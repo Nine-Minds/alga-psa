@@ -112,6 +112,12 @@ vi.mock('../../../lib/api/services/AssetService', () => ({
     getMaintenanceSchedules = vi.fn(async (id: string) => state.assets.find((a) => a.asset_id === id)?.maintenance_schedules ?? []);
     getAssetAssignments = vi.fn(async () => state.assetAssignments);
     getMaintenanceHistory = vi.fn(async () => state.maintenanceHistory);
+    getMaintenanceScheduleForUpdate = vi.fn(async (scheduleId: string) =>
+      state.maintenanceSchedules.find((schedule) => schedule.schedule_id === scheduleId) ?? null);
+    updateMaintenanceSchedule = vi.fn(async (scheduleId: string, values: Record<string, any>) => {
+      const schedule = state.maintenanceSchedules.find((item) => item.schedule_id === scheduleId);
+      return schedule ? { ...schedule, ...values } : null;
+    });
     list = vi.fn(async () => ({ data: state.assets, total: state.assets.length }));
     search = vi.fn(async () => state.assets);
     getAssetTickets = vi.fn(async () => state.assetTickets);
@@ -982,6 +988,7 @@ describe('asset routes serialize the projection', () => {
 
 describe('asset mutation and history projections', () => {
   const ASSET_ID = '22222222-2222-2222-2222-222222222229';
+  const SECOND_ASSET_ID = '22222222-2222-2222-2222-222222222228';
 
   beforeEach(() => {
     state.assets = [{ asset_id: ASSET_ID, name: 'Visible asset', serial_number: 'SECRET-SERIAL' }];
@@ -1081,6 +1088,111 @@ describe('asset mutation and history projections', () => {
       maintenance_data: { cost: 4938, notes: 'Private maintenance notes' },
       performed_by_user_name: 'Ada Lovelace',
     });
+  });
+
+  it.each(['bulkUpdate', 'bulkStatusUpdate'] as const)(
+    '%s authorizes every target before writing and returns only projected assets',
+    async (method) => {
+      const first = { asset_id: ASSET_ID, name: 'First asset', serial_number: 'FIRST-SECRET', status: 'active' };
+      const second = { asset_id: SECOND_ASSET_ID, name: 'Second asset', serial_number: 'SECOND-SECRET', status: 'active' };
+      state.assets = [first, second];
+      const controller = new ApiAssetController();
+      const update = vi.spyOn((controller as any).assetService, 'update');
+      const makeRequest = () => {
+        const req = request(`/api/v2/assets/${method === 'bulkUpdate' ? 'bulk-update' : 'bulk-status'}`);
+        req.json = async () => method === 'bulkUpdate'
+          ? { assets: [
+            { asset_id: ASSET_ID, data: { name: 'Renamed first' } },
+            { asset_id: SECOND_ASSET_ID, data: { name: 'Renamed second' } },
+          ] }
+          : { asset_ids: [ASSET_ID, SECOND_ASSET_ID], status: 'active' };
+        return req;
+      };
+      const call = () => method === 'bulkUpdate'
+        ? controller.bulkUpdate(makeRequest())
+        : controller.bulkStatusUpdate(makeRequest());
+
+      const visible = await call();
+      expect(visible.status).toBe(200);
+      expect((await visible.json()).data).toMatchObject([
+        { asset_id: ASSET_ID, serial_number: 'FIRST-SECRET' },
+        { asset_id: SECOND_ASSET_ID, serial_number: 'SECOND-SECRET' },
+      ]);
+
+      state.decisions.set(ASSET_ID, { allowed: true, redactedFields: ['assets.serial_number'] });
+      const hidden = await call();
+      const projected = (await hidden.json()).data;
+      expect(projected[0]).toMatchObject({ asset_id: ASSET_ID });
+      expect(projected[0]).not.toHaveProperty('serial_number');
+      expect(projected[1].serial_number).toBe('SECOND-SECRET');
+
+      const callsBeforeDeniedBatch = update.mock.calls.length;
+      state.decisions.set(SECOND_ASSET_ID, { allowed: false, redactedFields: [] });
+      expect((await call()).status).toBe(404);
+      expect(update).toHaveBeenCalledTimes(callsBeforeDeniedBatch);
+
+      state.decisions.set(SECOND_ASSET_ID, { allowed: true, redactedFields: [] });
+      state.decisions.set(ASSET_ID, { allowed: true, redactedFields: ['assets.asset_id'] });
+      expect((await call()).status).toBe(404);
+      expect(update).toHaveBeenCalledTimes(callsBeforeDeniedBatch);
+
+      state.assetReadAllowed = false;
+      expect((await call()).status).toBe(403);
+      expect(update).toHaveBeenCalledTimes(callsBeforeDeniedBatch);
+    },
+  );
+
+  it('authorizes the owning asset before maintenance schedule writes and projects stored schedule values', async () => {
+    const scheduleId = '44444444-4444-4444-4444-444444444449';
+    const schedule = {
+      schedule_id: scheduleId, asset_id: ASSET_ID, schedule_name: 'Old name',
+      next_maintenance: '2099-01-01T00:00:00Z', created_by: 'user-1', created_by_name: 'Ada Lovelace',
+    };
+    state.maintenanceSchedules = [schedule];
+    const controller = new ApiAssetController();
+    const service = (controller as any).assetService;
+    const findSchedule = vi.spyOn(service, 'getMaintenanceScheduleForUpdate');
+    const updateSchedule = vi.spyOn(service, 'updateMaintenanceSchedule');
+    const makeRequest = () => {
+      const req = request(`/api/v2/assets/maintenance/${scheduleId}`, { scheduleId });
+      req.json = async () => ({ schedule_name: 'Renamed schedule' });
+      return req;
+    };
+    const call = () => controller.updateMaintenanceSchedule(makeRequest(), { scheduleId });
+
+    const visible = await call();
+    expect((await visible.json()).data).toMatchObject({
+      schedule_name: 'Renamed schedule', next_maintenance: '2099-01-01T00:00:00Z',
+      created_by_name: 'Ada Lovelace',
+    });
+
+    state.decisions.set(ASSET_ID, {
+      allowed: true,
+      redactedFields: ['asset_maintenance_schedules.next_maintenance', 'users.first_name'],
+    });
+    const hidden = await call();
+    const hiddenData = (await hidden.json()).data;
+    expect(hiddenData.schedule_name).toBe('Renamed schedule');
+    expect(hiddenData).not.toHaveProperty('next_maintenance');
+    expect(hiddenData.created_by_name).toBeNull();
+
+    const writesBeforeDeniedOwner = updateSchedule.mock.calls.length;
+    state.decisions.set(ASSET_ID, { allowed: false, redactedFields: [] });
+    expect((await call()).status).toBe(404);
+    expect(updateSchedule).toHaveBeenCalledTimes(writesBeforeDeniedOwner);
+
+    state.decisions.set(ASSET_ID, { allowed: true, redactedFields: ['assets.asset_id'] });
+    expect((await call()).status).toBe(404);
+    expect(updateSchedule).toHaveBeenCalledTimes(writesBeforeDeniedOwner);
+
+    state.decisions.set(ASSET_ID, { allowed: true, redactedFields: ['asset_maintenance_schedules.schedule_id'] });
+    expect((await call()).status).toBe(404);
+    expect(updateSchedule).toHaveBeenCalledTimes(writesBeforeDeniedOwner);
+
+    state.assetReadAllowed = false;
+    expect((await call()).status).toBe(403);
+    expect(findSchedule).toHaveBeenCalledTimes(writesBeforeDeniedOwner + 3);
+    expect(updateSchedule).toHaveBeenCalledTimes(writesBeforeDeniedOwner);
   });
 });
 

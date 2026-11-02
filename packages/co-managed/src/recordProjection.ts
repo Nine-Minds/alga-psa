@@ -332,7 +332,9 @@ export const ASSET_MAINTENANCE_SCHEDULE_SOURCE: RedactableRecordSource = {
   resource: ['asset_maintenance_schedules'],
   identifier: ids('schedule_id', 'asset_maintenance_schedules.schedule_id'),
   fields: {},
-  derived: {},
+  derived: {
+    created_by_name: ids('created_by', 'users', 'users.first_name', 'users.last_name'),
+  },
 };
 
 /** Assignment history rows include a joined contact label. */

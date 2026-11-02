@@ -1183,6 +1183,14 @@ export class AssetService extends BaseService<any> {
     return query;
   }
 
+  /** Load a schedule before mutation so its owning asset can be authorized first. */
+  async getMaintenanceScheduleForUpdate(scheduleId: string, context: ServiceContext): Promise<any | null> {
+    const knex = await this.getDbForContext(context);
+    return scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+      .where({ schedule_id: scheduleId })
+      .first();
+  }
+
   async createMaintenanceSchedule(assetId: string, data: CreateMaintenanceScheduleData, context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
     this.assertCustomRecurrence(data.frequency, data.schedule_config);
