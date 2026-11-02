@@ -570,6 +570,7 @@ export const templateAstSchema = z.object({
     labelClass: z.enum(LABEL_CLASSES).optional(),
     labelSettings: z.object({
       hiddenFields: z.array(z.enum(LABEL_HIDEABLE_FIELDS)).optional(),
+      worksheetMode: z.enum(['letter']).optional(),
     }).strict().optional(),
   }).strict().optional(),
   styles: z.object({

@@ -207,3 +207,49 @@ export function resolveLabelBatchPdfOptions(geometry: LabelBatchGeometry): Invoi
 }
 
 export const LABEL_SHEET_MIN_MM = CUSTOM_PAGE_SIZE_MM_RANGE.min;
+
+/**
+ * Page size range a template may ask the printer for on its own (the print dialog's "template paper"
+ * default). Wider than the schema's absolute bounds (10 - 1200 mm) on the small end because a page
+ * below ~60 mm is a die-cut tag, not paper a normal printer holds, and belongs on the roll layout.
+ */
+export const LABEL_TEMPLATE_FIT_PAGE_MM_RANGE = { min: 60, max: 1200 } as const;
+
+/** True when a template's own page size is paper an ordinary printer holds (a worksheet, not a tag). */
+export function labelMetadataPrefersPaperPage(
+  metadata?: { printSettings?: { customPageSize?: CustomPageSize } } | null
+): boolean {
+  const pageSize = metadata?.printSettings?.customPageSize;
+  if (!pageSize) return false;
+  if (validateCustomPageSize(pageSize)) return false;
+  const { widthMm, heightMm } = customPageSizeToMm(pageSize);
+  const { min, max } = LABEL_TEMPLATE_FIT_PAGE_MM_RANGE;
+  return widthMm >= min && widthMm <= max && heightMm >= min && heightMm <= max;
+}
+
+/**
+ * The page size every template in the batch asks for, when they all agree on one explicit
+ * `customPageSize` (one label per page) that ordinary paper can hold. Returns null otherwise, which
+ * keeps the caller's default layout. This is what lets a Letter worksheet template print on Letter
+ * without the caller having to pick the paper twice.
+ */
+export function resolveTemplatePreferredPageSizes(
+  templates: readonly { metadata?: { printSettings?: { customPageSize?: CustomPageSize } } | undefined }[]
+): CustomPageSize | null {
+  if (templates.length === 0) return null;
+  let preferred: CustomPageSize | null = null;
+  for (const template of templates) {
+    const pageSize = template.metadata?.printSettings?.customPageSize;
+    if (!pageSize || !labelMetadataPrefersPaperPage(template.metadata)) return null;
+    if (preferred === null) {
+      preferred = pageSize;
+    } else if (
+      preferred.width !== pageSize.width ||
+      preferred.height !== pageSize.height ||
+      preferred.unit !== pageSize.unit
+    ) {
+      return null;
+    }
+  }
+  return preferred;
+}

@@ -7,6 +7,8 @@ export interface LabelTemplateChoice {
   id: string;
   name: string;
   source: 'standard' | 'custom';
+  /** True when the template declares a full-sheet page (a Letter worksheet), so "template paper" printing applies. */
+  prefersPaperPage?: boolean;
 }
 
 export interface LabelTemplateList {

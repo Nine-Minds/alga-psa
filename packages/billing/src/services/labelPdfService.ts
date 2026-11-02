@@ -6,10 +6,14 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { renderLabelBatchHtml, type LabelPrintItem } from '../lib/label-batch/renderLabelBatchHtml';
-import type { LabelBatchLayout } from '../lib/label-batch/layout';
+import { labelMetadataPrefersPaperPage, type LabelBatchLayout } from '../lib/label-batch/layout';
 import { listDocumentTemplates } from '../lib/document-templates/storage';
 import { labelClassOfCustomTemplate } from '../lib/label-template-ast/labelTemplates';
-import { LABEL_CLASS_BY_STANDARD_CODE, LABEL_STANDARD_CODE_BY_CLASS } from '../lib/label-template-ast/standardTemplates';
+import {
+  LABEL_CLASS_BY_STANDARD_CODE,
+  LABEL_STANDARD_CODE_BY_CLASS,
+  getStandardLabelTemplateAstByCode,
+} from '../lib/label-template-ast/standardTemplates';
 import { inlineLogoDataUrl } from '../lib/label-batch/labelLogo';
 import { resolveLabelTemplate, type ResolvedLabelTemplate } from '../lib/label-batch/resolveLabelTemplate';
 import type { LabelClass } from '@alga-psa/types';
@@ -72,7 +76,10 @@ export async function resolveLabelTemplateForTenant(
 export async function listLabelTemplatesForTenant(
   tenant: string,
   labelClass: LabelClass
-): Promise<{ defaultTemplateId: string; templates: Array<{ id: string; name: string; source: 'standard' | 'custom' }> }> {
+): Promise<{
+  defaultTemplateId: string;
+  templates: Array<{ id: string; name: string; source: 'standard' | 'custom'; prefersPaperPage: boolean }>;
+}> {
   const { knex } = await createTenantKnex();
   const items = await listDocumentTemplates(knex, tenant, 'work-tag');
   const templates = items
@@ -81,7 +88,19 @@ export async function listLabelTemplatesForTenant(
         ? LABEL_CLASS_BY_STANDARD_CODE[item.template_id] === labelClass
         : labelClassOfCustomTemplate(item.templateAst) === labelClass
     )
-    .map((item) => ({ id: item.template_id, name: item.name, source: item.source }));
+    .map((item) => ({
+      id: item.template_id,
+      name: item.name,
+      source: item.source,
+      // True when the template asks for a full sheet (a Letter worksheet): the dialog offers
+      // "template paper" as the layout default for it. Standard ASTs carry the page size, so the
+      // catalog answers for both sources.
+      prefersPaperPage:
+        labelMetadataPrefersPaperPage(item.templateAst?.metadata) ||
+        (item.source === 'standard'
+          ? labelMetadataPrefersPaperPage(getStandardLabelTemplateAstByCode(item.template_id)?.metadata)
+          : false),
+    }));
   const resolved = await resolveLabelTemplate(knex, tenant, labelClass);
   return { defaultTemplateId: resolved.ok ? resolved.templateCode : LABEL_STANDARD_CODE_BY_CLASS[labelClass], templates };
 }

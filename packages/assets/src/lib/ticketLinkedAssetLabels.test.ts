@@ -45,6 +45,7 @@ function seed(opts: { assets: string[]; held?: Record<string, ReturnType<typeof 
   state.links = opts.assets.map((asset_id) => ({ asset_id, entity_id: T }));
   state.assets = opts.assets.map((asset_id, i) => ({
     asset_id, asset_tag: `TAG-${asset_id}`, name: `Item ${asset_id}`, serial_number: `SERIAL-000${i}-WXYZ`, client_id: 'c',
+    asset_type: 'unknown', manufacturer: null, model: null,
   }));
   state.custody = new Map(Object.entries(opts.held ?? {}));
 }
@@ -68,13 +69,23 @@ describe('getTicketLinkedAssetLabelParts', () => {
     expect(r).toMatchObject({
       assetId: 'b', assetTag: 'TAG-b', serialSuffix: 'WXYZ',
       custodyLocation: 'Main Office / Shelf B3', nextAction: 'Waiting on vendor, Oct 29',
+      linkedAssetInfo: { assetId: 'b', name: 'Item b', manufacturer: null, model: null, cpuLine: null, ramLine: null, storageLine: null, osLine: null },
     });
+  });
+
+  it('no asset line (count only): no worksheet info block', async () => {
+    three();
+    const [r] = await getTicketLinkedAssetLabelParts(ctx, [{ recordId: T }]);
+    expect(r?.linkedAssetInfo).toBeNull();
   });
 
   it('no pick on several held items: count plus the earliest follow-up, no asset line', async () => {
     three();
     const [r] = await getTicketLinkedAssetLabelParts(ctx, [{ recordId: T }]);
-    expect(r).toEqual({ assetId: '', assetTag: null, serialSuffix: null, custodyLocation: '3 items held', nextAction: 'Follow up Oct 29' });
+    expect(r).toEqual({
+      assetId: '', assetTag: null, serialSuffix: null, linkedAssetInfo: null,
+      custodyLocation: '3 items held', nextAction: 'Follow up Oct 29',
+    });
   });
 
   it('the same ticket can appear several times with different picks (batch)', async () => {
