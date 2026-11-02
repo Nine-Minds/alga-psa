@@ -1,4 +1,5 @@
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
+import { createStripeClient } from './stripeClient';
 import { tenantDb } from '@alga-psa/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getConnection } from '@alga-psa/db';
@@ -36,7 +37,7 @@ export async function reconcileStripeWebhookEvents(tenant: string): Promise<bool
   const secretProvider = await getSecretProviderInstance();
   const secretKey = await secretProvider.getTenantSecret(tenant, 'stripe_payment_secret_key');
   if (!secretKey) return false;
-  const stripe = new Stripe(secretKey, { apiVersion: '2024-12-18.acacia' as any });
+  const stripe = createStripeClient(secretKey);
   const endpoint = await stripe.webhookEndpoints.update(endpointId, { enabled_events: STRIPE_WEBHOOK_EVENTS });
   await tenantDb(knex, tenant).table('payment_provider_configs').where({ config_id: config.config_id }).update({
     configuration: { ...(config.configuration as any), webhook_events: endpoint.enabled_events }, updated_at: knex.fn.now(),

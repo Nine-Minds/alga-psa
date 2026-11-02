@@ -69,10 +69,12 @@ enough on its own (a tenant config could name any account), so the two changes s
   `stripe.accounts.retrieve()` with the newly supplied key and stores `account.id` only if the call
   succeeds; a key that cannot be verified is rejected at save time with a typed error.
 - Read on first `getStripe()`: after constructing the client, the provider does
-  `await stripe.accounts.retrieve()` **once per provider instance** and compares `account.id` to the bound
-  id. Mismatch → the client is discarded and `StripeTenantAccountMismatchError` is thrown. Unbound config
-  (`stripe_account_id` absent) → `StripeTenantAccountUnboundError`; the provider refuses to serve. This is
-  what makes "the account is the tenant's" a fact rather than a copy-paste.
+  `await stripe.accounts.retrieve()` **once per provider instance**. Bound config compares `account.id` to
+  the stored id; mismatch discards the client and throws `StripeTenantAccountMismatchError`. A legacy row
+  with tenant credentials but no binding may use this identity request to discover its account. The provider
+  locks and re-reads the enabled config row, then persists `account.id`; customer/payment operations remain
+  unavailable until that write succeeds. Configuration changes or conflicting concurrent bindings fail
+  closed. Missing tenant credentials still refuse access without any platform fallback.
 
 `configuration.stripe_account_id` is the single source of truth for the binding — deliberately not a new
 column on `client_payment_customers` / `payment_methods`: those tables are Citus-distributed and the
@@ -80,12 +82,14 @@ provenance that matters for adoption lives on the Stripe object.
 
 ### 2.3 Import fails closed without a bound account
 
-`StripeCustomerImportService.create` resolves the provider config up front and **throws before any Stripe
-call** when it is missing or unbound:
+`StripeCustomerImportService.create` resolves the provider config up front and **throws before any customer or
+payment-data Stripe call** when credentials are missing or binding verification/persistence fails. For a
+credentialed legacy row, only the account identity request can occur before a durable binding:
 
 - `stripe-import/no-tenant-stripe-account` (no credentials) — the three actions return this as the user
   message: "This tenant has no Stripe account configured; imports are disabled."
-- `stripe-import/account-unbound` / `stripe-import/account-mismatch` — as above.
+- `stripe-import/account-mismatch` — as above. `account-unbound` remains for malformed provider state;
+  valid credentialed legacy rows bind on first use.
 
 The service exposes the bound account id as `this.accountId` and passes it into classification so every row
 records which account it was evaluated against.
@@ -124,7 +128,7 @@ records which account it was evaluated against.
    `stripe_secret_key`; `createStripePaymentProvider(t).getStripe()` rejects and no Stripe SDK call is made.
    Same through `previewStripeImportAction`: typed error, no customer listing.
 2. **Binding verified.** Config bound to `acct_A`, credentials resolve to `acct_B` → `account-mismatch`,
-   client never used. Unbound config → `account-unbound`.
+   client never used. Credentialed unbound config persists the verified account before use.
 3. **Legacy adoption still works inside the tenant's own account.** Bound account, customer with no
    metadata → adoptable; customer with `tenant_id` of another tenant → `conflict`.
 4. **Cross-account adoption impossible.** A customer carrying another account's stamp is never adoptable
@@ -154,7 +158,7 @@ records which account it was evaluated against.
 
 1. `operatorStripeConfig.ts` + repoint the three operator call sites (behaviour-neutral, ship first).
 2. Strip the fallbacks from `getStripePaymentConfig`; add save-time account verification.
-3. Verify the binding at first use in `StripePaymentProvider.getStripe()` and cache the resolved account id.
+3. Verify and durably persist legacy bindings at first use in `StripePaymentProvider.getStripe()` and cache the resolved account id.
 4. Import service: fail-closed create, `accountId` plumbed into classification and `importMetadata`.
 5. `ownershipOf` in the classifier; `selectOwnedCustomer` purpose/account signature; update the operator
    recovery path.
@@ -162,8 +166,9 @@ records which account it was evaluated against.
 
 ## 6. Risks
 
-- **Tenants on the fallback go dark** until they configure credentials — intended, but it must be said out
-  loud in the release note, and the settings UI must explain the fix rather than showing a generic error.
+- **Tenants without their own credentials go dark** until they configure credentials. Existing tenant
+  credentials bind on first use after identity verification; the settings UI should explain missing
+  credentials rather than showing a generic error.
 - **`stripe.accounts.retrieve()` per provider instance** is one extra call; cached with the config for the
   process lifetime, so it is not per request.
 - **Legacy unclaimed customers in a tenant's own account** remain adoptable by design; the guard is that the

@@ -35,6 +35,7 @@ function makeService(customers: FakeCustomer[], subscriptions: Record<string, an
   service.ensureInitialized = async () => undefined;
   service.importSubscription = vi.fn(async () => undefined);
   service.stripe = {
+    accounts: { retrieve: vi.fn(async () => ({ id: 'acct_test_operator' })) },
     customers: {
       list: vi.fn(async ({ email }: { email: string }) => ({
         data: customers.filter((c) => c.email === email && !c.deleted),

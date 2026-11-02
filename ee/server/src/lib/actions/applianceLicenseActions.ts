@@ -4,7 +4,7 @@ import { getSession } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getOperatorStripeSecretKey } from '../payments/operatorStripeConfig';
 import { isLicenseDistributionTenant } from '@alga-psa/licensing';
-import Stripe from 'stripe';
+import { createStripeClient } from '../payments/stripeClient';
 import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 
@@ -99,7 +99,7 @@ export async function createApplianceLicenseCheckout(
   }
 
   const secretKey = await getStripeSecretKey();
-  const stripe = new Stripe(secretKey, { apiVersion: '2024-12-18.acacia' as any });
+  const stripe = createStripeClient(secretKey);
 
   const isSubscription = transport !== 'airgap-annual';
   const baseUrl = getAppBaseUrl();

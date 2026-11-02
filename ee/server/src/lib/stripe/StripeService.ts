@@ -19,10 +19,10 @@ import { tenantDb } from '@alga-psa/db';
 import { auditLog } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { getOperatorStripeConfig } from '../payments/operatorStripeConfig';
+import { createStripeClient } from '../payments/stripeClient';
 import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
 import { ADD_ONS, type AddOnKey, type TenantTier } from '@alga-psa/types';
 import { tierFromStripeProduct } from './stripeTierMapping';
-import { stripeApiOverride } from './stripeApiOverride';
 import { reconcileHostedCoManagedEntitlement, runCoManagedPurchase, type CoManagedPurchaseResult } from '@alga-psa/licensing';
 import { coManagedSnapshotFromStripe, isCoManagedSubscription, assertCoManagedPrice, currentProSubscriptionExpiry } from './coManagedSubscription';
 import {
@@ -325,13 +325,7 @@ export class StripeService {
 
   private async initialize() {
     this.config = await getStripeConfig();
-    const clientOptions: Stripe.StripeConfig = {
-      apiVersion: '2024-12-18.acacia' as any,
-      typescript: true,
-    };
-    // Defaults to real Stripe; honoured only for a loopback endpoint with an sk_test_ key.
-    Object.assign(clientOptions, stripeApiOverride(this.config.secretKey));
-    this.stripe = new Stripe(this.config.secretKey, clientOptions);
+    this.stripe = createStripeClient(this.config.secretKey);
     await this.cleanupRetiredPremiumSchedules();
   }
 

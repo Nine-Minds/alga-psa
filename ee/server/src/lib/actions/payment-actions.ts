@@ -16,6 +16,7 @@ import { tenantDb } from '@alga-psa/db';
 import { createStripeClient } from '../payments/stripeClient';
 import { STRIPE_WEBHOOK_EVENTS, reconcileStripeWebhookEvents } from '../payments/stripeWebhookEvents';
 import * as fs from 'fs';
+import { createHash } from 'crypto';
 import {
   IPaymentProviderConfig,
   PaymentSettings,
@@ -212,13 +213,7 @@ export const connectStripeAction = withAuth(async (
       return { success: false, error: 'Stripe credentials belong to a different account than the tenant’s existing binding', code: 'stripe-payment/account-binding-mismatch' };
     }
 
-    // Store credentials securely
     const secretProvider = await getSecretProviderInstance();
-    await secretProvider.setTenantSecret(
-      tenant,
-      'stripe_payment_secret_key',
-      credentials.secretKey
-    );
 
     // Get the webhook URL
     const baseUrl = getStripeBaseUrl();
@@ -349,6 +344,7 @@ export const connectStripeAction = withAuth(async (
         publishable_key: credentials.publishableKey,
         webhook_endpoint_id: webhookEndpointId,
         stripe_account_id: verifiedAccountId,
+        stripe_credential_fingerprint: createHash('sha256').update(credentials.secretKey).digest('hex'),
       },
       credentials_vault_path: `tenant/${tenant}/stripe_payment_secret_key`,
       webhook_secret_vault_path: webhookSecret
@@ -359,17 +355,30 @@ export const connectStripeAction = withAuth(async (
       updated_at: knex.fn.now(),
     };
 
-    if (existingConfig) {
-      await tenantDb(knex, tenant).table('payment_provider_configs')
-        .where({ config_id: existingConfig.config_id })
-        .update(configData);
-    } else {
-      await tenantDb(knex, tenant).table('payment_provider_configs').insert({
-        tenant,
-        provider_type: 'stripe',
-        ...configData,
-      });
-    }
+    await knex.transaction(async (trx) => {
+      const db = tenantDb(trx, tenant);
+      const current = await db.table<IPaymentProviderConfig>('payment_provider_configs')
+        .where({ tenant, provider_type: 'stripe' }).forUpdate().first();
+      const currentAccountId = current?.configuration?.stripe_account_id as string | undefined;
+      if (currentAccountId && currentAccountId !== verifiedAccountId) {
+        throw new Error('Stripe credentials belong to a different account than the tenant’s existing binding');
+      }
+      if (current) {
+        await db.table('payment_provider_configs').where({ config_id: current.config_id }).update({
+          ...configData,
+          settings: mergePaymentSettings(current.settings),
+          configuration: { ...current.configuration, ...configData.configuration },
+          webhook_secret_vault_path: webhookSecret
+            ? `tenant/${tenant}/stripe_payment_webhook_secret`
+            : (current.webhook_secret_vault_path || null),
+        });
+      } else {
+        await db.table('payment_provider_configs').insert({ tenant, provider_type: 'stripe', ...configData });
+      }
+    });
+    // Publish the new secret only after its fingerprint and verified account are
+    // durably committed. Providers fail closed during the brief transition.
+    await secretProvider.setTenantSecret(tenant, 'stripe_payment_secret_key', credentials.secretKey);
 
     logger.info('[PaymentActions] Stripe connected successfully', {
       tenantId: tenant,

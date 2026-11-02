@@ -12,6 +12,7 @@
  */
 
 import Stripe from 'stripe';
+import { createHash } from 'crypto';
 import { createStripeClient } from './stripeClient';
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
@@ -47,6 +48,9 @@ interface StripePaymentConfig {
   webhookSecret: string;
   publishableKey: string;
   accountId: string;
+  configId: string;
+  credentialsVaultPath: string;
+  credentialFingerprint?: string;
 }
 
 export class StripeTenantAccountUnboundError extends Error {
@@ -84,7 +88,11 @@ async function getStripePaymentConfig(tenantId: string): Promise<StripePaymentCo
     if (secretKey && publishableKey) {
       // Webhook secret is optional - only needed for verifying incoming webhooks
       const webhookSecret = await secretProvider.getTenantSecret(tenantId, 'stripe_payment_webhook_secret') || '';
-      return { secretKey, webhookSecret, publishableKey, accountId: accountId ?? '' };
+      return {
+        secretKey, webhookSecret, publishableKey, accountId: accountId ?? '', configId: config.config_id,
+        credentialsVaultPath: config.credentials_vault_path,
+        credentialFingerprint: config.configuration?.stripe_credential_fingerprint as string | undefined,
+      };
     }
   }
   return null;
@@ -108,17 +116,46 @@ export class StripePaymentProvider implements PaymentProvider {
   private async initialize(): Promise<void> {
     if (this.stripe) return;
 
-    this.config = await getStripePaymentConfig(this.tenantId);
-    if (!this.config) {
+    const config = await getStripePaymentConfig(this.tenantId);
+    this.config = config;
+    if (!config) {
       throw new Error('stripe-import/no-tenant-stripe-account');
     }
-    if (!this.config.accountId) throw new StripeTenantAccountUnboundError();
-
-    this.stripe = createStripeClient(this.config.secretKey);
+    const fingerprint = createHash('sha256').update(config.secretKey).digest('hex');
+    if (config.credentialFingerprint && config.credentialFingerprint !== fingerprint) {
+      throw new Error('Stripe credentials changed during account verification');
+    }
+    this.stripe = createStripeClient(config.secretKey);
     const account = await this.stripe.accounts.retrieve();
-    if (account.id !== this.config.accountId) {
+    if (config.accountId && account.id !== config.accountId) {
       this.stripe = null;
       throw new StripeTenantAccountMismatchError();
+    }
+    if (!this.config.accountId) {
+      // The account lookup is the only Stripe request allowed before binding. Lock
+      // and re-read the row so concurrent reconnects cannot overwrite its binding.
+      const knex = await getConnection();
+      await knex.transaction(async (trx: Knex.Transaction) => {
+        const db = tenantDb(trx, this.tenantId);
+        const row = await db.table<IPaymentProviderConfig>('payment_provider_configs')
+          .where({ tenant: this.tenantId, config_id: config.configId, provider_type: 'stripe', is_enabled: true })
+          .forUpdate().first();
+        if (!row || row.credentials_vault_path !== config.credentialsVaultPath) {
+          throw new Error('Stripe configuration changed during account verification');
+        }
+        const currentId = row.configuration?.stripe_account_id as string | undefined;
+        const currentFingerprint = row.configuration?.stripe_credential_fingerprint as string | undefined;
+        if (currentFingerprint && currentFingerprint !== fingerprint) {
+          throw new Error('Stripe credentials changed during account verification');
+        }
+        if (currentId && currentId !== account.id) throw new StripeTenantAccountMismatchError();
+        if (!currentId) {
+          const updated = await db.table('payment_provider_configs').where({ config_id: row.config_id })
+            .update({ configuration: { ...(row.configuration ?? {}), stripe_account_id: account.id, stripe_credential_fingerprint: fingerprint }, updated_at: trx.fn.now() });
+          if (!updated) throw new Error('Could not persist verified Stripe account binding');
+        }
+      });
+      config.accountId = account.id;
     }
   }
 

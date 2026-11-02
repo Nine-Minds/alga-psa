@@ -39,6 +39,7 @@ vi.mock('stripe', () => ({
 const fakeKnex: any = {
   fn: { now: () => 'NOW' },
   raw: (sql: string) => ({ __raw: sql }),
+  transaction: async (fn: any) => fn(fakeKnex),
 };
 
 vi.mock('@/lib/db', () => ({
@@ -49,6 +50,7 @@ vi.mock('@alga-psa/db', () => ({
     table: () => ({
       where: () => ({
         first: async () => (store.row ? { ...store.row } : undefined),
+        forUpdate: () => ({ first: async () => (store.row ? { ...store.row } : undefined) }),
         update: async (patch: Record<string, any>) => {
           const next: Record<string, any> = { ...store.row, ...patch };
           // disconnect strips webhook_endpoint_id with a raw jsonb expression

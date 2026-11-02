@@ -5,13 +5,13 @@ import { StripePaymentProvider } from '../../../lib/payments/StripePaymentProvid
 import { classifyImport, importMetadata } from '../../../lib/payments/stripeImportClassifier';
 
 const { config, secrets } = vi.hoisted(() => ({
-  config: { credentials_vault_path: 'tenant/review/stripe_payment_secret_key', configuration: { publishable_key: 'pk_test_algasim', stripe_account_id: 'acct_review_4089' } },
+  config: { config_id: 'cfg-review', tenant: 'review', provider_type: 'stripe', is_enabled: true, credentials_vault_path: 'tenant/review/stripe_payment_secret_key', configuration: { publishable_key: 'pk_test_algasim', stripe_account_id: 'acct_review_4089' } },
   secrets: { getTenantSecret: vi.fn(async (_tenant: string, name: string) => name === 'stripe_payment_secret_key' ? 'sk_test_algasim' : 'whsec_algasim') },
 }));
 
 vi.mock('@alga-psa/db', () => ({
-  getConnection: vi.fn(async () => ({})),
-  tenantDb: vi.fn(() => ({ table: () => ({ where: () => ({ first: async () => config }) }) })),
+  getConnection: vi.fn(async () => ({ transaction: async (fn: any) => fn({ fn: { now: () => new Date() } }) })),
+  tenantDb: vi.fn(() => ({ table: () => ({ where: () => ({ first: async () => config, forUpdate: () => ({ first: async () => config }), update: async (patch: any) => { Object.assign(config, patch); return 1; } }) }) })),
 }));
 vi.mock('@alga-psa/core/secrets', () => ({ getSecretProviderInstance: vi.fn(async () => secrets) }));
 
@@ -44,6 +44,13 @@ describe('StripePaymentProvider against repository emulator', () => {
       metadata: { tenant_id: 'tenant_other', stripe_account_id: 'acct_review_4089' },
     });
     await control('seed/payment-method', { id: 'pm_review4089conflict', customer: 'cus_review4089conflict', isDefault: true, offSession: true });
+  });
+
+  it('discovers a legacy tenant account through the SDK and persists its binding before payment data access', async () => {
+    delete config.configuration.stripe_account_id;
+    const provider = new StripePaymentProvider('review');
+    expect(await provider.getCustomerImportSnapshot('cus_review4089legacy')).toMatchObject({ id: 'cus_review4089legacy' });
+    expect(config.configuration.stripe_account_id).toBe('acct_review_4089');
   });
 
   afterAll(async () => {

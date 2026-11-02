@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { createStripeClient } from './stripeClient';
 
 export interface OperatorStripeConfig {
   secretKey: string;
@@ -27,5 +28,5 @@ export async function getOperatorStripeConfig(): Promise<OperatorStripeConfig | 
 export async function createOperatorStripeClient(): Promise<Stripe> {
   const secretKey = await getOperatorStripeSecretKey();
   if (!secretKey) throw new Error('STRIPE_SECRET_KEY not found in secrets or environment');
-  return new Stripe(secretKey, { apiVersion: '2024-12-18.acacia' as any, typescript: true });
+  return createStripeClient(secretKey);
 }
