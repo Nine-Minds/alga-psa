@@ -437,7 +437,8 @@ export async function slaTicketWorkflow(
     if (
       useConfiguredEscalationWakePoints &&
       phase.phase === 'resolution' &&
-      (responseCompleted || state.notifiedThresholds.response.includes(100)) &&
+      !responseCompleted &&
+      state.notifiedThresholds.response.includes(100) &&
       target.response_time_minutes && target.response_time_minutes > 0
     ) {
       for (const threshold of escalationWakePoints) {
@@ -459,6 +460,13 @@ export async function slaTicketWorkflow(
       const threshold = wakeEvent.threshold;
       if (isDone(phase.phase)) {
         break;
+      }
+
+      // A response-completion signal ends pending response escalations, even
+      // when it arrives after breach while the resolution phase is running.
+      if (actionPhase === 'response' && responseCompleted) {
+        thresholdIndex += 1;
+        continue;
       }
 
       // Legacy runs treated notification state as the whole wake-point state.
@@ -483,7 +491,11 @@ export async function slaTicketWorkflow(
         // wedging the workflow. A superseded sweep timer just fires unused.
         const resumedOrCompleted = await Promise.race([
           sleep(PAUSED_SWEEP_INTERVAL_MS).then(() => false),
-          condition(() => !state.pauseState.isPaused || isDone(phase.phase)).then(() => true),
+          condition(() =>
+            !state.pauseState.isPaused ||
+            isDone(phase.phase) ||
+            (actionPhase === 'response' && responseCompleted)
+          ).then(() => true),
         ]);
 
         if (!resumedOrCompleted && state.pauseState.isPaused) {
@@ -499,6 +511,11 @@ export async function slaTicketWorkflow(
 
       if (isDone(phase.phase)) {
         break;
+      }
+
+      if (actionPhase === 'response' && responseCompleted) {
+        thresholdIndex += 1;
+        continue;
       }
 
       // Preserve the old pre-wake rollover point for replay. New runs roll at
@@ -532,7 +549,11 @@ export async function slaTicketWorkflow(
       if (sleepMs > 0) {
         await Promise.race([
           sleep(sleepMs),
-          condition(() => state.pauseState.isPaused || isDone(phase.phase)),
+          condition(() =>
+            state.pauseState.isPaused ||
+            isDone(phase.phase) ||
+            (actionPhase === 'response' && responseCompleted)
+          ),
         ]);
       }
 
@@ -542,6 +563,11 @@ export async function slaTicketWorkflow(
 
       if (isDone(phase.phase)) {
         break;
+      }
+
+      if (actionPhase === 'response' && responseCompleted) {
+        thresholdIndex += 1;
+        continue;
       }
 
       if (await checkClosedAndComplete('wake')) {
