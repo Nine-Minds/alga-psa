@@ -172,6 +172,37 @@ describe('team actions', () => {
     });
   });
 
+  describe('getTeams', () => {
+    it('returns safe member fields, roles, and team role without credentials', async () => {
+      const { conn } = createTrx({
+        teams: { rows: [{ team_id: 'team-1', team_name: 'Alpha', manager_id: 'user-b', tenant: 'tenant-1' }] },
+        team_members: { rows: [{ team_id: 'team-1', user_id: 'user-b', role: 'lead' }] },
+        users: { rows: [{
+          user_id: 'user-b', username: 'b', first_name: 'Bea', last_name: 'Member',
+          email: 'bea@example.invalid', user_type: 'internal', is_inactive: false, tenant: 'tenant-1',
+          hashed_password: 'nonempty-hash', two_factor_secret: 'nonempty-secret',
+        }] },
+        roles: { rows: [{ user_id: 'user-b', role_id: 'role-1', role_name: 'Agent', msp: true, client: false }] },
+      });
+      createTenantKnexMock.mockResolvedValue({ knex: conn });
+
+      const { getTeams } = await import('./teamActions');
+      const result = await getTeams();
+
+      expect(result).toMatchObject([{
+        team_id: 'team-1',
+        members: [{
+          user_id: 'user-b', username: 'b', first_name: 'Bea', last_name: 'Member',
+          email: 'bea@example.invalid', role: 'lead',
+          roles: [{ role_id: 'role-1', role_name: 'Agent', msp: true, client: false }],
+        }],
+      }]);
+      expect(result[0].members[0]).not.toHaveProperty('hashed_password');
+      expect(result[0].members[0]).not.toHaveProperty('two_factor_secret');
+      expect(hasPermissionMock).toHaveBeenCalledWith(expect.anything(), 'user_settings', 'read', conn);
+    });
+  });
+
   describe('saveTeamChanges', () => {
     it('rejects removing the user being promoted to lead', async () => {
       const { conn, ops } = createTrx({

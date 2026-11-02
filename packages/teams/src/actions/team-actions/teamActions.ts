@@ -1,7 +1,16 @@
 'use server'
 
 import Team from '../../models/team';
-import type { DeletionValidationResult, IRole, ITeam, ITeamMember, IUser, IUserWithRoles } from '@alga-psa/types';
+import {
+  sanitizeUserForResponse,
+  USER_RESPONSE_COLUMNS,
+  type DeletionValidationResult,
+  type IRole,
+  type ITeam,
+  type IUser,
+  type IUserWithRoles,
+  type SafeApiUser,
+} from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -9,16 +18,18 @@ import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { permissionError, type ActionMessageError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { teamActionErrorFrom, type TeamActionError } from './teamActionErrors';
 
-export type TeamMutationResult = ITeam | ActionMessageError | ActionPermissionError;
-export type TeamReadResult = ITeam | TeamActionError;
-export type TeamsReadResult = ITeam[] | TeamActionError;
+export type SafeTeamMember = SafeApiUser & { role: 'member' | 'lead' };
+export type SafeTeam = Omit<ITeam, 'members'> & { members: SafeTeamMember[] };
+export type TeamMutationResult = SafeTeam | ActionMessageError | ActionPermissionError;
+export type TeamReadResult = SafeTeam | TeamActionError;
+export type TeamsReadResult = SafeTeam[] | TeamActionError;
 export type TeamsBasicReadResult = Omit<ITeam, 'members'>[] | TeamActionError;
 
 async function getUsersWithRoles(
   trx: Knex | Knex.Transaction,
   tenant: string,
   members: Array<{ user_id: string; role: 'member' | 'lead' }>,
-): Promise<ITeamMember[]> {
+): Promise<SafeTeamMember[]> {
   if (members.length === 0) {
     return [];
   }
@@ -26,7 +37,7 @@ async function getUsersWithRoles(
   const userIds = members.map((member) => member.user_id);
   const db = tenantDb(trx, tenant);
   const users = await db.table<IUser>('users')
-    .select('*')
+    .select(...USER_RESPONSE_COLUMNS)
     .whereIn('user_id', userIds);
 
   const rolesQuery = db.table<IRole>('roles');
@@ -49,7 +60,7 @@ async function getUsersWithRoles(
   const roleByUser = new Map(members.map((member) => [member.user_id, member.role]));
 
   return users.map((user) => ({
-    ...(user as any),
+    ...sanitizeUserForResponse(user as unknown as Record<string, unknown>),
     roles: rolesByUser.get(user.user_id) ?? [],
     role: roleByUser.get(user.user_id) ?? 'member',
   }));
@@ -149,7 +160,7 @@ export const createTeam = withAuth(async (user, { tenant }, teamData: Omit<ITeam
 });
 
 // Internal helper function for getting team by ID (used by other actions within the same withAuth context)
-async function getTeamByIdInternal(knex: Knex, tenant: string, teamId: string): Promise<ITeam> {
+async function getTeamByIdInternal(knex: Knex, tenant: string, teamId: string): Promise<SafeTeam> {
   const team = await Team.get(knex, tenant, teamId);
   if (!team) {
     throw new Error('Team not found');
@@ -322,7 +333,7 @@ export const getTeams = withAuth(async (user, { tenant }): Promise<TeamsReadResu
 
   try {
     const teams = await Team.getAll(knex, tenant);
-    const teamsWithMembers = await Promise.all(teams.map(async (team): Promise<ITeam> => {
+    const teamsWithMembers = await Promise.all(teams.map(async (team): Promise<SafeTeam> => {
       const memberEntries = await Team.getMembers(knex, tenant, team.team_id);
       const members = await getUsersWithRoles(knex, tenant, memberEntries);
       return { ...team, members };
