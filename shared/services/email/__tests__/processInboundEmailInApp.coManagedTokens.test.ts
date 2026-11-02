@@ -118,7 +118,7 @@ describe('inbound reply token matrix (CM L5)', () => {
 
     it('passes internalAttributionTrusted=true when Authentication-Results satisfy allowsInternalSenderAttribution', async () => {
       admission = { admitted: true, audience: 'shared_it', relationshipId: 'rel', threadId: 'thr', ticketId: 'ticket-1', parentCommentId: null, actor: { tenant: 'msp', userId: 'u1' } };
-      await inbound('cm2:abc', { headers: { 'authentication-results': PASS }, senderAuthentication: { provider: 'google', authenticationResults: [`mx.google.com; dmarc=pass header.from=msp.test`] } });
+      await inbound('cm2:abc', { headers: { 'authentication-results': PASS }, senderAuthentication: { provider: 'google', internalAttributionTrusted: true, contactAttributionTrusted: true } });
       expect(admitSpy).toHaveBeenCalledWith('tenant-1', 'cm2:abc', expect.anything(), { email: 'agent@msp.test', internalAttributionTrusted: true });
     });
 

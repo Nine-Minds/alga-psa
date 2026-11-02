@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GmailAdapter } from '../../../services/email/providers/GmailAdapter';
 import { GmailAdapter as SharedGmailAdapter } from '@alga-psa/shared/services/email/providers/GmailAdapter';
 import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
-import { isInternalAttributionTrusted } from '@alga-psa/shared/lib/email/senderAuthVerification';
 
 const historyListMock = vi.fn();
 const messageGetMock = vi.fn();
@@ -170,11 +169,8 @@ describe('GmailAdapter.listMessagesSince', () => {
     } });
 
     const details = await adapter.getMessageDetails('message-auth-results');
-    expect(details.senderAuthentication?.authenticationResults).toEqual([
-      'mx.google.com; dmarc=fail header.from=msp.test',
-      'attacker.test; dmarc=pass header.from=msp.test',
-    ]);
-    expect(isInternalAttributionTrusted(details.senderAuthentication, details.from.email)).toBe(false);
+    // The first (receiver) failure wins; the later attacker pass is ignored.
+    expect(details.senderAuthentication?.internalAttributionTrusted === true).toBe(false);
 
     messageGetMock.mockResolvedValueOnce({ data: { id: 'message-auth-results-pass', labelIds: ['INBOX'], payload: { headers: [
       { name: 'From', value: 'Agent <agent@msp.test>' },
@@ -182,7 +178,7 @@ describe('GmailAdapter.listMessagesSince', () => {
       { name: 'Authentication-Results', value: 'relay.example; dmarc=fail header.from=msp.test' },
     ] } } });
     const valid = await adapter.getMessageDetails('message-auth-results-pass');
-    expect(isInternalAttributionTrusted(valid.senderAuthentication, valid.from.email)).toBe(true);
+    expect(valid.senderAuthentication?.internalAttributionTrusted === true).toBe(true);
   });
 
   it('rejects forged Gmail authserv identifiers and missing receiver results at ingestion', async () => {
@@ -193,19 +189,19 @@ describe('GmailAdapter.listMessagesSince', () => {
       { name: 'Authentication-Results', value: 'mx.google.com; dmarc=pass header.from=msp.test' },
     ] } } });
     const forged = await adapter.getMessageDetails('message-forged-authserv');
-    expect(isInternalAttributionTrusted(forged.senderAuthentication, forged.from.email)).toBe(false);
+    expect(forged.senderAuthentication?.internalAttributionTrusted === true).toBe(false);
 
     messageGetMock.mockResolvedValueOnce({ data: { id: 'message-no-auth', labelIds: ['INBOX'], payload: { headers: [
       { name: 'From', value: 'Agent <agent@msp.test>' },
       { name: 'Authentication-Results', value: 'attacker.test; dmarc=pass header.from=msp.test' },
     ] } } });
     const missing = await adapter.getMessageDetails('message-no-auth');
-    expect(isInternalAttributionTrusted(missing.senderAuthentication, missing.from.email)).toBe(false);
+    expect(missing.senderAuthentication?.internalAttributionTrusted === true).toBe(false);
 
     messageGetMock.mockResolvedValueOnce({ data: { id: 'message-missing-receiver', labelIds: ['INBOX'], payload: { headers: [
       { name: 'From', value: 'Agent <agent@msp.test>' },
     ] } } });
     const noEvidence = await adapter.getMessageDetails('message-missing-receiver');
-    expect(isInternalAttributionTrusted(noEvidence.senderAuthentication, noEvidence.from.email)).toBe(false);
+    expect(noEvidence.senderAuthentication?.internalAttributionTrusted === true).toBe(false);
   });
 });

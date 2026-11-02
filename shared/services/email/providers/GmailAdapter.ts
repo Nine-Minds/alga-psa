@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { BaseEmailAdapter, type AdapterConnectionTestResult } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/inbound-email.interfaces';
-import { orderedAuthenticationResults } from '../../../lib/email/senderAuthVerification';
+import { allowsContactSenderAttribution, allowsInternalSenderAttribution, orderedAuthenticationResults, verifyProviderSenderAuthentication } from '../../../lib/email/senderAuthVerification';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
@@ -740,14 +740,20 @@ This indicates a problem with the OAuth token saving process.`;
           contentId: att.contentId,
           isInline: att.isInline
         })),
-        senderAuthentication: {
-          provider: 'google',
-          // This OAuth integration requests gmail.readonly, and Gmail's SMTP
-          // receiving path removes inbound Authentication-Results claiming
-          // mx.google.com before prepending its own result (RFC 8601 §1.6).
-          // Keep the API's ordered list: downstream trusts only the first item.
-          authenticationResults: orderedAuthenticationResults(headers),
-        },
+        senderAuthentication: (() => {
+          // Gmail API returns the mailbox's stored RFC 5322 headers. The
+          // receiver assertion is accepted only at index 0 and only when
+          // stamped with Google's documented receiver identifier.
+          const results = verifyProviderSenderAuthentication({
+            provider: 'google',
+            authenticationResults: orderedAuthenticationResults(headers),
+          }, parsedFrom?.email || fromEmail.trim());
+          return {
+            provider: 'google' as const,
+            internalAttributionTrusted: allowsInternalSenderAttribution(results),
+            contactAttributionTrusted: allowsContactSenderAttribution(results),
+          };
+        })(),
         headers: headers.reduce((acc: any, header: any) => {
           const headerName = String(header?.name || '');
           const normalizedHeaderName = headerName.toLowerCase();

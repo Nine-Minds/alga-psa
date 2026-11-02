@@ -356,27 +356,8 @@ export function mapParsedMimeToEmailMessageDetails(params: {
   const fromEmail = listRewrite ? listRewrite.sender.email : (from?.address || '');
   const fromName = listRewrite ? (listRewrite.sender.name || from?.name || undefined) : (from?.name || undefined);
   const resolvedHeaders: Record<string, string> = {};
-  const authenticationResults: string[] = [];
-  const receivingAuthservIds: string[] = [];
-  // Graph MIME is fetched from the configured Exchange mailbox. Exchange's
-  // header firewall removes external X-MS-Exchange-Organization-* fields;
-  // only this provider path carries AuthSource into the typed evidence below.
-  const headerLines: Array<{ key?: unknown; line?: unknown }> | undefined = params.parsed.headerLines;
-  if (Array.isArray(headerLines)) {
-    for (const entry of headerLines) {
-      if (typeof entry?.key !== 'string' || entry.key.toLowerCase() !== 'authentication-results' || typeof entry.line !== 'string') continue;
-      const colon = entry.line.indexOf(':');
-      if (colon >= 0) authenticationResults.push(entry.line.slice(colon + 1).replace(/\r?\n[ \t]+/g, ' ').trim());
-    }
-    for (const entry of headerLines) {
-      if (typeof entry?.key !== 'string' || entry.key.toLowerCase() !== 'x-ms-exchange-organization-authsource' || typeof entry.line !== 'string') continue;
-      const colon = entry.line.indexOf(':');
-      if (colon >= 0) receivingAuthservIds.push(entry.line.slice(colon + 1).trim());
-    }
-  }
-  // Preserve Authentication-Results from raw MIME for the sender-auth gate.
-  // mailparser normalizes header names in its Map, while Gmail already supplies
-  // a record via GmailAdapter.
+  // Preserve duplicate raw headers in wire order for downstream diagnostics;
+  // these values do not establish provider authentication provenance.
   const parsedHeaders = params.parsed.headers;
   if (parsedHeaders?.forEach) {
     parsedHeaders.forEach((value: unknown, key: string) => {
@@ -388,12 +369,10 @@ export function mapParsedMimeToEmailMessageDetails(params: {
       }
       if (typeof value === 'string') {
         resolvedHeaders[headerName] = value;
-        if (headerName === 'authentication-results' && !Array.isArray(headerLines)) authenticationResults.push(value);
       } else if (Array.isArray(value)) {
-        // Header order is wire order: the first Authentication-Results block is
-        // our receiving MTA's topmost result. Preserve each block for the gate.
+        // Keep repeated fields ordered instead of silently retaining only the
+        // last Authentication-Results or Exchange metadata header.
         resolvedHeaders[headerName] = value.filter((item): item is string => typeof item === 'string').join('\n');
-        if (headerName === 'authentication-results' && !Array.isArray(headerLines)) authenticationResults.push(...value.filter((item): item is string => typeof item === 'string'));
       }
     });
   }
@@ -458,16 +437,12 @@ export function mapParsedMimeToEmailMessageDetails(params: {
     inReplyTo: inReplyTo || undefined,
     rawMimeBase64: params.rawMimeBuffer.toString('base64'),
     headers: Object.keys(resolvedHeaders).length ? resolvedHeaders : undefined,
+    // Graph returns stored MIME headers, not a separately authenticated
+    // Exchange provenance claim. Header Firewall normally removes external
+    // organization headers, but connector permissions can preserve them; this
+    // path cannot inspect that mailbox configuration, so fail closed.
     senderAuthentication: params.provider === 'microsoft'
-      ? {
-          provider: 'microsoft',
-          authenticationResults,
-          receivingAuthservIds: Array.isArray(headerLines)
-            ? receivingAuthservIds
-            : typeof resolvedHeaders['x-ms-exchange-organization-authsource'] === 'string'
-              ? [resolvedHeaders['x-ms-exchange-organization-authsource']]
-              : [],
-        }
+      ? { provider: 'microsoft', internalAttributionTrusted: false, contactAttributionTrusted: false }
       : undefined,
   };
 }

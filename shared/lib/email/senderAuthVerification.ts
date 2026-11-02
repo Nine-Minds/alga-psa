@@ -120,16 +120,16 @@ export function allowsInternalSenderAttribution(results: SenderAuthResults | nul
 }
 
 export function isInternalAttributionTrusted(
-  evidence: { provider: 'google' | 'microsoft'; authenticationResults: string[]; receivingAuthservId?: string; receivingAuthservIds?: string[] } | null | undefined,
-  fromEmail: string | null | undefined
+  decision: { provider: 'google' | 'microsoft'; internalAttributionTrusted: boolean } | null | undefined
 ): boolean {
-  return allowsInternalSenderAttribution(verifyProviderSenderAuthentication(evidence, fromEmail));
+  return decision?.provider === 'google' && decision.internalAttributionTrusted === true;
 }
 
 /**
- * Consume authentication results only when provider ingestion supplies them and
- * the unique assertion is stamped by that provider's receiving service. Raw
- * `headers` are intentionally not accepted here: they are message content.
+ * Parse provider ingestion's ordered Authentication-Results values. This is
+ * only safe for providers whose receiving boundary guarantees its assertion is
+ * prepended after removing sender-supplied copies of the receiver authserv-id.
+ * Raw `headers` are intentionally not accepted by the authorization consumer.
  */
 export function verifyProviderSenderAuthentication(
   evidence: { provider: 'google' | 'microsoft'; authenticationResults: string[]; receivingAuthservId?: string; receivingAuthservIds?: string[] } | null | undefined,
@@ -143,49 +143,14 @@ export function verifyProviderSenderAuthentication(
   if (typeof assertion !== 'string' || !assertion.trim()) return null;
   const firstSegment = assertion.split(';', 1)[0]?.trim().toLowerCase() ?? '';
   const authservId = /^(?:spf|dkim|dmarc|arc|compauth)\s*=/.test(firstSegment) ? '' : firstSegment.split(/\s+/, 1)[0];
-  const trusted = evidence.provider === 'google'
-    ? authservId === 'mx.google.com'
-    : evidence.provider === 'microsoft'
-      // Exchange Online Authentication-Results commonly has no authserv-id.
-      // Header Firewall strips inbound X-MS-Exchange-Organization-* fields;
-      // AuthSource therefore identifies the Exchange server that stamped it.
-      // Cover documented EOP and mailbox-server FQDN families.
-      ? !authservId
-        && (!evidence.receivingAuthservIds || evidence.receivingAuthservIds.length === 1)
-        && isMicrosoftReceivingAuthSource(evidence.receivingAuthservIds?.[0] ?? evidence.receivingAuthservId)
-      : false;
+  // Gmail has a receiver identifier with a documented Authentication-Results
+  // boundary. Microsoft MIME exposes AuthSource as a message header, whose
+  // preservation depends on connector configuration this worker cannot prove.
+  const trusted = evidence.provider === 'google' && authservId === 'mx.google.com';
   if (!trusted) return null;
   return verifySenderAuthentication(assertion, fromEmail);
 }
 
-function isMicrosoftReceivingAuthSource(value: string | undefined): boolean {
-  if (!value) return false;
-  const hostname = value.trim().toLowerCase().replace(/\.$/, '');
-  if (!/^[a-z0-9.-]+$/.test(hostname) || hostname.includes('..')) return false;
-  return hostname.endsWith('.mail.protection.outlook.com')
-    || hostname.endsWith('.prod.protection.outlook.com')
-    || hostname.endsWith('.prod.outlook.com');
-}
-
 export function allowsContactSenderAttribution(results: SenderAuthResults | null): boolean {
   return Boolean(results?.aligned.spf || results?.aligned.dkim);
-}
-
-/**
- * Exchange Online stamps `X-MS-Exchange-Organization-AuthAs: Internal` on mail that
- * was authenticated inside the receiving Microsoft 365 organization, and strips every
- * `X-MS-Exchange-Organization-*` header from mail arriving from outside it. Such mail
- * carries no Authentication-Results header (SPF/DKIM are never evaluated for
- * intra-tenant delivery), so it would otherwise fail the contact gate closed.
- * Only trust this for Microsoft providers: other MTAs do not strip the header.
- */
-export function isMicrosoftIntraOrgSender(
-  provider: string | null | undefined,
-  headers: Record<string, string> | null | undefined
-): boolean {
-  if (provider !== 'microsoft' || !headers) return false;
-  const authAs = Object.entries(headers).find(
-    ([name]) => name.toLowerCase() === 'x-ms-exchange-organization-authas'
-  )?.[1];
-  return typeof authAs === 'string' && authAs.trim().toLowerCase() === 'internal';
 }

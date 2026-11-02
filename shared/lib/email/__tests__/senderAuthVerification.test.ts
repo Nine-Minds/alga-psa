@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   allowsContactSenderAttribution,
   allowsInternalSenderAttribution,
-  isMicrosoftIntraOrgSender,
   verifySenderAuthentication,
   verifyProviderSenderAuthentication,
   orderedAuthenticationResults,
+  isInternalAttributionTrusted,
 } from '../senderAuthVerification';
 
 describe('verifySenderAuthentication', () => {
@@ -102,6 +102,11 @@ describe('verifySenderAuthentication', () => {
 });
 
 describe('verifyProviderSenderAuthentication', () => {
+  it('accepts an ingestion decision only from the provider with a proven boundary', () => {
+    expect(isInternalAttributionTrusted({ provider: 'google', internalAttributionTrusted: true })).toBe(true);
+    expect(isInternalAttributionTrusted({ provider: 'microsoft', internalAttributionTrusted: true })).toBe(false);
+  });
+
   it('retains duplicate Gmail authentication headers in source order', () => {
     expect(orderedAuthenticationResults([
       { name: 'Authentication-Results', value: 'attacker; dmarc=pass header.from=msp.test' },
@@ -140,38 +145,17 @@ describe('verifyProviderSenderAuthentication', () => {
     ] }, 'agent@msp.test')).toBeNull();
   });
 
-  it('accepts Microsoft results only with its provider stamped EOP AuthSource', () => {
-    const trusted = verifyProviderSenderAuthentication({
-      provider: 'microsoft',
-      authenticationResults: ['spf=pass smtp.mailfrom=msp.test; dkim=pass header.d=msp.test; dmarc=pass header.from=msp.test'],
-      receivingAuthservId: 'VI1EUR05FT022.eop-eur05.prod.protection.outlook.com',
-    }, 'agent@msp.test');
-    expect(allowsInternalSenderAttribution(trusted)).toBe(true);
-    expect(verifyProviderSenderAuthentication({
-      provider: 'microsoft', authenticationResults: ['spf=pass; dmarc=pass header.from=msp.test'],
-    }, 'agent@msp.test')).toBeNull();
-  });
-
-  it.each([
-    'VI1EUR05FT022.eop-eur05.prod.protection.outlook.com',
-    'SN6PR16MB2510.namprd16.prod.outlook.com',
-    'mail.example.mail.protection.outlook.com',
-  ])('accepts supported Microsoft receiver host format %s', (receivingAuthservId) => {
-    expect(allowsInternalSenderAttribution(verifyProviderSenderAuthentication({
-      provider: 'microsoft',
-      authenticationResults: ['dmarc=pass header.from=msp.test'],
-      receivingAuthservId,
-    }, 'agent@msp.test'))).toBe(true);
-  });
-
-  it.each(['attacker.test', 'protection.outlook.com.evil.test', 'mail.protection.outlook.com'])
-    ('rejects untrusted or malformed Microsoft receiver host %s', (receivingAuthservId) => {
+  it('never treats Microsoft MIME headers, including AuthSource, as verified provenance', () => {
+    for (const receivingAuthservId of [
+      'VI1EUR05FT022.eop-eur05.prod.protection.outlook.com', 'attacker.test', undefined,
+    ]) {
       expect(verifyProviderSenderAuthentication({
         provider: 'microsoft',
         authenticationResults: ['dmarc=pass header.from=msp.test'],
         receivingAuthservId,
       }, 'agent@msp.test')).toBeNull();
-    });
+    }
+  });
 
   it('rejects a forged explicit Microsoft authserv-id even when AuthSource is trusted', () => {
     expect(verifyProviderSenderAuthentication({
@@ -191,25 +175,5 @@ describe('verifyProviderSenderAuthentication', () => {
 
   it('does not trust generic IMAP or absent provider provenance', () => {
     expect(verifyProviderSenderAuthentication(undefined, 'agent@msp.test')).toBeNull();
-  });
-});
-
-describe('isMicrosoftIntraOrgSender', () => {
-  it('trusts the Exchange internal-auth stamp on a Microsoft provider regardless of header casing', () => {
-    expect(isMicrosoftIntraOrgSender('microsoft', { 'X-MS-Exchange-Organization-AuthAs': 'Internal' })).toBe(true);
-    expect(isMicrosoftIntraOrgSender('microsoft', { 'x-ms-exchange-organization-authas': ' internal ' })).toBe(true);
-  });
-
-  it('ignores the stamp for non-Microsoft providers, which do not strip it from external mail', () => {
-    expect(isMicrosoftIntraOrgSender('google', { 'X-MS-Exchange-Organization-AuthAs': 'Internal' })).toBe(false);
-    expect(isMicrosoftIntraOrgSender('imap', { 'X-MS-Exchange-Organization-AuthAs': 'Internal' })).toBe(false);
-    expect(isMicrosoftIntraOrgSender(undefined, { 'X-MS-Exchange-Organization-AuthAs': 'Internal' })).toBe(false);
-  });
-
-  it('requires the value to be Internal and fails closed without headers', () => {
-    expect(isMicrosoftIntraOrgSender('microsoft', { 'X-MS-Exchange-Organization-AuthAs': 'Anonymous' })).toBe(false);
-    expect(isMicrosoftIntraOrgSender('microsoft', { 'X-MS-Exchange-Organization-AuthSource': 'host.outlook.com' })).toBe(false);
-    expect(isMicrosoftIntraOrgSender('microsoft', undefined)).toBe(false);
-    expect(isMicrosoftIntraOrgSender('microsoft', {})).toBe(false);
   });
 });
