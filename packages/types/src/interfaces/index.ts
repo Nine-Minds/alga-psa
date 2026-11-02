@@ -23,6 +23,8 @@ export type {
   IUserAuthenticated,
   TPasswordCriteria,
 } from './auth.interfaces';
+export { USER_RESPONSE_FIELD_NAMES } from './userResponseFields';
+export type { AllowlistedUserField } from './userResponseFields';
 export * from './billing.interfaces';
 export * from './billingCompute.interfaces';
 export * from './board.interface';

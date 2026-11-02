@@ -1,7 +1,7 @@
 'use server'
 
 import Team from '../../models/team';
-import type { DeletionValidationResult, IRole, ITeam, ITeamMember, IUser, IUserWithRoles } from '@alga-psa/types';
+import { USER_RESPONSE_FIELD_NAMES, type DeletionValidationResult, type IRole, type ITeam, type ITeamMember, type IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -25,8 +25,8 @@ async function getUsersWithRoles(
 
   const userIds = members.map((member) => member.user_id);
   const db = tenantDb(trx, tenant);
-  const users = await db.table<IUser>('users')
-    .select('*')
+  const users = await db.table('users')
+    .select(USER_RESPONSE_FIELD_NAMES)
     .whereIn('user_id', userIds);
 
   const rolesQuery = db.table<IRole>('roles');
@@ -39,8 +39,14 @@ async function getUsersWithRoles(
   const rolesByUser = new Map<string, IRole[]>();
   for (const row of roles as any[]) {
     const userId = row.user_id as string;
-    const role: IRole = { ...(row as any) };
-    delete (role as any).user_id;
+    const role: IRole = {
+      role_id: row.role_id,
+      role_name: row.role_name,
+      description: row.description,
+      msp: row.msp,
+      client: row.client,
+      tenant: row.tenant,
+    };
     const list = rolesByUser.get(userId) ?? [];
     list.push(role);
     rolesByUser.set(userId, list);
@@ -48,11 +54,15 @@ async function getUsersWithRoles(
 
   const roleByUser = new Map(members.map((member) => [member.user_id, member.role]));
 
-  return users.map((user) => ({
-    ...(user as any),
-    roles: rolesByUser.get(user.user_id) ?? [],
-    role: roleByUser.get(user.user_id) ?? 'member',
-  }));
+  return users.map((user: Record<string, any>) => {
+    const member: Record<string, unknown> = {};
+    for (const field of USER_RESPONSE_FIELD_NAMES) {
+      member[field] = user[field];
+    }
+    member.roles = rolesByUser.get(user.user_id) ?? [];
+    member.role = roleByUser.get(user.user_id) ?? 'member';
+    return member as unknown as ITeamMember;
+  });
 }
 
 /**
