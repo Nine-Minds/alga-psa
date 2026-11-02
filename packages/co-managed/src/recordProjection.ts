@@ -5,6 +5,7 @@ import {
   type CoManagedFieldSource,
 } from './sharedWorkProjection';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { EXTENSION_TABLE_BY_ASSET_TYPE } from '@alga-psa/types';
 
 /**
  * Declarative description of one record kind for policy redaction. Same shape as `CoManagedFieldSource`
@@ -16,14 +17,34 @@ import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
  * - `derived`    display values built from another source (assignee name, client name, computed totals): field => source aliases.
  *                Dependencies follow other declared fields and child paths (e.g. `quote_items.total_price`) transitively.
  *                Hidden source (or hidden field) => field set to null, never dropped.
- * - `children`   nested arrays/objects (e.g. quote lines) projected with their own source; suppressed children are dropped.
+ * - `children`   nested arrays/objects projected with their own source, optionally selected by a parent discriminator.
+ *                Suppressed array members are dropped; suppressed or unrecognized object variants become null.
  */
 export interface RedactableRecordSource {
   readonly resource: readonly string[];
   readonly identifier: readonly string[];
   readonly fields: Readonly<Record<string, readonly string[]>>;
   readonly derived: Readonly<Record<string, readonly string[]>>;
-  readonly children?: Readonly<Record<string, RedactableRecordSource>>;
+  readonly children?: Readonly<Record<string, RedactableRecordSource | RedactableRecordVariants>>;
+}
+
+/** A nested record's source selected by a discriminator on its parent (for example an asset's extension table). */
+export interface RedactableRecordVariants {
+  readonly discriminator: string;
+  readonly variants: Readonly<Record<string, RedactableRecordSource>>;
+}
+
+function childSources(
+  child: RedactableRecordSource | RedactableRecordVariants,
+  parent?: Record<string, unknown>,
+): readonly RedactableRecordSource[] {
+  if (!('variants' in child)) return [child];
+  // Dependency/predicate resolution without a row conservatively considers every declared variant.
+  if (!parent) return Object.values(child.variants);
+  const discriminator = parent[child.discriminator];
+  return typeof discriminator === 'string' && Object.hasOwn(child.variants, discriminator)
+    ? [child.variants[discriminator]]
+    : [];
 }
 
 /** Builds a descriptor from an existing co-managed source, mapping its title/description onto the row's column names. */
@@ -95,11 +116,11 @@ export function recordFieldAliases(source: RedactableRecordSource, key: string):
       const child = recordSource.children && Object.hasOwn(recordSource.children, childKey)
         ? recordSource.children[childKey]
         : undefined;
-      if (child) {
+      for (const childSource of child ? childSources(child) : []) {
         // A suppressed child cannot contribute to an aggregate, even when its numeric field itself is readable.
         // Do not add the resource root: that would make an unrelated sibling-field redaction hide the aggregate.
-        child.identifier.flatMap(identifier => recordFieldAliasForms(child, identifier)).forEach(alias => aliases.add(alias));
-        visit(child, dependency.slice(separator + 1));
+        childSource.identifier.flatMap(identifier => recordFieldAliasForms(childSource, identifier)).forEach(alias => aliases.add(alias));
+        visit(childSource, dependency.slice(separator + 1));
       }
     }
   };
@@ -127,10 +148,14 @@ export function projectRecordByRedactions<T extends Record<string, any>>(
       continue;
     }
     const child = source.children && Object.hasOwn(source.children, key) ? source.children[key] : undefined;
-    if (child && Array.isArray(value)) {
-      out[key] = value.map(item => (item && typeof item === 'object' ? projectRecordByRedactions(redactions, item, child) : item)).filter(item => item !== null);
-    } else if (child && value && typeof value === 'object') {
-      out[key] = projectRecordByRedactions(redactions, value as Record<string, any>, child);
+    const childSource = child ? childSources(child, record)[0] : undefined;
+    if (child && !childSource) {
+      // An unknown discriminator cannot identify the source aliases safely. Never return its raw data.
+      out[key] = Array.isArray(value) ? [] : null;
+    } else if (childSource && Array.isArray(value)) {
+      out[key] = value.map(item => (item && typeof item === 'object' ? projectRecordByRedactions(redactions, item, childSource) : item)).filter(item => item !== null);
+    } else if (childSource && value && typeof value === 'object') {
+      out[key] = projectRecordByRedactions(redactions, value as Record<string, any>, childSource);
     } else {
       out[key] = value;
     }
@@ -357,9 +382,23 @@ export const ASSET_MAINTENANCE_HISTORY_SOURCE: RedactableRecordSource = {
   },
 };
 
+const ASSET_EXTENSION_SOURCES: Readonly<Record<string, RedactableRecordSource>> = Object.fromEntries(
+  Object.entries(EXTENSION_TABLE_BY_ASSET_TYPE).map(([type, table]) => [type, {
+    resource: [table],
+    identifier: ids('asset_id', `${table}.asset_id`),
+    fields: {},
+    derived: {},
+  }]),
+);
+
 export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
   ...ASSET_ROW_SOURCE,
+  derived: {
+    ...ASSET_ROW_SOURCE.derived,
+    extension_data: ids('asset_type'),
+  },
   children: {
+    extension_data: { discriminator: 'asset_type', variants: ASSET_EXTENSION_SOURCES },
     client: {
       resource: ['clients'],
       // The nested client is loaded through the asset's foreign key and copies its joined label. Compose the

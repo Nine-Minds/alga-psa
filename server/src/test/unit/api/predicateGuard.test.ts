@@ -12,6 +12,7 @@ import {
   PROJECT_RECORD_SOURCE,
   QUOTE_RECORD_SOURCE,
   TICKET_RECORD_SOURCE,
+  type RedactableRecordSource,
 } from '@alga-psa/co-managed/recordProjection';
 
 const qb = () => knexFactory({ client: 'pg' }).queryBuilder().from('projects');
@@ -121,6 +122,37 @@ describe('isRecordFieldReadable (descriptor-driven)', () => {
     expect(isRecordFieldReadable(['projects'], PROJECT_RECORD_SOURCE, 'project_name')).toBe(false);
     expect(isRecordFieldReadable([42 as any], PROJECT_RECORD_SOURCE, 'project_name')).toBe(false);
     expect(isRecordFieldReadable([], PROJECT_RECORD_SOURCE, 'description')).toBe(true);
+  });
+});
+
+
+describe('variant child dependencies', () => {
+  const source: RedactableRecordSource = {
+    ...ASSET_RECORD_SOURCE,
+    derived: { ...ASSET_RECORD_SOURCE.derived, extension_label: ['extension_data.os_version'] },
+  };
+
+  it('uses variant aliases for derived output and predicates, including unloaded child records', () => {
+    const asset = { asset_id: 'asset-1', asset_type: 'workstation', extension_label: 'Private OS version',
+      extension_data: { asset_id: 'asset-1', os_version: 'Private OS version', os_type: 'Visible OS type' } };
+    expect(projectRecordByRedactions([], asset, source)).toMatchObject(asset);
+    const redactions = ['workstation_assets.os_version'];
+    expect(projectRecordByRedactions(redactions, asset, source)).toMatchObject({
+      extension_label: null, extension_data: { os_type: 'Visible OS type' },
+    });
+    expect(projectRecordByRedactions(redactions, asset, source)?.extension_data).not.toHaveProperty('os_version');
+    expect(isRecordFieldReadable(redactions, source, 'extension_label')).toBe(false);
+    expect(isRecordFieldReadable(['workstation_assets.os_type'], source, 'extension_label')).toBe(true);
+    expect(projectRecordByRedactions(redactions, { asset_id: 'asset-1', extension_label: 'Private OS version' }, source)?.extension_label)
+      .toBeNull();
+  });
+
+  it('hides derived values when a variant child identifier is suppressed', () => {
+    const asset = { asset_id: 'asset-1', asset_type: 'workstation', extension_label: 'Private OS version',
+      extension_data: { asset_id: 'asset-1', os_version: 'Private OS version' } };
+    const redactions = ['workstation_assets.asset_id'];
+    expect(projectRecordByRedactions(redactions, asset, source)).toMatchObject({ extension_label: null, extension_data: null });
+    expect(isRecordFieldReadable(redactions, source, 'extension_label')).toBe(false);
   });
 });
 

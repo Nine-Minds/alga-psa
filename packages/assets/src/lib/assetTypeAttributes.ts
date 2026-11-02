@@ -10,14 +10,7 @@ export const BUILTIN_ASSET_TYPE_SLUGS: readonly string[] = [
   'unknown',
 ];
 
-/** The five built-ins backed by a dedicated extension table ('unknown' has none). */
-export const EXTENSION_TABLE_BY_ASSET_TYPE: Readonly<Record<string, string>> = {
-  workstation: 'workstation_assets',
-  network_device: 'network_device_assets',
-  server: 'server_assets',
-  mobile_device: 'mobile_device_assets',
-  printer: 'printer_assets',
-};
+export { EXTENSION_TABLE_BY_ASSET_TYPE } from '@alga-psa/types';
 
 export function isBuiltinAssetTypeSlug(slug: string): boolean {
   return BUILTIN_ASSET_TYPE_SLUGS.includes(slug);

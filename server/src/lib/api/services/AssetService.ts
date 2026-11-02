@@ -29,7 +29,7 @@ import { buildAssetCreatedPayload, buildAssetUpdatedPayload } from '@alga-psa/wo
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/apiMiddleware';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '@alga-psa/assets/lib/assetAttributeWrites';
 import { advanceMaintenanceDate, parseCustomRecurrence } from '@alga-psa/assets/lib/maintenanceRecurrence';
-import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
+import { EXTENSION_TABLE_BY_ASSET_TYPE, isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
 import { validateAssetStatusSlug } from '@alga-psa/assets/lib/assetStatusRegistry';
 import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
 import { getAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
@@ -1549,14 +1549,9 @@ export class AssetService extends BaseService<any> {
 
   // Helper methods
   private getExtensionTableName(assetType: string): string | null {
-    const tableMap: Record<string, string> = {
-      'workstation': 'workstation_assets',
-      'network_device': 'network_device_assets',
-      'server': 'server_assets',
-      'mobile_device': 'mobile_device_assets',
-      'printer': 'printer_assets'
-    };
-    return tableMap[assetType] || null;
+    return Object.hasOwn(EXTENSION_TABLE_BY_ASSET_TYPE, assetType)
+      ? EXTENSION_TABLE_BY_ASSET_TYPE[assetType]
+      : null;
   }
 
   // Shared with the UI actions so both paths advance schedules identically.

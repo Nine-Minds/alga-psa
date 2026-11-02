@@ -1312,3 +1312,80 @@ describe('quote financial projections', () => {
     expect(discountHidden.items[1]).toMatchObject({ total_price: null, net_amount: null });
   });
 });
+
+
+describe('asset extension projections', () => {
+  const assetId = '33333333-3333-3333-3333-333333333333';
+  const cases = [
+    { type: 'workstation', table: 'workstation_assets', field: 'os_version', secret: 'Private OS version' },
+    { type: 'network_device', table: 'network_device_assets', field: 'management_ip', secret: '10.20.30.40' },
+    { type: 'server', table: 'server_assets', field: 'primary_ip', secret: '10.20.30.41' },
+    { type: 'mobile_device', table: 'mobile_device_assets', field: 'imei', secret: 'PRIVATE-IMEI-4938' },
+    { type: 'printer', table: 'printer_assets', field: 'ip_address', secret: '10.20.30.42' },
+  ];
+
+  it.each(cases)('projects $type extension fields under their canonical aliases', async ({ type, table, field, secret }) => {
+    const extension = { asset_id: assetId, [field]: secret, visible_property: 'Visible extension value' };
+    state.assets = [{ asset_id: assetId, asset_type: type, name: 'Visible asset', extension_data: extension }];
+    const controller = new ApiAssetController();
+    const get = async () => {
+      const response = await controller.getById(request(`/api/v1/assets/${assetId}`), { id: assetId });
+      expect(response.status).toBe(200);
+      return (await response.json()).data;
+    };
+    expect((await get()).extension_data[field]).toBe(secret);
+    for (const alias of [field, `values.${field}`, `${table}.${field}`, `fields.${table}.${field}`]) {
+      state.decisions.set(assetId, { allowed: true, redactedFields: [alias] });
+      const hidden = await get();
+      expect(hidden.name).toBe('Visible asset');
+      expect(hidden.extension_data).toMatchObject({ asset_id: assetId, visible_property: 'Visible extension value' });
+      expect(hidden.extension_data).not.toHaveProperty(field);
+    }
+    // Projection copies the data; a later unrestricted reader still sees the source values.
+    state.decisions.delete(assetId);
+    expect((await get()).extension_data[field]).toBe(secret);
+  });
+
+  it.each(cases)('suppresses hidden $type extension records without suppressing their asset', async ({ type, table }) => {
+    state.assets = [{ asset_id: assetId, asset_type: type, name: 'Visible asset', extension_data: { asset_id: assetId, secret: 'Private' } }];
+    for (const alias of [table, `${table}.asset_id`, `fields.${table}.asset_id`]) {
+      state.decisions.set(assetId, { allowed: true, redactedFields: [alias] });
+      const response = await new ApiAssetController().getById(request(`/api/v1/assets/${assetId}`), { id: assetId });
+      expect(response.status).toBe(200);
+      expect((await response.json()).data).toMatchObject({ asset_id: assetId, name: 'Visible asset', extension_data: null });
+    }
+  });
+
+  it('keeps extension variants separate and selects the source before hiding the discriminator', async () => {
+    state.assets = [{ asset_id: assetId, asset_type: 'workstation', name: 'Visible asset',
+      extension_data: { asset_id: assetId, os_version: 'Visible OS version' } }];
+    const get = async () => (await (await new ApiAssetController().getById(request(`/api/v1/assets/${assetId}`), { id: assetId })).json()).data;
+    for (const alias of ['mobile_device_assets', 'mobile_device_assets.asset_id', 'mobile_device_assets.os_version']) {
+      state.decisions.set(assetId, { allowed: true, redactedFields: [alias] });
+      expect((await get()).extension_data.os_version).toBe('Visible OS version');
+    }
+    state.decisions.set(assetId, { allowed: true, redactedFields: ['assets.asset_type'] });
+    const hiddenType = await get();
+    expect(hiddenType).not.toHaveProperty('asset_type');
+    expect(hiddenType.extension_data).toBeNull();
+  });
+
+  it.each(['unrecognized', '__proto__', undefined])('does not expose extension records with unknown asset type %s', async (type) => {
+    state.assets = [{ asset_id: assetId, asset_type: type, name: 'Visible asset', extension_data: { secret: 'Private' } }];
+    const response = await new ApiAssetController().getById(request(`/api/v1/assets/${assetId}`), { id: assetId });
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toMatchObject({ name: 'Visible asset', extension_data: null });
+  });
+
+  it('projects extensions in search results through the same asset descriptor', async () => {
+    state.assets = [{ asset_id: assetId, asset_type: 'mobile_device', name: 'Visible asset',
+      extension_data: { asset_id: assetId, imei: 'PRIVATE-IMEI-4938', carrier: 'Visible carrier' } }];
+    const search = () => new ApiAssetController().search(request('/api/v1/assets/search?query=Visible&include_extension_data=true'));
+    expect((await (await search()).json()).data[0].extension_data.imei).toBe('PRIVATE-IMEI-4938');
+    state.decisions.set(assetId, { allowed: true, redactedFields: ['mobile_device_assets.imei'] });
+    const response = await search();
+    expect(response.status).toBe(200);
+    const data = (await response.json()).data[0];
+    expect(data.extension_data).toEqual({ asset_id: assetId, carrier: 'Visible carrier' });
+  });
+});
