@@ -28,8 +28,11 @@ import {
   buildAuthorizationPrincipalSubject,
   projectApiResourceRead,
   projectApiResourceReads,
+  reprojectUnderDecision,
   type AuthorizedProjection,
 } from './authorizationKernel';
+import { TICKET_RECORD_SOURCE } from '@alga-psa/co-managed/recordProjection';
+import { buildTicketRecordContext } from './recordContexts';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import { compileTenantScopedResourceReadAuthorizationSql, resolveDefaultBuiltinRelationshipRules } from '@alga-psa/authorization/kernel';
@@ -2009,7 +2012,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, id, knex);
+          const gate = await this.assertTicketReadAllowed(apiRequest, id, knex);
 
           const data = this.options.updateSchema
             ? await this.validateData(apiRequest, this.options.updateSchema)
@@ -2020,7 +2023,11 @@ export class ApiTicketController extends ApiBaseController {
             throw new NotFoundError(`${this.options.resource} not found`);
           }
 
-          return createSuccessResponse(updated);
+          const projection = reprojectUnderDecision(gate, updated, TICKET_RECORD_SOURCE);
+          if (!projection) {
+            throw new NotFoundError(`${this.options.resource} not found`);
+          }
+          return createSuccessResponse(projection);
         });
       } catch (error) {
         return handleApiError(error);
@@ -2147,8 +2154,42 @@ export class ApiTicketController extends ApiBaseController {
         return await runWithTenant(apiRequest.context.tenant, async () => {
           await this.checkPermission(apiRequest, 'read');
           const ticketId = await this.extractIdFromPath(apiRequest);
+          await this.assertTicketReadAllowed(apiRequest, ticketId);
           const bundle = await this.ticketService.getBundle(apiRequest.context, ticketId);
-          return createSuccessResponse(bundle, 200, undefined, apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          const projectMember = async (member: Record<string, any> | null) => {
+            if (!member || typeof member.ticket_id !== 'string') return null;
+            const authorizationRecord = await this.ticketService.getById(member.ticket_id, apiRequest.context);
+            if (!authorizationRecord) return null;
+            return projectApiResourceRead({
+              knex,
+              tenant: apiRequest.context.tenant,
+              user: apiRequest.context.user,
+              apiKeyId: apiRequest.context.apiKeyId,
+              kind: 'ticket',
+              record: member,
+              recordContext: buildTicketRecordContext(authorizationRecord),
+            });
+          };
+
+          const master = await projectMember(bundle.master as Record<string, any> | null);
+          // The bundle's master identifier is response metadata. Do not let it disclose an
+          // independently denied or identifier-suppressed master ticket.
+          if (!master || typeof master.ticket_id !== 'string') {
+            throw new NotFoundError('Ticket not found');
+          }
+          const children = (await Promise.all(bundle.children.map(projectMember)))
+            .filter((child): child is AuthorizedProjection<Record<string, any>> => child !== null);
+          if (ticketId !== master.ticket_id && !children.some((child) => child.ticket_id === ticketId)) {
+            throw new NotFoundError('Ticket not found');
+          }
+
+          return createSuccessResponse({
+            ...bundle,
+            master_ticket_id: master.ticket_id,
+            master,
+            children,
+          }, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);

@@ -1921,7 +1921,7 @@ export class ApiProjectController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertProjectReadAllowed(apiRequest, id, knex);
+          const gate = await this.assertProjectReadAllowed(apiRequest, id, knex);
 
           const data = this.options.updateSchema
             ? await this.validateData(apiRequest, this.options.updateSchema)
@@ -1932,7 +1932,11 @@ export class ApiProjectController extends ApiBaseController {
             throw new NotFoundError(`${this.options.resource} not found`);
           }
 
-          return createSuccessResponse(updated);
+          const projection = reprojectUnderDecision(gate, updated, PROJECT_RECORD_SOURCE);
+          if (!projection) {
+            throw new NotFoundError(`${this.options.resource} not found`);
+          }
+          return createSuccessResponse(projection);
         });
       } catch (error) {
         return handleApiError(error);

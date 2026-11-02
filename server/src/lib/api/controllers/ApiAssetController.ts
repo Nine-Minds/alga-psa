@@ -35,7 +35,11 @@ import {
   reprojectUnderDecision,
   type AuthorizedProjection,
 } from './authorizationKernel';
-import { ASSET_RECORD_SOURCE } from '@alga-psa/co-managed/recordProjection';
+import {
+  ASSET_MAINTENANCE_SCHEDULE_SOURCE,
+  ASSET_RECORD_SOURCE,
+  ASSET_RELATIONSHIP_SOURCE,
+} from '@alga-psa/co-managed/recordProjection';
 import { resolveAssetAuthorizationRecords } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 
@@ -145,10 +149,46 @@ export class ApiAssetController {
     );
     if (denied) return denied;
 
+    const relationships = await this.projectAssetRelationships(context, asset, (asset as any).relationships ?? []);
+
     return createApiResponse({
       ...asset,
+      relationships,
       _links: getHateoasLinks('asset', params.id)
     });
+  }
+
+  private async projectAssetRelationships(
+    context: ApiContext,
+    parentProjection: AuthorizedProjection<Record<string, any>>,
+    relationships: Record<string, any>[],
+  ): Promise<AuthorizedProjection<Record<string, any>>[]> {
+    if (relationships.length === 0) return [];
+    const knex = await getConnection(context.tenant);
+    const projected: AuthorizedProjection<Record<string, any>>[] = [];
+    for (const relationship of relationships) {
+      const parentVisible = reprojectUnderDecision(parentProjection, relationship, ASSET_RELATIONSHIP_SOURCE);
+      if (!parentVisible || typeof parentVisible.related_asset_id !== 'string') continue;
+
+      const recordContext = await this.assetService.getAuthorizationRecord(
+        parentVisible.related_asset_id,
+        { ...context, db: knex } as ApiContext,
+      );
+      if (!recordContext) continue;
+
+      const relatedProjection = await projectApiResourceRead({
+        knex,
+        tenant: context.tenant,
+        user: context.user,
+        apiKeyId: (context as any).apiKeyId,
+        kind: 'asset',
+        record: parentVisible as Record<string, any>,
+        recordContext: recordContext as any,
+        source: ASSET_RELATIONSHIP_SOURCE,
+      });
+      if (relatedProjection) projected.push(relatedProjection);
+    }
+    return projected;
   }
 
   /**
@@ -209,13 +249,16 @@ export class ApiAssetController {
    */
   async listRelationships(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    // Gate only: relationships name other assets, so the caller must be able to read this one.
-    const denied = await guardAssetRead(context, params.id, this.assetService);
+    const { projection: parent, denied } = await readAssetProjection(
+      context,
+      params.id,
+      this.assetService,
+      async () => ({ asset_id: params.id }),
+    );
     if (denied) return denied;
 
     const relationships = await this.assetService.getAssetRelationships(params.id, context);
-    
-    return createApiResponse(relationships);
+    return createApiResponse(await this.projectAssetRelationships(context, parent, relationships));
   }
 
   /**
@@ -429,12 +472,19 @@ export class ApiAssetController {
    */
   async listMaintenanceSchedules(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    const denied = await guardAssetRead(context, params.id, this.assetService);
+    const { projection: asset, denied } = await readAssetProjection(
+      context,
+      params.id,
+      this.assetService,
+      async () => ({ asset_id: params.id }),
+    );
     if (denied) return denied;
 
     const schedules = await this.assetService.getMaintenanceSchedules(params.id, context);
-    
-    return createApiResponse(schedules);
+    const projected = schedules
+      .map((schedule) => reprojectUnderDecision(asset, schedule, ASSET_MAINTENANCE_SCHEDULE_SOURCE))
+      .filter((schedule): schedule is AuthorizedProjection<Record<string, any>> => schedule !== null);
+    return createApiResponse(projected);
   }
 
   /**

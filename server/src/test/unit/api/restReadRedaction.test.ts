@@ -20,6 +20,7 @@ const state = vi.hoisted(() => ({
   quoteVersions: [] as Record<string, any>[],
   conversionPreview: null as Record<string, any> | null,
   assets: [] as Record<string, any>[],
+  assetAuthorizationRecords: new Map<string, Record<string, any>>(),
   assetReadAllowed: true,
   deployableStatusSlugs: ['active'] as string[],
   maintenanceSchedules: [] as Record<string, any>[],
@@ -29,8 +30,8 @@ const state = vi.hoisted(() => ({
 }));
 
 const authorizeResource = vi.hoisted(() =>
-  vi.fn(async (input: { record?: { id?: string } }) =>
-    state.decisions.get(input.record?.id ?? '') ?? { allowed: true, redactedFields: [] }
+  vi.fn(async (input: { record?: { id?: string }; recordContext?: { id?: string } }) =>
+    state.decisions.get(input.record?.id ?? input.recordContext?.id ?? '') ?? { allowed: true, redactedFields: [] }
   )
 );
 
@@ -89,8 +90,11 @@ vi.mock('@/lib/productAccess', () => ({ getTenantProduct: vi.fn(async () => 'psa
 vi.mock('@/lib/productSurfaceRegistry', () => ({ resolveProductApiBehavior: vi.fn(() => 'allowed') }));
 vi.mock('../../../lib/api/services/AssetService', () => ({
   AssetService: class {
-    getAuthorizationRecord = vi.fn(async (id: string) => (state.assets.some((a) => a.asset_id === id) ? { id } : null));
+    getAuthorizationRecord = vi.fn(async (id: string) =>
+      state.assetAuthorizationRecords.get(id) ?? (state.assets.some((a) => a.asset_id === id) ? { id } : null));
     getWithDetails = vi.fn(async (id: string) => state.assets.find((a) => a.asset_id === id) ?? null);
+    getAssetRelationships = vi.fn(async (id: string) => state.assets.find((a) => a.asset_id === id)?.relationships ?? []);
+    getMaintenanceSchedules = vi.fn(async (id: string) => state.assets.find((a) => a.asset_id === id)?.maintenance_schedules ?? []);
     list = vi.fn(async () => ({ data: state.assets, total: state.assets.length }));
     search = vi.fn(async () => state.assets);
     getAssetTickets = vi.fn(async () => state.assetTickets);
@@ -141,6 +145,7 @@ beforeEach(() => {
   state.quoteVersions = [];
   state.conversionPreview = null;
   state.assets = [];
+  state.assetAuthorizationRecords = new Map();
   state.assetReadAllowed = true;
   state.deployableStatusSlugs = ['active'];
   state.maintenanceSchedules = [];
@@ -348,6 +353,27 @@ describe('tickets: REST reads serialize the projection', () => {
     expect(hiddenData[derivedField]).toBeNull();
     expect(hiddenData.title).toBe('Printer');
   });
+
+  it('update response keeps hidden ticket fields hidden while preserving visible fields', async () => {
+    state.tickets = [{ ...state.tickets[0], description: 'Sensitive details', priority: 'high' }];
+    state.decisions.set(TICKET, { allowed: true, redactedFields: ['tickets.title', 'description'] });
+    const controller = new ApiTicketController();
+    (controller as any).validateData = vi.fn(async () => ({ title: 'Updated title' }));
+    (controller as any).service.update = vi.fn(async () => ({
+      ...state.tickets[0], title: 'Updated title', description: 'Sensitive details', priority: 'high',
+    }));
+
+    const hidden = await controller.update()(request(`/api/v1/tickets/${TICKET}`, { id: TICKET }));
+    expect(hidden.status).toBe(200);
+    const data = (await hidden.json()).data;
+    expect(data).not.toHaveProperty('title');
+    expect(data).not.toHaveProperty('description');
+    expect(data.priority).toBe('high');
+
+    state.decisions.delete(TICKET);
+    const visible = await controller.update()(request(`/api/v1/tickets/${TICKET}`, { id: TICKET }));
+    expect((await visible.json()).data).toMatchObject({ title: 'Updated title', description: 'Sensitive details', priority: 'high' });
+  });
 });
 
 describe('quotes: REST reads serialize the projection', () => {
@@ -481,6 +507,91 @@ describe('quotes: REST reads serialize the projection', () => {
       expect(data.contract_monthly_total).toBeNull();
     },
   );
+});
+
+describe('remaining REST projection consumers', () => {
+  it('project update response reuses the read decision and retains the unrestricted response shape', async () => {
+    hideProjectFields('description', 'budgeted_hours');
+    const controller = new ApiProjectController();
+    (controller as any).validateData = vi.fn(async () => ({ project_name: 'Renamed' }));
+    (controller as any).service.update = vi.fn(async () => ({ ...state.projects[0], project_name: 'Renamed' }));
+
+    const hidden = await controller.update()(request(`/api/v1/projects/${P1}`, { id: P1 }));
+    expect(hidden.status).toBe(200);
+    const redacted = (await hidden.json()).data;
+    expect(redacted).toMatchObject({ project_id: P1, project_name: 'Renamed' });
+    expect(redacted).not.toHaveProperty('description');
+    expect(redacted).not.toHaveProperty('budgeted_hours');
+
+    state.decisions.delete(P1);
+    const visible = await controller.update()(request(`/api/v1/projects/${P1}`, { id: P1 }));
+    expect((await visible.json()).data).toMatchObject({ project_name: 'Renamed', description: 'secret plan', budgeted_hours: 40 });
+  });
+
+  it('ticket bundle independently projects complete master and child records', async () => {
+    const masterId = '33333333-3333-3333-3333-333333333331';
+    const childId = '33333333-3333-3333-3333-333333333332';
+    const master = { ticket_id: masterId, title: 'Sensitive master', ticket_number: 'T-1', client_id: 'c-1' };
+    const child = { ticket_id: childId, title: 'Visible child', ticket_number: 'T-2', client_id: 'c-2' };
+    state.tickets = [
+      { ...master, entered_by: 'master-owner', assigned_to: 'master-assignee', board_id: 'board-master', assigned_team_id: 'team-master' },
+      { ...child, entered_by: 'child-owner', assigned_to: 'child-assignee', board_id: 'board-child', assigned_team_id: 'team-child' },
+    ];
+    state.decisions.set(masterId, { allowed: true, redactedFields: ['tickets.title'] });
+    state.decisions.set(childId, { allowed: true, redactedFields: ['tickets.ticket_number'] });
+    const controller = new ApiTicketController();
+    (controller as any).ticketService.getBundle = vi.fn(async () => ({
+      role: 'master', master_ticket_id: masterId, master, children: [child], settings: null,
+    }));
+
+    const response = await controller.getBundle()(request(`/api/v1/tickets/${masterId}/bundle`, { id: masterId }));
+    expect(response.status).toBe(200);
+    const data = (await response.json()).data;
+    expect(data.master).not.toHaveProperty('title');
+    expect(data.children[0]).toMatchObject({ ticket_id: childId, title: 'Visible child' });
+    expect(data.children[0]).not.toHaveProperty('ticket_number');
+    expect(data.master_ticket_id).toBe(masterId);
+
+    for (const [id, owner, assignee, board, team] of [
+      [masterId, 'master-owner', 'master-assignee', 'board-master', 'team-master'],
+      [childId, 'child-owner', 'child-assignee', 'board-child', 'team-child'],
+    ]) {
+      expect(authorizeResource.mock.calls.some(([input]) => input.record?.id === id
+        && input.record.ownerUserId === owner
+        && input.record.assignedUserIds.includes(assignee)
+        && input.record.boardId === board
+        && input.record.teamIds.includes(team))).toBe(true);
+    }
+
+    state.decisions.delete(masterId);
+    state.decisions.delete(childId);
+    const unrestricted = await controller.getBundle()(request(`/api/v1/tickets/${masterId}/bundle`, { id: masterId }));
+    const visible = (await unrestricted.json()).data;
+    expect(visible.master.title).toBe('Sensitive master');
+    expect(visible.children[0]).toMatchObject({ title: 'Visible child', ticket_number: 'T-2' });
+  });
+
+  it('ticket bundle returns 404 for a denied requested ticket and hides a suppressed master identifier', async () => {
+    const masterId = '33333333-3333-3333-3333-333333333331';
+    const childId = '33333333-3333-3333-3333-333333333332';
+    const master = { ticket_id: masterId, title: 'Master' };
+    const child = { ticket_id: childId, title: 'Child', master_ticket_id: masterId };
+    state.tickets = [master, child];
+    const controller = new ApiTicketController();
+    const getBundle = vi.fn(async () => ({ role: 'child', master_ticket_id: masterId, master, children: [child], settings: null }));
+    (controller as any).ticketService.getBundle = getBundle;
+
+    state.decisions.set(childId, { allowed: false, redactedFields: [] });
+    const denied = await controller.getBundle()(request(`/api/v1/tickets/${childId}/bundle`, { id: childId }));
+    expect(denied.status).toBe(404);
+    expect(getBundle).not.toHaveBeenCalled();
+
+    state.decisions.set(childId, { allowed: true, redactedFields: [] });
+    state.decisions.set(masterId, { allowed: true, redactedFields: ['tickets.ticket_id'] });
+    const suppressedMaster = await controller.getBundle()(request(`/api/v1/tickets/${childId}/bundle`, { id: childId }));
+    expect(suppressedMaster.status).toBe(404);
+    expect(await suppressedMaster.text()).not.toContain(masterId);
+  });
 });
 
 describe('assets / inventory lookup and document adapters', () => {
@@ -620,6 +731,68 @@ describe('asset routes serialize the projection', () => {
     state.decisions.set('t-2', { allowed: true, redactedFields: ['tickets'] });
     const { data } = await (await controller().listTickets(request(`/api/v1/assets/${A1}/tickets`), { id: A1 })).json();
     expect(data).toEqual([{ ticket_id: 't-1', title: 'Visible' }]);
+  });
+
+  it('asset detail independently authorizes related assets and projects copied fields', async () => {
+    const related = {
+      id: 'related-asset', ownerUserId: 'related-owner', assignedUserIds: ['related-owner'], clientId: 'c-related',
+    };
+    state.assetAuthorizationRecords.set(related.id, related);
+    state.assets = [
+      asset(A1, { relationships: [{ relationship_id: 'r1', related_asset_id: related.id,
+        related_asset_name: 'Sensitive related name', asset_tag: 'OTHER', asset_type: 'workstation', status: 'active' }] }),
+    ];
+    state.decisions.set(A1, { allowed: true, redactedFields: ['assets.name'] });
+    const hidden = await controller().getById(request(`/api/v2/assets/${A1}`), { id: A1 });
+    expect(hidden.status).toBe(200);
+    expect(JSON.stringify((await hidden.json()).data.relationships)).not.toContain('Sensitive related name');
+
+    state.decisions.delete(A1);
+    state.decisions.set(related.id, { allowed: true, redactedFields: ['assets.asset_tag'] });
+    const visible = await controller().getById(request(`/api/v2/assets/${A1}`), { id: A1 });
+    const relationship = (await visible.json()).data.relationships[0];
+    expect(relationship).toMatchObject({ related_asset_id: related.id, related_asset_name: 'Sensitive related name', status: 'active' });
+    expect(relationship).not.toHaveProperty('asset_tag');
+    expect(authorizeResource.mock.calls.some(([input]) => input.record?.id === related.id
+      && input.record.ownerUserId === 'related-owner'
+      && input.record.assignedUserIds.includes('related-owner'))).toBe(true);
+
+    state.decisions.delete(related.id);
+    const unrestricted = await controller().getById(request(`/api/v2/assets/${A1}`), { id: A1 });
+    expect((await unrestricted.json()).data.relationships[0].asset_tag).toBe('OTHER');
+  });
+
+  it('asset relationship list applies parent and related-asset projections, dropping hidden related identifiers', async () => {
+    const relatedId = 'related-list-asset';
+    state.assetAuthorizationRecords.set(relatedId, { id: relatedId, ownerUserId: 'owner-2', assignedUserIds: ['owner-2'] });
+    state.assets = [asset(A1, { relationships: [{ relationship_id: 'r-list', related_asset_id: relatedId,
+      related_asset_name: 'Related list name', asset_tag: 'LIST-TAG', asset_type: 'server', status: 'active' }] })];
+    state.decisions.set(relatedId, { allowed: true, redactedFields: ['assets.asset_tag'] });
+
+    const visible = await controller().listRelationships(request(`/api/v2/assets/${A1}/relationships`), { id: A1 });
+    expect(visible.status).toBe(200);
+    const rows = (await visible.json()).data;
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ related_asset_id: relatedId, related_asset_name: 'Related list name', status: 'active' });
+    expect(rows[0]).not.toHaveProperty('asset_tag');
+
+    state.decisions.set(relatedId, { allowed: true, redactedFields: ['assets.asset_id'] });
+    const suppressed = await controller().listRelationships(request(`/api/v2/assets/${A1}/relationships`), { id: A1 });
+    expect((await suppressed.json()).data).toEqual([]);
+  });
+
+  it('maintenance list uses the asset child descriptor for schedule fields and identifiers', async () => {
+    const schedule = { schedule_id: 's-review', asset_id: A1, next_maintenance: '2099-01-01', schedule_name: 'Service' };
+    state.assets = [asset(A1)];
+    const schedulesController = controller();
+    (schedulesController as any).assetService.getMaintenanceSchedules = vi.fn(async () => [schedule]);
+    state.decisions.set(A1, { allowed: true, redactedFields: ['asset_maintenance_schedules.next_maintenance'] });
+
+    const hidden = await schedulesController.listMaintenanceSchedules(request(`/api/v2/assets/${A1}/maintenance`), { id: A1 });
+    expect((await hidden.json()).data[0]).not.toHaveProperty('next_maintenance');
+    state.decisions.delete(A1);
+    const visible = await schedulesController.listMaintenanceSchedules(request(`/api/v2/assets/${A1}/maintenance`), { id: A1 });
+    expect((await visible.json()).data[0]).toMatchObject({ next_maintenance: '2099-01-01', schedule_name: 'Service' });
   });
 
   it('statistics aggregate authorized asset projections and only their maintenance schedules', async () => {

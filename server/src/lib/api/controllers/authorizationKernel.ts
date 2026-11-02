@@ -185,6 +185,8 @@ export interface ApiResourceReadInput<T extends Record<string, any>> {
   record: T;
   /** Authorization context when it is not derivable from `record` (assets). */
   recordContext?: AuthorizationRecord;
+  /** Optional response shape for records copied from this resource (for example flattened related-asset rows). */
+  source?: RedactableRecordSource;
 }
 
 /**
@@ -216,7 +218,7 @@ export async function projectApiResourceRead<T extends Record<string, any>>(
     redactedFields = decision.redactedFields ?? [];
   }
 
-  const projected = projectRecordByRedactions(redactedFields, input.record, kind.source);
+  const projected = projectRecordByRedactions(redactedFields, input.record, input.source ?? kind.source);
   if (projected === null) {
     return null;
   }

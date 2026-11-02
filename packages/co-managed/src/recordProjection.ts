@@ -275,6 +275,23 @@ const ASSET_ROW_SOURCE: RedactableRecordSource = {
   },
 };
 
+/** Flattened relationship rows copy fields from the other asset in the relationship. */
+export const ASSET_RELATIONSHIP_SOURCE: RedactableRecordSource = {
+  resource: ['assets'],
+  identifier: ids('related_asset_id', 'asset_id', 'assets.asset_id'),
+  fields: {
+    related_asset_name: ids('name', 'assets.name'),
+  },
+  derived: {},
+};
+
+export const ASSET_MAINTENANCE_SCHEDULE_SOURCE: RedactableRecordSource = {
+  resource: ['asset_maintenance_schedules'],
+  identifier: ids('schedule_id', 'asset_maintenance_schedules.schedule_id'),
+  fields: {},
+  derived: {},
+};
+
 export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
   ...ASSET_ROW_SOURCE,
   children: {
@@ -287,11 +304,9 @@ export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
       derived: {},
     },
     maintenance_schedules: {
-      resource: ['asset_maintenance_schedules'],
-      identifier: ids('schedule_id', 'asset_maintenance_schedules.schedule_id'),
-      fields: {},
-      derived: {},
+      ...ASSET_MAINTENANCE_SCHEDULE_SOURCE,
     },
+    relationships: ASSET_RELATIONSHIP_SOURCE,
   },
 };
 
