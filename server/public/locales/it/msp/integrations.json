@@ -36,6 +36,15 @@
         "suggested": "Suggerito",
         "toSave": "{{total}} da salvare"
       },
+      "customerMapping": {
+        "unlink": "Scollega",
+        "unlinkConfirm": {
+          "title": "Scollegare {{client}} da QuickBooks?",
+          "body": "{{client}} non viene più esportato verso il cliente QuickBooks {{customer}}. In QuickBooks non cambia nulla e puoi ricollegarlo da questo elenco in qualsiasi momento.",
+          "confirm": "Scollega",
+          "cancel": "Mantieni il collegamento"
+        }
+      },
       "dialog": {
         "cancel": "Annulla",
         "enterPlaceholder": "Inserisci {{field}}...",

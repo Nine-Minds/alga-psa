@@ -36,6 +36,15 @@
         "suggested": "Suggéré",
         "toSave": "{{total}} à enregistrer"
       },
+      "customerMapping": {
+        "unlink": "Dissocier",
+        "unlinkConfirm": {
+          "title": "Dissocier {{client}} de QuickBooks ?",
+          "body": "{{client}} cesse d’être exporté vers le client QuickBooks {{customer}}. Rien ne change dans QuickBooks et vous pouvez l’associer de nouveau depuis cette liste à tout moment.",
+          "confirm": "Dissocier",
+          "cancel": "Conserver l’association"
+        }
+      },
       "dialog": {
         "cancel": "Annuler",
         "enterPlaceholder": "Saisir {{field}}...",
