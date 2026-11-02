@@ -36,6 +36,7 @@ export function OpportunityStepTimeline({
   onApplyTemplate,
   onStageSelect,
   onOpenCitation,
+  canOpenInteraction,
   onCompleteStep,
   onEditStep,
   onDeleteStep,
@@ -52,6 +53,7 @@ export function OpportunityStepTimeline({
   onApplyTemplate: (stages: PlannableStage[]) => void;
   onStageSelect?: (stage: PlannableStage) => void;
   onOpenCitation?: (type: 'interaction' | 'document', id: string) => void;
+  canOpenInteraction?: boolean;
   onCompleteStep: (step: IOpportunityStep) => void;
   onEditStep: (step: IOpportunityStep, focus: StepEditFocus) => void;
   onDeleteStep: (step: IOpportunityStep) => void;
@@ -114,6 +116,7 @@ export function OpportunityStepTimeline({
             onApplyTemplate={onApplyTemplate}
             onStageSelect={onStageSelect}
             onOpenCitation={onOpenCitation}
+            canOpenInteraction={canOpenInteraction}
             onCompleteStep={onCompleteStep}
             onEditStep={onEditStep}
             onDeleteStep={onDeleteStep}
@@ -180,6 +183,7 @@ function StageSegment({
   onApplyTemplate,
   onStageSelect,
   onOpenCitation,
+  canOpenInteraction,
   onCompleteStep,
   onEditStep,
   onDeleteStep,
@@ -195,6 +199,7 @@ function StageSegment({
   onApplyTemplate: (stages: PlannableStage[]) => void;
   onStageSelect?: (stage: PlannableStage) => void;
   onOpenCitation?: (type: 'interaction' | 'document', id: string) => void;
+  canOpenInteraction?: boolean;
   onCompleteStep: (step: IOpportunityStep) => void;
   onEditStep: (step: IOpportunityStep, focus: StepEditFocus) => void;
   onDeleteStep: (step: IOpportunityStep) => void;
@@ -280,7 +285,12 @@ function StageSegment({
       </div>
       <div className={`min-w-0 flex-1 ${isLast ? 'pb-1' : 'pb-4'}`}>
         <div className="flex min-h-7 items-center gap-2">{heading}</div>
-        <EvidenceCitation idBase={idBase} evidence={evidence?.evidence} onOpenCitation={onOpenCitation} />
+        <EvidenceCitation
+          idBase={idBase}
+          evidence={evidence?.evidence}
+          onOpenCitation={onOpenCitation}
+          canOpenInteraction={canOpenInteraction}
+        />
         {steps.length > 0 ? (
           <div className="mt-2 space-y-2">
             {steps.map((step) => (
@@ -329,10 +339,12 @@ function EvidenceCitation({
   idBase,
   evidence,
   onOpenCitation,
+  canOpenInteraction,
 }: {
   idBase: string;
   evidence: IOpportunityEvidenceLadderStep['evidence'];
   onOpenCitation?: (type: 'interaction' | 'document', id: string) => void;
+  canOpenInteraction?: boolean;
 }) {
   const { t } = useTranslation('msp/opportunities');
   const type = evidence?.ref_type;
@@ -354,11 +366,11 @@ function EvidenceCitation({
   return (
     <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs">
       <span className="text-[rgb(var(--color-text-500))]">{t('opportunities.declare.source', 'Source')}:</span>
-      {onOpenCitation ? (
+      {onOpenCitation && (type === 'document' || canOpenInteraction) ? (
         <button
           id={`${idBase}-source-link`}
           type="button"
-          onClick={() => onOpenCitation(type, refId)}
+          onClick={() => onOpenCitation?.(type, refId)}
           className="min-w-0 truncate text-[rgb(var(--color-primary-600))] hover:underline"
           title={label}
         >

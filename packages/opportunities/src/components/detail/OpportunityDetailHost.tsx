@@ -259,12 +259,14 @@ export function OpportunityDetailHost({
             refreshKey={detail.updated_at}
             onStageSelect={detail.status === 'open' ? declareStage : undefined}
             onOpenCitation={openCitation}
+            canOpenInteraction={Boolean(onOpenInteraction)}
             onChanged={refresh}
           />
         }
         commitments={commitments}
         activity={activity}
         assignees={assignees}
+        onDocumentsChanged={refresh}
         onAssignOwner={(id, userId) =>
           runQuietly(() => assignOpportunityOwner(id, userId), t('opportunities.toast.ownerAssigned', 'Owner updated'))
         }
