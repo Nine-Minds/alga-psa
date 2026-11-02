@@ -22,8 +22,9 @@ describe('tenant Stripe configuration concurrency against PostgreSQL', () => {
     await admin.destroy();
     db = knexFactory({
       client: 'pg',
-      connection: { ...connection, options: `-c search_path=${schema},public` },
+      connection,
       pool: { min: 3, max: 3 },
+      searchPath: [schema, 'public'],
     });
     await db.schema.createTable('payment_provider_configs', (table) => {
       table.uuid('config_id').primary();
@@ -76,20 +77,26 @@ describe('tenant Stripe configuration concurrency against PostgreSQL', () => {
     });
     const lockWaitDeadline = Date.now() + 5_000;
     let waitingUpdates = 0;
-    while (Date.now() < lockWaitDeadline) {
-      const result = await db.raw(
-        `SELECT count(*)::int AS count
-           FROM pg_locks
-          WHERE relation = 'payment_provider_configs'::regclass
-            AND NOT granted`,
-      );
-      waitingUpdates = result.rows[0].count;
-      if (waitingUpdates > 0) break;
-      await new Promise((resolve) => setTimeout(resolve, 25));
+    try {
+      while (Date.now() < lockWaitDeadline) {
+        const result = await db.raw(
+          `SELECT count(*)::int AS count
+             FROM pg_stat_activity
+            WHERE datname = current_database()
+              AND wait_event_type = 'Lock'
+              AND state = 'active'
+              AND pid <> pg_backend_pid()
+              AND position('payment_provider_configs' in query) > 0`,
+        );
+        waitingUpdates = result.rows[0].count;
+        if (waitingUpdates > 0) break;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      expect(waitingUpdates).toBeGreaterThan(0);
+    } finally {
+      releaseLock();
+      await Promise.allSettled([bindingTransaction, webhookWrite]);
     }
-    expect(waitingUpdates).toBeGreaterThan(0);
-    releaseLock();
-    await Promise.all([bindingTransaction, webhookWrite]);
 
     const row = await db('payment_provider_configs').where({ tenant, config_id: configId }).first();
     expect(row.configuration).toMatchObject({

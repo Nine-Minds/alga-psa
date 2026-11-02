@@ -132,7 +132,7 @@ export class StripePaymentProvider implements PaymentProvider {
       this.stripe = null;
       throw new StripeTenantAccountMismatchError();
     }
-    if (!this.config.accountId) {
+    if (!config.accountId) {
       // The account lookup is the only Stripe request allowed before binding. Lock
       // and re-read the row so concurrent reconnects cannot overwrite its binding.
       const knex = await getConnection();
