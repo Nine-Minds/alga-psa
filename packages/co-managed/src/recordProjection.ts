@@ -16,8 +16,8 @@ import { EXTENSION_TABLE_BY_ASSET_TYPE } from '@alga-psa/types';
  * - `resource`   aliases naming the whole resource (also the `table.` prefixes of its columns). Hidden => row suppressed.
  * - `identifier` aliases naming the identifier(s) that locate the row. Hidden => row suppressed.
  * - `fields`     EXTRA aliases for a field beyond the implicit `[name, values.name, <table>.name]`. Hidden => field omitted.
- * - `derived`    display values built from another source (assignee name, client name, computed totals): field => source aliases.
- *                Dependencies follow other declared fields and child paths (e.g. `quote_items.total_price`) transitively.
+ * - `derived`    display values built from another source: field => source aliases or explicit source/field references.
+ *                Dependencies follow other fields and child paths transitively; references retain the named source's scope.
  *                Hidden source (or hidden field) => field set to null, never dropped.
  * - `children`   nested arrays/objects projected with their own source, optionally selected by a parent discriminator.
  *                Suppressed array members are dropped; suppressed or unrecognized object variants become null.
@@ -26,10 +26,16 @@ export interface RedactableRecordSource {
   readonly resource: readonly string[];
   readonly identifier: readonly string[];
   readonly fields: Readonly<Record<string, readonly string[]>>;
-  readonly derived: Readonly<Record<string, readonly string[]>>;
+  readonly derived: Readonly<Record<string, readonly (string | RecordFieldReference)[]>>;
   readonly children?: Readonly<Record<string, RedactableRecordSource | RedactableRecordVariants>>;
   /** The original source of an alternate response shape (for example quote lines in a conversion preview). */
   readonly policySource?: RedactableRecordSource;
+}
+
+/** A value taken from a particular source, rather than from any representation of the same table. */
+export interface RecordFieldReference {
+  readonly source: RedactableRecordSource;
+  readonly field: string;
 }
 
 /** A nested record's source selected by a discriminator on its parent (for example an asset's extension table). */
@@ -93,6 +99,13 @@ function recordFieldAliasForms(source: RedactableRecordSource, alias: string): r
   return [alias, field, `values.${field}`, ...source.resource.map(resource => `${resource}.${field}`)];
 }
 
+function recordFieldDependencies(source: RedactableRecordSource, field: string): readonly (string | RecordFieldReference)[] {
+  return [
+    ...(Object.hasOwn(source.fields, field) ? source.fields[field] : []),
+    ...(Object.hasOwn(source.derived, field) ? source.derived[field] : []),
+  ];
+}
+
 function recordFieldLocalPath(source: RedactableRecordSource, alias: string): string {
   const field = recordFieldKey(source, alias);
   if (field !== null) return field;
@@ -149,59 +162,69 @@ function isRecordFieldExplicitlyHidden(redactions: readonly string[], aliases: r
 }
 
 /** Resolve the dependency graph once per field, sharing its aliases with serialization and predicate guards. */
-export function recordFieldAliases(source: RedactableRecordSource, key: string): readonly string[] {
+function resolveRecordFieldAliases(
+  source: RedactableRecordSource, key: string, visiting: Map<RedactableRecordSource, Set<string>>,
+): readonly string[] {
   const aliases = new Set<string>();
-  const visited = new Map<RedactableRecordSource, Set<string>>();
   const visit = (recordSource: RedactableRecordSource, field: string): void => {
-    const pathSeparator = field.indexOf('.');
-    if (pathSeparator > 0) {
-      const childKey = field.slice(0, pathSeparator);
-      const child = recordSource.children && Object.hasOwn(recordSource.children, childKey)
-        ? recordSource.children[childKey]
-        : undefined;
-      if (child) {
-        for (const childSource of childSources(child)) {
-          const nestedAliases = recordFieldAliases(childSource, field.slice(pathSeparator + 1));
-          composeChildAliases(recordSource, childKey, childSource, nestedAliases).forEach(alias => aliases.add(alias));
-        }
-        return;
-      }
-    }
-
-    const fields = visited.get(recordSource) ?? new Set<string>();
+    const fields = visiting.get(recordSource) ?? new Set<string>();
     if (fields.has(field)) return;
     fields.add(field);
-    visited.set(recordSource, fields);
-    recordFieldAliasForms(recordSource, field).forEach(alias => aliases.add(alias));
+    visiting.set(recordSource, fields);
+    try {
+      const pathSeparator = field.indexOf('.');
+      if (pathSeparator > 0) {
+        const childKey = field.slice(0, pathSeparator);
+        const child = recordSource.children && Object.hasOwn(recordSource.children, childKey)
+          ? recordSource.children[childKey]
+          : undefined;
+        if (child) {
+          for (const childSource of childSources(child)) {
+            const nestedAliases = resolveRecordFieldAliases(childSource, field.slice(pathSeparator + 1), visiting);
+            composeChildAliases(recordSource, childKey, childSource, nestedAliases).forEach(alias => aliases.add(alias));
+          }
+          return;
+        }
+      }
 
-    const dependencies = [
-      ...(Object.hasOwn(recordSource.fields, field) ? recordSource.fields[field] : []),
-      ...(Object.hasOwn(recordSource.derived, field) ? recordSource.derived[field] : []),
-    ];
-    for (const dependency of dependencies) {
-      aliases.add(dependency);
-      const ownField = recordFieldKey(recordSource, dependency);
-      if (ownField !== null) {
-        visit(recordSource, ownField);
-        continue;
+      recordFieldAliasForms(recordSource, field).forEach(alias => aliases.add(alias));
+
+      for (const dependency of recordFieldDependencies(recordSource, field)) {
+        if (typeof dependency !== 'string') {
+          visit(dependency.source, dependency.field);
+          continue;
+        }
+        aliases.add(dependency);
+        const ownField = recordFieldKey(recordSource, dependency);
+        if (ownField !== null) {
+          visit(recordSource, ownField);
+          continue;
+        }
+        const separator = dependency.indexOf('.');
+        const childKey = dependency.slice(0, separator);
+        const child = recordSource.children && Object.hasOwn(recordSource.children, childKey)
+          ? recordSource.children[childKey]
+          : undefined;
+        for (const childSource of child ? childSources(child) : []) {
+          // A suppressed child cannot contribute to an aggregate, even when its numeric field itself is readable.
+          // Do not add the resource root: that would make an unrelated sibling-field redaction hide the aggregate.
+          const identifiers = childSource.identifier.flatMap(identifier => recordFieldAliasForms(childSource, identifier));
+          composeChildAliases(recordSource, childKey, childSource, identifiers).forEach(alias => aliases.add(alias));
+          const nestedAliases = resolveRecordFieldAliases(childSource, dependency.slice(separator + 1), visiting);
+          composeChildAliases(recordSource, childKey, childSource, nestedAliases).forEach(alias => aliases.add(alias));
+        }
       }
-      const separator = dependency.indexOf('.');
-      const childKey = dependency.slice(0, separator);
-      const child = recordSource.children && Object.hasOwn(recordSource.children, childKey)
-        ? recordSource.children[childKey]
-        : undefined;
-      for (const childSource of child ? childSources(child) : []) {
-        // A suppressed child cannot contribute to an aggregate, even when its numeric field itself is readable.
-        // Do not add the resource root: that would make an unrelated sibling-field redaction hide the aggregate.
-        const identifiers = childSource.identifier.flatMap(identifier => recordFieldAliasForms(childSource, identifier));
-        composeChildAliases(recordSource, childKey, childSource, identifiers).forEach(alias => aliases.add(alias));
-        const nestedAliases = recordFieldAliases(childSource, dependency.slice(separator + 1));
-        composeChildAliases(recordSource, childKey, childSource, nestedAliases).forEach(alias => aliases.add(alias));
-      }
+    } finally {
+      fields.delete(field);
     }
   };
   visit(source, key);
   return [...aliases];
+}
+
+/** Every declared spelling of a field and its transitive source dependencies. */
+export function recordFieldAliases(source: RedactableRecordSource, key: string): readonly string[] {
+  return resolveRecordFieldAliases(source, key, new Map());
 }
 
 /** True when the row must not be served at all: the whole resource or an identifier is redacted. */
@@ -258,7 +281,54 @@ export function createRecordProjectionPolicy(
     }
     return [...combined];
   };
-  const readable = (field: string, source: RedactableRecordSource, inherited: readonly string[]): boolean => {
+  type VisitingFields = Map<RedactableRecordSource, Set<string>>;
+
+  // Child paths carry their original scopes. Cross-source dependencies name their descriptor explicitly: table
+  // aliases alone cannot distinguish unrelated representations such as an assignee and a comment author.
+  const dependencyTarget = (dependency: string | RecordFieldReference, source: RedactableRecordSource) => {
+    if (typeof dependency !== 'string') return dependency;
+    const field = dependency;
+    const local = recordFieldLocalPath(source, field);
+    const first = local.split('.')[0];
+    if (!local.includes('.') || Object.hasOwn(source.children ?? {}, first)) return { source, field: local };
+    return null;
+  };
+
+  const dependenciesReadable = (
+    field: string, source: RedactableRecordSource, inherited: readonly string[], visiting: VisitingFields,
+  ): boolean => {
+    const fields = visiting.get(source) ?? new Set<string>();
+    // Cycles can express copied representations of the same value. Direct redactions are checked before this
+    // guard, so revisiting an edge adds no information and cannot bypass a hidden member of the cycle.
+    if (fields.has(field)) return true;
+    fields.add(field);
+    visiting.set(source, fields);
+    try {
+      return recordFieldDependencies(source, field).every(dependency => {
+        const target = dependencyTarget(dependency, source);
+        return !target || readable(target.field, target.source, target.source === source ? inherited : [], visiting);
+      });
+    } finally {
+      fields.delete(field);
+    }
+  };
+
+  const fieldReadable = (
+    field: string, source: RedactableRecordSource, inherited: readonly string[], visiting: VisitingFields,
+  ): boolean => {
+    const scoped = [...new Set([...redactionsFor(source), ...inherited])];
+    const aliases = recordFieldAliases(source, field);
+    // Nested field decisions belong to the child. Only an explicit container decision or a declared dependency
+    // hides the container itself; unrelated visible siblings must survive recursive projection.
+    const hidden = Object.hasOwn(source.children ?? {}, field)
+      ? isRecordFieldExplicitlyHidden(scoped, aliases)
+      : isCoManagedReadFieldHidden(scoped, aliases);
+    return !hidden && dependenciesReadable(field, source, inherited, visiting);
+  };
+
+  const readable = (
+    field: string, source: RedactableRecordSource, inherited: readonly string[], visiting: VisitingFields,
+  ): boolean => {
     const scoped = [...new Set([...redactionsFor(source), ...inherited])];
     if (isRecordSuppressed(scoped, source)) return false;
     const local = recordFieldLocalPath(source, field);
@@ -266,18 +336,24 @@ export function createRecordProjectionPolicy(
     const key = separator > 0 ? local.slice(0, separator) : local;
     const child = source.children && Object.hasOwn(source.children, key) ? source.children[key] : undefined;
     if (child && separator > 0) {
-      if (isRecordFieldExplicitlyHidden(scoped, recordFieldAliases(source, key))) return false;
+      if (!fieldReadable(key, source, inherited, visiting)) return false;
       return childSources(child).every(childSource => readable(
-        local.slice(separator + 1), childSource, childScopedRedactions(scoped, source, key, childSource),
+        local.slice(separator + 1), childSource, childScopedRedactions(scoped, source, key, childSource), visiting,
       ));
     }
-    return !isCoManagedReadFieldHidden(scoped, recordFieldAliases(source, local));
+    // A predicate over an entire container can inspect every descendant, even though serialization can retain
+    // that container and strip individual children. Keep such predicates closed when any descendant is hidden.
+    if (isCoManagedReadFieldHidden(scoped, recordFieldAliases(source, local))) return false;
+    return fieldReadable(local, source, inherited, visiting);
   };
   return {
-    project: (record, source) => projectRecordWithPolicy(record, source, redactionsFor, []),
+    project: (record, source) => projectRecordWithPolicy(
+      record, source, redactionsFor,
+      (field, fieldSource, inherited) => fieldReadable(field, fieldSource, inherited, new Map()), [],
+    ),
     readable(field, source) {
       try {
-        return readable(field, source, []);
+        return readable(field, source, [], new Map());
       } catch {
         return false;
       }
@@ -287,18 +363,16 @@ export function createRecordProjectionPolicy(
 
 function projectRecordWithPolicy<T extends Record<string, any>>(
   record: T, source: RedactableRecordSource,
-  redactionsFor: (source: RedactableRecordSource) => readonly string[], inherited: readonly string[],
+  redactionsFor: (source: RedactableRecordSource) => readonly string[],
+  fieldReadable: (field: string, source: RedactableRecordSource, inherited: readonly string[]) => boolean,
+  inherited: readonly string[],
 ): Partial<T> | null {
   const redactions = [...new Set([...redactionsFor(source), ...inherited])];
   if (isRecordSuppressed(redactions, source)) return null;
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(record)) {
     const child = source.children && Object.hasOwn(source.children, key) ? source.children[key] : undefined;
-    const fieldAliases = recordFieldAliases(source, key);
-    const fieldHidden = child
-      ? isRecordFieldExplicitlyHidden(redactions, fieldAliases)
-      : isCoManagedReadFieldHidden(redactions, fieldAliases);
-    if (fieldHidden) {
+    if (!fieldReadable(key, source, inherited)) {
       if (Object.hasOwn(source.derived, key)) out[key] = null;
       continue;
     }
@@ -309,10 +383,10 @@ function projectRecordWithPolicy<T extends Record<string, any>>(
     } else if (childSource && Array.isArray(value)) {
       const nestedRedactions = childScopedRedactions(redactions, source, key, childSource);
       out[key] = value.map(item => (item && typeof item === 'object' && !Array.isArray(item)
-        ? projectRecordWithPolicy(item, childSource, redactionsFor, nestedRedactions) : null)).filter(item => item !== null);
+        ? projectRecordWithPolicy(item, childSource, redactionsFor, fieldReadable, nestedRedactions) : null)).filter(item => item !== null);
     } else if (childSource && value && typeof value === 'object') {
       const nestedRedactions = childScopedRedactions(redactions, source, key, childSource);
-      out[key] = projectRecordWithPolicy(value as Record<string, any>, childSource, redactionsFor, nestedRedactions);
+      out[key] = projectRecordWithPolicy(value as Record<string, any>, childSource, redactionsFor, fieldReadable, nestedRedactions);
     } else if (childSource) {
       // A declared child is a record, never an opaque scalar that can bypass its source policy.
       out[key] = null;
@@ -340,28 +414,6 @@ export const PROJECT_TASK_CHECKLIST_ITEM_SOURCE: RedactableRecordSource = {
   derived: {},
 };
 
-/** Project task responses retain task column and relationship aliases across project-scoped endpoints. */
-export const PROJECT_TASK_RECORD_SOURCE: RedactableRecordSource = recordSourceFromCoManaged(
-  CO_MANAGED_TASK_FIELD_SOURCE, { title: 'task_name', description: 'description' }, {
-    derived: {
-      assigned_user_name: ids('assigned_to', 'users', 'users.first_name', 'users.last_name'),
-      status_name: ids('project_status_mapping_id', 'project_status_mappings', 'statuses', 'standard_statuses'),
-      is_closed: ids('project_status_mapping_id', 'project_status_mappings', 'statuses', 'standard_statuses'),
-      phase_name: ids('phase_id', 'project_phases', 'project_phases.phase_name'),
-      project_name: ids('project_id', 'projects', 'projects.project_name'),
-      client_id: ids('project_id', 'projects.client_id'),
-      effective_service_id: ids(
-        'service_id', 'phase_id', 'project_id', 'projects.service_id', 'project_phases.service_id',
-      ),
-      service_source: ids('service_id', 'phase_id', 'project_id', 'projects.service_id', 'project_phases.service_id'),
-      service_name: ids(
-        'service_id', 'phase_id', 'project_id', 'projects.service_id', 'project_phases.service_id',
-        'service_catalog', 'service_catalog.service_name',
-      ),
-    },
-    children: { checklist_items: PROJECT_TASK_CHECKLIST_ITEM_SOURCE },
-  });
-
 /** Project phases use the shared canonical source aliases for description and parent/project identifiers. */
 export const PROJECT_PHASE_RECORD_SOURCE: RedactableRecordSource = recordSourceFromCoManaged(
   CO_MANAGED_PHASE_FIELD_SOURCE, { title: 'phase_name', description: 'description' }, { derived: {} },
@@ -377,6 +429,28 @@ export const PROJECT_STATUS_MAPPING_SOURCE: RedactableRecordSource = {
     is_closed: ids('status_id', 'statuses', 'standard_status_id', 'standard_statuses'),
   },
 };
+
+const PROJECT_TASK_SERVICE_DEPENDENCIES: readonly (string | RecordFieldReference)[] = [
+  'service_id', 'phase_id', 'project_id', 'projects.service_id',
+  { source: PROJECT_PHASE_RECORD_SOURCE, field: 'service_id' },
+];
+
+/** Project task responses retain task column and relationship aliases across project-scoped endpoints. */
+export const PROJECT_TASK_RECORD_SOURCE: RedactableRecordSource = recordSourceFromCoManaged(
+  CO_MANAGED_TASK_FIELD_SOURCE, { title: 'task_name', description: 'description' }, {
+    derived: {
+      assigned_user_name: ids('assigned_to', 'users', 'users.first_name', 'users.last_name'),
+      status_name: ['project_status_mapping_id', { source: PROJECT_STATUS_MAPPING_SOURCE, field: 'status_name' }],
+      is_closed: ['project_status_mapping_id', { source: PROJECT_STATUS_MAPPING_SOURCE, field: 'is_closed' }],
+      phase_name: ['phase_id', { source: PROJECT_PHASE_RECORD_SOURCE, field: 'phase_name' }],
+      project_name: ids('project_id', 'projects', 'projects.project_name'),
+      client_id: ids('project_id', 'projects.client_id'),
+      effective_service_id: PROJECT_TASK_SERVICE_DEPENDENCIES,
+      service_source: PROJECT_TASK_SERVICE_DEPENDENCIES,
+      service_name: [...PROJECT_TASK_SERVICE_DEPENDENCIES, 'service_catalog', 'service_catalog.service_name'],
+    },
+    children: { checklist_items: PROJECT_TASK_CHECKLIST_ITEM_SOURCE },
+  });
 
 export const PROJECT_RECORD_SOURCE: RedactableRecordSource = recordSourceFromCoManaged(
   CO_MANAGED_PROJECT_FIELD_SOURCE, { title: 'project_name', description: 'description' }, {
@@ -607,12 +681,11 @@ export const TICKET_RECORD_SOURCE: RedactableRecordSource = {
 };
 
 const TICKET_TIME_ENTRY_COUNT_DEPENDENCIES = ids(
-  'entries.entry_id', 'entries.user_id', 'tickets.time_entries.user_id',
+  'entries.entry_id', 'entries.user_id',
 );
 const TICKET_TIME_ENTRY_MINUTE_DEPENDENCIES = ids(
   ...TICKET_TIME_ENTRY_COUNT_DEPENDENCIES,
   'entries.start_time', 'entries.end_time', 'entries.billable_duration',
-  'tickets.time_entries.start_time', 'tickets.time_entries.end_time',
 );
 
 /** Ticket time-entry summaries are calculated from their visible entry set. */

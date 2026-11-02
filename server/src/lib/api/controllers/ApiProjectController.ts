@@ -111,6 +111,28 @@ export class ApiProjectController extends ApiBaseController {
     return projection;
   }
 
+  /** Gate every target before the bulk write, then serialize each result under its retained decision. */
+  private async mutateAuthorizedProjects(
+    apiRequest: AuthenticatedApiRequest,
+    projectIds: string[],
+    mutate: () => Promise<Record<string, any>[]>,
+    knex: Awaited<ReturnType<typeof getConnection>>,
+  ): Promise<AuthorizedProjection<Record<string, any>>[]> {
+    if (!Array.isArray(projectIds) || projectIds.some(id => !uuidSchema.safeParse(id).success)) {
+      throw new ValidationError('projectIds must be an array of project UUIDs');
+    }
+    const ids = [...new Set(projectIds)];
+    const projections = await Promise.all(ids.map(id => this.assertProjectReadAllowed(apiRequest, id, knex)));
+    const gates = new Map(ids.map((id, index) => [id, projections[index]]));
+    const results = await mutate();
+    return results.map(project => {
+      const gate = gates.get(project.project_id);
+      const projection = gate ? reprojectUnderDecision(gate, project, PROJECT_RECORD_SOURCE) : null;
+      if (!projection) throw new NotFoundError('Project not found');
+      return projection;
+    });
+  }
+
   private async filterAuthorizedProjects(
     apiRequest: AuthenticatedApiRequest,
     projects: Record<string, any>[],
@@ -940,16 +962,9 @@ export class ApiProjectController extends ApiBaseController {
           // Parse body
           const data = await req.json();
           const { projectIds, updates } = data;
-          await Promise.all(
-            (Array.isArray(projectIds) ? projectIds : []).map((projectId: string) =>
-              this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex)
-            )
-          );
-
-          const results = await this.projectService.bulkUpdateProjects(
-            projectIds,
-            updates,
-            apiRequest.context!
+          const results = await this.mutateAuthorizedProjects(
+            apiRequest as AuthenticatedApiRequest, projectIds,
+            () => this.projectService.bulkUpdateProjects(projectIds, updates, apiRequest.context!), knex,
           );
 
           return createSuccessResponse(results);
@@ -1018,16 +1033,9 @@ export class ApiProjectController extends ApiBaseController {
           // Parse body
           const data = await req.json();
           const { projectIds, assignments } = data;
-          await Promise.all(
-            (Array.isArray(projectIds) ? projectIds : []).map((projectId: string) =>
-              this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex)
-            )
-          );
-
-          const results = await this.projectService.bulkAssign(
-            projectIds,
-            assignments,
-            apiRequest.context!
+          const results = await this.mutateAuthorizedProjects(
+            apiRequest as AuthenticatedApiRequest, projectIds,
+            () => this.projectService.bulkAssign(projectIds, assignments, apiRequest.context!), knex,
           );
 
           return createSuccessResponse(results);
@@ -1096,16 +1104,9 @@ export class ApiProjectController extends ApiBaseController {
           // Parse body
           const data = await req.json();
           const { projectIds, status } = data;
-          await Promise.all(
-            (Array.isArray(projectIds) ? projectIds : []).map((projectId: string) =>
-              this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex)
-            )
-          );
-
-          const results = await this.projectService.bulkStatusUpdate(
-            projectIds,
-            status,
-            apiRequest.context!
+          const results = await this.mutateAuthorizedProjects(
+            apiRequest as AuthenticatedApiRequest, projectIds,
+            () => this.projectService.bulkStatusUpdate(projectIds, status, apiRequest.context!), knex,
           );
 
           return createSuccessResponse(results);

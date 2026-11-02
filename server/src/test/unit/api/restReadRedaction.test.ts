@@ -2863,3 +2863,159 @@ describe('lead round2 derived source review', () => {
     }
   );
 });
+
+describe('scoped dependencies and project bulk response projections', () => {
+  beforeEach(() => {
+    vi.spyOn(ApiBaseController.prototype as any, 'assertProductApiAccess').mockResolvedValue(undefined);
+  });
+  const T = '33333333-3333-3333-3333-333333333331';
+  const setupTime = () => {
+    state.tickets = [{ ticket_id: T, title: 'Visible ticket' }];
+    state.timeEntriesSummary = {
+      entries: [{ entry_id: P2, user_id: 'user-1', is_own: true, start_time: '2026-11-02T09:00:00.000Z',
+        end_time: '2026-11-02T10:30:00.000Z', billable_duration: 0 }],
+      ownTotalMinutes: 90, ownEntryCount: 1, othersTotalMinutes: 0, othersEntryCount: 0,
+      othersVisibleMinutes: 0, othersVisibleCount: 0, othersHiddenMinutes: 0, othersHiddenCount: 0, totalMinutes: 90,
+    };
+  };
+  it.each(['values.time_entries.start_time', 'fields.values.time_entries.end_time'])(
+    'scoped elapsed source redaction %s also hides summary copies', async redaction => {
+      setupTime();
+      const c = new ApiTicketController();
+      const get = () => c.getTimeEntries()(request(`/api/v1/tickets/${T}/time-entries`, { id: T }));
+      expect((await (await get()).json()).data.totalMinutes).toBe(90);
+      state.decisions.set(T, { allowed: true, redactedFields: [redaction] });
+      const res = await get();
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      expect(data.entries[0]).not.toHaveProperty(redaction.endsWith('start_time') ? 'start_time' : 'end_time');
+      expect(data.totalMinutes).toBeNull();
+    }
+  );
+  it('scoped hidden user_id cannot reappear in ownership counts', async () => {
+    setupTime();
+    state.decisions.set(T, { allowed: true, redactedFields: ['values.time_entries.user_id'] });
+    const c = new ApiTicketController();
+    const res = await c.getTimeEntries()(request(`/api/v1/tickets/${T}/time-entries`, { id: T }));
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data.entries[0].is_own).toBeNull();
+    expect(data.ownEntryCount).toBeNull();
+  });
+  it.each(['tickets.time_entries.entry_id', 'values.time_entries.entry_id', 'values.time_entries'])(
+    'suppressed time rows cannot still contribute summary data under %s', async redaction => {
+      setupTime();
+      state.decisions.set(T, { allowed: true, redactedFields: [redaction] });
+      const c = new ApiTicketController();
+      const res = await c.getTimeEntries()(request(`/api/v1/tickets/${T}/time-entries`, { id: T }));
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      expect(data.entries).toEqual([]);
+      expect(data.totalMinutes).toBeNull();
+      expect(data.ownEntryCount).toBeNull();
+    }
+  );
+  it.each(['projects.phases.service_id', 'values.phases.service_id'])(
+    'task service copies honor their source phase namespace %s', async redaction => {
+      state.decisions.set(P1, { allowed: true, redactedFields: [redaction] });
+      const c = new ApiProjectController();
+      vi.spyOn(c as any, 'resolveProjectIdForTask').mockResolvedValue(P1);
+      (c as any).projectService.getTaskById = vi.fn(async () => ({
+        task_id: P2, phase_id: 'phase-1', project_id: P1, task_name: 'Visible task',
+        service_id: null, effective_service_id: P3, service_source: 'phase', service_name: 'PRIVATE INHERITED SERVICE',
+      }));
+      const res = await c.getTask()(request(`/api/v1/projects/tasks/${P2}`, { id: P2 }));
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      expect(data.task_name).toBe('Visible task');
+      expect(data.effective_service_id).toBeNull();
+      expect(data.service_name).toBeNull();
+    }
+  );
+  it.each([
+    { method: 'bulkUpdate', service: 'bulkUpdateProjects', payload: { projectIds: [P1], updates: { project_name: 'Visible updated name' } } },
+    { method: 'bulkAssign', service: 'bulkAssign', payload: { projectIds: [P1], assignments: P3 } },
+    { method: 'bulkStatusUpdate', service: 'bulkStatusUpdate', payload: { projectIds: [P1], status: 's-2' } },
+  ])('project $method serializes only projected mutation results', async ({ method, service, payload }) => {
+    const c = new ApiProjectController();
+    (c as any).projectService[service] = vi.fn(async () => [{ ...state.projects[0], project_name: 'Visible updated name' }]);
+    const get = () => {
+      const req = new NextRequest(`http://localhost/api/v1/projects/${method}`, {
+        method: 'PUT', headers: { 'x-api-key': 'k', 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+      }) as any;
+      return (c as any)[method]()(req);
+    };
+    const visible = await get();
+    expect(visible.status).toBe(200);
+    expect((await visible.json()).data[0].description).toBe('secret plan');
+    state.decisions.set(P1, { allowed: true, redactedFields: ['projects.description', 'projects.budgeted_hours'] });
+    const res = await get();
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data[0].project_name).toBe('Visible updated name');
+    expect(data[0]).not.toHaveProperty('description');
+    expect(data[0]).not.toHaveProperty('budgeted_hours');
+  });
+});
+
+describe('project bulk writes retain a separate decision for every target', () => {
+  const operations = [
+    { method: 'bulkUpdate', service: 'bulkUpdateProjects', body: { updates: { project_name: 'Updated' } } },
+    { method: 'bulkAssign', service: 'bulkAssign', body: { assignments: P3 } },
+    { method: 'bulkStatusUpdate', service: 'bulkStatusUpdate', body: { status: 's-2' } },
+  ];
+  beforeEach(() => {
+    vi.spyOn(ApiBaseController.prototype as any, 'assertProductApiAccess').mockResolvedValue(undefined);
+  });
+  const invoke = (controller: ApiProjectController, operation: typeof operations[number], projectIds: unknown) => {
+    const req = new NextRequest(`http://localhost/api/v1/projects/${operation.method}`, {
+      method: 'PUT', headers: { 'x-api-key': 'k', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ projectIds, ...operation.body }),
+    });
+    return (controller as any)[operation.method]()(req);
+  };
+
+  it.each(operations)('$method matches returned rows to their own decision even when reordered', async operation => {
+    const c = new ApiProjectController();
+    (c as any).projectService[operation.service] = vi.fn(async () => [state.projects[1], state.projects[0]]);
+    state.decisions.set(P1, { allowed: true, redactedFields: ['projects.description'] });
+    state.decisions.set(P2, { allowed: true, redactedFields: ['projects.budgeted_hours'] });
+    const response = await invoke(c, operation, [P1, P2]);
+    expect(response.status).toBe(200);
+    const { data } = await response.json();
+    expect(data.map((row: any) => row.project_id)).toEqual([P2, P1]);
+    expect(data[0].description).toBe('secret plan');
+    expect(data[0]).not.toHaveProperty('budgeted_hours');
+    expect(data[1]).not.toHaveProperty('description');
+    expect(data[1].budgeted_hours).toBe(40);
+  });
+
+  it.each(operations)('$method performs no writes when any target is denied or suppressed', async operation => {
+    const c = new ApiProjectController();
+    const write = vi.fn(async () => [state.projects[0], state.projects[1]]);
+    (c as any).projectService[operation.service] = write;
+    for (const decision of [
+      { allowed: false, redactedFields: [] },
+      { allowed: true, redactedFields: ['values.project_id'] },
+    ]) {
+      state.decisions.set(P2, decision);
+      expect((await invoke(c, operation, [P1, P2])).status).toBe(404);
+      expect(write).not.toHaveBeenCalled();
+    }
+    state.decisions.clear();
+    state.assetReadAllowed = false;
+    expect((await invoke(c, operation, [P1, P2])).status).toBe(403);
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it('fails closed for results outside the authorized target set and malformed target lists', async () => {
+    const c = new ApiProjectController();
+    const write = vi.fn(async () => [state.projects[2]]);
+    (c as any).projectService.bulkUpdateProjects = write;
+    expect((await invoke(c, operations[0], [P1])).status).toBe(404);
+    write.mockClear();
+    expect((await invoke(c, operations[0], P1)).status).toBe(400);
+    expect((await invoke(c, operations[0], ['not-a-uuid'])).status).toBe(400);
+    expect(write).not.toHaveBeenCalled();
+  });
+});
