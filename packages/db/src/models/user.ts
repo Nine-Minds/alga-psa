@@ -111,7 +111,7 @@ const User = {
     try {
       const user = await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
         .unscoped<IUser>('users', USER_DISCOVERY_BY_EMAIL_REASON)
-        .select('*')
+        .select(...USER_RESPONSE_FIELD_NAMES)
         .where({ email: email.toLowerCase() })
         .first();
       return user;
@@ -299,11 +299,11 @@ const User = {
     }
   },
 
-  getUserWithRoles: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<IUserWithRoles | undefined> => {
+  getUserWithRoles: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<(Pick<IUser, AllowlistedUserField> & { roles: IRole[] }) | undefined> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
       const user = await tenantDb(knexOrTrx, tenant).table<IUser>('users')
-        .select('*')
+        .select(...USER_RESPONSE_FIELD_NAMES)
         .where('user_id', user_id)
         .first();
       if (user) {

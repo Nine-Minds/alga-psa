@@ -175,6 +175,12 @@ describe('Service principals A/4 user management (T026, T013, F085, F086)', () =
         expect(rows.find((row) => row.user_id === f.internalId)).not.toHaveProperty('hashed_password');
         expect(rows.find((row) => row.user_id === f.internalId)).not.toHaveProperty('two_factor_secret');
 
+        const detail = await runWithTenant(f.tenant, () => User.getUserWithRoles(db, f.internalId));
+        expect(statements.some((sql) => /hashed_password|two_factor_secret/.test(sql))).toBe(false);
+        expect(detail).toMatchObject({ user_id: f.internalId, email: staff.email });
+        expect(detail).not.toHaveProperty('hashed_password');
+        expect(detail).not.toHaveProperty('two_factor_secret');
+
         const { getAllUsersBasic } = await import('@alga-psa/user-composition/actions/userQueryActions');
         const result = await getAllUsersBasic(true);
         const listed = result.find((row) => row.user_id === f.internalId);
@@ -188,6 +194,17 @@ describe('Service principals A/4 user management (T026, T013, F085, F086)', () =
           'contact_id', 'icon', 'created_at', 'updated_at', 'two_factor_enabled', 'two_factor_required_new_device',
           'is_google_user', 'is_inactive', 'tenant', 'reports_to', 'last_login_at', 'last_login_method',
         ].includes(key))).toBe(true);
+
+        const { findUserById, getUserWithRoles, getMultipleUsersWithRoles } = await import('@alga-psa/user-composition/actions/userQueryActions');
+        for (const detailResult of [
+          await findUserById(f.internalId),
+          await getUserWithRoles(f.internalId),
+          ...(await getMultipleUsersWithRoles([f.internalId])),
+        ]) {
+          expect(detailResult).toMatchObject({ user_id: f.internalId, email: staff.email });
+          expect(detailResult).not.toHaveProperty('hashed_password');
+          expect(detailResult).not.toHaveProperty('two_factor_secret');
+        }
       } finally {
         db.removeListener('query', capture);
       }
