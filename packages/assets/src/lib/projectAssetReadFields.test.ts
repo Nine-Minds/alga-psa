@@ -33,6 +33,32 @@ describe('projectAssetReadFields', () => {
     }, ['workstation'])).toEqual({ changes: [{ field: 'workstation.serial_number' }] });
   });
 
+  it('matches dotted extension and attribute paths below history wrappers and retains sibling values', () => {
+    expect(projectAssetReadFields({
+      changes: {
+        fields: {
+          workstation: { serial_number: { before: 'SECRET', after: 'SECRET2' }, os_version: 'keep-os' },
+          attributes: { hudu_fields: { password: 'SECRET-PASSWORD', public_note: 'keep-note' } },
+        },
+        maintenance_data: {
+          workstation: { serial_number: 'SECRET-MAINTENANCE', os_version: 'keep-maintenance-os' },
+          attributes: { hudu_fields: { password: 'SECRET-MAINTENANCE-PASSWORD', public_note: 'keep-maintenance-note' } },
+        },
+      },
+    }, ['workstation.serial_number', 'attributes.hudu_fields.password'])).toEqual({
+      changes: {
+        fields: {
+          workstation: { os_version: 'keep-os' },
+          attributes: { hudu_fields: { public_note: 'keep-note' } },
+        },
+        maintenance_data: {
+          workstation: { os_version: 'keep-maintenance-os' },
+          attributes: { hudu_fields: { public_note: 'keep-maintenance-note' } },
+        },
+      },
+    });
+  });
+
   it('preserves Date and other non-plain values when projecting a list row', () => {
     const observedAt = new Date('2026-10-21T12:34:56.000Z');
     const marker = new Map([['key', 'value']]);

@@ -467,7 +467,11 @@ describe('asset read redaction boundaries', () => {
       history_id: 'history-private',
       changes: {
         name: { before: 'Old private name', after: 'Historical private name' },
-        fields: { name: { previous_value: 'Older private name', new_value: 'New private name' } },
+        fields: {
+          name: { previous_value: 'Older private name', new_value: 'New private name' },
+          workstation: { serial_number: { before: 'Old device secret', after: 'New device secret' }, os_version: 'visible OS' },
+          attributes: { hudu_fields: { password: 'History password secret', public_note: 'visible history note' } },
+        },
         serial_number: 'Private historical serial',
       },
       changed_at: new Date(NOW_ISO),
@@ -480,22 +484,39 @@ describe('asset read redaction boundaries', () => {
       performed_at: new Date(NOW_ISO),
       performed_by: 'd0000000-0000-4000-8000-00000000000d',
       description: 'Routine inspection',
-      maintenance_data: { serial_number: 'Maintenance historical secret', visible_note: 'visible' },
+      maintenance_data: {
+        workstation: { serial_number: 'Maintenance device secret', os_version: 'visible maintenance OS' },
+        attributes: { hudu_fields: { password: 'Maintenance password secret', public_note: 'visible maintenance note' } },
+        visible_note: 'visible',
+      },
       created_at: new Date(NOW_ISO),
     });
-    h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: ['name', 'serial_number'] };
+    h.readDecisions[ASSET_ID] = {
+      allowed: true,
+      redactedFields: ['name', 'serial_number', 'workstation.serial_number', 'attributes.hudu_fields.password'],
+    };
 
     const report = await getAssetMaintenanceReport(ASSET_ID) as any;
     expect(report.asset_name).toBeUndefined();
-    expect(report.maintenance_history[0].maintenance_data).toEqual({ visible_note: 'visible' });
+    expect(report.maintenance_history[0].maintenance_data).toEqual({
+      workstation: { os_version: 'visible maintenance OS' },
+      attributes: { hudu_fields: { public_note: 'visible maintenance note' } },
+      visible_note: 'visible',
+    });
     const bundle = await getAssetDetailBundle(ASSET_ID) as any;
-    expect(bundle.maintenanceReport.maintenance_history[0].maintenance_data).toEqual({ visible_note: 'visible' });
-    expect(bundle.maintenanceHistory[0].maintenance_data).toEqual({ visible_note: 'visible' });
+    expect(bundle.maintenanceReport.maintenance_history[0].maintenance_data).toEqual(report.maintenance_history[0].maintenance_data);
+    expect(bundle.maintenanceHistory[0].maintenance_data).toEqual(report.maintenance_history[0].maintenance_data);
     const history = await getAssetHistory(ASSET_ID) as any;
-    expect(history[0].changes).toEqual({ fields: {} });
+    expect(history[0].changes).toEqual({
+      fields: {
+        workstation: { os_version: 'visible OS' },
+        attributes: { hudu_fields: { public_note: 'visible history note' } },
+      },
+    });
 
     h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: [] };
     expect((await getAssetMaintenanceReport(ASSET_ID) as any).asset_name).toBe('Historical private name');
+    expect((await getAssetMaintenanceReport(ASSET_ID) as any).maintenance_history[0].maintenance_data.workstation.serial_number).toBe('Maintenance device secret');
     expect((await getAssetHistory(ASSET_ID) as any)[0].changes.name.before).toBe('Old private name');
 
     h.readDecisions[ASSET_ID] = { allowed: false, redactedFields: [] };
