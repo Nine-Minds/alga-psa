@@ -3920,6 +3920,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     if (itemWithAction.groupKey || itemWithAction.iconToken) {
       switch (itemWithAction.iconToken ?? itemWithAction.groupKey) {
         case 'ticket': return <Ticket className={iconClass} />;
+        case 'maintenance': return <Cog className={iconClass} />;
         case 'contact': return <Contact className={iconClass} />;
         case 'client': return <Building className={iconClass} />;
         case 'communication': return <Mail className={iconClass} />;

@@ -185,6 +185,9 @@ const TICKET_PICKER_DEPENDENCY_HINT_DEFAULTS: DependencyHintDefaults = {
   'ticket-category': {
     board_id: 'Choose a fixed Board first to load category options.',
   },
+  'ticket-category-any': {
+    board_id: 'Choose a fixed Board first to load category options.',
+  },
   'ticket-status': {
     board_id: 'Choose a fixed Board first to load status options.',
     ticket_id: 'Choose a fixed Ticket first to load status options.',
@@ -230,6 +233,7 @@ export const WORKFLOW_FIXED_PICKER_SUPPORTED_RESOURCES = new Set([
   'ticket-status',
   'ticket-priority',
   'ticket-category',
+  'ticket-category-any',
   'ticket-subcategory',
   'client-location',
   'role',
@@ -459,6 +463,20 @@ const mapTicketFieldOptions = (
         boardId: category.board_id ?? null,
         parentId: category.parent_id ?? null,
       }));
+    case 'ticket-category-any': {
+      // One dropdown for the whole category tree (like the ticket UI): subcategories show as
+      // "Parent → Child" so they're findable by either name; parents keep their plain name.
+      const nameById = new Map(ticketOptions.categories.map((category) => [category.id, category.name]));
+      return ticketOptions.categories.map((category) => {
+        const parentName = category.parent_id ? nameById.get(category.parent_id) : undefined;
+        return {
+          value: category.id,
+          label: parentName ? `${parentName} → ${category.name}` : category.name,
+          boardId: category.board_id ?? null,
+          parentId: category.parent_id ?? null,
+        };
+      });
+    }
     case 'client-location':
       return ticketOptions.locations.map((location) => ({
         value: location.id,
@@ -667,6 +685,11 @@ const filterWorkflowPickerOptions = (
           option.parentId === null &&
           (boardId ? option.boardId === boardId : true)
       );
+    }
+    case 'ticket-category-any': {
+      // Parents and subcategories alike; only the board narrows the list.
+      const boardId = dependencyValues.get('board_id');
+      return boardId ? options.filter((option) => option.boardId === boardId) : options;
     }
     case 'ticket-subcategory': {
       const boardId = dependencyValues.get('board_id');
