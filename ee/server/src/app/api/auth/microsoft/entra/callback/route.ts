@@ -1,6 +1,13 @@
 import axios from 'axios';
 import { NextRequest, NextResponse } from 'next/server';
 import { getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import {
+  classifyMicrosoftOAuthFailure,
+  classifySafeMicrosoftOAuthFailure,
+  extractRedirectUriFromDescription,
+  MICROSOFT_OAUTH_FAILURE_ERROR_CODES,
+  toSafeMicrosoftOAuthFailure,
+} from '@alga-psa/shared/services/email/microsoftOAuthErrors';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -50,12 +57,16 @@ function entraSettingsUrl(): URL {
   return new URL(ENTRA_SETTINGS_PATH, process.env.NEXTAUTH_URL || 'http://localhost:3000');
 }
 
-function failureRedirect(errorCode: string, message?: string): NextResponse {
+function failureRedirect(errorCode: string, message?: string, redirectUri?: string | null): NextResponse {
   const url = entraSettingsUrl();
   url.searchParams.set('entra_status', 'failure');
   url.searchParams.set('error', errorCode);
   if (message) {
     url.searchParams.set('message', message);
+  }
+  // AADSTS50011: the page names the exact URI that must be registered.
+  if (redirectUri) {
+    url.searchParams.set('redirect_uri', redirectUri);
   }
   return NextResponse.redirect(url);
 }
@@ -77,6 +88,16 @@ export async function GET(request: NextRequest) {
       error: oauthError,
       errorDescription: oauthErrorDescription,
     });
+    const redirectKind = classifyMicrosoftOAuthFailure({ error: oauthError, errorDescription: oauthErrorDescription });
+    if (redirectKind) {
+      return failureRedirect(
+        MICROSOFT_OAUTH_FAILURE_ERROR_CODES[redirectKind],
+        'Unable to complete Microsoft Entra connection.',
+        redirectKind === 'redirect_uri_mismatch'
+          ? extractRedirectUriFromDescription(oauthErrorDescription)
+          : null
+      );
+    }
     return failureRedirect(oauthError, 'Unable to complete Microsoft Entra connection.');
   }
 
@@ -225,7 +246,28 @@ export async function GET(request: NextRequest) {
 
     return successRedirect();
   } catch (error: unknown) {
-    console.error('[Entra OAuth] Failed to complete callback:', error);
+    // Never log the raw error: for a failed token exchange it is an axios error
+    // whose `config.data` is the token request body, including client_secret.
+    const safeFailure = toSafeMicrosoftOAuthFailure(error);
+    console.error('[Entra OAuth] Failed to complete callback:', {
+      status: safeFailure.status,
+      error: safeFailure.error,
+      errorCodes: safeFailure.errorCodes,
+      errorDescription: safeFailure.errorDescription,
+      traceId: safeFailure.traceId,
+      correlationId: safeFailure.correlationId,
+      message: safeFailure.status ? undefined : (safeFailure.message ?? (error instanceof Error ? error.message : undefined)),
+    });
+    const failureKind = classifySafeMicrosoftOAuthFailure(safeFailure);
+    if (failureKind) {
+      return failureRedirect(
+        MICROSOFT_OAUTH_FAILURE_ERROR_CODES[failureKind],
+        'Unable to complete Microsoft Entra connection.',
+        failureKind === 'redirect_uri_mismatch'
+          ? extractRedirectUriFromDescription(safeFailure.errorDescription) ?? state.redirectUri
+          : null
+      );
+    }
     return failureRedirect('callback_error', 'Unable to complete Microsoft Entra connection.');
   }
 }
