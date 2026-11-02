@@ -110,17 +110,26 @@ describe('tenant settings authorization at action boundaries', () => {
   it('fails closed when authorization throws and when authentication is absent', async () => {
     mocks.hasPermission.mockRejectedValue(new Error('permission store unavailable'));
     const actions = await loadActions();
-    const brandingAction = actions.find(([name]) => name === 'branding')![1];
-    await expect(brandingAction()).rejects.toThrow('Permission denied: Cannot update settings');
+    for (const [name, invoke] of actions) {
+      if (name === 'timezone') {
+        await expect(invoke()).resolves.toMatchObject({ permissionError: 'Permission denied: Cannot update settings' });
+      } else {
+        await expect(invoke()).rejects.toThrow('Permission denied: Cannot update settings');
+      }
+    }
     expect(mocks.first).not.toHaveBeenCalled();
+    expect(mocks.select).not.toHaveBeenCalled();
     expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.insert).not.toHaveBeenCalled();
+    expect(mocks.revalidateTag).not.toHaveBeenCalled();
 
+    mocks.hasPermission.mockClear();
     mocks.user = null;
     const unauthenticatedActions = await loadActions();
     for (const [, invoke] of unauthenticatedActions) {
       await expect((async () => { await invoke(); })()).rejects.toThrow('user is not logged in');
     }
-    expect(mocks.hasPermission).toHaveBeenCalledTimes(1);
+    expect(mocks.hasPermission).not.toHaveBeenCalled();
     expect(mocks.update).not.toHaveBeenCalled();
     expect(mocks.insert).not.toHaveBeenCalled();
   });
@@ -130,11 +139,20 @@ describe('tenant settings authorization at action boundaries', () => {
     mocks.user = { user_id: 'user-1', user_type: 'internal', tenant: 'tenant-other' };
     const actions = await loadActions();
 
-    await expect(actions[0][1]()).rejects.toThrow('Permission denied: Cannot update settings');
+    for (const [name, invoke] of actions) {
+      if (name === 'timezone') {
+        await expect(invoke()).resolves.toMatchObject({ permissionError: 'Permission denied: Cannot update settings' });
+      } else {
+        await expect(invoke()).rejects.toThrow('Permission denied: Cannot update settings');
+      }
+    }
     expect(mocks.getConnection).not.toHaveBeenCalled();
     expect(mocks.hasPermission).not.toHaveBeenCalled();
     expect(mocks.first).not.toHaveBeenCalled();
+    expect(mocks.select).not.toHaveBeenCalled();
     expect(mocks.update).not.toHaveBeenCalled();
+    expect(mocks.insert).not.toHaveBeenCalled();
+    expect(mocks.revalidateTag).not.toHaveBeenCalled();
   });
 
   it('keeps external-user restrictions even when the permission lookup says yes', async () => {
