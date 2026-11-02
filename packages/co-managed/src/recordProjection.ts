@@ -1078,6 +1078,52 @@ export const TICKET_ASSETS_RESPONSE_SOURCE: RedactableRecordSource = {
   derived: { ...ASSET_RECORD_SOURCE.derived, ...ASSET_TICKET_ASSOCIATION_SOURCE.derived },
 };
 
+/** Detached asset notes retain the document child and its ownership of note content and timestamps. */
+export const ASSET_NOTE_RESPONSE_SOURCE: RedactableRecordSource = {
+  policySource: ASSET_RECORD_SOURCE,
+  resource: [],
+  identifier: [],
+  fields: {},
+  derived: {
+    blockData: ids('document.document_id'),
+    lastUpdated: ids('document.document_id', 'document.updated_at'),
+  },
+  children: { document: ASSET_DOCUMENT_SOURCE },
+};
+
+/** Installed software rows retain the canonical asset policy and the joined catalog source. */
+export const ASSET_SOFTWARE_SOURCE: RedactableRecordSource = {
+  policySource: ASSET_RECORD_SOURCE,
+  resource: ['asset_software', 'software_catalog'],
+  identifier: ids(
+    'software_id', 'asset_software.software_id', 'software_catalog.software_id',
+    'asset_id', 'asset_software.asset_id',
+  ),
+  fields: {
+    name: ids('software_name', 'software_catalog.name'),
+    publisher: ids('publisher', 'software_catalog.publisher'),
+    category: ids('category', 'software_catalog.category'),
+    software_type: ids('software_type', 'software_catalog.software_type'),
+    version: ids('version', 'asset_software.version'),
+    install_date: ids('install_date', 'asset_software.install_date'),
+    size_bytes: ids('size_bytes', 'asset_software.size_bytes'),
+    first_seen_at: ids('first_seen_at', 'asset_software.first_seen_at'),
+    is_current: ids('is_current', 'asset_software.is_current'),
+    is_managed: ids('software_catalog.is_managed'),
+    is_security_relevant: ids('software_catalog.is_security_relevant'),
+  },
+  derived: {},
+};
+
+/** Summary values are calculated from authorized software rows before this response projection. */
+export const ASSET_SOFTWARE_SUMMARY_SOURCE: RedactableRecordSource = {
+  policySource: ASSET_RECORD_SOURCE,
+  resource: [],
+  identifier: [],
+  fields: {},
+  derived: {},
+};
+
 /**
  * Predicate-side counterpart of `projectRecordByRedactions`: true when `field` (a response key such as `description`
  * or the derived `client_name`) may take part in a search or filter for a reader with `redactions`. It resolves

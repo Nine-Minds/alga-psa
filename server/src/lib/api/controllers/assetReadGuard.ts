@@ -160,11 +160,30 @@ export async function guardAssetReadForRequest(
   request: Request,
   assetId: string,
 ): Promise<NextResponse | null> {
+  return (await readAssetGateForRequest(request, assetId)).denied;
+}
+
+/** Request adapter that keeps the original API-key identity on the retained asset projection. */
+export async function readAssetGateForRequest(
+  request: Request,
+  assetId: string,
+): Promise<
+  | { projection: AuthorizedProjection<Record<string, any>>; denied: null }
+  | { projection: null; denied: NextResponse }
+> {
   return runWithApiKeyOrSession(request, async () => {
     const user = await getCurrentUser();
     if (!user) {
-      return createErrorResponse('User context required', 401, 'UNAUTHORIZED');
+      return {
+        projection: null,
+        denied: createErrorResponse('User context required', 401, 'UNAUTHORIZED'),
+      };
     }
-    return guardAssetRead({ tenant: user.tenant, user } as ApiContext, assetId, new AssetService());
+    const apiKeyId = (request as Request & { context?: { apiKeyId?: string } }).context?.apiKeyId;
+    return readAssetGateProjection(
+      { tenant: user.tenant, user, apiKeyId } as ApiContext,
+      assetId,
+      new AssetService(),
+    );
   });
 }

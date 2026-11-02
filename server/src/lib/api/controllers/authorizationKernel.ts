@@ -239,6 +239,16 @@ export function isAuthorizedProjection(value: unknown): value is AuthorizedProje
   return typeof value === 'object' && value !== null && (value as any)[projectionMark] === true;
 }
 
+/** Reads a predicate/display field through the retained policy that authorized this projection. */
+export function isAuthorizedProjectionFieldReadable(
+  projection: AuthorizedProjection<any>,
+  field: string,
+  source: RedactableRecordSource,
+): boolean {
+  const policy: RecordProjectionPolicy | undefined = (projection as any)[projectionPolicy];
+  return policy?.readable(field, source) ?? false;
+}
+
 /** Declarative per-kind table: kernel resource type, redaction descriptor and default record-context builder. */
 const API_READ_KINDS = {
   project: { resource: 'project', source: PROJECT_RECORD_SOURCE, context: buildProjectRecordContext },
