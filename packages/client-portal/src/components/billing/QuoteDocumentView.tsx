@@ -157,6 +157,8 @@ export interface QuoteDocumentViewProps {
   termsId?: string;
 }
 
+const DOCUMENT_DATE_OPTIONS: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+
 export const QuoteDocumentView: React.FC<QuoteDocumentViewProps> = ({
   quote,
   items,
@@ -180,9 +182,11 @@ export const QuoteDocumentView: React.FC<QuoteDocumentViewProps> = ({
     [money],
   );
 
-  // Central formatter: the client's own country sets the digit order, their
-  // language names the month.
-  const { formatDate: formatLocalizedDate } = useFormatters();
+  // quote_date / valid_until name a day (stored as midnight UTC), so they never
+  // shift by the viewer's timezone. They are written with a named month, the
+  // shape the reader's language owns: it reads right to any recipient whether
+  // or not their country is on file, and matches the quote email.
+  const { formatCalendarDate } = useFormatters();
   const formatDate = useCallback(
     (date: string | { toString(): string } | undefined | null) => {
       if (!date) return 'N/A';
@@ -191,12 +195,12 @@ export const QuoteDocumentView: React.FC<QuoteDocumentViewProps> = ({
         if (Number.isNaN(new Date(dateStr).getTime())) {
           return 'Invalid date';
         }
-        return formatLocalizedDate(dateStr);
+        return formatCalendarDate(dateStr, DOCUMENT_DATE_OPTIONS);
       } catch {
         return 'Invalid date';
       }
     },
-    [formatLocalizedDate],
+    [formatCalendarDate],
   );
 
   const hasOptionalItems = items.some((item) => item.is_optional);

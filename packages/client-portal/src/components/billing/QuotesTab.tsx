@@ -9,11 +9,10 @@ import { useFormatQuoteStatus } from '@alga-psa/ui/hooks/useQuoteEnumOptions';
 import { getClientQuotes } from '@alga-psa/client-portal/actions';
 import { useRouter } from 'next/navigation';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface QuotesTabProps {
   formatCurrency: (amount: number, currencyCode?: string) => string;
-  formatDate: (date: string | { toString(): string } | undefined | null) => string;
 }
 
 const isBillingActionError = (
@@ -35,8 +34,10 @@ const STATUS_VARIANTS: Record<QuoteStatus, BadgeVariant> = {
   archived: 'outline',
 };
 
-const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, formatDate }) => {
+const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency }) => {
   const { t } = useTranslation('client-portal');
+  // quote_date names a day (stored as midnight UTC): never shift it by timezone.
+  const { formatCalendarDate } = useFormatters();
   const router = useRouter();
   const formatQuoteStatus = useFormatQuoteStatus();
   const [quotes, setQuotes] = useState<IQuoteWithClient[]>([]);
@@ -99,9 +100,9 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
     {
       title: t('billing.quotes.columns.date', { defaultValue: 'Date' }),
       dataIndex: 'quote_date',
-      render: (value) => formatDate(value),
+      render: (value) => (value ? formatCalendarDate(value) : '—'),
     },
-  ], [formatCurrency, formatDate, formatQuoteStatus, t]);
+  ], [formatCurrency, formatCalendarDate, formatQuoteStatus, t]);
 
   if (isLoading) {
     return (

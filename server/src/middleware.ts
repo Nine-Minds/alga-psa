@@ -5,6 +5,7 @@ import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './lib/deployment/deploymentProfile';
 import { resolveRequestHost, detectForwardedHostRewrite } from './lib/deployment/requestHost';
 import { MIGRATED_SETTINGS_TAB_IDS } from './components/settings/settingsTabsRegistry';
+import { PUBLIC_QUOTE_PAGE_PATTERN, PUBLIC_QUOTE_PDF_PATTERN } from './lib/quote/publicQuotePaths';
 
 // Minimal, Edge-safe middleware: API key header presence check for select API routes
 // and auth gate for /msp paths, plus i18n locale resolution. Heavy logic stays in route handlers.
@@ -53,14 +54,10 @@ const clientPortalPrefix = '/client-portal';
 const publicPagePaths = new Set(['/payment-methods/setup-complete']);
 
 /**
- * Public, session-less quote review (alga-2026-0002820). Public by exact shape,
- * not by prefix: a 43-char base64url token (mirrors QUOTE_ACCESS_TOKEN_LENGTH in
- * @alga-psa/billing; middleware is Edge so it cannot import the Node service)
- * and nothing after it except, for the API, the fixed `/pdf` leaf.
- * Authorization is the token itself, checked in the page / route handler.
+ * Public, session-less quote review (alga-2026-0002820); shapes live in
+ * lib/quote/publicQuotePaths. Authorization is the token itself, checked in the
+ * page / route handler.
  */
-const PUBLIC_QUOTE_PAGE_PATTERN = /^\/quote\/[A-Za-z0-9_-]{43}$/;
-const PUBLIC_QUOTE_PDF_PATTERN = /^\/api\/quote\/[A-Za-z0-9_-]{43}\/pdf$/;
 
 export function isPublicQuotePagePath(pathname: string): boolean {
   return PUBLIC_QUOTE_PAGE_PATTERN.test(pathname);

@@ -22,6 +22,7 @@ import { ThemeBridge } from '@/components/providers/ThemeBridge';
 import { ClientUIStateProvider } from '@alga-psa/ui/ui-reflection/ClientUIStateProvider';
 import { getServerLocale, getServerTranslation, registerServerLocaleResolver } from "@alga-psa/ui/lib/i18n/serverOnly";
 import { getHierarchicalLocaleAction } from '@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale';
+import { registerPublicQuoteRouteLocale } from '@/lib/quote/publicQuoteRouteLocale';
 import { cookies, headers } from 'next/headers.js';
 import { generateBrandingStyles } from "@alga-psa/tenancy";
 import { resolveDeploymentCapabilities } from '@/lib/deployment/deploymentProfile';
@@ -65,6 +66,8 @@ export const dynamic = 'force-dynamic';
 // hierarchy is skipped entirely and every server-rendered string falls back to
 // the browser's Accept-Language.
 registerServerLocaleResolver(() => getHierarchicalLocaleAction());
+// Token-addressed routes speak their recipient's language, not the session's.
+registerPublicQuoteRouteLocale();
 
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers();

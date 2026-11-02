@@ -16,7 +16,7 @@ import {
   isSupportedLocale,
   filterPseudoLocales,
 } from './config';
-import { formatDateValue } from './formatDateValue';
+import { formatCalendarDateValue, formatDateValue } from './formatDateValue';
 import { useDateFormat } from '../dateFormat/useDateFormat';
 
 /**
@@ -529,6 +529,18 @@ export function useFormatters() {
       // Date-only strings are calendar dates and must not shift through the
       // browser timezone; see formatDateValue.
       return formatDateValue(date, locale, options, dateFormat);
+    },
+
+    /**
+     * For values that name a day rather than a moment, including calendar
+     * dates stored as midnight-UTC timestamps. Never shifts by the viewer's
+     * timezone; see formatCalendarDateValue.
+     */
+    formatCalendarDate: (
+      date: Date | string,
+      options?: Intl.DateTimeFormatOptions
+    ) => {
+      return formatCalendarDateValue(date, locale, options, dateFormat);
     },
 
     formatNumber: (value: number, options?: Intl.NumberFormatOptions) => {

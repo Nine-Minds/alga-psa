@@ -138,6 +138,54 @@ export function registerServerLocaleResolver(
   registeredServerLocaleResolver = resolver;
 }
 
+/**
+ * Routes whose reader is named by the URL, not by the session.
+ *
+ * A token-addressed page (the public quote review link, for one) is written for
+ * the person the token was issued to. Its language is that recipient's, whoever
+ * happens to be signed in on the device. The page itself can resolve that, but
+ * the root layout (which writes `<html lang>`) renders beside the page and never
+ * sees its params. A route registers its resolver here; getServerLocale() asks
+ * it first whenever the request path matches.
+ *
+ * The resolver gets the regex match for the request path (the `x-pathname`
+ * header middleware sets on every request). It returns null to fall through to
+ * the normal chain, e.g. when the token does not resolve. Resolvers that touch
+ * state must dedupe per request (React cache()) with whatever the page calls.
+ */
+type RouteLocaleResolver = (match: RegExpMatchArray) => Promise<string | null | undefined>;
+const routeLocaleResolvers = new Map<string, { pattern: RegExp; resolve: RouteLocaleResolver }>();
+
+export function registerRouteLocaleResolver(pattern: RegExp, resolve: RouteLocaleResolver): void {
+  // Keyed by pattern so module re-evaluation (HMR, duplicate bundles) replaces
+  // rather than stacks.
+  routeLocaleResolvers.set(pattern.source, { pattern, resolve });
+}
+
+async function resolveRouteLocale(): Promise<SupportedLocale | null> {
+  if (routeLocaleResolvers.size === 0) return null;
+
+  let pathname: string | null = null;
+  try {
+    pathname = (await headers()).get('x-pathname');
+  } catch {
+    return null; // outside a request scope
+  }
+  if (!pathname) return null;
+
+  for (const { pattern, resolve } of routeLocaleResolvers.values()) {
+    const match = pathname.match(pattern);
+    if (!match) continue;
+    try {
+      return normalizeLocale(await resolve(match));
+    } catch (error) {
+      console.error('Route locale resolver failed:', error);
+      return null;
+    }
+  }
+  return null;
+}
+
 /** The device-level language the user last chose, if it is still supported. */
 export async function readLocaleCookie(): Promise<SupportedLocale | null> {
   const cookieStore = await cookies();
@@ -189,7 +237,16 @@ export const getServerLocale = cache(
     clientId?: string;
   }): Promise<SupportedLocale> => {
     try {
-      // 0. When called without explicit options, defer to the registered
+      // 0a. A route addressed to a specific reader speaks that reader's
+      // language (see registerRouteLocaleResolver).
+      if (!options) {
+        const routeLocale = await resolveRouteLocale();
+        if (routeLocale) {
+          return routeLocale;
+        }
+      }
+
+      // 0b. When called without explicit options, defer to the registered
       // hierarchical resolver if the host app provided one. This keeps
       // server- and client-rendered translations in agreement and prevents a
       // stale `locale` cookie from overriding the user's stored DB

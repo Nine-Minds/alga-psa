@@ -1,21 +1,13 @@
-import { cache } from 'react';
-import { headers } from 'next/headers.js';
 import { getConnection } from '@alga-psa/db';
-import {
-  QuoteAccessLinks,
-  loadPublicQuoteView,
-  recordQuoteViewedViaEmailLink,
-  resolveQuoteRecipientLocale,
-} from '@alga-psa/billing/services';
+import { loadPublicQuoteView, recordQuoteViewedViaEmailLink } from '@alga-psa/billing/services';
 import { PublicQuoteReview } from '@alga-psa/client-portal/components';
 import { getTenantBrandingByTenantId } from '@alga-psa/tenancy/actions/tenant-actions/getTenantBrandingByDomain';
-import { normalizeLocale } from '@alga-psa/core/i18n/config';
 import {
-  clientIpFromHeaders,
   loadPublicQuoteResources,
   mapResolveFailureToOutcome,
   sameOriginLogoUrl,
 } from '../../../lib/quote/publicQuoteOutcome';
+import { resolvePublicQuoteRequest } from '../../../lib/quote/publicQuoteRequest';
 import PublicQuoteOutcomeView from './PublicQuoteOutcomeView';
 
 // Token-bearing, tenant-resolved-at-request-time page: never cache.
@@ -24,23 +16,18 @@ export const revalidate = 0;
 
 // robots / referrer metadata live in layout.tsx (generateMetadata, localised title).
 
-/**
- * `resolve` is not a pure read (it bumps last_used_at / use_count and consumes
- * rate-limit budget), so it must run exactly once per request. React cache()
- * dedupes it across everything that renders for this request.
- */
-const resolveToken = cache(async (token: string) => {
-  const ip = clientIpFromHeaders(await headers());
-  return QuoteAccessLinks.resolve(token, { ip });
-});
+// Token resolution is cached per request (see publicQuoteRequest): the root
+// layout's <html lang> and this page share one resolve.
 
 export default async function PublicQuotePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const resolved = await resolveToken(token);
+  const request = await resolvePublicQuoteRequest(token);
 
-  if (resolved.status !== 'ok') {
-    return <PublicQuoteOutcomeView outcome={mapResolveFailureToOutcome(resolved.status)} />;
+  if (request.reader === null) {
+    return <PublicQuoteOutcomeView outcome={mapResolveFailureToOutcome(request.resolved.status)} />;
   }
+
+  const { resolved, reader } = request;
 
   const { tenant, link, recipient, readOnly } = resolved;
   const knex = await getConnection(tenant);
@@ -62,7 +49,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
     console.error('[public-quote] failed to record quote view');
   }
 
-  const locale = normalizeLocale(await resolveQuoteRecipientLocale(knex, tenant, recipient)) ?? 'en';
+  const { locale } = reader;
   const [resources, branding] = await Promise.all([
     loadPublicQuoteResources(locale),
     getTenantBrandingByTenantId(tenant).catch(() => null),

@@ -10,7 +10,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
     t: (key: string, opts?: string | { defaultValue?: string }) =>
       typeof opts === 'string' ? opts : (opts?.defaultValue ?? key),
   }),
-  useFormatters: () => ({ formatDate: (d: string) => d }),
+  useFormatters: () => ({ formatDate: (d: string) => d, formatCalendarDate: (d: string) => d }),
   useOptionalI18n: () => null,
 }));
 vi.mock('@alga-psa/ui/hooks/useQuoteEnumOptions', () => ({

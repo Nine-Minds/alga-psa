@@ -147,7 +147,7 @@ function renderQuoteDetailRow(
 
 const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSelectVersion }) => {
   const { t } = useTranslation('msp/quotes');
-  const { formatCurrency, formatDate } = useFormatters();
+  const { formatCurrency, formatDate, formatCalendarDate } = useFormatters();
   const router = useRouter();
   const [quote, setQuote] = useState<IQuote | null>(null);
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
@@ -1106,11 +1106,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.quoteDate', { defaultValue: 'Quote Date' })}</div>
-            <div className="mt-1 font-medium">{quote.quote_date ? formatDate(quote.quote_date) : '—'}</div>
+            <div className="mt-1 font-medium">{quote.quote_date ? formatCalendarDate(quote.quote_date) : '—'}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.validUntil', { defaultValue: 'Valid Until' })}</div>
-            <div className="mt-1 font-medium">{quote.valid_until ? formatDate(quote.valid_until) : '—'}</div>
+            <div className="mt-1 font-medium">{quote.valid_until ? formatCalendarDate(quote.valid_until) : '—'}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.poNumber', { defaultValue: 'PO Number' })}</div>
