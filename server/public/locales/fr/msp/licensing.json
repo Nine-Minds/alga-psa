@@ -364,6 +364,21 @@
     "accountManagementRead": "Autorisation refusée : autorisation de lecture sur la gestion des comptes requise"
   },
   "coManaged": {
+    "portableExport": {
+      "title": "Exporter l’espace de travail",
+      "description": "Téléchargez une archive portable et chiffrée des enregistrements et fichiers de votre espace de travail.",
+      "recovery": "Conservez la phrase secrète de récupération en lieu sûr. Sans elle, l’archive ne peut pas être ouverte.",
+      "connections": "L’archive contient les enregistrements de votre espace de travail et les fichiers qui y sont stockés. Les enregistrements et associations de documents, ainsi que l’historique du temps, des plannings, des réunions et des conversations, ne sont pas encore inclus et arriveront dans une version ultérieure. Les données de facturation, les données privées du MSP et les secrets d’intégration ne sont pas inclus.",
+      "passphrase": "Phrase secrète de récupération",
+      "confirmPassphrase": "Confirmer la phrase secrète de récupération",
+      "download": "Préparer et télécharger l’archive",
+      "requested": "Votre demande s’ouvre dans un nouvel onglet. La préparation peut prendre quelques minutes ; votre navigateur téléchargera le fichier dès qu’il sera prêt.",
+      "loadError": "Vous ne pouvez pas exporter cet espace de travail avec votre accès actuel.",
+      "lengthError": "Utilisez une phrase secrète comprise entre 16 et 1024 octets UTF-8.",
+      "matchError": "Les phrases secrètes de récupération doivent correspondre.",
+      "unavailable": "L’export de l’espace de travail n’est pas disponible dans cette édition.",
+      "loading": "Chargement…"
+    },
     "acceptance": {
       "accept": "Accepter et activer l’espace de travail",
       "administratorRequired": "Un administrateur local de l’espace de travail doit accepter cette relation avant que votre équipe puisse commencer.",

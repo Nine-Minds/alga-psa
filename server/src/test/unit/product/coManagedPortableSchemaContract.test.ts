@@ -64,8 +64,9 @@ describe('portable catalogs against the main schema', () => {
   });
 });
 
-describe.skipIf(process.env.PORTABLE_SCHEMA_DB !== '1')('portable catalogs against a migrated database (information_schema)', () => {
-  it('every catalog column exists', async () => {
+// Gate the case, not the suite: the DB-less server unit shards require executed assertions in every collected file.
+describe('portable catalogs against a migrated database (information_schema)', () => {
+  it.skipIf(process.env.PORTABLE_SCHEMA_DB !== '1')('every catalog column exists', async () => {
     const { Client } = await import('pg');
     const client = new Client();
     await client.connect();

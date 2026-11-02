@@ -364,6 +364,21 @@
     "accountManagementRead": "Berechtigung verweigert: Leseberechtigung für die Kontoverwaltung erforderlich"
   },
   "coManaged": {
+    "portableExport": {
+      "title": "Arbeitsbereich exportieren",
+      "description": "Laden Sie ein verschlüsseltes, portables Archiv der Datensätze und Dateien Ihres Arbeitsbereichs herunter.",
+      "recovery": "Bewahren Sie die Wiederherstellungspassphrase sicher auf. Ohne sie lässt sich das Archiv nicht öffnen.",
+      "connections": "Das Archiv enthält die Datensätze Ihres Arbeitsbereichs und die darin gespeicherten Dateien. Dokumentdatensätze und -verknüpfungen sowie Zeit-, Termin-, Besprechungs- und Unterhaltungsverläufe sind noch nicht enthalten und folgen in einer späteren Version. Abrechnungsdaten, MSP-interne Daten und Integrationsgeheimnisse sind nicht enthalten.",
+      "passphrase": "Wiederherstellungspassphrase",
+      "confirmPassphrase": "Wiederherstellungspassphrase bestätigen",
+      "download": "Archiv vorbereiten und herunterladen",
+      "requested": "Ihre Anfrage wird in einem neuen Tab geöffnet. Die Vorbereitung kann einige Minuten dauern; Ihr Browser lädt die Datei herunter, sobald sie bereit ist.",
+      "loadError": "Mit Ihrem aktuellen Zugriff können Sie diesen Arbeitsbereich nicht exportieren.",
+      "lengthError": "Verwenden Sie eine Passphrase mit 16 bis 1024 UTF-8-Bytes.",
+      "matchError": "Die Wiederherstellungspassphrasen müssen übereinstimmen.",
+      "unavailable": "Der Export von Arbeitsbereichen ist in dieser Edition nicht verfügbar.",
+      "loading": "Wird geladen…"
+    },
     "acceptance": {
       "accept": "Annehmen und Workspace aktivieren",
       "administratorRequired": "Ein lokaler Workspace-Administrator muss diese Beziehung annehmen, bevor Ihr Team beginnen kann.",

@@ -364,6 +364,21 @@
     "accountManagementRead": "Åtkomst nekad: läsbehörighet för account_management krävs"
   },
   "coManaged": {
+    "portableExport": {
+      "title": "Exportera arbetsyta",
+      "description": "Ladda ned ett krypterat, portabelt arkiv med arbetsytans poster och filer.",
+      "recovery": "Förvara återställningslösenfrasen på ett säkert ställe. Utan den går arkivet inte att öppna.",
+      "connections": "Arkivet innehåller arbetsytans poster och de filer som lagras i arbetsytan. Dokumentposter och -kopplingar samt historik för tid, schema, möten och konversationer ingår ännu inte och kommer i en senare version. Faktureringsdata, MSP-privata data och integrationshemligheter ingår inte.",
+      "passphrase": "Återställningslösenfras",
+      "confirmPassphrase": "Bekräfta återställningslösenfras",
+      "download": "Förbered och ladda ned arkiv",
+      "requested": "Din begäran öppnas i en ny flik. Förberedelsen kan ta några minuter; webbläsaren laddar ned filen när den är klar.",
+      "loadError": "Du kan inte exportera den här arbetsytan med din nuvarande behörighet.",
+      "lengthError": "Använd en lösenfras på mellan 16 och 1024 UTF-8-byte.",
+      "matchError": "Återställningslösenfraserna måste matcha.",
+      "unavailable": "Export av arbetsytor är inte tillgängligt i den här utgåvan.",
+      "loading": "Läser in…"
+    },
     "acceptance": {
       "accept": "Godkänn och aktivera arbetsytan",
       "administratorRequired": "En lokal administratör för arbetsytan måste godkänna relationen innan ert team kan komma igång.",
