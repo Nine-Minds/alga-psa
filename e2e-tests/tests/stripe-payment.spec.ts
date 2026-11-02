@@ -25,10 +25,12 @@ const test = providerTest.extend<{ payment: PaymentFixture }>({
     await page.locator('#secretKey').fill('sk_test_algasim');
     await page.locator('#publishableKey').fill('pk_test_algasim');
     await page.locator('#connect-stripe-submit').click();
-    await expect(page.locator('#connect-stripe-button')).toHaveCount(0);
-    const savedConfig = await database('payment_provider_configs')
-      .where({ tenant: fixture.tenant.tenantId, provider_type: 'stripe' }).first();
-    expect(savedConfig?.configuration).toMatchObject({ stripe_account_id: 'acct_algasim' });
+    await expect(page.locator('#disconnect-stripe')).toBeVisible();
+    await expect.poll(async () => {
+      const savedConfig = await database('payment_provider_configs')
+        .where({ tenant: fixture.tenant.tenantId, provider_type: 'stripe' }).first();
+      return savedConfig?.configuration?.stripe_account_id;
+    }, { timeout: 15_000 }).toBe('acct_algasim');
     await testInfo.attach('payment-identities', { body: JSON.stringify(fixture), contentType: 'application/json' });
     await providePayment(fixture);
   },
