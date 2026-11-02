@@ -12,6 +12,7 @@ import {
   IContractLineServiceBucketConfig,
   IContractLineServiceRateTierInput,
   IUserTypeRate,
+  ContractLineServiceConfigurationMutableValues,
   UsageMeasurementMode
 } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
@@ -232,7 +233,7 @@ export const updateConfiguration = withAuth(async (
   user,
   { tenant },
   configId: string,
-  baseConfig?: Partial<IContractLineServiceConfiguration>,
+  baseConfig?: ContractLineServiceConfigurationMutableValues,
   typeConfig?: Partial<IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | Record<string, unknown>>,
   rateTiers?: IContractLineServiceRateTierInput[]
 ) => {

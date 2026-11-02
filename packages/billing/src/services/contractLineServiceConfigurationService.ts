@@ -13,6 +13,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import {
+  ContractLineServiceConfigurationMutableValues,
   IContractLineServiceConfiguration,
   IContractLineServiceFixedConfig,
   IContractLineServiceHourlyConfig,
@@ -314,7 +315,7 @@ export class ContractLineServiceConfigurationService {
    */
   async updateConfiguration(
     configId: string,
-    baseConfig?: Partial<IContractLineServiceConfiguration>,
+    baseConfig?: ContractLineServiceConfigurationMutableValues,
     typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>,
     rateTiers?: IContractLineServiceRateTier[], // Add rateTiers parameter
     // userTypeRates parameter removed as it's not used for hourly updates here
@@ -860,10 +861,8 @@ export class ContractLineServiceConfigurationService {
         console.log(`Created base config with ID: ${configId}`);
       } else {
         configId = baseConfig.config_id;
-        // 3. Update base configuration type if it's not Bucket
         if (baseConfig.configuration_type !== 'Bucket') {
-          console.log(`Base config ${configId} type is ${baseConfig.configuration_type}. Updating to Bucket.`);
-          await planServiceConfigModel.update(configId, { configuration_type: 'Bucket' });
+          throw new Error(`Configuration ${configId} is ${baseConfig.configuration_type}; its type cannot be changed to Bucket.`);
         }
       }
 
@@ -939,10 +938,8 @@ export class ContractLineServiceConfigurationService {
         console.log(`Created base config with ID: ${configId}`);
       } else {
         configId = baseConfig.config_id;
-        // 3. Update base configuration type if it's not Hourly
         if (baseConfig.configuration_type !== 'Hourly') {
-          console.log(`Base config ${configId} type is ${baseConfig.configuration_type}. Updating to Hourly.`);
-          await planServiceConfigModel.update(configId, { configuration_type: 'Hourly' });
+          throw new Error(`Configuration ${configId} is ${baseConfig.configuration_type}; its type cannot be changed to Hourly.`);
         }
       }
 
@@ -1032,13 +1029,10 @@ export class ContractLineServiceConfigurationService {
         configId = await planServiceConfigModel.create(newBaseConfig);
       } else {
         configId = baseConfig.config_id;
-        const updatePayload: Partial<IContractLineServiceConfiguration> = {
-          custom_rate: normalizedUnitRate,
-        };
         if (baseConfig.configuration_type !== 'Usage') {
-          updatePayload.configuration_type = 'Usage';
+          throw new Error(`Configuration ${configId} is ${baseConfig.configuration_type}; its type cannot be changed to Usage.`);
         }
-        await planServiceConfigModel.update(configId, updatePayload);
+        await planServiceConfigModel.update(configId, { custom_rate: normalizedUnitRate });
       }
 
       const usagePayload = {

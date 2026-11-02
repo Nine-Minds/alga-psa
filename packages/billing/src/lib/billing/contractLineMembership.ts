@@ -275,10 +275,14 @@ async function addServiceToLiveContractLine(
   const configurationService = new ContractLineServiceConfigurationService(trx, tenant);
   const existingConfig = await configurationService.getConfigurationForService(contractLineId, serviceId);
   if (existingConfig) {
+    if (existingConfig.configuration_type !== configurationType) {
+      throw new Error(
+        `Configuration ${existingConfig.config_id} is ${existingConfig.configuration_type}; its type cannot be changed to ${configurationType}.`,
+      );
+    }
     await configurationService.updateConfiguration(
       existingConfig.config_id,
       {
-        configuration_type: configurationType,
         custom_rate: customRate,
         quantity: configurationType === 'Usage' ? undefined : quantity ?? 1,
       },
