@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { isPendingOptional, isQuoteItemIncluded, isSelected } from './quoteItemInclusion';
-import { allocateIncludedQuoteDiscounts, buildQuoteDiscountAllocationInputs, summarizeQuoteTotals } from './quoteTotals';
+import { allocateIncludedQuoteDiscounts, buildQuoteDiscountAllocationInputs, computeQuoteTotals, summarizeQuoteTotals } from './quoteTotals';
 
 type Row = {
   id: string;
@@ -103,5 +103,33 @@ describe('summarizeQuoteTotals (alga-2026-0002383 one source of truth)', () => {
     const totals = summarize(rows);
     expect(totals.subtotal).toBe(10000);
     expect(totals.optional_subtotal).toBe(0);
+  });
+});
+
+describe('computeQuoteTotals (pure preview/server derivation)', () => {
+  const rows = (selected: boolean) => [
+    { id: 'a', groupKey: 'loc-1', quantity: 1, unit_price: 10000, taxAmountIfIncluded: 888 },
+    { id: 'b', groupKey: 'loc-2', quantity: 2, unit_price: 2500, is_optional: true, is_selected: selected, taxAmountIfIncluded: 444 },
+    { id: 'd', groupKey: 'loc-1', quantity: 1, unit_price: 0, is_discount: true, discount_type: 'percentage' as const, discount_percentage: 10 },
+  ];
+
+  it('counts an optional row only while selected, including its tax and discount share', () => {
+    const on = computeQuoteTotals(rows(true));
+    expect(on).toMatchObject({ subtotal: 15000, discountTotal: 1500, tax: 1332, totalAmount: 14832 });
+    expect(on.perGroup.get('loc-2')).toMatchObject({ subtotal: 5000, discountTotal: 500, tax: 444 });
+    expect(on.perGroup.get('loc-1')).toMatchObject({ subtotal: 10000, discountTotal: 1000, tax: 888, totalAmount: 9888 });
+    expect(on.discountAmountById.get('d')).toBe(1500);
+
+    const off = computeQuoteTotals(rows(false));
+    expect(off).toMatchObject({ subtotal: 10000, discountTotal: 1000, tax: 888, totalAmount: 9888 });
+    expect(off.perGroup.has('loc-2')).toBe(false);
+  });
+
+  it('is side-effect free and tolerates missing tax input', () => {
+    const input = [{ id: 'x', quantity: 1, unit_price: 100 }];
+    const snapshot = JSON.stringify(input);
+    expect(computeQuoteTotals(input)).toMatchObject({ subtotal: 100, tax: 0, totalAmount: 100 });
+    expect(JSON.stringify(input)).toBe(snapshot);
+    expect(computeQuoteTotals([])).toMatchObject({ subtotal: 0, discountTotal: 0, tax: 0, totalAmount: 0 });
   });
 });
