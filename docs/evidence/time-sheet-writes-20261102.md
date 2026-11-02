@@ -149,3 +149,31 @@ Logs: `/tmp/time-sheet-focused-final.log` and
 Event publishers and write-suite authorization are mocked; export authorization
 and all schema reads/writes use PostgreSQL. Citus execution, live browser smoke,
 full builds and typechecks were not repeated in this follow-up.
+
+## Browser and service recovery check, 22:45 UTC
+
+Checked from worktree revision `c0a4ca4e70`. The card-scoped browser creation
+command
+
+```sh
+alga-dev space-new-tab --type=browser --projectId=7ea8e6c6-3c89-40e5-be8b-4c9f4c4d1e04
+```
+
+failed with `No viewer window handled space-new-tab`. No browser was created.
+The existing pane `46d7b94b-08c4-4436-9f89-c47c72bce736` was present in the
+browser list and remained usable: navigation to a local data URL succeeded,
+`browser-eval` returned its heading and URL, and screenshot capture succeeded
+at `/tmp/ghostty-pane-ide/screenshots/time-sheet-browser-recovery-20261102.png`.
+This verifies the existing pane, not fresh pane creation or its workspace
+binding.
+
+`workflow-list-services --projectId=7ea8e6c6-3c89-40e5-be8b-4c9f4c4d1e04
+--live=true --health=true` listed only `review-infrastructure` and
+`review-guide`; no `dev-server` was registered. A direct request to
+`http://feature-rest-time-sheet-write-endpoints-500-nonexistent.localhost:3867`
+at 22:44 UTC failed with connection refused. No application process was
+started, resumed, or restarted. Fresh sign-in, reversal feedback, reload
+persistence, database verification, and walkthrough recording therefore were
+not performed in this round. Owner restoration of the registered app service
+is required before those UI checks. Historical HTTP/DB/UI results above remain
+historical and do not establish current UI completion.
