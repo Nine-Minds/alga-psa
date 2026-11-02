@@ -60,6 +60,8 @@ export function ticketToTemplateDraft(
     notes: null,
     title: source.title,
     description: typeof attributes.description === 'string' ? attributes.description : null,
+    // A template from a ticket starts tenant-wide; the editor can scope it to one client.
+    client_id: null,
     board_id: source.board_id ?? null,
     category_id: source.category_id ?? null,
     subcategory_id: source.subcategory_id ?? null,

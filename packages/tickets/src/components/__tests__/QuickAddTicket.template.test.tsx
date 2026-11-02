@@ -633,6 +633,7 @@ const makeTemplate = (overrides: Record<string, unknown> = {}) => ({
   name: 'Dept change',
   title: 'Employee department change',
   description: 'Steps for the move',
+  client_id: null,
   board_id: 'board-1',
   category_id: 'cat-1',
   subcategory_id: 'subcat-1',
@@ -677,7 +678,7 @@ describe('QuickAddTicket template mode', () => {
     boardSelectSpy.mockReset();
     getTicketTemplateForCreateMock.mockResolvedValue(makeTemplate());
     listTicketTemplatesForCreateMock.mockResolvedValue([
-      { template_id: TEMPLATE_ID, name: 'Dept change', board_id: 'board-1' },
+      { template_id: TEMPLATE_ID, name: 'Dept change', client_id: null, board_id: 'board-1' },
     ]);
     getContactsByClientMock.mockResolvedValue([]);
     getClientLocationsMock.mockResolvedValue([]);
@@ -771,7 +772,7 @@ describe('QuickAddTicket template mode', () => {
     expect(title).toHaveValue('Half typed');
 
     fireEvent.click(within(screen.getByTestId('confirmation-dialog')).getByRole('button', { name: 'Apply template' }));
-    await waitFor(() => expect(getTicketTemplateForCreateMock).toHaveBeenCalledWith(TEMPLATE_ID));
+    await waitFor(() => expect(getTicketTemplateForCreateMock).toHaveBeenCalledWith(TEMPLATE_ID, null));
     await waitFor(() => expect(title).toHaveValue('Employee department change'));
   });
 
@@ -788,7 +789,7 @@ describe('QuickAddTicket template mode', () => {
   it('an untouched template draft applies a second template without asking (template prefill is the baseline)', async () => {
     const other = '7c2e8e5f-2d1f-4d1b-8e7b-1d2a3a8b0c21';
     listTicketTemplatesForCreateMock.mockResolvedValue([
-      { template_id: TEMPLATE_ID, name: 'Dept change', board_id: 'board-1' },
+      { template_id: TEMPLATE_ID, name: 'Dept change', client_id: null, board_id: 'board-1' },
       { template_id: other, name: 'Other', board_id: 'board-1' },
     ]);
     getTicketTemplateForCreateMock.mockImplementation(async (id: string) =>
@@ -827,7 +828,7 @@ describe('QuickAddTicket template mode', () => {
       makeTemplate({ board_id: null, category_id: null, subcategory_id: null, warnings: ['Board no longer exists'] })
     );
     renderQuickAdd({ templateId: TEMPLATE_ID });
-    await waitFor(() => expect(getTicketTemplateForCreateMock).toHaveBeenCalledWith(TEMPLATE_ID));
+    await waitFor(() => expect(getTicketTemplateForCreateMock).toHaveBeenCalledWith(TEMPLATE_ID, null));
     await waitFor(() => expect(screen.getByPlaceholderText('Ticket Title *')).toHaveValue('Employee department change'));
     expect(screen.getByTestId('quick-add-ticket-template-warnings')).toHaveTextContent('Board no longer exists');
     expect(screen.getByTestId('quick-add-ticket-template-pill')).toBeInTheDocument();

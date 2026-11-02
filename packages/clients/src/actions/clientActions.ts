@@ -2,6 +2,7 @@
 
 import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
 import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
 import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
 import { unparseCSV, isEnterprise } from '@alga-psa/core';
@@ -1305,8 +1306,9 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
 
       await cleanupEntraReferencesBeforeClientDelete(trx, tenantId, clientId);
 
-      // Client-scoped checklist templates are deactivated and detached first (no SET NULL on Citus).
+      // Client-scoped checklist and ticket templates are deactivated and detached first (no SET NULL on Citus).
       await deactivateClientScopedChecklistTemplates(trx, tenantId, clientId);
+      await deactivateClientScopedTicketTemplates(trx, tenantId, clientId);
 
       const deleted = await tenantScopedTable(trx, 'clients', tenantId)
         .where({ client_id: clientId })

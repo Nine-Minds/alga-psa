@@ -422,7 +422,7 @@ export function QuickAddTicket({
         const [formData, duplicateResult, templateResult, optionsResult] = await Promise.all([
           getTicketFormData(prefilledClient?.id),
           duplicateFromTicketId ? getTicketDuplicateSource(duplicateFromTicketId) : Promise.resolve(null),
-          preloadTemplateId ? getTicketTemplateForCreate(preloadTemplateId) : Promise.resolve(null),
+          preloadTemplateId ? getTicketTemplateForCreate(preloadTemplateId, prefilledClient?.id ?? null) : Promise.resolve(null),
           duplicateFromTicketId ? Promise.resolve(null) : listTicketTemplatesForCreate().catch(() => null),
         ]);
         setTemplateOptions(Array.isArray(optionsResult) ? optionsResult : []);
@@ -906,7 +906,7 @@ export function QuickAddTicket({
 
   async function loadAndApplyTemplate(nextTemplateId: string) {
     try {
-      const result = await getTicketTemplateForCreate(nextTemplateId);
+      const result = await getTicketTemplateForCreate(nextTemplateId, clientId || null);
       if (isReturnedActionError(result)) {
         setTemplateLoadError(getErrorMessage(result));
       } else {
@@ -1026,6 +1026,22 @@ export function QuickAddTicket({
     // Only a client, contact or due date change re-renders; title edits must not loop back through here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId, contactId, dueDate, templateSource, clients, contacts]);
+
+  // Templates offered for the chosen client: the tenant-wide ones plus that client's. Before a
+  // client is picked only the tenant-wide ones can apply.
+  const availableTemplateOptions = useMemo(
+    () => templateOptions.filter((option) => !option.client_id || option.client_id === clientId),
+    [templateOptions, clientId]
+  );
+
+  // Changing the client away from a client-bound template's client detaches it: the fields it
+  // already filled in stay, exactly like picking "None" (addTicket would refuse it otherwise).
+  useEffect(() => {
+    if (!templateSource?.client_id) return;
+    if (templateSource.client_id === clientId) return;
+    setTemplateSource(null);
+    setTemplateLoadError(null);
+  }, [clientId, templateSource]);
 
   // A template prefill is a baseline too: an untouched template-filled draft is not dirty.
   const draftBaselineTitle = duplicateSource ? duplicateSource.title : templateSource ? lastRenderedTitleRef.current ?? templateSource.title : prefilledTitle;
@@ -1580,7 +1596,7 @@ export function QuickAddTicket({
                 </Alert>
               )}
 
-              {!duplicateSource && templateOptions.length > 0 && (
+              {!duplicateSource && availableTemplateOptions.length > 0 && (
                 <div className="mb-4">
                   <label htmlFor={`${id}-template-select`} className="block text-sm font-medium text-gray-700 mb-1">
                     {t('quickAdd.templateLabel', 'Template')}
@@ -1592,7 +1608,7 @@ export function QuickAddTicket({
                     disabled={isSubmitting}
                     options={[
                       { value: '', label: t('quickAdd.templateNone', 'None') },
-                      ...templateOptions.map((option) => ({ value: option.template_id, label: option.name })),
+                      ...availableTemplateOptions.map((option) => ({ value: option.template_id, label: option.name })),
                     ]}
                   />
                   {templateSource && titleHasTokens(templateSource.title) && (
