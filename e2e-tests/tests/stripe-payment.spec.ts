@@ -8,7 +8,7 @@ type Delivery = { eventId: string; eventType: string; status: number; attempt: n
 type Event = { id: string; type: string; data: { object: Session } };
 
 const test = providerTest.extend<{ payment: PaymentFixture }>({
-  payment: async ({ database, credentials, emulators, page }, use, testInfo) => {
+  payment: async ({ database, credentials, emulators, page }, providePayment, testInfo) => {
     const publicURL = process.env.ALGASIM_PUBLIC_STRIPE_URL;
     const callbackBase = process.env.ALGASIM_CALLBACK_BASE_URL;
     if (!publicURL || !callbackBase) throw new Error('Set the public Stripe URL and container-reachable Alga callback base');
@@ -30,7 +30,7 @@ const test = providerTest.extend<{ payment: PaymentFixture }>({
       .where({ tenant: fixture.tenant.tenantId, provider_type: 'stripe' }).first();
     expect(savedConfig?.configuration).toMatchObject({ stripe_account_id: 'acct_algasim' });
     await testInfo.attach('payment-identities', { body: JSON.stringify(fixture), contentType: 'application/json' });
-    await use(fixture);
+    await providePayment(fixture);
   },
 });
 test.use({ emulatorProviders: ['stripe'] });
