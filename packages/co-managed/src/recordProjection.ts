@@ -718,7 +718,7 @@ export const TICKET_RECORD_SOURCE: RedactableRecordSource = {
     board_name: ids('board_id'),
     entered_by_name: ids('entered_by'),
     description_html: ids('attributes'),
-    assigned_to_name: [...CO_MANAGED_ASSIGNEE_NAME_ALIASES, 'assigned_to'],
+    assigned_to_name: [...CO_MANAGED_ASSIGNEE_NAME_ALIASES, 'assigned_to', 'users.first_name', 'users.last_name'],
     bundle_master_ticket_number: ids('master_ticket_id'),
     contact_avatar_url: ids('contact_name_id'),
     client_logo_url: ids('client_id'),
@@ -736,6 +736,18 @@ export const TICKET_RECORD_SOURCE: RedactableRecordSource = {
     // used by the detached agents endpoint below.
     primary_agent: TICKET_PRIMARY_AGENT_SOURCE,
     additional_agents: TICKET_ADDITIONAL_AGENT_SOURCE,
+  },
+};
+
+/** ProjectService.getProjectTickets returns ticket fields joined with assignee and link metadata. */
+export const PROJECT_TICKET_RESPONSE_SOURCE: RedactableRecordSource = {
+  policySource: TICKET_RECORD_SOURCE,
+  resource: ['tickets', 'project_ticket_links'],
+  identifier: ids('ticket_id', 'tickets.ticket_id'),
+  fields: {},
+  derived: {
+    assigned_user_name: [{ source: TICKET_RECORD_SOURCE, field: 'assigned_to_name' }],
+    link_created_at: ids('project_ticket_links.created_at'),
   },
 };
 

@@ -3019,3 +3019,80 @@ describe('project bulk writes retain a separate decision for every target', () =
     expect(write).not.toHaveBeenCalled();
   });
 });
+
+describe('project tickets retain project and ticket response provenance', () => {
+  function controllerWithProjectTickets() {
+    const controller = new ApiProjectController();
+    (controller as any).projectService.getProjectTickets = vi.fn(async () => ({ data: state.tickets, total: state.tickets.length }));
+    state.tickets = [{ ticket_id: P2, title: 'Visible ticket', assigned_to: 'private-user', assigned_user_name: 'Private Assignee', link_created_at: '2026-10-01T12:00:00Z' }];
+    return controller;
+  }
+
+  it('retains visible joined assignee and association metadata', async () => {
+    const controller = controllerWithProjectTickets();
+    const response = await controller.getTickets()(request(`/api/v1/projects/${P1}/tickets`));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data[0]).toMatchObject({ assigned_to: 'private-user', assigned_user_name: 'Private Assignee', link_created_at: '2026-10-01T12:00:00Z' });
+  });
+
+  it.each(['tickets.assigned_to', 'values.assigned_to', 'fields.tickets.assigned_to'])(
+    'hides the service assignee display name under %s', async alias => {
+      const controller = controllerWithProjectTickets();
+      state.decisions.set(P2, { allowed: true, redactedFields: [alias] });
+      const response = await controller.getTickets()(request(`/api/v1/projects/${P1}/tickets`));
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.data[0]).not.toHaveProperty('assigned_to');
+      expect(body.data[0].assigned_user_name ?? null).toBeNull();
+    },
+  );
+
+  it.each([['project', P1], ['ticket', P2]])('retains the %s decision on copied association timestamp', async (_kind, id) => {
+    const controller = controllerWithProjectTickets();
+    state.decisions.set(id, { allowed: true, redactedFields: ['project_ticket_links.created_at'] });
+    const response = await controller.getTickets()(request(`/api/v1/projects/${P1}/tickets`));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data[0].link_created_at ?? null).toBeNull();
+  });
+
+  it('composes independent project and ticket field decisions on the joined response', async () => {
+    const controller = controllerWithProjectTickets();
+    state.decisions.set(P1, { allowed: true, redactedFields: ['project_ticket_links.created_at'] });
+    state.decisions.set(P2, { allowed: true, redactedFields: ['tickets.assigned_to'] });
+
+    const response = await controller.getTickets()(request(`/api/v1/projects/${P1}/tickets`));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data[0]).not.toHaveProperty('assigned_to');
+    expect(body.data[0].assigned_user_name ?? null).toBeNull();
+    expect(body.data[0].link_created_at ?? null).toBeNull();
+  });
+
+  it.each([['project', P1], ['ticket', P2]])('suppresses a hidden association under the %s policy and excludes it from totals', async (_kind, id) => {
+    const controller = controllerWithProjectTickets();
+    state.decisions.set(id, { allowed: true, redactedFields: ['project_ticket_links'] });
+    const response = await controller.getTickets()(request(`/api/v1/projects/${P1}/tickets`));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data).toEqual([]);
+    expect(body.pagination.total).toBe(0);
+  });
+
+  it('suppresses hidden ticket identifiers and excludes them from pagination totals', async () => {
+    const controller = controllerWithProjectTickets();
+    state.tickets = [
+      { ticket_id: P2, title: 'Hidden ticket', assigned_to: 'user-2', assigned_user_name: 'Private', link_created_at: '2026-10-02T12:00:00Z' },
+      { ticket_id: P3, title: 'Visible ticket', assigned_to: 'user-3', assigned_user_name: 'Visible', link_created_at: '2026-10-01T12:00:00Z' },
+    ];
+    state.decisions.set(P2, { allowed: true, redactedFields: ['tickets.ticket_id'] });
+
+    const response = await controller.getTickets()(request(`/api/v1/projects/${P1}/tickets?page=1&limit=1`));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]).toMatchObject({ ticket_id: P3, title: 'Visible ticket' });
+    expect(body.pagination.total).toBe(1);
+  });
+});

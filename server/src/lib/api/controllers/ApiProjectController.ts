@@ -39,6 +39,7 @@ import {
   PROJECT_STATUS_MAPPING_SOURCE,
   PROJECT_TASK_CHECKLIST_ITEM_SOURCE,
   PROJECT_TASK_RECORD_SOURCE,
+  PROJECT_TICKET_RESPONSE_SOURCE,
   TICKET_PROJECT_LINK_SOURCE,
 } from '@alga-psa/co-managed/recordProjection';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
@@ -794,7 +795,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
+          const projectProjection = await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           // Get pagination params
           const page = parseInt(url.searchParams.get('page') || '1');
@@ -809,15 +810,22 @@ export class ApiProjectController extends ApiBaseController {
                 { page: sourcePage, limit: sourceLimit },
                 apiRequest.context!
               ),
-            projectRecord: (ticket) =>
-              projectApiResourceRead({
+            projectRecord: async (ticket) => {
+              const ticketProjection = await projectApiResourceRead({
                 knex,
                 tenant: tenantId!,
                 user,
                 apiKeyId: keyRecord.api_key_id,
                 kind: 'ticket',
                 record: ticket,
-              }),
+              });
+              if (!ticketProjection) return null;
+              return reprojectUnderDecisions(
+                [projectProjection, ticketProjection],
+                ticket,
+                PROJECT_TICKET_RESPONSE_SOURCE,
+              );
+            },
             scanLimit: 100,
           });
           
