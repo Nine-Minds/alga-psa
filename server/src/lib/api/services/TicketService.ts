@@ -87,6 +87,7 @@ import {
   type TicketWatcherWriteResult,
 } from '@shared/services/tickets/ticketWatcherService';
 import { resolveAssetTicketContactOptions } from '@alga-psa/shared/models/assetTicketContactModel';
+import { authorizeTicketRecordAccess, type TicketRecordRow } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 import { ticketStatusClockPatch } from '@shared/lib/ticketStatusClock';
 import {
   CommentEmailRecipientsError,
@@ -1820,7 +1821,7 @@ export class TicketService extends BaseService<ITicket> {
    * Update ticket
    */
   async update(id: string, data: UpdateTicketData, context: ServiceContext): Promise<ITicket> {
-    const { knex } = await this.getKnex();
+    const knex = await this.getDbForContext(context);
 
     return withTransaction(knex, async (trx) => {
       // Get current ticket for event comparison
@@ -1834,6 +1835,26 @@ export class TicketService extends BaseService<ITicket> {
 
       if (!currentTicket) {
         throw new NotFoundError('Ticket not found');
+      }
+
+      if (!context.user) {
+        throw new ForbiddenError('Permission denied: Cannot update ticket');
+      }
+      try {
+        await authorizeTicketRecordAccess({
+          trx,
+          tenant: context.tenant,
+          user: context.user,
+          apiKeyId: context.apiKeyId,
+          ticketId: id,
+          action: 'update',
+          ticketRow: currentTicket as TicketRecordRow,
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === 'Permission denied: Cannot access ticket') {
+          throw new ForbiddenError('Permission denied: Cannot update ticket');
+        }
+        throw error;
       }
 
       // Remove undefined values from data object

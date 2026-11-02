@@ -13,6 +13,7 @@ const hasPermissionMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 const getClientContactVisibilityContextMock = vi.fn();
+const authorizeTicketRecordAccessMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
@@ -115,6 +116,10 @@ vi.mock('../lib/clientPortalVisibility.server', () => ({
   getClientContactVisibilityContext: (...args: any[]) => getClientContactVisibilityContextMock(...args),
 }));
 
+vi.mock('../lib/ticketRecordAuthorization', () => ({
+  authorizeTicketRecordAccess: (...args: any[]) => authorizeTicketRecordAccessMock(...args),
+}));
+
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => currentBundleRules),
 }));
@@ -154,6 +159,16 @@ function buildTrx(params: {
   detailTicketsById: Record<string, Record<string, unknown>>;
 }) {
   const trx = ((table: string) => {
+    if (table === 'tickets') {
+      const ticket = params.detailTicketsById['ticket-1'] ?? makeTicket();
+      return {
+        where: vi.fn(() => ({
+          first: vi.fn(async () => ticket),
+          update: vi.fn(async () => 1),
+        })),
+      };
+    }
+
     if (table === 'tickets as t') {
       const whereClauses: Array<Record<string, unknown>> = [];
       const queryBuilder: any = {
@@ -258,6 +273,7 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
   beforeEach(() => {
     vi.clearAllMocks();
     currentBundleRules = [];
+    authorizeTicketRecordAccessMock.mockResolvedValue(undefined);
     currentUser = {
       user_id: 'internal-user-1',
       user_type: 'internal',
@@ -450,6 +466,27 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
     ).rejects.toThrow('suppressInternalNotifications requires suppressContactNotifications');
 
     expect(createTenantKnexMock).not.toHaveBeenCalled();
+  });
+
+  it('denies an out-of-scope write through legacy updateTicket before updating the row', async () => {
+    currentUser = { user_id: 'agent-1', user_type: 'internal', tenant: 'tenant-1', roles: [] };
+    const ticket = makeTicket({ client_id: 'client-outside' });
+    const update = vi.fn(async () => 1);
+    const trx = ((table: string) => {
+      if (table === 'tickets') return { where: () => ({ first: async () => ticket, update }) };
+      throw new Error(`Unexpected table: ${table}`);
+    }) as any;
+    withTransactionMock.mockImplementation(async (_db, callback) => callback(trx));
+    authorizeTicketRecordAccessMock.mockRejectedValueOnce(new Error('Permission denied: Cannot access ticket'));
+
+    await expect(updateTicket('ticket-1', { title: 'Unauthorized title' } as any)).resolves.toMatchObject({
+      permissionError: 'Permission denied: Cannot access ticket',
+    });
+
+    expect(authorizeTicketRecordAccessMock).toHaveBeenCalledWith(expect.objectContaining({
+      ticketId: 'ticket-1', action: 'update', ticketRow: ticket,
+    }));
+    expect(update).not.toHaveBeenCalled();
   });
   it.each([false, true])('uses the real kernel for contact narrowing on list/detail (admin=%s)', async (admin) => {
     currentUser = { user_id: 'client-user-1', user_type: 'client', tenant: 'tenant-1', clientId: 'client-1', contact_id: 'contact-1', roles: [] };

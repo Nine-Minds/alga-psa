@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 let currentUser: any;
 
 const hasPermissionMock = vi.fn();
+const authorizeTicketRecordAccessMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 const publishWorkflowEventMock = vi.fn();
@@ -37,6 +38,17 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
+}));
+
+vi.mock('../lib/ticketRecordAuthorization', () => ({
+  authorizeTicketRecordAccess: (...args: any[]) => authorizeTicketRecordAccessMock(...args),
+}));
+
+vi.mock('../lib/ticketMutationActor', () => ({
+  resolveTicketMutationCollaborator: vi.fn(async () => ({
+    ownerTenantId: 'tenant-1', referenceId: 'actor-ref-1', tenantId: 'other-tenant',
+    userId: 'user-1', displayName: 'Collaborator', organizationName: 'Partner',
+  })),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -147,7 +159,6 @@ vi.mock('@alga-psa/shared/services/tickets/ticketSlaStageEvents', () => ({
       idempotencyKey: event.idempotencyKey,
     }),
 }));
-
 vi.mock('../lib/validateTicketClosure', () => ({
   enforceTicketCloseRules: vi.fn(async () => undefined),
 }));
@@ -295,6 +306,7 @@ function buildTrx(params: {
     where(whereArgs: Record<string, unknown>) {
       if ('ticket_id' in whereArgs) {
         return {
+          forUpdate: vi.fn(function (this: any) { return this; }),
           first: vi.fn(async () => currentTicket),
           update: vi.fn((data: Record<string, unknown>) => {
             ticketUpdates.push(data);
@@ -450,6 +462,7 @@ describe('updateTicketWithCache live updates', () => {
       user_type: 'internal',
     };
     hasPermissionMock.mockResolvedValue(true);
+    authorizeTicketRecordAccessMock.mockResolvedValue(undefined);
     createTenantKnexMock.mockResolvedValue({ knex: { any: true } });
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(buildTrx({})));
   });
@@ -517,6 +530,72 @@ describe('updateTicketWithCache live updates', () => {
     );
 
     expect(publishRedisMock).not.toHaveBeenCalled();
+  });
+
+  it('denies an out-of-scope record before database updates or event publication', async () => {
+    authorizeTicketRecordAccessMock.mockImplementationOnce(async ({ ticketRow }: any) => {
+      if (ticketRow.client_id !== 'client-in-scope') throw new Error('Permission denied: Cannot access ticket');
+    });
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+      callback(buildTrx({ currentTicket: makeTicket({ client_id: 'client-outside' }) }))
+    );
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+
+    const result = await updateTicketWithCache('ticket-1', { title: 'Unauthorized title' });
+
+    expect(result).toEqual(expect.objectContaining({ permissionError: 'Permission denied: Cannot access ticket' }));
+    expect(ticketUpdates).toHaveLength(0);
+    expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+    expect(publishEventMock).not.toHaveBeenCalled();
+    expect(publishRedisMock).not.toHaveBeenCalled();
+  });
+
+  it('allows an in-scope record and checks authorization before its first update', async () => {
+    authorizeTicketRecordAccessMock.mockImplementationOnce(async ({ ticketRow }: any) => {
+      expect(ticketRow.client_id).toBe('client-in-scope');
+      expect(ticketUpdates).toHaveLength(0);
+    });
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+      callback(buildTrx({ currentTicket: makeTicket({ client_id: 'client-in-scope' }) }))
+    );
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+
+    await expect(updateTicketWithCache('ticket-1', { title: 'Authorized title' })).resolves.toBe('success');
+
+    expect(ticketUpdates).toContainEqual(expect.objectContaining({ title: 'Authorized title' }));
+  });
+
+  it('allows system auto-close without record authorization', async () => {
+    const { updateTicketInTransaction } = await import('./optimizedTicketActions');
+    const trx = buildTrx({ currentTicket: makeTicket({ status_id: 'status-1' }) });
+    const systemUser = { ...currentUser, tenant: 'other-tenant' };
+
+    await expect(updateTicketInTransaction(
+      trx as any, systemUser, 'tenant-1', 'ticket-1', { status_id: 'closed-status-1' }, { systemActor: true },
+    )).resolves.toBe('success');
+
+    expect(authorizeTicketRecordAccessMock).not.toHaveBeenCalled();
+    expect(ticketUpdates).not.toHaveLength(0);
+  });
+
+  it('keeps an authorized collaboration edit on the shared-work authorization path', async () => {
+    const { updateTicketInTransaction } = await import('./optimizedTicketActions');
+    const trx = buildTrx({ currentTicket: makeTicket({ title: 'Before' }) });
+    const assertWriteAuthority = vi.fn(async () => undefined);
+
+    await expect(updateTicketInTransaction(
+      trx as any,
+      { ...currentUser, tenant: 'other-tenant' },
+      'tenant-1',
+      'ticket-1',
+      { title: 'Before' },
+      undefined,
+      { actorReferenceId: 'actor-ref-1', assertWriteAuthority },
+    )).resolves.toBe('success');
+
+    expect(assertWriteAuthority).toHaveBeenCalledWith(trx);
+    expect(authorizeTicketRecordAccessMock).not.toHaveBeenCalled();
+    expect(ticketUpdates).toContainEqual(expect.objectContaining({ title: 'Before' }));
   });
 
   it('T007: rejects a client-portal caller before any permission check or ticket access', async () => {

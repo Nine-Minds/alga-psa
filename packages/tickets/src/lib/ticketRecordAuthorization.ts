@@ -59,6 +59,7 @@ async function resolveAuthorizationSubjectForUser(
   trx: Conn,
   tenant: string,
   user: IUserWithRoles,
+  apiKeyId?: string,
 ): Promise<AuthorizationSubject> {
   let roleIds = extractRoleIdsFromUser(user);
   if (roleIds.length === 0) {
@@ -98,6 +99,7 @@ async function resolveAuthorizationSubjectForUser(
     managedUserIds: managedRows.map((row) => row.user_id),
     clientId: user.clientId ?? null,
     portfolioClientIds: [],
+    ...(apiKeyId ? { apiKeyId } : {}),
   };
 }
 
@@ -150,8 +152,9 @@ export async function createTicketAuthorizationContext(
   trx: Conn,
   tenant: string,
   user: IUserWithRoles,
+  apiKeyId?: string,
 ): Promise<TicketAuthorizationContext> {
-  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
+  const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user, apiKeyId);
   const contactVisibility = await resolveClientVisibility(trx, tenant, user);
   const selectedBoardIds =
     contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
@@ -233,6 +236,8 @@ export async function authorizeTicketRecordAccess(input: {
   user: IUserWithRoles;
   ticketId: string;
   action: 'read' | 'update';
+  /** API key identity remains part of the subject for REST record checks. */
+  apiKeyId?: string;
   /** Already-loaded ticket row (must include the authorization columns); skips the reload. */
   ticketRow?: TicketRecordRow;
 }): Promise<TicketRecordRow> {
@@ -242,7 +247,7 @@ export async function authorizeTicketRecordAccess(input: {
     throw new Error('Ticket not found');
   }
 
-  const context = await createTicketAuthorizationContext(input.trx, input.tenant, input.user);
+  const context = await createTicketAuthorizationContext(input.trx, input.tenant, input.user, input.apiKeyId);
   const decision = await context.authorizationKernel.authorizeResource({
     subject: context.authorizationSubject,
     resource: {
