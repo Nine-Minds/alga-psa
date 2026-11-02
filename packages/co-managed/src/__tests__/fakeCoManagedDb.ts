@@ -79,6 +79,8 @@ function makeBuilder(store: FakeStore, table: string, tenant: string | undefined
     /** Raw SQL predicates are not interpreted; tests seed no rows that rely on them. */
     whereRaw() { return builder; },
     orderBy() { return builder; },
+    /** Row limits are not applied: seed fewer rows than the page size. */
+    limit() { return builder; },
     select() { return builder; },
     async first() { const row = selected()[0]; return row ? { ...row } : undefined; },
     /** Awaitable (row count) and `.returning()`-able, like knex. */

@@ -458,6 +458,172 @@ describe('client portal ticket visibility enforcement', () => {
     });
   });
 
+  describe('portal comment projection (alga-2026-0002972)', () => {
+    const SCHEDULING_COLUMNS = [
+      'schedule_job_id',
+      'scheduled_publish_event_id',
+      'scheduled_publish_dispatched_at',
+      'scheduled_response_event_id',
+      'scheduled_previous_response_state',
+      'scheduled_response_dispatched_at',
+    ];
+
+    let lastDetail: any;
+
+    async function loadConversations(commentRows: any[]) {
+      const ticketBuilder = makeDetailBuilder({
+        ticket_id: TICKET_1,
+        ticket_number: 'T-1',
+        title: 'Visible ticket',
+        board_id: 'board-1',
+        client_id: 'client-1',
+        entered_by_user_type: 'internal',
+        entered_at: '2026-03-15T00:00:00.000Z',
+        updated_at: '2026-03-15T00:00:00.000Z',
+        closed_at: null,
+      });
+      withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
+        const trx = Object.assign(
+          (table: string) => {
+            if (table === 'users') return makeUserQuery();
+            if (table === 'tickets as t') return ticketBuilder;
+            if (table === 'comments') return makeChainable(commentRows);
+            if (table === 'asset_associations as aa') {
+              return {
+                innerJoin: vi.fn().mockReturnThis(),
+                where: vi.fn().mockReturnThis(),
+                select: vi.fn().mockResolvedValue([]),
+              };
+            }
+            return makeChainable();
+          },
+          { raw: vi.fn().mockResolvedValue({ rows: [] }) },
+        );
+        return callback(trx);
+      });
+      getVisibilityContextMock.mockResolvedValue({
+        ticketScope: 'client',
+        effectiveTicketScope: 'client',
+        isClientAdmin: false,
+        contactId: 'contact-1',
+        clientId: 'client-1',
+        visibilityGroupId: 'group-1',
+        visibleBoardIds: ['board-1'],
+      });
+      const { getClientTicketDetails } = await import('./client-tickets');
+      const detail: any = await getClientTicketDetails(TICKET_1);
+      lastDetail = detail;
+      return detail.conversations as any[];
+    }
+
+    const row = (over: any = {}) => ({
+      comment_id: 'c1',
+      ticket_id: TICKET_1,
+      thread_id: 't1',
+      parent_comment_id: null,
+      note: 'hello',
+      markdown_content: 'hello',
+      is_internal: false,
+      publish_state: 'published',
+      deleted_at: null,
+      created_at: '2026-03-15T00:00:00.000Z',
+      user_id: 'u1',
+      contact_id: null,
+      metadata: null,
+      bundle_mirror_source_comment_id: null,
+      ...over,
+    });
+
+    it('drops metadata.email and Bcc from published comments, keeps Cc', async () => {
+      const [c] = await loadConversations([
+        row({
+          metadata: {
+            responseSource: 'inbound_email',
+            email: { providerId: 'p', messageId: 'm', from: 'a@x', subject: 's' },
+            email_recipients: { cc: [{ email: 'cc@x' }], bcc: [{ email: 'secret@x' }] },
+          },
+        }),
+      ]);
+      expect(c.metadata.email).toBeUndefined();
+      expect(c.metadata.responseSource).toBe('inbound_email');
+      expect(JSON.stringify(c.metadata)).not.toContain('secret@x');
+      expect(JSON.stringify(c.metadata)).toContain('cc@x');
+    });
+
+    it('removes every CLIENT_REDACTED_COMMENT_FIELDS column', async () => {
+      const scheduling = Object.fromEntries(SCHEDULING_COLUMNS.map((k) => [k, 'x']));
+      const [c] = await loadConversations([row(scheduling)]);
+      for (const k of SCHEDULING_COLUMNS) expect(c).not.toHaveProperty(k);
+    });
+
+    it('drops comment_publication_payload and scheduling columns from live public comments', async () => {
+      const [c] = await loadConversations([
+        row({
+          note: 'POSTEDIT',
+          markdown_content: 'POSTEDIT',
+          comment_publication_payload: {
+            comment: { content: 'PREEDIT' },
+            tenantId: 'tenant-1',
+            suppressContactNotifications: true,
+          },
+          scheduled_publish_at: '2026-04-01T00:00:00.000Z',
+          scheduled_publish_tz: 'UTC',
+        }),
+      ]);
+      expect(c.note).toBe('POSTEDIT');
+      expect(c).not.toHaveProperty('comment_publication_payload');
+      expect(c).not.toHaveProperty('scheduled_publish_at');
+      expect(c).not.toHaveProperty('scheduled_publish_tz');
+      expect(JSON.stringify(lastDetail)).not.toContain('PREEDIT');
+    });
+
+    it('nulls unparseable string metadata', async () => {
+      const [c] = await loadConversations([row({ metadata: '{not json' })]);
+      expect(c.metadata).toBeNull();
+    });
+
+    it('returns deleted comments as minimal tombstones without metadata', async () => {
+      const scheduling = Object.fromEntries(SCHEDULING_COLUMNS.map((k) => [k, 'x']));
+      const [c] = await loadConversations([
+        row({
+          deleted_at: '2026-03-16T00:00:00.000Z',
+          note: 'secret body',
+          markdown_content: 'secret body',
+          metadata: { email: { messageId: 'm' } },
+          bundle_mirror_source_comment_id: 'src-1',
+          ...scheduling,
+        }),
+      ]);
+      expect(c).not.toHaveProperty('metadata');
+      expect(Object.keys(c).sort()).toEqual(
+        [
+          'comment_id', 'thread_id', 'parent_comment_id', 'created_at', 'deleted_at', 'user_id',
+          'contact_id', 'is_internal', 'publish_state', 'note', 'markdown_content', 'bundle_mirror_source',
+        ].sort(),
+      );
+      expect(c.note).toBe('[deleted]');
+      expect(c.markdown_content).toBe('[deleted]');
+      expect(c.bundle_mirror_source).toEqual({ source_comment_id: 'src-1' });
+    });
+
+    it('masks parent_comment_id when the parent was not served', async () => {
+      const [reply, deletedReply] = await loadConversations([
+        row({ comment_id: 'r1', parent_comment_id: 'unserved' }),
+        row({ comment_id: 'r2', parent_comment_id: 'unserved', deleted_at: '2026-03-16T00:00:00.000Z' }),
+      ]);
+      expect(reply.parent_comment_id).toBeNull();
+      expect(deletedReply.parent_comment_id).toBeNull();
+    });
+
+    it('keeps parent_comment_id when the parent was served', async () => {
+      const rows = await loadConversations([
+        row({ comment_id: 'p1' }),
+        row({ comment_id: 'r1', parent_comment_id: 'p1' }),
+      ]);
+      expect(rows[1].parent_comment_id).toBe('p1');
+    });
+  });
+
   it('T018: client portal ticket detail excludes internal comments and internal-only commenters', async () => {
     const ticketBuilder = makeDetailBuilder({
       ticket_id: TICKET_1,
@@ -552,6 +718,11 @@ describe('client portal ticket visibility enforcement', () => {
     // Comment-derived involved-user ids are likewise restricted to
     // client-visible comments so internal-only commenters aren't enumerated.
     expect(commentUserIdsBuilder.where).toHaveBeenCalledWith('c.is_internal', false);
+
+    // L4a: both reads also apply the shared audience predicate (commentAudienceSql), so only
+    // requester-audience comments reach the portal and shared_it / organization_private never do.
+    expect(conversationsBuilder.whereRaw).toHaveBeenCalledWith("(?) = 'requester'", expect.any(Array));
+    expect(commentUserIdsBuilder.whereRaw).toHaveBeenCalledWith("(?) = 'requester'", expect.any(Array));
   });
 
   it('T012: client portal ticket documents reject hidden-board access', async () => {

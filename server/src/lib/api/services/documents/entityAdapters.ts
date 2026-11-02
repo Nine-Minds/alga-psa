@@ -17,6 +17,8 @@ import type { IDocument } from 'server/src/interfaces/document.interface';
 import { ATTACHABLE_ENTITY_TYPES } from '../../schemas/documentAttach';
 import { hasPermission } from '../../../auth/rbac';
 import { authorizeApiResourceRead } from '../../controllers/authorizationKernel';
+import { assertAssetRecordAccess } from '../../controllers/assetReadGuard';
+import { AssetService } from '../AssetService';
 import { buildProjectRecordContext, buildTicketRecordContext } from '../../controllers/recordContexts';
 import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
@@ -236,11 +238,25 @@ const projectTaskAdapter: EntityAdapter = {
   resolveFolder: (knex, tenant, taskId) => firstEntityFolder(knex, tenant, 'project_task', taskId),
 };
 
+const assetAdapter: EntityAdapter = {
+  entityType: 'asset',
+  rbacResource: 'asset',
+  productApiPath: '/api/v1/assets',
+  async assertCanAttach(apiRequest, assetId, knex) {
+    // Coarse write gate first (403 before any load), then the same record-level
+    // read authorization the asset routes use. A missing and a denied asset both
+    // answer 404 "Asset not found". TODO: move to isAssetActionAllowed once it lands.
+    await assertRbacUpdate(apiRequest, 'asset', knex);
+    await assertAssetRecordAccess(apiRequest.context, assetId, new AssetService());
+  },
+  resolveFolder: (knex, tenant, assetId) => firstEntityFolder(knex, tenant, 'asset', assetId),
+};
+
 export const ENTITY_ADAPTERS: Record<AttachableEntityType, EntityAdapter> = {
   ticket: ticketAdapter,
   project_task: projectTaskAdapter,
   client: simpleAdapter('client', 'client', '/api/v1/clients', 'clients', 'client_id', 'Client'),
   contact: simpleAdapter('contact', 'contact', '/api/v1/contacts', 'contacts', 'contact_name_id', 'Contact'),
-  asset: simpleAdapter('asset', 'asset', '/api/v1/assets', 'assets', 'asset_id', 'Asset'),
+  asset: assetAdapter,
 };
 

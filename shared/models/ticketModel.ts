@@ -9,6 +9,9 @@ import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
+import {
+  assertReplyAudience, lockLabelledThreadAudience, nativeThreadAudience, type NativeCommentAudience,
+} from '../lib/commentAudience';
 import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
 import { assertHumanWorkAssignee } from '../lib/humanWork/assertHumanWorkAssignee';
 import { v4 as uuidv4 } from 'uuid';
@@ -143,6 +146,8 @@ export const createCommentSchema = z.object({
   content: z.string().min(1, 'Comment content is required'),
   parent_comment_id: z.string().guid('Parent comment ID must be a valid UUID').optional(),
   is_internal: z.boolean().optional(),
+  // Names who may read a shared-work comment; native tenants never need it (see nativeThreadAudience).
+  collaboration_audience: z.enum(['requester', 'organization_private']).optional(),
   is_resolution: z.boolean().optional(),
   is_system_generated: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
@@ -266,6 +271,7 @@ export interface CreateCommentValidationInput {
   content: string;
   parent_comment_id?: string;
   is_internal?: boolean;
+  collaboration_audience?: NativeCommentAudience;
   is_resolution?: boolean;
   is_system_generated?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
@@ -1530,6 +1536,8 @@ export class TicketModel {
     let parentCommentId = validatedData.parent_comment_id || null;
     let threadId = uuidv4();
     let commentIsInternal = validatedData.is_internal || false;
+    // Set only for a labelled (co-managed) thread; stays undefined for every native comment.
+    let labelledAudience: string | undefined;
     const now = new Date();
 
     // Map legacy/alias author types to current enum: internal | client | unknown
@@ -1557,6 +1565,7 @@ export class TicketModel {
           thread_id: 'parent.thread_id',
           deleted_at: 'parent.deleted_at',
           thread_is_internal: 'thread.is_internal',
+          thread_audience: 'thread.collaboration_audience',
         })
         .first()) as unknown as
         | {
@@ -1564,6 +1573,7 @@ export class TicketModel {
             deleted_at?: Date | string | null;
             thread_id: string;
             thread_is_internal?: boolean | null;
+            thread_audience?: string | null;
           }
         | undefined;
 
@@ -1590,8 +1600,28 @@ export class TicketModel {
       } else {
         threadId = parent.thread_id;
         commentIsInternal = Boolean(parent.thread_is_internal);
+        // A reply inherits its thread's audience. Only a labelled (co-managed) thread
+        // is re-read under lock, so legacy threads cost no extra statement.
+        if (parent.thread_audience != null) {
+          labelledAudience = parent.thread_audience;
+          await lockLabelledThreadAudience(trx, tenant, { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience });
+          assertReplyAudience(
+            { collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
+            { isInternal: validatedData.is_internal, audience: validatedData.collaboration_audience },
+          );
+        }
       }
     }
+
+    // Audience of a NEW thread: {} (no SQL) for internal notes, plain authors and PSA tenants;
+    // fails closed in a co-managed workspace when a staff comment names no audience.
+    // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
+    const threadAudience = parentCommentId ? {} : await nativeThreadAudience(trx, tenant, {
+      isInternal: commentIsInternal,
+      authorType: dbAuthorType,
+      audience: validatedData.collaboration_audience,
+    });
+    labelledAudience ??= threadAudience.collaboration_audience;
 
     // One-off Cc/Bcc ride along in metadata. Visibility is resolved above, so a
     // reply inheriting an internal thread is rejected here too.
@@ -1630,6 +1660,7 @@ export class TicketModel {
         project_task_id: null,
         root_comment_id: commentId,
         is_internal: commentIsInternal,
+        ...threadAudience,
         reply_count: 0,
         last_activity_at: now,
         created_at: now,
@@ -1700,7 +1731,9 @@ export class TicketModel {
             isInternal: commentIsInternal,
             is_resolution: validatedData.is_resolution,
             content: validatedData.content,
-            author: authorName
+            author: authorName,
+            // Present only on labelled threads, so a native event is byte-identical.
+            ...(labelledAudience ? { collaborationAudience: labelledAudience, threadId } : {})
           }
         };
         await publishCommentEvent(trx, 'ticket', {
@@ -1720,6 +1753,7 @@ export class TicketModel {
               tenantId: tenant, occurredAt: new Date().toISOString(), ticketId: validatedData.ticket_id, commentId, actor,
               comment: { content: validatedData.content, author: authorName,
                 isInternal: commentIsInternal, authorType: dbAuthorType },
+              ...(labelledAudience ? { collaboration_audience: labelledAudience as NativeCommentAudience, thread_id: threadId } : {}),
             }) });
           }
         });

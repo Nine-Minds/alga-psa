@@ -1,5 +1,12 @@
 import axios, { AxiosInstance } from 'axios';
+import { microsoftIssuerKindFromSource, resolveMicrosoftOAuthAuthority } from '@alga-psa/shared/services/email/microsoftAuthority';
 import { getMicrosoftGraphBaseUrl, getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import {
+  MICROSOFT_OAUTH_FAILURE_ERROR_CODES,
+  classifySafeMicrosoftOAuthFailure,
+  formatMicrosoftOAuthFailureForMailboxFlow,
+  toSafeMicrosoftOAuthFailure,
+} from '@alga-psa/shared/services/email/microsoftOAuthErrors';
 import { BaseCalendarAdapter } from './base/BaseCalendarAdapter';
 import type { CalendarProviderConfig, ExternalCalendarEvent } from '@alga-psa/types';
 import { resolveMicrosoftConsumerProfileConfig } from '../../../microsoftConsumerProfileResolution';
@@ -142,8 +149,13 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         throw new Error('Microsoft OAuth credentials not configured');
       }
 
-      // Always use 'common' for multi-tenant Azure AD apps
-      const tokenUrl = getMicrosoftTokenUrl('common');
+      // Same authority the authorize step used (same profile, same resolver).
+      const tokenUrl = getMicrosoftTokenUrl(
+        resolveMicrosoftOAuthAuthority({
+          issuerKind: microsoftIssuerKindFromSource(microsoftProfile.credentialSource),
+          profileTenantId: microsoftProfile.microsoftTenantId,
+        })
+      );
 
       // Omit scope on refresh: this preserves each refresh token's granted scopes.
       // Older connections can still sync event bodies and get a category-specific reconnect warning.
@@ -180,6 +192,22 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
 
       this.log('info', 'Access token refreshed successfully');
     } catch (error) {
+      // Classify Microsoft's OAuth error body (AADSTS) before the generic
+      // wrapper, which only reads Graph-style error.code/message. Only safe
+      // fields are carried; never the axios config/body.
+      const safeFailure = toSafeMicrosoftOAuthFailure(error);
+      const failureKind = classifySafeMicrosoftOAuthFailure(safeFailure);
+      if (failureKind) {
+        this.log('error', 'Microsoft Calendar token refresh rejected', safeFailure);
+        const wrapped = new Error(formatMicrosoftOAuthFailureForMailboxFlow(failureKind));
+        Object.assign(wrapped, {
+          status: safeFailure.status,
+          code: MICROSOFT_OAUTH_FAILURE_ERROR_CODES[failureKind],
+          microsoftOAuthFailureKind: failureKind,
+          microsoftOAuthFailure: safeFailure,
+        });
+        throw wrapped;
+      }
       throw this.handleError(error, 'refreshAccessToken');
     }
   }

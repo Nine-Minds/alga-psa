@@ -133,6 +133,57 @@ test('nl allowlist accepts the Dutch copula "is" without admitting English sente
   assert.equal(allowlist.isAllowed('Builder'), false);
 });
 
+test('ticket conversation audience strings use the formal register in es and nl', () => {
+  // Formal-register locales must not ship informal address in new conversation
+  // audience copy (es "tienes", nl "je"); the glossary forbids both.
+  const cases = {
+    es: ['conversation.shared.errors.forbidden'],
+    nl: ['conversation.audience.required', 'errors.comment.audienceRequired'],
+  };
+  const lookup = (obj, key) => key.split('.').reduce((node, part) => node?.[part], obj);
+  const en = JSON.parse(readFileSync(join(repoRoot, 'server/public/locales/en/features/tickets.json'), 'utf8'));
+
+  for (const [locale, keys] of Object.entries(cases)) {
+    const config = registry[locale];
+    const glossary = JSON.parse(readFileSync(join(repoRoot, config.dir, config.glossary), 'utf8'));
+    const matchers = forbiddenMatchers(glossary, config.dialect);
+    const strings = JSON.parse(readFileSync(join(repoRoot, `server/public/locales/${locale}/features/tickets.json`), 'utf8'));
+    for (const key of keys) {
+      const value = lookup(strings, key);
+      nonEmptyString(value, `${locale}: features/tickets:${key} must exist`);
+      const hits = findForbiddenTerms(value, matchers, config.dialect, lookup(en, key), `features/tickets:${key}`);
+      assert.deepEqual(hits.map((hit) => hit.term), [], `${locale}: features/tickets:${key} = ${value}`);
+    }
+  }
+});
+
+test('Microsoft calendar provider strings respect every locale glossary', () => {
+  // The bring-your-own Microsoft app copy talks about single-/multitenant apps and
+  // the directory (tenant) ID; locales must render "tenant" with the glossary term
+  // (e.g. pl "organizacja", never "dzierżawa").
+  const lookup = (obj, key) => key.split('.').reduce((node, part) => node?.[part], obj);
+  const leaves = (node, prefix) => Object.entries(node).flatMap(([name, value]) => {
+    const key = `${prefix}.${name}`;
+    return typeof value === 'string' ? [key] : leaves(value, key);
+  });
+  const en = JSON.parse(readFileSync(join(repoRoot, 'server/public/locales/en/msp/calendar.json'), 'utf8'));
+  const keys = leaves(lookup(en, 'calendar.providers.microsoft'), 'calendar.providers.microsoft');
+  assert.ok(keys.includes('calendar.providers.microsoft.setup.tenancy'), 'en: tenancy copy must exist');
+
+  for (const [locale, config] of Object.entries(registry)) {
+    if (locale === 'en' || !config.glossary) continue;
+    const glossary = JSON.parse(readFileSync(join(repoRoot, config.dir, config.glossary), 'utf8'));
+    const matchers = forbiddenMatchers(glossary, config.dialect);
+    const strings = JSON.parse(readFileSync(join(repoRoot, `server/public/locales/${locale}/msp/calendar.json`), 'utf8'));
+    for (const key of keys) {
+      const value = lookup(strings, key);
+      nonEmptyString(value, `${locale}: msp/calendar:${key} must exist`);
+      const hits = findForbiddenTerms(value, matchers, config.dialect, lookup(en, key), `msp/calendar:${key}`);
+      assert.deepEqual(hits.map((hit) => hit.term), [], `${locale}: msp/calendar:${key} = ${value}`);
+    }
+  }
+});
+
 // Hour-bucket bans ("bucket" -> prepaid hour pool) must not fire on object-storage
 // copy, where "bucket" is the S3 term and the hour-pool rendering would be wrong.
 const objectStorageEn =

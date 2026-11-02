@@ -60,6 +60,14 @@ export interface TimeEntryComputeRow {
   ticket_description?: string | null;
   project_task_name?: string | null;
   /**
+   * L6a1/T0-2 seam stand-in: retained source evidence for contributed (shared) work. Present only when a
+   * time-entry work contributor serves the tenant; absent for native time.
+   */
+  work_source_tenant?: string | null;
+  work_source_kind?: string | null;
+  work_source_id?: string | null;
+  work_relationship_id?: string | null;
+  /**
    * Set by the loader when the entry is dated inside a service period an issued
    * invoice already closed. Priced under the same contract terms; the charge
    * reports this period instead of the current one.
@@ -221,6 +229,8 @@ export function buildTimeEntryWorkItemSnapshot(
     | "ticket_title"
     | "ticket_description"
     | "project_task_name"
+    | "work_source_kind"
+    | "work_source_id"
   >,
   billed: {
     billedMinutes: number;
@@ -233,10 +243,19 @@ export function buildTimeEntryWorkItemSnapshot(
     segment?: 'regular' | 'overtime';
   },
 ): InvoiceTimeEntrySnapshot {
+  // L6a1/T0-2 seam stand-in: contributed (shared) work snapshots as its retained source kind, which the
+  // snapshot validator already accepts; without retained source evidence it stays the ad_hoc fallback.
+  const contributedKind =
+    entry.work_item_type === "co_managed" &&
+    entry.work_source_id &&
+    (entry.work_source_kind === "ticket" || entry.work_source_kind === "project_task")
+      ? entry.work_source_kind
+      : null;
+  const sourceKind = contributedKind ?? entry.work_item_type;
   const workItemType: InvoiceTimeEntrySnapshot["workItemType"] =
-    entry.work_item_type === "ticket"
+    sourceKind === "ticket"
       ? "ticket"
-      : entry.work_item_type === "project_task"
+      : sourceKind === "project_task"
         ? "project_task"
         : "ad_hoc";
   const isTicket = workItemType === "ticket";
@@ -246,7 +265,7 @@ export function buildTimeEntryWorkItemSnapshot(
     rateKind: billed.billedMinutes > 0 ? (billed.rateKind ?? 'unknown') : 'unknown',
     uniformRate: billed.billedMinutes > 0 && billed.rateKind === 'uniform' ? (billed.uniformRate ?? null) : null,
     workItemType,
-    workItemId: entry.work_item_id ?? null,
+    workItemId: (contributedKind ? entry.work_source_id : entry.work_item_id) ?? null,
     ticketNumber: isTicket ? trimmedOrNull(entry.ticket_number) : null,
     title: isTicket
       ? trimmedOrNull(entry.ticket_title)
