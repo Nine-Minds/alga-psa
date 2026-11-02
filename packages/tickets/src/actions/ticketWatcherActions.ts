@@ -15,6 +15,7 @@ import {
   type TicketWatcherWriteResult,
 } from '@alga-psa/shared/services/tickets/ticketWatcherService';
 import type { TicketActionError } from './ticketActionErrors';
+import { authorizeTicketRecordAccess } from '../lib/ticketRecordAuthorization';
 
 /**
  * UI write path for ticket watchers. Every call goes through TicketWatcherService
@@ -37,6 +38,13 @@ async function runWatcherWrite(
       if (!(await hasPermission(user as any, 'ticket', 'update', trx))) {
         throw new Error('Permission denied: Cannot update ticket watchers');
       }
+      await authorizeTicketRecordAccess({
+        trx,
+        tenant,
+        user: user as any,
+        ticketId,
+        action: 'update',
+      });
       return write(trx);
     });
 
