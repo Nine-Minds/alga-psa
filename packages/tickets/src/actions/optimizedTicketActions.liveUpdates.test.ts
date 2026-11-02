@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { AUTO_CLOSE_TICKET_AUTHORIZATION } from '../lib/ticketUpdateAuthorization';
 
 let currentUser: any;
 
@@ -904,7 +905,7 @@ describe('updateTicketWithCache live updates', () => {
       },
     });
   });
-  it('keeps the USER actor on TICKET_RESPONSE_STATE_CHANGED for a native systemActor update (auto-close)', async () => {
+  it('keeps the existing USER event actor for auto-close capability updates', async () => {
     const trx = buildTrx({
       currentTicket: makeTicket({ status_id: 'status-1', response_state: 'awaiting_client' }),
     });
@@ -916,10 +917,16 @@ describe('updateTicketWithCache live updates', () => {
     withTransactionMock.mockImplementation(async (_db: any, callback: (t: any) => Promise<any>) => callback(trx));
     await expect(
       withTransaction({ any: true } as any, (t: any) =>
-        updateTicketInTransaction(t, systemUser, 'tenant-1', 'ticket-1', { status_id: 'closed-status-1' }, {
-          systemActor: true,
-          systemAuthorization: { source: 'auto_close' },
-        }),
+        updateTicketInTransaction(
+          t,
+          systemUser,
+          'tenant-1',
+          'ticket-1',
+          { status_id: 'closed-status-1' },
+          undefined,
+          undefined,
+          AUTO_CLOSE_TICKET_AUTHORIZATION,
+        ),
       ),
     ).resolves.toBe('success');
 
@@ -936,7 +943,7 @@ describe('updateTicketWithCache live updates', () => {
     );
   });
 
-  it('requires an explicit auto-close authorization context for system updates', async () => {
+  it('rejects serialized attempts to forge trusted update authority', async () => {
     const trx = buildTrx({
       currentTicket: makeTicket({ status_id: 'status-1', response_state: 'awaiting_client' }),
     });
@@ -948,8 +955,8 @@ describe('updateTicketWithCache live updates', () => {
       'tenant-1',
       'ticket-1',
       { status_id: 'closed-status-1' },
-      { systemActor: true },
-    )).rejects.toThrow('System ticket updates require an explicit authorization context');
+      { systemActor: true, systemAuthorization: { source: 'auto_close' } } as any,
+    )).rejects.toThrow('Unsupported ticket update option');
     expect(ticketUpdates).toHaveLength(0);
   });
 });

@@ -104,6 +104,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
+import { assertAllowedTicketUpdateOptions, AUTO_CLOSE_TICKET_AUTHORIZATION } from '../lib/ticketUpdateAuthorization';
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
 import { compilePredicateFragment } from '@alga-psa/predicates/sql';
 import type { PredicateGroup } from '@alga-psa/predicates';
@@ -2634,15 +2635,6 @@ export interface UpdateTicketInTransactionOptions {
    * only, undefined raises BundlePropagationConfirmationRequiredError.
    */
   propagateToChildren?: boolean;
-  /**
-   * Attribute the change to the system rather than `user` (auto-close engine):
-   * closed_by stays null, events carry a SYSTEM actor, and the audit row is
-   * system-sourced. `user` is still required for the call signature but is not
-   * referenced for attribution.
-   */
-  systemActor?: boolean;
-  /** Explicit authority for trusted automation; system attribution alone grants no access. */
-  systemAuthorization?: { source: 'auto_close' };
 }
 
 export async function updateTicketInTransaction(
@@ -2653,10 +2645,19 @@ export async function updateTicketInTransaction(
   data: Partial<ITicket>,
   options?: UpdateTicketInTransactionOptions,
   collaboration?: TicketMutationCollaborationContext,
+  authorizationContext?: typeof AUTO_CLOSE_TICKET_AUTHORIZATION,
 ): Promise<'success'> {
     try {
       // Validate update data
       const validatedData = validateData(ticketUpdateSchema, data);
+      assertAllowedTicketUpdateOptions(options, [
+        'overrideCloseRules',
+        'overrideCloseRulesReason',
+        'suppressContactNotifications',
+        'suppressInternalNotifications',
+        'bypassCloseRules',
+        'propagateToChildren',
+      ]);
       const suppressContactNotifications = options?.suppressContactNotifications === true;
       const suppressInternalNotifications = options?.suppressInternalNotifications === true;
 
@@ -2667,10 +2668,10 @@ export async function updateTicketInTransaction(
     // Co-managed collaborator edits (admitted by the shared-work domain). Every
     // statement in this block is conditional on `collaboration`: a native caller
     // issues exactly the queries it issued before, and takes no additional lock.
-    const isSystemActor = options?.systemActor === true;
-    if (isSystemActor && options?.systemAuthorization?.source !== 'auto_close') {
-      throw new Error('System ticket updates require an explicit authorization context');
+    if (authorizationContext !== undefined && authorizationContext !== AUTO_CLOSE_TICKET_AUTHORIZATION) {
+      throw new Error('Invalid ticket update authorization context');
     }
+    const isSystemActor = authorizationContext === AUTO_CLOSE_TICKET_AUTHORIZATION;
     if (collaboration && (isSystemActor || options?.overrideCloseRules || options?.bypassCloseRules ||
         suppressContactNotifications || suppressInternalNotifications)) {
       throw new Error('Shared ticket edits cannot override closure or notification policy');
@@ -3329,7 +3330,7 @@ export async function updateTicketInTransaction(
           ctx: {
             tenantId: tenant,
             occurredAt,
-            // Native callers (including systemActor, e.g. auto-close) keep the USER actor they always had.
+            // Native callers (including trusted auto-close) keep the USER actor they always had.
             actor: collaborator ? workflowCtx.actor : { actorType: 'USER', actorUserId: user.user_id },
           },
         }),
@@ -3393,6 +3394,13 @@ export const updateTicketWithCache = withAuth(async (
   >,
 ): Promise<'success' | TicketActionError> => {
   try {
+    assertAllowedTicketUpdateOptions(options, [
+      'overrideCloseRules',
+      'overrideCloseRulesReason',
+      'suppressContactNotifications',
+      'suppressInternalNotifications',
+      'propagateToChildren',
+    ]);
     // MSP cached ticket write surface. A client-portal session must not reach it;
     // reject before the permission lookup or any ticket mutation.
     if (user.user_type !== 'internal') {

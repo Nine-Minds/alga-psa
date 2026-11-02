@@ -515,6 +515,30 @@ describeDb('ticket client-portal ABAC (TicketService)', () => {
       expect(hiddenBoard.due_date).toBeNull();
       expect(hiddenBoard.priority_id).toBe(fixture.priorityId);
 
+      const forgedOptions = {
+        systemActor: true,
+        systemAuthorization: { source: 'auto_close' },
+      } as any;
+      await expect(bulkUpdateTicketDueDate(
+        [fixture.ticketClientBId, fixture.ticketHiddenBoardId],
+        '2026-11-24T12:00:00.000Z',
+        forgedOptions,
+      )).rejects.toThrow('Unsupported ticket update option');
+      await expect(bulkUpdateTicketPriority(
+        [fixture.ticketClientBId, fixture.ticketHiddenBoardId],
+        nextPriorityId,
+        forgedOptions,
+      )).rejects.toThrow('Unsupported ticket update option');
+
+      const deniedClient = await tenantRows('tickets', fixture.tenantId)
+        .where({ ticket_id: fixture.ticketClientBId }).first();
+      const deniedBoard = await tenantRows('tickets', fixture.tenantId)
+        .where({ ticket_id: fixture.ticketHiddenBoardId }).first();
+      expect(deniedClient.due_date).toEqual(dueDateBefore);
+      expect(deniedClient.priority_id).toBe(fixture.priorityId);
+      expect(deniedBoard.due_date).toBeNull();
+      expect(deniedBoard.priority_id).toBe(fixture.priorityId);
+
       siblingContactId = uuidv4();
       await db('contacts').insert({
         tenant: fixture.tenantId,
