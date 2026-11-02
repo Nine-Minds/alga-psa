@@ -29,6 +29,18 @@ describe('isRecordFieldReadable (descriptor-driven)', () => {
     expect(isRecordFieldReadable(['assigned_to'], TICKET_RECORD_SOURCE, 'title')).toBe(true);
   });
 
+  it.each(['statuses', 'statuses.name', 'status_name', 'status', 'values.status', 'projects.status'])(
+    'projects and guards project status names hidden by %s', (alias) => {
+      const record = { project_id: 'project-1', status: 'status-1', status_name: 'Active' };
+      expect(projectRecordByRedactions([], record, PROJECT_RECORD_SOURCE)?.status_name).toBe('Active');
+      expect(projectRecordByRedactions([alias], record, PROJECT_RECORD_SOURCE)?.status_name).toBeNull();
+      expect(buildPredicateGuard('project', [alias]).columns([
+        { column: 's.name', field: 'status_name' },
+        { column: 'p.project_name', field: 'project_name' },
+      ])).toEqual(['p.project_name']);
+    },
+  );
+
   it.each(['tickets.assigned_to', 'values.assigned_to'])(
     'hides derived ticket names when the dependency is redacted as %s', (alias) => {
       expect(isRecordFieldReadable([alias], TICKET_RECORD_SOURCE, 'assigned_to_name')).toBe(false);

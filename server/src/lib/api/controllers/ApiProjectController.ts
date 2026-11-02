@@ -32,7 +32,8 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
-import { projectApiResourceRead, projectApiResourceReads, type AuthorizedProjection } from './authorizationKernel';
+import { projectApiResourceRead, projectApiResourceReads, reprojectUnderDecision, type AuthorizedProjection } from './authorizationKernel';
+import { PROJECT_RECORD_SOURCE } from '@alga-psa/co-managed/recordProjection';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import { tenantDb } from '@alga-psa/db';
 import {
@@ -154,12 +155,12 @@ export class ApiProjectController extends ApiBaseController {
 
   private async buildProjectStatsFromAuthorizedRows(
     apiRequest: AuthenticatedApiRequest,
-    projects: AuthorizedProjection<Record<string, any>>[],
+    authorizedProjects: AuthorizedProjection<Record<string, any>>[],
     knex?: Awaited<ReturnType<typeof getConnection>>
   ) {
     // Aggregates are computed from projected rows only: a redacted numeric (budgeted_hours) is absent and adds 0.
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const statusIds = Array.from(new Set(projects.map((project) => project.status).filter(Boolean)));
+    const statusIds = Array.from(new Set(authorizedProjects.map((project) => project.status).filter(Boolean)));
 
     const statuses = statusIds.length > 0
       ? await tenantDb(resolvedKnex, apiRequest.context.tenant).table('statuses')
@@ -170,12 +171,20 @@ export class ApiProjectController extends ApiBaseController {
     const statusNameById = new Map<string, string>(
       (statuses as any[]).map((row) => [String(row.status_id), String(row.name)] as [string, string])
     );
+    // Enrichment is projected under each row's original decision before any aggregate reads it.
+    const projects = authorizedProjects.flatMap((project) => {
+      const enriched = reprojectUnderDecision<Record<string, any>>(project, {
+        ...project,
+        status_name: statusNameById.get(project.status) ?? project.status ?? 'unknown',
+      }, PROJECT_RECORD_SOURCE);
+      return enriched ? [enriched] : [];
+    });
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
     const projectsByStatus = projects.reduce((acc: Record<string, number>, project) => {
-      const statusName = String(statusNameById.get(project.status) ?? project.status ?? 'unknown');
+      const statusName = String(project.status_name ?? 'unknown');
       acc[statusName] = (acc[statusName] ?? 0) + 1;
       return acc;
     }, {});
@@ -210,15 +219,15 @@ export class ApiProjectController extends ApiBaseController {
 
     return {
       total_projects: projects.length,
-      active_projects: projects.filter((project) => statusNameById.get(project.status) === 'Active').length,
-      completed_projects: projects.filter((project) => statusNameById.get(project.status) === 'Completed').length,
-      on_hold_projects: projects.filter((project) => statusNameById.get(project.status) === 'On Hold').length,
-      cancelled_projects: projects.filter((project) => statusNameById.get(project.status) === 'Cancelled').length,
+      active_projects: projects.filter((project) => project.status_name === 'Active').length,
+      completed_projects: projects.filter((project) => project.status_name === 'Completed').length,
+      on_hold_projects: projects.filter((project) => project.status_name === 'On Hold').length,
+      cancelled_projects: projects.filter((project) => project.status_name === 'Cancelled').length,
       overdue_projects: projects.filter((project) => {
-        if (!project.end_date) {
+        if (!project.end_date || project.status_name === null) {
           return false;
         }
-        return new Date(project.end_date) < new Date() && statusNameById.get(project.status) !== 'Completed';
+        return new Date(project.end_date) < new Date() && project.status_name !== 'Completed';
       }).length,
       total_budgeted_hours: projects.reduce(
         (sum, project) => sum + Number(project.budgeted_hours ?? 0),
@@ -229,7 +238,7 @@ export class ApiProjectController extends ApiBaseController {
       ).length,
       projects_completed_this_month: projects.filter(
         (project) =>
-          statusNameById.get(project.status) === 'Completed' &&
+          project.status_name === 'Completed' &&
           project.updated_at &&
           new Date(project.updated_at) >= monthStart,
       ).length,

@@ -19,6 +19,8 @@ const state = vi.hoisted(() => ({
   quote: null as Record<string, any> | null,
   assets: [] as Record<string, any>[],
   assetTickets: [] as Record<string, any>[],
+  statuses: [] as Record<string, any>[],
+  clients: [] as Record<string, any>[],
 }));
 
 const authorizeResource = vi.hoisted(() =>
@@ -37,10 +39,22 @@ vi.mock('@/lib/db', () => ({
 }));
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 
-// tenantDb(...).table(x).whereIn().select() => [] (status / client name lookups for project stats)
+// Populated lookups ensure enrichment cannot restore values hidden by the project's decision.
 vi.mock('@alga-psa/db', async (importOriginal) => {
-  const chain: any = { whereIn: () => chain, where: () => chain, select: async () => [], first: async () => null };
-  return { ...(await importOriginal<typeof import('@alga-psa/db')>()), tenantDb: vi.fn(() => ({ table: () => chain })) };
+  return {
+    ...(await importOriginal<typeof import('@alga-psa/db')>()),
+    tenantDb: vi.fn(() => ({
+      table: (name: string) => {
+        const chain: any = {
+          whereIn: () => chain,
+          where: () => chain,
+          select: async () => name === 'statuses' ? state.statuses : state.clients,
+          first: async () => null,
+        };
+        return chain;
+      },
+    })),
+  };
 });
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
 vi.mock('@/lib/api/rateLimit/enforce', () => ({
@@ -116,6 +130,8 @@ beforeEach(() => {
   state.quote = null;
   state.assets = [];
   state.assetTickets = [];
+  state.statuses = [{ status_id: 's-1', name: 'Active' }];
+  state.clients = [{ client_id: 'c-1', client_name: 'Acme' }];
   authorizeResource.mockClear();
   vi.spyOn(ApiBaseController.prototype as any, 'authenticate').mockImplementation(async (req: any) => {
     req.context = context;
@@ -206,6 +222,46 @@ describe('projects: REST reads serialize the projection', () => {
     expect(stats.data.top_clients_by_project_count).toEqual([
       { client_name: null, project_count: 3 },
     ]);
+  });
+
+  it.each(['statuses', 'statuses.name', 'status_name', 'status', 'values.status', 'projects.status'])(
+    'stats preserve visible status aggregates and exclude status values hidden by %s', async (alias) => {
+      state.statuses = ['Active', 'Completed', 'On Hold', 'Cancelled'].map((name, index) => ({
+        status_id: `s-${index + 1}`, name,
+      }));
+      state.projects = state.statuses.map(({ status_id }, index) => project(
+        `22222222-2222-2222-2222-22222222222${index + 1}`,
+        { status: status_id, end_date: '2000-01-01', updated_at: new Date().toISOString() },
+      ));
+      const visible = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
+      expect(visible.data).toMatchObject({
+        active_projects: 1, completed_projects: 1, on_hold_projects: 1, cancelled_projects: 1,
+        overdue_projects: 3, projects_completed_this_month: 1,
+        projects_by_status: { Active: 1, Completed: 1, 'On Hold': 1, Cancelled: 1 },
+      });
+
+      hideProjectFields(alias);
+      const hidden = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
+      expect(hidden.data).toMatchObject({
+        total_projects: 4,
+        active_projects: 0, completed_projects: 0, on_hold_projects: 0, cancelled_projects: 0,
+        overdue_projects: 0, projects_completed_this_month: 0,
+        projects_by_status: { unknown: 4 },
+      });
+    },
+  );
+
+  it('stats enrich each project under its original decision without reauthorizing', async () => {
+    state.statuses = [{ status_id: 's-1', name: 'Active' }, { status_id: 's-2', name: 'Completed' }];
+    state.projects = [project(P1), project(P2, { status: 's-2' })];
+    state.decisions.set(P1, { allowed: true, redactedFields: ['statuses.name'] });
+
+    const response = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
+    expect(response.data).toMatchObject({
+      total_projects: 2, active_projects: 0, completed_projects: 1,
+      projects_by_status: { unknown: 1, Completed: 1 },
+    });
+    expect(authorizeResource).toHaveBeenCalledTimes(2);
   });
 });
 
