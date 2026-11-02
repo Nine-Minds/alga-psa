@@ -18,10 +18,6 @@ vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
-vi.mock('@alga-psa/auth/rbac', () => ({
-  hasPermission: vi.fn(() => Promise.resolve(true)),
-}));
-
 import { setupCommonMocks } from '../../../../test-utils/testMocks';
 import { InvoiceService } from '@/lib/api/services/InvoiceService';
 import { manualInvoiceRequestSchema } from '@/lib/api/schemas/invoiceSchemas';
@@ -47,11 +43,17 @@ describe('REST manual invoice creation takes terms from the effective billing id
 
   beforeEach(async () => {
     context = await resetContext();
-    setupCommonMocks({ tenantId: context.tenantId, userId: context.userId, permissionCheck: () => true });
     user = await context.db('users')
       .where({ tenant: context.tenantId, user_id: context.userId })
       .first();
     expect(user).toBeDefined();
+    setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      user: user as any,
+      permissionCheck: (actor, resource, action) =>
+        actor.user_id === context.userId && resource === 'invoice' && action === 'create',
+    });
     await ensureDefaultBillingSettings(context);
     serviceId = await createTestService(context, {
       billing_method: 'fixed',
