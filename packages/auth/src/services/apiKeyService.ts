@@ -2,7 +2,6 @@ import { createTenantKnex, isTenantSuspended, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import crypto from 'crypto';
 import { isLicensedUserType } from '@alga-psa/types';
-import { servicePrincipalKeyGate } from '@product/service-principals/entry';
 
 interface ApiKey {
   api_key_id: string;
@@ -56,6 +55,10 @@ export class ApiKeyService {
     // Allow-list: an active internal owner passes. Any other owner type is
     // admitted only if the edition boundary approves it (the CE stub never does).
     if (user.user_type !== 'internal') {
+      // Lazy on purpose: a static import makes the auth barrel load the EE
+      // service-principals boundary (-> @alga-psa/users/actions -> withAuth from
+      // a half-loaded @alga-psa/auth), which breaks the production build.
+      const { servicePrincipalKeyGate } = await import('@product/service-principals/entry');
       const approved = await servicePrincipalKeyGate({ ...user, user_id: userId, tenant });
       if (!approved) return 'owner_type_rejected';
     }
