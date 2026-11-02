@@ -87,6 +87,7 @@ function parseCSVRaw(text: string): string[][] {
   return rows;
 }
 
+// LEVERAGE: pattern duplicate-code — csvParser exists verbatim at packages/core/src/lib/csvParser.ts and server/src/lib/utils/csvParser.ts; both must be patched in lock-step
 export function unparseCSV(data: any[], fields: string[]): string {
   const escapeField = (field: unknown): string => {
     // Only absent values become blank. `|| ''` would also blank a numeric 0 and a
@@ -100,7 +101,7 @@ export function unparseCSV(data: any[], fields: string[]): string {
       stringField = `'${stringField}`;
     }
 
-    if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+    if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n') || stringField.includes('\r')) {
       return `"${stringField.replace(/"/g, '""')}"`;
     }
     return stringField;

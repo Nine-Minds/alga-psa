@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
-import { displayAddressField, displayCountry } from '@alga-psa/core';
+import { displayAddressField, displayCountry, formatPostalAddress } from '@alga-psa/core';
 
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
@@ -23,7 +23,7 @@ const buildAddress = (record: Record<string, unknown> | null | undefined): strin
   ]
     .filter((value, index, collection) => value.length > 0 && collection.indexOf(value) === index);
 
-  return parts.length > 0 ? parts.join(', ') : null;
+  return formatPostalAddress(parts) || null;
 };
 
 export interface TenantParty {
@@ -32,6 +32,31 @@ export interface TenantParty {
   email: string | null;
   phone: string | null;
   logo_url: string | null;
+}
+
+/**
+ * Logo an admin configured under Settings -> Branding, which is what they
+ * expect on generated documents. Wide wordmark first (documents have room for
+ * it), then the square mark. Light variants only: these land on white paper.
+ */
+async function fetchBrandingDocumentLogoUrl(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string
+): Promise<string | null> {
+  const record = await tenantDb(knexOrTrx, tenant).table('tenant_settings')
+    .select('settings')
+    .first<Record<string, unknown>>()
+    .catch(() => null);
+
+  const branding = (record?.settings as Record<string, unknown> | undefined)?.branding as
+    | Record<string, unknown>
+    | undefined;
+  if (!branding) {
+    return null;
+  }
+
+  // Deleting a slot writes '', so an empty string means "no logo", not "logo ''".
+  return asTrimmedString(branding.logoWideUrl) || asTrimmedString(branding.logoUrl) || null;
 }
 
 export async function fetchTenantParty(
@@ -67,9 +92,11 @@ export async function fetchTenantParty(
     },
   });
   const tenantClient = await tenantClientQuery.first<Record<string, unknown>>();
+  const brandingLogoUrl = await fetchBrandingDocumentLogoUrl(knexOrTrx, tenant);
 
   if (tenantClient?.client_id) {
-    const logoUrl = await getClientDocumentLogoUrl(String(tenantClient.client_id), tenant).catch(() => null);
+    const logoUrl = brandingLogoUrl
+      ?? await getClientDocumentLogoUrl(String(tenantClient.client_id), tenant).catch(() => null);
 
     return {
       name: asTrimmedString(tenantClient.client_name) || 'Your Company',
@@ -94,6 +121,6 @@ export async function fetchTenantParty(
     address: null,
     email: null,
     phone: null,
-    logo_url: null,
+    logo_url: brandingLogoUrl,
   };
 }

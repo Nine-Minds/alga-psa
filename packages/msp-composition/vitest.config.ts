@@ -7,6 +7,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
+    // DB suites run through the workspace DB runner (scripts/run-workspace-db-tests.mjs).
+    exclude: ['**/node_modules/**', '**/*.db.test.{ts,tsx}'],
     sequence: { concurrent: false, shuffle: false },
     coverage: { enabled: false },
   },
@@ -28,6 +30,7 @@ export default defineConfig({
       // tsc/Next, and these aliases do the same for vitest.
       { find: /^@alga-psa\/billing$/, replacement: path.resolve(__dirname, '../billing/src/index.ts') },
       { find: /^@alga-psa\/billing\/(.*)$/, replacement: path.resolve(__dirname, '../billing/src/$1') },
+      { find: /^@alga-psa\/assets\/(.*)$/, replacement: path.resolve(__dirname, '../assets/src/$1') },
       { find: /^@alga-psa\/tickets$/, replacement: path.resolve(__dirname, '../tickets/src/index.ts') },
       { find: /^@alga-psa\/tickets\/(.*)$/, replacement: path.resolve(__dirname, '../tickets/src/$1') },
       { find: /^@alga-psa\/opportunities$/, replacement: path.resolve(__dirname, '../opportunities/src/index.ts') },

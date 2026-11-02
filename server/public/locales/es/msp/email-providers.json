@@ -297,7 +297,7 @@
         "description": "Configurar opciones avanzadas de procesamiento de correo electrónico",
         "folderFiltersLabel": "Filtros de carpeta",
         "folderFiltersPlaceholder": "Bandeja de entrada, Soporte, Carpeta personalizada",
-        "folderFiltersHelp": "Lista de carpetas separadas por comas para monitorear (predeterminado: Bandeja de entrada)",
+        "folderFiltersHelp": "Lista de carpetas separadas por comas para monitorear (predeterminado: Bandeja de entrada). Use el nombre exacto de la carpeta tal como aparece en Outlook y escriba las carpetas anidadas como Bandeja de entrada/Subcarpeta.",
         "maxEmailsPerSync": "Máximo de correos electrónicos por sincronización"
       },
       "readiness": {
@@ -424,7 +424,8 @@
         "clientId": "ID de cliente de OAuth",
         "clientSecret": "Secreto del cliente OAuth",
         "scopes": "Alcances de OAuth",
-        "scopesPlaceholder": "ámbitos delimitados por espacios"
+        "scopesPlaceholder": "ámbitos delimitados por espacios",
+        "clientSecretHelp": "El secreto de cliente se almacena de forma segura y no se mostrará. Déjalo en blanco para conservar el secreto existente."
       },
       "processing": {
         "title": "Configuración de procesamiento",
@@ -432,6 +433,9 @@
         "folderFilters": "Filtros de carpeta",
         "folderFiltersPlaceholder": "Bandeja de entrada, Soporte, Tickets",
         "active": "Activo"
+      },
+      "messages": {
+        "reconnectRequired": "La configuración de OAuth ha cambiado. Vuelve a conectar el buzón para autorizarlo con la nueva configuración."
       }
     }
   },
@@ -556,7 +560,8 @@
       "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
       "senderDisplayName": "Nombre del remitente",
       "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
-      "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjelo en blanco para usar el nombre del tablero del ticket."
+      "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjelo en blanco para usar el nombre del tablero del ticket.",
+      "oauthClientSecretHelp": "El secreto de cliente se almacena de forma segura y no se mostrará. Déjalo en blanco para conservar el secreto existente."
     },
     "authOptions": {
       "password": "Contraseña",
@@ -580,6 +585,9 @@
       "saving": "Guardando...",
       "updateProvider": "Actualizar proveedor",
       "createProvider": "Crear proveedor"
+    },
+    "messages": {
+      "reconnectRequired": "La configuración de OAuth ha cambiado. Vuelve a conectar el buzón para autorizarlo con la nueva configuración."
     }
   },
   "microsoftForm": {
@@ -727,6 +735,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Función Pro",
+      "domainsDescription": "Los dominios administrados requieren Pro.",
+      "settingsDescription": "La configuración de correo electrónico administrado requiere Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Error al cargar los dominios administrados",
       "loadOutboundSettingsFailed": "Error al cargar la configuración de correo saliente",
@@ -930,6 +943,12 @@
       "copyHostAriaLabel": "Copiar host",
       "copyFqdnAriaLabel": "Copiar nombre completo",
       "hostHint": "Consejo: en su proveedor de DNS, introduzca solo el Host que se muestra arriba. La mayoría de los proveedores (Namecheap, GoDaddy, Cloudflare, entre otros) añaden “{{domain}}” automáticamente. Si pega el nombre completo, el dominio se duplica (…{{domain}}.{{domain}}) y el registro nunca se verificará."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Función Pro",
+        "description": "Las instrucciones de registros DNS requieren Pro."
+      }
     }
   },
   "inboundRules": {

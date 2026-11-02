@@ -1,8 +1,10 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
+import { queueContactCreated, queueContactUpdated } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { persistGeneratedSuggestions, type GeneratedSuggestion } from '@alga-psa/opportunities/lib';
 import { recordMarketingEngagement } from './engagements';
 import { normalizeEmail } from './suppression';
+import { createClientWithDefaults } from '@alga-psa/shared/models/clientCreation';
 import type { CaptureSubmission } from '../schemas/marketingSchemas';
 
 export interface CaptureResult {
@@ -78,17 +80,13 @@ export async function submitCaptureInternal(
           : null;
 
         if (!client) {
-          const currency = await tenantDefaultCurrency(db, tenant);
-          const [created] = await db.table('clients')
-            .insert({
-              tenant,
-              client_name: companyName ?? payload.name.trim(),
-              lifecycle_status: 'prospect',
-              default_currency_code: currency,
-              properties: { source: `capture:${slug}` },
-            })
-            .returning('client_id');
-          client = created;
+          // Prospect clients get the same defaults as any other client, from
+          // the shared creation seam (tenant currency included).
+          client = await createClientWithDefaults(trx, tenant, {
+            client_name: companyName ?? payload.name.trim(),
+            lifecycle_status: 'prospect',
+            properties: { source: `capture:${slug}` },
+          });
           clientCreated = true;
         }
         clientId = String(client.client_id);
@@ -97,6 +95,7 @@ export async function submitCaptureInternal(
           await db.table('contacts')
             .where({ tenant, contact_name_id: contact.contact_name_id })
             .update({ client_id: clientId, updated_at: now });
+          queueContactUpdated(trx, tenant, contact, { ...contact, client_id: clientId }, ['client_id']);
           contact = { ...contact, client_id: clientId };
         } else {
           const [createdContact] = await db.table('contacts')
@@ -106,7 +105,8 @@ export async function submitCaptureInternal(
               email,
               client_id: clientId,
             })
-            .returning(['contact_name_id', 'full_name']);
+            .returning('*');
+          queueContactCreated(trx, tenant, createdContact);
           contact = { ...createdContact, client_id: clientId };
           contactCreated = true;
         }

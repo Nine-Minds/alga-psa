@@ -69,7 +69,7 @@ export type ListWorkflowTasksQuery = z.infer<typeof listWorkflowTasksQuerySchema
 export const completeWorkflowTaskSchema = z.object({
   // The form payload. Validated server-side against the task's JSON Schema inside
   // `submitTaskForm` (formRegistry.validateFormData); failures surface as 400.
-  formData: z.record(z.unknown()).default({}),
+  formData: z.record(z.string(), z.unknown()).default({}),
   comments: z.string().optional(),
 });
 
@@ -81,9 +81,9 @@ export type CompleteWorkflowTaskBody = z.infer<typeof completeWorkflowTaskSchema
 
 /** The task's resolved form schema — the mobile classifier keys off these field names. */
 export const workflowTaskFormSchemaSchema = z.object({
-  jsonSchema: z.record(z.unknown()),
-  uiSchema: z.record(z.unknown()).optional(),
-  defaultValues: z.record(z.unknown()).optional(),
+  jsonSchema: z.record(z.string(), z.unknown()),
+  uiSchema: z.record(z.string(), z.unknown()).optional(),
+  defaultValues: z.record(z.string(), z.unknown()).optional(),
 });
 
 /** A single workflow task. List items omit `formSchema`; the detail endpoint includes it. */
@@ -97,7 +97,7 @@ export const workflowTaskDetailSchema = z.object({
   dueDate: z.string().optional(),
   assignedRoles: z.array(z.string()).optional(),
   assignedUsers: z.array(z.string()).optional(),
-  contextData: z.record(z.unknown()).optional(),
+  contextData: z.record(z.string(), z.unknown()).optional(),
   formId: z.string(),
   formSchema: workflowTaskFormSchemaSchema.optional(),
   createdAt: z.string(),
@@ -106,7 +106,7 @@ export const workflowTaskDetailSchema = z.object({
   claimedBy: z.string().optional(),
   completedAt: z.string().optional(),
   completedBy: z.string().optional(),
-  responseData: z.record(z.unknown()).optional(),
+  responseData: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const workflowTaskListResponseSchema = z.object({

@@ -36,6 +36,7 @@ const TENANT_TABLES_EXPORT_ORDER: string[] = [
   // Tickets and support
   'tickets', // includes assigned_team_id
   'ticket_resources',
+  'ticket_watchers',
   'ticket_materials',
   'comments',
 

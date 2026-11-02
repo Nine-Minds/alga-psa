@@ -153,7 +153,7 @@ export abstract class ApiBaseController {
       return schema.parse(body);
     } catch (error) {
       if (error instanceof ZodError) {
-        throw new ValidationError('Validation failed', error.errors);
+        throw new ValidationError('Validation failed', error.issues);
       }
       throw error;
     }
@@ -172,7 +172,7 @@ export abstract class ApiBaseController {
       return schema.parse(query);
     } catch (error) {
       if (error instanceof ZodError) {
-        throw new ValidationError('Query validation failed', error.errors);
+        throw new ValidationError('Query validation failed', error.issues);
       }
       throw error;
     }
@@ -254,6 +254,7 @@ export abstract class ApiBaseController {
           const url = new URL(apiRequest.url);
           const page = parseInt(url.searchParams.get('page') || '1');
           const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
+          // LEVERAGE: friction list-default-sort-created-at — falls back to 'created_at' for every resource, even ones without that column.
           const sort = typeof validatedQuery.sort === 'string'
             ? validatedQuery.sort : url.searchParams.get('sort') || 'created_at';
           const order = (validatedQuery.order || url.searchParams.get('order') || 'desc') as 'asc' | 'desc';

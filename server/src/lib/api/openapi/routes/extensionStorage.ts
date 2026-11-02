@@ -10,8 +10,8 @@ export function registerStorageRoutes(
   const StoragePutRequest = registry.registerSchema(
     'StoragePutRequest',
     zOpenApi.object({
-      value: zOpenApi.any(),
-      metadata: zOpenApi.record(zOpenApi.any()).optional(),
+      value: zOpenApi.any().optional(),
+      metadata: zOpenApi.record(zOpenApi.string(), zOpenApi.any()).optional(),
       ttlSeconds: zOpenApi.number().int().positive().optional(),
       ifRevision: zOpenApi.number().int().nonnegative().optional(),
       schemaVersion: zOpenApi.number().int().positive().optional(),
@@ -36,8 +36,8 @@ export function registerStorageRoutes(
       namespace: zOpenApi.string(),
       key: zOpenApi.string(),
       revision: zOpenApi.number().int().positive(),
-      value: zOpenApi.any(),
-      metadata: zOpenApi.record(zOpenApi.any()),
+      value: zOpenApi.any().optional(),
+      metadata: zOpenApi.record(zOpenApi.string(), zOpenApi.any()),
       ttlExpiresAt: zOpenApi.string().datetime().nullable(),
       createdAt: zOpenApi.string().datetime(),
       updatedAt: zOpenApi.string().datetime(),
@@ -62,7 +62,7 @@ export function registerStorageRoutes(
       key: zOpenApi.string(),
       revision: zOpenApi.number().int().positive(),
       value: zOpenApi.any().optional(),
-      metadata: zOpenApi.record(zOpenApi.any()).optional(),
+      metadata: zOpenApi.record(zOpenApi.string(), zOpenApi.any()).optional(),
       ttlExpiresAt: zOpenApi.string().datetime().nullable(),
       createdAt: zOpenApi.string().datetime(),
       updatedAt: zOpenApi.string().datetime(),
@@ -83,8 +83,8 @@ export function registerStorageRoutes(
       items: zOpenApi.array(
         zOpenApi.object({
           key: zOpenApi.string().min(1).max(256),
-          value: zOpenApi.any(),
-          metadata: zOpenApi.record(zOpenApi.any()).optional(),
+          value: zOpenApi.any().optional(),
+          metadata: zOpenApi.record(zOpenApi.string(), zOpenApi.any()).optional(),
           ttlSeconds: zOpenApi.number().int().positive().optional(),
           ifRevision: zOpenApi.number().int().nonnegative().optional(),
           schemaVersion: zOpenApi.number().int().positive().optional(),

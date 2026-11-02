@@ -10,6 +10,10 @@ import {
   registerPrepaidBalanceAlertSubscriber,
   unregisterPrepaidBalanceAlertSubscriber,
 } from './prepaidBalanceAlertSubscriber';
+import {
+  registerPaymentConfirmationSubscriber,
+  unregisterPaymentConfirmationSubscriber,
+} from './paymentConfirmationSubscriber';
 import { registerHourBlockExpiringSubscriber, unregisterHourBlockExpiringSubscriber } from './hourBlockExpiringSubscriber';
 import { registerTicketAutoCloseWarningSubscriber, unregisterTicketAutoCloseWarningSubscriber } from './ticketAutoCloseWarningSubscriber';
 import { registerWebhookSubscriber, unregisterWebhookSubscriber } from './webhookSubscriber';
@@ -27,6 +31,8 @@ import {
   registerProjectBillingPaymentStatusSubscriber,
   unregisterProjectBillingPaymentStatusSubscriber,
 } from './projectBillingPaymentStatusSubscriber';
+import { registerCoManagedRoutingSubscriber, unregisterCoManagedRoutingSubscriber } from './coManagedRoutingSubscriber';
+import { ENTITY_WEBHOOK_SUBSCRIBERS } from './entityWebhookSubscribers';
 import { registerThreecxPhonebookSubscriber, unregisterThreecxPhonebookSubscriber } from './threecxPhonebookSubscriber';
 
 type SubscriberRegistration = {
@@ -44,6 +50,7 @@ const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'slaNotification', register: registerSlaNotificationSubscriber },
   { name: 'creditExpiring', register: registerCreditExpiringSubscriber },
   { name: 'prepaidBalanceAlert', register: registerPrepaidBalanceAlertSubscriber },
+  { name: 'paymentConfirmation', register: registerPaymentConfirmationSubscriber },
   { name: 'hourBlockExpiring', register: registerHourBlockExpiringSubscriber },
   { name: 'ticketAutoCloseWarning', register: registerTicketAutoCloseWarningSubscriber },
   { name: 'webhook', register: registerWebhookSubscriber },
@@ -56,6 +63,9 @@ const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'inboundAuthPauseNotification', register: registerInboundAuthPauseNotificationSubscriber },
   { name: 'projectBillingPaymentStatus', register: registerProjectBillingPaymentStatusSubscriber },
   { name: 'threecxPhonebook', register: registerThreecxPhonebookSubscriber },
+  { name: 'coManagedRouting', register: registerCoManagedRoutingSubscriber },
+  // client / contact / client_location webhooks: one registry-driven subscriber per entity.
+  ...ENTITY_WEBHOOK_SUBSCRIBERS.map((s) => ({ name: `webhook:${s.entity}`, register: () => s.register() })),
 ];
 
 const UNREGISTRATIONS: SubscriberRegistration[] = [
@@ -68,6 +78,7 @@ const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'slaNotification', register: unregisterSlaNotificationSubscriber },
   { name: 'creditExpiring', register: unregisterCreditExpiringSubscriber },
   { name: 'prepaidBalanceAlert', register: unregisterPrepaidBalanceAlertSubscriber },
+  { name: 'paymentConfirmation', register: unregisterPaymentConfirmationSubscriber },
   { name: 'hourBlockExpiring', register: unregisterHourBlockExpiringSubscriber },
   { name: 'ticketAutoCloseWarning', register: unregisterTicketAutoCloseWarningSubscriber },
   { name: 'maintenanceJob', register: unregisterMaintenanceJobSubscriber },
@@ -80,6 +91,8 @@ const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'rmmAlertNotification', register: unregisterRmmAlertNotificationSubscriber },
   { name: 'projectBillingPaymentStatus', register: unregisterProjectBillingPaymentStatusSubscriber },
   { name: 'threecxPhonebook', register: unregisterThreecxPhonebookSubscriber },
+  { name: 'coManagedRouting', register: unregisterCoManagedRoutingSubscriber },
+  ...ENTITY_WEBHOOK_SUBSCRIBERS.map((s) => ({ name: `webhook:${s.entity}`, register: () => s.unregister() })),
 ];
 
 // Each subscriber registers in its own try/catch. A transient failure (e.g. a

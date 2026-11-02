@@ -830,7 +830,8 @@
           "groups_read": "Läs kataloggrupper",
           "entitlement_group_resolves": "Slå upp behörighetsgrupp",
           "user_yield_preview": "Förhandsgranskning av användarurval",
-          "per_tenant_users": "CIPP-användare per klientorganisation"
+          "per_tenant_users": "CIPP-användare per klientorganisation",
+          "cipp_token_mint": "Hämtning av CIPP-API-token"
         },
         "readiness": {
           "authenticated": "Inloggad",
@@ -911,8 +912,8 @@
           "noManagedTenants": "Inga hanterade klientorganisationer returnerades. Partnern måste vara ansluten till Microsoft 365 Lighthouse med aktiva GDAP-relationer.",
           "mappedTenantMissing": "Den mappade klientorganisationen ”{{client}}” returnerades inte vid identifieringen. GDAP kan ha upphört att gälla eller avslutats.",
           "mappingsLookupFailed": "Det gick inte att läsa de bekräftade klientorganisationsmappningarna. Kör diagnostiken igen. Om problemet kvarstår, granska klientorganisationsmappningarna.",
-          "cippCredentialsMissing": "CIPP:s bas-URL och API-token krävs. Konfigurera dem på fliken Anslutning.",
-          "cippAuthRejected": "CIPP avvisade API-autentiseringsuppgiften. Rotera CIPP:s API-nyckel under Inställningar > CIPP > API-åtkomst. Detta är inte en Azure-klienthemlighet.",
+          "cippCredentialsMissing": "CIPP-API-URL och inloggningsuppgifter krävs. Konfigurera dem på fliken Anslutning.",
+          "cippAuthRejected": "CIPP avvisade den äldre API-nyckeln. Återanslut med en CIPP-API-klient från fliken Anslutning (skapa en i CIPP > Integrations > CIPP-API).",
           "cippEmptyTenantList": "CIPP returnerade inga klientorganisationer. Kontrollera kundernas synlighet och konfigurationen i CIPP.",
           "cippUnreachable": "Det gick inte att nå CIPP. Kontrollera bas-URL:en, DNS/TLS och utgående anslutning.",
           "cippPerTenantFailed": "CIPP kunde inte läsa den här klientorganisationens katalog.",

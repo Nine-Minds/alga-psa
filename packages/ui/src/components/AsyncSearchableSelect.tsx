@@ -16,6 +16,12 @@ export interface SelectOption {
   /** Muted second line under the label; omit to keep the row single-line. */
   secondaryLabel?: string;
   disabled?: boolean;
+  /** Native tooltip for the row (e.g. why it is disabled). */
+  title?: string;
+  /** Leading visual (avatar, logo) rendered before the label. */
+  icon?: React.ReactNode;
+  /** Trailing visual after the label (e.g. tag badges). */
+  trailing?: React.ReactNode;
   badge?: {
     text: string;
     variant?: 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'danger';
@@ -49,6 +55,14 @@ interface AsyncSearchableSelectProps {
   showMoreIndicator?: boolean;
   /** Content rendered below the scrollable list, always visible (sticky footer). */
   footerContent?: (args: { search: string; close: () => void }) => React.ReactNode;
+  /** Content rendered between the search input and the list (e.g. filter controls). Mounted only while open. */
+  headerContent?: React.ReactNode;
+  /** Overrides the DOM id of the trigger button (defaults to the registered automation id). */
+  triggerId?: string;
+  /** Leading visual shown on the trigger next to the selected label. */
+  selectedIcon?: React.ReactNode;
+  /** Trailing visual after the selected value (e.g. tag badges). */
+  selectedTrailing?: React.ReactNode;
 }
 
 export function AsyncSearchableSelect({
@@ -72,6 +86,10 @@ export function AsyncSearchableSelect({
   debounceMs = 300,
   showMoreIndicator = true,
   footerContent,
+  headerContent,
+  selectedIcon,
+  selectedTrailing,
+  triggerId,
 }: AsyncSearchableSelectProps & AutomationProps): React.JSX.Element {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t('form.selectPlaceholder', { defaultValue: 'Select...' });
@@ -170,6 +188,13 @@ export function AsyncSearchableSelect({
 
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
+      // Radix selects/popovers rendered in headerContent portal outside contentRef.
+      if (
+        target instanceof Element &&
+        target.closest('[data-radix-select-content], [data-radix-popper-content-wrapper]')
+      ) {
+        return;
+      }
       if (
         triggerRef.current &&
         !triggerRef.current.contains(target) &&
@@ -309,6 +334,8 @@ export function AsyncSearchableSelect({
           {loading && <Loader2 className="ml-2 h-4 w-4 animate-spin text-[rgb(var(--color-text-300))]" />}
         </div>
 
+        {headerContent}
+
         <Command.List ref={listRef} className="overflow-y-auto overscroll-contain p-1" style={{ maxHeight: maxListHeight }}>
           {loadError ? (
             <div className="py-6 text-center text-sm text-red-600">{loadError}</div>
@@ -317,7 +344,9 @@ export function AsyncSearchableSelect({
               {options.map((option) => (
                 <Command.Item
                   key={option.value}
+                  id={id ? `${id}-option-${option.value}` : undefined}
                   value={option.value}
+                  title={option.title}
                   disabled={option.disabled}
                   onSelect={() => {
                     if (option.disabled) return;
@@ -334,6 +363,7 @@ export function AsyncSearchableSelect({
                   )}
                 >
                   <span className="flex-1 flex items-center gap-2 min-w-0">
+                    {option.icon}
                     {option.badge && (
                       <span className={cn(
                         'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium',
@@ -355,6 +385,7 @@ export function AsyncSearchableSelect({
                         </span>
                       )}
                     </span>
+                    {option.trailing}
                   </span>
                   {value === option.value && <Check className="w-4 h-4 text-primary-600" />}
                 </Command.Item>
@@ -420,9 +451,14 @@ export function AsyncSearchableSelect({
           }}
           disabled={disabled}
           {...automationIdProps}
+          {...(triggerId ? { id: triggerId } : {})}
         >
-          <span className={cn('truncate', !value && 'text-[rgb(var(--color-text-300))]')}>
-            {selectedOption?.label ?? selectedLabel ?? (value ? value : resolvedPlaceholder)}
+          <span className="flex items-center gap-2 min-w-0">
+            {value ? selectedIcon : null}
+            <span className={cn('truncate', !value && 'text-[rgb(var(--color-text-300))]')}>
+              {selectedOption?.label ?? selectedLabel ?? (value ? value : resolvedPlaceholder)}
+            </span>
+            {value ? selectedTrailing : null}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>

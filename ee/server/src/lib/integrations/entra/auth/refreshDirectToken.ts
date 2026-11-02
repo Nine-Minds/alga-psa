@@ -1,5 +1,11 @@
 import axios from 'axios';
 import { getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import {
+  classifySafeMicrosoftOAuthFailure,
+  extractAadstsCode,
+  formatMicrosoftOAuthFailureForMailboxFlow,
+  toSafeMicrosoftOAuthFailure,
+} from '@alga-psa/shared/services/email/microsoftOAuthErrors';
 import { EntraOperatorError } from '../entraOperatorError';
 import { resolveMicrosoftCredentialsForTenant } from './microsoftCredentialResolver';
 import {
@@ -81,7 +87,19 @@ async function refreshEntraDirectTokenForAuthority(
         // conditional-access/MFA demand from that tenant (AADSTS50076/50079).
         // Surface Microsoft's suberror and AADSTS code so the run history says
         // which one this is.
-        const aadsts = /AADSTS\d+/.exec(data.error_description || '')?.[0];
+        // Microsoft also reports the code in `error_codes`, which can be the
+        // only place it appears; the description is checked first.
+        const safeFailure = toSafeMicrosoftOAuthFailure(error);
+        const failureKind = classifySafeMicrosoftOAuthFailure(safeFailure);
+        const mappedCode = extractAadstsCode({
+          errorCodes: safeFailure.errorCodes,
+          errorDescription: safeFailure.errorDescription,
+        });
+        const firstErrorCode = safeFailure.errorCodes?.[0];
+        const aadsts =
+          /AADSTS\d+/.exec(data.error_description || '')?.[0] ??
+          (mappedCode ? `AADSTS${mappedCode}` : undefined) ??
+          (firstErrorCode ? `AADSTS${firstErrorCode}` : undefined);
         const detail = [oauthError, data.suberror, aadsts].filter(Boolean).join(', ');
         const consentDenied =
           data.suberror === 'consent_required' || aadsts === 'AADSTS65001';
@@ -91,11 +109,15 @@ async function refreshEntraDirectTokenForAuthority(
         // the real reason.
         const credentialError = new EntraOperatorError(
           'credential-rejected',
-          'Microsoft rejected the stored credentials for this connection'
-          + (detail ? ` (${detail})` : '')
-          + (consentDenied
-            ? '. The app has not been granted admin consent in the managed tenant — grant consent there, then retry; reconnecting will not help.'
-            : '. Reconnect Microsoft Entra to resume syncing.')
+          failureKind && !consentDenied
+            // Mapped AADSTS code: same `<code>: <message>` text the OAuth
+            // callbacks store (the Entra-specific copy is client-side i18n).
+            ? formatMicrosoftOAuthFailureForMailboxFlow(failureKind)
+            : 'Microsoft rejected the stored credentials for this connection'
+              + (detail ? ` (${detail})` : '')
+              + (consentDenied
+                ? '. The app has not been granted admin consent in the managed tenant — grant consent there, then retry; reconnecting will not help.'
+                : '. Reconnect Microsoft Entra to resume syncing.')
         );
         // Preserve structured Microsoft metadata for diagnostics without
         // changing the operator-facing message or existing callers.

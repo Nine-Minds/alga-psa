@@ -472,6 +472,66 @@ describe('ProjectMaterialsDrawer', () => {
     });
   });
 
+  describe('stock reserved or held for sales orders (B1)', () => {
+    const conflict = (overrides: Record<string, unknown>) => ({
+      stockConflict: {
+        reason: 'reserved', overrideable: true, free: 2, onHand: 10, reserved: 8, held: 0, requested: 5,
+        message: 'server fallback', ...overrides,
+      },
+    });
+
+    async function openFormAndSubmit() {
+      mockProducts = [{ service_id: 'service-1', service_name: 'Widget', sku: null, track_stock: true, free_total: 2 } as CatalogPickerItem];
+      mockPrices = [{ service_id: 'service-1', currency_code: 'USD', rate: 1500 } as IServicePrice];
+      const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
+      render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
+      (await screen.findByRole('button', { name: 'Add' })).click();
+      fireEvent.change(await screen.findByTestId('async-searchable-select'), { target: { value: 'service-1' } });
+      fireEvent.change(await screen.findByLabelText('Quantity'), { target: { value: '5' } });
+      (await screen.findByRole('button', { name: 'Add Material' })).click();
+    }
+
+    it('soft reservation: asks to confirm, then retries with the override', async () => {
+      const actions = await import('../src/actions/materialCatalogActions');
+      vi.mocked(actions.addProjectMaterial)
+        .mockResolvedValueOnce(conflict({}) as any)
+        .mockResolvedValueOnce({ project_material_id: 'm-new' } as any);
+
+      await openFormAndSubmit();
+
+      expect(await screen.findByText('Stock is reserved for a sales order or project')).toBeInTheDocument();
+      expect(screen.getByText(/Only 2 of this product is free\. 8 on hand is reserved for sales orders or projects, and you asked for 5/)).toBeInTheDocument();
+      expect(vi.mocked(actions.addProjectMaterial).mock.calls[0][0]).not.toHaveProperty('allow_reserved_override');
+
+      screen.getByRole('button', { name: 'Add anyway' }).click();
+      await waitFor(() => expect(actions.addProjectMaterial).toHaveBeenCalledTimes(2));
+      expect(vi.mocked(actions.addProjectMaterial).mock.calls[1][0]).toMatchObject({ service_id: 'service-1', quantity: 5, allow_reserved_override: true });
+    });
+
+    it('soft reservation: cancelling the prompt does not retry', async () => {
+      const actions = await import('../src/actions/materialCatalogActions');
+      vi.mocked(actions.addProjectMaterial).mockResolvedValueOnce(conflict({}) as any);
+
+      await openFormAndSubmit();
+      await screen.findByText('Stock is reserved for a sales order or project');
+      const cancelButtons = screen.getAllByRole('button', { name: 'Cancel' });
+      cancelButtons[cancelButtons.length - 1].click();
+      await waitFor(() => expect(screen.queryByText('Stock is reserved for a sales order or project')).not.toBeInTheDocument());
+      expect(actions.addProjectMaterial).toHaveBeenCalledTimes(1);
+    });
+
+    it('hard hold: shows a non-overrideable error naming the free quantity and offers no override', async () => {
+      const actions = await import('../src/actions/materialCatalogActions');
+      vi.mocked(actions.addProjectMaterial).mockResolvedValueOnce(conflict({ reason: 'held', overrideable: false, free: 3, held: 7 }) as any);
+
+      await openFormAndSubmit();
+
+      expect(await screen.findByText(/Only 3 available\. 7 on hand is on hard hold for sales orders or projects/)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Add anyway' })).not.toBeInTheDocument();
+      expect(actions.addProjectMaterial).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('shows validation errors for missing product or price (T014)', async () => {
     mockProducts = [
       { service_id: 'service-1', service_name: 'Widget', sku: null } as CatalogPickerItem,

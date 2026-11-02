@@ -533,9 +533,15 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{from}} → {{to}}",
+      "{{field}}: {{from}} → {{to}}",
+      "RMA {{id}}",
+      "RMA {{number}} · {{status}}",
+      "Datto RMM",
       "TeamViewer",
       "VNC",
       "RDP",
+      "Code 128",
       "PG Boss",
       "YOLO",
       "Session: {{chatId}}",
@@ -701,7 +707,7 @@
       "Microsoft Teams", "NinjaOne", "Outlook", "QuickBooks", "QuickBooks CSV", "QuickBooks Online", "Stripe",
       "Tactical RMM", "Tanium", "Teams", "Teams Phone", "Temporal", "Windows", "Xero", "Xero CSV", "Zoom", "iOS", "macOS",
       "AI", "API", "CPU", "CSV", "Cron", "DNS", "GB", "GHz", "GPU", "HMAC-SHA256", "HTML", "HTTP", "HTTPS",
-      "ID", "IMAP", "IMEI", "IP", "IT", "ITIL", "JSON", "KB", "LAN", "MAC", "MB", "MHz", "MRR", "MSP",
+      "ID", "IIF", "IMAP", "IMEI", "IP", "IT", "ITIL", "JSON", "KB", "LAN", "MAC", "MB", "MHz", "MRR", "MSP",
       "NRR", "NVMe", "OAuth", "OAuth2 (XOAUTH2)", "OK", "OpenID Connect", "PDF", "PSA", "RAM", "RAM (GB)",
       "RMA", "RMM", "SKU", "SLA", "SMS", "SMTP", "SSD", "SSO", "TB", "TCP", "TLS", "TTL", "TTL:", "UDP",
       "URI", "URL", "USB", "UTC", "UUID", "VPN", "WAN", "Wi-Fi", "XML", "ZIP",
@@ -740,7 +746,8 @@
       "{{count}} {{licenseLabel}}",
       "Version {{version}}",
       "(Standard)", "Gigabyte", "Terabyte", "Liter", "Kilogram", "Meter", "Epic", "Onboarding", "Try",
-      "Auto", "Normal (400)", "auto | 50% | 120px", "In"
+      "Auto", "Normal (400)", "auto | 50% | 120px", "In",
+      "Presentation"
     ],
     "caseInsensitive": [
       "adapter", "budget", "fax", "filter", "kanban", "layout", "offline", "online", "router", "server", "status", "support", "team", "webhook"

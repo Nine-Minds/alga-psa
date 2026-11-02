@@ -6,8 +6,8 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
  * derived a same-origin ws://<tailnet-host>/hocuspocus URL and failed to reach
  * the local Hocuspocus instance; production must keep deriving same-origin.
  *
- * The three selectors are duplicated by package boundary (server hook,
- * notifications package hook, editor yjs config), so each is asserted against
+ * The two selectors are duplicated by package boundary (notifications
+ * package hook, editor yjs config), so each is asserted against
  * the same matrix.
  */
 
@@ -20,9 +20,7 @@ async function loadSelectors(): Promise<Record<string, UrlSelector>> {
   const notifications = await import(
     '@alga-psa/notifications/hooks/useInternalNotifications'
   );
-  const server = await import('@/hooks/useInternalNotifications');
   return {
-    'server hook': server.getHocuspocusUrl as UrlSelector,
     'notifications package hook': notifications.getHocuspocusUrl as UrlSelector,
     'editor yjs config': ui.getHocuspocusUrl as UrlSelector,
   };
@@ -47,7 +45,6 @@ describe('Hocuspocus URL selection', () => {
   }
 
   describe.each([
-    'server hook',
     'notifications package hook',
     'editor yjs config',
   ])('%s', (name) => {

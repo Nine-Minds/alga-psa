@@ -685,4 +685,237 @@ describe('KB Articles Integration Tests', () => {
       await tenantRows(tenant2Id).where({ tenant: tenant2Id }).del();
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // T0-9a (alga-2026-0002893): C1 visibility follows the article, C2 reviewers, C3 create-from-ticket
+  // ---------------------------------------------------------------------------
+  type Created = { article_id: string; document_id: string; status: string };
+
+  async function newArticle(title: string, audience: 'internal' | 'client' | 'public') {
+    const a = (await createArticle({ title, articleType: 'how_to', audience })) as Created;
+    createdIds.articleIds.push(a.article_id);
+    createdIds.documentIds.push(a.document_id);
+    return a;
+  }
+  async function flag(documentId: string): Promise<boolean> {
+    const d = await tenantTable('documents').where({ document_id: documentId }).first();
+    return d.is_client_visible;
+  }
+  async function articleRow(articleId: string) {
+    return tenantTable('kb_articles').where({ article_id: articleId }).first();
+  }
+  // Same predicate as the client portal KB page (client-kb.ts): published + client/public audience.
+  async function portalListsArticle(articleId: string): Promise<boolean> {
+    const rows = await tenantTable('kb_articles')
+      .where({ article_id: articleId, status: 'published' })
+      .whereIn('audience', ['client', 'public']);
+    return rows.length > 0;
+  }
+  async function reviewerRows(articleId: string) {
+    return tenantTable('kb_article_reviewers').where({ article_id: articleId });
+  }
+
+  describe('C1: client visibility follows status and audience', () => {
+    it('hides a published client article when audience becomes internal, and restores it', async () => {
+      const a = await newArticle('C1 audience', 'client');
+      await publishArticle(a.article_id);
+      expect(await flag(a.document_id)).toBe(true);
+      expect(await portalListsArticle(a.article_id)).toBe(true);
+
+      await updateArticle(a.article_id, { audience: 'internal' });
+      expect(await flag(a.document_id)).toBe(false);
+      expect(await portalListsArticle(a.article_id)).toBe(false);
+
+      await updateArticle(a.article_id, { audience: 'client' });
+      expect(await flag(a.document_id)).toBe(true);
+      expect(await portalListsArticle(a.article_id)).toBe(true);
+    });
+
+    it('hides a published client article moved back to draft via updateArticle', async () => {
+      const a = await newArticle('C1 draft', 'client');
+      await publishArticle(a.article_id);
+      await updateArticle(a.article_id, { status: 'draft' });
+      expect(await flag(a.document_id)).toBe(false);
+    });
+
+    it('publishArticle on an internal article clears a stale true flag', async () => {
+      const a = await newArticle('C1 stale', 'internal');
+      await tenantTable('documents').where({ document_id: a.document_id }).update({ is_client_visible: true });
+      await publishArticle(a.article_id);
+      expect(await flag(a.document_id)).toBe(false);
+    });
+
+    it('archiveArticle clears the flag', async () => {
+      const a = await newArticle('C1 archive', 'public');
+      await publishArticle(a.article_id);
+      expect(await flag(a.document_id)).toBe(true);
+      await archiveArticle(a.article_id);
+      expect(await flag(a.document_id)).toBe(false);
+    });
+
+    it('D1: submitForReview keeps a published client article published and visible', async () => {
+      const a = await newArticle('C1 D1', 'client');
+      await publishArticle(a.article_id);
+
+      await submitForReview(a.article_id, [reviewerId]);
+      expect((await articleRow(a.article_id)).status).toBe('published');
+      expect(await flag(a.document_id)).toBe(true);
+      expect(await portalListsArticle(a.article_id)).toBe(true);
+      const reviewers = await reviewerRows(a.article_id);
+      expect(reviewers).toHaveLength(1);
+      expect(reviewers[0].review_status).toBe('pending');
+
+      await publishArticle(a.article_id);
+      expect(await flag(a.document_id)).toBe(true);
+      expect(await portalListsArticle(a.article_id)).toBe(true);
+    });
+
+    it('submitForReview on a draft moves it to review, not visible', async () => {
+      const a = await newArticle('C1 draft review', 'client');
+      await submitForReview(a.article_id, [reviewerId]);
+      expect((await articleRow(a.article_id)).status).toBe('review');
+      expect(await flag(a.document_id)).toBe(false);
+    });
+
+    it('createArticle writes is_client_visible=false explicitly', async () => {
+      const a = await newArticle('C1 create', 'client');
+      expect(await flag(a.document_id)).toBe(false);
+    });
+  });
+
+  describe('C2: reviewer re-request', () => {
+    it('re-requesting a reviewer who approved resets them to pending', async () => {
+      const a = await newArticle('C2 approve', 'internal');
+      await submitForReview(a.article_id, [userId]);
+      await completeReview(a.article_id, 'approved', 'looks good');
+      let rows = await reviewerRows(a.article_id);
+      expect(rows[0].review_status).toBe('approved');
+      expect(rows[0].reviewed_at).not.toBeNull();
+
+      await expect(submitForReview(a.article_id, [userId])).resolves.toBe(true);
+      rows = await reviewerRows(a.article_id);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].review_status).toBe('pending');
+      expect(rows[0].reviewed_at).toBeNull();
+      expect(rows[0].review_notes).toBeNull();
+    });
+
+    it('re-requesting after a rejection resets to pending', async () => {
+      const a = await newArticle('C2 reject', 'internal');
+      await submitForReview(a.article_id, [userId]);
+      await completeReview(a.article_id, 'rejected', 'needs work');
+      await submitForReview(a.article_id, [userId]);
+      const rows = await reviewerRows(a.article_id);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].review_status).toBe('pending');
+      expect(rows[0].review_notes).toBeNull();
+    });
+
+    it('dedupes repeated reviewer ids', async () => {
+      const a = await newArticle('C2 dedupe', 'internal');
+      await submitForReview(a.article_id, [reviewerId, reviewerId]);
+      expect(await reviewerRows(a.article_id)).toHaveLength(1);
+    });
+
+    it('removes deselected pending reviewers but keeps non-pending history', async () => {
+      const b = await createUser(db, tenantId, { username: 'kb-reviewer-b' });
+      const c = await createUser(db, tenantId, { username: 'kb-reviewer-c' });
+      const a = await newArticle('C2 deselect', 'internal');
+      await submitForReview(a.article_id, [reviewerId, b, c]);
+      // C approves (as C), B stays pending
+      await tenantTable('kb_article_reviewers')
+        .where({ article_id: a.article_id, user_id: c })
+        .update({ review_status: 'approved', reviewed_at: db.fn.now() });
+
+      await submitForReview(a.article_id, [reviewerId]);
+      const rows = await reviewerRows(a.article_id);
+      const ids = rows.map((r: { user_id: string }) => r.user_id).sort();
+      expect(ids).toEqual([reviewerId, c].sort());
+      expect(rows.find((r: { user_id: string }) => r.user_id === c).review_status).toBe('approved');
+    });
+
+    it('an invalid reviewer id throws and leaves the article status unchanged', async () => {
+      const a = await newArticle('C2 atomic', 'internal');
+      await expect(submitForReview(a.article_id, [reviewerId, uuidv4()])).rejects.toThrow(/Invalid reviewer/);
+      expect((await articleRow(a.article_id)).status).toBe('draft');
+      expect(await reviewerRows(a.article_id)).toHaveLength(0);
+    });
+  });
+
+  describe('C3: create from ticket and atomic create', () => {
+    let createArticleFromTicket: typeof import('@alga-psa/documents/actions').createArticleFromTicket;
+
+    async function insertTicket(attributes: Record<string, unknown> | null): Promise<string> {
+      const clientId = uuidv4();
+      const boardId = uuidv4();
+      const priorityId = uuidv4();
+      const statusId = uuidv4();
+      const ticketId = uuidv4();
+      await tenantTable('clients').insert({
+        tenant: tenantId, client_id: clientId, client_name: `C3 Client ${clientId.slice(0, 6)}`,
+        billing_cycle: 'monthly', is_tax_exempt: false, created_at: db.fn.now(), updated_at: db.fn.now(),
+      });
+      await tenantTable('boards').insert({ tenant: tenantId, board_id: boardId, board_name: `B ${boardId.slice(0, 6)}`, is_default: false, is_inactive: false });
+      await tenantTable('priorities').insert({
+        tenant: tenantId, priority_id: priorityId, priority_name: `P ${priorityId.slice(0, 6)}`, item_type: 'ticket',
+        color: '#EF4444', order_number: 10, created_by: userId, created_at: db.fn.now(), updated_at: db.fn.now(),
+      });
+      await tenantTable('statuses').insert({
+        tenant: tenantId, status_id: statusId, board_id: boardId, name: 'Open', status_type: 'ticket',
+        is_closed: false, is_default: true, order_number: 10, created_by: userId, created_at: db.fn.now(),
+      });
+      await tenantTable('tickets').insert({
+        tenant: tenantId, ticket_id: ticketId, ticket_number: `C3-${ticketId.slice(0, 8)}`, title: 'Printer down',
+        client_id: clientId, board_id: boardId, status_id: statusId, priority_id: priorityId,
+        entered_by: userId, entered_at: db.fn.now(), updated_at: db.fn.now(),
+        attributes: attributes === null ? null : JSON.stringify(attributes),
+      });
+      return ticketId;
+    }
+
+    async function blocksFor(documentId: string): Promise<any[]> {
+      const row = await tenantTable('document_block_content').where({ document_id: documentId }).first();
+      return typeof row.block_data === 'string' ? JSON.parse(row.block_data) : row.block_data;
+    }
+
+    async function fromTicket(attributes: Record<string, unknown> | null) {
+      createArticleFromTicket = (await import('@alga-psa/documents/actions')).createArticleFromTicket;
+      const ticketId = await insertTicket(attributes);
+      const a = (await createArticleFromTicket(ticketId)) as Created;
+      createdIds.articleIds.push(a.article_id);
+      createdIds.documentIds.push(a.document_id);
+      return blocksFor(a.document_id);
+    }
+
+    it('carries BlockNote description blocks under Problem', async () => {
+      const desc = [{ type: 'paragraph', content: [{ type: 'text', text: 'Spooler crashes', styles: { bold: true } }] }];
+      const blocks = await fromTicket({ description: JSON.stringify(desc) });
+      expect(blocks[0].content[0].text).toBe('Problem');
+      expect(blocks[1]).toEqual(desc[0]);
+      expect(blocks[2].content[0].text).toBe('Resolution');
+    });
+
+    it('turns a plain-text description into a paragraph', async () => {
+      const blocks = await fromTicket({ description: 'Cannot print' });
+      expect(blocks[1].type).toBe('paragraph');
+      expect(blocks[1].content[0].text).toBe('Cannot print');
+    });
+
+    it('uses the placeholder when there is no description', async () => {
+      const blocks = await fromTicket(null);
+      expect(blocks[1].content[0].text).toBe('No description provided.');
+    });
+
+    it('createArticle leaves no orphan document or block content when the article insert fails', async () => {
+      const title = `Orphan check ${uuidv4()}`;
+      await expect(
+        createArticle({ title, audience: 'internal', reviewCycleDays: 1_000_000_000_000, // overflows int4 at the kb_articles insert, after the document rows are written
+         content: [{ type: 'paragraph', content: [{ type: 'text', text: title, styles: {} }] }] })
+      ).rejects.toThrow();
+      const docs = await tenantTable('documents').where({ document_name: title });
+      expect(docs).toHaveLength(0);
+      const blocks = await tenantTable('document_block_content').whereRaw('block_data::text like ?', [`%${title}%`]);
+      expect(blocks).toHaveLength(0);
+    });
+  });
 });

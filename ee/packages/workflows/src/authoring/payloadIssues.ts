@@ -31,23 +31,33 @@ export type WorkflowPayloadIssue = {
   message?: string;
 };
 
+/** A zod issue from either major: zod 4 renamed several codes and fields, listed second. */
 type ZodIssueLike = {
   code?: string;
-  path?: Array<string | number>;
+  path?: ReadonlyArray<PropertyKey>;
   message?: string;
   expected?: unknown;
   received?: unknown;
+  input?: unknown;
   validation?: unknown;
+  format?: unknown;
   minimum?: unknown;
   maximum?: unknown;
   type?: unknown;
+  origin?: unknown;
   options?: unknown;
+  values?: unknown;
   keys?: unknown;
   unionErrors?: Array<{ issues?: ZodIssueLike[] }>;
+  errors?: ZodIssueLike[][];
 };
+
+const toPath = (path: ReadonlyArray<PropertyKey> | undefined): Array<string | number> =>
+  (path ?? []).filter((segment): segment is string | number => typeof segment !== 'symbol');
 
 const ZOD_STRING_FORMATS: Record<string, string> = {
   uuid: 'uuid',
+  guid: 'uuid',
   email: 'email',
   datetime: 'date-time',
   date: 'date',
@@ -65,15 +75,21 @@ const toSizeOf = (value: unknown): WorkflowPayloadIssue['sizeOf'] =>
   value === 'string' || value === 'number' || value === 'array' ? value : value === 'bigint' ? 'number' : undefined;
 
 const normalizeOne = (issue: ZodIssueLike, basePath: Array<string | number>): WorkflowPayloadIssue[] => {
-  const path = [...basePath, ...(issue.path ?? [])];
+  const path = [...basePath, ...toPath(issue.path)];
   switch (issue.code) {
-    case 'invalid_type':
-      if (issue.received === 'undefined' || issue.received === 'null') {
+    case 'invalid_type': {
+      // Zod 4 leaves the input off the issue unless asked; its message still names it.
+      const missing = 'input' in issue
+        ? issue.input === undefined || issue.input === null
+        : issue.received === 'undefined' || issue.received === 'null' || /received (undefined|null)$/.test(issue.message ?? '');
+      if (missing) {
         return [{ path, kind: 'required' }];
       }
       return [{ path, kind: 'type', expected: typeof issue.expected === 'string' ? issue.expected : undefined }];
-    case 'invalid_string': {
-      const validation = typeof issue.validation === 'string' ? issue.validation : undefined;
+    }
+    case 'invalid_string':
+    case 'invalid_format': {
+      const validation = typeof issue.format === 'string' ? issue.format : typeof issue.validation === 'string' ? issue.validation : undefined;
       const format = validation ? ZOD_STRING_FORMATS[validation] : undefined;
       return format
         ? [{ path, kind: 'format', format }]
@@ -82,18 +98,20 @@ const normalizeOne = (issue: ZodIssueLike, basePath: Array<string | number>): Wo
     case 'invalid_date':
       return [{ path, kind: 'format', format: 'date-time' }];
     case 'too_small': {
-      const sizeOf = toSizeOf(issue.type);
+      const sizeOf = toSizeOf(issue.origin ?? issue.type);
       const limit = toLimit(issue.minimum);
       // A required text field left empty fails as "at least 1 character": say it's missing.
       if (sizeOf === 'string' && limit === 1) return [{ path, kind: 'required' }];
       return [{ path, kind: 'too_small', limit, sizeOf }];
     }
     case 'too_big':
-      return [{ path, kind: 'too_big', limit: toLimit(issue.maximum), sizeOf: toSizeOf(issue.type) }];
+      return [{ path, kind: 'too_big', limit: toLimit(issue.maximum), sizeOf: toSizeOf(issue.origin ?? issue.type) }];
     case 'invalid_enum_value':
-    case 'invalid_literal': {
-      const options = Array.isArray(issue.options)
-        ? issue.options.map(String)
+    case 'invalid_literal':
+    case 'invalid_value': {
+      const allowed = Array.isArray(issue.values) ? issue.values : Array.isArray(issue.options) ? issue.options : undefined;
+      const options = allowed
+        ? allowed.map(String)
         : issue.expected !== undefined ? [String(issue.expected)] : undefined;
       return [{ path, kind: 'choice', options }];
     }
@@ -104,8 +122,9 @@ const normalizeOne = (issue: ZodIssueLike, basePath: Array<string | number>): Wo
       }));
     case 'invalid_union': {
       // Report the alternative that came closest: the one with the fewest problems.
-      const branches = (issue.unionErrors ?? [])
-        .map((branch) => normalizeWorkflowPayloadZodIssues(branch.issues ?? [], basePath))
+      const alternatives = issue.errors ?? (issue.unionErrors ?? []).map((branch) => branch.issues ?? []);
+      const branches = alternatives
+        .map((branch) => normalizeWorkflowPayloadZodIssues(branch, basePath))
         .filter((branch) => branch.length > 0)
         .sort((left, right) => left.length - right.length);
       return branches[0] ?? [{ path, kind: 'invalid', message: issue.message }];

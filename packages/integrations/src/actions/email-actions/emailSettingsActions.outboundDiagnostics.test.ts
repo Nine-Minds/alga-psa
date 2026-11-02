@@ -112,7 +112,7 @@ describe('runOutboundEmailDiagnostics action authorization', () => {
     expect(runDiagnosticsMock).toHaveBeenCalledWith({
       tenant: 'tenant-123',
       knex: expect.anything(),
-      options: { liveSendTest: true, recipient: 'admin@example.test', includeIdentifiers: true },
+      options: { liveSendTest: true, recipient: 'admin@example.test', includeIdentifiers: true, actingUserId: 'user-1' },
     });
     expect(result.success).toBe(true);
     expect(result.report).toBeDefined();

@@ -2,7 +2,7 @@
   {
     "runner": "legacy-email-review",
     "cwd": "server",
-    "cli": "server/node_modules/vitest/vitest.mjs",
+    "cli": "node_modules/vitest/vitest.mjs",
     "config": "vitest.config.ts",
     "filters": [
       "src/test/e2e/email-processing.test.ts",
@@ -20,7 +20,7 @@
   {
     "runner": "invoice-visual-review",
     "cwd": "server",
-    "cli": "server/node_modules/vitest/vitest.mjs",
+    "cli": "node_modules/vitest/vitest.mjs",
     "config": "vitest.config.ts",
     "filters": [
       "src/test/visual/invoiceTemplateGolden.test.ts"
@@ -34,5 +34,56 @@
     "reason": "The existing visual-review workflow is explicitly opt-in and machine/font dependent. Its collection is not release evidence; mandatory invoice PDF content and persisted-layout journeys run separately.",
     "issue": "https://github.com/Nine-Minds/alga-psa/pull/3343",
     "expires": "2026-11-08"
+  },
+  {
+    "runner": "tenant-deletion-hotpath-review",
+    "cwd": "ee/temporal-workflows",
+    "cli": "node_modules/vitest/vitest.mjs",
+    "config": "vitest.no-docker.config.ts",
+    "filters": [
+      "src/activities/__tests__/tenantDeletionQueryBudget.test.ts"
+    ],
+    "env": {
+      "HOTPATH_DB": "1"
+    },
+    "owner": "Platform maintainers",
+    "runtime": "Manual L0b hot-path capture against a migrated, disposable PostgreSQL database (HOTPATH_DB=1 plus admin DB credentials)",
+    "mandatory": false,
+    "reason": "The suite deletes a fixture tenant and records its statement list for scripts/review/hotpath-diff.mjs to compare across commits; it needs a disposable migrated database that the DB-less Temporal readiness lane does not provide. HOTPATH_DB=1 is set only so collection registers the env-gated case; collection never executes test bodies. Tenant deletion behavior is mandatory separately in Temporal readiness (tenant-deletion-workflow.behavior, tenant-deletion-external-links, tenant-deletion-answer-mappings).",
+    "issue": "https://github.com/Nine-Minds/alga-psa/pull/3911",
+    "expires": "2026-11-27"
+  },
+  {
+    "runner": "server-hotpath-review",
+    "cwd": "server",
+    "cli": "node_modules/vitest/vitest.mjs",
+    "config": "vitest.config.ts",
+    "filters": [
+      "src/test/contract/hotPathQueryBudget.local.test.ts"
+    ],
+    "env": {
+      "HOTPATH_DB": "1"
+    },
+    "owner": "Platform maintainers",
+    "runtime": "Manual L0b hot-path capture against a migrated, disposable PostgreSQL database (HOTPATH_DB=1 plus admin DB credentials)",
+    "mandatory": false,
+    "reason": "The suite drives ticket, comment, transaction and maintenance fan-out hot paths against a fixture tenant and records their statement lists for scripts/review/hotpath-diff.mjs to compare across commits; it needs a disposable migrated database that the DB-less server unit lane does not provide. HOTPATH_DB=1 is set only so collection registers the env-gated cases; collection never executes test bodies. The committed hot-path query budget is mandatory separately in the workspace-db lane (src/test/contract/hotPathQueryBudget.db.test.ts).",
+    "issue": "https://github.com/Nine-Minds/alga-psa/pull/3911",
+    "expires": "2026-11-27"
+  },
+  {
+    "runner": "co-managed-built-worker-access-review",
+    "cwd": "ee/temporal-workflows",
+    "cli": "node_modules/vitest/vitest.mjs",
+    "config": "vitest.co-managed-worker-access.config.ts",
+    "filters": [
+      "src/__tests__/worker-access/coManagedBuiltWorkerAccess.integration.test.ts"
+    ],
+    "owner": "Co-managed maintainers",
+    "runtime": "Manual L1a check of the compiled worker (built dist plus Dockerfile seed payloads) against a local Temporal server, Redis and Mailpit",
+    "mandatory": false,
+    "reason": "The suite spawns the compiled Temporal worker, provisions a customer through the real workflow and redeems the delivered invitation; no CI lane provides a built worker with Temporal and Mailpit. The same native-access cases are mandatory separately in the server integration lane (ee/temporal-workflows/src/__tests__/integration/coManagedNativeAccess.integration.test.ts), which provisions through the activities synchronously.",
+    "issue": "https://github.com/Nine-Minds/alga-psa/pull/3937",
+    "expires": "2026-11-27"
   }
 ]

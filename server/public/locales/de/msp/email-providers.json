@@ -297,7 +297,7 @@
         "description": "Konfigurieren Sie erweiterte E-Mail-Verarbeitungsoptionen",
         "folderFiltersLabel": "Ordnerfilter",
         "folderFiltersPlaceholder": "Posteingang, Support, Benutzerdefinierter Ordner",
-        "folderFiltersHelp": "Durch Kommas getrennte Liste der zu überwachenden Ordner (Standard: Posteingang)",
+        "folderFiltersHelp": "Durch Kommas getrennte Liste der zu überwachenden Ordner (Standard: Posteingang). Verwenden Sie den genauen Ordnernamen wie in Outlook angezeigt und geben Sie verschachtelte Ordner als Posteingang/Unterordner an.",
         "maxEmailsPerSync": "Maximale E-Mails pro Synchronisierung"
       },
       "readiness": {
@@ -424,7 +424,8 @@
         "clientId": "OAuth-Client-ID",
         "clientSecret": "OAuth-Client-Geheimnis",
         "scopes": "OAuth-Bereiche",
-        "scopesPlaceholder": "durch Leerzeichen getrennte Bereiche"
+        "scopesPlaceholder": "durch Leerzeichen getrennte Bereiche",
+        "clientSecretHelp": "Das Client-Secret wird sicher gespeichert und nicht angezeigt. Lassen Sie das Feld leer, um das vorhandene Secret beizubehalten."
       },
       "processing": {
         "title": "Verarbeitungseinstellungen",
@@ -432,6 +433,9 @@
         "folderFilters": "Ordnerfilter",
         "folderFiltersPlaceholder": "Posteingang, Support, Tickets",
         "active": "Aktiv"
+      },
+      "messages": {
+        "reconnectRequired": "OAuth-Einstellungen wurden geändert. Verbinden Sie das Postfach erneut, um es mit den neuen Einstellungen zu autorisieren."
       }
     }
   },
@@ -556,7 +560,8 @@
       "providerNameHelp": "Interner Name zur Identifikation dieser Konfiguration. Wird in ausgehenden E-Mails nicht angezeigt.",
       "senderDisplayName": "Anzeigename des Absenders",
       "senderDisplayNamePlaceholder": "z. B. Acme Support",
-      "senderDisplayNameHelp": "Anzeigename, der im Absenderfeld ausgehender Ticket-E-Mails (Antworten, Abschlüsse) erscheint. Wird nur angewendet, wenn dieses Postfach der ausgehenden Ticketing-Adresse des Mandanten entspricht. Leer lassen, um den Boardnamen des Tickets zu verwenden."
+      "senderDisplayNameHelp": "Anzeigename, der im Absenderfeld ausgehender Ticket-E-Mails (Antworten, Abschlüsse) erscheint. Wird nur angewendet, wenn dieses Postfach der ausgehenden Ticketing-Adresse des Mandanten entspricht. Leer lassen, um den Boardnamen des Tickets zu verwenden.",
+      "oauthClientSecretHelp": "Das Client-Secret wird sicher gespeichert und nicht angezeigt. Lassen Sie das Feld leer, um das vorhandene Secret beizubehalten."
     },
     "authOptions": {
       "password": "Passwort",
@@ -580,6 +585,9 @@
       "saving": "Speichern...",
       "updateProvider": "Anbieter aktualisieren",
       "createProvider": "Anbieter erstellen"
+    },
+    "messages": {
+      "reconnectRequired": "OAuth-Einstellungen wurden geändert. Verbinden Sie das Postfach erneut, um es mit den neuen Einstellungen zu autorisieren."
     }
   },
   "microsoftForm": {
@@ -727,6 +735,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Pro-Funktion",
+      "domainsDescription": "Verwaltete Domains erfordern Pro.",
+      "settingsDescription": "Einstellungen für verwaltete E-Mails erfordern Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Verwaltete Domänen konnten nicht geladen werden",
       "loadOutboundSettingsFailed": "Einstellungen für ausgehende E-Mails konnten nicht geladen werden",
@@ -930,6 +943,12 @@
       "copyHostAriaLabel": "Host kopieren",
       "copyFqdnAriaLabel": "Vollständigen Namen kopieren",
       "hostHint": "Tipp: Geben Sie bei Ihrem DNS-Anbieter nur den oben angezeigten Host ein. Die meisten Anbieter (Namecheap, GoDaddy, Cloudflare und andere) fügen „{{domain}}“ automatisch hinzu. Wenn Sie stattdessen den vollständigen Namen einfügen, wird die Domain wiederholt (…{{domain}}.{{domain}}) und der Eintrag wird nie verifiziert."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Pro-Funktion",
+        "description": "Anleitungen für DNS-Einträge erfordern Pro."
+      }
     }
   },
   "inboundRules": {

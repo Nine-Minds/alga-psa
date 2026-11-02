@@ -5,7 +5,7 @@ import { z } from 'zod';
  * cookie, set-cookie, proxy-authorization, x-api-key) are stripped server-side.
  */
 const inboundWebhookHeadersSchema = z
-  .record(z.union([z.string(), z.array(z.string())]))
+  .record(z.string(), z.union([z.string(), z.array(z.string())]))
   .describe('Filtered request headers from the incoming request');
 
 /**
@@ -68,7 +68,7 @@ export const inboundWebhookReceivedEventPayloadSchema = z
     body: inboundWebhookBodySchema,
     headers: inboundWebhookHeadersSchema,
     verified: z.literal(true).describe('Always true; auth verification has already passed'),
-    delivery_id: z.string().uuid().describe('Inbound webhook delivery row UUID'),
+    delivery_id: z.string().guid().describe('Inbound webhook delivery row UUID'),
     idempotency_key: z
       .string()
       .nullable()

@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ES2022",
+    "module": "ESNext",
     "moduleResolution": "bundler",
     "outDir": "./dist",
     "strict": true,
@@ -32,6 +32,9 @@
       "@/interfaces/*": ["../../server/src/interfaces/*"],
       "@alga-psa/integrations/email/domains/entry": ["../../packages/integrations/src/email/domains/ee/entry"],
       "@alga-psa/integrations/*": ["../../packages/integrations/src/*"],
+      "@alga-psa/predicates": ["../../packages/predicates/src/index.ts"],
+      "@alga-psa/predicates/sql": ["../../packages/predicates/src/sql/index.ts"],
+      "@alga-psa/predicates/*": ["../../packages/predicates/src/*"],
       "@alga-psa/event-bus": ["../../packages/event-bus/src/index.ts"],
       "@alga-psa/event-bus/publishers": ["../../packages/event-bus/src/publishers/index.ts"],
       "@alga-psa/event-bus/*": ["../../packages/event-bus/src/*"],
@@ -104,13 +107,15 @@
       "@alga-psa/authorization/*": ["../../packages/authorization/src/*"],
       "@alga-psa/licensing": ["../../packages/licensing/src/index.ts"],
       "@alga-psa/licensing/*": ["../../packages/licensing/src/*"],
+      "@alga-psa/co-managed": ["../../packages/co-managed/src/index.ts"],
+      "@alga-psa/co-managed/*": ["../../packages/co-managed/src/*"],
       "@alga-psa/validation": ["../../packages/validation/src/index.ts"],
       "@alga-psa/validation/*": ["../../packages/validation/src/*"]
     },
     "typeRoots": ["../../node_modules/@types", "./node_modules/@types"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/test-utils/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/test-utils/**/*", "src/__tests__/integration/**/*"],
   "ts-node": {
     "esm": true
   }

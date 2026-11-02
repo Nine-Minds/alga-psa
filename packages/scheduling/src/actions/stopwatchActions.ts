@@ -1,5 +1,6 @@
 'use server';
 
+import { delegateToTimeSource } from '../lib/timeSource';
 import type { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -43,6 +44,9 @@ export const getMyStopwatch = withAuth(async (
   user,
   { tenant },
 ): Promise<StopwatchSessionView | null | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.timer.active(ctx));
+  if (delegated.handled) return delegated.value;
   const { knex } = await createTenantKnex();
   if (!await hasPermission(user, 'time_entry', 'read', knex)) {
     return permissionError('Permission denied: Cannot read time entries');
@@ -59,6 +63,9 @@ export const startStopwatch = withAuth(async (
   { tenant },
   input: StartStopwatchInput,
 ): Promise<StartStopwatchResult | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id, workItemType: input.work_item_type, workItemId: input.work_item_id }, (source, ctx) => source.timer.start(ctx, input));
+  if (delegated.handled) return delegated.value;
   const { knex } = await createTenantKnex();
   if (!await hasPermission(user, 'time_entry', 'create', knex)) {
     return permissionError('Permission denied: Cannot create time entries');
@@ -99,25 +106,41 @@ async function mutateOwnSession(
   }
 }
 
-export const pauseStopwatch = withAuth(async (user, { tenant }, sessionId: string) =>
-  mutateOwnSession(user, (trx) => pauseSession(trx, tenant, user.user_id, sessionId)));
+export const pauseStopwatch = withAuth(async (user, { tenant }, sessionId: string): Promise<StopwatchSessionView | TimeSheetActionError> => {
+  // Time-source seam: native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.timer.pause(ctx, sessionId));
+  if (delegated.handled) return delegated.value;
+  return mutateOwnSession(user, (trx) => pauseSession(trx, tenant, user.user_id, sessionId));
+});
 
-export const resumeStopwatch = withAuth(async (user, { tenant }, sessionId: string) =>
-  mutateOwnSession(user, (trx) => resumeSession(trx, tenant, user.user_id, sessionId)));
+export const resumeStopwatch = withAuth(async (user, { tenant }, sessionId: string): Promise<StopwatchSessionView | TimeSheetActionError> => {
+  // Time-source seam: native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.timer.resume(ctx, sessionId));
+  if (delegated.handled) return delegated.value;
+  return mutateOwnSession(user, (trx) => resumeSession(trx, tenant, user.user_id, sessionId));
+});
 
-export const discardStopwatch = withAuth(async (user, { tenant }, sessionId: string) =>
-  mutateOwnSession(user, (trx) => discardSession(trx, tenant, user.user_id, sessionId)));
+export const discardStopwatch = withAuth(async (user, { tenant }, sessionId: string): Promise<StopwatchSessionView | TimeSheetActionError> => {
+  // Time-source seam: native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.timer.cancel(ctx, sessionId));
+  if (delegated.handled) return delegated.value;
+  return mutateOwnSession(user, (trx) => discardSession(trx, tenant, user.user_id, sessionId));
+});
 
 export const updateStopwatchDraft = withAuth(async (
   user,
   { tenant },
   sessionId: string,
   input: { notes?: string; service_id?: string | null },
-) =>
-  mutateOwnSession(
+): Promise<StopwatchSessionView | TimeSheetActionError> => {
+  // Time-source seam: native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.timer.updateDraft(ctx, sessionId, input));
+  if (delegated.handled) return delegated.value;
+  return mutateOwnSession(
     user,
     (trx) => updateSessionDraft(trx, tenant, user.user_id, sessionId, {
       notes: input.notes,
       serviceId: input.service_id,
     }),
-  ));
+  );
+});

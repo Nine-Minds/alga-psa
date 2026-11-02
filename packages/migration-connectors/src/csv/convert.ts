@@ -34,6 +34,12 @@ export interface CsvConvertConfig {
   namespace: string;
   sourceSystem: string;
   producerVersion?: string;
+  /**
+   * ISO 4217 code used to read the decimals of money cells whose currency
+   * cell is blank. Supply the tenant's currency; omit it and such cells are
+   * dropped with a diagnostic. Never defaulted here.
+   */
+  defaultCurrency?: string;
   files: CsvConvertFileEntry[];
 }
 
@@ -112,6 +118,7 @@ export async function convertSpreadsheets(
       headers: sheet.headers,
       rows: sheet.rows,
       mapping: entry.mapping,
+      defaultCurrency: config.defaultCurrency,
     });
   }
 

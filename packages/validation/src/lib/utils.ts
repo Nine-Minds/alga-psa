@@ -113,7 +113,7 @@ export const tenantSchema = z.object({
 /**
  * UUID schema
  */
-export const uuidSchema = z.string().uuid();
+export const uuidSchema = z.string().guid();
 
 /**
  * Non-empty string schema

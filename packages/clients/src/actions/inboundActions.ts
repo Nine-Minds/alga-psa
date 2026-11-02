@@ -1,3 +1,6 @@
+import { randomUUID } from 'node:crypto';
+import type { Knex } from 'knex';
+import { queueContactCreated, queueContactUpdated } from '../lib/contactEvents';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { IClient } from '@alga-psa/types';
 import { ContactModel, type CreateContactInput, type UpdateContactInput } from '@alga-psa/shared/models/contactModel';
@@ -6,10 +9,11 @@ import {
   buildClientCreatedPayload,
   buildClientStatusChangedPayload,
 } from '@alga-psa/workflow-streams';
-import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
-import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
+import {
+  createClientWithDefaults,
+  type CreateClientWithDefaultsData,
+} from '@alga-psa/shared/models/clientCreation';
 
-import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
 import { CLIENT_SINCE_FORMAT_MESSAGE, toClientSinceDate } from '../lib/clientSince';
 
 import {
@@ -167,25 +171,24 @@ const upsertClientByExternalIdAction: InboundActionDefinition<UpsertClientByExte
               updated_at: new Date().toISOString(),
             })
             .returning('*');
+
+          // An update refreshes an existing default location but does not
+          // invent one, matching the clients.update business operation.
+          await upsertDefaultLocationFromMappedValues(trx, ctx.tenant, updated.client_id, mappedValues, {
+            createIfMissing: false,
+          });
+
           return { client: updated, wasCreated: false };
         }
 
-        const [created] = await tenantDb(trx, ctx.tenant).table<IClient>('clients')
-          .insert({
-            ...payload,
-            tenant: ctx.tenant,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .returning('*');
+        const created = await createClientWithDefaults(
+          trx,
+          ctx.tenant,
+          payload as CreateClientWithDefaultsData,
+        );
 
-        await ensureClientDefaultBillingProfile(trx, ctx.tenant, created.client_id, {
-          clientName: created.client_name,
-        });
-
-        await ensureDefaultContractForClientIfBillingConfigured(trx, {
-          tenant: ctx.tenant,
-          clientId: created.client_id,
+        await upsertDefaultLocationFromMappedValues(trx, ctx.tenant, created.client_id, mappedValues, {
+          createIfMissing: true,
         });
 
         await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'client', created.client_id, mappedValues.external_id, {
@@ -206,14 +209,8 @@ const upsertClientByExternalIdAction: InboundActionDefinition<UpsertClientByExte
     const { client, wasCreated } = result;
 
     if (wasCreated) {
-      // Mirror createClient post-commit side effects (tax settings, workflow event).
-      try {
-        await createDefaultTaxSettingsAsync(client.client_id);
-      } catch (taxError) {
-        // Tax settings are best-effort for inbound webhooks; surface in delivery outcome metadata.
-        console.error(`Failed to create default tax settings for inbound client ${client.client_id}:`, taxError);
-      }
-
+      // Tax settings now come from the shared creation seam inside the
+      // transaction, so only the workflow event is left to mirror here.
       const createdAt = client.created_at ?? new Date().toISOString();
       const status =
         (client as any)?.properties?.status ?? (client.is_inactive ? 'inactive' : 'active');
@@ -393,7 +390,12 @@ const upsertContactByExternalIdAction: InboundActionDefinition<UpsertContactByEx
               : undefined,
           };
 
-          return ContactModel.updateContact(existingMapping.algaEntityId, input, ctx.tenant, trx);
+          const before = await ContactModel.getContactById(existingMapping.algaEntityId, ctx.tenant, trx);
+          const updated = await ContactModel.updateContact(existingMapping.algaEntityId, input, ctx.tenant, trx);
+          if (before) {
+            queueContactUpdated(trx, ctx.tenant, before as any, updated as any, Object.keys(input).filter((k) => (input as any)[k] !== undefined));
+          }
+          return updated;
         }
 
         const input: CreateContactInput = {
@@ -408,6 +410,7 @@ const upsertContactByExternalIdAction: InboundActionDefinition<UpsertContactByEx
             : undefined,
         };
         const created = await ContactModel.createContact(input, ctx.tenant, trx);
+        queueContactCreated(trx, ctx.tenant, created as any);
 
         await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'contact', created.contact_name_id, mappedValues.external_id, {
           knex: trx,
@@ -447,6 +450,12 @@ export const clientInboundActions = [
   upsertContactByExternalIdAction,
 ];
 
+/**
+ * Column values for the `clients` row. Contact and address fields live on
+ * `client_locations`, not `clients` (dropped by migration 20250707120000), so
+ * only `email` crosses over — as `billing_email`. Anything else here would be a
+ * database error, since the payload is written straight to the table.
+ */
 function buildClientPayload(mappedValues: UpsertClientByExternalIdMappedValues): Partial<IClient> {
   const payload: Partial<IClient> = {
     client_name: mappedValues.client_name,
@@ -459,14 +468,7 @@ function buildClientPayload(mappedValues: UpsertClientByExternalIdMappedValues):
   };
 
   assignIfPresent(payload, 'url', mappedValues.url);
-  assignIfPresent(payload, 'phone_no', mappedValues.phone_no);
-  assignIfPresent(payload, 'email', mappedValues.email);
-  assignIfPresent(payload, 'address', mappedValues.address);
-  assignIfPresent(payload, 'address_2', mappedValues.address_2);
-  assignIfPresent(payload, 'city', mappedValues.city);
-  assignIfPresent(payload, 'state', mappedValues.state);
-  assignIfPresent(payload, 'zip', mappedValues.zip);
-  assignIfPresent(payload, 'country', mappedValues.country);
+  assignIfPresent(payload, 'billing_email', mappedValues.email);
   assignIfPresent(payload, 'default_currency_code', mappedValues.default_currency_code);
   assignIfPresent(payload, 'notes', mappedValues.notes);
 
@@ -484,6 +486,84 @@ function buildClientPayload(mappedValues: UpsertClientByExternalIdMappedValues):
   }
 
   return payload;
+}
+
+const LOCATION_MAPPED_FIELDS = [
+  'phone_no',
+  'email',
+  'address',
+  'address_2',
+  'city',
+  'state',
+  'zip',
+  'country',
+] as const;
+
+/**
+ * Writes the mapped contact/address fields to the client's default location,
+ * which is where they live. Mirrors the `clients.create` business operation so
+ * both write paths agree on the mapping and on the placeholders the NOT NULL
+ * location columns need.
+ */
+async function upsertDefaultLocationFromMappedValues(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  mappedValues: UpsertClientByExternalIdMappedValues,
+  options: { createIfMissing: boolean },
+): Promise<void> {
+  if (LOCATION_MAPPED_FIELDS.every((field) => mappedValues[field] === undefined)) {
+    return;
+  }
+
+  const db = tenantDb(trx, tenant);
+  const now = new Date().toISOString();
+  const existing = await db.table('client_locations')
+    .where({ client_id: clientId, is_default: true })
+    .first();
+
+  if (existing) {
+    const patch: Record<string, unknown> = { updated_at: now };
+    assignIfPresent(patch, 'address_line1', mappedValues.address);
+    assignIfPresent(patch, 'address_line2', mappedValues.address_2);
+    assignIfPresent(patch, 'city', mappedValues.city);
+    assignIfPresent(patch, 'state_province', mappedValues.state);
+    assignIfPresent(patch, 'postal_code', mappedValues.zip);
+    assignIfPresent(patch, 'country_name', mappedValues.country);
+    assignIfPresent(patch, 'phone', mappedValues.phone_no);
+    assignIfPresent(patch, 'email', mappedValues.email);
+
+    await db.table('client_locations')
+      .where({ location_id: existing.location_id })
+      .update(patch);
+    return;
+  }
+
+  if (!options.createIfMissing) {
+    return;
+  }
+
+  await db.table('client_locations').insert({
+    location_id: randomUUID(),
+    tenant,
+    client_id: clientId,
+    location_name: 'Main Office',
+    address_line1: mappedValues.address ?? '',
+    address_line2: mappedValues.address_2 ?? null,
+    city: mappedValues.city ?? '',
+    state_province: mappedValues.state ?? null,
+    postal_code: mappedValues.zip ?? null,
+    country_code: mappedValues.country ? mappedValues.country.slice(0, 2).toUpperCase() : 'US',
+    country_name: mappedValues.country ?? 'United States',
+    phone: mappedValues.phone_no ?? null,
+    email: mappedValues.email ?? null,
+    is_default: true,
+    is_billing_address: true,
+    is_shipping_address: true,
+    is_active: true,
+    created_at: now,
+    updated_at: now,
+  });
 }
 
 function assignIfPresent<T extends object>(target: T, key: string, value: unknown): void {

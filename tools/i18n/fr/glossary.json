@@ -1892,7 +1892,7 @@
     {
       "term": "bucket",
       "preferred": "forfait d’heures",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Résidu anglais non traduit pour les forfaits d’heures prépayées."
     },
     {
@@ -1916,7 +1916,7 @@
     {
       "term": "compartiment",
       "preferred": "forfait d’heures",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Calque du bucket d’heures ; le terme métier est forfait d’heures."
     },
     {
@@ -1946,7 +1946,7 @@
     {
       "term": "godet",
       "preferred": "forfait d’heures",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Calque du bucket d’heures."
     },
     {
@@ -1994,7 +1994,7 @@
     {
       "term": "seau",
       "preferred": "forfait d’heures",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Calque du bucket d’heures."
     },
     {
@@ -2081,6 +2081,11 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Conversation",
+      "{{from}} → {{to}}",
+      "RMA {{id}}",
+      "Datto RMM",
+      "mention",
       ",",
       "3CX",
       "Acme IT Solutions",
@@ -2198,6 +2203,7 @@
       "Services",
       "Shift",
       "Signature",
+      "Sites",
       "SLA",
       "SMS",
       "SMTP",
@@ -2247,7 +2253,15 @@
       "Normal (400)",
       "Style",
       "auto | 50% | 120px",
-      "Cc"
+      "Cc",
+      "Note",
+      "Consultation",
+      "Important",
+      "Compact",
+      "Extensions (Pro)",
+      "Stable",
+      "Code 128",
+      "RMA {{number}} · {{status}}"
     ],
     "caseInsensitive": [
       "api",

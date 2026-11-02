@@ -69,6 +69,7 @@ export interface JoinCondition {
   operator?: string;              // Comparison operator (defaults to =)
 }
 
+// LEVERAGE: pattern condition-dialects — overlapping condition dialect; candidate to converge on @alga-psa/predicates (also: workflow event-wait filters, reporting FilterDefinition, inbound email rules, service-request visibility)
 export interface FilterDefinition {
   field: string;                  // Field to filter on
   operator: FilterOperator;       // Filter operator

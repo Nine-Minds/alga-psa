@@ -10,6 +10,8 @@ export type MicrosoftOAuthFailureKind =
   | 'app_not_in_directory' // AADSTS700016
   | 'user_wrong_directory' // AADSTS50020
   | 'redirect_uri_mismatch' // AADSTS50011
+  | 'invalid_client_secret' // AADSTS7000215
+  | 'expired_client_secret' // AADSTS7000222
   | 'admin_consent_required'; // error=consent_required, AADSTS65001, AADSTS90094
 
 export interface MicrosoftOAuthFailureInput {
@@ -23,6 +25,8 @@ const CODE_TO_KIND: Record<number, MicrosoftOAuthFailureKind> = {
   700016: 'app_not_in_directory',
   50020: 'user_wrong_directory',
   50011: 'redirect_uri_mismatch',
+  7000215: 'invalid_client_secret',
+  7000222: 'expired_client_secret',
   65001: 'admin_consent_required',
   90094: 'admin_consent_required',
 };
@@ -66,6 +70,8 @@ export const MICROSOFT_OAUTH_FAILURE_ERROR_CODES: Record<MicrosoftOAuthFailureKi
   app_not_in_directory: 'aadsts_700016_app_not_found',
   user_wrong_directory: 'aadsts_50020_wrong_directory',
   redirect_uri_mismatch: 'aadsts_50011_redirect_uri',
+  invalid_client_secret: 'aadsts_7000215_invalid_secret',
+  expired_client_secret: 'aadsts_7000222_expired_secret',
   // Stable UI code the Outlook Calendar connect form keys its pending state on.
   admin_consent_required: 'pending_admin_consent',
 };
@@ -75,6 +81,18 @@ export function kindFromMicrosoftOAuthErrorCode(code: string | null | undefined)
     if (value === code) return kind as MicrosoftOAuthFailureKind;
   }
   return null;
+}
+
+/**
+ * True for a `<machine code>: <message>` string produced by
+ * formatMicrosoftOAuthFailureForMailboxFlow (the code before the first `:` is a
+ * known MICROSOFT_OAUTH_FAILURE_ERROR_CODES value).
+ */
+export function isMappedMicrosoftOAuthMessage(message: string | null | undefined): boolean {
+  if (!message) return false;
+  const idx = message.indexOf(':');
+  if (idx <= 0) return false;
+  return kindFromMicrosoftOAuthErrorCode(message.slice(0, idx)) !== null;
 }
 
 /** Email / calendar callback copy (the callbacks post this to the opener window). */
@@ -89,13 +107,30 @@ export function describeMicrosoftOAuthFailureForMailboxFlow(
       return "Microsoft could not find this app registration in the directory named by the profile's Tenant ID. Check that the Tenant ID on the Microsoft profile is the directory (tenant) ID where the app was registered.";
     case 'user_wrong_directory':
       return 'The account you signed in with belongs to a different directory than this single-tenant app. Sign in with an account from the app\'s directory, or make the app multi-tenant.';
+    case 'invalid_client_secret':
+      return 'Microsoft rejected the client secret on the Microsoft profile. Make sure you saved the secret Value, not its Secret ID.';
+    case 'expired_client_secret':
+      return 'The client secret on the Microsoft profile has expired. Create a new secret in Azure and update the profile.';
+    case 'admin_consent_required':
+      return 'Microsoft needs a Microsoft 365 administrator to approve this app before anyone can connect. Ask an administrator to grant admin consent for the app\'s delegated permissions, then connect again.';
     case 'redirect_uri_mismatch':
       return context.redirectUri
         ? `Microsoft rejected the redirect URI because it is not registered on the app. Add this exact URI under Authentication > Web redirect URIs: ${context.redirectUri}`
         : 'Microsoft rejected the redirect URI because it is not registered on the app. Add the redirect URI shown on the Microsoft app registration screen under Authentication > Web redirect URIs.';
-    case 'admin_consent_required':
-      return 'Microsoft needs a Microsoft 365 administrator to approve this app before anyone can connect. Ask an administrator to grant admin consent for the app\'s delegated permissions, then connect again.';
   }
+}
+
+/**
+ * The `<machine code>: <message>` string persisted to a provider's error field
+ * (email_providers.error_message) for a mapped failure. Shared by the OAuth
+ * callbacks' persistence and the background token-refresh paths so a stored
+ * error reads the same whichever path produced it.
+ */
+export function formatMicrosoftOAuthFailureForMailboxFlow(
+  kind: MicrosoftOAuthFailureKind,
+  context: { redirectUri?: string | null } = {}
+): string {
+  return `${MICROSOFT_OAUTH_FAILURE_ERROR_CODES[kind]}: ${describeMicrosoftOAuthFailureForMailboxFlow(kind, context)}`;
 }
 
 export interface SafeMicrosoftOAuthFailure {

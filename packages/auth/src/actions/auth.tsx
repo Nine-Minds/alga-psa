@@ -5,10 +5,12 @@ import { getTenantIdBySlug } from "@alga-psa/db";
 import { verifyPassword } from '@alga-psa/core/encryption';
 import logger from "@alga-psa/core/logger";
 
-import { IUser } from '@alga-psa/types';
+import { IUser, isInteractiveUserType } from '@alga-psa/types';
 import { isValidTenantSlug } from '@alga-psa/validation';
 import { isEnterprise } from '@alga-psa/core/features';
 import { loadEnterpriseInactiveLoginWinbackHook } from '../lib/winback/enterpriseWinbackEntry';
+import { normalizeLoginEmail } from '../lib/security/loginEmail';
+import { resolveSignInUser, TenantRequiredResolutionError } from '../lib/signInUserResolution';
 interface AuthenticateUserOptions {
     tenantId?: string;
     tenantSlug?: string;
@@ -65,44 +67,30 @@ async function resolveTenantFromPortalDomain(portalDomain: string): Promise<stri
 }
 
 /**
- * Client sign-in with no tenant in hand. The old `.first()` lookup answered an
- * arbitrary tenant here, so an email with client users in two portals could be
- * authenticated against — and handed off to — the wrong MSP. Look at every
- * match instead, and when the credentials prove out in more than one tenant,
- * refuse and let the form ask which organization was meant. Only an attempt
- * that already knows the password learns that the email spans tenants.
+ * Sign-in with no tenant in hand: password sign-in uses the shared resolution
+ * engine with the stored hash as the proof. Only an attempt that already knows
+ * the password learns that the email spans tenants.
  */
-async function resolveUnscopedClientUser(
+async function resolveUnscopedUser(
     normalizedEmail: string,
     password: string,
-): Promise<IUser | undefined> {
-    const candidates = await User.findUsersByEmailAndType(normalizedEmail, 'client');
-
-    if (candidates.length <= 1) {
-        return candidates[0];
-    }
-
-    const authenticated: IUser[] = [];
-    for (const candidate of candidates) {
-        if (candidate.is_inactive || !candidate.hashed_password) {
-            continue;
-        }
-        if (await verifyPassword(password, candidate.hashed_password)) {
-            authenticated.push(candidate);
-        }
-    }
-
-    const tenants = new Set(authenticated.map((candidate) => candidate.tenant));
-    if (tenants.size > 1) {
-        logger.warn('[authenticateUser] Email resolves to client users in multiple tenants', {
+    userType: 'client' | 'internal',
+): Promise<{ user: IUser | undefined; passwordVerified: boolean }> {
+    try {
+        const { user, verified } = await resolveSignInUser({
             email: normalizedEmail,
-            tenantCount: tenants.size,
+            userType,
+            verify: (candidate) =>
+                candidate.hashed_password ? verifyPassword(password, candidate.hashed_password) : false,
         });
-        const { TenantRequiredError } = await import('../lib/security/loginProtection');
-        throw new TenantRequiredError();
+        return { user, passwordVerified: verified };
+    } catch (error) {
+        if (error instanceof TenantRequiredResolutionError) {
+            const { TenantRequiredError } = await import('../lib/security/loginProtection');
+            throw new TenantRequiredError();
+        }
+        throw error;
     }
-
-    return authenticated[0];
 }
 
 export async function authenticateUser(
@@ -119,12 +107,12 @@ export async function authenticateUser(
         hasPortalDomain: Boolean(options.portalDomain),
     });
 
-    if (!email || !password) {
+    const normalizedEmail = normalizeLoginEmail(email);
+    if (!normalizedEmail || !password) {
         logger.warn("[authenticateUser] Missing credentials");
         return null;
     }
 
-    const normalizedEmail = email.toLowerCase();
     let resolvedTenantId: string | undefined | null = options.tenantId;
 
     if (!resolvedTenantId && options.tenantSlug) {
@@ -154,17 +142,19 @@ export async function authenticateUser(
         tenantFromPortalDomain = Boolean(resolvedTenantId);
     }
 
+    // Only interactive types may authenticate with a password, and the caller must say
+    // which one: there is no untyped lookup, so a POST that omits userType is refused.
+    if (!isInteractiveUserType(userType)) {
+        logger.warn('[authenticateUser] Missing or non-interactive userType rejected', { email, userType });
+        return null;
+    }
+
     let user: IUser | undefined;
-    if (userType === 'client' || userType === 'internal') {
-        if (resolvedTenantId) {
-            user = await User.findUserByEmailTenantAndType(normalizedEmail, resolvedTenantId, userType);
-        } else if (userType === 'client') {
-            user = await resolveUnscopedClientUser(normalizedEmail, password);
-        } else {
-            user = await User.findUserByEmailAndType(normalizedEmail, userType);
-        }
+    let passwordVerified = false;
+    if (resolvedTenantId) {
+        user = await User.findUserByEmailTenantAndType(normalizedEmail, resolvedTenantId, userType);
     } else {
-        user = await User.findUserByEmail(normalizedEmail);
+        ({ user, passwordVerified } = await resolveUnscopedUser(normalizedEmail, password, userType));
     }
 
     if (!user || !user.user_id) {
@@ -186,6 +176,11 @@ export async function authenticateUser(
         return null;
     }
 
+    if (!isInteractiveUserType(user.user_type)) {
+        logger.warn('[authenticateUser] Non-interactive user attempted to login', { email });
+        return null;
+    }
+
     // Check if user is inactive
     if (user.is_inactive) {
         logger.warn(`[authenticateUser] Inactive user attempted to login: ${email}`);
@@ -204,7 +199,7 @@ export async function authenticateUser(
         return null;
     }
 
-    const isValid = await verifyPassword(password, user.hashed_password);
+    const isValid = passwordVerified || await verifyPassword(password, user.hashed_password);
     if (!isValid) {
         logger.warn(`[authenticateUser] Invalid password for email ${email}`);
         return null;
@@ -215,16 +210,16 @@ export async function authenticateUser(
 
 
 
-export async function have_two_factor_enabled( password: string, email: string): Promise<boolean> {
+export async function have_two_factor_enabled( password: string, email: string, userType: 'internal' | 'client'): Promise<boolean> {
     logger.system(`Checking if user has 2FA enabled for email ${email}`);
-    const user = await authenticateUser(email, password);
+    const user = await authenticateUser(email, password, userType);
     if (!user || !user.two_factor_enabled) { return false; }
     return true;
 }
 
 export async function userExists( email: string): Promise<boolean> {
     logger.system(`Checking if user exists for email ${email}`);
-    const user = await User.findUserByEmail(email.toLowerCase());
+    const user = await User.findUserByEmail(normalizeLoginEmail(email));
     if (!user || !user.user_id) { return false; }
     return true;
 }

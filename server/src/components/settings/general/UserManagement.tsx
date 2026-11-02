@@ -68,7 +68,7 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { IUser, IRole } from '@alga-psa/types';
+import { IUser, IRole, isLicensedUserType, isClientUserType } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
@@ -379,8 +379,8 @@ const UserManagement = (): React.JSX.Element => {
       
       // Filter users based on portal type
       const filteredByType = portalType === 'msp' 
-        ? fetchedUsers.filter(user => user.user_type === 'internal' || !user.user_type)
-        : fetchedUsers.filter(user => user.user_type === 'client');
+        ? fetchedUsers.filter(user => isLicensedUserType(user.user_type) || !user.user_type)
+        : fetchedUsers.filter(user => isClientUserType(user.user_type));
       
       console.log(`Filtered ${portalType} users:`, filteredByType);
       
@@ -603,7 +603,7 @@ const fetchContacts = async (): Promise<void> => {
         });
 
         if (!result.success) {
-          const keysByCode: Record<typeof result.code, string> = {
+          const keysByCode: Partial<Record<typeof result.code, string>> = {
             ROLE_REQUIRED: 'users.messages.error.roleRequired',
             INVALID_ROLE: 'users.messages.error.invalidRole',
             ROLE_MSP_NOT_ALLOWED_FOR_CLIENT: 'users.messages.error.selectAppropriateRole',
@@ -614,7 +614,7 @@ const fetchContacts = async (): Promise<void> => {
             PERMISSION_DENIED: 'users.messages.error.permissionDenied',
             USER_CREATE_FAILED: 'users.messages.error.createUser',
           };
-          const message = t(keysByCode[result.code], { defaultValue: result.error });
+          const message = (keysByCode[result.code] ? t(keysByCode[result.code] as string, { defaultValue: result.error }) : result.error);
           toast.error(message);
           setError(message);
           return;

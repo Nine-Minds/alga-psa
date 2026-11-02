@@ -181,6 +181,7 @@ export function permissionError(
   return { permissionError: message, ...(key ? { messageKey: key } : {}), ...(params ? { messageParams: params } : {}) } as ActionPermissionError;
 }
 
+// LEVERAGE: pattern action-error-mapper — 22 per-module *ActionErrorFrom mappers; withAuth now owns the co-managed lifecycle case. Not resolved here: the remaining cases are product-specific copy.
 /**
  * Creates a user-safe error return value for server actions.
  *
@@ -204,9 +205,10 @@ export function actionError(
  */
 export type ActionValidationIssue = {
   readonly code?: unknown;
-  readonly path?: ReadonlyArray<string | number>;
+  readonly path?: ReadonlyArray<PropertyKey>;
   readonly message?: unknown;
   readonly received?: unknown;
+  readonly input?: unknown;
   readonly params?: {
     readonly messageKey?: unknown;
     readonly messageParams?: unknown;
@@ -242,13 +244,14 @@ export function actionErrorFromValidationIssue(issue: ActionValidationIssue): Ac
     );
   }
 
-  if (issue.code === 'invalid_type' && issue.received === 'undefined') {
+  const missingInput = 'input' in issue ? issue.input === undefined : issue.received === 'undefined' || /received undefined$/.test(String(issue.message ?? ''));
+  if (issue.code === 'invalid_type' && missingInput) {
     return actionError(`${field} is required.`, 'common:errors.validation.required', { field });
   }
   if (issue.code === 'invalid_type') {
     return actionError(`${field} has the wrong type.`, 'common:errors.validation.invalidType', { field });
   }
-  if (issue.code === 'invalid_string') {
+  if (issue.code === 'invalid_string' || issue.code === 'invalid_format') {
     return actionError(`${field} has an invalid format.`, 'common:errors.validation.invalidFormat', { field });
   }
   if (issue.code === 'too_small') {
@@ -265,7 +268,7 @@ export function actionErrorFromValidationIssue(issue: ActionValidationIssue): Ac
       { field },
     );
   }
-  if (issue.code === 'invalid_enum_value' || issue.code === 'invalid_literal') {
+  if (issue.code === 'invalid_enum_value' || issue.code === 'invalid_literal' || issue.code === 'invalid_value') {
     return actionError(
       `${field} has an unsupported value.`,
       'common:errors.validation.unsupportedValue',

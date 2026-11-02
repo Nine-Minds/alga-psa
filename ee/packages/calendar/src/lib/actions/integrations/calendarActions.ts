@@ -17,6 +17,7 @@ import { GoogleCalendarAdapter } from '@alga-psa/ee-calendar/lib/services/calend
 import { MicrosoftCalendarAdapter } from '@alga-psa/ee-calendar/lib/services/calendar/providers/MicrosoftCalendarAdapter';
 import { CalendarSyncService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarSyncService';
 import { CalendarWebhookMaintenanceService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarWebhookMaintenanceService';
+import { isMappedMicrosoftOAuthMessage } from '@alga-psa/shared/services/email/microsoftOAuthErrors';
 import { MICROSOFT_MULTI_TENANT_AUTHORITY, microsoftIssuerKindFromSource, resolveMicrosoftOAuthAuthority } from '@alga-psa/shared/services/email/microsoftAuthority';
 
 type CalendarActionContext = {
@@ -61,6 +62,14 @@ function calendarActionErrorMessage(error: unknown, fallback: string): string {
 
   if (!message) {
     return fallback;
+  }
+
+  // Mapped Microsoft OAuth rejections are already user-facing `<code>: <message>`.
+  if (
+    (error as { microsoftOAuthFailureKind?: unknown } | null)?.microsoftOAuthFailureKind ||
+    isMappedMicrosoftOAuthMessage(message)
+  ) {
+    return message;
   }
 
   if (

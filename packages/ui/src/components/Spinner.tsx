@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import { useTranslation } from '../lib/i18n/client';
 
 export type SpinnerSize = 'button' | 'xs' | 'sm' | 'md' | 'lg';
 export type SpinnerVariant = 'default' | 'inverted';
@@ -22,6 +25,7 @@ const Spinner = ({
   variant = 'default',
   className = '',
 }: SpinnerProps) => {
+  const { t } = useTranslation('common');
   const isInverted = variant === 'inverted';
 
   const variantStyle: React.CSSProperties | undefined = isInverted
@@ -36,11 +40,11 @@ const Spinner = ({
       <div
         className={`spinner ${sizeClasses[size]}`}
         role="status"
-        aria-label="Loading"
+        aria-label={t('status.loadingLabel')}
         style={variantStyle}
       >
         {!isInverted && <div className="spinner-inner" />}
-        <span className="sr-only">Loading</span>
+        <span className="sr-only">{t('status.loadingLabel')}</span>
       </div>
     </div>
   );

@@ -881,6 +881,7 @@
       "add": "Dodaj",
       "remove": "Usuń",
       "empty": "Brak mapowań.",
+      "nameRequired": "Wpisz nazwę tego mapowania.",
       "expressionLabel": "Wyrażenie"
     },
     "schemaForm": {
@@ -1478,6 +1479,9 @@
         "contains": "zawiera",
         "starts_with": "zaczyna się od",
         "ends_with": "kończy się na",
+        "not_contains": "nie zawiera",
+        "not_starts_with": "nie zaczyna się od",
+        "not_ends_with": "nie kończy się na",
         "is_empty": "jest puste",
         "is_not_empty": "nie jest puste"
       },
@@ -2379,7 +2383,12 @@
       "currentRun": "Uruchomienie {{id}}",
       "backToWorkflow": "Wróć do workflow"
     },
-    "title": "Studio uruchamiania workflow"
+    "title": "Studio uruchamiania workflow",
+    "communityEdition": {
+      "title": "Funkcja Pro",
+      "description": "Studio uruchomień workflow jest dostępne tylko w Pro.",
+      "runId": "ID uruchomienia: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3152,6 +3161,10 @@
         "selectBoard": "Wybierz lub wprowadź tablicę",
         "selectPriority": "Wybierz lub wprowadź priorytet"
       }
+    },
+    "proFeature": {
+      "title": "Funkcja Pro",
+      "description": "System workflow jest dostępny tylko w Pro. Uaktualnij swoją instalację, aby uzyskać dostęp do tej funkcji."
     }
   },
   "toggle": {

@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { PROVIDER_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import {
   completeMicrosoftEmailApplicationCreation,
   getMicrosoftEmailSetupSigningSecret,
 } from '@alga-psa/integrations/actions/integrations/microsoftEmailSetupActions';
-import { confirmMicrosoftEmailAdminConsentInternal } from '@alga-psa/integrations/actions/integrations/microsoftActions';
+// Only this route may import the unguarded, state-authorised consent writer.
+import { recordMicrosoftEmailAdminConsentFromState } from '@alga-psa/integrations/lib/microsoftEmailAdminConsent';
+import { describeMicrosoftSetupError } from '@alga-psa/integrations/lib/microsoftEmailSetupError';
 import { validateMicrosoftEmailSetupState } from '@alga-psa/integrations/lib/microsoftEmailSetup';
 import { consumeMicrosoftEmailSetupState } from '@alga-psa/integrations/utils/microsoftEmailSetupStateStore';
 import { getServerLocale, getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
@@ -17,9 +20,13 @@ export const dynamic = 'force-dynamic';
 // what the user sees.
 const SETUP_FAILURES = {
   invalid_state: 'This Microsoft setup request is invalid or expired. Start again from Providers settings.',
-  session_mismatch: 'Your AlgaPSA session does not match the administrator who started this setup. Sign in and try again.',
+  session_mismatch: 'This setup was started in a different browser or a private window. Finish it in the same window you started it in, or use the approval link.',
   consent_denied: 'Microsoft sign-in or administrator consent was denied. Choose another setup option or try again.',
-  microsoft_error: 'Microsoft could not complete the setup request. Try again or use manual setup.',
+  policy_blocked: 'A Conditional Access or device policy in your Microsoft tenant blocked the sign-in. Ask your Microsoft admin to exempt this app, or approve from a device your policy allows.',
+  admin_required: 'This needs a Microsoft Global Administrator to approve the app. Copy the approval link and send it to them.',
+  wrong_tenant: 'The Microsoft account used belongs to a different Microsoft tenant than the one being configured.',
+  app_not_found: 'The Microsoft app could not be found in that Microsoft tenant. It may have been deleted or the Microsoft tenant is wrong. You can set up a different app manually.',
+  microsoft_error: 'Microsoft could not complete the setup request.',
   consent_not_granted: 'Microsoft did not confirm administrator consent.',
   consent_persist_failed: 'Failed to record Microsoft administrator consent.',
   missing_code: 'Microsoft did not return an authorization code. Start setup again.',
@@ -27,8 +34,56 @@ const SETUP_FAILURES = {
 
 type MicrosoftEmailSetupErrorCode = keyof typeof SETUP_FAILURES;
 
-function failure(code: MicrosoftEmailSetupErrorCode, detail?: string) {
-  return { success: false, errorCode: code, error: detail || SETUP_FAILURES[code] };
+function failure(
+  code: MicrosoftEmailSetupErrorCode,
+  detail?: string,
+  diagnostics?: { aadsts?: string | null; correlationId?: string | null; detail?: string | null },
+) {
+  return {
+    success: false,
+    errorCode: code,
+    error: detail || SETUP_FAILURES[code],
+    ...(diagnostics?.aadsts ? { aadsts: diagnostics.aadsts } : {}),
+    ...(diagnostics?.correlationId ? { correlationId: diagnostics.correlationId } : {}),
+    ...(diagnostics?.detail ? { microsoftDetail: diagnostics.detail } : {}),
+  };
+}
+
+// One structured line per callback. Never include the state token, the
+// authorization code or Microsoft's raw error_description.
+function logCallback(entry: {
+  purpose: string;
+  outcome: 'success' | 'failure';
+  errorCode?: string | null;
+  aadsts?: string | null;
+  correlationId?: string | null;
+  algaTenant?: string | null;
+  profileId?: string | null;
+}) {
+  const line = {
+    purpose: entry.purpose,
+    outcome: entry.outcome,
+    errorCode: entry.errorCode ?? null,
+    aadsts: entry.aadsts ?? null,
+    correlationId: entry.correlationId ?? null,
+    algaTenant: entry.algaTenant ?? null,
+    profileId: entry.profileId ?? null,
+  };
+  if (entry.outcome === 'success') console.info('[microsoft-email-setup] callback', line);
+  else console.warn('[microsoft-email-setup] callback', line);
+}
+
+// Used when there is no window.opener (full-page approval, or the copied link
+// opened in a fresh tab). `returnTo` always comes from the signed state.
+function buildNoOpenerRedirectUrl(returnTo: string, payload: Record<string, unknown>): string {
+  const url = new URL(returnTo);
+  url.searchParams.set('microsoft_email_setup', payload.success ? 'ok' : 'error');
+  if (!payload.success) {
+    if (typeof payload.errorCode === 'string') url.searchParams.set('error_code', payload.errorCode);
+    if (typeof payload.aadsts === 'string') url.searchParams.set('aadsts', payload.aadsts);
+    if (typeof payload.correlationId === 'string') url.searchParams.set('correlation_id', payload.correlationId);
+  }
+  return url.toString();
 }
 
 function escapeHtml(s: string): string {
@@ -65,6 +120,7 @@ async function respondToSetupWindow(input: {
     notFinished: t('pages.microsoftEmailSetup.notFinished'),
     returnLink: t('pages.microsoftEmailSetup.returnLink'),
   }))).toString('base64');
+  const encodedRedirectUrl = Buffer.from(buildNoOpenerRedirectUrl(input.returnTo, input.payload)).toString('base64');
   const targetOrigin = returnUrl.origin;
   const html = `<!doctype html>
 <html lang="${locale}">
@@ -75,8 +131,12 @@ async function respondToSetupWindow(input: {
       (function () {
         var payload = JSON.parse(decodeURIComponent(atob('${encodedPayload}')));
         var text = JSON.parse(decodeURIComponent(atob('${encodedText}')));
-        var target = window.opener || window.parent;
-        if (target && target !== window) target.postMessage(payload, '${targetOrigin}');
+        if (!window.opener) {
+          // No popup to report to: hand the outcome to the Providers page.
+          window.location.replace(atob('${encodedRedirectUrl}'));
+          return;
+        }
+        window.opener.postMessage(payload, '${targetOrigin}');
         try { window.close(); } catch (_) {}
         setTimeout(function () {
           if (!window.closed) {
@@ -105,7 +165,7 @@ async function respondToSetupWindow(input: {
 
 function genericFailure(code: MicrosoftEmailSetupErrorCode): Promise<NextResponse> {
   return respondToSetupWindow({
-    returnTo: `${process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}/msp/settings/integrations?category=providers`,
+    returnTo: `${process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'}${PROVIDER_SETUP_ENTRY_PATH}`,
     payload: failure(code),
   });
 }
@@ -115,18 +175,28 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const signingSecret = await getMicrosoftEmailSetupSigningSecret();
   const state = validateMicrosoftEmailSetupState({ token: stateToken, secret: signingSecret });
   if (!state) {
+    logCallback({ purpose: 'unknown', outcome: 'failure', errorCode: 'invalid_state' });
     return genericFailure('invalid_state');
   }
 
-  const user = await getCurrentUser();
-  if (!user?.tenant || user.tenant !== state.algaTenant || user.user_id !== state.userId) {
-    if (state.purpose === 'create_application') {
+  const log = (outcome: 'success' | 'failure', extra: { errorCode?: string; aadsts?: string | null; correlationId?: string | null } = {}) =>
+    logCallback({ purpose: state.purpose, outcome, algaTenant: state.algaTenant, profileId: state.profileId, ...extra });
+
+  // admin_consent is authorised by the signed, unexpired, purpose-scoped state
+  // plus Microsoft's admin_consent=True: the approval link is meant to be opened
+  // by a different admin who has no Alga session. create_application still
+  // requires the admin who started it.
+  let user: Awaited<ReturnType<typeof getCurrentUser>> = null;
+  if (state.purpose === 'create_application') {
+    user = await getCurrentUser();
+    if (!user?.tenant || user.tenant !== state.algaTenant || user.user_id !== state.userId) {
       await consumeMicrosoftEmailSetupState(state.nonce).catch(() => null);
+      log('failure', { errorCode: 'session_mismatch' });
+      return respondToSetupWindow({
+        returnTo: state.returnTo,
+        payload: failure('session_mismatch'),
+      });
     }
-    return respondToSetupWindow({
-      returnTo: state.returnTo,
-      payload: failure('session_mismatch'),
-    });
   }
 
   const microsoftError = request.nextUrl.searchParams.get('error');
@@ -134,9 +204,17 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (state.purpose === 'create_application') {
       await consumeMicrosoftEmailSetupState(state.nonce).catch(() => null);
     }
+    const described = describeMicrosoftSetupError({
+      error: microsoftError,
+      error_description: request.nextUrl.searchParams.get('error_description'),
+      error_codes: request.nextUrl.searchParams.get('error_codes'),
+      correlation_id: request.nextUrl.searchParams.get('correlation_id'),
+      redact: [stateToken, request.nextUrl.searchParams.get('code')],
+    });
+    log('failure', described);
     return respondToSetupWindow({
       returnTo: state.returnTo,
-      payload: failure(microsoftError === 'access_denied' ? 'consent_denied' : 'microsoft_error'),
+      payload: failure(described.errorCode, undefined, described),
     });
   }
 
@@ -144,17 +222,20 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const granted = request.nextUrl.searchParams.get('admin_consent')?.toLowerCase() === 'true';
     const microsoftTenant = request.nextUrl.searchParams.get('tenant') || undefined;
     if (!granted) {
+      log('failure', { errorCode: 'consent_not_granted' });
       return respondToSetupWindow({
         returnTo: state.returnTo,
         payload: failure('consent_not_granted'),
       });
     }
 
-    const persisted = await confirmMicrosoftEmailAdminConsentInternal(user, state.algaTenant, {
-      profileId: state.profileId!,
+    const persisted = await recordMicrosoftEmailAdminConsentFromState({
+      algaTenant: state.algaTenant,
       clientId: state.clientId!,
+      profileId: state.profileId!,
       microsoftTenantId: microsoftTenant,
     });
+    log(persisted.success ? 'success' : 'failure', persisted.success ? {} : { errorCode: 'consent_persist_failed' });
     return respondToSetupWindow({
       returnTo: state.returnTo,
       payload: persisted.success
@@ -166,13 +247,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const code = request.nextUrl.searchParams.get('code');
   if (!code) {
     await consumeMicrosoftEmailSetupState(state.nonce).catch(() => null);
+    log('failure', { errorCode: 'missing_code' });
     return respondToSetupWindow({
       returnTo: state.returnTo,
       payload: failure('missing_code'),
     });
   }
 
-  const result = await completeMicrosoftEmailApplicationCreation({ user, state, code });
+  const result = await completeMicrosoftEmailApplicationCreation({ user: user!, state, code });
+  log(result.success ? 'success' : 'failure', result.success ? {} : { errorCode: (result as any).errorCode });
   return respondToSetupWindow({
     returnTo: state.returnTo,
     payload: { ...result },

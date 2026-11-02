@@ -4,6 +4,8 @@ import {
   describeMicrosoftOAuthFailureForMailboxFlow,
   extractRedirectUriFromDescription,
   MICROSOFT_OAUTH_FAILURE_ERROR_CODES,
+  formatMicrosoftOAuthFailureForMailboxFlow,
+  isMappedMicrosoftOAuthMessage,
   toSafeMicrosoftOAuthFailure,
 } from '../microsoftOAuthErrors';
 
@@ -21,8 +23,19 @@ describe('classifyMicrosoftOAuthFailure', () => {
     ).toBe('single_tenant_app');
   });
 
+  it('classifies client-secret rejections from the token exchange', () => {
+    expect(classifyMicrosoftOAuthFailure({ errorCodes: [7000215], errorDescription: 'AADSTS7000215: Invalid client secret provided.' })).toBe('invalid_client_secret');
+    expect(classifyMicrosoftOAuthFailure({ errorCodes: [7000222], errorDescription: 'AADSTS7000222: expired' })).toBe('expired_client_secret');
+    expect(describeMicrosoftOAuthFailureForMailboxFlow('invalid_client_secret')).toBe(
+      'Microsoft rejected the client secret on the Microsoft profile. Make sure you saved the secret Value, not its Secret ID.'
+    );
+    expect(describeMicrosoftOAuthFailureForMailboxFlow('expired_client_secret')).toBe(
+      'The client secret on the Microsoft profile has expired. Create a new secret in Azure and update the profile.'
+    );
+  });
+
   it('returns null for unknown codes', () => {
-    expect(classifyMicrosoftOAuthFailure({ errorCodes: [7000222], errorDescription: 'AADSTS7000222: expired' })).toBeNull();
+    expect(classifyMicrosoftOAuthFailure({ errorCodes: [7000999], errorDescription: 'AADSTS7000999: other' })).toBeNull();
     expect(classifyMicrosoftOAuthFailure({})).toBeNull();
   });
 
@@ -74,5 +87,16 @@ describe('admin consent failures (Calendar pending_admin_consent)', () => {
   it('hands the UI the stable pending_admin_consent code and an actionable message', () => {
     expect(MICROSOFT_OAUTH_FAILURE_ERROR_CODES.admin_consent_required).toBe('pending_admin_consent');
     expect(describeMicrosoftOAuthFailureForMailboxFlow('admin_consent_required')).toMatch(/administrator/);
+  });
+});
+
+describe('isMappedMicrosoftOAuthMessage', () => {
+  it('recognises formatted mapped messages and rejects everything else', () => {
+    expect(isMappedMicrosoftOAuthMessage(formatMicrosoftOAuthFailureForMailboxFlow('invalid_client_secret'))).toBe(true);
+    expect(isMappedMicrosoftOAuthMessage(formatMicrosoftOAuthFailureForMailboxFlow('expired_client_secret'))).toBe(true);
+    expect(isMappedMicrosoftOAuthMessage('aadsts_9999_unknown: nope')).toBe(false);
+    expect(isMappedMicrosoftOAuthMessage('Error in createEvent: aadsts_7000215_invalid_secret: x')).toBe(false);
+    expect(isMappedMicrosoftOAuthMessage('no colon')).toBe(false);
+    expect(isMappedMicrosoftOAuthMessage(undefined)).toBe(false);
   });
 });

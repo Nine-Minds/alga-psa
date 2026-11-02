@@ -27,6 +27,7 @@ describe('emulator suite', () => {
   it('boots all emulators with distinct ports and a full catalog', async () => {
     const catalog = ((await (await fetch(`${control}/control/catalog`)).json()) as any).result;
     expect(catalog.emulators.map((emu: any) => emu.id).sort()).toEqual([
+      'huntress',
       'levelio',
       'msgraph',
       'qbo',
@@ -59,6 +60,8 @@ describe('emulator suite', () => {
       'entra-diagnostics-expired-secret',
       'entra-diagnostics-green',
       'entra-diagnostics-partner-consent',
+      'huntress-escalation-multi-org',
+      'huntress-incident-lifecycle',
       'levelio-automation-alga-template',
       'levelio-native-webhook-signed',
       'multi-tenant-common-ok',

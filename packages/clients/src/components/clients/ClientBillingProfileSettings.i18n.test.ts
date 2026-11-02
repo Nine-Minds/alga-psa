@@ -23,7 +23,7 @@ describe.each(['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'xx', 'yy'])(
       const t = (key: string, values = {}) => i18n.t(prefix + key, values);
       for (const key of [
         'paymentMethod', 'paymentMethodHint', 'cardOnFileLabel', 'cardOnFileHint',
-        'noCardOnFile', 'cardType.card', 'cardType.bankAccount',
+        'noCardOnFile', 'cardType.card', 'cardType.bankAccount', 'tenantDefaultValue',
       ]) {
         expect(i18n.exists(prefix + key), key).toBe(true);
         expect(t(key)).not.toBe('');

@@ -12,6 +12,7 @@
  * itself is not started.
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 import { setupCommonMocks, createMockUser } from '../../../test-utils/testMocks';
 import * as auth from '@alga-psa/auth';
@@ -68,7 +69,9 @@ vi.mock('../../../../shared/workflow/runtime/actions/businessOperations/shared',
 });
 
 const HOOK_TIMEOUT = 900_000;
-const EE_ACTION_PATH = '../../../../ee/server/src/workflows/createFromTicket/actions.server';
+// Resolved on disk: a bare relative specifier in a dynamic import is resolved
+// against the Vite root, which sits below the repository's ee/ directory.
+const EE_ACTION_PATH = path.resolve(__dirname, '../../../../ee/server/src/workflows/createFromTicket/actions.server.ts');
 
 async function loadEeAction() {
   return (await import(EE_ACTION_PATH)) as typeof import('../../../../ee/server/src/workflows/createFromTicket/actions.server');
