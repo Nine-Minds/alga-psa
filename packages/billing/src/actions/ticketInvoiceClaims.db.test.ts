@@ -182,6 +182,63 @@ afterAll(async () => {
 });
 
 describe('persistManualInvoiceCharges ticket source claims (DB-backed)', () => {
+  async function insertFixedFee() {
+    const entryId = uuidv4();
+    const [entry] = await db('ticket_fixed_fee_services').insert({
+      tenant, entry_id: entryId, ticket_id: ticketId, client_id: clientId,
+      service_id: serviceId, quantity: 2, rate: 2500, currency_code: 'USD',
+    }).returning(['entry_id', db.raw('updated_at::text as source_version')]);
+    return { entryId, updatedAt: entry.source_version as string };
+  }
+
+  it('claims a fixed-fee entry using its full PostgreSQL timestamp precision', async () => {
+    const source = await insertFixedFee();
+    const invoiceId = uuidv4();
+    await runPersist({
+      invoiceId,
+      items: [{
+        service_id: serviceId, quantity: 2, rate: 2500, description: 'Setup',
+        source_link: { kind: 'ticket_fixed_fee', ...source },
+      }],
+    });
+    expect(await db('ticket_fixed_fee_services').where({ tenant, entry_id: source.entryId }).first())
+      .toMatchObject({ is_billed: true, billed_invoice_id: invoiceId });
+    expect(Number((await db('invoice_charges').where({ tenant, invoice_id: invoiceId }).first()).net_amount)).toBe(5000);
+  });
+
+  it('rejects a fixed-fee description edited after source selection and rolls back the invoice', async () => {
+    const source = await insertFixedFee();
+    await db('ticket_fixed_fee_services').where({ tenant, entry_id: source.entryId })
+      .update({ description: 'Revised', updated_at: '2026-10-28T12:00:00.123456Z' });
+    const invoiceId = uuidv4();
+    await expect(runPersist({
+      invoiceId,
+      items: [{
+        service_id: serviceId, quantity: 2, rate: 2500, description: 'Setup',
+        source_link: { kind: 'ticket_fixed_fee', ...source },
+      }],
+    })).rejects.toMatchObject({ code: 'SOURCE_NOT_ELIGIBLE' });
+    expect(await db('invoices').where({ tenant, invoice_id: invoiceId }).first()).toBeUndefined();
+    expect(await db('ticket_fixed_fee_services').where({ tenant, entry_id: source.entryId }).first())
+      .toMatchObject({ is_billed: false });
+  });
+
+  it('rolls back fixed-fee source claims with their invoice charges on a downstream failure', async () => {
+    const source = await insertFixedFee();
+    const invoiceId = uuidv4();
+    await expect(runPersist({
+      invoiceId,
+      items: [{
+        service_id: serviceId, quantity: 2, rate: 2500, description: 'Setup',
+        source_link: { kind: 'ticket_fixed_fee', ...source },
+      }],
+      afterPersist: async () => { throw new Error('forced rollback'); },
+    })).rejects.toThrow('forced rollback');
+    expect(await db('invoice_charges').where({ tenant, invoice_id: invoiceId })).toHaveLength(0);
+    expect(await db('ticket_fixed_fee_services').where({ tenant, entry_id: source.entryId }).first())
+      .toMatchObject({ is_billed: false, billed_invoice_id: null });
+  });
+
   it('claims an unbilled time entry and links the work-item snapshot', async () => {
     const entryId = await insertTimeEntry();
     const invoiceId = uuidv4();
