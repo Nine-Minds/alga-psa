@@ -147,20 +147,19 @@ describe('tenant ticket change room validation', () => {
   const now = 1_800_000_000;
   const tokenFor = (claims: Record<string, unknown> = {}) => jwt.sign({ scope: 'ticket-changes', tenantId, userId, sessionId,
     iat: now, exp: now + 300, ...claims }, secret, { algorithm: 'HS256', audience: 'ticket-changes' });
-  const reqFor = (token: string) => new Request(`http://localhost/hocuspocus?token=${token}`);
 
   beforeEach(() => { process.env.HOCUSPOCUS_JWT_SECRET = secret; process.env.NODE_ENV = 'test'; });
 
   it('accepts only a short lived token bound to its tenant room and returns its user identity', () => {
-    const access = validateDocumentRoomAccess(`tenant:${tenantId}:ticket-changes`, reqFor(tokenFor()), { now: now * 1000 });
+    const access = validateDocumentRoomAccess(`tenant:${tenantId}:ticket-changes`, new Request('http://localhost/hocuspocus'), { token: tokenFor(), now: now * 1000 });
     expect(access).toMatchObject({ status: 'ok', tenantId, userId, sessionId, expiresAt: (now + 300) * 1000 });
   });
 
   it('rejects missing, wrong-scope, wrong-tenant, and overlong tokens', () => {
-    expect(() => validateDocumentRoomAccess(`tenant:${tenantId}:ticket-changes`, new Request('http://localhost'))).toThrow('missing token');
-    expect(() => validateDocumentRoomAccess(`tenant:${tenantId}:ticket-changes`, reqFor(tokenFor({ scope: 'notification-signals' })))).toThrow();
-    expect(() => validateDocumentRoomAccess(`tenant:44444444-4444-4444-8444-444444444444:ticket-changes`, reqFor(tokenFor()))).toThrow();
-    expect(() => validateDocumentRoomAccess(`tenant:${tenantId}:ticket-changes`, reqFor(tokenFor({ exp: now + 301 })), { now: now * 1000 })).toThrow();
+    expect(() => validateDocumentRoomAccess(`tenant:${tenantId}:ticket-changes`, new Request(`http://localhost?token=${tokenFor()}`))).toThrow('missing token');
+    expect(() => validateDocumentRoomAccess(`tenant:${tenantId}:ticket-changes`, new Request('http://localhost'), { token: tokenFor({ scope: 'notification-signals' }) })).toThrow();
+    expect(() => validateDocumentRoomAccess(`tenant:44444444-4444-4444-8444-444444444444:ticket-changes`, new Request('http://localhost'), { token: tokenFor() })).toThrow();
+    expect(() => validateDocumentRoomAccess(`tenant:${tenantId}:ticket-changes`, new Request('http://localhost'), { token: tokenFor({ exp: now + 301 }), now: now * 1000 })).toThrow();
   });
 });
 

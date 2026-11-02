@@ -139,7 +139,7 @@ describe('TicketUpdatesExtension', () => {
     await extension.onDestroy();
   });
 
-  it('propagates the validated onConnect principal into connected relay delivery', async () => {
+  it('propagates the validated authentication principal into connected relay delivery', async () => {
     process.env.HOCUSPOCUS_JWT_SECRET = 'ticket-change-test-secret';
     const tenantId = '11111111-1111-4111-8111-111111111111';
     const userId = '22222222-2222-4222-8222-222222222222';
@@ -150,13 +150,14 @@ describe('TicketUpdatesExtension', () => {
       iat: now, exp: now + 300,
     }, process.env.HOCUSPOCUS_JWT_SECRET, { algorithm: 'HS256', audience: 'ticket-changes' });
     const { Hocuspocus } = await import('../../../../../hocuspocus/node_modules/@hocuspocus/server/dist/hocuspocus-server.esm.js');
-    const { resolveDocumentConnectionContext } = await import('../../../../../hocuspocus/ticketChangeConnectionContext.js');
+    const { resolveDocumentAuthenticationContext, resolveDocumentConnectionContext } = await import('../../../../../hocuspocus/ticketChangeConnectionContext.js');
     const roomName = `tenant:${tenantId}:ticket-changes`;
-    const hocuspocus = new Hocuspocus({ onConnect: resolveDocumentConnectionContext });
+    const hocuspocus = new Hocuspocus({ onAuthenticate: resolveDocumentAuthenticationContext, onConnect: resolveDocumentConnectionContext });
     let context: Record<string, unknown> = {};
-    await hocuspocus.hooks('onConnect', {
+    await hocuspocus.hooks('onAuthenticate', {
       documentName: roomName,
-      request: { url: `ws://localhost?token=${encodeURIComponent(token)}` },
+      request: { url: 'ws://localhost' },
+      token,
       context,
     }, additions => { context = { ...context, ...(additions as object) }; });
     expect(context?.ticketChangesAccess).toMatchObject({ tenantId, userId });
@@ -185,6 +186,48 @@ describe('TicketUpdatesExtension', () => {
     expect(pSubscribeMock).toHaveBeenCalled();
     expect(connection.sendStateless).toHaveBeenCalledTimes(1);
     expect(document.broadcastStateless).not.toHaveBeenCalled();
+  });
+  it('uses the installed Hocuspocus authentication message for authorized ticket room readiness', async () => {
+    process.env.HOCUSPOCUS_JWT_SECRET = 'ticket-change-test-secret';
+    const tenantId = '11111111-1111-4111-8111-111111111111';
+    const userId = '22222222-2222-4222-8222-222222222222';
+    const sessionId = '33333333-3333-4333-8333-333333333333';
+    const now = Math.floor(Date.now() / 1000);
+    const token = jwt.sign({ scope: 'ticket-changes', tenantId, userId, sessionId, iat: now, exp: now + 300 },
+      process.env.HOCUSPOCUS_JWT_SECRET, { algorithm: 'HS256', audience: 'ticket-changes' });
+    const { Hocuspocus } = await import('../../../../../hocuspocus/node_modules/@hocuspocus/server/dist/hocuspocus-server.esm.js');
+    const { HocuspocusProvider } = await import('@hocuspocus/provider');
+    const { resolveDocumentAuthenticationContext, resolveDocumentConnectionContext } = await import('../../../../../hocuspocus/ticketChangeConnectionContext.js');
+    let authenticatedContext: Record<string, unknown> | undefined;
+    const authenticate = async (data: any) => {
+      const result = await resolveDocumentAuthenticationContext(data);
+      authenticatedContext = result;
+      return result;
+    };
+    const server = new Hocuspocus({ onAuthenticate: authenticate, onConnect: resolveDocumentConnectionContext, quiet: true });
+    await server.listen(0);
+    const room = `tenant:${tenantId}:ticket-changes`;
+    const makeProvider = (authToken: string) => new HocuspocusProvider({ url: server.webSocketURL, name: room, token: authToken, preserveConnection: false });
+    const waitFor = (provider: InstanceType<typeof HocuspocusProvider>, event: string) => new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error(`Timed out waiting for ${event}`)), 3000);
+      provider.on(event, () => { clearTimeout(timeout); resolve(); });
+    });
+    const accepted = makeProvider(token);
+    try {
+      await waitFor(accepted, 'authenticated');
+      expect(server.documents.get(room)?.connections.size).toBe(1);
+      expect(authenticatedContext?.ticketChangesAccess).toMatchObject({ tenantId, userId });
+
+      const rejected = makeProvider('invalid');
+      try {
+        await waitFor(rejected, 'authenticationFailed');
+        expect(server.documents.get(room)?.connections.size).toBe(1);
+      } finally { rejected.destroy(); }
+
+    } finally {
+      accepted.destroy();
+      await server.destroy();
+    }
   });
   it('keeps recipient-only payloads off the cross-instance Redis broadcast bus', async () => {
     const { Document, OutgoingMessage, IncomingMessage, MessageReceiver } = await import('../../../../../hocuspocus/node_modules/@hocuspocus/server/dist/hocuspocus-server.esm.js');

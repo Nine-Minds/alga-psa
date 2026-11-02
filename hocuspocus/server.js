@@ -5,7 +5,7 @@ import { NotificationExtension } from './NotificationExtension.js'
 import { TicketUpdatesExtension } from './TicketUpdatesExtension.js'
 import { AiParticipantExtension } from './AiParticipantExtension.js'
 import { CollabPersistenceExtension } from './CollabPersistenceExtension.js'
-import { resolveDocumentConnectionContext } from './ticketChangeConnectionContext.js'
+import { resolveDocumentAuthenticationContext, resolveDocumentConnectionContext } from './ticketChangeConnectionContext.js'
 
 // Helper function to get required env var or fail in production
 function getEnvOrFail(key, fallbackValue = null) {
@@ -69,6 +69,9 @@ const server = Server.configure({
     ],
     async onConnect(data) {
         return resolveDocumentConnectionContext(data);
+    },
+    async onAuthenticate(data) {
+        return resolveDocumentAuthenticationContext(data);
     },
     })
 

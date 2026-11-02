@@ -64,7 +64,9 @@ export function validateDocumentRoomAccess(roomName, request, options) {
   if (roomName?.startsWith('tenant:') && roomName.endsWith(':ticket-changes')) {
     const parts = roomName.split(':');
     if (parts.length !== 3 || !UUID.test(parts[1])) throw new Error('Invalid ticket change room');
-    const token = getRequestToken(request);
+    // Hocuspocus sends provider tokens in an authentication protocol message;
+    // they are not part of the WebSocket upgrade URL.
+    const token = options?.token;
     if (!token) throw new Error('Ticket change validation failed: missing token');
     let claims;
     try {

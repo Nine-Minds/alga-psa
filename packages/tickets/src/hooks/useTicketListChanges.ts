@@ -21,26 +21,39 @@ export function useTicketListChanges(tenantId: string | undefined, onChange: (ev
     let disposed = false;
     let provider: HocuspocusProvider | null = null;
     let failures = 0;
-    let everConnected = false;
+    let everAuthorized = false;
+    let authorized = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let tokenTimer: ReturnType<typeof setTimeout> | undefined;
     let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
-    let reportedConnection = false;
-    let reconnecting = false;
     let outageStartedAt: number | null = Date.now();
     let unavailableReported = false;
-    const pollFallback = () => {
-      if (disposed || unavailableReported) return;
+
+    const reportUnavailable = () => {
+      if (disposed || unavailableReported || outageStartedAt === null) return;
       unavailableReported = true;
-      if (outageStartedAt !== null) unavailable.current?.(outageStartedAt);
-      const poll = () => {
-        if (disposed || !reconnecting || outageStartedAt === null) return;
+      unavailable.current?.(outageStartedAt);
+      fallbackTimer = setTimeout(function poll() {
+        if (disposed || outageStartedAt === null) return;
         unavailable.current?.(outageStartedAt);
         fallbackTimer = setTimeout(poll, 60_000);
-      };
-      fallbackTimer = setTimeout(poll, 60_000);
+      }, 60_000);
     };
+
+    const scheduleReconnect = () => {
+      if (disposed || timer) return;
+      failures += 1;
+      authorized = false;
+      if (outageStartedAt === null) outageStartedAt = Date.now();
+      if (failures >= 5) reportUnavailable();
+      timer = setTimeout(() => {
+        timer = undefined;
+        void connect();
+      }, Math.min(30_000, 1000 * 2 ** Math.min(failures, 5)));
+    };
+
     const connect = async () => {
+      if (disposed) return;
       if (provider) {
         provider.removeAllListeners();
         provider.destroy();
@@ -56,12 +69,8 @@ export function useTicketListChanges(tenantId: string | undefined, onChange: (ev
         provider = connection.provider;
         if (tokenTimer) clearTimeout(tokenTimer);
         if (typeof body.expiresAt === 'number') {
-          tokenTimer = setTimeout(async () => {
+          tokenTimer = setTimeout(() => {
             if (disposed || !provider) return;
-            // The relay binds its principal and expiry to the handshake context.
-            // Reconnect with a fresh token so that context and its expiry renew too.
-            reconnecting = true;
-            outageStartedAt ??= Date.now();
             provider.disconnect();
             scheduleReconnect();
           }, Math.max(1000, body.expiresAt - Date.now() - 30_000));
@@ -72,40 +81,28 @@ export function useTicketListChanges(tenantId: string | undefined, onChange: (ev
             if (typeof message.ticketId !== 'string' || typeof message.updatedAt !== 'string' ||
               !Array.isArray(message.assigneeIds) || typeof message.statusId !== 'string') return;
             callback.current(message as TicketListChange);
-          } catch { /* Invalid broadcasts are ignored; the next successful refresh resets the snapshot. */ }
+          } catch { /* Ignore invalid messages; reconciliation is counts-only. */ }
         });
-        const markConnected = () => {
-          if (reportedConnection) return;
-          reportedConnection = true;
+        provider.on('authenticated', () => {
+          if (disposed || authorized) return;
+          authorized = true;
           failures = 0;
           const recoveredOutage = outageStartedAt;
-          if (recoveredOutage !== null) recovered.current?.(recoveredOutage);
-          everConnected = true;
-          reconnecting = false;
+          if (everAuthorized || recoveredOutage !== null) recovered.current?.(recoveredOutage ?? Date.now());
+          everAuthorized = true;
           outageStartedAt = null;
           unavailableReported = false;
           if (fallbackTimer) clearTimeout(fallbackTimer);
           fallbackTimer = undefined;
-        };
-        provider.on('close', () => { if (!disposed) { reportedConnection = false; reconnecting = everConnected; scheduleReconnect(); } });
-        provider.on('disconnect', () => { if (!disposed) { reportedConnection = false; reconnecting = everConnected; scheduleReconnect(); } });
-        provider.on('connect', markConnected);
-        provider.on('status', ({ status }: { status: string }) => {
-          if (status === 'connected') markConnected();
-          if (status === 'disconnected') { reportedConnection = false; reconnecting = everConnected; }
         });
+        provider.on('authenticationFailed', () => scheduleReconnect());
+        provider.on('close', () => scheduleReconnect());
+        provider.on('disconnect', () => scheduleReconnect());
       } catch {
-        if (!disposed) scheduleReconnect();
+        scheduleReconnect();
       }
     };
-    const scheduleReconnect = () => {
-      if (timer) return;
-      failures += 1;
-      reconnecting = true;
-      if (outageStartedAt === null) outageStartedAt = Date.now();
-      if (failures >= 5) pollFallback();
-      timer = setTimeout(() => { timer = undefined; void connect(); }, Math.min(30_000, 1000 * 2 ** Math.min(failures, 5)));
-    };
+
     void connect();
     return () => {
       disposed = true;

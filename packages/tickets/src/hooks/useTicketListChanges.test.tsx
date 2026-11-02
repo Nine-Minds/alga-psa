@@ -47,10 +47,10 @@ describe('useTicketListChanges', () => {
     const recovered = vi.fn();
     renderHook(() => useTicketListChanges('tenant-a', vi.fn(), { onUnavailable: unavailable, onRecovered: recovered }));
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
-    await act(async () => { providers[0].handlers.get('connect')?.(); });
+    await act(async () => { providers[0].handlers.get('authenticated')?.(); });
     await act(async () => { providers[0].handlers.get('disconnect')?.(); });
     await act(async () => { await vi.advanceTimersByTimeAsync(2_100); });
-    await act(async () => { providers[1].handlers.get('connect')?.(); });
+    await act(async () => { providers[1].handlers.get('authenticated')?.(); });
     expect(recovered).toHaveBeenCalledTimes(2);
 
     (global.fetch as any).mockRejectedValue(new Error('offline'));
@@ -66,12 +66,12 @@ describe('useTicketListChanges', () => {
     renderHook(() => useTicketListChanges('tenant-a', vi.fn()));
     await act(async () => { await vi.advanceTimersByTimeAsync(0); });
     expect(createYjsProvider).toHaveBeenCalledTimes(1);
-    await act(async () => { providers[0].handlers.get('connect')?.(); });
+    await act(async () => { providers[0].handlers.get('authenticated')?.(); });
     await act(async () => { await vi.advanceTimersByTimeAsync(270_000); });
     await act(async () => { await vi.advanceTimersByTimeAsync(2_100); });
     expect(createYjsProvider).toHaveBeenCalledTimes(2);
     expect(global.fetch).toHaveBeenCalledTimes(2);
-    await act(async () => { providers[1].handlers.get('connect')?.(); });
+    await act(async () => { providers[1].handlers.get('authenticated')?.(); });
     await act(async () => { await vi.advanceTimersByTimeAsync(272_100); });
     expect(createYjsProvider).toHaveBeenCalledTimes(3);
     expect(global.fetch).toHaveBeenCalledTimes(3);
@@ -88,7 +88,56 @@ describe('useTicketListChanges', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(100_000); });
     expect(unavailable.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(createYjsProvider).toHaveBeenCalledTimes(1);
-    await act(async () => { providers[0].handlers.get('connect')?.(); });
+    await act(async () => { providers[0].handlers.get('authenticated')?.(); });
     expect(recovered).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not treat socket/status events as readiness and preserves exponential retry plus the 60-second recovery cadence', async () => {
+    vi.useFakeTimers();
+    const { useTicketListChanges } = await import('./useTicketListChanges');
+    const unavailable = vi.fn();
+    const recovered = vi.fn();
+    renderHook(() => useTicketListChanges('tenant-a', vi.fn(), { onUnavailable: unavailable, onRecovered: recovered }));
+    await flush();
+
+    await act(async () => {
+      providers[0].handlers.get('connect')?.();
+      providers[0].handlers.get('status')?.({ status: 'connected' });
+      providers[0].handlers.get('authenticationFailed')?.();
+      providers[0].handlers.get('close')?.();
+      providers[0].handlers.get('disconnect')?.();
+    });
+    expect(recovered).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_999); });
+    expect(createYjsProvider).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(createYjsProvider).toHaveBeenCalledTimes(2);
+    const retryIntervals = [4_000, 8_000, 16_000];
+    for (const interval of retryIntervals) {
+      await act(async () => { providers[providers.length - 1].handlers.get('authenticationFailed')?.(); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(interval); });
+    }
+    await act(async () => { providers[providers.length - 1].handlers.get('authenticationFailed')?.(); });
+    expect(unavailable).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(59_999); });
+    expect(unavailable).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(unavailable).toHaveBeenCalledTimes(2);
+    await act(async () => { providers[providers.length - 1].handlers.get('authenticated')?.(); });
+    expect(recovered).toHaveBeenCalledTimes(1);
+    expect(unavailable).toHaveBeenCalledTimes(2);
+  });
+
+  it('cleans provider listeners and scheduled reconnects on unmount', async () => {
+    vi.useFakeTimers();
+    const { useTicketListChanges } = await import('./useTicketListChanges');
+    const { unmount } = renderHook(() => useTicketListChanges('tenant-a', vi.fn()));
+    await flush();
+    providers[0].handlers.get('authenticationFailed')?.();
+    unmount();
+    expect(providers[0].provider.removeAllListeners).toHaveBeenCalled();
+    expect(providers[0].provider.destroy).toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(createYjsProvider).toHaveBeenCalledTimes(1);
   });
 });
