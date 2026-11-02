@@ -105,7 +105,8 @@ describe('project tag reads enforce effective project/read redactions', () => {
   it.each([
     'project.tags', 'fields.project.tags', 'project.tags.internal', 'project',
     ' PROJECT.TAGS ', 'projects.tags', 'fields.tags', 'values.tags', 'tags.internal',
-    'project_tags.tag_text', 'tags.background_color', '*',
+    'project_tags.tag_text', 'tags.background_color', 'project_tags.background_color',
+    'values.text_color', 'tags.text_color', '*',
   ])('hides populated tags consistently for the %s redaction', async (field) => {
     fixture.redactions['project-hidden'] = [field];
     await expect(findTagsByEntityId('project-hidden', 'project')).resolves.toEqual([]);

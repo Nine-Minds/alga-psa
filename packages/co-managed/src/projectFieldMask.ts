@@ -1,4 +1,5 @@
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+export { coManagedProjectTagsHidden } from '@alga-psa/types';
 import {
   CO_MANAGED_ASSIGNEE_NAME_ALIASES,
   CO_MANAGED_ORGANIZATION_NAME_ALIASES,
@@ -40,14 +41,6 @@ export function coManagedProjectFamilyMask(redactedFields: readonly string[], ki
 export function coManagedColumnHidden(redactedFields: readonly string[], table: string, column: string,
   extraAliases: readonly string[] = []): boolean {
   return isCoManagedReadFieldHidden(redactedFields, [column, `values.${column}`, `${table}.${column}`, ...extraAliases]);
-}
-
-/** Project tags are omitted when their collection or any displayed mapping field is hidden. */
-export function coManagedProjectTagsHidden(redactedFields: readonly string[]): boolean {
-  const fields = redactedFields.map((field) => field.trim().toLowerCase());
-  return coManagedColumnHidden(fields, 'projects', 'tags', ['project.tags'])
-    || ['tag_text', 'background_color', 'text_color'].some((field) =>
-      coManagedColumnHidden(fields, 'project_tags', field, ['tags', `tags.${field}`]));
 }
 
 /** Extra display-name aliases per logical column, for columns that are derived or joined (the client name, the manager's name, a status name). */

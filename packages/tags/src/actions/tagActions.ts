@@ -6,7 +6,7 @@ import { ITag, TaggedEntityType, PendingTag, IUserWithRoles } from '@alga-psa/ty
 import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { authorizeProjectsByIds } from '@alga-psa/authorization/projectReadAuthorization';
-import { coManagedProjectTagsHidden } from '@alga-psa/co-managed/projectFieldMask';
+import { coManagedProjectTagsHidden } from '@alga-psa/types';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
 import { isTagTextValidationFailure, validateTagText } from '../lib/tagTextValidation';
