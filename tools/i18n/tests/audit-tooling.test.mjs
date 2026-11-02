@@ -120,7 +120,7 @@ for (const locale of ['pt', 'es', 'fr', 'it']) {
   });
 }
 
-for (const namespace of ['client-portal', 'msp/contacts']) {
+for (const namespace of ['client-portal', 'msp/contacts', 'msp/licensing']) {
   test(`Brazilian Portuguese ${namespace} copy passes the locale quality audit`, () => {
     const { report } = runAudit({
       locale: 'pt',
