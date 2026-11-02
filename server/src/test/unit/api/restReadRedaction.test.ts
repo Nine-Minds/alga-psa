@@ -815,6 +815,27 @@ describe('asset routes serialize the projection', () => {
     }
   });
 
+  it('suppresses only the nested client when a path-qualified client identifier is hidden', async () => {
+    const assetId = 'nested-client-path-alias';
+    state.assets = [{
+      asset_id: assetId,
+      name: 'Laptop',
+      client_id: 'client-1',
+      client_name: 'Visible Client',
+      client: { client_id: 'client-1', client_name: 'Visible Client' },
+    }];
+    const get = () => controller().getById(request(`/api/v2/assets/${assetId}`), { id: assetId });
+    expect((await (await get()).json()).data.client).toMatchObject({ client_id: 'client-1' });
+
+    state.decisions.set(assetId, { allowed: true, redactedFields: ['values.client.client_id'] });
+    const response = await get();
+    expect(response.status).toBe(200);
+    const data = (await response.json()).data;
+    expect(data.client).toBeNull();
+    expect(data.client_id).toBe('client-1');
+    expect(data.name).toBe('Laptop');
+  });
+
   it('a suppressed or denied get is 404', async () => {
     state.decisions.set(A1, { allowed: true, redactedFields: ['assets'] });
     expect((await controller().getById(request(`/api/v2/assets/${A1}`), { id: A1 })).status).toBe(404);
@@ -1232,6 +1253,7 @@ describe('quote financial projections', () => {
   it.each([
     'unit_price', 'values.unit_price', 'quote_items.unit_price', 'fields.quote_items.unit_price',
     'fields.values.unit_price', 'quote_items.quantity', 'quote_items.is_selected', 'quote_items.quote_item_id', 'quote_items',
+    'items.unit_price', 'values.items.unit_price', 'quotes.items.unit_price', 'values.items.quote_item_id',
   ])('quote header totals do not reveal %s', async (field) => {
     const { summarizeQuoteTotals } = await import('../../../../../packages/billing/src/lib/quoteTotals');
     const id = '44444444-4444-4444-4444-444444444441';
@@ -1254,7 +1276,7 @@ describe('quote financial projections', () => {
     expect(response.status).toBe(200);
     const data = (await response.json()).data;
     expect(data.title).toBe('Visible quote');
-    if (field === 'quote_items' || field === 'quote_items.quote_item_id') {
+    if (field === 'quote_items' || field.endsWith('quote_item_id')) {
       expect(data.items).toEqual([]);
     } else {
       expect(data.items[0].total_price).toBeNull();
@@ -1265,6 +1287,30 @@ describe('quote financial projections', () => {
       optional_subtotal: null, optional_tax: null, optional_total: null,
     });
   });
+
+  it.each(['items.unit_price', 'values.items.unit_price', 'quotes.items.unit_price', 'values.items.quote_item_id'])(
+    'header-only quote totals do not reveal data hidden by %s', async (alias) => {
+      const id = '44444444-4444-4444-4444-444444444441';
+      state.quote = {
+        quote_id: id,
+        title: 'Visible header-only quote',
+        subtotal: 4938,
+        discount_total: 0,
+        tax: 0,
+        total_amount: 4938,
+      };
+      const get = () => new ApiQuoteController().getById()(request(`/api/v1/quotes/${id}`, { id }));
+      expect((await (await get()).json()).data.total_amount).toBe(4938);
+
+      state.decisions.set(id, { allowed: true, redactedFields: [alias] });
+      const response = await get();
+      expect(response.status).toBe(200);
+      const data = (await response.json()).data;
+      expect(data.title).toBe('Visible header-only quote');
+      expect(data.subtotal).toBeNull();
+      expect(data.total_amount).toBeNull();
+    },
+  );
 
   it('list projects header amounts even when its service response does not include quote lines', async () => {
     const id = '44444444-4444-4444-4444-444444444441';
@@ -1389,6 +1435,23 @@ describe('asset extension projections', () => {
     const data = (await response.json()).data[0];
     expect(data.extension_data).toEqual({ asset_id: assetId, carrier: 'Visible carrier' });
   });
+
+  it.each(['extension_data.imei', 'values.extension_data.imei', 'fields.assets.extension_data.imei'])(
+    'projects a mobile extension field hidden through %s', async (alias) => {
+      state.assets = [{ asset_id: assetId, asset_type: 'mobile_device', name: 'Visible asset',
+        extension_data: { asset_id: assetId, imei: 'PRIVATE-IMEI', carrier: 'Visible carrier' } }];
+      const get = () => new ApiAssetController().getById(request(`/api/v1/assets/${assetId}`), { id: assetId });
+      expect((await (await get()).json()).data.extension_data.imei).toBe('PRIVATE-IMEI');
+
+      state.decisions.set(assetId, { allowed: true, redactedFields: [alias] });
+      const response = await get();
+      expect(response.status).toBe(200);
+      const data = (await response.json()).data;
+      expect(data.name).toBe('Visible asset');
+      expect(data.extension_data.imei ?? null).toBeNull();
+      expect(data.extension_data.carrier).toBe('Visible carrier');
+    },
+  );
 });
 
 describe('asset document projections', () => {
@@ -1430,6 +1493,28 @@ describe('asset document projections', () => {
     expect(response.documents).toHaveLength(1);
     expect(response.documents[0].file_size).toBe(4938);
     expect(response.documents[0][field] ?? null).toBeNull();
+  });
+
+  it.each(['assets.documents.file_size', 'values.documents.file_size', 'fields.assets.documents.file_size'])(
+    'projects a nested document field hidden through %s', async (alias) => {
+      expect((await detail()).documents[0].file_size).toBe(4938);
+      state.decisions.set(assetId, { allowed: true, redactedFields: [alias] });
+
+      const data = await detail();
+      expect(data.name).toBe('Visible asset');
+      expect(data.documents).toHaveLength(1);
+      expect(data.documents[0].file_size ?? null).toBeNull();
+      expect(data.documents[0].original_filename).toBe('PRIVATE-upload-name.txt');
+    },
+  );
+
+  it('hides an asset document when its external-file identifier is hidden', async () => {
+    state.assets[0].documents[0].file_id = 'file-1';
+    state.decisions.set(assetId, { allowed: true, redactedFields: ['external_files.file_id'] });
+
+    const data = await detail();
+    expect(data.name).toBe('Visible asset');
+    expect(data.documents).toEqual([]);
   });
 
   it('asset document list redacts joined document fields under the asset decision', async () => {

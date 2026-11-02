@@ -40,6 +40,26 @@ describe('isRecordFieldReadable (descriptor-driven)', () => {
     },
   );
 
+  it.each([
+    ['assets.documents.file_size', 'documents.file_size'],
+    ['values.documents.file_size', 'documents.file_size'],
+    ['fields.assets.documents.file_size', 'documents.file_size'],
+    ['extension_data.imei', 'extension_data.imei'],
+    ['values.extension_data.imei', 'extension_data.imei'],
+    ['fields.assets.extension_data.imei', 'extension_data.imei'],
+  ])('uses recursive child aliases in projection predicates for %s', (alias, responseField) => {
+    expect(isRecordFieldReadable([], ASSET_RECORD_SOURCE, responseField)).toBe(true);
+    expect(isRecordFieldReadable([alias], ASSET_RECORD_SOURCE, responseField)).toBe(false);
+  });
+
+  it.each(['items.unit_price', 'values.items.unit_price', 'quotes.items.unit_price', 'values.items.quote_item_id'])(
+    'guards quote totals when nested dependency %s is hidden', (alias) => {
+      expect(buildPredicateGuard('quote', []).readable('q.total_amount')).toBe(true);
+      expect(buildPredicateGuard('quote', [alias]).readable('q.total_amount')).toBe(false);
+      expect(buildPredicateGuard('quote', [alias]).readable('q.title')).toBe(true);
+    },
+  );
+
   it.each(['statuses', 'statuses.name', 'status_name', 'status', 'values.status', 'projects.status'])(
     'projects and guards project status names hidden by %s', (alias) => {
       const record = { project_id: 'project-1', status: 'status-1', status_name: 'Active' };

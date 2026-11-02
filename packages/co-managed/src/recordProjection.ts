@@ -89,6 +89,52 @@ function recordFieldAliasForms(source: RedactableRecordSource, alias: string): r
   return [alias, field, `values.${field}`, ...source.resource.map(resource => `${resource}.${field}`)];
 }
 
+function recordFieldLocalPath(source: RedactableRecordSource, alias: string): string {
+  const field = recordFieldKey(source, alias);
+  if (field !== null) return field;
+  return alias.startsWith('values.') ? alias.slice('values.'.length) : alias;
+}
+
+function childRouteAliases(source: RedactableRecordSource, childKey: string, childSource: RedactableRecordSource): readonly string[] {
+  const keys = Object.entries(source.children ?? {}).flatMap(([key, child]) =>
+    childSources(child).includes(childSource) ? [key] : []);
+  const routeKeys = keys.length > 0 ? keys : [childKey];
+  return routeKeys.flatMap(key => [
+    key,
+    `values.${key}`,
+    ...source.resource.map(resource => `${resource}.${key}`),
+  ]);
+}
+
+/** Carries child field aliases into each parent response path that exposes that child. */
+function composeChildAliases(
+  source: RedactableRecordSource,
+  childKey: string,
+  childSource: RedactableRecordSource,
+  nestedAliases: readonly string[],
+): readonly string[] {
+  const routes = childRouteAliases(source, childKey, childSource);
+  return nestedAliases.flatMap(alias => {
+    const localPath = recordFieldLocalPath(childSource, alias);
+    return [alias, ...routes.map(route => `${route}.${localPath}`)];
+  });
+}
+
+/** Adds the child-relative form of a nested alias while retaining its canonical spelling. */
+function childScopedRedactions(
+  redactions: readonly string[],
+  source: RedactableRecordSource,
+  childKey: string,
+  childSource: RedactableRecordSource,
+): readonly string[] {
+  const routes = childRouteAliases(source, childKey, childSource);
+  const scoped = redactions.flatMap(redaction => {
+    const path = redaction.startsWith('fields.') ? redaction.slice('fields.'.length) : redaction;
+    return routes.flatMap(route => path.startsWith(`${route}.`) ? [path.slice(route.length + 1)] : []);
+  });
+  return scoped.length > 0 ? [...redactions, ...scoped] : redactions;
+}
+
 function isRecordFieldExplicitlyHidden(redactions: readonly string[], aliases: readonly string[]): boolean {
   return redactions.some(redaction => {
     if (redaction === '*' || redaction === 'fields') return true;
@@ -102,6 +148,21 @@ export function recordFieldAliases(source: RedactableRecordSource, key: string):
   const aliases = new Set<string>();
   const visited = new Map<RedactableRecordSource, Set<string>>();
   const visit = (recordSource: RedactableRecordSource, field: string): void => {
+    const pathSeparator = field.indexOf('.');
+    if (pathSeparator > 0) {
+      const childKey = field.slice(0, pathSeparator);
+      const child = recordSource.children && Object.hasOwn(recordSource.children, childKey)
+        ? recordSource.children[childKey]
+        : undefined;
+      if (child) {
+        for (const childSource of childSources(child)) {
+          const nestedAliases = recordFieldAliases(childSource, field.slice(pathSeparator + 1));
+          composeChildAliases(recordSource, childKey, childSource, nestedAliases).forEach(alias => aliases.add(alias));
+        }
+        return;
+      }
+    }
+
     const fields = visited.get(recordSource) ?? new Set<string>();
     if (fields.has(field)) return;
     fields.add(field);
@@ -127,8 +188,10 @@ export function recordFieldAliases(source: RedactableRecordSource, key: string):
       for (const childSource of child ? childSources(child) : []) {
         // A suppressed child cannot contribute to an aggregate, even when its numeric field itself is readable.
         // Do not add the resource root: that would make an unrelated sibling-field redaction hide the aggregate.
-        childSource.identifier.flatMap(identifier => recordFieldAliasForms(childSource, identifier)).forEach(alias => aliases.add(alias));
-        visit(childSource, dependency.slice(separator + 1));
+        const identifiers = childSource.identifier.flatMap(identifier => recordFieldAliasForms(childSource, identifier));
+        composeChildAliases(recordSource, childKey, childSource, identifiers).forEach(alias => aliases.add(alias));
+        const nestedAliases = recordFieldAliases(childSource, dependency.slice(separator + 1));
+        composeChildAliases(recordSource, childKey, childSource, nestedAliases).forEach(alias => aliases.add(alias));
       }
     }
   };
@@ -165,9 +228,11 @@ export function projectRecordByRedactions<T extends Record<string, any>>(
       // An unknown discriminator cannot identify the source aliases safely. Never return its raw data.
       out[key] = Array.isArray(value) ? [] : null;
     } else if (childSource && Array.isArray(value)) {
-      out[key] = value.map(item => (item && typeof item === 'object' ? projectRecordByRedactions(redactions, item, childSource) : item)).filter(item => item !== null);
+      const nestedRedactions = childScopedRedactions(redactions, source, key, childSource);
+      out[key] = value.map(item => (item && typeof item === 'object' ? projectRecordByRedactions(nestedRedactions, item, childSource) : item)).filter(item => item !== null);
     } else if (childSource && value && typeof value === 'object') {
-      out[key] = projectRecordByRedactions(redactions, value as Record<string, any>, childSource);
+      const nestedRedactions = childScopedRedactions(redactions, source, key, childSource);
+      out[key] = projectRecordByRedactions(nestedRedactions, value as Record<string, any>, childSource);
     } else {
       out[key] = value;
     }
@@ -412,6 +477,8 @@ export const ASSET_DOCUMENT_SOURCE: RedactableRecordSource = {
     'document_id',
     'document_associations.document_id',
     'documents.document_id',
+    'file_id',
+    'external_files.file_id',
   ),
   fields: {},
   derived: {
