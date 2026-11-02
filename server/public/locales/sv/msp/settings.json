@@ -3884,6 +3884,50 @@
     "saving": "Sparar…",
     "cancel": "Avbryt"
   },
+  "loginPolicy": {
+    "title": "Inloggningspolicy",
+    "description": "Styr hur personal och användare i kundportalen får logga in med lösenord. Reglerna tillämpas på servern.",
+    "requireSso": {
+      "title": "Kräv enkel inloggning (SSO) för MSP-personal",
+      "body": "Interna användare måste logga in med Google, Microsoft eller din Keycloak-leverantör. Lösenordsinloggning och lösenordsåterställning blockeras, förutom för nödadministratörerna nedan.",
+      "signOutWarning": "När du aktiverar ”Kräv enkel inloggning” loggas alla interna användare som loggat in med lösenord ut, utom nödadministratörer. Ett krav på tvåfaktorsautentisering loggar inte ut någon; det gäller vid nästa inloggning."
+    },
+    "require2faInternal": {
+      "title": "Kräv tvåfaktorsautentisering vid lösenordsinloggning för MSP-personal",
+      "body": "Personal utan autentiseringsapp ombeds konfigurera en vid nästa inloggning."
+    },
+    "require2faClient": {
+      "title": "Kräv tvåfaktorsautentisering vid lösenordsinloggning i kundportalen",
+      "body": "Kundportalanvändare utan autentiseringsapp ombeds konfigurera en vid nästa inloggning. Kravet på enkel inloggning gäller aldrig kundportalanvändare."
+    },
+    "knownDeviceSkip": {
+      "title": "Låt kända enheter hoppa över koden",
+      "body": "Användare som litar på en enhet tillfrågas inte om kod på den enheten. Nödadministratörer behöver alltid en kod."
+    },
+    "breakGlass": {
+      "title": "Nödadministratörer",
+      "body": "Dessa administratörer kan fortfarande logga in med lösenord när enkel inloggning krävs. De måste vara aktiva administratörer med tvåfaktorsautentisering aktiverad och behöver alltid en kod.",
+      "noEligible": "Inga behöriga administratörer. En administratör måste vara aktiv och ha tvåfaktorsautentisering aktiverad.",
+      "noLongerEligible": "Är inte längre behörig.",
+      "remove": "Ta bort",
+      "reasons": {
+        "no_two_factor": "Tvåfaktorsautentiseringen har återställts eller saknas.",
+        "inactive": "Användaren är inaktiverad.",
+        "not_admin": "Användaren är inte längre administratör.",
+        "not_internal": "Användaren är inte en intern användare.",
+        "not_found": "Användaren finns inte längre."
+      }
+    },
+    "guard": {
+      "sso_provider_required": "Konfigurera minst en leverantör av enkel inloggning innan du kräver enkel inloggning.",
+      "break_glass_required": "Välj minst en nödadministratör innan du kräver enkel inloggning.",
+      "break_glass_invalid_user": "Nödanvändare måste vara aktiva administratörer med tvåfaktorsautentisering aktiverad."
+    },
+    "errors": {
+      "load": "Det gick inte att läsa in inloggningspolicyn.",
+      "save": "Det gick inte att spara inloggningspolicyn."
+    }
+  },
   "featureFlags": {
     "categories": {
       "core": {

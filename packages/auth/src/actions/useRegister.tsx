@@ -123,7 +123,13 @@ export async function setNewPassword(password: string, token: string): Promise<b
       logger.error(`User [ ${userInfo.email} ] with type [ ${userInfo.user_type || 'any'} ] not found in the database`);
       return false;
     }
-    
+
+    // Tenant login policy: a token minted before SSO was required must not set a password afterwards.
+    const { isPasswordResetPermitted } = await import('../lib/passwordLoginGate');
+    if (!(await isPasswordResetPermitted(dbUser, 'password_reset_complete'))) {
+      return false;
+    }
+
     await User.updatePassword(dbUser.user_id, dbUser.tenant, hashedPassword);
     logger.info(`Password updated successfully for User [ ${userInfo.email} ] type [ ${dbUser.user_type} ] id [ ${dbUser.user_id} ]`);
     return true;
@@ -163,6 +169,14 @@ export async function recoverPassword(
       return true;
     }
     matchedTenant = userInfo.tenant;
+
+    // Tenant login policy: with SSO required, internal non-break-glass users get no
+    // reset email. Same generic success result as an unknown address.
+    const { isPasswordResetPermitted } = await import('../lib/passwordLoginGate');
+    if (!(await isPasswordResetPermitted(userInfo, 'password_reset_request'))) {
+      logger.debug('Password recovery skipped: SSO is required for this user', { portal, userType });
+      return true;
+    }
 
     // Provider readiness is decided by the send path, not by an environment
     // flag here. An enabled tenant SMTP/Resend/Microsoft provider therefore

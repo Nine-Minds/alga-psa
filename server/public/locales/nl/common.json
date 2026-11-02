@@ -860,7 +860,22 @@
       "verify": "Verifiëren",
       "title": "Heel eenvoudig",
       "instructions": "Voer de 6-cijferige code uit uw authenticator-app in.",
-      "digitsLeft": "Nog {{count}} cijfers"
+      "digitsLeft": "Nog {{count}} cijfers",
+      "enroll": {
+        "title": "Tweefactorauthenticatie instellen",
+        "instructions": "Uw organisatie verplicht tweefactorauthenticatie. Scan de QR-code met een authenticator-app en voer vervolgens de code van 6 cijfers in.",
+        "qrAlt": "QR-code voor uw authenticator-app",
+        "manualKey": "Of voer deze sleutel handmatig in:",
+        "cancel": "Annuleren",
+        "errors": {
+          "invalid_credentials": "Uw e-mailadres of wachtwoord is niet meer geldig. Meld u opnieuw aan.",
+          "enrollment_not_required": "Voor dit account is geen installatie nodig. Meld u opnieuw aan.",
+          "invalid_code": "Deze code is ongeldig. Probeer het opnieuw.",
+          "rate_limited": "Te veel pogingen. Wacht een paar minuten en probeer het opnieuw.",
+          "captcha_required": "Voltooi eerst de verificatie op de aanmeldpagina.",
+          "unavailable": "Instellen is momenteel niet beschikbaar. Probeer het opnieuw."
+        }
+      }
     },
     "messages": {
       "handoffMissingToken": "Het login-overdrachtstoken ontbreekt of is ongeldig. Log opnieuw in.",

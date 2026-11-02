@@ -3884,6 +3884,50 @@
     "saving": "Opslaan…",
     "cancel": "Annuleren"
   },
+  "loginPolicy": {
+    "title": "Aanmeldbeleid",
+    "description": "Bepaal hoe medewerkers en klantportaalgebruikers zich met een wachtwoord mogen aanmelden. Deze regels worden op de server afgedwongen.",
+    "requireSso": {
+      "title": "Single sign-on verplichten voor MSP-medewerkers",
+      "body": "Interne gebruikers moeten zich aanmelden met Google, Microsoft of uw Keycloak-provider. Aanmelden met een wachtwoord en het opnieuw instellen van wachtwoorden zijn geblokkeerd, behalve voor de noodbeheerders hieronder.",
+      "signOutWarning": "Als u “Single sign-on verplichten” inschakelt, worden alle interne gebruikers die zich met een wachtwoord hebben aangemeld afgemeld, behalve noodbeheerders. Het inschakelen van een tweefactorvereiste meldt niemand af; die geldt bij de volgende aanmelding."
+    },
+    "require2faInternal": {
+      "title": "Tweefactorauthenticatie verplichten voor aanmelden met wachtwoord door MSP-medewerkers",
+      "body": "Medewerkers zonder authenticator moeten er bij hun volgende aanmelding een instellen."
+    },
+    "require2faClient": {
+      "title": "Tweefactorauthenticatie verplichten voor aanmelden met wachtwoord in het klantportaal",
+      "body": "Klantportaalgebruikers zonder authenticator moeten er bij hun volgende aanmelding een instellen. De single sign-on-vereiste geldt nooit voor klantportaalgebruikers."
+    },
+    "knownDeviceSkip": {
+      "title": "Bekende apparaten mogen de code overslaan",
+      "body": "Gebruikers die een apparaat vertrouwd hebben, krijgen op dat apparaat geen codevraag. Noodbeheerders hebben altijd een code nodig."
+    },
+    "breakGlass": {
+      "title": "Noodbeheerders",
+      "body": "Deze beheerders kunnen zich nog steeds met een wachtwoord aanmelden wanneer single sign-on verplicht is. Het moeten actieve beheerders zijn met tweefactorauthenticatie ingeschakeld, en ze hebben altijd een code nodig.",
+      "noEligible": "Geen geschikte beheerders. Een beheerder moet actief zijn en tweefactorauthenticatie hebben ingeschakeld.",
+      "noLongerEligible": "Niet langer geschikt.",
+      "remove": "Verwijderen",
+      "reasons": {
+        "no_two_factor": "Tweefactorauthenticatie is gereset of ontbreekt.",
+        "inactive": "De gebruiker is gedeactiveerd.",
+        "not_admin": "De gebruiker is geen beheerder meer.",
+        "not_internal": "De gebruiker is geen interne gebruiker.",
+        "not_found": "De gebruiker bestaat niet meer."
+      }
+    },
+    "guard": {
+      "sso_provider_required": "Stel minstens één single sign-on-provider in voordat u single sign-on verplicht stelt.",
+      "break_glass_required": "Selecteer minstens één noodbeheerder voordat u single sign-on verplicht stelt.",
+      "break_glass_invalid_user": "Noodgebruikers moeten actieve beheerders zijn met tweefactorauthenticatie ingeschakeld."
+    },
+    "errors": {
+      "load": "Het aanmeldbeleid kan niet worden geladen.",
+      "save": "Het aanmeldbeleid kan niet worden opgeslagen."
+    }
+  },
   "featureFlags": {
     "categories": {
       "core": {

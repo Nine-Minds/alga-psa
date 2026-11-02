@@ -301,7 +301,22 @@
       "verify": "Verify",
       "title": "Easy peasy",
       "instructions": "Enter the 6-digit code from your two-factor authenticator app.",
-      "digitsLeft": "{{count}} digits left"
+      "digitsLeft": "{{count}} digits left",
+      "enroll": {
+        "title": "Set up two-factor authentication",
+        "instructions": "Your organization requires two-factor authentication. Scan the QR code with an authenticator app, then enter the 6-digit code.",
+        "qrAlt": "QR code for your authenticator app",
+        "manualKey": "Or enter this key manually:",
+        "cancel": "Cancel",
+        "errors": {
+          "invalid_credentials": "Your email or password is no longer valid. Please sign in again.",
+          "enrollment_not_required": "Setup is not required for this account. Please sign in again.",
+          "invalid_code": "That code is not valid. Please try again.",
+          "rate_limited": "Too many attempts. Please wait a few minutes and try again.",
+          "captcha_required": "Please complete the verification on the sign-in page first.",
+          "unavailable": "Setup is unavailable right now. Please try again."
+        }
+      }
     },
     "messages": {
       "handoffMissingToken": "The login handoff token is missing or invalid. Please sign in again.",

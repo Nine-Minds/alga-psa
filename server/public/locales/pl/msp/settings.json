@@ -3884,6 +3884,50 @@
     "saving": "Zapisywanie…",
     "cancel": "Anuluj"
   },
+  "loginPolicy": {
+    "title": "Zasady logowania",
+    "description": "Określ, w jaki sposób pracownicy i użytkownicy portalu klienta mogą logować się za pomocą hasła. Te reguły są egzekwowane na serwerze.",
+    "requireSso": {
+      "title": "Wymagaj logowania jednokrotnego dla pracowników MSP",
+      "body": "Użytkownicy wewnętrzni muszą logować się przez Google, Microsoft lub dostawcę Keycloak. Logowanie hasłem i resetowanie hasła są zablokowane, z wyjątkiem administratorów awaryjnych wskazanych poniżej.",
+      "signOutWarning": "Włączenie opcji „Wymagaj logowania jednokrotnego” wyloguje wszystkich użytkowników wewnętrznych zalogowanych hasłem, z wyjątkiem administratorów awaryjnych. Włączenie wymogu uwierzytelniania dwuskładnikowego nikogo nie wylogowuje; obowiązuje od następnego logowania."
+    },
+    "require2faInternal": {
+      "title": "Wymagaj uwierzytelniania dwuskładnikowego przy logowaniu hasłem pracowników MSP",
+      "body": "Pracownicy bez aplikacji uwierzytelniającej zostaną poproszeni o jej skonfigurowanie przy następnym logowaniu."
+    },
+    "require2faClient": {
+      "title": "Wymagaj uwierzytelniania dwuskładnikowego przy logowaniu hasłem do portalu klienta",
+      "body": "Użytkownicy portalu klienta bez aplikacji uwierzytelniającej zostaną poproszeni o jej skonfigurowanie przy następnym logowaniu. Wymóg logowania jednokrotnego nigdy nie dotyczy użytkowników portalu klienta."
+    },
+    "knownDeviceSkip": {
+      "title": "Zezwalaj znanym urządzeniom na pominięcie kodu",
+      "body": "Użytkownicy, którzy zaufali urządzeniu, nie są pytani o kod na tym urządzeniu. Administratorzy awaryjni zawsze potrzebują kodu."
+    },
+    "breakGlass": {
+      "title": "Administratorzy awaryjni",
+      "body": "Ci administratorzy mogą nadal logować się hasłem, gdy wymagane jest logowanie jednokrotne. Muszą być aktywnymi administratorami z włączonym uwierzytelnianiem dwuskładnikowym i zawsze potrzebują kodu.",
+      "noEligible": "Brak kwalifikujących się administratorów. Administrator musi być aktywny i mieć włączone uwierzytelnianie dwuskładnikowe.",
+      "noLongerEligible": "Nie kwalifikuje się już.",
+      "remove": "Usuń",
+      "reasons": {
+        "no_two_factor": "Uwierzytelnianie dwuskładnikowe zostało zresetowane lub nie jest włączone.",
+        "inactive": "Użytkownik jest dezaktywowany.",
+        "not_admin": "Użytkownik nie jest już administratorem.",
+        "not_internal": "Użytkownik nie jest użytkownikiem wewnętrznym.",
+        "not_found": "Użytkownik już nie istnieje."
+      }
+    },
+    "guard": {
+      "sso_provider_required": "Skonfiguruj co najmniej jednego dostawcę logowania jednokrotnego, zanim go wymusisz.",
+      "break_glass_required": "Wybierz co najmniej jednego administratora awaryjnego, zanim wymusisz logowanie jednokrotne.",
+      "break_glass_invalid_user": "Użytkownicy awaryjni muszą być aktywnymi administratorami z włączonym uwierzytelnianiem dwuskładnikowym."
+    },
+    "errors": {
+      "load": "Nie udało się wczytać zasad logowania.",
+      "save": "Nie udało się zapisać zasad logowania."
+    }
+  },
   "featureFlags": {
     "categories": {
       "core": {

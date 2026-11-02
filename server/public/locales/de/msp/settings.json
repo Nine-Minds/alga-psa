@@ -3884,6 +3884,50 @@
     "saving": "Wird gespeichert…",
     "cancel": "Abbrechen"
   },
+  "loginPolicy": {
+    "title": "Anmelderichtlinie",
+    "description": "Legen Sie fest, wie sich Mitarbeitende und Kundenportal-Benutzer per Passwort anmelden dürfen. Diese Regeln werden auf dem Server durchgesetzt.",
+    "requireSso": {
+      "title": "Single Sign-On für MSP-Mitarbeitende erzwingen",
+      "body": "Interne Benutzer müssen sich mit Google, Microsoft oder Ihrem Keycloak-Anbieter anmelden. Passwort-Anmeldung und Passwort-Zurücksetzen sind gesperrt, außer für die unten genannten Notfall-Administratoren.",
+      "signOutWarning": "Wenn Sie „Single Sign-On erzwingen“ aktivieren, werden alle internen Benutzer abgemeldet, die sich per Passwort angemeldet haben, außer Notfall-Administratoren. Eine Zwei-Faktor-Pflicht meldet niemanden ab; sie gilt ab der nächsten Anmeldung."
+    },
+    "require2faInternal": {
+      "title": "Zwei-Faktor-Authentifizierung für Passwort-Anmeldung von MSP-Mitarbeitenden erzwingen",
+      "body": "Mitarbeitende ohne Authenticator werden bei der nächsten Anmeldung aufgefordert, einen einzurichten."
+    },
+    "require2faClient": {
+      "title": "Zwei-Faktor-Authentifizierung für Passwort-Anmeldung im Kundenportal erzwingen",
+      "body": "Kundenportal-Benutzer ohne Authenticator werden bei der nächsten Anmeldung aufgefordert, einen einzurichten. Die Single-Sign-On-Pflicht gilt nie für Kundenportal-Benutzer."
+    },
+    "knownDeviceSkip": {
+      "title": "Bekannten Geräten das Überspringen des Codes erlauben",
+      "body": "Benutzer, die einem Gerät vertraut haben, werden auf diesem Gerät nicht nach einem Code gefragt. Notfall-Administratoren benötigen immer einen Code."
+    },
+    "breakGlass": {
+      "title": "Notfall-Administratoren",
+      "body": "Diese Administratoren können sich weiterhin per Passwort anmelden, wenn Single Sign-On erzwungen wird. Sie müssen aktive Administratoren mit aktivierter Zwei-Faktor-Authentifizierung sein und benötigen immer einen Code.",
+      "noEligible": "Keine geeigneten Administratoren. Ein Administrator muss aktiv sein und die Zwei-Faktor-Authentifizierung aktiviert haben.",
+      "noLongerEligible": "Nicht mehr berechtigt.",
+      "remove": "Entfernen",
+      "reasons": {
+        "no_two_factor": "Die Zwei-Faktor-Authentifizierung wurde zurückgesetzt oder fehlt.",
+        "inactive": "Der Benutzer ist deaktiviert.",
+        "not_admin": "Der Benutzer ist kein Administrator mehr.",
+        "not_internal": "Der Benutzer ist kein interner Benutzer.",
+        "not_found": "Der Benutzer existiert nicht mehr."
+      }
+    },
+    "guard": {
+      "sso_provider_required": "Richten Sie mindestens einen Single-Sign-On-Anbieter ein, bevor Sie Single Sign-On erzwingen.",
+      "break_glass_required": "Wählen Sie mindestens einen Notfall-Administrator aus, bevor Sie Single Sign-On erzwingen.",
+      "break_glass_invalid_user": "Notfall-Benutzer müssen aktive Administratoren mit aktivierter Zwei-Faktor-Authentifizierung sein."
+    },
+    "errors": {
+      "load": "Die Anmelderichtlinie konnte nicht geladen werden.",
+      "save": "Die Anmelderichtlinie konnte nicht gespeichert werden."
+    }
+  },
   "featureFlags": {
     "categories": {
       "core": {
