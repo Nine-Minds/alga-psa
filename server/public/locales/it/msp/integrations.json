@@ -2084,11 +2084,18 @@
         "environment": "Ambiente Intuit",
         "environmentProduction": "Produzione",
         "environmentSandbox": "Ambiente sandbox",
+        "environmentHint": "La produzione si collega ad aziende QuickBooks reali. L’ambiente sandbox si collega a un’azienda di prova di Intuit, così puoi provare le esportazioni senza toccare la contabilità reale.",
+        "environmentLockedHint": "Disconnetti QuickBooks prima di cambiare ambiente. L’azienda collegata e i suoi token esistono solo nell’ambiente in cui sono stati autorizzati.",
+        "environmentSandboxKeysTitle": "L’ambiente sandbox richiede una tua app Intuit",
+        "environmentSandboxKeysDescription": "Le aziende sandbox di Intuit accettano solo le chiavi Development di un’app Intuit che controlli tu. L’app condivisa di questa installazione usa chiavi Production: registra una tua app e salva qui sotto le sue chiavi Development prima di collegarti.",
+        "environmentSavedSandbox": "QuickBooks si collegherà ora a un’azienda sandbox di Intuit. Collegati con le chiavi Development della tua app Intuit.",
+        "environmentSavedProduction": "QuickBooks si collegherà ora ad aziende QuickBooks reali.",
         "errors": {
           "automatedSalesTax": "Impossibile aggiornare la modalità Automated Sales Tax.",
           "disconnect": "Impossibile disconnettere QuickBooks.",
           "load": "Impossibile caricare le impostazioni QuickBooks.",
-          "saveCredentials": "Impossibile salvare le credenziali QuickBooks."
+          "saveCredentials": "Impossibile salvare le credenziali QuickBooks.",
+          "environment": "Impossibile cambiare l’ambiente Intuit."
         },
         "howItWorksDescription": "Collega la tua azienda QuickBooks accedendo a Intuit; AlgaPSA la userà come contesto live predefinito per esportazioni e mappature. La scheda «App Intuit» qui sotto indica se la tua installazione fornisce già l'app usata per quell'accesso o se devi prima registrarne una.",
         "howItWorksTitle": "Come funziona QuickBooks live in questa release",
@@ -2120,6 +2127,7 @@
         "credentialSource": {
           "app": "Questa installazione fornisce un'app Intuit condivisa, quindi puoi collegare QuickBooks senza registrarne una. Salta questa scheda e fai clic su «Collega QuickBooks» qui sotto.",
           "none": "Non è ancora disponibile alcuna app Intuit. Registrane una presso Intuit prima di poter collegare.",
+          "noneSandbox": "L’ambiente sandbox richiede una tua app Intuit. Registrane una e salva le sue chiavi Development prima di poter collegare.",
           "tenant": "Questo tenant si collega tramite la propria app Intuit, usando le credenziali salvate qui sotto. Per ruotare una chiave, incolla il nuovo valore e salva.",
           "appTitle": "Nessuna credenziale necessaria"
         },

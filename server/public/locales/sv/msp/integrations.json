@@ -2107,11 +2107,18 @@
         "environment": "Intuit-miljö",
         "environmentProduction": "Produktion",
         "environmentSandbox": "Sandlåda",
+        "environmentHint": "Produktion ansluter till riktiga QuickBooks-företag. Sandlådan ansluter till ett testföretag hos Intuit, så att du kan prova exporter utan att påverka riktig bokföring.",
+        "environmentLockedHint": "Koppla från QuickBooks innan du byter miljö. Det anslutna företaget och dess tokens finns bara i den miljö där de auktoriserades.",
+        "environmentSandboxKeysTitle": "Sandlådan kräver din egen Intuit-app",
+        "environmentSandboxKeysDescription": "Företag i Intuits sandlåda accepterar bara Development-nycklarna från en Intuit-app som du själv styr. Den delade appen i den här installationen använder Production-nycklar, så registrera din egen app och spara dess Development-nycklar nedan innan du ansluter.",
+        "environmentSavedSandbox": "QuickBooks ansluter nu till ett företag i Intuits sandlåda. Anslut med Development-nycklarna från din egen Intuit-app.",
+        "environmentSavedProduction": "QuickBooks ansluter nu till riktiga QuickBooks-företag.",
         "errors": {
           "automatedSalesTax": "Det gick inte att uppdatera läget för ”Automated Sales Tax”.",
           "disconnect": "Det gick inte att koppla från QuickBooks.",
           "load": "Det gick inte att läsa in QuickBooks-inställningarna.",
-          "saveCredentials": "Det gick inte att spara QuickBooks-autentiseringsuppgifterna."
+          "saveCredentials": "Det gick inte att spara QuickBooks-autentiseringsuppgifterna.",
+          "environment": "Det gick inte att byta Intuit-miljö."
         },
         "howItWorksDescription": "Anslut ditt QuickBooks-företag genom att logga in på Intuit, så använder AlgaPSA det som standardkontext för direktexporter och mappningar. Kortet Intuit-app nedan visar om din installation redan tillhandahåller appen som används för inloggning eller om du behöver registrera en först.",
         "howItWorksTitle": "Så fungerar direktanslutning till QuickBooks i den här versionen",
@@ -2143,6 +2150,7 @@
         "credentialSource": {
           "app": "Den här installationen tillhandahåller en delad Intuit-app så att du kan ansluta QuickBooks utan att registrera en. Hoppa över det här kortet och klicka på Anslut QuickBooks nedan.",
           "none": "Ingen Intuit-app är tillgänglig ännu. Registrera en hos Intuit innan du kan ansluta.",
+          "noneSandbox": "Sandlådan kräver en egen Intuit-app. Registrera en och spara dess Development-nycklar innan du kan ansluta.",
           "tenant": "Din organisation ansluter via sin egen Intuit-app med autentiseringsuppgifterna nedan. Rotera en nyckel genom att klistra in det nya värdet och spara.",
           "appTitle": "Inga autentiseringsuppgifter behövs"
         },

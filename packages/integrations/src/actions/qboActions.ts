@@ -12,6 +12,7 @@ import {
   isQboAutomatedSalesTaxEnabled,
   setQboAutomatedSalesTaxEnabled
 } from '../lib/qbo/qboTaxSettings';
+import { setTenantQboEnvironmentSetting } from '../lib/qbo/qboEnvironmentSettings';
 import {
   clearQboCompanyCountryCacheForTenant,
   getQboCompanyCountry,
@@ -27,6 +28,7 @@ import {
   QboClientService,
   QBO_CLIENT_ID_SECRET_NAME,
   QBO_CLIENT_SECRET_SECRET_NAME,
+  getExplicitTenantQboEnvironment,
   getQboEnvironment,
   getQboOAuthScopes,
   getQboRedirectUri,
@@ -50,6 +52,7 @@ interface QboCredentials {
   realmId: string;
   accessTokenExpiresAt: string; // Store as ISO string
   refreshTokenExpiresAt: string; // Store as ISO string
+  environment?: QboEnvironment; // Stamped at callback time; absent on older connections
 }
 
 // Define the expected response structure based on Sec 5.5.2
@@ -59,6 +62,8 @@ export interface QboConnectionSummary {
   status: 'active' | 'expired' | 'error';
   lastValidatedAt?: string | null;
   error?: string | null;
+  /** The Intuit environment this realm lives in; drives the app.qbo deep link. */
+  environment?: QboEnvironment;
 }
 
 export interface QboCredentialStatus {
@@ -84,6 +89,16 @@ export interface QboConnectionStatus {
   redirectUri: string;
   scopes: string[];
   environment: QboEnvironment;
+  /**
+   * Where `environment` came from: 'tenant' when this tenant explicitly chose
+   * it, 'deployment' when it is only the deployment-wide default. The two are
+   * not interchangeable — Intuit accepts an app's Development keys only against
+   * sandbox companies, so a tenant that deliberately picked sandbox must bring
+   * its own app, while a deployment-wide sandbox default (dev, self-host) may
+   * legitimately use the shared app. Callers that gate on "needs own keys" must
+   * read this, not `environment` alone.
+   */
+  environmentSource: 'tenant' | 'deployment';
   credentials: QboCredentialStatus;
   /**
    * Durable disconnect state, when a disconnect has been started. Non-null
@@ -121,6 +136,7 @@ function qboConnectionStatusError(
     redirectUri: '',
     scopes: getQboOAuthScopes(),
     environment: getQboEnvironment(),
+    environmentSource: 'deployment',
     credentials: {
       clientIdConfigured: false,
       clientSecretConfigured: false,
@@ -965,10 +981,13 @@ export const getQboConnectionStatus = withAuth(async (
     clientSecretMasked: clientSecret ? maskSecret(clientSecret) : undefined,
     source: resolvedCredentials?.source ?? null
   };
+  const explicitEnvironment = await getExplicitTenantQboEnvironment(tenant);
+  const tenantEnvironment = explicitEnvironment ?? getQboEnvironment();
   const baseStatus = {
     redirectUri,
     scopes: getQboOAuthScopes(),
-    environment: getQboEnvironment(),
+    environment: tenantEnvironment,
+    environmentSource: (explicitEnvironment ? 'tenant' : 'deployment') as 'tenant' | 'deployment',
     credentials: credentialStatus
   };
 
@@ -1048,7 +1067,8 @@ export const getQboConnectionStatus = withAuth(async (
         displayName,
         status,
         lastValidatedAt,
-        error: summaryError
+        error: summaryError,
+        environment: credentials.environment ?? tenantEnvironment
       });
     }
 
@@ -1248,6 +1268,70 @@ export const getQboTaxCodes = withAuth(async (
 
   setCachedValue(taxCodeCache, buildCacheKey(tenant, result.realmId, 'tax-codes'), result.rows);
   return [...result.rows];
+});
+
+/**
+ * Chooses the Intuit environment this tenant connects to.
+ *
+ * Only valid while nothing is connected: a realm ID and its tokens exist in one
+ * environment only, so switching with a live connection would leave the stored
+ * credentials pointing at a host that does not know them. Sandbox additionally
+ * requires the tenant's own Intuit app (Development keys) — enforced where the
+ * OAuth credentials are resolved, not here, so the connect route and the
+ * settings card both see it.
+ */
+export const setQboEnvironment = withAuth(async (
+  user,
+  { tenant },
+  options: { environment: QboEnvironment }
+): Promise<{ success: boolean; environment?: QboEnvironment; error?: string }> => {
+  try {
+    const accessError = await getQboUpdateAccessError(user);
+    if (accessError) {
+      return { success: false, error: accessError };
+    }
+
+    const environment = options?.environment;
+    if (environment !== 'sandbox' && environment !== 'production') {
+      return { success: false, error: 'Choose either the Intuit sandbox or production environment.' };
+    }
+
+    const { knex } = await createTenantKnex();
+
+    const disconnect = await getProviderDisconnectStatusInfo(knex, tenant, PROVIDER_QBO).catch(() => null);
+    if (disconnect && disconnect.status !== 'finalized') {
+      return {
+        success: false,
+        error: 'QuickBooks is being disconnected. Wait for the disconnect to finish before changing the Intuit environment.'
+      };
+    }
+
+    const credentials = await getTenantCredentialMap(tenant);
+    if (Object.keys(credentials).length > 0) {
+      return {
+        success: false,
+        error: 'Disconnect QuickBooks before changing the Intuit environment. The connected company and its tokens exist only in the environment they were authorized in.'
+      };
+    }
+
+    await setTenantQboEnvironmentSetting(knex, tenant, environment);
+
+    logger.info('QBO Intuit environment updated', { tenantId: tenant, environment });
+
+    await writeAccountingAudit(knex, tenant, 'accounting_environment_changed', {
+      userId: user.user_id,
+      provider: 'qbo',
+      details: { environment },
+    }).catch((error) => {
+      logger.warn('Failed to write QBO environment audit entry', { tenantId: tenant, error });
+    });
+
+    revalidatePath('/msp/settings');
+    return { success: true, environment };
+  } catch (error: unknown) {
+    logger.error('Failed to update the QBO Intuit environment', { tenantId: tenant, error });
+    return { success: false, error: 'Failed to update the Intuit environment. Please try again.' };
+  }
 });
 
 /**

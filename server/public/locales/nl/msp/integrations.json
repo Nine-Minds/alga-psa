@@ -2084,11 +2084,18 @@
         "environment": "Intuit-omgeving",
         "environmentProduction": "Productie",
         "environmentSandbox": "Sandbox",
+        "environmentHint": "Productie maakt verbinding met echte QuickBooks-bedrijven. Sandbox maakt verbinding met een testbedrijf van Intuit, zodat u exports kunt uitproberen zonder echte boekhouding te raken.",
+        "environmentLockedHint": "Ontkoppel QuickBooks voordat u van omgeving wisselt. Het gekoppelde bedrijf en zijn tokens bestaan alleen in de omgeving waarin ze zijn geautoriseerd.",
+        "environmentSandboxKeysTitle": "Sandbox vereist uw eigen Intuit-app",
+        "environmentSandboxKeysDescription": "Sandbox-bedrijven van Intuit accepteren alleen de Development-sleutels van een Intuit-app die u zelf beheert. De gedeelde app van deze omgeving gebruikt Production-sleutels. Registreer daarom uw eigen app en sla hieronder de Development-sleutels op voordat u verbinding maakt.",
+        "environmentSavedSandbox": "QuickBooks maakt nu verbinding met een sandbox-bedrijf van Intuit. Maak verbinding met de Development-sleutels van uw eigen Intuit-app.",
+        "environmentSavedProduction": "QuickBooks maakt nu verbinding met echte QuickBooks-bedrijven.",
         "errors": {
           "automatedSalesTax": "Bijwerken van de Automated Sales Tax-modus is mislukt.",
           "disconnect": "QuickBooks ontkoppelen mislukt.",
           "load": "QuickBooks-instellingen laden mislukt.",
-          "saveCredentials": "QuickBooks-inloggegevens opslaan mislukt."
+          "saveCredentials": "QuickBooks-inloggegevens opslaan mislukt.",
+          "environment": "Wijzigen van de Intuit-omgeving is mislukt."
         },
         "howItWorksDescription": "Koppel uw QuickBooks-bedrijf door in te loggen bij Intuit; AlgaPSA gebruikt het dan als standaard live-context voor exports en toewijzingen. De kaart „Intuit-app” hieronder laat zien of uw installatie de app voor die aanmelding al levert of dat u er eerst een moet registreren.",
         "howItWorksTitle": "Hoe live QuickBooks werkt in deze release",
@@ -2120,6 +2127,7 @@
         "credentialSource": {
           "app": "Deze installatie levert een gedeelde Intuit-app, dus u kunt QuickBooks koppelen zonder er zelf een te registreren. Sla deze kaart over en klik hieronder op „QuickBooks koppelen”.",
           "none": "Er is nog geen Intuit-app beschikbaar. Registreer er een bij Intuit voordat u kunt koppelen.",
+          "noneSandbox": "Sandbox vereist een eigen Intuit-app. Registreer er een en sla de Development-sleutels op voordat u kunt koppelen.",
           "tenant": "Deze tenant maakt verbinding via een eigen Intuit-app met de hieronder opgeslagen inloggegevens. Plak een nieuwe waarde en sla op om een sleutel te roteren.",
           "appTitle": "Geen inloggegevens nodig"
         },

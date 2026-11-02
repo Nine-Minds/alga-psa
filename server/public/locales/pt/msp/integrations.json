@@ -2084,11 +2084,18 @@
         "environment": "Ambiente intuitivo",
         "environmentProduction": "Produção",
         "environmentSandbox": "Caixa de areia",
+        "environmentHint": "A produção se conecta a empresas reais do QuickBooks. A caixa de areia se conecta a uma empresa de teste da Intuit, para você testar exportações sem alterar a contabilidade real.",
+        "environmentLockedHint": "Desconecte o QuickBooks antes de trocar de ambiente. A empresa conectada e seus tokens existem apenas no ambiente em que foram autorizados.",
+        "environmentSandboxKeysTitle": "A caixa de areia exige seu próprio aplicativo da Intuit",
+        "environmentSandboxKeysDescription": "As empresas da caixa de areia da Intuit aceitam apenas as chaves Development de um aplicativo da Intuit que você controla. O aplicativo compartilhado desta instalação usa chaves Production, então registre seu próprio aplicativo e salve as chaves Development abaixo antes de conectar.",
+        "environmentSavedSandbox": "O QuickBooks passará a se conectar a uma empresa da caixa de areia da Intuit. Conecte-se com as chaves Development do seu próprio aplicativo da Intuit.",
+        "environmentSavedProduction": "O QuickBooks passará a se conectar a empresas reais do QuickBooks.",
         "errors": {
           "automatedSalesTax": "Não foi possível atualizar o modo Automated Sales Tax.",
           "disconnect": "Falha ao desconectar QuickBooks.",
           "load": "Falha ao carregar as configurações do QuickBooks.",
-          "saveCredentials": "Falha ao salvar as credenciais do QuickBooks."
+          "saveCredentials": "Falha ao salvar as credenciais do QuickBooks.",
+          "environment": "Não foi possível alterar o ambiente da Intuit."
         },
         "howItWorksDescription": "Conecte sua empresa QuickBooks fazendo login na Intuit, e o AlgaPSA a usará como contexto ao vivo padrão para exportações e mapeamentos. O cartão «Aplicativo Intuit» abaixo informa se sua implantação já fornece o aplicativo usado nesse login ou se você precisa registrar um primeiro.",
         "howItWorksTitle": "Como funciona o QuickBooks ao vivo nesta versão",
@@ -2120,6 +2127,7 @@
         "credentialSource": {
           "app": "Esta implantação fornece um aplicativo Intuit compartilhado, então você pode conectar o QuickBooks sem registrar um. Pule este cartão e clique em «Conectar QuickBooks» abaixo.",
           "none": "Nenhum aplicativo Intuit está disponível ainda. Registre um na Intuit antes de poder conectar.",
+          "noneSandbox": "A caixa de areia precisa de um aplicativo da Intuit próprio. Registre um e salve suas chaves Development antes de poder conectar.",
           "tenant": "Este tenant se conecta por meio do seu próprio aplicativo Intuit, usando as credenciais armazenadas abaixo. Para rotacionar uma chave, cole o novo valor e salve.",
           "appTitle": "Nenhuma credencial necessária"
         },
