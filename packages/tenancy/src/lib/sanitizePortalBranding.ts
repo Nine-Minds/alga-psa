@@ -17,6 +17,6 @@ export function sanitizePortalBranding(value: unknown): TenantBranding | null {
   if (input.portalSidebarStyle === 'default' || input.portalSidebarStyle === 'primary' || input.portalSidebarStyle === 'secondary' || input.portalSidebarStyle === 'custom') output.portalSidebarStyle = input.portalSidebarStyle;
   if (typeof input.portalSidebarColor === 'string') output.portalSidebarColor = input.portalSidebarColor;
   if (typeof input.portalFollowsTheme === 'boolean') output.portalFollowsTheme = input.portalFollowsTheme;
-  if (typeof output.logoUrl !== 'string' || typeof output.primaryColor !== 'string' || typeof output.secondaryColor !== 'string' || typeof output.clientName !== 'string') return null;
+  if (Object.keys(output).length === 0) return null;
   return output as unknown as TenantBranding;
 }

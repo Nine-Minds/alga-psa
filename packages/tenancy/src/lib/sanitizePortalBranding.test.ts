@@ -29,8 +29,15 @@ describe('sanitizePortalBranding', () => {
     expect(branding).not.toHaveProperty('onboarding_data');
   });
 
-  it('fails closed for incomplete or malformed branding', () => {
-    expect(sanitizePortalBranding({ clientName: 'Missing palette' })).toBeNull();
+  it('preserves supported partial branding while discarding unknown fields', () => {
+    expect(sanitizePortalBranding({ logoUrl: 'https://cdn.example.test/logo.svg', credential: 'private' }))
+      .toEqual({ logoUrl: 'https://cdn.example.test/logo.svg' });
+    expect(sanitizePortalBranding({ primaryColor: '#123456', credential: 'private' }))
+      .toEqual({ primaryColor: '#123456' });
+  });
+
+  it('fails closed for malformed or entirely unknown branding', () => {
     expect(sanitizePortalBranding(['not', 'an', 'object'])).toBeNull();
+    expect(sanitizePortalBranding({ credential: 'private' })).toBeNull();
   });
 });

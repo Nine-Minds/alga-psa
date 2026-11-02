@@ -76,4 +76,34 @@ describe('public tenant portal configuration', () => {
     expect(config.theme).not.toHaveProperty('arbitrarySecret');
     expect(config.locale).toBe('en');
   });
+
+  it('keeps a logo-only branding record visible to portal readers', async () => {
+    storedSettings.row.settings.branding = {
+      logoUrl: 'https://cdn.example.test/logo-only.svg',
+      logoDarkUrl: 'https://cdn.example.test/logo-only-dark.svg',
+      documentId: 'must-not-leak',
+    };
+
+    const config = await getTenantPortalConfigBySlug('tenant-a');
+
+    expect(config.branding).toMatchObject({
+      logoUrl: 'https://cdn.example.test/logo-only.svg',
+      logoDarkUrl: 'https://cdn.example.test/logo-only-dark.svg',
+    });
+    expect(config.branding).not.toHaveProperty('documentId');
+  });
+
+  it('keeps a partial palette while excluding unknown branding properties', async () => {
+    storedSettings.row.settings.branding = {
+      primaryColor: '#123456',
+      clientName: 'Partial Brand',
+      privateCredential: 'must-not-leak',
+    };
+
+    const config = await getTenantPortalConfigBySlug('tenant-a');
+
+    expect(config.branding).toMatchObject({ primaryColor: '#123456', clientName: 'Partial Brand' });
+    expect(config.branding).not.toHaveProperty('secondaryColor');
+    expect(config.branding).not.toHaveProperty('privateCredential');
+  });
 });
