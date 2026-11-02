@@ -49,7 +49,8 @@ describe('buildLabelModel', () => {
     const paths = Object.values(LABEL_TEMPLATE_VALUE_BINDINGS).map((b) => (b as { path: string }).path).sort();
     expect(paths).toEqual([
       'clientName', 'code128Value', 'custodyLocation', 'detail', 'display.assetLine', 'display.rmaReturnByLine', 'display.rmaTicketLine', 'display.sequenceLine', 'display.serialLine',
-      'identifier', 'nextAction', 'rma.shipping', 'rma.statusLabel', 'secondaryIdentifier', 'sequence.n', 'sequence.total', 'serialSuffix', 'tenantClient.brandText',
+      'identifier', 'linkedAsset.cpuLine', 'linkedAsset.manufacturer', 'linkedAsset.model', 'linkedAsset.name', 'linkedAsset.osLine', 'linkedAsset.ramLine', 'linkedAsset.storageLine',
+      'nextAction', 'rma.shipping', 'rma.statusLabel', 'secondaryIdentifier', 'sequence.n', 'sequence.total', 'serialSuffix', 'tenantClient.brandText',
       'tenantClient.logoUrl', 'tenantClient.name', 'title', 'url',
     ]);
     expect(paths.some((p) => /serial$|recordId|email|phone/i.test(p) && p !== 'serialSuffix')).toBe(false);

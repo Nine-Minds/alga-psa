@@ -17,6 +17,17 @@ export const buildSampleLabelViewModel = (): LabelViewModel => ({
   // matches the print path, which collapses the reason when custody prints.
   custodyLocation: null,
   nextAction: null,
+  // Shown only by the full-page customer worksheet; the 4 x 2 in tag templates bind none of these.
+  linkedAsset: {
+    assetId: 'b2d4e6f6-8a0c-4c1e-9e2g-4h6i8j8k0l2m',
+    name: 'Dell Latitude 5540',
+    manufacturer: 'Dell',
+    model: 'Latitude 5540',
+    osLine: 'Windows 11 Pro 23H2',
+    cpuLine: 'Intel Core i7-1365U / 10 cores',
+    ramLine: '16 GB',
+    storageLine: 'SSD 512 GB',
+  },
   // Shown only by templates that bind it (the staging box label): "Box n of m".
   sequence: { n: 3, total: 5 },
   tenantClient: { name: 'Example MSP', logoUrl: null, brandText: 'Example MSP' },

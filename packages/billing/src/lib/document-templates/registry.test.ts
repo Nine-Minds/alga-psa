@@ -78,11 +78,16 @@ describe('document type registry', () => {
     expect(entry.buildBindings().values).toHaveProperty('recordUrl');
   });
 
-  it('every label standard template renders a cell against the sample model and carries a 4x2in page', async () => {
+  it('every label standard template renders a cell against the sample model and carries its own page', async () => {
     const entry = getDocumentTypeRegistryEntry('work-tag');
     for (const code of entry.standardCodes) {
       const ast = entry.getStandardTemplateAstByCode(code)!;
-      expect(ast.metadata?.printSettings?.customPageSize).toEqual({ width: 4, height: 2, unit: 'in' });
+      // Thermal tags print on the 4 x 2 in roll cell; the customer worksheet prints on Letter paper.
+      expect(ast.metadata?.printSettings?.customPageSize).toEqual(
+        code === 'standard-ticket-customer-worksheet'
+          ? { width: 8.5, height: 11, unit: 'in' }
+          : { width: 4, height: 2, unit: 'in' },
+      );
       const evaluation = evaluateTemplateAst(ast, entry.buildSampleViewModel() as never);
       const html = await renderTemplateAstHtmlDocument(ast, evaluation, { locale: 'en' });
       expect(html).toContain('@page');

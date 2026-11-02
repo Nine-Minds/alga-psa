@@ -157,11 +157,13 @@ export function LabelPrintDialog({
         ? expandAssetLabelCopies(selectedLabels, copiesPerAsset).map((subject) => ({ ...subject }))
         : selectedLabels;
       if (labels.length === 0) return;
+      const presetLayout = LABEL_LAYOUT_PRESETS[preset].layout;
       const result = await print({
         labelClass,
         labels,
         templateId: overrideTemplateCode ?? (templateId || undefined),
-        layout: LABEL_LAYOUT_PRESETS[preset].layout,
+        // `template-preferred` sends no layout: the server prints on the template's own paper.
+        ...(presetLayout !== null ? { layout: presetLayout } : {}),
         ...(isSingleTicket
           ? {
               overrides: {
@@ -279,6 +281,22 @@ export function LabelPrintDialog({
               onValueChange={onPresetChange}
             />
           </div>
+
+          {/* A worksheet template declares a full-sheet page; the tag layouts cannot hold it, so say so
+              before the print fails with "does not fit on the label". */}
+          {templateOptions.length > 0 &&
+            (templates?.templates ?? []).find((tpl) => tpl.id === templateId)?.prefersPaperPage &&
+            preset !== 'template-preferred' &&
+            preset !== 'letter-full' && (
+              <Alert variant="warning">
+                <AlertDescription>
+                  {t('labels.dialog.templatePaperWarning', {
+                    defaultValue:
+                      'This template prints on a full sheet. Choose "Template paper" (or a full-sheet layout), or the content will not fit the label.',
+                  })}
+                </AlertDescription>
+              </Alert>
+            )}
 
           {isSingleTicket && (
             <>

@@ -35,6 +35,13 @@ export type LabelHideableField = (typeof LABEL_HIDEABLE_FIELDS)[number];
 
 export interface TemplateLabelSettings {
   hiddenFields?: LabelHideableField[];
+  /**
+   * `letter` marks a full-page worksheet template (the customer work sheet): it prints on Letter
+   * paper, so the label line-budget rules that trim fields to fit a 4 x 2 in tag (the custody
+   * lines replacing the detail/serial lines) do not apply, and the print dialog defaults to the
+   * paper the template asks for instead of the 4 x 2 in roll.
+   */
+  worksheetMode?: 'letter';
 }
 
 /** The record type each label class prints. */
@@ -45,6 +52,29 @@ export const LABEL_CLASS_ENTITY_TYPE: Record<LabelClass, RecordEntityType> = {
   'staging-container': 'staging_container',
   'rma-work-tag': 'rma',
 };
+
+/**
+ * The asset block a full-page ticket worksheet prints. Only ever filled behind the asset read check,
+ * for the ONE asset the label is about (the dialog pick, or the ticket's single affected asset).
+ * Free-text spec lines are pre-composed ("Intel Core i7-12700 / 12 cores", "16 GB", "SSD 512 GB") so
+ * templates never concatenate. Never credentials, notes or notes-like columns.
+ */
+export interface LabelLinkedAssetInfo {
+  assetId: string;
+  /** The `assets.name` display name — the tag line only carries the `asset_tag`. */
+  name: string | null;
+  /** Manufacturer and model are first-class columns on `assets` (procurement migration). */
+  manufacturer: string | null;
+  model: string | null;
+  /** "Windows 11 Pro 23H2" style, composed from the type extension row (workstation/server/mobile). */
+  osLine: string | null;
+  /** "Intel Core i7-12700 / 12 cores" style, composed from the type extension row. */
+  cpuLine: string | null;
+  /** "16 GB" style, composed from the type extension row. */
+  ramLine: string | null;
+  /** "SSD 512 GB" style, composed from the type extension row (servers summarise their storage_config). */
+  storageLine: string | null;
+}
 
 export interface LabelTenantClient {
   name: string | null;
@@ -84,6 +114,13 @@ export interface LabelViewModel {
   custodyLocation?: string | null;
   /** Ticket work tag only: who acts next ("Waiting on vendor, Oct 29"). Derived from party + follow-up date only. */
   nextAction?: string | null;
+  /**
+   * Ticket work tag only: the full identification of the asset the tag is about, filled by the same
+   * linked-asset seam behind the same asset read check. The 4 x 2 in tag ignores it; the full-page
+   * customer worksheet prints it (Make/Model/CPU/RAM/Storage, OS-Ticket style). Null when the ticket
+   * has no single readable affected asset for this label.
+   */
+  linkedAsset?: LabelLinkedAssetInfo | null;
   /**
    * Position of a staging box among its project's boxes ("Box n of m"), computed when the label is
    * rendered (a printed label is a snapshot). Null for every other label class.

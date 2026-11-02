@@ -1,10 +1,11 @@
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import type { LabelRequestContext } from '@alga-psa/types';
+import type { LabelLinkedAssetInfo, LabelRequestContext } from '@alga-psa/types';
 
 import { createAssetReadContext, isAssetReadAllowed, type AssetAuthUser } from './assetReadAuthorization';
 import { getOpenCustodyForAssets } from './custody/queries';
 import { formatCustodyForLabel, formatCustodyForLabelSubject, type CustodyLabelFacts } from './custody/labelFormat';
+import { getLinkedAssetInfoForAssets, type LinkedAssetInfoBase } from './linkedAssetLabelInfo';
 
 /**
  * The asset half of a ticket work tag: the linked asset's tag and a serial SUFFIX. Read-only.
@@ -22,6 +23,12 @@ export interface TicketLinkedAssetLabelParts {
   custodyLocation: string | null;
   /** "Waiting on vendor, Oct 29" etc., or null. Derived from party + follow-up date only. */
   nextAction: string | null;
+  /**
+   * Full identification of the asset this label is about (name, Make/Model, OS, CPU, RAM, Storage) for
+   * the full-page customer worksheet. Null when the label has no asset (custody-only labels) or the
+   * asset row is missing. Never filled for an asset the caller cannot read.
+   */
+  linkedAssetInfo: LabelLinkedAssetInfo | null;
 }
 
 /** Serials shorter than this produce no suffix, so the suffix can never be the whole serial. */
@@ -75,12 +82,18 @@ export async function getTicketLinkedAssetLabelParts(
   const assets = await db
     .table('assets')
     .whereIn('asset_id', assetIds)
-    .select<Array<{ asset_id: string; asset_tag: string | null; serial_number: string | null; client_id: string | null }>>(
-      'asset_id',
-      'asset_tag',
-      'serial_number',
-      'client_id'
-    );
+    .select<
+      Array<{
+        asset_id: string;
+        asset_tag: string | null;
+        serial_number: string | null;
+        client_id: string | null;
+        asset_type: string | null;
+        name: string | null;
+        manufacturer: string | null;
+        model: string | null;
+      }>
+    >('asset_id', 'asset_tag', 'serial_number', 'client_id', 'asset_type', 'name', 'manufacturer', 'model');
   const byId = new Map(assets.map((a) => [a.asset_id, a]));
 
   const authContext = await createAssetReadContext(knex, context.tenant, context.user as AssetAuthUser);
@@ -113,10 +126,12 @@ export async function getTicketLinkedAssetLabelParts(
   }
   const factsOf = (assetId: string): CustodyLabelFacts | null => formatCustodyForLabel(custodyByAsset.get(assetId));
 
+  const resolved: Array<string | null> = [];
   subjects.forEach((subject, index) => {
     const readableLinked = readableByTicket.get(subject.recordId) ?? [];
     const pickedId = subject.linkedAssetId && readableLinked.includes(subject.linkedAssetId) ? subject.linkedAssetId : null;
     const assetId = pickedId ?? (readableLinked.length === 1 ? readableLinked[0] : null);
+    resolved[index] = assetId;
     const held = readableLinked.flatMap((id) => {
       const facts = factsOf(id);
       return facts ? [facts] : [];
@@ -130,8 +145,25 @@ export async function getTicketLinkedAssetLabelParts(
       serialSuffix: asset ? serialSuffixOf(asset.serial_number) : null,
       custodyLocation: custody?.custodyLocation ?? null,
       nextAction: custody?.nextAction ?? null,
+      linkedAssetInfo: null,
     };
   });
+
+  // The worksheet block is fetched only for the assets the labels actually resolved — always readable.
+  const infoIds = Array.from(new Set(resolved.filter((id): id is string => Boolean(id))));
+  if (infoIds.length > 0) {
+    const bases: LinkedAssetInfoBase[] = infoIds.flatMap((id) => {
+      const a = byId.get(id);
+      if (!a) return [];
+      return [{ asset_id: a.asset_id, asset_type: a.asset_type, name: a.name, manufacturer: a.manufacturer, model: a.model }];
+    });
+    const infoById = await getLinkedAssetInfoForAssets(knex, context.tenant, bases);
+    result.forEach((parts, index) => {
+      const assetId = resolved[index];
+      if (!parts || !assetId) return;
+      parts.linkedAssetInfo = infoById.get(assetId) ?? null;
+    });
+  }
   return result;
 }
 

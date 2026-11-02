@@ -11,6 +11,8 @@ import {
   type LabelViewModelProvider,
 } from '@alga-psa/types';
 import type { LabelBatchLayout, LabelPrintItem, ResolvedLabelTemplate } from '@alga-psa/billing/services';
+import { resolveTemplatePreferredPageSizes } from '@alga-psa/billing/lib/label-batch/layout';
+import { getStandardLabelTemplateAstByCode } from '@alga-psa/billing/lib/label-template-ast/standardTemplates';
 
 /**
  * Composition root for label printing: the one place that knows the record owners (through their
@@ -279,6 +281,7 @@ export async function printLabels(
             serialSuffix: linked.serialSuffix,
             custodyLocation: linked.custodyLocation ?? null,
             nextAction: linked.nextAction ?? null,
+            linkedAsset: linked.linkedAssetInfo ?? null,
           }
         : vm;
     });
@@ -302,11 +305,22 @@ export async function printLabels(
   });
 
   try {
-    const { pdf, labels, sheets } = await deps.renderPdf(
-      caller.tenant,
-      items,
-      (request.layout as LabelBatchLayout | undefined) ?? DEFAULT_LAYOUT
-    );
+    // No layout in the request means "use the paper the template asks for": if every resolved template
+    // declares the same one-per-page page size that ordinary paper can hold (a Letter worksheet), print
+    // on it. Otherwise fall back to the 4 x 2 in roll, as before.
+    const preferredPage = request.layout === undefined || request.layout === null
+      ? resolveTemplatePreferredPageSizes(
+          classes.map((cls) => {
+            const template = templates.get(cls)!;
+            const ast = template.templateAst ?? getStandardLabelTemplateAstByCode(template.templateCode);
+            return { metadata: ast?.metadata };
+          })
+        )
+      : null;
+    const layout: LabelBatchLayout =
+      (request.layout as LabelBatchLayout | undefined) ??
+      (preferredPage ? { kind: 'one-per-page', pageSize: preferredPage } : DEFAULT_LAYOUT);
+    const { pdf, labels, sheets } = await deps.renderPdf(caller.tenant, items, layout);
     return { ok: true, pdf, labels, sheets, skipped };
   } catch (error) {
     const clientError = deps.describeClientError(error);
