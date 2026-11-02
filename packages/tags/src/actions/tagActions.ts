@@ -6,6 +6,7 @@ import { ITag, TaggedEntityType, PendingTag, IUserWithRoles } from '@alga-psa/ty
 import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { authorizeProjectsByIds } from '@alga-psa/authorization/projectReadAuthorization';
+import { coManagedColumnHidden } from '@alga-psa/co-managed/projectFieldMask';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
 import { isTagTextValidationFailure, validateTagText } from '../lib/tagTextValidation';
@@ -41,7 +42,7 @@ function getPermissionResource(taggedType: TaggedEntityType): string {
 type TagTextSnapshot = string[];
 
 function projectTagsAreRedacted(fields: string[]): boolean {
-  return fields.some((field) => ['tags', 'project.tags', 'projects.tags'].includes(field.trim().toLowerCase()));
+  return coManagedColumnHidden(fields, 'projects', 'tags');
 }
 
 async function readableProjectIdsForTags(
@@ -320,10 +321,13 @@ export const findTagsByEntityId = withAuth(async (user: IUserWithRoles, { tenant
   }
 });
 
-export const findTagById = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, tagId: string): Promise<ITag | undefined | TagActionError> => {
+export const findTagById = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, tagId: string): Promise<ITag | undefined | TagActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermissionAsync(user, 'tag', 'read', trx)) {
+        return permissionError('Permission denied: Cannot read tags');
+      }
       // tagId is actually mapping_id in the new system
       const tag = await tagMappingsWithDefinitionsQuery(trx, tenant)
         .modify((query) => joinTagDefinitions(query, trx, tenant))
@@ -344,6 +348,11 @@ export const findTagById = withAuth(async (_user: IUserWithRoles, { tenant }: Au
       if (!tag) {
         console.warn(`Tag with id ${tagId} not found`);
         return undefined;
+      }
+
+      if (tag.tagged_type === 'project') {
+        const readableIds = await readableProjectIdsForTags(trx, tenant, user, [tag.tagged_id]);
+        if (!readableIds.has(tag.tagged_id)) return undefined;
       }
 
       return {
