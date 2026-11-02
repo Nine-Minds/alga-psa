@@ -99,6 +99,7 @@ describe('getCurrentUser', () => {
       username: 'alex',
       first_name: 'Alex',
       email: 'alex@example.com',
+      phone_extension: '204',
       tenant: 'tenant-1',
       user_type: 'internal',
       is_inactive: false,
@@ -115,6 +116,7 @@ describe('getCurrentUser', () => {
       user_id: 'user-1',
       username: 'alex',
       email: 'alex@example.com',
+      phone_extension: '204',
       tenant: 'tenant-1',
       user_type: 'internal',
       roles: [{ role_id: 'role-1', role_name: 'Technician' }],
@@ -125,6 +127,34 @@ describe('getCurrentUser', () => {
     expect(serialized).not.toContain('password-hash-secret');
     expect(serialized).not.toContain('totp-seed-secret');
     expect(serialized).not.toContain('must-not-escape');
+  });
+
+  it('preserves phone extension and excludes non-allow-listed fields in revocation-checked responses', async () => {
+    vi.mocked(getSessionWithRevocationCheck).mockResolvedValue({
+      user: { id: 'user-1', tenant: 'tenant-1' },
+    } as any);
+    vi.mocked(getUserWithRoles).mockResolvedValue({
+      user_id: 'user-1',
+      phone_extension: '204',
+      tenant: 'tenant-1',
+      user_type: 'internal',
+      is_inactive: false,
+      hashed_password: 'revocation-password-hash',
+      two_factor_secret: 'revocation-totp-seed',
+      newly_added_database_column: 'revocation-unknown',
+      roles: [{ role_id: 'role-1' }],
+    } as any);
+
+    const user = await getCurrentUserWithRevocationCheck();
+    const serialized = JSON.stringify(user);
+
+    expect(user?.phone_extension).toBe('204');
+    expect(user).not.toHaveProperty('hashed_password');
+    expect(user).not.toHaveProperty('two_factor_secret');
+    expect(user).not.toHaveProperty('newly_added_database_column');
+    expect(serialized).not.toContain('revocation-password-hash');
+    expect(serialized).not.toContain('revocation-totp-seed');
+    expect(serialized).not.toContain('revocation-unknown');
   });
 
   it('returns null when session is missing', async () => {

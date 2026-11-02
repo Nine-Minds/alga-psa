@@ -15,6 +15,7 @@ const USER_RESPONSE_FIELD_NAMES_TUPLE = [
   'last_name',
   'email',
   'phone',
+  'phone_extension',
   'timezone',
   'user_type',
   'contact_id',
