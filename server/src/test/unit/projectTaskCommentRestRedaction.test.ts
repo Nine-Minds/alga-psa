@@ -10,6 +10,7 @@ vi.mock('@alga-psa/projects/lib/taskComments/taskCommentAuthorization', () => ({
 vi.mock('@alga-psa/db', () => ({ BaseService: class {} }));
 vi.mock('../../lib/api/middleware/apiMiddleware', () => ({ ConflictError: class extends Error {}, ForbiddenError: class extends Error {}, NotFoundError: class extends Error {}, ValidationError: class extends Error {} }));
 import { ProjectTaskCommentService } from '../../lib/api/services/ProjectTaskCommentService';
+import { projectTaskCommentResponseSchema } from '../../lib/api/schemas/projectTaskComment';
 
 const tombstone = {
   taskCommentId: 'c1', taskId: 't1', threadId: 'th1', parentCommentId: null, userId: 'u1', actorReferenceId: 'ref1', contactId: null,
@@ -37,5 +38,19 @@ describe('REST JSON', () => {
     const json = service.shape(tombstone, {}, {});
     expect('organization_name' in json || 'audience' in json || 'author_kind' in json).toBe(false);
   });
+  it('a contact-authored comment has no users row: user_id and author.user_id are null and match the documented schema', () => {
+    const contactComment = {
+      ...tombstone,
+      taskCommentId: '00000000-0000-4000-8000-000000000001', taskId: '00000000-0000-4000-8000-000000000002',
+      threadId: '00000000-0000-4000-8000-000000000003', userId: null, actorReferenceId: null,
+      contactId: '00000000-0000-4000-8000-000000000004', authorType: 'client', authorKind: 'contact',
+      note: '[]', deletedAt: null, editedAt: null, firstName: 'Grace', lastName: 'Hopper', email: 'grace@example.com',
+      organizationName: null, audience: 'requester',
+    };
+    for (const json of [service.shape(contactComment, {}, {}), service.shape(contactComment, {}, {}, hiding([]))]) {
+      expect(json.user_id).toBeNull();
+      expect(json.author).toMatchObject({ user_id: null, first_name: 'Grace' });
+      expect(projectTaskCommentResponseSchema.safeParse(json).success).toBe(true);
+    }
+  });
 });
-

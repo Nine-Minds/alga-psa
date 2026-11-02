@@ -608,5 +608,25 @@
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
     "pointer": "/components/schemas/InvoiceBulkStatusBody/properties/finalized_at",
     "reason": "alga-2026-0002945: bulk invoice status no longer accepts finalized_at; finalization is owned by the finalize command (invoice:finalize). Requests that send it now get 400 instead of a raw write."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ProjectTaskCommentResource/properties/user_id",
+    "reason": "CM L4c requester task threads: project_task_comments.user_id is nullable (migration 20261031100000) because comments written by a portal contact or a co-managed collaborator have no users row here; GET/POST task-comment responses already return user_id:null (and author.user_id:null) for those rows, so the spec now documents the nullable value instead of claiming it is always a uuid. Internal-user comments still carry a uuid."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ProjectTaskCommentResource/properties/author/properties/user_id",
+    "reason": "CM L4c requester task threads: project_task_comments.user_id is nullable (migration 20261031100000) because comments written by a portal contact or a co-managed collaborator have no users row here; GET/POST task-comment responses already return user_id:null (and author.user_id:null) for those rows, so the spec now documents the nullable value instead of claiming it is always a uuid. Internal-user comments still carry a uuid."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ProjectTaskCommentResource/properties/user_id",
+    "reason": "CM L4c requester task threads: project_task_comments.user_id is nullable (migration 20261031100000) because comments written by a portal contact or a co-managed collaborator have no users row here; GET/POST task-comment responses already return user_id:null (and author.user_id:null) for those rows, so the spec now documents the nullable value instead of claiming it is always a uuid. Internal-user comments still carry a uuid."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ProjectTaskCommentResource/properties/author/properties/user_id",
+    "reason": "CM L4c requester task threads: project_task_comments.user_id is nullable (migration 20261031100000) because comments written by a portal contact or a co-managed collaborator have no users row here; GET/POST task-comment responses already return user_id:null (and author.user_id:null) for those rows, so the spec now documents the nullable value instead of claiming it is always a uuid. Internal-user comments still carry a uuid."
   }
 ]
