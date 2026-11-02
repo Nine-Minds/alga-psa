@@ -70,7 +70,8 @@ vi.mock('@alga-psa/ui/components', () => ({
   ContentCardVariantProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
+vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/ui/ui-reflection/withDataAutomationId')>()),
   withDataAutomationId: ({ id }: { id: string }) => ({ 'data-testid': id }),
 }));
 
@@ -101,7 +102,8 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/ui/components/bento/BentoTile', () => ({
+vi.mock('@alga-psa/ui/components/bento/BentoTile', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/ui/components/bento/BentoTile')>()),
   BentoTile: ({ children }: { children?: React.ReactNode }) => <div data-testid="bento-tile">{children}</div>,
   BentoTileEmpty: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
   BentoTileSkeleton: () => <div />,
@@ -115,6 +117,7 @@ vi.mock('./dataTiles', () => ({
   AppointmentRequestsTile: () => null,
   CallsEmailsTile: () => null,
   BillingTile: () => null,
+  BillingSummary: () => null,
 }));
 vi.mock('./TimeLoggedSummary', () => ({ TimeLoggedSummary: () => null }));
 vi.mock('./useTeamAvatarUrl', () => ({ useTeamAvatarUrl: () => null }));

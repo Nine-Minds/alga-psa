@@ -10,7 +10,7 @@ export function registerServiceTypeRoutes(
   const ServiceTypeIdParams = registry.registerSchema(
     'ServiceTypeIdParams',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Service type UUID.'),
+      id: zOpenApi.string().guid().describe('Service type UUID.'),
     }),
   );
 
@@ -27,8 +27,8 @@ export function registerServiceTypeRoutes(
   const ServiceTypeResource = registry.registerSchema(
     'ServiceTypeResource',
     zOpenApi.object({
-      id: zOpenApi.string().uuid(),
-      tenant: zOpenApi.string().uuid(),
+      id: zOpenApi.string().guid(),
+      tenant: zOpenApi.string().guid(),
       name: zOpenApi.string(),
       is_active: zOpenApi.boolean(),
       description: zOpenApi.string().nullable().optional(),
@@ -42,7 +42,7 @@ export function registerServiceTypeRoutes(
     'ServiceTypeEnvelope',
     zOpenApi.object({
       data: ServiceTypeResource,
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -58,7 +58,7 @@ export function registerServiceTypeRoutes(
         hasNext: zOpenApi.boolean(),
         hasPrev: zOpenApi.boolean(),
       }),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 

@@ -12,6 +12,7 @@ import { AssetService } from '../services/AssetService';
 import { runWithApiKeyOrSession } from '../middleware/runWithApiKeyOrSession';
 import { createErrorResponse } from '../utils/response';
 import type { ApiContext } from '../middleware/apiMiddleware';
+import { ForbiddenError, NotFoundError, UnauthorizedError } from '../middleware/apiErrors';
 import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
 import { authorizeApiResourceRead } from './authorizationKernel';
@@ -29,21 +30,26 @@ export function assetNotFoundResponse(): NextResponse {
   return createErrorResponse(ASSET_NOT_FOUND_MESSAGE, 404, 'NOT_FOUND');
 }
 
-/** Returns an error response when the caller may not read the asset, else null. */
-export async function guardAssetRead(
+/**
+ * Throw-based core of the asset read guard, shared by REST routes (via
+ * guardAssetRead) and callers that must throw (e.g. document attach adapters).
+ * Throws UnauthorizedError (401), ForbiddenError (403) or NotFoundError (404;
+ * both a missing record and a record-level denial).
+ */
+export async function assertAssetRecordAccess(
   context: ApiContext,
   assetId: string,
   loader: AssetAuthorizationLoader,
   extraReadResources: Array<'ticket'> = [],
-): Promise<NextResponse | null> {
+): Promise<void> {
   if (!context.user) {
-    return createErrorResponse('User context required', 401, 'UNAUTHORIZED');
+    throw new UnauthorizedError('User context required');
   }
   const knex = await getConnection(context.tenant);
 
   for (const resource of ['asset', ...extraReadResources] as const) {
     if (!(await hasPermission(context.user, resource, 'read', knex))) {
-      return createErrorResponse(`Permission denied: Cannot read ${resource}`, 403, 'FORBIDDEN');
+      throw new ForbiddenError(`Permission denied: Cannot read ${resource}`);
     }
   }
 
@@ -52,7 +58,7 @@ export async function guardAssetRead(
   // connection we already hold is handed in explicitly.
   const record = await loader.getAuthorizationRecord(assetId, { ...context, db: knex } as ApiContext);
   if (!record) {
-    return assetNotFoundResponse();
+    throw new NotFoundError(ASSET_NOT_FOUND_MESSAGE);
   }
 
   const allowed = await authorizeApiResourceRead({
@@ -63,7 +69,33 @@ export async function guardAssetRead(
     resource: 'asset',
     recordContext: record as any,
   });
-  return allowed ? null : assetNotFoundResponse();
+  if (!allowed) {
+    throw new NotFoundError(ASSET_NOT_FOUND_MESSAGE);
+  }
+}
+
+/** Returns an error response when the caller may not read the asset, else null. */
+export async function guardAssetRead(
+  context: ApiContext,
+  assetId: string,
+  loader: AssetAuthorizationLoader,
+  extraReadResources: Array<'ticket'> = [],
+): Promise<NextResponse | null> {
+  try {
+    await assertAssetRecordAccess(context, assetId, loader, extraReadResources);
+    return null;
+  } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return createErrorResponse('User context required', 401, 'UNAUTHORIZED');
+    }
+    if (error instanceof ForbiddenError) {
+      return createErrorResponse(error.message, 403, 'FORBIDDEN');
+    }
+    if (error instanceof NotFoundError) {
+      return assetNotFoundResponse();
+    }
+    throw error;
+  }
 }
 
 /**

@@ -30,26 +30,26 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
 
   const IdParam = registry.registerSchema(
     'WorkV1IdParam',
-    zOpenApi.object({ id: zOpenApi.string().uuid().describe('UUID path identifier from underlying resource tables.') }),
+    zOpenApi.object({ id: zOpenApi.string().guid().describe('UUID path identifier from underlying resource tables.') }),
   );
 
   const ProjectPhaseParams = registry.registerSchema(
     'WorkV1ProjectPhaseParams',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Project UUID from projects.project_id.'),
-      phaseId: zOpenApi.string().uuid().describe('Project phase UUID from project_phases.phase_id.'),
+      id: zOpenApi.string().guid().describe('Project UUID from projects.project_id.'),
+      phaseId: zOpenApi.string().guid().describe('Project phase UUID from project_phases.phase_id.'),
     }),
   );
 
   const ProjectTaskParam = registry.registerSchema(
     'WorkV1ProjectTaskParam',
-    zOpenApi.object({ taskId: zOpenApi.string().uuid().describe('Project task UUID from project_tasks.task_id.') }),
+    zOpenApi.object({ taskId: zOpenApi.string().guid().describe('Project task UUID from project_tasks.task_id.') }),
   );
   const ProjectTaskChecklistItemParams = registry.registerSchema(
     'WorkV1ProjectTaskChecklistItemParams',
     zOpenApi.object({
-      taskId: zOpenApi.string().uuid().describe('Project task UUID from project_tasks.task_id.'),
-      itemId: zOpenApi.string().uuid().describe('Checklist item UUID from task_checklist_items.checklist_item_id.'),
+      taskId: zOpenApi.string().guid().describe('Project task UUID from project_tasks.task_id.'),
+      itemId: zOpenApi.string().guid().describe('Checklist item UUID from task_checklist_items.checklist_item_id.'),
     }),
   );
   const ProjectTaskChecklistItemBody = registry.registerSchema(
@@ -57,7 +57,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       item_name: zOpenApi.string().min(1).optional().describe('Checklist item text. Required on create. `item_text` is accepted as a legacy alias.'),
       description: zOpenApi.string().nullable().optional(),
-      assigned_to: zOpenApi.string().uuid().nullable().optional(),
+      assigned_to: zOpenApi.string().guid().nullable().optional(),
       completed: zOpenApi.boolean().optional().describe('Mark the item done/undone. `is_completed` is accepted as a legacy alias.'),
       due_date: zOpenApi.string().nullable().optional(),
       order_number: zOpenApi.number().int().min(0).optional(),
@@ -141,10 +141,10 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
           'Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.',
         ),
       order: zOpenApi.enum(['asc', 'desc']).optional(),
-      user_id: zOpenApi.string().uuid().optional(),
-      period_id: zOpenApi.string().uuid().optional(),
+      user_id: zOpenApi.string().guid().optional(),
+      period_id: zOpenApi.string().guid().optional(),
       approval_status: zOpenApi.string().optional(),
-      approved_by: zOpenApi.string().uuid().optional(),
+      approved_by: zOpenApi.string().guid().optional(),
       submitted_from: zOpenApi.string().datetime().optional(),
       submitted_to: zOpenApi.string().datetime().optional(),
       approved_from: zOpenApi.string().datetime().optional(),
@@ -159,7 +159,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
 
   const GenericBody = registry.registerSchema(
     'WorkV1GenericBody',
-    zOpenApi.record(zOpenApi.unknown()).describe('Controller/service-specific payload; see source route/controller for exact required shape.'),
+    zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('Controller/service-specific payload; see source route/controller for exact required shape.'),
   );
 
   const CreateProjectBody = registry.registerSchema(
@@ -169,35 +169,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       status: zOpenApi.string().optional(),
       start_date: zOpenApi.string().optional(),
       end_date: zOpenApi.string().optional(),
-      assigned_to: zOpenApi.string().uuid().optional(),
-      assigned_team_id: zOpenApi.string().uuid().optional(),
-      client_id: zOpenApi.string().uuid().optional(),
-    }),
-  );
-
-  const CreateTicketBody = registry.registerSchema(
-    'WorkV1CreateTicketBody',
-    zOpenApi.object({
-      title: zOpenApi.string().optional(),
-      summary: zOpenApi.string().optional(),
-      url: zOpenApi.string().url().optional().describe('Optional link-out for the ticket; any URL accepted by the ticket create schema. Omit or supply a valid URL; null is rejected.'),
-      client_id: zOpenApi.string().uuid().optional(),
-      board_id: zOpenApi.string().uuid().optional(),
-      priority_id: zOpenApi.string().uuid().optional(),
-      status_id: zOpenApi.string().uuid().optional(),
-      severity_id: zOpenApi.string().uuid().optional().describe('Optional severity reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected.'),
-      urgency_id: zOpenApi.string().uuid().optional().describe('Optional urgency reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected.'),
-      impact_id: zOpenApi.string().uuid().optional().describe('Optional impact reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected.'),
-      external_links: zOpenApi.array(zOpenApi.object({
-        system: zOpenApi.string().min(1).describe('Built-in system key or custom:<slug>.'),
-        external_id: zOpenApi.string().min(1).describe('Identifier of the record in the external system.'),
-        external_parent_id: zOpenApi.string().nullable().optional(),
-        realm: zOpenApi.string().nullable().optional().describe('Repo, server, or workspace the record lives in.'),
-        url: zOpenApi.string().url().nullable().optional().describe('Explicit link-out; must be http(s).'),
-        relationship: zOpenApi.enum(['origin', 'mirror', 'reference']).optional(),
-        actor: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
-        external_status: zOpenApi.string().nullable().optional(),
-      })).optional().describe('Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create.'),
+      assigned_to: zOpenApi.string().guid().optional(),
+      assigned_team_id: zOpenApi.string().guid().optional(),
+      client_id: zOpenApi.string().guid().optional(),
     }),
   );
 
@@ -210,21 +184,48 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     ),
   };
 
+  const CreateTicketBody = registry.registerSchema(
+    'WorkV1CreateTicketBody',
+    zOpenApi.object({
+      title: zOpenApi.string().optional(),
+      summary: zOpenApi.string().optional(),
+      url: zOpenApi.string().url().optional().describe('Optional link-out for the ticket; any URL accepted by the ticket create schema. Omit or supply a valid URL; null is rejected.'),
+      client_id: zOpenApi.string().guid().optional(),
+      board_id: zOpenApi.string().guid().optional(),
+      priority_id: zOpenApi.string().guid().optional(),
+      status_id: zOpenApi.string().guid().optional(),
+      severity_id: zOpenApi.string().guid().optional().describe('Optional severity reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected.'),
+      urgency_id: zOpenApi.string().guid().optional().describe('Optional urgency reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected.'),
+      impact_id: zOpenApi.string().guid().optional().describe('Optional impact reference (same tenant); stored as a nullable UUID. Distinct from numeric itil_impact/itil_urgency; null is rejected.'),
+      external_links: zOpenApi.array(zOpenApi.object({
+        system: zOpenApi.string().min(1).describe('Built-in system key or custom:<slug>.'),
+        external_id: zOpenApi.string().min(1).describe('Identifier of the record in the external system.'),
+        external_parent_id: zOpenApi.string().nullable().optional(),
+        realm: zOpenApi.string().nullable().optional().describe('Repo, server, or workspace the record lives in.'),
+        url: zOpenApi.string().url().nullable().optional().describe('Explicit link-out; must be http(s).'),
+        relationship: zOpenApi.enum(['origin', 'mirror', 'reference']).optional(),
+        actor: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
+        external_status: zOpenApi.string().nullable().optional(),
+      })).optional().describe('Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create.'),
+      ...ticketNotificationSuppressionProperties,
+    }).describe('Ticket fields to create. Notification suppression applies only to this operation.'),
+  );
+
   const TicketUpdateBody = registry.registerSchema(
     'WorkV1TicketUpdateBody',
     zOpenApi.object({
       title: zOpenApi.string().min(1).max(255).optional(),
       url: zOpenApi.string().url().optional(),
-      board_id: zOpenApi.string().uuid().optional(),
-      client_id: zOpenApi.string().uuid().optional(),
-      location_id: zOpenApi.string().uuid().optional(),
-      contact_name_id: zOpenApi.string().uuid().nullable().optional(),
-      status_id: zOpenApi.string().uuid().optional(),
-      category_id: zOpenApi.string().uuid().optional(),
-      subcategory_id: zOpenApi.string().uuid().optional(),
-      assigned_to: zOpenApi.string().uuid().nullable().optional(),
-      priority_id: zOpenApi.string().uuid().optional(),
-      attributes: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+      board_id: zOpenApi.string().guid().optional(),
+      client_id: zOpenApi.string().guid().optional(),
+      location_id: zOpenApi.string().guid().optional(),
+      contact_name_id: zOpenApi.string().guid().nullable().optional(),
+      status_id: zOpenApi.string().guid().optional(),
+      category_id: zOpenApi.string().guid().optional(),
+      subcategory_id: zOpenApi.string().guid().optional(),
+      assigned_to: zOpenApi.string().guid().nullable().optional(),
+      priority_id: zOpenApi.string().guid().optional(),
+      attributes: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
       tags: zOpenApi.array(zOpenApi.string()).optional(),
       override_close_rules: zOpenApi.boolean().optional(),
       override_close_rules_reason: zOpenApi.string().nullable().optional(),
@@ -238,9 +239,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const TicketStatusUpdateBody = registry.registerSchema(
     'WorkV1TicketStatusUpdateBody',
     zOpenApi.object({
-      status_id: zOpenApi.string().uuid(),
+      status_id: zOpenApi.string().guid(),
       closed_at: zOpenApi.string().datetime().optional(),
-      closed_by: zOpenApi.string().uuid().optional(),
+      closed_by: zOpenApi.string().guid().optional(),
       override_close_rules: zOpenApi.boolean().optional(),
       override_close_rules_reason: zOpenApi.string().nullable().optional(),
       propagateToChildren: zOpenApi.boolean().optional().describe(
@@ -253,7 +254,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const TicketAssignmentUpdateBody = registry.registerSchema(
     'WorkV1TicketAssignmentUpdateBody',
     zOpenApi.object({
-      assigned_to: zOpenApi.string().uuid().nullable().optional(),
+      assigned_to: zOpenApi.string().guid().nullable().optional(),
       ...ticketNotificationSuppressionProperties,
     }),
   );
@@ -265,8 +266,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       is_internal: zOpenApi.boolean().optional().default(false),
       is_resolution: zOpenApi.boolean().optional().default(false),
       time_spent: zOpenApi.number().min(0).optional(),
-      metadata: zOpenApi.record(zOpenApi.unknown()).optional(),
-      parent_comment_id: zOpenApi.string().uuid().optional(),
+      metadata: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
+      parent_comment_id: zOpenApi.string().guid().optional(),
       scheduled_publish_at: zOpenApi.string().datetime({ offset: true }).optional().describe('Withhold this client-visible comment until this future instant (ISO 8601). Requires scheduled_publish_tz; not allowed with is_internal or when replying into an internal thread.'),
       scheduled_publish_tz: zOpenApi.string().max(64).optional().describe('IANA time zone the author scheduled in, e.g. America/New_York.'),
       cc: zOpenApi.array(zOpenApi.string().email()).max(20).optional().describe('One-off Cc recipients for this comment\'s email only. They are never added to the ticket watch list and receive no later comments. Not allowed with is_internal. Max 20 cc + bcc combined.'),
@@ -310,8 +311,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const CreateTimeSheetBody = registry.registerSchema(
     'WorkV1CreateTimeSheetBody',
     zOpenApi.object({
-      user_id: zOpenApi.string().uuid().optional(),
-      period_id: zOpenApi.string().uuid().optional(),
+      user_id: zOpenApi.string().guid().optional(),
+      period_id: zOpenApi.string().guid().optional(),
       status: zOpenApi.string().optional(),
       notes: zOpenApi.string().optional(),
     }),
@@ -332,17 +333,17 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1ApiSuccess',
     zOpenApi.object({
       data: zOpenApi.union([
-        zOpenApi.record(zOpenApi.unknown()),
-        zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+        zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
+        zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
       ]),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
   const ApiPaginated = registry.registerSchema(
     'WorkV1ApiPaginated',
     zOpenApi.object({
-      data: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+      data: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
       pagination: zOpenApi.object({
         page: zOpenApi.number().int(),
         limit: zOpenApi.number().int(),
@@ -351,7 +352,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
         hasNext: zOpenApi.boolean(),
         hasPrev: zOpenApi.boolean(),
       }),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -385,9 +386,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'put', path: '/api/v1/projects/{id}/phases/{phaseId}', summary: 'Update project phase', description: 'Updates phase UUID under project UUID.', family: 'project' },
     { method: 'get', path: '/api/v1/projects/{id}/tickets', summary: 'List project tickets', description: 'Lists tickets linked to project UUID.', family: 'project' },
 
-    { method: 'get', path: '/api/v1/schedules', summary: 'List schedule entries', description: 'Lists schedule entries via ApiTimeSheetController.listScheduleEntries().', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/schedules', summary: 'List schedule entries', description: 'Lists schedule entries via ApiTimeSheetController.listScheduleEntries(). Returns every entry visible to the caller under shared-calendar rules (unpaginated), filtered by start_date, end_date (ISO 8601 date or date-time) and user_id. Date bounds are UTC: a date-only start_date means 00:00:00Z that day, a date-only end_date includes that whole day (entries ending before 00:00:00Z the next day), and date-time values are exact, inclusive bounds. Returns 400 for invalid dates or start_date after end_date.', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/schedules', summary: 'Create schedule entry', description: 'Creates schedule entry via ApiTimeSheetController.createScheduleEntry().', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/schedules/search', summary: 'Search schedules', description: 'Current route delegates to ApiTimeSheetController.list() (time sheet list path), not schedule-specific search.', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/schedules/search', summary: 'Search schedules', description: 'Searches schedule entries via ApiTimeSheetController.searchScheduleEntries(). Returns entries visible to the caller under shared-calendar rules, filtered by start_date, end_date (ISO 8601 date or date-time) and user_id, paginated with page/limit. Date bounds are UTC: a date-only start_date means 00:00:00Z that day, a date-only end_date includes that whole day (entries ending before 00:00:00Z the next day), and date-time values are exact, inclusive bounds. Returns 400 for invalid dates or start_date after end_date.', family: 'time_sheet' },
     { method: 'delete', path: '/api/v1/schedules/{id}', summary: 'Delete schedule entry', description: 'Deletes schedule entry via ApiTimeSheetController.deleteScheduleEntry().', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/schedules/{id}', summary: 'Get schedule entry', description: 'Current route delegates to ApiTimeSheetController.getById() (time sheet read path), not schedule-specific getter.', family: 'time_sheet' },
     { method: 'put', path: '/api/v1/schedules/{id}', summary: 'Update schedule entry', description: 'Updates schedule entry via ApiTimeSheetController.updateScheduleEntry(). `calendar_id`: omit to leave the calendar unchanged; a group calendar uuid moves the entry onto that group calendar (edit access required); `null` moves it back to a personal calendar (the entry stays on its assignees\' personal calendars). Requires edit access to the existing entry (403 read-only, 404 no access).', family: 'time_sheet' },
@@ -414,7 +415,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'put', path: '/api/v1/tags/{id}/text', summary: 'Update tag text', description: 'Updates tag display text.', family: 'tag' },
 
     { method: 'get', path: '/api/v1/tickets', summary: 'List tickets', description: 'Lists tickets via ApiTicketController.list() with authorization-aware pagination. `sort` is validated against an allowlist (unknown values return 400) and supports latest_activity_at, which is also selectable through `fields`.', family: 'ticket' },
-    { method: 'post', path: '/api/v1/tickets', summary: 'Create ticket', description: 'Creates ticket via ApiTicketController.create().', family: 'ticket' },
+    { method: 'post', path: '/api/v1/tickets', summary: 'Create ticket', description: 'Creates ticket via ApiTicketController.create(). Optional suppression flags make this operation silent for customer notifications or for all human notifications while preserving audit, workflow, and webhook records.', family: 'ticket' },
     { method: 'post', path: '/api/v1/tickets/from-asset', summary: 'Create ticket from asset', description: 'Creates ticket from asset context via ApiTicketController.createFromAsset().', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/search', summary: 'Search tickets', description: 'Searches tickets via ApiTicketController.search().', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/stats', summary: 'Get ticket stats', description: 'Returns ticket aggregate stats for authorized tickets.', family: 'ticket' },
@@ -462,7 +463,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'post', path: '/api/v1/time-periods/{id}/reopen', summary: 'Reopen time period', description: 'Sets is_closed false (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.', family: 'time_sheet' },
 
     { method: 'get', path: '/api/v1/time-sheets', summary: 'List time sheets', description: 'Lists time sheets via ApiTimeSheetController.list().', family: 'time_sheet' },
-    { method: 'post', path: '/api/v1/time-sheets', summary: 'Create time sheet', description: 'Creates time sheet via create() path.', family: 'time_sheet' },
+    { method: 'post', path: '/api/v1/time-sheets', summary: 'Create time sheet', description: 'Creates a time sheet. A time sheet is unique per tenant, effective owner (`user_id`, defaulting to the caller) and `period_id`, in every approval status. The first request returns 201 with a DRAFT sheet; a request for a user and period that already has a sheet returns 409 CONFLICT ("A time sheet already exists for this user and period") and changes nothing. To recover, GET /api/v1/time-sheets filtered by `user_id` and `period_id`.', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets/bulk', summary: 'Bulk time sheet operation', description: 'Current route delegates to ApiTimeSheetController.list() (read path) instead of bulk approval/update logic.', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/time-sheets/export', summary: 'Export time sheets', description: 'Exports time sheets using ApiTimeSheetController.export().', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/time-sheets/search', summary: 'Search time sheets', description: 'Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched as a case-insensitive substring against the sheet owner\'s full name (first name + space + last name). `user_name` is the only searchable field and the default. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet\'s `time_entries`. Returns at most `limit` sheets (default 25, max 100).', family: 'time_sheet' },
@@ -481,7 +482,6 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   ];
 
   const mismatchOps = new Set([
-    'get /api/v1/schedules/search',
     'get /api/v1/schedules/{id}',
     'get /api/v1/schedules/{id}/conflicts',
     'post /api/v1/time-sheets/bulk',
@@ -510,11 +510,32 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'put /api/v1/tickets/{id}/status',
   ]);
 
+  const TIME_SHEET_DUPLICATE_CONFLICT_OPS = new Set(['post /api/v1/time-sheets']);
+
   const TIME_PERIOD_CONFLICT_OPS = new Set([
     'post /api/v1/time-periods',
     'put /api/v1/time-periods/{id}',
     'delete /api/v1/time-periods/{id}',
   ]);
+
+  // GET /api/v1/schedules (unpaginated) and /schedules/search (paginated) share the same filters.
+  const scheduleEntryFilterShape = {
+    start_date: zOpenApi.string().optional().openapi({ description: 'ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day.' }),
+    end_date: zOpenApi.string().optional().openapi({ description: 'ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day).' }),
+    user_id: zOpenApi.string().guid().optional(),
+  };
+  const ScheduleEntryListQuery = registry.registerSchema(
+    'WorkV1ScheduleEntryListQuery',
+    zOpenApi.object(scheduleEntryFilterShape),
+  );
+  const ScheduleEntrySearchQuery = registry.registerSchema(
+    'WorkV1ScheduleEntrySearchQuery',
+    zOpenApi.object({
+      page: zOpenApi.string().optional(),
+      limit: zOpenApi.string().optional(),
+      ...scheduleEntryFilterShape,
+    }),
+  );
 
   // Real read contracts for the per-sheet and search routes (derived from the
   // same zod schemas the controller/service use, so docs cannot drift).
@@ -581,6 +602,12 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
 
     if (def.method === 'get' && def.path === '/api/v1/tickets') {
       req.query = TicketListQuery;
+    }
+    if (def.method === 'get' && def.path === '/api/v1/schedules') {
+      req.query = ScheduleEntryListQuery;
+    }
+    if (def.method === 'get' && def.path === '/api/v1/schedules/search') {
+      req.query = ScheduleEntrySearchQuery;
     }
     if (def.method === 'get' && def.path === '/api/v1/time-sheets') {
       req.query = TimeSheetListQuery;
@@ -667,6 +694,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       };
     }
 
+    if (TIME_SHEET_DUPLICATE_CONFLICT_OPS.has(`${def.method} ${def.path}`)) {
+      responses[409] = {
+        description: 'Conflict: a time sheet already exists for this user and period (any approval status). Body: {"error":{"code":"CONFLICT","message":"A time sheet already exists for this user and period"}}. The existing sheet is unchanged.',
+        schema: ApiError,
+      };
+    }
+
     if (TIME_PERIOD_CONFLICT_OPS.has(`${def.method} ${def.path}`)) {
       responses[409] = {
         description: 'Conflict: the period overlaps an existing period, is closed (reopen it first), or has time sheets that block the change.',
@@ -729,7 +763,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1CalendarListResponse',
     zOpenApi.object({
       data: zOpenApi.array(CalendarItem),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -780,7 +814,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       data: zOpenApi.object({
         session: StopwatchSessionSchema,
-        time_entry: zOpenApi.record(zOpenApi.unknown()).describe('The persisted time entry.'),
+        time_entry: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('The persisted time entry.'),
       }),
     }),
   );
@@ -951,20 +985,20 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const TicketCommentParams = registry.registerSchema(
     'WorkV1TicketCommentParams',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Ticket UUID.'),
-      commentId: zOpenApi.string().uuid().describe('Comment UUID.'),
+      id: zOpenApi.string().guid().describe('Ticket UUID.'),
+      commentId: zOpenApi.string().guid().describe('Comment UUID.'),
     }),
   );
   const TicketDocumentParams = registry.registerSchema(
     'WorkV1TicketDocumentParams',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Ticket UUID.'),
-      documentId: zOpenApi.string().uuid().describe('Document UUID.'),
+      id: zOpenApi.string().guid().describe('Ticket UUID.'),
+      documentId: zOpenApi.string().guid().describe('Document UUID.'),
     }),
   );
   const TicketStatusesQuery = registry.registerSchema(
     'WorkV1TicketStatusesQuery',
-    zOpenApi.object({ board_id: zOpenApi.string().uuid().optional().describe('Filter statuses to this board.') }),
+    zOpenApi.object({ board_id: zOpenApi.string().guid().optional().describe('Filter statuses to this board.') }),
   );
   const TicketCommentUpdateBody = registry.registerSchema(
     'WorkV1TicketCommentUpdateBody',
@@ -977,7 +1011,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const TicketMaterialBody = registry.registerSchema(
     'WorkV1TicketMaterialBody',
     zOpenApi.object({
-      service_id: zOpenApi.string().uuid(),
+      service_id: zOpenApi.string().guid(),
       quantity: zOpenApi.number().positive(),
       rate: zOpenApi.number().min(0),
       currency_code: zOpenApi.string().length(3),
@@ -987,8 +1021,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const TicketChecklistItemParams = registry.registerSchema(
     'WorkV1TicketChecklistItemParams',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Ticket UUID.'),
-      itemId: zOpenApi.string().uuid().describe('Ticket checklist item UUID.'),
+      id: zOpenApi.string().guid().describe('Ticket UUID.'),
+      itemId: zOpenApi.string().guid().describe('Ticket checklist item UUID.'),
     }),
   );
   const TicketChecklistCreateBody = registry.registerSchema(
@@ -1009,8 +1043,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const ExternalLinkParams = registry.registerSchema(
     'WorkV1TicketExternalLinkParams',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Ticket UUID.'),
-      linkId: zOpenApi.string().uuid().describe('External link UUID.'),
+      id: zOpenApi.string().guid().describe('Ticket UUID.'),
+      linkId: zOpenApi.string().guid().describe('External link UUID.'),
     }),
   );
   const ExternalLinkActor = zOpenApi.object({
@@ -1023,7 +1057,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TicketExternalLinkCreateBody',
     zOpenApi.object({
       entity_type: zOpenApi.enum(['ticket', 'comment']).optional().describe("Defaults to 'ticket'."),
-      comment_id: zOpenApi.string().uuid().optional().describe("Required when entity_type is 'comment'."),
+      comment_id: zOpenApi.string().guid().optional().describe("Required when entity_type is 'comment'."),
       system: zOpenApi.string().min(1).describe('Built-in system key or custom:<slug>.'),
       external_id: zOpenApi.string().min(1),
       external_parent_id: zOpenApi.string().nullable().optional(),
@@ -1033,7 +1067,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       actor: ExternalLinkActor.nullable().optional(),
       external_status: zOpenApi.string().nullable().optional(),
       external_updated_at: zOpenApi.string().nullable().optional(),
-      metadata: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+      metadata: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
     }),
   );
   const ExternalLinkUpdateBody = registry.registerSchema(
@@ -1045,7 +1079,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       external_status: zOpenApi.string().nullable().optional(),
       external_updated_at: zOpenApi.string().nullable().optional(),
       last_synced_at: zOpenApi.string().nullable().optional(),
-      metadata: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+      metadata: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
     }),
   );
   const ExternalLinkLookupQuery = registry.registerSchema(
@@ -1232,7 +1266,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'post', path: '/api/v1/tickets/{id}/documents',
     summary: 'Upload a ticket document',
-    description: 'Uploads a file as a document attachment to a ticket. Send multipart/form-data with a `file` field. Returns the created document.',
+    description: 'Uploads a file as a document attachment to a ticket. Send multipart/form-data with a `file` field. Returns the created document. Multipart only: MCP and JSON clients should use `POST /api/v1/documents` (or the `attach_file` MCP tool) instead.',
     tags: [tag], security: [{ ApiKeyAuth: [] }],
     request: { params: IdParam },
     responses: ticketStdResponses({ code: 201, description: 'Document uploaded.' }),
@@ -1291,14 +1325,14 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const TicketAgentParams = registry.registerSchema(
     'WorkV1TicketAgentParams',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Ticket UUID.'),
-      userId: zOpenApi.string().uuid().describe('User UUID of the additional agent.'),
+      id: zOpenApi.string().guid().describe('Ticket UUID.'),
+      userId: zOpenApi.string().guid().describe('User UUID of the additional agent.'),
     }),
   );
   const TicketAgentBody = registry.registerSchema(
     'WorkV1TicketAgentBody',
     zOpenApi.object({
-      user_id: zOpenApi.string().uuid().describe('User to add as an additional agent.'),
+      user_id: zOpenApi.string().guid().describe('User to add as an additional agent.'),
       role: zOpenApi.string().max(50).optional().describe('Resource role recorded on the assignment; defaults to support.'),
       ...ticketNotificationSuppressionProperties,
     }),
@@ -1306,7 +1340,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   const TicketTeamAssignBody = registry.registerSchema(
     'WorkV1TicketTeamAssignBody',
     zOpenApi.object({
-      team_id: zOpenApi.string().uuid().describe('Team to assign to the ticket.'),
+      team_id: zOpenApi.string().guid().describe('Team to assign to the ticket.'),
       ...ticketNotificationSuppressionProperties,
     }),
   );
@@ -1314,7 +1348,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'WorkV1TicketTeamRemoveBody',
     zOpenApi.object({
       mode: zOpenApi.enum(['remove_all', 'keep_all', 'selective']).optional().describe('What to do with the team_member additional agents; defaults to remove_all.'),
-      keep_user_ids: zOpenApi.array(zOpenApi.string().uuid()).optional().describe('Required with mode=selective: the team members to keep as additional agents.'),
+      keep_user_ids: zOpenApi.array(zOpenApi.string().guid()).optional().describe('Required with mode=selective: the team members to keep as additional agents.'),
     }),
   );
 
@@ -1331,7 +1365,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'post', path: '/api/v1/tickets/{id}/agents',
     summary: 'Add a ticket additional agent',
-    description: 'Adds a user as an additional agent on the ticket and publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI unless suppressed. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.',
+    description: 'Internal staff only: adds a user as an additional agent on the ticket (external people, client contacts and bare emails go to POST /api/v1/tickets/{id}/watchers; a one-off comment copy uses comment cc/bcc). Publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI unless suppressed. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.',
     tags: [tag], security: [{ ApiKeyAuth: [] }],
     request: { params: IdParam, body: { schema: TicketAgentBody } },
     responses: {
@@ -1355,6 +1389,77 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       404: { description: 'Ticket or additional agent not found.', schema: ApiError },
       500: { description: 'Unexpected controller/service failure.', schema: ApiError },
     },
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  const TicketWatcherBody = registry.registerSchema(
+    'WorkV1TicketWatcherBody',
+    zOpenApi.object({
+      contact_id: zOpenApi.string().guid().optional().describe('Client contact to watch; resolved to the contact email and name. Exactly one of contact_id, user_id, email.'),
+      user_id: zOpenApi.string().guid().optional().describe('Internal user to watch; resolved to the user email and name. Exactly one of contact_id, user_id, email.'),
+      email: zOpenApi.string().email().optional().describe('Any bare email address (external mailbox). Exactly one of contact_id, user_id, email.'),
+      name: zOpenApi.string().min(1).max(255).optional().describe('Display name; only used when the watcher has no name yet.'),
+      active: zOpenApi.boolean().optional().describe('Whether the watcher receives updates; defaults to true.'),
+      silent: zOpenApi.boolean().optional().describe('Request-scoped, never stored. When true the write emits no customer or internal notification.'),
+    }),
+  );
+  const TicketWatcherActiveBody = registry.registerSchema(
+    'WorkV1TicketWatcherActiveBody',
+    zOpenApi.object({
+      email: zOpenApi.string().email().describe('Email of an existing watcher (case-insensitive).'),
+      active: zOpenApi.boolean().describe('true to resume updates, false to pause them without removing the watcher.'),
+      silent: zOpenApi.boolean().optional().describe('Request-scoped, never stored. Suppresses notifications for this change.'),
+    }),
+  );
+  const TicketWatcherRemoveQuery = registry.registerSchema(
+    'WorkV1TicketWatcherRemoveQuery',
+    zOpenApi.object({
+      email: zOpenApi.string().email().describe('Email of the watcher to remove (case-insensitive).'),
+      silent: zOpenApi.enum(['true', 'false']).optional().describe('Request-scoped. "true" suppresses notifications for this removal.'),
+    }),
+  );
+  const watcherNote = 'Watchers are persistent (contacts, users or any email) and are copied on ticket updates; they are distinct from additional agents (internal staff, /agents) and from a comment cc (one-off, never joins the watch list). Unless silent=true the write emits one TICKET_UPDATED event; silent=true sets suppressContactNotifications and suppressInternalNotifications on it. The response is the full watcher list: {email, name, active, entity_type, entity_id, source}.';
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/{id}/watchers',
+    summary: 'List ticket watchers',
+    description: `Returns everyone on the ticket watch list. ${watcherNote}`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: ticketStdResponses({ code: 200, description: 'Watcher list.' }),
+    extensions: ticketExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/{id}/watchers',
+    summary: 'Add a ticket watcher',
+    description: `Idempotent set-add of a watcher by exactly one of contact_id, user_id or email; an existing email is re-activated, not duplicated. An unknown or other-tenant contact/user, or one without an email, returns 422. ${watcherNote}`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: TicketWatcherBody } },
+    responses: {
+      ...ticketStdResponses({ code: 200, description: 'Watcher added (or already present); full list returned.' }),
+      422: { description: 'Contact or user not found in this tenant, or has no email.', schema: ApiError },
+    },
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'patch', path: '/api/v1/tickets/{id}/watchers',
+    summary: 'Pause or resume a ticket watcher',
+    description: `Sets active on an existing watcher identified by email; the watcher stays on the list. ${watcherNote}`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: TicketWatcherActiveBody } },
+    responses: ticketStdResponses({ code: 200, description: 'Watcher updated; full list returned.' }),
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete', path: '/api/v1/tickets/{id}/watchers',
+    summary: 'Remove a ticket watcher',
+    description: `Removes the watcher with the given ?email=. Returns 404 when that email is not a watcher. ${watcherNote}`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, query: TicketWatcherRemoveQuery },
+    responses: ticketStdResponses({ code: 200, description: 'Watcher removed; full list returned.' }),
     extensions: ticketExt('update'), edition: 'both',
   });
 

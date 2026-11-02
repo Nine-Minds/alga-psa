@@ -133,10 +133,12 @@
       "notes": "Anteckningar",
       "deleteTimeEntry": "Radera tidpost",
       "unsavedChanges": "Osparade ändringar",
-      "contractLine": "Avtalsrad"
+      "contractLine": "Avtalsrad",
+      "operational": "Operativ – faktureras inte"
     },
     "placeholders": {
       "selectService": "Välj en tjänst",
+      "searchServices": "Sök tjänster…",
       "selectDate": "Välj datum",
       "addNotes": "Lägg till anteckningar",
       "selectContractLine": "Välj en avtalsrad"
@@ -159,7 +161,8 @@
       "project": "Standard från projekt"
     },
     "options": {
-      "resolveContractLineLater": "Ingen rad - lös senare"
+      "resolveContractLineLater": "Ingen rad - lös senare",
+      "noServicesFound": "Inga tjänster hittades"
     }
   },
   "workItemPicker": {

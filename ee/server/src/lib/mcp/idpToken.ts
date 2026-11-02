@@ -1,6 +1,7 @@
 import { createRemoteJWKSet, jwtVerify, decodeJwt, type JWTPayload } from 'jose';
 import { findTrustedIdpsByIssuer, resolveAgentByIdp, type ResolvedAgent } from './agents';
 import { getBuiltinIdpForIssuer } from './idpBuiltins';
+import { isUsableAudience } from './audience';
 
 /**
  * IdP-delegated token validation (Phase 2 F025/F029/F042). The MCP server is an
@@ -76,10 +77,18 @@ export async function authenticateAgentToken(
 
   let lastError = 'Token verification failed.';
   for (const cand of candidates) {
+    // Fail closed: a candidate with no expected audience must never validate
+    // anything (jose skips the `aud` check when audience is undefined).
+    const audience = cand.audience;
+    if (!isUsableAudience(audience)) {
+      lastError =
+        'Trusted IdP has no audience configured; set the `aud` your IdP issues for this MCP resource.';
+      continue;
+    }
     try {
       const { payload } = await jwtVerify(token, getJwks(cand.jwksUri), {
         issuer,
-        audience: cand.audience ?? undefined,
+        audience: audience.trim(),
       });
       const subjectClaim = opts.subjectClaim ?? cand.subjectClaim ?? 'sub';
       const subject = String(

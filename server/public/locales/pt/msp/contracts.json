@@ -588,7 +588,8 @@
       "failedToResetRate": "Falha ao redefinir o preço da linha",
       "protectedStartDate": "A data de início deve ser {{boundary}} ou anterior para incluir o histórico protegido.",
       "protectedEndDate": "A data de término deve ser {{boundary}} ou posterior para incluir o histórico protegido.",
-      "cannotEditWithInvoices": "Não é possível editar a linha de contrato: este contrato tem faturas associadas. As linhas de contrato não podem ser editadas depois que as faturas forem geradas."
+      "cannotEditWithInvoices": "Não é possível editar a linha de contrato: este contrato tem faturas associadas. As linhas de contrato não podem ser editadas depois que as faturas forem geradas.",
+      "reloadLatest": "Recarregar a versão mais recente"
     },
     "loading": {
       "contractLines": "Carregando linhas de contrato",
@@ -698,6 +699,13 @@
       "statusSuperseded": "Substituído",
       "supersededHistory": "Edições pendentes substituídas ({{count}})",
       "supersededBy": "Substituído por"
+    },
+    "pricing": {
+      "catalog": "catálogo",
+      "override": "personalizado",
+      "cost": "Custo: {{cost}}",
+      "costInCurrency": "Custo em {{currency}}: {{cost}}",
+      "margin": "Margem: {{margin}} por unidade"
     }
   },
   "contractLineEdit": {
@@ -1695,6 +1703,9 @@
       "label": "Perfil de faturação",
       "none": "Utilizar o perfil predefinido do cliente",
       "hint": "Os encargos deste contrato são faturados neste perfil, salvo se uma linha o substituir."
+    },
+    "billingTiming": {
+      "label": "Momento de faturamento"
     }
   },
   "wizardFixed": {
@@ -1745,10 +1756,7 @@
       "allocationQuantityLabel": "Quantidade de alocação",
       "noCurrencyPrice": "Sem preço em {{currency}} no catálogo. Informe uma tarifa unitária."
     },
-    "advanceSuggestion": {
-      "message": "Com faturamento em atraso, esta linha só pode ser faturada depois que seu primeiro período de serviço terminar. Com faturamento antecipado pelo ciclo do contrato, ela é faturada na data de início.",
-      "action": "Faturar antecipadamente pelo ciclo do contrato"
-    }
+    "billingTimingLabel": "Momento de faturamento"
   },
   "wizardProducts": {
     "actions": {
@@ -1771,7 +1779,8 @@
       "productMissingPrice": "Este produto não tem preço padrão nem substituição. Ele não pode ser cobrado até que você insira um preço unitário.",
       "noCurrencyPriceEnterUnitPrice": "Nenhum preço {{currency}} no catálogo. Insira um preço unitário.",
       "noCurrencyPriceWithLegacyHint": "Nenhum preço {{currency}} no catálogo. Taxa padrão herdada: {{rate}}. Insira um preço unitário em {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Momento de faturamento"
   },
   "wizardHourly": {
     "actions": {
@@ -1829,7 +1838,8 @@
         "rolloverDisabled": "Desabilitado",
         "rolloverEnabled": "Habilitado"
       }
-    }
+    },
+    "billingTimingLabel": "Momento de faturamento"
   },
   "wizardUsage": {
     "actions": {
@@ -1867,7 +1877,8 @@
     },
     "values": {
       "defaultUnit": "unidade"
-    }
+    },
+    "billingTimingLabel": "Momento de faturamento"
   },
   "wizardReview": {
     "heading": "Revise o contrato",
@@ -1976,7 +1987,10 @@
         "one": "Produto {{count}}",
         "other": "Produtos {{count}}"
       },
-      "overrideRate": "- substituir {{rate}}/{{currencyCode}}"
+      "overrideRate": "- substituir {{rate}}/{{currencyCode}}",
+      "cost": "Custo: {{cost}}",
+      "costInCurrency": "Custo em {{currency}}: {{cost}}",
+      "margin": "Margem: {{margin}} por unidade"
     },
     "hourly": {
       "badgeCount": {
@@ -1999,8 +2013,12 @@
     "total": {
       "title": "Total Mensal Estimado",
       "description": "Produtos e cobranças fixas estão incluídos neste total. Serviços por hora e de uso são faturados com base no consumo real.",
-      "perMonth": "por mês",
-      "savedDraftValue": "Valor do rascunho guardado: {{amount}}"
+      "savedDraftValue": "Valor do rascunho guardado: {{amount}}",
+      "titleCadence": "Total estimado",
+      "mixedFrequencyTitle": "Total estimado por frequência de faturamento",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "cerca de {{amount}} por mês",
+      "savedDraftValueMonthly": "Valor do rascunho guardado: {{amount}} por mês"
     },
     "finalChecklist": {
       "title": "Antes de terminar:",
@@ -2015,7 +2033,16 @@
       "blockSummary": "{{hours}} horas por {{price}}",
       "expiresAfter_one": "expira após {{count}} mês",
       "expiresAfter_other": "expira após {{count}} meses",
-      "neverExpires": "nunca expira"
+      "neverExpires": "nunca expira",
+      "cadenceSummary": "{{hours}} h por período de faturação por {{price}}",
+      "overageRate": "excedente {{rate}}/h"
+    },
+    "billingTiming": {
+      "label": "Momento de faturamento:",
+      "advance": "Antecipado",
+      "arrears": "Pós-pago",
+      "advanceInherited": "Antecipado (padrão do contrato)",
+      "arrearsInherited": "Pós-pago (padrão do contrato)"
     }
   },
   "wizardTemplateLines": {
@@ -2317,7 +2344,8 @@
       "period": "Período: {{period}}"
     },
     "prepaid": {
-      "blockSummaryNeutral": "{{hours}} horas por {{price}} (na moeda do cliente)"
+      "blockSummaryNeutral": "{{hours}} horas por {{price}} (na moeda do cliente)",
+      "cadenceSummaryNeutral": "{{hours}} h por período de faturação por {{price}} (na moeda do cliente)"
     }
   },
   "templatePreview": {
@@ -2427,6 +2455,22 @@
       "description": "Este contrato não tem linhas de contrato. Adicione primeiro linhas de contrato e depois volte para simular.",
       "title": "Ainda nada para simular"
     },
+    "errors": {
+      "title": "Não é possível executar a simulação",
+      "baselineTitle": "O contrato atual não pode ser simulado, então não há nada para comparar",
+      "unsupportedLineType": "A linha de contrato \"{{lineName}}\" tem o tipo de linha \"{{lineType}}\", que o simulador não consegue calcular. Altere a linha para Fixa, Por hora ou Uso e simule novamente.",
+      "unsupportedServiceConfiguration": "\"{{serviceName}}\" na linha de contrato \"{{lineName}}\" tem o tipo de configuração \"{{configurationType}}\", que o simulador não consegue calcular. Defina o serviço como Fixo, Por hora, Uso ou Pacote e simule novamente.",
+      "serviceNotInCatalog": "A linha de contrato \"{{lineName}}\" usa um serviço que não está mais no catálogo de serviços ({{serviceId}}). Remova-o da linha ou restaure o serviço e simule novamente.",
+      "poolMissing": "\"{{serviceName}}\" na linha de contrato \"{{lineName}}\" está configurado como pacote, mas não tem um pool de horas incluídas. Adicione as horas incluídas do pool na linha de contrato e simule novamente.",
+      "contractNotFound": "Este contrato não está disponível. Ele pode ter sido excluído; recarregue a página.",
+      "clientNotAvailable": "O cliente desta simulação não está disponível. Ele pode ter sido excluído; escolha outro cliente.",
+      "clientRequired": "Selecione um cliente antes de simular.",
+      "historyRequiresClient": "As premissas históricas exigem um cenário vinculado a um cliente real. Escolha um cliente para esta simulação e tente novamente.",
+      "invalidReplayRange": "O intervalo de reprodução não é válido. Escolha um intervalo que termine depois de começar e abranja no máximo 120 períodos de faturamento.",
+      "scenarioInvalid": "Este cenário não pode ser simulado porque sua configuração está incompleta. Recarregue a página e tente novamente.",
+      "scenarioReferenceInvalid": "Este cenário se refere a algo que não está mais disponível, como uma linha de contrato, um serviço, uma alíquota de imposto ou um local do cliente. Recarregue a página para começar do contrato atual.",
+      "unexpected": "O simulador não pôde ser executado devido a um erro inesperado. Tente novamente; se o problema continuar, entre em contato com o suporte."
+    },
     "explanation": {
       "amount": "Valor",
       "close": "Fechar",
@@ -2473,6 +2517,7 @@
       "simulatedDelta": "diferença simulada"
     },
     "runBar": {
+      "blocked": "Simulação indisponível",
       "compareToggle": "Mostrar alterações em relação ao contrato atual",
       "horizonOption": "{{count}} períodos de faturamento do cliente",
       "lastRun": "Simulação atualizada · {{count}} períodos de faturamento do cliente",
@@ -2481,6 +2526,7 @@
       "simulating": "Simulando…",
       "stale": "Alterações não simuladas",
       "staleBanner": "Estes valores vêm da simulação anterior. Atualize a simulação para incluir as suas alterações mais recentes.",
+      "staleBlockedBanner": "Esta mensagem é da simulação anterior. Atualize a simulação para incluir suas alterações mais recentes.",
       "updateSimulation": "Atualizar simulação"
     },
     "scenario": {
@@ -2742,6 +2788,7 @@
   "wizardFirstInvoice": {
     "loading": "Verificando o calendário de faturamento do cliente…",
     "arrearsPreviewNote": "Até lá, uma prévia de faturas deste cliente não tem nada a faturar para esta linha.",
+    "arrearsPreviewNoteMany": "Até lá, uma prévia de faturas deste cliente não tem nada a faturar para estas linhas.",
     "unavailable": {
       "missingStartDate": "Escolha uma data de início para ver quando este contrato será faturado pela primeira vez.",
       "unsupportedFrequency": "Nenhuma data da primeira fatura é exibida porque o faturamento pelo ciclo do contrato não oferece suporte a essa frequência. Escolha uma frequência compatível ou fature pelo calendário do cliente.",
@@ -2752,7 +2799,8 @@
       "advance": "Faturada antecipadamente pelo ciclo do contrato: a primeira fatura está disponível a partir de {{date}}, a data de início do contrato."
     },
     "client": {
-      "arrears": "Faturada em atraso pelo calendário de faturamento do cliente: a primeira fatura fica disponível em {{date}}, quando o período de faturamento atual do cliente termina.",
+      "arrears": "Faturada em atraso pelo calendário de faturamento do cliente: a primeira fatura fica disponível em {{date}}, quando termina o período de faturamento do cliente que contém a data de início.",
+      "arrearsPartial": "Faturada em atraso pelo calendário de faturamento do cliente: a primeira fatura fica disponível em {{date}}, quando termina o período de faturamento do cliente que contém a data de início. Como a data de início cai no meio desse período, ela cobre {{periodStart}} – {{periodEnd}}.",
       "advance": "Faturada antecipadamente pelo calendário de faturamento do cliente: a primeira fatura está disponível a partir de {{date}}, o início do período de faturamento do cliente que contém a data de início do contrato."
     }
   },
@@ -2763,7 +2811,7 @@
     "done": "Concluído"
   },
   "sellHourBlockNote": {
-    "text": "Um pacote de horas do contrato fatura apenas o excedente. Para cobrar antecipadamente um bloco de horas, adicione uma linha de Bloco pré-pago a este contrato."
+    "text": "Uma bolsa de horas do contrato fatura apenas o excedente. Para cobrar um bloco de horas antecipadamente, adicione ao contrato uma linha de Bloco pré-pago e emita-a a cada período de faturação."
   },
   "review": {
     "saveTemplateRates": "Guardar estas tarifas em {{currency}} no modelo",
@@ -2777,7 +2825,11 @@
     "options": {
       "advance": "Antecipado (faturar no início do período)",
       "arrears": "Após o período (faturar no fim do período)"
-    }
+    },
+    "inheritWithValue": "Usar o padrão do contrato — {{timing}}",
+    "inheritedAdvance": "antecipado",
+    "inheritedArrears": "pós-pago",
+    "contractDefaultHelp": "Padrão para linhas fixas, que podem ser faturadas antecipadamente. Linhas por hora e de uso são sempre faturadas após o período, independentemente do que escolher aqui."
   },
   "contractDiscounts": {
     "title": "Descontos",
@@ -2945,7 +2997,17 @@
       "tier": "Fatura seguinte",
       "tierDraft": "Criar um rascunho para revisão",
       "tierAutoIssue": "Finalizar e enviar automaticamente",
-      "blockPriceNeutral": "Preço do bloco (na moeda do cliente)"
+      "blockPriceNeutral": "Preço do bloco (na moeda do cliente)",
+      "ratePerHour": "Equivale a {{rate}} por hora do bloco.",
+      "issueMode": "Emitir blocos",
+      "issueModeCadence": "Cada período de faturação",
+      "blockFeeInAdvance": "A linha é faturada em atraso; a taxa do bloco é faturada antecipadamente.",
+      "issueModeConsumption": "Quando o bloco atual se esgota ou expira",
+      "rolloverPeriods": "Horas não utilizadas",
+      "rolloverNone": "Expiram no fim do período",
+      "cadenceNote": "Faturado antecipadamente a cada período. As horas acima do bloco são faturadas à taxa horária da linha na fatura seguinte.",
+      "rolloverCarry_one": "Transitar {{count}} período",
+      "rolloverCarry_other": "Transitar {{count}} períodos"
     },
     "status": {
       "pending": "Pendente",
@@ -2970,5 +3032,9 @@
       "invalidBlock": "Preencha o tamanho, o preço e os gatilhos de cada linha de bloco pré-pago antes de concluir.",
       "rateRequired": "O serviço de bloco pré-pago \"{{serviceName}}\" precisa de uma tarifa horária superior a zero (as horas além do bloco são faturadas a essa tarifa)."
     }
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "Primeira fatura: a fatura de {{invoiceDate}} cobre {{periodStart}} – {{periodEnd}} (faturada em atraso). Escolha Antecipado para faturá-la na fatura do período que começa em {{advanceInvoiceDate}}.",
+    "billInAdvance": "Faturar antecipadamente"
   }
 }

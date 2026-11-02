@@ -37,6 +37,10 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
 }));
 
 // Mock withAuth to bypass session/tenant resolution and call the action directly
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => (...args: any[]) =>
     action(userRef.user, { tenant: dbRef.tenant }, ...args),

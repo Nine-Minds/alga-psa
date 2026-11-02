@@ -53,6 +53,14 @@
     "./pagination/authorizationAwarePagination": {
       "import": "./dist/pagination/authorizationAwarePagination.js",
       "types": "./src/pagination/authorizationAwarePagination.ts"
+    },
+    "./assetReadAuthorization": {
+      "import": "./dist/assetReadAuthorization.js",
+      "types": "./src/assetReadAuthorization.ts"
+    },
+    "./rbac": {
+      "import": "./dist/rbac.js",
+      "types": "./src/rbac.ts"
     }
   },
   "scripts": {

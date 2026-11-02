@@ -27,6 +27,8 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: routerReplaceMock, refresh: vi.fn(), push: vi.fn() }),
 }));
 
+const sso = vi.hoisted(() => ({ canConfigure: vi.fn(async () => false) }));
+
 vi.mock('@ee/lib/actions/auth/getSsoProviderOptions', () => ({
   getSsoProviderOptionsAction: vi.fn(async () => ({
     options: [{ id: 'azure-ad', name: 'Microsoft', description: 'Microsoft Entra ID', configured: true }],
@@ -34,6 +36,7 @@ vi.mock('@ee/lib/actions/auth/getSsoProviderOptions', () => ({
 }));
 
 vi.mock('@ee/lib/actions/auth/ssoPreferences', () => ({
+  canConfigureSsoProvidersAction: sso.canConfigure,
   getLinkedSsoAccountsAction: vi.fn(async () => ({
     success: true,
     accounts: [],
@@ -82,5 +85,30 @@ describe('ConnectSsoWrapper link outcome', () => {
     await screen.findByDisplayValue('nd@computerbutler.eu');
     expect(window.location.search).toBe('?tab=single-sign-on');
     expect(routerReplaceMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('ConnectSsoWrapper with no configured provider', () => {
+  async function noProviders() {
+    const { getSsoProviderOptionsAction } = await import('@ee/lib/actions/auth/getSsoProviderOptions');
+    vi.mocked(getSsoProviderOptionsAction).mockResolvedValueOnce({
+      options: [{ id: 'azure-ad', name: 'Microsoft', description: 'Microsoft Entra ID', configured: false }],
+    } as any);
+    searchParams.value = new URLSearchParams({ tab: 'single-sign-on' });
+  }
+
+  it('lets an administrator go set up a provider instead of only asking for one', async () => {
+    // The dashboard checklist sends admins here to "Add an SSO provider"; this tab could only link accounts.
+    await noProviders();
+    sso.canConfigure.mockResolvedValueOnce(true);
+    render(<ConnectSsoWrapper />);
+    expect(await screen.findByRole('button', { name: 'Set up an SSO provider' })).toBeTruthy();
+  });
+
+  it('keeps asking a non-administrator to contact their administrator', async () => {
+    await noProviders();
+    render(<ConnectSsoWrapper />);
+    await screen.findByText(/Ask your administrator to configure Google or Microsoft credentials/);
+    expect(screen.queryByRole('button', { name: 'Set up an SSO provider' })).toBeNull();
   });
 });

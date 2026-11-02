@@ -54,8 +54,8 @@ function containerFixture() {
   const input = fixture();
   input.report.sourceRevisionOrigin = 'environment';
   input.report.sourceRevisionAfter = null;
-  input.runtimeBinding = { imageRevision: input.revision, imageId: `sha256:${'1'.repeat(64)}`,
-    containerImageId: `sha256:${'1'.repeat(64)}`, mountedSourceRevision: input.revision, mountsReadOnly: true };
+  input.runtimeBinding = { runtimeImage: 'node:22-bookworm-slim', imageId: `sha256:${'1'.repeat(64)}`,
+    containerImageId: `sha256:${'1'.repeat(64)}`, mountedSourceRevision: input.revision, workspaceMounted: true };
   return input;
 }
 test('accepts no-git container only with matching image/source read-only binding and clean wrapper', () => {
@@ -65,11 +65,11 @@ test('accepts no-git container only with matching image/source read-only binding
 });
 for (const [name, mutate] of [
   ['missing runtime binding', x => { delete x.runtimeBinding; }],
-  ['wrong image revision', x => { x.runtimeBinding.imageRevision = 'b'.repeat(40); }],
+  ['another runtime image', x => { x.runtimeBinding.runtimeImage = 'alga-e2e-test_server_ee_local:latest'; }],
   ['invalid image ID', x => { x.runtimeBinding.imageId = 'latest'; x.runtimeBinding.containerImageId = 'latest'; }],
   ['different container image', x => { x.runtimeBinding.containerImageId = `sha256:${'2'.repeat(64)}`; }],
   ['wrong mounted source', x => { x.runtimeBinding.mountedSourceRevision = 'b'.repeat(40); }],
-  ['writable mounts', x => { x.runtimeBinding.mountsReadOnly = false; }],
+  ['checkout not mounted', x => { x.runtimeBinding.workspaceMounted = false; }],
   ['dirty wrapper', x => { x.source.before.dirty = true; }],
   ['unexpected source after', x => { x.report.sourceRevisionAfter = 'b'.repeat(40); }],
 ]) test(`container evidence rejects ${name}`, () => {

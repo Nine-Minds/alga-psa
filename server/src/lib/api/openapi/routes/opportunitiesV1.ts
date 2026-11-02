@@ -21,49 +21,49 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
 
   const OpportunityIdParam = registry.registerSchema(
     'OpportunityIdParamV1',
-    zOpenApi.object({ id: zOpenApi.string().uuid().describe('Opportunity UUID from opportunities.opportunity_id.') }),
+    zOpenApi.object({ id: zOpenApi.string().guid().describe('Opportunity UUID from opportunities.opportunity_id.') }),
   );
   const OpportunityEvidenceParams = registry.registerSchema(
     'OpportunityEvidenceParamsV1',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Opportunity UUID from opportunities.opportunity_id.'),
-      evidenceId: zOpenApi.string().uuid().describe('Evidence UUID from opportunity_evidence.evidence_id.'),
+      id: zOpenApi.string().guid().describe('Opportunity UUID from opportunities.opportunity_id.'),
+      evidenceId: zOpenApi.string().guid().describe('Evidence UUID from opportunity_evidence.evidence_id.'),
     }),
   );
   const OpportunityStepParams = registry.registerSchema(
     'OpportunityStepParamsV1',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Opportunity UUID from opportunities.opportunity_id.'),
-      stepId: zOpenApi.string().uuid().describe('Step UUID from opportunity_steps.step_id.'),
+      id: zOpenApi.string().guid().describe('Opportunity UUID from opportunities.opportunity_id.'),
+      stepId: zOpenApi.string().guid().describe('Step UUID from opportunity_steps.step_id.'),
     }),
   );
   const OpportunityQuoteParams = registry.registerSchema(
     'OpportunityQuoteParamsV1',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Opportunity UUID from opportunities.opportunity_id.'),
-      quoteId: zOpenApi.string().uuid().describe('Quote UUID from quotes.quote_id.'),
+      id: zOpenApi.string().guid().describe('Opportunity UUID from opportunities.opportunity_id.'),
+      quoteId: zOpenApi.string().guid().describe('Quote UUID from quotes.quote_id.'),
     }),
   );
   const OpportunitySuggestionParams = registry.registerSchema(
     'OpportunitySuggestionParamsV1',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Suggestion UUID from opportunity_suggestions.suggestion_id.'),
+      id: zOpenApi.string().guid().describe('Suggestion UUID from opportunity_suggestions.suggestion_id.'),
     }),
   );
   const OpportunityCommitmentParams = registry.registerSchema(
     'OpportunityCommitmentParamsV1',
     zOpenApi.object({
-      id: zOpenApi.string().uuid(),
-      commitmentId: zOpenApi.string().uuid(),
+      id: zOpenApi.string().guid(),
+      commitmentId: zOpenApi.string().guid(),
     }),
   );
   const OpportunityMeetingSessionParams = registry.registerSchema(
     'OpportunityMeetingSessionParamsV1',
-    zOpenApi.object({ sessionId: zOpenApi.string().uuid() }),
+    zOpenApi.object({ sessionId: zOpenApi.string().guid() }),
   );
   const OpportunityQbrClientParams = registry.registerSchema(
     'OpportunityQbrClientParamsV1',
-    zOpenApi.object({ clientId: zOpenApi.string().uuid() }),
+    zOpenApi.object({ clientId: zOpenApi.string().guid() }),
   );
 
   const ListQuery = registry.registerSchema('OpportunityListQueryV1', opportunityListQuerySchema);
@@ -89,7 +89,7 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
   const MeetingReviewBody = registry.registerSchema(
     'OpportunityMeetingReviewBodyV1',
     zOpenApi.object({
-      opportunity_id: zOpenApi.string().uuid(),
+      opportunity_id: zOpenApi.string().guid(),
       note: zOpenApi.string().max(4000).nullable().optional(),
     }),
   );
@@ -102,7 +102,7 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       description: zOpenApi.string().min(1).max(4000).optional(),
       resolution_status: zOpenApi.enum(['open', 'quote_line', 'agreement_line', 'project_task', 'declined']).optional(),
-      resolution_ref_id: zOpenApi.string().uuid().nullable().optional(),
+      resolution_ref_id: zOpenApi.string().guid().nullable().optional(),
     }),
   );
   const QbrCreateBody = registry.registerSchema(
@@ -123,42 +123,42 @@ export function registerOpportunitiesV1Routes(registry: ApiOpenApiRegistry) {
   const ApiSuccess = registry.registerSchema(
     'OpportunityApiSuccessV1',
     zOpenApi.object({
-      data: zOpenApi.record(zOpenApi.unknown()),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      data: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
   const ApiPaginated = registry.registerSchema(
     'OpportunityApiPaginatedV1',
     zOpenApi.object({
-      data: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+      data: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
       pagination: zOpenApi.object({
         page: zOpenApi.number().int(),
         limit: zOpenApi.number().int(),
         total: zOpenApi.number().int(),
         totalPages: zOpenApi.number().int(),
       }).optional(),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
-      _links: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
+      _links: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
   const ApiArraySuccess = registry.registerSchema(
     'OpportunityApiArraySuccessV1',
     zOpenApi.object({
-      data: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      data: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
   const WorkQueueSuccess = registry.registerSchema(
     'OpportunityWorkQueueSuccessV1',
     zOpenApi.object({
-      data: zOpenApi.record(zOpenApi.unknown()),
+      data: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
     }),
   );
   const TimelineSuccess = registry.registerSchema(
     'OpportunityTimelineSuccessV1',
     zOpenApi.object({
       data: zOpenApi.array(zOpenApi.object({
-        interaction_id: zOpenApi.string().uuid(),
+        interaction_id: zOpenApi.string().guid(),
         title: zOpenApi.string(),
         notes: zOpenApi.string().nullable().optional(),
         interaction_date: zOpenApi.string().datetime(),

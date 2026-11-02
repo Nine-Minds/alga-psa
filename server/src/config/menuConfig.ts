@@ -32,6 +32,7 @@ import {
   Layers3,
   LayoutDashboard,
   LayoutTemplate,
+  MessageSquareText,
   ListTodo,
   ListChecks,
   ListTree,
@@ -60,8 +61,10 @@ import {
   Target,
   Repeat,
   Ticket,
+  Tags,
   BadgeCheck,
-  Wrench
+  Wrench,
+  PackageOpen
 } from 'lucide-react';
 
 // Navigation modes for the unified sidebar
@@ -89,6 +92,8 @@ export interface MenuItem {
 }
 
 export interface NavigationSection {
+  /** Stable React key for sections that have no title (the main group and slot-contributed groups). */
+  id?: string;
   title: string;
   translationKey?: string;
   items: MenuItem[];
@@ -96,6 +101,7 @@ export interface NavigationSection {
 
 export const navigationSections: NavigationSection[] = [
   {
+    id: 'main',
     title: '',
     items: [
       {
@@ -117,7 +123,8 @@ export const navigationSections: NavigationSection[] = [
         subItems: [
           { name: 'All Tickets', translationKey: 'nav.ticketsAll', icon: Ticket, href: '/msp/tickets' },
           { name: 'Recurring Tickets', translationKey: 'nav.ticketsRecurring', icon: Repeat, href: '/msp/tickets/recurring', requiredPermission: 'recurring_ticket:read' },
-          { name: 'Ticket Templates', translationKey: 'nav.ticketsTemplates', icon: LayoutTemplate, href: '/msp/tickets/templates', requiredPermission: 'ticket_template:read' }
+          { name: 'Ticket Templates', translationKey: 'nav.ticketsTemplates', icon: LayoutTemplate, href: '/msp/tickets/templates', requiredPermission: 'ticket_template:read' },
+          { name: 'Canned Responses', translationKey: 'nav.ticketsCannedResponses', icon: MessageSquareText, href: '/msp/tickets/canned-responses', requiredPermission: 'canned_response:read' }
         ]
       },
       {
@@ -194,7 +201,8 @@ export const navigationSections: NavigationSection[] = [
         icon: Monitor,
         subItems: [
           { name: 'All Assets', translationKey: 'nav.assetsAll', icon: Monitor, href: '/msp/assets' },
-          { name: 'Maintenance', translationKey: 'nav.assetsMaintenance', icon: Wrench, href: '/msp/assets/maintenance' }
+          { name: 'Maintenance', translationKey: 'nav.assetsMaintenance', icon: Wrench, href: '/msp/assets/maintenance' },
+          { name: 'Equipment in custody', translationKey: 'nav.assetsCustody', icon: PackageOpen, href: '/msp/assets/custody' }
         ]
       },
       {
@@ -341,6 +349,7 @@ export const settingsNavigationSections: NavigationSection[] = [
     translationKey: 'settings.sections.workManagement',
     items: [
       { name: 'Ticketing', translationKey: 'settings.tabs.ticketing', icon: Ticket, href: '/msp/settings?tab=ticketing' },
+      { name: 'Tags', translationKey: 'settings.tabs.tags', icon: Tags, href: '/msp/settings/tags' },
       { name: 'SLA', translationKey: 'settings.tabs.sla', icon: Timer, href: '/msp/settings/sla' },
       { name: 'Projects', translationKey: 'settings.tabs.projects', icon: ListTodo, href: '/msp/settings/projects' },
       { name: 'Assets', translationKey: 'settings.tabs.assets', icon: Monitor, href: '/msp/settings/assets' },

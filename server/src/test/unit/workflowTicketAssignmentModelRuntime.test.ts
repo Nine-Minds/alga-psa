@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useNativeCoManagedVerdict } from '@shared/workflow/runtime/actions/__tests__/helpers/nativeCoManagedVerdict';
 
 type RegisteredAction = {
   id: string;
@@ -368,6 +369,7 @@ function activeInternalUser(userId: string): TableRow {
 }
 
 describe('workflow ticket assignment model runtime', () => {
+  useNativeCoManagedVerdict();
   beforeEach(() => {
     runtimeState.registeredActions.length = 0;
     runtimeState.currentTenantTx = null;

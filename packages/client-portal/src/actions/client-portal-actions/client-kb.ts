@@ -3,7 +3,8 @@
 import { IUser } from '@alga-psa/types';
 import { isClientUserType } from '@alga-psa/types';
 import { Knex } from 'knex';
-import { hasPermission, withAuth } from '@alga-psa/auth';
+import { canReadPublishedKnowledgeBase } from '@alga-psa/auth/lib/knowledgeBasePermissions';
+import { withAuth } from '@alga-psa/auth';
 import { getConnection, withTransaction, tenantDb } from '@alga-psa/db';
 import type {
   IKBArticleWithDocument,
@@ -68,7 +69,7 @@ export const getClientKBArticles = withAuth(
       is_inactive: userRecord?.is_inactive ?? false,
       tenant,
     } as IUser;
-    const canRead = await hasPermission(userForPermission, 'document', 'read', db);
+    const canRead = await canReadPublishedKnowledgeBase(userForPermission, db);
     if (!canRead) {
       throw new Error('Insufficient permissions to view knowledge base');
     }
@@ -182,7 +183,7 @@ export const getClientKBArticle = withAuth(
       is_inactive: userRecord?.is_inactive ?? false,
       tenant,
     } as IUser;
-    const canRead = await hasPermission(userForPermission, 'document', 'read', db);
+    const canRead = await canReadPublishedKnowledgeBase(userForPermission, db);
     if (!canRead) {
       throw new Error('Insufficient permissions to view knowledge base');
     }

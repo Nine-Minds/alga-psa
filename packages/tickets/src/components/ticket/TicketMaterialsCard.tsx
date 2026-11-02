@@ -25,18 +25,8 @@ import type { ITicketMaterial, IServicePrice, IStockUnit } from '@alga-psa/types
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { isStockConflictResult, type StockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
-import {
-  listTicketMaterials,
-  addTicketMaterial,
-  deleteTicketMaterial,
-  searchServiceCatalogForPicker,
-  getServicePrices,
-  listAvailableStockUnitsForMaterial,
-} from '../../actions/materialCatalogActions';
-import {
-  getProductAvailability,
-  type ProductAvailability,
-} from '@alga-psa/inventory/actions/availabilityActions';
+import { useTicketDataSource, useTicketScreenReadOnly } from './TicketDataSourceContext';
+import type { ProductAvailability } from '@alga-psa/inventory/actions/availabilityActions';
 
 interface TicketMaterialsCardProps {
   id?: string;
@@ -74,6 +64,17 @@ export default function TicketMaterialsCard({
   initialMaterials,
 }: TicketMaterialsCardProps) {
   const { t } = useTranslation('features/tickets');
+  // A read-only ticket screen lists materials but offers no add or delete.
+  const readOnly = useTicketScreenReadOnly();
+  const {
+    listTicketMaterials,
+    addTicketMaterial,
+    deleteTicketMaterial,
+    searchServiceCatalogForPicker,
+    getServicePrices,
+    listAvailableStockUnitsForMaterial,
+    getProductAvailability,
+  } = useTicketDataSource().materials;
   const { money, currencyCode } = useCurrencyFormat();
   const [materials, setMaterials] = useState<ITicketMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(!initialMaterials);
@@ -294,7 +295,7 @@ export default function TicketMaterialsCard({
         } else if (conflict.reason === 'held') {
           setAddError(t(
             'materials.stockHeld',
-            'Only {{free}} available. {{held}} on hand is on hard hold for sales orders and can\'t be used here.',
+            'Only {{free}} available. {{held}} on hand is on hard hold for sales orders or projects and can\'t be used here.',
             { free: Math.max(0, conflict.free), held: conflict.held },
           ));
         } else {
@@ -382,14 +383,14 @@ export default function TicketMaterialsCard({
         title={t('materials.title', 'Materials')}
         headerIcon={<Package className="w-5 h-5" />}
         count={materials.length}
-        addButton={clientId && !showAddForm ? {
+        addButton={clientId && !showAddForm && !readOnly ? {
           id: `${id}-add-btn`,
           label: t('materials.addMaterial', 'Add Material'),
           onClick: () => setShowAddForm(true),
         } : undefined}
       >
         {/* Add Form */}
-        {showAddForm && clientId && (
+        {showAddForm && clientId && !readOnly && (
           <div className="border rounded-md p-4 space-y-4 bg-gray-50">
             <div className="space-y-2">
               <Label htmlFor={`${id}-product-select`}>{t('materials.product', 'Product')}</Label>
@@ -620,7 +621,7 @@ export default function TicketMaterialsCard({
                         )}
                       </td>
                       <td className="py-2 text-right">
-                        {!material.is_billed && (
+                        {!material.is_billed && !readOnly && (
                           <Button
                             {...withDataAutomationId({ id: `${id}-delete-${material.ticket_material_id}` })}
                             variant="ghost"
@@ -676,10 +677,10 @@ export default function TicketMaterialsCard({
         id={`${id}-reserved-stock-confirm`}
         isOpen={reservedConflict !== null}
         onClose={() => setReservedConflict(null)}
-        title={t('materials.reservedStockTitle', 'Stock is reserved for a sales order')}
+        title={t('materials.reservedStockTitle', 'Stock is reserved for a sales order or project')}
         message={reservedConflict ? t(
           'materials.reservedStockMessage',
-          'Only {{free}} of this product is free. {{reserved}} on hand is reserved for sales orders, and you asked for {{requested}}. Adding it anyway takes stock a sales order is counting on and may leave that order short.',
+          'Only {{free}} of this product is free. {{reserved}} on hand is reserved for sales orders or projects, and you asked for {{requested}}. Adding it anyway takes stock a sales order or project is counting on and may leave it short.',
           { free: Math.max(0, reservedConflict.free), reserved: reservedConflict.reserved, requested: reservedConflict.requested },
         ) : ''}
         confirmLabel={t('materials.reservedStockConfirm', 'Add anyway')}

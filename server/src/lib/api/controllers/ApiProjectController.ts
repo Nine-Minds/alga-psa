@@ -33,6 +33,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import { authorizeApiResourceRead } from './authorizationKernel';
+import { buildProjectRecordContext, buildTicketRecordContext } from './recordContexts';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { tenantDb } from '@alga-psa/db';
 import {
@@ -73,15 +74,9 @@ export class ApiProjectController extends ApiBaseController {
     this.projectService = projectService;
   }
 
+  // LEVERAGE: pattern ticket-record-context — thin wrapper over the shared builder; callers should import ./recordContexts directly
   private buildProjectRecordContext(project: Record<string, any>) {
-    return {
-      id: project.project_id,
-      ownerUserId: typeof project.assigned_to === 'string' ? project.assigned_to : undefined,
-      assignedUserIds: typeof project.assigned_to === 'string' ? [project.assigned_to] : [],
-      clientId: typeof project.client_id === 'string' ? project.client_id : undefined,
-      status: project.status,
-      isClosed: project.is_closed,
-    };
+    return buildProjectRecordContext(project);
   }
 
   private async assertProjectReadAllowed(
@@ -111,16 +106,9 @@ export class ApiProjectController extends ApiBaseController {
     return project as Record<string, any>;
   }
 
+  // LEVERAGE: pattern ticket-record-context — thin wrapper over the shared builder; callers should import ./recordContexts directly
   private buildTicketRecordContext(ticket: Record<string, any>) {
-    return {
-      id: ticket.ticket_id,
-      ownerUserId: typeof ticket.entered_by === 'string' ? ticket.entered_by : undefined,
-      assignedUserIds: typeof ticket.assigned_to === 'string' ? [ticket.assigned_to] : [],
-      clientId: typeof ticket.client_id === 'string' ? ticket.client_id : undefined,
-      boardId: typeof ticket.board_id === 'string' ? ticket.board_id : undefined,
-      teamIds: typeof ticket.assigned_team_id === 'string' ? [ticket.assigned_team_id] : [],
-      statusId: ticket.status_id,
-    };
+    return buildTicketRecordContext(ticket);
   }
 
   private async filterAuthorizedProjects(
@@ -457,7 +445,7 @@ export class ApiProjectController extends ApiBaseController {
             validatedQuery = projectSearchSchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -534,7 +522,7 @@ export class ApiProjectController extends ApiBaseController {
             validatedQuery = projectExportQuerySchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -2040,7 +2028,7 @@ export class ApiProjectController extends ApiBaseController {
             data = createTaskChecklistItemSchema.parse(await req.json());
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
@@ -2124,7 +2112,7 @@ export class ApiProjectController extends ApiBaseController {
             data = updateTaskChecklistItemSchema.parse(await req.json());
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }

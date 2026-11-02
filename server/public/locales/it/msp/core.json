@@ -105,7 +105,13 @@
     "passwords": "Password",
     "ticketsAll": "Tutti i ticket",
     "ticketsRecurring": "Ticket ricorrenti",
-    "ticketsTemplates": "Modelli di ticket"
+    "ticketsTemplates": "Modelli di ticket",
+    "assetsCustody": "Apparecchiature in custodia",
+    "ticketsCannedResponses": "Risposte predefinite",
+    "profile": "Profilo",
+    "signOut": "Esci",
+    "coManaged": "IT in co-gestione",
+    "coManagedAdministration": "Accesso e amministrazione"
   },
   "sidebar": {
     "backToMain": "Torna al principale",
@@ -154,7 +160,8 @@
       "extensions": "Estensioni",
       "experimentalFeatures": "Funzionalità sperimentali",
       "profile": "Profilo",
-      "security": "Sicurezza"
+      "security": "Sicurezza",
+      "tags": "Tag"
     }
   },
   "dashboard": {
@@ -321,6 +328,17 @@
       "calendar": {
         "error": "La sincronizzazione del calendario per {{providerName}} ha segnalato un errore e non è attiva.",
         "disconnected": "La sincronizzazione del calendario per {{providerName}} è disconnessa e non è attiva."
+      },
+      "rmm": {
+        "syncError": "{{providerName}} ha segnalato un errore di sincronizzazione, quindi i dati di dispositivi e avvisi potrebbero non essere aggiornati.",
+        "reconnectRequired": "{{providerName}} deve essere ricollegato: le sue credenziali non possono più essere rinnovate."
+      },
+      "accounting": {
+        "reconnectRequired": "{{providerName}} deve essere ricollegato prima che la sincronizzazione contabile possa riprendere.",
+        "syncError": "L'ultima sincronizzazione con {{providerName}} non è stata completata, quindi fatture e pagamenti potrebbero non essere aggiornati."
+      },
+      "teams": {
+        "botCredentialsMissing": "Il bot {{providerName}} non può rispondere: le credenziali del connettore del bot non sono configurate sul server."
       },
       "review": "Verifica",
       "dismiss": "Ignora avviso di integrazione"
@@ -843,5 +861,10 @@
     "errors": {
       "enterpriseOnly": "Le funzionalità di chat sono disponibili solo in Enterprise Edition"
     }
+  },
+  "coManagedWorkspace": {
+    "loading": "Caricamento dell’area di lavoro…",
+    "navigation": "Area di lavoro cliente",
+    "passwordError": "Impossibile verificare lo stato della password. Ricarica questa pagina."
   }
 }

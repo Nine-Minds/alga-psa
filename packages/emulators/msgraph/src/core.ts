@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Temporal } from '@js-temporal/polyfill';
+import { signEntraIdToken } from './entraOidc';
 import type { EmulatorCore, HostEnv } from '@alga-psa/emulator-host';
 
 /** Microsoft identity platform sign-in audience of an app registration. */
@@ -190,6 +191,8 @@ export interface GraphCalendarEvent {
   sensitivity?: unknown;
   isAllDay?: unknown;
   singleValueExtendedProperties?: unknown;
+  /** Client-supplied idempotency key; a repeat create by the same organizer returns the first event. */
+  transactionId?: string | null;
   lastModifiedDateTime?: string;
   recurrence?: unknown;
   categories?: string[];
@@ -391,6 +394,9 @@ export interface OperationFault {
 
 export interface TokenGrantInput {
   authorityTenant?: string;
+  /** Set by the wire adapter, never taken from a token request body. */
+  oidcIssuer?: string;
+  code_verifier?: string;
   grant_type?: string;
   client_id?: string;
   client_secret?: string;
@@ -490,6 +496,9 @@ export class MsGraphCore implements EmulatorCore {
     nonce?: string;
     scope?: string;
     userTenantId: string;
+    codeChallenge?: string;
+    authorityTenant?: string;
+    user: SignedInUser;
   }>();
   private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean; scope: string; userTenantId: string }>();
   private readonly accessTokens = new Map<string, { clientId: string; tenantId: string; expiresAt: number }>();
@@ -688,7 +697,7 @@ export class MsGraphCore implements EmulatorCore {
    * Throws OAuthError(50011) for an unregistered redirect URI (Microsoft
    * renders that as a hosted error page, never a redirect).
    */
-  authorize(clientId: string, redirectUri: string, input?: { nonce?: string; scope?: string; authorityTenant?: string }): string {
+  authorize(clientId: string, redirectUri: string, input?: { nonce?: string; scope?: string; codeChallenge?: string; codeChallengeMethod?: string; authorityTenant?: string }): string {
     const client = this.clients.get(clientId);
     if (!client) {
       throw new GraphApiError(400, { error: 'invalid_client' });
@@ -698,10 +707,14 @@ export class MsGraphCore implements EmulatorCore {
         'invalid_request',
         `The redirect URI '${redirectUri}' specified in the request does not match the redirect URIs configured for the application '${clientId}'. Make sure the redirect URI sent in the request matches one added to your application in the Azure portal. Navigate to https://aka.ms/redirectUriMismatchError to learn more about how to fix this.`);
     }
+    if (input?.codeChallenge && (input.codeChallengeMethod !== 'S256' || !/^[A-Za-z0-9_-]{43}$/.test(input.codeChallenge))) {
+      throw new GraphApiError(400, { error: 'invalid_request' });
+    }
     this.checkAuthority(clientId, input?.authorityTenant, this.userTenantId());
     const code = this.newId('code');
     this.codes.set(code, {
       clientId, redirectUri, nonce: input?.nonce, scope: input?.scope, userTenantId: this.userTenantId(),
+      codeChallenge: input?.codeChallenge, authorityTenant: input?.authorityTenant, user: { ...this.signedInUser },
     });
     return code;
   }
@@ -724,13 +737,23 @@ export class MsGraphCore implements EmulatorCore {
       if (!code || code.clientId !== input.client_id || code.redirectUri !== input.redirect_uri) {
         throw new GraphApiError(400, { error: 'invalid_grant' });
       }
+      // Audience/authority policing first so AADSTS errors win over the generic mismatch.
       this.checkAuthority(String(input.client_id), input.authorityTenant, code.userTenantId);
+      if (code.authorityTenant && code.authorityTenant !== input.authorityTenant) {
+        throw new GraphApiError(400, { error: 'invalid_grant' });
+      }
+      if (code.codeChallenge && (!input.code_verifier || !/^[A-Za-z0-9._~-]{43,128}$/.test(input.code_verifier)
+        || createHash('sha256').update(input.code_verifier).digest('base64url') !== code.codeChallenge)) {
+        throw new GraphApiError(400, { error: 'invalid_grant' });
+      }
       this.codes.delete(String(input.code));
       return this.issueTokens(String(input.client_id), undefined, {
         nonce: code.nonce,
         scope: code.scope || input.scope,
         authorityTenant: input.authorityTenant,
         userTenantId: code.userTenantId,
+        oidcIssuer: input.oidcIssuer,
+        user: code.user,
       });
     }
     if (input.grant_type === 'refresh_token') {
@@ -768,10 +791,11 @@ export class MsGraphCore implements EmulatorCore {
   private issueTokens(
     clientId: string,
     existingRefreshToken?: string,
-    claims?: { nonce?: string; scope?: string; appOnly?: boolean; authorityTenant?: string; userTenantId?: string }
+    claims?: { nonce?: string; scope?: string; appOnly?: boolean; authorityTenant?: string; userTenantId?: string; oidcIssuer?: string; user?: SignedInUser }
   ) {
     const tenantId = this.resolveTenantId(clientId, claims?.authorityTenant, claims?.userTenantId);
     const specificAuthority = Boolean(claims?.authorityTenant && !GENERIC_AUTHORITIES.has(claims.authorityTenant.toLowerCase()));
+    const user = claims?.user ?? this.signedInUser;
     // OAuth requests accept resource-qualified Graph scopes; Graph access
     // tokens expose permission names in scp, which the application validates.
     const scope = (claims?.scope || 'Mail.Read Mail.Read.Shared offline_access')
@@ -815,7 +839,12 @@ export class MsGraphCore implements EmulatorCore {
       expires_in: this.accessTokenTtlSeconds,
       token_type: 'Bearer' as const,
       ...(claims?.nonce
-        ? { id_token: this.encodeJwt({ tid: tenantId, nonce: claims.nonce, aud: clientId }) }
+        ? { id_token: signEntraIdToken({
+          ...user, sub: user.id, oid: user.id,
+          name: user.displayName, email: user.mail, preferred_username: user.userPrincipalName,
+          iss: claims.oidcIssuer ?? `https://login.microsoftonline.com/${tenantId}/v2.0`,
+          tid: tenantId, nonce: claims.nonce, aud: clientId,
+        }, Math.floor(this.nowMs() / 1000)) }
         : {}),
     };
   }
@@ -1203,6 +1232,12 @@ export class MsGraphCore implements EmulatorCore {
   }
 
   createCalendarEvent(organizerUserId: string, body: Record<string, unknown>): GraphCalendarEvent {
+    const transactionId = typeof body.transactionId === 'string' && body.transactionId ? body.transactionId : null;
+    if (transactionId) {
+      for (const existing of this.calendarEvents.values()) {
+        if (existing.organizerUserId === organizerUserId && existing.transactionId === transactionId) return existing;
+      }
+    }
     this.validateCalendarBoundaries(body);
     const isOnlineMeeting = body.isOnlineMeeting === true;
     const subject = typeof body.subject === 'string' ? body.subject : null;
@@ -1231,6 +1266,7 @@ export class MsGraphCore implements EmulatorCore {
       sensitivity: body.sensitivity,
       isAllDay: body.isAllDay,
       singleValueExtendedProperties: body.singleValueExtendedProperties,
+      ...(transactionId ? { transactionId } : {}),
       recurrence: body.recurrence,
       categories: Array.isArray(body.categories) ? body.categories.map(String) : [],
       lastModifiedDateTime: this.env.clock.now().toISOString(),

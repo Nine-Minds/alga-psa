@@ -297,7 +297,7 @@
         "description": "Skonfiguruj zaawansowane opcje przetwarzania poczty e-mail",
         "folderFiltersLabel": "Filtry folderów",
         "folderFiltersPlaceholder": "Skrzynka odbiorcza, pomoc techniczna, folder niestandardowy",
-        "folderFiltersHelp": "Rozdzielana przecinkami lista folderów do monitorowania (domyślnie: Skrzynka odbiorcza)",
+        "folderFiltersHelp": "Rozdzielana przecinkami lista folderów do monitorowania (domyślnie: Skrzynka odbiorcza). Użyj dokładnej nazwy folderu widocznej w programie Outlook, a foldery zagnieżdżone zapisuj jako Skrzynka odbiorcza/Podfolder.",
         "maxEmailsPerSync": "Maksymalna liczba e-maili na synchronizację"
       },
       "readiness": {
@@ -424,7 +424,8 @@
         "clientId": "Identyfikator klienta OAuth",
         "clientSecret": "Sekret klienta OAuth",
         "scopes": "Zakresy protokołu OAuth",
-        "scopesPlaceholder": "zakresy rozdzielone spacjami"
+        "scopesPlaceholder": "zakresy rozdzielone spacjami",
+        "clientSecretHelp": "Klucz tajny klienta jest bezpiecznie przechowywany i nie będzie wyświetlany. Pozostaw puste, aby zachować istniejący klucz."
       },
       "processing": {
         "title": "Ustawienia przetwarzania",
@@ -432,6 +433,9 @@
         "folderFilters": "Filtry folderów",
         "folderFiltersPlaceholder": "Skrzynka odbiorcza, wsparcie, zgłoszenia",
         "active": "Aktywny"
+      },
+      "messages": {
+        "reconnectRequired": "Ustawienia OAuth zostały zmienione. Połącz skrzynkę pocztową ponownie, aby autoryzować ją z nowymi ustawieniami."
       }
     }
   },
@@ -476,7 +480,8 @@
       "providerNameHelp": "Wewnętrzna nazwa służąca do identyfikacji tej konfiguracji. Nie jest pokazywana w wiadomościach wychodzących.",
       "senderDisplayName": "Wyświetlana nazwa nadawcy",
       "senderDisplayNamePlaceholder": "np. Acme Support",
-      "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń organizacji. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
+      "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń organizacji. Zostaw puste, aby użyć nazwy tablicy zgłoszenia.",
+      "oauthClientSecretHelp": "Klucz tajny klienta jest bezpiecznie przechowywany i nie będzie wyświetlany. Pozostaw puste, aby zachować istniejący klucz."
     },
     "authOptions": {
       "password": "Hasło",
@@ -500,6 +505,9 @@
       "saving": "Zapisywanie...",
       "updateProvider": "Aktualizuj dostawcę",
       "createProvider": "Utwórz dostawcę"
+    },
+    "messages": {
+      "reconnectRequired": "Ustawienia OAuth zostały zmienione. Połącz skrzynkę pocztową ponownie, aby autoryzować ją z nowymi ustawieniami."
     }
   },
   "microsoftForm": {
