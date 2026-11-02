@@ -14,6 +14,9 @@ const isEnterpriseRef = vi.hoisted(() => ({ value: false }));
 const deleteEntityWithValidationMock = vi.hoisted(() => vi.fn());
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn());
 const modelGetUserRolesMock = vi.hoisted(() => vi.fn());
+const userGetMock = vi.hoisted(() => vi.fn());
+const uploadEntityImageMock = vi.hoisted(() => vi.fn());
+const deleteEntityImageMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/core', () => ({
   get isEnterprise() {
@@ -57,11 +60,17 @@ vi.mock('@alga-psa/db/admin', () => ({
 
 vi.mock('@alga-psa/db/models/user', () => ({
   default: {
+    get: userGetMock,
     update: userUpdateMock,
     getUserWithRoles: getUserWithRolesMock,
     getUserRoles: modelGetUserRolesMock,
     isInReportsToChain: isInReportsToChainMock,
   },
+}));
+
+vi.mock('@alga-psa/storage', () => ({
+  uploadEntityImage: uploadEntityImageMock,
+  deleteEntityImage: deleteEntityImageMock,
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -695,5 +704,86 @@ describe('deleteUser', () => {
     const docOp = ops.find((o) => o.table === 'documents' && o.op === 'update');
     expect(docOp).toBeTruthy();
     expect(docOp!.values).toEqual({ created_by: ACTOR_USER_ID });
+  });
+});
+
+describe.each([
+  ['uploadUserAvatar', 'other-user'],
+  ['deleteUserAvatar', 'other-user'],
+] as const)('%s authorization boundary', (actionName, targetUserId) => {
+  const tenant = 'tenant-1';
+  const callerId = 'caller-user';
+  let action: (...args: any[]) => Promise<any>;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    userGetMock.mockReset();
+    uploadEntityImageMock.mockReset();
+    deleteEntityImageMock.mockReset();
+    hasPermissionMock.mockReset();
+    createTenantKnexMock.mockReset();
+    hasPermissionMock.mockResolvedValue(false);
+    userGetMock.mockResolvedValue({ user_id: targetUserId, tenant, user_type: 'internal' });
+    createTenantKnexMock.mockResolvedValue({ knex: {} });
+    uploadEntityImageMock.mockResolvedValue({ success: true, imageUrl: '/avatar.png' });
+    deleteEntityImageMock.mockResolvedValue({ success: true, message: 'deleted' });
+    action = (await import('./userActions'))[actionName] as any;
+  });
+
+  function caller(userType: 'internal' | 'client', roles: Array<{ role_name: string }> = []) {
+    return { user_id: callerId, user_type: userType, tenant, roles };
+  }
+
+  async function invoke(user: any, id: string = targetUserId) {
+    if (actionName === 'uploadUserAvatar') {
+      const formData = new FormData();
+      formData.append('avatar', new Blob(['avatar bytes'], { type: 'image/png' }), 'avatar.png');
+      return action(user, { tenant }, id, formData);
+    }
+    return action(user, { tenant }, id);
+  }
+
+  function expectNoMutation() {
+    expect(uploadEntityImageMock).not.toHaveBeenCalled();
+    expect(deleteEntityImageMock).not.toHaveBeenCalled();
+  }
+
+  it('denies a client-portal Admin changing an internal user even when user:update is granted', async () => {
+    hasPermissionMock.mockResolvedValue(true);
+    const result = await invoke(caller('client', [{ role_name: 'Admin' }]));
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/Permission denied/);
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+    expectNoMutation();
+  });
+
+  it('denies an internal caller without user:update', async () => {
+    const result = await invoke(caller('internal'));
+    expect(result.success).toBe(false);
+    expectNoMutation();
+  });
+
+  it('permits an internal caller with user:update for a same-tenant target', async () => {
+    hasPermissionMock.mockResolvedValue(true);
+    const result = await invoke(caller('internal'));
+    expect(result.success).toBe(true);
+    expect(actionName === 'uploadUserAvatar' ? uploadEntityImageMock : deleteEntityImageMock).toHaveBeenCalledOnce();
+  });
+
+  it('preserves self-service without requiring user:update', async () => {
+    userGetMock.mockResolvedValue({ user_id: callerId, tenant, user_type: 'client' });
+    const result = await invoke(caller('client'), callerId);
+    expect(result.success).toBe(true);
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+    expect(actionName === 'uploadUserAvatar' ? uploadEntityImageMock : deleteEntityImageMock).toHaveBeenCalledOnce();
+  });
+
+  it('rejects cross-tenant targets before mutation', async () => {
+    userGetMock.mockResolvedValue({ user_id: targetUserId, tenant: 'tenant-2', user_type: 'internal' });
+    hasPermissionMock.mockResolvedValue(true);
+    const result = await invoke(caller('internal'));
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/different tenant/);
+    expectNoMutation();
   });
 });
