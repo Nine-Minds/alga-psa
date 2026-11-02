@@ -90,6 +90,43 @@ describe('getCurrentUser', () => {
     expect(user?.roles).toEqual([{ role_id: 'role-1' }]);
   });
 
+  it('returns only allow-listed current-user data from credential-bearing lookup rows', async () => {
+    vi.mocked(getSession).mockResolvedValue({
+      user: { id: 'user-1', tenant: 'tenant-1' },
+    } as any);
+    vi.mocked(getUserWithRoles).mockResolvedValue({
+      user_id: 'user-1',
+      username: 'alex',
+      first_name: 'Alex',
+      email: 'alex@example.com',
+      tenant: 'tenant-1',
+      user_type: 'internal',
+      is_inactive: false,
+      hashed_password: 'password-hash-secret',
+      two_factor_secret: 'totp-seed-secret',
+      newly_added_database_column: 'must-not-escape',
+      roles: [{ role_id: 'role-1', role_name: 'Technician', tenant: 'tenant-1' }],
+    } as any);
+
+    const user = await getCurrentUser();
+    const serialized = JSON.stringify(user);
+
+    expect(user).toMatchObject({
+      user_id: 'user-1',
+      username: 'alex',
+      email: 'alex@example.com',
+      tenant: 'tenant-1',
+      user_type: 'internal',
+      roles: [{ role_id: 'role-1', role_name: 'Technician' }],
+    });
+    expect(user).not.toHaveProperty('hashed_password');
+    expect(user).not.toHaveProperty('two_factor_secret');
+    expect(user).not.toHaveProperty('newly_added_database_column');
+    expect(serialized).not.toContain('password-hash-secret');
+    expect(serialized).not.toContain('totp-seed-secret');
+    expect(serialized).not.toContain('must-not-escape');
+  });
+
   it('returns null when session is missing', async () => {
     vi.mocked(getSession).mockResolvedValue(null);
 
