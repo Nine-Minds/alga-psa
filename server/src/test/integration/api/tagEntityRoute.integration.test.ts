@@ -172,6 +172,15 @@ describe('REST tag entity route against the migrated database schema', () => {
     const [mapping] = await trx('tag_mappings').where({ tenant, mapping_id: postBody.data.tags[0].tag_id });
     const definition = await trx('tag_definitions').where({ tenant, tag_id: mapping.tag_id }).first();
     expect(mapping).toMatchObject({ tagged_id: ticketId, tagged_type: 'ticket', created_by: userId });
+    const explicitAttribution = await TagMapping.insert(trx, tenant, {
+      tag_id: mapping.tag_id,
+      tagged_id: randomUUID(),
+      tagged_type: 'ticket',
+      created_by: userId,
+    });
+    expect(explicitAttribution.created_by).toBe(userId);
+    await expect(trx('tag_mappings').where({ tenant, mapping_id: explicitAttribution.mapping_id }).first('created_by'))
+      .resolves.toMatchObject({ created_by: userId });
     expect(definition).toMatchObject({ board_id: null, background_color: postBody.data.tags[0].background_color, text_color: postBody.data.tags[0].text_color });
     const ticket = await trx('tickets').where({ tenant, ticket_id: ticketId }).first();
     expect(ticket.board_id).toBe(ticketBoardId);
@@ -202,7 +211,7 @@ describe('REST tag entity route against the migrated database schema', () => {
     });
   });
 
-  it('supports the REST tag lifecycle when tag_definitions has no board_id column', async () => {
+  it('supports the REST tag lifecycle when tag_definitions.board_id and tag_mappings.created_by are absent', async () => {
     const parentConnection = connection.db;
     await withRolledBackSchemaContract(trx, async (contractTrx) => {
       connection.db = contractTrx;
@@ -232,7 +241,7 @@ describe('REST tag entity route against the migrated database schema', () => {
           throw error;
         }
       }).catch(() => undefined);
-      // This reproduces PostgreSQL's diagnostic for the historical insert dependency. The
+      // This controlled local reproduction confirms PostgreSQL's diagnostic for the insert dependency. The
       // nested transaction rolls back the failed statement so the contract transaction stays usable.
       expect(baselineError?.code).toBe('42703');
       expect(baselineError?.message).toMatch(/column "created_by" of relation "tag_mappings" does not exist/);
@@ -249,6 +258,19 @@ describe('REST tag entity route against the migrated database schema', () => {
           background_color: expect.any(String), text_color: expect.any(String),
         });
         expect(postedTags[0]).not.toHaveProperty('board_id');
+
+        const [postedMapping] = await contractTrx('tag_mappings')
+          .where({ tenant, mapping_id: postedTags[0].tag_id });
+        const explicitAttribution = await TagMapping.insert(contractTrx, tenant, {
+          tag_id: postedMapping.tag_id,
+          tagged_id: randomUUID(),
+          tagged_type: 'ticket',
+          created_by: userId,
+        });
+        expect(explicitAttribution).not.toHaveProperty('created_by');
+        const reducedSchemaRow = await contractTrx('tag_mappings')
+          .where({ tenant, mapping_id: explicitAttribution.mapping_id }).first();
+        expect(reducedSchemaRow).not.toHaveProperty('created_by');
 
         const tagById = await readTagById(tagIdRequest('GET', postedTags[0].tag_id));
         expect(tagById.status).toBe(200);
