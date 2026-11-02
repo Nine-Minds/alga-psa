@@ -29,7 +29,7 @@ import {
   NotFoundError,
   ValidationError,
   ConflictError,
-  assertInternalApiUser,
+  assertApiPrincipal,
   createSuccessResponse,
   createPaginatedResponse,
   handleApiError
@@ -89,7 +89,7 @@ export abstract class ApiBaseController {
     // context-construction defense: a permissively mocked validator cannot
     // admit a client user into a user-key API context.
     const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-    assertInternalApiUser(user);
+    assertApiPrincipal(user);
 
     // Create extended request with context
     const apiRequest = req as AuthenticatedApiRequest;
