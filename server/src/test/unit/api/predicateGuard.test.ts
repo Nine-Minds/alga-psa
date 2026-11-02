@@ -5,7 +5,14 @@ import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 vi.mock('server/src/lib/authorization/kernel', () => ({ getAuthorizationKernel: vi.fn() }));
 
 import { buildPredicateGuard, createPredicateGuard } from '../../../lib/api/controllers/authorizationKernel';
-import { isRecordFieldReadable, PROJECT_RECORD_SOURCE, TICKET_RECORD_SOURCE } from '@alga-psa/co-managed/recordProjection';
+import {
+  isRecordFieldReadable,
+  projectRecordByRedactions,
+  ASSET_RECORD_SOURCE,
+  PROJECT_RECORD_SOURCE,
+  QUOTE_RECORD_SOURCE,
+  TICKET_RECORD_SOURCE,
+} from '@alga-psa/co-managed/recordProjection';
 
 const qb = () => knexFactory({ client: 'pg' }).queryBuilder().from('projects');
 
@@ -31,6 +38,61 @@ describe('isRecordFieldReadable (descriptor-driven)', () => {
       ])).toEqual(['t.title']);
     },
   );
+
+  it.each([
+    ['entered_by', 'entered_by_name'],
+    ['board_id', 'board_name'],
+    ['subcategory_id', 'subcategory_name'],
+    ['attributes', 'description_html'],
+    ['contact_name_id', 'contact_avatar_url'],
+    ['client_id', 'client_logo_url'],
+  ])('projects and guards ticket field %s -> %s', (sourceField, derivedField) => {
+    const record = {
+      ticket_id: 'ticket-1',
+      [sourceField]: `${sourceField}-value`,
+      [derivedField]: `${derivedField}-visible`,
+    };
+    expect(projectRecordByRedactions([], record, TICKET_RECORD_SOURCE)?.[derivedField]).toBe(`${derivedField}-visible`);
+
+    for (const alias of [sourceField, `values.${sourceField}`, `tickets.${sourceField}`]) {
+      const projected = projectRecordByRedactions([alias], record, TICKET_RECORD_SOURCE);
+      expect(projected).not.toHaveProperty(sourceField);
+      expect(projected?.[derivedField], alias).toBeNull();
+      expect(buildPredicateGuard('ticket', [alias]).columns([
+        { column: `t.${derivedField}`, field: derivedField },
+        { column: 't.title', field: 'title' },
+      ])).toEqual(['t.title']);
+    }
+  });
+
+  it('projects and guards display quote numbers through quote_number and version', () => {
+    const record = { quote_id: 'quote-1', quote_number: 'Q-9', version: 2, display_quote_number: 'Q-9 v2' };
+    expect(projectRecordByRedactions([], record, QUOTE_RECORD_SOURCE)?.display_quote_number).toBe('Q-9 v2');
+
+    for (const alias of ['quote_number', 'values.quote_number', 'quotes.quote_number', 'version']) {
+      const projected = projectRecordByRedactions([alias], record, QUOTE_RECORD_SOURCE);
+      expect(projected).not.toHaveProperty(alias === 'version' ? 'version' : 'quote_number');
+      expect(projected?.display_quote_number, alias).toBeNull();
+      expect(buildPredicateGuard('quote', [alias]).columns([
+        { column: 'q.display_quote_number', field: 'display_quote_number' },
+        { column: 'q.title', field: 'title' },
+      ])).toEqual(['q.title']);
+    }
+  });
+
+  it('suppresses each resource when a values-prefixed identifier alias is hidden', () => {
+    const cases = [
+      [PROJECT_RECORD_SOURCE, 'project_id', { project_id: 'project-1', project_name: 'Project' }],
+      [TICKET_RECORD_SOURCE, 'ticket_id', { ticket_id: 'ticket-1', title: 'Ticket' }],
+      [QUOTE_RECORD_SOURCE, 'quote_id', { quote_id: 'quote-1', title: 'Quote' }],
+      [ASSET_RECORD_SOURCE, 'asset_id', { asset_id: 'asset-1', name: 'Asset' }],
+    ] as const;
+
+    for (const [source, identifier, record] of cases) {
+      expect(projectRecordByRedactions([], record, source)).not.toBeNull();
+      expect(projectRecordByRedactions([`values.${identifier}`], record, source)).toBeNull();
+    }
+  });
 
   it('fails closed on wildcard, suppression and uninterpretable entries', () => {
     expect(isRecordFieldReadable(['*'], PROJECT_RECORD_SOURCE, 'project_name')).toBe(false);

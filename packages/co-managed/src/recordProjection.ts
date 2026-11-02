@@ -49,34 +49,35 @@ export function recordSourceFromCoManaged(
   };
 }
 
-/** Every spelling of a bare dependency in this record's value and table namespaces. */
-function dependencyFieldAliases(source: RedactableRecordSource, dependency: string): readonly string[] {
-  const table = source.resource.find(resource => dependency.startsWith(`${resource}.`));
-  const field = dependency.startsWith('values.')
-    ? dependency.slice('values.'.length)
+/** Every spelling of a record field in its value and table namespaces. */
+function recordFieldAliasForms(source: RedactableRecordSource, alias: string): readonly string[] {
+  const table = source.resource.find(resource => alias.startsWith(`${resource}.`));
+  const field = alias.startsWith('values.')
+    ? alias.slice('values.'.length)
     : table
-      ? dependency.slice(table.length + 1)
-      : dependency.includes('.')
+      ? alias.slice(table.length + 1)
+      : alias.includes('.')
         ? null
-        : dependency;
-  if (field === null) return [dependency];
-  return [dependency, field, `values.${field}`, ...source.resource.map(resource => `${resource}.${field}`)];
+        : alias;
+  if (field === null) return [alias];
+  return [alias, field, `values.${field}`, ...source.resource.map(resource => `${resource}.${field}`)];
 }
 
 /** Every alias a record key is matched against: itself, `values.`/`<table>.` forms, declared extras, and derived sources. */
 export function recordFieldAliases(source: RedactableRecordSource, key: string): readonly string[] {
   return [
-    key, `values.${key}`, ...source.resource.map(table => `${table}.${key}`),
+    ...recordFieldAliasForms(source, key),
     ...(Object.hasOwn(source.fields, key) ? source.fields[key] : []),
     ...(Object.hasOwn(source.derived, key)
-      ? source.derived[key].flatMap(dependency => dependencyFieldAliases(source, dependency))
+      ? source.derived[key].flatMap(dependency => recordFieldAliasForms(source, dependency))
       : []),
   ];
 }
 
 /** True when the row must not be served at all: the whole resource or an identifier is redacted. */
 export function isRecordSuppressed(redactions: readonly string[], source: RedactableRecordSource): boolean {
-  return isCoManagedResourceHidden(redactions, source.resource) || isCoManagedReadFieldHidden(redactions, source.identifier);
+  const identifierAliases = source.identifier.flatMap(identifier => recordFieldAliasForms(source, identifier));
+  return isCoManagedResourceHidden(redactions, source.resource) || isCoManagedReadFieldHidden(redactions, identifierAliases);
 }
 
 /**
@@ -132,8 +133,14 @@ export const TICKET_RECORD_SOURCE: RedactableRecordSource = {
     status_is_closed: ids('status_id', 'statuses'),
     priority_name: ids('priority_id', 'priorities'),
     category_name: ids('category_id', 'subcategory_id', 'categories'),
+    subcategory_name: ids('subcategory_id'),
+    board_name: ids('board_id'),
+    entered_by_name: ids('entered_by'),
+    description_html: ids('attributes'),
     assigned_to_name: [...CO_MANAGED_ASSIGNEE_NAME_ALIASES, 'assigned_to'],
     bundle_master_ticket_number: ids('master_ticket_id'),
+    contact_avatar_url: ids('contact_name_id'),
+    client_logo_url: ids('client_id'),
   },
 };
 
@@ -158,6 +165,7 @@ export const QUOTE_RECORD_SOURCE: RedactableRecordSource = {
     contact_name: ids('contact_id', 'contacts'),
     total_amount: ids('subtotal', 'discount_total', 'tax'),
     accepted_by_name: ids('accepted_by'),
+    display_quote_number: ids('quote_number', 'version'),
   },
   children: { items: QUOTE_LINE_RECORD_SOURCE, quote_items: QUOTE_LINE_RECORD_SOURCE },
 };

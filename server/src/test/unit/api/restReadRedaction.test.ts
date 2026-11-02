@@ -142,6 +142,8 @@ describe('projects: REST reads serialize the projection', () => {
   });
 
   it('a suppressed get is a 404, never a 403', async () => {
+    state.decisions.set(P1, { allowed: true, redactedFields: ['values.project_id'] });
+    expect((await controller().getById()(request(`/api/v1/projects/${P1}`, { id: P1 }))).status).toBe(404);
     state.decisions.set(P1, { allowed: true, redactedFields: ['projects'] });
     expect((await controller().getById()(request(`/api/v1/projects/${P1}`, { id: P1 }))).status).toBe(404);
     state.decisions.set(P1, { allowed: false, redactedFields: [] });
@@ -150,7 +152,7 @@ describe('projects: REST reads serialize the projection', () => {
 
   it('list omits hidden fields, drops suppressed rows and does not count them', async () => {
     hideProjectFields('description');
-    state.decisions.set(P2, { allowed: true, redactedFields: ['project_id'] });
+    state.decisions.set(P2, { allowed: true, redactedFields: ['values.project_id'] });
     const res = await controller().list()(request('/api/v1/projects?page=1&limit=25'));
     const body = await res.json();
     expect(body.data.map((p: any) => p.project_id)).toEqual([P1, P3]);
@@ -210,7 +212,25 @@ describe('projects: REST reads serialize the projection', () => {
 describe('tickets: REST reads serialize the projection', () => {
   const TICKET = '33333333-3333-3333-3333-333333333331';
   beforeEach(() => {
-    state.tickets = [{ ticket_id: TICKET, title: 'Printer', client_id: 'c-1', assigned_to: 'u-9', assigned_to_name: 'Pat Doe', status_name: 'Open' }];
+    state.tickets = [{
+      ticket_id: TICKET,
+      title: 'Printer',
+      client_id: 'c-1',
+      client_logo_url: '/client-logo.png',
+      contact_name_id: 'contact-1',
+      contact_avatar_url: '/contact-avatar.png',
+      assigned_to: 'u-9',
+      assigned_to_name: 'Pat Doe',
+      entered_by: 'u-2',
+      entered_by_name: 'Jo Doe',
+      board_id: 'board-1',
+      board_name: 'Security board',
+      subcategory_id: 'subcategory-1',
+      subcategory_name: 'Sensitive category',
+      attributes: { body: 'secret' },
+      description_html: '<p>secret</p>',
+      status_name: 'Open',
+    }];
   });
 
   it('get nulls derived values and omits hidden fields; suppressed get is 404', async () => {
@@ -237,15 +257,47 @@ describe('tickets: REST reads serialize the projection', () => {
       expect(data.title).toBe('Printer');
     },
   );
+
+  it.each([
+    ['entered_by', 'entered_by_name'],
+    ['board_id', 'board_name'],
+    ['subcategory_id', 'subcategory_name'],
+    ['attributes', 'description_html'],
+    ['contact_name_id', 'contact_avatar_url'],
+    ['client_id', 'client_logo_url'],
+  ])('preserves %s-derived values only for readers who can see the source', async (sourceField, derivedField) => {
+    const visible = await new ApiTicketController().getById()(request(`/api/v1/tickets/${TICKET}`, { id: TICKET }));
+    const visibleData = (await visible.json()).data;
+    expect(visibleData[derivedField]).toBe(state.tickets[0][derivedField]);
+
+    state.decisions.set(TICKET, { allowed: true, redactedFields: [sourceField] });
+    const hidden = await new ApiTicketController().getById()(request(`/api/v1/tickets/${TICKET}`, { id: TICKET }));
+    const hiddenData = (await hidden.json()).data;
+    expect(hiddenData).not.toHaveProperty(sourceField);
+    expect(hiddenData[derivedField]).toBeNull();
+    expect(hiddenData.title).toBe('Printer');
+  });
 });
 
 describe('quotes: REST reads serialize the projection', () => {
   const QUOTE = '44444444-4444-4444-4444-444444444441';
   beforeEach(() => {
     state.quote = {
-      quote_id: QUOTE, title: 'Q', subtotal: 10, tax: 1, total_amount: 11, created_by: 'u-1',
+      quote_id: QUOTE, title: 'Q', quote_number: 'QUO-1', version: 2,
+      display_quote_number: 'QUO-1 v2', subtotal: 10, tax: 1, total_amount: 11, created_by: 'u-1',
       items: [{ quote_item_id: 'i-1', unit_price: 5, quantity: 2, total_price: 10, cost: 3 }],
     };
+  });
+
+  it('nulls display_quote_number when quote_number is hidden and preserves it otherwise', async () => {
+    const visible = await new ApiQuoteController().getById()(request(`/api/v1/quotes/${QUOTE}`, { id: QUOTE }));
+    expect((await visible.json()).data.display_quote_number).toBe('QUO-1 v2');
+
+    state.decisions.set(QUOTE, { allowed: true, redactedFields: ['quote_number'] });
+    const hidden = await new ApiQuoteController().getById()(request(`/api/v1/quotes/${QUOTE}`, { id: QUOTE }));
+    const hiddenData = (await hidden.json()).data;
+    expect(hiddenData).not.toHaveProperty('quote_number');
+    expect(hiddenData.display_quote_number).toBeNull();
   });
 
   it('get hides cost/margin style fields, nulls computed totals and suppresses with 404', async () => {
