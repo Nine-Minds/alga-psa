@@ -484,7 +484,11 @@ export async function slaTicketWorkflow(
         continue;
       }
 
-      while (state.pauseState.isPaused && !isDone(phase.phase)) {
+      while (
+        state.pauseState.isPaused &&
+        !isDone(phase.phase) &&
+        !(actionPhase === 'response' && responseCompleted)
+      ) {
         // Plain race, not condition(pred, timeout): that cancels its timer on
         // resume, and a CancelTimer for a timer that fired in the same workflow
         // task is rejected by the server ("invalid history builder state"),

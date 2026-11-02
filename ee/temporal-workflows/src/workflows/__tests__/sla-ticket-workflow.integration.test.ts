@@ -265,6 +265,56 @@ describe('slaTicketWorkflow integration', () => {
     }
   });
 
+  it('exits a paused response escalation when response completes while resolution stays paused', async () => {
+    const { env, worker, taskQueue, notifications, escalations } = await setupWorkflowTest();
+    try {
+      await worker.runUntil(async () => {
+        const handle = await env.client.workflow.start(slaTicketWorkflow, {
+          args: [{
+            ticketId: 'ticket-response-complete-while-paused',
+            tenantId: 'tenant-response-complete-while-paused',
+            policyTargets: [{ ...target, response_time_minutes: 10, resolution_time_minutes: 30 }],
+            businessHoursSchedule: schedule24x7,
+          }],
+          taskQueue,
+          workflowId: 'sla-ticket-tenant-response-complete-while-paused-ticket',
+        });
+
+        await env.sleep(10 * 60 * 1000);
+        await expect.poll(async () => (await handle.query<any>('getState')).currentPhase).toBe('resolution');
+
+        await handle.signal('pause', { reason: 'status_pause' });
+        await expect.poll(async () => (await handle.query<any>('getState')).pauseState.isPaused).toBe(true);
+        await handle.signal('completeResponse', { met: false });
+
+        // Queries must remain responsive after completion interrupts the paused event.
+        await expect.poll(async () => {
+          const state = await handle.query<any>('getState');
+          return { phase: state.currentPhase, paused: state.pauseState.isPaused };
+        }).toEqual({ phase: 'resolution', paused: true });
+
+        await env.sleep(2 * 60 * 1000);
+        expect(escalations.filter((entry) => entry.phase === 'response').map((entry) => entry.thresholdPercent))
+          .toEqual([70, 90]);
+        expect(notifications.filter((entry) => entry.phase === 'resolution')).toEqual([]);
+
+        await handle.signal('resume');
+        await expect.poll(async () => (await handle.query<any>('getState')).pauseState.isPaused).toBe(false);
+        await env.sleep(6 * 60 * 1000);
+        await expect.poll(() => notifications.some(
+          (entry) => entry.phase === 'resolution' && entry.thresholdPercent === 50
+        )).toBe(true);
+        expect(escalations.filter((entry) => entry.phase === 'response').map((entry) => entry.thresholdPercent))
+          .toEqual([70, 90]);
+
+        await handle.signal('completeResolution', { met: true });
+        await handle.result();
+      });
+    } finally {
+      await env.teardown();
+    }
+  });
+
   it('evaluates coincident escalation levels independently at one shared wake point', async () => {
     const { env, worker, taskQueue, notifications, escalations } = await setupWorkflowTest();
     try {
