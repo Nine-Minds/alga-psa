@@ -13,7 +13,7 @@ describe('nativeInteractionCandidates', () => {
       userId: 'user-a', contactId: 'contact-a', clientId: 'client-a',
       statusId: 'status-a', typeId: 'type-a',
       dateFrom: new Date('2026-01-01T00:00:00Z'), dateTo: new Date('2026-12-31T23:59:59Z'),
-    }, { interaction_date: new Date('2026-06-01T00:00:00Z'), interaction_id: 'interaction-a' }, {
+    }, { interaction_date_sort_key: '2026-06-01T00:00:00.000000Z', interaction_id: 'interaction-a' }, {
       entity: { type: 'ticket', id: 'ticket-a' },
     }, 50);
     const compiled = query.toSQL();
@@ -25,8 +25,8 @@ describe('nativeInteractionCandidates', () => {
     }
     expect(sql).toContain('"interaction_date" >= ?');
     expect(sql).toContain('"interaction_date" <= ?');
-    expect(sql).toContain('"interaction_date" < ?');
-    expect(sql).toContain('"interaction_date" = ?');
+    expect(sql).toContain('interaction_date < ?::timestamptz');
+    expect(sql).toContain('interaction_date = ?::timestamptz');
     expect(sql).toContain('"interaction_date" is null');
     expect(sql).toContain('order by interaction_date desc nulls last, "interaction_id" asc');
     expect(sql).toContain('limit ?');

@@ -48,7 +48,7 @@ export async function readCoManagedNativeInteractions(db: Knex, tenant: string, 
     const afterCursor: NativeInteractionPosition | null = filters.cursor
       ? await openNativeInteractionCursor(filters.cursor, tenant, cursorScope) : null;
     const fetchCandidates = async (after: NativeInteractionPosition | null, limit: number) => nativeInteractionCandidates(owner, filters,
-      after ? { ...after, interaction_date: after.interaction_date ? new Date(after.interaction_date) : null } : null, { id: options.id, entity }, limit);
+      after, { id: options.id, entity }, limit);
     const sourceById = new Map<string, Awaited<ReturnType<typeof retainScheduleSource>>>();
     const authorize = async (row: any) => {
       const id = row.interaction_id;

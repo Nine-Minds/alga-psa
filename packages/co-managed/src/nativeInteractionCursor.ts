@@ -2,11 +2,11 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:
 import { getSecret } from '@alga-psa/core/secrets';
 
 export interface NativeInteractionPosition {
-  interaction_date: Date | string | null;
+  interaction_date_sort_key: string | null;
   interaction_id: string;
 }
 
-const TOKEN_VERSION = 'v1';
+const TOKEN_VERSION = 'v2';
 
 async function encryptionKey(): Promise<Buffer> {
   const secret = await getSecret('native_interaction_cursor_encryption_key', 'NEXTAUTH_SECRET');
@@ -25,7 +25,7 @@ export async function sealNativeInteractionCursor(position: NativeInteractionPos
   cipher.setAAD(associatedData(tenant, scope));
   const encrypted = Buffer.concat([cipher.update(JSON.stringify({
     interaction_id: position.interaction_id,
-    interaction_date: position.interaction_date == null ? null : new Date(position.interaction_date).toISOString(),
+    interaction_date_sort_key: position.interaction_date_sort_key,
   }), 'utf8'), cipher.final()]);
   return [TOKEN_VERSION, iv.toString('base64url'), cipher.getAuthTag().toString('base64url'), encrypted.toString('base64url')].join('.');
 }
@@ -48,10 +48,10 @@ export async function openNativeInteractionCursor(token: string, tenant: string,
     if (!value || typeof value !== 'object') throw new Error('invalid payload');
     const cursor = value as Record<string, unknown>;
     if (typeof cursor.interaction_id !== 'string' || !cursor.interaction_id ||
-        !(cursor.interaction_date === null || typeof cursor.interaction_date === 'string') ||
-        (typeof cursor.interaction_date === 'string' && !Number.isFinite(Date.parse(cursor.interaction_date)))) throw new Error('invalid payload');
+        !(cursor.interaction_date_sort_key === null ||
+          typeof cursor.interaction_date_sort_key === 'string' && /^[\x20-\x7e]{1,128}$/.test(cursor.interaction_date_sort_key))) throw new Error('invalid payload');
     return { interaction_id: cursor.interaction_id,
-      interaction_date: cursor.interaction_date as string | null };
+      interaction_date_sort_key: cursor.interaction_date_sort_key as string | null };
   } catch {
     throw new Error('Invalid interaction continuation');
   }

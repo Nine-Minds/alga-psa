@@ -38,7 +38,7 @@ vi.mock('../sharedWorkIdentity', () => ({
 vi.mock('../sharedWorkRedaction', () => ({ isCoManagedReadFieldHidden: (_fields: unknown, keys: string[]) => harness.redactDate && keys.some(key => key === 'interaction_date') }));
 vi.mock('@alga-psa/core/secrets', () => ({ getSecret: async () => 'test-cursor-secret' }));
 vi.mock('../nativeInteractionCandidates', () => ({
-  nativeInteractionCandidates: (_owner: unknown, filters: unknown, after: { interaction_date: Date | null; interaction_id: string } | null, _options: unknown, limit: number) => {
+  nativeInteractionCandidates: (_owner: unknown, filters: unknown, after: { interaction_date_sort_key: string | null; interaction_id: string } | null, _options: unknown, limit: number) => {
     harness.fetches.push({ after, limit, filters });
     const start = after ? harness.candidates.findIndex(row => row.interaction_id === after.interaction_id) + 1 : 0;
     return Promise.resolve(harness.candidates.slice(start, start + limit));
@@ -52,6 +52,7 @@ describe('co-managed native interaction paging', () => {
     harness.candidates = Array.from({ length: 400 }, (_, index) => ({
       interaction_id: `interaction-${String(index).padStart(3, '0')}`,
       interaction_date: new Date(Date.UTC(2026, 0, 1) - index * 1_000),
+      interaction_date_sort_key: new Date(Date.UTC(2026, 0, 1) - index * 1_000).toISOString().replace(/\.(\d{3})Z$/, (_match, millis) => `.${millis}000Z`),
       client_id: 'client-a',
       title: index === 99 ? 'visible needle' : `interaction ${index}`,
     }));
