@@ -100,7 +100,8 @@ describe('asset group surfaces', () => {
     expect(text).toMatch(/getAssetGroupSummariesForAssets\(\s*trx,\s*tenant,/);
     expect(text).toContain('group: groupSummaries.get(asset.asset_id) ?? null,');
     // And the filter the column pairs with, now in the shared list-filter builder.
-    expect(text).toContain('applyAssetListFilters(query, { trx, tenant, params: validatedParams });');
+    expect(text).toContain("applyAssetListFilters(facetQuery, { trx, tenant, params: validatedParams, exclude: 'asset_type' });");
+    expect(text).toContain(': applyAssetTypeFilter(facetQuery.clone(), validatedParams.asset_type);');
     expect(source('packages/assets/src/lib/assetListFilters.ts')).toMatch(/if \(params\.group_id\)/);
   });
 

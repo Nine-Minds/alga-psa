@@ -1,25 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { Card } from '@alga-psa/ui/components/Card';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getAssetCountsByType, type AssetTypeCountParams } from '../actions/assetStatisticsActions';
-import { getErrorMessage, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface AssetTypeBreakdownCardProps {
   /** Registry-aware label resolver shared with the asset list. */
   getTypeLabel: (slug: string) => string;
-  /** Bump to refetch counts (e.g. after bulk actions or manual refresh). */
-  refreshToken?: number;
+  /** Counts returned with the current asset list, or null while loading. */
+  counts: Record<string, number> | null;
   /** Slugs currently active in the type filter (rendered highlighted). */
   activeTypes?: string[];
-  /**
-   * The dashboard's other active filters (search, client, status, …), excluding
-   * the type filter itself. Counts are scoped to these so the bubbles track the
-   * grid; omit it for tenant-wide totals.
-   */
-  filters?: AssetTypeCountParams;
   onSelectType?: (slug: string) => void;
 }
 
@@ -30,54 +22,21 @@ interface AssetTypeBreakdownCardProps {
  */
 export function AssetTypeBreakdownCard({
   getTypeLabel,
-  refreshToken = 0,
+  counts,
   activeTypes = [],
-  filters,
   onSelectType,
 }: AssetTypeBreakdownCardProps) {
   const { t } = useTranslation('msp/assets');
-  const [counts, setCounts] = useState<Record<string, number> | null>(null);
-  const lastRequestIdRef = useRef(0);
-
-  // Filters arrive as a fresh object identity on most dashboard renders; key
-  // the effect on its serialized value so only real changes refetch.
-  const filterKey = useMemo(() => JSON.stringify(filters ?? {}), [filters]);
-
-  useEffect(() => {
-    let mounted = true;
-    const requestId = lastRequestIdRef.current + 1;
-    lastRequestIdRef.current = requestId;
-
-    getAssetCountsByType(filters ?? {})
-      .then((next) => {
-        if (!mounted || lastRequestIdRef.current !== requestId) return;
-        if (isActionPermissionError(next)) {
-          console.warn('Unable to load asset counts by type:', getErrorMessage(next));
-          setCounts({});
-          return;
-        }
-        setCounts(next);
-      })
-      .catch((error) => {
-        if (!mounted || lastRequestIdRef.current !== requestId) return;
-        console.error('Error loading asset counts by type:', error);
-        setCounts({});
-      });
-    return () => {
-      mounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- filterKey is the stable identity of `filters`
-  }, [filterKey, refreshToken]);
 
   const items = useMemo(() => {
-    const merged = { ...(counts ?? {}) };
+    const merged = new Map(Object.entries(counts ?? {}));
     // A selected type can legitimately drop out of the GROUP BY once other
     // filters exclude all of its assets. Keep it visible at 0 so the active chip
     // the user just clicked never disappears from under them.
     for (const slug of activeTypes) {
-      if (!(slug in merged)) merged[slug] = 0;
+      if (!merged.has(slug)) merged.set(slug, 0);
     }
-    return Object.entries(merged).sort((a, b) => b[1] - a[1]);
+    return Array.from(merged.entries()).sort((a, b) => b[1] - a[1]);
   }, [counts, activeTypes]);
 
   if (counts !== null && items.length === 0) {

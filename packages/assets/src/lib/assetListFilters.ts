@@ -6,12 +6,10 @@ import type { AssetQueryParams } from '@alga-psa/types';
  * The filterable subset of {@link AssetQueryParams}.
  *
  * Pagination, sort and extension-data flags are deliberately absent: they shape
- * the *page*, not the *result set*, so anything counting the result set (the
- * dashboard's by-type breakdown) must not be able to pass them by accident.
+ * the *page*, not the result set used by the dashboard's by-type breakdown.
  *
- * `agent_status` widens to `string` because both callers pass the output of a
- * zod schema that validates it as a free string (the slug set is tenant-owned);
- * the DB comparison is identical either way.
+ * `agent_status` widens to `string` because the query schema validates it as a
+ * free string (the slug set is tenant-owned).
  */
 export type AssetListFilterParams =
   Pick<
@@ -73,13 +71,8 @@ export interface ApplyAssetListFiltersOptions {
 }
 
 /**
- * Shared asset-list predicates, applied in place to any query built by
- * {@link joinAssetListRelations}.
- *
- * `listAssets` and `getAssetCountsByType` must agree on what "matching the
- * current filters" means, or the dashboard's type bubbles drift from the grid
- * they filter. Extracting the block rather than duplicating it is what keeps
- * them honest.
+ * Asset-list predicates, applied to the common query used by both the page
+ * and its type facet.
  */
 export function applyAssetListFilters(
     query: Knex.QueryBuilder,
@@ -94,8 +87,8 @@ export function applyAssetListFilters(
     if (params.contact_name_id) {
         query.where('assets.contact_name_id', params.contact_name_id);
     }
-    if (params.asset_type && exclude !== 'asset_type') {
-        query.where('assets.asset_type', params.asset_type);
+    if (exclude !== 'asset_type') {
+        applyAssetTypeFilter(query, params.asset_type);
     }
     if (params.status) {
         query.where('assets.status', params.status);
@@ -156,5 +149,15 @@ export function applyAssetListFilters(
         }
     }
 
+    return query;
+}
+
+export function applyAssetTypeFilter(
+    query: Knex.QueryBuilder,
+    assetType: AssetQueryParams['asset_type'],
+): Knex.QueryBuilder {
+    if (assetType) {
+        query.where('assets.asset_type', assetType);
+    }
     return query;
 }

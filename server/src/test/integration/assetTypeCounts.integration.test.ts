@@ -1,15 +1,13 @@
 /**
- * The dashboard's "Assets by type" bubbles must count the same rows the grid
- * shows. The counts now run through the shared asset-list filter builder
- * (packages/assets/src/lib/assetListFilters.ts); this test drives the real
- * action against a real database to prove that:
+ * The dashboard's "Assets by type" facet uses the list's filters and
+ * transaction. This test drives the real list action against a database:
  *
  *   1. unfiltered counts match a join-free GROUP BY exactly (the new left joins
  *      cannot inflate them),
  *   2. each filter narrows the counts the way the grid narrows rows,
  *   3. `asset_type` is EXCLUDED (facet semantics), so selecting a bubble never
  *      zeroes out the bubbles beside it,
- *   4. counts never cross the tenant boundary.
+ *   4. counts never cross the tenant boundary or include unreadable assets.
  *
  * Every row is seeded once in beforeAll and all expectations are written
  * against that one fixed dataset, so the cases cannot order-depend.
@@ -17,14 +15,26 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
+import type { AssetListResponse, AssetQueryParams } from '@alga-psa/types';
 
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn().mockResolvedValue(undefined),
+  publishWorkflowEvent: vi.fn().mockResolvedValue(undefined),
+  publishNonCatalogWorkflowEvent: vi.fn().mockResolvedValue(undefined),
+}));
 
-const HOOK_TIMEOUT = 180_000;
-const actionAuth = vi.hoisted(() => ({ tenant: '', userId: '' }));
+const HOOK_TIMEOUT = 900_000;
+const actionAuth = vi.hoisted(() => ({
+  tenant: '',
+  userId: '',
+  userType: 'internal' as 'internal' | 'client',
+  clientId: null as string | null,
+  transactions: 0,
+}));
 
 vi.mock('@alga-psa/auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/auth')>();
@@ -32,7 +42,7 @@ vi.mock('@alga-psa/auth', async (importOriginal) => {
     ...actual,
     hasPermission: vi.fn().mockResolvedValue(true),
     withAuth: (action: any) => async (...args: unknown[]) => action(
-      { user_id: actionAuth.userId },
+      { user_id: actionAuth.userId, user_type: actionAuth.userType, clientId: actionAuth.clientId },
       { tenant: actionAuth.tenant },
       ...args,
     ),
@@ -43,14 +53,26 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   return {
     ...actual,
     createTenantKnex: async () => ({ knex: db, tenant: actionAuth.tenant }),
-    withTransaction: async (knex: Knex, callback: (trx: Knex.Transaction) => Promise<unknown>) => knex.transaction(callback),
+    withTransaction: async (knex: Knex, callback: (trx: Knex.Transaction) => Promise<unknown>) => {
+      actionAuth.transactions += 1;
+      return knex.transaction(callback);
+    },
   };
 });
 
 let db: Knex;
-let getAssetCountsByType: typeof import('@alga-psa/assets/actions/assetStatisticsActions').getAssetCountsByType;
+let listAssets: typeof import('@alga-psa/assets/actions/assetActions').listAssets;
+let unwrapAssetActionResult: typeof import('@alga-psa/assets/actions/assetActionErrors').unwrapAssetActionResult;
 const columns: Record<string, Record<string, unknown>> = {};
 const cleanupTenants = new Set<string>();
+
+async function list(params: AssetQueryParams = {}): Promise<AssetListResponse> {
+  return unwrapAssetActionResult(await listAssets(params));
+}
+
+async function getCounts(params: AssetQueryParams = {}): Promise<Record<string, number>> {
+  return (await list(params)).asset_type_counts;
+}
 
 function hasColumn(name: string, column: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns[name] ?? {}, column);
@@ -64,7 +86,11 @@ function unscoped(name: string) {
 
 async function cleanupTenant(tenant: string): Promise<void> {
   const del = async (name: string) => table(tenant, name).del().catch(() => undefined);
-  for (const name of ['asset_group_members', 'asset_groups', 'assets', 'clients', 'vendors', 'users']) {
+  for (const name of [
+    'authorization_bundle_assignments', 'authorization_bundle_rules',
+    'authorization_bundle_revisions', 'authorization_bundles',
+    'asset_group_members', 'asset_groups', 'assets', 'clients', 'vendors', 'users',
+  ]) {
     await del(name);
   }
   await unscoped('tenants').where({ tenant }).del().catch(() => undefined);
@@ -78,6 +104,24 @@ type TenantFixture = {
   vendor: string;
 };
 
+async function seedUser(tenantId: string): Promise<string> {
+  const userId = randomUUID();
+  await table(tenantId, 'users').insert({
+    tenant: tenantId,
+    user_id: userId,
+    username: `atc-${userId.slice(0, 8)}`,
+    hashed_password: 'not-used',
+    first_name: 'Count',
+    last_name: 'Tester',
+    ...(hasColumn('users', 'email') ? { email: `atc-${userId.slice(0, 8)}@example.com` } : {}),
+    ...(hasColumn('users', 'user_type') ? { user_type: 'internal' } : {}),
+    ...(hasColumn('users', 'is_inactive') ? { is_inactive: false } : {}),
+    ...(hasColumn('users', 'created_at') ? { created_at: db.fn.now() } : {}),
+    ...(hasColumn('users', 'updated_at') ? { updated_at: db.fn.now() } : {}),
+  });
+  return userId;
+}
+
 async function seedTenant(companyName: string): Promise<TenantFixture> {
   const tenantId = randomUUID();
   cleanupTenants.add(tenantId);
@@ -89,20 +133,7 @@ async function seedTenant(companyName: string): Promise<TenantFixture> {
     ...(hasColumn('tenants', 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  const userId = randomUUID();
-  await table(tenantId, 'users').insert({
-    tenant: tenantId,
-    user_id: userId,
-    username: `atc-${tenantId.slice(0, 8)}`,
-    hashed_password: 'not-used',
-    first_name: 'Count',
-    last_name: 'Tester',
-    ...(hasColumn('users', 'email') ? { email: `atc-${tenantId.slice(0, 8)}@example.com` } : {}),
-    ...(hasColumn('users', 'user_type') ? { user_type: 'internal' } : {}),
-    ...(hasColumn('users', 'is_inactive') ? { is_inactive: false } : {}),
-    ...(hasColumn('users', 'created_at') ? { created_at: db.fn.now() } : {}),
-    ...(hasColumn('users', 'updated_at') ? { updated_at: db.fn.now() } : {}),
-  });
+  const userId = await seedUser(tenantId);
 
   const mkClient = async (clientName: string) => {
     const client_id = randomUUID();
@@ -160,7 +191,7 @@ async function seedAsset(tenantId: string, seed: AssetSeed): Promise<string> {
   return asset_id;
 }
 
-describe('getAssetCountsByType filtered counts', () => {
+describe('listAssets filtered type counts', () => {
   // Main tenant: 8 assets → workstation 4, server 2, network_device 2.
   //   clientA (Acme Widgets): Zeta Laptop(ws, rmm), Zeta Server(srv),
   //                           Retired Box(ws, retired), Switch-01(nd), Spare Switch(nd)
@@ -169,6 +200,7 @@ describe('getAssetCountsByType filtered counts', () => {
   let fixture: TenantFixture;
   let other: TenantFixture;
   let groupId: string;
+  let restrictedUserId: string;
 
   beforeAll(async () => {
     wireLocalTestDbEnv();
@@ -208,7 +240,48 @@ describe('getAssetCountsByType filtered counts', () => {
     await seedAsset(other.tenantId, { name: 'Initech WS 1', asset_type: 'workstation', client_id: other.clientA });
     await seedAsset(other.tenantId, { name: 'Initech WS 2', asset_type: 'workstation', client_id: other.clientA });
 
-    getAssetCountsByType = (await import('@alga-psa/assets/actions/assetStatisticsActions')).getAssetCountsByType;
+    restrictedUserId = await seedUser(fixture.tenantId);
+    const bundleId = randomUUID();
+    const revisionId = randomUUID();
+    await table(fixture.tenantId, 'authorization_bundles').insert({
+      tenant: fixture.tenantId,
+      bundle_id: bundleId,
+      bundle_key: `asset-counts-${bundleId.slice(0, 8)}`,
+      name: 'Client A assets only',
+      is_system: false,
+      status: 'active',
+    });
+    await table(fixture.tenantId, 'authorization_bundle_revisions').insert({
+      tenant: fixture.tenantId,
+      revision_id: revisionId,
+      bundle_id: bundleId,
+      revision_number: 1,
+      lifecycle_state: 'published',
+    });
+    await table(fixture.tenantId, 'authorization_bundles')
+      .where({ bundle_id: bundleId })
+      .update({ published_revision_id: revisionId });
+    await table(fixture.tenantId, 'authorization_bundle_rules').insert({
+      tenant: fixture.tenantId,
+      bundle_id: bundleId,
+      revision_id: revisionId,
+      resource_type: 'asset',
+      action: 'read',
+      template_key: 'selected_clients',
+      effect: 'narrow',
+      config: JSON.stringify({ selectedClientIds: [fixture.clientA] }),
+      position: 0,
+    });
+    await table(fixture.tenantId, 'authorization_bundle_assignments').insert({
+      tenant: fixture.tenantId,
+      bundle_id: bundleId,
+      target_type: 'user',
+      target_id: restrictedUserId,
+      status: 'active',
+    });
+
+    ({ listAssets } = await import('@alga-psa/assets/actions/assetActions'));
+    ({ unwrapAssetActionResult } = await import('@alga-psa/assets/actions/assetActionErrors'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -219,7 +292,7 @@ describe('getAssetCountsByType filtered counts', () => {
   }, HOOK_TIMEOUT);
 
   it('matches a join-free GROUP BY exactly', async () => {
-    const counts = await getAssetCountsByType({});
+    const counts = await getCounts();
     expect(counts).toEqual({ workstation: 4, server: 2, network_device: 2 });
 
     // Ground truth without any join. clients/contacts/vendors are joined on
@@ -235,15 +308,15 @@ describe('getAssetCountsByType filtered counts', () => {
   });
 
   it('narrows counts by client', async () => {
-    expect(await getAssetCountsByType({ client_id: fixture.clientB })).toEqual({
+    expect(await getCounts({ client_id: fixture.clientB })).toEqual({
       workstation: 2,
       server: 1,
     });
   });
 
   it('narrows counts by status', async () => {
-    expect(await getAssetCountsByType({ status: 'retired' })).toEqual({ workstation: 1 });
-    expect(await getAssetCountsByType({ status: 'active' })).toEqual({
+    expect(await getCounts({ status: 'retired' })).toEqual({ workstation: 1 });
+    expect(await getCounts({ status: 'active' })).toEqual({
       workstation: 3,
       server: 2,
       network_device: 2,
@@ -252,31 +325,57 @@ describe('getAssetCountsByType filtered counts', () => {
 
   it('searches asset columns and the joined client name', async () => {
     // Matches asset names only.
-    expect(await getAssetCountsByType({ search: 'Zeta' })).toEqual({ workstation: 1, server: 1 });
+    expect(await getCounts({ search: 'Zeta' })).toEqual({ workstation: 1, server: 1 });
     // Reaches the count only through clients.client_name — the join is required.
-    expect(await getAssetCountsByType({ search: 'Globex' })).toEqual({ workstation: 2, server: 1 });
+    expect(await getCounts({ search: 'Globex' })).toEqual({ workstation: 2, server: 1 });
   });
 
   it('combines filters', async () => {
-    expect(await getAssetCountsByType({ client_id: fixture.clientA, search: 'Switch' })).toEqual({
+    expect(await getCounts({ client_id: fixture.clientA, search: 'Switch' })).toEqual({
       network_device: 2,
     });
   });
 
   it('ignores asset_type so a selected bubble keeps the other bubbles alive', async () => {
-    // The dashboard omits asset_type (facet semantics); passing one must not
-    // zero the remaining types, which is what the user needs to switch to.
-    const counts = await getAssetCountsByType({
+    const result = await list({
       client_id: fixture.clientA,
       asset_type: 'workstation',
-    } as never);
+      page: 1,
+      limit: 1,
+      sort_by: 'name',
+      sort_direction: 'asc',
+    });
 
-    expect(counts).toEqual({ workstation: 2, server: 1, network_device: 2 });
+    expect(result.assets).toHaveLength(1);
+    expect(result.assets[0].asset_type).toBe('workstation');
+    expect(result.total).toBe(2);
+    expect(result.asset_type_counts).toEqual({ workstation: 2, server: 1, network_device: 2 });
+
+    const secondPage = await list({
+      client_id: fixture.clientA,
+      asset_type: 'workstation',
+      page: 2,
+      limit: 1,
+      sort_by: 'name',
+      sort_direction: 'asc',
+    });
+    expect(secondPage.assets).toHaveLength(1);
+    expect(secondPage.assets[0].asset_id).not.toBe(result.assets[0].asset_id);
+    expect(secondPage.asset_type_counts).toEqual(result.asset_type_counts);
+  });
+
+  it('fetches the page and counts through one transaction', async () => {
+    const before = actionAuth.transactions;
+    const result = await list({ client_id: fixture.clientB, limit: 1 });
+
+    expect(actionAuth.transactions - before).toBe(1);
+    expect(result.assets).toHaveLength(1);
+    expect(result.asset_type_counts).toEqual({ workstation: 2, server: 1 });
   });
 
   it('splits by rmm_managed', async () => {
-    expect(await getAssetCountsByType({ rmm_managed: true })).toEqual({ workstation: 1 });
-    expect(await getAssetCountsByType({ rmm_managed: false })).toEqual({
+    expect(await getCounts({ rmm_managed: true })).toEqual({ workstation: 1 });
+    expect(await getCounts({ rmm_managed: false })).toEqual({
       workstation: 3,
       server: 2,
       network_device: 2,
@@ -284,12 +383,12 @@ describe('getAssetCountsByType filtered counts', () => {
   });
 
   it('narrows by vendor', async () => {
-    expect(await getAssetCountsByType({ vendor_id: fixture.vendor })).toEqual({ server: 1 });
+    expect(await getCounts({ vendor_id: fixture.vendor })).toEqual({ server: 1 });
   });
 
   it('applies group membership and the ungrouped filter', async () => {
-    expect(await getAssetCountsByType({ group_id: groupId })).toEqual({ workstation: 1 });
-    expect(await getAssetCountsByType({ ungrouped_only: true })).toEqual({
+    expect(await getCounts({ group_id: groupId })).toEqual({ workstation: 1 });
+    expect(await getCounts({ ungrouped_only: true })).toEqual({
       workstation: 3,
       server: 2,
       network_device: 2,
@@ -297,20 +396,71 @@ describe('getAssetCountsByType filtered counts', () => {
   });
 
   it('never counts another tenant assets', async () => {
-    expect(await getAssetCountsByType({})).toEqual({ workstation: 4, server: 2, network_device: 2 });
+    expect(await getCounts()).toEqual({ workstation: 4, server: 2, network_device: 2 });
 
     actionAuth.tenant = other.tenantId;
+    actionAuth.userId = other.userId;
     try {
-      expect(await getAssetCountsByType({})).toEqual({ workstation: 2 });
+      expect(await getCounts()).toEqual({ workstation: 2 });
       // 'Globex' is the first tenant's client name; it must not match here.
-      expect(await getAssetCountsByType({ search: 'Globex' })).toEqual({});
+      expect(await getCounts({ search: 'Globex' })).toEqual({});
     } finally {
       actionAuth.tenant = fixture.tenantId;
+      actionAuth.userId = fixture.userId;
+    }
+  });
+
+  it('counts only assets allowed by record-level bundle rules', async () => {
+    actionAuth.userId = restrictedUserId;
+    try {
+      const before = actionAuth.transactions;
+      const result = await list({ asset_type: 'server', page: 1, limit: 1 });
+      expect(actionAuth.transactions - before).toBe(1);
+      expect(result.assets).toHaveLength(1);
+      expect(result.assets[0].client_id).toBe(fixture.clientA);
+      expect(result.total).toBe(1);
+      expect(result.asset_type_counts).toEqual({ workstation: 2, server: 1, network_device: 2 });
+      expect(await getCounts({ client_id: fixture.clientB })).toEqual({});
+      expect(await getCounts({ search: 'Globex' })).toEqual({});
+    } finally {
+      actionAuth.userId = fixture.userId;
+    }
+  });
+
+  it('counts only the client portal user\'s own assets', async () => {
+    actionAuth.userType = 'client';
+    actionAuth.clientId = fixture.clientB;
+    try {
+      const result = await list({ asset_type: 'workstation', page: 2, limit: 1 });
+      expect(result.assets).toHaveLength(1);
+      expect(result.assets[0].client_id).toBe(fixture.clientB);
+      expect(result.total).toBe(2);
+      expect(result.asset_type_counts).toEqual({ workstation: 2, server: 1 });
+      expect(await getCounts({ search: 'Zeta' })).toEqual({});
+    } finally {
+      actionAuth.userType = 'internal';
+      actionAuth.clientId = null;
+    }
+  });
+
+  it('counts a custom type whose slug matches an object property', async () => {
+    const assetId = await seedAsset(fixture.tenantId, {
+      name: 'Constructor',
+      asset_type: 'constructor',
+      client_id: fixture.clientA,
+    });
+    try {
+      expect((await getCounts())['constructor']).toBe(1);
+      actionAuth.userId = restrictedUserId;
+      expect((await getCounts())['constructor']).toBe(1);
+    } finally {
+      actionAuth.userId = fixture.userId;
+      await table(fixture.tenantId, 'assets').where({ asset_id: assetId }).del();
     }
   });
 
   it('rejects invalid filter values instead of silently ignoring them', async () => {
-    await expect(getAssetCountsByType({ client_id: 'not-a-uuid' } as never)).rejects.toThrow();
-    await expect(getAssetCountsByType({ rmm_managed: 'yes' } as never)).rejects.toThrow();
+    await expect(getCounts({ client_id: 'not-a-uuid' })).rejects.toThrow();
+    await expect(getCounts({ rmm_managed: 'yes' } as never)).rejects.toThrow();
   });
 });

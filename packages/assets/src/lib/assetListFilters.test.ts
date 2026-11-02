@@ -14,6 +14,7 @@ import type { Knex } from 'knex';
 
 import {
     applyAssetListFilters,
+    applyAssetTypeFilter,
     joinAssetListRelations,
     type AssetListFilterParams,
 } from './assetListFilters';
@@ -93,6 +94,33 @@ describe('applyAssetListFilters SQL', () => {
         expect(sql).toContain(`"assets"."status" = 'active'`);
     });
 
+    it('clones the shared facet query before adding the page type filter', () => {
+        const trx = compiler();
+        const transaction = trx as unknown as Knex.Transaction;
+        const facetQuery = joinAssetListRelations(transaction, TENANT);
+        applyAssetListFilters(facetQuery, {
+            trx: transaction,
+            tenant: TENANT,
+            params: { asset_type: 'workstation', status: 'active', search: 'laptop' },
+            exclude: 'asset_type',
+        });
+        const listQuery = applyAssetTypeFilter(facetQuery.clone(), 'workstation');
+        const facetSql = facetQuery.clone()
+            .select('assets.asset_type')
+            .count('assets.asset_id as count')
+            .groupBy('assets.asset_type')
+            .toString();
+        const listSql = listQuery.clone().limit(1).offset(1).toString();
+
+        expect(facetSql).toContain(`"assets"."status" = 'active'`);
+        expect(facetSql).toContain("'%laptop%'");
+        expect(facetSql).not.toContain(`"assets"."asset_type" = 'workstation'`);
+        expect(facetSql).not.toMatch(/\blimit\b|\boffset\b/i);
+        expect(facetSql).toContain('group by "assets"."asset_type"');
+        expect(listSql).toContain(`"assets"."asset_type" = 'workstation'`);
+        expect(listSql).toContain(`"assets"."status" = 'active'`);
+    });
+
     it('searches across asset columns and the joined client name', () => {
         const sql = build({ search: 'lab top' });
 
@@ -143,9 +171,7 @@ describe('applyAssetListFilters SQL', () => {
 
 describe('AssetListFilterParams shape', () => {
     it('omits paging, sorting and extension flags', () => {
-        // Compile-time guarantee restated at runtime: the type is built from an
-        // explicit allow-list, so a stray `page`/`sort_by` on the caller's
-        // object must be rejected by the schema rather than silently counted.
+        // Pagination and sorting never affect the filtered result set.
         const allowed = [
             'client_id',
             'location_id',

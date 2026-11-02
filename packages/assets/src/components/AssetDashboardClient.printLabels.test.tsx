@@ -20,7 +20,6 @@ import { MAX_LABELS_PER_REQUEST } from '@alga-psa/types';
 const mockListAssets = vi.fn();
 const mockGetClientMaintenanceSummaries = vi.fn();
 const mockGetAssetTypes = vi.fn();
-const mockGetAssetCountsByType = vi.fn();
 
 vi.mock('./custody/CustodyBadge', () => ({ useCustodyBadges: () => new Map(), CustodyBadge: () => null }));
 vi.mock('./warranty/RmaBadge', () => ({ useRmaBadges: () => new Map(), RmaBadge: () => null }));
@@ -57,10 +56,6 @@ vi.mock('../actions/assetStatusActions', () => ({
     { tenant: 't', status_id: 'st-active', slug: 'active', label: 'Active', kind: 'deployable', is_builtin: true, is_active: true, display_order: 0, created_at: '', updated_at: '' },
     { tenant: 't', status_id: 'st-inactive', slug: 'inactive', label: 'Inactive', kind: 'undeployable', is_builtin: true, is_active: true, display_order: 1, created_at: '', updated_at: '' },
   ]),
-}));
-
-vi.mock('../actions/assetStatisticsActions', () => ({
-  getAssetCountsByType: (...args: unknown[]) => mockGetAssetCountsByType(...args),
 }));
 
 vi.mock('../context/AssetCrossFeatureContext', () => ({
@@ -264,8 +259,11 @@ const pick = (id: string) => waitFor(() => {
 
 function setup(count: number) {
   const all = Array.from({ length: count }, (_, i) => asset(`a${i}`));
-  mockListAssets.mockResolvedValue({ assets: all, total: all.length, page: 1, limit: count });
-  render(<AssetDashboardClient initialAssets={{ assets: all, total: all.length, page: 1, limit: count } as AssetListResponse} />);
+  const response: AssetListResponse = {
+    assets: all, total: all.length, page: 1, limit: count, asset_type_counts: { workstation: count },
+  };
+  mockListAssets.mockResolvedValue(response);
+  render(<AssetDashboardClient initialAssets={response} />);
   return all;
 }
 
@@ -276,8 +274,6 @@ describe('AssetDashboardClient bulk print labels', () => {
     mockGetClientMaintenanceSummaries.mockResolvedValue({});
     mockGetAssetTypes.mockReset();
     mockGetAssetTypes.mockResolvedValue([]);
-    mockGetAssetCountsByType.mockReset();
-    mockGetAssetCountsByType.mockResolvedValue({});
   });
   afterEach(cleanup);
 

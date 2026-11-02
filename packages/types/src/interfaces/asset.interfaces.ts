@@ -608,6 +608,8 @@ export interface AssetListResponse {
   total: number;
   page: number;
   limit: number;
+  /** Readable asset counts for the active filters, excluding asset_type and pagination. */
+  asset_type_counts: Record<string, number>;
   client_summary?: ClientSummary;
 }
 

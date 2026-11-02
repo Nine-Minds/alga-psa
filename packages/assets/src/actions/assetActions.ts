@@ -70,7 +70,7 @@ import {
 } from '@alga-psa/shared/services/assets/maintenanceLifecycle';
 import { advanceMaintenanceDate, parseCustomRecurrence } from '../lib/maintenanceRecurrence';
 import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAssetOrder';
-import { applyAssetListFilters, joinAssetListRelations } from '../lib/assetListFilters';
+import { applyAssetListFilters, applyAssetTypeFilter, joinAssetListRelations } from '../lib/assetListFilters';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { resolveEffectiveTimeZone } from '@alga-psa/db';
@@ -93,6 +93,7 @@ import {
     createAuthorizationKernel,
     type AuthorizationRecord,
     type AuthorizationSubject,
+    type BundleNarrowingRule,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
@@ -529,11 +530,14 @@ type AssetReadAuthorizationContext = {
     requestCache: RequestLocalAuthorizationCache;
 };
 
-function createAssetReadAuthorizationKernel(trx: Knex.Transaction) {
+function createAssetReadAuthorizationKernel(trx: Knex.Transaction, assetReadRules?: BundleNarrowingRule[]) {
     return createAuthorizationKernel({
         builtinProvider: new BuiltinAuthorizationKernelProvider(),
         bundleProvider: new BundleAuthorizationKernelProvider({
             resolveRules: async (input) => {
+                if (assetReadRules && input.resource.type === 'asset' && input.resource.action === 'read') {
+                    return assetReadRules;
+                }
                 try {
                     return await resolveBundleNarrowingRulesForEvaluation(trx, input);
                 // write-admission: exempt — authorization-rule read, never a write
@@ -2277,11 +2281,6 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 return allowed[sortBy] ?? null;
             };
 
-            // Predicates live in the shared asset-list filter builder so the
-            // grid and the dashboard's by-type counts can never drift apart.
-            const applyFilters = (query: Knex.QueryBuilder) =>
-                applyAssetListFilters(query, { trx, tenant, params: validatedParams });
-
             const applySort = (query: Knex.QueryBuilder) => {
                 const sortColumn = resolveSortColumn(validatedParams.sort_by);
                 const sortDirection = validatedParams.sort_direction ?? 'desc';
@@ -2298,18 +2297,44 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 query.orderBy('assets.created_at', 'desc');
             };
 
-            const buildAssetListQuery = () => {
-                const query = joinAssetListRelations(trx, tenant);
-                applyFilters(query);
-                return query;
+            const facetQuery = joinAssetListRelations(trx, tenant);
+            applyAssetListFilters(facetQuery, { trx, tenant, params: validatedParams, exclude: 'asset_type' });
+            const baseContext = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+            // Use one rule snapshot for both the page and its facet.
+            const assetReadRules = await resolveBundleNarrowingRulesForEvaluation(trx, {
+                subject: baseContext.subject,
+                resource: { type: 'asset', action: 'read' },
+                requestCache: baseContext.requestCache,
+                knex: trx,
+            });
+            const context: AssetReadAuthorizationContext = {
+                ...baseContext,
+                authorizationKernel: createAssetReadAuthorizationKernel(trx, assetReadRules),
             };
+            const requiresRecordAuthorization = context.subject.userType === 'client'
+                || assetReadRules.some((rule) => rule.resource === 'asset' && rule.action === 'read');
+            // Restricted users must authorize every matching type before counting.
+            const listQuery = requiresRecordAuthorization
+                ? facetQuery.clone()
+                : applyAssetTypeFilter(facetQuery.clone(), validatedParams.asset_type);
+            const assetTypeCounts = new Map<string, number>();
+
+            if (!requiresRecordAuthorization) {
+                const typeCountRows = await facetQuery.clone()
+                    .select('assets.asset_type')
+                    .groupBy('assets.asset_type')
+                    .count<Array<{ asset_type: string | null; count: string | number }>>('assets.asset_id as count');
+                for (const row of typeCountRows) {
+                    assetTypeCounts.set(row.asset_type ?? 'unknown', Number(row.count));
+                }
+            }
 
             const fetchPage = async (sourcePage: number, sourceLimit: number) => {
                 const offset = (sourcePage - 1) * sourceLimit;
-                const countRow = await buildAssetListQuery()
+                const countRow = await listQuery.clone()
                     .count<{ count: string }>('assets.asset_id as count')
                     .first();
-                const rows = await buildAssetListQuery()
+                const rows = await listQuery.clone()
                     .select('assets.*', 'clients.client_name', 'contacts.full_name as contact_name', 'vendors.vendor_name')
                     .modify(applySort)
                     .limit(sourceLimit)
@@ -2323,7 +2348,6 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
 
             const page = validatedParams.page || 1;
             const limit = validatedParams.limit || 10;
-            const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
             const authorizedPage = await buildAuthorizationAwarePage<any>({
                 page,
                 limit,
@@ -2335,7 +2359,13 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                         context,
                         { asset_id: asset.asset_id, client_id: asset.client_id }
                     );
-                    return decision.allowed;
+                    if (!decision.allowed) return false;
+                    if (requiresRecordAuthorization) {
+                        const assetType = asset.asset_type ?? 'unknown';
+                        assetTypeCounts.set(assetType, (assetTypeCounts.get(assetType) ?? 0) + 1);
+                        return !validatedParams.asset_type || asset.asset_type === validatedParams.asset_type;
+                    }
+                    return true;
                 },
                 scanLimit: Math.max(limit, 100),
             });
@@ -2374,7 +2404,8 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 assets: assetsWithExtensions,
                 total: authorizedPage.total,
                 page,
-                limit
+                limit,
+                asset_type_counts: Object.fromEntries(assetTypeCounts)
             };
 
             return response;
