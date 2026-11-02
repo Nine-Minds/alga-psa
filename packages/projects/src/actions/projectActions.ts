@@ -57,7 +57,12 @@ import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
 import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
 import { createProjectReadDecider } from '../lib/projectReadAuthorization';
-import { coManagedColumnHidden, coManagedProjectFamilyMask } from '@alga-psa/co-managed/projectFieldMask';
+import {
+  coManagedColumnHidden,
+  coManagedHiddenColumns,
+  coManagedProjectFamilyMask,
+  CO_MANAGED_TASK_COLUMNS,
+} from '@alga-psa/co-managed/projectFieldMask';
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
 import { loadAuthorizedProjectProjections } from '../lib/projectReadProjection';
 
@@ -341,6 +346,7 @@ async function loadAuthorizedProjectPhase(
     'status', 'order_number', 'order_key', 'created_at', 'updated_at', 'wbs_code', 'service_id', 'tenant',
   ];
   const hidden = new Set(fields.filter((field) => coManagedColumnHidden(redactedFields, 'project_phases', field)));
+  if (mask.body) hidden.add('description');
   const query = tenantScopedTable(trx, 'project_phases', tenant).where({ phase_id: phaseId }).select(
     ...fields.map((field) => {
       if (field === 'phase_name' && mask.title) return trx.raw('?::text as ??', [mask.neutralTitle, field]);
@@ -348,6 +354,109 @@ async function loadAuthorizedProjectPhase(
     })
   );
   return await query.first<IProjectPhase>() ?? null;
+}
+
+async function loadAuthorizedProjectPhases(
+  trx: Knex.Transaction,
+  tenant: string,
+  projectId: string,
+  redactedFields: string[]
+): Promise<IProjectPhase[]> {
+  const mask = coManagedProjectFamilyMask(redactedFields, 'project_phase');
+  if (mask.dropRow) return [];
+  const fields = [
+    'tenant', 'phase_id', 'project_id', 'phase_name', 'description', 'start_date', 'end_date', 'completed_at',
+    'status', 'order_number', 'order_key', 'created_at', 'updated_at', 'wbs_code', 'service_id',
+  ];
+  const hidden = new Set(fields.filter((field) => coManagedColumnHidden(redactedFields, 'project_phases', field)));
+  if (mask.body) hidden.add('description');
+  const query = tenantScopedTable(trx, 'project_phases', tenant)
+    .where({ project_id: projectId })
+    .select(...fields.map((field) => {
+      if (field === 'phase_name' && mask.title) return trx.raw('?::text as ??', [mask.neutralTitle, field]);
+      return hidden.has(field)
+        ? trx.raw('CASE WHEN FALSE THEN ?? END as ??', [`project_phases.${field}`, field])
+        : `project_phases.${field}`;
+    }))
+    .orderBy(hidden.has('wbs_code') ? 'phase_id' : 'wbs_code');
+  return await query as IProjectPhase[];
+}
+
+async function loadAuthorizedProjectTasks(
+  trx: Knex.Transaction,
+  tenant: string,
+  projectId: string,
+  redactedFields: string[]
+): Promise<Array<IProjectTask & { assigned_to_name: string | null; project_id: string }>> {
+  const mask = coManagedProjectFamilyMask(redactedFields, 'project_task');
+  if (mask.dropRow) return [];
+  const fields = [
+    'tenant', 'task_id', 'phase_id', 'task_name', 'description', 'description_rich_text', 'assigned_to',
+    'assigned_team_id', 'estimated_hours', 'actual_hours', 'project_status_mapping_id', 'created_at', 'updated_at',
+    'wbs_code', 'order_key', 'start_date', 'due_date', 'priority_id', 'task_type_key', 'service_id',
+  ];
+  const hidden = coManagedHiddenColumns(redactedFields, 'project_tasks', CO_MANAGED_TASK_COLUMNS);
+  const aliasesByField: Record<string, string[]> = {
+    project_status_mapping_id: ['status', 'statuses', 'project_status_mappings', 'mapping_id'],
+    priority_id: ['priority', 'priority_name'],
+    assigned_to: ['assignee', 'assignee_name', 'assigned_to_name', 'users', 'teams'],
+    assigned_team_id: ['assignee', 'assigned_to_name', 'teams'],
+  };
+  for (const field of fields) {
+    if (coManagedColumnHidden(redactedFields, 'project_tasks', field, aliasesByField[field] ?? []) || (mask.body && field.startsWith('description'))) {
+      hidden.add(field);
+    }
+  }
+  const maskColumn = (field: string, type: string) => hidden.has(field)
+    ? trx.raw(`NULL::${type} as ??`, [field])
+    : `project_tasks.${field}`;
+  const db = tenantDb(trx, tenant);
+  const query = tenantScopedTable(trx, 'project_tasks', tenant);
+  db.tenantJoin(query, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+  db.tenantJoin(query, 'users', 'project_tasks.assigned_to', 'users.user_id', { type: 'left' });
+  const taskName = mask.title
+    ? trx.raw('?::text as task_name', [mask.neutralTitle])
+    : maskColumn('task_name', 'text');
+  const assignedNameHidden = coManagedColumnHidden(redactedFields, 'project_tasks', 'assigned_to_name', [
+    'assignee_name', 'assigned_to', 'users', 'teams',
+  ]);
+  const assignedName = assignedNameHidden
+    ? trx.raw('NULL::text as assigned_to_name')
+    : trx.raw("CONCAT(users.first_name, ' ', users.last_name) as assigned_to_name");
+  const rows = await query
+    .where('project_phases.project_id', projectId)
+    .select(
+      ...fields.filter((field) => field !== 'task_name').map((field) => maskColumn(field, field === 'estimated_hours' || field === 'actual_hours' ? 'numeric' :
+        ['created_at', 'updated_at', 'start_date', 'due_date'].includes(field) ? 'timestamptz' : 'text')),
+      taskName,
+      'project_phases.project_id as project_id',
+      assignedName,
+    )
+    .orderBy(hidden.has('wbs_code') ? 'project_tasks.task_id' : 'project_tasks.wbs_code') as Array<IProjectTask & { assigned_to_name: string | null; project_id: string }>;
+  if (!hidden.has('wbs_code')) {
+    rows.sort((a, b) => {
+      const left = a.wbs_code.split('.').map(Number), right = b.wbs_code.split('.').map(Number);
+      for (let i = 0; i < Math.max(left.length, right.length); i += 1) {
+        if ((left[i] ?? 0) !== (right[i] ?? 0)) return (left[i] ?? 0) - (right[i] ?? 0);
+      }
+      return 0;
+    });
+  }
+  return rows;
+}
+
+function projectStatusesHidden(redactedFields: string[]): boolean {
+  return [
+    ['name', ['status', 'statuses', 'standard_statuses']],
+    ['is_closed', ['status', 'statuses', 'standard_statuses']],
+    ['project_status_mapping_id', ['status', 'statuses', 'standard_statuses', 'mapping_id']],
+    ['status_id', ['statuses', 'statuses.status_id']],
+    ['standard_status_id', ['statuses', 'standard_statuses', 'statuses.standard_status_id']],
+    ['phase_id', ['statuses', 'project_phases.phase_id']],
+    ['project_id', ['statuses', 'projects.project_id']],
+  ].some(([field, aliases]) => coManagedColumnHidden(
+    redactedFields, 'project_status_mappings', field as string, aliases as string[]
+  ));
 }
 
 async function assertProjectReadAllowed(
@@ -773,21 +882,6 @@ export const getProjectsWithPhases = withAuth(async (
     if (denied) return denied;
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const db = tenantDb(trx, tenant);
-      const statusMappingsQuery = tenantScopedTable(trx, 'project_status_mappings as psm', tenant);
-      db.tenantJoin(statusMappingsQuery, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
-      db.tenantJoin(statusMappingsQuery, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
-      statusMappingsQuery
-        .select(
-          'psm.project_status_mapping_id as mapping_id',
-          'psm.project_id',
-          'psm.phase_id',
-          trx.raw("COALESCE(psm.custom_name, s.name, ss.name) as name"),
-          trx.raw("COALESCE(s.is_closed, ss.is_closed, false) as is_closed"),
-          'psm.display_order'
-        )
-        .orderBy('psm.display_order');
-
       const projectIds = await tenantScopedTable(trx, 'projects', tenant)
         .orderBy('project_name')
         .select<Array<Pick<IProject, 'project_id'>>>('project_id');
@@ -795,15 +889,45 @@ export const getProjectsWithPhases = withAuth(async (
         trx, tenant, user as IUserWithRoles, projectIds.map((row) => row.project_id)
       );
       const redactionsByProject = new Map(authorizedProjects.map(({ project, redactedFields }) => [project.project_id, redactedFields]));
-      const allowedIds = authorizedProjects.map((entry) => entry.project.project_id);
-      if (allowedIds.length === 0) return [];
-      const [phases, statusMappings] = await Promise.all([
-        tenantScopedTable(trx, 'project_phases', tenant)
-          .whereIn('project_id', allowedIds)
-          .select<Array<{ phase_id: string; project_id: string; phase_name: string; wbs_code: string }>>('phase_id', 'project_id', 'phase_name', 'wbs_code')
-          .orderBy('wbs_code'),
-        statusMappingsQuery.whereIn('psm.project_id', allowedIds),
-      ]);
+      const phaseGroups = new Map<string, { redactedFields: string[]; projectIds: string[] }>();
+      const statusProjectIds: string[] = [];
+      for (const { project, redactedFields } of authorizedProjects) {
+        if (!projectStatusesHidden(redactedFields)) statusProjectIds.push(project.project_id);
+        const mask = coManagedProjectFamilyMask(redactedFields, 'project_phase');
+        if (mask.dropRow) continue;
+        const key = JSON.stringify(redactedFields.slice().sort());
+        const group = phaseGroups.get(key) ?? { redactedFields, projectIds: [] };
+        group.projectIds.push(project.project_id);
+        phaseGroups.set(key, group);
+      }
+      if (authorizedProjects.length === 0) return [];
+      const phases: Array<{ phase_id: string; project_id: string; phase_name: string; wbs_code: string }> = [];
+      for (const group of phaseGroups.values()) {
+        const mask = coManagedProjectFamilyMask(group.redactedFields, 'project_phase');
+        const wbsHidden = coManagedColumnHidden(group.redactedFields, 'project_phases', 'wbs_code');
+        const query = tenantScopedTable(trx, 'project_phases', tenant)
+          .whereIn('project_id', group.projectIds)
+          .select(
+            'phase_id', 'project_id',
+            mask.title ? trx.raw('?::text as phase_name', [mask.neutralTitle]) : 'phase_name',
+            wbsHidden ? trx.raw('NULL::text as wbs_code') : 'wbs_code'
+          )
+          .orderBy(wbsHidden ? 'phase_id' : 'wbs_code');
+        phases.push(...await query as typeof phases);
+      }
+      let statusMappings: Array<{ mapping_id: string; project_id: string; phase_id: string | null; name: string; is_closed: boolean; display_order: number }> = [];
+      if (statusProjectIds.length > 0) {
+        const db = tenantDb(trx, tenant);
+        const statusQuery = tenantScopedTable(trx, 'project_status_mappings as psm', tenant);
+        db.tenantJoin(statusQuery, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
+        db.tenantJoin(statusQuery, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+        statusMappings = await statusQuery.whereIn('psm.project_id', statusProjectIds)
+          .select(
+            'psm.project_status_mapping_id as mapping_id', 'psm.project_id', 'psm.phase_id',
+            trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as name'),
+            trx.raw('COALESCE(s.is_closed, ss.is_closed, false) as is_closed'), 'psm.display_order'
+          ).orderBy('psm.display_order') as typeof statusMappings;
+      }
 
       // Group phases by project
       const phasesByProject = new Map<string, Array<{
@@ -819,8 +943,8 @@ export const getProjectsWithPhases = withAuth(async (
         const key = `${m.project_id}:${m.phase_id || '__default__'}`;
         const list = statusesByScope.get(key) || [];
         const redactedFields = redactionsByProject.get(m.project_id) ?? [];
-        const statusHidden = coManagedColumnHidden(redactedFields, 'project_status_mappings', 'name', ['status', 'statuses', 'standard_statuses']);
-        list.push({ mapping_id: m.mapping_id, name: statusHidden ? 'Status' : m.name, is_closed: statusHidden ? false : !!m.is_closed });
+        if (projectStatusesHidden(redactedFields)) continue;
+        list.push({ mapping_id: m.mapping_id, name: m.name, is_closed: !!m.is_closed });
         statusesByScope.set(key, list);
       }
 
@@ -846,11 +970,10 @@ export const getProjectsWithPhases = withAuth(async (
         phases: (phasesByProject.get(p.project_id) || []).flatMap((phase) => {
           const mask = coManagedProjectFamilyMask(redactedFields, 'project_phase');
           if (mask.dropRow) return [];
-          const statusHidden = coManagedColumnHidden(redactedFields, 'project_status_mappings', 'name', ['status', 'statuses', 'standard_statuses']);
           return [{
             ...phase,
             phase_name: mask.title ? mask.neutralTitle : phase.phase_name,
-            statuses: statusHidden ? [] : phase.statuses,
+            statuses: projectStatusesHidden(redactedFields) ? [] : phase.statuses,
           }];
         }),
       }));
@@ -916,12 +1039,13 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
         }[];
       } | null> => {
         try {
-          const [phases, statusMappings] = await Promise.all([
-            ProjectModel.getPhases(trx, tenant, project.project_id),
-            ProjectModel.getProjectStatusMappings(trx, tenant, project.project_id)
-          ]);
+          const phases = await loadAuthorizedProjectPhases(trx, tenant, project.project_id, redactedFields);
+          const statusesHidden = projectStatusesHidden(redactedFields);
+          const statusMappings = statusesHidden
+            ? []
+            : await ProjectModel.getProjectStatusMappings(trx, tenant, project.project_id);
 
-          if (!statusMappings || statusMappings.length === 0) {
+          if (!statusesHidden && (!statusMappings || statusMappings.length === 0)) {
             const standardStatuses = await ProjectModel.getStandardStatusesByType(trx, tenant, 'project_task');
             await Promise.all(standardStatuses.map((status): Promise<IProjectStatusMapping> =>
               ProjectModel.addProjectStatusMapping(trx, tenant, project.project_id, {
@@ -937,10 +1061,8 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
           // Resolve effective statuses per phase (phase-specific overrides when present,
           // else project-level defaults) so the status IDs surfaced in the tree match the
           // IDs the kanban will render for each phase.
-          const phaseStatuses = await Promise.all(
-            phases.map((phase) =>
-              getProjectTaskStatusesInternal(trx, tenant, project.project_id, user, phase.phase_id)
-            )
+          const phaseStatuses = statusesHidden ? phases.map(() => []) : await Promise.all(
+            phases.map((phase) => resolvePhaseStatusesInternal(trx, tenant, project.project_id, phase.phase_id))
           );
 
         return {
@@ -960,7 +1082,7 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
             label: coManagedProjectFamilyMask(redactedFields, 'project_phase').title ? 'Project phase' : phase.phase_name,
             value: phase.phase_id,
             type: 'phase' as const,
-            children: (coManagedColumnHidden(redactedFields, 'project_status_mappings', 'name', ['status', 'statuses', 'standard_statuses']) ? [] : phaseStatuses[phaseIndex]).map((status): {
+            children: (statusesHidden ? [] : phaseStatuses[phaseIndex]).map((status): {
                 label: string;
                 value: string;
                 type: 'status';
@@ -1983,31 +2105,22 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
         const denied = await checkPermission(user, 'project', 'read', knex);
         if (denied) return denied;
 
-        await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
-        });
-
-        // Fetch data that doesn't need to be in a transaction
-        const [statuses, users, clients] = await Promise.all([
-            getProjectTaskStatusesInternal2(tenant, projectId, user),
-            getAllUsers(),
-            getAllClientsForProjectsInternal(tenant)
-        ]);
-
-        // Fetch project-specific data within a transaction
         const projectData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            const [project, phases] = await Promise.all([
-                ProjectModel.getById(trx, tenant, projectId),
-                ProjectModel.getPhases(trx, tenant, projectId)
+            const [authorized] = await loadAuthorizedProjectProjections(trx, tenant, user as IUserWithRoles, [projectId]);
+            if (!authorized) throw new Error('Permission denied: Cannot read project');
+            const { project, redactedFields } = authorized;
+            const statusHidden = projectStatusesHidden(redactedFields);
+            const [phases, statuses] = await Promise.all([
+                loadAuthorizedProjectPhases(trx, tenant, projectId, redactedFields),
+                statusHidden ? [] : resolvePhaseStatusesInternal(trx, tenant, projectId),
             ]);
-
-            return { project, phases };
+            return { project, phases, statuses, redactedFields };
         });
-
-        const { project, phases } = projectData;
-        if (!project) {
-            throw new Error('Project not found');
-        }
+        const { project, phases, statuses, redactedFields } = projectData;
+        const users = coManagedColumnHidden(redactedFields, 'projects', 'manager_name', ['assigned_to', 'assignee', 'users', 'teams'])
+            ? [] : await getAllUsers();
+        const clients = coManagedColumnHidden(redactedFields, 'projects', 'client_name', ['client_id', 'tenants'])
+            ? [] : await getAllClientsForProjectsInternal(tenant);
 
         // Fetch assigned user details if assigned_to exists
         let assignedUser: IUserWithRoles | null = null;
@@ -2018,14 +2131,8 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
 
         // Fetch contact details if needed
         let contact: { full_name: string } | undefined;
-        if (project.contact_name_id) {
-            const contactData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-                return await tenantDb(trx, tenant).table('contacts')
-                    .where({ contact_name_id: project.contact_name_id })
-                    .select('full_name')
-                    .first();
-            });
-            contact = contactData;
+        if (project.contact_name && !coManagedColumnHidden(redactedFields, 'projects', 'contact_name', ['contact_name_id'])) {
+            contact = { full_name: project.contact_name };
         }
 
         return {
@@ -2204,36 +2311,37 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
         const denied = await checkPermission(user, 'project', 'read', knex);
         if (denied) return denied;
 
-        await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
-        });
-
-        // Fetch data that doesn't need to be in a transaction
-        const [statuses, users, clients] = await Promise.all([
-            getProjectTaskStatusesInternal2(tenant, projectId, user),
-            getAllUsers(),
-            getAllClientsForProjectsInternal(tenant)
-        ]);
-
-        // Fetch project-specific data within a transaction
         const projectData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            const [project, phases, rawTasks, checklistItemsMap, ticketLinksMap, taskResourcesMap] = await Promise.all([
-                ProjectModel.getById(trx, tenant, projectId),
-                ProjectModel.getPhases(trx, tenant, projectId),
-                ProjectTaskModel.getTasks(trx, tenant, projectId),
-                ProjectTaskModel.getAllTaskChecklistItems(trx, tenant, projectId),
-                ProjectTaskModel.getAllTaskTicketLinks(trx, tenant, projectId),
-                ProjectTaskModel.getAllTaskResources(trx, tenant, projectId)
+            const [authorized] = await loadAuthorizedProjectProjections(trx, tenant, user as IUserWithRoles, [projectId]);
+            if (!authorized) throw new Error('Permission denied: Cannot read project');
+            const { project, redactedFields } = authorized;
+            const statusHidden = projectStatusesHidden(redactedFields);
+            const [phases, statuses, rawTasks] = await Promise.all([
+                loadAuthorizedProjectPhases(trx, tenant, projectId, redactedFields),
+                statusHidden ? [] : resolvePhaseStatusesInternal(trx, tenant, projectId),
+                loadAuthorizedProjectTasks(trx, tenant, projectId, redactedFields),
             ]);
-
-            return { project, phases, rawTasks, checklistItemsMap, ticketLinksMap, taskResourcesMap };
+            const taskMask = coManagedProjectFamilyMask(redactedFields, 'project_task');
+            const taskFields = ['task_name', 'description', 'description_rich_text', 'assigned_to', 'assigned_team_id',
+                'estimated_hours', 'actual_hours', 'project_status_mapping_id', 'wbs_code', 'start_date', 'due_date', 'priority_id'];
+            const taskDataHidden = taskMask.dropRow || taskMask.title || taskMask.body || taskFields.some((field) =>
+                coManagedColumnHidden(redactedFields, 'project_tasks', field, field === 'assigned_to' ? ['assignee_name', 'users', 'teams'] : [])
+            );
+            const [checklistItemsMap, ticketLinksMap, taskResourcesMap] = taskDataHidden
+                ? [{}, {}, {}]
+                : await Promise.all([
+                    ProjectTaskModel.getAllTaskChecklistItems(trx, tenant, projectId),
+                    ProjectTaskModel.getAllTaskTicketLinks(trx, tenant, projectId),
+                    ProjectTaskModel.getAllTaskResources(trx, tenant, projectId),
+                ]);
+            return { project, phases, rawTasks, checklistItemsMap, ticketLinksMap, taskResourcesMap, statuses, redactedFields };
         });
 
-        const { project, phases, rawTasks, checklistItemsMap, ticketLinksMap, taskResourcesMap } = projectData;
-
-        if (!project) {
-            throw new Error('Project not found');
-        }
+        const { project, phases, rawTasks, checklistItemsMap, ticketLinksMap, taskResourcesMap, statuses, redactedFields } = projectData;
+        const users = coManagedColumnHidden(redactedFields, 'projects', 'manager_name', ['assigned_to', 'assignee', 'users', 'teams'])
+            ? [] : await getAllUsers();
+        const clients = coManagedColumnHidden(redactedFields, 'projects', 'client_name', ['client_id', 'tenants'])
+            ? [] : await getAllClientsForProjectsInternal(tenant);
 
         // Fetch assigned user details if assigned_to exists
         if (project.assigned_to) {
@@ -2261,7 +2369,7 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
         );
         const authorizedTicketLinks = ticketLinks.map((link) => applyTicketLinkRestriction(link, allowedTicketIds));
 
-        const contact = project.contact_name ? {
+        const contact = project.contact_name && !coManagedColumnHidden(redactedFields, 'projects', 'contact_name', ['contact_name_id']) ? {
             full_name: project.contact_name
         } : undefined;
 
