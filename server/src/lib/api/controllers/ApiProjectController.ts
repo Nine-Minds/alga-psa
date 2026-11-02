@@ -33,7 +33,13 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import { projectApiResourceRead, projectApiResourceReads, reprojectUnderDecision, type AuthorizedProjection } from './authorizationKernel';
-import { PROJECT_RECORD_SOURCE } from '@alga-psa/co-managed/recordProjection';
+import {
+  PROJECT_PHASE_RECORD_SOURCE,
+  PROJECT_RECORD_SOURCE,
+  PROJECT_STATUS_MAPPING_SOURCE,
+  PROJECT_TASK_CHECKLIST_ITEM_SOURCE,
+  PROJECT_TASK_RECORD_SOURCE,
+} from '@alga-psa/co-managed/recordProjection';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import { tenantDb } from '@alga-psa/db';
 import {
@@ -309,22 +315,20 @@ export class ApiProjectController extends ApiBaseController {
     apiRequest: AuthenticatedApiRequest,
     phaseId: string,
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<string> {
+  ): Promise<AuthorizedProjection<Record<string, any>>> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const projectId = await this.resolveProjectIdForPhase(phaseId, apiRequest.context.tenant, resolvedKnex);
-    await this.assertProjectReadAllowed(apiRequest, projectId, resolvedKnex);
-    return projectId;
+    return this.assertProjectReadAllowed(apiRequest, projectId, resolvedKnex);
   }
 
   private async assertTaskProjectAllowed(
     apiRequest: AuthenticatedApiRequest,
     taskId: string,
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<string> {
+  ): Promise<AuthorizedProjection<Record<string, any>>> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const projectId = await this.resolveProjectIdForTask(taskId, apiRequest.context.tenant, resolvedKnex);
-    await this.assertProjectReadAllowed(apiRequest, projectId, resolvedKnex);
-    return projectId;
+    return this.assertProjectReadAllowed(apiRequest, projectId, resolvedKnex);
   }
 
   list() {
@@ -617,14 +621,19 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
+          const projectGate = await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           const tasks = await this.projectService.getProjectTasks(
             projectId,
             apiRequest.context!
           );
 
-          return createSuccessResponse(tasks.map(t => this.stripInternalTaskFields(t)));
+          const projectedTasks = reprojectUnderDecision(
+            projectGate,
+            tasks.map(task => this.stripInternalTaskFields(task)),
+            PROJECT_TASK_RECORD_SOURCE,
+          );
+          return createSuccessResponse(projectedTasks);
         });
       } catch (error) {
         return handleApiError(error);
@@ -686,14 +695,14 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
+          const projectGate = await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           const mappings = await this.projectService.getProjectTaskStatusMappings(
             projectId,
             apiRequest.context!
           );
 
-          return createSuccessResponse(mappings);
+          return createSuccessResponse(reprojectUnderDecision(projectGate, mappings, PROJECT_STATUS_MAPPING_SOURCE));
         });
       } catch (error) {
         return handleApiError(error);
@@ -1168,14 +1177,14 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
+          const projectGate = await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           const phases = await this.projectService.listPhases(
             projectId,
             apiRequest.context!
           );
 
-          return createSuccessResponse(phases);
+          return createSuccessResponse(reprojectUnderDecision(projectGate, phases, PROJECT_PHASE_RECORD_SOURCE));
         });
       } catch (error) {
         return handleApiError(error);
@@ -1244,7 +1253,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
 
-          await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
+          const projectGate = await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           // Parse and validate body
           const data = await this.validateData(apiRequest as AuthenticatedApiRequest, createProjectPhaseSchema);
@@ -1255,7 +1264,7 @@ export class ApiProjectController extends ApiBaseController {
             apiRequest.context!
           );
 
-          return createSuccessResponse(phase, 201);
+          return createSuccessResponse(reprojectUnderDecision(projectGate, phase, PROJECT_PHASE_RECORD_SOURCE), 201);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1323,7 +1332,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
 
-          await this.assertPhaseProjectAllowed(apiRequest as AuthenticatedApiRequest, phaseId, knex);
+          const projectGate = await this.assertPhaseProjectAllowed(apiRequest as AuthenticatedApiRequest, phaseId, knex);
 
           // Parse body
           const data = await req.json();
@@ -1338,7 +1347,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new NotFoundError('Phase not found');
           }
 
-          return createSuccessResponse(phase);
+          return createSuccessResponse(reprojectUnderDecision(projectGate, phase, PROJECT_PHASE_RECORD_SOURCE));
         });
       } catch (error) {
         return handleApiError(error);
@@ -1482,14 +1491,19 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          await this.assertPhaseProjectAllowed(apiRequest as AuthenticatedApiRequest, phaseId, knex);
+          const projectGate = await this.assertPhaseProjectAllowed(apiRequest as AuthenticatedApiRequest, phaseId, knex);
 
           const tasks = await this.projectService.listPhaseTasks(
             phaseId,
             apiRequest.context!
           );
 
-          return createSuccessResponse(tasks.map(t => this.stripInternalTaskFields(t)));
+          const projectedTasks = reprojectUnderDecision(
+            projectGate,
+            tasks.map(task => this.stripInternalTaskFields(task)),
+            PROJECT_TASK_RECORD_SOURCE,
+          );
+          return createSuccessResponse(projectedTasks);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1560,7 +1574,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
 
-          await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
+          const projectGate = await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           const phase = await tenantDb(knex, tenantId!).table('project_phases')
             .where({ phase_id: phaseId, project_id: projectId })
@@ -1581,7 +1595,10 @@ export class ApiProjectController extends ApiBaseController {
             apiRequest.context!
           );
 
-          return createSuccessResponse(task, 201);
+          return createSuccessResponse(
+            reprojectUnderDecision(projectGate, this.stripInternalTaskFields(task), PROJECT_TASK_RECORD_SOURCE),
+            201,
+          );
         });
       } catch (error) {
         return handleApiError(error);
@@ -1649,7 +1666,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
+          const projectGate = await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
 
           const task = await this.projectService.getTaskById(
             taskId,
@@ -1660,7 +1677,13 @@ export class ApiProjectController extends ApiBaseController {
             throw new NotFoundError('Task not found');
           }
 
-          return createSuccessResponse(this.stripInternalTaskFields(task));
+          const projection = reprojectUnderDecision(
+            projectGate,
+            this.stripInternalTaskFields(task),
+            PROJECT_TASK_RECORD_SOURCE,
+          );
+          if (!projection) throw new NotFoundError('Task not found');
+          return createSuccessResponse(projection);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1728,7 +1751,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
 
-          await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
+          const projectGate = await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
 
           // Parse and validate body — strips unrecognized fields like
           // description_rich_text so they can't be written via the API.
@@ -1752,7 +1775,13 @@ export class ApiProjectController extends ApiBaseController {
             throw new NotFoundError('Task not found');
           }
 
-          return createSuccessResponse(this.stripInternalTaskFields(task));
+          const projection = reprojectUnderDecision(
+            projectGate,
+            this.stripInternalTaskFields(task),
+            PROJECT_TASK_RECORD_SOURCE,
+          );
+          if (!projection) throw new NotFoundError('Task not found');
+          return createSuccessResponse(projection);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1896,14 +1925,14 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
+          const projectGate = await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
 
           const checklist = await this.projectService.getTaskChecklistItems(
             taskId,
             apiRequest.context!
           );
 
-          return createSuccessResponse(checklist);
+          return createSuccessResponse(reprojectUnderDecision(projectGate, checklist, PROJECT_TASK_CHECKLIST_ITEM_SOURCE));
         });
       } catch (error) {
         return handleApiError(error);
@@ -2031,7 +2060,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot update project');
           }
 
-          await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
+          const projectGate = await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
 
           // Parse body (accepts the legacy item_text / is_completed spellings too)
           let data;
@@ -2050,7 +2079,7 @@ export class ApiProjectController extends ApiBaseController {
             apiRequest.context!
           );
 
-          return createSuccessResponse(checklistItem, 201);
+          return createSuccessResponse(reprojectUnderDecision(projectGate, checklistItem, PROJECT_TASK_CHECKLIST_ITEM_SOURCE), 201);
         });
       } catch (error) {
         return handleApiError(error);
@@ -2116,7 +2145,7 @@ export class ApiProjectController extends ApiBaseController {
         const { apiRequest, tenantId, knex } = await this.authenticateChecklistWrite(req);
 
         return await runWithTenant(tenantId, async () => {
-          await this.assertTaskProjectAllowed(apiRequest, taskId, knex);
+          const projectGate = await this.assertTaskProjectAllowed(apiRequest, taskId, knex);
 
           let data;
           try {
@@ -2129,7 +2158,7 @@ export class ApiProjectController extends ApiBaseController {
           }
 
           const item = await this.projectService.updateChecklistItem(taskId, checklistItemId, data, apiRequest.context!);
-          return createSuccessResponse(item);
+          return createSuccessResponse(reprojectUnderDecision(projectGate, item, PROJECT_TASK_CHECKLIST_ITEM_SOURCE));
         });
       } catch (error) {
         return handleApiError(error);

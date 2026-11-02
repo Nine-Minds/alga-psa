@@ -42,6 +42,7 @@ import {
 } from './authorizationKernel';
 import {
   QUOTE_CONVERSION_PREVIEW_SOURCE,
+  QUOTE_ACTIVITY_SOURCE,
   QUOTE_LINE_RECORD_SOURCE,
   QUOTE_RECORD_SOURCE,
 } from '@alga-psa/co-managed/recordProjection';
@@ -852,11 +853,11 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const quoteGate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           const activities = await this.quoteService.listActivities(id, apiRequest.context);
 
-          return createSuccessResponse(activities);
+          return createSuccessResponse(reprojectUnderDecision(quoteGate, activities, QUOTE_ACTIVITY_SOURCE));
         });
       } catch (error) {
         return handleApiError(error);

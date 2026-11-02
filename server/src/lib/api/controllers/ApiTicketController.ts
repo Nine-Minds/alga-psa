@@ -44,6 +44,7 @@ import {
   TICKET_MATERIAL_SOURCE,
   TICKET_RECORD_SOURCE,
   TICKET_WATCHER_SOURCE,
+  TICKET_TIME_ENTRIES_RESPONSE_SOURCE,
   type RedactableRecordSource,
 } from '@alga-psa/co-managed/recordProjection';
 import { createProjectedFileResponse, createProjectedPreviewResponse } from '../utils/projectedFileResponse';
@@ -1688,7 +1689,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           const summary = await fetchTimeEntriesForTicketCore(
             apiRequest.context!.user!,
@@ -1697,7 +1698,12 @@ export class ApiTicketController extends ApiBaseController {
             ticketId,
           );
 
-          return createSuccessResponse(summary, 200, undefined, apiRequest);
+          return createSuccessResponse(
+            reprojectUnderDecision(ticketGate, summary as Record<string, any>, TICKET_TIME_ENTRIES_RESPONSE_SOURCE),
+            200,
+            undefined,
+            apiRequest,
+          );
         });
       } catch (error) {
         return handleApiError(error);

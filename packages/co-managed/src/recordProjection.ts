@@ -1,6 +1,8 @@
 import {
   CO_MANAGED_ASSIGNEE_NAME_ALIASES,
+  CO_MANAGED_PHASE_FIELD_SOURCE,
   CO_MANAGED_PROJECT_FIELD_SOURCE,
+  CO_MANAGED_TASK_FIELD_SOURCE,
   isCoManagedResourceHidden,
   type CoManagedFieldSource,
 } from './sharedWorkProjection';
@@ -331,6 +333,46 @@ export function projectRecordByRedactions<T extends Record<string, any>>(
 const ids = (...names: string[]) => names;
 const quoteItemSources = (...fields: string[]) => fields.flatMap(field => [field, `quote_items.${field}`]);
 
+export const PROJECT_TASK_CHECKLIST_ITEM_SOURCE: RedactableRecordSource = {
+  resource: ['task_checklist_items'],
+  identifier: ids('checklist_item_id', 'task_checklist_items.checklist_item_id'),
+  fields: {},
+  derived: {},
+};
+
+/** Project task responses retain task column and relationship aliases across project-scoped endpoints. */
+export const PROJECT_TASK_RECORD_SOURCE: RedactableRecordSource = recordSourceFromCoManaged(
+  CO_MANAGED_TASK_FIELD_SOURCE, { title: 'task_name', description: 'description' }, {
+    derived: {
+      assigned_user_name: ids('assigned_to', 'users', 'users.first_name', 'users.last_name'),
+      status_name: ids('project_status_mapping_id', 'project_status_mappings', 'statuses', 'standard_statuses'),
+      is_closed: ids('project_status_mapping_id', 'project_status_mappings', 'statuses', 'standard_statuses'),
+      phase_name: ids('phase_id', 'project_phases', 'project_phases.phase_name'),
+      project_name: ids('project_id', 'projects', 'projects.project_name'),
+      client_id: ids('project_id', 'projects.client_id'),
+      effective_service_id: ids('service_id', 'phase_id', 'project_id', 'service_catalog'),
+      service_source: ids('service_id', 'phase_id', 'project_id'),
+      service_name: ids('service_id', 'phase_id', 'project_id', 'service_catalog', 'service_catalog.service_name'),
+    },
+    children: { checklist_items: PROJECT_TASK_CHECKLIST_ITEM_SOURCE },
+  });
+
+/** Project phases use the shared canonical source aliases for description and parent/project identifiers. */
+export const PROJECT_PHASE_RECORD_SOURCE: RedactableRecordSource = recordSourceFromCoManaged(
+  CO_MANAGED_PHASE_FIELD_SOURCE, { title: 'phase_name', description: 'description' }, { derived: {} },
+);
+
+export const PROJECT_STATUS_MAPPING_SOURCE: RedactableRecordSource = {
+  resource: ['project_status_mappings'],
+  identifier: ids('project_status_mapping_id', 'project_status_mappings.project_status_mapping_id'),
+  fields: {},
+  derived: {
+    status_name: ids('custom_name', 'status_id', 'statuses', 'statuses.name', 'standard_status_id', 'standard_statuses', 'standard_statuses.name'),
+    name: ids('custom_name', 'status_id', 'statuses', 'statuses.name', 'standard_status_id', 'standard_statuses', 'standard_statuses.name'),
+    is_closed: ids('status_id', 'statuses', 'standard_status_id', 'standard_statuses'),
+  },
+};
+
 export const PROJECT_RECORD_SOURCE: RedactableRecordSource = recordSourceFromCoManaged(
   CO_MANAGED_PROJECT_FIELD_SOURCE, { title: 'project_name', description: 'description' }, {
     derived: {
@@ -338,6 +380,11 @@ export const PROJECT_RECORD_SOURCE: RedactableRecordSource = recordSourceFromCoM
       client_name: ids('client_id', 'clients', 'clients.client_name'),
       contact_name: ids('contact_name_id', 'contacts', 'contacts.full_name'),
       assigned_user_name: [...CO_MANAGED_ASSIGNEE_NAME_ALIASES, 'assigned_to'],
+    },
+    children: {
+      tasks: PROJECT_TASK_RECORD_SOURCE,
+      phases: PROJECT_PHASE_RECORD_SOURCE,
+      status_mappings: PROJECT_STATUS_MAPPING_SOURCE,
     },
   });
 
@@ -456,6 +503,16 @@ export const TICKET_WATCHER_SOURCE: RedactableRecordSource = {
   },
 };
 
+export const TICKET_TIME_ENTRY_SOURCE: RedactableRecordSource = {
+  resource: ['time_entries'],
+  identifier: ids('entry_id', 'time_entries.entry_id'),
+  fields: {},
+  derived: {
+    user_name: ids('user_id', 'users', 'users.first_name', 'users.last_name'),
+    service_name: ids('service_id', 'service_catalog', 'service_catalog.service_name'),
+  },
+};
+
 /** The stored watch list is a mirror of the same watcher records returned by the detached endpoint. */
 const TICKET_ATTRIBUTES_SOURCE: RedactableRecordSource = {
   resource: ['tickets.attributes'],
@@ -535,11 +592,32 @@ export const TICKET_RECORD_SOURCE: RedactableRecordSource = {
     checklist: TICKET_CHECKLIST_ITEM_SOURCE,
     external_links: TICKET_EXTERNAL_LINK_SOURCE,
     watchers: TICKET_WATCHER_SOURCE,
+    time_entries: TICKET_TIME_ENTRY_SOURCE,
     // The service names its response keys `additional_agents` / `primary_agent`; these nested sources are also
     // used by the detached agents endpoint below.
     primary_agent: TICKET_PRIMARY_AGENT_SOURCE,
     additional_agents: TICKET_ADDITIONAL_AGENT_SOURCE,
   },
+};
+
+/** Ticket time-entry summaries are calculated from their visible entry set. */
+export const TICKET_TIME_ENTRIES_RESPONSE_SOURCE: RedactableRecordSource = {
+  policySource: TICKET_RECORD_SOURCE,
+  resource: [],
+  identifier: [],
+  fields: {},
+  derived: {
+    ownTotalMinutes: ids('entries.entry_id', 'entries.billable_duration'),
+    ownEntryCount: ids('entries.entry_id'),
+    othersTotalMinutes: ids('entries.entry_id', 'entries.billable_duration'),
+    othersEntryCount: ids('entries.entry_id'),
+    othersVisibleMinutes: ids('entries.entry_id', 'entries.billable_duration'),
+    othersVisibleCount: ids('entries.entry_id'),
+    othersHiddenMinutes: ids('entries.entry_id', 'entries.billable_duration'),
+    othersHiddenCount: ids('entries.entry_id'),
+    totalMinutes: ids('entries.entry_id', 'entries.billable_duration'),
+  },
+  children: { entries: TICKET_TIME_ENTRY_SOURCE },
 };
 
 /** An external-link lookup is another ticket representation with one detached link. */
@@ -608,6 +686,16 @@ export const QUOTE_CONVERSION_PREVIEW_DISCOUNT_SOURCE: RedactableRecordSource = 
   },
 };
 
+/** Quote audit rows keep the activity table namespace; metadata can repeat the description for comment events. */
+export const QUOTE_ACTIVITY_SOURCE: RedactableRecordSource = {
+  resource: ['quote_activities'],
+  identifier: ids('activity_id', 'quote_activities.activity_id'),
+  fields: {},
+  derived: {
+    metadata: ids('description', 'quote_activities.description'),
+  },
+};
+
 /** Quotes are read under the kernel's `billing` resource, so a whole-`billing` redaction hides the quote too. */
 export const QUOTE_RECORD_SOURCE: RedactableRecordSource = {
   resource: ['quotes', 'billing'],
@@ -628,7 +716,11 @@ export const QUOTE_RECORD_SOURCE: RedactableRecordSource = {
     accepted_by_name: ids('accepted_by'),
     display_quote_number: ids('quote_number', 'version'),
   },
-  children: { items: QUOTE_LINE_RECORD_SOURCE, quote_items: QUOTE_LINE_RECORD_SOURCE },
+  children: {
+    items: QUOTE_LINE_RECORD_SOURCE,
+    quote_items: QUOTE_LINE_RECORD_SOURCE,
+    activities: QUOTE_ACTIVITY_SOURCE,
+  },
 };
 
 /** Nested quote-conversion response shape, projected under the quote's original authorization decision. */

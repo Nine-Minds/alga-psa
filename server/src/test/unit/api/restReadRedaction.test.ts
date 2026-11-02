@@ -29,6 +29,19 @@ const state = vi.hoisted(() => ({
   assetTickets: [] as Record<string, any>[],
   checklistItems: [] as Record<string, any>[],
   externalLinks: [] as Record<string, any>[],
+  quoteActivities: [] as Record<string, any>[],
+  timeEntriesSummary: {
+    entries: [] as Record<string, any>[],
+    ownTotalMinutes: 0,
+    ownEntryCount: 0,
+    othersTotalMinutes: 0,
+    othersEntryCount: 0,
+    othersVisibleMinutes: 0,
+    othersVisibleCount: 0,
+    othersHiddenMinutes: 0,
+    othersHiddenCount: 0,
+    totalMinutes: 0,
+  },
   watchers: [] as Record<string, any>[],
   statuses: [] as Record<string, any>[],
   clients: [] as Record<string, any>[],
@@ -151,7 +164,11 @@ vi.mock('../../../lib/api/services/QuoteService', () => ({
     list = vi.fn(async () => ({ data: state.quote ? [state.quote] : [], total: state.quote ? 1 : 0 }));
     listVersions = vi.fn(async () => state.quoteVersions);
     getConversionPreview = vi.fn(async () => state.conversionPreview);
+    listActivities = vi.fn(async () => state.quoteActivities);
   },
+}));
+vi.mock('@alga-psa/scheduling/actions/timeEntryTicketActions', () => ({
+  fetchTimeEntriesForTicketCore: vi.fn(async () => state.timeEntriesSummary),
 }));
 
 import { ApiBaseController } from '../../../lib/api/controllers/ApiBaseController';
@@ -194,6 +211,11 @@ beforeEach(() => {
   state.assetTickets = [];
   state.checklistItems = [];
   state.externalLinks = [];
+  state.quoteActivities = [];
+  state.timeEntriesSummary = {
+    entries: [], ownTotalMinutes: 0, ownEntryCount: 0, othersTotalMinutes: 0, othersEntryCount: 0,
+    othersVisibleMinutes: 0, othersVisibleCount: 0, othersHiddenMinutes: 0, othersHiddenCount: 0, totalMinutes: 0,
+  };
   state.watchers = [];
   state.statuses = [{ status_id: 's-1', name: 'Active' }];
   state.clients = [{ client_id: 'c-1', client_name: 'Acme' }];
@@ -2511,6 +2533,168 @@ describe('ticket mutation response projection boundaries', () => {
     expect((await hidden.json()).data).toEqual({ document_id: P2, document_name: 'Visible file' });
     state.decisions.set(P1, { allowed: true, redactedFields: ['documents.document_id'] });
     expect((await (await invoke()).json()).data).toBeNull();
+  });
+});
+
+describe('detached project, quote, and time-entry responses retain parent projections', () => {
+  beforeEach(() => {
+    vi.spyOn(ApiBaseController.prototype as any, 'assertProductApiAccess').mockResolvedValue(undefined);
+  });
+
+  const task = { task_id: 'task-1', task_name: 'Visible task', description: 'Private task description', estimated_hours: 91 };
+  it.each([
+    ['project_tasks.description', 'description'],
+    ['fields.project_tasks.description', 'description'],
+    ['projects.tasks.description', 'description'],
+  ])('projects task rows under %s and preserves the visible control', async (redaction, field) => {
+    const c = new ApiProjectController();
+    (c as any).projectService.getProjectTasks = vi.fn(async () => [task]);
+    const get = () => c.getTasks()(request(`/api/v1/projects/${P1}/tasks`));
+    const visible = await get();
+    expect((await visible.json()).data[0]).toMatchObject({ task_name: task.task_name, description: task.description });
+
+    state.decisions.set(P1, { allowed: true, redactedFields: [redaction] });
+    const hidden = await get();
+    expect(hidden.status).toBe(200);
+    const [projected] = (await hidden.json()).data;
+    expect(projected.task_name).toBe(task.task_name);
+    expect(projected).not.toHaveProperty(field);
+  });
+
+  it.each(['project_tasks', 'project_tasks.task_id'])('suppresses project task rows when %s is hidden', async redaction => {
+    state.decisions.set(P1, { allowed: true, redactedFields: [redaction] });
+    const c = new ApiProjectController();
+    (c as any).projectService.getProjectTasks = vi.fn(async () => [task]);
+    const response = await c.getTasks()(request(`/api/v1/projects/${P1}/tasks`));
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual([]);
+  });
+
+  const phase = { phase_id: 'phase-1', phase_name: 'Visible phase', description: 'Private phase description' };
+  it.each(['project_phases.description', 'projects.phases.description'])(
+    'projects phase descriptions under %s and retains visible fields', async redaction => {
+      const c = new ApiProjectController();
+      (c as any).projectService.listPhases = vi.fn(async () => [phase]);
+      const get = () => c.listPhases()(request(`/api/v1/projects/${P1}/phases`));
+      expect((await (await get()).json()).data[0].description).toBe(phase.description);
+      state.decisions.set(P1, { allowed: true, redactedFields: [redaction] });
+      const response = await get();
+      expect(response.status).toBe(200);
+      const [projected] = (await response.json()).data;
+      expect(projected).toMatchObject({ phase_id: phase.phase_id, phase_name: phase.phase_name });
+      expect(projected).not.toHaveProperty('description');
+    },
+  );
+
+  it.each(['project_phases', 'project_phases.phase_id'])('suppresses project phases when %s is hidden', async redaction => {
+    state.decisions.set(P1, { allowed: true, redactedFields: [redaction] });
+    const c = new ApiProjectController();
+    (c as any).projectService.listPhases = vi.fn(async () => [phase]);
+    const response = await c.listPhases()(request(`/api/v1/projects/${P1}/phases`));
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual([]);
+  });
+
+  const Q = '44444444-4444-4444-4444-444444444441';
+  const activity = {
+    activity_id: 'activity-1', quote_id: Q, activity_type: 'approval_changes_requested',
+    description: 'Private approval reason', metadata: { comment: 'Private approval reason' },
+  };
+  it.each(['quote_activities.description', 'quotes.activities.description'])(
+    'projects quote activity description and copied metadata under %s', async redaction => {
+      state.quote = { quote_id: Q, title: 'Visible quote' };
+      state.quoteActivities = [activity];
+      const c = new ApiQuoteController();
+      const get = () => c.listActivities()(request(`/api/v1/quotes/${Q}/activities`, { id: Q }));
+      expect((await (await get()).json()).data[0]).toMatchObject({ description: activity.description, metadata: activity.metadata });
+      state.decisions.set(Q, { allowed: true, redactedFields: [redaction] });
+      const response = await get();
+      expect(response.status).toBe(200);
+      const [projected] = (await response.json()).data;
+      expect(projected).not.toHaveProperty('description');
+      expect(projected.metadata).toBeNull();
+    },
+  );
+
+  it.each(['quote_activities', 'quote_activities.activity_id'])(
+    'suppresses quote activities when %s is hidden', async redaction => {
+      state.quote = { quote_id: Q, title: 'Visible quote' };
+      state.quoteActivities = [activity];
+      state.decisions.set(Q, { allowed: true, redactedFields: [redaction] });
+      const c = new ApiQuoteController();
+      const response = await c.listActivities()(request(`/api/v1/quotes/${Q}/activities`, { id: Q }));
+      expect(response.status).toBe(200);
+      expect((await response.json()).data).toEqual([]);
+    },
+  );
+
+  const T = '33333333-3333-3333-3333-333333333331';
+  const timeEntry = { entry_id: 'time-1', notes: 'Private time note', billable_duration: 90, is_own: true };
+  const timeSummary = {
+    entries: [timeEntry], ownTotalMinutes: 90, ownEntryCount: 1, othersTotalMinutes: 0, othersEntryCount: 0,
+    othersVisibleMinutes: 0, othersVisibleCount: 0, othersHiddenMinutes: 0, othersHiddenCount: 0, totalMinutes: 90,
+  };
+  it.each(['time_entries.notes', 'tickets.time_entries.notes'])(
+    'projects ticket time-entry notes under %s without hiding independent totals', async redaction => {
+      state.tickets = [{ ticket_id: T, title: 'Visible ticket' }];
+      state.timeEntriesSummary = timeSummary;
+      const c = new ApiTicketController();
+      const get = () => c.getTimeEntries()(request(`/api/v1/tickets/${T}/time-entries`, { id: T }));
+      expect((await (await get()).json()).data.entries[0].notes).toBe(timeEntry.notes);
+      state.decisions.set(T, { allowed: true, redactedFields: [redaction] });
+      const response = await get();
+      expect(response.status).toBe(200);
+      const body = (await response.json()).data;
+      expect(body.entries[0]).not.toHaveProperty('notes');
+      expect(body.totalMinutes).toBe(90);
+    },
+  );
+
+  it.each(['time_entries', 'time_entries.entry_id'])(
+    'suppresses time-entry rows and their aggregates when %s is hidden', async redaction => {
+      state.tickets = [{ ticket_id: T, title: 'Visible ticket' }];
+      state.timeEntriesSummary = timeSummary;
+      state.decisions.set(T, { allowed: true, redactedFields: [redaction] });
+      const c = new ApiTicketController();
+      const response = await c.getTimeEntries()(request(`/api/v1/tickets/${T}/time-entries`, { id: T }));
+      expect(response.status).toBe(200);
+      const body = (await response.json()).data;
+      expect(body.entries).toEqual([]);
+      expect(body.totalMinutes).toBeNull();
+      expect(body.ownEntryCount).toBeNull();
+    },
+  );
+
+  it('does not fetch child records after the parent decision denies each read', async () => {
+    const Q = '44444444-4444-4444-4444-444444444441';
+    const T = '33333333-3333-3333-3333-333333333331';
+    state.quote = { quote_id: Q, title: 'Visible quote' };
+    state.tickets = [{ ticket_id: T, title: 'Visible ticket' }];
+    state.decisions.set(P1, { allowed: false, redactedFields: [] });
+    state.decisions.set(Q, { allowed: false, redactedFields: [] });
+    state.decisions.set(T, { allowed: false, redactedFields: [] });
+
+    const projectController = new ApiProjectController();
+    const getProjectTasks = vi.fn(async () => [task]);
+    (projectController as any).projectService.getProjectTasks = getProjectTasks;
+    const projectResponse = await projectController.getTasks()(request(`/api/v1/projects/${P1}/tasks`));
+    expect(projectResponse.status).toBe(404);
+    expect(getProjectTasks).not.toHaveBeenCalled();
+
+    const quoteController = new ApiQuoteController();
+    const listActivities = vi.fn(async () => [activity]);
+    (quoteController as any).quoteService.listActivities = listActivities;
+    const quoteResponse = await quoteController.listActivities()(request(`/api/v1/quotes/${Q}/activities`, { id: Q }));
+    expect(quoteResponse.status).toBe(404);
+    expect(listActivities).not.toHaveBeenCalled();
+
+    const timeEntries = await import('@alga-psa/scheduling/actions/timeEntryTicketActions');
+    const fetchEntries = vi.mocked(timeEntries.fetchTimeEntriesForTicketCore);
+    fetchEntries.mockClear();
+    const ticketController = new ApiTicketController();
+    const ticketResponse = await ticketController.getTimeEntries()(request(`/api/v1/tickets/${T}/time-entries`, { id: T }));
+    expect(ticketResponse.status).toBe(404);
+    expect(fetchEntries).not.toHaveBeenCalled();
   });
 });
 
