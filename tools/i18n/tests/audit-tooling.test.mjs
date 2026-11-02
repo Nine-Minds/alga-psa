@@ -78,6 +78,21 @@ for (const locale of ['fr', 'nl']) {
   });
 }
 
+for (const locale of ['es', 'nl']) {
+  test(`${locale} shared-project unavailable copy follows the formal register`, () => {
+    const { report } = runAudit({
+      locale,
+      namespaceFilter: new Set(['msp/licensing']),
+      writeReport: false,
+    });
+    const namespace = report.namespaces[0];
+    assert.equal(namespace.keyCount > 0, true);
+    assert.deepEqual(namespace.structuralErrors, []);
+    assert.deepEqual(namespace.untranslated, []);
+    assert.deepEqual(namespace.forbiddenViolations, []);
+  });
+}
+
 for (const locale of ['pt', 'it']) {
   test(`${locale} time entry copy passes the locale quality audit`, () => {
     const { report } = runAudit({
