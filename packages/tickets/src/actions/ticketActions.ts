@@ -21,7 +21,6 @@ import type {
   ITicketResource,
   IUser,
   IUserWithRoles,
-  PendingTag,
   TicketResponseState,
   TicketTemplateDraftFromTicket,
 } from '@alga-psa/types';
@@ -36,9 +35,8 @@ import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from
 import { Knex } from 'knex';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteTicketChildRecords } from '../lib/deleteTicketChildRecords';
-import { createTagsForEntityWithTransaction, findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
+import { bulkApplyTagsToEntities } from '@alga-psa/tags/actions/tagActions';
 import TagMapping from '@alga-psa/tags/models/tagMapping';
-import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 import { assignTeamToTicket, removeTeamFromTicket } from './teamAssignmentActions';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import {
@@ -133,6 +131,7 @@ import {
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { authorizeTicketRecordAccess, authorizeTicketRecordAccessConcealed } from '../lib/ticketRecordAuthorization';
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
 let _cancelSlaFn: ((tenantId: string, ticketId: string) => Promise<void>) | null = null;
 
@@ -2477,66 +2476,59 @@ export const bulkAddTagsToTickets = withAuth(async (
     return { updatedIds: [], failed: [] };
   }
 
-  // Tag writes don't go through updateTicketWithCache, so authorize explicitly here.
-  const { knex: authKnex } = await createTenantKnex();
-  if (!(await hasPermission(user, 'ticket', 'update', authKnex))) {
+  if (!isMspPrincipalUserType(user.user_type)) {
     return {
       updatedIds: [],
-      failed: ticketBulkFailuresForAll(uniqueIds, 'Permission denied: Cannot update tickets'),
+      failed: ticketBulkFailuresForAll(uniqueIds, 'Permission denied: operation not available in client portal'),
     };
   }
 
-  const existingByTicket = new Map<string, Set<string>>();
+  const { knex } = await createTenantKnex();
   try {
-    const existing = await findTagsByEntityIds(uniqueIds, 'ticket');
-    if (isTagActionError(existing)) {
-      console.warn('[bulkAddTagsToTickets] Failed to load existing tags for dedupe:', existing);
-    } else {
-      for (const tag of existing) {
-        const set = existingByTicket.get(tag.tagged_id) ?? new Set<string>();
-        set.add(tag.tag_text.toLowerCase());
-        existingByTicket.set(tag.tagged_id, set);
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (!(await hasPermission(user, 'ticket', 'update', trx))) {
+        throw new Error('Permission denied: Cannot update tickets');
       }
-    }
-  } catch (error) {
-    console.warn('[bulkAddTagsToTickets] Failed to load existing tags for dedupe:', error);
+      if (!(await hasPermission(user, 'tag', 'create', trx))) {
+        throw new Error('Permission denied: Cannot create tags');
+      }
+
+      // Authorize the complete target set before reading or mutating tag state.
+      for (const ticketId of uniqueIds) {
+        await authorizeTicketRecordAccess({ trx, tenant, user: user as IUserWithRoles, ticketId, action: 'update' });
+      }
+
+      const existingTags = await TagMapping.getByEntities(trx, tenant, uniqueIds, 'ticket');
+      const existingTextsByTicket = new Map<string, string[]>();
+      for (const tag of existingTags) {
+        const texts = existingTextsByTicket.get(tag.tagged_id) ?? [];
+        texts.push(tag.tag_text);
+        existingTextsByTicket.set(tag.tagged_id, texts);
+      }
+
+      await bulkApplyTagsToEntities(
+        trx,
+        tenant,
+        'ticket',
+        uniqueIds.map((entityId) => ({
+          entityId,
+          newTexts: normalizedTexts,
+          existingTexts: existingTextsByTicket.get(entityId) ?? [],
+        })),
+      );
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error && error.message.startsWith('Permission denied')
+      ? error.message
+      : await ticketBulkFailureMessage(error, 'Failed to add tags to tickets');
+    return { updatedIds: [], failed: ticketBulkFailuresForAll(uniqueIds, message) };
   }
 
-  const { knex: ticketKnex } = await createTenantKnex();
-  const updatedIds: string[] = [];
-  const failed: Array<{ ticketId: string; message: string }> = [];
-
-  for (const ticketId of uniqueIds) {
-    try {
-      const alreadyOnTicket = existingByTicket.get(ticketId) ?? new Set<string>();
-      const newTexts = normalizedTexts.filter((t) => !alreadyOnTicket.has(t.toLowerCase()));
-      if (newTexts.length === 0) {
-        updatedIds.push(ticketId);
-        continue;
-      }
-      const pendingTags: PendingTag[] = newTexts.map((text) => ({
-        tag_text: text,
-        background_color: null,
-        text_color: null,
-        isNew: true,
-      }));
-      await withTransaction(ticketKnex, async (trx: Knex.Transaction) => {
-        await createTagsForEntityWithTransaction(trx, tenant, ticketId, 'ticket', pendingTags);
-      });
-      updatedIds.push(ticketId);
-    } catch (error: unknown) {
-      failed.push({
-        ticketId,
-        message: await ticketBulkFailureMessage(error, 'Failed to add tags to ticket'),
-      });
-    }
-  }
-
-  if (updatedIds.length > 0) {
+  if (uniqueIds.length > 0) {
     revalidatePath('/msp/tickets');
   }
 
-  return { updatedIds, failed };
+  return { updatedIds: uniqueIds, failed: [] };
 });
 
 export const bulkUpdateTicketDueDate = withAuth(async (
@@ -2961,6 +2953,14 @@ export const getTicketAppointmentRequests = withAuth(async (
       if (!await hasPermission(user, 'ticket', 'read', trx)) {
         throw new Error('Permission denied');
       }
+
+      await authorizeTicketRecordAccessConcealed({
+        trx,
+        tenant,
+        user: user as IUserWithRoles,
+        ticketId,
+        action: 'read',
+      });
 
       const tenantFacade = tenantDb(trx, tenant);
       const appointmentQuery = tenantFacade.table('appointment_requests as ar');
