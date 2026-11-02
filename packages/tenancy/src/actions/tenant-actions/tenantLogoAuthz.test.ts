@@ -5,6 +5,7 @@ import { resolve } from 'path';
 const DENIED = { success: false, error: 'Permission denied: Cannot update settings' };
 
 const hasPermission = vi.fn();
+const canReadDocument = vi.fn();
 const getConnection = vi.fn();
 const uploadEntityImage = vi.fn();
 const deleteEntityImage = vi.fn();
@@ -25,6 +26,7 @@ async function loadActions() {
       (...args: unknown[]) =>
         fn(currentUser, { tenant: 'tenant-1' }, ...args),
   }));
+  vi.doMock('@alga-psa/documents/lib/documentPermissions', () => ({ canReadDocument }));
   vi.doMock('@alga-psa/db', () => ({
     getConnection,
     tenantDb: () => ({
@@ -75,6 +77,7 @@ function expectNoWrites() {
 beforeEach(() => {
   vi.clearAllMocks();
   currentUser = { user_id: 'user-1', user_type: 'internal' };
+  canReadDocument.mockResolvedValue(true);
   getConnection.mockResolvedValue({ fn: { now: () => 'now()' } });
   settingsFirst.mockResolvedValue({ settings: {} });
   settingsUpdate.mockResolvedValue(1);
@@ -144,6 +147,55 @@ describe('storage calls use the authenticated tenant', () => {
     expect(deleteEntityImage.mock.calls[0].slice(0, 4)).toEqual(['tenant', 'tenant-1', 'user-1', 'tenant-1']);
     expect(linkEntityImageFromDocument.mock.calls[0].slice(0, 4)).toEqual(['tenant', 'tenant-1', 'user-1', 'tenant-1']);
     expect(recropEntityLogo.mock.calls[0].slice(0, 4)).toEqual(['tenant', 'tenant-1', 'user-1', 'tenant-1']);
+  });
+});
+
+describe('linkDocumentAsTenantLogo source authorization', () => {
+  it('denies a settings writer who cannot read the source and performs no copy or logo mutation', async () => {
+    hasPermission.mockResolvedValue(true);
+    canReadDocument.mockResolvedValue(false);
+    const actions = await loadActions();
+
+    expect(await actions.linkDocumentAsTenantLogo('tenant-1', 'private-image', 'default')).toEqual({
+      success: false,
+      error: 'Permission denied: Cannot read documents',
+    });
+    expect(canReadDocument).toHaveBeenCalledWith(currentUser, 'private-image');
+    expect(linkEntityImageFromDocument).not.toHaveBeenCalled();
+    expect(settingsUpdate).not.toHaveBeenCalled();
+    expect(settingsInsert).not.toHaveBeenCalled();
+  });
+
+  it('denies by default when the source authorizer fails', async () => {
+    hasPermission.mockResolvedValue(true);
+    canReadDocument.mockRejectedValue(new Error('authorization unavailable'));
+    const actions = await loadActions();
+
+    expect(await actions.linkDocumentAsTenantLogo('tenant-1', 'private-image', 'default')).toEqual({
+      success: false,
+      error: 'Permission denied: Cannot read documents',
+    });
+    expect(linkEntityImageFromDocument).not.toHaveBeenCalled();
+    expect(settingsUpdate).not.toHaveBeenCalled();
+    expect(settingsInsert).not.toHaveBeenCalled();
+  });
+
+  it('links a source image when the caller can read it', async () => {
+    hasPermission.mockResolvedValue(true);
+    canReadDocument.mockResolvedValue(true);
+    const actions = await loadActions();
+
+    expect(await actions.linkDocumentAsTenantLogo('tenant-1', 'readable-image', 'default')).toMatchObject({
+      success: true,
+      message: 'Logo linked successfully',
+    });
+    expect(canReadDocument).toHaveBeenCalledWith(currentUser, 'readable-image');
+    expect(linkEntityImageFromDocument).toHaveBeenCalledWith('tenant', 'tenant-1', 'user-1', 'tenant-1', {
+      documentId: 'readable-image',
+      logoVariant: 'default',
+      contextName: 'tenant_logo',
+    });
+    expect(settingsUpdate.mock.calls.length + settingsInsert.mock.calls.length).toBe(1);
   });
 });
 

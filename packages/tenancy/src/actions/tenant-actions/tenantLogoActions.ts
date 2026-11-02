@@ -12,6 +12,7 @@ import {
 } from '@alga-psa/storage';
 import { getConnection, tenantDb } from '@alga-psa/db';
 import { withAuth, hasPermission, type AuthContext } from '@alga-psa/auth';
+import { canReadDocument } from '@alga-psa/documents/lib/documentPermissions';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
@@ -458,6 +459,17 @@ export const linkDocumentAsTenantLogo = withAuth(async (
   try {
     if (!documentId) {
       return { success: false, error: 'No document provided' };
+    }
+
+    // The storage helper copies source bytes into a publicly served tenant-logo
+    // document, so authorize this exact source before handing it off.
+    try {
+      if (!await canReadDocument(user, documentId)) {
+        return { success: false, error: 'Permission denied: Cannot read documents' };
+      }
+    } catch (error) {
+      console.error('Error checking source document permission for tenant logo:', error);
+      return { success: false, error: 'Permission denied: Cannot read documents' };
     }
 
     const result = await linkEntityImageFromDocument('tenant' as EntityType, tenant, user.user_id, tenant, {
