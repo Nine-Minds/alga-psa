@@ -501,12 +501,18 @@ export class ApiAssetController {
    */
   async listDocuments(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    const denied = await guardAssetRead(context, params.id, this.assetService);
+    const { projection, denied } = await readAssetProjection(
+      context,
+      params.id,
+      this.assetService,
+      async () => ({
+        asset_id: params.id,
+        documents: await this.assetService.getAssetDocuments(params.id, context),
+      }),
+    );
     if (denied) return denied;
 
-    const documents = await this.assetService.getAssetDocuments(params.id, context);
-    
-    return createApiResponse(documents);
+    return createApiResponse(projection.documents ?? []);
   }
 
   /**

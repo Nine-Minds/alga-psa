@@ -89,6 +89,14 @@ function recordFieldAliasForms(source: RedactableRecordSource, alias: string): r
   return [alias, field, `values.${field}`, ...source.resource.map(resource => `${resource}.${field}`)];
 }
 
+function isRecordFieldExplicitlyHidden(redactions: readonly string[], aliases: readonly string[]): boolean {
+  return redactions.some(redaction => {
+    if (redaction === '*' || redaction === 'fields') return true;
+    const path = redaction.startsWith('fields.') ? redaction.slice('fields.'.length) : redaction;
+    return aliases.includes(path);
+  });
+}
+
 /** Resolve the dependency graph once per field, sharing its aliases with serialization and predicate guards. */
 export function recordFieldAliases(source: RedactableRecordSource, key: string): readonly string[] {
   const aliases = new Set<string>();
@@ -143,11 +151,15 @@ export function projectRecordByRedactions<T extends Record<string, any>>(
   if (isRecordSuppressed(redactions, source)) return null;
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(record)) {
-    if (isCoManagedReadFieldHidden(redactions, recordFieldAliases(source, key))) {
+    const child = source.children && Object.hasOwn(source.children, key) ? source.children[key] : undefined;
+    const fieldAliases = recordFieldAliases(source, key);
+    const fieldHidden = child
+      ? isRecordFieldExplicitlyHidden(redactions, fieldAliases)
+      : isCoManagedReadFieldHidden(redactions, fieldAliases);
+    if (fieldHidden) {
       if (Object.hasOwn(source.derived, key)) out[key] = null;
       continue;
     }
-    const child = source.children && Object.hasOwn(source.children, key) ? source.children[key] : undefined;
     const childSource = child ? childSources(child, record)[0] : undefined;
     if (child && !childSource) {
       // An unknown discriminator cannot identify the source aliases safely. Never return its raw data.
@@ -391,6 +403,24 @@ const ASSET_EXTENSION_SOURCES: Readonly<Record<string, RedactableRecordSource>> 
   }]),
 );
 
+/** Asset document rows combine an association with document and external-file metadata. */
+export const ASSET_DOCUMENT_SOURCE: RedactableRecordSource = {
+  resource: ['documents', 'document_associations', 'external_files'],
+  identifier: ids(
+    'association_id',
+    'document_associations.association_id',
+    'document_id',
+    'document_associations.document_id',
+    'documents.document_id',
+  ),
+  fields: {},
+  derived: {
+    // The API filename prefers the uploaded file name and falls back to the document's own name.
+    original_filename: ids('external_files.original_name', 'documents.document_name'),
+    uploaded_at: ids('external_files.created_at', 'documents.entered_at', 'documents.updated_at'),
+  },
+};
+
 export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
   ...ASSET_ROW_SOURCE,
   derived: {
@@ -411,6 +441,7 @@ export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
       ...ASSET_MAINTENANCE_SCHEDULE_SOURCE,
     },
     relationships: ASSET_RELATIONSHIP_SOURCE,
+    documents: ASSET_DOCUMENT_SOURCE,
   },
 };
 

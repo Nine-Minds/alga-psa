@@ -104,6 +104,7 @@ vi.mock('../../../lib/api/services/AssetService', () => ({
     getAuthorizationRecord = vi.fn(async (id: string) =>
       state.assetAuthorizationRecords.get(id) ?? (state.assets.some((a) => a.asset_id === id) ? { id } : null));
     getWithDetails = vi.fn(async (id: string) => state.assets.find((a) => a.asset_id === id) ?? null);
+    getAssetDocuments = vi.fn(async (id: string) => state.assets.find((a) => a.asset_id === id)?.documents ?? []);
     update = vi.fn(async (id: string, values: Record<string, any>) => {
       const asset = state.assets.find((a) => a.asset_id === id);
       return asset ? { ...asset, ...values } : null;
@@ -1388,4 +1389,71 @@ describe('asset extension projections', () => {
     const data = (await response.json()).data[0];
     expect(data.extension_data).toEqual({ asset_id: assetId, carrier: 'Visible carrier' });
   });
+});
+
+describe('asset document projections', () => {
+  const assetId = '33333333-3333-3333-3333-333333333333';
+  const document = {
+    association_id: 'association-1',
+    document_id: 'document-1',
+    entity_type: 'asset',
+    entity_id: assetId,
+    notes: 'PRIVATE association notes',
+    original_filename: 'PRIVATE-upload-name.txt',
+    file_size: 4938,
+    mime_type: 'text/plain',
+    uploaded_at: '2026-11-02T10:00:00.000Z',
+  };
+
+  beforeEach(() => {
+    state.assets = [{ asset_id: assetId, name: 'Visible asset', documents: [{ ...document }] }];
+  });
+
+  const detail = async () => (await (await new ApiAssetController().getById(
+    request(`/api/v1/assets/${assetId}`), { id: assetId },
+  )).json()).data;
+
+  const listResponse = () => new ApiAssetController().listDocuments(
+      request(`/api/v1/assets/${assetId}/documents`), { id: assetId },
+    );
+  const list = async () => (await (await listResponse()).json()).data;
+
+  it.each([
+    ['document_associations.notes', 'notes'],
+    ['external_files.original_name', 'original_filename'],
+  ])('asset detail redacts nested document field from %s while preserving visible controls', async (alias, field) => {
+    expect((await detail()).documents[0][field]).toBe(document[field as keyof typeof document]);
+    state.decisions.set(assetId, { allowed: true, redactedFields: [alias] });
+
+    const response = await detail();
+    expect(response.name).toBe('Visible asset');
+    expect(response.documents).toHaveLength(1);
+    expect(response.documents[0].file_size).toBe(4938);
+    expect(response.documents[0][field] ?? null).toBeNull();
+  });
+
+  it('asset document list redacts joined document fields under the asset decision', async () => {
+    expect((await list())[0]).toMatchObject({
+      association_id: 'association-1', document_id: 'document-1', file_size: 4938,
+      original_filename: 'PRIVATE-upload-name.txt',
+    });
+    state.decisions.set(assetId, { allowed: true, redactedFields: ['documents.file_size'] });
+
+    authorizeResource.mockClear();
+    const response = await list();
+    expect(response).toHaveLength(1);
+    expect(response[0]).not.toHaveProperty('file_size');
+    expect(response[0].original_filename).toBe('PRIVATE-upload-name.txt');
+    expect(authorizeResource).toHaveBeenCalledTimes(1);
+    expect(authorizeResource.mock.calls[0][0].record.id).toBe(assetId);
+  });
+
+  it.each(['documents', 'documents.document_id'])(
+    'asset document list suppresses associations when %s is hidden', async (alias) => {
+      state.decisions.set(assetId, { allowed: true, redactedFields: [alias] });
+      const response = await listResponse();
+      expect(response.status).toBe(200);
+      expect((await response.json()).data).toEqual([]);
+    },
+  );
 });
