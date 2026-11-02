@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import TicketingDashboard from './TicketingDashboard';
-import { fetchTicketsWithPagination } from '../actions/optimizedTicketActions';
+import { fetchTicketsWithPagination, type TicketFormClientOption } from '../actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
 import {
   handleError,
@@ -1140,7 +1140,8 @@ export default function TicketingDashboardContainer({
       initialStatuses={effectiveOptions.statusOptions}
       initialPriorities={effectiveOptions.priorityOptions}
       initialCategories={effectiveOptions.categories}
-      initialClients={effectiveOptions.clients}
+      // The dashboard only consumes client_id/client_name and display metadata from this option DTO.
+      initialClients={effectiveOptions.clients as TicketFormClientOption[] as unknown as import('@alga-psa/types').IClient[]}
       initialTags={effectiveOptions.tags || []}
       contactTagDefinitions={effectiveOptions.contactTagDefinitions}
       clientTagDefinitions={effectiveOptions.clientTagDefinitions}

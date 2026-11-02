@@ -18,6 +18,7 @@ const getAllbyTicketIdMock = vi.fn();
 type Row = Record<string, unknown>;
 let tables: Record<string, Row[]>;
 let usersQueries: Array<{ selected: string[] | null }>;
+let optionDataQueries: string[];
 
 function credentialRow(overrides: Row): Row {
   return {
@@ -37,6 +38,7 @@ function credentialRow(overrides: Row): Row {
 
 function makeBuilder(table: string) {
   const baseTable = table.split(' as ')[0];
+  optionDataQueries.push(baseTable);
   const state: { selected: string[] | null; filters: Array<(row: Row) => boolean> } = {
     selected: null,
     filters: [],
@@ -110,6 +112,7 @@ vi.mock('@alga-psa/db', () => ({
     table: (table: string) => makeBuilder(table),
     unscoped: (table: string) => makeBuilder(table),
     tenantJoin: (builder: unknown) => builder,
+    tenantWhereColumn: vi.fn(),
     scoped: (table: string) => makeBuilder(table),
   }),
   registerAfterCommit: vi.fn(),
@@ -189,7 +192,7 @@ vi.mock('./ticketBundleUtils', () => ({
   mirrorCommentToChild: vi.fn(),
 }));
 
-import { getConsolidatedTicketData } from './optimizedTicketActions';
+import { getConsolidatedTicketData, getTicketFormOptions, toTicketFormUserOption } from './optimizedTicketActions';
 
 const TICKET_ID = 'ticket-1';
 const sensitiveKeys = new Set<string>(SENSITIVE_USER_FIELDS);
@@ -212,6 +215,7 @@ describe('getConsolidatedTicketData user credential exposure', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     usersQueries = [];
+    optionDataQueries = [];
     createTenantKnexMock.mockResolvedValue({ knex: {} });
     withTransactionMock.mockImplementation(async (_db: unknown, cb: (t: unknown) => unknown) => cb({ ref: (column: string) => column, raw: (sql: string) => sql }));
     hasPermissionMock.mockResolvedValue(true);
@@ -252,6 +256,34 @@ describe('getConsolidatedTicketData user credential exposure', () => {
       },
     ]);
     currentUser = { user_id: 'u-msp', tenant: 'tenant-1', user_type: 'internal', roles: [] };
+  });
+
+  it('reduces sensitive fixture users to the ticket form picker DTO', () => {
+    const result = toTicketFormUserOption(credentialRow({
+      user_id: 'agent-1', first_name: 'Ada', last_name: 'Agent', icon: 'avatar-1',
+      recovery_codes: ['secret'], arbitrary_directory_metadata: 'private',
+    }));
+    expect(result).toEqual({
+      user_id: 'agent-1', first_name: 'Ada', last_name: 'Agent', icon: 'avatar-1',
+      tenant: 'tenant-1', user_type: 'internal', is_inactive: false,
+    });
+    expect(findSensitiveKeyPaths(result)).toEqual([]);
+  });
+
+  it('refuses client and unknown principals before reading any form option tables', async () => {
+    for (const user_type of ['client', 'service-unknown']) {
+      currentUser = { user_id: `u-${user_type}`, tenant: 'tenant-1', user_type, roles: [] };
+      optionDataQueries = [];
+      const outcome = await getTicketFormOptions();
+      expect(outcome).toMatchObject({ permissionError: expect.stringMatching(/MSP principals only/) });
+      expect(optionDataQueries).toEqual([]);
+    }
+  });
+
+  it('still requires ticket:read for an internal principal before option queries', async () => {
+    hasPermissionMock.mockResolvedValueOnce(false);
+    expect(await getTicketFormOptions()).toMatchObject({ permissionError: expect.stringMatching(/Cannot view ticket options/) });
+    expect(optionDataQueries).toEqual([]);
   });
 
   it('sanity: the fake users table really carries credentials (so the test can fail)', () => {

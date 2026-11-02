@@ -2431,6 +2431,38 @@ export const getTicketBoardIds = withAuth(async (
  * Get all options needed for ticket forms and filters
  * This consolidates multiple API calls into a single request
  */
+export interface TicketFormUserOption {
+  user_id: string;
+  first_name?: string;
+  last_name?: string;
+  icon?: string;
+  tenant?: string;
+  user_type: string;
+  is_inactive: boolean;
+}
+
+export interface TicketFormClientOption {
+  client_id: string;
+  client_name: string;
+  tenant?: string;
+  is_inactive: boolean;
+  logoUrl: string | null;
+  displayTags: IClient['displayTags'];
+}
+
+export function toTicketFormUserOption(row: Record<string, unknown>): TicketFormUserOption {
+  const safeUser = sanitizeUserForResponse(row);
+  return {
+    user_id: safeUser.user_id,
+    first_name: safeUser.first_name,
+    last_name: safeUser.last_name,
+    icon: safeUser.icon,
+    tenant: safeUser.tenant,
+    user_type: safeUser.user_type,
+    is_inactive: safeUser.is_inactive,
+  };
+}
+
 export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
   const {knex: db} = await createTenantKnex();
 
@@ -2438,6 +2470,9 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
     try {
       if (!await hasPermission(user, 'ticket', 'read', trx)) {
         throw new Error('Permission denied: Cannot view ticket options');
+      }
+      if (!isMspPrincipalUserType(user.user_type)) {
+        throw new Error('Permission denied: Ticket form options are available to MSP principals only');
       }
 
       // Fetch all options in parallel
@@ -2478,10 +2513,11 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('category_name', 'asc'),
       
       tenantScopedTable(trx, 'clients as c', tenant)
-        .select('c.*')
+        .select('c.client_id', 'c.client_name', 'c.tenant', 'c.is_inactive')
         .orderBy('c.client_name', 'asc'),
 
       tenantScopedTable(trx, 'users', tenant)
+        .select(...USER_RESPONSE_FIELD_NAMES)
         .orderBy('first_name', 'asc'),
 
       // Fetch all unique tags for tickets (with colors, filtering orphans)
@@ -2553,22 +2589,25 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         value: user.user_id,
         label: `${user.first_name} ${user.last_name}`
       }));
+      const userOptions = users.map((user: any) => toTicketFormUserOption(user));
 
       // --- Add Logo URL Processing ---
-      const clientsData = clients as IClient[];
+      const clientsData = clients as Array<Pick<IClient, 'client_id' | 'client_name' | 'tenant' | 'is_inactive'>>;
 
       // Process clients to add logoUrl using batch loading
-      const clientIds = clientsData.map((c: IClient) => c.client_id);
+      const clientIds = clientsData.map((c) => c.client_id);
       const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
     
       const clientChipTags = await loadDisplayTagsForEntities(trx, tenant, displayAudienceForUser(user), [
         { taggedType: 'client', ids: clientIds },
       ]);
-      const clientsWithLogos = clientsData.map((clientData: IClient) => {
+      const clientsWithLogos: TicketFormClientOption[] = clientsData.map((clientData) => {
         const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
         return {
-          ...clientData,
-          properties: clientData.properties || {},
+          client_id: clientData.client_id,
+          client_name: clientData.client_name,
+          tenant: clientData.tenant,
+          is_inactive: clientData.is_inactive,
           logoUrl,
           displayTags: clientChipTags.get(displayTagKey('client', clientData.client_id)) ?? [],
         };
@@ -2584,7 +2623,7 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         agentOptions,
         categories,
         clients: clientsWithLogos, // Return clients with logos
-        users,
+        users: userOptions,
         contactTagDefinitions,
         clientTagDefinitions,
         tags: (tags || []).map((tag: any) => ({
