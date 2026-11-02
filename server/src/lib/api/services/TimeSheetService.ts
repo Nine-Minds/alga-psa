@@ -439,7 +439,6 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async update(id: string, data: UpdateTimeSheetData, context: ServiceContext): Promise<any> {
-    if (data.approval_status !== undefined) assertTransitionTarget(data.approval_status);
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'update', [id, data, context]);
     if (delegated.handled) return delegated.value;
@@ -462,7 +461,11 @@ export class TimeSheetService extends BaseService<any> {
         }
   
         if (data.approval_status !== undefined && data.approval_status !== existing.approval_status) {
-          await transitionTimeSheet(trx, id, data.approval_status, context);
+          assertTransitionTarget(data.approval_status);
+          await transitionTimeSheet(trx, id, data.approval_status, context, {
+            change_reason: data.change_reason,
+            detailed_feedback: data.detailed_feedback,
+          });
         }
   
       });

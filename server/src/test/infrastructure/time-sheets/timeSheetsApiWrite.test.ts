@@ -5,6 +5,7 @@ import { TestContext } from '../../../../test-utils/testContext';
 import { createTenant, createUser } from '../../../../test-utils/testDataFactory';
 import { setupCommonMocks } from '../../../../test-utils/testMocks';
 import { TimeSheetService } from '../../../lib/api/services/TimeSheetService';
+import { registerTimeSource, resetTimeSourcesForTests } from '@alga-psa/scheduling/lib/timeSource';
 import {
   createTimeSheetSchema,
   updateTimeSheetSchema,
@@ -32,6 +33,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(async () => undefined),
   publishEvent: vi.fn(async () => undefined),
 }));
+vi.mock('@alga-psa/core/capability', () => ({ serves: async () => ({ served: true }) }));
 
 /** What the HTTP client sees: Date objects become ISO strings, undefined keys disappear. */
 const wire = (value: unknown) => JSON.parse(JSON.stringify(value));
@@ -116,6 +118,7 @@ describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    resetTimeSourcesForTests();
   });
 
   describe('create', () => {
@@ -153,6 +156,56 @@ describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
       const sheet = await create({ period_id: periodId });
       const updated = await service.update(sheet.id, updateTimeSheetSchema.parse({}), ctx);
       expect(updated.approval_status).toBe('DRAFT');
+    });
+
+    it('allows an unchanged DRAFT status while rejecting a transition back to DRAFT', async () => {
+      const unchanged = await create({ period_id: periodId });
+      const result = await service.update(unchanged.id, updateTimeSheetSchema.parse({ approval_status: 'DRAFT' }), ctx);
+      expect(result.approval_status).toBe('DRAFT');
+      expect(await notesFor(unchanged.id)).toHaveLength(0);
+
+      const submitted = await draftWithEntry(await addPeriod('2026-11-09', '2026-11-16'));
+      await submit(submitted.id);
+      await expect(service.update(submitted.id, updateTimeSheetSchema.parse({ approval_status: 'DRAFT' }), ctx))
+        .rejects.toMatchObject({ statusCode: 409 });
+      expect((await sheetRow(submitted.id)).approval_status).toBe('SUBMITTED');
+      expect(await notesFor(submitted.id)).toHaveLength(0);
+    });
+
+    it('records reason, detail, and approver comment when update requests changes', async () => {
+      const sheet = await draftWithEntry();
+      await submit(sheet.id);
+      expect(() => updateTimeSheetSchema.parse({ approval_status: 'CHANGES_REQUESTED' })).toThrow();
+      const payload = updateTimeSheetSchema.parse({
+        approval_status: 'CHANGES_REQUESTED',
+        change_reason: 'Missing task detail',
+        detailed_feedback: 'Please identify the client task.',
+      });
+
+      const updated = await service.update(sheet.id, payload, ctx);
+
+      expect(updated.approval_status).toBe('CHANGES_REQUESTED');
+      expect((await sheetRow(sheet.id)).approval_status).toBe('CHANGES_REQUESTED');
+      expect(await notesFor(sheet.id)).toMatchObject([{
+        kind: 'request_changes', note: 'Missing task detail', detail: 'Please identify the client task.', created_by: context.userId,
+      }]);
+      expect(await commentsFor(sheet.id)).toMatchObject([{
+        comment: 'Changes requested: Missing task detail\n\nDetails: Please identify the client task.', is_approver: true,
+      }]);
+      timeSheetResponseSchema.parse(wire(updated));
+    });
+
+    it('delegates DRAFT status handling before applying native transition rules', async () => {
+      const delegatedResult = { id: uuidv4(), approval_status: 'DRAFT', delegated: true };
+      const source: any = {
+        kind: 'co-managed',
+        sheets: {}, periods: {}, entries: {}, timer: {}, work: {}, retain: {},
+        rest: { sheets: { update: async () => ({ handled: true, value: delegatedResult }) } },
+      };
+      registerTimeSource('co-managed', () => source, { servesCapability: 'co-managed' });
+
+      await expect(service.update(uuidv4(), updateTimeSheetSchema.parse({ approval_status: 'DRAFT' }), ctx))
+        .resolves.toEqual(delegatedResult);
     });
 
     it('routes a requested status through the guarded transition and persists matching history', async () => {

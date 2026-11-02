@@ -49,7 +49,13 @@ export const createTimeSheetSchema = z.object({
 
 // Update time sheet schema
 export const updateTimeSheetSchema = z.object({
-  approval_status: approvalStatusSchema.optional()
+  approval_status: approvalStatusSchema.optional(),
+  change_reason: z.string().min(1).optional(),
+  detailed_feedback: z.string().optional()
+}).superRefine((value, ctx) => {
+  if (value.approval_status === 'CHANGES_REQUESTED' && !value.change_reason?.trim()) {
+    ctx.addIssue({ code: 'custom', path: ['change_reason'], message: 'Change reason is required' });
+  }
 });
 
 // Time sheet filter schema
