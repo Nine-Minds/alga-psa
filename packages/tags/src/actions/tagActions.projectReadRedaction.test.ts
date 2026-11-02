@@ -21,13 +21,9 @@ const fixture = vi.hoisted(() => {
     'project-wildcard': ['*'],
   };
   const permissions = { tagRead: true };
-  const definitions = [
-    { tag_id: 'hidden-tag', tag_text: 'Wonderland Expansion', tagged_type: 'project', created_at: '2026-01-01' },
-    { tag_id: 'visible-tag', tag_text: 'Visible tag', tagged_type: 'project', created_at: '2026-01-02' },
-    { tag_id: 'denied-tag', tag_text: 'Denied project tag', tagged_type: 'project', created_at: '2026-01-03' },
-    ...mappings.slice(4, 9).map(({ tag_id, tag_text }) => ({ tag_id, tag_text, tagged_type: 'project', created_at: '2026-01-05' })),
-    { tag_id: 'ticket-tag', tag_text: 'Ticket tag', tagged_type: 'ticket', created_at: '2026-01-04' },
-  ];
+  const definitions = mappings.map(({ tag_id, tag_text, tagged_type }) => ({
+    tag_id, tag_text, tagged_type, created_at: '2026-01-01',
+  }));
   const projectAuthorization = vi.fn(async (_trx: unknown, _tenant: string, _user: unknown, ids: string[]) => ids.map((id) => ({
     project: { project_id: id }, allowed: id !== 'project-denied', redactedFields: redactions[id] ?? [],
   })));
@@ -100,7 +96,27 @@ vi.mock('@alga-psa/ui/lib/errorHandling', () => ({ actionError: vi.fn(), isAutho
 import { findTagById, findTagsByEntityId, findTagsByEntityIds, findAllTagsByType, getAllTags } from './tagActions';
 
 describe('project tag reads enforce effective project/read redactions', () => {
-  beforeEach(() => { fixture.permissions.tagRead = true; vi.clearAllMocks(); });
+  beforeEach(() => {
+    fixture.permissions.tagRead = true;
+    fixture.redactions['project-hidden'] = ['tags'];
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    'project.tags', 'fields.project.tags', 'project.tags.internal', 'project',
+    ' PROJECT.TAGS ', 'projects.tags', 'fields.tags', 'values.tags', 'tags.internal',
+    'project_tags.tag_text', 'tags.background_color', '*',
+  ])('hides populated tags consistently for the %s redaction', async (field) => {
+    fixture.redactions['project-hidden'] = [field];
+    await expect(findTagsByEntityId('project-hidden', 'project')).resolves.toEqual([]);
+    await expect(findTagsByEntityIds(['project-hidden'], 'project')).resolves.toEqual([]);
+    await expect(findTagById('hidden-map')).resolves.toBeUndefined();
+    await expect(getAllTags()).resolves.toMatchObject([
+      { tagged_id: 'project-visible', tag_text: 'Visible tag' },
+      { tagged_id: 'ticket-1', tag_text: 'Ticket tag' },
+    ]);
+    await expect(findAllTagsByType('project')).resolves.toMatchObject([{ tag_text: 'Visible tag' }]);
+  });
 
   it('filters populated hidden and denied mappings from entity reads while retaining visible tags', async () => {
     await expect(findTagsByEntityId('project-hidden', 'project')).resolves.toEqual([]);

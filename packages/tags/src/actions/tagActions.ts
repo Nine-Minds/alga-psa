@@ -6,7 +6,7 @@ import { ITag, TaggedEntityType, PendingTag, IUserWithRoles } from '@alga-psa/ty
 import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { authorizeProjectsByIds } from '@alga-psa/authorization/projectReadAuthorization';
-import { coManagedColumnHidden } from '@alga-psa/co-managed/projectFieldMask';
+import { coManagedProjectTagsHidden } from '@alga-psa/co-managed/projectFieldMask';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
 import { isTagTextValidationFailure, validateTagText } from '../lib/tagTextValidation';
@@ -41,10 +41,6 @@ function getPermissionResource(taggedType: TaggedEntityType): string {
 
 type TagTextSnapshot = string[];
 
-function projectTagsAreRedacted(fields: string[]): boolean {
-  return coManagedColumnHidden(fields, 'projects', 'tags');
-}
-
 async function readableProjectIdsForTags(
   trx: Knex.Transaction,
   tenant: string,
@@ -54,7 +50,7 @@ async function readableProjectIdsForTags(
   if (projectIds.length === 0 || !(await hasPermissionAsync(user, 'project', 'read', trx))) return new Set();
   const decisions = await authorizeProjectsByIds(trx, tenant, user, projectIds);
   return new Set(decisions.filter(({ project, allowed, redactedFields }) =>
-    allowed && !projectTagsAreRedacted(redactedFields) && project.project_id,
+    allowed && !coManagedProjectTagsHidden(redactedFields) && project.project_id,
   ).map(({ project }) => project.project_id!));
 }
 

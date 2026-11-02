@@ -61,6 +61,7 @@ import {
   coManagedColumnHidden,
   coManagedHiddenColumns,
   coManagedProjectFamilyMask,
+  coManagedProjectTagsHidden,
   CO_MANAGED_TASK_COLUMNS,
 } from '@alga-psa/co-managed/projectFieldMask';
 import {
@@ -571,11 +572,6 @@ export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]
     }
 });
 
-function projectTagsHidden(redactedFields: string[]): boolean {
-    return redactedFields.some((field) => ['tags', 'project.tags', 'projects.tags'].includes(field.trim().toLowerCase()))
-        || coManagedColumnHidden(redactedFields, 'projects', 'tags', ['tags']);
-}
-
 /** Read project tags only after the caller's effective project/read decision. */
 export const getAuthorizedProjectTags = withAuth(async (user, { tenant }, projectIds: string[]): Promise<ITag[]> => {
     if (!Array.isArray(projectIds) || projectIds.some((id) => typeof id !== 'string' || !id)) return [];
@@ -585,7 +581,7 @@ export const getAuthorizedProjectTags = withAuth(async (user, { tenant }, projec
     return withTransaction(knex, async (trx: Knex.Transaction) => {
         const authorized = await loadAuthorizedProjectProjections(trx, tenant, user as IUserWithRoles, projectIds);
         const visibleIds = authorized
-            .filter(({ redactedFields }) => !projectTagsHidden(redactedFields))
+            .filter(({ redactedFields }) => !coManagedProjectTagsHidden(redactedFields))
             .map(({ project }) => project.project_id!)
             .filter(Boolean);
         const mappings = await TagMapping.getByEntities(trx, tenant, visibleIds, 'project');
@@ -605,7 +601,7 @@ export const getAuthorizedProjectTagSuggestions = withAuth(async (user, { tenant
     const ids = await withTransaction(knex, async (trx: Knex.Transaction) => {
         const rows = await tenantScopedTable(trx, 'projects', tenant).select<{ project_id: string }[]>('project_id');
         const authorized = await loadAuthorizedProjectProjections(trx, tenant, user as IUserWithRoles, rows.map(({ project_id }) => project_id));
-        return authorized.filter(({ redactedFields }) => !projectTagsHidden(redactedFields))
+        return authorized.filter(({ redactedFields }) => !coManagedProjectTagsHidden(redactedFields))
             .map(({ project }) => project.project_id!).filter(Boolean);
     });
     const mappings = await withTransaction(knex, (trx: Knex.Transaction) => TagMapping.getByEntities(trx, tenant, ids, 'project'));
@@ -760,9 +756,7 @@ export const loadProjectListItemsByIds = withAuth(async (
             ]));
         const visibleTagProjectIds = ordered.map((project) => project.project_id).filter((projectId) => {
             const fields = redactionsById.get(projectId) ?? [];
-            return !['tag_text', 'background_color', 'text_color'].some((field) =>
-                coManagedColumnHidden(fields, 'project_tags', field, ['tags', `tags.${field}`])
-            );
+            return !coManagedProjectTagsHidden(fields);
         });
         if (visibleTagProjectIds.length > 0) {
             const tagRows = await TagMapping.getByEntities(trx, tenant, visibleTagProjectIds, 'project');
