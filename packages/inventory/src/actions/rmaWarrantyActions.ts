@@ -13,6 +13,7 @@ import {
   receiveVendorReplacementCore, receiveVendorReplacementSchema, recordVendorCreditCore, recordVendorCreditSchema,
   recordVendorRepairCore, recordVendorRepairSchema, requireWarrantyPerm, returnDeviceToClientCore, returnDeviceToClientSchema,
   runWarrantyTransition, shipToVendorCore, resolveRmaReadScope, filterReadableRmaCases, listRmaEvents as listRmaEventRows, shipToVendorSchema, validationActionError, withWarrantyErrors, type WarrantyActionError,
+  WarrantyError,
 } from '../lib/rma';
 import { rmaCaseQuery } from '../lib/rmaCaseQuery';
 import type { z } from 'zod';
@@ -41,9 +42,19 @@ function transition<S extends z.ZodTypeAny>(
       const parsed = schema.safeParse(rawInput ?? {});
       if (!parsed.success) return validationActionError(parsed.error);
       const input = parsed.data;
-      const result = await runWarrantyTransition(user as any, tenant, (trx, authorizeAsset) =>
-        core(trx, tenant, user.user_id, rmaId, input, { authorizeAsset })
-      );
+      const result = await runWarrantyTransition(user as any, tenant, async (trx, authorizeAsset) => {
+        // Keep the record check at this server-action boundary, before the transition core can
+        // inspect protected case state or perform any mutation. The core repeats the same gate
+        // after taking its row lock, preserving protection for direct core callers as well.
+        const row = await trx('rma_cases')
+          .where({ tenant, rma_id: rmaId })
+          .forUpdate()
+          .select('asset_id', 'client_id')
+          .first();
+        if (!row) throw new WarrantyError('not_found', 'RMA case not found');
+        if (row.asset_id) await authorizeAsset(row.asset_id, row.client_id ?? null);
+        return core(trx, tenant, user.user_id, rmaId, input, { authorizeAsset });
+      });
       return reload(tenant, rmaId, result.rma);
     })
   );
@@ -56,9 +67,12 @@ export const openWarrantyClaim = withAuth(async (user, { tenant }, rawInput: unk
     if (!parsed.success) return validationActionError(parsed.error);
     const input = parsed.data;
     const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) =>
-      openWarrantyClaimCore(trx, tenant, user.user_id, input, { authorizeAsset: await assetGate(trx, tenant, user as any) })
-    );
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const authorizeAsset = await assetGate(trx, tenant, user as any);
+      const asset = await trx('assets').where({ tenant, asset_id: input.asset_id }).select('asset_id', 'client_id').first();
+      if (asset) await authorizeAsset(asset.asset_id, asset.client_id ?? null);
+      return openWarrantyClaimCore(trx, tenant, user.user_id, input, { authorizeAsset });
+    });
     await publishWarrantyClaimOpened(tenant, result.rma, result.serialNumber);
     await publishRmaUpdated(tenant, result.rma, null, ['status'], user.user_id);
     return reload(tenant, result.rma.rma_id, result.rma);
