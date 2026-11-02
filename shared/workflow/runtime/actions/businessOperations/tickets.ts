@@ -394,6 +394,13 @@ const normalizeTicketTags = (tags: string[] | undefined): string[] => {
   return normalized;
 };
 
+// Keep the workflow patch surface separate from persisted ticket columns. In
+// particular, keys under `attributes` are data and can never become SQL columns.
+const WORKFLOW_TICKET_UPDATABLE_COLUMNS = new Set([
+  'status_id', 'priority_id', 'assignment', 'title', 'category_id', 'subcategory_id',
+  'location_id', 'due_date', 'tags', 'custom_fields', 'attributes'
+]);
+
 export function registerTicketActions(): void {
   const registry = getActionRegistryV2();
 
@@ -793,7 +800,11 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
-      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, Object.keys(input.patch));
+      const requestedColumns = Object.keys(input.patch);
+      if (requestedColumns.some((column) => !WORKFLOW_TICKET_UPDATABLE_COLUMNS.has(column))) {
+        throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Patch contains an unsupported ticket field' });
+      }
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, requestedColumns);
 
       const current = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!current) {
@@ -1713,13 +1724,6 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'read' });
-      if (input.ticket_id) {
-        await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, [], [
-          'title', 'description', 'status_id', 'priority_id', 'category_id', 'subcategory_id',
-          'contact_name_id', 'assigned_to', 'attributes', 'comments', 'attachments'
-        ]);
-      }
-
       const startedAt = Date.now();
       let ticket: any = null;
       if (input.ticket_id) {
@@ -1749,6 +1753,13 @@ export function registerTicketActions(): void {
         }
         return { ticket: null, latest_comment: null, latest_customer_comment: null, comments: [], attachments: [] };
       }
+
+      // Resolve the lookup first, then authorize the concrete row before any
+      // related names, comments, attributes, or attachments are loaded.
+      await retainWorkflowTicketAuthority(ctx, tx, ticket.ticket_id, [], [
+        'title', 'description', 'status_id', 'priority_id', 'category_id', 'subcategory_id',
+        'contact_name_id', 'assigned_to', 'attributes', 'comments', 'attachments'
+      ]);
 
       const include: Partial<NonNullable<typeof input.include>> = input.include ?? {};
       const includeAttributes = Boolean(include.attributes || include.custom_fields);
