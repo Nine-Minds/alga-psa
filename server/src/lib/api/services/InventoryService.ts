@@ -236,6 +236,8 @@ function toAssetSummary(row: any) {
   };
 }
 
+export type InventoryLookupAssetSummary = ReturnType<typeof toAssetSummary>;
+
 function toLevel(row: any, product?: InventoryProduct, locationName?: string | null): InventoryLevel {
   const available = row.available === undefined
     ? numeric(row.quantity_on_hand) - numeric(row.reserved_quantity) - numeric(row.held_quantity)
@@ -293,15 +295,21 @@ function throwInventoryApiError(error: unknown): never {
 }
 
 /**
- * Decides which scanned asset rows the caller may see. Receives the candidate
- * rows (already tenant scoped) and the lookup transaction, and returns the
- * subset the caller is authorized to read. Lookup is deny-by-default: when no
- * authorizer is supplied no asset is ever returned.
+ * Decides which scanned asset rows the caller may see. Receives raw,
+ * tenant-scoped authorization records separately from the response summaries,
+ * and returns the authorized projections of those summaries. Lookup is
+ * deny-by-default: when no authorizer is supplied no asset is ever returned.
  */
-export type InventoryLookupAssetAuthorizer = <T extends { asset_id: string; client_id?: string | null }>(
+export type InventoryLookupAssetAuthorizer = <T extends {
+  asset_id: string;
+  client_id?: string | null;
+  serial_number?: string | null;
+  asset_tag?: string | null;
+}>(
   trx: Knex.Transaction,
-  assets: T[],
-) => Promise<Partial<T>[]>;
+  authorizationRecords: T[],
+  responseSummaries: InventoryLookupAssetSummary[],
+) => Promise<Partial<InventoryLookupAssetSummary>[]>;
 
 export class InventoryService extends BaseService<any> {
   constructor() {
@@ -355,12 +363,19 @@ export class InventoryService extends BaseService<any> {
       const unitAssetIds = new Set(units.map((row: any) => row.asset_id).filter(Boolean));
       const candidateAssets = [...new Map((assetRows as any[]).map((row) => [row.asset_id, row])).values()]
         .filter((row: any) => !unitAssetIds.has(row.asset_id));
+      // Match against the values the caller may see. In particular, a hidden
+      // serial must not confirm that an asset exists, while a visible tag may
+      // still identify that same asset.
+      const candidateAssetSummaries = candidateAssets.map(toAssetSummary);
       // Deny by default, and filter BEFORE `domains` is computed: an unreadable
       // asset must not count as a match domain (it would turn a product result
       // into a `multi`, or an `asset` result into something other than `none`).
       // Never post-filter the response union; `multi` requires >= 2 matches.
       const assets = authorizeAssets && candidateAssets.length > 0
-        ? await authorizeAssets(trx, candidateAssets)
+        ? (await authorizeAssets(trx, candidateAssets, candidateAssetSummaries))
+          .filter((asset): asset is typeof asset & { asset_id: string } =>
+            typeof asset.asset_id === 'string'
+            && (asset.serial_number === trimmed || asset.asset_tag === trimmed))
         : [];
 
       const domains = (products.length > 0 ? 1 : 0) + (units.length > 0 ? 1 : 0) + (assets.length > 0 ? 1 : 0);
@@ -371,7 +386,7 @@ export class InventoryService extends BaseService<any> {
           matches: [
             ...products.map((row: any) => ({ kind: 'product' as const, product: toProduct(row) })),
             ...units.map((row: any) => ({ kind: 'unit' as const, unit: toUnit(row) })),
-            ...assets.map((row: any) => ({ kind: 'asset' as const, asset: toAssetSummary(row) })),
+            ...assets.map((row: any) => ({ kind: 'asset' as const, asset: row })),
           ],
         };
       }
@@ -388,7 +403,7 @@ export class InventoryService extends BaseService<any> {
       }
 
       if (assets.length > 0) {
-        return { type: 'asset', asset: toAssetSummary(assets[0]) };
+        return { type: 'asset', asset: assets[0] };
       }
 
       const rawPrefix = `${escapeLike(trimmed)}%`;
