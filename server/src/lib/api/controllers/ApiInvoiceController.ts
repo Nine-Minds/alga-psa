@@ -948,8 +948,9 @@ export class ApiInvoiceController extends ApiBaseController {
         // Authenticate
         const apiRequest = await this.authenticate(req);
         
-        // Run within tenant context
-        return await runWithTenant(apiRequest.context.tenant, async () => {
+        // Establish the API-key identity as well as tenant context because duplication
+        // generates an invoice number through a withAuth-wrapped billing action.
+        return await this.runWithApiKeyContext(apiRequest, async () => {
           // Check permissions
           await this.checkPermission(apiRequest, 'create');
 
