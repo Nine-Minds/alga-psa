@@ -21,6 +21,8 @@ function makeTrx(
     b.whereIn = vi.fn().mockReturnValue(b);
     b.count = vi.fn().mockReturnValue(b);
     b.join = vi.fn().mockReturnValue(b);
+    b.whereRaw = vi.fn().mockReturnValue(b);
+    b.whereNot = vi.fn().mockReturnValue(b);
     b.select = vi.fn().mockReturnValue(b);
     b.pluck = vi.fn().mockResolvedValue([]);
     b.first = vi.fn().mockResolvedValue({ count: String(count) });
@@ -35,6 +37,8 @@ function makeTrx(
     }
     return makeBuilder(defaultCount);
   }) as unknown as Knex;
+  // Optional-table dependencies probe the schema before counting.
+  (trx as unknown as { schema: unknown }).schema = { hasTable: vi.fn().mockResolvedValue(true) };
 
   return { trx, builder };
 }

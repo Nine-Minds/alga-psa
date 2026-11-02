@@ -11,8 +11,8 @@ const issuesFor = (schema: z.ZodTypeAny, value: unknown) => {
 
 describe('workflow payload issues', () => {
   const payload = z.object({
-    ticketId: z.string().uuid(),
-    messageId: z.string().uuid(),
+    ticketId: z.string().guid(),
+    messageId: z.string().guid(),
     channel: z.enum(['email', 'portal']),
     receivedAt: z.string().datetime().optional(),
     note: z.string().min(1),
@@ -55,8 +55,8 @@ describe('workflow payload issues', () => {
 });
 
 describe('manual run payload failures', () => {
-  const workflowPayload = z.object({ ticketId: z.string().uuid(), summary: z.string() });
-  const eventPayload = z.object({ ticketId: z.string().uuid(), messageId: z.string().uuid() });
+  const workflowPayload = z.object({ ticketId: z.string().guid(), summary: z.string() });
+  const eventPayload = z.object({ ticketId: z.string().guid(), messageId: z.string().guid() });
 
   it('points at the dialog fields when the payload went straight to the workflow', () => {
     const mapped = workflowPayload.safeParse({ ticketId: 'x' });

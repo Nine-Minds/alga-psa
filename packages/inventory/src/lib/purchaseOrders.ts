@@ -172,8 +172,8 @@ export async function queryPurchaseOrders(
 ): Promise<PurchaseOrderQueryRow[]> {
   const lineAgg = trx('purchase_order_lines')
     .where({ tenant })
-    .groupBy('po_id')
-    .select('po_id')
+    .groupBy('tenant', 'po_id')
+    .select('tenant', 'po_id')
     .select(trx.raw('COALESCE(SUM(unit_cost * quantity_ordered), 0) as total_amount'))
     .select(trx.raw('COALESCE(SUM(quantity_ordered), 0) as qty_ordered'))
     .select(trx.raw('COALESCE(SUM(quantity_received), 0) as qty_received'))
@@ -181,7 +181,9 @@ export async function queryPurchaseOrders(
     .as('la');
 
   const query = trx('purchase_orders as po')
-    .leftJoin(lineAgg, 'la.po_id', 'po.po_id')
+    .leftJoin(lineAgg, function () {
+      this.on('la.po_id', '=', 'po.po_id').andOn('la.tenant', '=', 'po.tenant');
+    })
     .leftJoin('vendors as v', function () {
       this.on('v.vendor_id', '=', 'po.vendor_id').andOn('v.tenant', '=', 'po.tenant');
     })

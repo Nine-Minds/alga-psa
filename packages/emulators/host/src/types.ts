@@ -33,7 +33,7 @@ export interface EmulatorCore {
 export interface ActionDef<P = unknown> {
   name: string;
   description: string;
-  params?: z.ZodType<P, z.ZodTypeDef, any>;
+  params?: z.ZodType<P, any>;
   run(params: P): unknown | Promise<unknown>;
 }
 
@@ -44,7 +44,7 @@ export interface ActionDef<P = unknown> {
 export interface FaultDef<P = unknown> {
   name: string;
   description: string;
-  params?: z.ZodType<P, z.ZodTypeDef, any>;
+  params?: z.ZodType<P, any>;
   arm(params: P): void | Promise<void>;
   disarm(): void | Promise<void>;
 }
@@ -60,7 +60,7 @@ export interface StateViewDef {
 export interface SeederDef<P = unknown> {
   name: string;
   description: string;
-  params?: z.ZodType<P, z.ZodTypeDef, any>;
+  params?: z.ZodType<P, any>;
   run(params: P): unknown | Promise<unknown>;
 }
 

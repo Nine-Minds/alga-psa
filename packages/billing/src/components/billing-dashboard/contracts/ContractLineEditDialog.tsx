@@ -5,12 +5,15 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
-import { getCurrencySymbol } from '@alga-psa/core';
+import { currencyFractionDigits, getCurrencySymbol } from '@alga-psa/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { BillingTimingField } from './BillingTimingField';
+import {
+  isAdvanceTimingAllowedForLineType,
+  resolveEffectiveBillingTiming,
+} from '@shared/billingClients/contractLineTimingRule';
 
 interface ContractLineEditDialogProps {
   line: {
@@ -21,15 +24,18 @@ interface ContractLineEditDialogProps {
     /** Stored in cents. */
     custom_rate?: number | null;
     billing_timing?: 'arrears' | 'advance';
+    /** Contract line type; Hourly and Usage lines always bill in arrears. */
+    contract_line_type?: string | null;
     /** Verbatim invoice line text; falls back to the line name when null. */
     invoice_line_description?: string | null;
   };
-  /**
-   * Currency of the contract being edited. Omit (null) for a contract template,
-   * which is currency-neutral: no symbol is shown and the rate is scaled by the
-   * same fraction digits `useTemplateNeutralRate` uses to display it.
-   */
+  /** Currency of the contract or template being edited; shown as the input symbol. */
   currencyCode?: string | null;
+  /**
+   * True for a contract template: its rate is stored in the currency's own minor
+   * units (0 digits for JPY), unlike contracts which keep the historical cents scale.
+   */
+  exactMinorUnits?: boolean;
   onClose: () => void;
   onSave: (
     contractLineId: string,
@@ -39,7 +45,7 @@ interface ContractLineEditDialogProps {
   ) => Promise<void>;
 }
 
-export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: ContractLineEditDialogProps) {
+export function ContractLineEditDialog({ line, currencyCode, exactMinorUnits, onClose, onSave }: ContractLineEditDialogProps) {
   const { t } = useTranslation('msp/contracts');
   const initialRateCents =
     line.rate !== undefined && line.rate !== null
@@ -48,16 +54,12 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
         ? Math.round(Number(line.custom_rate))
         : 0;
 
-  const neutral = !currencyCode;
-  const { fractionDigits } = useCurrencyFormat();
-  // Contracts keep their historical cents scale; neutral template rates use the
-  // authoring currency's minor-unit scale, matching useTemplateNeutralRate.
-  const digits = neutral ? fractionDigits() : 2;
+  const digits = exactMinorUnits && currencyCode ? currencyFractionDigits(currencyCode) : 2;
   const scale = 10 ** digits;
 
   const [rateInput, setRateInput] = useState<string>(() => (initialRateCents / scale).toFixed(digits));
   const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>(
-    line.billing_timing || 'arrears'
+    resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing)
   );
   const [invoiceLineDescription, setInvoiceLineDescription] = useState<string>(
     line.invoice_line_description ?? ''
@@ -65,7 +67,7 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const currencySymbol = neutral ? null : getCurrencySymbol(currencyCode as string);
+  const currencySymbol = currencyCode ? getCurrencySymbol(currencyCode) : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,7 +84,12 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
 
     setIsSaving(true);
     try {
-      await onSave(line.contract_line_id, rateCents, billingTiming, invoiceLineDescription.trim() || null);
+      await onSave(
+        line.contract_line_id,
+        rateCents,
+        resolveEffectiveBillingTiming(line.contract_line_type, billingTiming),
+        invoiceLineDescription.trim() || null,
+      );
     } catch (err) {
       console.error('Failed to save contract line:', err);
       setError(err instanceof Error
@@ -173,7 +180,7 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
                     const minor = Math.round(dollars * scale);
                     setRateInput((minor / scale).toFixed(digits));
                   }}
-                  className={`${neutral ? '' : 'pl-10 '}[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
+                  className={`${currencySymbol ? 'pl-10 ' : ''}[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
                 />
               </div>
             </div>
@@ -211,26 +218,19 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
                   defaultValue: 'When should this line be billed?',
                 })}
               </Label>
-              <CustomSelect
+              <BillingTimingField
+                id="billing-timing"
+                lineType={line.contract_line_type}
                 value={billingTiming}
-                onValueChange={(value) => setBillingTiming(value as 'arrears' | 'advance')}
-                options={[
-                  {
-                    label: t('contractLineEdit.timingOptions.arrears', {
-                      defaultValue: 'In Arrears (at end of billing period)',
-                    }),
-                    value: 'arrears'
-                  },
-                  {
-                    label: t('contractLineEdit.timingOptions.advance', {
-                      defaultValue: 'In Advance (at start of billing period)',
-                    }),
-                    value: 'advance'
-                  }
-                ]}
+                onChange={setBillingTiming}
+                hideHelp
               />
               <p className="text-xs text-muted-foreground mt-2">
-                {billingTiming === 'arrears'
+                {!isAdvanceTimingAllowedForLineType(line.contract_line_type)
+                  ? t('billingTimingField.nonFixedHelp', {
+                    defaultValue: 'Hourly and usage lines always bill in arrears, after the work happens.',
+                  })
+                  : billingTiming === 'arrears'
                   ? t('contractLineEdit.timingDescriptions.arrears', {
                     defaultValue: 'Charges will be billed after the service is provided',
                   })

@@ -5,6 +5,12 @@ import type { Knex } from 'knex';
 
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import {
+  createAuthorizationBundle,
+  createBundleAssignment,
+  publishBundleRevision,
+  upsertBundleRule,
+} from '@alga-psa/authorization/bundles/service';
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn().mockResolvedValue(undefined),
@@ -377,6 +383,13 @@ function withParams(req: NextRequest, params: Record<string, string>): NextReque
 async function cleanupTenant(tenant: string): Promise<void> {
   const safeDelete = async (name: string) => table(tenant, name).del().catch(() => undefined);
   for (const name of [
+    'authorization_bundle_assignments',
+    'authorization_bundle_rules',
+    'authorization_bundle_revisions',
+    'authorization_bundles',
+    'asset_associations',
+    'assets',
+    'clients',
     'stock_movements',
     'stock_units',
     'count_lines',
@@ -402,6 +415,121 @@ async function cleanupTenant(tenant: string): Promise<void> {
     await safeDelete(name);
   }
   await tenantRows().where({ tenant }).del().catch(() => undefined);
+}
+
+type AssetLookupFixture = {
+  fixture: Fixture;
+  /** Has inventory:read and asset:read, narrowed by a bundle to clientA only. */
+  narrowedApiKey: string;
+  /** Has inventory:read and asset:read with no narrowing. */
+  fullApiKey: string;
+  clientAAssetId: string;
+  clientBAssetId: string;
+  clientASerial: string;
+  clientBSerial: string;
+  clientBTag: string;
+  /** Serial of an asset that also equals a catalog product SKU. */
+  productCollisionCode: string;
+  productCollisionAssetId: string;
+};
+
+async function seedAssetLookupFixture(): Promise<AssetLookupFixture> {
+  const fixture = await seedFixture();
+  const tenant = fixture.tenantId;
+  const suffix = tenant.slice(0, 8);
+
+  const narrowedUserId = randomUUID();
+  const fullUserId = randomUUID();
+  await table(tenant, 'users').insert([
+    userInsert(tenant, narrowedUserId, `inventory-narrowed-${suffix}`),
+    userInsert(tenant, fullUserId, `inventory-full-${suffix}`),
+  ]);
+  for (const userId of [narrowedUserId, fullUserId]) {
+    await grantPermissions(tenant, userId, [['inventory', 'read'], ['asset', 'read']]);
+  }
+  const narrowedApiKey = `inventory-narrowed-${randomUUID()}`;
+  const fullApiKey = `inventory-full-${randomUUID()}`;
+  await table(tenant, 'api_keys').insert([
+    apiKeyInsert(tenant, narrowedUserId, narrowedApiKey),
+    apiKeyInsert(tenant, fullUserId, fullApiKey),
+  ]);
+
+  const clientAId = randomUUID();
+  const clientBId = randomUUID();
+  await table(tenant, 'clients').insert([clientAId, clientBId].map((clientId, index) => ({
+    tenant,
+    client_id: clientId,
+    client_name: `Lookup Client ${index === 0 ? 'A' : 'B'}`,
+  })));
+
+  const clientAAssetId = randomUUID();
+  const clientBAssetId = randomUUID();
+  const productCollisionAssetId = randomUUID();
+  const clientASerial = `LOOKUP-A-${suffix}`;
+  const clientBSerial = `LOOKUP-B-${suffix}`;
+  const clientBTag = `TAG-B-${suffix}`;
+  const serializedSku = (await table(tenant, 'service_catalog')
+    .where({ service_id: fixture.serializedServiceId })
+    .first()).sku as string;
+  const baseAsset = (assetId: string, clientId: string, name: string, serial: string, tag: string) => ({
+    tenant,
+    asset_id: assetId,
+    asset_tag: tag,
+    serial_number: serial,
+    name,
+    status: 'active',
+    asset_type: 'workstation',
+    client_id: clientId,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+  await table(tenant, 'assets').insert([
+    baseAsset(clientAAssetId, clientAId, 'Client A laptop', clientASerial, `TAG-A-${suffix}`),
+    baseAsset(clientBAssetId, clientBId, 'Client B laptop', clientBSerial, clientBTag),
+    baseAsset(productCollisionAssetId, clientAId, 'Asset sharing a product SKU', serializedSku, `TAG-C-${suffix}`),
+  ]);
+
+  const bundle = await createAuthorizationBundle(db, {
+    tenant,
+    name: `Lookup narrowing ${suffix}`,
+    actorUserId: narrowedUserId,
+  });
+  await upsertBundleRule(db, {
+    tenant,
+    bundleId: bundle.bundleId,
+    revisionId: bundle.revisionId,
+    resourceType: 'asset',
+    action: 'read',
+    templateKey: 'selected_clients',
+    config: { selectedClientIds: [clientAId] },
+    actorUserId: narrowedUserId,
+  });
+  await publishBundleRevision(db as any, {
+    tenant,
+    bundleId: bundle.bundleId,
+    revisionId: bundle.revisionId,
+    actorUserId: narrowedUserId,
+  });
+  await createBundleAssignment(db, {
+    tenant,
+    bundleId: bundle.bundleId,
+    targetType: 'user',
+    targetId: narrowedUserId,
+    actorUserId: narrowedUserId,
+  });
+
+  return {
+    fixture,
+    narrowedApiKey,
+    fullApiKey,
+    clientAAssetId,
+    clientBAssetId,
+    clientASerial,
+    clientBSerial,
+    clientBTag,
+    productCollisionCode: serializedSku,
+    productCollisionAssetId,
+  };
 }
 
 describe('inventory REST API (integration)', () => {
@@ -481,6 +609,10 @@ describe('inventory REST API (integration)', () => {
       body: { service_id: fixture.stockedServiceId, counted_quantity: 5 },
     }), { sessionId }));
     expect(recorded.status).toBe(200);
+    const listed = await countController.listCounts()(request(fixture, '/api/v1/inventory/counts'));
+    expect(listed.status).toBe(200);
+    const listedSession = (await listed.json()).data.find((row: any) => row.session_id === sessionId);
+    expect(listedSession.line_count).toBeGreaterThanOrEqual(1);
     const submitted = await countController.submitCount()(withParams(
       request(fixture, `/api/v1/inventory/counts/${sessionId}/submit`, { method: 'POST' }),
       { sessionId },
@@ -529,4 +661,79 @@ describe('inventory REST API (integration)', () => {
     expect(productDenied.status).toBe(403);
     expect((await productDenied.json()).error.code).toBe('PRODUCT_ACCESS_DENIED');
   }, HOOK_TIMEOUT);
+  describe('GET /api/v1/inventory/lookup asset authorization (alga-2026-0002683 B2)', () => {
+    async function lookup(tenantId: string, apiKey: string, code: string) {
+      const controller = new ApiInventoryController('inventory');
+      const response = await controller.lookup()(request(
+        { tenantId, apiKey },
+        `/api/v1/inventory/lookup?code=${encodeURIComponent(code)}`,
+      ));
+      expect(response.status).toBe(200);
+      return (await response.json()).data;
+    }
+
+    it('(a) returns none, with no asset in the payload, for a caller without asset:read', async () => {
+      const fx = await seedAssetLookupFixture();
+      for (const code of [fx.clientASerial, fx.clientBTag]) {
+        const result = await lookup(fx.fixture.tenantId, fx.fixture.apiKey, code);
+        expect(result.type).toBe('none');
+        const serialized = JSON.stringify(result);
+        expect(serialized).not.toContain(fx.clientAAssetId);
+        expect(serialized).not.toContain(fx.clientBAssetId);
+        expect(serialized).not.toContain('"asset"');
+      }
+    }, HOOK_TIMEOUT);
+
+    it('(b) returns a plain product result when the code matches a product and an unreadable asset', async () => {
+      const fx = await seedAssetLookupFixture();
+      const result = await lookup(fx.fixture.tenantId, fx.fixture.apiKey, fx.productCollisionCode);
+      expect(result.type).toBe('product');
+      expect(JSON.stringify(result)).not.toContain(fx.productCollisionAssetId);
+    }, HOOK_TIMEOUT);
+
+    it('(c) drops an asset without record-level access but keeps the ones the caller can read', async () => {
+      // Record-level narrowing for assets comes from authorization bundles, which
+      // only the enterprise kernel evaluates; the CE kernel is allow-all for
+      // internal users. Install the enterprise kernel for this case.
+      const { createEnterpriseAuthorizationKernel } = await import('../../../../ee/server/src/lib/authorization/kernel');
+      const previousKernel = globalThis.__algaAuthorizationKernelSingleton;
+      globalThis.__algaAuthorizationKernelSingleton = await createEnterpriseAuthorizationKernel();
+      try {
+        await assertNarrowedLookup();
+      } finally {
+        globalThis.__algaAuthorizationKernelSingleton = previousKernel;
+      }
+    }, HOOK_TIMEOUT);
+
+    async function assertNarrowedLookup() {
+      const fx = await seedAssetLookupFixture();
+      const denied = await lookup(fx.fixture.tenantId, fx.narrowedApiKey, fx.clientBSerial);
+      expect(denied.type).toBe('none');
+      expect(JSON.stringify(denied)).not.toContain(fx.clientBAssetId);
+
+      const allowed = await lookup(fx.fixture.tenantId, fx.narrowedApiKey, fx.clientASerial);
+      expect(allowed.type).toBe('asset');
+      expect(allowed.asset.asset_id).toBe(fx.clientAAssetId);
+
+      // Product + readable asset stays a multi; the unreadable asset never appears.
+      const multi = await lookup(fx.fixture.tenantId, fx.narrowedApiKey, fx.productCollisionCode);
+      expect(multi.type).toBe('multi');
+      expect(multi.matches.map((match: any) => match.kind)).toEqual(['product', 'asset']);
+    }
+
+    it('(d) keeps today\'s asset and multi results for a caller with asset:read and record access', async () => {
+      const fx = await seedAssetLookupFixture();
+      const asset = await lookup(fx.fixture.tenantId, fx.fullApiKey, fx.clientBSerial);
+      expect(asset.type).toBe('asset');
+      expect(asset.asset.asset_id).toBe(fx.clientBAssetId);
+
+      const byTag = await lookup(fx.fixture.tenantId, fx.fullApiKey, fx.clientBTag);
+      expect(byTag.type).toBe('asset');
+
+      const multi = await lookup(fx.fixture.tenantId, fx.fullApiKey, fx.productCollisionCode);
+      expect(multi.type).toBe('multi');
+      expect(multi.matches.map((match: any) => match.kind)).toEqual(['product', 'asset']);
+      expect(multi.matches[1].asset.asset_id).toBe(fx.productCollisionAssetId);
+    }, HOOK_TIMEOUT);
+  });
 });

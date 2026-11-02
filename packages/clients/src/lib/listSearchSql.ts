@@ -1,3 +1,4 @@
+import { isClientUserType } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { phoneSearchDigits } from './contactSearchMatch';
@@ -88,7 +89,7 @@ export function applyClientListIndexedSearchFilter(
 
   const prefixTsquery = buildListSearchPrefixTsquery(rawSearch);
   const identifier = rawSearch.match(LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
-  const isInternalUser = user.user_type !== 'client';
+  const isInternalUser = !isClientUserType(user.user_type);
   const clientScopePredicate = isInternalUser
     ? 'TRUE'
     : user.clientId

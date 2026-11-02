@@ -15,15 +15,11 @@ import {
   ClientCreationOptions 
 } from '../interfaces/client.interfaces';
 import { ValidationResult } from '../interfaces/validation.interfaces';
-import { ensureDefaultContractForClientIfBillingConfigured } from '../billingClients/defaultContract';
-// LEVERAGE: pattern client-creation-prerequisites — six client-creation sites each
-// have to remember the same list of post-insert ensure-* calls (default contract,
-// default billing profile, default tax settings). A single
-// `ensureClientPrerequisites(trx, tenant, client)` seam below these callers would
-// make forgetting one impossible; today a missed call silently breaks billing for
-// clients created through that path.
-import { ensureClientDefaultBillingProfile } from '../billingClients/billingProfiles';
 import { initializeClientDefaultTax } from '../billingClients/defaultTaxRate';
+import {
+  createClientWithDefaults,
+  type CreateClientWithDefaultsData,
+} from './clientCreation';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -45,17 +41,17 @@ export const clientFormSchema = z.object({
   notes: z.string().optional(),
   // Calendar date the relationship began; null keeps the created_at fallback.
   client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').optional().nullable(),
-  properties: z.record(z.any()).optional(),
-  parent_client_id: z.string().uuid().optional().nullable(),
-  contract_line_id: z.string().uuid().optional().nullable()
+  properties: z.record(z.string(), z.any()).optional(),
+  parent_client_id: z.string().guid().optional().nullable(),
+  contract_line_id: z.string().guid().optional().nullable()
 });
 
 // Complete client schema for validation
 export const clientSchema = z.object({
-  client_id: z.string().uuid(),
+  client_id: z.string().guid(),
   client_name: z.string(),
   client_type: z.enum(['company', 'individual']).nullable(),
-  tenant: z.string().uuid(),
+  tenant: z.string().guid(),
   url: z.string().nullable(),
   phone_no: z.string().nullable(),
   email: z.string().nullable(),
@@ -69,9 +65,9 @@ export const clientSchema = z.object({
   is_inactive: z.boolean().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
-  properties: z.record(z.any()).nullable(),
-  parent_client_id: z.string().uuid().nullable(),
-  contract_line_id: z.string().uuid().nullable(),
+  properties: z.record(z.string(), z.any()).nullable(),
+  parent_client_id: z.string().guid().nullable(),
+  contract_line_id: z.string().guid().nullable(),
   is_default: z.boolean().nullable(),
   // Additional allowlisted account columns written by the questionnaire answer
   // mapping engine. Optional/nullable so existing callers are unaffected; Zod
@@ -120,7 +116,7 @@ export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): T {
     return schema.parse(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+      const errorMessages = error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
       throw new Error(`Validation failed: ${errorMessages}`);
     }
     throw error;
@@ -233,69 +229,32 @@ export class ClientModel {
       throw new Error(`Client validation failed: ${validation.errors?.join('; ')}`);
     }
 
-    const clientId = uuidv4();
-    const now = new Date();
-
-    // Sync website fields
     const clientData = { ...validation.data };
-    if (clientData.properties?.website && !clientData.url) {
-      clientData.url = clientData.properties.website;
-    }
-    if (clientData.url && (!clientData.properties || !clientData.properties.website)) {
-      if (!clientData.properties) {
-        clientData.properties = {};
-      }
-      clientData.properties.website = clientData.url;
-    }
 
-    // Prepare data for insertion (only include fields that exist in clients table)
-    const insertData: any = {
-      client_id: clientId,
+    // Prepare data for insertion (only include fields that exist in clients
+    // table; `email` is not one of them — billing_email is). The shared seam
+    // owns the website/url sync, the tenant default currency and the
+    // billing-profile/contract/tax prerequisites.
+    const insertData: CreateClientWithDefaultsData = {
+      client_id: uuidv4(),
       client_name: clientData.client_name,
       client_type: clientData.client_type || 'company',
-      tenant,
       url: clientData.url || null,
       notes: clientData.notes || null,
       client_since: clientData.client_since || null,
       is_inactive: false,
-      created_at: now.toISOString(),
-      updated_at: now.toISOString(),
-      properties: clientData.properties ? JSON.stringify(clientData.properties) : null
+      // jsonb: node-postgres serializes the object, so do not pre-stringify it.
+      properties: clientData.properties ?? null,
     };
 
-    // Add billing_email if email is provided
     if (clientData.email) {
       insertData.billing_email = clientData.email;
     }
 
-    // Insert client
-    const [client] = await tenantDb(trx, tenant).table('clients')
-      .insert(insertData)
-      .returning('*');
-
-    await ensureClientDefaultBillingProfile(trx, tenant, client.client_id, {
-      clientName: client.client_name,
-    });
-
-    await ensureDefaultContractForClientIfBillingConfigured(trx, {
-      tenant,
-      clientId: client.client_id,
-    });
-    
-    // Create default tax settings if not skipped. Failures propagate so the
-    // caller's transaction rolls back rather than committing a client without
-    // usable tax configuration.
-    if (!options.skipTaxSettings) {
-      await this.createDefaultTaxSettings(client.client_id, tenant, trx);
-    }
     // Email suffix functionality removed for security - no automatic domain registration
-    
-    // Parse properties back to object if it was stringified
-    if (client.properties && typeof client.properties === 'string') {
-      client.properties = JSON.parse(client.properties);
-    }
-    
-    return client as IClient;
+    return createClientWithDefaults(trx, tenant, insertData, {
+      skipTaxSettings: options.skipTaxSettings,
+    });
   }
 
   /**

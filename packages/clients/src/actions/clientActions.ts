@@ -1,12 +1,12 @@
 'use server'
 
+import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
+import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
-import { resolveProductCode } from '@alga-psa/types';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
 import { unparseCSV, isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { preCheckDeletion } from '@alga-psa/auth';
-import { createDefaultTaxSettings } from '@alga-psa/shared/billingClients/taxSettings';
 import { parseClientCsvBoolean } from '../lib/clientCsvFields';
 import { revalidatePath } from 'next/cache';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
@@ -32,9 +32,11 @@ import {
   buildClientStatusChangedPayload,
   buildClientUpdatedPayload,
 } from '@alga-psa/workflow-streams';
-import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
-import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
-import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
+import { buildContactPrimarySetPayload, buildContactArchivedPayload } from '@alga-psa/workflow-streams';
+import {
+  createClientWithDefaults,
+  type CreateClientWithDefaultsData,
+} from '@alga-psa/shared/models/clientCreation';
 import {
   actionError,
   permissionError,
@@ -47,6 +49,7 @@ import { normalizeClientType } from '../lib/normalizeClientType';
 import { clientCoreFieldsSchema, normalizePhone, parseSubmittedFields } from '@alga-psa/validation';
 import { isStructuralFailure, type StructuralResult } from '../lib/structuralResult';
 import { resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
+import { queueClientLocationCreated, queueClientLocationUpdated } from '../lib/clientLocationEvents';
 import { mergeClientWebsiteUpdate } from '../lib/clientWebsiteUpdate';
 
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
@@ -570,48 +573,12 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
       clientData.properties.website = clientData.url ?? clientData.properties.website;
     }
 
-    // When no explicit currency is provided, adopt the tenant's configured default
-    // (default_billing_settings.default_currency_code) instead of leaving it null and
-    // letting downstream `... || 'USD'` fallbacks fire. 'USD' remains the final fallback.
-    if (!clientData.default_currency_code) {
-      const billingSettings = await tenantScopedTable(knex, 'default_billing_settings', tenant)
-        .select('default_currency_code')
-        .first();
-      clientData.default_currency_code = billingSettings?.default_currency_code || 'USD';
-    }
-
-    const createdClient = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const [created] = await tenantScopedTable(trx, 'clients', tenant)
-        .insert({
-          ...clientData,
-          tenant,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .returning('*');
-
-      // Every client must have exactly one default billing profile — it is the
-      // terminal step of charge attribution. Provisioned here so it carries the
-      // client's name from the start.
-      await ensureClientDefaultBillingProfile(trx, tenant, created.client_id, {
-        clientName: created.client_name,
-      });
-
-      await ensureDefaultContractForClientIfBillingConfigured(trx, {
-        tenant,
-        clientId: created.client_id,
-      });
-
-      // Tax initialization must share the client transaction: a failure (for
-      // example, no active tax rate) must not leave a partially created client.
-      // AlgaDesk has no billing tax setup and keeps its existing exemption.
-      const tenantRow = await tenantDb(trx, tenant).table('tenants').first('product_code');
-      if (resolveProductCode(tenantRow?.product_code).productCode !== 'algadesk') {
-        await createDefaultTaxSettings(trx, tenant, created.client_id);
-      }
-
-      return created;
-    });
+    // The shared seam owns the row insert and every default a client needs:
+    // tenant currency, default billing profile, system-managed default contract
+    // and default tax settings, all in this transaction.
+    const createdClient = await withTransaction(knex, async (trx: Knex.Transaction) =>
+      createClientWithDefaults(trx, tenant, clientData as CreateClientWithDefaultsData)
+    );
 
     if (!createdClient) {
       throw new Error('Client insert completed without returning the created record.');
@@ -1338,6 +1305,9 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
 
       await cleanupEntraReferencesBeforeClientDelete(trx, tenantId, clientId);
 
+      // Client-scoped checklist templates are deactivated and detached first (no SET NULL on Citus).
+      await deactivateClientScopedChecklistTemplates(trx, tenantId, clientId);
+
       const deleted = await tenantScopedTable(trx, 'clients', tenantId)
         .where({ client_id: clientId })
         .delete();
@@ -1654,6 +1624,64 @@ function clientImportFailureResults(
   }));
 }
 
+/**
+ * CSV import writes clients directly (not through createClient/updateClient), so it reports its own
+ * lifecycle events. Publishing waits for the row's transaction to commit.
+ */
+function queueImportedClientEvents(
+  trx: Knex.Transaction,
+  tenant: string,
+  userId: string,
+  change: { created: true; after: IClient } | { created: false; before: IClient; after: IClient; updatedFieldKeys: string[] },
+): void {
+  const occurredAt = new Date().toISOString();
+  const actor = maybeUserActor({ user_id: userId });
+  const clientId = change.after.client_id;
+  const ctx = { tenantId: tenant, occurredAt, actor };
+
+  // `in` narrows the union regardless of strictNullChecks (the ee tsconfig is non-strict).
+  if (!('before' in change)) {
+    registerAfterCommit(trx, () => publishWorkflowEvent({
+      eventType: 'CLIENT_CREATED',
+      payload: buildClientCreatedPayload({
+        clientId,
+        clientName: change.after.client_name,
+        createdByUserId: userId,
+        createdAt: occurredAt,
+        status: change.after.is_inactive ? 'inactive' : 'active',
+      }),
+      ctx,
+      idempotencyKey: `client_created:${clientId}`,
+    }), `CLIENT_CREATED client=${clientId}`);
+    return;
+  }
+
+  if (!change.before.is_inactive && change.after.is_inactive) {
+    registerAfterCommit(trx, () => publishWorkflowEvent({
+      eventType: 'CLIENT_ARCHIVED',
+      payload: buildClientArchivedPayload({ clientId, archivedByUserId: userId, archivedAt: occurredAt }),
+      ctx,
+      idempotencyKey: `client_archived:${clientId}:${occurredAt}`,
+    }), `CLIENT_ARCHIVED client=${clientId}`);
+  }
+
+  const updatedPayload = buildClientUpdatedPayload({
+    clientId,
+    before: change.before as any,
+    after: change.after as any,
+    updatedFieldKeys: change.updatedFieldKeys,
+    updatedAt: occurredAt,
+  });
+  if (((updatedPayload as any).updatedFields ?? []).length) {
+    registerAfterCommit(trx, () => publishWorkflowEvent({
+      eventType: 'CLIENT_UPDATED',
+      payload: updatedPayload,
+      ctx,
+      idempotencyKey: `client_updated:${clientId}:${occurredAt}`,
+    }), `CLIENT_UPDATED client=${clientId}`);
+  }
+}
+
 export const importClientsFromCSV = withAuth(async (
   user,
   { tenant },
@@ -1844,6 +1872,12 @@ export const importClientsFromCSV = withAuth(async (
             .where({ client_id: existingClient.client_id })
             .update(updateData)
             .returning('*');
+          queueImportedClientEvents(trx, tenant, user.user_id, {
+            created: false,
+            before: existingClient as IClient,
+            after: savedClient as IClient,
+            updatedFieldKeys: Object.keys(updateData),
+          });
 
           if (hasLocationData(clientData)) {
             const defaultLocation = await tenantScopedTable(trx, 'client_locations', tenant)
@@ -1851,14 +1885,16 @@ export const importClientsFromCSV = withAuth(async (
               .first();
 
             if (defaultLocation) {
-              await tenantScopedTable(trx, 'client_locations', tenant)
+              const [updatedLocation] = await tenantScopedTable(trx, 'client_locations', tenant)
                 .where({ location_id: defaultLocation.location_id })
                 .update({
                   ...locationFieldsFromRow(clientData, rowCountry),
                   updated_at: new Date().toISOString()
-                });
+                })
+                .returning('*');
+              queueClientLocationUpdated(trx, tenant, defaultLocation, updatedLocation, { actorUserId: user.user_id });
             } else {
-              await tenantScopedTable(trx, 'client_locations', tenant).insert({
+              const [insertedLocation] = await tenantScopedTable(trx, 'client_locations', tenant).insert({
                 location_id: trx.raw('gen_random_uuid()'),
                 client_id: existingClient.client_id,
                 tenant: tenant,
@@ -1869,7 +1905,8 @@ export const importClientsFromCSV = withAuth(async (
                 is_active: true,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
-              });
+              }).returning('*');
+              queueClientLocationCreated(trx, tenant, insertedLocation, { actorUserId: user.user_id });
             }
           }
         } else {
@@ -1904,25 +1941,22 @@ export const importClientsFromCSV = withAuth(async (
             auto_invoice: clientData.auto_invoice || false,
             invoice_delivery_method: clientData.invoice_delivery_method || '',
             region_code: clientData.region_code || null,
-            default_currency_code: clientData.default_currency_code || tenantDefaultCurrencyCode,
+            default_currency_code: clientData.default_currency_code || undefined,
             tax_id_number: clientData.tax_id_number || '',
             tax_exemption_certificate: clientData.tax_exemption_certificate || '',
             notes: clientData.notes || '',
             client_since: clientSince,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
           };
 
-          [savedClient] = await tenantScopedTable(trx, 'clients', tenant)
-            .insert(clientToCreate)
-            .returning('*');
-
-          await ensureClientDefaultBillingProfile(trx, tenant, savedClient!.client_id, {
-            clientName: savedClient!.client_name,
+          // Imported rows get the same defaults as a hand-created client; the
+          // batch's currency lookup is passed through so it is not repeated per row.
+          savedClient = await createClientWithDefaults(trx, tenant, clientToCreate as CreateClientWithDefaultsData, {
+            defaultCurrencyCode: tenantDefaultCurrencyCode,
           });
+          queueImportedClientEvents(trx, tenant, user.user_id, { created: true, after: savedClient as IClient });
 
           if (hasLocationData(clientData)) {
-            await tenantScopedTable(trx, 'client_locations', tenant).insert({
+            const [insertedLocation] = await tenantScopedTable(trx, 'client_locations', tenant).insert({
               location_id: trx.raw('gen_random_uuid()'),
               client_id: savedClient!.client_id,
               tenant: tenant,
@@ -1933,7 +1967,8 @@ export const importClientsFromCSV = withAuth(async (
               is_active: true,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
-            });
+            }).returning('*');
+            queueClientLocationCreated(trx, tenant, insertedLocation, { actorUserId: user.user_id });
           }
         }
       });
@@ -1946,6 +1981,28 @@ export const importClientsFromCSV = withAuth(async (
           originalData: clientData
         });
         continue;
+      }
+
+      // Imported clients announce themselves exactly as hand-created ones do,
+      // after the row commits so a subscriber cannot read a rolled-back client.
+      if (created && savedClient) {
+        const createdAt = savedClient.created_at ?? new Date().toISOString();
+        await publishWorkflowEvent({
+          eventType: 'CLIENT_CREATED',
+          payload: buildClientCreatedPayload({
+            clientId: savedClient.client_id,
+            clientName: savedClient.client_name,
+            createdByUserId: user.user_id,
+            createdAt,
+            status: (savedClient as any)?.properties?.status ?? (savedClient.is_inactive ? 'inactive' : 'active'),
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt: createdAt,
+            actor: maybeUserActor(user),
+          },
+          idempotencyKey: `client_created:${savedClient.client_id}`,
+        });
       }
 
       // Tags run after the row commits: createTag opens its own connection, so
@@ -2161,10 +2218,12 @@ export const deactivateClientContacts = withAuth(async (
         return { contactsDeactivated: 0 };
       }
 
-      // Deactivate all contacts
-      await db.table('contacts')
-        .where({ client_id: clientId, is_inactive: false })
-        .update({ is_inactive: true });
+      // Deactivate all contacts (contact.deactivated per contact, queued for after commit)
+      await trackContactUpdates(trx, tenant, contactIds, ['is_inactive'], () =>
+        db.table('contacts')
+          .where({ client_id: clientId, is_inactive: false })
+          .update({ is_inactive: true }),
+        { actorUserId: user.user_id });
 
       // Deactivate all users associated with these contacts
       await db.table('users')
@@ -2212,6 +2271,7 @@ export const markClientInactiveWithContacts = withAuth(async (
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
       let contactsDeactivated = 0;
+      let deactivatedContactIds: string[] = [];
 
       if (deactivateContacts) {
         // Get all active contact IDs for this client
@@ -2234,6 +2294,7 @@ export const markClientInactiveWithContacts = withAuth(async (
             .update({ is_inactive: true });
 
           contactsDeactivated = contactIds.length;
+          deactivatedContactIds = contactIds;
         }
       }
 
@@ -2242,7 +2303,7 @@ export const markClientInactiveWithContacts = withAuth(async (
         .where({ client_id: clientId })
         .update({ is_inactive: true, updated_at: occurredAt });
 
-      return { contactsDeactivated };
+      return { contactsDeactivated, deactivatedContactIds };
     });
 
     revalidatePath(`/msp/clients/${clientId}`);
@@ -2258,6 +2319,21 @@ export const markClientInactiveWithContacts = withAuth(async (
       ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(user) },
       idempotencyKey: `client_archived:${clientId}:${occurredAt}`,
     });
+
+    // Each contact the cascade deactivated is a real contact.deactivated.
+    for (const contactId of result.deactivatedContactIds) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_ARCHIVED',
+        payload: buildContactArchivedPayload({
+          contactId,
+          clientId,
+          archivedByUserId: user.user_id,
+          archivedAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(user) },
+        idempotencyKey: `contact_archived:${contactId}:${occurredAt}`,
+      });
+    }
 
     return { success: true, contactsDeactivated: result.contactsDeactivated };
   } catch (error) {
@@ -2289,14 +2365,39 @@ export const markClientActiveWithContacts = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
+    const occurredAt = new Date().toISOString();
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
       let contactsReactivated = 0;
 
+      // Read the prior state so client.updated[is_inactive] is only emitted on a real inactive -> active flip.
+      const existing = await db.table('clients')
+        .select('is_inactive')
+        .where({ client_id: clientId })
+        .first();
+
       // Mark the client as active first
       await db.table('clients')
         .where({ client_id: clientId })
-        .update({ is_inactive: false, updated_at: new Date().toISOString() });
+        .update({ is_inactive: false, updated_at: occurredAt });
+
+      if (existing && existing.is_inactive) {
+        const updatedPayload = buildClientUpdatedPayload({
+          clientId,
+          before: { is_inactive: true } as any,
+          after: { is_inactive: false } as any,
+          updatedFieldKeys: ['is_inactive'],
+          updatedAt: occurredAt,
+        });
+        if (((updatedPayload as any).updatedFields ?? []).length) {
+          registerAfterCommit(trx, () => publishWorkflowEvent({
+            eventType: 'CLIENT_UPDATED',
+            payload: updatedPayload,
+            ctx: { tenantId: tenant, occurredAt, actor: maybeUserActor(user) },
+            idempotencyKey: `client_updated:${clientId}:${occurredAt}`,
+          }), `CLIENT_UPDATED client=${clientId}`);
+        }
+      }
 
       if (reactivateContacts) {
         // Get all inactive contact IDs for this client
@@ -2307,10 +2408,12 @@ export const markClientActiveWithContacts = withAuth(async (
         const contactIds = inactiveContacts.map((c: { contact_name_id: string }) => c.contact_name_id);
 
         if (contactIds.length > 0) {
-          // Reactivate all contacts
-          await db.table('contacts')
-            .where({ client_id: clientId, is_inactive: true })
-            .update({ is_inactive: false });
+          // Reactivate all contacts (contact.updated with is_inactive per contact)
+          await trackContactUpdates(trx, tenant, contactIds, ['is_inactive'], () =>
+            db.table('contacts')
+              .where({ client_id: clientId, is_inactive: true })
+              .update({ is_inactive: false }),
+            { actorUserId: user.user_id });
 
           // Reactivate all users associated with these contacts
           await db.table('users')
@@ -2365,10 +2468,12 @@ export const reactivateClientContacts = withAuth(async (
         return { contactsReactivated: 0 };
       }
 
-      // Reactivate all contacts
-      await db.table('contacts')
-        .where({ client_id: clientId, is_inactive: true })
-        .update({ is_inactive: false });
+      // Reactivate all contacts (contact.updated with is_inactive per contact)
+      await trackContactUpdates(trx, tenant, contactIds, ['is_inactive'], () =>
+        db.table('contacts')
+          .where({ client_id: clientId, is_inactive: true })
+          .update({ is_inactive: false }),
+        { actorUserId: user.user_id });
 
       // Reactivate all users associated with these contacts
       await db.table('users')

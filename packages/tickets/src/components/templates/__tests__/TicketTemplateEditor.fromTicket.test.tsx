@@ -34,8 +34,8 @@ vi.mock('../../../actions/ticketActions', () => ({
 vi.mock('../useTicketTemplatePermissions', () => ({
   useTicketTemplatePermissions: () => permissionsMock(),
 }));
-vi.mock('../../recurring/useRecurringReferenceData', () => ({
-  useRecurringReferenceData: () => ({
+vi.mock('../../useTicketFieldReferenceData', () => ({
+  useTicketFieldReferenceData: () => ({
     loading: false, error: null, users: [], teams: [], boards: [], checklistTemplates: [], boardData: {}, ensureBoard: vi.fn(),
   }),
 }));
@@ -154,6 +154,8 @@ describe('TicketTemplateEditor with ?fromTicket', () => {
       name: 'Microsoft 365 Employee Department Change',
       notes: null,
       title: 'Jane Smith moved to Sales',
+      // A new template is offered in the picker unless the editor says otherwise (R5).
+      offer_for_manual_use: true,
       description: paragraph('Move steps'),
       board_id: UUID(1),
       category_id: UUID(2),

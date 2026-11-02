@@ -19,6 +19,9 @@ export interface TenantScopedRootQueryOptions {
   alias?: string;
   tenant: string;
   tenantColumn?: string;
+  /** Applied to the root builder and to every builder this query later holds
+   * (`clone`, `withBuilder`). Used to attach the write-admission guard. */
+  decorateBuilder?: (builder: Knex.QueryBuilder) => Knex.QueryBuilder;
 }
 
 type TenantScopedQueryMetadata = Pick<
@@ -39,13 +42,15 @@ function createMetadata(options: TenantScopedRootQueryOptions): TenantScopedQuer
 
 function tagTenantScopedQuery(
   builder: Knex.QueryBuilder,
-  metadata: TenantScopedQueryMetadata
+  metadata: TenantScopedQueryMetadata,
+  decorate?: TenantScopedRootQueryOptions['decorateBuilder']
 ): TenantScopedQuery {
+  const decorated = decorate ? decorate(builder) : builder;
   return {
     ...metadata,
-    builder,
-    clone: () => tagTenantScopedQuery(builder.clone(), metadata),
-    withBuilder: (nextBuilder: Knex.QueryBuilder) => tagTenantScopedQuery(nextBuilder, metadata),
+    builder: decorated,
+    clone: () => tagTenantScopedQuery(decorated.clone(), metadata, decorate),
+    withBuilder: (nextBuilder: Knex.QueryBuilder) => tagTenantScopedQuery(nextBuilder, metadata, decorate),
     [tenantScopedQueryBrand]: true,
   };
 }
@@ -64,7 +69,8 @@ export function createTenantScopedRootQuery(
   const metadata = createMetadata(options);
   return tagTenantScopedQuery(
     conn(options.table).where(metadata.qualifiedTenantColumn, options.tenant),
-    metadata
+    metadata,
+    options.decorateBuilder
   );
 }
 

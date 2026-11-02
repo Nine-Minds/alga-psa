@@ -14,6 +14,7 @@
       "semiAnnually": "Semestral"
     },
     "cadenceTotal": "Total {{cadence}}",
+    "currency": "Moeda",
     "date": "Data",
     "description": "Descrição",
     "discounts": "Descontos",
@@ -60,6 +61,7 @@
     "rate": "Tarifa",
     "recurring": "Recorrente",
     "service": "Serviço",
+    "servicePeriod": "Período de serviço",
     "shipDate": "Data de envio",
     "shipTo": "Entregar em",
     "shipped": "Enviado",
@@ -83,16 +85,47 @@
       "noLineItems": "Nenhum item",
       "noMonthlyItems": "Nenhum item mensal",
       "noOneTimeItems": "Nenhum item avulso",
-      "noPhasesDefined": "Nenhuma fase definida"
+      "noPhasesDefined": "Nenhuma fase definida",
+      "noItemsInBox": "Esta caixa está vazia"
     },
     "note": {
       "billedTimePortalDetail": "Contacte o seu prestador para obter uma discriminação do tempo faturado.",
       "pickedBy": "Separado por: ____________________     Data: ____________",
       "preTaxTotals": "Os totais exibidos não incluem impostos. O imposto aplicável é calculado na sua fatura.",
-      "thankYouForOrder": "Obrigado pelo seu pedido."
+      "thankYouForOrder": "Obrigado pelo seu pedido.",
+      "checkedBy": "Conferido por: ____________________     Data: ____________",
+      "releasedBy": "Liberado por: ____________________     Assinatura: ____________________     Data: ____________"
     },
     "serialNumbers": "Números de série",
-    "allocatedSerialsNote": "Números de série alocados; sujeitos a alteração no atendimento."
+    "allocatedSerialsNote": "Números de série alocados; sujeitos a alteração no atendimento.",
+    "stagingManifestTitle": "MANIFESTO DE EMBALAGEM",
+    "boxNumber": "Caixa n.º",
+    "project": "Projeto",
+    "client": "Cliente",
+    "task": "Tarefa",
+    "status": "Status",
+    "sealedOn": "Lacrada",
+    "sealedBy": "Lacrada por",
+    "location": "Local",
+    "checked": "Conferido",
+    "item": "Item",
+    "skuOrTag": "SKU / etiqueta",
+    "serialNumber": "Número de série",
+    "owner": "Proprietário",
+    "ownerMsp": "MSP",
+    "ownerClient": "Cliente",
+    "statusOpen": "Aberta",
+    "statusSealed": "Lacrada",
+    "rmaReturnSlipTitle": "COMPROVANTE DE DEVOLUÇÃO DE RMA",
+    "device": "Dispositivo",
+    "vendor": "Fornecedor",
+    "vendorReference": "Referência do fornecedor",
+    "asset": "Ativo",
+    "assetTag": "Etiqueta do ativo",
+    "replacementSerial": "Número de série da substituição",
+    "shipping": "Envio",
+    "returnBy": "Devolver até",
+    "returnShipTo": "Enviar devolução para"
   },
   "errors": {
     "permissions": {

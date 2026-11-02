@@ -39,14 +39,16 @@ export interface LevelIoCpu {
   cores?: number;
 }
 
-export interface LevelIoDiskPartition {
-  label?: string;
-  mount_point?: string;
-  encrypted?: boolean;
-  primary?: boolean;
-  size?: number;
-  free_space?: number;
-  file_system?: string;
+/**
+ * Physical disk as documented in Level's v2 device schema (returned when the
+ * request sets `include_disks=true`). Level reports capacity only: there is no
+ * free space and no mount point. `size` is in bytes.
+ */
+export interface LevelIoDisk {
+  disk_type?: string | null;
+  model?: string | null;
+  serial_number?: string | null;
+  size?: number | null;
 }
 
 export interface LevelIoNetworkInterface {
@@ -100,7 +102,7 @@ export interface LevelIoDevice {
   platform?: 'Windows' | 'Mac' | 'Linux' | null;
   operating_system?: LevelIoOperatingSystem;
   cpus?: LevelIoCpu[];
-  disk_partitions?: LevelIoDiskPartition[];
+  disks?: LevelIoDisk[] | null;
   network_interfaces?: LevelIoNetworkInterface[];
   security?: LevelIoSecurity;
 }

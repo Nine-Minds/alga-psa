@@ -31,10 +31,35 @@
       "import": "./dist/hooks/index.js",
       "require": "./dist/hooks/index.js"
     },
+    "./components/TagDisplaySettings": {
+      "types": "./dist/components/TagDisplaySettings.d.ts",
+      "import": "./dist/components/TagDisplaySettings.js",
+      "require": "./dist/components/TagDisplaySettings.js"
+    },
     "./lib/tagCleanup": {
       "types": "./dist/lib/tagCleanup.d.ts",
       "import": "./dist/lib/tagCleanup.js",
       "require": "./dist/lib/tagCleanup.js"
+    },
+    "./lib/tagDisplayRules": {
+      "types": "./dist/lib/tagDisplayRules.d.ts",
+      "import": "./dist/lib/tagDisplayRules.js",
+      "require": "./dist/lib/tagDisplayRules.js"
+    },
+    "./lib/tagReferences": {
+      "types": "./dist/lib/tagReferences.d.ts",
+      "import": "./dist/lib/tagReferences.js",
+      "require": "./dist/lib/tagReferences.js"
+    },
+    "./lib/loadDisplayTags": {
+      "types": "./dist/lib/loadDisplayTags.d.ts",
+      "import": "./dist/lib/loadDisplayTags.js",
+      "require": "./dist/lib/loadDisplayTags.js"
+    },
+    "./lib/tagTextValidation": {
+      "types": "./dist/lib/tagTextValidation.d.ts",
+      "import": "./dist/lib/tagTextValidation.js",
+      "require": "./dist/lib/tagTextValidation.js"
     }
   },
   "scripts": {
@@ -59,6 +84,7 @@
   },
   "devDependencies": {
     "tsup": "^8.0.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vite-tsconfig-paths": "^5.1.4"
   }
 }

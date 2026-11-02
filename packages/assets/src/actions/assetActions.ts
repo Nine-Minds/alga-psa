@@ -61,7 +61,8 @@ import {
     createAssetRelationshipSchema
 } from '../lib/schemas/asset.schema';
 import { formatClientLocation, type ClientLocationLike } from '../lib/formatClientLocation';
-import { advanceMaintenanceDate } from '../lib/maintenanceRecurrence';
+import { advanceMaintenanceDate, parseCustomRecurrence } from '../lib/maintenanceRecurrence';
+import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAssetOrder';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { toCalendarDateString, toISOTimestamp, toPlainDate } from '@alga-psa/core';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -96,6 +97,11 @@ import {
 } from '../lib/assetTypeAttributes';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '../lib/assetAttributeWrites';
 import { validateAssetStatusSlug } from '../lib/assetStatusRegistry';
+import {
+    resolveAuthorizationSubjectForUser as resolveSharedAuthorizationSubject,
+    resolveAssetAuthorizationRecords as resolveSharedAssetAuthorizationRecords,
+    type AssetAuthUser as SharedAssetAuthUser,
+} from '../lib/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
 import { getAssetGroupSummariesForAssets, getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
 import {
@@ -178,7 +184,7 @@ function normalizeBulkAssetIds(assetIds: string[]): string[] {
     if (ids.length > BULK_ASSET_ACTION_LIMIT) {
         throw new Error(`Bulk actions are limited to ${BULK_ASSET_ACTION_LIMIT} assets at a time`);
     }
-    z.array(z.string().uuid()).parse(ids);
+    z.array(z.string().guid()).parse(ids);
     return ids;
 }
 
@@ -485,60 +491,17 @@ async function applyPurchaseCostCurrency(
     candidate.purchase_cost_currency = currency || (await resolveTenantDefaultCurrency(trx, tenant));
 }
 
-type AssetAuthUser = {
-    user_id: string;
-    user_type: 'internal' | 'client';
-    clientId?: string | null;
-    roles?: Array<{ role_id?: string } | string>;
-};
-
-function extractRoleIdsFromUser(user: AssetAuthUser): string[] {
-    if (!Array.isArray(user.roles)) {
-        return [];
-    }
-
-    return user.roles
-        .map((role) => {
-            if (typeof role === 'string') {
-                return role;
-            }
-            return typeof role?.role_id === 'string' ? role.role_id : null;
-        })
-        .filter((value): value is string => Boolean(value));
-}
+// Subject and record resolution live in ../lib/assetReadAuthorization (shared with the label code
+// paths). The thin wrappers and the kernel/decision text below stay here because
+// assetAuthorization.contract.test.ts pins them in this file's source.
+type AssetAuthUser = SharedAssetAuthUser;
 
 async function resolveAuthorizationSubjectForUser(
     trx: Knex.Transaction,
     tenant: string,
     user: AssetAuthUser
 ): Promise<AuthorizationSubject> {
-    let roleIds = extractRoleIdsFromUser(user);
-    if (roleIds.length === 0) {
-        try {
-            const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-                .where({ user_id: user.user_id })
-                .select<{ role_id: string }[]>('role_id');
-            roleIds = roleRows.map((row) => row.role_id);
-        } catch {
-            roleIds = [];
-        }
-    }
-
-    const [teamRows, managedRows] = await Promise.all([
-        tenantScopedTable(trx, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-        tenantScopedTable(trx, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
-    ]);
-
-    return {
-        tenant,
-        userId: user.user_id,
-        userType: user.user_type,
-        roleIds,
-        teamIds: teamRows.map((row) => row.team_id),
-        managedUserIds: managedRows.map((row) => row.user_id),
-        clientId: user.clientId ?? null,
-        portfolioClientIds: user.clientId ? [user.clientId] : [],
-    };
+    return resolveSharedAuthorizationSubject(trx, tenant, user);
 }
 
 async function resolveAssetAuthorizationRecords(
@@ -546,42 +509,7 @@ async function resolveAssetAuthorizationRecords(
     tenant: string,
     assets: Array<Pick<Asset, 'asset_id' | 'client_id'>>
 ): Promise<Map<string, AuthorizationRecord>> {
-    const assetIds = assets.map((asset) => asset.asset_id);
-    if (assetIds.length === 0) {
-        return new Map();
-    }
-
-    const associationRows = await tenantScopedTable(trx, 'asset_associations', tenant)
-        .whereIn('asset_id', assetIds)
-        .select<Array<{ asset_id: string; entity_type: string; entity_id: string }>>('asset_id', 'entity_type', 'entity_id');
-
-    const associationsByAsset = new Map<string, Array<{ entity_type: string; entity_id: string }>>();
-    for (const row of associationRows) {
-        const existing = associationsByAsset.get(row.asset_id) ?? [];
-        existing.push({ entity_type: row.entity_type, entity_id: row.entity_id });
-        associationsByAsset.set(row.asset_id, existing);
-    }
-
-    const records = new Map<string, AuthorizationRecord>();
-    for (const asset of assets) {
-        const associations = associationsByAsset.get(asset.asset_id) ?? [];
-        const assignedUserIds = associations
-            .filter((association) => association.entity_type === 'user')
-            .map((association) => association.entity_id);
-        const teamIds = associations
-            .filter((association) => association.entity_type === 'team')
-            .map((association) => association.entity_id);
-
-        records.set(asset.asset_id, {
-            id: asset.asset_id,
-            ownerUserId: assignedUserIds[0] ?? null,
-            assignedUserIds,
-            clientId: asset.client_id ?? null,
-            teamIds,
-        });
-    }
-
-    return records;
+    return resolveSharedAssetAuthorizationRecords(trx, tenant, assets);
 }
 
 type AssetAuthorizationInput = Pick<Asset, 'asset_id' | 'client_id'>;
@@ -599,6 +527,7 @@ function createAssetReadAuthorizationKernel(trx: Knex.Transaction) {
             resolveRules: async (input) => {
                 try {
                     return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+                // write-admission: exempt — authorization-rule read, never a write
                 } catch {
                     return [];
                 }
@@ -1168,6 +1097,7 @@ export async function createAssetInTransaction(
                 asset_tag: validatedData.asset_tag,
                 name: validatedData.name,
                 status: validatedData.status,
+                ownership: validatedData.ownership ?? 'client',
                 location_id: selectedLocation?.location_id ?? null,
                 location: validatedData.location !== undefined && validatedData.location !== ''
                     ? validatedData.location
@@ -1475,6 +1405,16 @@ export async function updateAssetRecord(
                 await assertValidAssetStatus(trx, tenant, baseCandidate.status, asset.status);
             }
 
+            if (baseCandidate.client_id && baseCandidate.client_id !== asset.client_id) {
+                const openEpisode = await tenantScopedTable(trx, 'asset_custody', tenant)
+                    .where({ asset_id })
+                    .whereNull('closed_at')
+                    .first('custody_id');
+                if (openEpisode) {
+                    throw new Error('This asset is currently in custody and cannot move to another client. Return it first.');
+                }
+            }
+
             if (Object.prototype.hasOwnProperty.call(baseCandidate, 'vendor_id')) {
                 const selectedVendor = await resolveValidatedAssetVendor(
                     trx,
@@ -1762,6 +1702,18 @@ export async function deleteAssetRecord(
 
             if (!asset) {
                 throw new Error('Asset not found');
+            }
+
+            // C4: custody is a chain of custody, so an asset that is physically here cannot be deleted, and
+            // closed episodes (append-only events with FKs to the asset) keep the row alive as history.
+            const custodyRows = await tenantScopedTable(trx as Knex.Transaction, 'asset_custody', tenantId)
+                .where({ asset_id })
+                .select('closed_at');
+            if (custodyRows.some((row: { closed_at: unknown }) => row.closed_at === null)) {
+                throw new Error('This asset is currently in custody. Return it to the client before deleting it.');
+            }
+            if (custodyRows.length > 0) {
+                throw new Error('This asset has custody history that must be kept. Set its status to retired instead of deleting it.');
             }
 
             // Citus does not enforce ON DELETE CASCADE across distributed
@@ -2313,6 +2265,20 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 if (validatedParams.status) {
                     query.where('assets.status', validatedParams.status);
                 }
+                if (validatedParams.ownership) {
+                    query.where('assets.ownership', validatedParams.ownership);
+                }
+                if (validatedParams.in_custody !== undefined) {
+                    // Keyed off the open custody episode, never off assets.status.
+                    const openCustody = tenantScopedTable(trx, 'asset_custody', tenant)
+                        .whereNull('closed_at')
+                        .select('asset_id');
+                    if (validatedParams.in_custody) {
+                        query.whereIn('assets.asset_id', openCustody);
+                    } else {
+                        query.whereNotIn('assets.asset_id', openCustody);
+                    }
+                }
                 if (validatedParams.vendor_id) {
                     query.where('assets.vendor_id', validatedParams.vendor_id);
                 }
@@ -2582,6 +2548,10 @@ export const updateMaintenanceSchedule = withAuth(async (
             }
 
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, existingSchedule.asset_id);
+
+            if ((validatedData.frequency ?? existingSchedule.frequency) === 'custom') {
+                parseCustomRecurrence(validatedData.schedule_config ?? existingSchedule.schedule_config);
+            }
 
             // Update the schedule
             const [updatedSchedule] = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
@@ -2903,7 +2873,7 @@ export const completeOccurrence = withAuth(async (user, { tenant }, input: { occ
             const performedDate = toCalendarDateString(input.performed_at || new Date());
             if (!performedDate) throw new Error('A performed date is required');
             const performedAt = toISOTimestamp(toPlainDate(performedDate));
-            const nextDue = advanceMaintenanceDate(performedAt, schedule.frequency, schedule.frequency_interval);
+            const nextDue = advanceMaintenanceDate(performedAt, schedule.frequency, schedule.frequency_interval, schedule.schedule_config);
             const [history] = await tenantScopedTable(trx, 'asset_maintenance_history', tenant).insert({ tenant, schedule_id: schedule.schedule_id, asset_id: schedule.asset_id, maintenance_type: schedule.maintenance_type, description: input.notes || `${schedule.maintenance_type} maintenance completed`, maintenance_data: input.maintenance_data || {}, performed_at: performedAt, performed_by: user.user_id }).returning('*');
             await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id: occurrence.occurrence_id, status: 'open' }).update({ status: 'completed', history_id: history.history_id, closed_at: trx.fn.now(), closed_by: user.user_id, updated_at: trx.fn.now() });
             await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: schedule.schedule_id }).update({ last_maintenance: performedAt, next_maintenance: nextDue, updated_at: trx.fn.now() });
@@ -2925,7 +2895,7 @@ export const skipOccurrence = withAuth(async (user, { tenant }, occurrence_id: s
             if (occurrence.status !== 'open') throw new Error('Maintenance occurrence has already been closed');
             const schedule = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: occurrence.schedule_id, asset_id: occurrence.asset_id, is_active: true }).forUpdate().first();
             if (!schedule || schedule.archived_at) throw new Error('Maintenance schedule is inactive');
-            const nextDue = advanceMaintenanceDate(new Date(), schedule.frequency, schedule.frequency_interval);
+            const nextDue = advanceMaintenanceDate(new Date(), schedule.frequency, schedule.frequency_interval, schedule.schedule_config);
             await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id }).update({ status: 'skipped', skip_reason: reason.trim(), closed_at: trx.fn.now(), closed_by: user.user_id, updated_at: trx.fn.now() });
             await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: schedule.schedule_id }).update({ next_maintenance: nextDue, updated_at: trx.fn.now() });
             return openNextOccurrence(trx, tenant, schedule, nextDue);
@@ -2994,7 +2964,7 @@ export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: 
                 .where({
                     schedule_id: validatedData.schedule_id
                 })
-                .select('schedule_id', 'asset_id', 'frequency', 'frequency_interval', 'schedule_name', 'maintenance_type')
+                .select('schedule_id', 'asset_id', 'frequency', 'frequency_interval', 'schedule_config', 'schedule_name', 'maintenance_type')
                 .first();
 
             if (!schedule) {
@@ -3023,16 +2993,9 @@ export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: 
                 })
                 .update({
                     last_maintenance: validatedData.performed_at,
-                    next_maintenance: trx.raw(`
-                        CASE frequency
-                            WHEN 'daily' THEN ? + INTERVAL '1 day' * frequency_interval
-                            WHEN 'weekly' THEN ? + INTERVAL '1 week' * frequency_interval
-                            WHEN 'monthly' THEN ? + INTERVAL '1 month' * frequency_interval
-                            WHEN 'quarterly' THEN ? + INTERVAL '3 months' * frequency_interval
-                            WHEN 'yearly' THEN ? + INTERVAL '1 year' * frequency_interval
-                            ELSE ? + INTERVAL '1 day' * frequency_interval
-                        END
-                    `, Array(6).fill(validatedData.performed_at))
+                    next_maintenance: advanceMaintenanceDate(
+                        validatedData.performed_at, schedule.frequency, schedule.frequency_interval, schedule.schedule_config
+                    )
                 })
                 .returning('*');
 
@@ -3694,7 +3657,8 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
                     entity_id,
                     entity_type
                 })
-                .select('asset_id');
+                .select('asset_id', 'created_at')
+                .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'asset_id', order: 'asc' }]);
 
             const candidateAssetIds = associations.map((association: { asset_id: string }) => association.asset_id);
             const uniqueAssetIds: string[] = Array.from(new Set<string>(candidateAssetIds));
@@ -3710,9 +3674,13 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
                 candidateAssets.map((asset) => authorizeAssetReadDecision(trx, tenant, context, asset))
             );
 
-            const authorizedAssetIds = candidateAssets
-                .filter((_, index) => decisions[index]?.allowed)
-                .map((asset) => asset.asset_id);
+            // Newest association first, so the panel's collapsed rows include a just-received item.
+            const authorizedAssetIds = orderEntityAssetIds(
+                associations as EntityAssociationRow[],
+                candidateAssets
+                    .filter((_, index) => decisions[index]?.allowed)
+                    .map((asset) => asset.asset_id)
+            );
 
             if (authorizedAssetIds.length === 0) {
                 return [];

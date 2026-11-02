@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import { getTenantDefaultCurrencyCode } from '@alga-psa/billing/actions/billingCurrencyActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { WizardProgress } from '@alga-psa/ui/components/onboarding/WizardProgress';
@@ -19,6 +20,7 @@ import {
 } from '@shared/billingClients/recurringAuthoringValidation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getFixedServiceBasisIssue } from '../../../../lib/fixedServiceBasis';
+import { prepaidLineDraftsToSubmission, type PrepaidBlockLineDraft } from '../prepaidBlockConfigDraft';
 
 const TEMPLATE_STEPS_COUNT = 6;
 const RECURRING_LINE_TYPE_KEYS = {
@@ -43,8 +45,8 @@ export interface TemplateWizardData {
   billing_frequency: string;
   cadence_owner?: 'client' | 'contract';
   billing_timing?: 'arrears' | 'advance';
-  // Templates are currency-neutral. Currency and rates are determined when a contract
-  // is created from this template - rates come from the service's prices in the client's currency.
+  /** Base currency of the template; empty until the tenant default has loaded. */
+  currency_code: string;
   enable_proration?: boolean;
   fixed_services: Array<{
     service_id: string;
@@ -53,8 +55,8 @@ export interface TemplateWizardData {
     /** 'bundle' (default) allocates a share of the line total; 'unit' bills quantity × unit rate. */
     pricing_basis?: 'bundle' | 'unit';
     /**
-     * Optional default unit rate in minor units. Templates are currency-neutral, so an
-     * empty rate means "use the service's catalog price in the contract currency".
+     * Optional default unit rate in minor units of the template's base currency. An empty
+     * rate means "use the service's catalog price in the contract currency".
      */
     unit_rate?: number | null;
   }>;
@@ -74,6 +76,8 @@ export interface TemplateWizardData {
     unit_of_measure?: string;
     bucket_overlay?: BucketOverlayInput | null;
   }>;
+  /** Prepaid Block lines being authored (each becomes its own Hourly template line plus block config). */
+  prepaid_block_drafts?: PrepaidBlockLineDraft[];
   minimum_billable_time?: number;
   round_up_to_nearest?: number;
 }
@@ -99,11 +103,12 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     cadence_owner: 'client',
     billing_timing: 'arrears',
     enable_proration: false,
-    // currency_code removed - templates are now currency-neutral
+    currency_code: '',
     fixed_services: [],
     product_services: [],
     hourly_services: [],
     usage_services: [],
+    prepaid_block_drafts: [],
   });
   const formatList = useMemo(
     () => new Intl.ListFormat(undefined, { style: 'long', type: 'conjunction' }),
@@ -121,6 +126,20 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     [t]
   );
 
+  // Default the base currency to the tenant default; the author can change it.
+  useEffect(() => {
+    if (!open || wizardData.currency_code) return;
+    let cancelled = false;
+    getTenantDefaultCurrencyCode()
+      .then((code) => {
+        if (!cancelled) setWizardData((prev) => (prev.currency_code ? prev : { ...prev, currency_code: code }));
+      })
+      .catch((error) => console.error('Failed to load tenant default currency', error));
+    return () => {
+      cancelled = true;
+    };
+  }, [open, wizardData.currency_code]);
+
   useEffect(() => {
     if (!open) {
       setWizardData({
@@ -130,11 +149,12 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         cadence_owner: 'client',
         billing_timing: 'arrears',
         enable_proration: false,
-        // currency_code removed - templates are now currency-neutral
+        currency_code: '',
         fixed_services: [],
         product_services: [],
         hourly_services: [],
         usage_services: [],
+        prepaid_block_drafts: [],
       });
       setErrors({});
       setCompletedSteps(new Set());
@@ -143,7 +163,9 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     }
   }, [open]);
 
-  const buildSubmissionData = (): ContractTemplateWizardSubmission => ({
+  const buildSubmissionData = (): ContractTemplateWizardSubmission => {
+    const prepaid = prepaidLineDraftsToSubmission(wizardData.prepaid_block_drafts);
+    return {
     contract_name: wizardData.contract_name.trim(),
     description: wizardData.description?.trim() || undefined,
     cadence_owner: wizardData.cadence_owner ?? 'client',
@@ -156,8 +178,10 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
     minimum_billable_time: wizardData.minimum_billable_time,
     round_up_to_nearest: wizardData.round_up_to_nearest,
     billing_frequency: wizardData.billing_frequency,
-    // currency_code removed - templates are now currency-neutral
-  });
+    prepaid_block_lines: 'lines' in prepaid && prepaid.lines.length > 0 ? prepaid.lines : undefined,
+    currency_code: wizardData.currency_code,
+    };
+  };
 
   const updateData = (data: Partial<TemplateWizardData>) => {
     setWizardData((prev) => ({ ...prev, ...data }));
@@ -185,7 +209,8 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
             billingFrequency: wizardData.billing_frequency,
           })
         : null,
-      wizardData.hourly_services.length > 0
+      wizardData.hourly_services.length > 0 ||
+      (wizardData.prepaid_block_drafts ?? []).some((line) => line.services.some((service) => service.service_id))
         ? getUnsupportedRecurringAuthoringCombination({
             lineType: 'Hourly',
             cadenceOwner: wizardData.cadence_owner,
@@ -271,6 +296,15 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
           }));
           return false;
         }
+        if (!wizardData.currency_code) {
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t('templateWizard.validation.currencyRequired', {
+              defaultValue: 'Base currency is required',
+            }),
+          }));
+          return false;
+        }
         // Check for duplicate template name
         const isDuplicate = await checkDuplicateTemplateName(wizardData.contract_name);
         if (isDuplicate) {
@@ -294,6 +328,7 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
           wizardData.fixed_services.length > 0 ||
           wizardData.product_services.length > 0 ||
           wizardData.hourly_services.length > 0 ||
+          (wizardData.prepaid_block_drafts ?? []).some((line) => line.services.some((service) => service.service_id)) ||
           !!(wizardData.usage_services && wizardData.usage_services.length > 0);
 
         if (!hasServices) {
@@ -301,6 +336,16 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
             ...prev,
             [stepIndex]: t('templateWizard.validation.atLeastOneServiceRequired', {
               defaultValue: 'At least one service is required',
+            }),
+          }));
+          return false;
+        }
+        if ('errors' in prepaidLineDraftsToSubmission(wizardData.prepaid_block_drafts)) {
+          setErrors((prev) => ({
+            ...prev,
+            [stepIndex]: t('wizardPrepaidBlock.validation.invalidBlock', {
+              defaultValue:
+                'Complete the block size, price and trigger settings for every prepaid block line before finishing.',
             }),
           }));
           return false;
@@ -397,11 +442,12 @@ export function TemplateWizard({ open, onOpenChange, onComplete }: TemplateWizar
         cadence_owner: 'client',
         billing_timing: 'arrears',
         enable_proration: false,
-        // currency_code removed - templates are now currency-neutral
+        currency_code: '',
         fixed_services: [],
         product_services: [],
         hourly_services: [],
         usage_services: [],
+        prepaid_block_drafts: [],
       });
     } catch (error) {
       console.error('Failed to create template from wizard', error);

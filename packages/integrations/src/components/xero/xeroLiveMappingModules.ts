@@ -216,6 +216,8 @@ function createServiceModule(tabLabel: string): AccountingMappingModule {
           readXeroServiceTargetKind(mapping.metadata ?? null) ?? 'item',
           mapping.external_entity_id
         ),
+      // Items are one-to-one; revenue accounts are shareable (partial idx_unique_external_mapping).
+      isExclusiveKind: (kindId) => kindId === 'item',
       invalidNotice:
         'This mapping no longer matches a usable record in the connected Xero organisation. Pick a valid Xero Item, or explicitly switch it to a Xero Revenue Account — it will not convert automatically.'
     },
@@ -344,6 +346,8 @@ function createDiscountModule(tabLabel: string): AccountingMappingModule {
       kindForMapping: (mapping) => readXeroServiceTargetKind(mapping.metadata ?? null) ?? 'item',
       optionIdForMapping: (mapping) =>
         toOptionId(readXeroServiceTargetKind(mapping.metadata ?? null) ?? 'item', mapping.external_entity_id),
+      // Items are one-to-one; revenue accounts are shareable (partial idx_unique_external_mapping).
+      isExclusiveKind: (kindId) => kindId === 'item',
       invalidNotice:
         'This mapping no longer matches a usable record in the connected Xero organisation. Pick a valid Xero Item or Revenue Account.'
     },

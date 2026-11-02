@@ -26,6 +26,14 @@ export function rmmMappingErrorMessage(
       return t('integrations.rmm.errors.mappingNotFound', {
         defaultValue: 'That mapping no longer exists. Refresh and try again.',
       });
+    case 'Client not found':
+      return t('integrations.rmm.errors.clientNotFound', {
+        defaultValue: 'That client no longer exists. Refresh and try again.',
+      });
+    case 'Contact does not belong to this client':
+      return t('integrations.rmm.errors.contactNotForClient', {
+        defaultValue: 'That contact does not belong to the client this site is mapped to.',
+      });
     case 'Forbidden':
       return t('integrations.rmm.errors.forbidden', {
         defaultValue: 'You do not have permission to change this.',

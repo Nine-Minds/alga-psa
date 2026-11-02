@@ -105,7 +105,13 @@
     "extensions": "Tillägg",
     "ticketsAll": "Alla ärenden",
     "ticketsRecurring": "Återkommande ärenden",
-    "ticketsTemplates": "Ärendemallar"
+    "ticketsTemplates": "Ärendemallar",
+    "assetsCustody": "Utrustning i förvar",
+    "ticketsCannedResponses": "Färdiga svar",
+    "profile": "Profil",
+    "signOut": "Logga ut",
+    "coManaged": "Samförvaltad IT",
+    "coManagedAdministration": "Åtkomst och administration"
   },
   "marketing": {
     "dialogs": {
@@ -506,7 +512,8 @@
       "extensions": "Tillägg",
       "experimentalFeatures": "Experimentella funktioner",
       "profile": "Profil",
-      "security": "Säkerhet"
+      "security": "Säkerhet",
+      "tags": "Taggar"
     }
   },
   "dashboard": {
@@ -674,6 +681,17 @@
         "error": "Kalendersynkroniseringen för {{providerName}} rapporterade ett fel och synkroniserar inte.",
         "disconnected": "Kalendersynkroniseringen för {{providerName}} är frånkopplad och synkroniserar inte."
       },
+      "rmm": {
+        "syncError": "{{providerName}} rapporterade ett synkroniseringsfel, så enhets- och larmdata kan vara inaktuella.",
+        "reconnectRequired": "{{providerName}} måste anslutas igen — dess autentiseringsuppgifter kan inte längre förnyas."
+      },
+      "accounting": {
+        "reconnectRequired": "{{providerName}} måste anslutas igen innan bokföringssynkroniseringen kan köras igen.",
+        "syncError": "Den senaste synkroniseringen med {{providerName}} slutfördes inte, så fakturor och betalningar kan vara inaktuella."
+      },
+      "teams": {
+        "botCredentialsMissing": "{{providerName}}-botten kan inte svara: autentiseringsuppgifterna för botkopplingen är inte konfigurerade på servern."
+      },
       "review": "Granska",
       "dismiss": "Stäng integrationsavisering"
     }
@@ -811,5 +829,42 @@
   "githubStar": {
     "label": "Stjärnmärk",
     "ariaLabel": "Stjärnmärk {{repository}} på GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "MSP-portal",
+      "dashboard": "Översikt",
+      "ticketDetails": "Ärendedetaljer",
+      "tickets": "Ärenden",
+      "projectDetails": "Projektdetaljer",
+      "projects": "Projekt",
+      "clientDetails": "Kunduppgifter",
+      "clients": "Kunder",
+      "contactDetails": "Kontaktuppgifter",
+      "contacts": "Kontakter",
+      "assetDetails": "Tillgångsdetaljer",
+      "assets": "Tillgångar",
+      "billing": "Fakturering",
+      "settings": "Inställningar",
+      "settingsSection": "Inställningar: {{section}}",
+      "chat": "Chatt"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Pro-funktion",
+      "description": "AI-chattfunktionerna kräver Pro. Uppgradera för att få tillgång till den här funktionen."
+    },
+    "messages": {
+      "proRequired": "Meddelandefunktionerna kräver Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Chattfunktionerna är endast tillgängliga i Enterprise Edition"
+    }
+  },
+  "coManagedWorkspace": {
+    "loading": "Läser in arbetsytan…",
+    "navigation": "Kundens arbetsyta",
+    "passwordError": "Det gick inte att kontrollera lösenordsstatus. Läs in sidan igen."
   }
 }

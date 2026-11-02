@@ -16,11 +16,16 @@ function IncomingCallSurface({ tenant, userId }: { tenant: string; userId: strin
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useTranslation('msp/integrations');
+  // LEVERAGE: friction notification-socket-instances — this and NotificationBell are
+  // two hook instances, so two sockets and two tokens per tab (enableInbox: false
+  // keeps this one from also doubling the inbox reads). The layer is a refcounted
+  // provider registry keyed by `tenant:userId`.
   const { incomingCall, dismissIncomingCall } = useInternalNotifications({
     tenant,
     userId,
     limit: 1,
     enablePolling: false,
+    enableInbox: false,
   });
 
   // The quick-add dialogs live behind the app-wide create routes, which mount

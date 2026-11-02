@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { Temporal } from '@js-temporal/polyfill';
-import { formatInvoiceCalendarDate } from '../../../../../packages/billing/src/actions/invoiceCalendarDate';
+import { formatLocalizedCalendarDate } from '../../../../../packages/core/src/lib/calendarDate';
 import { PER_PROFILE_INVOICING_FLAG } from '../../../../../packages/billing/src/lib/billing/billingProfileInvoiceScope';
 import { buildContractCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import { getAvailableRecurringDueWork } from '@alga-psa/billing/actions/billingAndTax';
@@ -666,9 +666,9 @@ describe('billing profiles S2 — charge attribution and snapshots (T004, T010, 
         const fullInvoice = await Invoice.getFullInvoiceById(db, tenantId, cardInvoice.invoice_id);
         expect(fullInvoice.invoice_date).toBeInstanceOf(Date);
         expect(fullInvoice.due_date).toBeInstanceOf(Date);
-        expect(formatInvoiceCalendarDate(fullInvoice.invoice_date as Date, 'en-US'))
+        expect(formatLocalizedCalendarDate(fullInvoice.invoice_date as Date, 'en-US'))
           .toBe(displayDate(calendarDate(cardSnapshot.invoice_date)));
-        expect(formatInvoiceCalendarDate(fullInvoice.due_date as Date, 'en-US'))
+        expect(formatLocalizedCalendarDate(fullInvoice.due_date as Date, 'en-US'))
           .toBe(displayDate(calendarDate(cardSnapshot.due_date)));
       }
     } finally {

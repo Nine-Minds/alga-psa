@@ -11,11 +11,20 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import toast from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { cancelAccountingExportBatch, createAccountingExportBatch, downloadAccountingExportArtifact, executeAccountingExportBatch, getAccountingExportBatch, getAccountingExportConnections, listAccountingExportBatches } from '@alga-psa/billing/actions/accountingExportActions';
 import type { AccountingExportActionError } from '@alga-psa/billing/actions/accountingExportActions';
+import { getUnmappedQuickBooksEntities, saveQuickBooksExportMappings } from '../../../actions/quickBooksExportMappingActions';
+import {
+  QUICKBOOKS_FILE_ADAPTERS,
+  type QuickBooksMappingDecision,
+  type UnmappedQuickBooksEntity
+} from '../../../actions/quickBooksExportMappingRules';
+import { QuickBooksUnmappedItemsDialog } from './QuickBooksUnmappedItemsDialog';
 import { useAccountingCapabilities } from '@alga-psa/auth/hooks/useAccountingCapabilities';
+
+const UNMAPPED_ERROR_CODES = new Set(['missing_client_mapping', 'missing_service_mapping', 'missing_discount_mapping']);
 
 type AccountingExportStatus =
   | 'pending'
@@ -174,6 +183,13 @@ export default function AccountingExportsTab(): React.JSX.Element {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [connectionIssue, setConnectionIssue] = useState<'ambiguous' | 'none_connected' | null>(null);
   const [realmReloadNonce, setRealmReloadNonce] = useState(0);
+  const [unmappedPrompt, setUnmappedPrompt] = useState<{
+    batchId: string;
+    adapterType: string;
+    entities: UnmappedQuickBooksEntity[];
+  } | null>(null);
+  const [unmappedSaving, setUnmappedSaving] = useState(false);
+  const [unmappedError, setUnmappedError] = useState<string | null>(null);
   const realmRequestRef = useRef(0);
   // Keep `t` out of the connection-loading effect deps: some i18n setups return
   // a fresh bound function each render, which would re-trigger the effect
@@ -394,7 +410,21 @@ export default function AccountingExportsTab(): React.JSX.Element {
     }
   };
 
-  const onExecute = async (batchId: string) => {
+  /** Opens the create/link prompt when a QuickBooks file batch is blocked on unmapped entities. */
+  const openUnmappedPrompt = async (batchId: string, adapterType: string | undefined): Promise<boolean> => {
+    if (!adapterType || !QUICKBOOKS_FILE_ADAPTERS.includes(adapterType)) return false;
+    try {
+      const entities = await getUnmappedQuickBooksEntities(batchId);
+      if (!Array.isArray(entities) || entities.length === 0) return false;
+      setUnmappedError(null);
+      setUnmappedPrompt({ batchId, adapterType, entities });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const onExecute = async (batchId: string, adapterTypeHint?: string) => {
     try {
       const result = await executeAccountingExportBatch(batchId);
       if (isActionPermissionError(result)) {
@@ -404,6 +434,10 @@ export default function AccountingExportsTab(): React.JSX.Element {
       if (isAccountingExportActionError(result)) {
         await loadBatches();
         await loadBatchDetail(batchId);
+        const adapterType = adapterTypeHint ?? batches.find((batch) => batch.batch_id === batchId)?.adapter_type;
+        if (await openUnmappedPrompt(batchId, adapterType)) {
+          return;
+        }
         handleError(result.message);
         return;
       }
@@ -416,6 +450,36 @@ export default function AccountingExportsTab(): React.JSX.Element {
       handleError(e, t('accountingExports.toast.executeError', {
         defaultValue: 'Failed to execute batch',
       }));
+    }
+  };
+
+  const onSubmitUnmapped = async (decisions: QuickBooksMappingDecision[]) => {
+    if (!unmappedPrompt) return;
+    const { batchId, adapterType } = unmappedPrompt;
+    setUnmappedSaving(true);
+    setUnmappedError(null);
+    try {
+      const result = await saveQuickBooksExportMappings(batchId, decisions);
+      if (isActionPermissionError(result)) {
+        setUnmappedError(result.permissionError);
+        return;
+      }
+      if (isActionMessageError(result)) {
+        setUnmappedError(getErrorMessage(result));
+        return;
+      }
+      setUnmappedPrompt(null);
+      toast.success(t('accountingExports.unmapped.toast.saved', {
+        defaultValue: 'QuickBooks mappings saved',
+      }));
+      await onExecute(batchId, adapterType);
+    } catch (e) {
+      setUnmappedError(t('accountingExports.unmapped.toast.saveError', {
+        defaultValue: 'Failed to save QuickBooks mappings',
+      }));
+      handleError(e);
+    } finally {
+      setUnmappedSaving(false);
     }
   };
 
@@ -545,7 +609,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
                         <Button
                           variant="default"
                           size="sm"
-                          onClick={() => void onExecute(batch.batch_id)}
+                          onClick={() => void onExecute(batch.batch_id, batch.adapter_type)}
                           id={`accounting-exports-execute-${batch.batch_id}`}
                         >
                           {t('accountingExports.actions.execute', { defaultValue: 'Execute' })}
@@ -894,9 +958,21 @@ export default function AccountingExportsTab(): React.JSX.Element {
                     {t('accountingExports.actions.cancelBatch', { defaultValue: 'Cancel Batch' })}
                   </Button>
                 )}
+                {QUICKBOOKS_FILE_ADAPTERS.includes(selectedBatch.adapter_type) &&
+                  (selectedDetail?.errors ?? []).some(
+                    (error) => error.resolution_state === 'open' && UNMAPPED_ERROR_CODES.has(error.code)
+                  ) && (
+                  <Button
+                    id="accounting-exports-detail-resolve-unmapped"
+                    variant="outline"
+                    onClick={() => void openUnmappedPrompt(selectedBatch.batch_id, selectedBatch.adapter_type)}
+                  >
+                    {t('accountingExports.actions.resolveUnmapped', { defaultValue: 'Resolve unmapped items' })}
+                  </Button>
+                )}
                 <Button
                   id="accounting-exports-detail-execute"
-                  onClick={() => void onExecute(selectedBatch.batch_id)}
+                  onClick={() => void onExecute(selectedBatch.batch_id, selectedBatch.adapter_type)}
                 >
                   {t('accountingExports.actions.execute', { defaultValue: 'Execute' })}
                 </Button>
@@ -905,6 +981,20 @@ export default function AccountingExportsTab(): React.JSX.Element {
           )}
         </DialogContent>
       </Dialog>
+
+      <QuickBooksUnmappedItemsDialog
+        isOpen={Boolean(unmappedPrompt)}
+        adapterType={unmappedPrompt?.adapterType ?? ''}
+        entities={unmappedPrompt?.entities ?? []}
+        canManageMappings={accountingCapabilities.mappingsManage}
+        saving={unmappedSaving}
+        error={unmappedError}
+        onCancel={() => {
+          setUnmappedPrompt(null);
+          setUnmappedError(null);
+        }}
+        onSubmit={(decisions) => void onSubmitUnmapped(decisions)}
+      />
     </div>
   );
 }

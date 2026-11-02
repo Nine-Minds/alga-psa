@@ -1,0 +1,144 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: state machine transition table",
+    "featureIds": [
+      "F009"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "description": "Unit: formatCustodyForLabel (single, multiple, vendor, overdue, no note)",
+    "featureIds": [
+      "F015"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "description": "Unit: tag generator and Zod schemas",
+    "featureIds": [
+      "F007",
+      "F018"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "description": "Unit: describeAssetHistoryEntry custody_*",
+    "featureIds": [
+      "F024"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T005",
+    "description": "Integration: receive existing + new asset (episode, event, history, association)",
+    "featureIds": [
+      "F010",
+      "F011",
+      "F012",
+      "F017"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T006",
+    "description": "Integration: NO stock/money rows change across both intakes, move, hand-off, ship, receive-back, return",
+    "featureIds": [
+      "F017",
+      "F010",
+      "F011",
+      "F034"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T007",
+    "description": "Integration: refusals (second episode, client mismatch, no client, inactive location)",
+    "featureIds": [
+      "F018"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T008",
+    "description": "Integration: append-only trigger rejects UPDATE/DELETE (plain Postgres)",
+    "featureIds": [
+      "F004"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T009",
+    "description": "Integration: queue tabs, closed ticket's item still appears, record-level filtering",
+    "featureIds": [
+      "F014",
+      "F022"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T010",
+    "description": "Integration: ownership backfill, held_by_msp seed, migration idempotence",
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F006"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T011",
+    "description": "Integration: delete and location deactivation guards; held_by_msp->active on return",
+    "featureIds": [
+      "F031",
+      "F032",
+      "F033"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T012",
+    "description": "API: REST custody endpoints enforce asset RBAC + record check; 404 without access",
+    "featureIds": [
+      "F020",
+      "F021",
+      "F022",
+      "F023"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T013",
+    "description": "Label: work tag with/without custody; unreadable asset dropped; printing writes nothing; longest strings fit",
+    "featureIds": [
+      "F029",
+      "F015"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T014",
+    "description": "Static: custody modules do not import inventory/billing",
+    "featureIds": [
+      "F034"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T015",
+    "description": "Scenario: receive, shelve, print view model, move, timeline, queue",
+    "featureIds": [
+      "F010",
+      "F011",
+      "F015",
+      "F029",
+      "F024",
+      "F014"
+    ],
+    "implemented": true
+  }
+]

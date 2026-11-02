@@ -11,6 +11,7 @@ import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { ContractWizardData } from '../ContractWizard';
+import { BillingTimingField } from '../BillingTimingField';
 import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { CURRENCY_OPTIONS, getCurrencySymbol, currencyFractionDigits } from '@alga-psa/core';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -35,11 +36,16 @@ import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useBillingFrequencyOptions, useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
+import { templatePickerLabel } from './templatePickerOption';
+
 type TemplateOption = {
   contract_id: string;
   contract_name: string;
   contract_description?: string | null;
   billing_frequency?: string | null;
+  currency_code?: string;
+  price_set_currencies?: string[];
+  incomplete_set_currencies?: string[];
 };
 
 interface ContractBasicsStepProps {
@@ -123,9 +129,12 @@ export function ContractBasicsStep({
     setEndDate(parseLocalYMD(data.end_date));
   }, [data.start_date, data.end_date]);
 
+  // Templates are never hidden by currency. Each shows its base currency and
+  // price-set currencies, and once the client's currency is known a template
+  // without a complete price set for it is flagged "Needs <cur> rates".
   const templateOptions = templates.map((template) => ({
     value: template.contract_id,
-    label: template.contract_name,
+    label: templatePickerLabel(t, template, data.client_id, data.currency_code),
   }));
   const renewalModeOptions = [
     {
@@ -233,6 +242,14 @@ export function ContractBasicsStep({
                 ? selectedTemplate.billing_frequency.replace(/_/g, ' ')
                 : t('wizardBasics.template.preview.notSpecified', { defaultValue: 'Not specified' })}
             </p>
+            {selectedTemplate.currency_code && (
+              <p>
+                <span className="font-semibold text-[rgb(var(--color-primary-700))]">
+                  {t('wizardBasics.template.preview.currencyLabel', { defaultValue: 'Base currency:' })}
+                </span>{' '}
+                {selectedTemplate.currency_code}
+              </p>
+            )}
             {selectedTemplate.contract_description && (
               <p className="text-[rgb(var(--color-text-600))]">{selectedTemplate.contract_description}</p>
             )}
@@ -338,6 +355,26 @@ export function ContractBasicsStep({
         />
         <p className="text-xs text-[rgb(var(--color-text-400))]">
           {t('wizardBasics.billingFrequency.hint', { defaultValue: 'How often should this contract be billed?' })}
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="contract-basics-billing-timing" className="flex items-center gap-2">
+          <Repeat className="h-4 w-4" />
+          {t('wizardBasics.billingTiming.label', { defaultValue: 'Billing Timing' })}
+        </Label>
+        <BillingTimingField
+          id="contract-basics-billing-timing"
+          lineType="Fixed"
+          value={data.billing_timing ?? 'arrears'}
+          onChange={(value) => updateData({ billing_timing: value })}
+          hideHelp
+        />
+        <p className="text-xs text-[rgb(var(--color-text-400))]">
+          {t('billingTimingField.contractDefaultHelp', {
+            defaultValue:
+              'Default for fixed lines, which can bill in advance. Hourly and usage lines always bill in arrears, whatever you choose here.',
+          })}
         </p>
       </div>
 

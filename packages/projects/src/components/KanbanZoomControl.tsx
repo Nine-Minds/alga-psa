@@ -1,6 +1,7 @@
 'use client';
 
 import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface KanbanZoomControlProps {
   zoomLevel: number;
@@ -22,6 +23,8 @@ export const KanbanZoomControl: React.FC<KanbanZoomControlProps> = ({
   maxZoom = 100,
   step = 10,
 }) => {
+  const { t } = useTranslation('features/projects');
+
   return (
     <ViewDensityControl
       idPrefix="kanban"
@@ -35,11 +38,11 @@ export const KanbanZoomControl: React.FC<KanbanZoomControlProps> = ({
       minValue={minZoom}
       maxValue={maxZoom}
       step={step}
-      compactLabel="Compact"
-      spaciousLabel="Spacious"
-      decreaseTitle="Decrease column width"
-      increaseTitle="Increase column width"
-      resetTitle="Reset to default"
+      compactLabel={t('kanbanZoom.compact.label')}
+      spaciousLabel={t('kanbanZoom.spacious.label')}
+      decreaseTitle={t('kanbanZoom.decrease.title')}
+      increaseTitle={t('kanbanZoom.increase.title')}
+      resetTitle={t('kanbanZoom.reset.title')}
     />
   );
 };

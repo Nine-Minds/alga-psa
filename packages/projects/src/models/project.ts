@@ -13,6 +13,19 @@ import type { Knex } from 'knex';
 import type { IProject, IProjectPhase, IProjectStatusMapping, IProjectTask, IStatus, IStandardStatus, ItemType } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
+import { coManagedHiddenColumns, coManagedProjectFamilyMask, CO_MANAGED_PROJECT_COLUMNS } from '@alga-psa/co-managed/projectFieldMask';
+import { releaseStagingForProject, releaseStagingForTasks } from '@alga-psa/inventory/lib';
+
+/**
+ * Every physical `projects` column a masked row emits. `tenant`, `project_id` (identifiers: hiding one drops the
+ * row) and the title/description (masked by the field-source descriptors) are handled specially; every other
+ * entry must be a key of CO_MANAGED_PROJECT_COLUMNS so it passes the hidden check.
+ */
+export const PROJECT_MASKED_ROW_COLUMNS = [
+  'tenant', 'project_id', 'project_name', 'description', 'project_number', 'wbs_code', 'is_inactive', 'start_date', 'end_date',
+  'created_at', 'updated_at', 'budgeted_hours', 'client_portal_config', 'service_id', 'billing_profile_id', 'status', 'client_id',
+  'contact_name_id', 'assigned_to',
+] as const;
 
 /** Status enriched with mapping metadata as returned by getProjectTaskStatuses. */
 export type ProjectTaskStatus = (IStatus | IStandardStatus) & Pick<IProjectStatusMapping, 'project_status_mapping_id' | 'phase_id' | 'custom_name' | 'display_order' | 'is_visible'> & { is_standard: boolean };
@@ -164,6 +177,56 @@ const ProjectModel = {
       console.error('Error getting projects by id:', error);
       throw error;
     }
+  },
+
+  /**
+   * `getByIds` for projects whose reader has redactions: the same row shape, with hidden columns NULL in the
+   * query itself (never fetched and filtered afterwards) and a hidden title shown as the neutral title.
+   * Returns no rows when the whole project or an identifier is hidden. One call per redaction set.
+   */
+  getMaskedByIds: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    projectIds: string[],
+    redactedFields: readonly string[]
+  ): Promise<IProject[]> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting projects by id');
+    }
+    const mask = coManagedProjectFamilyMask(redactedFields, 'project');
+    if (projectIds.length === 0 || mask.dropRow) {
+      return [];
+    }
+
+    const hidden = coManagedHiddenColumns(redactedFields, 'projects', CO_MANAGED_PROJECT_COLUMNS);
+    // Fail closed: only the columns listed here are ever emitted, each through the hidden check. A column
+    // added to `projects` later is not emitted until it is listed (and so given a redaction alias).
+    const column = (name: string) => {
+      if (name === 'project_name' && mask.title) return knexOrTrx.raw('?::text as ??', [mask.neutralTitle, name]);
+      const isHidden = name === 'project_name' ? false : name === 'description' ? mask.body : hidden.has(name);
+      // CASE WHEN FALSE yields a NULL of the column's own type, so the row shape and types are unchanged.
+      return isHidden ? knexOrTrx.raw('CASE WHEN FALSE THEN ?? END as ??', [`projects.${name}`, name]) : `projects.${name}`;
+    };
+    const nullable = (name: string, expression: string, type: string) =>
+      hidden.has(name) ? knexOrTrx.raw(`NULL::${type} as ??`, [name]) : knexOrTrx.raw(`${expression} as ??`, [name]);
+    const db = tenantDb(knexOrTrx, tenant);
+    const query = tenantScopedTable(knexOrTrx, 'projects', tenant)
+      .select(
+        ...PROJECT_MASKED_ROW_COLUMNS.map(column),
+        nullable('client_name', 'clients.client_name', 'text'),
+        hidden.has('manager_name') ? knexOrTrx.raw('NULL::text as assigned_to_first_name') : 'users.first_name as assigned_to_first_name',
+        hidden.has('manager_name') ? knexOrTrx.raw('NULL::text as assigned_to_last_name') : 'users.last_name as assigned_to_last_name',
+        nullable('contact_name', 'contacts.full_name', 'text'),
+        nullable('status_name', 's.name', 'text'),
+        nullable('is_closed', 's.is_closed', 'boolean')
+      )
+      .whereIn('projects.project_id', projectIds);
+    db.tenantJoin(query, 'clients', 'projects.client_id', 'clients.client_id', { type: 'left' });
+    db.tenantJoin(query, 'users', 'projects.assigned_to', 'users.user_id', { type: 'left' });
+    db.tenantJoin(query, 'contacts', 'projects.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
+    db.tenantJoin(query, 'statuses as s', 'projects.status', 's.status_id', { type: 'left' });
+
+    return (await query) as IProject[];
   },
 
   /**
@@ -351,6 +414,9 @@ const ProjectModel = {
           );
         }
       }
+
+      // C6: return every staging claim of the project before its tasks go (task FKs are NO ACTION)
+      await releaseStagingForProject(trx, tenant, projectId, null);
 
       // Delete task dependencies (both predecessor and successor references)
       if (phaseIds.length > 0) {
@@ -578,6 +644,12 @@ const ProjectModel = {
           `Cannot delete phase: ${timeEntriesCount.count} time ${Number(timeEntriesCount.count) === 1 ? 'entry exists' : 'entries exist'} for tasks in this phase.`
         );
       }
+
+      // C6: release staging claims on the phase's tasks (installed lines/boxes are detached)
+      const phaseTaskIds = await tenantScopedTable(trx, 'project_tasks', tenant)
+        .where('phase_id', phaseId)
+        .pluck('task_id') as string[];
+      await releaseStagingForTasks(trx, tenant, phaseTaskIds, null);
 
       // Delete task dependencies (both predecessor and successor references)
       await tenantScopedTable(trx, 'project_task_dependencies', tenant)

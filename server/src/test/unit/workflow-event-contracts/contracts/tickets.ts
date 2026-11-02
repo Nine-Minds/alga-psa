@@ -115,6 +115,9 @@ const BUNDLE_UTILS = 'packages/tickets/src/actions/ticketBundleUtils.ts';
 const BUNDLE_ACTIONS = 'packages/tickets/src/actions/ticketBundleActions.ts';
 
 const responseStateFields = ['previousResponseState', 'newResponseState'] as const;
+// Schema-optional, but the notification subscribers can only stay silent when the
+// emitter actually sends them (alga-2026-0002907).
+const suppressionFields = ['suppressContactNotifications', 'suppressInternalNotifications'] as const;
 function responseState(
   site: string,
   previousState: 'awaiting_client' | 'awaiting_internal' | null,
@@ -162,7 +165,10 @@ export const ticketContracts = {
                 relationship: 'tracks',
               },
             ],
+            suppressContactNotifications: true,
+            suppressInternalNotifications: true,
           }),
+        expectFields: suppressionFields,
       },
       {
         site: `${TICKET_SERVICE}#createFromAsset`,
@@ -174,7 +180,10 @@ export const ticketContracts = {
             boardId: ticket.board_id,
             priorityId: ticket.priority_id,
             clientId: ticket.client_id,
+            suppressContactNotifications: true,
+            suppressInternalNotifications: false,
           }),
+        expectFields: suppressionFields,
       },
       {
         site: 'shared/rmm/alerts/ticketCreatedEvent.ts#publishRmmTicketCreated',

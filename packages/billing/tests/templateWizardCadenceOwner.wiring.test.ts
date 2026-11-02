@@ -30,7 +30,7 @@ describe('template wizard cadence_owner wiring', () => {
     expect(fixedStepSource).toContain(
       "updateData({ cadence_owner: value as TemplateWizardData['cadence_owner'] })"
     );
-    expect(actionsSource.match(/cadence_owner: recurringAuthoringPolicy\.cadenceOwner/g)?.length).toBeGreaterThanOrEqual(4);
+    expect(actionsSource.match(/cadence_owner: (?:recurringAuthoringPolicy|arrearsOnlyLinePolicy)\.cadenceOwner/g)?.length).toBeGreaterThanOrEqual(4);
   });
 
   it('T235: template fixed-line authoring captures billing timing and partial-period defaults explicitly before template persistence', () => {
@@ -80,6 +80,6 @@ describe('template wizard cadence_owner wiring', () => {
     expect(reviewSource).toContain('recurringPreview.firstInvoiceSummary');
     expect(reviewSource).toContain('recurringPreview.materializedPeriodsHeading');
     expect(reviewSource).toContain('recurringPreview.materializedPeriods.map');
-    expect(actionsSource).toContain('billingTiming: submission.billing_timing,');
+    expect(actionsSource).toContain('contractWideBillingTiming: submission.billing_timing,');
   });
 });

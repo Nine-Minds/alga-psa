@@ -6,6 +6,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useTheme } from "../ui/ThemeContext";
 import { Badge, Card, Separator } from "../ui/components";
 import { ErrorState, LoadingState } from "../ui/states";
+import { RecordUnavailableState, isRecordUnavailableError } from "../ui/components/RecordUnavailableState";
 import { getStockUnit, type StockUnitDetail } from "../api/inventory";
 import { useInventoryApi } from "../features/inventory/hooks/useInventoryApi";
 import { formatDateTime } from "../ui/formatters/dateTime";
@@ -23,13 +24,13 @@ function FieldRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function StockUnitDetailScreen({ route }: Props) {
+export function StockUnitDetailScreen({ route, navigation }: Props) {
   const { unitId } = route.params;
   const theme = useTheme();
   const { t } = useTranslation("inventory");
   const { client, apiKey } = useInventoryApi();
   const [unit, setUnit] = useState<StockUnitDetail | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "error" | "unavailable">("loading");
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchUnit = useCallback(async () => {
@@ -39,7 +40,13 @@ export function StockUnitDetailScreen({ route }: Props) {
     abortRef.current = controller;
     const result = await getStockUnit(client, { apiKey, unitId, signal: controller.signal });
     if (!result.ok) {
-      if (result.error.kind !== "canceled") setStatus("error");
+      if (result.error.kind === "canceled") return;
+      if (isRecordUnavailableError(result.error)) {
+        setUnit(null);
+        setStatus("unavailable");
+        return;
+      }
+      setStatus("error");
       return;
     }
     setUnit(result.data.data);
@@ -52,6 +59,9 @@ export function StockUnitDetailScreen({ route }: Props) {
   }, [fetchUnit]);
 
   if (status === "loading") return <LoadingState />;
+  if (status === "unavailable") {
+    return <RecordUnavailableState onBack={() => navigation.goBack()} />;
+  }
   if (status === "error" || !unit) {
     return (
       <ErrorState

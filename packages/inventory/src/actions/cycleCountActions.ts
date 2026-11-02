@@ -204,14 +204,15 @@ export const listCountSessions = withAuth(
         })
         .leftJoin(
           trx('count_lines')
-            .select('session_id')
+            .select('tenant', 'session_id')
             .count({ line_count: '*' })
             .sum({ counted_count: trx.raw('CASE WHEN counted_qty IS NOT NULL THEN 1 ELSE 0 END') })
             .where({ tenant })
-            .groupBy('session_id')
+            .groupBy('tenant', 'session_id')
             .as('cl'),
-          'cl.session_id',
-          'cs.session_id',
+          function () {
+            this.on('cl.session_id', '=', 'cs.session_id').andOn('cl.tenant', '=', 'cs.tenant');
+          },
         )
         .where('cs.tenant', tenant)
         .orderBy('cs.started_at', 'desc')

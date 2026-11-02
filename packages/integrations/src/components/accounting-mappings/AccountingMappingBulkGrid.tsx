@@ -10,6 +10,7 @@ import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import type { ColumnDefinition } from '@alga-psa/types';
+import type { ExternalEntityMapping } from '@alga-psa/integrations/actions';
 
 import { suggestMappingTargets } from './suggestMappingTargets';
 import type {
@@ -29,11 +30,22 @@ export const BULK_GRID_COLUMN_SIZES = {
   name: { width: '220px', minWidth: '160px' },
   kindId: { width: '200px', minWidth: '140px' },
   externalId: { width: '520px', minWidth: '240px' },
+  metadataField: { width: '280px', minWidth: '180px' },
   ignored: { width: '72px', minWidth: '72px' },
   id: { width: '140px' }
 } as const;
 
-type MappedRow = { externalName?: string; alga_entity_id: string };
+/**
+ * Whether bulk mapping types the target instead of picking it from a catalog.
+ * Explicit per module: a catalog-backed module whose catalog happens to be
+ * empty (a new company, nothing of that kind yet) keeps the picker, so a
+ * free-text value can never be saved where a provider id is expected.
+ */
+export function isManualEntryModule(module: Pick<AccountingMappingModule, 'manualExternalEntry' | 'externalTarget'>): boolean {
+  return module.manualExternalEntry === true && !module.externalTarget;
+}
+
+type MappedRow = ExternalEntityMapping & { externalName?: string };
 
 type RowEdit = {
   ignored?: boolean;
@@ -41,6 +53,8 @@ type RowEdit = {
   kindId?: string;
   /** Present (even as '') once the user has touched the target picker or kind. */
   externalId?: string;
+  /** Values typed into the module's metadata fields, keyed by field key. */
+  fields?: Record<string, string>;
 };
 
 type MappedFilter = 'unmapped' | 'mapped' | 'all';
@@ -51,6 +65,10 @@ type GridRow = {
   mappedTo: string | null;
   kindId: string;
   externalId: string;
+  /** Metadata field values: typed values for unmapped rows, stored values for mapped rows. */
+  fieldValues: Record<string, string>;
+  /** Label of the first required metadata field still empty, if any. */
+  missingField: string | null;
   suggested: boolean;
   /** Fuzzy suggestions are prefilled but never preselected for save. */
   fuzzy: boolean;
@@ -84,6 +102,12 @@ export function AccountingMappingBulkGrid({
   const { t } = useTranslation('msp/integrations');
   const targetConfig = module.externalTarget;
   const idPrefix = `${module.id}-bulk`;
+  // File-based modules (no provider catalog) type the target, exactly as it
+  // appears in the accounting system.
+  const manualEntry = isManualEntryModule(module);
+  // Named metadata inputs a module declares (e.g. the QuickBooks Desktop item
+  // name next to the account): edited per row and saved with the mapping.
+  const metadataFields = useMemo(() => module.metadata?.fields ?? [], [module.metadata]);
 
   const [filter, setFilter] = useState<MappedFilter>('unmapped');
   const [search, setSearch] = useState('');
@@ -102,13 +126,33 @@ export function AccountingMappingBulkGrid({
     [algaEntities, mappedByAlga]
   );
 
-  // Suggestions are computed once per catalog load, only for unmapped rows.
+  // Catalog options an existing mapping holds exclusively, i.e. targets the
+  // server's unique index would reject a second mapping to. Only those are
+  // withheld from suggestions; targets the server lets several mappings share
+  // (Xero revenue accounts) stay suggestable. Multi-catalog modules compare by
+  // option id (`item:200` and `account:200` are different targets); modules
+  // without a target config compare the bare external id (one-to-one).
+  const unavailableExternalIds = useMemo(() => {
+    const held = new Set<string>();
+    for (const mapping of mappings) {
+      if (!targetConfig) {
+        held.add(mapping.external_entity_id);
+      } else if (targetConfig.isExclusiveKind(targetConfig.kindForMapping(mapping))) {
+        held.add(targetConfig.optionIdForMapping(mapping));
+      }
+    }
+    return new Set(externalEntities.filter((entity) => held.has(entity.id)).map((entity) => entity.id));
+  }, [mappings, externalEntities, targetConfig]);
+
+  // Suggestions cover unmapped rows only and never offer a target an existing
+  // mapping holds; recomputed after a save reload so fresh mappings exclude theirs.
   const suggestions = useMemo(
     () =>
       suggestMappingTargets(unmappedAlga, externalEntities, {
-        preferredKind: targetConfig?.defaultKindId
+        preferredKind: targetConfig?.defaultKindId,
+        unavailableExternalIds
       }),
-    [unmappedAlga, externalEntities, targetConfig?.defaultKindId]
+    [unmappedAlga, externalEntities, targetConfig?.defaultKindId, unavailableExternalIds]
   );
 
   const externalById = useMemo(
@@ -138,7 +182,16 @@ export function AccountingMappingBulkGrid({
         // Exact (code/name) suggestions are preselected; near-misses need an
         // explicit tick so a variant is never saved without review.
         const selected = edit.selected ?? (suggested && !fuzzy);
-        const externalName = mapped?.externalName ?? externalById.get(externalId)?.name ?? '';
+        const externalName = mapped?.externalName ?? externalById.get(externalId)?.name ?? (manualEntry ? externalId : '');
+        const storedMetadata = (mapped?.metadata ?? {}) as Record<string, unknown>;
+        const fieldValues: Record<string, string> = {};
+        for (const field of metadataFields) {
+          const value = mapped ? storedMetadata[field.key] : edit.fields?.[field.key];
+          fieldValues[field.key] = typeof value === 'string' ? value : '';
+        }
+        const missingField = mapped
+          ? null
+          : metadataFields.find((field) => field.required && !fieldValues[field.key].trim())?.label ?? null;
 
         return {
           id: entity.id,
@@ -146,15 +199,17 @@ export function AccountingMappingBulkGrid({
           mappedTo: mapped ? mapped.externalName ?? mapped.alga_entity_id : null,
           kindId,
           externalId,
+          fieldValues,
+          missingField,
           suggested,
           fuzzy,
           ignored,
           selected,
-          toSave: !mapped && selected && !ignored && Boolean(externalId),
-          searchText: `${entity.name} ${externalName}`.toLowerCase()
+          toSave: !mapped && selected && !ignored && Boolean(externalId.trim()) && missingField === null,
+          searchText: `${entity.name} ${externalName} ${Object.values(fieldValues).join(' ')}`.toLowerCase()
         };
       }),
-    [algaEntities, edits, mappedByAlga, suggestions, externalById, targetConfig]
+    [algaEntities, edits, mappedByAlga, suggestions, externalById, targetConfig, manualEntry, metadataFields]
   );
 
   const visibleRows = useMemo(() => {
@@ -187,7 +242,7 @@ export function AccountingMappingBulkGrid({
 
   // Only rows with a target and not ignored can ever be "selected to save".
   const selectableVisible = useMemo(
-    () => editableVisible.filter((row) => row.externalId && !row.ignored),
+    () => editableVisible.filter((row) => row.externalId.trim() && !row.ignored),
     [editableVisible]
   );
   const allSelected = selectableVisible.length > 0 && selectableVisible.every((row) => row.selected);
@@ -202,10 +257,18 @@ export function AccountingMappingBulkGrid({
     // The option id is sent exactly as picked. For multi-catalog modules it
     // carries the kind (`item:200` vs `account:200`); nothing here strips or
     // infers it, and the module's createMany rejects an unprefixed id per row.
-    const inputs: AccountingMappingBulkCreateInput[] = pending.map((row) => ({
-      algaEntityId: row.id,
-      externalEntityId: row.externalId
-    }));
+    const inputs: AccountingMappingBulkCreateInput[] = pending.map((row) => {
+      const metadata: Record<string, unknown> = {};
+      for (const field of metadataFields) {
+        const value = row.fieldValues[field.key]?.trim();
+        if (value) metadata[field.key] = value;
+      }
+      return {
+        algaEntityId: row.id,
+        externalEntityId: manualEntry ? row.externalId.trim() : row.externalId,
+        ...(Object.keys(metadata).length > 0 ? { metadata } : {})
+      };
+    });
 
     setIsSaving(true);
     setRowErrors({});
@@ -310,6 +373,31 @@ export function AccountingMappingBulkGrid({
         ...BULK_GRID_COLUMN_SIZES.externalId,
         render: (_value, row) => {
           if (row.mappedTo !== null) return <span>{row.mappedTo}</span>;
+          if (manualEntry) {
+            return (
+              // The cell clips its content to truncate text, and the field fills
+              // it edge to edge, so the focus ring is drawn outside the clip and
+              // sliced off. The 2px inset is exactly the ring's width.
+              <div className="p-0.5">
+                <Input
+                  id={`${idPrefix}-external-${row.id}`}
+                  value={row.externalId}
+                  disabled={row.ignored || isSaving}
+                  onChange={(event) =>
+                    patchRow(row.id, { externalId: event.target.value, selected: Boolean(event.target.value.trim()) })
+                  }
+                  placeholder={t('integrations.accounting.dialog.enterPlaceholder', {
+                    defaultValue: 'Enter {{field}}...',
+                    field: module.labels.dialog.externalField
+                  })}
+                  aria-label={`${module.labels.dialog.externalField}: ${row.name}`}
+                  // Ignored rows read as disabled here the same way the picker
+                  // rows do.
+                  className="w-full min-w-0 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+            );
+          }
           const options = externalEntities
             .filter((entity) => !targetConfig || !entity.kind || entity.kind === row.kindId)
             .map((entity) => ({ value: entity.id, label: entity.name }));
@@ -345,6 +433,40 @@ export function AccountingMappingBulkGrid({
           );
         }
       },
+      ...metadataFields.map((field): ColumnDefinition<GridRow> => ({
+        title: field.columnLabel ?? field.label,
+        dataIndex: `field:${field.key}`,
+        id: `field-${field.key}`,
+        sortable: false,
+        ...BULK_GRID_COLUMN_SIZES.metadataField,
+        render: (_value, row) => {
+          if (row.mappedTo !== null) {
+            return <span>{row.fieldValues[field.key] || '—'}</span>;
+          }
+          return (
+            <Input
+              id={`${idPrefix}-field-${field.key}-${row.id}`}
+              value={row.fieldValues[field.key] ?? ''}
+              disabled={row.ignored || isSaving}
+              onChange={(event) =>
+                setEdits((current) => ({
+                  ...current,
+                  [row.id]: {
+                    ...current[row.id],
+                    fields: { ...current[row.id]?.fields, [field.key]: event.target.value }
+                  }
+                }))
+              }
+              placeholder={field.placeholder ?? t('integrations.accounting.dialog.enterPlaceholder', {
+                defaultValue: 'Enter {{field}}...',
+                field: field.label
+              })}
+              aria-label={`${field.label}: ${row.name}`}
+              className="w-full min-w-0"
+            />
+          );
+        }
+      })),
       {
         title: t('integrations.accounting.bulk.columns.ignore', { defaultValue: 'Ignore' }),
         dataIndex: 'ignored',
@@ -391,6 +513,15 @@ export function AccountingMappingBulkGrid({
             content = t('integrations.accounting.bulk.status.ignored', { defaultValue: 'Ignored' });
           } else if (row.toSave) {
             content = t('integrations.accounting.bulk.status.pending', { defaultValue: 'Pending' });
+          } else if (row.selected && row.externalId.trim() && row.missingField) {
+            content = (
+              <Badge variant="warning" data-testid={`${idPrefix}-missing-field-${row.id}`}>
+                {t('integrations.accounting.bulk.status.missingField', {
+                  defaultValue: 'Needs {{field}}',
+                  field: row.missingField
+                })}
+              </Badge>
+            );
           } else {
             content = '—';
           }
@@ -409,7 +540,9 @@ export function AccountingMappingBulkGrid({
     rowErrors,
     savedIds,
     isSaving,
-    patchRow
+    patchRow,
+    manualEntry,
+    metadataFields
   ]);
 
   const filterOptions = useMemo(
@@ -486,6 +619,14 @@ export function AccountingMappingBulkGrid({
           </Button>
         </div>
       </div>
+
+      {manualEntry ? (
+        <p className="text-xs text-muted-foreground" id={`${idPrefix}-manual-entry-help`}>
+          {t('integrations.accounting.dialog.manualEntryHelp', {
+            defaultValue: 'Enter the identifier exactly as it appears in your accounting system.'
+          })}
+        </p>
+      ) : null}
 
       {visibleRows.length === 0 ? (
         <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">

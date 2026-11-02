@@ -281,6 +281,7 @@ describe('manual export selected-target delivery (DB-backed)', () => {
     ] as const) await db('tenant_external_entity_mappings').insert({
       id: randomUUID(), tenant: tenantA, integration_type: 'quickbooks_desktop',
       alga_entity_type: entityType, alga_entity_id: entityId, external_entity_id: externalId,
+      metadata: JSON.stringify(entityType === 'service' ? { qbdItem: 'Atomic Service' } : {}),
       sync_status: 'manual_link', created_at: db.fn.now(), updated_at: db.fn.now(),
     });
     const selected = await new AccountingExportInvoiceSelector(db, tenantA).createBatchFromFilters({
@@ -318,6 +319,7 @@ describe('manual export selected-target delivery (DB-backed)', () => {
     ] as const) await db('tenant_external_entity_mappings').insert({
       id: randomUUID(), tenant: tenantA, integration_type: 'quickbooks_desktop',
       alga_entity_type: entityType, alga_entity_id: entityId, external_entity_id: externalId,
+      metadata: JSON.stringify(entityType === 'service' ? { qbdItem: 'Race Service' } : {}),
       sync_status: 'manual_link', created_at: db.fn.now(), updated_at: db.fn.now(),
     });
     const selected = await new AccountingExportInvoiceSelector(db, tenantA).createBatchFromFilters({
@@ -366,6 +368,7 @@ describe('manual export selected-target delivery (DB-backed)', () => {
       await db('tenant_external_entity_mappings').insert({
         id: randomUUID(), tenant: tenantA, integration_type: 'quickbooks_desktop',
         alga_entity_type: entityType, alga_entity_id: entityId, external_entity_id: externalId,
+        metadata: JSON.stringify(entityType === 'service' ? { qbdItem: 'Desktop Service' } : {}),
         sync_status: 'manual_link', created_at: db.fn.now(), updated_at: db.fn.now(),
       });
     }
@@ -381,7 +384,7 @@ describe('manual export selected-target delivery (DB-backed)', () => {
     adapter.deliver = async (transformResult: any, context: any) => {
       const result = await originalDeliver(transformResult, context);
       deliveryAttempt += 1;
-      const iif = result.artifacts.file;
+      const iif = result.metadata.files[0];
       if (deliveryAttempt === 1) previousIifBytes = Buffer.from(iif.content, 'utf8');
       return {
         ...result,
@@ -441,6 +444,7 @@ describe('manual export selected-target delivery (DB-backed)', () => {
     const updatedIif = artifacts.find((row: any) => row.filename.endsWith('.iif'));
     expect(Buffer.from(updatedIif.content)).not.toEqual(previousIifBytes);
     expect(Buffer.from(updatedIif.content).toString('utf8')).toContain('DESKTOP-SERVICE');
+    expect(Buffer.from(updatedIif.content).toString('utf8')).toContain('Desktop Service');
     expect(artifacts.find((row: any) => row.filename === 'supplemental.csv')).toMatchObject({ file_id: null, storage_fallback: true });
     expect(artifacts.find((row: any) => row.filename === 'supplemental.csv').content.toString()).toBe('second exact file\r\n');
     expect(reloaded.artifacts.map((file) => file.filename)).toEqual(expect.arrayContaining(['supplemental.csv', updatedIif.filename]));

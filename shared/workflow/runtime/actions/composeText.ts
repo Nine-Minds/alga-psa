@@ -198,7 +198,7 @@ export const composeTextOutputsSchema = z.array(composeTextOutputSchema).min(1, 
   });
 });
 
-export const composeTextResultSchema = z.record(z.string()).describe(
+export const composeTextResultSchema = z.record(z.string(), z.string()).describe(
   'Rendered markdown outputs keyed by stable output key.'
 );
 

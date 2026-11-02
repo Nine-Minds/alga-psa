@@ -16,6 +16,8 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { TagManager } from '@alga-psa/tags/components';
 import { updateProject, getProjectStatuses } from '../actions/projectActions';
+import { releaseAllProjectStaging } from '../actions/stagingActions';
+import { isStockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
 import { getServices } from '../actions/serviceCatalogActions';
 import { timeEntryServiceChoices, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
@@ -207,6 +209,35 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
         toast(t('materials.productsMovedToHoldOnClose', '{{count}} linked product(s) moved to On hold because their billing event was canceled.', {
           count: updatedProject.products_moved_to_hold,
         }), { icon: '⚠️' });
+      }
+      const activeStagingClaims = updatedProject.active_staging_claims ?? 0;
+      if (activeStagingClaims > 0) {
+        const projectId = project.project_id;
+        toast((toastInstance) => (
+          <span className="flex flex-col gap-2" id="project-close-staging-claims">
+            {t('staging.closeWarning', '{{count}} reserved or staged item(s) still hold stock for this project.', { count: activeStagingClaims })}
+            <span className="flex gap-2">
+              <Button
+                id="project-close-release-staging"
+                size="sm"
+                onClick={async () => {
+                  toast.dismiss(toastInstance.id);
+                  const released = await releaseAllProjectStaging(projectId);
+                  if (isReturnedActionError(released) || isStockConflictResult(released)) {
+                    handleError(getErrorMessage(released));
+                    return;
+                  }
+                  toast.success(t('staging.releasedAll', 'Released {{count}} item(s). The stock is free again.', { count: released.released }));
+                }}
+              >
+                {t('staging.releaseAll', 'Release all reserved and staged')}
+              </Button>
+              <Button id="project-close-keep-staging" size="sm" variant="outline" onClick={() => toast.dismiss(toastInstance.id)}>
+                {t('staging.keepClaims', 'Keep them')}
+              </Button>
+            </span>
+          </span>
+        ), { duration: 30000, icon: '⚠️' });
       }
       onSave(updatedProject);
     } catch (error) {

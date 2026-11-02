@@ -39,6 +39,7 @@ function wizardData(unitRate: number | null): TemplateWizardData {
     cadence_owner: 'client',
     billing_timing: 'arrears',
     enable_proration: false,
+    currency_code: 'EUR',
     fixed_services: [
       {
         service_id: 'service-seat-1',
@@ -55,7 +56,7 @@ function wizardData(unitRate: number | null): TemplateWizardData {
 }
 
 function renderStep(unitRate: number | null) {
-  // Even with a USD tenant default, the template must not claim a currency.
+  // Even with a USD tenant default, the template shows amounts in its own base currency.
   return render(
     <CurrencyFormatProvider currencyCode="USD">
       <TemplateReviewContractStep data={wizardData(unitRate)} updateData={vi.fn()} />
@@ -68,11 +69,11 @@ describe('TemplateReviewContractStep per-seat unit rate', () => {
     cleanup();
   });
 
-  it('renders the default unit rate as a neutral number with no currency symbol', () => {
+  it('renders the default unit rate in the template base currency, not the tenant default', () => {
     renderStep(25000);
 
     const rateLine = screen.getByText(/Unit rate:/);
-    expect(rateLine).toHaveTextContent("Unit rate: 250.00 in the client's currency");
+    expect(rateLine).toHaveTextContent(/Unit rate:\s*€\s*250[.,]00|Unit rate:\s*250[.,]00\s*€/);
     expect(rateLine.textContent).not.toContain('$');
   });
 

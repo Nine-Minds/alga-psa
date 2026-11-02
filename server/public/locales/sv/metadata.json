@@ -217,7 +217,10 @@
       "policies": {
         "title": "Tillgångspolicyer"
       },
-      "title": "Tillgångar"
+      "title": "Tillgångar",
+      "custody": {
+        "title": "Utrustning i förvar"
+      }
     },
     "billing": {
       "title": "Fakturering",
@@ -403,6 +406,9 @@
           "detail": {
             "title": "Projektuppgift"
           }
+        },
+        "staging": {
+          "title": "Projektförberedelse"
         }
       },
       "templates": {
@@ -552,6 +558,9 @@
       },
       "templates": {
         "title": "Ärendemallar"
+      },
+      "cannedResponses": {
+        "title": "Färdiga svar"
       }
     },
     "timeEntry": {
@@ -592,6 +601,29 @@
     },
     "layout": {
       "defaultTitle": "Översikt | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Samhanterad IT"
+    },
+    "coManagement": {
+      "title": "Samhanterad åtkomst",
+      "administration": {
+        "title": "Samhanterad administration"
+      },
+      "customerTickets": {
+        "title": "Kundärenden"
+      },
+      "sharedTicket": {
+        "title": "Delat ärende"
+      },
+      "providers": {
+        "title": "E-post- och identitetsleverantörer"
+      },
+      "sharedTasks": {
+        "title": "Delade uppgifter",
+        "taskTitle": "Delad uppgift",
+        "projectTitle": "Delat projekt"
+      }
     }
   },
   "share": {
@@ -630,5 +662,8 @@
     "setupComplete": {
       "title": "Kortregistrering"
     }
+  },
+  "pay": {
+    "title": "Betala faktura"
   }
 }

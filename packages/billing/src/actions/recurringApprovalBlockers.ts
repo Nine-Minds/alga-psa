@@ -76,6 +76,64 @@ export async function detectRecurringApprovalWarnings(params: {
   return warnings;
 }
 
+export const STALE_PENDING_PREPAID_BLOCK_DAYS = 14;
+
+export function formatStalePendingPrepaidBlockWarning(blockCount: number): string {
+  const noun = blockCount === 1 ? 'prepaid block has' : 'prepaid blocks have';
+  return `${blockCount} pending ${noun} been awaiting invoice finalization for more than ${STALE_PENDING_PREPAID_BLOCK_DAYS} days while holding time entries. Finalize or delete the draft invoice so the held time can bill.`;
+}
+
+/**
+ * Risk 4: time allocated to a PENDING contract-issued prepaid block is held (not
+ * invoiced) until the block's draft invoice is finalized or deleted. A draft that
+ * is abandoned would leave that time unbilled, so warn (never block) when a
+ * client's pending contract block is older than 14 days and still holds
+ * allocations. Attached to every due-work identity of that client, like the
+ * stale project-billing warning.
+ */
+export async function detectStalePendingPrepaidBlockWarnings(params: {
+  knex: Knex;
+  tenant: string;
+  rows: RecurringApprovalBlockerRow[];
+  now?: Date;
+}): Promise<RecurringApprovalWarnings> {
+  const warnings: RecurringApprovalWarnings = new Map();
+  const clientIds = Array.from(new Set(params.rows.map((row) => row.clientId).filter(Boolean)));
+  if (clientIds.length === 0) return warnings;
+
+  const cutoff = new Date(
+    (params.now ?? new Date()).getTime() - STALE_PENDING_PREPAID_BLOCK_DAYS * 24 * 60 * 60 * 1000,
+  );
+  const db = tenantDb(params.knex, params.tenant);
+  const query = db.table('hour_blocks as block')
+    .where('block.status', 'pending')
+    .whereNotNull('block.contract_line_id')
+    .where('block.created_at', '<', cutoff.toISOString())
+    .whereIn('block.client_id', clientIds)
+    .select('block.client_id', 'block.block_id');
+  // Inner join: only blocks that actually hold allocations.
+  db.tenantJoin(query, 'hour_block_time_allocations as alloc', 'alloc.block_id', 'block.block_id');
+  const rows = await query as unknown as Array<{ client_id: string; block_id: string }>;
+
+  const blocksByClient = new Map<string, Set<string>>();
+  for (const row of rows) {
+    const set = blocksByClient.get(row.client_id) ?? new Set<string>();
+    set.add(row.block_id);
+    blocksByClient.set(row.client_id, set);
+  }
+  for (const row of params.rows) {
+    const blockCount = blocksByClient.get(row.clientId)?.size ?? 0;
+    if (blockCount <= 0 || warnings.has(row.executionIdentityKey)) continue;
+    warnings.set(row.executionIdentityKey, [{
+      code: 'stale_pending_prepaid_block',
+      severity: 'warning',
+      message: formatStalePendingPrepaidBlockWarning(blockCount),
+      entryCount: blockCount,
+    }]);
+  }
+  return warnings;
+}
+
 function parseUnresolvedSelectionFromScheduleKey(scheduleKey: string | null | undefined): {
   chargeType: 'time' | 'usage';
   recordId: string;

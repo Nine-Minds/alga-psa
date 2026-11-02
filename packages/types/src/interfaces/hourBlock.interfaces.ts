@@ -16,7 +16,10 @@ export type HourBlockAuditType =
   | 'manual_expiration'
   | 'auto_expiration'
   | 'void'
-  | 'purchase_reversal';
+  | 'purchase_reversal'
+  | 'contract_end_expiration'
+  | 'allocation_release'
+  | 'reassignment';
 
 /** One contract line (through a client_contracts association) that covers a service. */
 export interface ContractLineCoverageLine {
@@ -70,6 +73,12 @@ export interface IHourBlock extends TenantEntity {
    */
   first_allocated_at?: string | null;
   expiration_date?: string | null;
+  /**
+   * First calendar day (YYYY-MM-DD) the block may be drawn on. Null = no lower
+   * bound (every ad-hoc and consumption block). Cadence blocks set it to their
+   * service period start so earlier time never draws a later block.
+   */
+  valid_from?: string | null;
   /** Null ⇒ direct grant. */
   source_invoice_id?: string | null;
   /**
@@ -85,7 +94,16 @@ export interface IHourBlock extends TenantEntity {
    * purchase provenance even when the source invoice is later deleted, so the
    * UI can distinguish "purchase, invoice deleted" from a true grant.
    */
-  source_type?: 'purchase' | 'grant';
+  source_type?: 'purchase' | 'grant' | 'contract';
+  /** Set for bucket top-up replenishment blocks (ad-hoc ledger; contract_line_id stays null). */
+  replenishment_bucket_usage_id?: string | null;
+  /** Prepaid Block contract line that owns this block (source_type 'contract'); null for ad-hoc blocks. */
+  contract_line_id?: string | null;
+  client_contract_id?: string | null;
+  /** contract_line_block_issuances row that produced this block. */
+  issuance_id?: string | null;
+  /** recurring_service_periods row (charge_family 'prepaid_block') that issued a cadence block; soft reference. */
+  service_period_record_id?: string | null;
   voided_at?: string | null;
   voided_by?: string | null;
   void_reason?: string | null;
@@ -96,6 +114,9 @@ export interface IHourBlock extends TenantEntity {
   // Joins populated by list/detail actions.
   service_name?: string;
   invoice_number?: string;
+  /** Owning contract / line names for contract-issued blocks (null for ad-hoc blocks). */
+  contract_name?: string | null;
+  contract_line_name?: string | null;
   scope_service_ids?: string[];
   /** Dollar value remaining in minor units (remaining_minutes/60 × hourly_rate). */
   remaining_value?: number;

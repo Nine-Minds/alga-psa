@@ -63,6 +63,18 @@ import {
   createNewChatAction,
 } from '@ee/lib/chat-actions/chatActions';
 
+// These tests replace window.localStorage with a partial stub. Every test file
+// shares one process (vitest singleFork) and file order is shuffled, so a stub
+// left in place reaches whichever file runs next and breaks it on any method
+// the stub omits. Restore the real descriptor after each test.
+const originalLocalStorageDescriptor = Object.getOwnPropertyDescriptor(window, 'localStorage');
+afterEach(() => {
+  if (originalLocalStorageDescriptor) {
+    Object.defineProperty(window, 'localStorage', originalLocalStorageDescriptor);
+  }
+});
+
+
 (globalThis as unknown as { React?: typeof React }).React = React;
 
 // RightSidebar gates rendering on the AI Assistant add-on, resolved from the

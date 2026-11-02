@@ -117,7 +117,8 @@ export const connectHuntress = withHuntressAccess(
 
     const apiKey = input.apiKey?.trim();
     const apiSecret = input.apiSecret?.trim();
-    const baseUrl = input.baseUrl?.trim() || HUNTRESS_DEFAULT_BASE_URL;
+    const baseUrl =
+      input.baseUrl?.trim() || process.env.HUNTRESS_API_BASE_URL || HUNTRESS_DEFAULT_BASE_URL;
     if (!apiKey || !apiSecret) {
       return { success: false, error: 'API key and secret are required' };
     }
@@ -231,7 +232,9 @@ export const getHuntressConnectionStatus = withHuntressAccess(
         .first(),
       db.table('rmm_alerts')
         .where({ integration_id: row.integration_id })
-        .whereIn('status', ['sent', 'auto_remediating'])
+        // Open incidents (sent, auto_remediating) and open escalations
+        // (open, overdue); the two status sets don't overlap.
+        .whereIn('status', ['sent', 'auto_remediating', 'open', 'overdue'])
         .count('* as n')
         .first(),
     ]);
@@ -266,6 +269,7 @@ export interface HuntressSettingsUpdate {
   closedStatusId?: string | null;
   pollIntervalMinutes?: number;
   backfillDays?: number;
+  ingestEscalations?: boolean;
 }
 
 export const updateHuntressSettings = withHuntressAccess(
@@ -306,8 +310,18 @@ export const updateHuntressSettings = withHuntressAccess(
         ? { pollIntervalMinutes: updates.pollIntervalMinutes }
         : {}),
       ...(updates.backfillDays !== undefined ? { backfillDays: updates.backfillDays } : {}),
+      ...(updates.ingestEscalations !== undefined
+        ? { ingestEscalations: updates.ingestEscalations }
+        : {}),
     });
     merged.incidentCursor = current.incidentCursor;
+    // Turning escalations (back) on starts from the backfill window rather
+    // than a cursor left over from an earlier enabled period, which could be
+    // months old and flood the board with stale open escalations.
+    merged.escalationCursor =
+      merged.ingestEscalations && !current.ingestEscalations
+        ? undefined
+        : current.escalationCursor;
 
     await db.table('rmm_integrations')
       .where({ integration_id: row.integration_id })

@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { cn } from '../lib/utils';
+import { useTranslation } from '../lib/i18n/client';
 
 export interface BreadcrumbItem {
   label: React.ReactNode;
@@ -81,6 +82,7 @@ function BreadcrumbLink({
 }
 
 function Breadcrumbs({ items, separator, className, maxItems }: BreadcrumbsProps) {
+  const { t } = useTranslation('common');
   const resolvedSeparator = separator ?? <DefaultSeparator />;
 
   let displayItems = items;
@@ -93,7 +95,7 @@ function Breadcrumbs({ items, separator, className, maxItems }: BreadcrumbsProps
   }
 
   return (
-    <nav aria-label="Breadcrumb" className={cn('flex items-center', className)}>
+    <nav aria-label={t('breadcrumbs.ariaLabel')} className={cn('flex items-center', className)}>
       <ol className="flex items-center flex-wrap">
         {displayItems.map((item, index) => {
           const isLast = index === displayItems.length - 1;

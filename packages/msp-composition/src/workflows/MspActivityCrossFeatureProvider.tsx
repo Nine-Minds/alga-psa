@@ -18,6 +18,7 @@ import type {
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { ticketDetailsInitialProps } from '../tickets/ticketDetailsInitialProps';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
+import { renderQuickAddAssetPicker } from '../tickets/renderQuickAddAssetPicker';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 
 // Client imports
@@ -68,6 +69,7 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
         initialClient={d.client}
         initialContacts={d.contacts}
         initialContactInfo={d.contactInfo}
+        initialDisplayTags={d.displayTags}
         {...ticketDetailsInitialProps(d)}
         initialAdditionalAgents={d.additionalAgents}
         statusOptions={d.options.status}
@@ -142,6 +144,7 @@ export function MspActivityCrossFeatureProvider({ children }: { children: ReactN
       prefilledTitle={props.title}
       prefilledDescription={props.description}
       prefilledAssignedTo={props.assignedTo ?? undefined}
+      renderAssetPicker={renderQuickAddAssetPicker}
     />
   );
 

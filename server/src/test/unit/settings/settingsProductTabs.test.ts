@@ -20,6 +20,16 @@ describe('settings product tab allowlist', () => {
     expect(tabs.has('experimental-features')).toBe(false);
   });
 
+  it('co_managed has a real allow-list: the help-desk tabs, never the PSA-only ones', () => {
+    const tabs = getAllowedSettingsTabIds('co_managed');
+    for (const tab of ['general', 'users', 'teams', 'ticketing', 'email', 'profile', 'security']) {
+      expect(tabs.has(tab)).toBe(true);
+    }
+    for (const tab of ['billing', 'integrations', 'extensions', 'projects', 'secrets']) {
+      expect(tabs.has(tab)).toBe(false);
+    }
+  });
+
   it('PSA mode does not use an allowlist', () => {
     const tabs = getAllowedSettingsTabIds('psa');
     expect(tabs.size).toBe(0);

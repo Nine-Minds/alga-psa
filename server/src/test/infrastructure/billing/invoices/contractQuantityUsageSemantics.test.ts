@@ -735,10 +735,11 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       const preview = await previewInvoice(setup.billingCycleId);
       expect(preview.usageServicePeriodStatuses?.[0]).toMatchObject({quantity: 0, billable_quantity: 5, status: 'minimum_raised_zero'});
     });
-    it.each(['advance', 'arrears'])('uses authoritative %s timing when accepting a reported service period', async timing => {
+    // Usage lines always bill in arrears; the authoring policy and the DB CHECK constraint reject 'advance'.
+    it.each(['arrears'])('uses authoritative %s timing when accepting a reported service period', async timing => {
       const setup = await setupUsageLine({measurementMode: 'period_total'});
       await context.db('contract_lines').where({tenant: context.tenantId, contract_line_id: setup.contractLineId}).update({billing_timing: timing});
-      const canonical = timing === 'advance' ? {period_start: '2023-02-01', period_end: '2023-02-28'} : JAN_PERIOD;
+      const canonical = JAN_PERIOD;
       expect(await upsertUsagePeriodTotal({...reportInput(setup), ...canonical})).toHaveProperty('total');
       expect(await upsertUsagePeriodTotal({...reportInput(setup), ...canonical, period_end: '2023-02-27'})).toHaveProperty('actionError');
     });
@@ -1286,6 +1287,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         config_id: configId,
         tenant: context.tenantId,
         base_rate: options.unitRateCents,
+        base_rate_basis: 'per_unit',
         pricing_basis: 'unit'
       });
       return { serviceId, configId };
@@ -1329,7 +1331,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
     });
     it('mixed per-service pricing and catalog fallback match the invoice calculation', async () => {
       const setup = await setupSeatLine({year: 2023, month: 2, day: 1});
-      await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: setup.standard.configId}).update({base_rate: null});
+      await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: setup.standard.configId}).update({base_rate: null, base_rate_basis: null});
       await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: setup.basic.configId}).update({pricing_basis: null});
       await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: setup.server.configId}).update({pricing_basis: 'bundle'});
       await context.db('contract_lines').where({tenant: context.tenantId, contract_line_id: setup.contractLineId}).update({custom_rate: 90000});
@@ -1377,6 +1379,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
           config_id: configId,
           tenant: context.tenantId,
           base_rate: 10000,
+          base_rate_basis: 'per_unit',
           pricing_basis: 'unit'
         });
       }
@@ -1692,6 +1695,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         config_id: configId,
         tenant: context.tenantId,
         base_rate: options.baseRate ?? 0,
+        base_rate_basis: 'share',
         pricing_basis: 'bundle',
       });
       return { serviceId, configId };
@@ -3611,6 +3615,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         config_id: seatConfigId,
         tenant: context.tenantId,
         base_rate: 10000,
+        base_rate_basis: 'per_unit',
         pricing_basis: 'unit',
       });
       await assignContractLineToClient(context, seatLineId, {

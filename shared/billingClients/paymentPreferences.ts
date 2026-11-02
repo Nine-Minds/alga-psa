@@ -37,14 +37,34 @@ export const PREFERRED_PAYMENT_METHOD_LABELS: Record<PreferredPaymentMethod, str
   check: 'Check',
 };
 
-export const PAYMENT_TERMS = ['net_30', 'net_15', 'due_on_receipt'] as const;
+export const PAYMENT_TERMS = ['net_30', 'net_15', 'net_14', 'net_7', 'due_on_receipt'] as const;
 export type PaymentTerms = (typeof PAYMENT_TERMS)[number];
 
 const PAYMENT_TERM_DAYS: Record<PaymentTerms, number> = {
   net_30: 30,
   net_15: 15,
+  net_14: 14,
+  net_7: 7,
   due_on_receipt: 0,
 };
+
+/**
+ * Authored English labels, used where terms are listed without a translator
+ * (integration mapping lists, REST fallback). UI surfaces translate through
+ * their own i18n keys.
+ */
+export const PAYMENT_TERM_LABELS: Record<PaymentTerms, string> = {
+  net_30: 'Net 30',
+  net_15: 'Net 15',
+  net_14: 'Net 14',
+  net_7: 'Net 7',
+  due_on_receipt: 'Due on Receipt',
+};
+
+/** `{ id, name }` pairs for every known term, in vocabulary order. */
+export function paymentTermOptions(): Array<{ id: PaymentTerms; name: string }> {
+  return PAYMENT_TERMS.map((id) => ({ id, name: PAYMENT_TERM_LABELS[id] }));
+}
 
 /** Terms applied when nothing (or nothing recognizable) is configured. */
 export const DEFAULT_PAYMENT_TERMS: PaymentTerms = 'net_30';

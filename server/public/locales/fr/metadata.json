@@ -179,7 +179,10 @@
             "title": "Tâche du projet"
           }
         },
-        "fallbackTitle": "Détails du projet"
+        "fallbackTitle": "Détails du projet",
+        "staging": {
+          "title": "Préparation du projet"
+        }
       },
       "templates": {
         "layout": {
@@ -266,6 +269,9 @@
       },
       "templates": {
         "title": "Modèles de tickets"
+      },
+      "cannedResponses": {
+        "title": "Réponses prédéfinies"
       }
     },
     "workflowEditor": {
@@ -340,7 +346,10 @@
         },
         "fallbackTitle": "Détails de l'actif"
       },
-      "title": "Actifs"
+      "title": "Actifs",
+      "custody": {
+        "title": "Matériel sous garde"
+      }
     },
     "chat": {
       "title": "Discussion"
@@ -510,6 +519,29 @@
     },
     "layout": {
       "defaultTitle": "Tableau de bord | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Informatique cogérée"
+    },
+    "coManagement": {
+      "title": "Accès cogéré",
+      "administration": {
+        "title": "Administration cogérée"
+      },
+      "customerTickets": {
+        "title": "Tickets clients"
+      },
+      "sharedTicket": {
+        "title": "Ticket partagé"
+      },
+      "providers": {
+        "title": "Fournisseurs d'e-mail et d'identité"
+      },
+      "sharedTasks": {
+        "title": "Tâches partagées",
+        "taskTitle": "Tâche partagée",
+        "projectTitle": "Projet partagé"
+      }
     }
   },
   "auth": {
@@ -630,5 +662,8 @@
     "setupComplete": {
       "title": "Configuration de la carte"
     }
+  },
+  "pay": {
+    "title": "Payer la facture"
   }
 }

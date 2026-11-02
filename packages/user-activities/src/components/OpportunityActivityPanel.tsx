@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Button } from '@alga-psa/ui/components/Button';
 import type { IOpportunityDetail } from '@alga-psa/types';
 // Targeted import (not the /actions barrel) so only this action module lands in
 // the route's server-reference manifest.
@@ -32,8 +33,8 @@ function humanize(value?: string | null): string {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide text-gray-500">{label}</div>
-      <div className="text-sm text-gray-900">{children}</div>
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="text-sm text-foreground">{children}</div>
     </div>
   );
 }
@@ -103,8 +104,8 @@ export function OpportunityActivityPanel({ opportunityId, onClose }: Opportunity
     <div className="flex h-full flex-col">
       <div className="flex-1 space-y-5 overflow-y-auto p-6">
         <div>
-          <div className="text-xs font-medium text-gray-500">{opportunity.opportunity_number}</div>
-          <h2 className="text-xl font-semibold text-gray-900">{opportunity.title}</h2>
+          <div className="text-xs font-medium text-muted-foreground">{opportunity.opportunity_number}</div>
+          <h2 className="text-xl font-semibold text-foreground">{opportunity.title}</h2>
           <Link
             href={`/msp/clients/${opportunity.client_id}`}
             className="mt-1 inline-block text-sm font-medium text-[rgb(var(--color-primary-600))] hover:underline"
@@ -114,19 +115,19 @@ export function OpportunityActivityPanel({ opportunityId, onClose }: Opportunity
         </div>
 
         {opportunity.next_action ? (
-          <div className={`rounded-md border p-3 ${overdue ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'}`}>
-            <div className="text-xs uppercase tracking-wide text-gray-500">
+          <Alert variant={overdue ? 'destructive' : 'default'} showIcon={false} className="p-3">
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">
               {t('drawer.nextAction', { defaultValue: 'Next action' })}
             </div>
-            <div className="text-sm font-medium text-gray-900">{opportunity.next_action}</div>
+            <div className="text-sm font-medium text-foreground">{opportunity.next_action}</div>
             {dueDate ? (
-              <div className={`mt-1 text-xs ${overdue ? 'font-medium text-red-600' : 'text-gray-500'}`}>
+              <div className={`mt-1 text-xs ${overdue ? 'font-medium text-destructive' : 'text-muted-foreground'}`}>
                 {overdue
                   ? t('drawer.overdueSince', { defaultValue: 'Overdue since {{date}}', date: dueDate })
                   : t('drawer.dueOn', { defaultValue: 'Due {{date}}', date: dueDate })}
               </div>
             ) : null}
-          </div>
+          </Alert>
         ) : null}
 
         <div className="grid grid-cols-2 gap-4">
@@ -162,14 +163,12 @@ export function OpportunityActivityPanel({ opportunityId, onClose }: Opportunity
         ) : null}
       </div>
 
-      <div className="flex-shrink-0 border-t border-gray-200 p-4">
-        <a
-          href={opportunityUrl}
-          onClick={onClose}
-          className="inline-flex w-full items-center justify-center rounded-md bg-[rgb(var(--color-primary-500))] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[rgb(var(--color-primary-600))]"
-        >
-          {t('drawer.openOpportunity', { defaultValue: 'Open Opportunity' })}
-        </a>
+      <div className="flex-shrink-0 border-t border-border p-4">
+        <Button id="opportunity-drawer-open-opportunity" asChild className="w-full">
+          <Link href={opportunityUrl} onClick={onClose}>
+            {t('drawer.openOpportunity', { defaultValue: 'Open Opportunity' })}
+          </Link>
+        </Button>
       </div>
     </div>
   );

@@ -3,10 +3,11 @@
 import TagDefinition, { ITagDefinition } from '../models/tagDefinition';
 import TagMapping, { ITagMapping, ITagWithDefinition } from '../models/tagMapping';
 import { ITag, TaggedEntityType, PendingTag, IUserWithRoles } from '@alga-psa/types';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
+import { isTagTextValidationFailure, validateTagText } from '../lib/tagTextValidation';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -260,10 +261,14 @@ async function publishEntityTagUpdateEvent(params: {
   }
 }
 
-export const findTagsByEntityId = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, entityId: string, entityType: string): Promise<ITag[] | TagActionError> => {
+export const findTagsByEntityId = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, entityId: string, entityType: string): Promise<ITag[] | TagActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Client-portal users hold no tag:read; chip tags reach them only through display rules.
+      if (!await hasPermissionAsync(user, 'tag', 'read', trx)) {
+        return permissionError('Permission denied: Cannot read tags');
+      }
       const tagsWithDefinitions = await TagMapping.getByEntity(trx, tenant, entityId, entityType as TaggedEntityType);
       return tagsWithDefinitions.map(tag => ({
         tag_id: tag.mapping_id,
@@ -337,22 +342,11 @@ export const createTag = withAuth(async (
   tag: Omit<ITag, 'tag_id' | 'tenant'>,
   options: CreateTagOptions = {}
 ): Promise<ITag | TagActionError> => {
-  // Validate tag text
-  if (!tag.tag_text || !tag.tag_text.trim()) {
-    return actionError('Tag text is required', 'common:errors.tags.textRequired');
+  const validation = validateTagText(tag.tag_text);
+  if (isTagTextValidationFailure(validation)) {
+    return actionError(validation.message, validation.i18nKey);
   }
-
-  const tagText = tag.tag_text.trim();
-
-  // Validate length
-  if (tagText.length > 50) {
-    return actionError('Tag text too long (max 50 characters)', 'common:errors.tags.textTooLong');
-  }
-
-  // Validate characters - allow letters, numbers, spaces, and common punctuation
-  if (!/^[a-zA-Z0-9\-_\s!@#$%^&*()+=\][{};':",./<>?]+$/.test(tagText)) {
-    return actionError('Tag text contains invalid characters', 'common:errors.tags.textInvalidCharacters');
-  }
+  const tagText = validation.text;
 
   const userId = currentUser.user_id;
 
@@ -703,13 +697,16 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
   });
 });
 
-export const findTagsByEntityIds = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, entityIds: string[], entityType: TaggedEntityType): Promise<ITag[] | TagActionError> => {
+export const findTagsByEntityIds = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, entityIds: string[], entityType: TaggedEntityType): Promise<ITag[] | TagActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
     if (entityIds.length === 0) {
       return [];
     }
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermissionAsync(user, 'tag', 'read', trx)) {
+        return permissionError('Permission denied: Cannot read tags');
+      }
       const tagsWithDefinitions = await TagMapping.getByEntities(trx, tenant, entityIds, entityType);
       return tagsWithDefinitions.map(tag => ({
         tag_id: tag.mapping_id,
@@ -775,7 +772,7 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
     const { knex: db } = await createTenantKnex();
     const { tenant } = ctx;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get tag definitions that have at least one mapping (filter out orphans)
+      // Get tag definitions that have at least one mapping or reference (filter out orphans)
       // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)
       const scopedDb = tenantDb(trx, tenant);
       const tagMappingsQuery = scopedDb.table('tag_mappings as tm')
@@ -783,11 +780,18 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
         .whereRaw('?? = ??', ['tm.tag_id', 'td.tag_id']);
       scopedDb.tenantWhereColumn(tagMappingsQuery, 'tm.tenant', 'td.tenant');
 
+      // A definition something refers to is listed even with no mappings, so a referrer's tag can
+      // still be picked in filters and settings.
+      const tagReferencesQuery = scopedDb.table('tag_references as tr')
+        .select(trx.raw('1'))
+        .whereRaw('?? = ??', ['tr.tag_id', 'td.tag_id']);
+      scopedDb.tenantWhereColumn(tagReferencesQuery, 'tr.tenant', 'td.tenant');
+
       const definitions = await scopedDb.table('tag_definitions as td')
         .distinctOn('td.tag_text')
         .select('td.*')
         .where('td.tagged_type', entityType)
-        .whereExists(tagMappingsQuery)
+        .where((builder) => builder.whereExists(tagMappingsQuery).orWhereExists(tagReferencesQuery))
         .orderBy('td.tag_text', 'asc')
         .orderBy('td.created_at', 'asc');
 
@@ -881,14 +885,15 @@ export const createTagsForEntityWithTransaction = withAuth(async (
 
   for (const tag of pendingTags) {
     try {
-      const tagText = tag.tag_text?.trim();
-      if (!tagText) continue;
+      if (!tag.tag_text?.trim()) continue;
 
-      // Validate length
-      if (tagText.length > 50) {
-        console.warn(`Tag text "${tagText}" too long, skipping`);
+      // Same rules as createTag: an invalid tag is skipped, not fatal.
+      const validation = validateTagText(tag.tag_text);
+      if (isTagTextValidationFailure(validation)) {
+        console.warn(`Skipping tag "${tag.tag_text}": ${validation.message}`);
         continue;
       }
+      const tagText = validation.text;
 
       if (!userHasTagCreate) {
         const existingDefinition = await TagDefinition.findByTextAndType(
@@ -931,9 +936,12 @@ export const createTagsForEntityWithTransaction = withAuth(async (
         tagged_type: entityType
       }, userId);
 
+      // Events are deferred until the owning transaction commits. registerAfterCommit
+      // keeps them on this transactor's savepoint, so they are dropped if that
+      // savepoint (or the outer transaction) rolls back and emitted only if both commit.
       const occurredAt = new Date().toISOString();
       if (createdDefinition) {
-        await publishWorkflowEvent({
+        registerAfterCommit(trx, () => publishWorkflowEvent({
           eventType: 'TAG_DEFINITION_CREATED',
           payload: buildTagDefinitionCreatedPayload({
             tagId: definition.tag_id,
@@ -946,10 +954,10 @@ export const createTagsForEntityWithTransaction = withAuth(async (
             occurredAt,
             actor: { actorType: 'USER', actorUserId: userId },
           },
-        });
+        }), `TAG_DEFINITION_CREATED tag=${definition.tag_id}`);
       }
 
-      await publishWorkflowEvent({
+      registerAfterCommit(trx, () => publishWorkflowEvent({
         eventType: 'TAG_APPLIED',
         payload: buildTagAppliedPayload({
           tagId: definition.tag_id,
@@ -963,7 +971,7 @@ export const createTagsForEntityWithTransaction = withAuth(async (
           occurredAt,
           actor: { actorType: 'USER', actorUserId: userId },
         },
-      });
+      }), `TAG_APPLIED tag=${definition.tag_id} entity=${entityId}`);
 
       createdTags.push({
         tag_id: mapping.mapping_id,

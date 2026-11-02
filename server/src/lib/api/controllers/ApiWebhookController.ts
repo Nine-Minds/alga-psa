@@ -19,7 +19,6 @@ import {
   webhookSubscriptionSchema,
   webhookTemplateSchema,
   webhookEventSchema,
-  webhookEventTypeSchema,
   webhookRetryFailedSchema,
   webhookSignatureSchema,
   CreateWebhookData,
@@ -56,6 +55,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 import { webhookModel } from '../../webhooks/webhookModel';
+import { WEBHOOK_EVENT_NAMES } from '../../webhooks/eventRegistry';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { verifyWebhookSignature as verifyAlgaWebhookSignature } from '../../webhooks/sign';
 import { signRequest } from '../../webhooks/sign';
@@ -66,6 +66,7 @@ import {
 import { performWebhookDeliveryRequest } from '../../webhooks/delivery';
 import { getTenantProduct, ProductAccessError } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 export class ApiWebhookController {
   private webhookService: WebhookService;
@@ -545,7 +546,7 @@ export class ApiWebhookController {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
-          const webhookConfig = await this.validateData(apiRequest, createWebhookSchema.partial());
+          const webhookConfig = await this.validateData(apiRequest, partialWithoutDefaults(createWebhookSchema));
 
           // Validate webhook configuration from payload
           // TODO: Implement validateWebhookConfiguration method in WebhookService
@@ -798,7 +799,7 @@ export class ApiWebhookController {
           const data = await this.validateData(apiRequest, z.object({
             name: z.string().min(1),
             url: z.string().url(),
-            custom_config: z.record(z.any()).optional()
+            custom_config: z.record(z.string(), z.any()).optional()
           }));
           
           const webhook = await this.webhookService.createWebhookFromTemplate(
@@ -1102,7 +1103,7 @@ export class ApiWebhookController {
               template: z.string().optional(),
               include_fields: z.array(z.string()).optional(),
               exclude_fields: z.array(z.string()).optional(),
-              custom_fields: z.record(z.any()).optional()
+              custom_fields: z.record(z.string(), z.any()).optional()
             }).optional()
           }));
           
@@ -1154,7 +1155,7 @@ export class ApiWebhookController {
               template: z.string().optional(),
               include_fields: z.array(z.string()).optional(),
               exclude_fields: z.array(z.string()).optional(),
-              custom_fields: z.record(z.any()).optional()
+              custom_fields: z.record(z.string(), z.any()).optional()
             }).optional()
           }));
           
@@ -1205,11 +1206,11 @@ export class ApiWebhookController {
             sample_event: webhookEventSchema,
             filter: z.object({
               entity_types: z.array(z.string()).optional(),
-              entity_ids: z.array(z.string().uuid()).optional(),
+              entity_ids: z.array(z.string().guid()).optional(),
               conditions: z.array(z.object({
                 field: z.string(),
                 operator: z.enum(['equals', 'not_equals', 'contains', 'not_contains', 'greater_than', 'less_than', 'in', 'not_in']),
-                value: z.any()
+                value: z.any().optional()
               })).optional(),
               tags: z.array(z.string()).optional()
             }).optional()
@@ -1266,11 +1267,11 @@ export class ApiWebhookController {
             sample_event: webhookEventSchema,
             filter: z.object({
               entity_types: z.array(z.string()).optional(),
-              entity_ids: z.array(z.string().uuid()).optional(),
+              entity_ids: z.array(z.string().guid()).optional(),
               conditions: z.array(z.object({
                 field: z.string(),
                 operator: z.enum(['equals', 'not_equals', 'contains', 'not_contains', 'greater_than', 'less_than', 'in', 'not_in']),
-                value: z.any()
+                value: z.any().optional()
               })).optional(),
               tags: z.array(z.string()).optional()
             }).optional()
@@ -1436,7 +1437,7 @@ export class ApiWebhookController {
           const exportParams = this.validateQuery(apiRequest, z.object({
             format: z.enum(['json', 'csv', 'yaml']).default('json'),
             include_secrets: z.boolean().default(false),
-            webhook_ids: z.array(z.string().uuid()).optional()
+            webhook_ids: z.array(z.string().guid()).optional()
           }));
           
           // TODO: Implement exportWebhooks method in WebhookService
@@ -1510,7 +1511,7 @@ export class ApiWebhookController {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
-          const events = [...webhookEventTypeSchema.options];
+          const events = [...WEBHOOK_EVENT_NAMES];
           
           return createSuccessResponse(events);
         });
@@ -1560,7 +1561,7 @@ export class ApiWebhookController {
       return schema.parse(body);
     } catch (error) {
       if (error instanceof ZodError) {
-        throw new ValidationError('Validation failed', error.errors);
+        throw new ValidationError('Validation failed', error.issues);
       }
       throw error;
     }
@@ -1579,7 +1580,7 @@ export class ApiWebhookController {
       return schema.parse(query);
     } catch (error) {
       if (error instanceof ZodError) {
-        throw new ValidationError('Query validation failed', error.errors);
+        throw new ValidationError('Query validation failed', error.issues);
       }
       throw error;
     }

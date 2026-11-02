@@ -60,7 +60,8 @@ describe('client workflow business operations tenant-scoped query contract', () 
     expect(helperSection).toContain("deleteFromTenantTableIfExists(trx, tenant, 'documents'");
     expect(helperSection).toContain("tenantScopedTableForTenant(trx, tenantId, 'entra_client_tenant_mappings')");
     expect(helperSection).toContain("tenantScopedTable(tx, 'statuses')");
-    expect(helperSection).toContain("tenantScopedTable(tx, 'default_billing_settings')");
+    // The tenant default-currency read moved into the shared creation seam
+    // (shared/models/clientCreation.ts), which scopes it the same way.
     expect(helperSection).toContain("tenantScopedTable(tx, 'document_block_content')");
     expect(helperSection).toContain("tenantScopedTable(tx, 'documents')");
     expect(helperSection).toContain("tenantScopedTable(tx, 'document_types')");
@@ -119,7 +120,10 @@ describe('client workflow business operations tenant-scoped query contract', () 
       /\b(?:tx\.trx|trx)\s*(?:<[^>]+>)?\(\s*['`](?:client_locations|clients|document_associations|document_block_content|documents|entra_client_tenant_mappings|interactions|tag_definitions|tag_mappings)['`]/;
 
     expect(source).toMatch(/tenantScopedTable\(tx, 'client_locations'\)[\s\S]{0,80}\.insert/);
-    expect(source).toMatch(/tenantScopedTable\(tx, 'clients'\)[\s\S]{0,80}\.insert/);
+    // Client rows are written by the shared creation seam, which owns the
+    // tenant scoping along with the rest of a new client's prerequisites.
+    expect(source).not.toMatch(/tenantScopedTable\(tx, 'clients'\)[\s\S]{0,80}\.insert/);
+    expect(source).toContain("createClientWithDefaults(\n            tx.trx,\n            tx.tenantId,");
     expect(source).toMatch(/tenantScopedTable\(tx, 'documents'\)[\s\S]{0,80}\.insert/);
     expect(source).toMatch(/tenantScopedTable\(tx, 'document_block_content'\)[\s\S]{0,80}\.insert/);
     expect(source).toContain("tenantScopedTable(tx, 'document_associations')");

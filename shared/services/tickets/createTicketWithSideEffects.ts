@@ -4,7 +4,11 @@ import { publishWorkflowEvent, type WorkflowActor } from '@alga-psa/event-bus/pu
 import { TicketModel, type CreateTicketInput } from '../../models/ticketModel';
 import { TagModel } from '../../models/tagModel';
 import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
-import { applyChecklistTemplateToTicket } from '../../lib/ticketChecklists';
+import {
+  applyChecklistTemplateToTicket,
+  insertChecklistItemsReplacingTemplates,
+  type ChecklistItemToInsert,
+} from '../../lib/ticketChecklists';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -76,6 +80,74 @@ export function resolveActorEffects(actor: CreateTicketActor): CreateTicketActor
   }
 }
 
+/** A checklist item the ticket owns outright (a snapshot, e.g. from a ticket template). */
+export interface OwnedChecklistItemInput {
+  item_name: string;
+  description?: string | null;
+  is_required: boolean;
+  /** Checklist template the item was copied from; the replacement rule drops auto-applied rows for it. */
+  checklist_template_id?: string | null;
+}
+
+/** Provenance of a ticket created from a ticket template (written as TICKET_CREATED_FROM_TEMPLATE). */
+export interface CreatedFromTemplateInput {
+  template_id: string;
+  template_name: string;
+  custom_fields_copied: number;
+}
+
+export function ownedChecklistItemsToInsert(items: readonly OwnedChecklistItemInput[]): ChecklistItemToInsert[] {
+  return items.map((item) => ({
+    item_name: item.item_name,
+    description: item.description ?? null,
+    is_required: item.is_required,
+    assigned_to: null,
+    source: item.checklist_template_id ? 'template' : 'manual',
+    template_id: item.checklist_template_id ?? null,
+  }));
+}
+
+/**
+ * The effects of "created from a ticket template" once the ticket row exists: the owned checklist items
+ * (replacement rule, plus a CHECKLIST_TEMPLATE_APPLIED activity per carried checklist template that auto-apply
+ * had not applied) and the TICKET_CREATED_FROM_TEMPLATE activity. Used by `createTicketWithSideEffects` and by
+ * `addTicket`, which composes its own create but must record the same provenance.
+ */
+export async function applyCreatedFromTemplateEffects(
+  trx: Knex.Transaction,
+  tenant: string,
+  args: {
+    ticketId: string;
+    actor: CreateTicketActor;
+    checklistItems: readonly OwnedChecklistItemInput[];
+    fromTemplate: CreatedFromTemplateInput;
+  }
+): Promise<{ checklistItemsCopied: number }> {
+  const { actorUserId, activityActor, activitySource } = resolveActorEffects(args.actor);
+  const checklistItemsCopied = await insertChecklistItemsReplacingTemplates(trx, tenant, {
+    targetTicketId: args.ticketId,
+    items: ownedChecklistItemsToInsert(args.checklistItems),
+    userId: actorUserId,
+    audit: { actor: activityActor, source: activitySource },
+  });
+  await writeTicketActivity(trx, {
+    tenant,
+    ticketId: args.ticketId,
+    eventType: TICKET_ACTIVITY_EVENT.CREATED_FROM_TEMPLATE,
+    entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+    entityId: args.ticketId,
+    actor: activityActor,
+    source: activitySource,
+    details: {
+      template_id: args.fromTemplate.template_id,
+      template_name: args.fromTemplate.template_name,
+      checklist_items_copied: checklistItemsCopied,
+      custom_fields_copied: args.fromTemplate.custom_fields_copied,
+    },
+  });
+  return { checklistItemsCopied };
+}
+
 export interface CreateTicketWithSideEffectsInput {
   actor: CreateTicketActor;
   /** Core ticket fields. `entered_by` is derived from `actor`; do not set it. */
@@ -90,6 +162,10 @@ export interface CreateTicketWithSideEffectsInput {
   assetIds?: string[];
   /** Checklist template applied in addition to any auto-applying templates. */
   checklistTemplateId?: string | null;
+  /** Owned checklist items applied with the replacement rule (they win over auto-applied rows for the same checklist template). */
+  checklistItems?: OwnedChecklistItemInput[];
+  /** When set, the ticket records that it was created from a ticket template (activity row inside this layer). */
+  fromTemplate?: CreatedFromTemplateInput;
   /**
    * Notification suppression carried on every published ticket event
    * (TICKET_CREATED, TICKET_ASSIGNED and the additional-agent events). The
@@ -210,7 +286,16 @@ export async function createTicketWithSideEffects(
   }
 
   if (input.checklistTemplateId) {
-    await applyChecklistTemplateToTicket(trx, tenant, ticketId, input.checklistTemplateId, 'template');
+    // A client-scoped template that doesn't match the new ticket's client is skipped, not fatal:
+    // ticket creation must never fail because of an optional checklist.
+    const checklistResult = await applyChecklistTemplateToTicket(trx, tenant, ticketId, input.checklistTemplateId, 'template');
+    if (checklistResult.reason) {
+      console.warn('[createTicketWithSideEffects] checklist template not applied', {
+        ticketId,
+        templateId: input.checklistTemplateId,
+        reason: checklistResult.reason,
+      });
+    }
   }
 
   const fullTicket = await db.table('tickets').where({ ticket_id: ticketId }).first();
@@ -237,6 +322,22 @@ export async function createTicketWithSideEffects(
       ticket_origin: fullTicket.ticket_origin,
     },
   });
+
+  if (input.fromTemplate) {
+    await applyCreatedFromTemplateEffects(trx, tenant, {
+      ticketId,
+      actor: input.actor,
+      checklistItems: input.checklistItems ?? [],
+      fromTemplate: input.fromTemplate,
+    });
+  } else if (input.checklistItems?.length) {
+    await insertChecklistItemsReplacingTemplates(trx, tenant, {
+      targetTicketId: ticketId,
+      items: ownedChecklistItemsToInsert(input.checklistItems),
+      userId: actorUserId,
+      audit: { actor: activityActor, source: activitySource },
+    });
+  }
 
   const eventCtx = (extra: { occurredAt?: string } = {}) => ({
     ctx: { tenantId: tenant, actor: busActor, ...(extra.occurredAt ? { occurredAt: extra.occurredAt } : {}) },

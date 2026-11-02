@@ -1,3 +1,4 @@
+import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -33,6 +34,44 @@ export class RecurringTotalChangeRequiresConfirmation extends Error {
   }
 }
 
+/**
+ * Error thrown inside a wizard transaction that the client renders from an i18n
+ * key. `message` stays the English default so callers that match on text keep
+ * working; `key`/`params` are forwarded as `messageKey`/`messageParams`.
+ */
+export class ContractWizardKeyedError extends Error {
+  constructor(
+    message: string,
+    readonly key: string,
+    readonly params: Record<string, string | number>,
+  ) {
+    super(message);
+    this.name = 'ContractWizardKeyedError';
+  }
+}
+
+/** `errors.wizard.currencyPricingMissing` params: `{ currency, services }` (services = comma-joined quoted names). */
+export function currencyPricingMissingError(currency: string, serviceNames: string[]): ContractWizardKeyedError {
+  const services = serviceNames.join(', ');
+  return new ContractWizardKeyedError(
+    `Cannot create contract in ${currency}. The following services do not have ${currency} pricing and no custom rate was entered: ${services}. ` +
+      `Please either add ${currency} prices to these services in the Service Catalog, or enter a custom rate in the wizard.`,
+    'msp/contracts:errors.wizard.currencyPricingMissing',
+    { currency, services },
+  );
+}
+
+/** `errors.wizard.templateAmountsMissing` params: `{ currency, amounts }` (amounts = comma-joined quoted labels). */
+export function templateAmountsMissingError(currency: string, amountLabels: string[]): ContractWizardKeyedError {
+  const amounts = amountLabels.join(', ');
+  return new ContractWizardKeyedError(
+    `Cannot create contract in ${currency}. The following amounts have no ${currency} value: ${amounts}. ` +
+      `Enter an amount for each, or add ${currency} rates to the template.`,
+    'msp/contracts:errors.wizard.templateAmountsMissing',
+    { currency, amounts },
+  );
+}
+
 export const FIXED_LINE_NO_SERVICE_PREFIX = 'Fixed line "';
 
 /** Prefix for a wizard-authored discount the authoring rules refuse. */
@@ -43,7 +82,15 @@ export function fixedLineNoServiceMessage(lineName: string): string {
 }
 
 export function contractWizardActionErrorFrom(error: unknown): ContractWizardActionError | null {
+  if (isContractLineTimingNotAllowedError(error)) {
+    return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
+  }
+
   if (!(error instanceof Error)) return null;
+
+  if (error instanceof ContractWizardKeyedError) {
+    return actionError(error.message, error.key, error.params);
+  }
 
   if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
     return permissionError(error.message);

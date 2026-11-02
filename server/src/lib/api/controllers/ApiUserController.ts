@@ -221,7 +221,7 @@ export class ApiUserController extends ApiBaseController {
             validatedQuery = userActivityFilterSchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -323,7 +323,7 @@ export class ApiUserController extends ApiBaseController {
             data = changePasswordSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }

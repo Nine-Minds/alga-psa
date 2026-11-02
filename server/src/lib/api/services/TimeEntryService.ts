@@ -3,6 +3,8 @@
  * Handles all time entry-related database operations for the REST API
  */
 
+import { delegateRest } from '@alga-psa/scheduling/lib/timeSource';
+import { assertHumanWorkAssignee, assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
 import {
@@ -29,6 +31,7 @@ import { hasPermission } from '../../auth/rbac';
 import type { IUser } from '@alga-psa/types';
 import {
   StopwatchConflictError,
+  discardSession,
   getOpenSession,
   getSession,
   logSession,
@@ -36,7 +39,20 @@ import {
   type StopwatchSessionView,
 } from '@alga-psa/scheduling/lib/stopwatch/stopwatchCore';
 import { mapStopwatchError, publishLoggedSessionEvents } from './StopwatchApiService';
-import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
+import {
+  getWorkItemBillingContext,
+  deleteTimeEntryCore,
+  persistTimeEntry,
+  publishPersistedTimeEntryEvents,
+  type PersistedTimeEntry,
+} from '@alga-psa/scheduling/lib/timeEntryWriteCore';
+import { getEligibleContractLines } from '@alga-psa/scheduling/lib/contractLineDisambiguation';
+import { resolveDeterministicContractLineSelection } from '@alga-psa/scheduling/lib/contractLineDisambiguation.shared';
+import { saveTimeEntryParamsSchema, type SaveTimeEntryParams } from '@alga-psa/scheduling/actions/timeEntrySchemas';
+import {
+  CONTRACT_LINE_SOURCE_BY_SELECTION_REASON,
+  type ContractLineSource,
+} from '@alga-psa/types';
 
 export class TimeEntryService extends BaseService<any> {
   constructor() {
@@ -75,6 +91,14 @@ export class TimeEntryService extends BaseService<any> {
   // before pg hydrates it into a Date in the Node process's timezone.
   private workDateProjection(knex: Knex): Knex.Raw {
     return knex.raw("to_char(??, 'YYYY-MM-DD') as ??", [`${this.tableName}.work_date`, 'work_date']);
+  }
+
+  /** A contributed work item type (not in the native set) is rejected exactly as the schema rejected it before it became a contributed type. */
+  private assertNativeWorkItemType(workItemType: string | undefined): void {
+    if (workItemType === 'co_managed') {
+      throw new ValidationError('Validation failed', [{ code: 'invalid_enum_value', path: ['work_item_type'],
+        message: "Invalid enum value. Expected 'ticket' | 'project_task' | 'non_billable_category' | 'ad_hoc' | 'interaction'" }]);
+    }
   }
 
   private assertServiceIdPresent(serviceId: string | null | undefined): void {
@@ -154,6 +178,9 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async list(options: ListOptions, context: ServiceContext): Promise<ListResult<any>> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'list', [options, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     const query = this.buildTenantScopedQuery(knex, context);
 
@@ -206,6 +233,9 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async getById(id: string, context: ServiceContext): Promise<any | null> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'getById', [id, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     const scopedDb = tenantDb(knex, context.tenant);
     const query = this.buildTenantScopedQuery(knex, context);
@@ -228,6 +258,9 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async getWithDetails(id: string, context: ServiceContext): Promise<any | null> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'getWithDetails', [id, context]);
+    if (delegated.handled) return delegated.value;
     const timeEntry = await this.getById(id, context);
     if (!timeEntry) return null;
 
@@ -249,9 +282,11 @@ export class TimeEntryService extends BaseService<any> {
     };
   }
 
-  // LEVERAGE: friction time-entry-write-paths — this thinner create skips sheet resolution, bucket draw, hour-block burn and
-  // ticket/task resource adding that persistTimeEntry (@alga-psa/scheduling timeEntryWriteCore) does; it should move onto the core.
   async create(data: CreateTimeEntryData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId, workItemType: data.work_item_type, workItemId: data.work_item_id }, 'entries', 'create', [data, context]);
+    if (delegated.handled) return delegated.value;
+    this.assertNativeWorkItemType(data.work_item_type);
     const { knex } = await this.getKnex();
 
     this.assertServiceIdPresent(data.service_id);
@@ -298,6 +333,9 @@ export class TimeEntryService extends BaseService<any> {
       ]);
     }
 
+    // Human-work guard: the entry owner is the (effective) caller and must be a licensed user.
+    await assertHumanWorkOwner(knex, context.tenant, context.userId, 'user_id');
+
     const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
     const { work_date, work_timezone } = computeWorkDateFields(data.start_time, userTimeZone);
     
@@ -339,74 +377,55 @@ export class TimeEntryService extends BaseService<any> {
     // Get or create time sheet for the period
     const timeSheetId = await this.getOrCreateTimeSheetForWorkDate(work_date, context.userId, context);
 
-    const { is_billable, ...dataWithoutBillable } = data;
-    const timeEntryData = {
-      ...dataWithoutBillable,
+    const isBillable = data.is_billable !== false;
+
+    // Linkage is decided before anything is written so an ambiguous or ineligible
+    // line is a 400 and not a half-saved entry. Non-billable time carries none.
+    const contractLine = isBillable
+      ? await this.resolveContractLineForWrite(knex, context, {
+          workItemType: data.work_item_type,
+          workItemId: data.work_item_id ?? null,
+          serviceId: data.service_id,
+          workDate: work_date,
+          explicitContractLineId: data.contract_line_id ?? null,
+        })
+      : { id: null, source: null };
+
+    const nowIso = new Date().toISOString();
+    const entry = this.buildSaveParams({
+      entry_id: null,
+      work_item_id: data.work_item_id,
+      work_item_type: data.work_item_type,
+      start_time: startTime.toISOString(),
+      end_time: endTime.toISOString(),
+      created_at: nowIso,
+      updated_at: nowIso,
+      // 0 is the explicit non-billable marker the core honours.
+      billable_duration: isBillable ? billableDuration : 0,
+      notes: data.notes ?? '',
       user_id: context.userId, // Always use authenticated user
-      start_time: startTime, // persist minute-truncated instants, not the caller's seconds
-      end_time: endTime,
-      work_date,
-      work_timezone,
-      billable_duration: is_billable !== false ? billableDuration : 0,
       time_sheet_id: timeSheetId,
       approval_status: 'DRAFT',
-      tenant: context.tenant,
-      created_at: new Date(),
-      updated_at: new Date()
-    };
-
-    // Get billing information if billable
-    if (data.is_billable !== false) {
-      const billingInfo = await this.calculateBillingInfo(timeEntryData, context);
-      Object.assign(timeEntryData, billingInfo);
-    }
-
-    const timeEntry = await knex.transaction(async (trx) => {
-      const [created] = await tenantDb(trx, context.tenant).table('time_entries')
-        .insert(timeEntryData)
-        .returning('*');
-      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, null, created);
-      return created;
+      service_id: data.service_id,
+      tax_region: data.tax_region,
+      tax_rate_id: data.tax_rate_id ?? undefined,
     });
 
-    // Publish event
-    await publishEvent({
-      eventType: 'TIME_ENTRY_CREATED',
-      payload: {
-        tenantId: context.tenant,
-        timeEntryId: timeEntry.entry_id,
-        userId: context.userId,
-        workItemId: timeEntry.work_item_id,
-        workItemType: timeEntry.work_item_type,
-        duration: billableDuration,
-        timestamp: new Date().toISOString()
-      }
-    });
+    const persisted = await this.persistViaWriteCore(knex, context, entry, contractLine);
+    const timeEntry = persisted.entry;
 
-    const ticketTimeEntryAdded = buildTicketTimeEntryAddedWorkflowEvent({
-      workItemType: timeEntry.work_item_type,
-      workItemId: timeEntry.work_item_id,
-      timeEntryId: timeEntry.entry_id,
-      minutes: billableDuration,
-      billable: timeEntry.billable_duration > 0,
-      createdAt: timeEntry.created_at,
-    });
-    if (ticketTimeEntryAdded) {
-      await publishWorkflowEvent({
-        eventType: ticketTimeEntryAdded.eventType,
-        payload: ticketTimeEntryAdded.payload,
-        ctx: {
-          tenantId: context.tenant,
-          occurredAt: timeEntry.created_at,
-          actor: { actorType: 'USER', actorUserId: context.userId },
-        },
-      });
-    }
+    // Post-commit events (search event + ticket-time-entry-added workflow event),
+    // exactly as the stopwatch log endpoint publishes them.
+    await publishLoggedSessionEvents(persisted, context);
 
-    return this.getWithDetails(timeEntry.entry_id, context);
+    return this.getWithDetails(timeEntry.entry_id as string, context);
   }
 
   async update(id: string, data: UpdateTimeEntryData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'update', [id, data, context]);
+    if (delegated.handled) return delegated.value;
+    this.assertNativeWorkItemType((data as { work_item_type?: string }).work_item_type);
     const { knex } = await this.getKnex();
     const existing = await this.getById(id, context);
     if (!existing) {
@@ -424,6 +443,12 @@ export class TimeEntryService extends BaseService<any> {
     }
 
     this.assertServiceIdPresent(data.service_id ?? existing.service_id);
+
+    // Human-work guard: only when this write changes the owner.
+    const requestedOwner = (data as { user_id?: string | null }).user_id;
+    if (requestedOwner && requestedOwner !== existing.user_id) {
+      await assertHumanWorkAssignee(knex, context.tenant, [requestedOwner]);
+    }
 
     // Extract is_billable from data as it's not a database column
     const { is_billable, ...dataWithoutBillable } = data;
@@ -469,37 +494,61 @@ export class TimeEntryService extends BaseService<any> {
       updateData.billable_duration = is_billable ? totalDuration : 0;
     }
 
-    // Recalculate billing if relevant fields changed
-    if (data.service_id !== undefined || updateData.billable_duration !== undefined) {
-      const billingInfo = await this.calculateBillingInfo({ ...existing, ...updateData }, context);
-      Object.assign(updateData, billingInfo);
-    }
+    // Merge the patch over the stored row: the write core saves a whole entry.
+    const merged = { ...existing, ...dataWithoutBillable };
+    const startIso = new Date(updateData.start_time ?? existing.start_time).toISOString();
+    const endIso = new Date(updateData.end_time ?? existing.end_time).toISOString();
+    const billableDuration: number = updateData.billable_duration ?? existing.billable_duration ?? 0;
+    const isBillable = billableDuration > 0;
+    const workDate: string = updateData.work_date ?? existing.work_date;
 
-    await knex.transaction(async (trx) => {
-      const [updated] = await tenantDb(trx, context.tenant).table('time_entries')
-        .where({ [this.primaryKey]: id })
-        .update(updateData)
-        .returning('*');
-      if (!updated) throw new NotFoundError('Time entry not found');
-      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, existing, updated);
+    const contractLine = await this.resolveContractLineForUpdate(knex, context, existing, {
+      isBillable,
+      workItemType: merged.work_item_type,
+      workItemId: merged.work_item_id ?? null,
+      serviceId: merged.service_id,
+      workDate,
+      explicitContractLineId: data.contract_line_id ?? null,
+      linkageInputsChanged:
+        (data.service_id !== undefined && data.service_id !== existing.service_id) ||
+        (data.work_item_id !== undefined && data.work_item_id !== existing.work_item_id) ||
+        (data.work_item_type !== undefined && data.work_item_type !== existing.work_item_type) ||
+        workDate !== existing.work_date ||
+        !(existing.billable_duration > 0),
     });
 
-    // Publish event
-    await publishEvent({
-      eventType: 'TIME_ENTRY_UPDATED',
-      payload: {
-        tenantId: context.tenant,
-        timeEntryId: id,
-        userId: context.userId,
-        changes: data,
-        timestamp: new Date().toISOString()
-      }
+    const nowIso = new Date().toISOString();
+    const entry = this.buildSaveParams({
+      entry_id: id,
+      work_item_id: merged.work_item_id ?? undefined,
+      work_item_type: merged.work_item_type,
+      start_time: startIso,
+      end_time: endIso,
+      created_at: new Date(existing.created_at ?? Date.now()).toISOString(),
+      updated_at: nowIso,
+      billable_duration: billableDuration,
+      notes: merged.notes ?? '',
+      user_id: existing.user_id,
+      time_sheet_id: existing.time_sheet_id ?? undefined,
+      approval_status: existing.approval_status,
+      service_id: merged.service_id,
+      // undefined leaves the stored value untouched (the write core's update skips undefined).
+      tax_region: data.tax_region ?? undefined,
+      tax_rate_id: data.tax_rate_id,
     });
+
+    const persisted = await this.persistViaWriteCore(knex, context, entry, contractLine);
+
+    // Post-commit search event, as saveTimeEntry publishes it.
+    await publishPersistedTimeEntryEvents(persisted);
 
     return this.getById(id, context);
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'delete', [id, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     const existing = await this.getById(id, context);
     if (!existing) {
@@ -517,10 +566,9 @@ export class TimeEntryService extends BaseService<any> {
     }
 
     await knex.transaction(async (trx) => {
-      await tenantDb(trx, context.tenant).table('time_entries')
-        .where({ [this.primaryKey]: id })
-        .del();
-      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, existing, null);
+      // Shared with the UI deleteTimeEntry action: reverses the bucket draw and
+      // hour-block burn, deletes the row and recalculates project-task hours.
+      await deleteTimeEntryCore(trx, context.tenant, id);
     });
 
     // Publish event
@@ -537,6 +585,9 @@ export class TimeEntryService extends BaseService<any> {
 
   // Override bulk methods to match BaseService signature
   async bulkCreateTimeEntries(data: BulkTimeEntryData, context: ServiceContext): Promise<any[]> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'bulkCreateTimeEntries', [data, context]);
+    if (delegated.handled) return delegated.value;
     const results: { success: boolean; data?: any; error?: string }[] = [];
     
     for (const entryData of data.entries) {
@@ -553,6 +604,9 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async bulkUpdateTimeEntries(data: BulkUpdateTimeEntryData, context: ServiceContext): Promise<any[]> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'bulkUpdateTimeEntries', [data, context]);
+    if (delegated.handled) return delegated.value;
     const results: { success: boolean; data?: any; error?: string; entry_id?: string }[] = [];
     
     for (const { entry_id, data: updateData } of data.entries) {
@@ -569,8 +623,11 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async bulkDeleteTimeEntries(data: BulkDeleteTimeEntryData, context: ServiceContext): Promise<any[]> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'bulkDeleteTimeEntries', [data, context]);
+    if (delegated.handled) return delegated.value;
     const results: { success: boolean; error?: string; entry_id: string }[] = [];
-    
+
     for (const entryId of data.entry_ids) {
       try {
         await this.delete(entryId, context);
@@ -623,6 +680,10 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async startTimeTracking(data: StartTimeTrackingData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId, workItemType: data.work_item_type, workItemId: data.work_item_id }, 'entries', 'startTimeTracking', [data, context]);
+    if (delegated.handled) return delegated.value;
+    this.assertNativeWorkItemType(data.work_item_type);
     const { knex } = await this.getKnex();
 
     this.assertServiceIdPresent(data.service_id);
@@ -654,6 +715,9 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async stopTimeTracking(sessionId: string, data: StopTimeTrackingData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'stopTimeTracking', [sessionId, data, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
 
     let result;
@@ -681,7 +745,25 @@ export class TimeEntryService extends BaseService<any> {
     return this.getById(result.persisted.entry.entry_id, context);
   }
 
+  /** Abandon the caller's own timer without writing effort (REST cancel-tracking). */
+  async cancelTimeTracking(sessionId: string, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'cancelTimeTracking', [sessionId, context]);
+    if (delegated.handled) return delegated.value;
+    const { knex } = await this.getKnex();
+    try {
+      // discardSession scopes to the caller's own session: another user's id is simply "not found".
+      const view = await knex.transaction((trx) => discardSession(trx, context.tenant, context.userId, sessionId));
+      return { session_id: view.session_id, status: view.status };
+    } catch (error) {
+      throw mapStopwatchError(error);
+    }
+  }
+
   async getActiveSession(userId: string, context: ServiceContext): Promise<any | null> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'getActiveSession', [userId, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
 
     if (!await hasPermission(context.user, 'time_entry', 'read', knex)) {
@@ -712,6 +794,9 @@ export class TimeEntryService extends BaseService<any> {
   }
   
   async exportTimeEntries(exportQuery: TimeEntryExportQuery, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'exportTimeEntries', [exportQuery, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     
     // Build query with filters
@@ -806,9 +891,16 @@ export class TimeEntryService extends BaseService<any> {
 
   // Approval operations
   async approveTimeEntries(data: ApproveTimeEntriesData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'approveTimeEntries', [data, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     const results: { success: boolean; error?: string; entry_id: string }[] = [];
-    
+
+    // Human-work guard: approval requires a human approver. Checked before the per-entry
+    // loop, whose catch would otherwise swallow the error into a per-entry failure.
+    await assertHumanWorkOwner(knex, context.tenant, context.userId, 'approved_by');
+
     for (const entryId of data.entry_ids) {
       try {
         // First check if the entry exists
@@ -884,6 +976,9 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async requestChanges(data: RequestTimeEntryChangesData, context: ServiceContext): Promise<any[]> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'requestChanges', [data, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     const results: { success: boolean; error?: string; entry_id: string }[] = [];
     
@@ -921,6 +1016,9 @@ export class TimeEntryService extends BaseService<any> {
 
   // Search and export
   async searchTimeEntries(searchData: TimeEntrySearchData, context: ServiceContext): Promise<{ data: any[], total: number }> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'searchTimeEntries', [searchData, context]);
+    if (delegated.handled) return delegated.value;
     const { knex } = await this.getKnex();
     const query = this.buildTenantScopedQuery(knex, context);
 
@@ -1052,6 +1150,9 @@ export class TimeEntryService extends BaseService<any> {
 
   // Statistics
   async getTimeEntryStatistics(filters: TimeEntryFilterData | undefined, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'getTimeEntryStatistics', [filters, context]);
+    if (delegated.handled) return delegated.value;
     const stats = await this.getStatistics(context, filters);
     return {
       total_hours: stats.total_billable_hours + stats.total_non_billable_hours,
@@ -1111,6 +1212,8 @@ export class TimeEntryService extends BaseService<any> {
 
     if (!timeSheet) {
       // Create new time sheet
+      // Human-work guard (R5.3): never create a time sheet for a non-internal user.
+      await assertHumanWorkAssignee(knex, context.tenant, [userId]);
       const [newTimeSheet] = await tenantDb(knex, context.tenant).table('time_sheets')
         .insert({
           period_id: period.period_id,
@@ -1134,13 +1237,199 @@ export class TimeEntryService extends BaseService<any> {
       .first();
   }
 
-  private async calculateBillingInfo(timeEntry: any, context: ServiceContext): Promise<any> {
-    // This would integrate with billing system
-    // For now, return basic structure
+  /**
+   * Validate and shape an entry for the shared write core. The core's caller
+   * contract requires saveTimeEntryParamsSchema; that schema types work_item_id as
+   * a required string, but the REST API has always accepted ad_hoc /
+   * non_billable_category entries without one (stored as NULL), so the schema is
+   * satisfied with a placeholder and the real (absent) value is restored.
+   */
+  private buildSaveParams(input: Record<string, unknown>): SaveTimeEntryParams {
+    const parsed = saveTimeEntryParamsSchema.safeParse({
+      ...input,
+      work_item_id: input.work_item_id ?? '',
+    });
+    if (!parsed.success) {
+      throw new ValidationError('Validation failed', parsed.error.issues.map((issue) => ({
+        path: issue.path,
+        message: issue.message,
+      })));
+    }
+    return { ...parsed.data, work_item_id: (input.work_item_id ?? null) as string } as SaveTimeEntryParams;
+  }
+
+  /**
+   * Run the write core inside a transaction this service owns (core caller contract
+   * steps 3-4; the controller has already checked the time_entry permission).
+   * Expected failures (locked sheet, invoiced entry, bucket problems, ...) become
+   * 4xx API errors through the same mapping the stopwatch endpoints use.
+   */
+  private async persistViaWriteCore(
+    knex: Knex,
+    context: ServiceContext,
+    entry: SaveTimeEntryParams,
+    contractLine: { id: string | null; source: ContractLineSource | null },
+  ): Promise<PersistedTimeEntry> {
+    if (!context.user) {
+      throw new ForbiddenError('Permission denied: Missing user context');
+    }
+    try {
+      return await knex.transaction((trx) =>
+        persistTimeEntry(trx, {
+          tenant: context.tenant,
+          actor: context.user as IUser,
+          entry,
+          contractLine,
+          // The sheet was resolved from work_date (getOrCreateTimeSheetForWorkDate),
+          // so the period is checked against the same date the bucketing used.
+          sheetPeriodCheck: 'work_date',
+        }),
+      );
+    } catch (error) {
+      throw mapStopwatchError(error);
+    }
+  }
+
+  /**
+   * Contract-line linkage for a billable REST write, decided before anything is saved.
+   *
+   *  - caller named a line: it must be one of the eligible lines, else 400;
+   *  - several lines eligible and the resolver cannot narrow them (billing
+   *    profile, bucket overlay): 400 listing the candidates. The UI saves such an
+   *    entry as 'unresolved' for the review queue, but an API caller can resend
+   *    with a choice, and guessing could post to the wrong line;
+   *  - otherwise the resolver's pick (or none) with the same provenance the UI records.
+   *
+   * Client and billing profile come from the work item exactly as the write core
+   * derives them (getWorkItemBillingContext).
+   */
+  private async resolveContractLineForWrite(
+    knex: Knex,
+    context: ServiceContext,
+    input: {
+      workItemType: string;
+      workItemId: string | null;
+      serviceId: string;
+      workDate: string;
+      explicitContractLineId: string | null;
+    },
+  ): Promise<{ id: string | null; source: ContractLineSource | null }> {
+    const eligible = await this.loadEligibleContractLines(knex, context, input);
+    return this.chooseContractLine(eligible.lines, eligible.billingProfileId, input.explicitContractLineId);
+  }
+
+  /**
+   * PATCH linkage. An existing line is never nulled just because the entry was
+   * edited: it is kept (with its recorded provenance) unless the edit changed what
+   * the line depends on AND the line is no longer eligible, in which case the
+   * linkage is re-resolved like a create (including the ambiguity 400). A caller-
+   * supplied line is validated like on create. Entries that are (now) non-billable
+   * carry no linkage.
+   */
+  private async resolveContractLineForUpdate(
+    knex: Knex,
+    context: ServiceContext,
+    existing: any,
+    input: {
+      isBillable: boolean;
+      workItemType: string;
+      workItemId: string | null;
+      serviceId: string;
+      workDate: string;
+      explicitContractLineId: string | null;
+      linkageInputsChanged: boolean;
+    },
+  ): Promise<{ id: string | null; source: ContractLineSource | null }> {
+    if (!input.isBillable) {
+      return { id: null, source: null };
+    }
+
+    const existingLine: { id: string | null; source: ContractLineSource | null } = {
+      id: existing.contract_line_id ?? null,
+      source: existing.contract_line_source ?? null,
+    };
+
+    if (!input.explicitContractLineId && !input.linkageInputsChanged) {
+      // Notes, duration, tax... nothing the linkage depends on moved; leave it
+      // exactly as stored (including a legacy null: no ambiguity 400 on a notes edit).
+      return existingLine;
+    }
+
+    const eligible = await this.loadEligibleContractLines(knex, context, input);
+
+    if (
+      !input.explicitContractLineId &&
+      existingLine.id &&
+      eligible.lines.some((line) => line.client_contract_line_id === existingLine.id)
+    ) {
+      return existingLine;
+    }
+
+    return this.chooseContractLine(eligible.lines, eligible.billingProfileId, input.explicitContractLineId);
+  }
+
+  private async loadEligibleContractLines(
+    knex: Knex,
+    context: ServiceContext,
+    input: { workItemType: string; workItemId: string | null; serviceId: string; workDate: string },
+  ): Promise<{ lines: Awaited<ReturnType<typeof getEligibleContractLines>>; billingProfileId: string | null }> {
+    const { clientId, billingProfileId } = await getWorkItemBillingContext(
+      tenantDb(knex, context.tenant),
+      input.workItemType,
+      input.workItemId,
+    );
+    const lines = clientId
+      ? await getEligibleContractLines(knex, context.tenant, clientId, input.serviceId, input.workDate)
+      : [];
+    return { lines, billingProfileId };
+  }
+
+  private chooseContractLine(
+    lines: Awaited<ReturnType<typeof getEligibleContractLines>>,
+    billingProfileId: string | null,
+    explicitContractLineId: string | null,
+  ): { id: string | null; source: ContractLineSource | null } {
+    const candidates = lines.map((line) => ({
+      contract_line_id: line.client_contract_line_id,
+      contract_line_name: line.contract_line_name ?? null,
+      contract_line_type: line.contract_line_type,
+      contract_id: line.contract_id ?? null,
+      contract_name: line.contract_name ?? null,
+      has_bucket: Boolean(line.bucket_overlay?.config_id),
+    }));
+
+    if (explicitContractLineId) {
+      if (!lines.some((line) => line.client_contract_line_id === explicitContractLineId)) {
+        throw new ValidationError(
+          'contract_line_id is not an eligible contract line for this client, service and work date',
+          {
+            reason: 'contract_line_not_eligible',
+            contract_line_id: explicitContractLineId,
+            eligible_contract_lines: candidates,
+          },
+        );
+      }
+      return { id: explicitContractLineId, source: 'explicit' };
+    }
+
+    // LEVERAGE: pattern contract-line-resolution — eligibility + deterministic selection composed
+    // here a second time; the write core composes it through resolveContractLineSelection, which
+    // needs a session user. A resolver taking (knex, tenant) explicitly would be the one layer.
+    const selection = resolveDeterministicContractLineSelection(lines, { billingProfileId });
+
+    if (selection.reason === 'ambiguous') {
+      throw new ValidationError(
+        'Multiple contract lines are eligible for this time entry; resend with contract_line_id set to one of eligible_contract_lines',
+        {
+          reason: 'contract_line_ambiguous',
+          eligible_contract_lines: candidates,
+        },
+      );
+    }
+
     return {
-      contract_line_id: null,
-      tax_rate_id: null,
-      tax_region: timeEntry.tax_region || null
+      id: selection.selectedContractLineId,
+      source: CONTRACT_LINE_SOURCE_BY_SELECTION_REASON[selection.reason],
     };
   }
 

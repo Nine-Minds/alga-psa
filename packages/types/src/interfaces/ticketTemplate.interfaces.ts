@@ -41,6 +41,8 @@ export interface ITicketTemplate extends Omit<TicketTemplateDraft, 'checklist'> 
   tenant: string;
   template_id: string;
   is_active: boolean;
+  /** Offered in the new-ticket picker. Templates created for a recurring schedule by migration are not (R5). */
+  offer_for_manual_use: boolean;
   source_ticket_id: string | null;
   created_by: string | null;
   updated_by: string | null;
@@ -49,8 +51,24 @@ export interface ITicketTemplate extends Omit<TicketTemplateDraft, 'checklist'> 
   checklist: ITicketTemplateChecklistItem[];
 }
 
+/** A recurring schedule that uses a template (non-archived definitions only). */
+export interface TicketTemplateScheduleRef {
+  definition_id: string;
+  name: string;
+  is_active: boolean;
+}
+
+/** Counts shown next to a template: schedules that use it and tickets created from it. */
+export interface TicketTemplateUsage {
+  schedule_count: number;
+  ticket_count: number;
+}
+
 export interface TicketTemplateReferenceProblem {
-  field: 'board_id' | 'category_id' | 'subcategory_id' | 'priority_id';
+  /** Template saves only ever report the first four; the wider set is shared with recurring schedules. */
+  field:
+    | 'board_id' | 'category_id' | 'subcategory_id' | 'priority_id' | 'status_id' | 'assigned_to'
+    | 'assigned_team_id' | 'additional_agent_ids' | 'contact_id' | 'location_id' | 'asset_ids';
   /** Actionable, user-facing English message. */
   message: string;
 }
@@ -64,6 +82,9 @@ export interface TicketTemplateListItem {
   checklist_count: number;
   tag_count: number;
   is_active: boolean;
+  offer_for_manual_use: boolean;
+  schedule_count: number;
+  ticket_count: number;
   updated_at: string;
 }
 

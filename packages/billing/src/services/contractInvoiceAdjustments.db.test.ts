@@ -867,7 +867,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
           sourceDescription: 'SMOKE Prod Users', direction, units: 3,
           start: '2026-08-16', exclusiveEnd: '2026-09-01', unitPrice: 10_000,
           coveredDays: 16, fullPeriodDays: 31, currencyCode: 'USD',
-          formatCurrency: (amount) => `$${amount.toFixed(2)}`,
+          formatCurrency: (minorUnits) => `$${(minorUnits / 100).toFixed(2)}`,
           describe: (kind, values) => kind === 'increase'
             ? `${values.description} — additional ${values.units} users, ${values.period} — ${values.calculation}`
             : `${values.description} — credit for ${values.units} fewer users, ${values.period} — ${values.calculation}`,
@@ -1127,6 +1127,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     await db('contract_templates').insert({
       tenant, template_id: acceptanceTemplateId, template_name: 'Acceptance 10 percent',
       default_billing_frequency: 'monthly', template_status: 'published', template_metadata: {},
+      currency_code: 'USD',
     });
     const { updateContract } = await import('../actions/contractActions');
     const authored = await updateContract(acceptanceTemplateId, {
@@ -2458,7 +2459,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
     });
     await db('contract_templates').insert({
       tenant, template_id: templateId, template_name: `Discount template ${templateId.slice(0, 8)}`,
-      default_billing_frequency: 'monthly', template_status: 'published',
+      default_billing_frequency: 'monthly', template_status: 'published', currency_code: 'USD',
       template_metadata: { default_discounts: [{
         discount_name: 'Template 10 percent', discount_type: 'percentage', value: 10,
         start_date: '2026-01-01', scope: 'contract', is_active: true,
@@ -2607,6 +2608,10 @@ describe('contract invoice adjustments (DB-backed)', () => {
     await db('contract_templates').insert({
       tenant, template_id: templateId, template_name: 'Repeated-service identity template',
       default_billing_frequency: 'monthly', template_status: 'published',
+      // The contract below is created in USD, so the template's base currency is
+      // USD too: the clone copies the template's own amounts, with no price set
+      // and no mismatch prompt.
+      currency_code: 'USD',
       template_metadata: { default_discounts: [
         { template_discount_key: uuidv4(), discount_name: 'Fixed source line', discount_type: 'percentage', value: 10, start_date: '2026-01-01', scope: 'line', contract_line_id: fixedTemplateLineId },
         { template_discount_key: uuidv4(), discount_name: 'Hourly source line', discount_type: 'percentage', value: 20, start_date: '2026-01-01', scope: 'line', contract_line_id: hourlyTemplateLineId },
@@ -3458,8 +3463,10 @@ describe('accounting adjustment export matrix', () => {
     const realm = ['xero', 'quickbooks_online'].includes(adapterType) ? 'test-realm' : null;
     for (const [kind, local, external] of [['service', miscId, 'MISC'], ['service', serviceId, 'RECURRING'], ['discount', AUTOMATIC_DISCOUNT_MAPPING_ID, 'DISCOUNT'], ['client', clientId, 'CUSTOMER']]) {
       await db('tenant_external_entity_mappings').where({ tenant, integration_type: adapterType, alga_entity_type: kind, alga_entity_id: local }).delete();
+      // A QuickBooks Desktop service/discount mapping's value is the income account; every line also names an item.
+      const desktopItem = adapterType === 'quickbooks_desktop' && kind !== 'client' ? { qbdItem: external } : {};
       await db('tenant_external_entity_mappings').insert({ tenant, integration_type: adapterType, alga_entity_type: kind, alga_entity_id: local,
-        external_entity_id: external, external_realm_id: realm, sync_status: 'manual_link', metadata: JSON.stringify({ xeroTargetKind: 'account', accountCode: external }) });
+        external_entity_id: external, external_realm_id: realm, sync_status: 'manual_link', metadata: JSON.stringify({ xeroTargetKind: 'account', accountCode: external, ...desktopItem }) });
     }
     // The fixed-plan parent is intentionally serviceless. Export its canonical
     // allocated children exactly once while preserving the batch parent identity.
@@ -3555,6 +3562,10 @@ describe('accounting adjustment export matrix', () => {
         const rows = content.split('\n').filter(row => /^(TRNS|SPL)\t/.test(row));
         expect(Math.round(rows.reduce((sum, row) => sum + Number(row.split('\t')[6]), 0) * 100)).toBe(0);
         expect(Number(rows[0].split('\t')[6]) * 100).toBeCloseTo(net);
+        // Every invoice line names an item (INVITEM is the 12th SPL column), never an account-only line.
+        const splRows = rows.filter(row => row.startsWith('SPL\t'));
+        expect(splRows.length).toBeGreaterThan(0);
+        expect(splRows.every(row => row.split('\t')[11].trim().length > 0)).toBe(true);
       } else {
         const { parseCSV } = await import('@alga-psa/core');
         const rows = parseCSV(content, { header: true });

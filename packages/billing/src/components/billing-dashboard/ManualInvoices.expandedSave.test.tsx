@@ -20,6 +20,7 @@ vi.mock('@alga-psa/ui/context', () => ({ useQuickAddClient: () => ({ renderQuick
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({ ClientPicker: () => null }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ __esModule: true, default: ({ id, options = [], value, onValueChange }: any) => <select id={id} value={value ?? ''} onChange={(e) => onValueChange(e.target.value)}><option value="">Select</option>{options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}</select> }));
 vi.mock('@alga-psa/ui/components/SearchableSelect', () => ({ default: () => null }));
+vi.mock('./contracts/ServicePicker', () => ({ ServicePicker: ({ id, options = [], value, onChange }: any) => <select id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value)}><option value="">Select</option>{options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}</select> }));
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({ DatePicker: () => null }));
 vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, ...props }: any) => <button {...props}>{children}</button> }));
 vi.mock('@alga-psa/ui/components/Input', () => ({ Input: (props: any) => <input {...props} /> }));
@@ -31,7 +32,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_k
 import ManualInvoices from './ManualInvoices';
 afterEach(cleanup);
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   mocks.snapshot.mockImplementation(async (requestedInvoiceId?: string) => {
     const invoiceId = requestedInvoiceId ?? invoice.invoice_id;
     const invoiceCharges = await mocks.lineItems(invoiceId);

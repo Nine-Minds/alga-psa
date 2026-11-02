@@ -702,6 +702,14 @@ describe('selector-input recurring generation', () => {
       invoice_window_end: '2025-03-08',
       invoice_id: 'invoice-existing',
     });
+    // The seeded schedule row for the window is invoiced too: no row is left waiting. (A window
+    // with a still-pending sibling row is not a duplicate; see the arrears-only repair test.)
+    for (const row of mocks.rowsByTable.recurring_service_periods) {
+      if (row.record_id === 'rsp-contract-1') {
+        row.invoice_id = 'invoice-existing';
+        row.lifecycle_state = 'billed';
+      }
+    }
 
     await expect(generateInvoiceForSelectionInput(selectorInput)).resolves.toEqual({
       actionError: 'Invoice already exists for this recurring execution window',

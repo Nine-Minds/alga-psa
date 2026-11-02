@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -136,7 +136,11 @@ export function ProviderCredentialsWorkbench({
 }: ProviderCredentialsWorkbenchProps) {
   const { t } = useTranslation('msp/integrations');
   const router = useRouter();
-  const [selectedProvider, setSelectedProvider] = React.useState<ProviderKey>('google');
+  const searchParams = useSearchParams();
+  // Decided on the first render, before MicrosoftIntegrationSettings strips the outcome params.
+  const [selectedProvider, setSelectedProvider] = React.useState<ProviderKey>(() =>
+    searchParams?.get('microsoft_email_setup') ? 'microsoft' : 'google',
+  );
   const [googleStatus, setGoogleStatus] = React.useState<GoogleIntegrationStatus | null>(null);
   const [microsoftStatus, setMicrosoftStatus] = React.useState<MicrosoftIntegrationStatus | null>(null);
 

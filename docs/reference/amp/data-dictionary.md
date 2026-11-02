@@ -85,6 +85,38 @@ accounts, companies, or organizations.
 | `manufacturer` / `model` | no | Hardware identity as text |
 | `purchase_date` | no | `YYYY-MM-DD` |
 
+## products
+
+Money is an integer in minor units (cents for USD, whole yen for JPY) plus an
+ISO 4217 code. A null currency means the tenant billing currency at apply time.
+
+| Column | Required | Meaning |
+| --- | --- | --- |
+| `name` | yes | Product name |
+| `sku` | no | Natural duplicate key: a product with the same trimmed SKU already in the tenant is matched and left unchanged |
+| `category_name` | no | Source category, stored as the product's free-text category (no category is created) |
+| `unit_of_measure` | no | Unit label |
+| `price_minor` / `price_currency` | no | Sell price in minor units and its currency |
+| `cost_minor` / `cost_currency` | no | Cost in minor units and its currency |
+| `description` | no | Free text |
+| `is_active` | no | `1` active (default), `0` inactive |
+
+## vendor_products
+
+A vendor's offer for a product (a distributor price-list row). There is no
+`vendors` table: the vendor is created or matched by trimmed, case-insensitive
+`vendor_name` when the row is applied. The upsert key is (vendor, product).
+
+| Column | Required | Meaning |
+| --- | --- | --- |
+| `product_package_record_id` | one of these two | The `products` row this offer is for |
+| `product_sku` | one of these two | Fallback: an existing or staged product with this SKU |
+| `vendor_name` | yes | Vendor name |
+| `vendor_sku` | no | The vendor's own SKU |
+| `unit_cost_minor` / `cost_currency` | no | Contract cost in minor units and its currency |
+| `lead_time_days` | no | 0–3650 |
+| `is_preferred` | no | `1` marks the preferred offer; at most one per product (others are demoted) |
+
 ## external_identifiers
 
 Additional namespaced identifiers for any entity record — for example the same
@@ -93,7 +125,7 @@ organization's key in an RMM and an accounting system.
 | Column | Required | Meaning |
 | --- | --- | --- |
 | `package_record_id` | yes | Row key within the package |
-| `entity_type` | yes | One of the six entity table names |
+| `entity_type` | yes | One of the entity table names |
 | `entity_package_record_id` | yes | The record this identifier belongs to |
 | `namespace` | yes | Identifier namespace |
 | `value` | yes | Identifier value |
@@ -106,7 +138,7 @@ them onto tenant custom fields automatically.
 | Column | Required | Meaning |
 | --- | --- | --- |
 | `package_record_id` | yes | Row key within the package |
-| `entity_type` | yes | One of the six entity table names |
+| `entity_type` | yes | One of the entity table names |
 | `entity_package_record_id` | yes | The record the value belongs to |
 | `field_name` | yes | Source field name |
 | `value_json` | yes | JSON-encoded value, bounded like `extension_json` |

@@ -24,25 +24,16 @@
  *                     the tax each would carry if selected. Presented as
  *                     "Optional if selected"; never part of `total_amount`.
  */
-import {
-  allocateQuoteDiscounts,
-  type DiscountBaseItemInput,
-  type QuoteDiscountAllocation,
-  type QuoteDiscountInput,
-} from '../services/quoteDiscountAllocation';
+// The row -> allocation-input derivation is shared with the workflow runtime's
+// quote conversion, so it lives in `@alga-psa/shared`; re-exported here for
+// existing billing imports.
+export {
+  allocateIncludedQuoteDiscounts,
+  buildQuoteDiscountAllocationInputs,
+  rowGrossAmount,
+  type QuoteTotalsRowInput,
+} from '@alga-psa/shared/billingClients/quoteDiscountAllocation';
 import { isPendingOptional, isQuoteItemIncluded, type QuoteItemInclusionInput } from './quoteItemInclusion';
-
-export type QuoteTotalsRowInput = QuoteItemInclusionInput & {
-  service_id?: string | null;
-  quantity?: number | string | null;
-  unit_price?: number | string | null;
-  is_recurring?: boolean | null;
-  is_discount?: boolean | null;
-  discount_type?: 'percentage' | 'fixed' | string | null;
-  discount_percentage?: number | string | null;
-  applies_to_item_id?: string | null;
-  applies_to_service_id?: string | null;
-};
 
 export interface QuoteTotalsSummary {
   subtotal: number;
@@ -52,56 +43,6 @@ export interface QuoteTotalsSummary {
   optional_subtotal: number;
   optional_tax: number;
   optional_total: number;
-}
-
-const toFiniteNumber = (value: unknown): number => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
-/** `quantity × unit_price` of a row in minor units (as persisted in `total_price`). */
-export const rowGrossAmount = (item: Pick<QuoteTotalsRowInput, 'quantity' | 'unit_price'>): number =>
-  toFiniteNumber(item.quantity) * toFiniteNumber(item.unit_price);
-
-/**
- * Allocation inputs for `allocateQuoteDiscounts`: included base rows and
- * included discount rows. `idOf` supplies the row key (persisted rows use
- * `quote_item_id`; editor drafts fall back to their local id).
- */
-export function buildQuoteDiscountAllocationInputs<T extends QuoteTotalsRowInput>(
-  items: T[],
-  idOf: (item: T) => string,
-): { bases: DiscountBaseItemInput[]; discounts: QuoteDiscountInput[] } {
-  const bases = items
-    .filter((item) => !item.is_discount && isQuoteItemIncluded(item))
-    .map((item) => ({
-      id: idOf(item),
-      serviceId: item.service_id ?? null,
-      amount: rowGrossAmount(item),
-      isRecurring: item.is_recurring === true,
-    }));
-
-  const discounts = items
-    .filter((item) => item.is_discount === true && isQuoteItemIncluded(item))
-    .map((item) => ({
-      id: idOf(item),
-      discountType: (item.discount_type === 'percentage' ? 'percentage' : 'fixed') as 'percentage' | 'fixed',
-      fixedAmount: Math.abs(toFiniteNumber(item.quantity || 1) * toFiniteNumber(item.unit_price)),
-      discountPercentage: toFiniteNumber(item.discount_percentage),
-      appliesToItemId: item.applies_to_item_id ?? null,
-      appliesToServiceId: item.applies_to_service_id ?? null,
-    }));
-
-  return { bases, discounts };
-}
-
-/** Resolve every included discount across the included bases. */
-export function allocateIncludedQuoteDiscounts<T extends QuoteTotalsRowInput>(
-  items: T[],
-  idOf: (item: T) => string,
-): QuoteDiscountAllocation {
-  const { bases, discounts } = buildQuoteDiscountAllocationInputs(items, idOf);
-  return allocateQuoteDiscounts(bases, discounts);
 }
 
 /**

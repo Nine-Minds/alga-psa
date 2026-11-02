@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Skróty klawiaturowe",
     "mcpServer": "Serwer MCP",
     "opportunities": "Szanse sprzedaży",
-    "settingsFallback": "Ustawienia"
+    "settingsFallback": "Ustawienia",
+    "tags": "Tagi"
   },
   "unsavedChanges": {
     "title": "Niezapisane zmiany",
@@ -413,17 +414,21 @@
       "cancel": "Anuluj",
       "delete": "Usuń",
       "placeholder": "Wprowadź nazwę nowego zespołu",
+      "descriptionPlaceholder": "Wprowadź opcjonalny opis zespołu",
       "selectManager": "Wybierz kierownika"
     },
     "details": {
       "loading": "Ładowanie szczegółów zespołu...",
       "notFound": "Nie znaleziono zespołu",
+      "noDescription": "Brak opisu",
       "fields": {
         "teamLead": "Lider zespołu",
+        "description": "Opis",
         "addMember": "Dodaj członka"
       },
       "placeholders": {
         "teamName": "Wprowadź nazwę zespołu",
+        "description": "Wprowadź opis zespołu",
         "selectTeamLead": "Wybierz lidera zespołu",
         "selectUserToAdd": "Wybierz użytkownika do dodania",
         "noTeamLead": "Nieprzypisany"
@@ -435,8 +440,10 @@
         "discard": "Odrzuć",
         "saveChanges": "Zapisz zmiany",
         "saveName": "Zapisz nazwę",
+        "saveDescription": "Zapisz opis",
         "cancel": "Anuluj",
         "editName": "Edytuj nazwę",
+        "editDescription": "Edytuj opis",
         "remove": "Usuń"
       },
       "table": {
@@ -461,6 +468,7 @@
         "createFailed": "Nie udało się utworzyć zespołu: {{error}}",
         "deleteFailed": "Nie udało się usunąć zespołu",
         "updateName": "Nie udało się zaktualizować nazwy zespołu",
+        "updateDescription": "Nie udało się zaktualizować opisu zespołu",
         "saveChanges": "Nie udało się zapisać zmian. Spróbuj ponownie."
       }
     }
@@ -710,7 +718,8 @@
         "importNewName": "Importuj z inną nazwą:",
         "importWithResolutions": "Importuj z rozwiązaniami",
         "orderConflict": "Kolejność {{order}} jest już zajęta",
-        "importWithOrder": "Importuj z kolejnością {{order}}"
+        "importWithOrder": "Importuj z kolejnością {{order}}",
+        "removesIntro": "Usunięcie tej tablicy spowoduje również usunięcie:"
       },
       "importTable": {
         "active": "Aktywna"
@@ -779,7 +788,9 @@
           "deleteFailed": "Nie udało się usunąć tablicy",
           "importFailed": "Nie udało się zaimportować tablic",
           "updateStatusFailed": "Nie udało się zaktualizować statusu tablicy",
-          "updateDefaultFailed": "Nie udało się zaktualizować domyślnej tablicy"
+          "updateDefaultFailed": "Nie udało się zaktualizować domyślnej tablicy",
+          "hasEmailSenderRoute": "Nie można usunąć tablicy: ma własną trasę nadawcy wiadomości wychodzących. Najpierw usuń nadawcę zgłoszeń w edytorze tablicy.",
+          "referencedByAutomations": "Nie można usunąć tablicy: nadal wskazują na nią inne ustawienia. Najpierw przekieruj je na inną tablicę lub usuń."
         }
       },
       "closeRules": {
@@ -893,6 +904,48 @@
         "displayName": "Nazwa wyświetlana",
         "save": "Zapisz nadawcę",
         "saved": "Zapisano nadawcę"
+      },
+      "deleteDependencies": {
+        "categories_one": "kategoria",
+        "categories_other": "kategorii",
+        "categories_few": "kategorie",
+        "categories_many": "kategorii",
+        "statuses_one": "status zgłoszenia",
+        "statuses_other": "statusów zgłoszeń",
+        "statuses_few": "statusy zgłoszeń",
+        "statuses_many": "statusów zgłoszeń",
+        "autoCloseRules_one": "reguła automatycznego zamknięcia",
+        "autoCloseRules_other": "reguł automatycznego zamknięcia",
+        "autoCloseRules_few": "reguły automatycznego zamknięcia",
+        "autoCloseRules_many": "reguł automatycznego zamknięcia",
+        "notificationRules_one": "reguła powiadomień",
+        "notificationRules_other": "reguł powiadomień",
+        "notificationRules_few": "reguły powiadomień",
+        "notificationRules_many": "reguł powiadomień",
+        "portalVisibility_one": "przypisanie widoczności w portalu klienta",
+        "portalVisibility_other": "przypisań widoczności w portalu klienta",
+        "portalVisibility_few": "przypisania widoczności w portalu klienta",
+        "portalVisibility_many": "przypisań widoczności w portalu klienta",
+        "emailSenderRoutes_one": "trasa nadawcy wychodzącego",
+        "emailSenderRoutes_other": "tras nadawcy wychodzącego",
+        "emailSenderRoutes_few": "trasy nadawcy wychodzącego",
+        "emailSenderRoutes_many": "tras nadawcy wychodzącego",
+        "ticketTemplates_one": "szablon zgłoszenia",
+        "ticketTemplates_other": "szablonów zgłoszeń",
+        "ticketTemplates_few": "szablony zgłoszeń",
+        "ticketTemplates_many": "szablonów zgłoszeń",
+        "recurringTickets_one": "harmonogram cyklicznych zgłoszeń",
+        "recurringTickets_other": "harmonogramów cyklicznych zgłoszeń",
+        "recurringTickets_few": "harmonogramy cyklicznych zgłoszeń",
+        "recurringTickets_many": "harmonogramów cyklicznych zgłoszeń",
+        "checklistRules_one": "reguła stosowania listy kontrolnej",
+        "checklistRules_other": "reguł stosowania listy kontrolnej",
+        "checklistRules_few": "reguły stosowania listy kontrolnej",
+        "checklistRules_many": "reguł stosowania listy kontrolnej",
+        "cannedResponses_one": "gotowa odpowiedź tablicy",
+        "cannedResponses_other": "gotowych odpowiedzi tablicy",
+        "cannedResponses_few": "gotowe odpowiedzi tablicy",
+        "cannedResponses_many": "gotowych odpowiedzi tablicy"
       }
     },
     "priorities": {
@@ -984,7 +1037,8 @@
         "description": "Opis",
         "items": "Elementy",
         "status": "Status",
-        "actions": "Akcje"
+        "actions": "Akcje",
+        "scope": "Dostępne dla"
       },
       "statusLabels": {
         "active": "Aktywny",
@@ -1002,7 +1056,9 @@
         "down": "W dół",
         "remove": "Usuń",
         "addItem": "Dodaj element",
-        "addRule": "Dodaj regułę"
+        "addRule": "Dodaj regułę",
+        "duplicateToClient": "Duplikuj dla klienta…",
+        "duplicate": "Duplikuj"
       },
       "fields": {
         "name": {
@@ -1024,13 +1080,48 @@
         },
         "rules": {
           "label": "Reguły automatycznego stosowania",
-          "help": "Szablon jest automatycznie stosowany do nowych zgłoszeń pasujących do którejkolwiek z tych reguł. Pozostaw pole jako \"Dowolny\", aby dopasować wszystkie wartości.",
+          "help": "Szablon jest stosowany do nowego zgłoszenia, gdy pasuje ono do dowolnej z jego reguł. Reguła pasuje tylko wtedy, gdy zgłoszenie spełnia wszystkie ustawione filtry. Pozostaw filtr pusty, aby go pominąć.",
           "empty": "Brak reguł automatycznego stosowania. Szablon nadal można stosować do zgłoszeń ręcznie.",
           "board": "Tablica",
           "category": "Kategoria",
           "subcategory": "Podkategoria",
           "priority": "Priorytet",
-          "any": "Dowolny"
+          "any": "Dowolny",
+          "appliesToAll": "Dotyczy wszystkich zgłoszeń",
+          "appliesToAllClientTickets": "Dotyczy wszystkich zgłoszeń klienta {{client}}",
+          "clients": "Klienci",
+          "clientsAny": "Dowolny klient",
+          "clientsFixedByTemplate": "Tylko {{client}} (ustalone przez klienta szablonu)",
+          "clientsAddAnother": "Dodaj kolejnego klienta",
+          "removeClient": "Usuń {{name}}",
+          "origins": "Źródło zgłoszenia",
+          "originsAny": "Dowolne źródło",
+          "fromServiceRequest": "Tylko zgłoszenia z żądania usługi",
+          "anyServiceRequest": "Dowolne żądanie usługi",
+          "keywords": "Słowa kluczowe",
+          "keywordsPlaceholder": "Wpisz słowo lub frazę i naciśnij Enter",
+          "keywordsHelp": "Dopasowywane są także fragmenty słów, więc \"onboard\" znajdzie \"onboarding\". Wielkość liter jest pomijana.",
+          "removeKeyword": "Usuń {{keyword}}",
+          "keywordMode": "Dopasowanie",
+          "keywordModeAny": "Dowolne słowo kluczowe",
+          "keywordModeAll": "Wszystkie słowa kluczowe",
+          "keywordTarget": "Szukaj w",
+          "keywordTargetBoth": "Tytuł i opis",
+          "keywordTargetTitle": "Tytuł",
+          "keywordTargetDescription": "Opis",
+          "originLabels": {
+            "internal": "Utworzone przez personel",
+            "client_portal": "Portal klienta",
+            "inbound_email": "Przychodząca wiadomość e-mail",
+            "api": "API",
+            "recurring": "Harmonogram cykliczny"
+          },
+          "clientScopedWarning": "Ten szablon jest ograniczony do klienta {{client}}: te reguły dotyczą tylko zgłoszeń klienta {{client}}."
+        },
+        "availableTo": {
+          "label": "Dostępne dla",
+          "clear": "Wszyscy klienci",
+          "help": "Pozostaw „Wszyscy klienci”, aby oferować szablon w każdym zgłoszeniu, lub wybierz klienta, aby ograniczyć go do jego zgłoszeń."
         }
       },
       "dialog": {
@@ -1038,13 +1129,17 @@
         "editTemplate": "Edytuj szablon listy kontrolnej",
         "createFirstHelp": "Najpierw utwórz szablon, a następnie dodaj elementy listy kontrolnej i reguły automatycznego stosowania.",
         "deleteTitle": "Usuń szablon listy kontrolnej",
-        "deleteMessage": "Czy na pewno chcesz usunąć \"{{name}}\"? Listy kontrolne już dodane do zgłoszeń nie zostaną zmienione."
+        "deleteMessage": "Czy na pewno chcesz usunąć \"{{name}}\"? Listy kontrolne już dodane do zgłoszeń nie zostaną zmienione.",
+        "duplicateTitle": "Duplikuj dla klienta",
+        "duplicateHelp": "Skopiuj „{{name}}” wraz z pozycjami do nowego szablonu ograniczonego do jednego klienta. Kopia jest niezależna: późniejsze zmiany jednego szablonu nie wpływają na drugi.",
+        "duplicateClientPlaceholder": "Wybierz klienta"
       },
       "messages": {
         "success": {
           "created": "Szablon listy kontrolnej został utworzony pomyślnie",
           "updated": "Szablon listy kontrolnej został zaktualizowany pomyślnie",
-          "deleted": "Szablon listy kontrolnej został usunięty pomyślnie"
+          "deleted": "Szablon listy kontrolnej został usunięty pomyślnie",
+          "duplicated": "Szablon listy kontrolnej zduplikowany dla klienta"
         },
         "error": {
           "fetchFailed": "Nie udało się pobrać szablonów list kontrolnych",
@@ -1054,8 +1149,65 @@
           "deleteFailed": "Nie udało się usunąć szablonu listy kontrolnej",
           "updateStatusFailed": "Nie udało się zaktualizować statusu szablonu",
           "itemSaveFailed": "Nie udało się zapisać elementu listy kontrolnej",
-          "ruleSaveFailed": "Nie udało się zapisać reguły automatycznego stosowania"
+          "ruleSaveFailed": "Nie udało się zapisać reguły automatycznego stosowania",
+          "duplicateFailed": "Nie udało się zduplikować szablonu listy kontrolnej"
         }
+      },
+      "scope": {
+        "allClients": "Wszyscy klienci",
+        "unknownClient": "Nieznany klient"
+      },
+      "filter": {
+        "client": "Klient",
+        "allClients": "Wszyscy klienci",
+        "clear": "Wyczyść filtr"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Tablica",
+          "category_id": "Kategoria",
+          "subcategory_id": "Podkategoria",
+          "priority_id": "Priorytet",
+          "client_id": "Klient",
+          "client_tags": "Tagi klienta",
+          "contact_tags": "Tagi kontaktu",
+          "ticket_origin": "Źródło zgłoszenia",
+          "title_folded": "Tytuł",
+          "description_folded": "Opis",
+          "from_service_request": "Z wniosku o usługę",
+          "service_request_definition_id": "Wniosek o usługę"
+        },
+        "operators": {
+          "equals": "Jest równe",
+          "not_equals": "Nie jest równe",
+          "in": "Zawiera dowolną z wartości",
+          "not_in": "Nie zawiera żadnej z wartości",
+          "contains": "Zawiera",
+          "starts_with": "Zaczyna się od",
+          "ends_with": "Kończy się na",
+          "not_contains": "Nie zawiera",
+          "not_starts_with": "Nie zaczyna się od",
+          "not_ends_with": "Nie kończy się na",
+          "is_empty": "Jest puste",
+          "is_not_empty": "Nie jest puste"
+        },
+        "conditions": "Warunki",
+        "match": "Dopasowanie",
+        "and": "Wszystkie warunki",
+        "or": "Dowolny warunek",
+        "field": "Pole",
+        "operator": "Warunek",
+        "value": "Wartość",
+        "yes": "Tak",
+        "no": "Nie",
+        "advanced": "Ta reguła zawiera zgrupowane lub zaawansowane warunki i jest w tym edytorze tylko do odczytu.",
+        "add": "Dodaj warunek",
+        "save": "Zapisz warunki",
+        "enabled": "Włączona",
+        "matchesAll": "Pasuje do wszystkich zgłoszeń w zakresie szablonu.",
+        "matchesNone": "Nie pasuje do żadnego zgłoszenia.",
+        "tagsFailed": "Nie udało się wczytać opcji tagów. Zapisane wybory zostały zachowane.",
+        "retry": "Spróbuj ponownie"
       }
     },
     "externalSystems": {
@@ -1396,7 +1548,9 @@
         "saveDomain": "Zapisz domenę",
         "updateDomain": "Aktualizuj domenę",
         "submitting": "Wysyłanie…",
-        "cancelEdit": "Anuluj edycję"
+        "cancelEdit": "Anuluj edycję",
+        "confirmUris": "Zarejestrowano — potwierdź",
+        "confirmingUris": "Potwierdzanie…"
       },
       "form": {
         "label": "Domena niestandardowa",
@@ -1434,7 +1588,8 @@
         "deploying": "Wdrażanie",
         "active": "Aktywna",
         "disabled": "Wyłączona",
-        "unknown": "Nieznany"
+        "unknown": "Nieznany",
+        "pending_redirect_uri": "Oczekiwanie na URI przekierowania"
       },
       "messages": {
         "requestSubmitted": "Wysłano żądanie domeny niestandardowej.",
@@ -1446,9 +1601,32 @@
         "registerFailed": "Nie udało się zarejestrować domeny niestandardowej.",
         "refreshFailed": "Nie udało się odświeżyć statusu domeny.",
         "retryFailed": "Ponowienie nie powiodło się.",
-        "disableFailed": "Nie udało się wyłączyć domeny niestandardowej."
+        "disableFailed": "Nie udało się wyłączyć domeny niestandardowej.",
+        "confirmUrisFailed": "Nie udało się potwierdzić identyfikatorów URI przekierowania.",
+        "urisConfirmed": "Identyfikatory URI przekierowania potwierdzone."
       },
-      "hostedTlsNote": "Po zweryfikowaniu DNS automatycznie wystawimy certyfikaty TLS."
+      "hostedTlsNote": "Po zweryfikowaniu DNS automatycznie wystawimy certyfikaty TLS.",
+      "surface": {
+        "label": "Obsługuje",
+        "current": "Obsługuje: {{value}}",
+        "updatingSurface": "Zapisanie zmieni aplikację obsługiwaną przez tę domenę i uruchomi ponownie konfigurację.",
+        "options": {
+          "client_portal": "Portal klienta",
+          "msp": "Aplikacja MSP",
+          "both": "Obie"
+        },
+        "descriptions": {
+          "client_portal": "Domena otwiera portal klienta. To ustawienie domyślne.",
+          "msp": "Domena otwiera aplikację MSP (dla techników). Najpierw trzeba zarejestrować identyfikatory URI przekierowania logowania jednokrotnego.",
+          "both": "Jedna domena obsługuje obie aplikacje. Ścieżki pod /msp otwierają aplikację MSP, a ścieżki pod /client-portal otwierają portal klienta."
+        }
+      },
+      "redirectUris": {
+        "title": "Trzeba zarejestrować identyfikatory URI przekierowania SSO",
+        "description": "Ta domena obsługuje aplikację MSP, więc logowanie jednokrotne zadziała dopiero po zarejestrowaniu poniższych identyfikatorów URI przekierowania u dostawcy SSO. Domena pozostaje oczekująca do czasu ich potwierdzenia.",
+        "listLabel": "Zarejestruj te identyfikatory URI przekierowania:",
+        "contactSupport": "Poproś administratora lub skontaktuj się z pomocą techniczną, aby zarejestrować i potwierdzić te identyfikatory URI przekierowania."
+      }
     },
     "yourCompanyName": "Nazwa Twojej firmy",
     "brandingPreviewMode": "Tryb motywu podglądu marki",
@@ -1962,6 +2140,48 @@
       "editor": {
         "inlineLogoHint": "Twoje logo jest osadzane w wiadomości podczas wysyłki. Pozostaw odwołanie src=\"cid:{{cid}}\" bez zmian — zastąpienie go adresem URL sprawi, że odbiorcy będą musieli najpierw zezwolić na pobranie obrazu."
       }
+    },
+    "templateVariables": {
+      "actions": {
+        "insert": "Wstaw w miejscu kursora",
+        "guide": "Przeczytaj pełny przewodnik",
+        "copy": "Kopiuj {{path}}"
+      },
+      "insertHelp": "Wybierz zmienną, aby ją wstawić.",
+      "availableHelp": "Zmienne dostępne w tym szablonie.",
+      "fields": {
+        "search": {
+          "placeholder": "Szukaj zmiennych"
+        },
+        "globalSearch": {
+          "placeholder": "Szukaj ścieżek, opisów i pojęć"
+        },
+        "category": {
+          "all": "Wszystkie obszary"
+        }
+      },
+      "title": "Informacje o zmiennych szablonów e-mail",
+      "panelTitle": "Zmienne szablonu",
+      "inferredContract": "Obecnie nie jest wysyłany. Ten kontrakt został wywnioskowany z szablonu.",
+      "empty": "Brak pasujących zmiennych.",
+      "example": "Przykład:",
+      "usedBy": "Używane przez {{templates}}",
+      "description": "Znajdź dane dostępne w każdym systemowym szablonie e-mail. Skopiuj dokładny token Handlebars do własnego szablonu.",
+      "enums": {
+        "categories": {
+          "appointments": "Wizyty",
+          "auth": "Uwierzytelnianie",
+          "billing": "Rozliczenia",
+          "quotes": "Oferty",
+          "invoices": "Faktury",
+          "opportunities": "Szanse sprzedaży",
+          "projects": "Projekty",
+          "sla": "SLA",
+          "surveys": "Ankiety",
+          "tickets": "Zgłoszenia",
+          "time": "Czas"
+        }
+      }
     }
   },
   "timeEntry": {
@@ -2310,7 +2530,23 @@
         "nothingImportedBody": "To uruchomienie nie utworzyło żadnych nowych rekordów. Każdy wiersz odpowiadał czemuś, co już istniało, więc nic nie zmieniono.",
         "claimedBySamePackage": "Już zmigrowane przez ten pakiet",
         "claimedByOtherPackage": "Już zmigrowane przez {{file}}",
-        "claimedByExistingEntity": "Dopasowano do istniejącej encji"
+        "claimedByExistingEntity": "Dopasowano do istniejącej encji",
+        "matchedBySku": "Dopasowano do istniejącego produktu według SKU"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Produkty (katalog / cennik)",
+          "vendorProducts": "Cennik dostawców (koszty dystrybutora)"
+        },
+        "productsHint": "Ceny i koszty są odczytywane jako kwoty dziesiętne (np. 1,299.50) z kolumną waluty, jeśli istnieje, w przeciwnym razie z walutą organizacji. Ujemne, nienumeryczne lub zbyt dokładne kwoty są odrzucane i zgłaszane; wiersz jest mimo to importowany. Produkty są dopasowywane do istniejących według SKU; wiersze cennika dostawców odwołują się do produktu przez SKU i tworzą lub dopasowują dostawcę według nazwy."
+      },
+      "configure": {
+        "products": {
+          "title": "Produkty",
+          "serviceType": "Typ usługi dla nowych produktów",
+          "serviceTypePlaceholder": "Wybierz typ usługi",
+          "serviceTypeHelp": "Produkty, których SKU już istnieje, są dopasowywane i pozostają bez zmian; tylko nowe produkty są przypisywane do tego typu usługi."
+        }
       }
     },
     "jobDetails": {
@@ -2391,7 +2627,16 @@
   },
   "policyManagement": {
     "title": "Zarządzanie zasadami",
-    "upgradeDescription": "Zarządzanie zasadami jest funkcją Pro. Uaktualnij plan, aby uzyskać dostęp do zaawansowanych ustawień zasad."
+    "upgradeDescription": "Zarządzanie zasadami jest funkcją Pro. Uaktualnij plan, aby uzyskać dostęp do zaawansowanych ustawień zasad.",
+    "bundleLibrary": {
+      "title": "Biblioteka pakietów autoryzacji",
+      "upgradeDescription": "Zaawansowane zarządzanie pakietami autoryzacji jest dostępne w Pro. Przejdź na Pro, aby skonfigurować pakiety ograniczające uprawnienia ról, zespołów, użytkowników i kluczy API.",
+      "protectionsDescription": "Wbudowane zabezpieczenia autoryzacji pozostają aktywne nawet wtedy, gdy konfigurowalne zaawansowane mechanizmy kontroli są niedostępne w tej edycji lub planie."
+    },
+    "proFeature": {
+      "title": "Funkcja Pro",
+      "description": "Zarządzanie zasadami wymaga wersji Pro. Przejdź na wersję Pro, aby uzyskać dostęp do tej funkcji."
+    }
   },
   "roleManagement": {
     "title": "Zarządzanie rolami",
@@ -2673,6 +2918,10 @@
       "modeTitle": "Tryb inicjowania obsługi Entra dla portalu klienta",
       "modeWorkflowManaged": "Zarządzany przez workflow",
       "workflowManagedInfo": "Tryb zarządzany przez workflow publikuje tylko zdarzenia dostępu z Entra. Wybrany workflow odpowiada za tworzenie użytkowników portalu klienta, przypisywanie ról, zaproszenia i zmiany w cyklu życia."
+    },
+    "proFeature": {
+      "title": "Zbiorcze przypisywanie pojedynczego logowania",
+      "description": "Ta funkcja jest dostępna w Pro. Przejdź na Pro, aby zarządzać przypisaniami SSO Google Workspace i Microsoft 365 bezpośrednio na stronie ustawień bezpieczeństwa."
     }
   },
   "profile": {
@@ -2856,7 +3105,8 @@
     "emptyState": "Brak dostępnych użytkowników.",
     "roles": {
       "client": "Użytkownik klienta",
-      "internal": "Użytkownik wewnętrzny"
+      "internal": "Użytkownik wewnętrzny",
+      "service": "Konto usługowe"
     },
     "badge": {
       "inactive": "Nieaktywny"
@@ -3287,7 +3537,7 @@
       "platformManaged": "Zarządzany przez AlgaPSA — nie wymaga konfiguracji. Połącz z nim agenta w kroku 2.",
       "addAnother": "Dodaj kolejnego dostawcę",
       "advancedOptions": "Opcje zaawansowane",
-      "googleNoSetup": "Google nie wymaga konfiguracji. Agenci logują się za pomocą identyfikatora konta usługi Google.",
+      "googleSetup": "Agenci logują się tokenem ID konta usługi Google. Tylko poniższy odbiorca musi odpowiadać temu, jak go żądają.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3301,9 +3551,14 @@
       "fields": {
         "provider": "Dostawca",
         "entraTenantId": "Identyfikator organizacji Entra",
-        "audienceOptional": "Odbiorca (opcjonalnie)",
         "audience": "Odbiorca",
         "subjectClaim": "Identyfikuj agentów według",
+        "audienceHelp": {
+          "microsoft": "Identyfikator aplikacji (klienta) rejestracji aplikacji Entra, dla której Twoi agenci żądają tokenów. Agenci żądają zakresu api://<ten identyfikator>/.default.",
+          "google": "Agenci muszą żądać tokenu ID Google dokładnie z tym odbiorcą. Wpisaliśmy adres URL MCP tego serwera, który jest typowym wyborem.",
+          "custom": "Identyfikator API lub zasobu skonfigurowany u dostawcy (na przykład identyfikator API Auth0). Musi dokładnie odpowiadać oświadczeniu aud w tokenach agentów. Adres URL MCP tego serwera to dobry wybór."
+        },
+        "audienceWhy": "Tokeny wystawione przez dostawcę dla innych aplikacji nie będą tu akceptowane.",
         "subjectClaimHelp": "Pozostaw puste, chyba że dostawca zaleca inaczej.",
         "issuer": "Wystawca",
         "jwksUri": "Adres URL kluczy podpisujących"
@@ -3416,6 +3671,36 @@
         "message": "Czy chcesz odłączyć klienta „{{name}}”? Natychmiast utraci dostęp i przed ponownym połączeniem będzie wymagać ponownej autoryzacji.",
         "confirm": "Odłącz",
         "cancel": "Anuluj"
+      }
+    },
+    "loading": "Ładowanie…",
+    "downloadHosts": {
+      "title": "Dozwolone hosty pobierania",
+      "intro": "Gdy dokument jest dołączany przez URL, AlgaPSA pobiera go wyłącznie z hostów wymienionych tutaj. Dotyczy to każdego, kto dołącza dokumenty, w tym agentów AI, klientów API i interfejsu REST API. Wybieraj hosty przypisane do konkretnego zasobnika, np. acme-uploads.s3.us-east-1.amazonaws.com, zamiast ogólnych.",
+      "readOnly": "Możesz przeglądać tę listę. Jej zmiana wymaga uprawnienia „Zarządzanie hostami pobierania”.",
+      "builtIn": "Wbudowany",
+      "empty": "Brak niestandardowych hostów.",
+      "add": "Dodaj host",
+      "addTitle": "Dodaj dozwolony host pobierania",
+      "remove": "Usuń",
+      "removeTitle": "Usunąć host?",
+      "removeMessage": "Pobieranie z {{host}} przestanie działać, dopóki host nie zostanie ponownie dodany.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Nazwa hosta lub *.example.com, aby zezwolić na wszystkie subdomeny.",
+        "note": "Notatka (opcjonalnie)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Używany do",
+        "allowed": "Dozwolony",
+        "note": "Notatka",
+        "addedBy": "Dodane przez",
+        "addedOn": "Data dodania"
+      },
+      "errors": {
+        "load": "Nie udało się wczytać dozwolonych hostów pobierania.",
+        "save": "Nie udało się zapisać zmiany."
       }
     }
   },
@@ -3587,10 +3872,219 @@
       "noLeadingTrailingDot": "Domena nie może zaczynać się ani kończyć kropką.",
       "notApplianceHost": "Wybierz domenę inną niż główny host tego serwera. Niestandardowa domena portalu musi być inną nazwą hosta, którą serwer proxy przekierowuje tutaj.",
       "nothingToRetry": "Brak nieudanej rejestracji domeny niestandardowej do ponowienia.",
-      "retryOnlyAfterFailure": "Ponowienie jest dostępne tylko po nieudanej rejestracji."
+      "retryOnlyAfterFailure": "Ponowienie jest dostępne tylko po nieudanej rejestracji.",
+      "alreadyInUse": "Ta domena jest już używana. Wybierz inną domenę.",
+      "usedByOtherSurface": "Ta domena jest już używana przez inną z Twoich domen niestandardowych. Aby udostępniać portal klienta i aplikację MSP z jednej domeny, wybierz „Oba”.",
+      "invalidSurface": "Wybierz, co udostępnia domena niestandardowa: portal klienta, aplikację MSP lub oba.",
+      "redirectUrisHosted": "Identyfikatory URI przekierowań dla domen hostowanych rejestruje wsparcie platformy.",
+      "nothingToConfirm": "Brak oczekującego potwierdzenia identyfikatorów URI przekierowań SSO dla tej domeny."
     }
   },
   "common": {
-    "saving": "Zapisywanie…"
+    "saving": "Zapisywanie…",
+    "cancel": "Anuluj"
+  },
+  "featureFlags": {
+    "categories": {
+      "core": {
+        "title": "Podstawowe funkcje",
+        "description": "Niezbędne funkcje do codziennej pracy"
+      },
+      "ui": {
+        "title": "Interfejs użytkownika",
+        "description": "Nowe funkcje i ulepszenia interfejsu"
+      },
+      "ai": {
+        "title": "Funkcje AI",
+        "description": "Funkcje oparte na sztucznej inteligencji"
+      },
+      "integrations": {
+        "title": "Integracje",
+        "description": "Integracje z usługami zewnętrznymi"
+      },
+      "performance": {
+        "title": "Wydajność",
+        "description": "Funkcje optymalizacji wydajności"
+      },
+      "experimental": {
+        "title": "Eksperymentalne",
+        "description": "Innowacyjne funkcje w fazie rozwoju"
+      }
+    },
+    "features": {
+      "enable_ticket_automation": {
+        "title": "Automatyzacja zgłoszeń",
+        "description": "Automatycznie przypisuj i kieruj zgłoszenia na podstawie reguł"
+      },
+      "enable_time_tracking": {
+        "title": "Rejestrowanie czasu",
+        "description": "Rejestruj czas poświęcony na zgłoszenia i projekty"
+      },
+      "enable_billing": {
+        "title": "System rozliczeń",
+        "description": "Generowanie faktur i śledzenie płatności"
+      },
+      "new_ticket_ui": {
+        "title": "Nowy interfejs zgłoszeń",
+        "description": "Przeprojektowany interfejs tworzenia zgłoszeń i zarządzania nimi"
+      },
+      "new_dashboard_layout": {
+        "title": "Nowoczesny pulpit",
+        "description": "Nowy pulpit z konfigurowalnymi widżetami"
+      },
+      "ai_ticket_suggestions": {
+        "title": "Sugestie AI dotyczące zgłoszeń",
+        "description": "Kategoryzacja zgłoszeń i sugestie priorytetów oparte na AI"
+      },
+      "enable_ai_time_tracking": {
+        "title": "Rejestrowanie czasu z AI",
+        "description": "Automatycznie rejestruj czas na podstawie aktywności"
+      },
+      "enable_predictive_analytics": {
+        "title": "Analityka predykcyjna",
+        "description": "Przewiduj liczbę zgłoszeń i zapotrzebowanie na zasoby"
+      },
+      "enable_slack_integration": {
+        "title": "Integracja ze Slack",
+        "description": "Wysyłaj powiadomienia i aktualizacje do Slack"
+      },
+      "teams-integration-ui": {
+        "description": "Zintegruj z Microsoft Teams"
+      },
+      "enable_jira_sync": {
+        "title": "Synchronizacja z Jira",
+        "description": "Synchronizuj zgłoszenia z zadaniami Jira"
+      },
+      "enable_query_caching": {
+        "title": "Buforowanie zapytań",
+        "description": "Buforuj zapytania do bazy danych, aby skrócić czas odpowiedzi"
+      },
+      "enable_lazy_loading": {
+        "title": "Ładowanie na żądanie",
+        "description": "Ładuj treść w miarę potrzeb, aby poprawić wydajność"
+      },
+      "enable_websocket_updates": {
+        "title": "Aktualizacje w czasie rzeczywistym",
+        "description": "Używaj WebSockets do natychmiastowych aktualizacji"
+      },
+      "enable_voice_commands": {
+        "title": "Polecenia głosowe",
+        "description": "Steruj aplikacją za pomocą poleceń głosowych"
+      },
+      "beta_mobile_app": {
+        "title": "Wersja beta aplikacji mobilnej",
+        "description": "Dostęp do wersji beta aplikacji mobilnej"
+      }
+    },
+    "enums": {
+      "stable": "Stabilne",
+      "beta": "Wersja beta",
+      "experimental": "Eksperymentalne"
+    },
+    "loading": "Ładowanie flag funkcji...",
+    "title": "Flagi funkcji",
+    "description": "Włączaj lub wyłączaj funkcje w aplikacji. Niektóre funkcje mogą wymagać ponownego uruchomienia.",
+    "unsaved": "Masz niezapisane zmiany. Kliknij Zapisz, aby je zastosować.",
+    "requiresRestart": "Wymaga ponownego uruchomienia",
+    "errors": {
+      "loadFailed": "Błąd ładowania flag funkcji: {{message}}"
+    },
+    "dependencies": "Wymaga: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Ustawienia języka portalu klienta",
+    "description": "Skonfiguruj opcje językowe dostępne dla klientów",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Język domyślny",
+        "help": "Ten język będzie używany dla nowych klientów oraz gdy nie ustawiono preferencji"
+      },
+      "availableLanguages": {
+        "label": "Dostępne języki",
+        "help": "Wybierz języki, z których mogą korzystać klienci"
+      }
+    },
+    "defaultSuffix": "(domyślny)",
+    "preview": {
+      "title": "Podgląd",
+      "defaultLanguage": "Język domyślny:",
+      "availableLanguages": "Dostępne języki:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Ustawienia zapisane pomyślnie"
+      }
+    },
+    "errors": {
+      "saveFailed": "Nie udało się zapisać ustawień"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Angielski",
+      "fr": "Francuski",
+      "es": "Hiszpański",
+      "de": "Niemiecki",
+      "nl": "Niderlandzki",
+      "it": "Włoski",
+      "pl": "Polski",
+      "pt": "Portugalski (Brazylia)",
+      "sv": "Szwedzki",
+      "xx": "Pseudo-język (xx)",
+      "yy": "Pseudo-język (yy)"
+    }
+  },
+  "telemetry": {
+    "fields": {
+      "usageStats": {
+        "label": "Statystyki użytkowania",
+        "enabledDescription": "Włączone - Wysyła anonimowe dane o użytkowaniu, aby pomóc ulepszać produkt",
+        "disabledDescription": "Wyłączone - Wysyła anonimowe dane o użytkowaniu, aby pomóc ulepszać produkt"
+      }
+    },
+    "environmentHelp": "Statystyki użytkowania są kontrolowane przez zmienną środowiskową {{variable}}. Skontaktuj się z administratorem systemu, aby zmienić to ustawienie.",
+    "sections": {
+      "collectedData": {
+        "title": "Jakie dane są zbierane",
+        "featureUsage": "Wzorce korzystania z funkcji (bez danych osobowych)",
+        "errorReports": "Raporty błędów do debugowania",
+        "performance": "Wskaźniki wydajności",
+        "configuration": "Konfiguracja systemu (zanonimizowana)"
+      }
+    }
+  },
+  "dialogs": {
+    "statusImport": {
+      "title": "Importuj standardowe statusy",
+      "description": "Wybierz standardowe statusy, które chcesz zaimportować",
+      "selectAll": "Zaznacz wszystko ({{selected}}/{{total}})",
+      "closed": "Zamknięty",
+      "default": "Domyślny",
+      "empty": "Brak standardowych statusów do zaimportowania",
+      "importSelected": "Importuj wybrane ({{count}})"
+    }
+  },
+  "tagDisplay": {
+    "title": "Wyświetlaj na chipach",
+    "subtitle": "Tagi wyświetlane obok kontaktów i klientów na listach zgłoszeń, w nagłówkach zgłoszeń i w selektorach.",
+    "loading": "Ładowanie…",
+    "description": "Wybierz, które tagi są wyświetlane jako odznaki obok kontaktów i klientów oraz w jakiej kolejności. Lista bez tagów nie pokazuje odznak dla tej grupy odbiorców.",
+    "contacts": "Kontakty",
+    "clients": "Klienci",
+    "audienceInternal": "Użytkownicy wewnętrzni",
+    "audienceClient": "Portal klienta",
+    "clientNote": "Domyślnie pusta. Tagi z tej listy są widoczne dla użytkowników klienta w portalu klienta.",
+    "noneSelected": "Nie wyświetlono żadnych tagów.",
+    "moveUp": "Przenieś w górę",
+    "moveDown": "Przenieś w dół",
+    "remove": "Usuń",
+    "addTag": "Dodaj tag…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Wróć do ustawień e-mail",
+      "title": "Dostawcy poczty e-mail i tożsamości",
+      "description": "Zarejestruj własną aplikację Google lub Microsoft do obsługi przychodzących wiadomości e-mail i logowania pracowników. Te poświadczenia należą do Twojego obszaru roboczego."
+    }
   }
 }

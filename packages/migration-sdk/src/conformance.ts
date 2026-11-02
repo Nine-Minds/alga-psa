@@ -114,6 +114,37 @@ export function sampleEntityRows(): AmpPackageRows {
         purchase_date: '2023-08-15',
       },
     ],
+    products: [
+      {
+        package_record_id: 'product-fw-license',
+        source_record_id: 'src-product-1',
+        external_identifier_namespace: 'fixture:instance-1',
+        name: 'FortiGate 60F UTP Bundle (1 yr)',
+        sku: 'FC-10-0060F-950-02-12',
+        category_name: 'Security',
+        unit_of_measure: 'each',
+        price_minor: 129900,
+        price_currency: 'USD',
+        cost_minor: 98000,
+        cost_currency: 'USD',
+        description: 'Firewall with one year of UTP protection.',
+        is_active: 1,
+      },
+    ],
+    vendor_products: [
+      {
+        package_record_id: 'vendor-product-1',
+        source_record_id: 'src-vendor-product-1',
+        external_identifier_namespace: 'fixture:instance-1',
+        product_package_record_id: 'product-fw-license',
+        vendor_name: 'Ingram Micro',
+        vendor_sku: 'IM-FG60F-UTP',
+        unit_cost_minor: 98000,
+        cost_currency: 'USD',
+        lead_time_days: 5,
+        is_preferred: 1,
+      },
+    ],
     external_identifiers: [
       {
         package_record_id: 'ext-1',

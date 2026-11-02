@@ -196,7 +196,10 @@
             "title": "Projecttaak"
           }
         },
-        "fallbackTitle": "Projectgegevens"
+        "fallbackTitle": "Projectgegevens",
+        "staging": {
+          "title": "Project klaarzetten"
+        }
       },
       "title": "Projecten",
       "templates": {
@@ -272,6 +275,9 @@
       },
       "templates": {
         "title": "Ticketsjablonen"
+      },
+      "cannedResponses": {
+        "title": "Standaardantwoorden"
       }
     },
     "timeEntry": {
@@ -357,6 +363,9 @@
           "title": "Asset bewerken"
         },
         "fallbackTitle": "Activadetails"
+      },
+      "custody": {
+        "title": "Apparatuur in bewaring"
       }
     },
     "chat": {
@@ -510,6 +519,29 @@
     },
     "layout": {
       "defaultTitle": "Dashboard | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Gezamenlijk beheerde IT"
+    },
+    "coManagement": {
+      "title": "Toegang voor gezamenlijk beheer",
+      "administration": {
+        "title": "Co-managed beheer"
+      },
+      "customerTickets": {
+        "title": "Klanttickets"
+      },
+      "sharedTicket": {
+        "title": "Gedeeld ticket"
+      },
+      "providers": {
+        "title": "E-mail- en identiteitsproviders"
+      },
+      "sharedTasks": {
+        "title": "Gedeelde taken",
+        "taskTitle": "Gedeelde taak",
+        "projectTitle": "Gedeeld project"
+      }
     }
   },
   "auth": {
@@ -630,5 +662,8 @@
     "setupComplete": {
       "title": "Kaart instellen"
     }
+  },
+  "pay": {
+    "title": "Factuur betalen"
   }
 }

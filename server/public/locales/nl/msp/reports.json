@@ -276,7 +276,7 @@
       },
       "bucketUsage": {
         "title": "Gebruik van urenbundels",
-        "description": "Gebruik van urenbundels bewaken en overgebruik herkennen",
+        "description": "Volg het gebruik van bucketuren en signaleer overschrijdingen. Voorkochte urenblokken (op contract en ad-hoc) worden vermeld met hun verbruik.",
         "empty": "Geen op bundels gebaseerde contracten gevonden"
       },
       "profitability": {
@@ -305,13 +305,23 @@
       "profit": "Winst",
       "margin": "Marge",
       "plusVariableUsage": "+ variabel verbruik",
-      "variableUsage": "Variabel verbruik"
+      "variableUsage": "Variabel verbruik",
+      "service": "Dienst",
+      "hourlyRate": "Tarief / uur",
+      "expirationDate": "Verloopt",
+      "neverExpires": "Nooit",
+      "adhocBlock": "Ad-hoc",
+      "remainingValue": "Resterende waarde",
+      "validFrom": "Geldig vanaf"
     },
     "statusValues": {
       "active": "Actief",
       "upcoming": "Binnenkort",
       "yes": "Ja",
-      "no": "Nee"
+      "no": "Nee",
+      "expired": "Verlopen",
+      "voided": "Ongedaan gemaakt",
+      "all": "Alle statussen"
     },
     "profitability": {
       "formats": {
@@ -414,6 +424,11 @@
         "allAgreements": "Alle contracten",
         "currency": "Valuta"
       }
+    },
+    "columnsMenu": {
+      "label": "Kolommen",
+      "title": "Kolommen",
+      "reset": "Standaardkolommen herstellen"
     }
   },
   "contractPerformance": {

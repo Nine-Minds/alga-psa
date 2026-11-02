@@ -1,8 +1,18 @@
 import { createHash } from 'node:crypto';
-import { verifyBuildRecord, verifyDockerArchive, verifyLoadedDockerImage } from '../verify-docker-archive-build.mjs';
+import { verifyBuildRecord, verifyDockerArchive, verifyLoadedDockerImage, verifyPulledDockerImage,
+  verifyRegistryRecord } from '../verify-docker-archive-build.mjs';
 
 const digest = /^sha256:[a-f0-9]{64}$/;
 const hash = value => `sha256:${createHash('sha256').update(JSON.stringify(value)).digest('hex')}`;
+// Each transport has a record kind, a receipt kind attesting the consumer's
+// local verification, and a manifest identity. A manifest's components all
+// travel the same way, so the manifest identity follows from its components.
+const transports = {
+  'docker-archive-build': { receipt: 'browser-ci-archive-verification',
+    manifest: { kind: 'browser-ci-docker-archives', scope: 'candidate-built-archives-only' } },
+  'docker-registry-build': { receipt: 'browser-ci-registry-verification',
+    manifest: { kind: 'browser-ci-registry-images', scope: 'candidate-pulled-registry-images-only' } },
+};
 function identity({ revision, edition, runId, runAttempt }) {
   if (!/^[a-f0-9]{40}$/.test(revision ?? '') || !['community', 'enterprise'].includes(edition)
     || !/^[1-9][0-9]*$/.test(String(runId ?? '')) || !Number.isSafeInteger(runAttempt) || runAttempt < 1) {
@@ -17,48 +27,65 @@ export function browserArtifactServices(edition) {
 }
 function recordFields(record, context) {
   verifyBuildRecord(record, { ...context, attempt: context.runAttempt, service: record?.service });
-  if (!digest.test(record.archive?.sha256 ?? '') || !Number.isSafeInteger(record.archive?.bytes) || record.archive.bytes < 1
-    || record.archive?.filename !== `${record.service}.tar.gz`
-    || typeof record.dockerfile !== 'string' || !record.dockerfile || record.dockerfile.startsWith('/')
-    || record.dockerfile.split(/[\\/]/).includes('..')) throw new Error('Invalid browser archive record');
-  return { schemaVersion: 1, kind: 'docker-archive-build', registryPublication: false,
+  if (typeof record.dockerfile !== 'string' || !record.dockerfile || record.dockerfile.startsWith('/')
+    || record.dockerfile.split(/[\\/]/).includes('..')) throw new Error('Invalid browser build record');
+  const common = { schemaVersion: 1, kind: record.kind, registryPublication: false,
     revision: record.revision, build: { provider: record.build.provider, runId: record.build.runId, attempt: record.build.attempt },
     service: record.service, image: record.image, dockerfile: record.dockerfile, platform: record.platform,
     configImageId: record.configImageId, buildReportedDigest: record.buildReportedDigest,
-    metadata: { 'containerimage.config.digest': record.configImageId, 'containerimage.digest': record.buildReportedDigest },
-    archive: { filename: record.archive.filename, bytes: record.archive.bytes, sha256: record.archive.sha256 } };
+    metadata: { 'containerimage.config.digest': record.configImageId, 'containerimage.digest': record.buildReportedDigest } };
+  if (record.kind === 'docker-registry-build') {
+    const registry = verifyRegistryRecord(record);
+    return { ...common, registry: { reference: registry.reference, tag: registry.tag, manifestDigest: registry.manifestDigest,
+      mediaType: registry.mediaType, bytes: registry.bytes } };
+  }
+  if (!digest.test(record.archive?.sha256 ?? '') || !Number.isSafeInteger(record.archive?.bytes) || record.archive.bytes < 1
+    || record.archive?.filename !== `${record.service}.tar.gz`) throw new Error('Invalid browser archive record');
+  return { ...common, archive: { filename: record.archive.filename, bytes: record.archive.bytes, sha256: record.archive.sha256 } };
 }
-// Receipts attest a successful local byte verification before CI removes the large
-// gzip archive. They are not signatures or evidence of registry publication.
+const receipt = (context, selected) => ({ schemaVersion: 1, kind: transports[selected.kind].receipt, ...context,
+  service: selected.service, recordSha256: hash(selected) });
+// Receipts attest a successful local verification before CI discards what it
+// verified: the gzip archive's bytes, or the pulled image's repository digest.
+// They are not signatures or evidence of release publication.
 export async function createBrowserArchiveReceipt(record, archivePath, expected) {
   const context = identity(expected);
   const selected = recordFields(record, context);
   await verifyDockerArchive(record, archivePath, { ...context, attempt: context.runAttempt, service: selected.service });
-  return { schemaVersion: 1, kind: 'browser-ci-archive-verification', ...context,
-    service: selected.service, recordSha256: hash(selected) };
+  return receipt(context, selected);
 }
-function componentFields({ record, receipt, inspection }, context) {
+export function createBrowserRegistryReceipt(record, inspection, expected) {
+  const context = identity(expected);
   const selected = recordFields(record, context);
-  if (receipt?.schemaVersion !== 1 || receipt.kind !== 'browser-ci-archive-verification'
-    || receipt.service !== selected.service || receipt.recordSha256 !== hash(selected)
-    || Object.entries(context).some(([key, value]) => receipt[key] !== value)) throw new Error('Archive verification receipt mismatch');
-  verifyLoadedDockerImage(selected, inspection, { ...context, attempt: context.runAttempt, service: selected.service });
-  const image = inspection[0];
-  return { record: selected, receipt: { schemaVersion: 1, kind: receipt.kind, ...context,
-    service: receipt.service, recordSha256: receipt.recordSha256 }, inspection: [{ Id: image.Id,
-    Os: image.Os, Architecture: image.Architecture,
-    Config: { Labels: { 'org.opencontainers.image.revision': image.Config.Labels['org.opencontainers.image.revision'] } } }] };
+  verifyPulledDockerImage(record, inspection, { ...context, attempt: context.runAttempt, service: selected.service,
+    registryNamespace: expected.registryNamespace });
+  return receipt(context, selected);
+}
+function componentFields({ record, receipt: given, inspection }, context) {
+  const selected = recordFields(record, context);
+  if (given?.schemaVersion !== 1 || given.kind !== transports[selected.kind].receipt
+    || given.service !== selected.service || given.recordSha256 !== hash(selected)
+    || Object.entries(context).some(([key, value]) => given[key] !== value)) throw new Error('Candidate verification receipt mismatch');
+  const expected = { ...context, attempt: context.runAttempt, service: selected.service };
+  const image = inspection?.[0];
+  const sanitized = { Id: image?.Id, Os: image?.Os, Architecture: image?.Architecture,
+    Config: { Labels: { 'org.opencontainers.image.revision': image?.Config?.Labels?.['org.opencontainers.image.revision'] } } };
+  if (selected.kind === 'docker-registry-build') sanitized.RepoDigests = [verifyPulledDockerImage(selected, inspection, expected)];
+  else verifyLoadedDockerImage(selected, inspection, expected);
+  return { record: selected, receipt: { schemaVersion: 1, kind: given.kind, ...context,
+    service: given.service, recordSha256: given.recordSha256 }, inspection: [sanitized] };
 }
 export function buildBrowserArtifactManifest({ components, ...expected }) {
   const context = identity(expected);
-  if (!Array.isArray(components)) throw new Error('Browser archive components are required');
+  if (!Array.isArray(components)) throw new Error('Browser candidate components are required');
   const selected = components.map(component => componentFields(component, context))
     .sort((a, b) => a.record.service.localeCompare(b.record.service));
   if (JSON.stringify(selected.map(component => component.record.service)) !== JSON.stringify(browserArtifactServices(context.edition))) {
-    throw new Error('Browser archive component inventory mismatch');
+    throw new Error('Browser candidate component inventory mismatch');
   }
-  return { schemaVersion: 1, kind: 'browser-ci-docker-archives', registryPublication: false,
-    scope: 'candidate-built-archives-only', ...context, components: selected };
+  const kinds = new Set(selected.map(component => component.record.kind));
+  if (kinds.size !== 1) throw new Error('Browser candidate components must share one transport');
+  return { schemaVersion: 1, ...transports[[...kinds][0]].manifest, registryPublication: false, ...context, components: selected };
 }
 export function validateBrowserArtifactManifest(manifest, expected) {
   const current = identity(expected);
@@ -73,10 +100,12 @@ export function validateBrowserArtifactManifest(manifest, expected) {
     throw new Error('Browser artifact manifest identity mismatch');
   }
   const context = { ...current, runAttempt: attempt };
-  if (manifest?.schemaVersion !== 1 || manifest.kind !== 'browser-ci-docker-archives' || manifest.registryPublication !== false
-    || manifest.scope !== 'candidate-built-archives-only'
+  const transport = Object.values(transports).find(({ manifest: shape }) => shape.kind === manifest?.kind && shape.scope === manifest.scope);
+  if (manifest?.schemaVersion !== 1 || !transport || manifest.registryPublication !== false
     || Object.entries(context).some(([key, value]) => manifest[key] !== value)) throw new Error('Browser artifact manifest identity mismatch');
   // Return the sanitized projection; never export arbitrary inspection environment
   // variables or build metadata to metrics.
-  return buildBrowserArtifactManifest({ ...context, components: manifest.components });
+  const rebuilt = buildBrowserArtifactManifest({ ...context, components: manifest.components });
+  if (rebuilt.kind !== manifest.kind) throw new Error('Browser artifact manifest identity mismatch');
+  return rebuilt;
 }

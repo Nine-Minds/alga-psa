@@ -1,7 +1,9 @@
 {
   "escalationManager": {
     "unsavedChanges_one": "{{count}} osparad ändring",
-    "unsavedChanges_other": "{{count}} osparade ändringar"
+    "unsavedChanges_other": "{{count}} osparade ändringar",
+    "unsavedChanges_few": "{{count}} osparade ändringar",
+    "unsavedChanges_many": "{{count}} osparade ändringar"
   },
   "page": {
     "title": "Administrationsinställningar"
@@ -34,7 +36,8 @@
     "keyboardShortcuts": "Tangentbordsgenvägar",
     "opportunities": "Affärsmöjligheter",
     "mcpServer": "MCP-server",
-    "settingsFallback": "Inställningar"
+    "settingsFallback": "Inställningar",
+    "tags": "Taggar"
   },
   "unsavedChanges": {
     "title": "Osparade ändringar",
@@ -411,17 +414,21 @@
       "cancel": "Avbryt",
       "delete": "Radera",
       "placeholder": "Ange nytt teamnamn",
+      "descriptionPlaceholder": "Ange en valfri teambeskrivning",
       "selectManager": "Välj en chef"
     },
     "details": {
       "loading": "Läser in teamuppgifter…",
       "notFound": "Inget team hittades",
+      "noDescription": "Ingen beskrivning",
       "fields": {
         "teamLead": "Teamledare",
+        "description": "Beskrivning",
         "addMember": "Lägg till medlem"
       },
       "placeholders": {
         "teamName": "Ange teamnamn",
+        "description": "Ange teambeskrivning",
         "selectTeamLead": "Välj en teamledare",
         "selectUserToAdd": "Välj en användare att lägga till",
         "noTeamLead": "Inte tilldelad"
@@ -433,8 +440,10 @@
         "discard": "Kasta",
         "saveChanges": "Spara ändringar",
         "saveName": "Spara namn",
+        "saveDescription": "Spara beskrivning",
         "cancel": "Avbryt",
         "editName": "Redigera namn",
+        "editDescription": "Redigera beskrivning",
         "remove": "Ta bort"
       },
       "table": {
@@ -448,7 +457,9 @@
       },
       "leadName": "Ledare: {{name}}",
       "memberCount_one": "{{count}} medlem",
-      "memberCount_other": "{{count}} medlemmar"
+      "memberCount_other": "{{count}} medlemmar",
+      "memberCount_few": "{{count}} medlemmar",
+      "memberCount_many": "{{count}} medlemmar"
     },
     "messages": {
       "error": {
@@ -457,6 +468,7 @@
         "createFailed": "Det gick inte att skapa teamet: {{error}}",
         "deleteFailed": "Det gick inte att radera teamet",
         "updateName": "Det gick inte att uppdatera teamnamnet",
+        "updateDescription": "Det gick inte att uppdatera teambeskrivningen",
         "saveChanges": "Det gick inte att spara ändringarna. Försök igen."
       }
     }
@@ -706,7 +718,8 @@
         "skipItem": "Hoppa över denna post",
         "importNewName": "Importera med ett annat namn:",
         "importWithOrder": "Importera med ordning {{order}}",
-        "importWithResolutions": "Importera med lösta konflikter"
+        "importWithResolutions": "Importera med lösta konflikter",
+        "removesIntro": "Om du raderar den här tavlan tas även följande bort:"
       },
       "importTable": {
         "active": "Aktiv"
@@ -775,7 +788,9 @@
           "deleteFailed": "Det gick inte att radera tavlan",
           "importFailed": "Det gick inte att importera tavlor",
           "updateStatusFailed": "Det gick inte att uppdatera tavlans status",
-          "updateDefaultFailed": "Det gick inte att uppdatera standardtavlan"
+          "updateDefaultFailed": "Det gick inte att uppdatera standardtavlan",
+          "hasEmailSenderRoute": "Det går inte att radera tavlan: den har en egen routning för utgående avsändare. Ta först bort ärendeavsändaren i tavelredigeraren.",
+          "referencedByAutomations": "Det går inte att radera tavlan: andra inställningar pekar fortfarande på den. Rikta om dem till en annan tavla eller ta bort dem först."
         }
       },
       "closeRules": {
@@ -889,6 +904,48 @@
         "useDefault": "Använd standard för ärenden",
         "duplicateRoute": "Den avsändarroutningen finns redan.",
         "saveFailed": "Det gick inte att spara avsändarroutningen. Försök igen."
+      },
+      "deleteDependencies": {
+        "categories_one": "kategori",
+        "categories_other": "kategorier",
+        "categories_few": "kategorier",
+        "categories_many": "kategorier",
+        "statuses_one": "ärendestatus",
+        "statuses_other": "ärendestatusar",
+        "statuses_few": "ärendestatusar",
+        "statuses_many": "ärendestatusar",
+        "autoCloseRules_one": "regel för automatisk stängning",
+        "autoCloseRules_other": "regler för automatisk stängning",
+        "autoCloseRules_few": "regler för automatisk stängning",
+        "autoCloseRules_many": "regler för automatisk stängning",
+        "notificationRules_one": "aviseringsregel",
+        "notificationRules_other": "aviseringsregler",
+        "notificationRules_few": "aviseringsregler",
+        "notificationRules_many": "aviseringsregler",
+        "portalVisibility_one": "synlighetstilldelning i kundportalen",
+        "portalVisibility_other": "synlighetstilldelningar i kundportalen",
+        "portalVisibility_few": "synlighetstilldelningar i kundportalen",
+        "portalVisibility_many": "synlighetstilldelningar i kundportalen",
+        "emailSenderRoutes_one": "utgående avsändarroutning",
+        "emailSenderRoutes_other": "utgående avsändarroutningar",
+        "emailSenderRoutes_few": "utgående avsändarroutningar",
+        "emailSenderRoutes_many": "utgående avsändarroutningar",
+        "ticketTemplates_one": "ärendemall",
+        "ticketTemplates_other": "ärendemallar",
+        "ticketTemplates_few": "ärendemallar",
+        "ticketTemplates_many": "ärendemallar",
+        "recurringTickets_one": "schema för återkommande ärenden",
+        "recurringTickets_other": "scheman för återkommande ärenden",
+        "recurringTickets_few": "scheman för återkommande ärenden",
+        "recurringTickets_many": "scheman för återkommande ärenden",
+        "checklistRules_one": "regel för checklistetilldelning",
+        "checklistRules_other": "regler för checklistetilldelning",
+        "checklistRules_few": "regler för checklistetilldelning",
+        "checklistRules_many": "regler för checklistetilldelning",
+        "cannedResponses_one": "färdigt svar för tavlan",
+        "cannedResponses_other": "färdiga svar för tavlan",
+        "cannedResponses_few": "färdiga svar för tavlan",
+        "cannedResponses_many": "färdiga svar för tavlan"
       }
     },
     "priorities": {
@@ -980,7 +1037,8 @@
         "description": "Beskrivning",
         "items": "Poster",
         "status": "Status",
-        "actions": "Åtgärder"
+        "actions": "Åtgärder",
+        "scope": "Tillgänglig för"
       },
       "statusLabels": {
         "active": "Aktiv",
@@ -998,7 +1056,9 @@
         "down": "Ner",
         "remove": "Ta bort",
         "addItem": "Lägg till post",
-        "addRule": "Lägg till regel"
+        "addRule": "Lägg till regel",
+        "duplicateToClient": "Duplicera till kund…",
+        "duplicate": "Duplicera"
       },
       "fields": {
         "name": {
@@ -1020,13 +1080,48 @@
         },
         "rules": {
           "label": "Regler för automatisk tillämpning",
-          "help": "Mallen tillämpas automatiskt på nya ärenden som matchar någon av dessa regler. Låt ett fält stå som ”Alla” för att matcha alla värden.",
+          "help": "En mall tillämpas på ett nytt ärende när det matchar någon av mallens regler. En regel matchar bara om ärendet uppfyller alla filter du angett. Lämna ett filter tomt för att ignorera det.",
           "empty": "Inga regler för automatisk tillämpning. Mallen kan fortfarande tillämpas manuellt på ärenden.",
           "board": "Tavla",
           "category": "Kategori",
           "subcategory": "Underkategori",
           "priority": "Prioritet",
-          "any": "Alla"
+          "any": "Alla",
+          "appliesToAll": "Gäller alla ärenden",
+          "appliesToAllClientTickets": "Gäller alla ärenden för {{client}}",
+          "clients": "Kunder",
+          "clientsAny": "Valfri kund",
+          "clientsFixedByTemplate": "Endast {{client}} (bestämt av mallens kund)",
+          "clientsAddAnother": "Lägg till en kund till",
+          "removeClient": "Ta bort {{name}}",
+          "origins": "Ärendets källa",
+          "originsAny": "Valfri källa",
+          "fromServiceRequest": "Endast ärenden från en tjänstebegäran",
+          "anyServiceRequest": "Valfri tjänstebegäran",
+          "keywords": "Nyckelord",
+          "keywordsPlaceholder": "Skriv ett ord eller en fras och tryck på Retur",
+          "keywordsHelp": "Delar av ord matchar också, så \"onboard\" hittar \"onboarding\". Skiftläge ignoreras.",
+          "removeKeyword": "Ta bort {{keyword}}",
+          "keywordMode": "Matchning",
+          "keywordModeAny": "Valfritt nyckelord",
+          "keywordModeAll": "Alla nyckelord",
+          "keywordTarget": "Sök i",
+          "keywordTargetBoth": "Titel och beskrivning",
+          "keywordTargetTitle": "Titel",
+          "keywordTargetDescription": "Beskrivning",
+          "originLabels": {
+            "internal": "Skapat av personal",
+            "client_portal": "Kundportal",
+            "inbound_email": "Inkommande e-post",
+            "api": "API",
+            "recurring": "Återkommande schema"
+          },
+          "clientScopedWarning": "Den här mallen är begränsad till {{client}}: dessa regler gäller bara ärenden för {{client}}."
+        },
+        "availableTo": {
+          "label": "Tillgänglig för",
+          "clear": "Alla kunder",
+          "help": "Låt stå på Alla kunder för att erbjuda mallen på alla ärenden, eller välj en kund för att begränsa den till kundens ärenden."
         }
       },
       "dialog": {
@@ -1034,13 +1129,17 @@
         "editTemplate": "Redigera checklistemall",
         "createFirstHelp": "Skapa mallen först och lägg sedan till checklistans poster och regler för automatisk tillämpning.",
         "deleteTitle": "Radera checklistemall",
-        "deleteMessage": "Vill du radera ”{{name}}”? Checklistor som redan lagts till på ärenden påverkas inte."
+        "deleteMessage": "Vill du radera ”{{name}}”? Checklistor som redan lagts till på ärenden påverkas inte.",
+        "duplicateTitle": "Duplicera till kund",
+        "duplicateHelp": "Kopiera \"{{name}}\" och dess punkter till en ny mall som är begränsad till en kund. Kopian är oberoende: senare ändringar i den ena mallen påverkar inte den andra.",
+        "duplicateClientPlaceholder": "Välj en kund"
       },
       "messages": {
         "success": {
           "created": "Checklistemallen har skapats",
           "updated": "Checklistemallen har uppdaterats",
-          "deleted": "Checklistemallen har raderats"
+          "deleted": "Checklistemallen har raderats",
+          "duplicated": "Checklistmall duplicerad till kund"
         },
         "error": {
           "fetchFailed": "Det gick inte att hämta checklistemallar",
@@ -1050,8 +1149,65 @@
           "deleteFailed": "Det gick inte att radera checklistemallen",
           "updateStatusFailed": "Det gick inte att uppdatera mallens status",
           "itemSaveFailed": "Det gick inte att spara checklistans post",
-          "ruleSaveFailed": "Det gick inte att spara regeln för automatisk tillämpning"
+          "ruleSaveFailed": "Det gick inte att spara regeln för automatisk tillämpning",
+          "duplicateFailed": "Det gick inte att duplicera checklistmallen"
         }
+      },
+      "scope": {
+        "allClients": "Alla kunder",
+        "unknownClient": "Okänd kund"
+      },
+      "filter": {
+        "client": "Kund",
+        "allClients": "Alla kunder",
+        "clear": "Rensa filter"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Tavla",
+          "category_id": "Kategori",
+          "subcategory_id": "Underkategori",
+          "priority_id": "Prioritet",
+          "client_id": "Kund",
+          "client_tags": "Kundtaggar",
+          "contact_tags": "Kontakttaggar",
+          "ticket_origin": "Ärendekälla",
+          "title_folded": "Rubrik",
+          "description_folded": "Beskrivning",
+          "from_service_request": "Från tjänstebegäran",
+          "service_request_definition_id": "Tjänstebegäran"
+        },
+        "operators": {
+          "equals": "Är lika med",
+          "not_equals": "Är inte lika med",
+          "in": "Innehåller något av",
+          "not_in": "Innehåller inget av",
+          "contains": "Innehåller",
+          "starts_with": "Börjar med",
+          "ends_with": "Slutar med",
+          "not_contains": "Innehåller inte",
+          "not_starts_with": "Börjar inte med",
+          "not_ends_with": "Slutar inte med",
+          "is_empty": "Är tomt",
+          "is_not_empty": "Är inte tomt"
+        },
+        "conditions": "Villkor",
+        "match": "Matchning",
+        "and": "Alla villkor",
+        "or": "Något villkor",
+        "field": "Fält",
+        "operator": "Villkor",
+        "value": "Värde",
+        "yes": "Ja",
+        "no": "Nej",
+        "advanced": "Den här regeln innehåller grupperade eller avancerade villkor och är skrivskyddad i den här redigeraren.",
+        "add": "Lägg till villkor",
+        "save": "Spara villkor",
+        "enabled": "Aktiverad",
+        "matchesAll": "Matchar alla ärenden inom mallens omfattning.",
+        "matchesNone": "Matchar inga ärenden.",
+        "tagsFailed": "Det gick inte att läsa in taggalternativen. Sparade val bevaras.",
+        "retry": "Försök igen"
       }
     },
     "externalSystems": {
@@ -1139,7 +1295,9 @@
         "success": {
           "deleted": "Interaktionstypen har raderats",
           "imported_one": "{{count}} interaktionstyp har importerats",
-          "imported_other": "{{count}} interaktionstyper har importerats"
+          "imported_other": "{{count}} interaktionstyper har importerats",
+          "imported_few": "{{count}} interaktionstyper har importerats",
+          "imported_many": "{{count}} interaktionstyper har importerats"
         },
         "error": {
           "fetchFailed": "Det gick inte att hämta interaktionstyper",
@@ -1390,7 +1548,9 @@
         "saveDomain": "Spara domän",
         "updateDomain": "Uppdatera domän",
         "submitting": "Skickar in…",
-        "cancelEdit": "Avbryt redigering"
+        "cancelEdit": "Avbryt redigering",
+        "confirmUris": "Jag har registrerat dem — bekräfta",
+        "confirmingUris": "Bekräftar…"
       },
       "form": {
         "label": "Egen domän",
@@ -1428,7 +1588,8 @@
         "deploying": "Driftsätter",
         "active": "Aktiv",
         "disabled": "Inaktiverad",
-        "unknown": "Okänd"
+        "unknown": "Okänd",
+        "pending_redirect_uri": "Väntar på omdirigerings-URI:er"
       },
       "messages": {
         "requestSubmitted": "Begäran om egen domän har skickats in.",
@@ -1440,9 +1601,32 @@
         "registerFailed": "Det gick inte att registrera egen domän.",
         "refreshFailed": "Det gick inte att uppdatera domänstatusen.",
         "retryFailed": "Det nya försöket misslyckades.",
-        "disableFailed": "Det gick inte att inaktivera egen domän."
+        "disableFailed": "Det gick inte att inaktivera egen domän.",
+        "confirmUrisFailed": "Det gick inte att bekräfta omdirigerings-URI:erna.",
+        "urisConfirmed": "Omdirigerings-URI:er bekräftade."
       },
-      "hostedTlsNote": "Vi utfärdar TLS-certifikat automatiskt när DNS har verifierats."
+      "hostedTlsNote": "Vi utfärdar TLS-certifikat automatiskt när DNS har verifierats.",
+      "surface": {
+        "label": "Betjänar",
+        "current": "Betjänar: {{value}}",
+        "updatingSurface": "Om du sparar ändras vilken app domänen betjänar, och etableringen startar om.",
+        "options": {
+          "client_portal": "Kundportal",
+          "msp": "MSP-app",
+          "both": "Båda"
+        },
+        "descriptions": {
+          "client_portal": "Domänen öppnar din kundportal. Detta är standard.",
+          "msp": "Domänen öppnar MSP-appen (tekniker). Omdirigerings-URI:erna för enkel inloggning måste registreras först.",
+          "both": "En domän betjänar båda apparna. Sökvägar under /msp öppnar MSP-appen och sökvägar under /client-portal öppnar kundportalen."
+        }
+      },
+      "redirectUris": {
+        "title": "SSO-omdirigerings-URI:er måste registreras",
+        "description": "Den här domänen betjänar MSP-appen, så enkel inloggning fungerar först när omdirigerings-URI:erna nedan har registrerats hos din SSO-leverantör. Domänen förblir väntande tills de har bekräftats.",
+        "listLabel": "Registrera dessa omdirigerings-URI:er:",
+        "contactSupport": "Be din administratör eller kontakta supporten för att registrera och bekräfta dessa omdirigerings-URI:er."
+      }
     },
     "yourCompanyName": "Ditt företagsnamn",
     "brandingPreviewMode": "Temaläge för förhandsgranskning av varumärkesprofil",
@@ -1956,6 +2140,48 @@
       "editor": {
         "inlineLogoHint": "Din logotyp bäddas in i meddelandet när det skickas. Behåll referensen src=\"cid:{{cid}}\" oförändrad – om den ersätts med en URL måste mottagarna först godkänna att bilden laddas ner."
       }
+    },
+    "templateVariables": {
+      "actions": {
+        "insert": "Infoga vid markören",
+        "guide": "Läs hela guiden",
+        "copy": "Kopiera {{path}}"
+      },
+      "insertHelp": "Välj en variabel för att infoga den.",
+      "availableHelp": "Variabler som är tillgängliga för den här mallen.",
+      "fields": {
+        "search": {
+          "placeholder": "Sök variabler"
+        },
+        "globalSearch": {
+          "placeholder": "Sök sökvägar, beskrivningar och begrepp"
+        },
+        "category": {
+          "all": "Alla områden"
+        }
+      },
+      "title": "Referens för variabler i e-postmallar",
+      "panelTitle": "Mallvariabler",
+      "inferredContract": "Skickas inte för närvarande. Detta kontrakt härleds från mallen.",
+      "empty": "Inga matchande variabler.",
+      "example": "Exempel:",
+      "usedBy": "Används av {{templates}}",
+      "description": "Hitta de data som är tillgängliga för varje e-postmall i systemet. Kopiera exakt Handlebars-token till en anpassad mall.",
+      "enums": {
+        "categories": {
+          "appointments": "Bokningar",
+          "auth": "Autentisering",
+          "billing": "Fakturering",
+          "quotes": "Offerter",
+          "invoices": "Fakturor",
+          "opportunities": "Affärsmöjligheter",
+          "projects": "Projekt",
+          "sla": "SLA",
+          "surveys": "Enkäter",
+          "tickets": "Ärenden",
+          "time": "Tid"
+        }
+      }
     }
   },
   "timeEntry": {
@@ -2265,7 +2491,9 @@
         "samples_other": "{{sample}} · {{count}} poster",
         "noSample": "Inget exempel",
         "missingRequired": "Obligatoriska fält är inte mappade: {{fields}}",
-        "duplicate": "Ett anpassat fält är mappat mer än en gång. Välj ett unikt målfält för varje källa."
+        "duplicate": "Ett anpassat fält är mappat mer än en gång. Välj ett unikt målfält för varje källa.",
+        "samples_few": "{{sample}} · {{count}} poster",
+        "samples_many": "{{sample}} · {{count}} poster"
       },
       "actions": {
         "back": "Tillbaka till migreringar",
@@ -2302,7 +2530,23 @@
         "nothingImportedBody": "Körningen skapade inga nya poster. Varje rad matchade något som redan fanns, så inget ändrades.",
         "claimedBySamePackage": "Redan migrerad av detta paket",
         "claimedByOtherPackage": "Redan migrerad av {{file}}",
-        "claimedByExistingEntity": "Matchad mot ett befintligt objekt"
+        "claimedByExistingEntity": "Matchad mot ett befintligt objekt",
+        "matchedBySku": "Matchad mot en befintlig produkt via SKU"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Produkter (katalog / prislista)",
+          "vendorProducts": "Leverantörsprislista (distributörens kostnader)"
+        },
+        "productsHint": "Priser och kostnader läses som decimalbelopp (till exempel 1,299.50) med valutakolumnen om den finns, annars hyresgästens valuta. Negativa, icke-numeriska eller alltför exakta belopp tas bort och rapporteras; raden importeras ändå. Produkter matchas mot befintliga produkter via SKU; rader i leverantörsprislistan refererar till en produkt via SKU och skapar eller matchar leverantören via namn."
+      },
+      "configure": {
+        "products": {
+          "title": "Produkter",
+          "serviceType": "Tjänstetyp för nya produkter",
+          "serviceTypePlaceholder": "Välj en tjänstetyp",
+          "serviceTypeHelp": "Produkter vars SKU redan finns matchas och lämnas oförändrade; endast nya produkter placeras under denna tjänstetyp."
+        }
       }
     },
     "jobDetails": {
@@ -2383,7 +2627,16 @@
   },
   "policyManagement": {
     "title": "Policyhantering",
-    "upgradeDescription": "Policyhantering är en Pro-funktion. Uppgradera för att få tillgång till avancerade policykontroller."
+    "upgradeDescription": "Policyhantering är en Pro-funktion. Uppgradera för att få tillgång till avancerade policykontroller.",
+    "bundleLibrary": {
+      "title": "Bibliotek för behörighetspaket",
+      "upgradeDescription": "Avancerad hantering av behörighetspaket är tillgänglig i Pro. Uppgradera för att konfigurera begränsande paket för roller, team, användare och API-nycklar.",
+      "protectionsDescription": "Inbyggda behörighetsskydd förblir aktiva även när konfigurerbara avancerade kontroller inte är tillgängliga i den här utgåvan eller abonnemangsnivån."
+    },
+    "proFeature": {
+      "title": "Pro-funktion",
+      "description": "Policyhantering kräver Pro. Uppgradera för att få tillgång till den här funktionen."
+    }
   },
   "roleManagement": {
     "title": "Hantera roller",
@@ -2528,7 +2781,9 @@
         "noSessions": "Inga aktiva sessioner hittades"
       },
       "subtitle_one": "{{sessionCount}} aktiv session för {{userCount}} användare",
-      "subtitle_other": "{{sessionCount}} aktiva sessioner för {{userCount}} användare"
+      "subtitle_other": "{{sessionCount}} aktiva sessioner för {{userCount}} användare",
+      "subtitle_few": "{{sessionCount}} aktiva sessioner för {{userCount}} användare",
+      "subtitle_many": "{{sessionCount}} aktiva sessioner för {{userCount}} användare"
     }
   },
   "ssoBulk": {
@@ -2621,7 +2876,9 @@
         "unlinkedCount": "Kopplingen för {{count}} konton via {{provider}} har tagits bort.",
         "previewUnlink_one": "Förhandsgranskningen är klar. Vi tar bort kopplingen för {{count}} vald användare.",
         "previewUnlink_other": "Förhandsgranskningen är klar. Vi tar bort kopplingen för {{count}} valda användare.",
-        "previewLink": "Förhandsgranskningen är klar. Granska sammanfattningen innan du kopplar konton."
+        "previewLink": "Förhandsgranskningen är klar. Granska sammanfattningen innan du kopplar konton.",
+        "previewUnlink_few": "Förhandsgranskningen är klar. Vi tar bort kopplingen för {{count}} valda användare.",
+        "previewUnlink_many": "Förhandsgranskningen är klar. Vi tar bort kopplingen för {{count}} valda användare."
       },
       "results": {
         "completeTitle": "Tilldelningen är klar",
@@ -2636,12 +2893,16 @@
         "wouldLink": "Skulle koppla",
         "alreadyUnlinked": "Kopplingen är redan borttagen",
         "alreadyLinked": "Redan kopplad",
-        "skippedInactive": "Överhoppad (inaktiv)"
+        "skippedInactive": "Överhoppad (inaktiv)",
+        "processed_few": "{{count}} användare har bearbetats.",
+        "processed_many": "{{count}} användare har bearbetats."
       },
       "providerNames": {
         "google": "Google Workspace",
         "microsoft": "Microsoft 365"
-      }
+      },
+      "selected_few": "{{count}} användare valda.",
+      "selected_many": "{{count}} användare valda."
     },
     "clientPortalProvisioning": {
       "deactivateBody": "När detta är aktiverat inaktiveras användare som hanteras via Entra-etablering när deras behörighet via åtkomstgruppen tas bort.",
@@ -2657,6 +2918,10 @@
       "modeTitle": "Läge för Entra-etablering i kundportalen",
       "modeWorkflowManaged": "Hanteras av arbetsflöde",
       "workflowManagedInfo": "Läget som hanteras av arbetsflöden publicerar endast Entra-åtkomsthändelser. Det valda arbetsflödet ansvarar för etablering av kundportalanvändare, rolltilldelning, inbjudningar och livscykeländringar."
+    },
+    "proFeature": {
+      "title": "Masstilldelning av enkel inloggning",
+      "description": "Den här funktionen är tillgänglig i Pro. Uppgradera för att hantera SSO-tilldelningar för Google Workspace och Microsoft 365 direkt från sidan med säkerhetsinställningar."
     }
   },
   "profile": {
@@ -2840,7 +3105,8 @@
     "emptyState": "Inga användare är tillgängliga.",
     "roles": {
       "client": "Kundanvändare",
-      "internal": "Intern användare"
+      "internal": "Intern användare",
+      "service": "Tjänstekonto"
     },
     "badge": {
       "inactive": "Inaktiv"
@@ -2905,7 +3171,9 @@
         "overallCompliance": "Total efterlevnad",
         "pausedSla": "ärenden med pausat SLA",
         "ticketsTracked_one": "{{count}} ärende följs",
-        "ticketsTracked_other": "{{count}} ärenden följs"
+        "ticketsTracked_other": "{{count}} ärenden följs",
+        "ticketsTracked_few": "{{count}} ärenden följs",
+        "ticketsTracked_many": "{{count}} ärenden följs"
       },
       "recentBreaches": {
         "empty": "Inga SLA-brott under den valda perioden",
@@ -2948,7 +3216,9 @@
         "responseTrackingDisabled": "Uppföljning av svarsstatus har inaktiverats",
         "responseTrackingEnabled": "Uppföljning av svarsstatus har aktiverats",
         "statusesUpdated_one": "{{count}} statuskonfiguration har uppdaterats",
-        "statusesUpdated_other": "{{count}} statuskonfigurationer har uppdaterats"
+        "statusesUpdated_other": "{{count}} statuskonfigurationer har uppdaterats",
+        "statusesUpdated_few": "{{count}} statuskonfigurationer har uppdaterats",
+        "statusesUpdated_many": "{{count}} statuskonfigurationer har uppdaterats"
       },
       "perStatus": {
         "description": "Konfigurera vilka ärendestatusar som ska pausa SLA-tidtagningen. När ett ärende får en status med pausning aktiverad stoppas SLA-tidtagningen tills ärendet får en annan status.",
@@ -2960,7 +3230,9 @@
         "resetChanges": "Återställ ändringar",
         "saveChanges": "Spara ändringar",
         "saving": "Sparar…",
-        "title": "Pauskonfiguration per status"
+        "title": "Pauskonfiguration per status",
+        "modifiedCount_few": "{{count}} statusar ändrade",
+        "modifiedCount_many": "{{count}} statusar ändrade"
       },
       "retry": "Försök igen"
     },
@@ -3003,7 +3275,9 @@
         "selectAll": "Markera alla",
         "selectAllVisible": "Markera alla synliga",
         "selectedCount_one": "{{count}} vald",
-        "selectedCount_other": "{{count}} valda"
+        "selectedCount_other": "{{count}} valda",
+        "selectedCount_few": "{{count}} valda",
+        "selectedCount_many": "{{count}} valda"
       },
       "targets": {
         "always": "Dygnet runt (ignorera öppettider)",
@@ -3096,7 +3370,13 @@
         "usageClients_one": "Kund: {{names}}",
         "usageClients_other": "Kunder: {{names}}",
         "usageTickets_one": "{{count}} ärende",
-        "usageTickets_other": "{{count}} ärenden"
+        "usageTickets_other": "{{count}} ärenden",
+        "usageBoards_few": "Tavlor: {{names}}",
+        "usageBoards_many": "Tavlor: {{names}}",
+        "usageClients_few": "Kunder: {{names}}",
+        "usageClients_many": "Kunder: {{names}}",
+        "usageTickets_few": "{{count}} ärenden",
+        "usageTickets_many": "{{count}} ärenden"
       },
       "description": "Hantera policyer för servicenivåavtal som definierar mål för svars- och lösningstider",
       "empty": "Inga SLA-policyer hittades. Klicka på ”Lägg till policy” för att skapa din första policy.",
@@ -3257,7 +3537,7 @@
       "platformManaged": "Hanteras av AlgaPSA – ingen konfiguration behövs. Anslut en agent till en i steg 2.",
       "addAnother": "Lägg till en annan identitetsleverantör",
       "advancedOptions": "Avancerade alternativ",
-      "googleNoSetup": "Google kräver ingen konfiguration. Agenter loggar in med ID:t för sitt Google-tjänstkonto.",
+      "googleSetup": "Agenterna loggar in med en ID-token för ett Google-tjänstkonto. Endast målgruppen nedan behöver matcha hur de begär den.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3271,9 +3551,14 @@
       "fields": {
         "provider": "Identitetsleverantör",
         "entraTenantId": "Entra-klientorganisations-ID",
-        "audienceOptional": "Målgrupp (valfritt)",
         "audience": "Målgrupp",
         "subjectClaim": "Identifiera agenter med",
+        "audienceHelp": {
+          "microsoft": "Program-ID (klient-ID) för Entra-appregistreringen som dina agenter begär token för. Agenterna begär omfånget api://<det ID:t>/.default.",
+          "google": "Agenterna måste begära sin Google-ID-token med exakt den här målgruppen. Vi har fyllt i den här serverns MCP-URL, som är det vanliga valet.",
+          "custom": "API- eller resursidentifieraren som har konfigurerats hos din leverantör (till exempel en Auth0-API-identifierare). Den måste exakt matcha aud-anspråket i agenternas token. Den här serverns MCP-URL är ett bra val."
+        },
+        "audienceWhy": "Token som din leverantör har utfärdat till andra appar godkänns inte här.",
         "subjectClaimHelp": "Lämna tomt om inte identitetsleverantören anger något annat.",
         "issuer": "Utfärdare",
         "jwksUri": "URL för signeringsnycklar"
@@ -3386,6 +3671,36 @@
         "message": "Koppla från ”{{name}}”? Den förlorar åtkomsten omedelbart och måste godkännas på nytt för att ansluta igen.",
         "confirm": "Koppla från",
         "cancel": "Avbryt"
+      }
+    },
+    "loading": "Läser in…",
+    "downloadHosts": {
+      "title": "Tillåtna nedladdningsvärdar",
+      "intro": "När ett dokument bifogas via URL hämtar AlgaPSA det bara från värdarna som listas här. Det gäller alla som bifogar dokument, inklusive AI-agenter, API-klienter och REST-API:t. Föredra bucket-specifika värdar som acme-uploads.s3.us-east-1.amazonaws.com framför breda.",
+      "readOnly": "Du kan visa listan. För att ändra den krävs behörigheten ”Hantera nedladdningsvärdar”.",
+      "builtIn": "Inbyggd",
+      "empty": "Inga anpassade värdar ännu.",
+      "add": "Lägg till värd",
+      "addTitle": "Lägg till tillåten nedladdningsvärd",
+      "remove": "Ta bort",
+      "removeTitle": "Ta bort värd?",
+      "removeMessage": "Nedladdningar från {{host}} slutar fungera tills värden läggs till igen.",
+      "fields": {
+        "host": "Värd",
+        "hostHelp": "Ett värdnamn, eller *.example.com för att tillåta alla underdomäner.",
+        "note": "Anteckning (valfritt)"
+      },
+      "table": {
+        "host": "Värd",
+        "used": "Används för",
+        "allowed": "Tillåten",
+        "note": "Anteckning",
+        "addedBy": "Tillagd av",
+        "addedOn": "Tillagd"
+      },
+      "errors": {
+        "load": "Det gick inte att läsa in tillåtna nedladdningsvärdar.",
+        "save": "Det gick inte att spara ändringen."
       }
     }
   },
@@ -3557,10 +3872,219 @@
       "noLeadingTrailingDot": "Domänen får inte börja eller sluta med en punkt.",
       "notApplianceHost": "Välj en annan domän än serverns primära värdnamn. Den egna portaldomänen måste vara ett annat värdnamn som din omvända proxy vidarebefordrar hit.",
       "nothingToRetry": "Det finns ingen misslyckad registrering av egen domän att försöka igen med.",
-      "retryOnlyAfterFailure": "Nytt försök är endast tillgängligt efter en misslyckad registrering."
+      "retryOnlyAfterFailure": "Nytt försök är endast tillgängligt efter en misslyckad registrering.",
+      "alreadyInUse": "Den här domänen används redan. Välj en annan domän.",
+      "usedByOtherSurface": "Den här domänen används redan av en annan av dina anpassade domäner. Välj ”Båda” för att visa kundportalen och MSP-appen från samma domän.",
+      "invalidSurface": "Välj vad den anpassade domänen visar: kundportal, MSP-app eller båda.",
+      "redirectUrisHosted": "Omdirigerings-URI:er för värdade domäner registreras av plattformssupporten.",
+      "nothingToConfirm": "Det finns ingen väntande bekräftelse av SSO-omdirigerings-URI:er för den här domänen."
     }
   },
   "common": {
-    "saving": "Sparar…"
+    "saving": "Sparar…",
+    "cancel": "Avbryt"
+  },
+  "featureFlags": {
+    "categories": {
+      "core": {
+        "title": "Grundfunktioner",
+        "description": "Viktiga funktioner för det dagliga arbetet"
+      },
+      "ui": {
+        "title": "Användargränssnitt",
+        "description": "Nya funktioner och förbättringar i gränssnittet"
+      },
+      "ai": {
+        "title": "AI-funktioner",
+        "description": "Funktioner som använder artificiell intelligens"
+      },
+      "integrations": {
+        "title": "Integrationer",
+        "description": "Integrationer med tredjepartstjänster"
+      },
+      "performance": {
+        "title": "Prestanda",
+        "description": "Funktioner för prestandaoptimering"
+      },
+      "experimental": {
+        "title": "Experimentell",
+        "description": "Nyskapande funktioner under utveckling"
+      }
+    },
+    "features": {
+      "enable_ticket_automation": {
+        "title": "Ärendeautomatisering",
+        "description": "Tilldela och vidarebefordra ärenden automatiskt utifrån regler"
+      },
+      "enable_time_tracking": {
+        "title": "Tidregistrering",
+        "description": "Registrera tid som läggs på ärenden och projekt"
+      },
+      "enable_billing": {
+        "title": "Faktureringssystem",
+        "description": "Skapa fakturor och följ upp betalningar"
+      },
+      "new_ticket_ui": {
+        "title": "Nytt ärendegränssnitt",
+        "description": "Omarbetat gränssnitt för att skapa och hantera ärenden"
+      },
+      "new_dashboard_layout": {
+        "title": "Modern översikt",
+        "description": "Ny översikt med anpassningsbara widgetar"
+      },
+      "ai_ticket_suggestions": {
+        "title": "AI-förslag för ärenden",
+        "description": "AI-baserad ärendekategorisering och prioritetsförslag"
+      },
+      "enable_ai_time_tracking": {
+        "title": "AI-tidregistrering",
+        "description": "Registrera tid automatiskt utifrån aktivitet"
+      },
+      "enable_predictive_analytics": {
+        "title": "Prediktiv analys",
+        "description": "Förutse ärendevolym och resursbehov"
+      },
+      "enable_slack_integration": {
+        "title": "Slack-integration",
+        "description": "Skicka aviseringar och uppdateringar till Slack"
+      },
+      "teams-integration-ui": {
+        "description": "Integrera med Microsoft Teams"
+      },
+      "enable_jira_sync": {
+        "title": "Jira-synkronisering",
+        "description": "Synkronisera ärenden med Jira-ärenden"
+      },
+      "enable_query_caching": {
+        "title": "Cachelagring av frågor",
+        "description": "Cachelagra databasfrågor för snabbare svarstider"
+      },
+      "enable_lazy_loading": {
+        "title": "Inläsning vid behov",
+        "description": "Läs in innehåll vid behov för bättre prestanda"
+      },
+      "enable_websocket_updates": {
+        "title": "Uppdateringar i realtid",
+        "description": "Använd WebSockets för omedelbara uppdateringar"
+      },
+      "enable_voice_commands": {
+        "title": "Röstkommandon",
+        "description": "Styr appen med röstkommandon"
+      },
+      "beta_mobile_app": {
+        "title": "Mobilapp i betaversion",
+        "description": "Tillgång till mobilappen i betaversion"
+      }
+    },
+    "enums": {
+      "stable": "Stabil",
+      "beta": "Beta",
+      "experimental": "Experimentell"
+    },
+    "loading": "Läser in funktionsflaggor...",
+    "title": "Funktionsflaggor",
+    "description": "Aktivera eller inaktivera funktioner i appen. Vissa funktioner kan kräva en omstart.",
+    "unsaved": "Du har osparade ändringar. Klicka på Spara för att tillämpa dem.",
+    "requiresRestart": "Kräver omstart",
+    "errors": {
+      "loadFailed": "Det gick inte att läsa in funktionsflaggor: {{message}}"
+    },
+    "dependencies": "Kräver: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Språkinställningar för kundportalen",
+    "description": "Konfigurera de språkalternativ som är tillgängliga för dina kunder",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Standardspråk",
+        "help": "Det här språket används för nya kunder och när ingen språkinställning har valts"
+      },
+      "availableLanguages": {
+        "label": "Tillgängliga språk",
+        "help": "Välj vilka språk kunderna kan välja mellan"
+      }
+    },
+    "defaultSuffix": "(standard)",
+    "preview": {
+      "title": "Förhandsgranskning",
+      "defaultLanguage": "Standardspråk:",
+      "availableLanguages": "Tillgängliga språk:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Inställningarna har sparats"
+      }
+    },
+    "errors": {
+      "saveFailed": "Det gick inte att spara inställningarna"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "Engelska",
+      "fr": "Franska",
+      "es": "Spanska",
+      "de": "Tyska",
+      "nl": "Nederländska",
+      "it": "Italienska",
+      "pl": "Polska",
+      "pt": "Portugisiska (Brasilien)",
+      "sv": "Svenska",
+      "xx": "Pseudospråk (xx)",
+      "yy": "Pseudospråk (yy)"
+    }
+  },
+  "telemetry": {
+    "fields": {
+      "usageStats": {
+        "label": "Användningsstatistik",
+        "enabledDescription": "Aktiverad - Skickar anonyma användningsdata för att hjälpa till att förbättra produkten",
+        "disabledDescription": "Inaktiverad - Skickar anonyma användningsdata för att hjälpa till att förbättra produkten"
+      }
+    },
+    "environmentHelp": "Användningsstatistik styrs via miljövariabeln {{variable}}. Kontakta din systemadministratör för att ändra den här inställningen.",
+    "sections": {
+      "collectedData": {
+        "title": "Vilka data samlas in",
+        "featureUsage": "Användningsmönster för funktioner (inga personuppgifter)",
+        "errorReports": "Felrapporter för felsökning",
+        "performance": "Prestandamått",
+        "configuration": "Systemkonfiguration (anonymiserad)"
+      }
+    }
+  },
+  "dialogs": {
+    "statusImport": {
+      "title": "Importera standardstatusar",
+      "description": "Välj de standardstatusar du vill importera",
+      "selectAll": "Markera alla ({{selected}}/{{total}})",
+      "closed": "Stängd",
+      "default": "Standard",
+      "empty": "Inga standardstatusar tillgängliga för import",
+      "importSelected": "Importera markerade ({{count}})"
+    }
+  },
+  "tagDisplay": {
+    "title": "Visa på chips",
+    "subtitle": "Taggar som visas bredvid kontakter och kunder i ärendelistor, ärenderubriker och väljare.",
+    "loading": "Laddar…",
+    "description": "Välj vilka taggar som visas som märken bredvid kontakter och kunder, och i vilken ordning. En lista utan taggar visar inga märken för den målgruppen.",
+    "contacts": "Kontakter",
+    "clients": "Kunder",
+    "audienceInternal": "Interna användare",
+    "audienceClient": "Kundportal",
+    "clientNote": "Börjar tom. Taggar i den här listan syns för kundens egna användare i kundportalen.",
+    "noneSelected": "Inga taggar visas.",
+    "moveUp": "Flytta upp",
+    "moveDown": "Flytta ned",
+    "remove": "Ta bort",
+    "addTag": "Lägg till en tagg…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Tillbaka till e-postinställningar",
+      "title": "E-post- och identitetsleverantörer",
+      "description": "Registrera din egen Google- eller Microsoft-applikation för inkommande e-post och inloggning för personal. Dessa autentiseringsuppgifter tillhör din arbetsyta."
+    }
   }
 }

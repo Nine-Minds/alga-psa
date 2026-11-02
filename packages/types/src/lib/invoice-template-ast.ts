@@ -1,4 +1,5 @@
 import type { TemplatePrintSettings } from './invoice-print-settings';
+import type { LabelClass, TemplateLabelSettings } from './labels';
 
 export const TEMPLATE_AST_VERSION = 1 as const;
 
@@ -25,6 +26,10 @@ export interface TemplateAstMetadata {
   locale?: string;
   currencyCode?: string;
   printSettings?: TemplatePrintSettings;
+  /** `work-tag` documents only: which label class the template prints. Read-time default: ticket-work-tag. */
+  labelClass?: LabelClass;
+  /** `work-tag` documents only: label field visibility. */
+  labelSettings?: TemplateLabelSettings;
 }
 
 /**
@@ -53,6 +58,7 @@ export type TemplateNodeType =
   | 'field'
   | 'image'
   | 'divider'
+  | 'barcode'
   | 'table'
   | 'dynamic-table'
   | 'totals';
@@ -137,6 +143,21 @@ export interface TemplateImageNode extends TemplateNodeBase {
 
 export interface TemplateDividerNode extends TemplateNodeBase {
   type: 'divider';
+  children?: never;
+}
+
+export type TemplateBarcodeSymbology = 'qr' | 'code128';
+
+/**
+ * A machine-readable code. `value` is encoded as-is; rendering is an async server prepass into an
+ * SVG string keyed by node id (the synchronous shared renderer only inlines it). Quiet zone
+ * (QR >= 4 modules, Code 128 >= 10) and a minimum module size are enforced there, and a value that
+ * cannot be encoded or cannot fit at the node's width fails the render with a clear error.
+ */
+export interface TemplateBarcodeNode extends TemplateNodeBase {
+  type: 'barcode';
+  symbology: TemplateBarcodeSymbology;
+  value: TemplateValueExpression;
   children?: never;
 }
 
@@ -237,6 +258,7 @@ export type TemplateNode =
   | TemplateFieldNode
   | TemplateImageNode
   | TemplateDividerNode
+  | TemplateBarcodeNode
   | TemplateTableNode
   | TemplateDynamicTableNode
   | TemplateTotalsNode;
@@ -278,6 +300,9 @@ export interface TemplateStyleDeclaration {
   fontFamily?: string;
   lineHeight?: string | number;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
+  tableLayout?: 'auto' | 'fixed';
+  whiteSpace?: 'normal' | 'nowrap' | 'pre' | 'pre-line' | 'pre-wrap';
+  overflowWrap?: 'normal' | 'break-word' | 'anywhere';
   flex?: string;
   // Longhand flex has been part of the runtime contract since the AST cutover:
   // the designer export emits it and the zod styleDeclarationSchema accepts it.
@@ -289,6 +314,9 @@ export interface TemplateStyleDeclaration {
   objectPosition?: string;
   borderColor?: string;
   fontStyle?: string;
+  // Fixed-size cells (labels) pair `overflowWrap: 'anywhere'` (declared above), which lets an
+  // unbroken identifier wrap inside its column, with `overflow`, which clips a capped (maxHeight) block.
+  overflow?: 'visible' | 'hidden' | 'clip';
   // Print fragmentation hints (CSS Fragmentation Level 3). The PDF renderer
   // prints through Chromium, which honours these on block and flex children:
   // `breakAfter: 'avoid'` keeps a heading with what follows it,

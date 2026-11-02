@@ -22,7 +22,7 @@ import {
   IUserTypeRate
 } from '@alga-psa/types';
 import ContractLineServiceConfiguration from '../models/contractLineServiceConfiguration';
-import ContractLineServiceFixedConfig from '../models/contractLineServiceFixedConfig';
+import ContractLineServiceFixedConfig, { resolveFixedMemberRateWrite } from '../models/contractLineServiceFixedConfig';
 import ContractLineServiceHourlyConfig from '../models/contractLineServiceHourlyConfig';
 import ContractLineServiceUsageConfig from '../models/contractLineServiceUsageConfig';
 import ContractLineServiceBucketConfig from '../models/contractLineServiceBucketConfig';
@@ -215,7 +215,12 @@ export class ContractLineServiceConfigurationService {
         case 'Fixed':
           await fixedConfigModel.create({
             config_id: configId,
-            base_rate: (typeConfig as IContractLineServiceFixedConfig)?.base_rate ?? null,
+            // A stored base_rate must state its meaning; seats are per_unit.
+            ...resolveFixedMemberRateWrite({
+              base_rate: (typeConfig as IContractLineServiceFixedConfig)?.base_rate ?? null,
+              base_rate_basis: (typeConfig as IContractLineServiceFixedConfig)?.base_rate_basis,
+              pricing_basis: (typeConfig as IContractLineServiceFixedConfig)?.pricing_basis ?? 'bundle',
+            }),
             rate_provenance: (typeConfig as IContractLineServiceFixedConfig)?.rate_provenance ?? undefined,
             pricing_basis: (typeConfig as IContractLineServiceFixedConfig)?.pricing_basis ?? 'bundle',
             // enable_proration: (typeConfig as IContractLineServiceFixedConfig)?.enable_proration ?? false, // Removed: Handled in contract_line_fixed_config
@@ -313,6 +318,16 @@ export class ContractLineServiceConfigurationService {
     typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>,
     rateTiers?: IContractLineServiceRateTier[], // Add rateTiers parameter
     // userTypeRates parameter removed as it's not used for hourly updates here
+    /**
+     * Compare-and-set expectation for a recurring-unit revision at the boundary.
+     * Default `null` = create-only at an empty boundary (the legacy inline
+     * editor). A number = replace only the revision at that version (the
+     * single-transaction contract-line save reads it under the billing lock).
+     * `undefined` = unconditional upsert with an audit-history row; avoid it.
+     * Callers wanting this to run on a caller-owned transaction construct the
+     * service with that trx: `this.knex.transaction` then nests as a savepoint.
+     */
+    expectedRevisionVersion: number | null | undefined = null,
   ): Promise<boolean> {
     await this.initKnex();
     
@@ -384,16 +399,16 @@ export class ContractLineServiceConfigurationService {
               contractLineId: currentConfig.contract_line_id, serviceId: currentConfig.service_id, configId,
               kind, quantity: Number(baseConfig?.quantity ?? effective.quantity),
               pricePolicy, unitRateCents, effectivePeriodStart: boundary,
-              // The inline editor has no version token, so it may only create at
-              // an empty boundary. Replacing an existing scheduled change must go
-              // through the scheduling panel's compare-and-set, which surfaces
-              // the newer values and records the superseded edit in history.
-              expectedVersion: null,
+              // Default (null): create-only at an empty boundary; replacing a
+              // scheduled change then goes through the scheduling panel's
+              // compare-and-set. The transactional line save passes the version
+              // it read under the billing lock.
+              expectedVersion: expectedRevisionVersion,
             });
             if (scheduled.ok === false) throw new Error(scheduled.error);
             const { quantity, custom_rate, ...restBase } = baseConfig ?? {};
             baseConfig = restBase;
-            const { base_rate, effective_period_start, ...restFixed } = incoming ?? {};
+            const { base_rate, base_rate_basis, effective_period_start, ...restFixed } = incoming ?? {};
             typeConfig = restFixed;
           }
         }
@@ -422,7 +437,9 @@ export class ContractLineServiceConfigurationService {
             // delete fixedUpdateData.billing_cycle_alignment; // Removed as property no longer exists
             // Only update if there are other fields left (e.g., base_rate)
             if (Object.keys(fixedUpdateData).length > 0) {
-              await fixedConfigModel.update(configId, fixedUpdateData);
+              // Model.update recomputes basis + provenance with the rate and
+              // keeps the stored basis when the patch does not state one.
+              await fixedConfigModel.update(configId, fixedUpdateData as Parameters<typeof fixedConfigModel.update>[1]);
             }
             break;
             

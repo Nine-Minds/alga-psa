@@ -32,7 +32,8 @@
     "to": "Bis",
     "today": "Heute",
     "total": "Gesamt",
-    "unknown": "Unbekannt"
+    "unknown": "Unbekannt",
+    "recordUnavailable": "Nicht gefunden oder kein Zugriff"
   },
   "counts": {
     "adjustments": "{{count}} Anpassung(en)",
@@ -588,7 +589,32 @@
       "returnLocationRequired": "Wählen Sie einen Standort aus, bevor Sie die Rücksendung vereinnahmen.",
       "returnedUnitNotFound": "Zurückgesendete Bestandseinheit nicht gefunden. Bitte aktualisieren Sie die Seite und wählen Sie eine andere Einheit.",
       "returnedUnitRequired": "Die ID der zurückgesendeten Einheit ist erforderlich.",
-      "vendorRequired": "Wählen Sie einen Lieferanten aus, bevor Sie die RMA senden."
+      "vendorRequired": "Wählen Sie einen Lieferanten aus, bevor Sie die RMA senden.",
+      "warrantyUnitTracked": "Diese RMA betrifft eine Bestandseinheit. Verwenden Sie die RMA-Aktionen der Bestandseinheit.",
+      "warrantyStockTrackedAsset": "Dieses Gerät wurde aus dem Bestand verkauft. Eröffnen Sie die RMA stattdessen über die zugehörige Bestandseinheit.",
+      "warrantyNotClientOwned": "Garantieansprüche gelten nur für Geräte im Kundenbesitz.",
+      "warrantyNoCustody": "Das Gerät befindet sich nicht in Obhut. Nehmen Sie das Gerät zuerst entgegen.",
+      "warrantyCustodyWrongState": "Das Gerät befindet sich für diesen Schritt nicht am richtigen Ort. Aktualisieren Sie die Seite und prüfen Sie die Obhut.",
+      "warrantyLocationRequired": "Wählen Sie, wo sich das Gerät aktuell befindet, damit es zurückgenommen werden kann.",
+      "warrantyInvalidTransition": "Dieser Schritt ist im aktuellen Status der RMA nicht verfügbar. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "warrantyReviewClose": "Genehmigen oder lehnen Sie den Anspruch ab, bevor Sie ihn schließen.",
+      "duplicateReference": "Diese RMA-Referenz oder -Nummer wird bereits verwendet.",
+      "checkViolation": "Dieser Wert ist für diese RMA nicht zulässig.",
+      "ticketNotFound": "Ticket nicht gefunden.",
+      "noTicket": "Diese RMA ist mit keinem Ticket verknüpft.",
+      "referenceRequired": "Tragen Sie zuerst die Vorgangsnummer des Lieferanten ein.",
+      "warrantyClaimUnitAction": "Dies ist ein Garantieanspruch für Kundengeräte. Verwenden Sie die Garantieaktionen der RMA.",
+      "warrantyReasonRequired": "Beschreiben Sie, was mit dem Gerät nicht stimmt.",
+      "warrantyDenialReasonRequired": "Geben Sie den Grund an, warum der Anspruch nicht abgedeckt ist.",
+      "warrantyCarrierRequired": "Geben Sie den Spediteur ein.",
+      "warrantyTrackingRequired": "Geben Sie die Sendungsnummer ein.",
+      "warrantyReplacementSerialRequired": "Geben Sie die Seriennummer des Ersatzgeräts ein.",
+      "warrantyDateFormat": "Verwenden Sie das Format JJJJ-MM-TT.",
+      "warrantyDateInvalid": "Das ist kein gültiges Datum.",
+      "warrantyInputInvalid": "Einige Angaben sind ungültig. Prüfen Sie sie und versuchen Sie es erneut.",
+      "baseUrlMissing": "Die Anwendungs-URL ist nicht konfiguriert.",
+      "vendorSystemNotFound": "Dieses Lieferantenvorgangs-System ist nicht verfügbar.",
+      "vendorSystemTemplateInvalid": "Die Link-Vorlage dieses Systems kann nicht für einen Lieferantenvorgang verwendet werden."
     },
     "salesOrders": {
       "clientRequired": "Wählen Sie einen Kunden aus, bevor Sie den Kundenauftrag anlegen.",
@@ -1255,7 +1281,9 @@
       "type": "Typ",
       "vendor": "Lieferant",
       "creditAtStake": "Ausstehende Gutschrift",
-      "rmaNumber": "RMA-Nr."
+      "rmaNumber": "RMA-Nr.",
+      "ticket": "Ticket",
+      "returnBy": "Rückgabe bis"
     },
     "deadUnitsOwed": "Geschuldete Defekteinheiten",
     "fields": {
@@ -1300,11 +1328,128 @@
       "replaced": "Ersetzt",
       "credited": "Gutgeschrieben",
       "charged": "Berechnet",
-      "closed": "Geschlossen"
+      "closed": "Geschlossen",
+      "warrantyReview": "Garantieprüfung",
+      "repaired": "Repariert"
     },
     "ageAtVendor": "seit {{days}} T beim Lieferanten",
     "filters": {
       "statusActive": "RMA-Fälle mit Status {{status}} werden angezeigt."
+    },
+    "detail": {
+      "title": "RMA {{id}}",
+      "reference": "RMA-Referenz",
+      "product": "Produkt",
+      "returnedSerial": "Seriennummer der zurückgegebenen Einheit",
+      "opened": "Eröffnet",
+      "updated": "Aktualisiert",
+      "age": "Alter (Tage)",
+      "reason": "Grund",
+      "viewUnit": "Einheit anzeigen",
+      "viewAsset": "Asset anzeigen"
+    },
+    "tabs": {
+      "all": "Alle",
+      "review": "Garantieprüfung",
+      "inProgress": "In Bearbeitung",
+      "closed": "Geschlossen"
+    },
+    "warranty": {
+      "openDetail": "Öffnen",
+      "updated": "RMA aktualisiert.",
+      "updateFailed": "RMA konnte nicht aktualisiert werden.",
+      "printTag": "RMA-Etikett drucken",
+      "printTagFailed": "RMA-Etikett konnte nicht gedruckt werden.",
+      "popupBlocked": "Erlauben Sie Pop-ups, um das Etikett anzuzeigen.",
+      "printSlip": "Rücksendeschein drucken",
+      "mirrorToTicket": "Lieferantenvorgang im Ticket spiegeln",
+      "mirrored": "Lieferantenvorgang wurde zum Ticket hinzugefügt.",
+      "mirrorFailed": "Lieferantenvorgang konnte nicht zum Ticket hinzugefügt werden.",
+      "mirrorSystem": "System für Lieferantenvorgang",
+      "mirrorSystemGeneric": "Allgemeiner Link",
+      "assetLink": "Asset: {{name}}",
+      "ticketLink": "Ticket: {{number}}",
+      "timeline": "Verlauf",
+      "noEvents": "Noch kein Verlauf vorhanden.",
+      "confirmReceived": "Bestätigen Sie, dass sich das Gerät im Büro befindet. Es muss sich im Büro in Obhut befinden.",
+      "confirmCredit": "Erfassen Sie, dass der Lieferant dieses Gerät gutgeschrieben hat. Die Obhutsphase wird als entsorgt abgeschlossen.",
+      "actions": {
+        "approveStandard": "Genehmigen (Standard)",
+        "approveAdvance": "Genehmigen (Vorabaustausch)",
+        "deny": "Anspruch ablehnen",
+        "cancel": "Anspruch stornieren",
+        "markDeviceReceived": "Gerät als erhalten markieren",
+        "shipToVendor": "An Lieferanten versenden",
+        "receiveReplacement": "Ersatz entgegennehmen",
+        "recordRepair": "Reparatur erfassen",
+        "recordCredit": "Lieferantengutschrift erfassen",
+        "returnToClient": "An Kunden zurückgeben",
+        "close": "RMA schließen"
+      },
+      "events": {
+        "opened": "Anspruch eröffnet",
+        "warrantyApproved": "Garantie genehmigt",
+        "warrantyDenied": "Garantie abgelehnt",
+        "deviceReceived": "Gerät erhalten",
+        "shippedOutbound": "An Lieferanten versendet",
+        "vendorCaseRecorded": "Lieferantenvorgang erfasst",
+        "replacementReceived": "Ersatz erhalten",
+        "repairReceived": "Reparatur erhalten",
+        "vendorCredited": "Vom Lieferanten gutgeschrieben",
+        "returnedToClient": "An Kunden zurückgegeben",
+        "closed": "Geschlossen",
+        "note": "Notiz"
+      },
+      "outcome": {
+        "covered": "Abgedeckt",
+        "notCovered": "Nicht abgedeckt",
+        "unknown": "Unbekannt"
+      },
+      "closeReason": {
+        "resolved": "Gelöst",
+        "warrantyDenied": "Garantie abgelehnt",
+        "cancelled": "Storniert",
+        "duplicate": "Duplikat",
+        "vendorCredited": "Vom Lieferanten gutgeschrieben"
+      },
+      "fields": {
+        "outcome": "Garantieentscheidung",
+        "decidedAt": "Entschieden am",
+        "denialReason": "Ablehnungsgrund",
+        "vendorRef": "RMA-Referenz des Lieferanten",
+        "returnBy": "Rückgabe bis",
+        "outbound": "Ausgehende Sendung",
+        "inbound": "Eingehende Sendung",
+        "replacementSerial": "Ersatzseriennummer",
+        "returnShipTo": "Rücksendeadresse",
+        "closedReason": "Schließungsgrund",
+        "cancelReason": "Grund",
+        "carrier": "Transportunternehmen",
+        "tracking": "Sendungsnummer",
+        "model": "Modell",
+        "manufacturer": "Hersteller",
+        "warrantyEnd": "Garantieende",
+        "inboundCarrier": "Eingehendes Transportunternehmen",
+        "inboundTracking": "Eingehende Sendungsnummer",
+        "counterparty": "Zurückgegeben an",
+        "closeReason": "Schließungsgrund",
+        "note": "Notiz"
+      },
+      "claim": {
+        "title": "Neuer Garantieanspruch",
+        "loadAssetsFailed": "Geräte konnten nicht geladen werden.",
+        "assetRequired": "Wählen Sie das Gerät aus.",
+        "reasonRequired": "Beschreiben Sie, was am Gerät nicht in Ordnung ist.",
+        "opened": "Garantieanspruch eröffnet.",
+        "openFailed": "Garantieanspruch konnte nicht eröffnet werden.",
+        "search": "Gerät suchen",
+        "searchPlaceholder": "Name, Tag oder Seriennummer",
+        "asset": "Gerät",
+        "assetPlaceholder": "Gerät auswählen…",
+        "track": "Verfolgen",
+        "stockHint": "Aus dem Bestand verkaufte Geräte können hier nicht beansprucht werden. Verwenden Sie stattdessen RMA eröffnen an der Bestandseinheit.",
+        "submit": "Anspruch eröffnen"
+      }
     }
   },
   "salesOrders": {
@@ -1564,6 +1709,10 @@
       "inProgress": "Wird neu aufgebaut…"
     },
     "receive": {
+      "searchProducts": "Produkte oder SKU suchen...",
+      "noProductsFound": "Keine Produkte gefunden",
+      "searchLocations": "Lagerorte suchen...",
+      "noLocationsFound": "Keine Lagerorte gefunden",
       "costNonNegative": "Die Stückkosten dürfen nicht negativ sein.",
       "failed": "Bestand konnte nicht erfasst werden.",
       "inProgress": "Wird erfasst…",
@@ -1698,7 +1847,15 @@
       "failed": "Die Rückgabe konnte nicht wieder eingelagert werden.",
       "restocking": "Wird wieder eingelagert…",
       "submit": "Wieder einlagern"
-    }
+    },
+    "printLabel": "Etikett drucken",
+    "printWithTemplate": "Mit {{code}} drucken",
+    "claimant": {
+      "project": "Projekt {{number}}",
+      "salesOrder": "Verkaufsauftrag {{number}}"
+    },
+    "printPopupBlocked": "Erlauben Sie Pop-ups, um das Etikett zu öffnen.",
+    "printFailed": "Dieses Etikett konnte nicht gedruckt werden."
   },
   "transfers": {
     "addLine": "Position hinzufügen",

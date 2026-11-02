@@ -14,6 +14,7 @@
       "semiAnnually": "Półrocznie"
     },
     "cadenceTotal": "Suma {{cadence}}",
+    "currency": "Waluta",
     "date": "Data",
     "description": "Opis",
     "discounts": "Rabaty",
@@ -60,6 +61,7 @@
     "rate": "Stawka",
     "recurring": "Cykliczne",
     "service": "Usługa",
+    "servicePeriod": "Okres usługi",
     "shipDate": "Data wysyłki",
     "shipTo": "Adres dostawy",
     "shipped": "Wysłano",
@@ -83,16 +85,47 @@
       "noLineItems": "Brak pozycji",
       "noMonthlyItems": "Brak pozycji miesięcznych",
       "noOneTimeItems": "Brak pozycji jednorazowych",
-      "noPhasesDefined": "Nie zdefiniowano faz"
+      "noPhasesDefined": "Nie zdefiniowano faz",
+      "noItemsInBox": "To pudełko jest puste"
     },
     "note": {
       "billedTimePortalDetail": "Skontaktuj się z dostawcą usług, aby uzyskać zestawienie rozliczonego czasu.",
       "pickedBy": "Pobrał: ____________________     Data: ____________",
       "preTaxTotals": "Podane sumy nie zawierają podatku. Należny podatek jest naliczany na fakturze.",
-      "thankYouForOrder": "Dziękujemy za zamówienie."
+      "thankYouForOrder": "Dziękujemy za zamówienie.",
+      "checkedBy": "Sprawdził(a): ____________________     Data: ____________",
+      "releasedBy": "Wydał: ____________________     Podpis: ____________________     Data: ____________"
     },
     "serialNumbers": "Numery seryjne",
-    "allocatedSerialsNote": "Przypisane numery seryjne; mogą ulec zmianie podczas realizacji."
+    "allocatedSerialsNote": "Przypisane numery seryjne; mogą ulec zmianie podczas realizacji.",
+    "stagingManifestTitle": "LISTA PAKOWA",
+    "boxNumber": "Karton nr",
+    "project": "Projekt",
+    "client": "Klient",
+    "task": "Zadanie",
+    "status": "Status",
+    "sealedOn": "Zaplombowane",
+    "sealedBy": "Zaplombował(a)",
+    "location": "Lokalizacja",
+    "checked": "Sprawdzono",
+    "item": "Pozycja",
+    "skuOrTag": "SKU / etykieta",
+    "serialNumber": "Numer seryjny",
+    "owner": "Właściciel",
+    "ownerMsp": "MSP",
+    "ownerClient": "Klient",
+    "statusOpen": "Otwarte",
+    "statusSealed": "Zaplombowane",
+    "rmaReturnSlipTitle": "DOKUMENT ZWROTU RMA",
+    "device": "Urządzenie",
+    "vendor": "Dostawca",
+    "vendorReference": "Referencja dostawcy",
+    "asset": "Zasób",
+    "assetTag": "Tag zasobu",
+    "replacementSerial": "Numer seryjny zamiennika",
+    "shipping": "Wysyłka",
+    "returnBy": "Zwrot do",
+    "returnShipTo": "Adres wysyłki zwrotnej"
   },
   "errors": {
     "permissions": {

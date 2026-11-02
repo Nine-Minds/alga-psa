@@ -4,6 +4,16 @@ export interface RemoteAccessTemplateContext {
   field?: Record<string, unknown> | null;
 }
 
+/** Single source of truth for `{asset.<key>}` placeholders; used by the renderer and the server validator. */
+export const SUPPORTED_ASSET_PLACEHOLDER_KEYS: readonly string[] = [
+  'name',
+  'asset_tag',
+  'serial_number',
+  'rmm_device_id',
+  'rmm_provider',
+  'rmm_organization_id',
+];
+
 const PLACEHOLDER_PATTERN = /\{(asset|client|field)\.([a-zA-Z0-9_-]+)\}/g;
 
 /** Templates must contain an explicit scheme and a literal, valid host. */
@@ -34,7 +44,7 @@ export function renderRemoteAccessTemplate(
 
   let hasMissingValue = false;
   const rendered = normalizedTemplate.replace(PLACEHOLDER_PATTERN, (_token, scope: string, key: string) => {
-    const isSupportedAssetKey = scope !== 'asset' || ['name', 'asset_tag', 'serial_number'].includes(key);
+    const isSupportedAssetKey = scope !== 'asset' || SUPPORTED_ASSET_PLACEHOLDER_KEYS.includes(key);
     const isSupportedClientKey = scope !== 'client' || key === 'name';
     if (!isSupportedAssetKey || !isSupportedClientKey) {
       hasMissingValue = true;

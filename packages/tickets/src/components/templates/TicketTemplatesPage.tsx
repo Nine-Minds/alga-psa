@@ -102,12 +102,19 @@ export function TicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode
       {
         title: t('templates.list.columns.status', 'Status'),
         dataIndex: 'is_active',
-        render: (value: boolean) => (
-          <Badge variant={value ? 'success' : 'default-muted'}>
-            {value ? t('templates.status.active', 'Active') : t('templates.status.inactive', 'Inactive')}
-          </Badge>
+        render: (value: boolean, record: TicketTemplateListItem) => (
+          <div className="flex flex-wrap gap-1">
+            <Badge variant={value ? 'success' : 'default-muted'}>
+              {value ? t('templates.status.active', 'Active') : t('templates.status.inactive', 'Inactive')}
+            </Badge>
+            {/* Not offered in the new-ticket picker (R5); only recurring schedules use it. */}
+            {!record.offer_for_manual_use && (
+              <Badge variant="default-muted">{t('templates.status.scheduledOnly', 'Scheduled only')}</Badge>
+            )}
+          </div>
         ),
       },
+      { title: t('templates.list.columns.schedules', 'Schedules'), dataIndex: 'schedule_count' },
     ];
     if (canCreateTicket || permissions.update || permissions.delete) {
       cols.push({
@@ -134,8 +141,8 @@ export function TicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {/* Inactive templates are refused by addTicket, so the action is only offered on active ones. */}
-                {canCreateTicket && record.is_active && (
+                {/* addTicket refuses templates that are inactive or not offered for manual use, so the action is only offered on the rest. */}
+                {canCreateTicket && record.is_active && record.offer_for_manual_use && (
                   <DropdownMenuItem
                     id="new-ticket-from-template-menu-item"
                     onClick={(event) => {
@@ -177,6 +184,10 @@ export function TicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode
                   <DropdownMenuItem
                     id="delete-ticket-template-menu-item"
                     className="text-destructive"
+                    disabled={record.schedule_count > 0}
+                    title={record.schedule_count > 0
+                      ? t('templates.list.deleteBlocked', 'Used by {{count}} recurring schedule(s). Point them at another template or archive them first.', { count: record.schedule_count })
+                      : undefined}
                     onClick={(event) => {
                       event.stopPropagation();
                       setPendingDelete(record);

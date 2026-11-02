@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Tijdsvermelding toevoegen"
+    }
+  },
   "common": {
     "actions": {
       "view": "Bekijken",
@@ -127,12 +132,16 @@
       "billable": "Factureerbaar",
       "notes": "Opmerkingen",
       "deleteTimeEntry": "Tijdsinvoer verwijderen",
-      "unsavedChanges": "Niet-opgeslagen wijzigingen"
+      "unsavedChanges": "Niet-opgeslagen wijzigingen",
+      "contractLine": "Contractregel",
+      "operational": "Operationeel – niet gefactureerd"
     },
     "placeholders": {
       "selectService": "Selecteer een dienst",
+      "searchServices": "Diensten zoeken...",
       "selectDate": "Datum selecteren",
-      "addNotes": "Voeg notities toe"
+      "addNotes": "Voeg notities toe",
+      "selectContractLine": "Selecteer een contractregel"
     },
     "validation": {
       "startBeforeEnd": "De starttijd moet eerder zijn dan de eindtijd",
@@ -150,6 +159,10 @@
       "task": "Standaard van taak",
       "phase": "Standaard van fase",
       "project": "Standaard van project"
+    },
+    "options": {
+      "resolveContractLineLater": "Geen regel - later oplossen",
+      "noServicesFound": "Geen diensten gevonden"
     }
   },
   "workItemPicker": {
@@ -396,7 +409,7 @@
     "noContract": "Er is geen contractregel gevonden voor deze service. De tijd wordt doorgestuurd naar het systeembeheerde standaardcontract.",
     "contract": "Contract: {{name}}",
     "defaultContract": "Systeembeheerd standaardcontract",
-    "multipleLines": "Meerdere contractregels beschikbaar - met standaardselectie"
+    "multipleEligible": "Meerdere contractregels komen in aanmerking voor deze datum. Selecteer een contractregel om de toewijzing op te slaan."
   },
   "billableLegend": {
     "title": "Factureerbare legende",
@@ -513,7 +526,8 @@
     "entryMissingPeriod": "De urenstaat van deze registratie mist de periode en kan niet worden geopend.",
     "noPeriods": "Er zijn nog geen tijdsperioden ingesteld, dus er kan geen tijd worden geregistreerd. Vraag een beheerder om tijdsperioden aan te maken onder Instellingen → Tijdregistratie.",
     "noEditablePeriods": "Alle urenstaten zijn ingediend of goedgekeurd, dus er is geen dag om tijd aan toe te voegen. Vraag een goedkeurder om een staat te heropenen, of een beheerder om een periode toe te voegen.",
-    "prepareFailed": "Er is een fout opgetreden bij het voorbereiden van de tijdregistratie. Probeer het opnieuw."
+    "prepareFailed": "Er is een fout opgetreden bij het voorbereiden van de tijdregistratie. Probeer het opnieuw.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Suggesties",
@@ -538,7 +552,9 @@
       "checklistChanged": "checklist gewijzigd",
       "linksChanged": "links gewijzigd",
       "updated": "bijgewerkt"
-    }
+    },
+    "activitySummary_few": "eerste activiteit {{first}} · laatste {{last}} · {{count}} acties ({{kinds}})",
+    "activitySummary_many": "eerste activiteit {{first}} · laatste {{last}} · {{count}} acties ({{kinds}})"
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} bijgehouden in {{count}} segment (gepauzeerd {{paused}})",
@@ -557,6 +573,8 @@
       "confirm": "Doorgaan",
       "cancel": "Annuleren"
     },
-    "ticketFallbackName": "Ticket {{number}}"
+    "ticketFallbackName": "Ticket {{number}}",
+    "pausedNotice_few": "{{active}} bijgehouden in {{count}} segmenten (gepauzeerd {{paused}})",
+    "pausedNotice_many": "{{active}} bijgehouden in {{count}} segmenten (gepauzeerd {{paused}})"
   }
 }

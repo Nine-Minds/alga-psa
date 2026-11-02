@@ -7,17 +7,20 @@ import type {
   ScenarioAssumptionPrefill,
   ScenarioLine,
   ScenarioReplayInvoice,
+  SimulatedInvoiceLine,
 } from "@alga-psa/types";
 import { tenantDb } from "@alga-psa/db";
 import { toISODate, toPlainDate } from "@alga-psa/core";
-import {
-  getBillingPeriodForDate,
-  normalizeAnchorSettingsForCycle,
-} from "@alga-psa/shared/billingClients/billingCycleAnchors";
 import { assumptionKey } from "./syntheticActivity";
+import {
+  assignServicePeriodsToInvoicePeriods,
+  generateLineServicePeriods,
+  listInvoiceWindows,
+} from "./hypotheticalPeriods";
 import { validateScenarioTenantScope } from "./validateScenarioTenantScope";
 import { loadSimulatorInvoiceParties } from "./invoicePreviewContext";
 import { enrichWithGroupedItems } from "@alga-psa/billing/lib/adapters/invoiceAdapters";
+import { simulationRefusal } from "./simulationRefusal";
 
 export interface AssumptionPeriodWindow {
   start: ISO8601String;
@@ -40,30 +43,18 @@ export interface HistoricalUsageActivityRow {
   quantity: number | string;
 }
 
-function normalizedAnchor(scenario: ContractScenario) {
-  return normalizeAnchorSettingsForCycle(
-    scenario.invoice_schedule.billing_cycle,
-    {
-      dayOfMonth: scenario.invoice_schedule.anchor.day_of_month,
-      monthOfYear: scenario.invoice_schedule.anchor.month_of_year,
-      dayOfWeek: scenario.invoice_schedule.anchor.day_of_week,
-      referenceDate: scenario.invoice_schedule.anchor.reference_date,
-    },
-  );
-}
-
 function periodContaining(
   scenario: ContractScenario,
   date: ISO8601String,
 ): AssumptionPeriodWindow {
-  const period = getBillingPeriodForDate(
-    `${toISODate(toPlainDate(date))}T00:00:00Z`,
-    scenario.invoice_schedule.billing_cycle,
-    normalizedAnchor(scenario),
+  const [period] = listInvoiceWindows(
+    scenario.invoice_schedule,
+    toISODate(toPlainDate(date)),
+    1,
   );
   return {
-    start: period.periodStartDate,
-    endExclusive: period.periodEndDate,
+    start: `${period.start}T00:00:00Z`,
+    endExclusive: `${period.end}T00:00:00Z`,
   };
 }
 
@@ -94,7 +85,10 @@ export function buildReplayAssumptionPeriods(
 ): AssumptionPeriodWindow[] {
   const requestedEnd = toPlainDate(endDateExclusive);
   if (Temporal.PlainDate.compare(toPlainDate(startDate), requestedEnd) >= 0) {
-    throw new Error("Replay end must be after replay start");
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_INVALID_REPLAY_RANGE",
+      "The replay range must end after it starts and cover no more than 120 billing periods.",
+    );
   }
   let period = periodContaining(scenario, startDate);
   const periods: AssumptionPeriodWindow[] = [];
@@ -104,7 +98,10 @@ export function buildReplayAssumptionPeriods(
     periods.push(period);
     period = periodContaining(scenario, period.endExclusive);
     if (periods.length > 120) {
-      throw new Error("Replay range exceeds the 120-period safety limit");
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_INVALID_REPLAY_RANGE",
+        "The replay range must end after it starts and cover no more than 120 billing periods.",
+      );
     }
   }
   return periods;
@@ -146,6 +143,72 @@ function periodIndexForDate(
   );
 }
 
+/**
+ * Replay stores activity at the invoice index that BILLS it, because that is the
+ * index the simulator reads overrides at (ScenarioChargeSource and the prepaid
+ * block ledger both resolve the assumed quantity per invoice window). An
+ * arrears stream's invoice N bills service period N-1, so work done in
+ * service period P belongs on the invoice whose window contains P's closing
+ * boundary; an advance stream bills the period's own opening window. Work
+ * whose invoice falls past the replay is dropped, and the first replayed
+ * invoice shows no arrears activity (the simulator generates no service period
+ * before its first window). The
+ * assignment is the simulator's own (generateLineServicePeriods +
+ * assignServicePeriodsToInvoicePeriods), so the two cannot drift.
+ */
+export function buildReplayActivityIndexer(
+  scenario: ContractScenario,
+  periods: AssumptionPeriodWindow[],
+): {
+  /** Invoice index billing the line's service period containing the date; -1 when none in the replay. */
+  indexFor: (line: ScenarioLine, date: ISO8601String) => number;
+} {
+  const horizon = {
+    start_date: periods[0]?.start ?? scenario.horizon.start_date,
+    period_count: Math.max(1, periods.length),
+  };
+  const windows = periods.map((period, index) => ({
+    index,
+    startDate: toISODate(toPlainDate(period.start)),
+    endDateExclusive: toISODate(toPlainDate(period.endExclusive)),
+  }));
+  const byLine = new Map<
+    string,
+    Array<{ start: string; end: string; index: number }> | null
+  >();
+  const lineRanges = (line: ScenarioLine) => {
+    if (byLine.has(line.key)) return byLine.get(line.key)!;
+    const own = generateLineServicePeriods({
+      line,
+      horizon,
+      invoiceSchedule: scenario.invoice_schedule,
+      contractStartDate: scenario.contract_start_date,
+      scenarioId: scenario.scenario_id,
+    }).find((entry) => entry.stream === "line");
+    const ranges = own
+      ? assignServicePeriodsToInvoicePeriods(own.records, windows).map(
+          ({ periodIndex, record }) => ({
+            start: toISODate(toPlainDate(record.servicePeriod.start)),
+            end: toISODate(toPlainDate(record.servicePeriod.end)),
+            index: periodIndex,
+          }),
+        )
+      : null;
+    byLine.set(line.key, ranges);
+    return ranges;
+  };
+  for (const line of scenario.lines) lineRanges(line);
+  return {
+    indexFor: (line, date) => {
+      const day = toISODate(toPlainDate(date));
+      const range = lineRanges(line)?.find(
+        (candidate) => day >= candidate.start && day < candidate.end,
+      );
+      return range ? range.index : -1;
+    },
+  };
+}
+
 function durationMinutes(row: HistoricalTimeActivityRow): number {
   const persisted = Number(row.billable_duration ?? 0);
   if (Number.isFinite(persisted) && persisted > 0) return persisted;
@@ -167,6 +230,14 @@ export function aggregateActivityAssumptions(input: {
   mode: "average" | "replay";
 }): Record<string, ScenarioAssumption> {
   const { scenario, periods, timeRows, usageRows, mode } = input;
+  const replayIndexer =
+    mode === "replay" ? buildReplayActivityIndexer(scenario, periods) : null;
+  // Replay: the invoice that bills the work. Average: the window it falls in
+  // (only the per-window total matters for a flat average).
+  const indexOf = (line: ScenarioLine, date: ISO8601String) =>
+    replayIndexer
+      ? replayIndexer.indexFor(line, date)
+      : periodIndexForDate(periods, date);
   const values = new Map<string, number[]>();
   const add = (key: string, periodIndex: number, value: number) => {
     if (periodIndex < 0 || !Number.isFinite(value)) return;
@@ -185,7 +256,7 @@ export function aggregateActivityAssumptions(input: {
     if (!line) continue;
     add(
       assumptionKey(line.key, row.service_id),
-      periodIndexForDate(periods, row.entry_date),
+      indexOf(line, row.entry_date),
       durationMinutes(row) / 60,
     );
   }
@@ -199,7 +270,7 @@ export function aggregateActivityAssumptions(input: {
     if (!line) continue;
     add(
       assumptionKey(line.key, row.service_id),
-      periodIndexForDate(periods, row.usage_date),
+      indexOf(line, row.usage_date),
       Number(row.quantity) || 0,
     );
   }
@@ -274,6 +345,108 @@ async function loadActivityRows(
   return { timeRows, usageRows };
 }
 
+/**
+ * The saved Prepaid Block line that sells/covers a service, when exactly one
+ * does. $0 draw lines are persisted without a detail row, so the contract's own
+ * structure is the only attribution available.
+ */
+function blockLineForService(
+  scenario: ContractScenario,
+  serviceId: string | null | undefined,
+): string | null {
+  if (!serviceId) return null;
+  const candidates = scenario.lines.filter(
+    (line) =>
+      line.prepaid_block &&
+      line.origin_contract_line_id &&
+      line.services.some((service) => service.service_id === serviceId),
+  );
+  return candidates.length === 1 ? candidates[0].origin_contract_line_id : null;
+}
+
+export interface ReplayChargeRow {
+  item_id: string;
+  service_id?: string | null;
+  billing_charge_type?: string | null;
+  description?: string | null;
+  quantity?: number | string | null;
+  unit_price?: number | string | null;
+  net_amount?: number | string | null;
+  tax_amount?: number | string | null;
+  total_price?: number | string | null;
+  is_discount?: boolean | null;
+  item_kind?: string | null;
+  is_license?: boolean | null;
+}
+
+export interface ReplayChargeDetailRow {
+  service_period_start?: ISO8601String | null;
+  service_period_end?: ISO8601String | null;
+  contract_line_id?: string | null;
+  configuration_type?: string | null;
+}
+
+/** Maps one issued invoice charge (and its detail) to a comparable line. */
+// LEVERAGE: pattern charge-stream-to-type — second copy of the billing_charge_type -> stream/charge_type mapping (see SimulatedInvoiceLine builders); a shared stream vocabulary below would remove it.
+export function buildReplayInvoiceLine(input: {
+  charge: ReplayChargeRow;
+  detail?: ReplayChargeDetailRow;
+  /** contract_lines row that invoice_charge_details.config_id points at (block fees). */
+  blockLineId: string | null;
+  scenario: ContractScenario;
+}): SimulatedInvoiceLine {
+  const { charge, detail, blockLineId, scenario } = input;
+  // billing_charge_type is the engine's own record of the charge stream;
+  // it is what tells a block fee and a $0 draw line from fixed/hourly lines.
+  const blockStream =
+    charge.billing_charge_type === "prepaid_block"
+      ? ("prepaid_block" as const)
+      : charge.billing_charge_type === "hour_block"
+        ? ("block_draw" as const)
+        : null;
+  const chargeType = blockStream
+    ? blockStream
+    : charge.is_discount
+    ? "discount"
+    : charge.item_kind === "product"
+      ? charge.is_license
+        ? "license"
+        : "product"
+      : detail?.configuration_type === "Hourly"
+        ? "time"
+        : detail?.configuration_type === "Usage"
+          ? "usage"
+          : detail?.configuration_type === "Bucket"
+            ? "bucket"
+            : "fixed";
+  const net = Number(charge.net_amount ?? charge.total_price ?? 0);
+  const tax = Number(charge.tax_amount ?? 0);
+  // Origin contract line: the service configuration's line, else the block
+  // line the fee detail points at, else (a $0 draw line has no detail row)
+  // the one block line that sells this service.
+  const originContractLineId =
+    detail?.contract_line_id ??
+    blockLineId ??
+    (blockStream === "block_draw"
+      ? blockLineForService(scenario, charge.service_id)
+      : null);
+  return {
+    line_key: originContractLineId ?? `actual:${charge.item_id}`,
+    origin_contract_line_id: originContractLineId,
+    service_id: charge.service_id ?? null,
+    service_name: charge.description || "Invoice line",
+    charge_type: chargeType,
+    quantity_label: String(Number(charge.quantity ?? 1)),
+    rate_label: String(Number(charge.unit_price ?? 0)),
+    net_amount: net,
+    tax_amount: tax,
+    total: net + tax,
+    explanation: null,
+    service_period_start: detail?.service_period_start ?? undefined,
+    service_period_end: detail?.service_period_end ?? undefined,
+  };
+}
+
 async function loadReplayInvoices(
   knex: Knex,
   tenant: string,
@@ -332,6 +505,7 @@ async function loadReplayInvoices(
       .select(
         "ic.item_id",
         "ic.service_id",
+        "ic.billing_charge_type",
         "ic.description",
         "ic.quantity",
         "ic.unit_price",
@@ -350,6 +524,29 @@ async function loadReplayInvoices(
       "iid.config_id",
       { type: "left" },
     );
+    // Engine-written prepaid-block fee details carry config_id = the block
+    // line's contract_line_id (there is no service configuration row), so the
+    // configuration join above misses them; resolve that id directly.
+    const blockLineQuery = db.table("invoice_charge_details as iid");
+    db.tenantJoin(
+      blockLineQuery,
+      "contract_lines as cl",
+      "cl.contract_line_id",
+      "iid.config_id",
+      { type: "inner" },
+    );
+    const blockLineByItem = new Map<string, string>();
+    if (charges.length > 0) {
+      const blockLineRows = await blockLineQuery
+        .whereIn(
+          "iid.item_id",
+          charges.map((charge: { item_id: string }) => charge.item_id),
+        )
+        .select("iid.item_id", "cl.contract_line_id");
+      for (const row of blockLineRows) {
+        blockLineByItem.set(row.item_id, row.contract_line_id);
+      }
+    }
     const details =
       charges.length > 0
         ? await detailQuery
@@ -371,39 +568,14 @@ async function loadReplayInvoices(
       itemDetails.push(detail);
       detailsByItem.set(detail.item_id, itemDetails);
     }
-    const lines = charges.map((charge: any, index: number) => {
-      const itemDetails = detailsByItem.get(charge.item_id) ?? [];
-      const detail = itemDetails[0];
-      const chargeType = charge.is_discount
-        ? "discount"
-        : charge.item_kind === "product"
-          ? charge.is_license
-            ? "license"
-            : "product"
-          : detail?.configuration_type === "Hourly"
-            ? "time"
-            : detail?.configuration_type === "Usage"
-              ? "usage"
-              : detail?.configuration_type === "Bucket"
-                ? "bucket"
-                : "fixed";
-      const net = Number(charge.net_amount ?? charge.total_price ?? 0);
-      const tax = Number(charge.tax_amount ?? 0);
-      return {
-        line_key: detail?.contract_line_id ?? `actual:${charge.item_id}`,
-        service_id: charge.service_id ?? null,
-        service_name: charge.description || "Invoice line",
-        charge_type: chargeType,
-        quantity_label: String(Number(charge.quantity ?? 1)),
-        rate_label: String(Number(charge.unit_price ?? 0)),
-        net_amount: net,
-        tax_amount: tax,
-        total: net + tax,
-        explanation: null,
-        service_period_start: detail?.service_period_start ?? undefined,
-        service_period_end: detail?.service_period_end ?? undefined,
-      };
-    });
+    const lines = charges.map((charge: any) =>
+      buildReplayInvoiceLine({
+        charge,
+        detail: (detailsByItem.get(charge.item_id) ?? [])[0],
+        blockLineId: blockLineByItem.get(charge.item_id) ?? null,
+        scenario,
+      }),
+    );
     const subtotal = Number(invoice.subtotal ?? 0);
     const tax = Number(invoice.tax ?? 0);
     const total = Number(invoice.total_amount ?? subtotal + tax);
@@ -454,8 +626,9 @@ async function loadReplayInvoices(
 
 function requireClientBinding(scenario: ContractScenario): string {
   if (scenario.client_binding.kind !== "client") {
-    throw new Error(
-      "Historical assumptions require a scenario bound to a real client",
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_HISTORY_REQUIRES_CLIENT",
+      "Historical assumptions need a scenario bound to a real client. Choose a client for this simulation, then try again.",
     );
   }
   return scenario.client_binding.client_id;

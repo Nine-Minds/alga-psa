@@ -1,5 +1,5 @@
 /**
- * Seeds the five builtin asset statuses for a newly created tenant (FR-B2).
+ * Seeds the six builtin asset statuses for a newly created tenant (FR-B2).
  *
  * Mirrors the existing-tenant seeding in
  * server/migrations/20261009121000_create_asset_statuses.cjs — both paths are
@@ -15,6 +15,7 @@ const BUILTIN_ASSET_STATUSES = [
   { slug: 'maintenance', label: 'In maintenance', kind: 'pending', display_order: 2 },
   { slug: 'inactive', label: 'Inactive', kind: 'undeployable', display_order: 3 },
   { slug: 'retired', label: 'Retired', kind: 'archived', display_order: 4 },
+  { slug: 'held_by_msp', label: 'Held by MSP', kind: 'pending', display_order: 5 },
 ];
 
 exports.seed = async function (knex, tenantId) {

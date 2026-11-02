@@ -46,7 +46,7 @@ function expectContactBody(body: any) {
   expect(phone.required).toContain('phone_number');
   expect(phone.properties).toEqual(expect.objectContaining({
     phone_number: expect.anything(),
-    canonical_type: expect.objectContaining({ enum: ['work', 'mobile', 'home', 'fax', 'other'] }),
+    canonical_type: expect.objectContaining({ enum: ['work', 'mobile', 'home', 'fax', 'other', null] }),
     custom_type: expect.anything(),
     extension: expect.anything(),
     is_default: expect.anything(),
@@ -59,7 +59,7 @@ function expectContactBody(body: any) {
   expect(email.required).toContain('email_address');
   expect(email.properties).toEqual(expect.objectContaining({
     email_address: expect.anything(),
-    canonical_type: expect.objectContaining({ enum: ['work', 'personal', 'billing', 'other'] }),
+    canonical_type: expect.objectContaining({ enum: ['work', 'personal', 'billing', 'other', null] }),
     custom_type: expect.anything(),
     display_order: expect.anything(),
     contact_additional_email_address_id: expect.anything(),

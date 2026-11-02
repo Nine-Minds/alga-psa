@@ -304,3 +304,19 @@ test('untranslated UI JSON output drains before exit', () => {
   assert.equal(Array.isArray(report.high), true);
   assert.equal(Array.isArray(report.partial), true);
 });
+
+test('inventory pack passes the audit in every locale, with the RMA {{id}} title kept verbatim', () => {
+  const registry = JSON.parse(readFileSync(new URL('../locales.registry.json', import.meta.url), 'utf8'));
+  for (const locale of Object.keys(registry)) {
+    const pack = JSON.parse(readFileSync(new URL(
+      `../../../server/public/locales/${locale}/features/inventory.json`, import.meta.url,
+    ), 'utf8'));
+    assert.equal(pack.rma.detail.title, 'RMA {{id}}', `${locale}: RMA acronym title stays identical`);
+
+    const { report } = runAudit({ locale, namespaceFilter: new Set(['features/inventory']), writeReport: false });
+    assert.equal(report.namespaces.length, 1, `${locale}: expected the inventory namespace`);
+    const [inventory] = report.namespaces;
+    assert.deepEqual(inventory.untranslated, [], `${locale}: English left in inventory`);
+    assert.deepEqual(inventory.forbiddenViolations, [], `${locale}: glossary violations in inventory`);
+  }
+});

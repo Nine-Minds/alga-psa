@@ -143,6 +143,7 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
     asset_tag: '',
     serial_number: '',
     status: '',
+    ownership: 'client',
     location_id: null,
     contact_name_id: null,
     location: '',
@@ -247,6 +248,7 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
           asset_tag: data.asset_tag || '',
           serial_number: data.serial_number || '',
           status: data.status || 'active',
+          ownership: data.ownership ?? 'client',
           location_id: data.location_id ?? null,
           contact_name_id: data.contact_name_id ?? null,
           location: data.location || '',
@@ -1585,6 +1587,21 @@ export default function AssetForm({ assetId, onSaved, onCancel, hideActions, onS
                     value={formData.status}
                     onValueChange={handleSelectChange}
                     options={statusOptions}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="ownership-select" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                    {t('assetForm.fields.ownership', { defaultValue: 'Ownership' })}
+                  </label>
+                  <CustomSelect
+                    id="ownership-select"
+                    value={formData.ownership ?? 'client'}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, ownership: value as 'client' | 'msp' }))}
+                    options={[
+                      { value: 'client', label: t('assetForm.ownership.client', { defaultValue: 'Client-owned' }) },
+                      { value: 'msp', label: t('assetForm.ownership.msp', { defaultValue: 'MSP-owned' }) },
+                    ]}
                     className="mt-1"
                   />
                 </div>

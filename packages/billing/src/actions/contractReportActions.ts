@@ -4,13 +4,14 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
-import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import { deriveClientContractStatus, getTenantLocalToday } from '@alga-psa/shared/billingClients';
 import {
   aggregateCentsByCurrency,
   getContractMonthlyValuesByAssignment,
   type CurrencyAmount,
 } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { mapHourBlockUsageRow, type HourBlockUsageQueryRow } from '../lib/hourBlockUsageRows';
 import type { Knex } from 'knex';
 import { isActionPermissionError, permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -231,7 +232,9 @@ async function getContractRevenueYtdByAssignment(
 const mapAssignmentStatusToRevenueStatus = (
   status: ReturnType<typeof deriveClientContractStatus>
 ): ContractRevenue['status'] | null => {
-  if (status === 'draft') {
+  // Not billing yet: both real drafts and confirmed future-start ('scheduled') contracts keep the
+  // report's existing 'upcoming' bucket (future-start rows were 'draft' -> 'upcoming' before).
+  if (status === 'draft' || status === 'scheduled') {
     return 'upcoming';
   }
   if (status === 'terminated') {
@@ -279,6 +282,7 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
     db.tenantJoin(dataQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
     db.tenantJoin(dataQuery, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
     const data = (await dataQuery) as unknown as ContractRevenueAssignmentRow[];
+    const tenantToday = await getTenantLocalToday(knex, tenant);
 
     const aggregatedMap = new Map<string, any>();
 
@@ -288,7 +292,7 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
         startDate: normalizeDateOnly(row.start_date),
         endDate: normalizeDateOnly(row.end_date),
         contractStatus: row.contract_status ?? undefined,
-        now: today,
+        now: tenantToday,
       });
       const status = mapAssignmentStatusToRevenueStatus(assignmentStatus);
       if (!status) {
@@ -399,6 +403,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
     );
 
     const expirationMap = new Map<string, ContractExpiration>();
+    const tenantToday = await getTenantLocalToday(knex, tenant);
 
     for (const row of data) {
       const assignmentStatus = deriveClientContractStatus({
@@ -406,8 +411,9 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         startDate: normalizeDateOnly(row.start_date),
         endDate: normalizeDateOnly(row.end_date),
         contractStatus: row.contract_status ?? undefined,
-        now: today,
+        now: tenantToday,
       });
+      // Only contracts billing now can expire; 'scheduled' has not started so it is excluded.
       if (assignmentStatus !== 'active') {
         continue;
       }
@@ -576,6 +582,104 @@ export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<B
     return bucketUsages;
   } catch (error) {
     console.error('Error fetching bucket usage report:', error);
+    throw error;
+  }
+});
+
+export interface HourBlockUsage {
+  block_id: string;
+  client_id: string;
+  client_name: string;
+  logoUrl?: string | null;
+  service_name: string;
+  contract_name: string | null;
+  status: string;
+  total_hours: number;
+  used_hours: number;
+  remaining_hours: number;
+  utilization_percentage: number;
+  /** Cents per hour the block is valued at (minor units). */
+  hourly_rate: number;
+  currency_code: string;
+  /**
+   * Value of the unused hours, minor units of `currency_code`: remaining hours x hourly_rate,
+   * rounded once on the server (computeRemainingBlockValueMinor). Zero unless the block is
+   * active, since an expired or voided block's remaining hours are forfeited.
+   */
+  remaining_value: number;
+  purchased_at: string | null;
+  /** First day the block can be drawn (cadence blocks); null = no lower bound. */
+  valid_from: string | null;
+  expiration_date: string | null;
+}
+
+/**
+ * Get prepaid hour-block usage report data
+ * One row per issued block (ad-hoc and contract-issued) with burn progress.
+ * Blocks with no liability (pending, or voided before issuance) are excluded,
+ * as are blocks that fell out of the trailing 12-month window (see below) so
+ * the report does not accumulate every block the tenant ever bought.
+ */
+export const getHourBlockUsageReport = withAuth(async (user, { tenant }): Promise<HourBlockUsage[] | ActionPermissionError> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
+  }
+  try {
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenant);
+
+    const blockQuery = db.table('hour_blocks as hb')
+      .select(
+        'hb.block_id',
+        'hb.client_id',
+        'hb.status',
+        'hb.total_minutes',
+        'hb.remaining_minutes',
+        'hb.hourly_rate',
+        'hb.currency_code',
+        'hb.purchased_at',
+        'hb.valid_from',
+        'hb.expiration_date',
+        'cl.contract_line_name as line_name',
+        'c.contract_name',
+        'sc.service_name',
+        'clients.client_name'
+      );
+    db.tenantJoin(blockQuery, 'clients', 'hb.client_id', 'clients.client_id', { type: 'left' });
+    db.tenantJoin(blockQuery, 'contract_lines as cl', 'hb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
+    db.tenantJoin(blockQuery, 'contracts as c', 'cl.contract_id', 'c.contract_id', { type: 'left' });
+    db.tenantJoin(blockQuery, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
+    blockQuery.whereNotNull('hb.purchased_at').andWhere('hb.status', '!=', 'pending');
+    // Default window so the table does not grow without bound as blocks age
+    // out: live blocks always, plus blocks that expired, were voided or were
+    // purchased within the last 12 months. Callers narrow further in the UI.
+    const today = new Date();
+    const windowStartDateOnly = new Date(Date.UTC(
+      today.getUTCFullYear() - 1, today.getUTCMonth(), today.getUTCDate(), 0, 0, 0, 0
+    )).toISOString().slice(0, 10);
+    blockQuery.where((builder) => {
+      builder
+        .where('hb.status', 'active')
+        .orWhere('hb.expiration_date', '>=', windowStartDateOnly)
+        .orWhere('hb.voided_at', '>=', windowStartDateOnly)
+        .orWhere('hb.purchased_at', '>=', windowStartDateOnly);
+    });
+    blockQuery.orderBy('clients.client_name', 'asc').orderBy('hb.purchased_at', 'asc');
+    const rows = await blockQuery;
+
+    const usages: HourBlockUsage[] = rows.map((row: HourBlockUsageQueryRow) => mapHourBlockUsageRow(row));
+
+    const clientIds = Array.from(new Set(usages.map((row) => row.client_id).filter((id): id is string => Boolean(id))));
+    if (clientIds.length > 0) {
+      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
+      for (const row of usages) {
+        row.logoUrl = row.client_id ? logoUrlsMap.get(row.client_id) ?? null : null;
+      }
+    }
+
+    return usages;
+  } catch (error) {
+    console.error('Error fetching hour block usage report:', error);
     throw error;
   }
 });

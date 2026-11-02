@@ -145,7 +145,7 @@ export function registerTeamsWorkflowActionsV2(): void {
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
     inputSchema: z.object({
-      user_id: z.string().uuid(),
+      user_id: z.string().guid(),
       title: z.string().trim().min(1),
       message: z.string().trim().min(1).optional(),
       link: z.string().url().optional(),
@@ -221,7 +221,7 @@ export function registerTeamsWorkflowActionsV2(): void {
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
     inputSchema: z.object({
-      user_id: z.string().uuid(),
+      user_id: z.string().guid(),
       message: z.string().trim().min(1)
     }),
     outputSchema: z.object({
