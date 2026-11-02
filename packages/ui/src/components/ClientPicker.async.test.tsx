@@ -241,4 +241,21 @@ describe('ClientPicker', () => {
     expect(onSelect).toHaveBeenCalledWith('b');
     await waitFor(() => expect(fetchClientTags).toHaveBeenCalledWith(['a', 'b']));
   });
+
+  it('preserves company and individual type filters for projected in-memory client options', async () => {
+    const clients = [
+      { client_id: 'company-1', client_name: 'Acme', client_type: 'company', is_inactive: false },
+      { client_id: 'individual-1', client_name: 'Ada Lovelace', client_type: 'individual', is_inactive: false },
+    ];
+    render(<ClientPicker id="typed" clients={clients} onSelect={vi.fn()} selectedClientId={null} />);
+    fireEvent.click(screen.getByRole('button', { name: /Select Client/ }));
+
+    fireEvent.change(screen.getByTestId('typed-type-filter'), { target: { value: 'company' } });
+    expect(screen.getByText('Acme')).toBeTruthy();
+    expect(screen.queryByText('Ada Lovelace')).toBeNull();
+
+    fireEvent.change(screen.getByTestId('typed-type-filter'), { target: { value: 'individual' } });
+    expect(screen.getByText('Ada Lovelace')).toBeTruthy();
+    expect(screen.queryByText('Acme')).toBeNull();
+  });
 });

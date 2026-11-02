@@ -109,6 +109,7 @@ import { compilePredicateFragment } from '@alga-psa/predicates/sql';
 import type { PredicateGroup } from '@alga-psa/predicates';
 import { resolveTicketTagIdsByText } from '../lib/ticketTagFilter';
 import { createTicketQuerySchema } from '../lib/ticketQuerySchema';
+import { toTicketFormUserOption, type TicketFormClientOption } from '../lib/ticketFormOptions';
 import { ticketFiltersToPredicates, type TicketFilterCodecContext } from '../lib/ticketFilterPredicates';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
@@ -800,7 +801,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // Fetch created by user
     // LEVERAGE: pattern users-star-projection — see availableAgents query above
-    const createdByUserRow = ticket.entered_by ? 
+    const createdByUserRow = ticket.entered_by ?
       await tenantScopedTable(trx, 'users', tenant)
         .select(...USER_RESPONSE_FIELD_NAMES)
         .where({
@@ -2439,6 +2440,9 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
       if (!await hasPermission(user, 'ticket', 'read', trx)) {
         throw new Error('Permission denied: Cannot view ticket options');
       }
+      if (!isMspPrincipalUserType(user.user_type)) {
+        throw new Error('Permission denied: Ticket form options are available to MSP principals only');
+      }
 
       // Fetch all options in parallel
       const scopedDb = tenantDb(trx, tenant);
@@ -2478,10 +2482,11 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('category_name', 'asc'),
       
       tenantScopedTable(trx, 'clients as c', tenant)
-        .select('c.*')
+        .select('c.client_id', 'c.client_name', 'c.client_type', 'c.tenant', 'c.is_inactive')
         .orderBy('c.client_name', 'asc'),
 
       tenantScopedTable(trx, 'users', tenant)
+        .select(...USER_RESPONSE_FIELD_NAMES)
         .orderBy('first_name', 'asc'),
 
       // Fetch all unique tags for tickets (with colors, filtering orphans)
@@ -2553,22 +2558,26 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         value: user.user_id,
         label: `${user.first_name} ${user.last_name}`
       }));
+      const userOptions = users.map((user: any) => toTicketFormUserOption(user));
 
       // --- Add Logo URL Processing ---
-      const clientsData = clients as IClient[];
+      const clientsData = clients as Array<Pick<IClient, 'client_id' | 'client_name' | 'client_type' | 'tenant' | 'is_inactive'>>;
 
       // Process clients to add logoUrl using batch loading
-      const clientIds = clientsData.map((c: IClient) => c.client_id);
+      const clientIds = clientsData.map((c) => c.client_id);
       const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
     
       const clientChipTags = await loadDisplayTagsForEntities(trx, tenant, displayAudienceForUser(user), [
         { taggedType: 'client', ids: clientIds },
       ]);
-      const clientsWithLogos = clientsData.map((clientData: IClient) => {
+      const clientsWithLogos: TicketFormClientOption[] = clientsData.map((clientData) => {
         const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
         return {
-          ...clientData,
-          properties: clientData.properties || {},
+          client_id: clientData.client_id,
+          client_name: clientData.client_name,
+          client_type: clientData.client_type,
+          tenant: clientData.tenant,
+          is_inactive: clientData.is_inactive,
           logoUrl,
           displayTags: clientChipTags.get(displayTagKey('client', clientData.client_id)) ?? [],
         };
@@ -2584,7 +2593,7 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         agentOptions,
         categories,
         clients: clientsWithLogos, // Return clients with logos
-        users,
+        users: userOptions,
         contactTagDefinitions,
         clientTagDefinitions,
         tags: (tags || []).map((tag: any) => ({

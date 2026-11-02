@@ -38,6 +38,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import type { TicketFormClientOption } from '../lib/ticketFormOptions';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { TagFilter } from '@alga-psa/ui/components/tags/TagFilter';
 import { WhereTagFilter } from './WhereTagFilter';
@@ -172,7 +173,7 @@ interface TicketingDashboardProps {
   initialStatuses: TicketStatusFilterOption[];
   initialPriorities: SelectOption[];
   initialCategories: ITicketCategory[];
-  initialClients: IClient[];
+  initialClients: TicketFormClientOption[];
   initialTags?: ITag[];
   /** Contact / client tag definitions for the Requester tags / Client tags filters. */
   contactTagDefinitions?: ITag[];
@@ -411,7 +412,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
 
   const [boards] = useState<IBoard[]>(initialBoards);
-  const [clients] = useState<IClient[]>(initialClients);
+  const [clients] = useState<TicketFormClientOption[]>(initialClients);
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
   const [rawStatusOptions] = useState<TicketStatusFilterOption[]>(initialStatuses);
   const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
