@@ -415,6 +415,36 @@ export const TICKET_MATERIAL_SOURCE: RedactableRecordSource = {
   },
 };
 
+export const TICKET_CHECKLIST_ITEM_SOURCE: RedactableRecordSource = {
+  resource: ['ticket_checklist_items'],
+  identifier: ids('checklist_item_id', 'ticket_checklist_items.checklist_item_id', 'values.ticket_checklist_items.checklist_item_id'),
+  fields: {},
+  derived: {
+    completed_by_name: ids('completed_by', 'users', 'users.first_name', 'users.last_name', 'users.username'),
+  },
+};
+
+export const TICKET_EXTERNAL_LINK_SOURCE: RedactableRecordSource = {
+  resource: ['external_entity_links'],
+  identifier: ids('link_id', 'external_entity_links.link_id', 'values.external_entity_links.link_id'),
+  fields: {},
+  derived: {
+    // These values are rendered from the external system definition and link identifiers, not independent fields.
+    url: ids('system', 'external_id', 'external_parent_id', 'realm', 'tenant_external_systems'),
+    display: ids('system', 'external_id', 'external_parent_id', 'realm', 'tenant_external_systems'),
+    actor: ids('actor_id', 'users'),
+  },
+};
+
+export const TICKET_WATCHER_SOURCE: RedactableRecordSource = {
+  resource: ['ticket_watchers'],
+  identifier: ids('entity_id', 'ticket_watchers.entity_id'),
+  fields: {},
+  derived: {
+    name: ids('entity_type', 'entity_id', 'users', 'users.first_name', 'users.last_name', 'contacts', 'contacts.full_name'),
+  },
+};
+
 const TICKET_PRIMARY_AGENT_SOURCE: RedactableRecordSource = {
   resource: ['users'],
   // The primary agent object exists only because tickets.assigned_to exists. Hiding that source suppresses the
@@ -481,6 +511,9 @@ export const TICKET_RECORD_SOURCE: RedactableRecordSource = {
     documents: TICKET_DOCUMENT_SOURCE,
     comments: TICKET_COMMENT_SOURCE,
     materials: TICKET_MATERIAL_SOURCE,
+    checklist: TICKET_CHECKLIST_ITEM_SOURCE,
+    external_links: TICKET_EXTERNAL_LINK_SOURCE,
+    watchers: TICKET_WATCHER_SOURCE,
     // The service names its response keys `additional_agents` / `primary_agent`; these nested sources are also
     // used by the detached agents endpoint below.
     primary_agent: TICKET_PRIMARY_AGENT_SOURCE,

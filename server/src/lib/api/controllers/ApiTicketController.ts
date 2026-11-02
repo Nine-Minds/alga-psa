@@ -37,9 +37,12 @@ import {
   TICKET_DOCUMENT_SOURCE,
   TICKET_DOCUMENT_VARIANT_SOURCES,
   TICKET_AGENT_RESPONSE_SOURCE,
+  TICKET_CHECKLIST_ITEM_SOURCE,
   TICKET_COMMENT_SOURCE,
+  TICKET_EXTERNAL_LINK_SOURCE,
   TICKET_MATERIAL_SOURCE,
   TICKET_RECORD_SOURCE,
+  TICKET_WATCHER_SOURCE,
   type RedactableRecordSource,
 } from '@alga-psa/co-managed/recordProjection';
 import { createProjectedFileResponse, createProjectedPreviewResponse } from '../utils/projectedFileResponse';
@@ -801,10 +804,13 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           const checklist = await getTicketChecklistItems(ticketId);
-          return createSuccessResponse(checklist, 200, undefined, apiRequest);
+          const projectedChecklist = checklist.map((item) =>
+            reprojectUnderDecision(ticketGate, item as Record<string, any>, TICKET_CHECKLIST_ITEM_SOURCE)
+          ).filter((item) => item !== null);
+          return createSuccessResponse(projectedChecklist, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -903,13 +909,16 @@ export class ApiTicketController extends ApiBaseController {
           await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           const links = await getTicketExternalLinks(ticketId);
           if (isServerActionErrorResult(links)) {
             return createServerActionErrorResponse(links);
           }
-          return createSuccessResponse(links, 200, undefined, apiRequest);
+          const projectedLinks = links.map((link) =>
+            reprojectUnderDecision(ticketGate, link as Record<string, any>, TICKET_EXTERNAL_LINK_SOURCE)
+          ).filter((link) => link !== null);
+          return createSuccessResponse(projectedLinks, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1301,11 +1310,14 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           const watchers = await this.ticketService.listWatchers(ticketId, apiRequest.context!);
+          const projectedWatchers = watchers.map((watcher) =>
+            reprojectUnderDecision(ticketGate, watcher as Record<string, any>, TICKET_WATCHER_SOURCE)
+          ).filter((watcher) => watcher !== null);
 
-          return createSuccessResponse(watchers, 200, undefined, apiRequest);
+          return createSuccessResponse(projectedWatchers, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);

@@ -27,6 +27,9 @@ const state = vi.hoisted(() => ({
   assetAssignments: [] as Record<string, any>[],
   maintenanceHistory: [] as Record<string, any>[],
   assetTickets: [] as Record<string, any>[],
+  checklistItems: [] as Record<string, any>[],
+  externalLinks: [] as Record<string, any>[],
+  watchers: [] as Record<string, any>[],
   statuses: [] as Record<string, any>[],
   clients: [] as Record<string, any>[],
 }));
@@ -91,7 +94,20 @@ vi.mock('../../../lib/api/services/TicketService', () => ({
   TicketService: class {
     getById = vi.fn(async (id: string) => state.tickets.find((t) => t.ticket_id === id) ?? null);
     list = vi.fn(async () => ({ data: state.tickets, total: state.tickets.length }));
+    listWatchers = vi.fn(async () => state.watchers);
   },
+}));
+vi.mock('@alga-psa/tickets/actions/checklists/ticketChecklistActions', () => ({
+  addChecklistItem: vi.fn(),
+  getTicketChecklistItems: vi.fn(async () => state.checklistItems),
+  setChecklistItemCompleted: vi.fn(),
+}));
+vi.mock('@alga-psa/tickets/actions/externalLinks/externalLinkActions', () => ({
+  addExternalLink: vi.fn(),
+  findTicketByExternalLink: vi.fn(),
+  getTicketExternalLinks: vi.fn(async () => state.externalLinks),
+  removeExternalLink: vi.fn(),
+  updateExternalLink: vi.fn(),
 }));
 vi.mock('@alga-psa/assets/lib/assetReadAuthorization', () => ({
   resolveAssetAuthorizationRecords: vi.fn(async (_knex: unknown, _tenant: string, rows: { asset_id: string }[]) =>
@@ -176,6 +192,9 @@ beforeEach(() => {
   state.assetAssignments = [];
   state.maintenanceHistory = [];
   state.assetTickets = [];
+  state.checklistItems = [];
+  state.externalLinks = [];
+  state.watchers = [];
   state.statuses = [{ status_id: 's-1', name: 'Active' }];
   state.clients = [{ client_id: 'c-1', client_name: 'Acme' }];
   authorizeResource.mockClear();
@@ -465,6 +484,53 @@ describe('tickets: REST reads serialize the projection', () => {
       expect((await (await get()).json()).data).toEqual([]);
       state.decisions.delete(TICKET);
     }
+  });
+
+  it('checklist GET projects fields and suppresses hidden checklist identifiers', async () => {
+    state.checklistItems = [{ checklist_item_id: P2, ticket_id: TICKET, item_name: 'Visible task', completed_by_name: 'Sam Doe' }];
+    const controller = new ApiTicketController();
+    const get = () => controller.getChecklist()(request(`/api/v1/tickets/${TICKET}/checklist`, { id: TICKET }));
+    expect((await (await get()).json()).data[0].item_name).toBe('Visible task');
+
+    state.decisions.set(TICKET, { allowed: true, redactedFields: ['ticket_checklist_items.item_name'] });
+    const redacted = (await (await get()).json()).data[0];
+    expect(redacted).not.toHaveProperty('item_name');
+    expect(redacted.checklist_item_id).toBe(P2);
+    state.decisions.set(TICKET, { allowed: true, redactedFields: ['ticket_checklist_items.checklist_item_id'] });
+    expect((await (await get()).json()).data).toEqual([]);
+  });
+
+  it('external link GET projects derived URL metadata and suppresses hidden link identifiers', async () => {
+    state.externalLinks = [{
+      link_id: P2, ticket_id: TICKET, system: 'tracker', external_id: 'EXT-7', external_parent_id: null,
+      realm: 'tenant-a', url: 'https://tracker.example/EXT-7',
+      display: { label: 'Tracker', icon: 'Link', href: 'https://tracker.example/EXT-7', realmLabel: null },
+    }];
+    const controller = new ApiTicketController();
+    const get = () => controller.getExternalLinks()(request(`/api/v1/tickets/${TICKET}/external-links`, { id: TICKET }));
+    expect((await (await get()).json()).data[0].display.href).toBe('https://tracker.example/EXT-7');
+
+    state.decisions.set(TICKET, { allowed: true, redactedFields: ['external_entity_links.external_id'] });
+    const redacted = (await (await get()).json()).data[0];
+    expect(redacted).not.toHaveProperty('external_id');
+    expect(redacted.url).toBeNull();
+    expect(redacted.display).toBeNull();
+    state.decisions.set(TICKET, { allowed: true, redactedFields: ['external_entity_links.link_id'] });
+    expect((await (await get()).json()).data).toEqual([]);
+  });
+
+  it('watcher GET projects email fields and suppresses hidden association identifiers', async () => {
+    state.watchers = [{ email: 'visible@example.test', name: 'Visible Person', active: true, entity_type: 'contact', entity_id: P2, source: 'manual' }];
+    const controller = new ApiTicketController();
+    const get = () => controller.getWatchers()(request(`/api/v1/tickets/${TICKET}/watchers`, { id: TICKET }));
+    expect((await (await get()).json()).data[0].email).toBe('visible@example.test');
+
+    state.decisions.set(TICKET, { allowed: true, redactedFields: ['ticket_watchers.email'] });
+    const redacted = (await (await get()).json()).data[0];
+    expect(redacted).not.toHaveProperty('email');
+    expect(redacted.name).toBe('Visible Person');
+    state.decisions.set(TICKET, { allowed: true, redactedFields: ['ticket_watchers.entity_id'] });
+    expect((await (await get()).json()).data).toEqual([]);
   });
 
   it('update response keeps hidden ticket fields hidden while preserving visible fields', async () => {
