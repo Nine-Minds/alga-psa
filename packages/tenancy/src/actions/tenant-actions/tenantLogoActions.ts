@@ -10,9 +10,9 @@ import {
   type EntityType,
   type LogoCropRect,
 } from '@alga-psa/storage';
-import { getConnection, tenantDb } from '@alga-psa/db';
+import { getConnection, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission, type AuthContext } from '@alga-psa/auth';
-import { canReadDocument } from '@alga-psa/documents/lib/documentPermissions';
+import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
@@ -461,19 +461,48 @@ export const linkDocumentAsTenantLogo = withAuth(async (
       return { success: false, error: 'No document provided' };
     }
 
-    // The storage helper copies source bytes into a publicly served tenant-logo
-    // document, so authorize this exact source before handing it off.
+    // A general document:read grant is necessary but does not bypass the
+    // instance-level relationship, asset, and attachment lifecycle checks.
+    const knex = await getConnection(tenant);
+    let sourceDocument;
     try {
-      if (!await canReadDocument(user, documentId)) {
-        return { success: false, error: 'Permission denied: Cannot read documents' };
-      }
+      sourceDocument = await withTransaction(knex, async (trx) => {
+        if (!await hasPermission(user, 'document', 'read', trx)) {
+          return null;
+        }
+
+        const candidate = await tenantDb(trx, tenant).table('documents')
+          .where({ document_id: documentId })
+          .first();
+        if (!candidate) {
+          return null;
+        }
+
+        const [authorizedDocument] = await authorizeAndRedactDocuments(trx, tenant, user, [candidate]);
+        return authorizedDocument ?? null;
+      });
     } catch (error) {
       console.error('Error checking source document permission for tenant logo:', error);
       return { success: false, error: 'Permission denied: Cannot read documents' };
     }
 
+    // The byte fields may themselves be redacted. Never fall back to a fresh
+    // storage lookup by the caller-supplied ID after authorization.
+    if (!sourceDocument?.file_id || !sourceDocument.mime_type) {
+      return { success: false, error: 'Permission denied: Cannot read documents' };
+    }
+    if (!sourceDocument.mime_type.startsWith('image/')) {
+      return { success: false, error: 'Only image documents can be used here.' };
+    }
+
     const result = await linkEntityImageFromDocument('tenant' as EntityType, tenant, user.user_id, tenant, {
-      documentId,
+      sourceDocument: {
+        tenant,
+        documentId: sourceDocument.document_id,
+        fileId: sourceDocument.file_id,
+        documentName: sourceDocument.document_name,
+        mimeType: sourceDocument.mime_type,
+      },
       logoVariant,
       contextName: 'tenant_logo',
     });
