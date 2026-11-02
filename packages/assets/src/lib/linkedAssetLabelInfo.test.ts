@@ -60,12 +60,18 @@ describe('composeLinkedAssetInfo', () => {
   });
 
   it('summarises free-form server storage_config entries', () => {
-    expect(summarizeServerStorage([{ type: 'SSD', size_gb: 960 }, 'RAID1 mirror'])).toBe('SSD 960; RAID1 mirror');
+    expect(summarizeServerStorage([{ type: 'SSD', size_gb: 960 }, 'RAID1 mirror'])).toBe('SSD 960 GB; RAID1 mirror');
+    expect(
+      summarizeServerStorage([
+        { name: 'C:', capacity_gb: 476, free_gb: 120, file_system: 'NTFS' },
+        { name: 'D:', capacity_gb: 1863, free_gb: 900, file_system: 'NTFS' },
+      ])
+    ).toBe('C: 476 GB NTFS; D: 1863 GB NTFS');
     expect(summarizeServerStorage([])).toBeNull();
     expect(summarizeServerStorage([{ a: { deep: 1 } }])).toBeNull();
     expect(summarizeServerStorage(null)).toBeNull();
     const info = composeLinkedAssetInfo(base, { ram_gb: 64, storage_config: [{ type: 'SSD', size_gb: 960 }] });
-    expect(info.storageLine).toBe('SSD 960');
+    expect(info.storageLine).toBe('SSD 960 GB');
     expect(info.ramLine).toBe('64 GB');
   });
 });
