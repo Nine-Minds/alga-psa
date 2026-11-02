@@ -33,6 +33,7 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { TIER_FEATURES, type ColumnDefinition, type IUserWithRoles, type ITeam } from '@alga-psa/types';
+import { getAuthorizationActions } from '@alga-psa/authorization/bundles/resourceActions';
 import AuthorizationResourceActionSelect from './AuthorizationResourceActionSelect';
 import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeams, getTeamAvatarUrlsBatchAction, isTeamActionError } from '@alga-psa/teams/actions';
@@ -1764,6 +1765,10 @@ export default function PolicyManagement() {
                           value={simulatorResourceType}
                           onValueChange={(value) => {
                             setSimulatorResourceType(value);
+                            const actions = getAuthorizationActions(value);
+                            if (!actions.includes(simulatorAction)) {
+                              setSimulatorAction(actions[0] ?? '');
+                            }
                             setSimulatorRecordId('');
                             setSimulationResult(null);
                           }}
