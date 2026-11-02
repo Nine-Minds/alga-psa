@@ -57,9 +57,7 @@ async function canAccessTicket(conn: Conn, tenant: string, userId: string, ticke
     const kernel = createAuthorizationKernel({
       builtinProvider: new BuiltinAuthorizationKernelProvider({ relationshipRules: [] }),
       bundleProvider: new BundleAuthorizationKernelProvider({
-        resolveRules: async input => {
-          try { return await resolveBundleNarrowingRulesForEvaluation(conn as Knex.Transaction, input); } catch { return []; }
-        },
+        resolveRules: input => resolveBundleNarrowingRulesForEvaluation(conn as Knex.Transaction, input),
       }),
       rbacEvaluator: async () => true,
     });
