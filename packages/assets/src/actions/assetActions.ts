@@ -68,6 +68,7 @@ import {
     skipMaintenanceOccurrence,
     setMaintenanceSchedulePaused,
 } from '@alga-psa/shared/services/assets/maintenanceLifecycle';
+import { projectAssetReadFields } from '../lib/projectAssetReadFields';
 import { advanceMaintenanceDate, parseCustomRecurrence } from '../lib/maintenanceRecurrence';
 import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAssetOrder';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
@@ -582,11 +583,12 @@ async function assertAssetReadAllowed(
     tenant: string,
     context: AssetReadAuthorizationContext,
     asset: AssetAuthorizationInput
-): Promise<void> {
+): Promise<Awaited<ReturnType<typeof authorizeAssetReadDecision>>> {
     const decision = await authorizeAssetReadDecision(trx, tenant, context, asset);
     if (!decision.allowed) {
         throw new Error('Permission denied: Cannot read assets');
     }
+    return decision;
 }
 
 async function resolveAssetAuthorizationInputById(
@@ -797,16 +799,17 @@ export const getAsset = withAuth(async (user, { tenant }, asset_id: string): Pro
     }
 
     const asset = await getAssetWithExtensions(knex, tenant, asset_id);
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const decision = await withTransaction(knex, async (trx: Knex.Transaction) => {
         const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
-        await assertAssetReadAllowed(trx, tenant, context, { asset_id: asset.asset_id, client_id: asset.client_id });
+        const readDecision = await assertAssetReadAllowed(trx, tenant, context, { asset_id: asset.asset_id, client_id: asset.client_id });
+        return readDecision;
     });
 
     // Same normalisation every other read path applies (getAssetDetailBundle,
     // create, update): pg returns NUMERIC columns as strings and timestamps as
     // Date, neither of which matches the declared Asset contract or what the
     // edit form can round-trip back through updateAssetSchema (alga0002283).
-    return formatAssetForOutput(asset);
+    return projectAssetReadFields(formatAssetForOutput(asset), decision.redactedFields);
     } catch (error) {
         const expected = expectedAssetActionError(error);
         if (expected) return expected;
@@ -848,14 +851,14 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
         ]);
 
         const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
-        await assertAssetReadAllowed(
+        const decision = await assertAssetReadAllowed(
             trx,
             tenant,
             context,
             { asset_id: assetRecord.asset_id, client_id: assetRecord.client_id }
         );
 
-        const formattedAsset = formatAssetForOutput(assetRecord);
+        const formattedAsset = projectAssetReadFields(formatAssetForOutput(assetRecord), decision.redactedFields);
 
         // Structural child data inherits parent-asset authorization. Linked ticket/document data
         // additionally intersects with their own resource-family authorization.
@@ -2395,6 +2398,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
             const page = validatedParams.page || 1;
             const limit = validatedParams.limit || 10;
             const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+            const decisionsByAssetId = new Map<string, string[]>();
             const authorizedPage = await buildAuthorizationAwarePage<any>({
                 page,
                 limit,
@@ -2406,6 +2410,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                         context,
                         { asset_id: asset.asset_id, client_id: asset.client_id }
                     );
+                    if (decision.allowed) decisionsByAssetId.set(asset.asset_id, decision.redactedFields);
                     return decision.allowed;
                 },
                 scanLimit: Math.max(limit, 100),
@@ -2426,7 +2431,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     ? await getExtensionData(trx, tenant, asset.asset_id, asset.asset_type)
                     : null;
 
-                return {
+                return projectAssetReadFields({
                     ...asset,
                     client: {
                         client_id: asset.client_id,
@@ -2437,7 +2442,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     ...(extensionData ? {
                         [asset.asset_type]: extensionData
                     } : {})
-                };
+                }, decisionsByAssetId.get(asset.asset_id) ?? []);
             })
         );
 
