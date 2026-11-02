@@ -194,11 +194,13 @@ describe('connectStripeAction settings preservation', () => {
       stripe_credential_fingerprint: createHash('sha256').update('sk_test_stored').digest('hex'),
     };
     vault.failValue = 'sk_test_x';
+    vault.values.set('unrelated_tenant_secret', 'keep-this-value');
     const result = await (connectStripeAction as any)(credentials);
     expect(result.success).toBe(false);
     expect(store.row!.configuration.stripe_secret_key_name).toBe('stripe_payment_secret_key');
     expect(store.row!.configuration.stripe_credential_fingerprint).toBe(createHash('sha256').update('sk_test_stored').digest('hex'));
     expect(vault.values.get('stripe_payment_secret_key')).toBe('sk_test_stored');
+    expect(vault.values.get('unrelated_tenant_secret')).toBe('keep-this-value');
   });
 
   it('keeps interleaved saves paired with their own versioned key and fingerprint', async () => {

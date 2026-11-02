@@ -149,6 +149,17 @@ export class StripePaymentProvider implements PaymentProvider {
         if (currentFingerprint && currentFingerprint !== fingerprint) {
           throw new Error('Stripe credentials changed during account verification');
         }
+        // Older rows have no fingerprint. Re-read the selected Vault value while
+        // holding the config lock so an in-place legacy credential replacement
+        // cannot bind the account discovered with a stale key.
+        const secretProvider = await getSecretProviderInstance();
+        const currentSecret = await secretProvider.getTenantSecret(
+          this.tenantId,
+          stripeTenantSecretName(row.configuration),
+        );
+        if (!currentSecret || createHash('sha256').update(currentSecret).digest('hex') !== fingerprint) {
+          throw new Error('Stripe credentials changed during account verification');
+        }
         if (currentId && currentId !== account.id) throw new StripeTenantAccountMismatchError();
         if (!currentId) {
           const updated = await db.table('payment_provider_configs').where({ config_id: row.config_id })

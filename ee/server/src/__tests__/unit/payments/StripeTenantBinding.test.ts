@@ -87,4 +87,21 @@ describe('Stripe tenant account binding', () => {
     await expect((new StripePaymentProvider('t1') as any).getStripe()).rejects.toThrow('Stripe configuration changed during account verification');
     expect(configRow.configuration.stripe_account_id).toBe('');
   });
+
+  it('does not bind a legacy row when its selected Vault credential changes in place', async () => {
+    configRow.configuration.stripe_account_id = '';
+    let selectedKeyReads = 0;
+    secretProvider.getTenantSecret.mockImplementation(async (_tenant: string, name: string) => {
+      if (name === 'stripe_payment_secret_key') {
+        selectedKeyReads++;
+        return selectedKeyReads === 1 ? 'sk_test_tenant' : 'sk_test_replaced';
+      }
+      return null;
+    });
+
+    await expect((new StripePaymentProvider('t1') as any).getStripe())
+      .rejects.toThrow('Stripe credentials changed during account verification');
+    expect(selectedKeyReads).toBe(2);
+    expect(configRow.configuration.stripe_account_id).toBe('');
+  });
 });
