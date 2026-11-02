@@ -7,7 +7,7 @@ import {
   validateClause,
 } from '../querySchema';
 import type { Attribute, QuerySchema, Relation, SetAttribute, SqlFragment } from '../querySchema';
-import { isPredicateGroup } from '../types';
+import { COMPLEMENTS, isPredicateGroup } from '../types';
 import type { PredicateClause, PredicateGroup, PredicateLiteral, PredicateNode, PredicateOperator } from '../types';
 
 export interface CompileOptions {
@@ -41,11 +41,6 @@ const or = (parts: SqlFragment[]): SqlFragment => {
 
 const not = (part: SqlFragment): SqlFragment =>
   part === TRUE ? FALSE : part === FALSE ? TRUE : { sql: `NOT (${part.sql})`, bindings: part.bindings };
-
-const COMPLEMENT: Partial<Record<PredicateOperator, PredicateOperator>> = {
-  not_in: 'in',
-  is_empty: 'is_not_empty',
-};
 
 const escapeLike = (value: string): string => value.replace(/[\\%_]/g, (character) => `\\${character}`);
 
@@ -233,7 +228,7 @@ class Compiler {
     const issue = validateClause(this.schema, clause);
     if (issue) throw new PredicateSchemaError(issue.message, issue.code, issue.path);
 
-    const complement = COMPLEMENT[clause.operator];
+    const complement = COMPLEMENTS[clause.operator];
     const operator = complement ?? clause.operator;
     const rootAlias = this.options.rootAlias;
 

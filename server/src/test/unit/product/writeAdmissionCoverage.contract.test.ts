@@ -317,6 +317,8 @@ describe('write-admission coverage (A6)', () => {
     expect(findUnguardedWriteSites(`await admitOperationalWrite(other, t, 'tickets', 'x');\nawait trx('tickets').insert({});`, 'x.ts')).toHaveLength(1);
     expect(findUnguardedWriteSites(`await trx('tickets').where({a:1}).first();`, 'x.ts')).toHaveLength(0);
     expect(findUnguardedWriteSites(`// write-admission: exempt — system job\nawait trx('tickets').insert({});`, 'x.ts')).toHaveLength(0);
+    // The exemption belongs on or above the write's first line; a trailer on a later continuation line is not read.
+    expect(findUnguardedWriteSites(`await trx('co_managed_relationships').insert({\n  a: 1,\n  b: 2 }); // write-admission: exempt — trailer`, 'x.ts')).toHaveLength(1);
     expect(findUnguardedWriteSites(`await admitOperationalWrite(trx, t, 'tickets', 'x');\nawait trx.raw('UPDATE tickets SET a = 1');`, 'x.ts')).toHaveLength(0);
     expect(findUnguardedWriteSites(`await admitOperationalWrite(trx, t, 'assets', 'x');\nawait trx.raw('UPDATE tickets SET a = 1');`, 'x.ts')).toHaveLength(1);
     expect(findUnguardedWriteSites(`await tenantDb(trx, t).table('tickets').update({});`, 'x.ts')).toHaveLength(0);

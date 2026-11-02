@@ -7,7 +7,7 @@ import { z } from 'zod';
  * dependent fields consistent: a board override always carries its status (board and status are only
  * meaningful together), and an assignment override can deliberately mean "unassigned".
  */
-const uuid = z.string().uuid();
+const uuid = z.string().guid();
 
 export const recurringTicketOverridesSchema = z
   .object({

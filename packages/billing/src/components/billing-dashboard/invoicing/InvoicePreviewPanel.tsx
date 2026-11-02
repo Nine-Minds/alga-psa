@@ -27,6 +27,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { voidInvoice } from '../../../actions/voidInvoiceActions';
+import { getEffectiveTaxSourceForClient, updateInvoiceTaxSource } from '@alga-psa/billing/actions/taxSourceActions';
 import { InvoiceTaxSourceBadge } from '../../invoices/InvoiceTaxSourceBadge';
 import { InvoiceSyncBadge, qboInvoiceDeepLink, xeroInvoiceDeepLink } from '../../invoices/InvoiceSyncBadge';
 import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
@@ -122,10 +123,59 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [voidError, setVoidError] = useState<string | null>(null);
   const [voidLoading, setVoidLoading] = useState(false);
   const [applyCreditOpen, setApplyCreditOpen] = useState(false);
+  const [clientDelegatesTax, setClientDelegatesTax] = useState(false);
+  const [delegateTaxDialogOpen, setDelegateTaxDialogOpen] = useState(false);
+  const [delegateTaxError, setDelegateTaxError] = useState<string | null>(null);
+  const [delegateTaxLoading, setDelegateTaxLoading] = useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const previewInvoiceIdentityRef = React.useRef(invoiceId);
   const isReturnedActionError = (value: unknown) =>
     isActionMessageError(value) || isActionPermissionError(value);
+
+  // Whether this client's invoices are meant to take their tax from the
+  // accounting system; decides if a finalized internal-tax invoice offers the
+  // switch to delegation.
+  useEffect(() => {
+    let cancelled = false;
+    if (!isFinalized || !clientId || readOnly) {
+      setClientDelegatesTax(false);
+      return () => { cancelled = true; };
+    }
+    getEffectiveTaxSourceForClient(clientId)
+      .then((result) => {
+        if (cancelled) return;
+        setClientDelegatesTax(!isReturnedActionError(result) && result.taxSource === 'external');
+      })
+      .catch(() => {
+        if (!cancelled) setClientDelegatesTax(false);
+      });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId, isFinalized, readOnly]);
+
+  const handleDelegateTaxConfirm = async () => {
+    if (!invoiceId) return;
+    setDelegateTaxLoading(true);
+    setDelegateTaxError(null);
+    try {
+      const result = await updateInvoiceTaxSource(invoiceId, 'pending_external');
+      if (isReturnedActionError(result)) {
+        setDelegateTaxError(getErrorMessage(result));
+        return;
+      }
+      if (!result.success) {
+        setDelegateTaxError(result.error);
+        return;
+      }
+      setTaxSource('pending_external');
+      setDelegateTaxDialogOpen(false);
+      setPreviewRefreshCounter((prev) => prev + 1);
+    } catch (err) {
+      setDelegateTaxError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setDelegateTaxLoading(false);
+    }
+  };
 
   // QBO sync status for this invoice
   const syncIds = invoiceId ? [invoiceId] : [];
@@ -783,6 +833,22 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 </Button>
               )}
 
+            {!readOnly && isFinalized && clientDelegatesTax && taxSource === 'internal'
+              && syncStatus?.state !== 'synced' && (detailedInvoiceData as any)?.status !== 'cancelled' && (
+                <Button
+                  id="invoice-delegate-tax-button"
+                  variant="secondary"
+                  onClick={() => {
+                    setDelegateTaxError(null);
+                    setDelegateTaxDialogOpen(true);
+                  }}
+                  disabled={isActionLoading}
+                  className="flex-1"
+                >
+                  {t('invoicePreview.actions.delegateTax', { defaultValue: 'Use accounting system tax' })}
+                </Button>
+              )}
+
             {!readOnly && isFinalized && (detailedInvoiceData as any)?.status !== 'cancelled' && (
                 <Button
                   id="invoice-void-button"
@@ -821,6 +887,47 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
                 />
               </Dialog>
             )}
+
+            <Dialog
+              id="delegate-tax-dialog"
+              isOpen={delegateTaxDialogOpen}
+              onClose={() => setDelegateTaxDialogOpen(false)}
+              title={t('invoicePreview.delegateTaxDialog.title', { defaultValue: 'Use accounting system tax' })}
+            >
+              <div className="space-y-4 p-4">
+                <p className="text-sm text-muted-foreground">
+                  {t('invoicePreview.delegateTaxDialog.description', {
+                    defaultValue:
+                      'The accounting system will calculate tax for this invoice on its next export, and AlgaPSA will then replace the tax and total with that result. Numbers, lines, prices and recorded payments stay as they are.',
+                  })}
+                </p>
+                {delegateTaxError && (
+                  <Alert variant="destructive">
+                    <AlertDescription className="text-sm">{delegateTaxError}</AlertDescription>
+                  </Alert>
+                )}
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    id="delegate-tax-cancel-button"
+                    variant="outline"
+                    onClick={() => setDelegateTaxDialogOpen(false)}
+                    disabled={delegateTaxLoading}
+                  >
+                    {t('invoicePreview.delegateTaxDialog.cancel', { defaultValue: 'Cancel' })}
+                  </Button>
+                  <Button
+                    id="delegate-tax-confirm-button"
+                    variant="default"
+                    onClick={handleDelegateTaxConfirm}
+                    disabled={delegateTaxLoading}
+                  >
+                    {delegateTaxLoading
+                      ? t('invoicePreview.delegateTaxDialog.switching', { defaultValue: 'Switching...' })
+                      : t('invoicePreview.delegateTaxDialog.confirm', { defaultValue: 'Switch to accounting system tax' })}
+                  </Button>
+                </div>
+              </div>
+            </Dialog>
 
             <Dialog
               id="void-invoice-dialog"

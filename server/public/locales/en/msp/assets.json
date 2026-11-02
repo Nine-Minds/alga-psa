@@ -51,7 +51,9 @@
       "replaced": "Replaced",
       "credited": "Credited",
       "charged": "Charged",
-      "closed": "Closed"
+      "closed": "Closed",
+      "warranty_review": "Warranty review",
+      "repaired": "Repaired"
     }
   },
   "assetAlertsSection": {
@@ -2124,6 +2126,25 @@
     "photos": {
       "limit": "Up to 20 photos, 10 MB total. Photos are hidden from clients.",
       "tooLarge": "Choose at most 20 photos totalling no more than 10 MB."
+    }
+  },
+  "warranty": {
+    "card": {
+      "title": "Warranty",
+      "warrantyEnd": "Warranty ends",
+      "expired": "Expired",
+      "expiringSoon": "Expiring soon",
+      "vendor": "Vendor",
+      "ownership": "Ownership",
+      "ownershipMsp": "MSP-owned",
+      "ownershipClient": "Client-owned",
+      "claims": "Warranty claims",
+      "noClaims": "No warranty claims yet.",
+      "openRma": "Open RMA",
+      "startClaim": "Start warranty claim"
+    },
+    "badge": {
+      "label": "RMA {{number}} · {{status}}"
     }
   }
 }

@@ -588,7 +588,8 @@
       "failedToResetRate": "Det gick inte att återställa radens taxa",
       "protectedStartDate": "Startdatum måste vara senast {{boundary}} för att inkludera skyddad tjänstehistorik.",
       "protectedEndDate": "Slutdatum måste vara tidigast {{boundary}} för att inkludera skyddad tjänstehistorik.",
-      "cannotEditWithInvoices": "Avtalsraden kan inte redigeras: det finns fakturor kopplade till avtalet. Avtalsrader kan inte redigeras när fakturor har skapats."
+      "cannotEditWithInvoices": "Avtalsraden kan inte redigeras: det finns fakturor kopplade till avtalet. Avtalsrader kan inte redigeras när fakturor har skapats.",
+      "reloadLatest": "Ladda senaste versionen"
     },
     "loading": {
       "contractLines": "Läser in avtalsrader",

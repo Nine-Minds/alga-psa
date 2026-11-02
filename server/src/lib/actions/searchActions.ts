@@ -3,6 +3,8 @@
 import { withAuth } from '@alga-psa/auth';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@alga-psa/db';
+import { withProjectSearchAccess } from '@alga-psa/search/projectSearchAccess';
+import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 
 import {
@@ -35,6 +37,12 @@ export type {
   SearchResultRow,
   SearchTypeaheadResult,
 } from '@alga-psa/search/actions/searchActionShared';
+
+async function coManagedSearchAuthentication(user: { user_id: string; user_type?: string }, tenant: string) {
+  // Only reached when the co-managed capability serves this tenant.
+  const actor = await coManagedBrowserActor(user, tenant);
+  return { kind: 'session' as const, sessionId: actor.sessionId };
+}
 
 const fullSearchLimiter = new RateLimiterMemory({ points: 10, duration: 1 });
 const typeaheadSearchLimiter = new RateLimiterMemory({ points: 30, duration: 1 });
@@ -79,7 +87,8 @@ export const searchAppAction = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
-    const result = await runAppSearch(knex, tenant, user, parsedInput);
+    const result = await withProjectSearchAccess(knex, tenant, user, () => coManagedSearchAuthentication(user, tenant),
+      (accessKnex, searchIndex) => runAppSearch(accessKnex, tenant, user, parsedInput, searchIndex));
 
     if (result.totalCount === 0) {
       emitSearchTelemetry('search.query.empty', {
@@ -120,30 +129,19 @@ export const searchAppTypeaheadAction = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
-    const requestedTypes = resolveAllowedTypes(parsedInput.types);
-    const clientAccess = resolveClientAccess(user);
-    const acl = await resolveSearchAclPrincipal(knex, user, clientAccess);
-    const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
+    const { visibleHits, totalCount } = await withProjectSearchAccess(knex, tenant, user, () => coManagedSearchAuthentication(user, tenant), async (accessKnex, searchIndex) => {
+      const requestedTypes = resolveAllowedTypes(parsedInput.types);
+      const clientAccess = resolveClientAccess(user);
+      const acl = await resolveSearchAclPrincipal(accessKnex, user, clientAccess);
+      const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
 
-    const [hits, totalCount] = await Promise.all([
-      runSearchTypeaheadQuery({
-        knex,
-        tenant,
-        query: parsedInput.query,
-        allowedTypes,
-        cursor: parsedInput.cursor,
-        acl,
-      }),
-      countSearchMatches({
-        knex,
-        tenant,
-        query: parsedInput.query,
-        allowedTypes,
-        acl,
-      }),
-    ]);
-
-    const visibleHits = await verifyResultVisibility(knex, acl, hits);
+      // Typeahead and its count read the same admitted relation as the full search.
+      const [hits, count] = await Promise.all([
+        runSearchTypeaheadQuery({ knex: accessKnex, tenant, query: parsedInput.query, allowedTypes, cursor: parsedInput.cursor, acl, searchIndex }),
+        countSearchMatches({ knex: accessKnex, tenant, query: parsedInput.query, allowedTypes, acl, searchIndex }),
+      ]);
+      return { visibleHits: await verifyResultVisibility(accessKnex, acl, hits), totalCount: count };
+    });
     const result: SearchTypeaheadResult = {
       results: visibleHits.slice(0, 5).map((hit) => ({
         ...toSearchResultRow(hit),

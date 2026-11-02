@@ -31,6 +31,7 @@ import { renderLabelBatchHtml, type LabelPrintItem } from './renderLabelBatchHtm
 import {
   STANDARD_LABEL_ASSET_CODE,
   STANDARD_LABEL_ASSET_CODE128_CODE,
+  STANDARD_LABEL_RMA_CODE,
   STANDARD_LABEL_STOCK_UNIT_CODE,
   STANDARD_LABEL_TICKET_WORK_TAG_CODE,
 } from '../label-template-ast/standardTemplates';
@@ -462,6 +463,82 @@ describe('label PDF end to end', () => {
           if (item.viewModel.code128Value) expect(decodeCode128(cell)).toBe(item.viewModel.code128Value);
         }, 120_000);
       }
+    }
+  });
+
+  describe('RMA work tag (T033, F022.4)', () => {
+    const rmaItem = (n: number, overrides: Partial<LabelViewModel> = {}, withTemplateCode = false): LabelPrintItem => ({
+      ...(withTemplateCode ? { templateCode: STANDARD_LABEL_RMA_CODE } : {}),
+      viewModel: {
+        labelClass: 'rma-work-tag',
+        entityType: 'rma',
+        recordId: uuid(700 + n),
+        url: recordUrl('rma', uuid(700 + n), BASE),
+        identifier: `RMA-${String(n).padStart(5, '0')}`,
+        code128Value: null,
+        title: 'Dell Latitude 7440 Laptop',
+        clientName: 'Emerald City Dental',
+        detail: 'Dell Technologies / 1234-5678-90',
+        secondaryIdentifier: 'AT-000123',
+        serialSuffix: 'SN…ZX81QW77',
+        rma: { statusLabel: 'Sent to vendor', returnBy: '2026-11-15', shipping: 'UPS 1Z999AA10123456784', ticketNumber: 'TIC-1042' },
+        ...overrides,
+      } as LabelViewModel,
+    });
+
+    it('the QR URL is the canonical /msp/inventory/rma?rmaId= record URL', () => {
+      const item = rmaItem(1);
+      expect(item.viewModel.url).toBe(`${BASE}/msp/inventory/rma?rmaId=${uuid(701)}`);
+    });
+
+    it('renders the standard rma-work-tag on a 4x2in cell and its QR decodes to the RMA record URL', async () => {
+      const item = rmaItem(1);
+      const { html, pages, rasters } = await printLabels([item], ONE_PER_PAGE, 'rma-single');
+      expect(html).toContain('RMA-00001');
+      expect(pages).toHaveLength(1);
+      expect(pages[0].width).toBeCloseTo(4 * PT_PER_IN, 0);
+      expect(pages[0].height).toBeCloseTo(2 * PT_PER_IN, 0);
+      expect(decodeQr(rasters[0])).toBe(item.viewModel.url);
+      expect(edgeBandIsWhite(rasters[0])).toBe(true);
+    }, 120_000);
+
+    it('decodes per record when n-up on Letter 2x5', async () => {
+      const items = [rmaItem(1), rmaItem(2, {}, true), rmaItem(3)];
+      const { geometry, rasters } = await printLabels(items, LETTER_2X5, 'rma-nup');
+      geometry.placements.forEach((p, i) => {
+        const cell = crop(rasters[0], mmToPx(p.leftMm), mmToPx(p.topMm), mmToPx(p.widthMm), mmToPx(p.heightMm));
+        expect(decodeQr(cell)).toBe(items[i].viewModel.url);
+      });
+    }, 120_000);
+
+    for (const [layoutName, layout] of [
+      ['4x2in', ONE_PER_PAGE],
+      ['Letter 2x5', LETTER_2X5],
+    ] as const) {
+      it(`all text stays inside the cell and clear of the QR, with worst-case long data (${layoutName})`, async () => {
+        const item = worstCase(STANDARD_LABEL_RMA_CODE, {
+          labelClass: 'rma-work-tag',
+          entityType: 'rma',
+          identifier: 'RMA-2026-000000123456789',
+          detail: `${LONG_CLIENT} / VENDOR-REFERENCE-0000000000000000000001`,
+          rma: {
+            statusLabel: 'Replacement received from vendor',
+            returnBy: '2026-11-15',
+            shipping: 'UPS 1Z999AA10123456784-WITH-A-VERY-LONG-TRAILING-REFERENCE',
+            ticketNumber: 'TICKET-2026-0000123456789',
+          },
+        });
+        const { html } = await renderLabelBatchHtml([item, item], layout, { tenantClient: { name: 'Example MSP', logoUrl: null } });
+        for (const report of await measureContainment(html)) {
+          expect(report.outside).toEqual([]);
+          expect(report.overBarcode).toEqual([]);
+        }
+        const { rasters, geometry } = await printLabels([item], layout, `rma-contain-${layoutName}`);
+        const p = geometry.placements[0];
+        const cell = crop(rasters[0], mmToPx(p.leftMm), mmToPx(p.topMm), mmToPx(p.widthMm), mmToPx(p.heightMm));
+        expect(edgeBandIsWhite(cell)).toBe(true);
+        expect(decodeQr(cell)).toBe(item.viewModel.url);
+      }, 120_000);
     }
   });
 

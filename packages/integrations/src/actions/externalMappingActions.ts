@@ -886,8 +886,10 @@ const QBD_SHARED_TARGET_ENTITY_TYPES = new Set<string>([
 /**
  * Whether this row's external target is one several entities may legitimately
  * share. Mirrors the WHERE predicate of idx_unique_external_mapping: Xero
- * revenue-account targets and the QuickBooks Desktop account targets above sit
- * outside the index and reserve nothing.
+ * revenue-account targets, the QuickBooks Desktop account targets above and
+ * QuickBooks Online tax codes sit outside the index and reserve nothing. A US
+ * Automated Sales Tax company has only TAX and NON, so every taxable region
+ * maps to TAX; a catalog rate likewise serves every region it applies to.
  */
 function sharesExternalTarget(
   integrationType: string,
@@ -899,6 +901,9 @@ function sharesExternalTarget(
   }
   if (integrationType === 'quickbooks_desktop') {
     return QBD_SHARED_TARGET_ENTITY_TYPES.has(algaEntityType);
+  }
+  if (integrationType === 'quickbooks_online') {
+    return algaEntityType === 'tax_code';
   }
   return false;
 }

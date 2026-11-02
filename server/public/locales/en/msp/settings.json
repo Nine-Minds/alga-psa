@@ -1185,6 +1185,9 @@
           "contains": "Contains",
           "starts_with": "Starts with",
           "ends_with": "Ends with",
+          "not_contains": "Does not contain",
+          "not_starts_with": "Does not start with",
+          "not_ends_with": "Does not end with",
           "is_empty": "Is empty",
           "is_not_empty": "Is not empty"
         },
@@ -3534,7 +3537,7 @@
       "platformManaged": "Managed by AlgaPSA — no setup needed. Connect an agent to one in step 2.",
       "addAnother": "Add another provider",
       "advancedOptions": "Advanced options",
-      "googleNoSetup": "Google needs no setup. Agents sign in with their Google service-account ID.",
+      "googleSetup": "Agents sign in with a Google service-account ID token. Only the audience below needs to match how they request it.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3548,9 +3551,14 @@
       "fields": {
         "provider": "Provider",
         "entraTenantId": "Entra tenant ID",
-        "audienceOptional": "Audience (optional)",
         "audience": "Audience",
         "subjectClaim": "Identify agents by",
+        "audienceHelp": {
+          "microsoft": "The Application (client) ID of the Entra app registration your agents request tokens for. Agents request the scope api://<that ID>/.default.",
+          "google": "Agents must request their Google ID token with exactly this audience. We've filled in this server's MCP URL, which is the usual choice.",
+          "custom": "The API or resource identifier set up in your provider (for example, an Auth0 API identifier). It must exactly match the aud claim in agent tokens. This server's MCP URL is a good choice."
+        },
+        "audienceWhy": "Tokens your provider issued to other apps won't be accepted here.",
         "subjectClaimHelp": "Leave blank unless your provider tells you otherwise.",
         "issuer": "Issuer",
         "jwksUri": "Signing keys URL"
@@ -3663,6 +3671,36 @@
         "message": "Disconnect \"{{name}}\"? It will lose access immediately and need to be re-authorized to reconnect.",
         "confirm": "Disconnect",
         "cancel": "Cancel"
+      }
+    },
+    "loading": "Loading…",
+    "downloadHosts": {
+      "title": "Allowed download hosts",
+      "intro": "When a document is attached by URL, AlgaPSA downloads it only from the hosts listed here. This applies to every caller that attaches documents, including AI agents, API clients and the REST API. Prefer bucket-specific hosts such as acme-uploads.s3.us-east-1.amazonaws.com over broad ones.",
+      "readOnly": "You can view this list. Changing it needs the \"Manage download hosts\" permission.",
+      "builtIn": "Built-in",
+      "empty": "No custom hosts yet.",
+      "add": "Add host",
+      "addTitle": "Add allowed download host",
+      "remove": "Remove",
+      "removeTitle": "Remove host?",
+      "removeMessage": "Downloads from {{host}} will stop working until it is added again.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "A hostname, or *.example.com to allow every subdomain.",
+        "note": "Note (optional)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Used for",
+        "allowed": "Allowed",
+        "note": "Note",
+        "addedBy": "Added by",
+        "addedOn": "Added on"
+      },
+      "errors": {
+        "load": "Failed to load allowed download hosts.",
+        "save": "Could not save the change."
       }
     }
   },
@@ -3843,7 +3881,8 @@
     }
   },
   "common": {
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "cancel": "Cancel"
   },
   "featureFlags": {
     "categories": {

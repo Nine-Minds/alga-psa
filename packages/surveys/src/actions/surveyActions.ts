@@ -19,6 +19,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 const SURVEY_TEMPLATE_TABLE = 'survey_templates';
 const SURVEY_TRIGGER_TABLE = 'survey_triggers';
@@ -122,20 +123,20 @@ const baseTemplateSchema = z.object({
   enabled: z.boolean().optional(),
 });
 
-const updateTemplateSchema = baseTemplateSchema.partial().extend({
-  templateId: z.string().uuid().optional(),
+const updateTemplateSchema = partialWithoutDefaults(baseTemplateSchema).extend({
+  templateId: z.string().guid().optional(),
 });
 
 const triggerConditionsSchema = z
   .object({
-    board_id: z.array(z.string().uuid()).optional(),
-    status_id: z.array(z.string().uuid()).optional(),
+    board_id: z.array(z.string().guid()).optional(),
+    status_id: z.array(z.string().guid()).optional(),
     priority: z.array(z.string()).optional(),
   })
   .optional();
 
 const baseTriggerSchema = z.object({
-  templateId: z.string().uuid(),
+  templateId: z.string().guid(),
   triggerType: z.enum(['ticket_closed', 'project_completed']),
   triggerConditions: triggerConditionsSchema,
   enabled: z.boolean().optional(),
