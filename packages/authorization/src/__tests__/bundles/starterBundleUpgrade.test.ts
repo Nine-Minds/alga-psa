@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 type Row = Record<string, any>;
 
@@ -93,6 +96,11 @@ const db = Object.assign((table: string) => new Query(table), {
   fn: { now: () => '2026-11-02T00:00:00.000Z' },
 });
 
+const require = createRequire(import.meta.url);
+const migration = require(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../../server/migrations/20261102120000_restrict_existing_asset_operator_deletes.cjs')) as {
+  up(knex: any): Promise<void>;
+};
+
 vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any, tenant: string) => ({ table: (name: string) => conn(name).where({ tenant }) }),
 }));
@@ -113,24 +121,27 @@ const OLD_REVISION = 'revision-1';
 const OTHER_REVISION = 'revision-b1';
 
 function seedOldBundles() {
+  state.tables.tenants = [{ tenant: TENANT }, { tenant: OTHER_TENANT }];
   state.tables.authorization_bundles = [
     { tenant: TENANT, bundle_id: BUNDLE_ID, bundle_key: 'restricted-asset-operator', name: 'Restricted Asset Operator', description: 'Keep this text', is_system: true, status: 'active', published_revision_id: OLD_REVISION, updated_by: 'prior-admin' },
     { tenant: OTHER_TENANT, bundle_id: OTHER_BUNDLE_ID, bundle_key: 'restricted-asset-operator', name: 'Other tenant bundle', description: 'Other tenant config', is_system: true, status: 'active', published_revision_id: OTHER_REVISION, updated_by: 'other-admin' },
   ];
   state.tables.authorization_bundle_revisions = [
     { tenant: TENANT, bundle_id: BUNDLE_ID, revision_id: OLD_REVISION, revision_number: 1, lifecycle_state: 'published' },
+    { tenant: TENANT, bundle_id: BUNDLE_ID, revision_id: 'revision-draft', revision_number: 2, lifecycle_state: 'draft' },
     { tenant: OTHER_TENANT, bundle_id: OTHER_BUNDLE_ID, revision_id: OTHER_REVISION, revision_number: 1, lifecycle_state: 'published' },
   ];
   state.tables.authorization_bundle_rules = [
     { tenant: TENANT, bundle_id: BUNDLE_ID, revision_id: OLD_REVISION, rule_id: 'read-rule', resource_type: 'asset', action: 'read', template_key: 'selected_clients', effect: 'narrow', constraint_key: null, config: { selectedClientIds: ['client-a'], preserved: { source: 'existing' } }, position: 0 },
     { tenant: TENANT, bundle_id: BUNDLE_ID, revision_id: OLD_REVISION, rule_id: 'update-rule', resource_type: 'asset', action: 'update', template_key: 'same_team', effect: 'narrow', constraint_key: null, config: { operatorSetting: 'keep' }, position: 1 },
+    { tenant: TENANT, bundle_id: BUNDLE_ID, revision_id: 'revision-draft', rule_id: 'draft-unrelated', resource_type: 'ticket', action: 'read', template_key: 'all', effect: 'narrow', constraint_key: null, config: { unfinished: true }, position: 0 },
     { tenant: OTHER_TENANT, bundle_id: OTHER_BUNDLE_ID, revision_id: OTHER_REVISION, rule_id: 'other-read', resource_type: 'asset', action: 'read', template_key: 'selected_clients', effect: 'narrow', constraint_key: null, config: { selectedClientIds: ['other-client'] }, position: 0 },
     { tenant: OTHER_TENANT, bundle_id: OTHER_BUNDLE_ID, revision_id: OTHER_REVISION, rule_id: 'other-update', resource_type: 'asset', action: 'update', template_key: 'same_team', effect: 'narrow', constraint_key: null, config: {}, position: 1 },
   ];
   state.tables.authorization_bundle_assignments = [
     { tenant: TENANT, bundle_id: BUNDLE_ID, assignment_id: 'assignment-a', status: 'active', target_type: 'role', target_id: 'role-a' },
   ];
-  state.nextRevision = 2;
+  state.nextRevision = 3;
   state.nextRule = 3;
 }
 
@@ -147,7 +158,7 @@ function persistedRules(tenant: string, revisionId: string) {
     }));
 }
 
-function actionAllowed(revisionId: string, action: 'read' | 'update' | 'delete', asset: { asset_id: string; client_id: string }, teamIds: string[]) {
+function actionAllowed(revisionId: string, action: 'read' | 'update' | 'delete', asset: { asset_id: string; client_id: string; teamIds?: string[] }, subjectTeamIds: string[]) {
   const kernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
     bundleProvider: new BundleAuthorizationKernelProvider({
@@ -156,17 +167,17 @@ function actionAllowed(revisionId: string, action: 'read' | 'update' | 'delete',
     rbacEvaluator: async () => true,
   });
   return kernel.authorizeResource({
-    subject: { tenant: TENANT, userId: 'operator', userType: 'internal', roleIds: [], teamIds, managedUserIds: [], clientId: null, portfolioClientIds: [] },
+    subject: { tenant: TENANT, userId: 'operator', userType: 'internal', roleIds: [], teamIds: subjectTeamIds, managedUserIds: [], clientId: null, portfolioClientIds: [] },
     resource: { type: 'asset', action, id: asset.asset_id },
-    record: { id: asset.asset_id, clientId: asset.client_id, teamIds, ownerUserId: null, assignedUserIds: [] },
+    record: { id: asset.asset_id, clientId: asset.client_id, teamIds: asset.teamIds ?? [], ownerUserId: null, assignedUserIds: [] },
     requestCache: new RequestLocalAuthorizationCache(),
     knex: db as any,
   }).then(decision => decision.allowed);
 }
 
-async function deleteAssetUnderBundle(revisionId: string, assetId: string, teamIds: string[]): Promise<boolean> {
+async function deleteAssetUnderBundle(revisionId: string, assetId: string, subjectTeamIds: string[]): Promise<boolean> {
   const asset = state.tables.assets.find(row => row.asset_id === assetId);
-  if (!asset || !await actionAllowed(revisionId, 'delete', asset, teamIds)) return false;
+  if (!asset || !await actionAllowed(revisionId, 'delete', asset, subjectTeamIds)) return false;
   state.tables.assets = state.tables.assets.filter(row => row.asset_id !== assetId);
   return true;
 }
@@ -177,28 +188,24 @@ describe('restricted asset operator starter bundle upgrade', () => {
   });
 
   it('publishes same-team delete narrowing for the old bundle without changing its existing configuration', async () => {
-    const asset = { asset_id: 'asset-outside-team', client_id: 'client-b' };
+    const asset = { asset_id: 'asset-outside-team', client_id: 'client-b', teamIds: ['team-asset'] };
 
     // The old published rules deny read/update here, but no asset:delete rule means delete is allowed.
-    expect(await actionAllowed(OLD_REVISION, 'read', asset, [])).toBe(false);
-    expect(await actionAllowed(OLD_REVISION, 'update', asset, [])).toBe(false);
-    expect(await actionAllowed(OLD_REVISION, 'delete', asset, [])).toBe(true);
+    expect(await actionAllowed(OLD_REVISION, 'read', asset, ['team-subject'])).toBe(false);
+    expect(await actionAllowed(OLD_REVISION, 'update', asset, ['team-subject'])).toBe(false);
+    expect(await actionAllowed(OLD_REVISION, 'delete', asset, ['team-subject'])).toBe(true);
 
-    await ensurePublishedBundleRule(db as any, {
-      tenant: TENANT,
-      bundleId: BUNDLE_ID,
-      resourceType: 'asset',
-      action: 'delete',
-      templateKey: 'same_team',
-      config: {},
-      actorUserId: 'upgrade-admin',
-    });
+    await migration.up(db as any);
 
     const bundle = state.tables.authorization_bundles.find(row => row.tenant === TENANT && row.bundle_id === BUNDLE_ID)!;
     const newRevision = bundle.published_revision_id;
     expect(newRevision).not.toBe(OLD_REVISION);
     expect(state.tables.authorization_bundle_revisions.find(row => row.revision_id === OLD_REVISION)?.lifecycle_state).toBe('archived');
-    expect(state.tables.authorization_bundle_revisions.find(row => row.revision_id === newRevision)).toMatchObject({ revision_number: 2, lifecycle_state: 'published' });
+    expect(state.tables.authorization_bundle_revisions.find(row => row.revision_id === newRevision)).toMatchObject({ revision_number: 3, lifecycle_state: 'published' });
+    expect(state.tables.authorization_bundle_revisions.find(row => row.revision_id === 'revision-draft')?.lifecycle_state).toBe('draft');
+    expect(state.tables.authorization_bundle_rules.filter(row => row.revision_id === 'revision-draft')).toEqual([
+      expect.objectContaining({ rule_id: 'draft-unrelated', config: { unfinished: true }, action: 'read' }),
+    ]);
 
     const rules = state.tables.authorization_bundle_rules.filter(row => row.tenant === TENANT && row.revision_id === newRevision);
     expect(rules).toHaveLength(3);
@@ -206,40 +213,56 @@ describe('restricted asset operator starter bundle upgrade', () => {
     expect(rules.find(row => row.action === 'update')).toMatchObject({ config: { operatorSetting: 'keep' } });
     expect(rules.find(row => row.action === 'delete')).toMatchObject({ resource_type: 'asset', template_key: 'same_team', position: 2 });
 
-    expect(await actionAllowed(newRevision, 'read', asset, [])).toBe(false);
-    expect(await actionAllowed(newRevision, 'update', asset, [])).toBe(false);
-    expect(await actionAllowed(newRevision, 'delete', asset, [])).toBe(false);
+    expect(await actionAllowed(newRevision, 'read', asset, ['team-subject'])).toBe(false);
+    expect(await actionAllowed(newRevision, 'update', asset, ['team-subject'])).toBe(false);
+    expect(await actionAllowed(newRevision, 'delete', asset, ['team-subject'])).toBe(false);
     state.tables.assets = [{ tenant: TENANT, ...asset, name: 'Original name' }];
-    expect(await deleteAssetUnderBundle(newRevision, asset.asset_id, [])).toBe(false);
+    expect(await deleteAssetUnderBundle(newRevision, asset.asset_id, ['team-subject'])).toBe(false);
     expect(state.tables.assets).toEqual([{ tenant: TENANT, ...asset, name: 'Original name' }]);
-    expect(await deleteAssetUnderBundle(newRevision, asset.asset_id, ['team-ops'])).toBe(true);
+    expect(await deleteAssetUnderBundle(newRevision, asset.asset_id, ['team-asset'])).toBe(true);
     expect(state.tables.assets).toEqual([]);
 
-    expect(bundle).toMatchObject({ name: 'Restricted Asset Operator', description: 'Keep this text', is_system: true, status: 'active', updated_by: 'upgrade-admin' });
+    expect(bundle).toMatchObject({ name: 'Restricted Asset Operator', description: 'Keep this text', is_system: true, status: 'active', updated_by: 'prior-admin' });
     expect(state.tables.authorization_bundle_assignments).toHaveLength(1);
-    expect(state.tables.authorization_bundles.find(row => row.tenant === OTHER_TENANT && row.bundle_id === OTHER_BUNDLE_ID)?.published_revision_id).toBe(OTHER_REVISION);
-    expect(state.tables.authorization_bundle_rules.filter(row => row.tenant === OTHER_TENANT)).toHaveLength(2);
+    const otherTenantBundle = state.tables.authorization_bundles.find(row => row.tenant === OTHER_TENANT && row.bundle_id === OTHER_BUNDLE_ID)!;
+    expect(otherTenantBundle.published_revision_id).not.toBe(OTHER_REVISION);
+    expect(state.tables.authorization_bundle_rules.filter(row => row.tenant === OTHER_TENANT && row.revision_id === otherTenantBundle.published_revision_id)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ action: 'delete', resource_type: 'asset', template_key: 'same_team' }),
+      expect.objectContaining({ config: { selectedClientIds: ['other-client'] } }),
+    ]));
+    expect(state.tables.authorization_bundle_rules
+      .filter(row => row.tenant === OTHER_TENANT && row.bundle_id === OTHER_BUNDLE_ID)
+      .some(row => row.config?.selectedClientIds?.includes('client-a'))).toBe(false);
   });
 
-  it('is idempotent after the required delete rule is published', async () => {
-    const input = {
+  it('is idempotent through the deployment migration entry point', async () => {
+    await migration.up(db as any);
+    const publishedRevision = state.tables.authorization_bundles[0].published_revision_id;
+    const revisionCount = state.tables.authorization_bundle_revisions.length;
+    const ruleCount = state.tables.authorization_bundle_rules.length;
+
+    await migration.up(db as any);
+
+    expect(state.tables.authorization_bundles[0].published_revision_id).toBe(publishedRevision);
+    expect(state.tables.authorization_bundle_revisions).toHaveLength(revisionCount);
+    expect(state.tables.authorization_bundle_rules).toHaveLength(ruleCount);
+  });
+
+  it('keeps an editor draft unpublished when the manual repair path runs', async () => {
+    await ensurePublishedBundleRule(db as any, {
       tenant: TENANT,
       bundleId: BUNDLE_ID,
       resourceType: 'asset',
       action: 'delete',
       templateKey: 'same_team',
       config: {},
-      actorUserId: 'upgrade-admin',
-    };
-    await ensurePublishedBundleRule(db as any, input);
-    const publishedRevision = state.tables.authorization_bundles[0].published_revision_id;
-    const revisionCount = state.tables.authorization_bundle_revisions.length;
-    const ruleCount = state.tables.authorization_bundle_rules.length;
+    });
 
-    await ensurePublishedBundleRule(db as any, input);
-
-    expect(state.tables.authorization_bundles[0].published_revision_id).toBe(publishedRevision);
-    expect(state.tables.authorization_bundle_revisions).toHaveLength(revisionCount);
-    expect(state.tables.authorization_bundle_rules).toHaveLength(ruleCount);
+    const bundle = state.tables.authorization_bundles.find(row => row.tenant === TENANT && row.bundle_id === BUNDLE_ID)!;
+    expect(state.tables.authorization_bundle_revisions.find(row => row.revision_id === bundle.published_revision_id))
+      .toMatchObject({ revision_number: 3, lifecycle_state: 'published' });
+    expect(state.tables.authorization_bundle_revisions.find(row => row.revision_id === 'revision-draft')?.lifecycle_state).toBe('draft');
+    expect(state.tables.authorization_bundle_rules.filter(row => row.revision_id === 'revision-draft'))
+      .toEqual([expect.objectContaining({ rule_id: 'draft-unrelated', config: { unfinished: true } })]);
   });
 });
