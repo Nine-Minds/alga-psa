@@ -1810,9 +1810,9 @@ describe('quoteActions', () => {
 
       expect(sendEmailMock.mock.calls[0][0].to).toEqual(['known@example.com']);
       expect(sendEmailMock.mock.calls[1][0].to).toEqual(['other@example.com']);
-      expect(bodyOf(0)).toContain('https://app.example.com/quote/token-1-secretvalue');
+      expect(bodyOf(0)).toContain('https://helpdesk.digitalchk.com/quote/token-1-secretvalue');
       expect(bodyOf(0)).not.toContain('token-2-secretvalue');
-      expect(bodyOf(1)).toContain('https://app.example.com/quote/token-2-secretvalue');
+      expect(bodyOf(1)).toContain('https://helpdesk.digitalchk.com/quote/token-2-secretvalue');
       expect(bodyOf(1)).not.toContain('token-1-secretvalue');
     });
 
@@ -1890,6 +1890,96 @@ describe('quoteActions', () => {
         const { html, text, attachments, ...meta } = payload;
         expect(JSON.stringify(meta)).not.toContain('secretvalue');
       }
+    });
+
+    describe('tenant template overrides (F1)', () => {
+      const portalUrl = `/client-portal/billing/quotes/${QUOTE_ID}`;
+      const setOverride = (html: string, text: string) => {
+        emailTemplateRows.tenant_email_templates = { subject: 'Quote {{quote.number}}', html_content: html, text_content: text };
+      };
+
+      it('override without {{quoteReviewLink}}: nothing minted or revoked, portal link kept, skip recorded', async () => {
+        // The variable only appears in a comment and in plain text, which must not count.
+        setOverride('<p>{{!-- {{quoteReviewLink}} --}}quoteReviewLink <a href="{{portalLink}}">Open</a></p>', 'See {{portalLink}}');
+        const { resendQuote } = await import('../../src/actions/quoteActions');
+        await resendQuote(QUOTE_ID, { email_addresses: ['nologin@example.com'] });
+
+        expect(mintLinkMock).not.toHaveBeenCalled();
+        expect(revokeLinkMock).not.toHaveBeenCalled();
+        const payload = sendEmailMock.mock.calls[0][0];
+        expect(payload.html).toContain(`https://helpdesk.digitalchk.com${portalUrl}`);
+        expect(payload.text).toContain(`https://helpdesk.digitalchk.com${portalUrl}`);
+        expect(activityMetadata().deliveries).toEqual([
+          expect.objectContaining({ email: 'nologin@example.com', success: true, link_id: null, review_link: 'not_rendered' }),
+        ]);
+        expect(JSON.stringify(activityMetadata())).not.toMatch(/\/quote\/|secretvalue/);
+      });
+
+      it('override with the variable: minted; portal link blanked for non-portal recipient, kept for portal recipient', async () => {
+        setOverride('<p><a href="{{quoteReviewLink}}">Review</a> <a href="{{portalLink}}">Portal</a></p>', '{{quoteReviewLink}} | portal:{{portalLink}}');
+        contactsByEmail = { 'portal@example.com': 'contact-p' };
+        usersWithPortalAccess = ['contact-p'];
+        const { resendQuote } = await import('../../src/actions/quoteActions');
+        await resendQuote(QUOTE_ID, { email_addresses: ['portal@example.com', 'nologin@example.com'] });
+
+        expect(mintLinkMock).toHaveBeenCalledTimes(2);
+        const [portal, nologin] = [0, 1].map((i) => sendEmailMock.mock.calls[i][0]);
+        expect(portal.html).toContain(portalUrl);
+        expect(portal.text).toContain(`portal:https://helpdesk.digitalchk.com${portalUrl}`);
+        expect(nologin.html).toContain('/quote/token-2-secretvalue');
+        expect(nologin.html).not.toContain(portalUrl);
+        expect(nologin.text).toContain('portal:');
+        expect(nologin.text).not.toContain(portalUrl);
+        expect(activityMetadata().deliveries[1].review_link).toBeUndefined();
+      });
+
+      it('variable only in html: token minted, html blanks the portal link, text keeps it', async () => {
+        setOverride('<a href="{{quoteReviewLink}}">Review</a> {{portalLink}}', 'Quote {{quote.number}} {{portalLink}}');
+        const { resendQuote } = await import('../../src/actions/quoteActions');
+        await resendQuote(QUOTE_ID, { email_addresses: ['nologin@example.com'] });
+
+        expect(mintLinkMock).toHaveBeenCalledTimes(1);
+        const payload = sendEmailMock.mock.calls[0][0];
+        expect(payload.html).toContain('/quote/token-1-secretvalue');
+        expect(payload.html).not.toContain(portalUrl);
+        expect(payload.text).toContain(portalUrl);
+        expect(payload.text).not.toContain('secretvalue');
+      });
+
+      it('resend with an override lacking the variable does not revoke earlier links', async () => {
+        setOverride('<p>{{portalLink}}</p>', '{{portalLink}}');
+        const { sendQuoteReminder } = await import('../../src/actions/quoteActions');
+        await sendQuoteReminder(QUOTE_ID, { email_addresses: ['a@example.com', 'b@example.com'] });
+        expect(revokeLinkMock).not.toHaveBeenCalled();
+        expect(mintLinkMock).not.toHaveBeenCalled();
+        expect(sendEmailMock).toHaveBeenCalledTimes(2);
+      });
+
+      it('resolves the template before any token is touched', async () => {
+        const { resendQuote } = await import('../../src/actions/quoteActions');
+        await resendQuote(QUOTE_ID, { email_addresses: ['a@example.com'] });
+        expect(emailTemplateLookups.length).toBeGreaterThan(0);
+        expect(mintLinkMock).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe('review link host (buildTenantPortalUrl)', () => {
+      it('uses the tenant custom domain, not NEXT_PUBLIC_BASE_URL', async () => {
+        const { resendQuote } = await import('../../src/actions/quoteActions');
+        await resendQuote(QUOTE_ID, { email_addresses: ['a@example.com'] });
+        expect(buildTenantPortalUrlMock).toHaveBeenCalledWith(TENANT_ID, '/quote/token-1-secretvalue');
+        expect(bodyOf(0)).toContain('https://helpdesk.digitalchk.com/quote/token-1-secretvalue');
+        expect(bodyOf(0)).not.toContain('app.example.com');
+      });
+
+      it('builder returning null: nothing is minted or revoked, the email still goes out with the portal link', async () => {
+        buildTenantPortalUrlMock.mockResolvedValue(null);
+        const { resendQuote } = await import('../../src/actions/quoteActions');
+        await resendQuote(QUOTE_ID, { email_addresses: ['a@example.com'] });
+        expect(mintLinkMock).not.toHaveBeenCalled();
+        expect(revokeLinkMock).not.toHaveBeenCalled();
+        expect(sendEmailMock).toHaveBeenCalledTimes(1);
+      });
     });
 
     it.each([

@@ -23,7 +23,7 @@ import { mapLoadedQuoteToViewModel } from '../lib/adapters/quoteAdapters';
 import { buildTenantPortalUrl } from '@alga-psa/tenancy/server';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, getQuoteEmailLinkReviewSettings as loadQuoteEmailLinkReviewSettings, setQuoteEmailLinkReviewSettings as persistQuoteEmailLinkReviewSettings, type QuoteApprovalWorkflowSettings, type QuoteEmailLinkReviewSettings, validateQuoteEmailLinkLifetimeHours } from '../lib/quoteApprovalSettings';
-import { buildQuoteReviewLink, getPublicBaseOrigin } from '../lib/quoteReviewLink';
+import { buildQuoteReviewLink, canBuildQuoteReviewLink } from '../lib/quoteReviewLink';
 import { mint as mintQuoteAccessLink, revoke as revokeQuoteAccessLinks } from '../services/quoteAccessLinks';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
 import { buildQuoteConversionPreview, convertQuoteToDraftContract, convertQuoteToDraftContractAndInvoice, convertQuoteToDraftInvoice, convertQuoteToDraftSalesOrder, createPDFGenerationService } from '../services';
@@ -556,30 +556,91 @@ const buildQuotePortalLink = async (tenant: string, quoteId: string): Promise<st
   }
 };
 
-const renderQuoteEmail = async ({
-  knex,
-  tenant,
-  templateName,
+const REVIEW_LINK_VARIABLE = 'quoteReviewLink';
+
+// True when the Handlebars source references `{{quoteReviewLink}}` as a path
+// expression. Parsed, not substring-matched, so mentions in comments or plain
+// text do not count. A source that does not parse is treated as not
+// referencing it (rendering it would fail anyway).
+const templateReferencesReviewLink = (source: string): boolean => {
+  let ast: unknown;
+  try {
+    ast = Handlebars.parse(source);
+  } catch {
+    return false;
+  }
+  const visit = (node: unknown): boolean => {
+    if (Array.isArray(node)) {
+      return node.some(visit);
+    }
+    if (!node || typeof node !== 'object') {
+      return false;
+    }
+    const record = node as Record<string, unknown>;
+    if (record.type === 'PathExpression' && !record.data && Array.isArray(record.parts) && record.parts[0] === REVIEW_LINK_VARIABLE) {
+      return true;
+    }
+    return Object.values(record).some((value) => typeof value === 'object' && value !== null && visit(value));
+  };
+  return visit(ast);
+};
+
+/**
+ * The template that will render for a recipient, resolved before any token is
+ * touched. `template` is null when the fallback builder renders (which always
+ * shows the review link). The per-part flags say which parts of a tenant or
+ * system template reference `{{quoteReviewLink}}`.
+ */
+interface ResolvedQuoteEmail {
+  templateName: QuoteTemplateName;
+  locale: string;
+  template: QuoteEmailTemplate | null;
+  htmlRendersReviewLink: boolean;
+  textRendersReviewLink: boolean;
+  /** True when the email will show a review link if one is supplied. */
+  rendersReviewLink: boolean;
+}
+
+const resolveQuoteEmail = async (
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  templateName: QuoteTemplateName,
+  locale: string
+): Promise<ResolvedQuoteEmail> => {
+  const template = await getQuoteEmailTemplate(knex, tenant, templateName, locale);
+  if (!template) {
+    return { templateName, locale, template: null, htmlRendersReviewLink: true, textRendersReviewLink: true, rendersReviewLink: true };
+  }
+  const htmlRendersReviewLink = templateReferencesReviewLink(template.html_content);
+  const textRendersReviewLink = templateReferencesReviewLink(template.text_content);
+  return {
+    templateName,
+    locale,
+    template,
+    htmlRendersReviewLink,
+    textRendersReviewLink,
+    rendersReviewLink: htmlRendersReviewLink || textRendersReviewLink,
+  };
+};
+
+const renderQuoteEmail = ({
+  resolved,
   quote,
   companyName,
   portalLink,
   quoteReviewLink,
   hasPortalAccess,
   customMessage,
-  locale,
 }: {
-  knex: Knex;
-  tenant: string;
-  templateName: QuoteTemplateName;
+  resolved: ResolvedQuoteEmail;
   quote: IQuote;
   companyName: string;
   portalLink?: string;
   quoteReviewLink?: string;
   hasPortalAccess?: boolean;
   customMessage?: string;
-  locale?: string;
-}): Promise<{ subject: string; html: string; text: string }> => {
-  const template = await getQuoteEmailTemplate(knex, tenant, templateName, locale ?? 'en');
+}): { subject: string; html: string; text: string } => {
+  const { template, templateName, locale } = resolved;
 
   if (!template) {
     const buildFallback = templateName === 'quote-reminder-email'
@@ -588,28 +649,34 @@ const renderQuoteEmail = async ({
     return buildFallback({ quote, companyName, portalLink, quoteReviewLink, hasPortalAccess, customMessage, locale });
   }
 
-  const templateContext = {
+  const baseContext = {
     quote: {
       number: quote.quote_number ?? quote.quote_id,
       // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
-      amount: formatCurrency((quote.total_amount ?? 0) / 100, locale ?? 'en', quote.currency_code || 'USD'),
+      amount: formatCurrency((quote.total_amount ?? 0) / 100, locale, quote.currency_code || 'USD'),
       validUntil: formatQuoteDate(quote.valid_until ?? null, locale),
     },
     company: {
       name: companyName,
     },
-    // With a review link the portal link is secondary and only for recipients with portal access.
-    portalLink: (quoteReviewLink && hasPortalAccess === false ? '' : portalLink?.trim()) || '',
     quoteReviewLink: quoteReviewLink?.trim() || '',
     customMessage: customMessage?.trim() || '',
   };
+  // With a review link the portal link is secondary and only for recipients
+  // with portal access - but a part is only changed when that part actually
+  // renders the review link, so a part without it keeps a way to the quote.
+  const contextFor = (partRendersReviewLink: boolean) => ({
+    ...baseContext,
+    portalLink: (quoteReviewLink && hasPortalAccess === false && partRendersReviewLink ? '' : portalLink?.trim()) || '',
+  });
 
   // Subject and plain-text are not HTML — disable Handlebars' HTML escape so
-  // characters like `"` in quote titles don't render as `&quot;`.
+  // characters like `"` in quote titles don't render as `&quot;`. The subject
+  // never blanks the portal link.
   return {
-    subject: Handlebars.compile(template.subject, { noEscape: true })(templateContext),
-    html: Handlebars.compile(template.html_content)(templateContext),
-    text: Handlebars.compile(template.text_content, { noEscape: true })(templateContext),
+    subject: Handlebars.compile(template.subject, { noEscape: true })(contextFor(false)),
+    html: Handlebars.compile(template.html_content)(contextFor(resolved.htmlRendersReviewLink)),
+    text: Handlebars.compile(template.text_content, { noEscape: true })(contextFor(resolved.textRendersReviewLink)),
   };
 };
 
@@ -665,6 +732,11 @@ export interface QuoteEmailRecipientResult {
   messageId: string | null;
   /** Access link minted for this recipient (id only, never the token). */
   linkId: string | null;
+  /**
+   * Set to 'not_rendered' when no link was minted because the template that
+   * rendered does not show `{{quoteReviewLink}}` (earlier links left untouched).
+   */
+  reviewLink?: 'not_rendered';
   error?: string;
 }
 
@@ -752,15 +824,12 @@ const deliverQuoteEmails = async ({
   if (!linkSettings.enabled) {
     try {
     const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
-    const renderedEmail = await renderQuoteEmail({
-      knex,
-      tenant,
-      templateName,
+    const renderedEmail = renderQuoteEmail({
+      resolved: await resolveQuoteEmail(knex, tenant, templateName, recipientLocale),
       quote,
       companyName,
       portalLink,
       customMessage: input.message,
-      locale: recipientLocale,
     });
     const subject = input.subject?.trim() || renderedEmail.subject;
 
@@ -787,17 +856,27 @@ const deliverQuoteEmails = async ({
   // Per-recipient path. Dedupe on trimmed + lowercased address.
   const uniqueRecipients = Array.from(new Set(recipients.map(normalizeRecipientEmail)));
   const actorUserId = getActorUserId(user);
-  const hasPublicOrigin = getPublicBaseOrigin() !== null;
+  const hasPublicOrigin = await canBuildQuoteReviewLink(tenant);
   const pdf = await createPDFGenerationService(tenant).generatePDF({ quoteId: quote.quote_id, userId: actorUserId ?? '' });
   const results: QuoteEmailRecipientResult[] = [];
 
   for (const email of uniqueRecipients) {
     let linkId: string | null = null;
+    let reviewLinkState: QuoteEmailRecipientResult['reviewLink'];
     try {
       const { contactId, hasPortalAccess } = await resolveRecipientContact(knex, tenant, quote, email);
 
+      // Resolve the template that will render BEFORE touching any token, so a
+      // live link is never minted for an email that will not show it.
+      const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, email);
+      const resolved = await resolveQuoteEmail(knex, tenant, templateName, recipientLocale);
+
       let quoteReviewLink: string | undefined;
-      if (hasPublicOrigin) {
+      if (hasPublicOrigin && !resolved.rendersReviewLink) {
+        // Tenant override without {{quoteReviewLink}}: keep the portal link,
+        // mint and revoke nothing (earlier delivered links stay valid).
+        reviewLinkState = 'not_rendered';
+      } else if (hasPublicOrigin) {
         const { link, token } = await withTransaction(knex, async (trx: Knex.Transaction) => {
           await revokeQuoteAccessLinks(trx, tenant, { quoteId: quote.quote_id, recipientEmail: email }, 'superseded');
           return await mintQuoteAccessLink(trx, tenant, {
@@ -808,21 +887,22 @@ const deliverQuoteEmails = async ({
           });
         });
         linkId = link.link_id;
-        quoteReviewLink = buildQuoteReviewLink(token) ?? undefined;
+        quoteReviewLink = (await buildQuoteReviewLink(tenant, token)) ?? undefined;
+        if (!quoteReviewLink) {
+          // The origin vanished between the check and the mint: do not leave a live link nobody received.
+          await revokeQuoteAccessLinks(knex, tenant, { linkId }, 'manual');
+          linkId = null;
+        }
       }
 
-      const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, email);
-      const renderedEmail = await renderQuoteEmail({
-        knex,
-        tenant,
-        templateName,
+      const renderedEmail = renderQuoteEmail({
+        resolved,
         quote,
         companyName,
         portalLink,
         quoteReviewLink,
         hasPortalAccess,
         customMessage: input.message,
-        locale: recipientLocale,
       });
       const subject = input.subject?.trim() || renderedEmail.subject;
 
@@ -841,7 +921,7 @@ const deliverQuoteEmails = async ({
       if (!emailResult.success) {
         throw new Error(emailResult.error ? String(emailResult.error) : 'Email send failed');
       }
-      results.push({ email, success: true, messageId: emailResult.messageId ?? null, linkId });
+      results.push({ email, success: true, messageId: emailResult.messageId ?? null, linkId, ...(reviewLinkState ? { reviewLink: reviewLinkState } : {}) });
     } catch (error) {
       if (linkId) {
         try {
@@ -852,7 +932,7 @@ const deliverQuoteEmails = async ({
       }
       const message = error instanceof Error ? error.message : String(error);
       console.warn(`${logLabel} (recipient):`, message);
-      results.push({ email, success: false, messageId: null, linkId: null, error: message });
+      results.push({ email, success: false, messageId: null, linkId: null, ...(reviewLinkState ? { reviewLink: reviewLinkState } : {}), error: message });
     }
   }
 
@@ -878,6 +958,7 @@ const buildQuoteEmailActivityMetadata = (delivery: QuoteEmailDelivery) => ({
           success: r.success,
           message_id: r.messageId,
           link_id: r.linkId,
+          ...(r.reviewLink ? { review_link: r.reviewLink } : {}),
           ...(r.error ? { error: r.error } : {}),
         })),
         failed_recipients: delivery.perRecipient.filter((r) => !r.success).map((r) => r.email),

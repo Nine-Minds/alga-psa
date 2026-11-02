@@ -1,22 +1,41 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { QUOTE_REVIEW_LINK_PATH_PREFIX, buildQuoteReviewLink } from '../../src/lib/quoteReviewLink';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const saved = { b: process.env.NEXT_PUBLIC_BASE_URL, n: process.env.NEXTAUTH_URL, h: process.env.HOST };
-afterEach(() => {
-  for (const [k, v] of [['NEXT_PUBLIC_BASE_URL', saved.b], ['NEXTAUTH_URL', saved.n], ['HOST', saved.h]] as const) {
-    if (v === undefined) delete process.env[k]; else process.env[k] = v;
-  }
+const buildTenantPortalUrlMock = vi.fn();
+vi.mock('@alga-psa/tenancy/server', () => ({
+  buildTenantPortalUrl: (...args: any[]) => buildTenantPortalUrlMock(...args),
+}));
+
+import { QUOTE_REVIEW_LINK_PATH_PREFIX, buildQuoteReviewLink, canBuildQuoteReviewLink } from '../../src/lib/quoteReviewLink';
+
+beforeEach(() => {
+  buildTenantPortalUrlMock.mockReset();
+  buildTenantPortalUrlMock.mockImplementation(async (_t: string, path: string) => `https://helpdesk.example.com${path}`);
 });
 
 describe('buildQuoteReviewLink', () => {
-  it('builds /quote/<token> on the public base URL', () => {
-    process.env.NEXT_PUBLIC_BASE_URL = 'https://app.example.com/';
+  it('builds /quote/<token> through buildTenantPortalUrl (custom domain aware)', async () => {
     expect(QUOTE_REVIEW_LINK_PATH_PREFIX).toBe('/quote');
-    expect(buildQuoteReviewLink('abc_-123')).toBe('https://app.example.com/quote/abc_-123');
+    expect(await buildQuoteReviewLink('tenant-1', 'abc_-123')).toBe('https://helpdesk.example.com/quote/abc_-123');
+    expect(buildTenantPortalUrlMock).toHaveBeenCalledWith('tenant-1', '/quote/abc_-123');
   });
 
-  it('is null when no valid public origin exists', () => {
-    delete process.env.NEXT_PUBLIC_BASE_URL; delete process.env.NEXTAUTH_URL; delete process.env.HOST;
-    expect(buildQuoteReviewLink('tok')).toBeNull();
+  it('encodes the token as a path segment', async () => {
+    await buildQuoteReviewLink('tenant-1', 'a/b c');
+    expect(buildTenantPortalUrlMock).toHaveBeenCalledWith('tenant-1', '/quote/a%2Fb%20c');
+  });
+
+  it('is null when the builder returns null or throws', async () => {
+    buildTenantPortalUrlMock.mockResolvedValueOnce(null);
+    expect(await buildQuoteReviewLink('tenant-1', 'tok')).toBeNull();
+    buildTenantPortalUrlMock.mockRejectedValueOnce(new Error('boom'));
+    expect(await buildQuoteReviewLink('tenant-1', 'tok')).toBeNull();
+  });
+});
+
+describe('canBuildQuoteReviewLink', () => {
+  it('reflects whether the builder returns a URL', async () => {
+    expect(await canBuildQuoteReviewLink('tenant-1')).toBe(true);
+    buildTenantPortalUrlMock.mockResolvedValue(null);
+    expect(await canBuildQuoteReviewLink('tenant-1')).toBe(false);
   });
 });
