@@ -5,7 +5,7 @@
 
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
-import { 
+import {
   CreateAssetData,
   CreateAssetWithExtensionData,
   UpdateAssetData,
@@ -31,6 +31,7 @@ import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttri
 import { advanceMaintenanceDate, parseCustomRecurrence } from '@alga-psa/assets/lib/maintenanceRecurrence';
 import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
 import { validateAssetStatusSlug } from '@alga-psa/assets/lib/assetStatusRegistry';
+import { createAssetReadContext, filterReadableAssets } from '@alga-psa/authorization/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
 import { getAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
 import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
@@ -143,7 +144,9 @@ export class AssetService extends BaseService<any> {
 
   async list(options: ListOptions, context: ServiceContext, filters?: AssetFilterData): Promise<ListResult<any>> {
     const knex = await this.getDbForContext(context);
+    const authorizedIds = await this.authorizedAssetIds(knex, context);
     const query = scopedTable(knex, context.tenant, this.tableName);
+    if (authorizedIds) query.whereIn(`${this.tableName}.asset_id`, authorizedIds);
 
     // Common and asset-specific range filters. Unsupported range keys fail loudly.
     if (filters) {
@@ -225,7 +228,7 @@ export class AssetService extends BaseService<any> {
         'clients.client_name',
         'vendors.vendor_name',
         knex.raw(`
-          CASE 
+          CASE
             WHEN ${this.tableName}.warranty_end_date IS NULL THEN 'no_warranty'
             WHEN ${this.tableName}.warranty_end_date < NOW() THEN 'expired'
             WHEN ${this.tableName}.warranty_end_date < NOW() + INTERVAL '30 days' THEN 'expiring_soon'
@@ -236,6 +239,7 @@ export class AssetService extends BaseService<any> {
 
     // Execute queries with pagination
     const countQuery = scopedTable(knex, context.tenant, this.tableName);
+    if (authorizedIds) countQuery.whereIn(`${this.tableName}.asset_id`, authorizedIds);
 
     if (filters) {
       // Apply the same range filters to count query
@@ -273,7 +277,7 @@ export class AssetService extends BaseService<any> {
     const page = options.page || 1;
     const limit = options.limit || 25;
     const offset = (page - 1) * limit;
-    
+
     query.limit(limit).offset(offset);
 
     // Apply sorting
@@ -959,7 +963,13 @@ export class AssetService extends BaseService<any> {
     if (rows.length === 0) return [];
 
     const relatedId = (row: any): string => (row.parent_asset_id === assetId ? row.child_asset_id : row.parent_asset_id);
-    const relatedIds: string[] = [...new Set((rows as any[]).map(relatedId))];
+    let relatedIds: string[] = [...new Set((rows as any[]).map(relatedId))];
+    const authorizedIds = await this.authorizedAssetIds(knex, context);
+    if (authorizedIds) {
+      const allowed = new Set(authorizedIds);
+      relatedIds = relatedIds.filter((id) => allowed.has(id));
+    }
+    if (relatedIds.length === 0) return [];
     const related = await scopedTable(knex, context.tenant, 'assets')
       .whereIn('asset_id', relatedIds)
       .select('asset_id', 'asset_tag', 'name', 'asset_type', 'status');
@@ -1136,6 +1146,13 @@ export class AssetService extends BaseService<any> {
     }
   }
 
+  async getRelationshipAssetIds(relationshipId: string, context: ServiceContext): Promise<string[] | null> {
+    const knex = await this.getDbForContext(context);
+    const row = await scopedTable(knex, context.tenant, 'asset_relationships')
+      .where({ relationship_id: relationshipId }).first('asset_id', 'related_asset_id');
+    return row ? [row.asset_id, row.related_asset_id] : null;
+  }
+
   // Asset documents
   async getAssetDocuments(assetId: string, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
@@ -1192,6 +1209,13 @@ export class AssetService extends BaseService<any> {
     }
   }
 
+  async getDocumentAssociationAssetId(associationId: string, context: ServiceContext): Promise<string | null> {
+    const knex = await this.getDbForContext(context);
+    const row = await scopedTable(knex, context.tenant, 'document_associations')
+      .where({ association_id: associationId, entity_type: 'asset' }).first('entity_id');
+    return row?.entity_id ?? null;
+  }
+
   // Maintenance management
   async getMaintenanceSchedules(assetId: string, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
@@ -1209,6 +1233,13 @@ export class AssetService extends BaseService<any> {
       type: 'left',
     });
     return query;
+  }
+
+  async getMaintenanceScheduleAssetId(scheduleId: string, context: ServiceContext): Promise<string | null> {
+    const knex = await this.getDbForContext(context);
+    const row = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+      .where({ schedule_id: scheduleId }).first('asset_id');
+    return row?.asset_id ?? null;
   }
 
   async createMaintenanceSchedule(assetId: string, data: CreateMaintenanceScheduleData, context: ServiceContext): Promise<any> {
@@ -1383,8 +1414,10 @@ export class AssetService extends BaseService<any> {
   // Search and export
   async search(searchData: AssetSearchData, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
+    const authorizedIds = await this.authorizedAssetIds(knex, context);
     const db = tenantDb(knex, context.tenant);
     const query = db.table(this.tableName);
+    if (authorizedIds) query.whereIn(`${this.tableName}.asset_id`, authorizedIds);
 
     // Build search query
     const tableName = this.tableName;
@@ -1475,13 +1508,16 @@ export class AssetService extends BaseService<any> {
 
   // Statistics
   async getStatistics(context: ServiceContext): Promise<any> {
+    const knex = await this.getDbForContext(context);
+    const authorizedIds = await this.authorizedAssetIds(knex, context);
+    const scopedContext = { ...context, authorizedAssetIds: authorizedIds } as ServiceContext & { authorizedAssetIds: string[] | null };
     const [basicStats, typeStats, statusStats, clientStats, warrantyStats, maintenanceStats] = await Promise.all([
-      this.getBasicStatistics(context),
-      this.getAssetsByType(context),
-      this.getAssetsByStatus(context),
-      this.getAssetsByClient(context),
-      this.getWarrantyStatistics(context),
-      this.getMaintenanceStatistics(context)
+      this.getBasicStatistics(scopedContext),
+      this.getAssetsByType(scopedContext),
+      this.getAssetsByStatus(scopedContext),
+      this.getAssetsByClient(scopedContext),
+      this.getWarrantyStatistics(scopedContext),
+      this.getMaintenanceStatistics(scopedContext)
     ]);
 
     return {
@@ -1492,6 +1528,18 @@ export class AssetService extends BaseService<any> {
       ...warrantyStats,
       ...maintenanceStats
     };
+  }
+
+  private async authorizedAssetIds(knex: Knex, context: ServiceContext): Promise<string[] | null> {
+    if (!context.user) return null;
+    const rows = await scopedTable(knex, context.tenant, this.tableName).select('asset_id', 'client_id');
+    const authContext = await createAssetReadContext(knex, context.tenant, context.user as any);
+    return filterReadableAssets(knex, context.tenant, authContext, rows).then((assets) => assets.map((asset) => asset.asset_id));
+  }
+
+  private applyAuthorizedAssetIds(query: Knex.QueryBuilder, context: ServiceContext): void {
+    const ids = (context as ServiceContext & { authorizedAssetIds?: string[] | null }).authorizedAssetIds;
+    if (ids) query.whereIn(`${this.tableName}.asset_id`, ids);
   }
 
   // Helper methods
@@ -1561,6 +1609,7 @@ export class AssetService extends BaseService<any> {
   private async getBasicStatistics(context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
     const stats = await scopedTable(knex, context.tenant, this.tableName)
+      .modify((query) => this.applyAuthorizedAssetIds(query, context))
       .select([
         knex.raw('COUNT(*) as total_assets'),
         knex.raw(`COUNT(CASE WHEN created_at >= date_trunc('month', NOW()) THEN 1 END) as assets_added_this_month`),
@@ -1573,6 +1622,7 @@ export class AssetService extends BaseService<any> {
     // tenant's custom "In use" counts and the literal `active` slug does not
     // have to be special.
     const deployed = await scopedTable(knex, context.tenant, this.tableName)
+      .modify((query) => this.applyAuthorizedAssetIds(query, context))
       .whereIn(
         'status',
         scopedTable(knex, context.tenant, 'asset_statuses').where({ kind: 'deployable' }).select('slug')
@@ -1592,6 +1642,7 @@ export class AssetService extends BaseService<any> {
   private async getAssetsByType(context: ServiceContext): Promise<Record<string, number>> {
     const knex = await this.getDbForContext(context);
     const results = await scopedTable(knex, context.tenant, this.tableName)
+      .modify((query) => this.applyAuthorizedAssetIds(query, context))
       .groupBy('asset_type')
       .select('asset_type', knex.raw('COUNT(*) as count'));
 
@@ -1604,9 +1655,10 @@ export class AssetService extends BaseService<any> {
   private async getAssetsByStatus(context: ServiceContext): Promise<Record<string, number>> {
     const knex = await this.getDbForContext(context);
     const results = await scopedTable(knex, context.tenant, this.tableName)
+        .modify((query) => this.applyAuthorizedAssetIds(query, context))
         .groupBy('status')
         .select('status', knex.raw('COUNT(*) as count'));
-  
+
       return results.reduce((acc, item) => {
         const status = item.status ?? 'Unknown';
         acc[status] = parseInt(item.count);
@@ -1619,6 +1671,8 @@ export class AssetService extends BaseService<any> {
     const knex = await this.getDbForContext(context);
     const db = tenantDb(knex, context.tenant);
     const query = db.table(this.tableName);
+    const ids = (context as ServiceContext & { authorizedAssetIds?: string[] | null }).authorizedAssetIds;
+    if (ids) query.whereIn(`${this.tableName}.asset_id`, ids);
     db.tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id');
     const results = await query
       .groupBy('clients.client_name')
@@ -1634,6 +1688,7 @@ export class AssetService extends BaseService<any> {
   private async getWarrantyStatistics(context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
     const stats = await scopedTable(knex, context.tenant, this.tableName)
+      .modify((query) => this.applyAuthorizedAssetIds(query, context))
       .select([
         knex.raw(`COUNT(CASE WHEN warranty_end_date < NOW() + INTERVAL '30 days' AND warranty_end_date >= NOW() THEN 1 END) as warranty_expiring_soon`),
         knex.raw(`COUNT(CASE WHEN warranty_end_date < NOW() THEN 1 END) as warranty_expired`)
@@ -1648,7 +1703,10 @@ export class AssetService extends BaseService<any> {
 
   private async getMaintenanceStatistics(context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
-    const stats = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+    const statsQuery = scopedTable(knex, context.tenant, 'asset_maintenance_schedules');
+    const authorizedIds = (context as ServiceContext & { authorizedAssetIds?: string[] | null }).authorizedAssetIds;
+    if (authorizedIds) statsQuery.whereIn('asset_id', authorizedIds);
+    const stats = await statsQuery
       .select([
         knex.raw(`COUNT(CASE WHEN next_maintenance <= NOW() AND is_active = true THEN 1 END) as maintenance_due`),
         knex.raw(`COUNT(CASE WHEN next_maintenance < NOW() - INTERVAL '7 days' AND is_active = true THEN 1 END) as maintenance_overdue`)
