@@ -32,6 +32,10 @@ const test = providerTest.extend<{ payment: PaymentFixture }>({
         .where({ tenant: fixture.tenant.tenantId, provider_type: 'stripe' }).first();
       return savedConfig?.configuration?.stripe_account_id;
     }, { timeout: 15_000 }).toBe('acct_algasim');
+    // Portal tests reuse this page, so leave the admin session through the
+    // supported portal-switch flow before yielding it to them.
+    await page.getByRole('button', { name: 'Sign Out and Switch to Client Portal' }).click();
+    await expect(page.locator('[data-automation-id="client-email-field"]')).toBeVisible();
     await testInfo.attach('payment-identities', { body: JSON.stringify(fixture), contentType: 'application/json' });
     await providePayment(fixture);
   },
