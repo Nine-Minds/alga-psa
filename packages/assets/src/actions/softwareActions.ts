@@ -376,17 +376,8 @@ export const searchSoftwareFleetWide = withAuth(async (
       .where('scoped_asw.is_current', true)
       .whereIn('scoped_asw.asset_id', readableAssetIds)
       .as('asw');
-    let softwareQuery = catalogQuery.clone()
-      .select(
-        'sc.software_id',
-        'sc.name',
-        'sc.publisher',
-        'sc.category',
-        'sc.software_type',
-        'sc.is_managed',
-        'sc.is_security_relevant'
-      );
-    db.tenantJoinSubquery(softwareQuery, currentAssetSoftware, 'asw.software_id', 'sc.software_id', {
+    let authorizedCatalogQuery = catalogQuery.clone();
+    authorizedCatalogQuery = db.tenantJoinSubquery(authorizedCatalogQuery, currentAssetSoftware, 'asw.software_id', 'sc.software_id', {
       type: 'inner',
       rootTenantColumn: 'sc.tenant',
       joinedTenantColumn: 'asw.tenant',
@@ -397,23 +388,32 @@ export const searchSoftwareFleetWide = withAuth(async (
       .select('tenant', 'asset_id', 'client_id')
       .whereIn('scoped_a.asset_id', readableAssetIds)
       .as('a');
-    db.tenantJoinSubquery(softwareQuery, scopedAssets, 'a.asset_id', 'asw.asset_id', {
+    authorizedCatalogQuery = db.tenantJoinSubquery(authorizedCatalogQuery, scopedAssets, 'a.asset_id', 'asw.asset_id', {
       type: 'inner',
       rootTenantColumn: 'asw.tenant',
       joinedTenantColumn: 'a.tenant',
     });
 
     if (client_id) {
-      softwareQuery = softwareQuery.where('a.client_id', client_id);
+      authorizedCatalogQuery = authorizedCatalogQuery.where('a.client_id', client_id);
     }
 
-    const countResult = await softwareQuery.clone().countDistinct('sc.software_id as count').first();
+    const countResult = await authorizedCatalogQuery.clone().countDistinct('sc.software_id as count').first();
     const total = parseInt(String(countResult?.count || 0), 10);
 
     // Get paginated software entries with authorized install counts.
     const offset = (page - 1) * limit;
 
-    const softwareRows = await softwareQuery
+    const softwareRows = await authorizedCatalogQuery.clone()
+      .select(
+        'sc.software_id',
+        'sc.name',
+        'sc.publisher',
+        'sc.category',
+        'sc.software_type',
+        'sc.is_managed',
+        'sc.is_security_relevant'
+      )
       .count('asw.asset_id as install_count')
       .groupBy('sc.software_id', 'sc.name', 'sc.publisher', 'sc.category', 'sc.software_type', 'sc.is_managed', 'sc.is_security_relevant')
       .orderBy('install_count', 'desc')
