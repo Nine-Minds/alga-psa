@@ -1,6 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import { createLogger, format, transports } from 'winston';
 import { isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin';
+import { getEventBus } from '@alga-psa/event-bus';
 import type { Knex } from 'knex';
 import {
   workflowOneTimeScheduledRunHandler,
@@ -36,6 +38,7 @@ const PUBLISH_SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
 const RECOVER_COMMENT_PUBLICATIONS_JOB = 'recover-comment-publications';
 const FINALIZE_LINK_ACCEPTED_QUOTE_JOB = 'finalize-link-accepted-quote';
 const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000';
+const SERVER_JOB_EXECUTION_TIMEOUT_MS = 9 * 60 * 1000;
 
 // Configure logger
 const logger = createLogger({
@@ -141,6 +144,29 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
         },
       }, options);
     };
+  const forwardJobToServerAndAwait = (jobName: string) =>
+    async (jobId: string, data: Record<string, unknown>) => {
+      const requestId = randomUUID();
+      const eventBus = getEventBus();
+      await eventBus.beginRequest(requestId, Math.ceil(SERVER_JOB_EXECUTION_TIMEOUT_MS / 1000) + 120);
+      try {
+        await publishEvent({
+          eventType: 'MAINTENANCE_JOB_REQUESTED',
+          payload: {
+            tenantId: (data?.tenantId as string) ?? SYSTEM_TENANT_ID,
+            occurredAt: new Date().toISOString(),
+            jobName,
+            jobId,
+            requestId,
+            data: data ?? {},
+          },
+        }, { strict: true });
+        await eventBus.waitForRequest(requestId, SERVER_JOB_EXECUTION_TIMEOUT_MS);
+      } catch (error) {
+        await eventBus.clearRequest(requestId);
+        throw error;
+      }
+    };
   registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, forwardJobToServer(RMM_ALERT_RECONCILIATION_JOB));
   registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, forwardJobToServer(HUNTRESS_INCIDENT_POLL_JOB));
   // Device sync reaches provider clients under ee/server, so it forwards to the
@@ -217,7 +243,7 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   // generate the signed PDF and send its confirmation through this retryable job.
   registerJobHandlerForActivities(
     FINALIZE_LINK_ACCEPTED_QUOTE_JOB,
-    forwardJobToServer(FINALIZE_LINK_ACCEPTED_QUOTE_JOB, { strict: true }),
+    forwardJobToServerAndAwait(FINALIZE_LINK_ACCEPTED_QUOTE_JOB),
   );
 
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these
