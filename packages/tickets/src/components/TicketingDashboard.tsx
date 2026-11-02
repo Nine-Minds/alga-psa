@@ -1,7 +1,7 @@
 'use client'
 
 import { encodeTicketWhere } from '../lib/ticketWhereUrl';
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import BulkBundleDialog from './BulkBundleDialog';
@@ -79,7 +79,7 @@ import {
 } from '../actions/ticketActions';
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { getBoardListStats, type BoardListStats } from '../actions/board-actions/boardActions';
-import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds, loadTicketListItemsByIds } from '../actions/optimizedTicketActions';
+import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds, getTicketChangeCounts, loadTicketListItemsByIds } from '../actions/optimizedTicketActions';
 import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filter, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -377,15 +377,49 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const router = useRouter();
   const { t } = useTranslation('features/tickets');
   const changeStateRef = useRef(new ChangedSinceLoad());
+  const recoverChangesRef = useRef<(() => void) | null>(null);
   const [, setChangeRevision] = useState(0);
-  useEffect(() => {
+  useLayoutEffect(() => {
     changeStateRef.current.load(initialTickets.flatMap(ticket => ticket.ticket_id ? [ticket.ticket_id] : []), loadedFilters, user?.user_id ?? '', loadedAt);
     setChangeRevision(value => value + 1);
   }, [initialTickets, loadedAt, loadedFilters, user?.user_id]);
   const receiveTicketChange = useCallback((event: TicketListChange) => {
-    if (changeStateRef.current.record(event)) setChangeRevision(value => value + 1);
+    if (changeStateRef.current.record(event)) {
+      setChangeRevision(value => value + 1);
+      // Counts-only recovery is an absolute snapshot. Reconcile promptly when
+      // live delivery resumes so repeated edits to one recovered ticket remain
+      // one distinct ticket in the banner.
+      if (changeStateRef.current.hasFallback()) recoverChangesRef.current?.();
+    }
   }, []);
-  useTicketListChanges(user?.tenant, receiveTicketChange);
+  const recoverTicketChanges = useCallback(async (_outageStartedAt: number) => {
+    const requestedSnapshot = changeStateRef.current.getSnapshot();
+    try {
+      const result = await getTicketChangeCounts(
+        loadedFilters as ITicketListFilters,
+        initialTickets.flatMap(ticket => ticket.ticket_id ? [ticket.ticket_id] : []),
+        loadedAt,
+      );
+      if (isActionMessageError(result) || isActionPermissionError(result)) return;
+      changeStateRef.current.setFallbackSnapshot({
+        since: loadedAt, asOf: result.asOf,
+        newCount: result.newCount, updatedCount: result.updatedCount, boards: result.boards,
+        boardLatestAt: result.boardLatestAt,
+      }, requestedSnapshot.generation);
+      setChangeRevision(value => value + 1);
+    } catch (error) {
+      console.warn('Ticket change counts recovery failed:', error);
+    }
+  }, [loadedAt, loadedFilters, initialTickets]);
+  recoverChangesRef.current = () => { void recoverTicketChanges(loadedAt); };
+  useTicketListChanges(user?.tenant, receiveTicketChange, {
+    onUnavailable: recoverTicketChanges,
+    onRecovered: recoverTicketChanges,
+    shouldPollFallback: () => changeStateRef.current.hasFallback(),
+  });
+  useEffect(() => {
+    if (changeStateRef.current.hasFallback()) void recoverTicketChanges(loadedAt);
+  }, [loadedAt, loadedFilters, recoverTicketChanges]);
   const changeCounts = changeStateRef.current.getCounts();
   const changedBoardIds = changeStateRef.current.boards();
   const refreshChangedTickets = useCallback(async () => {
@@ -461,6 +495,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const selectedBoard = selectedBoards.length === 1 && selectedBoards[0] !== NO_BOARD_VALUE
     ? selectedBoards[0]
     : null;
+  useLayoutEffect(() => {
+    if (!selectedBoard) return;
+    changeStateRef.current.acknowledgeBoard(selectedBoard, Date.now());
+    setChangeRevision(value => value + 1);
+  }, [selectedBoard]);
   const selectedClient = filterValues.clientId ?? null;
   const selectedContact = filterValues.contactId ?? null;
   const selectedStatus = filterValues.statusId ?? TICKET_STATUS_FILTER_OPEN;

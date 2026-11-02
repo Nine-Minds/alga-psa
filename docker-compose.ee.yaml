@@ -392,6 +392,7 @@ services:
       AI_DOCUMENT_API_URL: ${AI_DOCUMENT_API_URL:-http://server:3000/api/v1/ai/document-assist}
       AI_DOCUMENT_API_KEY: ${AI_DOCUMENT_API_KEY:-}
       COLLAB_PERSIST_API_URL: ${COLLAB_PERSIST_API_URL:-http://server:3000/api/internal/collab/persist}
+      TICKET_LIST_CHANGE_AUTHORIZATION_URL: ${TICKET_LIST_CHANGE_AUTHORIZATION_URL:-http://server:3000/api/internal/tickets/live-change}
       COLLAB_PERSIST_API_KEY: ${COLLAB_PERSIST_API_KEY:-alga-collab-persist-dev}
     volumes:
       - type: bind

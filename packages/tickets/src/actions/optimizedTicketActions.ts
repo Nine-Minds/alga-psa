@@ -77,6 +77,7 @@ import { preserveStoredWatchList } from '@alga-psa/shared/lib/tickets/watchList'
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import { resolveLatestActivityActor, type LatestActivityNames } from '../lib/latestActivityActor';
+import { countAuthorizedTicketChanges } from '../lib/ticketChangeCounts';
 import Comment from '../models/comment';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -2285,6 +2286,84 @@ export const getAllMatchingTicketIds = withAuth(async (
         return expected;
       }
       console.error('Failed to fetch matching ticket IDs:', error);
+      throw error;
+    }
+  });
+});
+
+/** Counts-only recovery for changes missed while the tenant live room was
+ * unavailable. Ticket ids and rows remain server-side; authorization is the
+ * same per-record kernel used by the list path. */
+export const getTicketChangeCounts = withAuth(async (
+  user,
+  { tenant },
+  filters: ITicketListFilters,
+  loadedTicketIds: string[],
+  since: number,
+): Promise<{ asOf: number; newCount: number; updatedCount: number; boards: Record<string, number>; boardLatestAt: Record<string, string> } | TicketActionError> => {
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async trx => {
+    try {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) throw new Error('Permission denied: Cannot view tickets');
+      const validated = cleanFilterValues(validateData(ticketListFiltersSchema, filters) as ITicketListFilters);
+      const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validated);
+      const context = await createTicketAuthorizationContext(trx, tenant, user as IUserWithRoles);
+      const scoped = scopedQuery.clone();
+      const authorizedQuery = applyTicketReadAuthorizationSql(scoped, trx, tenant, context);
+      const matchingRows = authorizedQuery.supported
+        ? await scoped.builder.clone().clearSelect().clearOrder().select('t.ticket_id')
+        : await filterAuthorizedTickets(trx, context, await baseQuery.clone().clearSelect().clearOrder()
+          .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', 't.attributes'));
+      const matching = new Set<string>(matchingRows.map((row: { ticket_id?: string }) => row.ticket_id).filter((id: string | undefined): id is string => Boolean(id)));
+      const loaded = new Set(loadedTicketIds.filter((id: string) => typeof id === 'string'));
+      const asOf = Date.now();
+      const commentRows = await tenantDb(trx, tenant).table('comments')
+        .where(builder => builder.where(query => query.where('created_at', '>', new Date(since)).andWhere('created_at', '<=', new Date(asOf)))
+          .orWhere(query => query.where('updated_at', '>', new Date(since)).andWhere('updated_at', '<=', new Date(asOf))))
+        .select('ticket_id', 'user_id', 'created_at', 'updated_at');
+      const commentActors = new Map<string, Array<string | null>>();
+      const commentTimes = new Map<string, string>();
+      for (const comment of commentRows as Array<{ ticket_id: string; user_id?: string | null; created_at?: Date | string | null; updated_at?: Date | string | null }>) {
+        if (comment.user_id === user.user_id) continue;
+        const actors = commentActors.get(comment.ticket_id) ?? [];
+        actors.push(comment.user_id ?? null);
+        commentActors.set(comment.ticket_id, actors);
+        for (const value of [comment.created_at, comment.updated_at]) {
+          if (!value) continue;
+          const iso = new Date(value).toISOString();
+          if (!commentTimes.has(comment.ticket_id) || iso > commentTimes.get(comment.ticket_id)!) commentTimes.set(comment.ticket_id, iso);
+        }
+      }
+      const changedCommentTicketIds = Array.from(commentActors.keys());
+      const candidates = await tenantDb(trx, tenant).table('tickets')
+        .where(builder => builder.where(query => query.where('updated_at', '>', new Date(since)).andWhere('updated_at', '<=', new Date(asOf)))
+          .orWhereIn('ticket_id', changedCommentTicketIds))
+        .select('*');
+      const readable = await filterAuthorizedTickets(trx, context, candidates);
+      const activityCandidates = readable.map((ticket: { ticket_id: string; updated_at?: Date | string | null; updated_by?: string | null; updated_by_user_id?: string | null; board_id?: string | null }) => {
+        const id = ticket.ticket_id;
+        const activityActors = [...(commentActors.get(id) ?? [])];
+        let latestActivityAt = commentTimes.get(id) ?? null;
+        const ticketUpdatedAt = ticket.updated_at ? new Date(ticket.updated_at).getTime() : NaN;
+        if (ticketUpdatedAt > since && ticketUpdatedAt <= asOf) {
+          activityActors.push(ticket.updated_by ?? ticket.updated_by_user_id ?? null);
+          const iso = new Date(ticketUpdatedAt).toISOString();
+          if (!latestActivityAt || iso > latestActivityAt) latestActivityAt = iso;
+        }
+        return { ...ticket, activityActors, latestActivityAt };
+      });
+      return {
+        asOf,
+        ...countAuthorizedTicketChanges({
+          candidates: activityCandidates,
+          matchingTicketIds: matching,
+          loadedTicketIds: loaded,
+          currentUserId: user.user_id,
+        }),
+      };
+    } catch (error) {
+      const expected = ticketListActionErrorFrom(error);
+      if (expected) return expected;
       throw error;
     }
   });

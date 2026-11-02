@@ -526,7 +526,7 @@ export default function TicketingDashboardContainer({
 
       console.log('[Container] Fetch completed, got tickets:', result.tickets.length);
       setTickets(result.tickets);
-      setLoadedAt(Date.now());
+      setLoadedAt(typeof result.loadedAt === 'number' ? result.loadedAt : Date.now());
       setLoadedFilters(currentFiltersWithDefaults);
       setTotalCount(result.totalCount);
       if (result.metadata) {

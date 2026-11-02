@@ -29,11 +29,15 @@ export class TicketUpdatesExtension {
     this.redisUsername = config.redisUsername || 'default'
     this.redisPassword = config.redisPassword
     this.redisPrefix = config.redisPrefix || ''
+    this.listChangeAuthorizationUrl = config.listChangeAuthorizationUrl || 'http://server:3000/api/internal/tickets/live-change'
+    this.listChangeApiKey = config.listChangeApiKey || ''
     this.pattern = `${this.redisPrefix}ticket-updates:*`
     this.listPattern = `${this.redisPrefix}ticket-list-changes:*`
     this.subscriber = null
     this.instance = null
     this.hasPatternSubscription = false
+    this.listConnections = new Map()
+    this.connectionExpiryTimers = new Map()
     this.handlePatternMessage = this.handlePatternMessage.bind(this)
     this.handleListMessage = this.handleListMessage.bind(this)
   }
@@ -86,11 +90,61 @@ export class TicketUpdatesExtension {
       if (!channel.startsWith(prefix)) return
       const tenantId = channel.slice(prefix.length)
       if (!tenantId || tenantId.includes(':')) return
-      const document = this.instance?.documents?.get(`tenant:${tenantId}:ticket-changes`)
-      if (document) document.broadcastStateless(message)
+      const roomName = `tenant:${tenantId}:ticket-changes`
+      const document = this.instance?.documents?.get(roomName)
+      if (!document || !this.listChangeApiKey) return
+      const event = JSON.parse(message)
+      if (typeof event.ticketId !== 'string' || typeof event.updatedAt !== 'string') return
+      const roomConnections = this.listConnections.get(roomName)
+      if (!roomConnections?.size) return
+      const users = new Map()
+      for (const connection of roomConnections) {
+        const access = connection.context?.ticketChangesAccess
+        if (access?.tenantId === tenantId && access.expiresAt > Date.now()) users.set(access.userId, access)
+      }
+      for (const access of users.values()) {
+        try {
+          const response = await fetch(this.listChangeAuthorizationUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': this.listChangeApiKey },
+            body: JSON.stringify({ tenantId, userId: access.userId, ticketId: event.ticketId, event }),
+          })
+          if (!response.ok) continue
+          const result = await response.json()
+          if (!result?.change) continue
+          document.broadcastStateless(JSON.stringify(result.change), connection => {
+            const recipient = connection.context?.ticketChangesAccess
+            return recipient?.tenantId === tenantId && recipient.userId === access.userId && recipient.expiresAt > Date.now()
+          })
+        } catch (error) {
+          console.error(`[TicketUpdatesExtension] Unable to authorize ticket change for ${access.userId}:`, error)
+        }
+      }
     } catch (error) {
       console.error('[TicketUpdatesExtension] Error handling ticket list change:', error)
     }
+  }
+
+  async connected(data) {
+    if (!data.documentName?.startsWith('tenant:') || !data.documentName.endsWith(':ticket-changes')) return
+    const access = data.context?.ticketChangesAccess
+    const connection = data.connectionInstance
+    if (!access || !connection || access.expiresAt <= Date.now()) return
+    let connections = this.listConnections.get(data.documentName)
+    if (!connections) { connections = new Set(); this.listConnections.set(data.documentName, connections) }
+    connections.add(connection)
+    this.connectionExpiryTimers.set(connection, setTimeout(() => connection.close(), Math.max(0, access.expiresAt - Date.now()) + 1))
+  }
+
+  async onDisconnect(data) {
+    if (!data.documentName?.startsWith('tenant:') || !data.documentName.endsWith(':ticket-changes')) return
+    const connection = data.connectionInstance
+    const timer = connection && this.connectionExpiryTimers.get(connection)
+    if (timer) clearTimeout(timer)
+    const connections = this.listConnections.get(data.documentName)
+    if (connections && connection) connections.delete(connection)
+    if (connections?.size === 0) this.listConnections.delete(data.documentName)
+    if (connection) this.connectionExpiryTimers.delete(connection)
   }
 
   async handlePatternMessage(message, channel) {
@@ -115,6 +169,9 @@ export class TicketUpdatesExtension {
   }
 
   async onDestroy() {
+    this.listConnections.clear()
+    for (const timer of this.connectionExpiryTimers.values()) clearTimeout(timer)
+    this.connectionExpiryTimers.clear()
     if (this.subscriber) {
       await this.subscriber.quit()
     }
