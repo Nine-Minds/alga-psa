@@ -290,11 +290,17 @@ export const createAssetDocumentSchema = z.object({
 
 export const assetDocumentResponseSchema = z.object({
   association_id: uuidSchema,
+  entity_type: z.literal('asset'),
+  entity_id: uuidSchema,
   asset_id: uuidSchema,
   document_id: uuidSchema,
   notes: z.string().nullable(),
   created_at: z.string().datetime(),
   tenant: uuidSchema,
+  original_filename: z.string().optional(),
+  file_size: z.number().nullable().optional(),
+  mime_type: z.string().nullable().optional(),
+  uploaded_at: z.string().datetime().optional(),
   
   // Document details
   document: z.object({

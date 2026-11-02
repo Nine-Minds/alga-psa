@@ -1202,7 +1202,7 @@ export class AssetService extends BaseService<any> {
     const rows = await query
       .where({ 'da.entity_type': 'asset', 'da.entity_id': assetId })
       .select(
-        'da.association_id', 'da.tenant', 'da.document_id', 'da.entity_id as asset_id', 'da.created_at',
+        'da.association_id', 'da.tenant', 'da.document_id', 'da.entity_type', 'da.entity_id', 'da.entity_id as asset_id', 'da.created_at',
         'ada.notes',
         knex.raw('COALESCE(external_files.original_name, documents.document_name) AS original_filename'),
         'documents.file_size',
@@ -1214,20 +1214,27 @@ export class AssetService extends BaseService<any> {
 
   private mapAssetDocumentAssociation(row: Record<string, any>) {
     const { original_filename, file_size, mime_type, uploaded_at, ...association } = row;
+    const document = original_filename == null ? undefined : {
+      document_id: association.document_id,
+      original_filename,
+      file_size,
+      mime_type,
+      uploaded_at,
+    };
     return {
       association_id: association.association_id,
+      entity_type: association.entity_type ?? 'asset',
+      entity_id: association.entity_id ?? association.asset_id,
       asset_id: association.asset_id,
       document_id: association.document_id,
       notes: association.notes ?? null,
       created_at: association.created_at,
       tenant: association.tenant,
-      document: original_filename == null ? undefined : {
-        document_id: association.document_id,
-        original_filename,
-        file_size,
-        mime_type,
-        uploaded_at,
-      },
+      original_filename,
+      file_size,
+      mime_type,
+      uploaded_at,
+      document,
     };
   }
 

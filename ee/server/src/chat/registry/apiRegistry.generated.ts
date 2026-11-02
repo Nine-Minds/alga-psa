@@ -6455,7 +6455,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/assets/{id}/documents",
     "displayName": "List asset document associations",
     "summary": "List asset document associations",
-    "description": "Returns document associations for the asset in the authenticated tenant. Document details are joined from documents/external_files, and optional association notes come from asset_document_associations. It does not check whether the asset exists first, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.",
+    "description": "Returns document associations for the asset in the authenticated tenant. Controller authorization resolves and authorizes the asset first; nonexistent or cross-tenant asset IDs return 404, while in-tenant permission denials return 403. Document details are joined from documents/external_files, legacy filename, size, MIME type, and upload-time fields remain at the response top level, and optional association notes come from asset_document_associations. Response links currently point at /api/v2/assets paths.",
     "tags": [
       "Assets"
     ],

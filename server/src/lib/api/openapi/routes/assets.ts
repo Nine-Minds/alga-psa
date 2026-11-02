@@ -176,11 +176,17 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     'AssetDocumentAssociationRow',
     zOpenApi.object({
       association_id: zOpenApi.string().guid().describe('Association UUID from document_associations.association_id.'),
+      entity_type: zOpenApi.literal('asset').describe('Legacy entity type for this asset document association.'),
+      entity_id: zOpenApi.string().guid().describe('Legacy asset UUID field from document_associations.entity_id.'),
       asset_id: zOpenApi.string().guid().describe('Asset UUID linked by the association.'),
       document_id: zOpenApi.string().guid().describe('Document UUID linked by the association.'),
       notes: zOpenApi.string().nullable().describe('Optional association notes stored on asset_document_associations.notes.'),
       tenant: zOpenApi.string().guid().describe('Tenant UUID for the association.'),
       created_at: zOpenApi.string().datetime().optional().describe('Association creation timestamp.'),
+      original_filename: zOpenApi.string().optional().describe('Legacy document filename field, included on list responses.'),
+      file_size: zOpenApi.number().nullable().optional().describe('Legacy document size field in bytes, included on list responses.'),
+      mime_type: zOpenApi.string().nullable().optional().describe('Legacy document MIME type field, included on list responses.'),
+      uploaded_at: zOpenApi.string().datetime().optional().describe('Legacy document upload timestamp field, included on list responses.'),
       document: zOpenApi.object({
         document_id: zOpenApi.string().guid(),
         original_filename: zOpenApi.string(),
@@ -194,7 +200,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   const AssetDocumentListPayload = registry.registerSchema(
     'AssetDocumentListPayload',
     zOpenApi.object({
-      data: zOpenApi.array(AssetDocumentAssociationRow).describe('Document association rows for the asset. Empty when no associations exist or the asset is not found.'),
+      data: zOpenApi.array(AssetDocumentAssociationRow).describe('Document association rows for the authorized asset.'),
       _links: zOpenApi.object({
         self: HateoasLink.optional(),
         create: HateoasLink.optional(),
@@ -1447,7 +1453,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}/documents',
     summary: 'List asset document associations',
     description:
-      'Returns document associations for the asset in the authenticated tenant. Document details are joined from documents/external_files, and optional association notes come from asset_document_associations. It does not check whether the asset exists first, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.',
+      'Returns document associations for the asset in the authenticated tenant. Controller authorization resolves and authorizes the asset first; nonexistent or cross-tenant asset IDs return 404, while in-tenant permission denials return 403. Document details are joined from documents/external_files, legacy filename, size, MIME type, and upload-time fields remain at the response top level, and optional association notes come from asset_document_associations. Response links currently point at /api/v2/assets paths.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1455,7 +1461,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     },
     responses: {
       200: {
-        description: 'Document associations returned successfully. Empty when no associations exist or the asset is not found.',
+        description: 'Document associations returned successfully for an authorized asset; an asset with no associations returns an empty array.',
         schema: AssetDocumentListResponse,
       },
       401: {
@@ -1475,7 +1481,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       ...assetRouteExtensions,
       'x-rbac-resource': 'asset',
       'x-rbac-action': 'read',
-      'x-no-asset-existence-check': true,
+      'x-no-asset-existence-check': false,
       'x-response-links-path-version': 'v2',
     },
     edition: 'both',

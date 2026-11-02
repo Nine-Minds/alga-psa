@@ -416,12 +416,29 @@ describe('asset API-key authorization through public routes and migrated Postgre
         const listed = await invoke(assetDocumentsGet, request(caller, `/api/v1/assets/${assetId}/documents`), { id: assetId });
         expect(listed.status).toBe(200);
         const listedBody = await listed.json();
-        expect(listedBody.data).toContainEqual(expect.objectContaining({
-          association_id: createdBody.data.association_id, asset_id: assetId, document_id: documentId, notes: expectedNotes,
-        }));
-        expect(listedBody.data).toContainEqual(expect.objectContaining({
-          association_id: legacyAssociationId, asset_id: assetId, document_id: documentIds[2], notes: null,
-        }));
+        const apiAssociation = listedBody.data.find((row: any) => row.association_id === createdBody.data.association_id);
+        expect(apiAssociation).toMatchObject({
+          association_id: createdBody.data.association_id,
+          entity_type: 'asset', entity_id: assetId, asset_id: assetId, document_id: documentId,
+          notes: expectedNotes,
+          original_filename: `Asset document ${documentIds.indexOf(documentId)}`,
+          file_size: null, mime_type: null, uploaded_at: expect.any(String),
+          document: {
+            document_id: documentId,
+            original_filename: `Asset document ${documentIds.indexOf(documentId)}`,
+            file_size: null, mime_type: null, uploaded_at: expect.any(String),
+          },
+        });
+        const genericOnlyAssociation = listedBody.data.find((row: any) => row.association_id === legacyAssociationId);
+        expect(genericOnlyAssociation).toMatchObject({
+          association_id: legacyAssociationId,
+          entity_type: 'asset', entity_id: assetId, asset_id: assetId, document_id: documentIds[2], notes: null,
+          original_filename: 'Asset document 2', file_size: null, mime_type: null, uploaded_at: expect.any(String),
+          document: {
+            document_id: documentIds[2], original_filename: 'Asset document 2',
+            file_size: null, mime_type: null, uploaded_at: expect.any(String),
+          },
+        });
 
         const deleted = await invoke(documentAssociationDelete, request(caller, `/api/v1/assets/documents/${createdBody.data.association_id}`, 'DELETE'), { associationId: createdBody.data.association_id });
         expect(deleted.status).toBe(204);
