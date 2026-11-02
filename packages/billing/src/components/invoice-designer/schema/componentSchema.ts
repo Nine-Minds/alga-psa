@@ -1108,6 +1108,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         variant: 'subtotal',
         label: 'Subtotal',
         bindingKey: 'invoice.subtotal',
+        format: 'currency',
       },
     },
     hierarchy: {
@@ -1127,6 +1128,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         variant: 'tax',
         label: 'Tax',
         bindingKey: 'invoice.tax',
+        format: 'currency',
       },
     },
     hierarchy: {
@@ -1138,14 +1140,17 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
   discount: {
     type: 'discount',
     label: 'Discount Row',
-    description: 'Displays discount amount.',
+    description: 'Displays the total of discounts and credits.',
     category: 'Content',
     defaults: {
       size: { width: 320, height: 56 },
       metadata: {
         variant: 'discount',
-        label: 'Discount',
-        bindingKey: 'invoice.discount',
+        label: 'Discounts',
+        // Positive magnitude of discount and credit lines. The legacy `invoice.discount` key
+        // was never bound; saved nodes that still carry it stay blank (alga0002295).
+        bindingKey: 'invoice.discountTotal',
+        format: 'currency',
       },
     },
     hierarchy: {
@@ -1165,6 +1170,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         variant: 'custom',
         label: 'Total',
         bindingKey: 'invoice.total',
+        format: 'currency',
       },
     },
     hierarchy: {

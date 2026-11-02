@@ -1982,15 +1982,19 @@
       },
       "invoice_subtotal": {
         "label": "Sous-total",
-        "description": "Sous-total de la facture avant taxes et remises."
+        "description": "Sous-total de la facture après remises et avoirs, avant taxes."
+      },
+      "invoice_grossSubtotal": {
+        "label": "Sous-total avant remises",
+        "description": "Sous-total de la facture avant remises et avoirs, et avant taxes."
+      },
+      "invoice_discountTotal": {
+        "label": "Remises",
+        "description": "Total des lignes de remise et d'avoir, affiché sous forme de montant positif."
       },
       "invoice_tax": {
         "label": "Taxe",
         "description": "Montant de la taxe de la facture."
-      },
-      "invoice_discount": {
-        "label": "Remise",
-        "description": "Montant de la remise."
       },
       "invoice_total": {
         "label": "Total",
@@ -2452,7 +2456,8 @@
       "moveDown": "Déplacer {{row}} vers le bas",
       "remove": "Retirer {{row}}",
       "label": "Libellé",
-      "emphasize": "Mettre en évidence (style du total général)"
+      "emphasize": "Mettre en évidence (style du total général)",
+      "hideWhenZero": "Masquer si zéro"
     }
   },
   "draftInvoiceDetails": {

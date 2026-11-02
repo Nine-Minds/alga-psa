@@ -2034,15 +2034,19 @@
       },
       "invoice_subtotal": {
         "label": "Suma częściowa",
-        "description": "Suma częściowa przed podatkiem i rabatem."
+        "description": "Suma częściowa faktury po rabatach i kredytach, przed podatkiem."
+      },
+      "invoice_grossSubtotal": {
+        "label": "Suma częściowa przed rabatami",
+        "description": "Suma częściowa faktury przed rabatami i kredytami oraz przed podatkiem."
+      },
+      "invoice_discountTotal": {
+        "label": "Rabaty",
+        "description": "Suma pozycji rabatów i kredytów, wyświetlana jako kwota dodatnia."
       },
       "invoice_tax": {
         "label": "Podatek",
         "description": "Kwota podatku faktury."
-      },
-      "invoice_discount": {
-        "label": "Rabat",
-        "description": "Kwota rabatu."
       },
       "invoice_total": {
         "label": "Razem",
@@ -2504,7 +2508,8 @@
       "moveDown": "Przenieś {{row}} niżej",
       "remove": "Usuń {{row}}",
       "label": "Etykieta",
-      "emphasize": "Wyróżnij (styl sumy końcowej)"
+      "emphasize": "Wyróżnij (styl sumy końcowej)",
+      "hideWhenZero": "Ukryj, gdy zero"
     }
   },
   "draftInvoiceDetails": {

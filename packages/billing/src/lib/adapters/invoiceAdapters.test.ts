@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { WasmInvoiceViewModel } from '@alga-psa/types';
 import {
+  applyInvoiceDiscountSummary,
   buildInvoiceTimeCollections,
   buildLocationAddressBlock,
   mapDbInvoiceToWasmViewModel,
@@ -786,5 +788,118 @@ describe('buildLocationAddressBlock', () => {
       buildLocationAddressBlock({ address_line1: '1 Main', city: 'Tampa', state_province: '', postal_code: ' ' } as any),
     ).toBe('1 Main\nTampa');
     expect(buildLocationAddressBlock({ address_line1: '', city: '  ' } as any)).toBeNull();
+  });
+});
+
+describe('invoice discount summary (alga0002295)', () => {
+  const dbInvoice = (overrides: Record<string, unknown> = {}) => ({
+    invoice_number: 'INV-D1',
+    invoice_date: '2026-07-30',
+    due_date: '2026-08-15',
+    currency_code: 'EUR',
+    client: { name: 'Client', address: '2 Main St' },
+    invoice_charges: [
+      { item_id: 's1', description: 'Service', quantity: 1, unit_price: 10_000, net_amount: 10_000, tax_amount: 0, total_price: 10_000, is_discount: false },
+      { item_id: 'd1', description: 'Discount', quantity: 1, unit_price: -1_000, net_amount: -1_000, tax_amount: 0, total_price: -1_000, is_discount: true },
+      { item_id: 'c1', description: 'Manual credit', quantity: 1, unit_price: -500, net_amount: -500, tax_amount: 0, total_price: -500, is_discount: true },
+      { item_id: 'a1', description: 'Contract adjustment', quantity: 1, unit_price: -200, net_amount: -200, tax_amount: 0, total_price: -200, is_discount: false },
+    ],
+    subtotal: 8_300,
+    tax: 830,
+    total: 9_130,
+    ...overrides,
+  });
+
+  it('maps is_discount to isDiscount on the DB branch', () => {
+    const mapped = mapDbInvoiceToWasmViewModel(dbInvoice());
+    expect(mapped?.items.map((item) => item.isDiscount)).toEqual([false, true, true, false]);
+  });
+
+  it('derives a positive discountTotal from discounts and credits only, and keeps both identities', () => {
+    const mapped = mapDbInvoiceToWasmViewModel(dbInvoice())!;
+    expect(mapped.discountTotal).toBe(1_500);
+    expect(mapped.grossSubtotal).toBe(9_800);
+    expect(mapped.grossSubtotal! - mapped.discountTotal!).toBe(mapped.subtotal);
+    expect(mapped.subtotal + mapped.tax).toBe(mapped.total);
+    // Non-discount negative rows stay inside the gross figure; net values are unchanged.
+    expect(mapped.subtotal).toBe(8_300);
+    expect(mapped.tax).toBe(830);
+    expect(mapped.total).toBe(9_130);
+  });
+
+  it('is zero / equal to subtotal when no line is a discount', () => {
+    const mapped = mapDbInvoiceToWasmViewModel(
+      dbInvoice({
+        invoice_charges: [
+          { item_id: 's1', description: 'Service', quantity: 1, unit_price: 10_000, net_amount: 10_000, tax_amount: 0, total_price: 10_000 },
+        ],
+        subtotal: 10_000,
+        tax: 0,
+        total: 10_000,
+      })
+    )!;
+    expect(mapped.discountTotal).toBe(0);
+    expect(Object.is(mapped.discountTotal, 0)).toBe(true);
+    expect(mapped.grossSubtotal).toBe(mapped.subtotal);
+  });
+
+  it('keeps the identity on legacy major-unit payloads', () => {
+    const mapped = mapDbInvoiceToWasmViewModel(
+      dbInvoice({
+        invoice_charges: [
+          { item_id: 's1', description: 'Service', quantity: 1, unit_price: 8000, total_price: 8000 },
+          { item_id: 'd1', description: 'Discount', quantity: 1, unit_price: -500, total_price: -500, is_discount: true },
+        ],
+        subtotal: 0,
+        tax: 0,
+        total: 7500,
+      })
+    )!;
+    expect(mapped.subtotal).toBe(750_000);
+    expect(mapped.discountTotal).toBe(50_000);
+    expect(mapped.grossSubtotal).toBe(800_000);
+    expect(mapped.grossSubtotal! - mapped.discountTotal!).toBe(mapped.subtotal);
+  });
+
+  it('uses the computed subtotal fallback when the persisted subtotal is 0', () => {
+    const mapped = mapDbInvoiceToWasmViewModel(dbInvoice({ subtotal: 0, tax: 0, total: 0 }))!;
+    expect(mapped.subtotal).toBe(8_300);
+    expect(mapped.grossSubtotal! - mapped.discountTotal!).toBe(mapped.subtotal);
+  });
+
+  it('keeps isDiscount through the pass-through Wasm branch and re-derives idempotently', () => {
+    const wasm = {
+      invoiceNumber: 'INV-W1',
+      issueDate: '2026-01-01',
+      dueDate: '2026-01-31',
+      currencyCode: 'USD',
+      customer: { name: 'C', address: 'A' },
+      tenantClient: null,
+      items: [
+        { id: 'a', description: 'Svc', quantity: '1', unitPrice: '5000', total: '5000' },
+        { id: 'b', description: 'Disc', quantity: '1', unitPrice: '-500', total: '-500', isDiscount: true },
+      ],
+      subtotal: 4_500,
+      tax: 0,
+      total: 4_500,
+    } as unknown as WasmInvoiceViewModel;
+    const once = mapDbInvoiceToWasmViewModel(wasm)!;
+    expect(once.items[1].isDiscount).toBe(true);
+    expect(once.discountTotal).toBe(500);
+    expect(once.grossSubtotal).toBe(5_000);
+    const twice = mapDbInvoiceToWasmViewModel(once)!;
+    expect(twice.discountTotal).toBe(500);
+    expect(twice.grossSubtotal).toBe(5_000);
+  });
+
+  it('is safe on legacy Wasm payloads with no isDiscount flag', () => {
+    const vm = applyInvoiceDiscountSummary({
+      items: [{ id: 'a', description: 'x', quantity: 1, unitPrice: -100, total: -100 }],
+      subtotal: 1_000,
+      tax: 0,
+      total: 1_000,
+    } as unknown as WasmInvoiceViewModel);
+    expect(vm.discountTotal).toBe(0);
+    expect(vm.grossSubtotal).toBe(1_000);
   });
 });

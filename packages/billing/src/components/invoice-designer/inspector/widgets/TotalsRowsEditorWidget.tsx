@@ -95,9 +95,22 @@ const setInlineColor = (
 // Rows a totals block can add; value paths are the render model's totals. Labels
 // are the standard document labels of the same name (namespace `documents`), so a
 // new row translates for each recipient like the rows a preset ships with.
-const TOTALS_ROW_PRESETS: Array<{ id: string; label: TranslatableRef; valuePath: string }> = (
-  ['subtotal', 'tax', 'total'] as const
-).map((id) => ({ id, label: getStandardDocumentLabel(`labels.${id}`)!, valuePath: id }));
+const TOTALS_ROW_PRESETS: Array<{
+  id: string;
+  label: TranslatableRef;
+  valuePath: string;
+  hideWhenZero?: boolean;
+}> = [
+  ...(['subtotal', 'tax', 'total'] as const).map((id) => ({
+    id,
+    label: getStandardDocumentLabel(`labels.${id}`)!,
+    valuePath: id,
+  })),
+  // Opt-in discount rows (alga0002295). `subtotal` stays net of discounts, so the layout
+  // `grossSubtotal / discountTotal / subtotal` adds up without double-counting.
+  { id: 'grossSubtotal', label: getStandardDocumentLabel('labels.subtotalBeforeDiscounts')!, valuePath: 'grossSubtotal' },
+  { id: 'discountTotal', label: getStandardDocumentLabel('labels.discounts')!, valuePath: 'discountTotal', hideWhenZero: true },
+];
 
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{6})$/;
 
@@ -254,6 +267,7 @@ export const TotalsRowsEditorWidget: React.FC<Props> = ({ node }) => {
             format: 'currency',
             type: 'currency',
             emphasize: preset.id === 'total',
+            ...(preset.hideWhenZero ? { hideWhenZero: true } : {}),
           },
         ],
         true
@@ -400,6 +414,15 @@ export const TotalsRowsEditorWidget: React.FC<Props> = ({ node }) => {
                 onChange={(event) => updateRow(rowId, { emphasize: event.target.checked }, true)}
               />
               {t('invoiceDesigner.totalsRowsEditor.emphasize', { defaultValue: 'Emphasize (grand total style)' })}
+            </label>
+            <label className="flex items-center gap-2 text-[11px] text-slate-600 dark:text-slate-400">
+              <input
+                id={`${domBaseId}-hide-when-zero`}
+                type="checkbox"
+                checked={row.hideWhenZero === true}
+                onChange={(event) => updateRow(rowId, { hideWhenZero: event.target.checked ? true : undefined }, true)}
+              />
+              {t('invoiceDesigner.totalsRowsEditor.hideWhenZero', { defaultValue: 'Hide when zero' })}
             </label>
 
             <RowColorControl

@@ -1982,15 +1982,19 @@
       },
       "invoice_subtotal": {
         "label": "Subtotaal",
-        "description": "Subtotaal vóór btw en kortingen."
+        "description": "Subtotaal van de factuur na kortingen en tegoeden, vóór btw."
+      },
+      "invoice_grossSubtotal": {
+        "label": "Subtotaal vóór kortingen",
+        "description": "Subtotaal van de factuur vóór kortingen en tegoeden, en vóór btw."
+      },
+      "invoice_discountTotal": {
+        "label": "Kortingen",
+        "description": "Totaal van de korting- en tegoedregels, weergegeven als positief bedrag."
       },
       "invoice_tax": {
         "label": "Btw",
         "description": "Btw-bedrag voor de factuur."
-      },
-      "invoice_discount": {
-        "label": "Korting",
-        "description": "Kortingsbedrag van de factuur."
       },
       "invoice_total": {
         "label": "Totaal",
@@ -2452,7 +2456,8 @@
       "moveDown": "{{row}} omlaag verplaatsen",
       "remove": "{{row}} verwijderen",
       "label": "Label",
-      "emphasize": "Benadrukken (stijl van eindtotaal)"
+      "emphasize": "Benadrukken (stijl van eindtotaal)",
+      "hideWhenZero": "Verbergen bij nul"
     }
   },
   "draftInvoiceDetails": {

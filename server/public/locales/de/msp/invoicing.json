@@ -1982,15 +1982,19 @@
       },
       "invoice_subtotal": {
         "label": "Zwischensumme",
-        "description": "Rechnungszwischensumme vor Steuern und Rabatten."
+        "description": "Rechnungszwischensumme nach Rabatten und Gutschriften, vor Steuern."
+      },
+      "invoice_grossSubtotal": {
+        "label": "Zwischensumme vor Rabatten",
+        "description": "Rechnungszwischensumme vor Rabatten und Gutschriften sowie vor Steuern."
+      },
+      "invoice_discountTotal": {
+        "label": "Rabatte",
+        "description": "Summe der Rabatt- und Gutschriftspositionen, als positiver Betrag dargestellt."
       },
       "invoice_tax": {
         "label": "Steuer",
         "description": "Steuerbetrag der Rechnung."
-      },
-      "invoice_discount": {
-        "label": "Rabatt",
-        "description": "Rabattbetrag der Rechnung."
       },
       "invoice_total": {
         "label": "Gesamt",
@@ -2452,7 +2456,8 @@
       "moveDown": "{{row}} nach unten verschieben",
       "remove": "{{row}} entfernen",
       "label": "Bezeichnung",
-      "emphasize": "Hervorheben (Stil der Gesamtsumme)"
+      "emphasize": "Hervorheben (Stil der Gesamtsumme)",
+      "hideWhenZero": "Ausblenden, wenn null"
     }
   },
   "draftInvoiceDetails": {

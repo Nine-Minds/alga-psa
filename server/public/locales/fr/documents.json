@@ -69,6 +69,7 @@
     "sku": "UGS",
     "source": "Source",
     "subtotal": "Sous-total",
+    "subtotalBeforeDiscounts": "Sous-total avant remises",
     "tax": "Taxes",
     "termsAndConditions": "Conditions générales",
     "ticket": "Ticket",

@@ -1982,15 +1982,19 @@
       },
       "invoice_subtotal": {
         "label": "Subtotal",
-        "description": "Subtotal de factura antes de impuestos y descuentos."
+        "description": "Subtotal de la factura después de descuentos y créditos, antes de impuestos."
+      },
+      "invoice_grossSubtotal": {
+        "label": "Subtotal antes de descuentos",
+        "description": "Subtotal de la factura antes de descuentos y créditos, y antes de impuestos."
+      },
+      "invoice_discountTotal": {
+        "label": "Descuentos",
+        "description": "Total de las líneas de descuento y crédito, mostrado como importe positivo."
       },
       "invoice_tax": {
         "label": "Impuesto",
         "description": "Importe del impuesto de la factura."
-      },
-      "invoice_discount": {
-        "label": "Descuento",
-        "description": "Importe del descuento."
       },
       "invoice_total": {
         "label": "Total",
@@ -2452,7 +2456,8 @@
       "moveDown": "Mover {{row}} hacia abajo",
       "remove": "Quitar {{row}}",
       "label": "Etiqueta",
-      "emphasize": "Destacar (estilo de total general)"
+      "emphasize": "Destacar (estilo de total general)",
+      "hideWhenZero": "Ocultar si es cero"
     }
   },
   "draftInvoiceDetails": {

@@ -727,6 +727,7 @@ export function buildSimulatedPeriod(
         servicePeriodStart: line.service_period_start ?? null,
         servicePeriodEnd: line.service_period_end ?? null,
         billingTiming: line.billing_timing ?? null,
+        isDiscount: line.charge_type === "discount",
       })),
       subtotal,
       tax,
