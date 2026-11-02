@@ -801,7 +801,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // Fetch created by user
     // LEVERAGE: pattern users-star-projection — see availableAgents query above
-    const createdByUserRow = ticket.entered_by ? 
+    const createdByUserRow = ticket.entered_by ?
       await tenantScopedTable(trx, 'users', tenant)
         .select(...USER_RESPONSE_FIELD_NAMES)
         .where({
