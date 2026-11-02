@@ -8,15 +8,11 @@ import { authorizeCoManagedLocalRecord, CoManagedSharedWorkError, isCoManagedUui
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { AUTHORIZED_ROW_MAX_PAGE, pageAuthorizedRows } from './pageAuthorizedRows';
 import { nativeInteractionCandidates } from './nativeInteractionCandidates';
+import { openNativeInteractionCursor, sealNativeInteractionCursor, type NativeInteractionPosition } from './nativeInteractionCursor';
 
 export interface NativeInteractionFilters {
   search?: string; userId?: string; contactId?: string; clientId?: string; statusId?: string; typeId?: string;
-  dateFrom?: Date; dateTo?: Date; page?: number; pageSize?: number; cursor?: NativeInteractionCursor | null;
-}
-
-export interface NativeInteractionCursor {
-  interaction_date: string | null;
-  interaction_id: string;
+  dateFrom?: Date; dateTo?: Date; page?: number; pageSize?: number; cursor?: string | null;
 }
 
 /** Lists and their totals are built from admitted current projections. Hidden
@@ -44,7 +40,14 @@ export async function readCoManagedNativeInteractions(db: Knex, tenant: string, 
       }
     }
     const search = filters.search?.trim().toLowerCase();
-    const fetchCandidates = async (after: NativeInteractionCursor | null, limit: number) => nativeInteractionCandidates(owner, filters,
+    const cursorScope = JSON.stringify({ subject: credential.subject, id: options.id ?? null, entity: entity ?? null, search: search ?? null,
+      userId: filters.userId ?? null, contactId: filters.contactId ?? null, clientId: filters.clientId ?? null,
+      statusId: filters.statusId ?? null, typeId: filters.typeId ?? null,
+      dateFrom: filters.dateFrom ? new Date(filters.dateFrom).toISOString() : null,
+      dateTo: filters.dateTo ? new Date(filters.dateTo).toISOString() : null });
+    const afterCursor: NativeInteractionPosition | null = filters.cursor
+      ? await openNativeInteractionCursor(filters.cursor, tenant, cursorScope) : null;
+    const fetchCandidates = async (after: NativeInteractionPosition | null, limit: number) => nativeInteractionCandidates(owner, filters,
       after ? { ...after, interaction_date: after.interaction_date ? new Date(after.interaction_date) : null } : null, { id: options.id, entity }, limit);
     const sourceById = new Map<string, Awaited<ReturnType<typeof retainScheduleSource>>>();
     const authorize = async (row: any) => {
@@ -101,7 +104,7 @@ export async function readCoManagedNativeInteractions(db: Knex, tenant: string, 
         filters.dateTo && (!Number.isFinite(time) || time > new Date(filters.dateTo).getTime()));
     };
     const result = await pageAuthorizedRows({ page: filters.cursor ? 1 : options.paginated ? page : 1, pageSize: options.paginated ? pageSize : 100,
-      after: filters.cursor ?? null, maxWindows: 3, fetchCandidates, authorize, matches,
+      after: afterCursor, maxWindows: 3, fetchCandidates, authorize, matches,
       searchMatches: view => !search || ['title', 'notes', 'contact_name', 'client_name', 'user_name'].some(key => String(view[key] ?? '').toLowerCase().includes(search)) });
     const count = await pageAuthorizedRows({ page: 1, pageSize: 100, maxWindows: 1, fetchCandidates, authorize, matches,
       searchMatches: view => !search || ['title', 'notes', 'contact_name', 'client_name', 'user_name'].some(key => String(view[key] ?? '').toLowerCase().includes(search)) });
@@ -110,10 +113,7 @@ export async function readCoManagedNativeInteractions(db: Knex, tenant: string, 
       view.online_meeting = source.fields.length ? null : await nativeInteractionMeetingView(trx, actor, credential.subject, view.interaction_id);
     }
     await credential.assertCurrent();
-    const nextCursor = result.nextAfter ? {
-      interaction_id: result.nextAfter.interaction_id,
-      interaction_date: result.nextAfter.interaction_date == null ? null : new Date(result.nextAfter.interaction_date).toISOString(),
-    } : null;
+    const nextCursor = result.nextAfter ? await sealNativeInteractionCursor(result.nextAfter, tenant, cursorScope) : null;
     return { handled: true as const, interactions: result.rows, total: count.total, totalExact: count.totalExact,
       nextCursor, hasMore: nextCursor !== null, page, pageSize };
   });

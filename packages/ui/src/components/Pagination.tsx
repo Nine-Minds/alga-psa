@@ -83,7 +83,8 @@ const Pagination = ({
     const {
         currentPage: internalCurrentPage,
         totalPages,
-        handlePageChange
+        handlePageChange,
+        setCurrentPage
     } = usePagination(totalItems, itemsPerPage);
 
     // Determine which current page to use (controlled vs uncontrolled)
@@ -98,8 +99,10 @@ const Pagination = ({
 
     // Handle page change and call the provided callback
     const handleChange = (page: number) => {
-        handlePageChange(page);
-        onPageChange(page);
+        const nextPage = Math.max(1, page);
+        if (totalItemsExact) handlePageChange(nextPage);
+        else setCurrentPage(nextPage);
+        onPageChange(nextPage);
     };
 
     const pageButtonBaseClassName = 'inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-[13px] font-medium transition-colors';

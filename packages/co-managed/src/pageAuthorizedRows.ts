@@ -57,5 +57,5 @@ export async function pageAuthorizedRows<C, T>(options: {
   }
   const hasMoreRows = matched > target + options.pageSize;
   return { rows, total: matched, totalExact: exhausted, exhausted,
-    nextAfter: hasMoreRows ? pageAfter : exhausted ? null : pageAfter ?? after };
+    nextAfter: hasMoreRows ? pageAfter : exhausted ? null : after };
 }

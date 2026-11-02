@@ -62,7 +62,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [interactionsLoadErrorMessage, setInteractionsLoadErrorMessage] = useState<string | null>(null);
-  const [interactionCursor, setInteractionCursor] = useState<{ interaction_date: string | null; interaction_id: string } | null>(null);
+  const [interactionCursor, setInteractionCursor] = useState<string | null>(null);
   const [hasMoreInteractions, setHasMoreInteractions] = useState(false);
   const [typesLoadErrorMessage, setTypesLoadErrorMessage] = useState<string | null>(null);
   const openQuickAddInteraction = useCallback(() => setIsQuickAddOpen(true), []);

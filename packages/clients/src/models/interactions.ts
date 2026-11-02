@@ -16,7 +16,7 @@ export interface InteractionPageFilters {
   typeId?: string;
   page?: number;
   pageSize?: number;
-  cursor?: { interaction_date: string | null; interaction_id: string } | null;
+  cursor?: string | null;
 }
 
 export interface InteractionPageResult {
@@ -25,7 +25,7 @@ export interface InteractionPageResult {
   totalExact: boolean;
   page: number;
   pageSize: number;
-  nextCursor?: { interaction_date: string | null; interaction_id: string } | null;
+  nextCursor?: string | null;
   hasMore?: boolean;
 }
 

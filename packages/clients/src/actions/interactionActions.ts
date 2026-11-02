@@ -257,8 +257,8 @@ export const getInteractionsForEntityPage = withAuth(async (
   { tenant },
   entityId: string,
   entityType: 'contact' | 'client' | 'ticket' | 'opportunity',
-  cursor?: { interaction_date: string | null; interaction_id: string } | null
-): Promise<{ interactions: IInteraction[]; nextCursor?: { interaction_date: string | null; interaction_id: string } | null; hasMore?: boolean } | InteractionActionError> => {
+  cursor?: string | null
+): Promise<{ interactions: IInteraction[]; nextCursor?: string | null; hasMore?: boolean } | InteractionActionError> => {
   try {
     await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
     const { knex } = await createTenantKnex();

@@ -94,5 +94,6 @@ describe('pageAuthorizedRows', () => {
     expect(authorized).toBe(200);
     expect(result.rows).toEqual([]);
     expect(result.totalExact).toBe(false);
+    expect(result.nextAfter).toEqual({ id: 49, date: 1 });
   });
 });

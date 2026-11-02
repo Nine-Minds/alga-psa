@@ -140,7 +140,7 @@ export default function OverallInteractionsFeed({
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [total, setTotal] = useState(0);
   const [totalExact, setTotalExact] = useState(true);
-  const cursorsByPageRef = useRef<Record<number, { interaction_date: string | null; interaction_id: string } | null>>({});
+  const cursorsByPageRef = useRef<Record<number, string | null>>({});
   const [hasMore, setHasMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);

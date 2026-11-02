@@ -1034,7 +1034,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             </tbody>
           </table>
         </div>
-        {pagination && safeData.length > 0 && (hasMorePages || totalPages > 1 || onItemsPerPageChange || pageSizePreference.enabled) && (
+        {pagination && (safeData.length > 0 || pageIndex > 0 || hasMorePages) && (pageIndex > 0 || hasMorePages || totalPages > 1 || onItemsPerPageChange || pageSizePreference.enabled) && (
           <div className="border-t border-[rgb(var(--color-border-200)/0.7)]">
             <Pagination
               id={`${id || generatedTableId}-pagination`}
