@@ -32,12 +32,9 @@ describe('project authorization kernel contracts', () => {
     expect(projectTaskActionsSource).toContain("import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';");
     expect(projectActionsSource).not.toContain('async function createProjectReadAuthorizer(');
     expect(projectTaskActionsSource).not.toContain('async function createProjectReadAuthorizer(');
-    expect(projectActionsSource).toContain('async function filterAuthorizedProjects<T extends Partial<IProject>>(');
     expect(projectActionsSource).toContain('async function assertProjectReadAllowed(');
     expect(projectActionsSource).toContain('async function resolveProjectIdForPhase(');
     expect(projectActionsSource).toContain('async function resolveProjectIdsForStatus(');
-    expect(projectActionsSource).toContain('return await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);');
-    expect(projectActionsSource).toContain('const authorizedProjects = await filterAuthorizedProjects(');
     expect(projectActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);');
     expect(projectActionsSource).toContain('const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);');
     expect(projectActionsSource).toContain('const projectIds = await resolveProjectIdsForStatus(trx, tenant, statusId);');

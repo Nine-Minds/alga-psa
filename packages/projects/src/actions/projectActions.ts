@@ -57,7 +57,9 @@ import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
 import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
 import { createProjectReadDecider } from '../lib/projectReadAuthorization';
+import { coManagedColumnHidden, coManagedProjectFamilyMask } from '@alga-psa/co-managed/projectFieldMask';
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
+import { loadAuthorizedProjectProjections } from '../lib/projectReadProjection';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
 
@@ -326,19 +328,26 @@ async function decideAuthorizedProjects<T extends Partial<IProject>>(
   );
 }
 
-async function filterAuthorizedProjects<T extends Partial<IProject>>(
+async function loadAuthorizedProjectPhase(
   trx: Knex.Transaction,
   tenant: string,
-  user: IUserWithRoles,
-  projects: T[]
-): Promise<T[]> {
-  if (projects.length === 0) {
-    return [];
-  }
-
-  const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user);
-  const decisions = await Promise.all(projects.map((project) => authorizeProjectRead(project)));
-  return projects.filter((_, index) => decisions[index]);
+  phaseId: string,
+  redactedFields: string[]
+): Promise<IProjectPhase | null> {
+  const mask = coManagedProjectFamilyMask(redactedFields, 'project_phase');
+  if (mask.dropRow) return null;
+  const fields = [
+    'phase_id', 'project_id', 'phase_name', 'description', 'start_date', 'end_date', 'completed_at',
+    'status', 'order_number', 'order_key', 'created_at', 'updated_at', 'wbs_code', 'service_id', 'tenant',
+  ];
+  const hidden = new Set(fields.filter((field) => coManagedColumnHidden(redactedFields, 'project_phases', field)));
+  const query = tenantScopedTable(trx, 'project_phases', tenant).where({ phase_id: phaseId }).select(
+    ...fields.map((field) => {
+      if (field === 'phase_name' && mask.title) return trx.raw('?::text as ??', [mask.neutralTitle, field]);
+      return hidden.has(field) ? trx.raw('CASE WHEN FALSE THEN ?? END as ??', [`project_phases.${field}`, field]) : `project_phases.${field}`;
+    })
+  );
+  return await query.first<IProjectPhase>() ?? null;
 }
 
 async function assertProjectReadAllowed(
@@ -412,8 +421,12 @@ export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]
         if (denied) return denied;
 
         const projects = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            const rows = await ProjectModel.getAll(trx, tenant, true);
-            return await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);
+            const rows = await tenantScopedTable(trx, 'projects', tenant)
+                .orderBy('created_at', 'desc')
+                .orderBy('project_number', 'desc')
+                .select<Array<Pick<IProject, 'project_id'>>>('project_id');
+            const loaded = await loadAuthorizedProjectProjections(trx, tenant, user as IUserWithRoles, rows.map((row) => row.project_id));
+            return loaded.map((entry) => entry.project);
         });
 
         return withAssignedUsers(projects);
@@ -561,8 +574,17 @@ export const loadProjectListItemsByIds = withAuth(async (
             .filter((project): project is IProject => Boolean(project));
 
         const projectTags: Record<string, ITag[]> = {};
-        if (ordered.length > 0) {
-            const tagRows = await TagMapping.getByEntities(trx, tenant, ordered.map((project) => project.project_id), 'project');
+        const redactionsById = new Map(authorizedIdentities.map(({ project, redactedFields }) => [
+                project.project_id!, Array.from(new Set([...redactedFields, ...(callerRedactions?.[project.project_id!] ?? [])])),
+            ]));
+        const visibleTagProjectIds = ordered.map((project) => project.project_id).filter((projectId) => {
+            const fields = redactionsById.get(projectId) ?? [];
+            return !['tag_text', 'background_color', 'text_color'].some((field) =>
+                coManagedColumnHidden(fields, 'project_tags', field, ['tags', `tags.${field}`])
+            );
+        });
+        if (visibleTagProjectIds.length > 0) {
+            const tagRows = await TagMapping.getByEntities(trx, tenant, visibleTagProjectIds, 'project');
             for (const tag of tagRows) {
                 const list = projectTags[tag.tagged_id] ?? (projectTags[tag.tagged_id] = []);
                 list.push({
@@ -728,8 +750,8 @@ export const searchProjectListIds = withAuth(async (
     const matchedProjects = await tenantScopedTable(trx, 'projects', tenant)
       .whereIn('project_id', projectIds)
       .select<IProject[]>('project_id', 'assigned_to', 'client_id');
-    const authorizedProjects = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, matchedProjects);
-    const authorizedProjectIds = new Set(authorizedProjects.map((project) => project.project_id).filter(Boolean));
+    const authorizedProjects = await decideAuthorizedProjects(trx, tenant, user as IUserWithRoles, matchedProjects);
+    const authorizedProjectIds = new Set(authorizedProjects.map(({ project }) => project.project_id).filter(Boolean));
 
     return projectIds.filter((projectId) => authorizedProjectIds.has(projectId));
   });
@@ -766,15 +788,21 @@ export const getProjectsWithPhases = withAuth(async (
         )
         .orderBy('psm.display_order');
 
-      const [projects, phases, statusMappings] = await Promise.all([
-        tenantScopedTable(trx, 'projects', tenant)
-          .select('project_id', 'project_name', 'is_inactive', 'client_id', 'assigned_to')
-          .orderBy('project_name'),
+      const projectIds = await tenantScopedTable(trx, 'projects', tenant)
+        .orderBy('project_name')
+        .select<Array<Pick<IProject, 'project_id'>>>('project_id');
+      const authorizedProjects = await loadAuthorizedProjectProjections(
+        trx, tenant, user as IUserWithRoles, projectIds.map((row) => row.project_id)
+      );
+      const redactionsByProject = new Map(authorizedProjects.map(({ project, redactedFields }) => [project.project_id, redactedFields]));
+      const allowedIds = authorizedProjects.map((entry) => entry.project.project_id);
+      if (allowedIds.length === 0) return [];
+      const [phases, statusMappings] = await Promise.all([
         tenantScopedTable(trx, 'project_phases', tenant)
-          .select('phase_id', 'project_id', 'phase_name', 'wbs_code')
+          .whereIn('project_id', allowedIds)
+          .select<Array<{ phase_id: string; project_id: string; phase_name: string; wbs_code: string }>>('phase_id', 'project_id', 'phase_name', 'wbs_code')
           .orderBy('wbs_code'),
-        // Fetch all project status mappings with resolved names
-        statusMappingsQuery,
+        statusMappingsQuery.whereIn('psm.project_id', allowedIds),
       ]);
 
       // Group phases by project
@@ -790,7 +818,9 @@ export const getProjectsWithPhases = withAuth(async (
       for (const m of statusMappings) {
         const key = `${m.project_id}:${m.phase_id || '__default__'}`;
         const list = statusesByScope.get(key) || [];
-        list.push({ mapping_id: m.mapping_id, name: m.name, is_closed: !!m.is_closed });
+        const redactedFields = redactionsByProject.get(m.project_id) ?? [];
+        const statusHidden = coManagedColumnHidden(redactedFields, 'project_status_mappings', 'name', ['status', 'statuses', 'standard_statuses']);
+        list.push({ mapping_id: m.mapping_id, name: statusHidden ? 'Status' : m.name, is_closed: statusHidden ? false : !!m.is_closed });
         statusesByScope.set(key, list);
       }
 
@@ -809,22 +839,20 @@ export const getProjectsWithPhases = withAuth(async (
         phasesByProject.set(phase.project_id, list);
       }
 
-      const authorizedProjects = await filterAuthorizedProjects(
-        trx,
-        tenant,
-        user as IUserWithRoles,
-        projects as Array<Partial<IProject>>
-      ) as Array<{
-        project_id: string;
-        project_name: string;
-        is_inactive: boolean;
-      }>;
-
-      return authorizedProjects.map((p) => ({
+      return authorizedProjects.map(({ project: p, redactedFields }) => ({
         project_id: p.project_id,
         project_name: p.project_name,
         is_inactive: p.is_inactive,
-        phases: phasesByProject.get(p.project_id) || [],
+        phases: (phasesByProject.get(p.project_id) || []).flatMap((phase) => {
+          const mask = coManagedProjectFamilyMask(redactedFields, 'project_phase');
+          if (mask.dropRow) return [];
+          const statusHidden = coManagedColumnHidden(redactedFields, 'project_status_mappings', 'name', ['status', 'statuses', 'standard_statuses']);
+          return [{
+            ...phase,
+            phase_name: mask.title ? mask.neutralTitle : phase.phase_name,
+            statuses: statusHidden ? [] : phase.statuses,
+          }];
+        }),
       }));
     });
   } catch (error) {
@@ -844,8 +872,9 @@ export const getProjectPhase = withAuth(async (user, { tenant }, phaseId: string
             if (!projectId) {
                 return null;
             }
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
-            return await ProjectModel.getPhaseById(trx, tenant, phaseId);
+            const project = await loadAuthorizedProjectProjections(trx, tenant, user as IUserWithRoles, [projectId]);
+            if (project.length === 0) throw new Error('Permission denied: Cannot read project');
+            return loadAuthorizedProjectPhase(trx, tenant, phaseId, project[0].redactedFields);
         });
         return phase;
     } catch (error) {
@@ -862,23 +891,16 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
     if (denied) return denied;
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const projects = projectId ?
-        [await ProjectModel.getById(trx, tenant, projectId)] :
-        await ProjectModel.getAll(trx, tenant, true);
-
-      const validProjects = projects.filter((p): p is NonNullable<typeof p> => p !== null);
-      const authorizedProjects = await filterAuthorizedProjects(
-        trx,
-        tenant,
-        user as IUserWithRoles,
-        validProjects
-      );
+      const candidateIds = projectId ? [projectId] : await tenantScopedTable(trx, 'projects', tenant)
+        .orderBy('created_at', 'desc').orderBy('project_number', 'desc')
+        .select<Array<Pick<IProject, 'project_id'>>>('project_id').then((rows) => rows.map((row) => row.project_id));
+      const authorizedProjects = await loadAuthorizedProjectProjections(trx, tenant, user as IUserWithRoles, candidateIds);
 
       if (authorizedProjects.length === 0) {
         return [];
       }
 
-      const treeData = await Promise.all(authorizedProjects.map(async (project): Promise<{
+      const treeData = await Promise.all(authorizedProjects.map(async ({ project, redactedFields }): Promise<{
         label: string;
         value: string;
         type: 'project';
@@ -922,10 +944,10 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
           );
 
         return {
-          label: project.project_name,
+          label: coManagedProjectFamilyMask(redactedFields, 'project').title ? 'Project' : project.project_name,
           value: project.project_id,
           type: 'project' as const,
-          children: phases.map((phase, phaseIndex): {
+          children: phases.filter((phase) => !coManagedProjectFamilyMask(redactedFields, 'project_phase').dropRow).map((phase, phaseIndex): {
             label: string;
             value: string;
             type: 'phase';
@@ -935,10 +957,10 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
               type: 'status';
             }[];
           } => ({
-            label: phase.phase_name,
+            label: coManagedProjectFamilyMask(redactedFields, 'project_phase').title ? 'Project phase' : phase.phase_name,
             value: phase.phase_id,
             type: 'phase' as const,
-            children: phaseStatuses[phaseIndex].map((status): {
+            children: (coManagedColumnHidden(redactedFields, 'project_status_mappings', 'name', ['status', 'statuses', 'standard_statuses']) ? [] : phaseStatuses[phaseIndex]).map((status): {
                 label: string;
                 value: string;
                 type: 'status';
@@ -1421,13 +1443,10 @@ export const getProject = withAuth(async (user, { tenant }, projectId: string): 
         if (denied) return denied;
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            const project = await ProjectModel.getById(trx, tenant, projectId);
-            if (!project) {
-                return null;
-            }
-
-            const authorizedProjects = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, [project]);
-            return authorizedProjects[0] ?? null;
+            const authorizedProjects = await loadAuthorizedProjectProjections(
+                trx, tenant, user as IUserWithRoles, [projectId]
+            );
+            return authorizedProjects[0]?.project ?? null;
         });
     } catch (error) {
         console.error('Error fetching project:', error);
