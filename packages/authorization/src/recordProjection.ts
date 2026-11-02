@@ -615,7 +615,10 @@ export const ASSET_RMM_REMOTE_CONTROL_SOURCE: RedactableRecordSource = {
   identifier: ASSET_RECORD_SOURCE.identifier,
   fields: {},
   derived: {
-    url: [{ source: ASSET_RECORD_SOURCE, field: 'rmm_device_id' }],
+    url: [
+      { source: ASSET_RECORD_SOURCE, field: 'rmm_provider' },
+      { source: ASSET_RECORD_SOURCE, field: 'rmm_device_id' },
+    ],
   },
 };
 

@@ -319,6 +319,46 @@ describe('asset RMM remote-control REST boundary', () => {
     expect(h.state.subjects.at(-1)?.apiKeyId).toBe('summary-key');
   });
 
+  for (const key of [false, true]) {
+    it.each(['rmm_provider', 'assets.rmm_provider', 'values.rmm_provider', 'fields.assets.rmm_provider'])(
+      `${key ? 'API-key' : 'session'} URL retains its provider dependency under %s`, async alias => {
+        h.state.redactions.asset = [alias];
+        h.state.keyOnly = key;
+        h.state.remoteControlUrl.mockResolvedValueOnce('https://tacticalrmm.example/device-1');
+
+        const response = await readRemoteControl(key);
+        expect(response.status).toBe(200);
+        expect((await response.json()).data).toEqual({ url: null, type: 'splashtop' });
+        expect(h.state.subjects.at(-1)?.apiKeyId).toBe(key ? 'summary-key' : undefined);
+      },
+    );
+  }
+
+  it.each(['tacticalrmm', 'ninjaone', 'datto'])('preserves a visible %s provider URL', async provider => {
+    h.state.asset.rmm_provider = provider;
+    const url = `https://${provider}.example/device-1`;
+    h.state.remoteControlUrl.mockResolvedValueOnce(url);
+
+    const response = await readRemoteControl();
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual({ url, type: 'splashtop' });
+  });
+
+  it('keeps session URLs visible when only the API-key policy hides the provider', async () => {
+    h.state.redactions.asset = ['assets.rmm_provider'];
+    h.state.keyOnly = true;
+    const url = 'https://tacticalrmm.example/device-1';
+    h.state.remoteControlUrl.mockResolvedValueOnce(url).mockResolvedValueOnce(url);
+
+    const sessionResponse = await readRemoteControl();
+    expect(sessionResponse.status).toBe(200);
+    expect((await sessionResponse.json()).data.url).toBe(url);
+
+    const keyResponse = await readRemoteControl(true);
+    expect(keyResponse.status).toBe(200);
+    expect((await keyResponse.json()).data).toEqual({ url: null, type: 'splashtop' });
+  });
+
   it('preserves asset update authorization', async () => {
     h.state.assetUpdatePermission = false;
     const response = await readRemoteControl();
