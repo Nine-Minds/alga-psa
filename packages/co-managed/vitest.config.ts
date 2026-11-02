@@ -22,6 +22,7 @@ export default defineConfig({
       { find: /^@alga-psa\/authorization$/, replacement: pkg('authorization') },
       { find: /^@alga-psa\/authorization\/(.*)$/, replacement: path.resolve(__dirname, '../authorization/src/$1') },
       { find: /^@alga-psa\/types$/, replacement: pkg('types') },
+      { find: /^@alga-psa\/tickets\/(.*)$/, replacement: path.resolve(__dirname, '../tickets/src/$1') },
       { find: /^@alga-psa\/licensing$/, replacement: pkg('licensing') },
       { find: /^@alga-psa\/licensing\/(.*)$/, replacement: path.resolve(__dirname, '../licensing/src/$1') },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, '../../shared/$1') },

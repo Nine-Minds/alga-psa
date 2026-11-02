@@ -23,22 +23,14 @@ import {
   booleanTransform,
   numberTransform
 } from './common';
+import { INVOICE_STATUSES } from '../../invoices/invoiceStatusPolicy';
 
 // ============================================================================
 // Base Invoice Schemas
 // ============================================================================
 
 // Invoice status enum
-const invoiceStatusSchema = z.enum([
-  'draft',
-  'sent', 
-  'paid',
-  'overdue',
-  'cancelled',
-  'pending',
-  'prepayment',
-  'partially_applied'
-]);
+const invoiceStatusSchema = z.enum(INVOICE_STATUSES);
 
 const recurringExecutionWindowKindSchema = z.enum([
   'client_cadence_window',
@@ -205,9 +197,21 @@ const createInvoiceSchema = baseInvoiceSchema.omit({
 // tax source from the client/tenant default, while an existing one may be
 // switched (any direction on a draft; internal -> pending_external on a
 // finalized invoice that has not been exported).
-const updateInvoiceSchema = createUpdateSchema(createInvoiceSchema).extend({
+// The editable set is an explicit allowlist (INVOICE_UPDATE_FIELDS); lifecycle,
+// identity and monetary fields are owned by dedicated commands. Strict so that a
+// PUT carrying e.g. {"status":"paid"} is a 400 naming the key, never a silent no-op 200.
+// Never use omit here: it would fail open when a column is added.
+const updateInvoiceSchema = createUpdateSchema(
+  createInvoiceSchema.pick({
+    payment_method: true,
+    billing_profile_id: true,
+    due_date: true,
+    invoice_date: true,
+    items: true,
+  })
+).extend({
   tax_source: z.enum(['internal', 'external', 'pending_external']).optional(),
-});
+}).strict();
 
 // Invoice response schema
 const invoiceResponseSchema = baseInvoiceSchema.merge(baseEntitySchema).extend({
@@ -549,7 +553,8 @@ const updateInvoiceAnnotationSchema = createUpdateSchema(createInvoiceAnnotation
 const bulkInvoiceStatusUpdateSchema = z.object({
   invoice_ids: z.array(uuidSchema).min(1).max(100),
   status: invoiceStatusSchema,
-  finalized_at: invoiceDateSchema.optional()
+  // Workflow-controlled: finalization has its own command.
+  finalized_at: z.never({ message: 'finalized_at cannot be set through bulk status update; use the finalize command' }).optional()
 });
 
 // Bulk invoice send

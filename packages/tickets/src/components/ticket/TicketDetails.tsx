@@ -38,6 +38,7 @@ import { TicketExternalLinksSection } from "./TicketExternalLinksSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import type { CommentEmailRecipientsPayload } from "./CommentEmailRecipientsControl";
+import type { ComposerAudience, NativeComposerAudience } from "./CommentAudienceControl";
 import { TicketActivityTimeline } from "./TicketActivityTimeline";
 import { useInboundEmailViewPreference } from "../../hooks/useInboundEmailViewPreference";
 import { useSession } from 'next-auth/react';
@@ -191,7 +192,7 @@ interface TicketDetailsProps {
         changes: Record<string, unknown>,
         options?: Partial<TicketNotificationSuppressionValue> & { propagateToChildren?: boolean }
     ) => Promise<boolean>;
-    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null, emailRecipients?: CommentEmailRecipientsPayload) => Promise<boolean>;
+    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null, emailRecipients?: CommentEmailRecipientsPayload, audienceId?: ComposerAudience | null) => Promise<boolean>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     /**
      * Additive notification fired after a user edit was saved successfully (field change,
@@ -702,6 +703,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         suppression: TicketNotificationSuppressionValue,
         isInternal: boolean = false,
         emailRecipients?: CommentEmailRecipientsPayload,
+        audienceId?: NativeComposerAudience | null,
     ): Promise<boolean> => {
         const ticketId = ticket.ticket_id;
         if (!ticketId) {
@@ -723,6 +725,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         // The close email carries these; see the email
                         // subscriber's closes_ticket handling.
                         emailRecipients,
+                        audienceId,
                     );
                     if (isReturnedActionError(result)) {
                         throw result;
@@ -2046,6 +2049,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         options?: TicketNotificationSuppressionValue,
         schedule?: { publishAt: string; timeZone: string } | null,
         emailRecipients?: CommentEmailRecipientsPayload,
+        audienceId?: ComposerAudience | null,
     ): Promise<boolean> => {
         // Check if content is empty
         const contentStr = JSON.stringify(newCommentContent);
@@ -2096,6 +2100,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     willCloseTicket,
                     schedule,
                     emailRecipients,
+                    audienceId,
                 );
                 // An unconfirmed publish (rejected or unknown outcome) has already been
                 // reported by the handler; keep the composer and its draft intact.
@@ -2170,7 +2175,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                             scheduled_publish_tz: schedule.timeZone,
                         } : {}),
                         // See email-subscriber suppression note above.
-                        ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {})
+                        ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {}),
+                        ...(audienceId ? { collaboration_audience: audienceId } : {})
                     }, emailRecipients);
                     if (isReturnedActionError(newComment)) {
                         handleTicketActionError(newComment, t('messages.addCommentFailed', 'Failed to add comment'));
@@ -2983,6 +2989,7 @@ const handleClose = () => {
         suppression: TicketNotificationSuppressionValue,
         isInternal: boolean = false,
         emailRecipients?: CommentEmailRecipientsPayload,
+        audienceId?: NativeComposerAudience | null,
     ) => {
         if (!ticket.ticket_id || !closedStatusOptions.some((option) => option.value === statusId)) {
             toast.error(t('messages.closeFailed', 'Failed to close ticket'));
@@ -3003,6 +3010,7 @@ const handleClose = () => {
                     suppression,
                     isInternal,
                     emailRecipients,
+                    audienceId,
                 );
                 if (!resolutionAdded) {
                     return false;

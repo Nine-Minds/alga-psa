@@ -15,6 +15,8 @@ import {
   type ManualInvoiceItem,
   type ManualInvoiceResult,
 } from './manualInvoiceActions';
+// L6a1/T0-2 seam stand-in (timeEntryWorkContext): shared work is resolved only when a contributor serves the tenant.
+import { resolveContributedWorkItem } from '../lib/billing/timeEntryWorkContext';
 
 /**
  * Quick invoice a ticket.
@@ -135,6 +137,23 @@ async function loadTicket(knex: Knex, tenant: string, ticketId: string): Promise
 }
 
 /**
+ * The work the time of a quick invoice hangs off. Native: the MSP's own ticket. L6a1/T0-2 seam stand-in:
+ * when no native ticket matches, a serving contributor (co-managed shared ticket) may own the id, in which
+ * case the time is `work_item_type = <contributed type>` on its local work item and the invoice carries no
+ * `ticket_id` (that column is a foreign key into this tenant's own tickets).
+ */
+async function loadQuickInvoiceWork(knex: Knex, tenant: string, ticketId: string) {
+  const ticket = await loadTicket(knex, tenant, ticketId);
+  if (ticket) return { ticket, workItemType: 'ticket', workItemId: ticket.ticket_id, invoiceTicketId: ticket.ticket_id as string | undefined };
+  const shared = await resolveContributedWorkItem(knex, tenant, ticketId);
+  if (!shared) return null;
+  return {
+    ticket: { ticket_id: ticketId, client_id: shared.clientId, ticket_number: shared.ticketNumber, title: shared.title } as TicketRow,
+    workItemType: shared.workItemType, workItemId: shared.workItemId, invoiceTicketId: undefined as string | undefined,
+  };
+}
+
+/**
  * Unbilled, billable ticket items for the quick-invoice dialog.
  *
  * Time: approved, positively-billable, unbilled entries tied to this ticket.
@@ -150,8 +169,9 @@ export const getTicketBillableItems = withAuth(async (
       return permissionError('Permission denied: Cannot read ticket billable items');
     }
     const { knex } = await createTenantKnex();
-    const ticket = await loadTicket(knex, tenant, ticketId);
-    if (!ticket) {
+    const work = await loadQuickInvoiceWork(knex, tenant, ticketId);
+    const ticket = work?.ticket;
+    if (!work || !ticket) {
       return actionError('That ticket no longer exists.', 'msp/invoicing:quickInvoice.errors.ticketNotFound');
     }
 
@@ -161,8 +181,8 @@ export const getTicketBillableItems = withAuth(async (
     db.tenantJoin(timeQuery, 'service_catalog as sc', 'sc.service_id', 'te.service_id', { type: 'left' });
     const timeRows = await timeQuery
       .where({
-        'te.work_item_type': 'ticket',
-        'te.work_item_id': ticketId,
+        'te.work_item_type': work.workItemType,
+        'te.work_item_id': work.workItemId,
         'te.invoiced': false,
         'te.approval_status': 'APPROVED',
       })
@@ -269,8 +289,9 @@ export const generateTicketInvoice = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const ticket = await loadTicket(knex, tenant, input.ticketId);
-  if (!ticket) {
+  const work = await loadQuickInvoiceWork(knex, tenant, input.ticketId);
+  const ticket = work?.ticket;
+  if (!work || !ticket) {
     return {
       success: false,
       code: 'CLIENT_NOT_FOUND',
@@ -299,8 +320,8 @@ export const generateTicketInvoice = withAuth(async (
     : await timeQuery
         .whereIn('te.entry_id', timeEntryIds)
         .where({
-          'te.work_item_type': 'ticket',
-          'te.work_item_id': input.ticketId,
+          'te.work_item_type': work.workItemType,
+          'te.work_item_id': work.workItemId,
           'te.invoiced': false,
           'te.approval_status': 'APPROVED',
         })
@@ -381,7 +402,7 @@ export const generateTicketInvoice = withAuth(async (
   return generateManualInvoice({
     clientId: ticket.client_id,
     items,
-    ticket_id: ticket.ticket_id,
+    ticket_id: work.invoiceTicketId,
     currency_code: currencyCode,
   });
 });

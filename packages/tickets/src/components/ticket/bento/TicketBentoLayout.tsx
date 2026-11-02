@@ -1,5 +1,6 @@
 'use client';
 
+import type { ComposerAudience } from '../CommentAudienceControl';
 import React, { Suspense, useRef } from 'react';
 import type { PartialBlock } from '@blocknote/core';
 import { User, Clock, Users, Pencil, ClipboardList } from 'lucide-react';
@@ -150,6 +151,7 @@ export interface TicketBentoLayoutProps {
     options?: TicketNotificationSuppressionValue,
     schedule?: { publishAt: string; timeZone: string } | null,
     emailRecipients?: CommentEmailRecipientsPayload,
+    audienceId?: ComposerAudience | null,
   ) => Promise<boolean>;
   closedStatusOptions?: { value: string; label: string }[];
   // Comment affordances on timeline nodes (reactions, edit, delete).

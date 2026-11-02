@@ -2,6 +2,30 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-10-28 — Duplicate time sheets blocked per user and period
+
+**Affected endpoint:** `POST /api/v1/time-sheets`
+
+A time sheet is now unique per **tenant + effective owner + period**, where the effective owner is `user_id` from the body, or the caller when it is omitted (an explicit `user_id` equal to the caller is the same owner). The rule applies to sheets in every approval status, not only `DRAFT`, and is enforced by a database unique index as well as the endpoint.
+
+**Changes:**
+
+- The first `POST` for an owner and period is unchanged: `201` with the detailed time sheet payload.
+- A further `POST` for the same owner and period (including a concurrent loser) creates nothing and returns `409`:
+  ```json
+  {
+    "error": {
+      "code": "CONFLICT",
+      "message": "A time sheet already exists for this user and period"
+    }
+  }
+  ```
+- Previously it created an additional `DRAFT` sheet. Authorization is checked first: a caller without act-on-behalf rights for another `user_id` still gets `403`, never `409`.
+- **Client recovery:** `GET /api/v1/time-sheets` filtered by `user_id` and `period_id` (when authorized) returns the existing sheet.
+- The existing sheet's id, status, entries, comments and review history are preserved; a rejected duplicate request never resets it to `DRAFT`.
+
+**Migration note:** On upgrade, surplus empty duplicate `DRAFT` sheets (no entries, comments, change requests or submission/approval data) are removed, keeping the sheet with history, or the lowest id when all are empty. If any owner and period holds two or more sheets with history, the migration stops without changing data and lists them for manual reconciliation.
+
 ## 2026-10-27 — Asset maintenance schedule request contract corrected
 
 **Affected endpoints:** `POST /api/v1/assets/{id}/maintenance`, `PUT /api/v1/assets/maintenance/{scheduleId}`

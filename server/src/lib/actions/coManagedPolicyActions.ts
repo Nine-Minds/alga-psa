@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { CapabilityUnavailableError, requireCapabilityForAction } from '@alga-psa/core/capability/server';
+import { CapabilityUnavailableError, requireCapabilityEitherMode } from '@alga-psa/core/capability/server';
 import { CoManagedPolicyError, coManagedDisplayName, requireCoManagedPolicyReader, evaluateCoManagedAccess, getCoManagedCollaborationPolicy, hasCoManagedLocalPermission,
   loadCoManagedLifecycleFacts, loadCoManagedStaffRoles, replaceCoManagedCustomerScope, replaceCoManagedStaffAssignments,
   type CoManagedCustomerScope, type CoManagedStaffAssignment } from '@alga-psa/co-managed';
@@ -33,16 +33,8 @@ type Held = 'admits' | 'serves';
  */
 function withCoManagedHeld<A extends unknown[], R>(work: (user: IUserWithRoles, ctx: { tenant: string; held: Held }, ...args: A) => Promise<R>) {
   return withAuth(async (user, { tenant }, ...args: A) => {
-    // LEVERAGE: pattern capability-either-mode — a two-sided action needs "whichever mode holds"; a second such action should extract an adapter next to requireCapabilityForAction (and teach the entry-point contract about it).
-    // `admits` first and short-circuiting: an admitted sponsor needs no participation read, and a forced-off or flag-off
-    // non-participating tenant is refused here, before any co-managed table is read.
-    let held: Held = 'admits';
-    try { await requireCapabilityForAction('co-managed', tenant, 'admits'); }
-    catch (error) {
-      if (!(error instanceof CapabilityUnavailableError)) throw error;
-      held = 'serves';
-      await requireCapabilityForAction('co-managed', tenant, 'serves');
-    }
+    // `admits` first and short-circuiting: a forced-off or flag-off non-participating tenant is refused before any co-managed table is read.
+    const held: Held = await requireCapabilityEitherMode('co-managed', tenant);
     return work(user, { tenant, held }, ...args);
   });
 }
