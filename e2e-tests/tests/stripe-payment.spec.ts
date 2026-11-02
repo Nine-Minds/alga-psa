@@ -1,6 +1,7 @@
 import { test as providerTest, expect } from '../fixtures/emulators';
 import { signIn, signInPortal } from '../fixtures/auth';
 import { createPaymentFixture } from '../fixtures/payment';
+import { buildTenantPortalSlug } from '../../shared/utils/tenantSlug';
 
 type PaymentFixture = Awaited<ReturnType<typeof createPaymentFixture>>;
 type Session = { id: string; amount_total: number; payment_status: string; status: string; payment_intent: string | null; metadata: { invoice_id: string; tenant_id: string } };
@@ -34,6 +35,7 @@ const test = providerTest.extend<{ payment: PaymentFixture }>({
     }, { timeout: 15_000 }).toBe('acct_algasim');
     // Portal tests reuse this page, so leave the admin session through the
     // supported portal-switch flow before yielding it to them.
+    await page.goto(`/auth/client-portal/signin?tenant=${buildTenantPortalSlug(fixture.tenant.tenantId)}`);
     await page.getByRole('button', { name: 'Sign Out and Switch to Client Portal' }).click();
     await expect(page.locator('[data-automation-id="client-email-field"]')).toBeVisible();
     await testInfo.attach('payment-identities', { body: JSON.stringify(fixture), contentType: 'application/json' });
