@@ -84,6 +84,21 @@ const BUILT_IN_CATALOG_SEEDS: BuiltInCatalogSeed[] = [
     actionIds: ['assets.find_associated_tickets']
   },
   {
+    groupKey: 'maintenance',
+    label: 'Maintenance',
+    iconToken: 'maintenance',
+    tileKind: 'core-object',
+    description: 'Find asset maintenance, create linked tickets, complete or skip occurrences, and pause or resume plans.',
+    defaultActionId: 'assets.get_maintenance',
+    actionIds: [
+      'assets.get_maintenance',
+      'assets.create_maintenance_ticket',
+      'assets.complete_maintenance',
+      'assets.skip_maintenance',
+      'assets.set_maintenance_paused',
+    ],
+  },
+  {
     groupKey: 'contact',
     label: 'Contact',
     iconToken: 'contact',

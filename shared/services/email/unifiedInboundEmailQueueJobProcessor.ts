@@ -1,3 +1,4 @@
+import { isInboundRetryLaterError } from './inboundRetryLaterError';
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { INBOUND_MIME_PARSE_OPTIONS } from './inboundMimeParseOptions';
@@ -910,6 +911,13 @@ async function insertProcessingRecord(params: {
   }
 }
 
+async function releaseProcessingRecord(params: { job: UnifiedInboundEmailQueueJob; externalIdentity: string }): Promise<void> {
+  const db = await getAdminConnection();
+  await tenantDb(db, params.job.tenantId).table('email_processed_messages')
+    .where({ message_id: params.externalIdentity, provider_id: params.job.providerId, processing_status: 'processing' })
+    .delete();
+}
+
 async function updateProcessingRecord(params: {
   job: UnifiedInboundEmailQueueJob;
   externalIdentity: string;
@@ -1202,6 +1210,12 @@ export async function processUnifiedInboundEmailQueueJob(
       });
     } catch (error: any) {
       recordMessageOutcome({ providerType: job.provider, outcome: 'failed', reason: 'error' });
+      if (isInboundRetryLaterError(error)) {
+        // Not a verdict on the message: drop its processing record so the queue retry re-runs it
+        // instead of being deduped against a 'failed' row.
+        await releaseProcessingRecord({ job, externalIdentity });
+        throw error;
+      }
       await updateProcessingRecord({
         job,
         externalIdentity,

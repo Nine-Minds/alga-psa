@@ -70,6 +70,7 @@ import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
 import { useProjectDataSource } from '../context/ProjectDataSourceContext';
 import { computeTaskEditChanges, refusedFieldLabels, taskEditSignature } from '../lib/taskEditChanges';
+import { useProjectEffortIntegration } from '../context/ProjectEffortIntegrationContext';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
 import { useSchedulingCallbacks, useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
@@ -161,6 +162,7 @@ export default function TaskForm({
   // Read 'en-US' outright, so it stayed American in every locale.
   const { formatDate } = useFormatters();
   const billingIntegration = useProjectBillingIntegration();
+  const effortIntegration = useProjectEffortIntegration();
   const projectSource = useProjectDataSource();
   const taskTypeLabel = useTaskTypeLabel();
   const screen = projectSource.screen;
@@ -2511,6 +2513,9 @@ export default function TaskForm({
               pendingMode
             />
           )}
+
+          {/* Effort split (customer / MSP / combined); the slot is null unless the workspace serves co-managed. */}
+          {mode === 'edit' && task?.task_id && effortIntegration && <effortIntegration.TaskEffort taskId={task.task_id} />}
 
           {/* Full width Associated Tickets section */}
           {!sharedMode && <TaskTicketLinks

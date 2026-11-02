@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { getConnection } from '@/lib/db/db';
 import { resolveIdpFromPreset, type IdpKind } from './idpPresets';
+import { isUsableAudience, MISSING_AUDIENCE_MESSAGE } from './audience';
 import { listBuiltinIssuers } from './idpBuiltins';
 
 /**
@@ -191,6 +192,9 @@ export interface TrustedIdpInput {
 /** Add/update a trusted IdP, resolving presets (issuer + JWKS via OIDC discovery). Returns the stored row. */
 export async function addTrustedIdp(input: TrustedIdpInput): Promise<TrustedIdp> {
   const kind = input.kind ?? 'custom';
+  // Refuse before any discovery call; applies to every kind.
+  if (!isUsableAudience(input.audience)) throw new Error(MISSING_AUDIENCE_MESSAGE);
+  const audience = input.audience.trim();
   const resolved = await resolveIdpFromPreset(kind, {
     entraTenantId: input.entraTenantId,
     issuer: input.issuer,
@@ -203,7 +207,7 @@ export async function addTrustedIdp(input: TrustedIdpInput): Promise<TrustedIdp>
     const db = tenantDb(knex, input.tenant);
     const fields = {
       jwks_uri: resolved.jwksUri,
-      audience: input.audience ?? null,
+      audience,
       subject_claim: resolved.subjectClaim,
       kind,
       entra_tenant_id: input.entraTenantId ?? null,

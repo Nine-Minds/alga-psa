@@ -6,6 +6,7 @@ import { aggregateReactions, validateEmoji } from '@alga-psa/types';
 import type { IReactionsBatchResult } from '@alga-psa/types';
 import { isClientUserType } from '@alga-psa/types';
 import { authorizeTicketRecordAccessConcealed } from '../../lib/ticketRecordAuthorization';
+import { findReactionComment } from '../../lib/commentReactionResolver';
 import { publishTicketUpdate } from '../../lib/liveUpdates';
 
 function formatLiveUpdateDisplayName(user: any): string {
@@ -27,9 +28,7 @@ export const toggleCommentReaction = withAuth(async (
   const userId = user.user_id;
 
   return withTransaction(db, async (trx) => {
-    const comment = await tenantDb(trx, tenant).table('comments')
-      .where({ comment_id: commentId })
-      .first();
+    const comment = await findReactionComment(trx, tenant, commentId);
 
     if (isClientUserType(user.user_type)) {
       // Reacting writes to the ticket's thread: a client must be able to see that ticket.

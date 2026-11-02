@@ -19,7 +19,7 @@ import { toPlainDate } from '@alga-psa/core';
 import {
   timeSheetApprovalViewSchema,
   timeSheetCommentSchema,
-  timeEntrySchema,
+  timeEntryReadSchema,
   timeSheetViewSchema
 } from '../schemas/timeSheet.schemas';
 import { WorkItemType } from '@alga-psa/types';
@@ -450,7 +450,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, ti
       work_timezone: entry.work_timezone
     }));
 
-    return validateArray(timeEntrySchema, formattedEntries) as ITimeEntry[];
+    return validateArray(timeEntryReadSchema, formattedEntries) as ITimeEntry[];
   } catch (error) {
     console.error('Error fetching time entries for time sheet:', error);
     const expected = timeSheetActionErrorFrom(error);

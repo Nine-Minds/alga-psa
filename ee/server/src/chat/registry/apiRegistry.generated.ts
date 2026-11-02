@@ -21493,7 +21493,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices/bulk",
     "displayName": "Bulk update invoice status",
     "summary": "Bulk update invoice status",
-    "description": "Bulk status transition route using bulkInvoiceStatusUpdateSchema.",
+    "description": "Bulk status transition route using bulkInvoiceStatusUpdateSchema. Only metadata transitions are applied; paid, cancelled and finalize transitions are reported as per-invoice errors naming the dedicated command. finalized_at is not accepted.",
     "tags": [
       "Invoices"
     ],
@@ -21523,9 +21523,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "prepayment",
             "partially_applied"
           ]
-        },
-        "finalized_at": {
-          "type": "string"
         }
       },
       "required": [
@@ -48385,7 +48382,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "project_task",
             "non_billable_category",
             "ad_hoc",
-            "interaction"
+            "interaction",
+            "co_managed"
           ]
         },
         "start_time": {
@@ -48640,7 +48638,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "project_task",
                   "non_billable_category",
                   "ad_hoc",
-                  "interaction"
+                  "interaction",
+                  "co_managed"
                 ]
               },
               "start_time": {
@@ -48764,7 +48763,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "project_task",
                       "non_billable_category",
                       "ad_hoc",
-                      "interaction"
+                      "interaction",
+                      "co_managed"
                     ]
                   },
                   "start_time": {
@@ -49642,7 +49642,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "project_task",
             "non_billable_category",
             "ad_hoc",
-            "interaction"
+            "interaction",
+            "co_managed"
           ]
         },
         "start_time": {
@@ -50599,7 +50600,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets",
     "displayName": "Create time sheet",
     "summary": "Create time sheet",
-    "description": "Creates time sheet via create() path.",
+    "description": "Creates a time sheet. A time sheet is unique per tenant, effective owner (`user_id`, defaulting to the caller) and `period_id`, in every approval status. The first request returns 201 with a DRAFT sheet; a request for a user and period that already has a sheet returns 409 CONFLICT (\"A time sheet already exists for this user and period\") and changes nothing. To recover, GET /api/v1/time-sheets filtered by `user_id` and `period_id`.",
     "tags": [
       "Work Management v1"
     ],
@@ -51051,6 +51052,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "non_billable_category",
                         "ad_hoc",
                         "interaction",
+                        "co_managed",
                         null
                       ]
                     },
@@ -51609,6 +51611,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "non_billable_category",
                   "ad_hoc",
                   "interaction",
+                  "co_managed",
                   null
                 ]
               },
