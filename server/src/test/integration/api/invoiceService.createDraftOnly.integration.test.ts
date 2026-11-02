@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
 import { TestContext } from '../../../../test-utils/testContext';
 import { ensureDefaultBillingSettings } from '../../../../test-utils/billingTestHelpers';
 
@@ -23,6 +24,7 @@ vi.mock('@/lib/auth/rbac', () => ({
 
 import { v4 as uuidv4 } from 'uuid';
 import { setupCommonMocks } from '../../../../test-utils/testMocks';
+import { ApiInvoiceController } from '@/lib/api/controllers/ApiInvoiceController';
 import { InvoiceService } from '@/lib/api/services/InvoiceService';
 import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
 
@@ -62,6 +64,49 @@ describe('POST /api/v1/invoices (InvoiceService.create) is draft-only', () => {
     vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: context.db, tenant: context.tenantId });
     return service;
   }
+
+  class TestInvoiceController extends ApiInvoiceController {
+    protected async authenticate(req: NextRequest) {
+      return Object.assign(req, { context: ctx() }) as any;
+    }
+
+    protected async checkPermission(_req: any, action: string) {
+      expect(action).toBe('create');
+    }
+
+    protected runWithApiKeyContext<T>(_req: any, callback: () => Promise<T>): Promise<T> {
+      return callback();
+    }
+  }
+
+  function controllerUnderTest() {
+    const controller = new TestInvoiceController();
+    // Keep the controller's real schema and InvoiceService.create, but direct
+    // the service to this integration test's transaction-scoped database.
+    vi.spyOn((controller as any).invoiceService, 'getKnex')
+      .mockResolvedValue({ knex: context.db, tenant: context.tenantId });
+    return controller;
+  }
+
+  function postInvoice(body: Record<string, unknown>) {
+    const controller = controllerUnderTest();
+    const request = new NextRequest('http://localhost/api/v1/invoices', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return controller.create()(request);
+  }
+
+  function duplicateInvoice(invoiceId: string) {
+    const controller = controllerUnderTest();
+    const request = new NextRequest(`http://localhost/api/v1/invoices/${invoiceId}/duplicate`, {
+      method: 'POST',
+    });
+    (request as any).params = Promise.resolve({ id: invoiceId });
+    return controller.duplicate()(request);
+  }
+
   const ctx = () => ({
     tenant: context.tenantId,
     userId: context.userId,
@@ -85,6 +130,73 @@ describe('POST /api/v1/invoices (InvoiceService.create) is draft-only', () => {
     expect(error).toMatchObject({ statusCode: 400, message: expect.stringContaining('status') });
     expect(handleApiError(error).status).toBe(400);
     expect(await invoiceCount()).toBe(baselineCount);
+  });
+
+  it('POST rejects a non-draft status through the controller without writing an invoice', async () => {
+    const response = await postInvoice({
+      ...base(), status: 'sent', subtotal: 0, tax: 0, total_amount: 0,
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { message: expect.stringContaining('status') } });
+    expect(await invoiceCount()).toBe(baselineCount);
+  });
+
+  it('POST rejects non-zero credit through the controller without writing an invoice', async () => {
+    const response = await postInvoice({ ...base(), credit_applied: 25 });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { message: expect.stringContaining('credit_applied') } });
+    expect(await invoiceCount()).toBe(baselineCount);
+  });
+
+  it('POST creates an authorized draft through the controller, schema, and service', async () => {
+    const response = await postInvoice({
+      ...base(),
+      status: 'draft',
+      credit_applied: 0,
+      subtotal: 999999,
+      tax: 123456,
+      total_amount: 1,
+      items: [{ description: 'HTTP work', quantity: 2, unit_price: 750, rate: 750, tax_amount: 0 }],
+    });
+
+    expect(response.status).toBe(201);
+    const { data } = await response.json();
+    const header = await headerOf(data.invoice_id);
+    const charges = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: data.invoice_id });
+    const net = charges.reduce((sum: number, charge: any) => sum + Number(charge.net_amount), 0);
+    const tax = charges.reduce((sum: number, charge: any) => sum + Number(charge.tax_amount), 0);
+
+    expect(header.status).toBe('draft');
+    expect(Number(header.credit_applied)).toBe(0);
+    expect(Number(header.subtotal)).toBe(net);
+    expect(Number(header.tax)).toBe(Math.round(tax));
+    expect(Number(header.total_amount)).toBe(Math.round(net + tax));
+  });
+
+  it('POST duplicate endpoint creates a new draft with zero credit and charge-derived totals', async () => {
+    const created = await serviceUnderTest().create({
+      ...base(), items: [{ description: 'Duplicate source', quantity: 1, unit_price: 2300 }],
+    } as any, ctx());
+
+    const response = await duplicateInvoice((created as any).invoice_id);
+
+    expect(response.status).toBe(201);
+    const { data } = await response.json();
+    const header = await headerOf(data.invoice_id);
+    const charges = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: data.invoice_id });
+    const derived = charges.reduce((sum: number, charge: any) =>
+      sum + Number(charge.net_amount) + Number(charge.tax_amount), 0);
+
+    expect(header.invoice_id).not.toBe((created as any).invoice_id);
+    expect(header.status).toBe('draft');
+    expect(header.is_manual).toBe(true);
+    expect(Number(header.credit_applied)).toBe(0);
+    expect(charges.length).toBeGreaterThan(0);
+    expect(Number(header.total_amount)).toBe(Math.round(derived));
   });
 
   it('a non-zero credit_applied is a 400 and creates nothing', async () => {
