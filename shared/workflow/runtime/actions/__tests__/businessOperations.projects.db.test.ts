@@ -27,6 +27,16 @@ const runtimeState = vi.hoisted(() => ({
   tenantId: '',
   actorUserId: '',
   deniedPermissions: new Set<string>(),
+  rejectProjectBundleResolution: false,
+}));
+
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  resolveBundleNarrowingRulesForEvaluation: async () => {
+    if (runtimeState.rejectProjectBundleResolution) {
+      throw new Error('project bundle store unavailable');
+    }
+    return [];
+  },
 }));
 
 vi.mock('../businessOperations/shared', async (importOriginal) => {
@@ -1786,6 +1796,40 @@ describe('project business operation db actions', () => {
     });
     expect(searchTasks.total).toBe(1);
     expect(searchTasks.tasks[0].project_id).toBe(projectA);
+  });
+
+  it('fails project record reads when bundle rule resolution rejects', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    const projectId = await createProject(db, runtimeState.tenantId, {
+      name: 'Bundle Failure Record Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '98',
+    });
+    runtimeState.rejectProjectBundleResolution = true;
+    try {
+      await expect(invokeAction('projects.find', { project_id: projectId })).rejects.toBeDefined();
+    } finally {
+      runtimeState.rejectProjectBundleResolution = false;
+    }
+  });
+
+  it('fails project list reads when bundle rule resolution rejects', async () => {
+    const entity = await createClientOrCompany(db, runtimeState.tenantId);
+    await createProject(db, runtimeState.tenantId, {
+      name: 'Bundle Failure List Project',
+      clientOrCompanyId: entity.clientId,
+      wbsCode: '97',
+    });
+    runtimeState.rejectProjectBundleResolution = true;
+    try {
+      await expect(invokeAction('projects.search', {
+        query: 'Bundle Failure List Project',
+        page: 1,
+        page_size: 25,
+      })).rejects.toBeDefined();
+    } finally {
+      runtimeState.rejectProjectBundleResolution = false;
+    }
   });
 
   it('T025: projects.create_task remains registered and can create tasks after project action expansion', async () => {
