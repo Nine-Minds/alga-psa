@@ -862,12 +862,19 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
 
         // Structural child data inherits parent-asset authorization. Linked ticket/document data
         // additionally intersects with their own resource-family authorization.
-        const [maintenanceReport, history, tickets, documents] = await Promise.all([
+        const [rawMaintenanceReport, rawHistory, tickets, documents] = await Promise.all([
             fetchAssetMaintenanceReport(trx, tenant, asset_id),
             fetchAssetHistory(trx, tenant, asset_id),
             canReadTickets ? fetchAssetLinkedTickets(trx, tenant, asset_id, context) : Promise.resolve([]),
             canReadDocuments ? fetchAssetDocuments(trx, tenant, asset_id, assetRecord.client_id ?? null, 15, context) : Promise.resolve([])
         ]);
+        const maintenanceReport = projectAssetReadFields(
+            { maintenanceReport: rawMaintenanceReport }, decision.redactedFields
+        ).maintenanceReport;
+        const history = rawHistory.map((entry) => ({
+            ...entry,
+            changes: projectAssetReadFields(entry.changes, decision.redactedFields),
+        }));
 
         return {
             asset: formattedAsset,

@@ -30,6 +30,7 @@ const h = vi.hoisted(() => {
   const TENANT = 'a0000000-0000-4000-8000-00000000000a';
 
   const dbState: Record<string, Row[]> = {};
+  const readDecisions: Record<string, { allowed: boolean; redactedFields: string[] }> = {};
   let uuidCounter = 0;
 
   const nextUuid = () => {
@@ -55,12 +56,16 @@ const h = vi.hoisted(() => {
       { tenant: TENANT, status_id: 'st-retired', slug: 'retired', label: 'Retired', kind: 'archived', is_builtin: true, is_active: true, display_order: 4 },
     ];
     uuidCounter = 0;
+    for (const key of Object.keys(readDecisions)) delete readDecisions[key];
   };
 
   const stripPrefix = (key: string) => (key.includes('.') ? key.split('.').pop()! : key);
 
   class QB {
     private readonly table: string;
+    private countMode = false;
+    private rowLimit?: number;
+    private rowOffset = 0;
     private objWheres: Array<Record<string, any>> = [];
     private inWheres: Array<{ col: string; vals: any[] }> = [];
 
@@ -89,6 +94,12 @@ const h = vi.hoisted(() => {
     orWhere() { return this; }
     whereIn(col: string, vals: any[]) { this.inWheres.push({ col: stripPrefix(col), vals }); return this; }
     select(..._cols: any[]) { return this; }
+    modify(callback: (query: any) => void) { callback(this); return this; }
+    count() { this.countMode = true; return this; }
+    sum() { return this; }
+    groupBy() { return this; }
+    limit(value: number) { this.rowLimit = value; return this; }
+    offset(value: number) { this.rowOffset = value; return this; }
     private nullWheres: Array<{ col: string; isNull: boolean }> = [];
     whereNull(col: string) { this.nullWheres.push({ col: stripPrefix(col), isNull: true }); return this; }
     whereNotNull(col: string) { this.nullWheres.push({ col: stripPrefix(col), isNull: false }); return this; }
@@ -114,7 +125,7 @@ const h = vi.hoisted(() => {
       return this.filtered().map((row) => ({ ...row }));
     }
 
-    first() { return Promise.resolve(this.detached()[0]); }
+    first() { return Promise.resolve(this.countMode ? { count: String(this.filtered().length) } : this.detached()[0]); }
 
     insert(data: Row | Row[]) {
       const incoming = (Array.isArray(data) ? data : [data]).map((row) => {
@@ -148,7 +159,10 @@ const h = vi.hoisted(() => {
     }
 
     then(resolve: (value: any) => void, reject?: (reason: unknown) => void) {
-      return Promise.resolve(this.detached()).then(resolve, reject);
+      let rows = this.detached();
+      if (this.rowOffset) rows = rows.slice(this.rowOffset);
+      if (this.rowLimit !== undefined) rows = rows.slice(0, this.rowLimit);
+      return Promise.resolve(rows).then(resolve, reject);
     }
 
     catch(onReject: (reason: unknown) => any) {
@@ -188,14 +202,14 @@ const h = vi.hoisted(() => {
     roles: [{ role_id: 'role-1' }],
   };
 
-  return { TENANT, dbState, knexMock, mockUser, resetDb };
+  return { TENANT, dbState, knexMock, mockUser, readDecisions, resetDb };
 });
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn(h.mockUser, { tenant: h.TENANT }, ...args),
-  hasPermission: vi.fn(async () => true),
+  hasPermission: vi.fn(async (_user: unknown, resource?: string) => resource === undefined || resource === 'asset'),
   localizeActionError: vi.fn(async (value: unknown) => value),
 }));
 
@@ -235,17 +249,24 @@ vi.mock('@alga-psa/authorization/kernel', () => ({
     constructor(_opts: unknown) {}
   },
   RequestLocalAuthorizationCache: class {},
-  createAuthorizationKernel: () => ({ authorizeResource: async () => ({ allowed: true }) }),
+  createAuthorizationKernel: () => ({ authorizeResource: async (input: any) => h.readDecisions[input.resource.id] ?? { allowed: true, redactedFields: [] } }),
 }));
 
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),
 }));
 
-vi.mock('@alga-psa/authorization/pagination', () => ({ buildAuthorizationAwarePage: vi.fn() }));
+vi.mock('@alga-psa/authorization/pagination', () => ({
+  buildAuthorizationAwarePage: async (input: any) => {
+    const result = await input.fetchPage(1, Math.max(input.limit, input.scanLimit ?? 100));
+    const data = [];
+    for (const row of result.data) if (await input.authorizeRecord(row)) data.push(row);
+    return { data: data.slice(0, input.limit), total: data.length };
+  },
+}));
 vi.mock('../lib/assetFactsService', () => ({ listAvailableAssetFactsForAsset: vi.fn(async () => []) }));
 
-import { bulkUpdateAssets, createAsset, getAsset, updateAsset } from './assetActions';
+import { bulkUpdateAssets, createAsset, getAsset, getAssetDetailBundle, listAssets, updateAsset } from './assetActions';
 
 function seedAsset(overrides: Row = {}): Row {
   const row: Row = {
@@ -381,6 +402,58 @@ describe('getAsset returns the normalised Asset (alga0002283 root cause)', () =>
 
     expect(asset.network_device.power_draw_watts).toBe(0);
     expect(typeof asset.network_device.power_draw_watts).toBe('number');
+  });
+});
+
+describe('asset read redaction boundaries', () => {
+  it('projects getAsset fields and preserves unrestricted values; denial still returns an action error', async () => {
+    seedAsset({ asset_type: 'workstation', contact_name_id: 'contact-1', contact_name: 'Contact Secret', serial_number: 'BASE-SECRET' });
+    seedWorkstation({ serial_number: 'EXT-SECRET' });
+    h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: ['contact_name_id', 'workstation.serial_number'] };
+    const redacted = await getAsset(ASSET_ID) as any;
+    expect(redacted.contact_name_id).toBeUndefined();
+    expect(redacted.contact_name).toBeUndefined();
+    expect(redacted.workstation.serial_number).toBeUndefined();
+    expect(redacted.serial_number).toBe('BASE-SECRET');
+
+    h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: [] };
+    expect((await getAsset(ASSET_ID) as any).workstation.serial_number).toBe('EXT-SECRET');
+    h.readDecisions[ASSET_ID] = { allowed: false, redactedFields: [] };
+    expect((await getAsset(ASSET_ID) as any).permissionError).toMatch(/Permission denied/);
+  });
+
+  it('projects detail history changes and maintenance aliases, while enforcing denial', async () => {
+    seedAsset({ name: 'Secret asset name' });
+    h.dbState.asset_history.push({ tenant: TENANT, asset_id: ASSET_ID, history_id: 'h1', changes: { name: 'Secret asset name', serial_number: 'Secret serial' }, changed_at: new Date(NOW_ISO) });
+    h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: ['name', 'serial_number'] };
+    const bundle = await getAssetDetailBundle(ASSET_ID) as any;
+    expect(bundle.asset.name).toBeUndefined();
+    expect(bundle.maintenanceReport.asset_name).toBeUndefined();
+    expect(bundle.history[0].changes).toEqual({});
+    h.readDecisions[ASSET_ID] = { allowed: false, redactedFields: [] };
+    await expect(getAssetDetailBundle(ASSET_ID)).rejects.toThrow(/Permission denied/);
+  });
+
+  it('uses a distinct decision mask for each list row and honors flat aliases and extensions', async () => {
+    const secondId = 'f0000000-0000-4000-8000-000000000010';
+    seedAsset({ contact_name_id: 'contact-1', contact_name: 'Contact One', client_name: 'Client One' });
+    seedAsset({ asset_id: secondId, asset_tag: 'WS-002', contact_name_id: 'contact-2', contact_name: 'Contact Two', client_name: 'Client Two', asset_type: 'workstation' });
+    h.dbState.workstation_assets.push({ tenant: TENANT, asset_id: secondId, serial_number: 'EXT-SECRET', os_version: 'visible' });
+    h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: ['contact_name_id', 'client.client_name'] };
+    h.readDecisions[secondId] = { allowed: true, redactedFields: ['workstation.serial_number'] };
+    const result = await listAssets({ page: 1, limit: 10, include_extension_data: true } as any) as any;
+    const first = result.assets.find((asset: any) => asset.asset_id === ASSET_ID);
+    const second = result.assets.find((asset: any) => asset.asset_id === secondId);
+    expect(first.contact_name).toBeUndefined();
+    expect(first.client_name).toBeUndefined();
+    expect(first.client.client_name).toBeUndefined();
+    expect(second.contact_name).toBe('Contact Two');
+    expect(second.workstation.serial_number).toBeUndefined();
+    expect(second.workstation.os_version).toBe('visible');
+    expect(first.created_at).toBeInstanceOf(Date);
+    h.readDecisions[secondId] = { allowed: false, redactedFields: [] };
+    const deniedList = await listAssets({ page: 1, limit: 10, include_extension_data: true } as any) as any;
+    expect(deniedList.assets.some((asset: any) => asset.asset_id === secondId)).toBe(false);
   });
 });
 

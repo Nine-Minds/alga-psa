@@ -26,4 +26,32 @@ describe('projectAssetReadFields', () => {
   it('preserves all fields when the authorization decision has no redactions', () => {
     expect(projectAssetReadFields(response, [])).toEqual(response);
   });
+
+  it('preserves Date and other non-plain values when projecting a list row', () => {
+    const observedAt = new Date('2026-10-21T12:34:56.000Z');
+    const marker = new Map([['key', 'value']]);
+    const result = projectAssetReadFields({ created_at: observedAt, marker, name: 'visible' }, []);
+    expect(result.created_at).toBe(observedAt);
+    expect(result.created_at).toBeInstanceOf(Date);
+    expect(result.marker).toBe(marker);
+  });
+
+  it('masks both sides of duplicated response aliases without matching same-named nested fields broadly', () => {
+    const asset = {
+      contact_name_id: 'contact-1', contact_name: 'Contact Secret',
+      client_name: 'Client Secret', client: { client_name: 'Client Secret' },
+      workstation: { serial_number: 'Extension Secret' },
+      unrelated: { serial_number: 'Must remain' },
+    };
+    expect(projectAssetReadFields(asset, ['contact_name_id', 'client.client_name'])).toEqual({
+      client: {},
+      workstation: { serial_number: 'Extension Secret' },
+      unrelated: { serial_number: 'Must remain' },
+    });
+    expect(projectAssetReadFields(asset, ['contact_name', 'client_name'])).toEqual({
+      client: {},
+      workstation: { serial_number: 'Extension Secret' },
+      unrelated: { serial_number: 'Must remain' },
+    });
+  });
 });
