@@ -3,12 +3,27 @@
  */
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { IProject } from '@alga-psa/types';
 
 const openDrawer = vi.fn();
 const closeDrawer = vi.fn();
+const metrics = vi.hoisted(() => ({
+  value: {
+    taskCompletionPercentage: 0,
+    hoursCompletionPercentage: 0,
+    budgetedHours: 0,
+    spentHours: 0,
+    remainingHours: 0,
+  } as {
+    taskCompletionPercentage: number;
+    hoursCompletionPercentage: number | null;
+    budgetedHours: number | null;
+    spentHours: number;
+    remainingHours: number | null;
+  },
+}));
 
 // A component in the render tree calls useSession; there is no SessionProvider
 // in this test, so stub the hook (matches how the server suite's components
@@ -26,13 +41,7 @@ vi.mock('@alga-psa/ui', () => ({
 }));
 
 vi.mock('@alga-psa/projects/lib/projectUtils', () => ({
-  calculateProjectCompletion: vi.fn(async () => ({
-    taskCompletionPercentage: 0,
-    hoursCompletionPercentage: 0,
-    budgetedHours: 0,
-    spentHours: 0,
-    remainingHours: 0,
-  })),
+  calculateProjectCompletion: vi.fn(async () => metrics.value),
 }));
 
 vi.mock('@alga-psa/tags/components', () => ({
@@ -69,6 +78,13 @@ describe('ProjectInfo materials drawer', () => {
   beforeEach(() => {
     openDrawer.mockClear();
     closeDrawer.mockClear();
+    metrics.value = {
+      taskCompletionPercentage: 0,
+      hoursCompletionPercentage: 0,
+      budgetedHours: 0,
+      spentHours: 0,
+      remainingHours: 0,
+    };
   });
 
   it('opens the materials drawer with 560px width (T002)', async () => {
@@ -95,5 +111,27 @@ describe('ProjectInfo materials drawer', () => {
     expect(openDrawer).toHaveBeenCalledTimes(1);
     const call = openDrawer.mock.calls[0];
     expect(call[3]).toBe('560px');
+  });
+
+  it('does not render budget usage when budget metrics are redacted', async () => {
+    metrics.value = {
+      taskCompletionPercentage: 0,
+      hoursCompletionPercentage: null,
+      budgetedHours: null,
+      spentHours: 12.2,
+      remainingHours: null,
+    };
+    const project = {
+      project_id: 'project-1',
+      project_name: 'Test Project',
+      project_number: 'PRJ-100',
+      client_id: 'client-1',
+      client_name: 'Client One',
+    } as IProject;
+    const ProjectInfo = (await import('../src/components/ProjectInfo')).default;
+    render(<ProjectInfo project={project} users={[]} clients={[]} phases={[]} />);
+
+    await waitFor(() => expect(screen.queryByText('Budget:')).not.toBeInTheDocument());
+    expect(screen.queryByText(/12\.2 of/)).not.toBeInTheDocument();
   });
 });

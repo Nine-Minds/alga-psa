@@ -380,10 +380,10 @@ export default function ProjectDetail({
   
   const [projectMetrics, setProjectMetrics] = useState<{
     taskCompletionPercentage: number;
-    hoursCompletionPercentage: number;
-    budgetedHours: number;
+    hoursCompletionPercentage: number | null;
+    budgetedHours: number | null;
     spentHours: number;
-    remainingHours: number;
+    remainingHours: number | null;
   } | null>(null);
 
   // Project billing (option 3 — "Billing" as a third view + ambient signals)

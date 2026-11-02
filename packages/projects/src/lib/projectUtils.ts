@@ -3,16 +3,19 @@
 import type { IProject, IProjectTask, ITimeEntry } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { createProjectReadDecider } from './projectReadAuthorization';
+import { isCoManagedReadFieldHidden } from '@alga-psa/co-managed/sharedWorkRedaction';
 import { Knex } from 'knex';
 
 export interface ProjectCompletionMetrics {
   taskCompletionPercentage: number;
-  hoursCompletionPercentage: number;
+  hoursCompletionPercentage: number | null;
   totalTasks: number;
   completedTasks: number;
-  budgetedHours: number;
+  budgetedHours: number | null;
   spentHours: number;
-  remainingHours: number;
+  remainingHours: number | null;
 }
 
 /**
@@ -21,7 +24,7 @@ export interface ProjectCompletionMetrics {
  * @returns ProjectCompletionMetrics object with task and hours-based completion percentages
  */
 export const calculateProjectCompletion = withAuth(async (
-  _user,
+  user,
   { tenant },
   projectId: string
 ): Promise<ProjectCompletionMetrics> => {
@@ -29,16 +32,35 @@ export const calculateProjectCompletion = withAuth(async (
   return await withTransaction(db, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenant);
 
-    // Get project details
+    if (!await hasPermission(user, 'project', 'read', trx)) {
+      throw new Error('Permission denied: Cannot read project');
+    }
+
+    // Load only the identity fields needed for the shared record decision. Metrics are not queried before
+    // both coarse and record-level authorization succeeds.
     const project = await scopedDb.table('projects')
       .where({
         project_id: projectId,
       })
-      .first() as IProject | undefined;
+      .select('project_id', 'client_id', 'assigned_to')
+      .first() as Pick<IProject, 'project_id' | 'client_id' | 'assigned_to'> | undefined;
 
     if (!project) {
       throw new Error(`Project with ID ${projectId} not found`);
     }
+
+    const decideProjectRead = await createProjectReadDecider(trx, tenant, user);
+    const decision = await decideProjectRead(project);
+    if (!decision.allowed) {
+      throw new Error('Permission denied: Cannot read project');
+    }
+    const budgetHidden = isCoManagedReadFieldHidden(decision.redactedFields, [
+      'budgeted_hours', 'projects.budgeted_hours', 'fields.budgeted_hours',
+    ]);
+    const budgetRow = budgetHidden ? undefined : await scopedDb.table('projects')
+      .where({ project_id: projectId })
+      .select('budgeted_hours')
+      .first<{ budgeted_hours: number | string | null }>();
 
     // Get all tasks for the project
     const tasksQuery = scopedDb.table<IProjectTask>('project_tasks');
@@ -77,12 +99,12 @@ export const calculateProjectCompletion = withAuth(async (
       .select('time_entries.billable_duration');
 
     // Calculate hours-based completion
-    const budgetedHours = Number(project.budgeted_hours || 0) / 60; // Convert minutes to hours
+    const budgetedHours = budgetHidden ? null : Number(budgetRow?.budgeted_hours || 0) / 60; // Convert minutes to hours
     // Convert billable_duration from minutes to hours
     const spentMinutes = timeEntries.reduce((total, entry) => total + entry.billable_duration, 0);
     const spentHours = spentMinutes / 60; // Convert minutes to hours for display
-    const remainingHours = Math.max(0, budgetedHours - spentHours);
-    const hoursCompletionPercentage = budgetedHours > 0 ? Math.min(100, (spentHours / budgetedHours) * 100) : 0;
+    const remainingHours = budgetedHours === null ? null : Math.max(0, budgetedHours - spentHours);
+    const hoursCompletionPercentage = budgetedHours === null ? null : budgetedHours > 0 ? Math.min(100, (spentHours / budgetedHours) * 100) : 0;
 
     return {
       taskCompletionPercentage,
