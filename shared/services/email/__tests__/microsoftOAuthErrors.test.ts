@@ -3,6 +3,7 @@ import {
   classifyMicrosoftOAuthFailure,
   describeMicrosoftOAuthFailureForMailboxFlow,
   extractRedirectUriFromDescription,
+  MICROSOFT_OAUTH_FAILURE_ERROR_CODES,
   formatMicrosoftOAuthFailureForMailboxFlow,
   isMappedMicrosoftOAuthMessage,
   toSafeMicrosoftOAuthFailure,
@@ -63,6 +64,29 @@ describe('toSafeMicrosoftOAuthFailure', () => {
     expect(JSON.stringify(safe)).not.toContain('SUPERSECRET');
     expect(JSON.stringify(safe)).not.toContain('client_secret');
     expect(safe).toMatchObject({ status: 400, error: 'invalid_request', errorCodes: [50194], traceId: 't', correlationId: 'c' });
+  });
+});
+
+describe('admin consent failures (Calendar pending_admin_consent)', () => {
+  it('classifies error=consent_required, AADSTS65001 and AADSTS90094', () => {
+    expect(classifyMicrosoftOAuthFailure({ error: 'consent_required' })).toBe('admin_consent_required');
+    expect(classifyMicrosoftOAuthFailure({ errorCodes: [65001] })).toBe('admin_consent_required');
+    expect(classifyMicrosoftOAuthFailure({ errorCodes: ['90094'] })).toBe('admin_consent_required');
+    expect(
+      classifyMicrosoftOAuthFailure({ error: 'access_denied', errorDescription: 'AADSTS90094: The grant requires admin permission.' })
+    ).toBe('admin_consent_required');
+    expect(
+      classifyMicrosoftOAuthFailure({ errorDescription: 'AADSTS65001: The user or administrator has not consented to use the application' })
+    ).toBe('admin_consent_required');
+  });
+
+  it('does not treat other OAuth errors as consent failures', () => {
+    expect(classifyMicrosoftOAuthFailure({ error: 'access_denied', errorDescription: 'The user cancelled' })).toBeNull();
+  });
+
+  it('hands the UI the stable pending_admin_consent code and an actionable message', () => {
+    expect(MICROSOFT_OAUTH_FAILURE_ERROR_CODES.admin_consent_required).toBe('pending_admin_consent');
+    expect(describeMicrosoftOAuthFailureForMailboxFlow('admin_consent_required')).toMatch(/administrator/);
   });
 });
 

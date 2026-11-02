@@ -138,8 +138,10 @@ export function ProviderCredentialsWorkbench({
   const router = useRouter();
   const searchParams = useSearchParams();
   // Decided on the first render, before MicrosoftIntegrationSettings strips the outcome params.
+  // `?provider=microsoft` deep-links straight to the Microsoft app registration
+  // (e.g. from the Outlook Calendar connect form).
   const [selectedProvider, setSelectedProvider] = React.useState<ProviderKey>(() =>
-    searchParams?.get('microsoft_email_setup') ? 'microsoft' : 'google',
+    searchParams?.get('microsoft_email_setup') || searchParams?.get('provider') === 'microsoft' ? 'microsoft' : 'google',
   );
   const [googleStatus, setGoogleStatus] = React.useState<GoogleIntegrationStatus | null>(null);
   const [microsoftStatus, setMicrosoftStatus] = React.useState<MicrosoftIntegrationStatus | null>(null);

@@ -10,7 +10,7 @@ import { TIER_FEATURES, FEATURE_MINIMUM_TIER, TIER_LABELS, resolveTier, tierHasF
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getWebhookBaseUrl } from '../../../../../../lib/utils/email/webhookHelpers';
 import axios from 'axios';
-import { getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import { getMicrosoftTokenUrl, MICROSOFT_CALENDAR_OAUTH_SCOPES } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { MICROSOFT_MULTI_TENANT_AUTHORITY, microsoftIssuerKindFromSource, resolveMicrosoftOAuthAuthority } from '@alga-psa/shared/services/email/microsoftAuthority';
 import {
   classifyMicrosoftOAuthFailure,
@@ -37,7 +37,13 @@ export async function GET(request: NextRequest) {
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
     let isPopup = searchParams.get('popup') === 'true';
-    
+
+    // Decode state once, before any early return. The connect form carries `isPopup`
+    // only inside the base64 state (Microsoft never echoes a `popup` query param), so
+    // error/missing-parameter branches need it to reach the opener via postMessage.
+    const decodedState = state ? decodeCalendarState(state) : null;
+    isPopup = isPopup || decodedState?.isPopup === true;
+
     // Helper: redirect to user profile calendar tab (for non-popup flows)
     const redirectToSettings = (success: boolean, error?: string) => {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
@@ -140,12 +146,7 @@ export async function GET(request: NextRequest) {
       return redirectToSettings(false, 'Authorization code or state parameter is missing');
     }
 
-    // Parse state to get tenant and other info
-    const decodedState = decodeCalendarState(state);
-    if (decodedState?.isPopup) {
-      isPopup = true;
-    }
-
+    // State was decoded (and isPopup resolved) at the top of the handler.
     if (!decodedState) {
       if (isPopup) {
         return respondWithPostMessage({
@@ -304,7 +305,7 @@ export async function GET(request: NextRequest) {
         code: code,
         grant_type: 'authorization_code',
         redirect_uri: redirectUri,
-        scope: 'https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/MailboxSettings.ReadWrite offline_access'
+        scope: MICROSOFT_CALENDAR_OAUTH_SCOPES.join(' ')
       });
 
       const response = await axios.post(tokenUrl, params.toString(), {
