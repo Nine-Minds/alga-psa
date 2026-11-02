@@ -34,6 +34,8 @@ async function updateThroughController() {
   controller.authenticate = async (request: NextRequest) => Object.assign(request, { context });
   controller.checkPermission = async () => undefined;
   controller.assertTicketReadAllowed = async () => undefined;
+  // update() authorizes through the mutation guard (resource + 'update' scope).
+  controller.assertTicketMutationAllowed = async () => ({ ...ticket });
   controller.service.getKnex = async () => ({ knex: fake.knex, tenant: CO_MANAGED_TENANT });
   return controller.update()(new NextRequest(`http://localhost/api/v1/tickets/${ID}`, {
     method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: 'Renamed' }),
