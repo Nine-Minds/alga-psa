@@ -11,7 +11,15 @@ export const isCoManagedTaskResourceHidden = (redactedFields: readonly string[])
 });
 export const CO_MANAGED_TASK_NAME_ALIASES = ['task_name', 'values.task_name', 'project_tasks.task_name', ...CO_MANAGED_TASK_RESOURCE_ALIASES] as const;
 export const CO_MANAGED_PROJECT_NAME_ALIASES = ['project_name', 'projectName', 'values.project_name', 'projects.project_name', 'project', 'project_id', 'projects'] as const;
-export const CO_MANAGED_ORGANIZATION_NAME_ALIASES = ['client_name', 'organizationName', 'tenants'] as const;
+/** Every spelling the organization's display name is stored, queried or projected under: the snapshot column, the raw provider value, the live `tenants.client_name` read and the response key. */
+export const CO_MANAGED_ORGANIZATION_NAME_FIELD_NAMES = [
+  'organization_name', 'values.organization_name',
+  'client_name', 'organizationName', 'tenants',
+  'organizations.organization_name', 'project_tasks.organization_name',
+  'co_managed_project_task_references.organization_name',
+] as const;
+/** The organization name's aliases; one set drives both the cached-reference mask and the live `readCoManagedCustomerOrganizationName` check. */
+export const CO_MANAGED_ORGANIZATION_NAME_ALIASES = CO_MANAGED_ORGANIZATION_NAME_FIELD_NAMES;
 /** The assignee display name; same aliases the ticket assignment surface uses for the assignee (users/teams are its sources). */
 export const CO_MANAGED_ASSIGNEE_NAME_ALIASES = ['assignee_name', 'values.assignee_name', 'assignee', 'users', 'teams'] as const;
 
