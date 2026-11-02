@@ -156,7 +156,7 @@ describe('api authorization kernel helper', () => {
       quote_id: 'q-1', subtotal: 10, tax: 1, total_amount: 11,
       items: [{ quote_item_id: 'i-1', unit_price: 5, quantity: 2, total_price: 10, cost: 3 }],
     }, 'quote');
-    expect(quote).toEqual({ quote_id: 'q-1', subtotal: 10, total_amount: null, items: [{ quote_item_id: 'i-1', quantity: 2, total_price: null, cost: 3 }] });
+    expect(quote).toEqual({ quote_id: 'q-1', subtotal: null, tax: null, total_amount: null, items: [{ quote_item_id: 'i-1', quantity: 2, total_price: null, cost: 3 }] });
     expect(await read(['quotes'], { quote_id: 'q-1' }, 'quote')).toBeNull();
 
     // assets have no default record context: the caller must supply one

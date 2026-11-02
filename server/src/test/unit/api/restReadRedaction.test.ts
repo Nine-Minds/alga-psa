@@ -435,7 +435,7 @@ describe('quotes: REST reads serialize the projection', () => {
     state.decisions.set(QUOTE, { allowed: true, redactedFields: ['cost', 'tax'] });
     const res = await new ApiQuoteController().getById()(request(`/api/v1/quotes/${QUOTE}`, { id: QUOTE }));
     const { data } = await res.json();
-    expect(data).not.toHaveProperty('tax');
+    expect(data.tax).toBeNull();
     expect(data.total_amount).toBeNull();
     expect(data.items[0]).not.toHaveProperty('cost');
 
@@ -462,7 +462,7 @@ describe('quotes: REST reads serialize the projection', () => {
     );
     const { data } = await response.json();
 
-    expect(data).toEqual([{ quote_id: v1, title: 'Visible revision', version: 1 }]);
+    expect(data).toEqual([{ quote_id: v1, title: 'Visible revision', version: 1, subtotal: null }]);
     expect(authorizeResource.mock.calls.map(([input]) => input.record?.id)).toEqual([QUOTE, v1, v2, v3]);
   });
 
@@ -987,7 +987,7 @@ describe('quote responses and items are projected', () => {
     expect(res.status).toBe(200);
     const { data } = await res.json();
     expect(data.status).toBe('draft');
-    expect(data).not.toHaveProperty('subtotal');
+    expect(data.subtotal).toBeNull();
     expect(data.created_by).toBe('u-1');
   });
 
@@ -998,5 +998,91 @@ describe('quote responses and items are projected', () => {
     expect(data[0]).not.toHaveProperty('unit_price');
     expect(data[0].total_price).toBeNull();
     expect(data[0].description).toBe('Line');
+  });
+});
+
+describe('quote financial projections', () => {
+  it.each([
+    'unit_price', 'values.unit_price', 'quote_items.unit_price', 'fields.quote_items.unit_price',
+    'fields.values.unit_price', 'quote_items.quantity', 'quote_items.is_selected', 'quote_items.quote_item_id', 'quote_items',
+  ])('quote header totals do not reveal %s', async (field) => {
+    const { summarizeQuoteTotals } = await import('../../../../../packages/billing/src/lib/quoteTotals');
+    const id = '44444444-4444-4444-4444-444444444441';
+    const items = [{
+      quote_item_id: 'price-line', quote_id: id, quantity: 1, unit_price: 4938,
+      total_price: 4938, net_amount: 4938, tax_amount: 0, is_optional: false,
+      is_selected: true, is_discount: false,
+    }];
+    // Use the same financial summary that persisted quote recalculation uses.
+    const totals = summarizeQuoteTotals(items, {
+      amountOf: (item) => item.total_price, taxOf: (item) => item.tax_amount, discountTotal: 0,
+    });
+    state.quote = { quote_id: id, title: 'Visible quote', created_by: 'u-1', items, ...totals };
+    const get = () => new ApiQuoteController().getById()(request(`/api/v1/quotes/${id}`, { id }));
+    const open = (await (await get()).json()).data;
+    expect(open.subtotal).toBe(4938);
+    expect(open.total_amount).toBe(4938);
+    state.decisions.set(id, { allowed: true, redactedFields: [field] });
+    const response = await get();
+    expect(response.status).toBe(200);
+    const data = (await response.json()).data;
+    expect(data.title).toBe('Visible quote');
+    if (field === 'quote_items' || field === 'quote_items.quote_item_id') {
+      expect(data.items).toEqual([]);
+    } else {
+      expect(data.items[0].total_price).toBeNull();
+      if (field.endsWith('unit_price')) expect(data.items[0]).not.toHaveProperty('unit_price');
+    }
+    expect(data).toMatchObject({
+      subtotal: null, discount_total: null, tax: null, total_amount: null,
+      optional_subtotal: null, optional_tax: null, optional_total: null,
+    });
+  });
+
+  it('list projects header amounts even when its service response does not include quote lines', async () => {
+    const id = '44444444-4444-4444-4444-444444444441';
+    state.quote = { quote_id: id, title: 'Visible quote', subtotal: 4938, discount_total: 0, tax: 0, total_amount: 4938 };
+    const get = () => new ApiQuoteController().list()(request('/api/v1/quotes'));
+    const visible = (await (await get()).json()).data[0];
+    expect(visible).toMatchObject({ subtotal: 4938, total_amount: 4938 });
+
+    state.decisions.set(id, { allowed: true, redactedFields: ['quote_items.unit_price'] });
+    const response = await get();
+    expect(response.status).toBe(200);
+    const data = (await response.json()).data[0];
+    expect(data).toMatchObject({ quote_id: id, title: 'Visible quote', subtotal: null, discount_total: null, tax: null, total_amount: null });
+    expect(data).not.toHaveProperty('items');
+  });
+
+  it('follows discount and tax dependencies while preserving totals for unrelated redactions', async () => {
+    const { summarizeQuoteTotals } = await import('../../../../../packages/billing/src/lib/quoteTotals');
+    const id = '44444444-4444-4444-4444-444444444441';
+    const items = [
+      { quote_item_id: 'base', quantity: 2, unit_price: 250, total_price: 500, net_amount: 500,
+        tax_amount: 50, tax_rate: 10, is_discount: false, description: 'Private description' },
+      { quote_item_id: 'discount', quantity: 1, unit_price: 0, total_price: 125, net_amount: 125,
+        tax_amount: 0, is_discount: true, discount_type: 'percentage', discount_percentage: 25 },
+    ];
+    const totals = summarizeQuoteTotals(items, {
+      amountOf: item => item.total_price, taxOf: item => item.tax_amount, discountTotal: 125,
+    });
+    state.quote = { quote_id: id, title: 'Visible quote', items, ...totals };
+    const get = async () => (await (await new ApiQuoteController().getById()(
+      request(`/api/v1/quotes/${id}`, { id }),
+    )).json()).data;
+    expect(await get()).toMatchObject({ subtotal: 500, discount_total: 125, tax: 50, total_amount: 425 });
+
+    state.decisions.set(id, { allowed: true, redactedFields: ['quote_items.description'] });
+    const descriptionHidden = await get();
+    expect(descriptionHidden).toMatchObject({ subtotal: 500, discount_total: 125, tax: 50, total_amount: 425 });
+    expect(descriptionHidden.items[0]).not.toHaveProperty('description');
+
+    state.decisions.set(id, { allowed: true, redactedFields: ['quote_items.tax_rate'] });
+    expect(await get()).toMatchObject({ subtotal: 500, discount_total: 125, tax: null, total_amount: null });
+
+    state.decisions.set(id, { allowed: true, redactedFields: ['quote_items.discount_percentage'] });
+    const discountHidden = await get();
+    expect(discountHidden).toMatchObject({ subtotal: null, discount_total: null, tax: null, total_amount: null });
+    expect(discountHidden.items[1]).toMatchObject({ total_price: null, net_amount: null });
   });
 });

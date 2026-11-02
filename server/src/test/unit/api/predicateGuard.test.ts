@@ -29,6 +29,16 @@ describe('isRecordFieldReadable (descriptor-driven)', () => {
     expect(isRecordFieldReadable(['assigned_to'], TICKET_RECORD_SOURCE, 'title')).toBe(true);
   });
 
+  it.each(['values.unit_price', 'quote_items.quantity', 'quote_items.quote_item_id', 'fields.quote_items.tax_rate'])(
+    'excludes transitive quote-total predicates when %s is hidden', (alias) => {
+      const guard = buildPredicateGuard('quote', [alias]);
+      expect(guard.readable('q.total_amount')).toBe(false);
+      expect(guard.readable('q.title')).toBe(true);
+      expect(buildPredicateGuard('quote', []).readable('q.total_amount')).toBe(true);
+      expect(buildPredicateGuard('quote', ['quote_items.description']).readable('q.total_amount')).toBe(true);
+    },
+  );
+
   it.each(['statuses', 'statuses.name', 'status_name', 'status', 'values.status', 'projects.status'])(
     'projects and guards project status names hidden by %s', (alias) => {
       const record = { project_id: 'project-1', status: 'status-1', status_name: 'Active' };

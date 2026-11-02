@@ -14,6 +14,7 @@ import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
  * - `identifier` aliases naming the identifier(s) that locate the row. Hidden => row suppressed.
  * - `fields`     EXTRA aliases for a field beyond the implicit `[name, values.name, <table>.name]`. Hidden => field omitted.
  * - `derived`    display values built from another source (assignee name, client name, computed totals): field => source aliases.
+ *                Dependencies follow other declared fields and child paths (e.g. `quote_items.total_price`) transitively.
  *                Hidden source (or hidden field) => field set to null, never dropped.
  * - `children`   nested arrays/objects (e.g. quote lines) projected with their own source; suppressed children are dropped.
  */
@@ -49,29 +50,61 @@ export function recordSourceFromCoManaged(
   };
 }
 
-/** Every spelling of a record field in its value and table namespaces. */
-function recordFieldAliasForms(source: RedactableRecordSource, alias: string): readonly string[] {
+function recordFieldKey(source: RedactableRecordSource, alias: string): string | null {
   const table = source.resource.find(resource => alias.startsWith(`${resource}.`));
-  const field = alias.startsWith('values.')
+  return alias.startsWith('values.')
     ? alias.slice('values.'.length)
     : table
       ? alias.slice(table.length + 1)
       : alias.includes('.')
         ? null
         : alias;
+}
+
+/** Every spelling of a record field in its value and table namespaces. */
+function recordFieldAliasForms(source: RedactableRecordSource, alias: string): readonly string[] {
+  const field = recordFieldKey(source, alias);
   if (field === null) return [alias];
   return [alias, field, `values.${field}`, ...source.resource.map(resource => `${resource}.${field}`)];
 }
 
-/** Every alias a record key is matched against: itself, `values.`/`<table>.` forms, declared extras, and derived sources. */
+/** Resolve the dependency graph once per field, sharing its aliases with serialization and predicate guards. */
 export function recordFieldAliases(source: RedactableRecordSource, key: string): readonly string[] {
-  return [
-    ...recordFieldAliasForms(source, key),
-    ...(Object.hasOwn(source.fields, key) ? source.fields[key] : []),
-    ...(Object.hasOwn(source.derived, key)
-      ? source.derived[key].flatMap(dependency => recordFieldAliasForms(source, dependency))
-      : []),
-  ];
+  const aliases = new Set<string>();
+  const visited = new Map<RedactableRecordSource, Set<string>>();
+  const visit = (recordSource: RedactableRecordSource, field: string): void => {
+    const fields = visited.get(recordSource) ?? new Set<string>();
+    if (fields.has(field)) return;
+    fields.add(field);
+    visited.set(recordSource, fields);
+    recordFieldAliasForms(recordSource, field).forEach(alias => aliases.add(alias));
+
+    const dependencies = [
+      ...(Object.hasOwn(recordSource.fields, field) ? recordSource.fields[field] : []),
+      ...(Object.hasOwn(recordSource.derived, field) ? recordSource.derived[field] : []),
+    ];
+    for (const dependency of dependencies) {
+      aliases.add(dependency);
+      const ownField = recordFieldKey(recordSource, dependency);
+      if (ownField !== null) {
+        visit(recordSource, ownField);
+        continue;
+      }
+      const separator = dependency.indexOf('.');
+      const childKey = dependency.slice(0, separator);
+      const child = recordSource.children && Object.hasOwn(recordSource.children, childKey)
+        ? recordSource.children[childKey]
+        : undefined;
+      if (child) {
+        // A suppressed child cannot contribute to an aggregate, even when its numeric field itself is readable.
+        // Do not add the resource root: that would make an unrelated sibling-field redaction hide the aggregate.
+        child.identifier.flatMap(identifier => recordFieldAliasForms(child, identifier)).forEach(alias => aliases.add(alias));
+        visit(child, dependency.slice(separator + 1));
+      }
+    }
+  };
+  visit(source, key);
+  return [...aliases];
 }
 
 /** True when the row must not be served at all: the whole resource or an identifier is redacted. */
@@ -151,9 +184,11 @@ export const QUOTE_LINE_RECORD_SOURCE: RedactableRecordSource = {
   identifier: ids('quote_item_id', 'quote_items.quote_item_id'),
   fields: {},
   derived: {
-    total_price: ids('unit_price', 'quantity'),
-    net_amount: ids('unit_price', 'quantity'),
-    tax_amount: ids('unit_price', 'quantity', 'tax_rate'),
+    // Discount rows resolve against selected bases and their item/service targets before totals are persisted.
+    total_price: ids('unit_price', 'quantity', 'discount_type', 'discount_percentage',
+      'applies_to_item_id', 'applies_to_service_id', 'service_id', 'is_optional', 'is_selected', 'is_discount'),
+    net_amount: ids('total_price', 'is_optional', 'is_selected', 'is_discount'),
+    tax_amount: ids('total_price', 'tax_rate', 'is_taxable', 'tax_region', 'location_id', 'is_optional', 'is_selected', 'is_discount'),
   },
 };
 
@@ -209,7 +244,15 @@ export const QUOTE_RECORD_SOURCE: RedactableRecordSource = {
   derived: {
     client_name: ids('client_id', 'clients', 'clients.client_name'),
     contact_name: ids('contact_id', 'contacts'),
+    // Stored header amounts are aggregates of quote lines; resolve their declared line dependencies even on lists
+    // that do not load the items. This also carries line-price redactions through total_amount -> subtotal -> lines.
+    subtotal: ids('quote_items.total_price'),
+    discount_total: ids('quote_items.total_price'),
+    tax: ids('quote_items.tax_amount'),
     total_amount: ids('subtotal', 'discount_total', 'tax'),
+    optional_subtotal: ids('quote_items.total_price'),
+    optional_tax: ids('quote_items.tax_amount'),
+    optional_total: ids('optional_subtotal', 'optional_tax'),
     accepted_by_name: ids('accepted_by'),
     display_quote_number: ids('quote_number', 'version'),
   },
