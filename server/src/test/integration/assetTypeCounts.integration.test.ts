@@ -479,6 +479,21 @@ describe('listAssets filtered type counts', () => {
       expect(result.total).toBe(1);
       expect(result.asset_type_counts).toEqual({ workstation: 1, server: 1 });
       expect(await getCounts({ search: 'Globex' })).toEqual({});
+
+      const { createAssetReadContext, isAssetReadAllowed } = await import('@alga-psa/authorization/assetReadAuthorization');
+      const context = await createAssetReadContext(db, fixture.tenantId, {
+        user_id: assignedUserId,
+        user_type: 'internal',
+      });
+      const candidates: Array<{ asset_id: string; client_id: string }> = await table(fixture.tenantId, 'assets')
+        .select<Array<{ asset_id: string; client_id: string }>>('asset_id', 'client_id')
+        .orderBy('name', 'asc');
+      const decisions = await Promise.all(
+        candidates.map((asset) => isAssetReadAllowed(db, fixture.tenantId, context, asset)),
+      );
+      const individuallyReadable = candidates.filter((_, index) => decisions[index]).map((asset) => asset.asset_id);
+      const batched = await list({ sort_by: 'name', sort_direction: 'asc', limit: 100 });
+      expect(batched.assets.map((asset) => asset.asset_id)).toEqual(individuallyReadable);
     } finally {
       actionAuth.userId = fixture.userId;
     }
@@ -492,10 +507,10 @@ describe('listAssets filtered type counts', () => {
         asset_id: assetId,
         asset_tag: `BATCH-${assetId}`,
         serial_number: `BATCH-${assetId}`,
-        name: `Batch asset ${index}`,
+        name: `Batch asset ${String(index).padStart(3, '0')}`,
         status: 'active',
         asset_type: index % 2 === 0 ? 'workstation' : 'server',
-        client_id: index < 105 ? fixture.clientA : fixture.clientB,
+        client_id: index % 3 === 2 ? fixture.clientB : fixture.clientA,
         created_at: db.fn.now(),
         updated_at: db.fn.now(),
       };
@@ -507,13 +522,21 @@ describe('listAssets filtered type counts', () => {
     actionAuth.userId = restrictedUserId;
     db.on('query', recordQuery);
     try {
-      const result = await list({ search: 'Batch asset', asset_type: 'workstation', page: 2, limit: 10 });
-      expect(result.assets).toHaveLength(10);
-      expect(result.assets.every((asset) =>
-        asset.asset_type === 'workstation' && asset.client_id === fixture.clientA
-      )).toBe(true);
-      expect(result.total).toBe(53);
-      expect(result.asset_type_counts).toEqual({ workstation: 53, server: 52 });
+      const result = await list({
+        search: 'Batch asset',
+        asset_type: 'workstation',
+        page: 2,
+        limit: 10,
+        sort_by: 'name',
+        sort_direction: 'asc',
+      });
+      const expectedPage = assets
+        .filter((asset) => asset.client_id === fixture.clientA && asset.asset_type === 'workstation')
+        .slice(10, 20)
+        .map((asset) => asset.asset_id);
+      expect(result.assets.map((asset) => asset.asset_id)).toEqual(expectedPage);
+      expect(result.total).toBe(69);
+      expect(result.asset_type_counts).toEqual({ workstation: 69, server: 68 });
       expect(queries.filter((sql) => /\bfrom "asset_associations"/i.test(sql))).toHaveLength(3);
       expect(queries.filter((sql) => /\bfrom "authorization_bundle_assignments"/i.test(sql))).toHaveLength(1);
       const countQueries = queries.filter((sql) => /count\("assets"\."asset_id"\).*from "assets"/i.test(sql));
