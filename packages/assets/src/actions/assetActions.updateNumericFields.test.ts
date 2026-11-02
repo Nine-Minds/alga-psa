@@ -416,6 +416,11 @@ describe('asset read redaction boundaries', () => {
     expect(redacted.workstation.serial_number).toBeUndefined();
     expect(redacted.serial_number).toBe('BASE-SECRET');
 
+    h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: ['client_id'] };
+    const identifierRedacted = await getAsset(ASSET_ID) as any;
+    expect(identifierRedacted.client_id).toBeUndefined();
+    expect(identifierRedacted.client.client_id).toBeUndefined();
+
     h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: [] };
     expect((await getAsset(ASSET_ID) as any).workstation.serial_number).toBe('EXT-SECRET');
     h.readDecisions[ASSET_ID] = { allowed: false, redactedFields: [] };
@@ -439,17 +444,20 @@ describe('asset read redaction boundaries', () => {
     seedAsset({ contact_name_id: 'contact-1', contact_name: 'Contact One', client_name: 'Client One' });
     seedAsset({ asset_id: secondId, asset_tag: 'WS-002', contact_name_id: 'contact-2', contact_name: 'Contact Two', client_name: 'Client Two', asset_type: 'workstation' });
     h.dbState.workstation_assets.push({ tenant: TENANT, asset_id: secondId, serial_number: 'EXT-SECRET', os_version: 'visible' });
-    h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: ['contact_name_id', 'client.client_name'] };
-    h.readDecisions[secondId] = { allowed: true, redactedFields: ['workstation.serial_number'] };
+    h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: ['contact_name_id', 'client'] };
+    h.readDecisions[secondId] = { allowed: true, redactedFields: ['workstation.serial_number', 'client.client_id'] };
     const result = await listAssets({ page: 1, limit: 10, include_extension_data: true } as any) as any;
     const first = result.assets.find((asset: any) => asset.asset_id === ASSET_ID);
     const second = result.assets.find((asset: any) => asset.asset_id === secondId);
     expect(first.contact_name).toBeUndefined();
     expect(first.client_name).toBeUndefined();
-    expect(first.client.client_name).toBeUndefined();
+    expect(first.client).toBeUndefined();
+    expect(first.client_id).toBeUndefined();
     expect(second.contact_name).toBe('Contact Two');
     expect(second.workstation.serial_number).toBeUndefined();
     expect(second.workstation.os_version).toBe('visible');
+    expect(second.client.client_id).toBeUndefined();
+    expect(second.client_id).toBeUndefined();
     expect(first.created_at).toBeInstanceOf(Date);
     h.readDecisions[secondId] = { allowed: false, redactedFields: [] };
     const deniedList = await listAssets({ page: 1, limit: 10, include_extension_data: true } as any) as any;

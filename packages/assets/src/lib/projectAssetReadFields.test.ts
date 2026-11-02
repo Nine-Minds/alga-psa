@@ -54,4 +54,23 @@ describe('projectAssetReadFields', () => {
       unrelated: { serial_number: 'Must remain' },
     });
   });
+
+  it('masks duplicated client identifiers from either path and expands a client ancestor to its flat alias', () => {
+    const asset = {
+      client_id: 'client-secret', client_name: 'Client Secret',
+      client: { client_id: 'client-secret', client_name: 'Client Secret', unrelated: 'keep' },
+      unrelated: { client_id: 'not-an-alias', client_name: 'keep' },
+    };
+    expect(projectAssetReadFields(asset, ['client_id'])).toEqual({
+      client_name: 'Client Secret', client: { client_name: 'Client Secret', unrelated: 'keep' },
+      unrelated: { client_id: 'not-an-alias', client_name: 'keep' },
+    });
+    expect(projectAssetReadFields(asset, ['client.client_id'])).toEqual({
+      client_name: 'Client Secret', client: { client_name: 'Client Secret', unrelated: 'keep' },
+      unrelated: { client_id: 'not-an-alias', client_name: 'keep' },
+    });
+    expect(projectAssetReadFields(asset, ['client'])).toEqual({
+      unrelated: { client_id: 'not-an-alias', client_name: 'keep' },
+    });
+  });
 });
