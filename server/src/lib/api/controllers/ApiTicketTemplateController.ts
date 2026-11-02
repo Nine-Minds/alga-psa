@@ -15,7 +15,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError } from 'zod';
-import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
+import { ApiBaseController } from './ApiBaseController';
 import { BaseService } from './types';
 import { uuidSchema } from '../schemas/common';
 import {
