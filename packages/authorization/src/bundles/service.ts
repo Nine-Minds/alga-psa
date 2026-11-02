@@ -38,6 +38,10 @@ export interface UpsertBundleRuleInput {
   actorUserId?: string | null;
 }
 
+export interface EnsurePublishedBundleRuleInput extends Omit<UpsertBundleRuleInput, 'revisionId' | 'ruleId' | 'position'> {
+  bundleId: string;
+}
+
 export interface CreateAuthorizationBundleInput {
   tenant: string;
   name: string;
@@ -785,6 +789,71 @@ export async function publishBundleRevision(
         updated_by: input.actorUserId ?? null,
         updated_at: trx.fn.now(),
       });
+  });
+}
+
+/**
+ * Ensure a tenant-owned bundle has a required narrowing rule in its published revision.
+ * Existing published and draft rules are copied/preserved through the normal revision lifecycle.
+ */
+export async function ensurePublishedBundleRule(
+  knex: Knex | Knex.Transaction,
+  input: EnsurePublishedBundleRuleInput
+): Promise<void> {
+  await knex.transaction(async (trx) => {
+    const scopedDb = tenantDb(trx, input.tenant);
+    const bundle = await scopedDb.table('authorization_bundles')
+      .where({ bundle_id: input.bundleId })
+      .forUpdate()
+      .first<{ published_revision_id: string | null; status: 'active' | 'archived' }>(
+        'published_revision_id', 'status'
+      );
+
+    if (!bundle) {
+      throw new Error('Bundle not found in tenant scope.');
+    }
+    if (bundle.status === 'archived') {
+      return;
+    }
+
+    const matchesRequiredRule = (rule: BundleRuleRecord) =>
+      rule.resourceType === input.resourceType &&
+      rule.action === input.action &&
+      rule.templateKey === input.templateKey &&
+      rule.constraintKey === (input.constraintKey ?? null);
+
+    const publishedRules = bundle.published_revision_id
+      ? await listBundleRulesForRevision(trx, { tenant: input.tenant, revisionId: bundle.published_revision_id })
+      : [];
+    if (publishedRules.some(matchesRequiredRule)) {
+      return;
+    }
+
+    const draft = await ensureDraftBundleRevision(trx, {
+      tenant: input.tenant,
+      bundleId: input.bundleId,
+      actorUserId: input.actorUserId,
+    });
+    const draftRules = await listBundleRulesForRevision(trx, {
+      tenant: input.tenant,
+      revisionId: draft.revisionId,
+    });
+
+    if (!draftRules.some(matchesRequiredRule)) {
+      const nextPosition = draftRules.reduce((max, rule) => Math.max(max, rule.position), -1) + 1;
+      await upsertBundleRule(trx, {
+        ...input,
+        revisionId: draft.revisionId,
+        position: nextPosition,
+      });
+    }
+
+    await publishBundleRevision(trx, {
+      tenant: input.tenant,
+      bundleId: input.bundleId,
+      revisionId: draft.revisionId,
+      actorUserId: input.actorUserId,
+    });
   });
 }
 
