@@ -219,6 +219,79 @@ describe('attachDocumentToTicket — real shared upload policy (unmocked storage
     expect(state.associations).toHaveLength(0);
   });
 
+  it('rejects an unsafe IPv6 literal before transport or attachment persistence', async () => {
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
+    await resetStoragePolicy();
+    const transport = vi.fn(async () => new Response(wavBytes));
+    outbound.safeFetch.mockImplementation((url, options) =>
+      outbound.actualSafeFetch(url, options, {
+        lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+        fetch: transport,
+      })
+    );
+
+    const { attachDocumentToTicket } = await import('../businessOperations/shared');
+    await expect(
+      attachDocumentToTicket(ctx, tx, ticketId, { source: { url: 'https://[fec0::1]/private.wav' } })
+    ).rejects.toMatchObject({ category: 'ValidationError', code: 'VALIDATION_ERROR' });
+
+    expect(transport).not.toHaveBeenCalled();
+    expect(uploadMock).not.toHaveBeenCalled();
+    expect(state.externalFiles).toHaveLength(0);
+    expect(state.documents).toHaveLength(0);
+    expect(state.associations).toHaveLength(0);
+  });
+
+  it('rejects a DNS answer in the local-use translation prefix before persistence', async () => {
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
+    await resetStoragePolicy();
+    const transport = vi.fn(async () => new Response(wavBytes));
+    outbound.safeFetch.mockImplementation((url, options) =>
+      outbound.actualSafeFetch(url, options, {
+        lookup: async () => [{ address: '64:ff9b:1::a00:1', family: 6 }],
+        fetch: transport,
+      })
+    );
+
+    const { attachDocumentToTicket } = await import('../businessOperations/shared');
+    await expect(
+      attachDocumentToTicket(ctx, tx, ticketId, { source: { url: 'https://dns.example.test/private.wav' } })
+    ).rejects.toMatchObject({ category: 'ValidationError', code: 'VALIDATION_ERROR' });
+
+    expect(transport).not.toHaveBeenCalled();
+    expect(uploadMock).not.toHaveBeenCalled();
+    expect(state.externalFiles).toHaveLength(0);
+    expect(state.documents).toHaveLength(0);
+    expect(state.associations).toHaveLength(0);
+  });
+
+  it('rejects a redirect to nonpublic IPv6 before fetching or persisting its response', async () => {
+    vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
+    await resetStoragePolicy();
+    const transport = vi.fn(async () => new Response(null, {
+      status: 302,
+      headers: { location: 'https://[fec0::1]/private.wav' },
+    }));
+    outbound.safeFetch.mockImplementation((url, options) =>
+      outbound.actualSafeFetch(url, options, {
+        lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+        fetch: transport,
+      })
+    );
+
+    const { attachDocumentToTicket } = await import('../businessOperations/shared');
+    await expect(
+      attachDocumentToTicket(ctx, tx, ticketId, { source: { url: 'https://example.test/redirect.wav' } })
+    ).rejects.toMatchObject({ category: 'ValidationError', code: 'VALIDATION_ERROR' });
+
+    expect(transport).toHaveBeenCalledOnce();
+    expect(transport.mock.calls[0]![0]).toBe('https://example.test/redirect.wav');
+    expect(uploadMock).not.toHaveBeenCalled();
+    expect(state.externalFiles).toHaveLength(0);
+    expect(state.documents).toHaveLength(0);
+    expect(state.associations).toHaveLength(0);
+  });
+
   it('does not persist a streamed response that crosses the configured cap', async () => {
     vi.stubEnv('STORAGE_LOCAL_ALLOWED_MIME_TYPES', '*/*');
     await resetStoragePolicy();

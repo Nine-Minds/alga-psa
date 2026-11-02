@@ -160,10 +160,16 @@ blocked.addSubnet('fc00::', 7, 'ipv6');
 blocked.addSubnet('fe80::', 10, 'ipv6');
 blocked.addSubnet('ff00::', 8, 'ipv6');
 blocked.addSubnet('64:ff9b::', 96, 'ipv6');
+blocked.addSubnet('64:ff9b:1::', 48, 'ipv6'); // local-use IPv4/IPv6 translation
+blocked.addSubnet('100::', 64, 'ipv6'); // discard-only
+blocked.addSubnet('100:0:0:1::', 64, 'ipv6'); // dummy prefix
+blocked.addSubnet('2001:10::', 28, 'ipv6'); // deprecated ORCHID
 blocked.addSubnet('2001:db8::', 32, 'ipv6');
 blocked.addSubnet('2001::', 23, 'ipv6'); // protocol assignments and special-purpose ranges
 blocked.addSubnet('2002::', 16, 'ipv6'); // 6to4 embeds IPv4 destinations
 blocked.addSubnet('3fff::', 20, 'ipv6'); // documentation range
+blocked.addSubnet('5f00::', 16, 'ipv6'); // Segment Routing SIDs
+blocked.addSubnet('fec0::', 10, 'ipv6'); // deprecated site-local unicast
 
 /** Expand an IPv6 literal to eight 16-bit groups, or null when malformed. */
 function expandIPv6(input: string): number[] | null {
@@ -209,6 +215,10 @@ export function isBlockedAddress(address: string): boolean {
     if (!groups) return true; // unparseable -> fail closed
     const embedded = unwrapEmbeddedIPv4(groups);
     if (embedded) return blocked.check(embedded, 'ipv4');
+    // Public IPv6 destinations must be global-unicast space (2000::/3).
+    // This also rejects reserved, transition, and other non-global ranges
+    // that are not individually represented in the special-purpose registry.
+    if (groups[0]! < 0x2000 || groups[0]! > 0x3fff) return true;
     return blocked.check(address, 'ipv6');
   }
   return true; // not an IP at all -> fail closed
