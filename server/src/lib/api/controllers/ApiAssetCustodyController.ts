@@ -49,8 +49,14 @@ const STATUS_BY_CODE: Record<CustodyErrorCode, number> = {
   permission_denied: 403,
 };
 
+const ASSET_CUSTODY_PERMISSION_ACTIONS = ['read', 'update'] as const;
+
 export class ApiAssetCustodyController {
   private assetService = new AssetService();
+
+  getPermissionRequirements(): Array<{ resource: string; action: string }> {
+    return ASSET_CUSTODY_PERMISSION_ACTIONS.map((action) => ({ resource: 'asset', action }));
+  }
 
   private async requireAllowedContext(req: NextRequest): Promise<ApiContext> {
     const context = requireRequestContext(req);
@@ -76,6 +82,9 @@ export class ApiAssetCustodyController {
 
   /** 401 unless a user, 403 without asset:<action>. Runs BEFORE any record load. */
   private async requirePermission(context: ApiContext, action: 'read' | 'update'): Promise<NextResponse | null> {
+    if (!(ASSET_CUSTODY_PERMISSION_ACTIONS as readonly string[]).includes(action)) {
+      throw new Error(`Undeclared asset custody permission action: ${action}`);
+    }
     if (!context.user) return createErrorResponse('User context required', 401, 'UNAUTHORIZED');
     const knex = await getConnection(context.tenant);
     if (!(await hasPermission(context.user, 'asset', action, knex))) {

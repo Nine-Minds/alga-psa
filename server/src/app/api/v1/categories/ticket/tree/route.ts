@@ -8,7 +8,7 @@ import { ApiCategoryController } from 'server/src/lib/api/controllers/ApiCategor
 const controller = new ApiCategoryController();
 
 export async function GET(request: Request) {
-  return controller.getCategoryTree()(request as any);
+  return controller.getCategoryTree(null)(request as any);
 }
 
 export const runtime = 'nodejs';

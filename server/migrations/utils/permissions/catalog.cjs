@@ -206,6 +206,8 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'marketing', action: 'manage', msp: true, client: false, description: 'Manage marketing campaigns, content, posts, sequences, and forms', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'marketing', action: 'read', msp: true, client: false, description: 'View marketing campaigns, content, posts, and sequences', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
 
+  { resource: 'metadata', action: 'read', msp: true, client: false, description: 'View REST API metadata and capability descriptions', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+
   { resource: 'notification', action: 'manage', msp: true, client: false, description: 'Manage notifications', products: ['psa', 'co_managed'], defaultGrants: { psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
   { resource: 'notification', action: 'read', msp: true, client: false, description: 'Read notifications', products: ['psa', 'co_managed'], defaultGrants: { psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
 
@@ -213,6 +215,11 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'opportunities', action: 'delete', msp: true, client: false, description: 'Delete opportunities', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'opportunities', action: 'read', msp: true, client: false, description: 'View opportunities', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'opportunities', action: 'update', msp: true, client: false, description: 'Update opportunities', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
+
+  { resource: 'permission', action: 'create', msp: true, client: false, description: 'Create tenant permissions', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'permission', action: 'delete', msp: true, client: false, description: 'Delete tenant permissions', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'permission', action: 'read', msp: true, client: false, description: 'View tenant permissions', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'permission', action: 'update', msp: true, client: false, description: 'Update tenant permission metadata', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
 
   { resource: 'priority', action: 'create', msp: true, client: false, description: 'Create ticket priorities', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
 
@@ -224,6 +231,10 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'project', action: 'read', msp: false, client: true, description: 'View projects in client portal', products: ['psa'], defaultGrants: { psa: ['client:Admin', 'client:Finance', 'client:User'] } },
   { resource: 'project', action: 'update', msp: true, client: false, description: 'Modify project information and timeline', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance', 'msp:Project Manager'] } },
   { resource: 'project', action: 'update', msp: false, client: true, description: 'Update projects in client portal', products: ['psa'], defaultGrants: { psa: ['client:Admin'] } },
+
+  { resource: 'quickbooks', action: 'admin', msp: true, client: false, description: 'Administer QuickBooks integration settings', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
+  { resource: 'quickbooks', action: 'read', msp: true, client: false, description: 'View QuickBooks integration data and sync status', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
+  { resource: 'quickbooks', action: 'write', msp: true, client: false, description: 'Write and synchronize QuickBooks integration data', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
 
   { resource: 'project_task', action: 'create', msp: true, client: false, description: 'Create new project tasks', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },
   { resource: 'project_task', action: 'delete', msp: true, client: false, description: 'Delete project tasks', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Project Manager'] } },
@@ -240,6 +251,11 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'recurring_ticket', action: 'delete', msp: true, client: false, description: 'Archive recurring ticket definitions', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Manager'], co_managed: ['msp:Admin', 'msp:Dispatcher'] } },
   { resource: 'recurring_ticket', action: 'read', msp: true, client: false, description: 'View recurring ticket definitions and run history', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin', 'msp:Agent'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Manager', 'msp:Technician'], co_managed: ['msp:Admin', 'msp:Dispatcher', 'msp:Technician'] } },
   { resource: 'recurring_ticket', action: 'update', msp: true, client: false, description: 'Modify recurring ticket definitions, clients and schedules', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Manager'], co_managed: ['msp:Admin', 'msp:Dispatcher'] } },
+
+  { resource: 'role', action: 'create', msp: true, client: false, description: 'Create tenant roles', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'role', action: 'delete', msp: true, client: false, description: 'Delete tenant roles', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'role', action: 'read', msp: true, client: false, description: 'View tenant roles and assignments', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'role', action: 'update', msp: true, client: false, description: 'Update tenant roles and assignments', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
 
   { resource: 'reports', action: 'create', msp: true, client: false, description: 'Create reports', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'reports', action: 'delete', msp: true, client: false, description: 'Delete reports', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
@@ -305,6 +321,7 @@ const ACTIVE_PERMISSIONS = [
 
   { resource: 'tax', action: 'read', msp: true, client: false, description: 'View tax rates and tax settings', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
 
+  { resource: 'team', action: 'create', msp: true, client: false, description: 'Create teams', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
   { resource: 'team', action: 'delete', msp: true, client: false, description: 'Delete teams', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
   { resource: 'team', action: 'read', msp: true, client: false, description: 'View teams and their members', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
   { resource: 'team', action: 'update', msp: true, client: false, description: 'Update teams and their membership', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
@@ -394,6 +411,21 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'warranty', action: 'create', msp: true, client: false, description: 'Open warranty claims on client equipment', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
   { resource: 'warranty', action: 'read', msp: true, client: false, description: 'View warranty claims and RMA cases', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
   { resource: 'warranty', action: 'update', msp: true, client: false, description: 'Decide, ship, receive and close warranty claims', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
+
+  { resource: 'webhook', action: 'analytics', msp: true, client: false, description: 'View webhook delivery analytics', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'bulk_update', msp: true, client: false, description: 'Bulk update webhook configurations', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'create', msp: true, client: false, description: 'Create webhook configurations', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'delete', msp: true, client: false, description: 'Delete webhook configurations', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'export', msp: true, client: false, description: 'Export webhook event and delivery data', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'manage_security', msp: true, client: false, description: 'Manage webhook signing secrets and security settings', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'manage_subscriptions', msp: true, client: false, description: 'Manage webhook event subscriptions', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'read', msp: true, client: false, description: 'View webhook configurations and deliveries', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'retry', msp: true, client: false, description: 'Retry failed webhook deliveries', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'system_settings', msp: true, client: false, description: 'Manage system webhook settings and templates', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'test', msp: true, client: false, description: 'Test webhook configuration and delivery', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'trigger', msp: true, client: false, description: 'Manually trigger webhook deliveries', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'update', msp: true, client: false, description: 'Update webhook configurations', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'verify', msp: true, client: false, description: 'Verify webhook signatures and endpoint configuration', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
 
   { resource: 'workflow', action: 'admin', msp: true, client: false, description: 'Administer workflows', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'workflow', action: 'manage', msp: true, client: false, description: 'Manage workflows', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
