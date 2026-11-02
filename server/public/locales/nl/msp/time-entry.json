@@ -133,7 +133,8 @@
       "notes": "Opmerkingen",
       "deleteTimeEntry": "Tijdsinvoer verwijderen",
       "unsavedChanges": "Niet-opgeslagen wijzigingen",
-      "contractLine": "Contractregel"
+      "contractLine": "Contractregel",
+      "operational": "Operationeel – niet gefactureerd"
     },
     "placeholders": {
       "selectService": "Selecteer een dienst",

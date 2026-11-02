@@ -9666,8 +9666,6 @@ components:
             - pending
             - prepayment
             - partially_applied
-        finalized_at:
-          type: string
       required:
         - invoice_ids
         - status
@@ -17241,6 +17239,7 @@ components:
             - non_billable_category
             - ad_hoc
             - interaction
+            - co_managed
         start_time:
           type: string
           format: date-time
@@ -17300,6 +17299,7 @@ components:
             - non_billable_category
             - ad_hoc
             - interaction
+            - co_managed
         start_time:
           type: string
           format: date-time
@@ -17358,6 +17358,7 @@ components:
                   - non_billable_category
                   - ad_hoc
                   - interaction
+                  - co_managed
               start_time:
                 type: string
                 format: date-time
@@ -17432,6 +17433,7 @@ components:
                       - non_billable_category
                       - ad_hoc
                       - interaction
+                      - co_managed
                   start_time:
                     type: string
                     format: date-time
@@ -17793,6 +17795,7 @@ components:
                   - non_billable_category
                   - ad_hoc
                   - interaction
+                  - co_managed
                   - null
               approval_status:
                 type:
@@ -18086,6 +18089,7 @@ components:
                         - non_billable_category
                         - ad_hoc
                         - interaction
+                        - co_managed
                         - null
                     approval_status:
                       type:
@@ -39969,6 +39973,9 @@ paths:
     post:
       summary: Bulk update invoice status
       description: Bulk status transition route using bulkInvoiceStatusUpdateSchema.
+        Only metadata transitions are applied; paid, cancelled and finalize
+        transitions are reported as per-invoice errors naming the dedicated
+        command. finalized_at is not accepted.
       tags:
         - Invoices
       security:
@@ -69152,7 +69159,13 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     post:
       summary: Create time sheet
-      description: Creates time sheet via create() path.
+      description: Creates a time sheet. A time sheet is unique per tenant, effective
+        owner (`user_id`, defaulting to the caller) and `period_id`, in every
+        approval status. The first request returns 201 with a DRAFT sheet; a
+        request for a user and period that already has a sheet returns 409
+        CONFLICT ("A time sheet already exists for this user and period") and
+        changes nothing. To recover, GET /api/v1/time-sheets filtered by
+        `user_id` and `period_id`.
       tags:
         - Work Management v1
       security:
@@ -69198,6 +69211,15 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
         "403":
           description: RBAC denied for time_sheet resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: 'Conflict: a time sheet already exists for this user and period
+            (any approval status). Body:
+            {"error":{"code":"CONFLICT","message":"A time sheet already exists
+            for this user and period"}}. The existing sheet is unchanged.'
           content:
             application/json:
               schema:

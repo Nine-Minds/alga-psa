@@ -80,6 +80,7 @@ vi.mock('../src/context/SchedulingCrossFeatureContext', () => ({
 }));
 
 vi.mock('../src/actions/timeEntryActions', () => ({
+  isServiceOptionalForWorkItem: vi.fn(async () => false),
   deleteTimeEntry: vi.fn(),
   fetchTimeEntriesForTimeSheet: vi.fn().mockResolvedValue([]),
 }));
