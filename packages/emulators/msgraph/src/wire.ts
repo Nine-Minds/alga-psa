@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, Response, Router } from 'express';
 import { route } from '@alga-psa/emulator-host';
 import type { HostEnv } from '@alga-psa/emulator-host';
-import { GraphApiError, publicEvent, publicOnlineMeeting, publicSubscription, publicTeam } from './core';
+import { GraphApiError, OAuthError, publicEvent, publicOnlineMeeting, publicSubscription, publicTeam } from './core';
 import type { MsGraphCore } from './core';
 import { BOT_FRAMEWORK_ISSUER, botFrameworkJwks } from './botFramework';
 import { entraJwks } from './entraOidc';
@@ -60,6 +60,18 @@ function formUrlDecode(value: string): string {
   }
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
+}
+
+/** The "Sign in" error page login.microsoftonline.com renders instead of redirecting. */
+function oauthErrorPage(err: OAuthError): string {
+  return `<!DOCTYPE html><html><head><title>Sign in to your account</title></head><body>`
+    + `<h1>Sign in</h1><div id="errorText">${escapeHtml(err.description)}</div>`
+    + `<p>Trace ID: ${escapeHtml(err.ids.traceId)}<br>Correlation ID: ${escapeHtml(err.ids.correlationId)}<br>`
+    + `Timestamp: ${escapeHtml(err.ids.timestamp)}</p></body></html>`;
+}
+
 /**
  * Vendor surface: Microsoft login (OAuth2 v2.0), the Graph v1.0 routes Alga's
  * email and Teams integrations use, and the Bot Framework connector plus its
@@ -110,13 +122,30 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     if (!clientId || !redirectUri) {
       throw new GraphApiError(400, { error: 'invalid_client' });
     }
-    const code = core.authorize(clientId, redirectUri, {
-      authorityTenant: String(req.params.tenant),
-      nonce: req.query.nonce ? String(req.query.nonce) : undefined,
-      scope: req.query.scope ? String(req.query.scope) : undefined,
-      codeChallenge: req.query.code_challenge ? String(req.query.code_challenge) : undefined,
-      codeChallengeMethod: req.query.code_challenge_method ? String(req.query.code_challenge_method) : undefined,
-    });
+    let code: string;
+    try {
+      code = core.authorize(clientId, redirectUri, {
+        nonce: req.query.nonce ? String(req.query.nonce) : undefined,
+        scope: req.query.scope ? String(req.query.scope) : undefined,
+        codeChallenge: req.query.code_challenge ? String(req.query.code_challenge) : undefined,
+        codeChallengeMethod: req.query.code_challenge_method ? String(req.query.code_challenge_method) : undefined,
+        authorityTenant: String(req.params.tenant),
+      });
+    } catch (err) {
+      if (!(err instanceof OAuthError)) throw err;
+      if (err.aadsts === 50194) {
+        // Audience errors are returned to the (registered) redirect URI.
+        const callback = new URL(redirectUri);
+        callback.searchParams.set('error', err.error);
+        callback.searchParams.set('error_description', err.body.error_description);
+        if (req.query.state) callback.searchParams.set('state', String(req.query.state));
+        res.redirect(302, callback.toString());
+        return;
+      }
+      // 50011 / 700016 / 50020: Microsoft-hosted error page, never a redirect.
+      res.status(400).type('html').send(oauthErrorPage(err));
+      return;
+    }
     const callback = new URL(redirectUri);
     callback.searchParams.set('code', code);
     if (req.query.state) {
@@ -131,14 +160,19 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
       res.status(fault.status).json(fault.body);
       return;
     }
-    res.json(
-      core.grantToken({
-        ...clientSecretBasicCredentials(req),
-        ...req.body,
-        authorityTenant: String(req.params.tenant),
-        oidcIssuer: `${req.protocol}://${req.get('host')}/${encodeURIComponent(String(req.params.tenant))}/v2.0`,
-      }),
-    );
+    try {
+      res.json(
+        core.grantToken({
+          ...clientSecretBasicCredentials(req),
+          ...req.body,
+          authorityTenant: String(req.params.tenant),
+          oidcIssuer: `${req.protocol}://${req.get('host')}/${encodeURIComponent(String(req.params.tenant))}/v2.0`,
+        }),
+      );
+    } catch (err) {
+      if (!(err instanceof OAuthError)) throw err;
+      res.status(err.status).json(err.body);
+    }
   });
 
   router.get('/:tenant/v2.0/adminconsent', (req, res) => {

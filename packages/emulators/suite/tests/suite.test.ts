@@ -64,6 +64,11 @@ describe('emulator suite', () => {
       'huntress-incident-lifecycle',
       'levelio-automation-alga-template',
       'levelio-native-webhook-signed',
+      'multi-tenant-common-ok',
+      'platform-app-authority',
+      'redirect-uri-missing',
+      'single-tenant-common-rejected',
+      'single-tenant-tenant-authority-ok',
       'token-trouble',
     ]);
 
@@ -96,6 +101,74 @@ describe('emulator suite', () => {
     await run('entra-diagnostics-empty');
     expect(await state('organizations')).toEqual([]);
     expect(await state('directory-users')).toEqual([]);
+  });
+
+  describe('Entra tenancy scenarios', () => {
+    const CUSTOMER = 'bbbbbbbb-1111-4111-8111-111111111111';
+    const NINEMINDS = '99999999-9999-4999-8999-999999999999';
+    const REDIRECT = 'http://localhost:3000/api/auth/callback/azure-ad';
+    const run = async (name: string) => {
+      expect((await fetch(`${control}/control/scenarios/${name}/run`, { method: 'POST' })).status).toBe(200);
+    };
+    const authorize = (authority: string, clientId: string, redirectUri = REDIRECT) =>
+      fetch(`http://127.0.0.1:${ports.msgraph}/${authority}/oauth2/v2.0/authorize?${new URLSearchParams({
+        client_id: clientId, redirect_uri: redirectUri, state: 's',
+      })}`, { redirect: 'manual' });
+    const tid = async (authority: string, clientId: string, clientSecret: string, location: string) => {
+      const response = await fetch(`http://127.0.0.1:${ports.msgraph}/${authority}/oauth2/v2.0/token`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code', client_id: clientId, client_secret: clientSecret,
+          code: new URL(location).searchParams.get('code')!, redirect_uri: REDIRECT,
+        }),
+      });
+      expect(response.status).toBe(200);
+      const token = ((await response.json()) as any).access_token as string;
+      return JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()).tid;
+    };
+
+    it('single-tenant-common-rejected: 50194 redirect', async () => {
+      await run('single-tenant-common-rejected');
+      const response = await authorize('common', 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa');
+      const location = new URL(response.headers.get('location')!);
+      expect(location.searchParams.get('error_description')).toContain('AADSTS50194');
+      expect(location.searchParams.get('state')).toBe('s');
+    });
+
+    it('single-tenant-tenant-authority-ok: home tenant authority issues a home-tenant token', async () => {
+      await run('single-tenant-tenant-authority-ok');
+      const response = await authorize(CUSTOMER, 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa');
+      expect(await tid(CUSTOMER, 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa', 'single-tenant-secret', response.headers.get('location')!)).toBe(CUSTOMER);
+    });
+
+    it('multi-tenant-common-ok: tid is the user directory', async () => {
+      await run('multi-tenant-common-ok');
+      const response = await authorize('common', 'aaaaaaaa-2222-4222-8222-aaaaaaaaaaaa');
+      expect(await tid('common', 'aaaaaaaa-2222-4222-8222-aaaaaaaaaaaa', 'multi-tenant-secret', response.headers.get('location')!)).toBe(CUSTOMER);
+    });
+
+    it('redirect-uri-missing: hosted 50011 page, no redirect', async () => {
+      await run('redirect-uri-missing');
+      const response = await authorize('common', 'aaaaaaaa-3333-4333-8333-aaaaaaaaaaaa', 'http://elsewhere.example/cb');
+      expect(response.status).toBe(400);
+      expect(response.headers.get('location')).toBeNull();
+      expect(await response.text()).toContain('AADSTS50011');
+    });
+
+    it('platform-app-authority: both issuer kinds side by side', async () => {
+      await run('platform-app-authority');
+      const platform = 'aaaaaaaa-2222-4222-8222-aaaaaaaaaaaa';
+      const customer = 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa';
+      const ok = await authorize('common', platform);
+      expect(await tid('common', platform, 'platform-secret', ok.headers.get('location')!)).toBe(CUSTOMER);
+      const regression = await authorize(NINEMINDS, platform);
+      expect(regression.status).toBe(400);
+      expect(await regression.text()).toContain('AADSTS50020');
+      expect(new URL((await authorize('common', customer)).headers.get('location')!).searchParams.get('error_description')).toContain('AADSTS50194');
+      expect((await authorize(CUSTOMER, customer)).status).toBe(302);
+      expect(await (await authorize('cccccccc-2222-4222-8222-cccccccccccc', customer)).text()).toContain('AADSTS700016');
+    });
   });
 
   describe('Level alert-ingestion scenarios, aimed at webhook-sink', () => {
