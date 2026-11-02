@@ -180,3 +180,20 @@ SELECT count(*) FROM invoice_templates WHERE "templateAst"::text ~ '"path":\s*"(
 ```
 
 The count doesn't change the decision in §3.2. It sizes any outreach.
+
+## Addendum: reconciliation with main's contract-discount work (alga0002295 deploy-fix)
+
+- **Line-item flag.** `WasmInvoiceLineItem.isDiscount` (and `discountType`, `adjustmentSourceKind`,
+  `adjustmentScope`, `adjustmentReason`, `manualLineMetadata`) now come from main (PR #3499,
+  `mapDbInvoiceToWasmViewModel` sets `isDiscount: Boolean(item.is_discount)`). This branch no longer declares or maps
+  its own; it only adds `discountTotal`, `grossSubtotal` and the shared helper `applyInvoiceDiscountSummary`.
+- **Row inclusion: every `isDiscount` row; no `adjustmentSourceKind` filter.** Main writes `is_discount = true` for
+  discounts and for manual credits; contract-change true-up/adjustment lines
+  (`adjustment_source_kind = 'contract_change'`, `reconcileContractChangeAdjustments.ts`) and computed adjustments
+  (`computeDiscountsAndAdjustments.ts`) are `is_discount = false`, so they stay in the net subtotal like any other
+  charge and are not counted as discounts. Filtering on kind would risk breaking
+  `grossSubtotal - discountTotal === subtotal`; `is_discount` is the single flag every consumer already uses.
+  The identity holds by construction since `grossSubtotal = subtotal + discountTotal`.
+- **Simulator.** `loadSimulationCalculationInput.ts` marks lines whose canonical charge family is `discount` as
+  `isDiscount`, so simulated periods get the same summary through `enrichWithGroupedItems`.
+- Main's standard templates define `labels.discounts` but render no discounts row, so they are left unchanged.
