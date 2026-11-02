@@ -294,6 +294,10 @@ function createKnexStub() {
   const whereArgs: any[] = [];
   const folderRows: any[] = [];
   const defaultFolderRows: any[] = [];
+  const externalFileRows = [
+    { file_id: 'thumb-123', metadata: { context: 'document_thumbnail', source_document_id: 'doc-123' } },
+    { file_id: 'preview-456', metadata: { context: 'document_preview', source_document_id: 'doc-123' } },
+  ];
 
   const documentsBuilder = {
     insert: vi.fn(async (record: any) => {
@@ -318,6 +322,13 @@ function createKnexStub() {
   const sharedDocumentTypesBuilder = {
     where: vi.fn((_conditions: any) => ({
       first: vi.fn(async () => null),
+    })),
+  };
+
+  const externalFilesBuilder: any = {
+    where: vi.fn(() => externalFilesBuilder),
+    whereIn: vi.fn((_column: string, fileIds: string[]) => ({
+      select: vi.fn(async () => externalFileRows.filter(({ file_id }) => fileIds.includes(file_id))),
     })),
   };
 
@@ -449,6 +460,7 @@ function createKnexStub() {
     if (table === 'document_default_folders') return createDefaultDocumentFoldersBuilder();
     if (table === 'document_types') return documentTypesBuilder;
     if (table === 'shared_document_types') return sharedDocumentTypesBuilder;
+    if (table === 'external_files') return externalFilesBuilder;
     return defaultBuilder;
   });
   knexFn.fn = { now: () => new Date() };

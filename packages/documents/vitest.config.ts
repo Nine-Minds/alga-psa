@@ -108,7 +108,7 @@ export default defineConfig({
           name: 'documents-node',
           globals: true,
           environment: 'node',
-          include: ['tests/**/*.test.ts', 'src/lib/renderHtmlToPng.test.ts'],
+          include: ['tests/**/*.test.ts', 'src/lib/renderHtmlToPng.test.ts', 'src/lib/documentPreviewProvenance.test.ts'],
           testTimeout: 10000,
         },
         resolve: { alias: nodeAliases },

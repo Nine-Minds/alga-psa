@@ -43,6 +43,7 @@ import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
 import { documentPreviewErrorMessage } from '@alga-psa/documents/handlers/previewErrors';
 import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
+import { validateDocumentPreviewProvenance, withoutClientThumbnailReference } from '../lib/documentPreviewProvenance';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildDocumentAssociatedPayload,
@@ -549,7 +550,10 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
       await tenantScopedTable(trx, 'documents', tenant)
         .where('document_id', documentId)
         .update({
-          ...data,
+          // Thumbnail references are server-generated derivatives. Accepting this
+          // field from an editor lets a client point a shared document at any
+          // uploaded file in the tenant, including active SVG content.
+          ...withoutClientThumbnailReference(data),
           updated_at: new Date()
         });
 
@@ -2650,6 +2654,7 @@ export const uploadDocument = withAuth(async (
       try {
         const previewResult = await generateDocumentPreviews(document, buffer);
         if (previewResult.thumbnail_file_id || previewResult.preview_file_id) {
+          await validateDocumentPreviewProvenance(knex, tenant, document.document_id, previewResult);
           await tenantScopedTable(knex, 'documents', tenant)
             .where({ document_id: document.document_id })
             .update({
