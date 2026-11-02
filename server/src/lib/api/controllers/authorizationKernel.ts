@@ -128,17 +128,6 @@ export async function authorizeApiResource(input: {
   return decision.allowed;
 }
 
-export async function authorizeApiResourceRead(input: {
-  knex: Knex;
-  tenant: string;
-  user: any;
-  apiKeyId?: string;
-  resource: string;
-  recordContext: AuthorizationRecord;
-}): Promise<boolean> {
-  return authorizeApiResource({ ...input, action: 'read' });
-}
-
 /**
  * Who is reading? One rule, applied in order, shared by every read-authorization path:
  *  1. `user` with a non-empty `user_id`, or a non-empty `apiKeyId`: the request principal, built exactly as before.
@@ -186,18 +175,34 @@ function markProjection<R extends Record<string, any>>(
 /**
  * Projects another record owned by the same authorized resource (a mutation result, quote lines, ...) under the
  * decision that produced `projection`, so it is never re-authorized and never served unredacted. Returns null when the
- * redactions suppress the record under `source`. Parent namespaces remain available for detached child records.
+ * redactions suppress the record under `source`. Batches drop suppressed rows while retaining order and policy.
+ * Parent namespaces remain available for detached child records.
  */
+export function reprojectUnderDecision<R extends Record<string, any>>(
+  projection: AuthorizedProjection<any>,
+  records: readonly R[],
+  source: RedactableRecordSource,
+): AuthorizedProjection<R>[];
 export function reprojectUnderDecision<R extends Record<string, any>>(
   projection: AuthorizedProjection<any>,
   record: R,
   source: RedactableRecordSource,
-): AuthorizedProjection<R> | null {
+): AuthorizedProjection<R> | null;
+export function reprojectUnderDecision<R extends Record<string, any>>(
+  projection: AuthorizedProjection<any>,
+  record: R | readonly R[],
+  source: RedactableRecordSource,
+): AuthorizedProjection<R> | AuthorizedProjection<R>[] | null {
   const policy: RecordProjectionPolicy | undefined = (projection as any)[projectionPolicy];
   if (!policy) throw new Error('reprojectUnderDecision requires an authorized projection with its original policy');
-  const projected = policy.project(record, source);
-  if (projected === null) return null;
-  return markProjection<R>(projected, policy);
+  const project = (row: R): AuthorizedProjection<R> | null => {
+    const projected = policy.project(row, source);
+    return projected === null ? null : markProjection<R>(projected, policy);
+  };
+  if (Array.isArray(record)) {
+    return (record as R[]).map(project).filter((row) => row !== null);
+  }
+  return project(record as R);
 }
 
 export function isAuthorizedProjection(value: unknown): value is AuthorizedProjection {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildAuthorizationPrincipalSubject, authorizeApiResourceRead, authorizeApiResource, isAuthorizedProjection, projectApiResourceRead, projectApiResourceReads, reprojectUnderDecision } from 'server/src/lib/api/controllers/authorizationKernel';
+import { buildAuthorizationPrincipalSubject, authorizeApiResource, isAuthorizedProjection, projectApiResourceRead, projectApiResourceReads, reprojectUnderDecision } from 'server/src/lib/api/controllers/authorizationKernel';
 import { QUOTE_LINE_RECORD_SOURCE, QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE } from '@alga-psa/co-managed/recordProjection';
 
 const authorizeResourceMock = vi.fn();
@@ -201,17 +201,16 @@ describe('api authorization kernel helper', () => {
     expect(rows).toEqual([{ project_id: 'p-1', description: 'd' }, { project_id: 'p-4' }]);
   });
 
-  it('authorizeApiResource passes the given action through; the read wrapper sends read', async () => {
+  it('authorizeApiResource passes the mutation action through', async () => {
     authorizeResourceMock.mockReset();
     authorizeResourceMock.mockResolvedValue({ allowed: true });
     const base = { knex: {} as any, tenant: 't1', user: { user_id: 'u1' }, resource: 'ticket', recordContext: { id: 'r1' } };
 
     await authorizeApiResource({ ...base, action: 'update' });
     await authorizeApiResource({ ...base, action: 'delete' });
-    await authorizeApiResourceRead(base);
 
     const actions = authorizeResourceMock.mock.calls.map((c) => c[0].resource.action);
-    expect(actions).toEqual(['update', 'delete', 'read']);
+    expect(actions).toEqual(['update', 'delete']);
   });
 
   it('API-key and session principals reach the kernel with the same resource/action', async () => {
@@ -228,4 +227,26 @@ describe('api authorization kernel helper', () => {
     expect(a.subject.apiKeyId).toBe('k1');
     expect(b.subject.apiKeyId).toBeUndefined();
   });
+
+  it('batch reprojection preserves scope, row order and branding without reauthorizing', async () => {
+    authorizeResourceMock.mockResolvedValue({ allowed: true, redactedFields: ['values.items.description'] });
+    const gate = await projectApiResourceRead({
+      knex: {} as any, tenant: 't', user: { user_id: 'u' }, kind: 'quote', record: { quote_id: 'q' },
+    });
+    const lines = [1, 2].map(id => ({ quote_item_id: `line-${id}`, description: 'Private line', quantity: id }));
+    const projected = reprojectUnderDecision(gate!, lines, QUOTE_LINE_RECORD_SOURCE);
+    expect(projected).toEqual([
+      { quote_item_id: 'line-1', quantity: 1 }, { quote_item_id: 'line-2', quantity: 2 },
+    ]);
+    expect(projected.every(isAuthorizedProjection)).toBe(true);
+    expect(lines[0].description).toBe('Private line');
+    expect(authorizeResourceMock).toHaveBeenCalledTimes(1);
+
+    authorizeResourceMock.mockResolvedValue({ allowed: true, redactedFields: ['values.items.quote_item_id'] });
+    const suppressed = await projectApiResourceRead({
+      knex: {} as any, tenant: 't', user: { user_id: 'u' }, kind: 'quote', record: { quote_id: 'q' },
+    });
+    expect(reprojectUnderDecision(suppressed!, lines, QUOTE_LINE_RECORD_SOURCE)).toEqual([]);
+  });
+
 });

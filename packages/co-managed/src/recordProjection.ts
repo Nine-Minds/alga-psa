@@ -306,10 +306,14 @@ function projectRecordWithPolicy<T extends Record<string, any>>(
       out[key] = Array.isArray(value) ? [] : null;
     } else if (childSource && Array.isArray(value)) {
       const nestedRedactions = childScopedRedactions(redactions, source, key, childSource);
-      out[key] = value.map(item => (item && typeof item === 'object' ? projectRecordWithPolicy(item, childSource, redactionsFor, nestedRedactions) : item)).filter(item => item !== null);
+      out[key] = value.map(item => (item && typeof item === 'object' && !Array.isArray(item)
+        ? projectRecordWithPolicy(item, childSource, redactionsFor, nestedRedactions) : null)).filter(item => item !== null);
     } else if (childSource && value && typeof value === 'object') {
       const nestedRedactions = childScopedRedactions(redactions, source, key, childSource);
       out[key] = projectRecordWithPolicy(value as Record<string, any>, childSource, redactionsFor, nestedRedactions);
+    } else if (childSource) {
+      // A declared child is a record, never an opaque scalar that can bypass its source policy.
+      out[key] = null;
     } else {
       out[key] = value;
     }
@@ -391,16 +395,23 @@ export const TICKET_DOCUMENT_VARIANT_SOURCES = {
 export const TICKET_COMMENT_SOURCE: RedactableRecordSource = {
   resource: ['comments'],
   identifier: ids('comment_id', 'comments.comment_id'),
-  fields: {},
+  fields: {
+    user_id: ids('created_by'),
+    contact_id: ids('author_contact_id'),
+  },
   derived: {
     comment_text: ids('note', 'comments.note'),
     comment_html: ids('note', 'comments.note'),
-    created_by_name: ids('user_id', 'users', 'users.first_name', 'users.last_name', 'users.email', 'contact_id', 'contacts'),
+    markdown_content: ids('note', 'comments.note'),
+    created_by: ids('user_id', 'users.user_id'),
+    created_by_name: ids('user_id', 'users', 'users.first_name', 'users.last_name', 'users.email', 'contact_id', 'contacts', 'metadata'),
     created_by_avatar_url: ids('user_id', 'users'),
+    author_contact_id: ids('contact_id', 'contacts.contact_name_id'),
     author_contact_name: ids('author_contact_id', 'contacts', 'contacts.full_name'),
     author_contact_email: ids('author_contact_id', 'contacts', 'contacts.email'),
     reactions: ids('comment_id', 'comment_reactions'),
     reaction_user_names: ids('comment_id', 'comment_reactions', 'users'),
+    email_recipients: ids('metadata'),
   },
 };
 
@@ -445,6 +456,15 @@ export const TICKET_WATCHER_SOURCE: RedactableRecordSource = {
   },
 };
 
+/** The stored watch list is a mirror of the same watcher records returned by the detached endpoint. */
+const TICKET_ATTRIBUTES_SOURCE: RedactableRecordSource = {
+  resource: ['tickets.attributes'],
+  identifier: [],
+  fields: {},
+  derived: {},
+  children: { watch_list: TICKET_WATCHER_SOURCE },
+};
+
 const TICKET_PRIMARY_AGENT_SOURCE: RedactableRecordSource = {
   resource: ['users'],
   // The primary agent object exists only because tickets.assigned_to exists. Hiding that source suppresses the
@@ -460,7 +480,7 @@ const TICKET_PRIMARY_AGENT_SOURCE: RedactableRecordSource = {
 
 const TICKET_ADDITIONAL_AGENT_SOURCE: RedactableRecordSource = {
   resource: ['ticket_resources'],
-  identifier: ids('assignment_id', 'ticket_resources.assignment_id', 'additional_user_id', 'ticket_resources.additional_user_id'),
+  identifier: ids('assignment_id', 'ticket_resources.assignment_id', 'additional_user_id', 'ticket_resources.additional_user_id', 'user_id', 'users.user_id'),
   fields: {},
   derived: {
     first_name: ids('additional_user_id', 'users.first_name'),
@@ -508,6 +528,7 @@ export const TICKET_RECORD_SOURCE: RedactableRecordSource = {
     client_logo_url: ids('client_id'),
   },
   children: {
+    attributes: TICKET_ATTRIBUTES_SOURCE,
     documents: TICKET_DOCUMENT_SOURCE,
     comments: TICKET_COMMENT_SOURCE,
     materials: TICKET_MATERIAL_SOURCE,
@@ -519,6 +540,13 @@ export const TICKET_RECORD_SOURCE: RedactableRecordSource = {
     primary_agent: TICKET_PRIMARY_AGENT_SOURCE,
     additional_agents: TICKET_ADDITIONAL_AGENT_SOURCE,
   },
+};
+
+/** An external-link lookup is another ticket representation with one detached link. */
+export const TICKET_EXTERNAL_LINK_LOOKUP_SOURCE: RedactableRecordSource = {
+  ...TICKET_RECORD_SOURCE,
+  policySource: TICKET_RECORD_SOURCE,
+  children: { link: TICKET_EXTERNAL_LINK_SOURCE },
 };
 
 export const QUOTE_LINE_RECORD_SOURCE: RedactableRecordSource = {

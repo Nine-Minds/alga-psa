@@ -2179,3 +2179,419 @@ describe('ticket binary responses preserve document redactions', () => {
     expect(authorizeResource).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('ticket subresource mutations and comment representations', () => {
+  it.each(['full', 'markdown'] as const)('comments %s format hides note-derived markdown', async (format) => {
+    state.tickets = [{ ticket_id: P1, title: 'Visible ticket' }];
+    const c = new ApiTicketController();
+    const comment = {
+      comment_id: P2,
+      ticket_id: P1,
+      note: 'Private note',
+      comment_text: 'Private note',
+      comment_html: '<p>Private note</p>',
+      markdown_content: 'Private note',
+    };
+    (c as any).ticketService.getTicketComments = vi.fn(async () =>
+      format === 'markdown' ? [{ comment_id: P2, ticket_id: P1, markdown_content: 'Private note' }] : [comment]
+    );
+    const get = () => c.getComments()(request(`/api/v1/tickets/${P1}/comments?content_format=${format}`, { id: P1 }));
+    expect((await (await get()).json()).data[0].markdown_content).toBe('Private note');
+    state.decisions.set(P1, { allowed: true, redactedFields: ['comments.note'] });
+    const response = await get();
+    expect(response.status).toBe(200);
+    expect((await response.json()).data[0].markdown_content).toBeNull();
+  });
+
+  it.each(['ticket_checklist_items.item_name', 'ticket_checklist_items', 'ticket_checklist_items.checklist_item_id'])(
+    'checklist completion response retains %s',
+    async (field) => {
+      state.tickets = [{ ticket_id: P1, title: 'Visible ticket' }];
+      state.checklistItems = [
+        { checklist_item_id: P2, ticket_id: P1, item_name: 'Private checklist task', completed: true },
+      ];
+      const actions = await import('@alga-psa/tickets/actions/checklists/ticketChecklistActions');
+      vi.mocked(actions.setChecklistItemCompleted).mockResolvedValue({ checklist_item_id: P2 } as any);
+      const c = new ApiTicketController();
+      const update = () => {
+        const req = new NextRequest(`http://localhost/api/v1/tickets/${P1}/checklist/${P2}`, {
+          method: 'PATCH',
+          headers: { 'x-api-key': 'k', 'content-type': 'application/json' },
+          body: JSON.stringify({ completed: true }),
+        }) as any;
+        req.params = Promise.resolve({ id: P1, itemId: P2 });
+        return c.updateChecklistItemCompletion()(req);
+      };
+      expect((await (await update()).json()).data.item_name).toBe('Private checklist task');
+      state.decisions.set(P1, { allowed: true, redactedFields: [field] });
+      const response = await update();
+      if (field.endsWith('.item_name')) {
+        expect(response.status).toBe(200);
+        expect((await response.json()).data).not.toHaveProperty('item_name');
+      } else {
+        // A hidden row must not be serialized even when the mutation succeeded.
+        expect(JSON.stringify(await response.json())).not.toContain('Private checklist task');
+      }
+    }
+  );
+
+  it.each(['addWatcher', 'updateWatcher'] as const)('%s projects the returned watcher list', async (method) => {
+    state.tickets = [{ ticket_id: P1, title: 'Visible ticket' }];
+    state.watchers = [
+      {
+        email: 'known@example.test',
+        name: 'Private watcher name',
+        active: false,
+        entity_type: 'contact',
+        entity_id: P2,
+        source: 'manual',
+      },
+    ];
+    const c = new ApiTicketController();
+    (c as any).ticketService.addWatcher = vi.fn(async () => state.watchers);
+    (c as any).ticketService.setWatcherActive = vi.fn(async () => state.watchers);
+    const change = () => {
+      const req = new NextRequest(`http://localhost/api/v1/tickets/${P1}/watchers`, {
+        method: method === 'addWatcher' ? 'POST' : 'PATCH',
+        headers: { 'x-api-key': 'k', 'content-type': 'application/json' },
+        body: JSON.stringify({ email: 'known@example.test', active: false }),
+      }) as any;
+      req.params = Promise.resolve({ id: P1 });
+      return c[method]()(req);
+    };
+    expect((await (await change()).json()).data[0].name).toBe('Private watcher name');
+    state.decisions.set(P1, { allowed: true, redactedFields: ['ticket_watchers.name'] });
+    const get = await c.getWatchers()(request(`/api/v1/tickets/${P1}/watchers`, { id: P1 }));
+    expect((await get.json()).data[0].name).toBeNull();
+    const response = await change();
+    expect(response.status).toBe(200);
+    expect((await response.json()).data[0].name).toBeNull();
+  });
+});
+
+describe('copied ticket field provenance', () => {
+  it.each(['full', 'markdown'] as const)('comments %s format hides copied creator IDs', async (format) => {
+    state.tickets = [{ ticket_id: P1, title: 'Visible ticket' }];
+    const c = new ApiTicketController();
+    (c as any).ticketService.getTicketComments = vi.fn(async () => [
+      { comment_id: P2, ticket_id: P1, user_id: P3, created_by: P3, markdown_content: 'Visible note' },
+    ]);
+    const get = () => c.getComments()(request(`/api/v1/tickets/${P1}/comments?content_format=${format}`, { id: P1 }));
+    expect((await (await get()).json()).data[0].created_by).toBe(P3);
+    state.decisions.set(P1, { allowed: true, redactedFields: ['comments.user_id'] });
+    const response = await get();
+    expect(response.status).toBe(200);
+    expect((await response.json()).data[0].created_by ?? null).toBeNull();
+  });
+  it('ticket detail projects its stored watcher mirror with the watcher decision', async () => {
+    const watcher = {
+      email: 'private@example.test',
+      name: 'Visible name',
+      active: true,
+      entity_type: 'contact',
+      entity_id: P2,
+    };
+    state.tickets = [{ ticket_id: P1, title: 'Visible ticket', attributes: { watch_list: [watcher] } }];
+    state.watchers = [watcher];
+    const c = new ApiTicketController();
+    const get = () => c.getById()(request(`/api/v1/tickets/${P1}`, { id: P1 }));
+    expect((await (await get()).json()).data.attributes.watch_list[0].email).toBe('private@example.test');
+    state.decisions.set(P1, { allowed: true, redactedFields: ['ticket_watchers.email'] });
+    const detached = await c.getWatchers()(request(`/api/v1/tickets/${P1}/watchers`, { id: P1 }));
+    expect((await detached.json()).data[0]).not.toHaveProperty('email');
+    const response = await get();
+    expect(response.status).toBe(200);
+    expect((await response.json()).data.attributes.watch_list[0]).not.toHaveProperty('email');
+  });
+});
+
+function ticketMutationRequest(path: string, body: Record<string, unknown>, method = 'POST') {
+  const req = new NextRequest(`http://localhost/api/v1/tickets/${P1}${path}`, {
+    method,
+    headers: { 'x-api-key': 'k', 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  }) as any;
+  req.params = Promise.resolve({ id: P1 });
+  return req;
+}
+
+describe('ticket mutation response projection boundaries', () => {
+  beforeEach(() => {
+    state.tickets = [{ ticket_id: P1, title: 'Visible ticket' }];
+  });
+
+  it('projects newly created checklist rows, including joined completion values and suppression', async () => {
+    const actions = await import('@alga-psa/tickets/actions/checklists/ticketChecklistActions');
+    vi.mocked(actions.addChecklistItem).mockResolvedValue({ checklist_item_id: P2 } as any);
+    state.checklistItems = [
+      {
+        checklist_item_id: P2,
+        ticket_id: P1,
+        item_name: 'Visible task',
+        completed_by: P3,
+        completed_by_name: 'Private person',
+      },
+    ];
+    const c = new ApiTicketController();
+    const create = () => c.createChecklistItem()(ticketMutationRequest('/checklist', { item_name: 'Visible task' }));
+    expect((await (await create()).json()).data.completed_by_name).toBe('Private person');
+    state.decisions.set(P1, { allowed: true, redactedFields: ['ticket_checklist_items.completed_by'] });
+    const hidden = await create();
+    expect(hidden.status).toBe(201);
+    expect((await hidden.json()).data).toMatchObject({ item_name: 'Visible task', completed_by_name: null });
+    state.decisions.set(P1, { allowed: true, redactedFields: ['values.checklist.checklist_item_id'] });
+    expect((await (await create()).json()).data).toBeNull();
+    state.decisions.set(P1, { allowed: false, redactedFields: [] });
+    vi.mocked(actions.addChecklistItem).mockClear();
+    expect((await create()).status).toBe(404);
+    expect(actions.addChecklistItem).not.toHaveBeenCalled();
+  });
+
+  it.each(['createExternalLink', 'updateExternalLink', 'deleteExternalLink'] as const)(
+    '%s returns only the authorized external-link representation',
+    async (method) => {
+      const actions = await import('@alga-psa/tickets/actions/externalLinks/externalLinkActions');
+      const link = {
+        link_id: P2,
+        ticket_id: P1,
+        system: 'generic',
+        external_id: 'PRIVATE-4938',
+        url: 'https://tracker.example/PRIVATE-4938',
+        display: { href: 'https://tracker.example/PRIVATE-4938' },
+      };
+      state.externalLinks = [link];
+      vi.mocked(actions.addExternalLink).mockResolvedValue(link as any);
+      vi.mocked(actions.updateExternalLink).mockResolvedValue(link as any);
+      vi.mocked(actions.removeExternalLink).mockResolvedValue({ link_id: P2 } as any);
+      const c = new ApiTicketController();
+      const invoke = () =>
+        c[method]()(
+          ticketMutationRequest(
+            `/external-links${method === 'createExternalLink' ? '' : `/${P2}`}`,
+            method === 'createExternalLink'
+              ? { system: 'generic', external_id: 'PRIVATE-4938', url: link.url }
+              : { external_status: 'closed' },
+            method === 'deleteExternalLink' ? 'DELETE' : method === 'updateExternalLink' ? 'PATCH' : 'POST'
+          )
+        );
+      expect((await (await invoke()).json()).data.link_id).toBe(P2);
+      if (method !== 'deleteExternalLink') {
+        state.decisions.set(P1, { allowed: true, redactedFields: ['external_entity_links.external_id'] });
+        const redacted = (await (await invoke()).json()).data;
+        expect(redacted).not.toHaveProperty('external_id');
+        expect(redacted.url).toBeNull();
+        expect(redacted.display).toBeNull();
+      }
+      state.decisions.set(P1, { allowed: true, redactedFields: ['values.external_links.link_id'] });
+      expect((await (await invoke()).json()).data).toBeNull();
+    }
+  );
+
+  it.each(['addWatcher', 'updateWatcher', 'removeWatcher'] as const)(
+    '%s suppresses watcher rows under the same decision as GET and the mirror',
+    async (method) => {
+      state.watchers = [
+        { email: 'known@example.test', name: 'Private name', entity_type: 'contact', entity_id: P2, active: false },
+      ];
+      state.tickets[0].attributes = { watch_list: state.watchers };
+      const c = new ApiTicketController();
+      const write = vi.fn(async () => state.watchers);
+      (c as any).ticketService.addWatcher = write;
+      (c as any).ticketService.setWatcherActive = write;
+      (c as any).ticketService.removeWatcher = write;
+      const invoke = () =>
+        c[method]()(
+          ticketMutationRequest(
+            '/watchers?email=known@example.test',
+            { email: 'known@example.test', active: false },
+            method === 'removeWatcher' ? 'DELETE' : method === 'updateWatcher' ? 'PATCH' : 'POST'
+          )
+        );
+      expect((await (await invoke()).json()).data[0].name).toBe('Private name');
+      state.decisions.set(P1, { allowed: true, redactedFields: ['tickets.attributes.watch_list.entity_id'] });
+      const hidden = await invoke();
+      expect(hidden.status).toBe(200);
+      expect((await hidden.json()).data).toEqual([]);
+      state.decisions.set(P1, { allowed: false, redactedFields: [] });
+      write.mockClear();
+      expect((await invoke()).status).toBe(404);
+      expect(write).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['addComment', 'updateComment', 'cancelScheduledComment'] as const)(
+    '%s returns projected comment rows and respects suppression',
+    async (method) => {
+      const comment = {
+        comment_id: P2,
+        ticket_id: P1,
+        user_id: P3,
+        created_by: P3,
+        note: 'Visible content',
+        markdown_content: 'Visible content',
+      };
+      const c = new ApiTicketController();
+      const write = vi.fn(async () =>
+        method === 'cancelScheduledComment' ? { comment_id: P2, publish_state: 'canceled' } : comment
+      );
+      (c as any).ticketService.addComment = write;
+      (c as any).ticketService.updateComment = write;
+      (c as any).ticketService.cancelScheduledComment = write;
+      const invoke = () =>
+        c[method]()(
+          ticketMutationRequest(
+            `/comments${method === 'addComment' ? '' : `/${P2}`}${method === 'cancelScheduledComment' ? '/cancel' : ''}`,
+            { comment_text: 'Visible content' },
+            method === 'updateComment' ? 'PATCH' : 'POST'
+          )
+        );
+      expect((await (await invoke()).json()).data.comment_id).toBe(P2);
+      if (method !== 'cancelScheduledComment') {
+        state.decisions.set(P1, { allowed: true, redactedFields: ['comments.user_id'] });
+        const redacted = (await (await invoke()).json()).data;
+        expect(redacted).not.toHaveProperty('user_id');
+        expect(redacted.created_by).toBeNull();
+      } else {
+        state.decisions.set(P1, { allowed: true, redactedFields: ['comments.publish_state'] });
+        expect((await (await invoke()).json()).data).not.toHaveProperty('publish_state');
+      }
+      state.decisions.set(P1, { allowed: true, redactedFields: ['values.comments.comment_id'] });
+      expect((await (await invoke()).json()).data).toBeNull();
+      state.decisions.set(P1, { allowed: false, redactedFields: [] });
+      write.mockClear();
+      expect((await invoke()).status).toBe(404);
+      expect(write).not.toHaveBeenCalled();
+    }
+  );
+
+  it('projects joined material values and suppresses a hidden created material', async () => {
+    const c = new ApiTicketController();
+    (c as any).ticketService.addTicketMaterial = vi.fn(async () => ({
+      ticket_material_id: P2,
+      ticket_id: P1,
+      service_id: P3,
+      service_name: 'Private product',
+      rate: 4938,
+    }));
+    const invoke = () =>
+      c.addMaterial()(
+        ticketMutationRequest('/materials', { service_id: P3, quantity: 1, rate: 4938, currency_code: 'USD' })
+      );
+    expect((await (await invoke()).json()).data.service_name).toBe('Private product');
+    state.decisions.set(P1, { allowed: true, redactedFields: ['ticket_materials.service_id'] });
+    const hidden = await invoke();
+    expect(hidden.status).toBe(201);
+    expect((await hidden.json()).data.service_name).toBeNull();
+    state.decisions.set(P1, { allowed: true, redactedFields: ['materials.ticket_material_id'] });
+    expect((await (await invoke()).json()).data).toBeNull();
+  });
+
+  it('projects uploaded document metadata and suppresses a hidden document', async () => {
+    const c = new ApiTicketController();
+    (c as any).ticketService.uploadTicketDocument = vi.fn(async () => ({
+      document_id: P2,
+      document_name: 'Visible file',
+      file_size: 4938,
+    }));
+    const invoke = () => {
+      const form = new FormData();
+      form.append('file', new File(['bytes'], 'visible.txt', { type: 'text/plain' }));
+      const req = new NextRequest(`http://localhost/api/v1/tickets/${P1}/documents`, {
+        method: 'POST',
+        headers: { 'x-api-key': 'k' },
+        body: form,
+      }) as any;
+      req.params = Promise.resolve({ id: P1 });
+      return c.uploadDocument()(req);
+    };
+    expect((await (await invoke()).json()).data.file_size).toBe(4938);
+    state.decisions.set(P1, { allowed: true, redactedFields: ['documents.file_size'] });
+    const hidden = await invoke();
+    expect(hidden.status).toBe(201);
+    expect((await hidden.json()).data).toEqual({ document_id: P2, document_name: 'Visible file' });
+    state.decisions.set(P1, { allowed: true, redactedFields: ['documents.document_id'] });
+    expect((await (await invoke()).json()).data).toBeNull();
+  });
+});
+
+
+describe('external-link lookup projection and predicate privacy', () => {
+  beforeEach(async () => {
+    state.tickets = [{ ticket_id: P1, title: 'Visible ticket' }];
+    const actions = await import('@alga-psa/tickets/actions/externalLinks/externalLinkActions');
+    vi.mocked(actions.findTicketByExternalLink).mockResolvedValue({ ticket_id: P1, link: {
+      link_id: P2, ticket_id: P1, system: 'generic', external_id: 'PRIVATE-4938', external_parent_id: 'parent-1',
+      external_status: 'Private status', url: 'https://tracker.example/PRIVATE-4938',
+    } } as any);
+  });
+
+  it.each([
+    'external_entity_links.external_id', 'external_entity_links.system', 'external_entity_links.link_id',
+    'external_links', 'link.external_id', 'values.link.external_id', 'tickets.link.external_id',
+  ])('does not confirm a lookup on a link hidden by %s', async field => {
+    const c = new ApiTicketController();
+    const get = () => c.findByExternalLink()(request('/api/v1/tickets/by-external-link?system=generic&external_id=PRIVATE-4938'));
+    const visible = await get();
+    expect(visible.status).toBe(200);
+    expect((await visible.json()).data.link.external_id).toBe('PRIVATE-4938');
+    state.decisions.set(P1, { allowed: true, redactedFields: [field] });
+    expect((await get()).status).toBe(404);
+  });
+
+  it('projects non-predicate fields while allowing a readable lookup', async () => {
+    const c = new ApiTicketController();
+    state.decisions.set(P1, { allowed: true, redactedFields: ['external_entity_links.external_status', 'external_entity_links.external_parent_id'] });
+    const get = (parent = '') => c.findByExternalLink()(request(`/api/v1/tickets/by-external-link?system=generic&external_id=PRIVATE-4938${parent}`));
+    const visiblePredicate = await get();
+    expect(visiblePredicate.status).toBe(200);
+    const data = (await visiblePredicate.json()).data;
+    expect(data.link).not.toHaveProperty('external_status');
+    expect(data.link).not.toHaveProperty('external_parent_id');
+    expect(data.ticket_id).toBe(P1);
+    expect((await get('&external_parent_id=parent-1')).status).toBe(404);
+  });
+});
+
+
+describe('ticket copied identifier aliases', () => {
+  it.each(['comments.user_id', 'comments.created_by', 'comments.contact_id', 'comments.author_contact_id'])(
+    'hides both comment identifier representations for %s', async field => {
+      state.tickets = [{ ticket_id: P1, title: 'Visible ticket' }];
+      const c = new ApiTicketController();
+      (c as any).ticketService.getTicketComments = vi.fn(async () => [{
+        comment_id: P2, user_id: P3, created_by: P3, contact_id: P1, author_contact_id: P1, note: 'Visible comment',
+      }]);
+      state.decisions.set(P1, { allowed: true, redactedFields: [field] });
+      const response = await c.getComments()(request(`/api/v1/tickets/${P1}/comments`, { id: P1 }));
+      expect(response.status).toBe(200);
+      const row = (await response.json()).data[0];
+      expect(row.note).toBe('Visible comment');
+      if (field.includes('contact')) {
+        expect(row).not.toHaveProperty('contact_id');
+        expect(row.author_contact_id).toBeNull();
+        expect(row.user_id).toBe(P3);
+      } else {
+        expect(row).not.toHaveProperty('user_id');
+        expect(row.created_by).toBeNull();
+        expect(row.contact_id).toBe(P1);
+      }
+    },
+  );
+
+  it.each(['users.user_id', 'ticket_resources.additional_user_id', 'values.additional_agents.user_id'])(
+    'suppresses additional-agent identity copies under %s', async field => {
+      state.tickets = [{ ticket_id: P1, title: 'Visible ticket' }];
+      const c = new ApiTicketController();
+      const actual = await vi.importActual<any>('../../../lib/api/services/TicketService');
+      const agents = await actual.TicketService.prototype.buildTicketAgentsResponse.call({}, {}, context, state.tickets[0],
+        [{ additional_user_id: P3, assignment_id: P2 }]);
+      (c as any).ticketService.getTicketAgents = vi.fn(async () => agents);
+      const get = () => c.getAgents()(request(`/api/v1/tickets/${P1}/agents`, { id: P1 }));
+      expect((await (await get()).json()).data.additional_agents[0].user_id).toBe(P3);
+      state.decisions.set(P1, { allowed: true, redactedFields: [field] });
+      const response = await get();
+      expect(response.status).toBe(200);
+      expect((await response.json()).data.additional_agents).toEqual([]);
+    },
+  );
+});

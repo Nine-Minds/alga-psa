@@ -74,12 +74,17 @@ vi.mock('@/lib/productSurfaceRegistry', () => ({
   resolveProductApiBehavior: vi.fn(() => 'allowed'),
 }));
 
-vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
-  projectApiResourceRead: authorizeReadMock,
-  authorizeApiResourceRead: authorizeReadMock,
-  authorizeApiResource: authorizeReadMock,
-  buildAuthorizationPrincipalSubject: vi.fn(() => ({})),
-}));
+vi.mock('@/lib/api/controllers/authorizationKernel', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api/controllers/authorizationKernel')>();
+  return {
+    ...actual,
+    projectApiResourceRead: vi.fn(async (input) => {
+      if (!(await authorizeReadMock(input))) return null;
+      return actual.projectApiResourceRead({ ...input, user: undefined, apiKeyId: undefined });
+    }),
+    authorizeApiResource: authorizeReadMock,
+  };
+});
 
 // The service is the seam that raises the inline-link validation failure.
 vi.mock('../../../lib/api/services/TicketService', () => ({

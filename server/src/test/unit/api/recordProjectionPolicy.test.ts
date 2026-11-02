@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   ASSET_MAINTENANCE_SCHEDULE_SOURCE,
   ASSET_RECORD_SOURCE,
+  TICKET_RECORD_SOURCE,
+  TICKET_WATCHER_SOURCE,
   ASSET_RELATIONSHIP_SOURCE,
   QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE,
   QUOTE_LINE_RECORD_SOURCE,
@@ -53,4 +55,36 @@ describe('source-aware record projection policy', () => {
     expect(policy.project({ quote_item_id: 'line-1', unit_price: 4938 }, QUOTE_LINE_RECORD_SOURCE)).toBeNull();
     expect(policy.readable('unit_price', QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE)).toBe(false);
   });
+
+  it.each([
+    'ticket_watchers.email', 'values.watchers.email', 'tickets.attributes.watch_list.email',
+    'fields.tickets.attributes.watch_list.email',
+  ])('shares watcher decisions across stored and detached representations for %s', alias => {
+    const watcher = { email: 'private@example.test', entity_id: 'contact-1', name: 'Visible name' };
+    const record = { ticket_id: 'ticket-1', attributes: { watch_list: [watcher], unrelated: 'Visible context' } };
+    const policy = createRecordProjectionPolicy([alias], TICKET_RECORD_SOURCE);
+    expect(policy.project(watcher, TICKET_WATCHER_SOURCE)).toEqual({ entity_id: 'contact-1', name: 'Visible name' });
+    expect(policy.project(record, TICKET_RECORD_SOURCE)).toEqual({
+      ticket_id: 'ticket-1', attributes: { watch_list: [{ entity_id: 'contact-1', name: 'Visible name' }], unrelated: 'Visible context' },
+    });
+    expect(policy.readable('attributes.watch_list.email', TICKET_RECORD_SOURCE)).toBe(false);
+    expect(record.attributes.watch_list[0].email).toBe('private@example.test');
+  });
+
+  it('suppresses both watcher representations when either child route is hidden', () => {
+    const policy = createRecordProjectionPolicy(['attributes.watch_list.entity_id'], TICKET_RECORD_SOURCE);
+    const watcher = { email: 'private@example.test', entity_id: 'contact-1' };
+    expect(policy.project(watcher, TICKET_WATCHER_SOURCE)).toBeNull();
+    expect(policy.project({ ticket_id: 't', watchers: [watcher], attributes: { watch_list: [watcher] } }, TICKET_RECORD_SOURCE))
+      .toEqual({ ticket_id: 't', watchers: [], attributes: { watch_list: [] } });
+  });
+
+  it('fails closed for malformed declared child records rather than serving opaque source data', () => {
+    const policy = createRecordProjectionPolicy(['ticket_watchers.email'], TICKET_RECORD_SOURCE);
+    expect(policy.project({ ticket_id: 't', attributes: '{"watch_list":[{"email":"private@example.test"}]}' }, TICKET_RECORD_SOURCE))
+      .toEqual({ ticket_id: 't', attributes: null });
+    expect(policy.project({ ticket_id: 't', watchers: ['private@example.test', null, ['private@example.test'], { email: 'private@example.test', entity_id: 'c' }] }, TICKET_RECORD_SOURCE))
+      .toEqual({ ticket_id: 't', watchers: [{ entity_id: 'c' }] });
+  });
+
 });
