@@ -1,5 +1,5 @@
 import { test as providerTest, expect } from '../fixtures/emulators';
-import { signInPortal } from '../fixtures/auth';
+import { signIn, signInPortal } from '../fixtures/auth';
 import { createPaymentFixture } from '../fixtures/payment';
 
 type PaymentFixture = Awaited<ReturnType<typeof createPaymentFixture>>;
@@ -8,7 +8,7 @@ type Delivery = { eventId: string; eventType: string; status: number; attempt: n
 type Event = { id: string; type: string; data: { object: Session } };
 
 const test = providerTest.extend<{ payment: PaymentFixture }>({
-  payment: async ({ database, credentials, emulators }, use, testInfo) => {
+  payment: async ({ database, credentials, emulators, page }, use, testInfo) => {
     const publicURL = process.env.ALGASIM_PUBLIC_STRIPE_URL;
     const callbackBase = process.env.ALGASIM_CALLBACK_BASE_URL;
     if (!publicURL || !callbackBase) throw new Error('Set the public Stripe URL and container-reachable Alga callback base');
@@ -16,6 +16,19 @@ const test = providerTest.extend<{ payment: PaymentFixture }>({
       webhookTarget: `${callbackBase}/api/webhooks/stripe/payments`, webhookSecret: 'whsec_algasim',
     });
     const fixture = await createPaymentFixture(database, credentials.email);
+    // Configure this disposable tenant through the shipped connection action.
+    // A publishable-only DB row used to make the UI look connected while the
+    // payment operation silently depended on an application-wide secret.
+    await signIn(page, { email: fixture.tenant.admin.email, password: credentials.password });
+    await page.goto('/msp/settings/billing?section=payments');
+    await page.locator('#connect-stripe-button').click();
+    await page.locator('#secretKey').fill('sk_test_algasim');
+    await page.locator('#publishableKey').fill('pk_test_algasim');
+    await page.locator('#connect-stripe-submit').click();
+    await expect(page.locator('#connect-stripe-button')).toHaveCount(0);
+    const savedConfig = await database('payment_provider_configs')
+      .where({ tenant: fixture.tenant.tenantId, provider_type: 'stripe' }).first();
+    expect(savedConfig?.configuration).toMatchObject({ stripe_account_id: 'acct_algasim' });
     await testInfo.attach('payment-identities', { body: JSON.stringify(fixture), contentType: 'application/json' });
     await use(fixture);
   },
