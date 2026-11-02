@@ -13,7 +13,7 @@ import { withAuth } from '@alga-psa/auth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
-import Stripe from 'stripe';
+import { createStripeClient } from '../payments/stripeClient';
 import { STRIPE_WEBHOOK_EVENTS, reconcileStripeWebhookEvents } from '../payments/stripeWebhookEvents';
 import * as fs from 'fs';
 import {
@@ -185,9 +185,7 @@ export const connectStripeAction = withAuth(async (
 ): Promise<PaymentActionResult<{ publishableKey: string; webhookConfigured: boolean }>> => {
   try {
     // Validate credentials by making a test API call
-    const stripe = new Stripe(credentials.secretKey, {
-      apiVersion: '2024-12-18.acacia' as any,
-    });
+    const stripe = createStripeClient(credentials.secretKey);
 
     let verifiedAccountId: string;
     try {
@@ -419,9 +417,7 @@ export const disconnectStripeAction = withAuth(async (user, { tenant }): Promise
           );
 
           if (secretKey) {
-            const stripe = new Stripe(secretKey, {
-              apiVersion: '2024-12-18.acacia' as any,
-            });
+            const stripe = createStripeClient(secretKey);
 
             await stripe.webhookEndpoints.del(webhookEndpointId);
             logger.info('[PaymentActions] Deleted Stripe webhook endpoint', {
@@ -540,9 +536,7 @@ export const testStripeConnectionAction = withAuth(async (user, { tenant }): Pro
       return { success: false, error: 'Stripe not configured' };
     }
 
-    const stripe = new Stripe(secretKey, {
-      apiVersion: '2024-12-18.acacia' as any,
-    });
+    const stripe = createStripeClient(secretKey);
 
     // Test by fetching account info
     const account = await stripe.accounts.retrieve();
@@ -664,9 +658,7 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
       return { success: false, error: 'Stripe credentials not found. Please reconnect Stripe.' };
     }
 
-    const stripe = new Stripe(secretKey, {
-      apiVersion: '2024-12-18.acacia' as any,
-    });
+    const stripe = createStripeClient(secretKey);
 
     // Get the webhook URL
     const baseUrl = getStripeBaseUrl();

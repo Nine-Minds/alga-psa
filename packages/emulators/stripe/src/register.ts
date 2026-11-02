@@ -40,12 +40,13 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
     description: 'Configure test credentials, webhook targets, and the public hosted checkout base URL',
     params: z.object({
       secretKey: z.string().optional(),
+      accountId: z.string().regex(/^acct_[A-Za-z0-9_]+$/).optional(),
       webhookSecret: z.string().optional(),
       publishableKey: z.string().optional(),
       webhookTarget: z.string().optional(),
       hostedBaseUrl: z.string().optional(),
     }),
-    run: ({ secretKey, webhookSecret, publishableKey, webhookTarget, hostedBaseUrl }) => {
+    run: ({ secretKey, accountId, webhookSecret, publishableKey, webhookTarget, hostedBaseUrl }) => {
       if (webhookTarget !== undefined) {
         const targets = core.webhookTargets;
         if (!targets.includes(webhookTarget)) targets.push(webhookTarget);
@@ -53,6 +54,7 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
       return redactedConfig(
         core.configure({
           secretKey,
+          accountId,
           webhookSecret,
           publishableKey,
           hostedBaseUrl: hostedBaseUrl ?? null,

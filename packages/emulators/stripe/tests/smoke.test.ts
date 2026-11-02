@@ -92,6 +92,14 @@ afterAll(async () => {
 });
 
 describe('stripe emulator wire contract', { shuffle: false }, () => {
+  it('serves a stable account through the official Stripe SDK and supports configured account mismatch fixtures', async () => {
+    const sdk = new Stripe(SECRET_KEY, { host: new URL(base).hostname, port: Number(new URL(base).port), protocol: 'http' });
+    expect((await sdk.accounts.retrieve()).id).toBe('acct_algasim');
+    await controlPost('/control/stripe/seed/config', { accountId: 'acct_review_other' });
+    const mismatchSdk = new Stripe(SECRET_KEY, { host: new URL(base).hostname, port: Number(new URL(base).port), protocol: 'http' });
+    expect((await mismatchSdk.accounts.retrieve()).id).toBe('acct_review_other');
+    await controlPost('/control/stripe/seed/config', { accountId: 'acct_algasim' });
+  });
   it('redelivers the same event with a delivery-time signature and increments delivery attempts', async () => {
     const replayHost = new EmulatorHost({ emulators: [stripeEmulator], controlPort: 0, ports: { stripe: 0 } });
     try {

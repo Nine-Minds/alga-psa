@@ -12,6 +12,7 @@
  */
 
 import Stripe from 'stripe';
+import { createStripeClient } from './stripeClient';
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@alga-psa/db';
@@ -113,40 +114,7 @@ export class StripePaymentProvider implements PaymentProvider {
     }
     if (!this.config.accountId) throw new StripeTenantAccountUnboundError();
 
-    const clientOptions: Stripe.StripeConfig = {
-      apiVersion: '2024-12-18.acacia' as any,
-      typescript: true,
-    };
-
-    // Test-only endpoint override: an explicit STRIPE_API_BASE_URL points the
-    // Stripe SDK at a local emulator. With the variable absent, construction is
-    // byte-for-byte equivalent to the production path and uses Stripe's normal
-    // API endpoint.
-    const apiBaseUrl = process.env.STRIPE_API_BASE_URL;
-    if (apiBaseUrl) {
-      let parsed: URL;
-      try {
-        parsed = new URL(apiBaseUrl);
-      } catch {
-        throw new Error(`Invalid STRIPE_API_BASE_URL: ${apiBaseUrl}`);
-      }
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        throw new Error(`Invalid STRIPE_API_BASE_URL protocol: ${parsed.protocol}`);
-      }
-      clientOptions.host = parsed.hostname;
-      if (parsed.port) {
-        clientOptions.port = Number(parsed.port);
-      }
-      clientOptions.protocol = parsed.protocol === 'https:' ? 'https' : 'http';
-      logger.info('[StripePaymentProvider] Using STRIPE_API_BASE_URL override', {
-        tenantId: this.tenantId,
-        host: parsed.hostname,
-        port: parsed.port,
-        protocol: clientOptions.protocol,
-      });
-    }
-
-    this.stripe = new Stripe(this.config.secretKey, clientOptions);
+    this.stripe = createStripeClient(this.config.secretKey);
     const account = await this.stripe.accounts.retrieve();
     if (account.id !== this.config.accountId) {
       this.stripe = null;

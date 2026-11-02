@@ -25,6 +25,7 @@ export class StripeWireError extends Error {
 
 export interface StripeEmulatorConfig {
   secretKey: string;
+  accountId: string;
   webhookSecret: string;
   publishableKey: string;
   webhookTargets: string[];
@@ -191,6 +192,7 @@ export interface StripeList<T> {
 }
 
 const DEFAULT_SECRET_KEY = 'sk_test_algasim';
+const DEFAULT_ACCOUNT_ID = 'acct_algasim';
 const DEFAULT_WEBHOOK_SECRET = 'whsec_algasim';
 const DEFAULT_PUBLISHABLE_KEY = 'pk_test_algasim';
 
@@ -203,6 +205,7 @@ export class StripeEmulatorCore implements EmulatorCore {
   readonly env: HostEnv;
 
   secretKey = DEFAULT_SECRET_KEY;
+  accountId = DEFAULT_ACCOUNT_ID;
   webhookSecret = DEFAULT_WEBHOOK_SECRET;
   publishableKey = DEFAULT_PUBLISHABLE_KEY;
   webhookTargets: string[] = [];
@@ -238,6 +241,7 @@ export class StripeEmulatorCore implements EmulatorCore {
     this.deliveries.length = 0;
     this.operationFaults.clear();
     this.secretKey = DEFAULT_SECRET_KEY;
+    this.accountId = DEFAULT_ACCOUNT_ID;
     this.webhookSecret = DEFAULT_WEBHOOK_SECRET;
     this.publishableKey = DEFAULT_PUBLISHABLE_KEY;
     this.webhookTargets = [];
@@ -248,6 +252,7 @@ export class StripeEmulatorCore implements EmulatorCore {
   config(): StripeEmulatorConfig {
     return {
       secretKey: this.secretKey,
+      accountId: this.accountId,
       webhookSecret: this.webhookSecret,
       publishableKey: this.publishableKey,
       webhookTargets: [...this.webhookTargets],
@@ -257,6 +262,7 @@ export class StripeEmulatorCore implements EmulatorCore {
 
   configure(config: Partial<StripeEmulatorConfig>): StripeEmulatorConfig {
     if (config.secretKey !== undefined) this.secretKey = config.secretKey;
+    if (config.accountId !== undefined) this.accountId = config.accountId;
     if (config.webhookSecret !== undefined) this.webhookSecret = config.webhookSecret;
     if (config.publishableKey !== undefined) this.publishableKey = config.publishableKey;
     if (config.webhookTargets !== undefined) this.webhookTargets = [...config.webhookTargets];
@@ -280,6 +286,14 @@ export class StripeEmulatorCore implements EmulatorCore {
     if (!bearer || bearer !== this.secretKey) {
       throw new StripeWireError(401, 'Invalid API Key provided', 'authentication_error');
     }
+  }
+
+  retrieveAccount(): Record<string, unknown> {
+    return {
+      id: this.accountId, object: 'account', business_type: 'company', charges_enabled: true,
+      country: 'US', default_currency: 'usd', details_submitted: true,
+      email: 'billing@example.invalid', payouts_enabled: true, type: 'standard', livemode: false,
+    };
   }
 
   // ── Customers ─────────────────────────────────────────────────────────────

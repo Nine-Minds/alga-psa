@@ -117,6 +117,11 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
   const v1 = express.Router();
   router.use('/v1', bearerAuth(core), v1);
 
+  v1.get('/account', route((_req, res) => {
+    checkFault(core, 'account.retrieve');
+    res.json(core.retrieveAccount());
+  }));
+
   v1.get('/customers', route((req, res) => {
     checkFault(core, 'customers.list');
     const email = typeof req.query.email === 'string' ? req.query.email : undefined;

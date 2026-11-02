@@ -3,9 +3,9 @@
  * payment setting. Uses an in-memory stand-in for payment_provider_configs
  * (no DB needed) and drives the real connect/disconnect actions.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const store: { row: Record<string, any> | null } = { row: null };
+const store: { row: Record<string, any> | null; accountId: string; stripeOptions: any[] } = { row: null, accountId: 'acct_1', stripeOptions: [] };
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
@@ -25,8 +25,8 @@ vi.mock('../../../lib/payments/stripeWebhookEvents', () => ({
   reconcileStripeWebhookEvents: vi.fn(),
 }));
 vi.mock('stripe', () => ({
-  default: vi.fn().mockImplementation(function () { return {
-    accounts: { retrieve: vi.fn().mockResolvedValue({ id: 'acct_1' }) },
+  default: vi.fn().mockImplementation(function (_key: string, options: any) { store.stripeOptions.push(options); return {
+    accounts: { retrieve: vi.fn().mockImplementation(async () => { if (store.accountId === 'error') throw new Error('offline'); return { id: store.accountId }; }) },
     webhookEndpoints: {
       list: vi.fn().mockResolvedValue({ data: [] }),
       create: vi.fn().mockResolvedValue({ id: 'we_1', secret: 'whsec_1' }),
@@ -71,6 +71,7 @@ import { connectStripeAction, disconnectStripeAction } from '../../../lib/action
 import { DEFAULT_PAYMENT_SETTINGS } from '@alga-psa/types';
 
 const credentials = { secretKey: 'sk_test_x', publishableKey: 'pk_test_x' };
+const originalApiBaseUrl = process.env.STRIPE_API_BASE_URL;
 
 const customised = {
   paymentLinksInEmails: false,
@@ -86,6 +87,8 @@ const customised = {
 
 describe('connectStripeAction settings preservation', () => {
   beforeEach(() => {
+    store.accountId = 'acct_1';
+    store.stripeOptions = [];
     store.row = {
       config_id: 'cfg-1',
       tenant: 'tenant-1',
@@ -95,6 +98,10 @@ describe('connectStripeAction settings preservation', () => {
       webhook_secret_vault_path: null,
       settings: { ...customised },
     };
+  });
+  afterEach(() => {
+    if (originalApiBaseUrl === undefined) delete process.env.STRIPE_API_BASE_URL;
+    else process.env.STRIPE_API_BASE_URL = originalApiBaseUrl;
   });
 
   it('keeps all saved settings when connecting again over an existing row', async () => {
@@ -131,9 +138,32 @@ describe('connectStripeAction settings preservation', () => {
 
   it('refuses credentials for a different account without replacing the durable binding', async () => {
     store.row!.configuration.stripe_account_id = 'acct_original';
+    store.accountId = 'acct_other';
     const result = await (connectStripeAction as any)(credentials);
     expect(result.success).toBe(false);
     expect(result.code).toBe('stripe-payment/account-binding-mismatch');
     expect(store.row!.configuration.stripe_account_id).toBe('acct_original');
+  });
+
+  it('saves credentials through STRIPE_API_BASE_URL and retains the verified binding on reconnect', async () => {
+    process.env.STRIPE_API_BASE_URL = 'http://127.0.0.1:4050';
+    const first = await (connectStripeAction as any)(credentials);
+    expect(first.success).toBe(true);
+    expect(store.stripeOptions[0]).toMatchObject({ host: '127.0.0.1', port: 4050, protocol: 'http' });
+    expect(store.row!.configuration.stripe_account_id).toBe('acct_1');
+    await (disconnectStripeAction as any)();
+    const reconnect = await (connectStripeAction as any)(credentials);
+    expect(reconnect.success).toBe(true);
+    expect(store.row!.configuration.stripe_account_id).toBe('acct_1');
+  });
+
+  it('does not write credentials or an account binding when account verification fails', async () => {
+    store.row = null;
+    store.accountId = 'error';
+    const result = await (connectStripeAction as any)(credentials);
+    expect(result.success).toBe(false);
+    expect(store.row).toBeNull();
+    const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
+    expect((await getSecretProviderInstance() as any).setTenantSecret).not.toHaveBeenCalled();
   });
 });
