@@ -1,7 +1,7 @@
 'use server';
 
 import User from '@alga-psa/db/models/user';
-import { isInteractiveUserType, IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from '@alga-psa/types';
+import { isInteractiveUserType, IUser, IUserBasic, IRole, IUserWithRoles, IRoleWithPermissions, USER_RESPONSE_FIELD_NAMES, sanitizeUserForResponse } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -26,13 +26,36 @@ function isExpectedUserQueryError(error: unknown): boolean {
   return isPermissionDeniedError(error) || isInvalidUserQueryReference(error);
 }
 
+function toIUserBasic(user: IUser): IUserBasic {
+  const safeUser = sanitizeUserForResponse(user);
+  return {
+    user_id: safeUser.user_id,
+    username: safeUser.username,
+    first_name: safeUser.first_name,
+    last_name: safeUser.last_name,
+    email: safeUser.email,
+    phone: safeUser.phone,
+    timezone: safeUser.timezone,
+    user_type: safeUser.user_type,
+    contact_id: safeUser.contact_id,
+    icon: safeUser.icon,
+    created_at: safeUser.created_at,
+    updated_at: safeUser.updated_at,
+    two_factor_enabled: safeUser.two_factor_enabled,
+    two_factor_required_new_device: safeUser.two_factor_required_new_device,
+    is_google_user: safeUser.is_google_user,
+    is_inactive: safeUser.is_inactive,
+    tenant: safeUser.tenant,
+    reports_to: safeUser.reports_to,
+    last_login_at: safeUser.last_login_at,
+    last_login_method: safeUser.last_login_method,
+  };
+}
+
 /**
- * These query actions return full `users` rows (select '*', including
- * hashed_password/two_factor_secret). Client-portal roles hold a
- * client-flagged `user:read` permission, so the RBAC check alone does not
- * keep portal callers out. No client-portal surface legitimately calls these
- * actions (the portal uses dedicated actions like getClientUserById /
- * getClientUsersForClient), so they are restricted to non-client callers.
+ * Client-portal roles hold a client-flagged `user:read` permission, so the RBAC
+ * check alone does not keep portal callers out. No client-portal surface
+ * legitimately calls these actions; they use dedicated portal actions instead.
  */
 function assertNotClientPortalCaller(currentUser: { user_type?: string }, action: string): void {
   if (currentUser.user_type === 'client') {
@@ -56,7 +79,7 @@ export const findUserById = withAuth(async (
 
       const user = await User.getUserWithRoles(trx, id);
       // Non-interactive principals are not managed through user management.
-      return user && isInteractiveUserType(user.user_type) ? user : null;
+      return user && isInteractiveUserType(user.user_type) ? { ...sanitizeUserForResponse(user), roles: user.roles } : null;
     });
   } catch (error) {
     logger.error(`Failed to find user with id ${id}:`, error);
@@ -77,7 +100,7 @@ export const getAllUsersBasic = withAuth(async (
   includeInactive: boolean = true,
   userType?: string,
   includeNonInteractive: boolean = false
-): Promise<IUser[]> => {
+): Promise<IUserBasic[]> => {
   try {
     const {knex} = await createTenantKnex();
 
@@ -93,7 +116,7 @@ export const getAllUsersBasic = withAuth(async (
       return users.filter(user =>
         user.tenant === tenant &&
         (userType ? user.user_type === userType : true)
-      );
+      ).map(toIUserBasic);
     });
   } catch (error) {
     logger.error('Failed to fetch users:', error);
@@ -133,7 +156,7 @@ export const getAllUsers = withAuth(async (
       const rolesByUser = await User.getUserRolesBulk(trx, userIds);
 
       return filteredUsers.map((user): IUserWithRoles => ({
-        ...user,
+        ...sanitizeUserForResponse(user),
         roles: rolesByUser.get(user.user_id) || []
       }));
     });
@@ -150,7 +173,7 @@ export const getReportsToSubordinates = withAuth(async (
   currentUser,
   { tenant },
   managerUserId?: string
-): Promise<IUser[]> => {
+): Promise<IUserBasic[]> => {
   try {
     const { knex } = await createTenantKnex();
     return await withTransaction(knex, async (trx) => {
@@ -170,9 +193,9 @@ export const getReportsToSubordinates = withAuth(async (
       const rows = await tenantDb(trx, tenant)
         .table('users')
         .whereIn('user_id', subordinateIds)
-        .select('*');
+        .select(...USER_RESPONSE_FIELD_NAMES);
 
-      return rows as IUser[];
+      return rows.map((row) => toIUserBasic(row as IUser));
     });
   } catch (error) {
     logger.error('Failed to fetch reports_to subordinates:', error);
@@ -357,7 +380,7 @@ export const getUserWithRoles = withAuth(async (
 
       const user = await User.getUserWithRoles(trx, userId);
       // Non-interactive principals are not managed through user management.
-      return user && isInteractiveUserType(user.user_type) ? user : null;
+      return user && isInteractiveUserType(user.user_type) ? { ...sanitizeUserForResponse(user), roles: user.roles } : null;
     });
   } catch (error) {
     logger.error(`Failed to fetch user with roles for id ${userId}:`, error);
@@ -383,7 +406,8 @@ export const getMultipleUsersWithRoles = withAuth(async (
       assertNotClientPortalCaller(currentUser, 'read multiple users with roles');
 
       const users = await Promise.all(userIds.map((id: string): Promise<IUserWithRoles | undefined> => User.getUserWithRoles(trx, id)));
-      return users.filter((user): user is IUserWithRoles => user !== undefined && isInteractiveUserType(user.user_type));
+      return users.filter((user): user is IUserWithRoles => user !== undefined && isInteractiveUserType(user.user_type))
+        .map((user) => ({ ...sanitizeUserForResponse(user), roles: user.roles }));
     });
   } catch (error) {
     logger.error('Failed to fetch multiple users with roles:', error);
@@ -613,10 +637,10 @@ export const getClientUsersForClient = withAuth(async (
           'users.updated_at'
         );
       } else {
-        query = query.select<IUser[]>('users.*');
+        query = query.select<IUser[]>(...USER_RESPONSE_FIELD_NAMES.map((field) => `users.${field}`));
       }
 
-      return await query;
+      return (await query).map((user) => toIUserBasic(user));
     });
   } catch (error) {
     logger.error('Error getting client users:', error);

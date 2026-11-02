@@ -37,6 +37,14 @@ export interface IUser {
   last_login_method?: string;
 }
 
+/** Browser-safe fields used by user directory pickers and dropdowns. */
+export type IUserBasic = Pick<IUser,
+  'user_id' | 'username' | 'first_name' | 'last_name' | 'email' | 'phone' |
+  'timezone' | 'user_type' | 'contact_id' | 'icon' | 'created_at' | 'updated_at' |
+  'two_factor_enabled' | 'two_factor_required_new_device' | 'is_google_user' |
+  'is_inactive' | 'tenant' | 'reports_to' | 'last_login_at' | 'last_login_method'
+>;
+
 /**
  * Role entity interface
  */

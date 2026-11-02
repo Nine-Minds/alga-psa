@@ -12,6 +12,8 @@ import { getAdminConnection } from '../lib/admin';
 import { tenantDb } from '../lib/tenantDb';
 import { requireTenantId } from '../lib/tenantId';
 import { verifyPassword } from '@alga-psa/core/encryption';
+import { USER_RESPONSE_FIELD_NAMES } from '@alga-psa/types';
+import type { AllowlistedUserField } from '@alga-psa/types';
 
 interface IUserRoleWithOptionalTenant extends Omit<IUserRole, 'tenant'> {
   user_id: string;
@@ -80,10 +82,10 @@ const User = {
     knexOrTrx: Knex | Knex.Transaction,
     includeInactive = false,
     options: { includeNonInteractive?: boolean } = {}
-  ): Promise<IUser[]> => {
+  ): Promise<Pick<IUser, AllowlistedUserField>[]> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      let query = tenantDb(knexOrTrx, tenant).table<IUser>('users').select('*');
+      let query = tenantDb(knexOrTrx, tenant).table<IUser>('users').select(...USER_RESPONSE_FIELD_NAMES);
       // Non-interactive principals (e.g. service) are never part of the default user list.
       if (!options.includeNonInteractive) {
         query = query.whereIn('user_type', [...INTERACTIVE_USER_TYPES]);
