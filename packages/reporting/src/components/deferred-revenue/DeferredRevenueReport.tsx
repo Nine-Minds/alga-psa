@@ -18,6 +18,7 @@ import {
   type BucketDetailRow,
   type CreditDetailRow,
   type CurrencySection,
+  type HourBlockDetailRow,
   type MovementColumns,
 } from '@alga-psa/reporting/actions/report-actions/getDeferredRevenueReport';
 import { defaultReportMonth } from '@alga-psa/reporting/actions/report-actions/deferred-revenue/month';
@@ -27,6 +28,24 @@ const isReportActionError = (value: unknown) =>
 
 function formatCents(cents: number, currency: string, formatCurrency: (value: number, currency: string) => string): string {
   return formatCurrency(cents / 100, currency);
+}
+
+/** Hours with one decimal, for the block detail table (minutes → hours). */
+function minutesToHours(minutes: number): string {
+  return (Math.max(0, minutes) / 60).toFixed(1);
+}
+
+/** Translated labels for hour-block statuses (HourBlockStatus values). */
+const HOUR_BLOCK_STATUS_LABELS: Record<string, { key: string; defaultValue: string }> = {
+  active: { key: 'deferredRevenue.detail.statusActive', defaultValue: 'Active' },
+  expired: { key: 'deferredRevenue.detail.statusExpired', defaultValue: 'Expired' },
+  voided: { key: 'deferredRevenue.detail.statusVoided', defaultValue: 'Voided' },
+  pending: { key: 'deferredRevenue.detail.statusPending', defaultValue: 'Pending' },
+};
+
+function hourBlockStatusLabel(status: string, t: (key: string, opts: { defaultValue: string }) => string): string {
+  const label = HOUR_BLOCK_STATUS_LABELS[status];
+  return label ? t(label.key, { defaultValue: label.defaultValue }) : status;
 }
 
 /**
@@ -234,6 +253,62 @@ function BucketDetailList({ details, currency, formatCurrency }: { details: Buck
   );
 }
 
+function HourBlockDetailList({ details, currency, formatCurrency }: { details: HourBlockDetailRow[]; currency: string; formatCurrency: (value: number, currency: string) => string }) {
+  const { t } = useTranslation('msp/reports');
+  return (
+    <div className="px-4 py-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[rgb(var(--color-text-500))]">
+        {t('deferredRevenue.detail.blocks', { defaultValue: 'Prepaid hour blocks' })}
+      </p>
+      {details.length === 0 ? (
+        <p className="mt-2 text-sm text-[rgb(var(--color-text-500))]">
+          {t('deferredRevenue.detail.noBlocks', { defaultValue: 'No prepaid hour blocks.' })}
+        </p>
+      ) : (
+        <div className="mt-2 overflow-x-auto">
+          <table id="dr-hour-block-table" className="min-w-full divide-y divide-[rgb(var(--color-border-200))] text-sm">
+            <thead className="bg-[rgb(var(--color-border-100))]">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium text-[rgb(var(--color-text-600))]">{t('deferredRevenue.detail.service', { defaultValue: 'Service' })}</th>
+                <th className="px-3 py-2 text-left font-medium text-[rgb(var(--color-text-600))]">{t('deferredRevenue.detail.purchased', { defaultValue: 'Purchased' })}</th>
+                <th className="px-3 py-2 text-left font-medium text-[rgb(var(--color-text-600))]">{t('deferredRevenue.detail.expiration', { defaultValue: 'Expiration' })}</th>
+                <th className="px-3 py-2 text-right font-medium text-[rgb(var(--color-text-600))]">{t('deferredRevenue.detail.included', { defaultValue: 'Included' })}</th>
+                <th className="px-3 py-2 text-right font-medium text-[rgb(var(--color-text-600))]">{t('deferredRevenue.detail.used', { defaultValue: 'Used' })}</th>
+                <th className="px-3 py-2 text-right font-medium text-[rgb(var(--color-text-600))]">{t('deferredRevenue.detail.remaining', { defaultValue: 'Remaining' })}</th>
+                <th className="px-3 py-2 text-right font-medium text-[rgb(var(--color-text-600))]">{t('deferredRevenue.detail.value', { defaultValue: 'Value' })}</th>
+                <th className="px-3 py-2 text-left font-medium text-[rgb(var(--color-text-600))]">{t('deferredRevenue.detail.status', { defaultValue: 'Status' })}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[rgb(var(--color-border-200))]">
+              {details.map((detail) => (
+                <tr key={detail.blockId}>
+                  <td className="px-3 py-2 text-[rgb(var(--color-text-700))]">
+                    {detail.serviceName}
+                    {detail.contractName ? (
+                      <span className="ml-2 text-xs text-[rgb(var(--color-text-500))]">{detail.contractName}</span>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap text-[rgb(var(--color-text-700))]">{detail.purchasedAt ?? '—'}</td>
+                  <td className="px-3 py-2 whitespace-nowrap text-[rgb(var(--color-text-700))]">
+                    {detail.expirationDate ?? t('deferredRevenue.detail.never', { defaultValue: 'Never' })}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[rgb(var(--color-text-700))]">{minutesToHours(detail.totalMinutes)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[rgb(var(--color-text-700))]">{minutesToHours(detail.minutesBurned)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[rgb(var(--color-text-700))]">{minutesToHours(detail.remainingMinutes)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[rgb(var(--color-text-700))]">
+                    {formatCents(detail.valueRemaining, currency, formatCurrency)}
+                  </td>
+                  <td className="px-3 py-2 text-[rgb(var(--color-text-700))]">{hourBlockStatusLabel(detail.status, t)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SummaryCards({ sections, formatCurrency }: { sections: CurrencySection[]; formatCurrency: (value: number, currency: string) => string }) {
   const { t } = useTranslation('msp/reports');
   return (
@@ -394,6 +469,9 @@ function ClientRow({
             <div className="divide-y divide-[rgb(var(--color-border-200))]">
               <CreditDetailList details={client.creditDetails} currency={currency} formatCurrency={formatCurrency} />
               <BucketDetailList details={client.bucketDetails} currency={currency} formatCurrency={formatCurrency} />
+              {client.hourBlockDetails.length > 0 ? (
+                <HourBlockDetailList details={client.hourBlockDetails} currency={currency} formatCurrency={formatCurrency} />
+              ) : null}
             </div>
           </td>
         </tr>
@@ -529,7 +607,8 @@ export default function DeferredRevenueReport() {
           </h2>
           <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
             {t('deferredRevenue.description', {
-              defaultValue: 'Per-client, per-month rollforward of client credit balances and unburned prepaid bucket hours.',
+              defaultValue:
+                'Per-client, per-month rollforward of client credit balances and unburned prepaid hours (bucket periods and hour blocks).',
             })}
           </p>
         </div>
