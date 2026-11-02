@@ -21,6 +21,7 @@ const test = providerTest.extend<{ payment: PaymentFixture }>({
     // payment operation silently depended on an application-wide secret.
     await signIn(page, { email: fixture.tenant.admin.email, password: credentials.password });
     await page.goto('/msp/settings/billing?section=payments');
+    await page.getByRole('link', { name: 'Connect Stripe' }).click();
     await page.locator('#connect-stripe-button').click();
     await page.locator('#secretKey').fill('sk_test_algasim');
     await page.locator('#publishableKey').fill('pk_test_algasim');
