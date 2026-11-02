@@ -249,7 +249,7 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
   }, []);
 
   /** The one-click "Use it": swap this link for the matching target location, keeping the primary flag. */
-  const useTargetLocation = useCallback((contactNameId: string, fromLocationId: string, toLocationId: string) => {
+  const swapToTargetLocation = useCallback((contactNameId: string, fromLocationId: string, toLocationId: string) => {
     setContactLocations((current) => {
       const existing = current[contactNameId] ?? [];
       const replaced = existing.find((link) => link.locationId === fromLocationId);
@@ -582,7 +582,7 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
                               type="button"
                               id={`merge-contact-use-target-${contact.contactNameId}-${link.locationId}`}
                               className="text-[rgb(var(--color-primary-600))] underline"
-                              onClick={() => useTargetLocation(
+                              onClick={() => swapToTargetLocation(
                                 contact.contactNameId,
                                 link.locationId,
                                 link.suggestedTargetLocationId!,
