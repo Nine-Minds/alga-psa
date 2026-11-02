@@ -37,6 +37,12 @@ const common = {
 export const WARRANTY_TRACKS = ['standard', 'advance_replacement'] as const;
 export const warrantyTrackSchema = z.enum(WARRANTY_TRACKS);
 
+/**
+ * What a browser may send to open a claim. There is deliberately no `ticket_id`: zod strips unknown keys, so a
+ * supplied one is dropped before the core sees it. Only the open custody episode can link a ticket here, and the
+ * core authorizes that ticket. Linking a caller-chosen ticket is `openWarrantyClaimForTicketSchema`, used only
+ * through the composition layer's `openWarrantyClaimFromTicket`.
+ */
 export const openWarrantyClaimSchema = z.object({
   asset_id: uuid,
   reason: requiredText(RMA_NOTE_MAX, 'Describe what is wrong with the device'),
@@ -44,10 +50,15 @@ export const openWarrantyClaimSchema = z.object({
   rma_reference: optionalText(RMA_TEXT_MAX),
   /** Provisional until approval, which writes the final track. */
   rma_type: warrantyTrackSchema.default('standard'),
-  /** Optional ticket the claim belongs to; the composition layer verifies access. When absent, the open custody episode's ticket is used. */
-  ticket_id: uuid.nullish().transform((v) => v ?? null),
 });
-export type OpenWarrantyClaimInput = z.infer<typeof openWarrantyClaimSchema>;
+
+/** The ticket-aware variant: the caller names the ticket. The core still authorizes it. */
+export const openWarrantyClaimForTicketSchema = openWarrantyClaimSchema.extend({
+  ticket_id: uuid,
+});
+
+/** The core's input: `ticket_id` is only ever present when it came through the ticket-aware schema. */
+export type OpenWarrantyClaimInput = z.infer<typeof openWarrantyClaimSchema> & { ticket_id?: string | null };
 
 export const approveWarrantyClaimSchema = z.object({
   track: warrantyTrackSchema,

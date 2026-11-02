@@ -240,11 +240,11 @@ describe('T020 warranty permission provisioning and enforcement', () => {
 
 describe('T021 record-level asset visibility on RMA reads', () => {
   it('a case whose asset the caller cannot read is hidden exactly like a missing case; asset-less rows keep today\'s visibility', async () => {
-    holder.grants = new Set(['warranty:read', 'warranty:create', 'inventory:read', 'asset:update']);
+    holder.grants = new Set(['warranty:read', 'warranty:create', 'inventory:read', 'asset:update', 'ticket:read']);
 
     const assetId = await newAsset();
     await inCustody(assetId);
-    const claim = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'x', ticket_id: TICKET }));
+    const claim = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'x' }));
 
     // a stock-unit RMA row: no asset_id
     const service = await knex('service_catalog').where({ tenant: holder.tenant }).first();

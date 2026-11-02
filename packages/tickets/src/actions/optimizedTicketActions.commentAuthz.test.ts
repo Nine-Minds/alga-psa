@@ -99,7 +99,7 @@ vi.mock('@alga-psa/shared/lib/ticketCommentAttachments', () => ({
   persistCommentPublication: vi.fn(async () => undefined),
   reconcileCommentAttachments: vi.fn(async () => undefined),
 }));
-vi.mock('../lib/clientPortalVisibility.server', () => ({
+vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
   getClientContactVisibilityContext: async (_trx: unknown, _tenant: string, contactId: string) => {
     const ctx = visibilityByContact[contactId];
     if (!ctx) throw new Error('visibility unresolved');
