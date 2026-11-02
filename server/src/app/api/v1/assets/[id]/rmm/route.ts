@@ -6,7 +6,11 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getAssetRmmData } from '@/lib/actions/asset-actions/rmmActions';
+import { getAssetRmmDataForApi } from '@/lib/actions/asset-actions/rmmActions';
+import { assetRmmRecordSource } from '@alga-psa/authorization/recordProjection';
+import { readAssetGateForRequest, assetNotFoundResponse } from 'server/src/lib/api/controllers/assetReadGuard';
+import { reprojectUnderDecision } from 'server/src/lib/api/controllers/authorizationKernel';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 import { rmmErrorResponse, rmmRouteErrorFrom } from './rmmRouteErrors';
 
 export async function GET(
@@ -19,14 +23,24 @@ export async function GET(
       return NextResponse.json({ error: 'Missing asset ID' }, { status: 400 });
     }
 
-    const rmmData = await getAssetRmmData(id);
+    const gate = await readAssetGateForRequest(request, id);
+    if (gate.denied) return gate.denied;
 
-    if (!rmmData) {
+    const result = await runWithApiKeyOrSession(request, () => getAssetRmmDataForApi(id));
+
+    if (!result?.data) {
       return NextResponse.json({
         data: null,
         message: 'No RMM data available for this asset',
       });
     }
+
+    const rmmData = reprojectUnderDecision(
+      gate.projection,
+      result.data,
+      assetRmmRecordSource(result.assetType),
+    );
+    if (rmmData === null) return assetNotFoundResponse();
 
     return NextResponse.json({
       data: rmmData,

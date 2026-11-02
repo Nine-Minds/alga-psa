@@ -578,6 +578,36 @@ export function assetSummaryRecordSource(assetType: string): RedactableRecordSou
   };
 }
 
+/** Cached RMM response fields retain the owning asset and the provider-specific extension row they copy from. */
+export function assetRmmRecordSource(assetType: string): RedactableRecordSource {
+  const extension = ASSET_EXTENSION_SOURCES[assetType];
+  const extensionField = (field: string): RecordFieldReference[] => extension
+    ? [{ source: extension, field }]
+    : [];
+  const cpuField = assetType === 'server' ? 'cpu_usage_percent' : 'cpu_utilization_percent';
+  return {
+    policySource: ASSET_RECORD_SOURCE,
+    resource: ASSET_RECORD_SOURCE.resource,
+    identifier: ASSET_RECORD_SOURCE.identifier,
+    fields: {},
+    derived: {
+      provider: [{ source: ASSET_RECORD_SOURCE, field: 'rmm_provider' }],
+      agent_status: [{ source: ASSET_RECORD_SOURCE, field: 'agent_status' }],
+      last_check_in: [{ source: ASSET_RECORD_SOURCE, field: 'last_seen_at' }],
+      last_rmm_sync_at: [{ source: ASSET_RECORD_SOURCE, field: 'last_rmm_sync_at' }],
+      current_user: extensionField('current_user'),
+      uptime_seconds: extensionField('uptime_seconds'),
+      lan_ip: extensionField('lan_ip'),
+      wan_ip: extensionField('wan_ip'),
+      cpu_utilization_percent: extensionField(cpuField),
+      memory_utilization_percent: extensionField('memory_usage_percent'),
+      memory_used_gb: extensionField('memory_used_gb'),
+      memory_total_gb: extensionField('ram_gb'),
+      storage: extensionField('disk_usage'),
+    },
+  };
+}
+
 /** Custody episodes retain the asset policy and the ownership of joined holder labels. */
 export const ASSET_CUSTODY_SOURCE: RedactableRecordSource = {
   policySource: ASSET_RECORD_SOURCE,
