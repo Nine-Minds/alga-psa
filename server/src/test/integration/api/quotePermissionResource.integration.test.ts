@@ -1,9 +1,14 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
+import { spawnSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 
-import { getTenantContext, runWithoutTenant, tenantDb } from '@alga-psa/db';
+import { getTenantContext, runWithTenant, runWithoutTenant, tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
+import { createTestApiKey } from '../../e2e/utils/apiTestHelpers';
 
 // The controller resolves its RBAC connection through getConnection(); point that
 // at the bootstrapped test database so checkPermission runs against real rows.
@@ -21,6 +26,7 @@ const { ApiProjectController } = await import('@/lib/api/controllers/ApiProjectC
 const { ApiTicketController } = await import('@/lib/api/controllers/ApiTicketController');
 const { ApiAssetController } = await import('@/lib/api/controllers/ApiAssetController');
 const { hasPermission } = await import('@/lib/auth/rbac');
+const User = (await import('@alga-psa/db/models/user')).default;
 
 type ColumnInfoMap = Record<string, unknown>;
 
@@ -132,6 +138,66 @@ function requestFor(fixture: Fixture): any {
   };
 }
 
+type ColdRoute = 'projects/export' | 'tickets' | 'assets/[id]';
+type ColdProbeResult = {
+  initialTenant: string | null;
+  authorizedStatus: number;
+  authorizedErrorCode: string | null;
+  unauthorizedStatus: number;
+  unauthorizedErrorCode: string | null;
+  finalTenant: string | null;
+};
+
+function runColdApiRequest(
+  route: ColdRoute,
+  url: string,
+  authorizedKey: string,
+  unauthorizedKey: string,
+  expectedStatus: number,
+  assetId?: string,
+): ColdProbeResult {
+  const connection = db.client.config.connection as Record<string, unknown>;
+  const scratch = mkdtempSync(join(tmpdir(), 'alga-cold-rbac-'));
+  const resultPath = join(scratch, 'result.json');
+
+  try {
+    const child = spawnSync(process.execPath, [
+      '../node_modules/vitest/vitest.mjs', 'run',
+      '--config', 'vitest.cold-rbac.config.ts',
+      'test-workers/coldRbacFreshProcess.test.ts',
+    ], {
+      cwd: process.cwd(),
+      timeout: 90_000,
+      stdio: 'ignore',
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+        DB_HOST: String(connection.host),
+        DB_PORT: String(connection.port),
+        DB_NAME_SERVER: String(connection.database),
+        DB_USER_SERVER: String(connection.user),
+        DB_PASSWORD_SERVER: String(connection.password),
+        COLD_RBAC_ROUTE_MODULE: `@/app/api/v1/${route}/route`,
+        COLD_RBAC_URL: url,
+        COLD_RBAC_AUTHORIZED_KEY: authorizedKey,
+        COLD_RBAC_UNAUTHORIZED_KEY: unauthorizedKey,
+        COLD_RBAC_AUTHORIZED_STATUS: String(expectedStatus),
+        COLD_RBAC_ASSET_ID: assetId ?? '',
+        COLD_RBAC_RESULT_FILE: resultPath,
+      },
+    });
+
+    if (child.error || child.status !== 0) {
+      throw new Error(`Cold API probe process failed (status=${child.status ?? 'none'}, signal=${child.signal ?? 'none'}, error=${child.error?.code ?? 'none'})`);
+    }
+    const result = readFileSync(resultPath, 'utf8');
+    const parsed = JSON.parse(result) as ColdProbeResult;
+    return parsed;
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+}
+
 describe('quote API permission resource integration', () => {
   beforeAll(async () => {
     db = await createTestDbConnection();
@@ -217,6 +283,53 @@ describe('quote API permission resource integration', () => {
     });
     expect(getTenantContext()).toBeUndefined();
   });
+
+  it('authorizes first API-key requests in fresh processes with a real connection, and denies valid keys without grants', async () => {
+    const routeCases: Array<{ route: ColdRoute; url: string; resource: string; authorizedStatus: number; assetId?: string }> = [
+      { route: 'projects/export', url: 'http://localhost/api/v1/projects/export?format=json', resource: 'project', authorizedStatus: 200 },
+      { route: 'tickets', url: 'http://localhost/api/v1/tickets?search=Cold%20RBAC', resource: 'ticket', authorizedStatus: 200 },
+      {
+        route: 'assets/[id]',
+        url: 'http://localhost/api/v1/assets/33333333-3333-3333-3333-333333333333',
+        resource: 'asset',
+        authorizedStatus: 404,
+        assetId: '33333333-3333-3333-3333-333333333333',
+      },
+    ];
+    const authorized = await createFixture(routeCases.map(({ resource }) => ({ resource, action: 'read' })));
+    const unauthorized = await createFixture([{ resource: 'ticket', action: 'create' }]);
+    const authorizedKey = await createTestApiKey(db, authorized.userId, authorized.tenantId, 'Cold RBAC authorized');
+    const unauthorizedKey = await createTestApiKey(db, unauthorized.userId, unauthorized.tenantId, 'Cold RBAC unauthorized');
+
+    const roles = await runWithTenant(authorized.tenantId, () => User.getUserRolesWithPermissions(db, authorized.userId));
+    expect(roles).toHaveLength(1);
+    expect(roles[0].msp).toBe(true);
+    expect(roles[0].client).toBe(false);
+    expect(roles[0].permissions.filter(({ action }) => action === 'read')).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ resource: 'project', msp: true }),
+        expect.objectContaining({ resource: 'ticket', msp: true }),
+        expect.objectContaining({ resource: 'asset', msp: true }),
+      ]),
+    );
+    expect(roles[0].permissions.filter(({ action }) => action === 'read').every(({ client }) => !client)).toBe(true);
+
+    for (const routeCase of routeCases) {
+      const result = runColdApiRequest(
+        routeCase.route,
+        routeCase.url,
+        authorizedKey.api_key,
+        unauthorizedKey.api_key,
+        routeCase.authorizedStatus,
+        routeCase.assetId,
+      );
+      expect(result.initialTenant).toBeNull();
+      expect(result.authorizedStatus).toBe(routeCase.authorizedStatus);
+      expect(result.unauthorizedStatus).toBe(403);
+      expect(result.unauthorizedErrorCode).toBe('FORBIDDEN');
+      expect(result.finalTenant).toBeNull();
+    }
+  }, 180_000);
 
   it('gates approve on quotes:approve rather than billing', async () => {
     const billingOnly = await createFixture([{ resource: 'billing', action: 'read' }]);
