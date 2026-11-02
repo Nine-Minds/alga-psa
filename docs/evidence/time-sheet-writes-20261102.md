@@ -177,3 +177,37 @@ persistence, database verification, and walkthrough recording therefore were
 not performed in this round. Owner restoration of the registered app service
 is required before those UI checks. Historical HTTP/DB/UI results above remain
 historical and do not establish current UI completion.
+
+## Card browser viewer recovery, 22:49 UTC
+
+The missing handler was caused by the absence of a Ghostty Pane IDE desktop
+process on the card host (`ts:robert-X670E-Pro-RS`): the Alga Dev agent and
+browser host were running, but the viewer's local window registry was empty.
+The desktop build's Chromium sandbox helper is not configured for this host,
+so the default Electron launch exited before registering a window. Starting
+the existing desktop build with `--no-sandbox` kept this operation within the
+Alga Dev viewer and did not start any PSA service. Its hub responder became
+active and the card's existing space was then served by a live renderer.
+
+The exact requested command succeeded on retry:
+
+```sh
+alga-dev space-new-tab --type=browser --projectId=7ea8e6c6-3c89-40e5-be8b-4c9f4c4d1e04 --pretty
+```
+
+It returned `spaceId=31c7d2bc-1750-4792-8ebc-359139064f86`,
+`tabId=77ded8b1-73d0-4b16-ada1-fe258acf76e5`, and
+`paneId=aebbcae3-b694-4633-8f98-5ecf8aeb43b0`. `list-spaces` independently
+showed that space bound to this card's project ID and named for the card. On
+the returned pane, navigation to a local data page, JavaScript evaluation
+(heading `card pane recovery`), and screenshot capture all succeeded. The
+capture is preserved at
+`/home/robert/.alga-reviews/7ea8e6c6-3c89-40e5-be8b-4c9f4c4d1e04/evidence/takeover-20261102/card-browser-recovery-20261102.png`.
+This proves fresh card-pane creation and viewer operation; it is infrastructure
+evidence, not PSA UI evidence.
+
+The PSA URL on port 3867 still refused connections and no `dev-server` appeared
+in the card service list. No PSA app server was started, resumed, or restarted.
+Fresh sign-in, reversal feedback, response save/reload, database verification,
+and the walkthrough remain blocked pending owner restoration of the app
+service.
