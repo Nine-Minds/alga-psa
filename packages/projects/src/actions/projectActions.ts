@@ -451,7 +451,8 @@ async function loadAuthorizedProjectTasks(
 function projectStatusesHidden(redactedFields: string[]): boolean {
   const fieldsByTable: Record<string, string[]> = {
     project_status_mappings: [
-      'project_status_mapping_id', 'project_id', 'phase_id', 'status_id', 'standard_status_id',
+      // Picker rows expose the same identifier as mapping_id; either alias hides status rows.
+      'project_status_mapping_id', 'mapping_id', 'project_id', 'phase_id', 'status_id', 'standard_status_id',
       'is_standard', 'custom_name', 'display_order', 'is_visible', 'status_name', 'name', 'is_closed',
     ],
     statuses: [

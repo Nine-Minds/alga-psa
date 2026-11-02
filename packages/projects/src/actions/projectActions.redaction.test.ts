@@ -10,6 +10,10 @@ const mocks = vi.hoisted(() => ({
   getAllTaskChecklistItems: vi.fn(),
   getAllTaskTicketLinks: vi.fn(),
   getAllTaskResources: vi.fn(),
+  statusMappings: [{
+    project_status_mapping_id: 'mapping-1', project_id: 'redacted-project', phase_id: 'phase-1', status_id: 'status-1',
+    is_standard: false, custom_name: 'Secret custom status', display_order: 0, is_visible: true,
+  }],
 }));
 
 function queryFor(tableName: string): any {
@@ -18,6 +22,10 @@ function queryFor(tableName: string): any {
     if (tableName === 'projects') return [{ project_id: 'redacted-project', assigned_to: 'user-1', client_id: 'client-1' }];
     if (tableName === 'clients') return [{ client_id: 'client-1', client_name: 'Secret client name' }];
     if (tableName === 'statuses') return [{ status_id: 'status-1', name: 'Secret status name', is_closed: false }];
+    if (tableName === 'project_status_mappings as psm') return [{
+      mapping_id: 'mapping-1', project_id: 'redacted-project', phase_id: 'phase-1',
+      name: 'Secret custom status', is_closed: false, display_order: 0,
+    }];
     if (tableName === 'project_phases') {
       const row: any = { tenant: 'tenant-1', phase_id: 'phase-1', project_id: 'redacted-project', phase_name: 'Secret phase', description: 'Secret phase description', wbs_code: '1.1' };
       for (const column of selected.flat()) {
@@ -84,12 +92,9 @@ vi.mock('../models/project', () => ({ default: {
   getByIds: mocks.getByIds,
   getMaskedByIds: mocks.getMaskedByIds,
   getPhases: vi.fn(),
-  getProjectStatusMappings: vi.fn(),
+  getProjectStatusMappings: vi.fn(async () => mocks.statusMappings),
   getStandardStatusesByType: vi.fn(async () => []),
-  getEffectiveStatusMappings: vi.fn(async () => [{
-    project_status_mapping_id: 'mapping-1', project_id: 'redacted-project', status_id: 'status-1',
-    is_standard: false, custom_name: 'Secret custom status', display_order: 0, is_visible: true,
-  }]),
+  getEffectiveStatusMappings: vi.fn(async () => mocks.statusMappings),
   addProjectStatusMapping: vi.fn(),
 } }));
 vi.mock('../models/projectTask', () => ({ default: {
@@ -171,6 +176,43 @@ describe('ordinary project action field redaction', () => {
     mocks.authorizeResource.mockResolvedValue({ allowed: true, redactedFields: ['mapping_id'] });
     await expect(getProjectsWithPhases()).resolves.toMatchObject([{ phases: [{ statuses: [] }] }]);
   });
+
+  it.each(['metadata', 'details', 'picker', 'tree'] as const)(
+    'withholds populated status identifiers from %s when mapping_id is redacted', async (surface) => {
+      const readStatuses = async (): Promise<unknown> => {
+        if (surface === 'metadata' || surface === 'details') {
+          const result = await (surface === 'metadata' ? getProjectMetadata : getProjectDetails)('redacted-project');
+          if (!('statuses' in result)) throw new Error('Expected project data');
+          return result.statuses;
+        }
+        if (surface === 'picker') {
+          const result = await getProjectsWithPhases();
+          if (!Array.isArray(result)) throw new Error('Expected project picker data');
+          return result[0].phases[0].statuses;
+        }
+        const result = await getProjectTreeData();
+        if (!Array.isArray(result)) throw new Error('Expected project tree data');
+        return result[0].children[0].children;
+      };
+
+      // Verify the fixture has visible statuses before testing their removal.
+      mocks.authorizeResource.mockResolvedValue({ allowed: true, redactedFields: ['description'] });
+      expect(await readStatuses()).toEqual([expect.objectContaining(
+        surface === 'tree' ? { value: 'mapping-1' } :
+          surface === 'picker' ? { mapping_id: 'mapping-1' } : { project_status_mapping_id: 'mapping-1' }
+      )]);
+
+      mocks.authorizeResource.mockResolvedValue({ allowed: true, redactedFields: ['mapping_id'] });
+      await expect(readStatuses()).resolves.toEqual([]);
+    }
+  );
+
+  it.each(['values.mapping_id', 'fields.mapping_id', 'project_status_mappings.mapping_id'])(
+    'honors the qualified status identifier alias %s', async (redaction) => {
+      mocks.authorizeResource.mockResolvedValue({ allowed: true, redactedFields: [redaction] });
+      await expect(getProjectMetadata('redacted-project')).resolves.toMatchObject({ statuses: [] });
+    }
+  );
 
   it('does not hydrate project assignees when manager_name is redacted', async () => {
     mocks.authorizeResource.mockResolvedValue({ allowed: true, redactedFields: ['manager_name'] });
