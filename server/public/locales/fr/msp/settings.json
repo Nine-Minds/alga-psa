@@ -1185,6 +1185,9 @@
           "contains": "Contient",
           "starts_with": "Commence par",
           "ends_with": "Se termine par",
+          "not_contains": "Ne contient pas",
+          "not_starts_with": "Ne commence pas par",
+          "not_ends_with": "Ne se termine pas par",
           "is_empty": "Est vide",
           "is_not_empty": "N’est pas vide"
         },
@@ -3534,7 +3537,7 @@
       "platformManaged": "Géré par AlgaPSA — aucune configuration requise. Connectez un agent à un fournisseur à l'étape 2.",
       "addAnother": "Ajouter un autre fournisseur",
       "advancedOptions": "Options avancées",
-      "googleNoSetup": "Google ne nécessite aucune configuration. Les agents se connectent avec l'ID de leur compte de service Google.",
+      "googleSetup": "Les agents se connectent avec un jeton d'ID de compte de service Google. Seule l'audience ci-dessous doit correspondre à leur demande.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3548,9 +3551,14 @@
       "fields": {
         "provider": "Fournisseur",
         "entraTenantId": "ID du locataire Entra",
-        "audienceOptional": "Audience du jeton (facultatif)",
         "audience": "Audience du jeton",
         "subjectClaim": "Identifier les agents par",
+        "audienceHelp": {
+          "microsoft": "L'ID d'application (client) de l'inscription d'application Entra pour laquelle vos agents demandent des jetons. Les agents demandent l'étendue api://<cet ID>/.default.",
+          "google": "Les agents doivent demander leur jeton d'ID Google avec exactement cette audience. Nous avons saisi l'URL MCP de ce serveur, le choix habituel.",
+          "custom": "L'identifiant d'API ou de ressource configuré chez votre fournisseur (par exemple, un identifiant d'API Auth0). Il doit correspondre exactement à la revendication aud des jetons des agents. L'URL MCP de ce serveur est un bon choix."
+        },
+        "audienceWhy": "Les jetons émis par votre fournisseur pour d'autres applications ne seront pas acceptés ici.",
         "subjectClaimHelp": "Laissez ce champ vide, sauf indication contraire de votre fournisseur.",
         "issuer": "Émetteur",
         "jwksUri": "URL des clés de signature"

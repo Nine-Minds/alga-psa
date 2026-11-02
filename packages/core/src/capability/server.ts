@@ -45,6 +45,22 @@ export async function requireCapabilityForAction(
 }
 
 /**
+ * Adapter 1b. For a two-sided action that must serve whichever side holds a mode: `admits` first and
+ * short-circuiting (an admitted sponsor needs no participation read), else `serves`. A tenant that
+ * neither admits nor serves (flag off, FORCE_CAPABILITIES off, non-participating) is refused with
+ * CapabilityUnavailableError, and a forced-off capability is refused by the first check, before any SQL.
+ * Returns the mode that held so the caller can cross-check it against the resolved side.
+ */
+export async function requireCapabilityEitherMode(
+  capability: CapabilityKey,
+  tenantId: string,
+): Promise<'admits' | 'serves'> {
+  if (await isOpen(capability, tenantId, 'admits')) return 'admits';
+  if (await isOpen(capability, tenantId, 'serves')) return 'serves';
+  throw new CapabilityUnavailableError();
+}
+
+/**
  * Adapter 2. Returns (rather than throws) because bare route handlers never
  * enter a controller error path. The body is byte-identical to
  * `handleApiError(new NotFoundError())` in apiMiddleware.ts (asserted by the

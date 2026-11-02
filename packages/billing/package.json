@@ -41,6 +41,10 @@
       "types": "./src/lib/payments/invoicePaymentUrls.ts",
       "import": "./dist/lib/payments/invoicePaymentUrls.mjs"
     },
+    "./lib/billing/timeEntryWorkContext": {
+      "types": "./src/lib/billing/timeEntryWorkContext.ts",
+      "import": "./dist/lib/billing/timeEntryWorkContext.mjs"
+    },
     "./services": {
       "types": "./src/services/index.ts",
       "import": "./dist/services/index.mjs"
@@ -62,6 +66,7 @@
     "@alga-psa/documents": "*",
     "@alga-psa/email": "*",
     "@alga-psa/inventory": "*",
+    "@alga-psa/licensing": "*",
     "@alga-psa/notifications": "*",
     "@alga-psa/opportunities": "*",
     "@alga-psa/shared": "*",

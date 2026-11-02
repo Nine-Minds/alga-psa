@@ -5,6 +5,7 @@ import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { lockCoManagedCustomerPolicy } from './policy';
 import { withCoManagedCustomerTicket } from './customerWork';
+import { enqueueCoManagedRouting } from './routingOutbox';
 import { retainCoManagedBeforeAccessReduction, retainCoManagedParticipationEvidence } from './participationEvidence';
 import { CoManagedSharedWorkError, isCoManagedUuid, assertCoManagedSessionUnexpired, snapshotCoManagedSessionActor,
   lockCoManagedSessionIdentity, type CoManagedSessionActor } from './sharedWorkIdentity';
@@ -151,7 +152,10 @@ async function transitionTicket(context: CoManagedSharedWorkContext, request: Co
     actor_name: [author?.first_name, author?.last_name].filter(Boolean).join(' ').trim() || author?.username || actor.userId,
     actor_organization: organization?.client_name ?? '', note: request.note, audience: 'shared_it', occurred_at: occurredAt };
   await customer.table('co_management_ticket_handoffs').insert(event); // write-admission: exempt — append-only receipt of the admitted transition
-  // LEVERAGE: friction handoff-routing-notification — MSP routing notification retention (L5) hooks in after the receipt row.
+  // Routing notifications (L5): recipients are captured atomically with the receipt as pending ledger rows.
+  await enqueueCoManagedRouting(trx, { customerTenant: resource.tenant, sponsorTenant: relationship.sponsor_tenant, relationshipId: resource.relationshipId,
+    ticketId: resource.id, operationId: request.operationId, event: transition === 'escalated' ? 'escalation_received' : 'escalation_returned',
+    actorName: event.actor_name, actorOrganization: event.actor_organization });
   await retainCoManagedParticipationEvidence(context, 'ticket_handoff', request.operationId);
   await assertCoManagedSessionUnexpired(trx, { ...actor, kind: 'session', sessionId: context.sessionId });
   if (transition !== 'access_revoked') await assertCoManagedOperationalWrite(trx, resource.tenant);

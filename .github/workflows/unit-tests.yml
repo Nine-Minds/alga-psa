@@ -178,9 +178,14 @@ jobs:
     # spends ~14 silent minutes on coverage after the last test module), so 30
     # left no headroom: shard 4 was killed at exactly 30m0s with all 776 of its
     # files already green, and the null evidence it uploaded then failed the
-    # server-unit-complete, inventory and readiness gates. Same 45 the
-    # nx-affected job above uses.
-    timeout-minutes: 45
+    # server-unit-complete, inventory and readiness gates. The suite has since
+    # grown: on main (run 41180673350) shards took 33-44.6 minutes, ~25 of
+    # setup, collection and tests, then ~19 silent minutes of v8 coverage
+    # remapping. 45 left under a minute of headroom, and shard 1 of PR 4015 was
+    # cancelled at 45m27s twice in a row, again with every one of its 1036
+    # files green. scripts/tests/server-unit-shard-timeout.test.mjs keeps this
+    # ceiling above the measured peak.
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:

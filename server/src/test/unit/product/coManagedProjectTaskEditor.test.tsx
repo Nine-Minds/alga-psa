@@ -75,6 +75,20 @@ describe('co-managed project task editor', () => {
     expect(document.body.textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}/);
   });
 
+  it('shows an assigned task with a hidden assignee name as assigned, not as unassigned', async () => {
+    mocks.snapshot.mockResolvedValue({ ...snapshot(), assignee: { kind: 'user', name: null } });
+    render(<CoManagedProjectTaskEditor {...props} />);
+    await screen.findByText('Assigned (name hidden)');
+    expect(screen.queryByText('Not assigned')).toBeNull();
+  });
+
+  it('still shows Not assigned when the snapshot has no assignee', async () => {
+    mocks.snapshot.mockResolvedValue({ ...snapshot(), assignee: null });
+    render(<CoManagedProjectTaskEditor {...props} />);
+    await screen.findByText('Not assigned');
+    expect(screen.queryByText('Assigned (name hidden)')).toBeNull();
+  });
+
   it('explains a task without an MSP reference and offers assignment', async () => {
     mocks.snapshot.mockResolvedValue(null);
     render(<CoManagedProjectTaskEditor {...props} />);

@@ -16,8 +16,9 @@ A clause is `{ path, operator, value? }`. A group is `{ join: 'and' | 'or', clau
 group is true; an empty `or` group is false.
 
 Operators: `equals`, `not_equals`, `in`, `not_in`, `gt`, `gte`, `lt`, `lte`, `contains`, `starts_with`,
-`ends_with`, `is_empty`, `is_not_empty`. `value` is a literal for single-value operators, a list for `in` and
-`not_in`, and absent for `is_empty` and `is_not_empty`.
+`ends_with`, `not_contains`, `not_starts_with`, `not_ends_with`, `is_empty`, `is_not_empty`. `value` is a literal
+for single-value operators (a string for the text operators and their `not_` forms), a list for `in` and `not_in`,
+and absent for `is_empty` and `is_not_empty`.
 
 A path is either **scalar** (zero or one value) or **set-valued** (zero or more elements, such as tags).
 A path may cross relations (`contact.tags`); a relation hop that finds no row yields a missing value / empty set.
@@ -28,18 +29,39 @@ A value is *missing* when it is absent or null (a missing relation row counts). 
 
 1. A missing value **never satisfies a comparison**: `equals`, `not_equals`, `in`, `gt`, `gte`, `lt`, `lte`,
    `contains`, `starts_with`, `ends_with` are all false. This includes `not_equals`.
-2. A missing value **satisfies** `is_empty` and `not_in`. `not_in` is exactly `NOT in`.
+2. A missing value **satisfies** `is_empty`, `not_in`, `not_contains`, `not_starts_with` and `not_ends_with`.
+   Each `not_` operator is exactly `NOT <positive>`.
 3. A scalar string is also empty when it is `''`. Numbers, booleans, timestamps and ids are empty only when missing.
 4. `equals null` is true when the value is missing and `not_equals null` when it is present. Other operators
    against `null` are false. (The JSONata path cannot tell JSON null from missing and skips these rows.)
 
-SQL compiles comparisons as `COALESCE(<comparison>, FALSE)`, `not_in` as `NOT (in)`, and missing relation rows
+SQL compiles comparisons as `COALESCE(<comparison>, FALSE)`, the complement operators as `NOT (<positive>)`
+(never `NOT LIKE`, which is `NULL` for a missing value), and missing relation rows
 through `EXISTS` / `NOT EXISTS`, so `NULL` never leaks into a `NOT`.
 
 ## Text
 
 `contains`, `starts_with`, `ends_with` are **case-sensitive** substring, prefix and suffix tests on strings.
 `%`, `_` and `\` in the needle are literal. A non-string value never satisfies them.
+
+`not_contains`, `not_starts_with` and `not_ends_with` are the family of negative text operators, defined as
+exactly `NOT contains`, `NOT starts_with` and `NOT ends_with` over the full path:
+
+| Value | `not_contains` / `not_starts_with` / `not_ends_with` |
+| --- | --- |
+| missing | true |
+| not a string (number, boolean, object) | true |
+| a string that fails the positive test | true |
+| a string that passes the positive test | false |
+| any string, with an empty needle | false (every string contains, starts with and ends with `''`) |
+
+They are case-sensitive and their needle is literal, like the positive operators. They are valid on scalar string
+paths only, not on set-valued paths. Across a relation hop they mean `NOT EXISTS (a related row that passes the
+positive test)`: no related rows is true, and a mixed hop (one related row passes, one does not) is false, because
+a row passes.
+
+All three negatives ship together, for symmetry with the three positive operators. None is valid on a set-valued
+path (`SET_OPERATORS` is unchanged).
 
 ## Ordering
 
@@ -59,9 +81,11 @@ Across a `many` relation the same words apply to the union of the related rows' 
 
 ## Complements
 
-`not_in` and `is_empty` are defined as the negation of `in` and `is_not_empty` evaluated over the full path,
-relation hops included. With a relation hop this means `NOT EXISTS (hop ... AND positive)`, so "no related row"
-satisfies them.
+`not_in`, `is_empty`, `not_contains`, `not_starts_with` and `not_ends_with` are defined as the negation of `in`,
+`is_not_empty`, `contains`, `starts_with` and `ends_with` evaluated over the full path, relation hops included.
+With a relation hop this means `NOT EXISTS (hop ... AND positive)`, so "no related row" satisfies them. Every
+backend resolves them through one table (`COMPLEMENTS` in `src/types.ts`). `not_equals` is not in it: a missing
+value does not satisfy `not_equals` (see Missing values), so it is not `NOT equals`.
 
 ## Self or any child (compiler option, not part of the model)
 
