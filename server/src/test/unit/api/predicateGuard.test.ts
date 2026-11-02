@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import knexFactory from 'knex';
+import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 
 vi.mock('server/src/lib/authorization/kernel', () => ({ getAuthorizationKernel: vi.fn() }));
 
-import { buildPredicateGuard } from '../../../lib/api/controllers/authorizationKernel';
+import { buildPredicateGuard, createPredicateGuard } from '../../../lib/api/controllers/authorizationKernel';
 import { isRecordFieldReadable, PROJECT_RECORD_SOURCE, TICKET_RECORD_SOURCE } from '@alga-psa/co-managed/recordProjection';
 
 const qb = () => knexFactory({ client: 'pg' }).queryBuilder().from('projects');
@@ -48,5 +49,36 @@ describe('buildPredicateGuard', () => {
     expect(hidden).toContain('1 = 0');
     expect(hidden).not.toContain('assigned_to');
     expect(guard.filter(qb(), 't.client_id', (q, c) => { q.where(c, 'u'); }).toSQL().sql).toContain('"t"."client_id" = ?');
+  });
+});
+
+describe('createPredicateGuard principal resolution', () => {
+  const authorizeResource = vi.fn();
+  const setup = () => {
+    authorizeResource.mockReset();
+    authorizeResource.mockResolvedValue({ allowed: true, redactedFields: ['description'] });
+    (getAuthorizationKernel as any).mockResolvedValue({ authorizeResource });
+  };
+
+  it('builds the subject from context.userId when there is no user object', async () => {
+    setup();
+    const guard = await createPredicateGuard({} as any, { tenant: 't1', userId: 'u1' }, 'project');
+    expect(authorizeResource).toHaveBeenCalledTimes(1);
+    expect(authorizeResource.mock.calls[0][0].subject).toMatchObject({ userId: 'u1', tenant: 't1' });
+    expect(guard.readable('projects.description')).toBe(false);
+  });
+
+  it('accepts tenantId as the tenant key', async () => {
+    setup();
+    await createPredicateGuard({} as any, { tenantId: 't2', userId: 'u1' }, 'project');
+    expect(authorizeResource.mock.calls[0][0].subject.tenant).toBe('t2');
+  });
+
+  it('skips the kernel and treats every column as readable when there is no principal', async () => {
+    setup();
+    const guard = await createPredicateGuard({} as any, { tenant: 't1', userId: '' }, 'project');
+    expect(authorizeResource).not.toHaveBeenCalled();
+    expect(guard.readable('projects.description')).toBe(true);
+    expect(guard.readable('projects.project_name')).toBe(true);
   });
 });

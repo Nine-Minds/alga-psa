@@ -105,6 +105,30 @@ export function buildAuthorizationPrincipalSubject(
   return subject;
 }
 
+/**
+ * Who is reading? One rule, applied in order, shared by every read-authorization path:
+ *  1. `user` with a non-empty `user_id`, or a non-empty `apiKeyId`: the request principal, built exactly as before.
+ *  2. Otherwise a non-empty `userId` (a `ServiceContext` used by direct service callers, which carries no `user`):
+ *     the subject is `{ user_id: userId, tenant }` and the kernel loads that user's roles and bundles itself, so the
+ *     real policy still applies.
+ *  3. Otherwise there is no principal at all: an internal call with no identity is unrestricted, so the kernel is
+ *     skipped (returns null). An empty-string user id must never reach the kernel.
+ */
+function resolveReadSubject(input: { tenant: string; user?: any; userId?: string; apiKeyId?: string }): AuthorizationSubject | null {
+  const hasUser = typeof input.user?.user_id === 'string' && input.user.user_id.length > 0;
+  const hasApiKey = typeof input.apiKeyId === 'string' && input.apiKeyId.trim().length > 0;
+  let subject: AuthorizationSubject;
+  if (hasUser || hasApiKey) {
+    subject = buildAuthorizationPrincipalSubject(input.user, input.apiKeyId);
+  } else if (typeof input.userId === 'string' && input.userId.length > 0) {
+    subject = buildAuthorizationPrincipalSubject({ user_id: input.userId, tenant: input.tenant });
+  } else {
+    return null;
+  }
+  subject.tenant = input.tenant;
+  return subject;
+}
+
 declare const authorizedProjectionBrand: unique symbol;
 const projectionMark = Symbol('authorizedProjection');
 
@@ -152,7 +176,9 @@ export type ApiReadKind = keyof typeof API_READ_KINDS;
 export interface ApiResourceReadInput<T extends Record<string, any>> {
   knex: Knex;
   tenant: string;
-  user: any;
+  user?: any;
+  /** Direct service callers identify the principal by id only (see `resolveReadSubject`). */
+  userId?: string;
   apiKeyId?: string;
   kind: ApiReadKind;
   /** The row to project (and serialize). */
@@ -174,26 +200,28 @@ export async function projectApiResourceRead<T extends Record<string, any>>(
     throw new Error(`projectApiResourceRead: a recordContext is required for kind "${input.kind}"`);
   }
 
-  const kernel = await getAuthorizationKernel();
-  const subject = buildAuthorizationPrincipalSubject(input.user, input.apiKeyId);
-  subject.tenant = input.tenant;
-
-  const decision = await kernel.authorizeResource({
-    knex: input.knex as any,
-    subject,
-    resource: { type: kind.resource, action: 'read' },
-    record: recordContext,
-  });
-  if (!decision.allowed) {
-    return null;
+  const subject = resolveReadSubject(input);
+  let redactedFields: readonly string[] = [];
+  if (subject) {
+    const kernel = await getAuthorizationKernel();
+    const decision = await kernel.authorizeResource({
+      knex: input.knex as any,
+      subject,
+      resource: { type: kind.resource, action: 'read' },
+      record: recordContext,
+    });
+    if (!decision.allowed) {
+      return null;
+    }
+    redactedFields = decision.redactedFields ?? [];
   }
 
-  const projected = projectRecordByRedactions(decision.redactedFields ?? [], input.record, kind.source);
+  const projected = projectRecordByRedactions(redactedFields, input.record, kind.source);
   if (projected === null) {
     return null;
   }
   Object.defineProperty(projected, projectionMark, { value: true, enumerable: false });
-  Object.defineProperty(projected, projectionRedactions, { value: decision.redactedFields ?? [], enumerable: false });
+  Object.defineProperty(projected, projectionRedactions, { value: redactedFields, enumerable: false });
   return projected as AuthorizedProjection<T>;
 }
 
@@ -218,11 +246,11 @@ export async function projectApiResourceReads<T extends Record<string, any>>(
  * exactly that union. This is approach (b): a column is unsearchable whenever any applicable rule redacts it.
  */
 export async function resolveApiReadRedactions(input: {
-  knex: Knex; tenant: string; user: any; apiKeyId?: string; kind: ApiReadKind;
+  knex: Knex; tenant: string; user?: any; userId?: string; apiKeyId?: string; kind: ApiReadKind;
 }): Promise<readonly string[]> {
+  const subject = resolveReadSubject(input);
+  if (!subject) return [];
   const kernel = await getAuthorizationKernel();
-  const subject = buildAuthorizationPrincipalSubject(input.user, input.apiKeyId);
-  subject.tenant = input.tenant;
   const decision = await kernel.authorizeResource({
     knex: input.knex as any,
     subject,
@@ -280,11 +308,12 @@ export function buildPredicateGuard(kind: ApiReadKind, redactions: readonly stri
 /** Resolves the caller's redactions once and returns the guard for `kind`. `context` is a REST `ServiceContext`. */
 export async function createPredicateGuard(
   knex: Knex,
-  context: { tenant: string; user?: any; apiKeyId?: string },
+  context: { tenant?: string; tenantId?: string; user?: any; userId?: string; apiKeyId?: string },
   kind: ApiReadKind,
 ): Promise<PredicateGuard> {
   const redactions = await resolveApiReadRedactions({
-    knex, tenant: context.tenant, user: context.user, apiKeyId: context.apiKeyId, kind,
+    knex, tenant: (context.tenant ?? context.tenantId) as string, user: context.user, userId: context.userId,
+    apiKeyId: context.apiKeyId, kind,
   });
   return buildPredicateGuard(kind, redactions);
 }
