@@ -118,7 +118,7 @@ describe('inbound reply token matrix (CM L5)', () => {
 
     it('passes internalAttributionTrusted=true when Authentication-Results satisfy allowsInternalSenderAttribution', async () => {
       admission = { admitted: true, audience: 'shared_it', relationshipId: 'rel', threadId: 'thr', ticketId: 'ticket-1', parentCommentId: null, actor: { tenant: 'msp', userId: 'u1' } };
-      await inbound('cm2:abc', { headers: { 'authentication-results': PASS } });
+      await inbound('cm2:abc', { headers: { 'authentication-results': PASS }, senderAuthentication: { provider: 'google', authenticationResults: [`mx.google.com; dmarc=pass header.from=msp.test`] } });
       expect(admitSpy).toHaveBeenCalledWith('tenant-1', 'cm2:abc', expect.anything(), { email: 'agent@msp.test', internalAttributionTrusted: true });
     });
 
@@ -130,6 +130,13 @@ describe('inbound reply token matrix (CM L5)', () => {
       admission = { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
       await inbound('cm2:abc', { headers });
       expect(admitSpy).toHaveBeenCalledWith('tenant-1', 'cm2:abc', expect.anything(), { email: 'agent@msp.test', internalAttributionTrusted: false });
+    });
+
+    it('does not let raw attacker supplied Authentication-Results authorize cm2 internal attribution', async () => {
+      admission = { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
+      await inbound('cm2:abc', { headers: { 'authentication-results': 'mx.google.com; dmarc=pass header.from=msp.test' } });
+      expect(admitSpy).toHaveBeenCalledWith('tenant-1', 'cm2:abc', expect.anything(), { email: 'agent@msp.test', internalAttributionTrusted: false });
+      expect(writes).toHaveLength(0);
     });
 
     it('sender_unauthenticated is quarantined (not inert): no write, no native fallthrough, no acknowledgement', async () => {

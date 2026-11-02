@@ -7,6 +7,14 @@ export interface SenderAuthResults {
   aligned: { spf: boolean; dkim: boolean; dmarc: boolean };
 }
 
+/** Keep repeated provider header fields in their original order. */
+export function orderedAuthenticationResults(headers: Array<{ name?: unknown; value?: unknown }>): string[] {
+  return headers
+    .filter((header) => String(header?.name ?? '').toLowerCase() === 'authentication-results')
+    .map((header) => header.value)
+    .filter((value): value is string => typeof value === 'string');
+}
+
 const RESULT = /\b(spf|dkim|dmarc)\s*=\s*(pass|fail|neutral|none|temperror|permerror)\b([^;]*)/gi;
 
 /**
@@ -109,6 +117,31 @@ export function verifySenderAuthentication(
 
 export function allowsInternalSenderAttribution(results: SenderAuthResults | null): boolean {
   return Boolean(results?.aligned.dmarc || (results?.aligned.spf && results?.aligned.dkim));
+}
+
+/**
+ * Consume authentication results only when provider ingestion supplies them and
+ * the unique assertion is stamped by that provider's receiving service. Raw
+ * `headers` are intentionally not accepted here: they are message content.
+ */
+export function verifyProviderSenderAuthentication(
+  evidence: { provider: 'google' | 'microsoft'; authenticationResults: string[]; receivingAuthservId?: string } | null | undefined,
+  fromEmail: string | null | undefined
+): SenderAuthResults | null {
+  if (!evidence || !Array.isArray(evidence.authenticationResults) || evidence.authenticationResults.length !== 1) return null;
+  const [assertion] = evidence.authenticationResults;
+  if (typeof assertion !== 'string') return null;
+  const firstSegment = assertion.split(';', 1)[0]?.trim().toLowerCase() ?? '';
+  const authservId = /^(?:spf|dkim|dmarc|arc|compauth)\s*=/.test(firstSegment) ? '' : firstSegment.split(/\s+/, 1)[0];
+  const trusted = evidence.provider === 'google'
+    ? authservId === 'mx.google.com'
+    : evidence.provider === 'microsoft'
+      // Exchange Online's Authentication-Results value has no authserv-id;
+      // its provider-stamped AuthSource supplies that receiving-service identity.
+      ? !authservId && /^[a-z0-9-]+\.eop-[a-z0-9-]+\.prod\.protection\.outlook\.com$/.test(evidence.receivingAuthservId?.trim().toLowerCase() || '')
+      : false;
+  if (!trusted) return null;
+  return verifySenderAuthentication(assertion, fromEmail);
 }
 
 export function allowsContactSenderAttribution(results: SenderAuthResults | null): boolean {

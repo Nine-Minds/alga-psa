@@ -4,6 +4,8 @@ import {
   allowsInternalSenderAttribution,
   isMicrosoftIntraOrgSender,
   verifySenderAuthentication,
+  verifyProviderSenderAuthentication,
+  orderedAuthenticationResults,
 } from '../senderAuthVerification';
 
 describe('verifySenderAuthentication', () => {
@@ -96,6 +98,48 @@ describe('verifySenderAuthentication', () => {
     );
     expect(result?.dmarc).toBe('fail');
     expect(allowsInternalSenderAttribution(result)).toBe(false);
+  });
+});
+
+describe('verifyProviderSenderAuthentication', () => {
+  it('retains duplicate Gmail authentication headers in source order', () => {
+    expect(orderedAuthenticationResults([
+      { name: 'Authentication-Results', value: 'attacker; dmarc=pass header.from=msp.test' },
+      { name: 'authentication-results', value: 'mx.google.com; dmarc=fail header.from=msp.test' },
+    ])).toEqual([
+      'attacker; dmarc=pass header.from=msp.test',
+      'mx.google.com; dmarc=fail header.from=msp.test',
+    ]);
+  });
+  it('accepts a unique Google receiver assertion', () => {
+    expect(allowsInternalSenderAttribution(verifyProviderSenderAuthentication({
+      provider: 'google', authenticationResults: ['mx.google.com; dmarc=pass header.from=msp.test'],
+    }, 'agent@msp.test'))).toBe(true);
+  });
+
+  it('accepts Microsoft results only with its provider stamped EOP AuthSource', () => {
+    const trusted = verifyProviderSenderAuthentication({
+      provider: 'microsoft',
+      authenticationResults: ['spf=pass smtp.mailfrom=msp.test; dkim=pass header.d=msp.test; dmarc=pass header.from=msp.test'],
+      receivingAuthservId: 'VI1EUR05FT022.eop-eur05.prod.protection.outlook.com',
+    }, 'agent@msp.test');
+    expect(allowsInternalSenderAttribution(trusted)).toBe(true);
+    expect(verifyProviderSenderAuthentication({
+      provider: 'microsoft', authenticationResults: ['spf=pass; dmarc=pass header.from=msp.test'],
+    }, 'agent@msp.test')).toBeNull();
+  });
+
+  it.each([
+    ['untrusted authserv', ['attacker.test; dmarc=pass header.from=msp.test']],
+    ['mismatched authserv', ['mx.google.com.evil.test; dmarc=pass header.from=msp.test']],
+    ['duplicate assertions', ['mx.google.com; dmarc=pass header.from=msp.test', 'mx.google.com; dmarc=pass header.from=msp.test']],
+    ['malformed assertion', ['mx.google.com; dmarc=pass header.from=']],
+  ])('fails closed for %s', (_name, authenticationResults) => {
+    expect(allowsInternalSenderAttribution(verifyProviderSenderAuthentication({ provider: 'google', authenticationResults }, 'agent@msp.test'))).toBe(false);
+  });
+
+  it('does not trust generic IMAP or absent provider provenance', () => {
+    expect(verifyProviderSenderAuthentication(undefined, 'agent@msp.test')).toBeNull();
   });
 });
 

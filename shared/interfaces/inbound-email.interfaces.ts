@@ -155,6 +155,12 @@ export interface EmailMessageDetails extends EmailMessage {
   sourceSha256?: string;
   // Additional details that might be available when fetching full message
   headers?: Record<string, string>;
+  /** Authentication assertions captured from the authenticated provider ingestion path. */
+  senderAuthentication?: {
+    provider: 'google' | 'microsoft';
+    authenticationResults: string[];
+    receivingAuthservId?: string;
+  };
   messageSize?: number;
   importance?: 'low' | 'normal' | 'high';
   sensitivity?: 'normal' | 'personal' | 'private' | 'confidential';

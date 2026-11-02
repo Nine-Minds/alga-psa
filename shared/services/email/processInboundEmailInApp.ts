@@ -48,7 +48,7 @@ import {
   allowsContactSenderAttribution,
   isMicrosoftIntraOrgSender,
   allowsInternalSenderAttribution,
-  verifySenderAuthentication,
+  verifyProviderSenderAuthentication,
 } from '../../lib/email/senderAuthVerification';
 
 export interface ProcessInboundEmailInAppInput {
@@ -960,10 +960,7 @@ export async function processInboundEmailInApp(
   const emailData = input.emailData;
   const dedupeKey = buildDedupeKey(input);
   const senderEmail = normalizeEmailAddress(emailData.from?.email);
-  const authenticationResultsHeader = Object.entries(emailData.headers ?? {}).find(
-    ([name]) => name.toLowerCase() === 'authentication-results'
-  )?.[1];
-  const senderAuthResults = verifySenderAuthentication(authenticationResultsHeader, senderEmail);
+  const senderAuthResults = verifyProviderSenderAuthentication(emailData.senderAuthentication, senderEmail);
   const isVerifiedListRewrite = Boolean(emailData.headers?.['x-resolved-original-sender']);
   // Same-M365-tenant mail has no Authentication-Results; Exchange's internal-auth stamp
   // stands in for aligned SPF/DKIM for contact (never internal-user) attribution.

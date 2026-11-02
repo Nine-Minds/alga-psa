@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { BaseEmailAdapter, type AdapterConnectionTestResult } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/inbound-email.interfaces';
+import { orderedAuthenticationResults } from '../../../lib/email/senderAuthVerification';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
@@ -739,6 +740,12 @@ This indicates a problem with the OAuth token saving process.`;
           contentId: att.contentId,
           isInline: att.isInline
         })),
+        senderAuthentication: {
+          provider: 'google',
+          // Gmail returns the original ordered header list. Keep every copy so
+          // ambiguous or attacker-prepended assertions fail closed downstream.
+          authenticationResults: orderedAuthenticationResults(headers),
+        },
         headers: headers.reduce((acc: any, header: any) => {
           const headerName = String(header?.name || '');
           const normalizedHeaderName = headerName.toLowerCase();
@@ -748,7 +755,9 @@ This indicates a problem with the OAuth token saving process.`;
           if (normalizedHeaderName.startsWith('x-resolved-') || normalizedHeaderName.startsWith('x-list-')) {
             return acc;
           }
-          acc[headerName] = header.value;
+          const priorKey = Object.keys(acc).find((key) => key.toLowerCase() === normalizedHeaderName);
+          if (priorKey) acc[priorKey] = `${acc[priorKey]}\n${header.value}`;
+          else acc[headerName] = header.value;
           return acc;
         }, {})
       };
