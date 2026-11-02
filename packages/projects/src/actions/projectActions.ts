@@ -571,6 +571,52 @@ export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]
     }
 });
 
+function projectTagsHidden(redactedFields: string[]): boolean {
+    return redactedFields.some((field) => ['tags', 'project.tags', 'projects.tags'].includes(field.trim().toLowerCase()))
+        || coManagedColumnHidden(redactedFields, 'projects', 'tags', ['tags']);
+}
+
+/** Read project tags only after the caller's effective project/read decision. */
+export const getAuthorizedProjectTags = withAuth(async (user, { tenant }, projectIds: string[]): Promise<ITag[]> => {
+    if (!Array.isArray(projectIds) || projectIds.some((id) => typeof id !== 'string' || !id)) return [];
+    const { knex } = await createTenantKnex();
+    const denied = await checkPermission(user, 'project', 'read', knex);
+    if (denied || !(await hasPermission(user, 'tag', 'read', knex))) return [];
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+        const authorized = await loadAuthorizedProjectProjections(trx, tenant, user as IUserWithRoles, projectIds);
+        const visibleIds = authorized
+            .filter(({ redactedFields }) => !projectTagsHidden(redactedFields))
+            .map(({ project }) => project.project_id!)
+            .filter(Boolean);
+        const mappings = await TagMapping.getByEntities(trx, tenant, visibleIds, 'project');
+        return mappings.map((tag) => ({
+            tag_id: tag.mapping_id, tenant, board_id: tag.board_id || undefined,
+            tag_text: tag.tag_text, tagged_id: tag.tagged_id, tagged_type: tag.tagged_type,
+            background_color: tag.background_color, text_color: tag.text_color,
+        }));
+    });
+});
+
+/** Suggestions are limited to tags attached to projects visible without a tags redaction. */
+export const getAuthorizedProjectTagSuggestions = withAuth(async (user, { tenant }): Promise<ITag[]> => {
+    const { knex } = await createTenantKnex();
+    const denied = await checkPermission(user, 'project', 'read', knex);
+    if (denied || !(await hasPermission(user, 'tag', 'read', knex))) return [];
+    const ids = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const rows = await tenantScopedTable(trx, 'projects', tenant).select<{ project_id: string }[]>('project_id');
+        const authorized = await loadAuthorizedProjectProjections(trx, tenant, user as IUserWithRoles, rows.map(({ project_id }) => project_id));
+        return authorized.filter(({ redactedFields }) => !projectTagsHidden(redactedFields))
+            .map(({ project }) => project.project_id!).filter(Boolean);
+    });
+    const mappings = await withTransaction(knex, (trx: Knex.Transaction) => TagMapping.getByEntities(trx, tenant, ids, 'project'));
+    const unique = new Map<string, ITag>();
+    for (const tag of mappings) if (!unique.has(tag.tag_text)) unique.set(tag.tag_text, {
+        tag_id: tag.tag_id, tenant, board_id: tag.board_id || undefined, tag_text: tag.tag_text,
+        tagged_id: '', tagged_type: 'project', background_color: tag.background_color, text_color: tag.text_color,
+    });
+    return [...unique.values()];
+});
+
 /**
  * Folds the manager columns ProjectModel joins in (`assigned_to_first_name`,
  * `assigned_to_last_name`) into `assigned_user`, the shape the list renders.

@@ -1,6 +1,6 @@
 import Projects from '@alga-psa/projects/components/Projects';
 import { getAllClientsForProjects, getProjects } from '@alga-psa/projects/actions/projectActions';
-import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
+import { getAuthorizedProjectTags, getAuthorizedProjectTagSuggestions } from '@alga-psa/projects/actions/projectActions';
 import type { IClient, IProject, ITag } from '@alga-psa/types';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { Metadata } from 'next';
@@ -48,20 +48,12 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     .map(project => project.project_id)
     .filter((id): id is string => typeof id === 'string' && id.length > 0);
 
-  const [projectTagsResult, allProjectTagsResult] = await Promise.all([
+  const [projectTagsList, allProjectTags] = await Promise.all([
     projectIds.length > 0
-      ? findTagsByEntityIds(projectIds, 'project').catch(() => [] as ITag[])
+      ? getAuthorizedProjectTags(projectIds).catch(() => [] as ITag[])
       : Promise.resolve([] as ITag[]),
-    findAllTagsByType('project').catch(() => [] as ITag[]),
+    getAuthorizedProjectTagSuggestions().catch(() => [] as ITag[]),
   ]);
-  const projectTagsList = isTagActionError(projectTagsResult) ? [] : projectTagsResult;
-  const allProjectTags = isTagActionError(allProjectTagsResult) ? [] : allProjectTagsResult;
-  if (isTagActionError(projectTagsResult)) {
-    console.error('[ProjectsPage] Failed to load project tags:', projectTagsResult);
-  }
-  if (isTagActionError(allProjectTagsResult)) {
-    console.error('[ProjectsPage] Failed to load all project tags:', allProjectTagsResult);
-  }
 
   const initialProjectTags: Record<string, ITag[]> = {};
   for (const tag of projectTagsList) {

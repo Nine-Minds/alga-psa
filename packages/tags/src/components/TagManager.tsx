@@ -16,6 +16,8 @@ interface TagManagerProps {
   entityId: string;
   entityType: TaggedEntityType;
   initialTags: ITag[];
+  /** Caller-authorized choices for entity types with record-level redactions. */
+  availableTags?: ITag[];
   onTagsChange?: (tags: ITag[]) => void;
   className?: string;
   allowColorEdit?: boolean;
@@ -39,6 +41,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
   entityId,
   entityType,
   initialTags,
+  availableTags,
   onTagsChange,
   className = '',
   allowColorEdit = true,
@@ -70,7 +73,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
   const [showLastUsageDialog, setShowLastUsageDialog] = useState(false);
 
   // Use context if available, otherwise use local state
-  const allTags = tagContext?.tags || localAllTags;
+  const allTags = availableTags ?? tagContext?.tags ?? localAllTags;
   const refetchTags = tagContext?.refetchTags || (async () => {
     try {
       const fetchedTags = await getAllTags();

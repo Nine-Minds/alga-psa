@@ -1,6 +1,6 @@
 'use client';
 
-import { getProjectMetadata, updateProject } from '../actions/projectActions';
+import { getAuthorizedProjectTagSuggestions, getProjectMetadata, updateProject } from '../actions/projectActions';
 import ProjectInfo from './ProjectInfo';
 import ProjectDetail from './ProjectDetail';
 import { TaskShareActionsProvider } from './TaskShareActionsContext';
@@ -44,6 +44,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [projectMetadata, setProjectMetadata] = useState<ProjectMetadata | null>(null);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
+  const [authorizedProjectTagSuggestions, setAuthorizedProjectTagSuggestions] = useState<ITag[]>([]);
   // The edit drawer deletes status columns (moving their tasks) without the
   // board knowing; this counter is how it asks the board to re-read.
   const [statusRefreshKey, setStatusRefreshKey] = useState(0);
@@ -58,6 +59,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
   useEffect(() => {
     if (!projectId) return;
+
+    getAuthorizedProjectTagSuggestions().then(setAuthorizedProjectTagSuggestions).catch(() => setAuthorizedProjectTagSuggestions([]));
 
     const fetchProjectMetadata = async () => {
       const metadata = await getProjectMetadata(projectId);
@@ -189,6 +192,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         onStatusesChanged={handleStatusesChanged}
         projectTags={projectTags}
         allTagTexts={allTagTexts}
+        availableProjectTags={authorizedProjectTagSuggestions}
         onTagsChange={setProjectTags}
       />
       <ProjectDetail

@@ -17,7 +17,7 @@ import {
 } from '../lib/kanbanPreferences';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTaskTypes } from '../actions/projectTaskActions';
-import { findTagsByEntityId, findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
+import { findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getTaskCommentCountsBatch } from '../actions/projectTaskCommentActions';
 import { TagFilter } from '@alga-psa/ui/components';
@@ -38,7 +38,7 @@ import { useUrlTaskOpenGuard } from './useUrlTaskOpenGuard';
 import { addDependencyToMap, removeDependencyFromMap } from '../lib/taskDependencyMap';
 import ProjectGanttView, { DEFAULT_GANTT_SETTINGS, type GanttSettings } from './ProjectGanttView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
-import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase, markPhaseComplete, reopenPhase } from '../actions/projectActions';
+import { getAuthorizedProjectTags, getAuthorizedProjectTagSuggestions, getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase, markPhaseComplete, reopenPhase } from '../actions/projectActions';
 import { getPhaseCustomStatusCounts } from '../actions/projectTaskStatusActions';
 import { PhaseStatusScopeChip } from './status-columns';
 import { checkCurrentUserPermissions } from '@alga-psa/auth/actions';
@@ -431,6 +431,7 @@ export default function ProjectDetail({
 
   // Tag-related state
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
+  const [authorizedProjectTagSuggestions, setAuthorizedProjectTagSuggestions] = useState<ITag[]>([]);
   const { tags: allTags } = useTags();
   const hasNotifiedParent = useRef(false);
   // Opens a task named in the URL once; a task opened by a click counts as handled.
@@ -516,7 +517,10 @@ export default function ProjectDetail({
       if (!project.project_id) return;
 
       try {
-        const tags = await findTagsByEntityId(project.project_id, 'project').catch((error) => {
+        const suggestions = await getAuthorizedProjectTagSuggestions().catch(() => []);
+        if (stale) return;
+        setAuthorizedProjectTagSuggestions(suggestions);
+        const tags = await getAuthorizedProjectTags([project.project_id]).catch((error) => {
           console.warn('Failed to fetch project tags, continuing without tags:', error);
           return [];
         });
@@ -531,7 +535,7 @@ export default function ProjectDetail({
 
         // Notify parent component of tags update only once
         if (onTagsUpdate && !hasNotifiedParent.current) {
-          const projectTagTexts = allTags.filter(tag => tag.tagged_type === 'project').map(tag => tag.tag_text);
+          const projectTagTexts = suggestions.map(tag => tag.tag_text);
           onTagsUpdate(tags, projectTagTexts);
           hasNotifiedParent.current = true;
         }
@@ -1560,7 +1564,7 @@ export default function ProjectDetail({
   const handleProjectTagsChange = (tags: ITag[]) => {
     setProjectTags(tags);
     if (onTagsUpdate) {
-      const projectTagTexts = allTags.filter(tag => tag.tagged_type === 'project').map(tag => tag.tag_text);
+      const projectTagTexts = authorizedProjectTagSuggestions.map(tag => tag.tag_text);
       onTagsUpdate(tags, projectTagTexts);
     }
   };

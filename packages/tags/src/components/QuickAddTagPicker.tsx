@@ -13,6 +13,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 interface QuickAddTagPickerProps {
   id?: string;
   entityType: TaggedEntityType;
+  availableTags?: ITag[];
   pendingTags: PendingTag[];
   onPendingTagsChange: (tags: PendingTag[]) => void;
   placeholder?: string;
@@ -29,6 +30,7 @@ interface QuickAddTagPickerProps {
 export const QuickAddTagPicker: React.FC<QuickAddTagPickerProps> = ({
   id = 'quick-add-tag-picker',
   entityType,
+  availableTags,
   pendingTags,
   onPendingTagsChange,
   placeholder,
@@ -46,12 +48,12 @@ export const QuickAddTagPicker: React.FC<QuickAddTagPickerProps> = ({
   // Use context if available, otherwise fetch locally
   const tagContext = useTags();
   const [localTags, setLocalTags] = useState<ITag[]>([]);
-  const existingTags = tagContext?.tags ?? localTags;
+  const existingTags = availableTags ?? tagContext?.tags ?? localTags;
 
   // Fetch existing tags for this entity type when component mounts
   useEffect(() => {
     // If context provides tags, don't fetch locally
-    if (tagContext?.tags) return;
+    if (availableTags || tagContext?.tags) return;
 
     const fetchTags = async () => {
       if (isLoadingTags) return;
@@ -70,7 +72,7 @@ export const QuickAddTagPicker: React.FC<QuickAddTagPickerProps> = ({
       }
     };
     fetchTags();
-  }, [entityType, tagContext?.tags]);
+  }, [availableTags, entityType, tagContext?.tags]);
 
   useEffect(() => {
     if (isEditing && inputRef.current) {

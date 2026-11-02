@@ -15,14 +15,14 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { TagManager } from '@alga-psa/tags/components';
-import { updateProject, getProjectStatuses } from '../actions/projectActions';
+import { updateProject, getProjectStatuses, getAuthorizedProjectTags, getAuthorizedProjectTagSuggestions } from '../actions/projectActions';
 import { releaseAllProjectStaging } from '../actions/stagingActions';
 import { isStockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
 import { getServices } from '../actions/serviceCatalogActions';
 import { timeEntryServiceChoices, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
-import { findTagsByEntityId, isTagActionError } from '@alga-psa/tags/actions';
+import { isTagActionError } from '@alga-psa/tags/actions';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { toast } from 'react-hot-toast';
 import {
@@ -87,6 +87,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
+  const [availableProjectTags, setAvailableProjectTags] = useState<ITag[]>([]);
   const [showClientPortalConfig, setShowClientPortalConfig] = useState(false);
   // Status column edits are staged inside the editor and written by Save Changes.
   const statusSettingsRef = useRef<ProjectTaskStatusSettingsHandle>(null);
@@ -97,12 +98,14 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [allUsers, projectStatusesResult, projectTagsData, servicesResponse] = await Promise.all([
+        const [allUsers, projectStatusesResult, projectTagsData, projectTagSuggestions, servicesResponse] = await Promise.all([
           getAllUsersBasic(),
           getProjectStatuses(),
-          initialProject.project_id ? findTagsByEntityId(initialProject.project_id, 'project') : Promise.resolve([]),
+          initialProject.project_id ? getAuthorizedProjectTags([initialProject.project_id]) : Promise.resolve([]),
+          getAuthorizedProjectTagSuggestions(),
           getServices(1, 999)
         ]);
+        setAvailableProjectTags(projectTagSuggestions);
         setUsers(allUsers);
         setServices(servicesResponse.services);
         if (isActionPermissionError(projectStatusesResult)) {
@@ -460,6 +463,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               entityId={project.project_id}
               entityType="project"
               initialTags={projectTags}
+              availableTags={availableProjectTags}
               onTagsChange={(tags) => {
                 console.log('Tags changed in ProjectDetailsEdit:', tags);
                 setProjectTags(tags);

@@ -52,6 +52,7 @@ interface ProjectInfoProps {
   onStatusesChanged?: () => void;
   projectTags?: ITag[];
   allTagTexts?: string[];
+  availableProjectTags?: ITag[];
   onTagsChange?: (tags: ITag[]) => void;
 }
 
@@ -68,6 +69,7 @@ export default function ProjectInfo({
   onStatusesChanged,
   projectTags = [],
   allTagTexts = [],
+  availableProjectTags,
   onTagsChange
 }: ProjectInfoProps) {
   const { t } = useTranslation(['features/projects', 'common']);
@@ -206,6 +208,7 @@ export default function ProjectInfo({
               entityId={project.project_id}
               entityType="project"
               initialTags={projectTags}
+              availableTags={availableProjectTags}
               onTagsChange={onTagsChange}
             />
           )}

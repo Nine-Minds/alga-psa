@@ -14,6 +14,9 @@ const mocks = vi.hoisted(() => ({
     project_status_mapping_id: 'mapping-1', project_id: 'redacted-project', phase_id: 'phase-1', status_id: 'status-1',
     is_standard: false, custom_name: 'Secret custom status', display_order: 0, is_visible: true,
   }],
+  getProjectTags: vi.fn(async (_trx: unknown, _tenant: string, ids: string[]) => ids.includes('redacted-project')
+    ? [{ mapping_id: 'tag-map-1', tag_id: 'tag-1', tag_text: 'Wonderland Expansion', tagged_id: 'redacted-project', tagged_type: 'project' }]
+    : []),
 }));
 
 function queryFor(tableName: string): any {
@@ -102,8 +105,9 @@ vi.mock('../models/projectTask', () => ({ default: {
   getAllTaskTicketLinks: mocks.getAllTaskTicketLinks,
   getAllTaskResources: mocks.getAllTaskResources,
 } }));
+vi.mock('@alga-psa/tags/models/tagMapping', () => ({ default: { getByEntities: mocks.getProjectTags } }));
 
-import { getProject, getProjects, getProjectsWithPhases, getProjectTreeData, getProjectMetadata, getProjectDetails } from './projectActions';
+import { getProject, getProjects, getProjectsWithPhases, getProjectTreeData, getProjectMetadata, getProjectDetails, getAuthorizedProjectTags, getAuthorizedProjectTagSuggestions } from './projectActions';
 
 const projectRedactions = ['description', 'client_name', 'manager_name', 'contact_name_id', 'body', 'task_name', 'status', 'phase_name', 'project_phases.wbs_code'];
 
@@ -115,6 +119,7 @@ beforeEach(() => {
   mocks.getAllTaskChecklistItems.mockResolvedValue({});
   mocks.getAllTaskTicketLinks.mockResolvedValue({});
   mocks.getAllTaskResources.mockResolvedValue({});
+  mocks.getProjectTags.mockResolvedValue([{ mapping_id: 'tag-map-1', tag_id: 'tag-1', tag_text: 'Wonderland Expansion', tagged_id: 'redacted-project', tagged_type: 'project' }]);
   mocks.getMaskedByIds.mockResolvedValue([{
     project_id: 'redacted-project', project_name: 'Restricted project', description: null, client_name: null,
     contact_name: null, contact_name_id: null, assigned_to: null, assigned_user: null, is_inactive: false,
@@ -125,6 +130,25 @@ beforeEach(() => {
 });
 
 describe('ordinary project action field redaction', () => {
+  it('hides project tags for redacted and denied project reads while preserving permitted tags', async () => {
+    mocks.authorizeResource.mockResolvedValue({ allowed: true, redactedFields: ['tags'] });
+    mocks.getProjectTags.mockResolvedValue([]);
+    await expect(getAuthorizedProjectTags(['redacted-project'])).resolves.toEqual([]);
+    await expect(getAuthorizedProjectTagSuggestions()).resolves.toEqual([]);
+    expect(mocks.getProjectTags).toHaveBeenCalledWith(expect.anything(), 'tenant-1', [], 'project');
+
+    mocks.getProjectTags.mockClear();
+    mocks.authorizeResource.mockResolvedValue({ allowed: true, redactedFields: [] });
+    mocks.getProjectTags.mockResolvedValue([{ mapping_id: 'tag-map-1', tag_id: 'tag-1', tag_text: 'Wonderland Expansion', tagged_id: 'redacted-project', tagged_type: 'project' }]);
+    await expect(getAuthorizedProjectTags(['redacted-project'])).resolves.toMatchObject([{ tag_text: 'Wonderland Expansion' }]);
+    expect(mocks.getProjectTags).toHaveBeenCalledWith(expect.anything(), 'tenant-1', ['redacted-project'], 'project');
+
+    mocks.getProjectTags.mockClear();
+    mocks.authorizeResource.mockResolvedValue({ allowed: false, redactedFields: [] });
+    mocks.getProjectTags.mockResolvedValue([]);
+    await expect(getAuthorizedProjectTags(['redacted-project'])).resolves.toEqual([]);
+    expect(mocks.getProjectTags).toHaveBeenCalledWith(expect.anything(), 'tenant-1', [], 'project');
+  });
   it('does not return protected project or client metadata for an allowed redacted detail read', async () => {
     await expect(getProject('redacted-project')).resolves.toMatchObject({
       project_id: 'redacted-project',

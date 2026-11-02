@@ -14,7 +14,9 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import ProjectQuickAdd from './ProjectQuickAdd';
 import { deleteProject, loadProjectListItemsByIds, searchProjectListIds } from '../actions/projectActions';
 import { findUserById } from '@alga-psa/user-composition/actions';
-import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
+import { isTagActionError } from '@alga-psa/tags/actions';
+import { getAuthorizedProjectTags, getAuthorizedProjectTagSuggestions } from '../actions/projectActions';
+import { projectClientPresentation } from '../lib/projectClientPresentation';
 import { TagFilter } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
@@ -461,7 +463,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
         const projectIds = projects.map(project => project.project_id).filter((id): id is string => id !== undefined);
         
         // Only fetch project-specific tags, not all tags again
-        const projectTags = await findTagsByEntityIds(projectIds, 'project');
+        const projectTags = await getAuthorizedProjectTags(projectIds);
         if (isTagActionError(projectTags)) {
           console.error('Error fetching tags:', projectTags);
           return;
@@ -489,7 +491,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
   useEffect(() => {
     const fetchAllTags = async () => {
       try {
-        const allTags = await findAllTagsByType('project');
+        const allTags = await getAuthorizedProjectTagSuggestions();
         if (isTagActionError(allTags)) {
           console.error('Error fetching all tags:', allTags);
           setAllUniqueTags([]);
@@ -857,7 +859,9 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
       dataIndex: 'client_id',
       width: '12%',
       render: (value, record) => {
-        const client = clients.find(c => c.client_id === value);
+        // A null client_name is the masked projection's authorization signal. Never
+        // rehydrate it from the global client options, which contain unmasked data.
+        const client = projectClientPresentation(record, clients);
         if (!client) return <ClientNameCell clientName={null} />;
 
         return (
@@ -925,6 +929,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
             entityId={record.project_id}
             entityType="project"
             initialTags={projectTagsRef.current[record.project_id] || []}
+            availableTags={allUniqueTags}
             onTagsChange={(tags) => handleTagsChange(record.project_id!, tags)}
           />
         );

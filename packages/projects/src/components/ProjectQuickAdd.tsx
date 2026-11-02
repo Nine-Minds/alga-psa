@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import { IProject, IClient, IStatus } from '@alga-psa/types';
+import { IProject, IClient, IStatus, ITag } from '@alga-psa/types';
 import { IClientPortalConfig, DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import {
@@ -15,7 +15,7 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { createProject, getProjectStatuses } from '../actions/projectActions';
+import { createProject, getAuthorizedProjectTagSuggestions, getProjectStatuses } from '../actions/projectActions';
 import { getTenantProjectStatuses } from '../actions/projectTaskStatusActions';
 import { getServices } from '../actions/serviceCatalogActions';
 import { timeEntryServiceChoices, type TimeEntryServiceChoice } from '@alga-psa/core';
@@ -73,12 +73,17 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
+  const [availableProjectTags, setAvailableProjectTags] = useState<ITag[]>([]);
   const [clientPortalConfig, setClientPortalConfig] = useState<IClientPortalConfig>(DEFAULT_CLIENT_PORTAL_CONFIG);
   const [showClientPortalConfig, setShowClientPortalConfig] = useState(false);
   const [showQuickAddProjectStatus, setShowQuickAddProjectStatus] = useState(false);
   const pendingStatusSelectRef = React.useRef<string | null>(null);
 
   // Apply pending status selection after statuses array is updated
+  useEffect(() => {
+    getAuthorizedProjectTagSuggestions().then(setAvailableProjectTags).catch(() => setAvailableProjectTags([]));
+  }, []);
+
   useEffect(() => {
     if (pendingStatusSelectRef.current) {
       const id = pendingStatusSelectRef.current;
@@ -429,6 +434,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
               <QuickAddTagPicker
                 id="quick-add-project-tags"
                 entityType="project"
+                availableTags={availableProjectTags}
                 pendingTags={pendingTags}
                 onPendingTagsChange={setPendingTags}
                 disabled={isSubmitting}
