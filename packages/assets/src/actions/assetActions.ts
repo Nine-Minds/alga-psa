@@ -110,6 +110,7 @@ import {
     resolveAssetAuthorizationRecords as resolveSharedAssetAuthorizationRecords,
     isAssetActionAllowed as isSharedAssetActionAllowed,
     isAssetReadAllowed as isSharedAssetReadAllowed,
+    filterReadableAssets,
     type AssetAuthUser as SharedAssetAuthUser,
 } from '../lib/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
@@ -2297,6 +2298,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 query.orderBy('assets.created_at', 'desc');
             };
 
+            // Type counts remain a facet over every filter except the selected type.
             const facetQuery = joinAssetListRelations(trx, tenant);
             applyAssetListFilters(facetQuery, { trx, tenant, params: validatedParams, exclude: 'asset_type' });
             const baseContext = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
@@ -2329,37 +2331,42 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 }
             }
 
+            type AssetListQueryRow = Asset & { client_name: string | null };
+            type AssetListScanRow = { asset: AssetListQueryRow; readable: boolean };
             const fetchPage = async (sourcePage: number, sourceLimit: number) => {
                 const offset = (sourcePage - 1) * sourceLimit;
                 const countRow = await listQuery.clone()
                     .count<{ count: string }>('assets.asset_id as count')
                     .first();
-                const rows = await listQuery.clone()
-                    .select('assets.*', 'clients.client_name', 'contacts.full_name as contact_name', 'vendors.vendor_name')
+                if (!countRow || countRow.count === null || countRow.count === undefined) {
+                    throw new Error('Asset list count query returned no count');
+                }
+                const sourceTotal = Number(countRow.count);
+                if (!Number.isSafeInteger(sourceTotal) || sourceTotal < 0) {
+                    throw new Error('Asset list count query returned an invalid count');
+                }
+                const rows: AssetListQueryRow[] = await listQuery.clone()
+                    .select<AssetListQueryRow[]>('assets.*', 'clients.client_name', 'contacts.full_name as contact_name', 'vendors.vendor_name')
                     .modify(applySort)
                     .limit(sourceLimit)
                     .offset(offset);
+                const readableAssets = await filterReadableAssets(trx, tenant, context, rows);
+                const readableAssetIds = new Set(readableAssets.map((asset) => asset.asset_id));
 
                 return {
-                    data: rows,
-                    total: Number(countRow?.count || 0),
+                    data: rows.map((asset) => ({ asset, readable: readableAssetIds.has(asset.asset_id) })),
+                    total: sourceTotal,
                 };
             };
 
             const page = validatedParams.page || 1;
             const limit = validatedParams.limit || 10;
-            const authorizedPage = await buildAuthorizationAwarePage<any>({
+            const authorizedPage = await buildAuthorizationAwarePage<AssetListScanRow>({
                 page,
                 limit,
                 fetchPage,
-                authorizeRecord: async (asset) => {
-                    const decision = await authorizeAssetReadDecision(
-                        trx,
-                        tenant,
-                        context,
-                        { asset_id: asset.asset_id, client_id: asset.client_id }
-                    );
-                    if (!decision.allowed) return false;
+                authorizeRecord: async ({ asset, readable }) => {
+                    if (!readable) return false;
                     if (requiresRecordAuthorization) {
                         const assetType = asset.asset_type ?? 'unknown';
                         assetTypeCounts.set(assetType, (assetTypeCounts.get(assetType) ?? 0) + 1);
@@ -2369,18 +2376,19 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 },
                 scanLimit: Math.max(limit, 100),
             });
+            const pageAssets = authorizedPage.data.map(({ asset }) => asset);
 
         // F075: the Group column reads `asset.group`, so the page's summaries
         // are fetched in one batch rather than per row.
         const groupSummaries = await getAssetGroupSummariesForAssets(
             trx,
             tenant,
-            authorizedPage.data.map((asset: any) => asset.asset_id)
+            pageAssets.map((asset) => asset.asset_id)
         );
 
         // Get extension data for each asset if requested
         const assetsWithExtensions = await Promise.all(
-            authorizedPage.data.map(async (asset: any): Promise<Asset> => {
+            pageAssets.map(async (asset): Promise<Asset> => {
                 const extensionData = validatedParams.include_extension_data
                     ? await getExtensionData(trx, tenant, asset.asset_id, asset.asset_type)
                     : null;

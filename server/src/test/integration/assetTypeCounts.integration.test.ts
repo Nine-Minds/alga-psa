@@ -191,6 +191,52 @@ async function seedAsset(tenantId: string, seed: AssetSeed): Promise<string> {
   return asset_id;
 }
 
+async function assignAssetReadBundle(
+  tenant: string,
+  userId: string,
+  templateKey: 'selected_clients' | 'assigned',
+  config: Record<string, unknown>,
+): Promise<void> {
+  const bundleId = randomUUID();
+  const revisionId = randomUUID();
+  await table(tenant, 'authorization_bundles').insert({
+    tenant,
+    bundle_id: bundleId,
+    bundle_key: `asset-counts-${bundleId.slice(0, 8)}`,
+    name: `Asset count restriction ${bundleId.slice(0, 8)}`,
+    is_system: false,
+    status: 'active',
+  });
+  await table(tenant, 'authorization_bundle_revisions').insert({
+    tenant,
+    revision_id: revisionId,
+    bundle_id: bundleId,
+    revision_number: 1,
+    lifecycle_state: 'published',
+  });
+  await table(tenant, 'authorization_bundles')
+    .where({ bundle_id: bundleId })
+    .update({ published_revision_id: revisionId });
+  await table(tenant, 'authorization_bundle_rules').insert({
+    tenant,
+    bundle_id: bundleId,
+    revision_id: revisionId,
+    resource_type: 'asset',
+    action: 'read',
+    template_key: templateKey,
+    effect: 'narrow',
+    config: JSON.stringify(config),
+    position: 0,
+  });
+  await table(tenant, 'authorization_bundle_assignments').insert({
+    tenant,
+    bundle_id: bundleId,
+    target_type: 'user',
+    target_id: userId,
+    status: 'active',
+  });
+}
+
 describe('listAssets filtered type counts', () => {
   // Main tenant: 8 assets → workstation 4, server 2, network_device 2.
   //   clientA (Acme Widgets): Zeta Laptop(ws, rmm), Zeta Server(srv),
@@ -241,43 +287,8 @@ describe('listAssets filtered type counts', () => {
     await seedAsset(other.tenantId, { name: 'Initech WS 2', asset_type: 'workstation', client_id: other.clientA });
 
     restrictedUserId = await seedUser(fixture.tenantId);
-    const bundleId = randomUUID();
-    const revisionId = randomUUID();
-    await table(fixture.tenantId, 'authorization_bundles').insert({
-      tenant: fixture.tenantId,
-      bundle_id: bundleId,
-      bundle_key: `asset-counts-${bundleId.slice(0, 8)}`,
-      name: 'Client A assets only',
-      is_system: false,
-      status: 'active',
-    });
-    await table(fixture.tenantId, 'authorization_bundle_revisions').insert({
-      tenant: fixture.tenantId,
-      revision_id: revisionId,
-      bundle_id: bundleId,
-      revision_number: 1,
-      lifecycle_state: 'published',
-    });
-    await table(fixture.tenantId, 'authorization_bundles')
-      .where({ bundle_id: bundleId })
-      .update({ published_revision_id: revisionId });
-    await table(fixture.tenantId, 'authorization_bundle_rules').insert({
-      tenant: fixture.tenantId,
-      bundle_id: bundleId,
-      revision_id: revisionId,
-      resource_type: 'asset',
-      action: 'read',
-      template_key: 'selected_clients',
-      effect: 'narrow',
-      config: JSON.stringify({ selectedClientIds: [fixture.clientA] }),
-      position: 0,
-    });
-    await table(fixture.tenantId, 'authorization_bundle_assignments').insert({
-      tenant: fixture.tenantId,
-      bundle_id: bundleId,
-      target_type: 'user',
-      target_id: restrictedUserId,
-      status: 'active',
+    await assignAssetReadBundle(fixture.tenantId, restrictedUserId, 'selected_clients', {
+      selectedClientIds: [fixture.clientA],
     });
 
     ({ listAssets } = await import('@alga-psa/assets/actions/assetActions'));
@@ -440,6 +451,78 @@ describe('listAssets filtered type counts', () => {
     } finally {
       actionAuth.userType = 'internal';
       actionAuth.clientId = null;
+    }
+  });
+
+  it('evaluates association-based rules for each asset in the batch', async () => {
+    const assignedUserId = await seedUser(fixture.tenantId);
+    await assignAssetReadBundle(fixture.tenantId, assignedUserId, 'assigned', {});
+    const rows = await table(fixture.tenantId, 'assets')
+      .whereIn('name', ['Zeta Laptop', 'Zeta Server', 'Loose WS'])
+      .select<Array<{ asset_id: string; name: string }>>('asset_id', 'name');
+    const assetsByName = new Map(rows.map((row) => [row.name, row.asset_id]));
+    const laptopId = assetsByName.get('Zeta Laptop');
+    const serverId = assetsByName.get('Zeta Server');
+    const otherId = assetsByName.get('Loose WS');
+    if (!laptopId || !serverId || !otherId) throw new Error('Assigned asset fixtures are missing');
+
+    await table(fixture.tenantId, 'asset_associations').insert([
+      { tenant: fixture.tenantId, asset_id: laptopId, entity_type: 'user', entity_id: assignedUserId, created_by: fixture.userId },
+      { tenant: fixture.tenantId, asset_id: serverId, entity_type: 'user', entity_id: assignedUserId, created_by: fixture.userId },
+      { tenant: fixture.tenantId, asset_id: otherId, entity_type: 'user', entity_id: fixture.userId, created_by: fixture.userId },
+    ]);
+
+    actionAuth.userId = assignedUserId;
+    try {
+      const result = await list({ asset_type: 'workstation' });
+      expect(result.assets.map((asset) => asset.asset_id)).toEqual([laptopId]);
+      expect(result.total).toBe(1);
+      expect(result.asset_type_counts).toEqual({ workstation: 1, server: 1 });
+      expect(await getCounts({ search: 'Globex' })).toEqual({});
+    } finally {
+      actionAuth.userId = fixture.userId;
+    }
+  });
+
+  it('batches authorization lookups across a multi-page restricted facet scan', async () => {
+    const assets = Array.from({ length: 205 }, (_, index) => {
+      const assetId = randomUUID();
+      return {
+        tenant: fixture.tenantId,
+        asset_id: assetId,
+        asset_tag: `BATCH-${assetId}`,
+        serial_number: `BATCH-${assetId}`,
+        name: `Batch asset ${index}`,
+        status: 'active',
+        asset_type: index % 2 === 0 ? 'workstation' : 'server',
+        client_id: index < 105 ? fixture.clientA : fixture.clientB,
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      };
+    });
+    await table(fixture.tenantId, 'assets').insert(assets);
+
+    const queries: string[] = [];
+    const recordQuery = (query: { sql: string }) => queries.push(query.sql);
+    actionAuth.userId = restrictedUserId;
+    db.on('query', recordQuery);
+    try {
+      const result = await list({ search: 'Batch asset', asset_type: 'workstation', page: 2, limit: 10 });
+      expect(result.assets).toHaveLength(10);
+      expect(result.assets.every((asset) =>
+        asset.asset_type === 'workstation' && asset.client_id === fixture.clientA
+      )).toBe(true);
+      expect(result.total).toBe(53);
+      expect(result.asset_type_counts).toEqual({ workstation: 53, server: 52 });
+      expect(queries.filter((sql) => /\bfrom "asset_associations"/i.test(sql))).toHaveLength(3);
+      expect(queries.filter((sql) => /\bfrom "authorization_bundle_assignments"/i.test(sql))).toHaveLength(1);
+      const countQueries = queries.filter((sql) => /count\("assets"\."asset_id"\).*from "assets"/i.test(sql));
+      expect(countQueries.length).toBeGreaterThan(0);
+      expect(countQueries.length).toBeLessThanOrEqual(3);
+    } finally {
+      db.off('query', recordQuery);
+      actionAuth.userId = fixture.userId;
+      await table(fixture.tenantId, 'assets').whereIn('asset_id', assets.map((asset) => asset.asset_id)).del();
     }
   });
 

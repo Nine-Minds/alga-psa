@@ -15,13 +15,14 @@ describe('asset authorization kernel contracts', () => {
     expect(source).toContain('export const getAsset = withAuth(async (user, { tenant }, asset_id: string)');
     expect(source).toContain('export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: string)');
     expect(source).toContain('export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryParams)');
-    expect(source).toContain('buildAuthorizationAwarePage<any>({');
+    expect(source).toContain('buildAuthorizationAwarePage<AssetListScanRow>({');
     expect(source).toContain('const listQuery = requiresRecordAuthorization');
     expect(source).toContain(': applyAssetTypeFilter(facetQuery.clone(), validatedParams.asset_type);');
     expect(source).toContain('const countRow = await listQuery.clone()');
     expect(source).toContain(".count<{ count: string }>('assets.asset_id as count')");
-    expect(source).toContain('authorizeRecord: async (asset) => {');
-    expect(source).toContain('total: Number(countRow?.count || 0),');
+    expect(source).toContain('filterReadableAssets(trx, tenant, context, rows)');
+    expect(source).toContain('authorizeRecord: async ({ asset, readable }) => {');
+    expect(source).toContain('const sourceTotal = Number(countRow.count);');
     expect(source).toContain('total: authorizedPage.total,');
     expect(source).toContain('builtinProvider: new BuiltinAuthorizationKernelProvider(),');
     expect(source).toContain('bundleProvider: new BundleAuthorizationKernelProvider({');
