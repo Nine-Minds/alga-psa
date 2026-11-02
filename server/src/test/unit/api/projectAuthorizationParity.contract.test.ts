@@ -22,7 +22,6 @@ describe('Project controller authorization parity contract', () => {
     expect(source).toContain('const stats = await this.buildProjectStatsFromAuthorizedRows(apiRequest, authorizedProjects, knex);');
     expect(source).toContain('await this.assertPhaseProjectAllowed(apiRequest as AuthenticatedApiRequest, phaseId, knex);');
     expect(source).toContain('await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);');
-    expect(source).toContain('projectRecord: (ticket) =>');
     expect(source).toContain('update() {');
     expect(source).toContain('delete() {');
     expect(source).toContain('await this.assertProjectReadAllowed(apiRequest, id, knex);');

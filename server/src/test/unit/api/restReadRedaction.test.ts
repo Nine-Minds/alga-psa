@@ -3096,3 +3096,76 @@ describe('project tickets retain project and ticket response provenance', () => 
     expect(body.pagination.total).toBe(1);
   });
 });
+
+describe('project ticket response preserves the complete ticket source', () => {
+  function fixture() {
+    const controller = new ApiProjectController();
+    (controller as any).projectService.getProjectTickets = vi.fn(async () => ({ data: state.tickets, total: state.tickets.length }));
+    state.tickets = [{
+      ticket_id: P2,
+      title: 'Visible ticket',
+      client_id: 'c-1',
+      client_name: 'Private Client',
+      assigned_to: 'private-user',
+      assigned_user_name: 'Private Assignee',
+      attributes: { watch_list: [{ entity_id: 'contact-1', email: 'private@example.test', name: 'Visible watcher' }] },
+      link_id: 'link-1',
+      link_created_at: '2026-10-01T12:00:00Z',
+    }];
+    return controller;
+  }
+
+  it('preserves visible joined client and persisted watcher mirror values', async () => {
+    const controller = fixture();
+    const response = await controller.getTickets()(request(`/api/v1/projects/${P1}/tickets`));
+    expect(response.status).toBe(200);
+    expect((await response.json()).data[0]).toMatchObject({
+      client_name: 'Private Client',
+      attributes: { watch_list: [{ email: 'private@example.test' }] },
+    });
+  });
+
+  it.each(['tickets.client_id', 'values.client_id', 'clients.client_name'])(
+    'preserves ticket client-name redaction from %s', async alias => {
+      const controller = fixture();
+      state.decisions.set(P2, { allowed: true, redactedFields: [alias] });
+      const detail = await new ApiTicketController().getById()(request(`/api/v1/tickets/${P2}`, { id: P2 }));
+      expect(detail.status).toBe(200);
+      expect((await detail.json()).data.client_name ?? null).toBeNull();
+
+      const response = await controller.getTickets()(request(`/api/v1/projects/${P1}/tickets`));
+      expect(response.status).toBe(200);
+      expect((await response.json()).data[0].client_name ?? null).toBeNull();
+    },
+  );
+
+  it('applies a project-only client display-name decision to joined ticket values', async () => {
+    const controller = fixture();
+    state.decisions.set(P1, { allowed: true, redactedFields: ['clients.client_name'] });
+    const response = await controller.getTickets()(request(`/api/v1/projects/${P1}/tickets`));
+    expect(response.status).toBe(200);
+    expect((await response.json()).data[0].client_name ?? null).toBeNull();
+  });
+
+  it('preserves the ticket watcher mirror projection instead of restoring raw attributes', async () => {
+    const controller = fixture();
+    state.decisions.set(P2, { allowed: true, redactedFields: ['ticket_watchers.email'] });
+    const detail = await new ApiTicketController().getById()(request(`/api/v1/tickets/${P2}`, { id: P2 }));
+    expect(detail.status).toBe(200);
+    expect(JSON.stringify((await detail.json()).data)).not.toContain('private@example.test');
+
+    const response = await controller.getTickets()(request(`/api/v1/projects/${P1}/tickets`));
+    expect(response.status).toBe(200);
+    expect(JSON.stringify((await response.json()).data)).not.toContain('private@example.test');
+  });
+
+  it.each([['project', P1], ['ticket', P2]])('suppresses a hidden link identifier under the %s policy', async (_kind, id) => {
+    const controller = fixture();
+    state.decisions.set(id, { allowed: true, redactedFields: ['project_ticket_links.link_id'] });
+    const response = await controller.getTickets()(request(`/api/v1/projects/${P1}/tickets`));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data).toEqual([]);
+    expect(body.pagination.total).toBe(0);
+  });
+});

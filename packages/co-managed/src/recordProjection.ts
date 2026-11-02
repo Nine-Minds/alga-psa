@@ -741,11 +741,12 @@ export const TICKET_RECORD_SOURCE: RedactableRecordSource = {
 
 /** ProjectService.getProjectTickets returns ticket fields joined with assignee and link metadata. */
 export const PROJECT_TICKET_RESPONSE_SOURCE: RedactableRecordSource = {
+  ...TICKET_RECORD_SOURCE,
   policySource: TICKET_RECORD_SOURCE,
-  resource: ['tickets', 'project_ticket_links'],
-  identifier: ids('ticket_id', 'tickets.ticket_id'),
-  fields: {},
+  resource: [...TICKET_RECORD_SOURCE.resource, 'project_ticket_links'],
+  identifier: [...TICKET_RECORD_SOURCE.identifier, 'link_id', 'project_ticket_links.link_id'],
   derived: {
+    ...TICKET_RECORD_SOURCE.derived,
     assigned_user_name: [{ source: TICKET_RECORD_SOURCE, field: 'assigned_to_name' }],
     link_created_at: ids('project_ticket_links.created_at'),
   },
