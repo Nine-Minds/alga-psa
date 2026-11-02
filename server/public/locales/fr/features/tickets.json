@@ -2832,5 +2832,23 @@
       "notAvailable": "Cette réponse prédéfinie n'est pas disponible pour ce ticket.",
       "notATeamMember": "Vous ne pouvez gérer que les réponses des équipes dont vous êtes membre."
     }
+  },
+  "live": {
+    "updatedOne": "1 ticket mis à jour",
+    "updatedMany": "{{count}} tickets mis à jour",
+    "newOne": "1 nouveau ticket",
+    "newMany": "{{count}} nouveaux tickets",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "1 nouveau ticket et 1 ticket mis à jour",
+        "manyUpdated": "1 nouveau ticket et {{updatedCount}} tickets mis à jour"
+      },
+      "manyNew": {
+        "oneUpdated": "{{newCount}} nouveaux tickets et 1 ticket mis à jour",
+        "manyUpdated": "{{newCount}} nouveaux tickets et {{updatedCount}} tickets mis à jour"
+      }
+    },
+    "updatedBadge": "Mis à jour",
+    "boardActivity": "Nouvelle activité sur ce tableau"
   }
 }

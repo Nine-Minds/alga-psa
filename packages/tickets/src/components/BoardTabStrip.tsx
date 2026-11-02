@@ -43,7 +43,7 @@ export const BoardTabStrip: React.FC<BoardTabStripProps> = ({
               </span>
             )}
             {tab.boardId && changedBoardIds.has(tab.boardId) && <>
-              <span className="h-2 w-2 rounded-full bg-sky-500" aria-hidden="true" />
+              <span className="h-2 w-2 rounded-full bg-sky-500 dark:bg-sky-400" aria-hidden="true" />
               <span className="sr-only">{t('live.boardActivity', 'New activity on this board')}</span>
             </>}
           </span>

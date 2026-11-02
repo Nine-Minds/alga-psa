@@ -2832,5 +2832,23 @@
       "notAvailable": "⟦Ŧħīş ƈȧƞƞḗḓ řḗşƥȯƞşḗ īş ƞȯŧ ȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş ŧīƈķḗŧ.⟧",
       "notATeamMember": "⟦Ẏȯŭ ƈȧƞ ȯƞŀẏ ḿȧƞȧɠḗ ŧḗȧḿ řḗşƥȯƞşḗş ƒȯř ŧḗȧḿş ẏȯŭ ƀḗŀȯƞɠ ŧȯ.⟧"
     }
+  },
+  "live": {
+    "updatedOne": "⟦1 ṱīċḳḗṱ ṳṕḍȧṱḗḍ⟧",
+    "updatedMany": "⟦{{count}} ṱīċḳḗṱş ṳṕḍȧṱḗḍ⟧",
+    "newOne": "⟦1 ƞḗẇ ṱīċḳḗṱ⟧",
+    "newMany": "⟦{{count}} ƞḗẇ ṱīċḳḗṱş⟧",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "⟦1 ƞḗẇ ṱīċḳḗṱ ȧƞḍ 1 ṳṕḍȧṱḗḍ ṱīċḳḗṱ⟧",
+        "manyUpdated": "⟦1 ƞḗẇ ṱīċḳḗṱ ȧƞḍ {{updatedCount}} ṳṕḍȧṱḗḍ ṱīċḳḗṱş⟧"
+      },
+      "manyNew": {
+        "oneUpdated": "⟦{{newCount}} ƞḗẇ ṱīċḳḗṱş ȧƞḍ 1 ṳṕḍȧṱḗḍ ṱīċḳḗṱ⟧",
+        "manyUpdated": "⟦{{newCount}} ƞḗẇ ṱīċḳḗṱş ȧƞḍ {{updatedCount}} ṳṕḍȧṱḗḍ ṱīċḳḗṱş⟧"
+      }
+    },
+    "updatedBadge": "⟦ṳṕḍȧṱḗḍ⟧",
+    "boardActivity": "⟦ƞḗẇ ȧċṱīṿīṱẏ ȯƞ ṱħīş ƀȯȧřḍ⟧"
   }
 }

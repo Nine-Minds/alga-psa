@@ -8,6 +8,34 @@ export interface AuthorizedTicketChangeCandidate {
   latestActivityAt?: string | null;
 }
 
+export interface TicketActivityHistoryEntry {
+  actorUserId: string | null;
+  occurredAt: Date | string;
+}
+
+/** Summarize durable actor history without letting the latest ticket edit erase earlier activity. */
+export function summarizeTicketActivityHistory(input: {
+  entries: readonly TicketActivityHistoryEntry[];
+  currentUserId: string;
+  listSince: number;
+  fallback?: TicketActivityHistoryEntry;
+}): Pick<AuthorizedTicketChangeCandidate, 'activityActors' | 'listActivityActors' | 'latestActivityAt'> {
+  const entries = input.fallback ? [...input.entries, input.fallback] : input.entries;
+  const activityActors: Array<string | null> = [];
+  const listActivityActors: Array<string | null> = [];
+  let latestExternalActivityAt: string | null = null;
+  for (const entry of entries) {
+    const at = new Date(entry.occurredAt).getTime();
+    if (!Number.isFinite(at)) continue;
+    const occurredAt = new Date(at).toISOString();
+    activityActors.push(entry.actorUserId);
+    if (entry.actorUserId === input.currentUserId) continue;
+    if (at > input.listSince) listActivityActors.push(entry.actorUserId);
+    if (!latestExternalActivityAt || occurredAt > latestExternalActivityAt) latestExternalActivityAt = occurredAt;
+  }
+  return { activityActors, listActivityActors, latestActivityAt: latestExternalActivityAt };
+}
+
 /** Aggregate an already visibility-filtered recovery window without returning ticket identifiers. */
 export function countAuthorizedTicketChanges<T extends AuthorizedTicketChangeCandidate>(input: {
   candidates: readonly T[];

@@ -2832,5 +2832,23 @@
       "notAvailable": "This canned response is not available for this ticket.",
       "notATeamMember": "You can only manage team responses for teams you belong to."
     }
+  },
+  "live": {
+    "updatedOne": "1 ticket updated",
+    "updatedMany": "{{count}} tickets updated",
+    "newOne": "1 new ticket",
+    "newMany": "{{count}} new tickets",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "1 new ticket and 1 updated ticket",
+        "manyUpdated": "1 new ticket and {{updatedCount}} updated tickets"
+      },
+      "manyNew": {
+        "oneUpdated": "{{newCount}} new tickets and 1 updated ticket",
+        "manyUpdated": "{{newCount}} new tickets and {{updatedCount}} updated tickets"
+      }
+    },
+    "updatedBadge": "Updated",
+    "boardActivity": "New activity on this board"
   }
 }

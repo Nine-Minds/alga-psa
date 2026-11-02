@@ -2832,5 +2832,23 @@
       "notAvailable": "Questa risposta predefinita non è disponibile per questo ticket.",
       "notATeamMember": "Puoi gestire le risposte di team solo per i team di cui fai parte."
     }
+  },
+  "live": {
+    "updatedOne": "1 ticket aggiornato",
+    "updatedMany": "{{count}} ticket aggiornati",
+    "newOne": "1 nuovo ticket",
+    "newMany": "{{count}} nuovi ticket",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "1 nuovo ticket e 1 ticket aggiornato",
+        "manyUpdated": "1 nuovo ticket e {{updatedCount}} ticket aggiornati"
+      },
+      "manyNew": {
+        "oneUpdated": "{{newCount}} nuovi ticket e 1 ticket aggiornato",
+        "manyUpdated": "{{newCount}} nuovi ticket e {{updatedCount}} ticket aggiornati"
+      }
+    },
+    "updatedBadge": "Aggiornato",
+    "boardActivity": "Nuova attività in questa bacheca"
   }
 }

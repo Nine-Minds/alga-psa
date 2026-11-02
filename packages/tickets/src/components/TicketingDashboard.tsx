@@ -112,6 +112,7 @@ import {
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { ChangedSinceLoad } from '../lib/changedSinceLoad';
+import { handleTicketListChangeForDashboard } from '../lib/liveTicketChangeWiring';
 import { useTicketListChanges } from '../hooks/useTicketListChanges';
 import type { TicketListChange } from '../lib/listChangeFilters';
 
@@ -387,13 +388,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setChangeRevision(value => value + 1);
   }, [initialTickets, loadedAt, loadedFilters, user?.user_id]);
   const receiveTicketChange = useCallback((event: TicketListChange) => {
-    if (changeStateRef.current.record(event)) {
-      setChangeRevision(value => value + 1);
-      // Counts-only recovery is an absolute snapshot. Reconcile promptly when
-      // live delivery resumes so repeated edits to one recovered ticket remain
-      // one distinct ticket in the banner.
-      if (changeStateRef.current.hasFallback() || loadedFilters.searchQuery?.trim()) recoverChangesRef.current?.();
-    }
+    handleTicketListChangeForDashboard(event, changeStateRef.current, loadedFilters.searchQuery ?? '',
+      () => setChangeRevision(value => value + 1), () => recoverChangesRef.current?.());
   }, [loadedFilters.searchQuery]);
   const recoverTicketChanges = useCallback(async (_outageStartedAt: number) => {
     if (recoveryRunningRef.current) {
@@ -2492,7 +2488,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       <ListCard>
         {(changeCounts.newCount > 0 || changeCounts.updatedCount > 0) && (
           <button id="refresh-ticket-list-changes" type="button" onClick={() => void refreshChangedTickets()} disabled={isLoadingMore}
-            className="mb-3 w-full rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-left text-sm font-medium text-sky-900 hover:bg-sky-100 disabled:opacity-60"
+            className="mb-3 w-full rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-left text-sm font-medium text-sky-900 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100 dark:hover:bg-sky-900 disabled:opacity-60"
             aria-live="polite">
             {changeCounts.newCount > 0 && changeCounts.updatedCount > 0
               ? t(`live.both.${changeCounts.newCount === 1 ? 'oneNew' : 'manyNew'}.${changeCounts.updatedCount === 1 ? 'oneUpdated' : 'manyUpdated'}`,

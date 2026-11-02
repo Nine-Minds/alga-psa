@@ -2832,5 +2832,23 @@
       "notAvailable": "Ta gotowa odpowiedź nie jest dostępna dla tego zgłoszenia.",
       "notATeamMember": "Możesz zarządzać odpowiedziami zespołu tylko dla zespołów, do których należysz."
     }
+  },
+  "live": {
+    "updatedOne": "Zaktualizowano 1 zgłoszenie",
+    "updatedMany": "Zaktualizowano {{count}} zgłoszeń",
+    "newOne": "1 nowe zgłoszenie",
+    "newMany": "{{count}} nowych zgłoszeń",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "1 nowe zgłoszenie i 1 zaktualizowane zgłoszenie",
+        "manyUpdated": "1 nowe zgłoszenie i {{updatedCount}} zaktualizowanych zgłoszeń"
+      },
+      "manyNew": {
+        "oneUpdated": "{{newCount}} nowych zgłoszeń i 1 zaktualizowane zgłoszenie",
+        "manyUpdated": "{{newCount}} nowych zgłoszeń i {{updatedCount}} zaktualizowanych zgłoszeń"
+      }
+    },
+    "updatedBadge": "Zaktualizowano",
+    "boardActivity": "Nowa aktywność na tej tablicy"
   }
 }

@@ -2832,5 +2832,23 @@
       "notAvailable": "Det här färdiga svaret är inte tillgängligt för det här ärendet.",
       "notATeamMember": "Du kan bara hantera teamsvar för team som du tillhör."
     }
+  },
+  "live": {
+    "updatedOne": "1 ärende uppdaterat",
+    "updatedMany": "{{count}} ärenden uppdaterade",
+    "newOne": "1 nytt ärende",
+    "newMany": "{{count}} nya ärenden",
+    "both": {
+      "oneNew": {
+        "oneUpdated": "1 nytt ärende och 1 uppdaterat ärende",
+        "manyUpdated": "1 nytt ärende och {{updatedCount}} uppdaterade ärenden"
+      },
+      "manyNew": {
+        "oneUpdated": "{{newCount}} nya ärenden och 1 uppdaterat ärende",
+        "manyUpdated": "{{newCount}} nya ärenden och {{updatedCount}} uppdaterade ärenden"
+      }
+    },
+    "updatedBadge": "Uppdaterat",
+    "boardActivity": "Ny aktivitet på den här tavlan"
   }
 }

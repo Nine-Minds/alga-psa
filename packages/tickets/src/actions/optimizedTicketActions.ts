@@ -77,7 +77,7 @@ import { preserveStoredWatchList } from '@alga-psa/shared/lib/tickets/watchList'
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import { resolveLatestActivityActor, type LatestActivityNames } from '../lib/latestActivityActor';
-import { countAuthorizedTicketChanges } from '../lib/ticketChangeCounts';
+import { countAuthorizedTicketChanges, summarizeTicketActivityHistory } from '../lib/ticketChangeCounts';
 import Comment from '../models/comment';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -2324,51 +2324,46 @@ export const getTicketChangeCounts = withAuth(async (
         .where(builder => builder.where(query => query.where('created_at', '>', new Date(recoverySince)).andWhere('created_at', '<=', new Date(asOf)))
           .orWhere(query => query.where('updated_at', '>', new Date(recoverySince)).andWhere('updated_at', '<=', new Date(asOf))))
         .select('ticket_id', 'user_id', 'created_at', 'updated_at');
-      const commentActors = new Map<string, Array<string | null>>();
-      const commentTimes = new Map<string, string>();
-      const commentListActors = new Map<string, Array<string | null>>();
+      const activityRows = await tenantDb(trx, tenant).table('ticket_audit_logs')
+        .where('occurred_at', '>', new Date(recoverySince))
+        .andWhere('occurred_at', '<=', new Date(asOf))
+        .select('ticket_id', 'actor_user_id', 'occurred_at');
+      const historyByTicket = new Map<string, Array<{ actorUserId: string | null; occurredAt: Date | string }>>();
+      const appendHistory = (ticketId: string, entry: { actorUserId: string | null; occurredAt: Date | string }) => {
+        const entries = historyByTicket.get(ticketId) ?? [];
+        entries.push(entry);
+        historyByTicket.set(ticketId, entries);
+      };
       for (const comment of commentRows as Array<{ ticket_id: string; user_id?: string | null; created_at?: Date | string | null; updated_at?: Date | string | null }>) {
-        if (comment.user_id === user.user_id) continue;
-        const actors = commentActors.get(comment.ticket_id) ?? [];
-        actors.push(comment.user_id ?? null);
-        commentActors.set(comment.ticket_id, actors);
         for (const value of [comment.created_at, comment.updated_at]) {
-          if (!value) continue;
-          const iso = new Date(value).toISOString();
-          if (Date.parse(iso) > since) {
-            const listActors = commentListActors.get(comment.ticket_id) ?? [];
-            listActors.push(comment.user_id ?? null);
-            commentListActors.set(comment.ticket_id, listActors);
-          }
-          if (!commentTimes.has(comment.ticket_id) || iso > commentTimes.get(comment.ticket_id)!) commentTimes.set(comment.ticket_id, iso);
+          if (value) appendHistory(comment.ticket_id, { actorUserId: comment.user_id ?? null, occurredAt: value });
         }
       }
-      const changedCommentTicketIds = Array.from(commentActors.keys());
+      for (const activity of activityRows as Array<{ ticket_id: string; actor_user_id?: string | null; occurred_at: Date | string }>) {
+        appendHistory(activity.ticket_id, { actorUserId: activity.actor_user_id ?? null, occurredAt: activity.occurred_at });
+      }
+      const changedActivityTicketIds = Array.from(historyByTicket.keys());
       const candidates = await tenantDb(trx, tenant).table('tickets')
         .where(builder => builder.where(query => query.where('updated_at', '>', new Date(recoverySince)).andWhere('updated_at', '<=', new Date(asOf)))
-          .orWhereIn('ticket_id', changedCommentTicketIds))
+          .orWhereIn('ticket_id', changedActivityTicketIds))
         .select('*');
       const readable = await filterAuthorizedTickets(trx, context, candidates);
       const activityCandidates = readable.map((ticket: { ticket_id: string; updated_at?: Date | string | null; updated_by?: string | null; updated_by_user_id?: string | null; board_id?: string | null }) => {
         const id = ticket.ticket_id;
-        const activityActors = [...(commentActors.get(id) ?? [])];
-        const listActivityActors = [...(commentListActors.get(id) ?? [])];
-        let latestActivityAt = commentTimes.get(id) ?? null;
         const ticketUpdatedAt = ticket.updated_at ? new Date(ticket.updated_at).getTime() : NaN;
-        if (ticketUpdatedAt > recoverySince && ticketUpdatedAt <= asOf) {
-          const actor = ticket.updated_by ?? ticket.updated_by_user_id ?? null;
-          activityActors.push(actor);
-          if (ticketUpdatedAt > since) listActivityActors.push(actor);
-          const iso = new Date(ticketUpdatedAt).toISOString();
-          if (!latestActivityAt || iso > latestActivityAt) latestActivityAt = iso;
-        }
-        return { ...ticket, activityActors, listActivityActors, latestActivityAt };
+        const fallback = ticketUpdatedAt > recoverySince && ticketUpdatedAt <= asOf
+          ? { actorUserId: ticket.updated_by ?? ticket.updated_by_user_id ?? null, occurredAt: new Date(ticketUpdatedAt).toISOString() }
+          : undefined;
+        const history = summarizeTicketActivityHistory({
+          entries: historyByTicket.get(id) ?? [], currentUserId: user.user_id, listSince: since, fallback,
+        });
+        return { ...ticket, ...history };
       });
       // Flags refer only to ids supplied in the loaded page. Recovery never
       // returns new ticket rows or identifiers, but can restore their badges.
       const changedLoaded = new Set(activityCandidates.filter(ticket =>
         ticket.latestActivityAt && Date.parse(ticket.latestActivityAt) > since &&
-        ticket.listActivityActors.some(actor => actor !== user.user_id)
+        ticket.listActivityActors?.some(actor => actor !== user.user_id)
       ).map(ticket => ticket.ticket_id));
       return {
         asOf,
