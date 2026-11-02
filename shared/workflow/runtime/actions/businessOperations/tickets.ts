@@ -1372,6 +1372,7 @@ export function registerTicketActions(): void {
     ui: { label: 'Link Ticket Entity', category: 'Business Operations', description: 'Link a ticket to another entity' },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, ['entity_links']);
 
       const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
@@ -1491,6 +1492,7 @@ export function registerTicketActions(): void {
     ui: { label: 'Add Ticket Attachment', category: 'Business Operations', description: 'Attach a document/file to a ticket' },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, ['attachments']);
       await requirePermission(ctx, tx, { resource: 'document', action: 'create' });
       const attached = await attachDocumentToTicket(ctx, tx, input.ticket_id, {
         source: input.source,
@@ -1711,6 +1713,12 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'read' });
+      if (input.ticket_id) {
+        await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, [], [
+          'title', 'description', 'status_id', 'priority_id', 'category_id', 'subcategory_id',
+          'contact_name_id', 'assigned_to', 'attributes', 'comments', 'attachments'
+        ]);
+      }
 
       const startedAt = Date.now();
       let ticket: any = null;
@@ -1872,6 +1880,7 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, ['checklist']);
 
       const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
@@ -1946,6 +1955,7 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, ['checklist']);
 
       const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
