@@ -1,4 +1,5 @@
 import type { IClient, IProject } from '@alga-psa/types';
+import { isCoManagedReadFieldHidden, isCoManagedResourceHidden } from '@alga-psa/co-managed';
 
 export interface ProjectRowDecision<T> {
   project: T;
@@ -13,12 +14,14 @@ export function projectPickerProjection<T extends { client_id: string; client_na
   return rows.flatMap((client, index) => {
     const decision = decisions[index];
     if (!decision?.allowed) return [];
-    const hidden = new Set(decision.redactedFields);
+    const redactions = decision.redactedFields;
+    if (isCoManagedResourceHidden(redactions, ['client', 'clients'])
+      || isCoManagedReadFieldHidden(redactions, ['client_id', 'clients.client_id', 'id'])) return [];
     return [{
       client_id: client.client_id,
-      client_name: ['client_name', 'clients.client_name', 'name'].some((field) => hidden.has(field)) ? null : client.client_name,
-      client_type: ['client_type', 'clients.client_type'].some((field) => hidden.has(field)) ? null : client.client_type,
-      is_inactive: ['is_inactive', 'clients.is_inactive'].some((field) => hidden.has(field)) ? null : client.is_inactive,
+      client_name: isCoManagedReadFieldHidden(redactions, ['client_name', 'clients.client_name', 'name']) ? null : client.client_name,
+      client_type: isCoManagedReadFieldHidden(redactions, ['client_type', 'clients.client_type']) ? null : client.client_type,
+      is_inactive: isCoManagedReadFieldHidden(redactions, ['is_inactive', 'clients.is_inactive']) ? null : client.is_inactive,
     }];
   });
 }

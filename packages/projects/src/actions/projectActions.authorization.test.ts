@@ -135,4 +135,16 @@ describe('project action authorization boundaries', () => {
     }]);
     expect(state.logoUrls).toHaveBeenCalledWith(['c1'], 't1');
   });
+
+  it.each([
+    ['wildcard resource redaction', ['*']],
+    ['prefixed client name redaction', ['fields.client_name']],
+    ['client identifier redaction', ['client_id']],
+  ])('getAllClientsForProjects applies %s before exposing picker data or logos', async (_caseName, redactedFields) => {
+    state.clientRows = [{ client_id: 'c1', client_name: 'Acme', client_type: 'company', is_inactive: false }];
+    state.clientDecisions.set('c1', { allowed: true, redactedFields });
+
+    await expect(getAllClientsForProjects()).resolves.toEqual([]);
+    expect(state.logoUrls).not.toHaveBeenCalled();
+  });
 });
