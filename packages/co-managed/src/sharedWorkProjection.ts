@@ -85,7 +85,8 @@ export type CoManagedMaskedSnapshot<Row, Spec> = { [Field in keyof Row]: Field e
  * - The assigned-task queue NULLS hidden names, because the assignment itself is the fact being shown. Dropping the row
  *   would hide work from the person it is assigned to.
  * - `listCoManagedSharedProjectTasks` keeps returning no rows when `task_name` is hidden, because a task with no name
- *   cannot be listed there.
+ *   cannot be listed there. Its per-task assignment reference is masked the same way as the queue: a hidden assignee
+ *   name is nulled while `revision` and `assignedToMe` (the fact that it is assigned) still come through.
  */
 export function maskCoManagedSnapshot<Row extends object, Spec extends CoManagedSnapshotSpec<Row>>(
   redactedFields: readonly string[], row: Row, spec: Spec): CoManagedMaskedSnapshot<Row, Spec> {
