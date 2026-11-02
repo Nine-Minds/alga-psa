@@ -10,6 +10,7 @@ import { defineRemoteMeetingCases } from './coManagedPortableRemoteMeeting.cases
 import { defineEngagementCases } from './coManagedPortableEngagement.cases';
 import { defineSupplementalFileCases } from './coManagedPortableSupplementalFiles.cases';
 import { defineProvisioningCases } from './coManagedPortableProvisioning.cases';
+import { defineSchemaCases } from './coManagedPortableSchema.cases';
 
 // Object storage is the one stand-in: staging reads bytes through the provider, which is replaced by an in-memory map.
 vi.mock('@alga-psa/storage/StorageProviderFactory', async () => {
@@ -38,4 +39,5 @@ describe('CM L7b3 portable export domains', () => {
   defineDocumentCases(state);
   defineManifestCases(state);
   defineProvisioningCases(state);
+  defineSchemaCases(state);
 });

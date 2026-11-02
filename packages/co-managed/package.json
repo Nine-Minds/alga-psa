@@ -193,6 +193,30 @@
     "./refusalAck": {
       "types": "./src/refusalAck.ts",
       "import": "./src/refusalAck.ts"
+    },
+    "./portableDocumentExport": {
+      "types": "./src/portableDocumentExport.ts",
+      "import": "./src/portableDocumentExport.ts"
+    },
+    "./portableEngagementExport": {
+      "types": "./src/portableEngagementExport.ts",
+      "import": "./src/portableEngagementExport.ts"
+    },
+    "./portableConversationExport": {
+      "types": "./src/portableConversationExport.ts",
+      "import": "./src/portableConversationExport.ts"
+    },
+    "./portableOperationalExport": {
+      "types": "./src/portableOperationalExport.ts",
+      "import": "./src/portableOperationalExport.ts"
+    },
+    "./portableOperationalCatalog": {
+      "types": "./src/portableOperationalCatalog.ts",
+      "import": "./src/portableOperationalCatalog.ts"
+    },
+    "./portableSupplementalFileExport": {
+      "types": "./src/portableSupplementalFileExport.ts",
+      "import": "./src/portableSupplementalFileExport.ts"
     }
   },
   "scripts": {

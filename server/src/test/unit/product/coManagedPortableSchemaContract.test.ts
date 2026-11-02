@@ -1,11 +1,8 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { CO_MANAGED_PORTABLE_CORE_COLUMNS } from '../../../../../packages/co-managed/src/portableCoreExport';
 import { CO_MANAGED_PORTABLE_WORK_COLUMNS } from '../../../../../packages/co-managed/src/portableWorkCatalog';
-import { CO_MANAGED_PORTABLE_ASSET_COLUMNS } from '../../../../../packages/co-managed/src/portableAssetCatalog';
-import { CO_MANAGED_PORTABLE_WORKFLOW_COLUMNS } from '../../../../../packages/co-managed/src/portableWorkflowCatalog';
-import { CO_MANAGED_PORTABLE_FILE_COLUMNS } from '../../../../../packages/co-managed/src/portableFileExport';
+import { PORTABLE_CATALOGS as CATALOGS, PORTABLE_MAPPED_TABLES as MAPPED_TABLES, catalogColumnsToCheck } from '../../helpers/coManagedPortableCatalogColumns';
 
 /**
  * Every column a portable catalog projects must exist in the migrated main schema. A catalog column the schema lacks
@@ -13,26 +10,10 @@ import { CO_MANAGED_PORTABLE_FILE_COLUMNS } from '../../../../../packages/co-man
  *
  * Derivation is from the migrations (no database): a column is "provided" when a migration that names the table
  * (as a whole word) also names the column as a whole word. This is deliberately a coarse over-approximation, so it
- * can miss a column that only some other table in the same file has; the DB-backed test below is the exact check
- * and runs when PORTABLE_SCHEMA_DB=1 with the standard PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE pointing at a migrated main database.
+ * can miss a column that only some other table in the same file has; the exact check against a migrated database's
+ * information_schema is a case of the portable-domains integration runner (coManagedPortableSchema.cases.ts).
  */
 const ROOT = resolve(__dirname, '../../../../..');
-const CATALOGS = { core: CO_MANAGED_PORTABLE_CORE_COLUMNS, work: CO_MANAGED_PORTABLE_WORK_COLUMNS,
-  assets: CO_MANAGED_PORTABLE_ASSET_COLUMNS, workflows: CO_MANAGED_PORTABLE_WORKFLOW_COLUMNS, files: CO_MANAGED_PORTABLE_FILE_COLUMNS } as Record<string, Record<string, readonly string[]>>;
-
-/** Catalog names whose migrations name another table: handoff_history is a view of handoffs; external_files was created as file_stores and renamed. */
-const MAPPED_TABLES: Record<string, string> = { handoff_history: 'co_management_ticket_handoffs', external_files: 'file_stores' };
-/** Computed in the export query by joining users, not selected from the table. */
-const isComputed = (table: string, column: string) =>
-  (table === 'workflow_tasks' || table === 'workflow_task_history') && column.endsWith('_name');
-
-export function catalogColumnsToCheck() {
-  const out: { catalog: string; table: string; physical: string; column: string }[] = [];
-  for (const [catalog, tables] of Object.entries(CATALOGS)) for (const [table, columns] of Object.entries(tables)) {
-    for (const column of columns) if (!isComputed(table, column)) out.push({ catalog, table, physical: MAPPED_TABLES[table] ?? table, column });
-  }
-  return out;
-}
 
 function migrationSources() {
   return ['server/migrations', 'ee/server/migrations'].flatMap(dir => {
@@ -61,20 +42,5 @@ describe('portable catalogs against the main schema', () => {
   it('does not project the collaboration actor columns main never added to project task comments', () => {
     for (const column of ['actor_reference_id', 'actor_display_name', 'actor_organization_name', 'collaboration_revision'])
       expect(CO_MANAGED_PORTABLE_WORK_COLUMNS.project_task_comments).not.toContain(column);
-  });
-});
-
-// Gate the case, not the suite: the DB-less server unit shards require executed assertions in every collected file.
-describe('portable catalogs against a migrated database (information_schema)', () => {
-  it.skipIf(process.env.PORTABLE_SCHEMA_DB !== '1')('every catalog column exists', async () => {
-    const { Client } = await import('pg');
-    const client = new Client();
-    await client.connect();
-    try {
-      const rows = (await client.query("select table_name, column_name from information_schema.columns where table_schema = 'public'")).rows as { table_name: string; column_name: string }[];
-      const have = new Set(rows.map(r => `${r.table_name}.${r.column_name}`));
-      const missing = catalogColumnsToCheck().filter(c => !have.has(`${c.physical}.${c.column}`)).map(c => `${c.catalog}.${c.table}.${c.column}`);
-      expect(missing).toEqual([]);
-    } finally { await client.end(); }
   });
 });
