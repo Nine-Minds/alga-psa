@@ -253,7 +253,7 @@
           "copyFailed": "Nie udało się skopiować",
           "unavailable": "Niedostępne",
           "permissions": "Uprawnienia delegowane (Microsoft Graph)",
-          "tenancy": "Aplikacja może być jednodzierżawna lub wielodzierżawna. Logowanie korzysta z identyfikatora katalogu (dzierżawy) z profilu Microsoft powiązanego z Calendar.",
+          "tenancy": "Aplikacja może obsługiwać jedną organizację lub wiele organizacji. Logowanie korzysta z identyfikatora katalogu (organizacji) z profilu Microsoft powiązanego z Calendar.",
           "openProviders": "Otwórz ustawienia dostawców Microsoft"
         },
         "adminConsentPending": {
