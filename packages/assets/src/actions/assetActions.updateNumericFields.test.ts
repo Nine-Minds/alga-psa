@@ -488,6 +488,9 @@ describe('asset read redaction boundaries', () => {
     const report = await getAssetMaintenanceReport(ASSET_ID) as any;
     expect(report.asset_name).toBeUndefined();
     expect(report.maintenance_history[0].maintenance_data).toEqual({ visible_note: 'visible' });
+    const bundle = await getAssetDetailBundle(ASSET_ID) as any;
+    expect(bundle.maintenanceReport.maintenance_history[0].maintenance_data).toEqual({ visible_note: 'visible' });
+    expect(bundle.maintenanceHistory[0].maintenance_data).toEqual({ visible_note: 'visible' });
     const history = await getAssetHistory(ASSET_ID) as any;
     expect(history[0].changes).toEqual({ fields: {} });
 

@@ -27,6 +27,12 @@ describe('projectAssetReadFields', () => {
     expect(projectAssetReadFields(response, [])).toEqual(response);
   });
 
+  it('masks field-labelled historical deltas when a redaction covers an ancestor path', () => {
+    expect(projectAssetReadFields({
+      changes: [{ field: 'workstation.serial_number', before: 'SECRET', after: 'SECRET2' }],
+    }, ['workstation'])).toEqual({ changes: [{ field: 'workstation.serial_number' }] });
+  });
+
   it('preserves Date and other non-plain values when projecting a list row', () => {
     const observedAt = new Date('2026-10-21T12:34:56.000Z');
     const marker = new Map([['key', 'value']]);

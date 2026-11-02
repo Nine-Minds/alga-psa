@@ -869,9 +869,7 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
             canReadTickets ? fetchAssetLinkedTickets(trx, tenant, asset_id, context) : Promise.resolve([]),
             canReadDocuments ? fetchAssetDocuments(trx, tenant, asset_id, assetRecord.client_id ?? null, 15, context) : Promise.resolve([])
         ]);
-        const maintenanceReport = projectAssetReadFields(
-            { maintenanceReport: rawMaintenanceReport }, decision.redactedFields
-        ).maintenanceReport;
+        const maintenanceReport = projectAssetMaintenanceReport(rawMaintenanceReport, decision.redactedFields);
         const history = rawHistory.map((entry) => ({
             ...entry,
             changes: projectAssetReadFields({ changes: entry.changes }, decision.redactedFields).changes,
@@ -3071,13 +3069,7 @@ export const getAssetMaintenanceReport = withAuth(async (user, { tenant }, asset
         return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetMaintenanceReport> => {
             const { decision } = await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
             const report = await fetchAssetMaintenanceReport(trx, tenant, asset_id);
-            const projected = projectAssetReadFields({ maintenanceReport: report }, decision.redactedFields).maintenanceReport;
-            return {
-                ...projected,
-                maintenance_history: projectAssetReadFields(
-                    { changes: projected.maintenance_history }, decision.redactedFields
-                ).changes,
-            };
+            return projectAssetMaintenanceReport(report, decision.redactedFields);
         });
     } catch (error) {
         console.error('Error getting asset maintenance report:', error);
@@ -3182,6 +3174,19 @@ export const getClientMaintenanceSummary = withAuth(async (user, { tenant }, cli
         throw error;
     }
 });
+
+function projectAssetMaintenanceReport(
+    report: AssetMaintenanceReport,
+    redactedFields: readonly string[]
+): AssetMaintenanceReport {
+    const projected = projectAssetReadFields({ maintenanceReport: report }, redactedFields).maintenanceReport;
+    return {
+        ...projected,
+        maintenance_history: projectAssetReadFields(
+            { changes: projected.maintenance_history }, redactedFields
+        ).changes,
+    };
+}
 
 async function fetchAssetMaintenanceReport(
     db: Knex | Knex.Transaction,

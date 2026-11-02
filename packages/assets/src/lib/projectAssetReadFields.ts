@@ -9,7 +9,9 @@ export function projectAssetReadFields<T>(value: T, redactedFields: readonly str
     ['billing_profile_id', 'billing_profile_name'],
     ['name', 'maintenanceReport.asset_name'],
   ];
-  const isMasked = (field: string) => [...paths].some((path) => field === path || field.startsWith(`${path}.`));
+  const pathsOverlap = (left: string, right: string) =>
+    left === right || left.startsWith(`${right}.`) || right.startsWith(`${left}.`);
+  const isMasked = (field: string) => [...paths].some((path) => pathsOverlap(field, path));
   let expanded = true;
   while (expanded) {
     expanded = false;
@@ -36,13 +38,14 @@ export function projectAssetReadFields<T>(value: T, redactedFields: readonly str
       // History stores asset values below a `changes`/`fields` wrapper. Match
       // asset paths at any depth there, and also support flattened dotted keys.
       const isHistoryValue = path === 'changes' || path.startsWith('changes.');
+      const historyPath = childPath.startsWith('changes.') ? childPath.slice('changes.'.length) : key;
       const historyFieldMatch = isHistoryValue && [...paths].some((redactedPath) =>
-        key === redactedPath || key.endsWith(`.${redactedPath}`) || redactedPath.endsWith(`.${key}`)
+        pathsOverlap(historyPath, redactedPath) || (!redactedPath.includes('.') && historyPath.endsWith(`.${redactedPath}`))
       );
       if (paths.has(childPath) || historyFieldMatch) continue;
       if (isHistoryValue && (key === 'before' || key === 'after' || key === 'previous_value' || key === 'new_value' || key === 'old_value' || key === 'value')) {
         const field = (node as Record<string, unknown>).field ?? (node as Record<string, unknown>).field_name ?? (node as Record<string, unknown>).path;
-        if (typeof field === 'string' && [...paths].some((redactedPath) => field === redactedPath || field.endsWith(`.${redactedPath}`))) continue;
+        if (typeof field === 'string' && [...paths].some((redactedPath) => pathsOverlap(field, redactedPath))) continue;
       }
       result[key] = project(child, childPath);
     }
