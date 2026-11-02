@@ -716,6 +716,38 @@
       "rejected": "Det gick inte att spara uppgiften.",
       "saved": "Sparat.",
       "save": "Spara"
+    },
+    "conversation": {
+      "title": "Konversation",
+      "reload": "Läs in igen",
+      "loadError": "Konversationen kunde inte läsas in.",
+      "readOnly": "Du kan läsa den här konversationen men inte lägga till något.",
+      "new": "Ny kommentar",
+      "empty": "Inga kommentarer ännu.",
+      "restrictedAuthor": "Författare dold",
+      "replyMarker": "Svar",
+      "deleted": "Den här kommentaren har tagits bort.",
+      "reply": "Svara",
+      "edit": "Redigera",
+      "delete": "Ta bort",
+      "newer": "Nyare",
+      "older": "Äldre",
+      "audience": "Mottagare",
+      "message": "Meddelande",
+      "deleteHelp": "Kommentaren ersätts med en borttagningsmarkering. Svar finns kvar i tråden.",
+      "conflict": "Den här kommentaren har ändrats sedan du öppnade den. Avbryt och läs in igen för att fortsätta.",
+      "unknownOutcome": "Vi kunde inte bekräfta att det sparades. Försök igen; det tillämpas inte två gånger.",
+      "invalid": "Den här kommentaren kunde inte sparas.",
+      "send": "Skicka",
+      "cancel": "Avbryt",
+      "audiences": {
+        "requester": "Beställare och IT",
+        "shared_it": "Delad med IT-team",
+        "organization_private": "Endast vår organisation"
+      },
+      "audienceHelp": {
+        "requester": "Meddelanden här är synliga för dig och din IT-leverantör. Interna anteckningar visas aldrig."
+      }
     }
   },
   "common": {

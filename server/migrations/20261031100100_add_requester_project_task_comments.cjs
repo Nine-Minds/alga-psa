@@ -35,33 +35,35 @@ async function hasConstraint(knex, table, name) {
 
 exports.up = async function up(knex) {
   if (!(await knex.schema.hasTable('project_task_comments'))) return;
-  for (const [name, type] of [['contact_id', 'uuid'], ['author_kind', 'varchar(16)'], ['request_hash', 'varchar(64)']]) {
-    await withLockRetry(knex, (trx) => trx.raw(`ALTER TABLE project_task_comments ADD COLUMN IF NOT EXISTS ${name} ${type}`));
-  }
+  await withLockRetry(knex, (trx) => trx.raw('ALTER TABLE project_task_comments ADD COLUMN IF NOT EXISTS contact_id uuid'));
+  await withLockRetry(knex, (trx) => trx.raw('ALTER TABLE project_task_comments ADD COLUMN IF NOT EXISTS author_kind varchar(16)'));
+  await withLockRetry(knex, (trx) => trx.raw('ALTER TABLE project_task_comments ADD COLUMN IF NOT EXISTS request_hash varchar(64)'));
   // The base table's unnamed knex CHECK only admits 'internal'.
   const { rows: checks } = await knex.raw(`SELECT conname, pg_get_constraintdef(oid) AS definition FROM pg_constraint
     WHERE contype = 'c' AND conrelid = 'project_task_comments'::regclass`);
   for (const check of checks) {
     if (check.definition.includes('author_type') && !check.definition.includes("'client'") && !check.definition.includes('author_kind')) {
+      // migration-lint: allow UNRESOLVED - the base table's author_type CHECK was created unnamed by knex, so its generated name is read from pg_constraint above; dropping a CHECK takes a brief ACCESS EXCLUSIVE lock under withLockRetry and scans nothing
       await withLockRetry(knex, (trx) => trx.raw('ALTER TABLE project_task_comments DROP CONSTRAINT ??', [check.conname]));
     }
   }
-  const constraints = [
-    ['project_task_comments_author_type', `CHECK (author_type IN ('internal', 'client')) NOT VALID`],
-    ['project_task_comments_author_kind', `CHECK (author_kind IS NULL OR author_kind IN ('user', 'contact')) NOT VALID`],
-    ['project_task_comments_author_shape', `CHECK (
+  if (!(await hasConstraint(knex, 'project_task_comments', 'project_task_comments_author_type'))) {
+    await withLockRetry(knex, (trx) => trx.raw(`ALTER TABLE project_task_comments ADD CONSTRAINT project_task_comments_author_type CHECK (author_type IN ('internal', 'client')) NOT VALID`));
+  }
+  if (!(await hasConstraint(knex, 'project_task_comments', 'project_task_comments_author_kind'))) {
+    await withLockRetry(knex, (trx) => trx.raw(`ALTER TABLE project_task_comments ADD CONSTRAINT project_task_comments_author_kind CHECK (author_kind IS NULL OR author_kind IN ('user', 'contact')) NOT VALID`));
+  }
+  if (!(await hasConstraint(knex, 'project_task_comments', 'project_task_comments_author_shape'))) {
+    await withLockRetry(knex, (trx) => trx.raw(`ALTER TABLE project_task_comments ADD CONSTRAINT project_task_comments_author_shape CHECK (
       ((author_kind IS NULL OR author_kind = 'user') AND contact_id IS NULL AND (
         (actor_reference_id IS NULL AND user_id IS NOT NULL) OR
         (actor_reference_id IS NOT NULL AND user_id IS NULL AND author_type = 'internal'
           AND COALESCE(char_length(actor_display_name), 0) > 0 AND COALESCE(char_length(actor_organization_name), 0) > 0)))
       OR (author_kind = 'contact' AND contact_id IS NOT NULL AND user_id IS NULL AND actor_reference_id IS NULL AND author_type = 'client'
-        AND COALESCE(char_length(actor_display_name), 0) > 0)) NOT VALID`],
-    ['project_task_comments_contact_fk', `FOREIGN KEY (tenant, contact_id) REFERENCES contacts (tenant, contact_name_id) NOT VALID`],
-  ];
-  for (const [name, definition] of constraints) {
-    if (!(await hasConstraint(knex, 'project_task_comments', name))) {
-      await withLockRetry(knex, (trx) => trx.raw(`ALTER TABLE project_task_comments ADD CONSTRAINT ?? ${definition}`, [name]));
-    }
+        AND COALESCE(char_length(actor_display_name), 0) > 0)) NOT VALID`));
+  }
+  if (!(await hasConstraint(knex, 'project_task_comments', 'project_task_comments_contact_fk'))) {
+    await withLockRetry(knex, (trx) => trx.raw(`ALTER TABLE project_task_comments ADD CONSTRAINT project_task_comments_contact_fk FOREIGN KEY (tenant, contact_id) REFERENCES contacts (tenant, contact_name_id) NOT VALID`));
   }
 };
 

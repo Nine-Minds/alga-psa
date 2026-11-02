@@ -720,6 +720,38 @@
       "rejected": "Nie udało się zapisać tego zadania.",
       "saved": "Zapisano.",
       "save": "Zapisz"
+    },
+    "conversation": {
+      "title": "Rozmowa",
+      "reload": "Odśwież",
+      "loadError": "Nie udało się wczytać rozmowy.",
+      "readOnly": "Możesz czytać tę rozmowę, ale nie możesz nic dodać.",
+      "new": "Nowy komentarz",
+      "empty": "Brak komentarzy.",
+      "restrictedAuthor": "Autor ukryty",
+      "replyMarker": "Odpowiedź",
+      "deleted": "Ten komentarz został usunięty.",
+      "reply": "Odpowiedz",
+      "edit": "Edytuj",
+      "delete": "Usuń",
+      "newer": "Nowsze",
+      "older": "Starsze",
+      "audience": "Odbiorcy",
+      "message": "Wiadomość",
+      "deleteHelp": "Komentarz zostanie zastąpiony znacznikiem usunięcia. Odpowiedzi pozostaną w wątku.",
+      "conflict": "Ten komentarz zmienił się od czasu otwarcia. Anuluj i odśwież, aby kontynuować.",
+      "unknownOutcome": "Nie udało się potwierdzić zapisu. Spróbuj ponownie; nie zostanie zastosowany dwukrotnie.",
+      "invalid": "Nie udało się zapisać tego komentarza.",
+      "send": "Wyślij",
+      "cancel": "Anuluj",
+      "audiences": {
+        "requester": "Zgłaszający i IT",
+        "shared_it": "Udostępnione zespołom IT",
+        "organization_private": "Tylko nasza organizacja"
+      },
+      "audienceHelp": {
+        "requester": "Wiadomości tutaj widzisz Ty i Twój dostawca IT. Notatki wewnętrzne nigdy nie są wyświetlane."
+      }
     }
   },
   "common": {

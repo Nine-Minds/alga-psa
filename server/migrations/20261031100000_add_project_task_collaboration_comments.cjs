@@ -35,9 +35,10 @@ async function hasConstraint(knex, table, name) {
 
 exports.up = async function up(knex) {
   if (!(await knex.schema.hasTable('project_task_comments'))) return;
-  for (const [name, type] of [['actor_reference_id', 'uuid'], ['actor_display_name', 'text'], ['actor_organization_name', 'text'], ['collaboration_revision', 'integer']]) {
-    await withLockRetry(knex, (trx) => trx.raw(`ALTER TABLE project_task_comments ADD COLUMN IF NOT EXISTS ${name} ${type}`));
-  }
+  await withLockRetry(knex, (trx) => trx.raw('ALTER TABLE project_task_comments ADD COLUMN IF NOT EXISTS actor_reference_id uuid'));
+  await withLockRetry(knex, (trx) => trx.raw('ALTER TABLE project_task_comments ADD COLUMN IF NOT EXISTS actor_display_name text'));
+  await withLockRetry(knex, (trx) => trx.raw('ALTER TABLE project_task_comments ADD COLUMN IF NOT EXISTS actor_organization_name text'));
+  await withLockRetry(knex, (trx) => trx.raw('ALTER TABLE project_task_comments ADD COLUMN IF NOT EXISTS collaboration_revision integer'));
   await withLockRetry(knex, (trx) => trx.raw('ALTER TABLE project_task_comments ALTER COLUMN user_id DROP NOT NULL'));
   if (!(await hasConstraint(knex, 'project_task_comments', 'project_task_comments_revision_positive'))) {
     await withLockRetry(knex, (trx) => trx.raw(`ALTER TABLE project_task_comments ADD CONSTRAINT project_task_comments_revision_positive

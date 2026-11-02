@@ -716,6 +716,38 @@
       "rejected": "Impossibile salvare questa attività.",
       "saved": "Salvato.",
       "save": "Salva"
+    },
+    "conversation": {
+      "title": "Conversazione",
+      "reload": "Ricarica",
+      "loadError": "Impossibile caricare la conversazione.",
+      "readOnly": "Puoi leggere questa conversazione, ma non aggiungere messaggi.",
+      "new": "Nuovo commento",
+      "empty": "Ancora nessun commento.",
+      "restrictedAuthor": "Autore nascosto",
+      "replyMarker": "Risposta",
+      "deleted": "Questo commento è stato eliminato.",
+      "reply": "Rispondi",
+      "edit": "Modifica",
+      "delete": "Elimina",
+      "newer": "Più recenti",
+      "older": "Meno recenti",
+      "audience": "Destinatari",
+      "message": "Messaggio",
+      "deleteHelp": "Il commento viene sostituito da un indicatore di eliminazione. Le risposte restano nel thread.",
+      "conflict": "Questo commento è cambiato da quando l’hai aperto. Annulla e ricarica per continuare.",
+      "unknownOutcome": "Non è stato possibile confermare il salvataggio. Riprova; non verrà applicato due volte.",
+      "invalid": "Impossibile salvare questo commento.",
+      "send": "Invia",
+      "cancel": "Annulla",
+      "audiences": {
+        "requester": "Richiedente e IT",
+        "shared_it": "Condiviso con i team IT",
+        "organization_private": "Solo la nostra organizzazione"
+      },
+      "audienceHelp": {
+        "requester": "I messaggi qui sono visibili a te e al tuo fornitore IT. Le note interne non vengono mai mostrate."
+      }
     }
   },
   "common": {

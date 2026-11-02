@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
+import { isClientUserType } from '@alga-psa/types';
 import { RequesterTaskConversationProvider, type RequesterTaskConversationProps } from '@alga-psa/client-portal/components';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -17,24 +18,33 @@ type Request = Parameters<typeof createRequesterTaskCommentAction>[1];
 export function CoManagedRequesterTaskProvider({ children }: { children: ReactNode }) {
   return <RequesterTaskConversationProvider component={Conversation} loadSharedTaskIds={getRequesterSharedTaskIdsAction}>{children}</RequesterTaskConversationProvider>;
 }
+// Only a signed-in client contact with a full session identity sees requester task threads.
+function signedInClient(session: ReturnType<typeof useSession>['data']) {
+  const user = session?.user;
+  if (!session?.session_id || !user || !isClientUserType(user.user_type) || !user.tenant || !user.id) return null;
+  return { sessionId: session.session_id, tenant: user.tenant, userId: user.id };
+}
+
 function Conversation(props: RequesterTaskConversationProps) {
   const { data: session } = useSession();
+  const client = signedInClient(session);
+  const signedIn = client !== null;
   const { t } = useTranslation('msp/licensing');
   const [open, setOpen] = useState(false);
   const taskLinkHandled = useRef<string | null>(null);
   useEffect(() => {
-    if (session?.user?.user_type !== 'client' || !session.session_id || !session.user.tenant || !session.user.id) return;
+    if (!signedIn) return;
     const target = `${props.projectId}:${props.taskId}`;
     if (taskLinkHandled.current === target) return;
     taskLinkHandled.current = target;
     if (new URLSearchParams(window.location.search).get('taskId') === props.taskId) setOpen(true);
-  }, [props.projectId, props.taskId, session]);
-  if (session?.user?.user_type !== 'client' || !session.session_id || !session.user.tenant || !session.user.id) return null;
-  const identity = `${session.session_id}:${session.user.tenant}:${session.user.id}:${props.projectId}:${props.taskId}`;
+  }, [props.projectId, props.taskId, signedIn]);
+  if (!client) return null;
+  const identity = `${client.sessionId}:${client.tenant}:${client.userId}:${props.projectId}:${props.taskId}`;
   return <>
     <Button id={`requester-task-${props.taskId}-conversation`} size="sm" variant="ghost" onClick={() => setOpen(true)}>{t('coManaged.conversation.title', { defaultValue: 'Conversation' })}</Button>
     <Dialog id={`requester-task-${props.taskId}-dialog`} isOpen={open} onClose={() => setOpen(false)} title={t('coManaged.conversation.title', { defaultValue: 'Conversation' })} className="max-w-2xl">
-      {open && <Messages key={identity} {...props} tenant={session.user.tenant} userId={session.user.id} />}
+      {open && <Messages key={identity} {...props} tenant={client.tenant} userId={client.userId} />}
     </Dialog>
   </>;
 }
@@ -71,7 +81,7 @@ function Messages({ tenant, userId, ...target }: RequesterTaskConversationProps 
   return <section className="my-3 space-y-3 rounded border p-3" aria-label={t('coManaged.conversation.title', { defaultValue: 'Conversation' })}>
     <p className="text-sm">{t('coManaged.conversation.audienceHelp.requester', { defaultValue: 'Messages here are visible to you and your IT provider. Internal notes are never shown.' })}</p>
     {loadError && <p role="alert">{t('coManaged.conversation.loadError', { defaultValue: 'The conversation could not be loaded.' })}</p>}
-    <Button id={`${id}-refresh`} size="sm" variant="ghost" disabled={busy} onClick={() => void load(null)}>{t('coManaged.ticket.reload', { defaultValue: 'Reload' })}</Button>
+    <Button id={`${id}-refresh`} size="sm" variant="ghost" disabled={busy} onClick={() => void load(null)}>{t('coManaged.conversation.reload', { defaultValue: 'Reload' })}</Button>
     {screen && !screen.items.length && <p>{t('coManaged.conversation.empty', { defaultValue: 'No comments yet.' })}</p>}
     {screen?.items.map(item => <article key={item.commentId} className="space-y-1 border-t pt-2">
       <p className="text-sm font-medium">{item.authorName || t('coManaged.conversation.restrictedAuthor', { defaultValue: 'Author hidden' })}{item.organizationName ? ` · ${item.organizationName}` : ''}</p>

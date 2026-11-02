@@ -716,6 +716,38 @@
       "rejected": "No se pudo guardar esta tarea.",
       "saved": "Guardado.",
       "save": "Guardar"
+    },
+    "conversation": {
+      "title": "Conversación",
+      "reload": "Recargar",
+      "loadError": "No se pudo cargar la conversación.",
+      "readOnly": "Puede leer esta conversación, pero no añadir mensajes.",
+      "new": "Nuevo comentario",
+      "empty": "Aún no hay comentarios.",
+      "restrictedAuthor": "Autor oculto",
+      "replyMarker": "Respuesta",
+      "deleted": "Este comentario se eliminó.",
+      "reply": "Responder",
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "newer": "Más recientes",
+      "older": "Más antiguos",
+      "audience": "Destinatarios",
+      "message": "Mensaje",
+      "deleteHelp": "El comentario se sustituye por una marca de eliminado. Las respuestas permanecen en el hilo.",
+      "conflict": "Este comentario cambió desde que lo abrió. Cancele y recargue para continuar.",
+      "unknownOutcome": "No pudimos confirmar el guardado. Inténtelo de nuevo; no se aplicará dos veces.",
+      "invalid": "No se pudo guardar este comentario.",
+      "send": "Enviar",
+      "cancel": "Cancelar",
+      "audiences": {
+        "requester": "Solicitante y TI",
+        "shared_it": "Compartido con equipos de TI",
+        "organization_private": "Solo nuestra organización"
+      },
+      "audienceHelp": {
+        "requester": "Los mensajes aquí son visibles para usted y su proveedor de TI. Las notas internas nunca se muestran."
+      }
     }
   },
   "common": {

@@ -716,6 +716,38 @@
       "rejected": "Deze taak kon niet worden opgeslagen.",
       "saved": "Opgeslagen.",
       "save": "Opslaan"
+    },
+    "conversation": {
+      "title": "Gesprek",
+      "reload": "Opnieuw laden",
+      "loadError": "Het gesprek kon niet worden geladen.",
+      "readOnly": "U kunt dit gesprek lezen, maar er niets aan toevoegen.",
+      "new": "Nieuwe opmerking",
+      "empty": "Nog geen opmerkingen.",
+      "restrictedAuthor": "Auteur verborgen",
+      "replyMarker": "Antwoord",
+      "deleted": "Deze opmerking is verwijderd.",
+      "reply": "Beantwoorden",
+      "edit": "Bewerken",
+      "delete": "Verwijderen",
+      "newer": "Nieuwer",
+      "older": "Ouder",
+      "audience": "Doelgroep",
+      "message": "Bericht",
+      "deleteHelp": "De opmerking wordt vervangen door een verwijdermarkering. Antwoorden blijven in de draad.",
+      "conflict": "Deze opmerking is gewijzigd sinds u deze opende. Annuleer en laad opnieuw om door te gaan.",
+      "unknownOutcome": "We konden het opslaan niet bevestigen. Probeer het opnieuw; het wordt niet dubbel toegepast.",
+      "invalid": "Deze opmerking kon niet worden opgeslagen.",
+      "send": "Verzenden",
+      "cancel": "Annuleren",
+      "audiences": {
+        "requester": "Aanvrager en IT",
+        "shared_it": "Gedeeld met IT-teams",
+        "organization_private": "Alleen onze organisatie"
+      },
+      "audienceHelp": {
+        "requester": "Berichten hier zijn zichtbaar voor u en uw IT-dienstverlener. Interne notities worden nooit getoond."
+      }
     }
   },
   "common": {

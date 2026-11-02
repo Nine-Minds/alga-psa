@@ -716,6 +716,38 @@
       "rejected": "Diese Aufgabe konnte nicht gespeichert werden.",
       "saved": "Gespeichert.",
       "save": "Speichern"
+    },
+    "conversation": {
+      "title": "Unterhaltung",
+      "reload": "Neu laden",
+      "loadError": "Die Unterhaltung konnte nicht geladen werden.",
+      "readOnly": "Sie können diese Unterhaltung lesen, aber nichts hinzufügen.",
+      "new": "Neuer Kommentar",
+      "empty": "Noch keine Kommentare.",
+      "restrictedAuthor": "Autor verborgen",
+      "replyMarker": "Antwort",
+      "deleted": "Dieser Kommentar wurde gelöscht.",
+      "reply": "Antworten",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "newer": "Neuere",
+      "older": "Ältere",
+      "audience": "Zielgruppe",
+      "message": "Nachricht",
+      "deleteHelp": "Der Kommentar wird durch einen Löschvermerk ersetzt. Antworten bleiben im Verlauf.",
+      "conflict": "Dieser Kommentar wurde geändert, seit Sie ihn geöffnet haben. Brechen Sie ab und laden Sie neu, um fortzufahren.",
+      "unknownOutcome": "Das Speichern konnte nicht bestätigt werden. Versuchen Sie es erneut; es wird nicht doppelt angewendet.",
+      "invalid": "Dieser Kommentar konnte nicht gespeichert werden.",
+      "send": "Senden",
+      "cancel": "Abbrechen",
+      "audiences": {
+        "requester": "Anfragende und IT",
+        "shared_it": "Mit IT-Teams geteilt",
+        "organization_private": "Nur unsere Organisation"
+      },
+      "audienceHelp": {
+        "requester": "Nachrichten hier sind für Sie und Ihren IT-Dienstleister sichtbar. Interne Notizen werden nie angezeigt."
+      }
     }
   },
   "common": {

@@ -22724,13 +22724,17 @@
             "format": "uuid"
           },
           "user_id": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "uuid"
           },
           "author_type": {
             "type": "string",
             "enum": [
-              "internal"
+              "internal",
+              "client"
             ]
           },
           "note": {
@@ -22770,7 +22774,10 @@
             ],
             "properties": {
               "user_id": {
-                "type": "string",
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "format": "uuid"
               },
               "first_name": {
@@ -22805,6 +22812,30 @@
               "email",
               "avatar_url"
             ]
+          },
+          "organization_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "author_kind": {
+            "type": "string",
+            "enum": [
+              "user",
+              "contact"
+            ]
+          },
+          "audience": {
+            "type": "string",
+            "enum": [
+              "requester",
+              "shared_it",
+              "organization_private"
+            ]
+          },
+          "collaboration_revision": {
+            "type": "integer"
           },
           "reactions": {
             "type": "array",
