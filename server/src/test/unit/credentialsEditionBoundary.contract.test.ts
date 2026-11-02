@@ -31,7 +31,6 @@ const ALLOWED_FILES = new Set<string>([
   'server/migrations/20260812110000_expand_credential_associations_entity_types.cjs',
   'server/migrations/20260828120000_add_credential_audit_permission.cjs',
 
-  // Shared metadata / RBAC catalog (data, not logic).
   'server/migrations/utils/tenantDb.cjs',
   'server/migrations/utils/permissions/catalog.cjs',
 
