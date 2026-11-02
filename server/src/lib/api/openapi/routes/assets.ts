@@ -396,7 +396,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   const AssetRelationshipParams = registry.registerSchema(
     'AssetRelationshipParams',
     zOpenApi.object({
-      relationshipId: zOpenApi.string().guid().describe('Asset relationship UUID from asset_relationships.relationship_id.'),
+      relationshipId: zOpenApi.string().describe('Composite asset relationship identity: parent_asset_id:child_asset_id.'),
     }),
   );
 
@@ -574,9 +574,11 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   const AssetRelationshipRow = registry.registerSchema(
     'AssetRelationshipRow',
     zOpenApi.object({
-      relationship_id: zOpenApi.string().guid().describe('Primary key from asset_relationships.relationship_id.'),
-      asset_id: zOpenApi.string().guid().describe('Source asset UUID from asset_relationships.asset_id.'),
-      related_asset_id: zOpenApi.string().guid().describe('Related asset UUID from asset_relationships.related_asset_id.'),
+      relationship_id: zOpenApi.string().describe('Composite route identity: parent_asset_id:child_asset_id.'),
+      asset_id: zOpenApi.string().guid().describe('Compatibility alias for parent_asset_id.'),
+      parent_asset_id: zOpenApi.string().guid().describe('Parent asset UUID from asset_relationships.parent_asset_id.'),
+      child_asset_id: zOpenApi.string().guid().describe('Child asset UUID from asset_relationships.child_asset_id.'),
+      related_asset_id: zOpenApi.string().guid().describe('Other endpoint asset UUID, present in relationship list responses.'),
       relationship_type: zOpenApi.string().describe('Free-form relationship type.'),
       tenant: zOpenApi.string().guid().describe('Tenant UUID from asset_relationships.tenant.'),
       created_at: zOpenApi.string().datetime().optional().describe('Relationship creation timestamp.'),

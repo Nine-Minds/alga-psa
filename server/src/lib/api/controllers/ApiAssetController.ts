@@ -33,6 +33,7 @@ type AssetAction = { resource: 'asset' | 'ticket'; action: 'read' | 'create' | '
 const ASSET_READ: AssetAction[] = [{ resource: 'asset', action: 'read' }];
 const ASSET_CREATE: AssetAction[] = [{ resource: 'asset', action: 'create' }];
 const ASSET_UPDATE: AssetAction[] = [{ resource: 'asset', action: 'update' }];
+const ASSET_UPDATE_RELATED_READ: AssetAction[] = [...ASSET_UPDATE, ...ASSET_READ];
 const ASSET_DELETE: AssetAction[] = [{ resource: 'asset', action: 'delete' }];
 const ASSET_TICKET_READ: AssetAction[] = [...ASSET_READ, { resource: 'ticket', action: 'read' }];
 const ASSET_TICKET_LINK: AssetAction[] = [{ resource: 'asset', action: 'update' }, { resource: 'ticket', action: 'read' }];
@@ -311,7 +312,7 @@ export class ApiAssetController {
    * POST /api/v2/assets/{id}/relationships - Create asset relationship
    */
   async createRelationship(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const { context, denied: authDenied } = await this.authorize(req, ASSET_UPDATE);
+    const { context, denied: authDenied } = await this.authorize(req, ASSET_UPDATE_RELATED_READ);
     if (authDenied) return authDenied;
     const data = await req.json();
 
@@ -334,15 +335,15 @@ export class ApiAssetController {
    * DELETE /api/v2/assets/relationships/{relationshipId} - Delete asset relationship
    */
   async deleteRelationship(req: NextRequest, params: { relationshipId: string }): Promise<NextResponse> {
-    const { context, denied: authDenied } = await this.authorize(req, ASSET_UPDATE);
+    const { context, denied: authDenied } = await this.authorize(req, ASSET_UPDATE_RELATED_READ);
     if (authDenied) return authDenied;
 
     const assetIds = await this.assetService.getRelationshipAssetIds(params.relationshipId, context);
     if (!assetIds) return createErrorResponse('Asset relationship not found', 404, 'NOT_FOUND');
-    for (const assetId of assetIds) {
-      const denied = await this.authorizeRecord(context, assetId, 'update');
-      if (denied) return denied;
-    }
+    const targetDenied = await this.authorizeRecord(context, assetIds[0], 'update');
+    if (targetDenied) return targetDenied;
+    const relatedDenied = await this.authorizeRecord(context, assetIds[1], 'read');
+    if (relatedDenied) return relatedDenied;
     await this.assetService.deleteRelationship(params.relationshipId, context);
 
     return new NextResponse(null, { status: 204 });

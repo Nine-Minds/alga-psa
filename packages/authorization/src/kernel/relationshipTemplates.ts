@@ -76,6 +76,10 @@ export interface RelationshipSqlAdapter {
    * when `userIds` is empty.
    */
   applyAssignedUsers(builder: Knex.QueryBuilder, userIds: string[]): void;
+  /** Optional relationship-backed ownership mapping for resources without a scalar owner column. */
+  applyOwnerUsers?(builder: Knex.QueryBuilder, userIds: string[]): void;
+  /** Optional relationship-backed team mapping for resources without a scalar team column. */
+  applyTeams?(builder: Knex.QueryBuilder, teamIds: string[]): void;
 }
 
 export interface RelationshipSqlContext {
@@ -116,9 +120,9 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
   own: {
     matches: (input) =>
       typeof input.record?.ownerUserId === 'string' && input.record.ownerUserId === input.subject.userId,
-    compileSql: (builder, ctx) => {
-      builder.where(ctx.adapter.ownerColumn, ctx.subject.userId);
-    },
+    compileSql: (builder, ctx) => ctx.adapter.applyOwnerUsers
+      ? ctx.adapter.applyOwnerUsers(builder, [ctx.subject.userId])
+      : builder.where(ctx.adapter.ownerColumn, ctx.subject.userId),
   },
   assigned: {
     matches: (input) =>
@@ -189,9 +193,9 @@ const RELATIONSHIP_TEMPLATES: Record<RelationshipTemplateKey, RelationshipTempla
   },
   same_team: {
     matches: (input) => hasIntersection(input.record?.teamIds, input.subject.teamIds),
-    compileSql: (builder, ctx) => {
-      whereInOrDeny(builder, ctx.adapter.teamColumn, ctx.subject.teamIds);
-    },
+    compileSql: (builder, ctx) => ctx.adapter.applyTeams
+      ? ctx.adapter.applyTeams(builder, ctx.subject.teamIds ?? [])
+      : whereInOrDeny(builder, ctx.adapter.teamColumn, ctx.subject.teamIds),
   },
   // One rule intersects client, board, and contact restrictions. Built-in rules
   // otherwise compose with OR, which would leak sibling tickets if split up.

@@ -225,7 +225,7 @@ export const assetWithDetailsResponseSchema = assetResponseSchema.extend({
   ]).optional(),
   
   relationships: z.array(z.object({
-    relationship_id: uuidSchema,
+    relationship_id: z.string(),
     related_asset_id: uuidSchema,
     relationship_type: z.string(),
     related_asset_name: z.string(),
@@ -265,7 +265,7 @@ export const linkAssetTicketSchema = z.object({
 });
 
 export const assetRelationshipResponseSchema = z.object({
-  relationship_id: uuidSchema,
+  relationship_id: z.string(),
   asset_id: uuidSchema,
   related_asset_id: uuidSchema,
   relationship_type: z.string(),
