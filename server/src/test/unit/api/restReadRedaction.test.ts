@@ -24,6 +24,8 @@ const state = vi.hoisted(() => ({
   assetReadAllowed: true,
   deployableStatusSlugs: ['active'] as string[],
   maintenanceSchedules: [] as Record<string, any>[],
+  assetAssignments: [] as Record<string, any>[],
+  maintenanceHistory: [] as Record<string, any>[],
   assetTickets: [] as Record<string, any>[],
   statuses: [] as Record<string, any>[],
   clients: [] as Record<string, any>[],
@@ -102,8 +104,14 @@ vi.mock('../../../lib/api/services/AssetService', () => ({
     getAuthorizationRecord = vi.fn(async (id: string) =>
       state.assetAuthorizationRecords.get(id) ?? (state.assets.some((a) => a.asset_id === id) ? { id } : null));
     getWithDetails = vi.fn(async (id: string) => state.assets.find((a) => a.asset_id === id) ?? null);
+    update = vi.fn(async (id: string, values: Record<string, any>) => {
+      const asset = state.assets.find((a) => a.asset_id === id);
+      return asset ? { ...asset, ...values } : null;
+    });
     getAssetRelationships = vi.fn(async (id: string) => state.assets.find((a) => a.asset_id === id)?.relationships ?? []);
     getMaintenanceSchedules = vi.fn(async (id: string) => state.assets.find((a) => a.asset_id === id)?.maintenance_schedules ?? []);
+    getAssetAssignments = vi.fn(async () => state.assetAssignments);
+    getMaintenanceHistory = vi.fn(async () => state.maintenanceHistory);
     list = vi.fn(async () => ({ data: state.assets, total: state.assets.length }));
     search = vi.fn(async () => state.assets);
     getAssetTickets = vi.fn(async () => state.assetTickets);
@@ -158,6 +166,8 @@ beforeEach(() => {
   state.assetReadAllowed = true;
   state.deployableStatusSlugs = ['active'];
   state.maintenanceSchedules = [];
+  state.assetAssignments = [];
+  state.maintenanceHistory = [];
   state.assetTickets = [];
   state.statuses = [{ status_id: 's-1', name: 'Active' }];
   state.clients = [{ client_id: 'c-1', client_name: 'Acme' }];
@@ -967,6 +977,110 @@ describe('asset routes serialize the projection', () => {
 
     expect(response.status).toBe(403);
     expect(list).not.toHaveBeenCalled();
+  });
+});
+
+describe('asset mutation and history projections', () => {
+  const ASSET_ID = '22222222-2222-2222-2222-222222222229';
+
+  beforeEach(() => {
+    state.assets = [{ asset_id: ASSET_ID, name: 'Visible asset', serial_number: 'SECRET-SERIAL' }];
+  });
+
+  it('projects asset update results, preserves visible fields, and suppresses hidden identifiers before mutation', async () => {
+    const controller = new ApiAssetController();
+    const update = vi.spyOn((controller as any).assetService, 'update');
+    const makeRequest = () => {
+      const req = request(`/api/v1/assets/${ASSET_ID}`, { id: ASSET_ID });
+      req.json = async () => ({ name: 'Renamed asset' });
+      return req;
+    };
+
+    state.assetReadAllowed = false;
+    expect((await controller.update(makeRequest(), { id: ASSET_ID })).status).toBe(403);
+    expect(update).not.toHaveBeenCalled();
+    state.assetReadAllowed = true;
+
+    state.decisions.set(ASSET_ID, { allowed: false, redactedFields: [] });
+    expect((await controller.update(makeRequest(), { id: ASSET_ID })).status).toBe(404);
+    expect(update).not.toHaveBeenCalled();
+
+    state.decisions.set(ASSET_ID, { allowed: true, redactedFields: ['assets.serial_number'] });
+    const hidden = await controller.update(makeRequest(), { id: ASSET_ID });
+    expect(hidden.status).toBe(200);
+    const hiddenData = (await hidden.json()).data;
+    expect(hiddenData).toMatchObject({ asset_id: ASSET_ID, name: 'Renamed asset' });
+    expect(hiddenData).not.toHaveProperty('serial_number');
+
+    state.decisions.delete(ASSET_ID);
+    const visible = await controller.update(makeRequest(), { id: ASSET_ID });
+    expect((await visible.json()).data).toMatchObject({ name: 'Renamed asset', serial_number: 'SECRET-SERIAL' });
+
+    state.decisions.set(ASSET_ID, { allowed: true, redactedFields: ['assets.asset_id'] });
+    const callsBeforeSuppression = update.mock.calls.length;
+    const suppressed = await controller.update(makeRequest(), { id: ASSET_ID });
+    expect(suppressed.status).toBe(404);
+    expect(update).toHaveBeenCalledTimes(callsBeforeSuppression);
+  });
+
+  it('gates assignment history and projects joined contact names with visible and suppressed controls', async () => {
+    const controller = new ApiAssetController();
+    const getAssignments = vi.spyOn((controller as any).assetService, 'getAssetAssignments');
+    state.assetAssignments = [{
+      assignment_id: 'assignment-1', asset_id: ASSET_ID, contact_name_id: 'contact-1',
+      contact_name: 'Private Contact Name', note: 'Visible assignment note',
+    }];
+
+    state.decisions.set(ASSET_ID, { allowed: false, redactedFields: [] });
+    expect((await controller.listAssignments(request(`/api/v1/assets/${ASSET_ID}/assignments`), { id: ASSET_ID })).status).toBe(404);
+    expect(getAssignments).not.toHaveBeenCalled();
+
+    state.decisions.set(ASSET_ID, { allowed: true, redactedFields: ['contacts.full_name'] });
+    const hiddenLabel = await controller.listAssignments(request(`/api/v1/assets/${ASSET_ID}/assignments`), { id: ASSET_ID });
+    expect(hiddenLabel.status).toBe(200);
+    expect((await hiddenLabel.json()).data).toEqual([{
+      assignment_id: 'assignment-1', asset_id: ASSET_ID, contact_name_id: 'contact-1',
+      contact_name: null, note: 'Visible assignment note',
+    }]);
+
+    state.decisions.delete(ASSET_ID);
+    expect((await (await controller.listAssignments(request(`/api/v1/assets/${ASSET_ID}/assignments`), { id: ASSET_ID })).json()).data[0].contact_name)
+      .toBe('Private Contact Name');
+
+    state.decisions.set(ASSET_ID, { allowed: true, redactedFields: ['assets.asset_id'] });
+    expect((await controller.listAssignments(request(`/api/v1/assets/${ASSET_ID}/assignments`), { id: ASSET_ID })).status).toBe(404);
+  });
+
+  it('projects maintenance data and performer labels, suppresses hidden history rows, and returns 404 for a denied asset', async () => {
+    const controller = new ApiAssetController();
+    state.maintenanceHistory = [{
+      history_id: 'history-1', asset_id: ASSET_ID, performed_by: 'user-1', performed_by_user_name: 'Ada Lovelace',
+      maintenance_data: { cost: 4938, notes: 'Private maintenance notes' },
+    }];
+    const get = () => controller.getMaintenanceHistory(request(`/api/v1/assets/${ASSET_ID}/history`), { id: ASSET_ID });
+
+    state.decisions.set(ASSET_ID, { allowed: true, redactedFields: ['asset_maintenance_history.maintenance_data'] });
+    const hiddenData = await get();
+    expect(hiddenData.status).toBe(200);
+    const hiddenHistory = (await hiddenData.json()).data[0];
+    expect(hiddenHistory).toMatchObject({ history_id: 'history-1', performed_by_user_name: 'Ada Lovelace' });
+    expect(hiddenHistory).not.toHaveProperty('maintenance_data');
+
+    state.decisions.set(ASSET_ID, { allowed: true, redactedFields: ['users.first_name'] });
+    const hiddenName = await get();
+    expect((await hiddenName.json()).data[0]).toMatchObject({ maintenance_data: { cost: 4938 }, performed_by_user_name: null });
+
+    state.decisions.set(ASSET_ID, { allowed: true, redactedFields: ['asset_maintenance_history.history_id'] });
+    expect((await (await get()).json()).data).toEqual([]);
+
+    state.decisions.set(ASSET_ID, { allowed: false, redactedFields: [] });
+    expect((await get()).status).toBe(404);
+
+    state.decisions.delete(ASSET_ID);
+    expect((await (await get()).json()).data[0]).toMatchObject({
+      maintenance_data: { cost: 4938, notes: 'Private maintenance notes' },
+      performed_by_user_name: 'Ada Lovelace',
+    });
   });
 });
 

@@ -36,6 +36,8 @@ import {
   type AuthorizedProjection,
 } from './authorizationKernel';
 import {
+  ASSET_ASSIGNMENT_SOURCE,
+  ASSET_MAINTENANCE_HISTORY_SOURCE,
   ASSET_MAINTENANCE_SCHEDULE_SOURCE,
   ASSET_RECORD_SOURCE,
   ASSET_RELATIONSHIP_SOURCE,
@@ -216,8 +218,11 @@ export class ApiAssetController {
    * PUT /api/v2/assets/{id} - Update asset
    */
   async update(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const data = await req.json();
     const context = await this.requireAllowedContext(req);
+    const denied = await this.requirePermissions(context, [{ resource: 'asset', action: 'update' }]);
+    if (denied) return denied;
+
+    const data = await req.json();
     
     // Validate request body
     const validation = updateAssetSchema.safeParse(data);
@@ -225,11 +230,27 @@ export class ApiAssetController {
       return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
+    const knex = await getConnection(context.tenant);
+    const recordContext = await this.assetService.getAuthorizationRecord(params.id, context);
+    if (!recordContext) return createErrorResponse('Asset not found', 404, 'NOT_FOUND');
+    const gate = await projectApiResourceRead({
+      knex,
+      tenant: context.tenant,
+      user: context.user,
+      apiKeyId: (context as any).apiKeyId,
+      kind: 'asset',
+      record: { asset_id: params.id },
+      recordContext,
+    });
+    if (!gate) return createErrorResponse('Asset not found', 404, 'NOT_FOUND');
+
     const asset = await this.assetService.update(params.id, validation.data, context);
+    const projection = asset ? reprojectUnderDecision(gate, asset, ASSET_RECORD_SOURCE) : null;
+    if (!projection) return createErrorResponse('Asset not found', 404, 'NOT_FOUND');
     
     return createApiResponse({
-      ...asset,
-      _links: getHateoasLinks('asset', asset.asset_id)
+      ...projection,
+      _links: getHateoasLinks('asset', projection.asset_id)
     });
   }
 
@@ -268,16 +289,19 @@ export class ApiAssetController {
    */
   async listAssignments(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    const denied = await this.requireReadPermissions(context, ['asset']);
+    const { projection: asset, denied } = await readAssetProjection(
+      context,
+      params.id,
+      this.assetService,
+      async () => ({ asset_id: params.id }),
+    );
     if (denied) return denied;
 
-    const asset = await this.assetService.getById(params.id, context);
-    if (!asset) {
-      return createErrorResponse('Asset not found', 404, 'NOT_FOUND');
-    }
-
     const assignments = await this.assetService.getAssetAssignments(params.id, context);
-    return createApiResponse(assignments);
+    const projected = assignments
+      .map((assignment) => reprojectUnderDecision(asset, assignment, ASSET_ASSIGNMENT_SOURCE))
+      .filter((assignment): assignment is AuthorizedProjection<Record<string, any>> => assignment !== null);
+    return createApiResponse(projected);
   }
 
   /** FR-B4: GET /api/v1/asset-statuses — the tenant's status registry. */
@@ -557,12 +581,19 @@ export class ApiAssetController {
    */
   async getMaintenanceHistory(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    const denied = await guardAssetRead(context, params.id, this.assetService);
+    const { projection: asset, denied } = await readAssetProjection(
+      context,
+      params.id,
+      this.assetService,
+      async () => ({ asset_id: params.id }),
+    );
     if (denied) return denied;
 
     const history = await this.assetService.getMaintenanceHistory(params.id, context);
-    
-    return createApiResponse(history);
+    const projected = history
+      .map((entry) => reprojectUnderDecision(asset, entry, ASSET_MAINTENANCE_HISTORY_SOURCE))
+      .filter((entry): entry is AuthorizedProjection<Record<string, any>> => entry !== null);
+    return createApiResponse(projected);
   }
 
   /**

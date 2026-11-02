@@ -335,6 +335,26 @@ export const ASSET_MAINTENANCE_SCHEDULE_SOURCE: RedactableRecordSource = {
   derived: {},
 };
 
+/** Assignment history rows include a joined contact label. */
+export const ASSET_ASSIGNMENT_SOURCE: RedactableRecordSource = {
+  resource: ['asset_assignments'],
+  identifier: ids('assignment_id', 'asset_assignments.assignment_id'),
+  fields: {},
+  derived: {
+    contact_name: ids('contact_name_id', 'contacts', 'contacts.full_name'),
+  },
+};
+
+/** Maintenance history contains free-form maintenance data and a joined performer label. */
+export const ASSET_MAINTENANCE_HISTORY_SOURCE: RedactableRecordSource = {
+  resource: ['asset_maintenance_history'],
+  identifier: ids('history_id', 'asset_maintenance_history.history_id'),
+  fields: {},
+  derived: {
+    performed_by_user_name: ids('performed_by', 'users', 'users.first_name', 'users.last_name'),
+  },
+};
+
 export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
   ...ASSET_ROW_SOURCE,
   children: {
