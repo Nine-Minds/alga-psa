@@ -1684,7 +1684,15 @@
       "unnamedAsset": "Recurso sem nome",
       "useTemplate": "Usar {{template}}",
       "copiesPerAsset": "Cópias por ativo",
-      "adjacentCopies": "As cópias de cada ativo são impressas juntas."
+      "adjacentCopies": "As cópias de cada ativo são impressas juntas.",
+      "templatePaperWarning": "Este modelo é impresso em uma folha inteira. Escolha \"Papel do modelo\" (ou um layout de folha inteira), caso contrário o conteúdo não caberá na etiqueta."
+    },
+    "layout": {
+      "template-preferred": "Papel do modelo (padrão)",
+      "roll-4x2": "Uma por etiqueta (rolo de 4 × 2 pol.)",
+      "letter-2x5": "Folha Letter, 2 × 5 (estilo Avery 5163)",
+      "a4-2x7": "Folha A4, 2 × 7 (estilo 99,1 × 38,1 mm)",
+      "letter-full": "Folha Letter, uma por página"
     }
   },
   "deleteEntity": {

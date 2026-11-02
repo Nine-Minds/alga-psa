@@ -1684,7 +1684,15 @@
       "unnamedAsset": "Unnamed asset",
       "useTemplate": "Use {{template}}",
       "copiesPerAsset": "Copies per asset",
-      "adjacentCopies": "Copies print together for each asset."
+      "adjacentCopies": "Copies print together for each asset.",
+      "templatePaperWarning": "This template prints on a full sheet. Choose \"Template paper\" (or a full-sheet layout), or the content will not fit the label."
+    },
+    "layout": {
+      "template-preferred": "Template paper (default)",
+      "roll-4x2": "One per label (4 × 2 in roll)",
+      "letter-2x5": "Letter sheet, 2 × 5 (Avery 5163-style)",
+      "a4-2x7": "A4 sheet, 2 × 7 (99.1 × 38.1 mm style)",
+      "letter-full": "Letter sheet, one per page"
     }
   },
   "deleteEntity": {

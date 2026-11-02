@@ -1684,7 +1684,15 @@
       "unnamedAsset": "Unbenanntes Asset",
       "useTemplate": "{{template}} verwenden",
       "copiesPerAsset": "Exemplare pro Asset",
-      "adjacentCopies": "Die Exemplare jedes Assets werden zusammen gedruckt."
+      "adjacentCopies": "Die Exemplare jedes Assets werden zusammen gedruckt.",
+      "templatePaperWarning": "Diese Vorlage wird auf ein ganzes Blatt gedruckt. Wählen Sie „Vorlagenpapier“ (oder ein Ganzseiten-Layout), sonst passt der Inhalt nicht auf das Etikett."
+    },
+    "layout": {
+      "template-preferred": "Vorlagenpapier (Standard)",
+      "roll-4x2": "Eines pro Etikett (4 × 2 in Rolle)",
+      "letter-2x5": "Letter-Blatt, 2 × 5 (Avery-5163-Stil)",
+      "a4-2x7": "A4-Blatt, 2 × 7 (99,1 × 38,1 mm-Stil)",
+      "letter-full": "Letter-Blatt, eines pro Seite"
     }
   },
   "deleteEntity": {
