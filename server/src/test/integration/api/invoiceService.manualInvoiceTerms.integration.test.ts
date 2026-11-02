@@ -39,6 +39,7 @@ const {
 describe('REST manual invoice creation takes terms from the effective billing identity', () => {
   let context: TestContext;
   let serviceId: string;
+  let user: Record<string, unknown>;
 
   beforeAll(async () => {
     context = await setupContext({ runSeeds: false });
@@ -47,6 +48,10 @@ describe('REST manual invoice creation takes terms from the effective billing id
   beforeEach(async () => {
     context = await resetContext();
     setupCommonMocks({ tenantId: context.tenantId, userId: context.userId, permissionCheck: () => true });
+    user = await context.db('users')
+      .where({ tenant: context.tenantId, user_id: context.userId })
+      .first();
+    expect(user).toBeDefined();
     await ensureDefaultBillingSettings(context);
     serviceId = await createTestService(context, {
       billing_method: 'fixed',
@@ -248,7 +253,7 @@ describe('REST manual invoice creation takes terms from the effective billing id
       return createBillingProfile(context, otherClientId, 'Foreign');
     }
 
-    const ctx = () => ({ tenant: context.tenantId, userId: context.userId } as any);
+    const ctx = () => ({ tenant: context.tenantId, userId: context.userId, user } as any);
     const base = () => ({
       client_id: context.clientId,
       invoice_date: '2026-03-01',

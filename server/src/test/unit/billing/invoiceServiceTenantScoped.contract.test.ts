@@ -40,6 +40,10 @@ const taxWriteSection = sectionBetween(
   '// 6. Update Detail and Item Tables',
   'export async function updateInvoiceTotalsAndRecordTransaction'
 );
+const recomputeTotalsSection = sectionBetween(
+  'export async function recomputeInvoiceHeaderTotals',
+  'export async function updateInvoiceTotalsAndRecordTransaction'
+);
 const totalUpdateSection = sectionBetween(
   'export async function updateInvoiceTotalsAndRecordTransaction',
   'await tenantScopedTable(tx, tenant, \'transactions\').insert'
@@ -117,16 +121,18 @@ describe('invoiceService tenant-scoped query contract', () => {
     expect(taxReadSection).not.toContain("tx('invoice_charge_fixed_details as iifd')");
   });
 
-  it('uses structural tenant scoping for invoice tax writeback and total update roots', () => {
+  it('uses structural tenant scoping for invoice tax writeback and header total recomputation', () => {
     expect(taxWriteSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charge_fixed_details')");
     expect(taxWriteSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charges')");
     expect(taxWriteSection).toContain("tenantDb(tx, tenant).table('invoice_charge_fixed_details as iifd')");
-    expect(totalUpdateSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charges')");
-    expect(totalUpdateSection).toContain("tenantScopedTable(tx, tenant, 'invoices')");
+    expect(recomputeTotalsSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charges')");
+    expect(recomputeTotalsSection).toContain("tenantScopedTable(tx, tenant, 'invoices')");
     expect(totalUpdateSection).toContain("tenantScopedTable(tx, tenant, 'transactions')");
 
     expect(taxWriteSection).not.toMatch(/\.where\(\{[^}]*['"]?tenant['"]?\s*:/s);
     expect(taxWriteSection).not.toMatch(/\.(?:where|andWhere)\(['"][^'"]*tenant['"]/);
+    expect(recomputeTotalsSection).not.toMatch(/\.where\(\{[^}]*['"]?tenant['"]?\s*:/s);
+    expect(recomputeTotalsSection).not.toMatch(/\.(?:where|andWhere)\(['"][^'"]*tenant['"]/);
     expect(totalUpdateSection).not.toMatch(/\.where\(\{[^}]*['"]?tenant['"]?\s*:/s);
     expect(totalUpdateSection).not.toMatch(/\.(?:where|andWhere)\(['"][^'"]*tenant['"]/);
   });
