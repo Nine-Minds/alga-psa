@@ -130,7 +130,8 @@ export interface TicketTemplateForCreate {
 }
 
 export interface TicketTemplateDraftFromTicket {
-  draft: TicketTemplateDraft;
+  /** The source ticket's client is never copied, so the scope is the editor's to pick. */
+  draft: Omit<TicketTemplateDraft, 'client_id'>;
   source_ticket_id: string;
   source_ticket_number: string;
   /** True when the description embeds images that point at the source ticket's documents (R2). */

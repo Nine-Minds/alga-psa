@@ -47,12 +47,13 @@ function readAttributes(attributes: unknown): Record<string, unknown> {
 
 /**
  * Ticket → template copy set (plan "Copy sets"). Completion state, assignee, client, contact,
- * location, status, assignment, watch list and SLA bookkeeping are never copied.
+ * location, status, assignment, watch list and SLA bookkeeping are never copied. `client_id` is
+ * absent on purpose: a template from a ticket starts tenant-wide and the editor scopes it.
  */
 export function ticketToTemplateDraft(
   source: TicketRowForTemplate,
   { tags, checklist }: { tags: readonly string[]; checklist: readonly SourceChecklistRow[] }
-): TicketTemplateDraft {
+): Omit<TicketTemplateDraft, 'client_id'> {
   const attributes = readAttributes(source.attributes);
   const customFields = pickDuplicableAttributes(attributes).custom_fields as Record<string, unknown> | undefined;
   return {
@@ -60,8 +61,6 @@ export function ticketToTemplateDraft(
     notes: null,
     title: source.title,
     description: typeof attributes.description === 'string' ? attributes.description : null,
-    // A template from a ticket starts tenant-wide; the editor can scope it to one client.
-    client_id: null,
     board_id: source.board_id ?? null,
     category_id: source.category_id ?? null,
     subcategory_id: source.subcategory_id ?? null,

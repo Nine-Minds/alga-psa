@@ -98,7 +98,8 @@ interface TemplateLike {
   notes: string | null;
   title: string;
   description: string | null;
-  client_id: string | null;
+  /** Absent on a draft prefilled from a ticket: that starts tenant-wide. */
+  client_id?: string | null;
   board_id: string | null;
   category_id: string | null;
   subcategory_id: string | null;
@@ -117,7 +118,7 @@ function formFromTemplate(template: TemplateLike): FormState {
     title: template.title,
     offer_for_manual_use: template.offer_for_manual_use ?? true,
     description: template.description ? parseTicketRichTextContent(template.description) : null,
-    client_id: template.client_id,
+    client_id: template.client_id ?? null,
     board_id: template.board_id ?? '',
     category_id: template.category_id,
     subcategory_id: template.subcategory_id,
