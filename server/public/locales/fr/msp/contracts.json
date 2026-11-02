@@ -391,11 +391,14 @@
       "terms": {
         "net_30": "Net à 30 jours",
         "net_15": "Net à 15 jours",
+        "net_14": "Net à 14 jours",
+        "net_7": "Net à 7 jours",
         "due_on_receipt": "Dû à réception"
       },
       "termsSource": {
         "profile": "du profil de facturation",
         "client": "du client",
+        "tenant": "de la valeur par défaut du locataire",
         "default": "par défaut : aucune condition définie"
       },
       "profileSource": {

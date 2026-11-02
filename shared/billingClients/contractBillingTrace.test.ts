@@ -34,6 +34,8 @@ const identity = (
   invoiceTemplateId: null,
   billingCycle: null,
   paymentTerms: 'net_30',
+  // Mirrors resolveEffectiveBillingIdentity: a profile override is the 'profile' tier.
+  paymentTermsSource: overrides.overriddenFields?.includes('payment_terms') ? 'profile' : 'client',
   preferredPaymentMethod: null,
   billsSeparately: false,
   overriddenFields: [],
@@ -112,9 +114,29 @@ describe('buildContractBillingTrace', () => {
   });
 
   it('applies Net 30 with source default when no terms are set anywhere', () => {
-    const trace = build({ identities: { [DEFAULT_ID]: identity(DEFAULT_ID, { paymentTerms: null }) } });
+    // The engine resolves "nothing set" to the system Net 30 and says so via paymentTermsSource.
+    const trace = build({
+      identities: { [DEFAULT_ID]: identity(DEFAULT_ID, { paymentTerms: 'net_30', paymentTermsSource: 'system' }) },
+    });
     expect(trace.terms).toMatchObject({ value: 'net_30', source: 'default', days: 30 });
     expect(trace.terms.dueDateExample).toEqual({ invoiceDate: '2026-10-22', dueDate: '2026-11-21' });
+  });
+
+  it('reports tenant-default terms as source tenant, not client or default', () => {
+    const trace = build({
+      identities: { [DEFAULT_ID]: identity(DEFAULT_ID, { paymentTerms: 'net_14', paymentTermsSource: 'tenant' }) },
+    });
+    expect(trace.terms).toMatchObject({ value: 'net_14', source: 'tenant', days: 14 });
+    expect(trace.terms.dueDateExample.dueDate).toBe(dueDateForPaymentTerms('2026-10-22', 'net_14'));
+  });
+
+  it('carries Net 7 terms through with their own day count', () => {
+    const trace = build({
+      assignmentBillingProfileId: NORTH_ID,
+      identities: { [NORTH_ID]: identity(NORTH_ID, { paymentTerms: 'net_7', overriddenFields: ['payment_terms'] }) },
+    });
+    expect(trace.terms).toMatchObject({ value: 'net_7', source: 'profile', days: 7 });
+    expect(trace.terms.dueDateExample.dueDate).toBe('2026-10-29');
   });
 
   it('reports client terms as source client', () => {

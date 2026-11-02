@@ -391,11 +391,14 @@
       "terms": {
         "net_30": "Líquido 30",
         "net_15": "Líquido 15",
+        "net_14": "Líquido 14",
+        "net_7": "Líquido 7",
         "due_on_receipt": "Devido no recebimento"
       },
       "termsSource": {
         "profile": "do perfil de faturação",
         "client": "do cliente",
+        "tenant": "do padrão do inquilino",
         "default": "predefinição: sem condições definidas"
       },
       "profileSource": {

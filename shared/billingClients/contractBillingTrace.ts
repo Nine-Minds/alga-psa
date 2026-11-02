@@ -7,6 +7,7 @@ import type {
   ContractBillingTraceProfile,
   ContractBillingTraceProfileSource,
   ContractBillingTraceTerms,
+  ContractBillingTraceTermsSource,
   ContractBillingTraceWarning,
   ISO8601String,
 } from '@alga-psa/types';
@@ -15,6 +16,7 @@ import {
   listSeparatelyBillingProfiles,
   resolveEffectiveBillingIdentity,
   type EffectiveBillingIdentity,
+  type PaymentTermsSource,
 } from './billingProfileSettings';
 import { ensureClientDefaultBillingProfile } from './billingProfiles';
 import { resolveBucketForLine } from './bucketUsageService';
@@ -24,7 +26,7 @@ import {
   type InvoiceProfileScope,
 } from './invoiceProfileScope';
 import { dueDateForPaymentTerms } from './paymentDueDate';
-import { DEFAULT_PAYMENT_TERMS, normalizePaymentTerms, paymentTermDays } from './paymentPreferences';
+import { paymentTermDays, type PaymentTerms } from './paymentPreferences';
 
 /**
  * Contract billing traceability: which billing profile(s) bill a contract, the
@@ -221,13 +223,28 @@ function requireIdentity(input: Pick<BuildContractBillingTraceInput, 'identities
   return identity;
 }
 
+// The trace's terms vocabulary and the engine's must be the same set, in both
+// directions: a term the engine bills under must be representable here, and the
+// trace must not name a term the engine cannot bill.
+type Equals<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const TRACE_TERMS_MATCH_ENGINE: Equals<ContractBillingTraceTerms['value'], PaymentTerms> = true;
+void TRACE_TERMS_MATCH_ENGINE;
+
+/** The engine's terms tier, in the trace's vocabulary (`system` is the Net 30 fallback). */
+const TERMS_SOURCE: Record<PaymentTermsSource, ContractBillingTraceTermsSource> = {
+  profile: 'profile',
+  client: 'client',
+  tenant: 'tenant',
+  system: 'default',
+};
+
 function buildTerms(identity: EffectiveBillingIdentity, asOf: ISO8601String): ContractBillingTraceTerms {
-  // Stored terms the engine does not recognise (legacy free text) bill as Net 30,
-  // so they are attributed to the default rather than to the profile or client.
-  const known = normalizePaymentTerms(identity.paymentTerms);
+  // The identity already resolved terms through profile → client → tenant
+  // default → system default (legacy free text counts as unset at each tier).
+  // Read its tier rather than re-deriving one here.
   return {
-    value: known ?? DEFAULT_PAYMENT_TERMS,
-    source: known === null ? 'default' : identity.overriddenFields.includes('payment_terms') ? 'profile' : 'client',
+    value: identity.paymentTerms,
+    source: TERMS_SOURCE[identity.paymentTermsSource],
     days: paymentTermDays(identity.paymentTerms),
     dueDateExample: {
       invoiceDate: asOf,

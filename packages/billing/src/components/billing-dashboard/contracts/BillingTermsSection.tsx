@@ -26,7 +26,16 @@ interface BillingTermsSectionProps {
 const TERMS_LABELS: Record<ContractBillingTraceTerms['value'], string> = {
   net_30: 'Net 30',
   net_15: 'Net 15',
+  net_14: 'Net 14',
+  net_7: 'Net 7',
   due_on_receipt: 'Due on receipt',
+};
+
+const TERMS_SOURCE_LABELS: Record<ContractBillingTraceTerms['source'], string> = {
+  profile: 'from the billing profile',
+  client: 'from the client',
+  tenant: 'from the tenant default',
+  default: 'default — no terms are set',
 };
 
 /**
@@ -49,11 +58,7 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
 
   const termsSourceLabel = (source: ContractBillingTraceTerms['source']) =>
     t(`contractOverview.billing.termsSource.${source}`, {
-      defaultValue: {
-        profile: 'from the billing profile',
-        client: 'from the client',
-        default: 'default — no terms are set',
-      }[source],
+      defaultValue: TERMS_SOURCE_LABELS[source],
     });
 
   const profileSourceLabel = (source: ContractBillingTraceProfile['source']) =>

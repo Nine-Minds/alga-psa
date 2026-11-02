@@ -391,11 +391,14 @@
       "terms": {
         "net_30": "Net 30",
         "net_15": "Net 15",
+        "net_14": "Net 14",
+        "net_7": "Net 7",
         "due_on_receipt": "Due on receipt"
       },
       "termsSource": {
         "profile": "from the billing profile",
         "client": "from the client",
+        "tenant": "from the tenant default",
         "default": "default — no terms are set"
       },
       "profileSource": {

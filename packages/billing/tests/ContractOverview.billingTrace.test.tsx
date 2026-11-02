@@ -129,6 +129,22 @@ describe('ContractOverview billing terms section', () => {
     expect(await screen.findByTestId('billing-terms-source')).toHaveTextContent('default — no terms are set');
   });
 
+  it('attributes tenant-default terms to the tenant default and labels Net 7/Net 14', async () => {
+    actionMocks.getContractOverview.mockResolvedValue(
+      overviewWith({ ...singleTrace, terms: terms({ value: 'net_7', source: 'tenant', days: 7 }) }),
+    );
+    render(<ContractOverview contractId="c1" />);
+    expect(await screen.findByTestId('billing-terms-source')).toHaveTextContent('from the tenant default');
+    expect(screen.getByTestId('billing-terms-value')).toHaveTextContent('Net 7');
+    cleanup();
+
+    actionMocks.getContractOverview.mockResolvedValue(
+      overviewWith({ ...singleTrace, terms: terms({ value: 'net_14', source: 'tenant', days: 14 }) }),
+    );
+    render(<ContractOverview contractId="c1" />);
+    expect(await screen.findByTestId('billing-terms-value')).toHaveTextContent('Net 14');
+  });
+
   it('gives every disclosed row a source, and never presents the profile cycle as applied', async () => {
     actionMocks.getContractOverview.mockResolvedValue(overviewWith(singleTrace));
     render(<ContractOverview contractId="c1" />);

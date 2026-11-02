@@ -391,11 +391,14 @@
       "terms": {
         "net_30": "Netto 30",
         "net_15": "Netto 15",
+        "net_14": "Netto 14",
+        "net_7": "Netto 7",
         "due_on_receipt": "Płatne po otrzymaniu"
       },
       "termsSource": {
         "profile": "z profilu rozliczeniowego",
         "client": "od klienta",
+        "tenant": "z ustawień domyślnych organizacji",
         "default": "domyślne — nie ustawiono warunków"
       },
       "profileSource": {

@@ -10,6 +10,7 @@ export default defineConfig({
     alias: [
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../packages/db/src/index.ts') },
       { find: /^@alga-psa\/db\/writeAdmission$/, replacement: path.resolve(__dirname, '../packages/db/src/writeAdmission.ts') },
+      { find: /^@alga-psa\/db\/tenantDb$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/tenantDb.ts') },
       { find: /^@alga-psa\/db\/commentEventRegistry$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/commentEventRegistry.ts') },
       { find: /^@alga-psa\/storage$/, replacement: path.resolve(__dirname, '../packages/storage/src/index.ts') },
       { find: /^@alga-psa\/storage\/(.*)$/, replacement: path.resolve(__dirname, '../packages/storage/src/$1') },

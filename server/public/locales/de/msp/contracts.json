@@ -391,11 +391,14 @@
       "terms": {
         "net_30": "Netto 30",
         "net_15": "Netto 15",
+        "net_14": "Netto 14",
+        "net_7": "Netto 7",
         "due_on_receipt": "Fällig bei Erhalt"
       },
       "termsSource": {
         "profile": "aus dem Abrechnungsprofil",
         "client": "vom Kunden",
+        "tenant": "aus dem Mandantenstandard",
         "default": "Standard — keine Bedingungen hinterlegt"
       },
       "profileSource": {

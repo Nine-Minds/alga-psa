@@ -331,6 +331,37 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     expect(trace!.terms).toMatchObject({ source: 'default', days: 30 });
   }, HOOK_TIMEOUT);
 
+  it('no client or profile terms but a tenant default: the tenant default applies and is attributed to it', async () => {
+    const clientId = await createClient(tenantId, 'Tenant Terms Client', null);
+    await ensureDefaultBillingProfile({ db, tenantId }, clientId);
+    const { contractId } = await createContract(tenantId, clientId);
+    // The tenant may have no settings row yet; an update alone would silently no-op.
+    const existingSettings = await table('default_billing_settings').first();
+    if (existingSettings) {
+      await table('default_billing_settings').update({ default_payment_terms: 'net_14' });
+    } else {
+      await table('default_billing_settings').insert({
+        tenant: tenantId,
+        default_payment_terms: 'net_14',
+        zero_dollar_invoice_handling: 'normal',
+        suppress_zero_dollar_invoices: false,
+      });
+    }
+    try {
+      const trace = await traceOf(contractId, { asOf: '2026-10-22' });
+      expect(trace!.terms).toMatchObject({ value: 'net_14', source: 'tenant', days: 14 });
+      expect(trace!.terms.dueDateExample).toEqual({ invoiceDate: '2026-10-22', dueDate: '2026-11-05' });
+    } finally {
+      if (existingSettings) {
+        await table('default_billing_settings').update({
+          default_payment_terms: existingSettings.default_payment_terms ?? null,
+        });
+      } else {
+        await table('default_billing_settings').delete();
+      }
+    }
+  }, HOOK_TIMEOUT);
+
   it('a template contract id returns null', async () => {
     const templateId = uuidv4();
     await table('contract_templates').insert({
@@ -566,7 +597,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     return String(value).slice(0, 10);
   }
 
-  function useRealTransactions() {
+  function enableRealTransactions() {
     transactionControl.useRealTransactions = true;
   }
 
@@ -683,7 +714,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     await createApprovedTimeEntry({ db, tenantId }, {
       userId, ticketId, serviceId: hourly.serviceId, contractLineId: hourly.contractLineId, workDate: '2024-12-16', minutes: 60,
     });
-    useRealTransactions();
+    enableRealTransactions();
 
     const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(cycleId));
     const invoice = await invoiceRow(result.invoice_id);
@@ -719,7 +750,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     await createApprovedTimeEntry({ db, tenantId }, {
       userId, ticketId, serviceId: hourly.serviceId, contractLineId: hourly.contractLineId, workDate: '2024-12-16', minutes: 60,
     });
-    useRealTransactions();
+    enableRealTransactions();
 
     const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(cycleId));
     const invoice = await invoiceRow(result.invoice_id);
@@ -781,7 +812,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     const entryId = await createApprovedTimeEntry({ db, tenantId }, {
       userId, ticketId, serviceId: hourly.serviceId, contractLineId: null, workDate: '2024-12-16', minutes: 60,
     });
-    useRealTransactions();
+    enableRealTransactions();
     const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(cycleId));
     const invoice = await invoiceRow(result.invoice_id);
     const workItemCharges = await table('invoice_charges')
@@ -838,7 +869,7 @@ describe('contract billing trace (loadContractBillingTrace)', () => {
     await createApprovedTimeEntry({ db, tenantId }, {
       userId, ticketId, serviceId: hourly.serviceId, contractLineId: hourly.contractLineId, workDate: '2024-12-16', minutes: 60,
     });
-    useRealTransactions();
+    enableRealTransactions();
 
     const result = unwrapInvoiceResult<{ invoice_id: string }>(await generateInvoice(profileCycleId));
     const invoice = await invoiceRow(result.invoice_id);

@@ -219,11 +219,21 @@ export type ContractBillingTraceProfileSource = 'contract_line' | 'contract' | '
 /** Where a value inside the winning profile's identity came from. */
 export type ContractBillingTraceValueSource = 'profile' | 'client' | 'default' | 'contract';
 
+/**
+ * Where the applied payment terms came from, in the engine's inheritance order:
+ * the billing profile, the client, the tenant default, then `default` (the
+ * system Net 30 fallback when no tier holds a known key).
+ */
+export type ContractBillingTraceTermsSource = 'profile' | 'client' | 'tenant' | 'default';
+
 export interface ContractBillingTraceTerms {
-  /** Known terms key that applies (`net_30` when nothing is configured). */
-  value: 'net_30' | 'net_15' | 'due_on_receipt';
-  /** `default` = the Net 30 fallback: neither profile nor client holds a known key. */
-  source: Exclude<ContractBillingTraceValueSource, 'contract'>;
+  /**
+   * Known terms key that applies (`net_30` when nothing is configured). Mirrors
+   * `PAYMENT_TERMS` in `shared/billingClients/paymentPreferences`; a compile-time
+   * check there keeps the two in step.
+   */
+  value: 'net_30' | 'net_15' | 'net_14' | 'net_7' | 'due_on_receipt';
+  source: ContractBillingTraceTermsSource;
   days: number;
   /** Worked example: an invoice dated `asOf` is due on `dueDate`. */
   dueDateExample: { invoiceDate: ISO8601String; dueDate: ISO8601String };

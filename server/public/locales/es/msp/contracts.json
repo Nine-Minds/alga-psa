@@ -391,11 +391,14 @@
       "terms": {
         "net_30": "Neto 30",
         "net_15": "Neto 15",
+        "net_14": "Neto 14",
+        "net_7": "Neto 7",
         "due_on_receipt": "Pagadero al recibir"
       },
       "termsSource": {
         "profile": "del perfil de facturación",
         "client": "del cliente",
+        "tenant": "del predeterminado del inquilino",
         "default": "predeterminado: no hay condiciones definidas"
       },
       "profileSource": {
