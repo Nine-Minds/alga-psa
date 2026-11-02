@@ -395,6 +395,22 @@ export interface QuoteViewModel {
   has_multiple_locations?: boolean;
   accepted_by_name?: string | null;
   accepted_at?: ISO8601String | null;
+  /**
+   * Who accepted the quote and how. Populated only when the renderer is handed
+   * acceptance details (the signed copy of a quote accepted through an emailed
+   * link); null/absent for every other render, so a sent quote is unchanged.
+   */
+  acceptance?: QuoteViewModelAcceptance | null;
+}
+
+/** The acceptance record shown on a signed quote copy. */
+export interface QuoteViewModelAcceptance {
+  signer_name: string;
+  signer_email?: string | null;
+  signer_title?: string | null;
+  accepted_at: ISO8601String;
+  method: string;
+  ip_address?: string | null;
 }
 
 export type QuoteDocumentTemplateSource = 'standard' | 'custom';

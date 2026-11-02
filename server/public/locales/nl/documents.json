@@ -56,6 +56,20 @@
     "product": "Product",
     "projectPhase": "Projectfase",
     "qty": "Aantal",
+    "quoteAcceptance": {
+      "title": "Offerte geaccepteerd",
+      "signedBy": "Ondertekend door",
+      "email": "E-mail",
+      "jobTitle": "Functie",
+      "acceptedOn": "Geaccepteerd op",
+      "method": "Methode",
+      "ipAddress": "IP-adres",
+      "methods": {
+        "emailLink": "Link per e-mail",
+        "portal": "Klantenportaal",
+        "msp": "Vastgelegd door MSP"
+      }
+    },
     "quoteNumber": "Offertenr.",
     "quoteTitle": "OFFERTE",
     "rate": "Tarief",
