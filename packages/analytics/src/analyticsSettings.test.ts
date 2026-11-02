@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   createTenantKnex: vi.fn(),
   getTenantForCurrentRequest: vi.fn(),
-  getTenantSettingsByTenantId: vi.fn(),
+  readTenantSettingsRow: vi.fn(),
   insert: vi.fn(),
   merge: vi.fn(),
   now: vi.fn(),
@@ -12,10 +12,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/tenancy/server', () => ({
   getTenantForCurrentRequest: mocks.getTenantForCurrentRequest,
-}));
-
-vi.mock('@alga-psa/tenancy/actions', () => ({
-  getTenantSettingsByTenantId: mocks.getTenantSettingsByTenantId,
+  readTenantSettingsRow: mocks.readTenantSettingsRow,
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -52,7 +49,7 @@ describe('analytics settings persistence', () => {
       environment: 'test',
     };
     mocks.getTenantForCurrentRequest.mockResolvedValue('tenant-1');
-    mocks.getTenantSettingsByTenantId.mockResolvedValue({ settings: { analytics } });
+    mocks.readTenantSettingsRow.mockResolvedValue({ settings: { analytics } });
     mocks.first.mockResolvedValue({ settings: { analytics } });
     mocks.createTenantKnex.mockResolvedValue({ knex: {} });
     mocks.merge.mockResolvedValue(undefined);

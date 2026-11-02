@@ -1,8 +1,9 @@
 "use server";
 
-import { getTenantSettings, updateTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
+import { getTenantSettings } from "@alga-psa/tenancy/actions";
+import { mergeTenantSettingsJson } from "@alga-psa/tenancy/server";
 import { withAuth, hasPermission } from "@alga-psa/auth";
-import { TIER_FEATURES } from "@alga-psa/types";
+import { TIER_FEATURES, isLicensedUserType } from "@alga-psa/types";
 import { createTenantKnex } from "@/lib/db";
 import { listOAuthAccountLinksForUser } from "@ee/lib/auth/oauthAccountLinks";
 import User from "@alga-psa/db/models/user";
@@ -83,9 +84,18 @@ export const updateSsoPreferencesAction = withAuth(async (
 ): Promise<SsoPreferences> => {
   const { knex } = await createTenantKnex();
   const allowed = await hasPermission(user, "settings", "update", knex);
-  if (!allowed) {
+  if (!isLicensedUserType(user.user_type) || !allowed) {
     throw new Error("You do not have permission to manage security settings.");
   }
+  if (updates === null || typeof updates !== 'object' || Array.isArray(updates) || Object.keys(updates).some((key) => ![
+    'autoLinkInternal', 'autoLinkClient', 'clientPortalEntraProvisioningMode', 'clientPortalDefaultRoleName',
+    'deactivateEntraManagedPortalUsersOnEntitlementRemoval',
+  ].includes(key))) throw new Error('Invalid SSO preferences.');
+  for (const key of ['autoLinkInternal', 'autoLinkClient', 'deactivateEntraManagedPortalUsersOnEntitlementRemoval'] as const) {
+    if (updates[key] !== undefined && typeof updates[key] !== 'boolean') throw new Error(`Invalid SSO preference: ${key}.`);
+  }
+  if (updates.clientPortalEntraProvisioningMode !== undefined && !['disabled', 'built_in', 'workflow_managed'].includes(updates.clientPortalEntraProvisioningMode)) throw new Error('Invalid client portal provisioning mode.');
+  if (updates.clientPortalDefaultRoleName !== undefined && (typeof updates.clientPortalDefaultRoleName !== 'string' || !updates.clientPortalDefaultRoleName.trim() || updates.clientPortalDefaultRoleName.length > 100)) throw new Error('Invalid client portal role name.');
 
   const tenantSettings = await getTenantSettings();
   const currentSettings =
@@ -126,7 +136,7 @@ export const updateSsoPreferencesAction = withAuth(async (
     },
   };
 
-  await updateTenantSettings(updatedSettings);
+  await mergeTenantSettingsJson(tenant, { sso: updatedSettings.sso });
   return nextPreferences;
 });
 

@@ -57,7 +57,8 @@
     "@alga-psa/types": "*",
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
-    "@alga-psa/workflows": "*"
+    "@alga-psa/workflows": "*",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "tsup": "^8.0.0",
