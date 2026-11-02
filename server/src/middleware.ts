@@ -348,6 +348,10 @@ const _middleware = auth((request) => {
 
   // Handle CORS preflight requests early
   if (request.method === 'OPTIONS') {
+    // Token routes are same-origin only: no permissive CORS, not even on preflight.
+    if (isPublicQuoteReviewPath(pathname)) {
+      return applyPublicQuoteReviewHeaders(new NextResponse(null, { status: 204 }));
+    }
     return corsPreflightResponse(origin);
   }
 
@@ -457,7 +461,7 @@ const _middleware = auth((request) => {
     }
 
     if (shouldSkipApiKeyAuth(pathname)) {
-      return applyCorsHeaders(response, origin);
+      return isPublicQuotePdfPath(pathname) ? response : applyCorsHeaders(response, origin);
     }
 
     // For API routes that need authentication, check for API key presence only;
@@ -477,7 +481,11 @@ const _middleware = auth((request) => {
   const isAuthPage = pathname.startsWith('/auth/');
 
   // Public Stripe Checkout return page verifies its opaque session context itself.
-  if (publicPagePaths.has(pathname) || isPublicQuotePagePath(pathname)) {
+  if (isPublicQuotePagePath(pathname)) {
+    // Same-origin only: never the permissive CORS headers on a bearer-token page.
+    return response;
+  }
+  if (publicPagePaths.has(pathname)) {
     return applyCorsHeaders(response, origin);
   }
 

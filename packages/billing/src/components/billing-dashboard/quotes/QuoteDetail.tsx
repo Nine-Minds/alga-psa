@@ -145,6 +145,22 @@ function renderQuoteDetailRow(
   );
 }
 
+
+/** Recipient email from activity metadata; tolerates missing, null, array or JSON-string metadata. */
+function viewedViaEmailLinkRecipient(metadata: unknown): string | null {
+  let value = metadata;
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const email = (value as Record<string, unknown>).recipient_email;
+  return typeof email === 'string' && email.trim() ? email.trim() : null;
+}
+
 const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSelectVersion }) => {
   const { t } = useTranslation('msp/quotes');
   const { formatCurrency, formatDate, formatCalendarDate } = useFormatters();
@@ -1331,10 +1347,10 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                   <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                     <div className="font-medium text-foreground">
                       {activity.activity_type === 'viewed_via_email_link'
-                        ? (typeof activity.metadata?.recipient_email === 'string'
+                        ? (viewedViaEmailLinkRecipient(activity.metadata)
                           ? t('quoteDetail.activity.viewedViaEmailLink.descriptionWithRecipient', {
                             defaultValue: 'Quote viewed via email link by {{email}}',
-                            email: activity.metadata.recipient_email,
+                            email: viewedViaEmailLinkRecipient(activity.metadata),
                           })
                           : t('quoteDetail.activity.viewedViaEmailLink.description', { defaultValue: 'Quote viewed via email link' }))
                         : activity.description}

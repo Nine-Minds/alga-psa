@@ -49,17 +49,25 @@ export function outcomeCopyKey(outcome: PublicQuoteOutcome): PublicQuoteOutcomeC
   }
 }
 
-/** HTTP status for surfaces that can set one (the PDF route). Pages always render 200. */
+/**
+ * HTTP status for surfaces that can set one (the PDF route). Pages always render 200.
+ *
+ * unknown and revoked MUST share a status (404): the PDF route is otherwise an
+ * oracle for "this token once existed". expired / superseded / decided are
+ * 410 Gone: their page already tells the visitor so in words (they are the
+ * outcomes with their own friendly copy), so the code adds nothing a prober
+ * could not read, and 410 is the accurate machine signal for crawlers/clients.
+ */
 export function outcomeHttpStatus(outcome: PublicQuoteOutcome): number {
   switch (outcome) {
     case 'rate_limited':
       return 429;
     case 'expired':
-    case 'revoked':
     case 'superseded':
     case 'decided':
       return 410;
     default:
+      // unknown + revoked (indistinguishable by design)
       return 404;
   }
 }

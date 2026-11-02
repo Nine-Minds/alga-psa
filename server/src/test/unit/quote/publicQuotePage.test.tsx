@@ -123,7 +123,7 @@ describe('public quote PDF route', () => {
 
   it.each([
     ['not_found', 404],
-    ['revoked', 410],
+    ['revoked', 404],
     ['expired', 410],
     ['rate_limited', 429],
   ])('%s -> %i with an empty body', async (status, code) => {
