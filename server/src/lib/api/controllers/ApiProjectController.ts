@@ -39,6 +39,7 @@ import {
   PROJECT_STATUS_MAPPING_SOURCE,
   PROJECT_TASK_CHECKLIST_ITEM_SOURCE,
   PROJECT_TASK_RECORD_SOURCE,
+  TICKET_PROJECT_LINK_SOURCE,
 } from '@alga-psa/co-managed/recordProjection';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import { tenantDb } from '@alga-psa/db';
@@ -885,17 +886,37 @@ export class ApiProjectController extends ApiBaseController {
             status: l.project_status,
             is_closed: l.project_is_closed,
           }])).values()];
-          // Project-owned values in each link (name, number) are served from the project's projection, never the raw join row.
+          // Authorize each joined project once; every link below is reprojected under that retained decision.
           const readable = new Map(
             (await this.filterAuthorizedProjects(apiRequest, projects, knex)).map((p) => [p.project_id, p] as const)
           );
 
-          const data = links
-            .filter((l) => readable.has(l.project_id))
-            .map(({ project_assigned_to, project_client_id, project_status, project_is_closed, ...link }) => {
-              const project = readable.get(link.project_id)!;
-              return { ...link, project_name: project.project_name ?? null, project_number: project.project_number ?? null };
-            });
+          const data = links.flatMap((link) => {
+            const project = readable.get(link.project_id);
+            if (!project) return [];
+
+            // This row flattens link, project, phase, task and status fields.
+            // Pick the response contract explicitly, then apply the retained
+            // project decision through each source descriptor before serialization.
+            const response = {
+              link_id: link.link_id,
+              project_id: link.project_id,
+              project_name: link.project_name,
+              project_number: link.project_number,
+              phase_id: link.phase_id,
+              phase_name: link.phase_name,
+              task_id: link.task_id,
+              task_name: link.task_name,
+              project_status_mapping_id: link.project_status_mapping_id,
+              status_name: link.status_name,
+              is_closed: link.is_closed,
+              task_updated_at: link.task_updated_at,
+              bill_under_project: link.bill_under_project,
+              created_at: link.created_at,
+            };
+            const projection = reprojectUnderDecision(project, response, TICKET_PROJECT_LINK_SOURCE);
+            return projection ? [projection] : [];
+          });
           return createSuccessResponse(data, 200, undefined, apiRequest);
         });
       } catch (error) {

@@ -19,13 +19,20 @@ const state = vi.hoisted(() => ({
   hidden: new Set<string>(),
 }));
 
-const authorizeReadMock = vi.hoisted(() =>
-  vi.fn(async ({ kind, record }: { kind: string; record: Record<string, unknown> }) => {
-    const id = (kind === 'ticket' ? record.ticket_id : record.project_id) as string;
-    if (!state.readable.has(`${kind}:${id}`)) return null;
-    return Object.fromEntries(Object.entries(record).filter(([field]) => !state.hidden.has(field)));
-  })
-);
+const authorizeResourceMock = vi.hoisted(() => vi.fn(async ({
+  resource,
+  record,
+}: {
+  resource: { type: string };
+  record: Record<string, unknown>;
+}) => {
+  const kind = resource.type;
+  const id = record.id as string | undefined;
+  return {
+    allowed: state.readable.has(`${kind}:${id}`),
+    redactedFields: [...state.hidden],
+  };
+}));
 const getTicketProjectLinksMock = vi.hoisted(() => vi.fn(async () => state.links));
 
 vi.mock('@/lib/services/apiKeyServiceForApi', () => ({
@@ -72,16 +79,10 @@ vi.mock('@/lib/productSurfaceRegistry', () => ({
   resolveProductApiBehavior: vi.fn(() => 'allowed'),
 }));
 
-vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
-  projectApiResourceRead: authorizeReadMock,
-  projectApiResourceReads: vi.fn(async ({ kind, records }: { kind: string; records: Record<string, unknown>[] }) => {
-    const out: Record<string, unknown>[] = [];
-    for (const record of records) {
-      const projected = await authorizeReadMock({ kind, record });
-      if (projected) out.push(projected);
-    }
-    return out;
-  }),
+vi.mock('server/src/lib/authorization/kernel', () => ({
+  getAuthorizationKernel: vi.fn(async () => ({
+    authorizeResource: authorizeResourceMock,
+  })),
 }));
 
 vi.mock('../../../lib/api/services/ProjectService', () => ({
@@ -125,7 +126,7 @@ describe('GET /api/v1/tickets/{id}/project-links', () => {
     state.permissions = new Set(['project:read', 'ticket:read']);
     state.readable = new Set([`ticket:${TICKET}`, `project:${PROJECT_A}`]);
     state.hidden = new Set();
-    authorizeReadMock.mockClear();
+    authorizeResourceMock.mockClear();
     getTicketProjectLinksMock.mockClear();
   });
 
@@ -139,10 +140,11 @@ describe('GET /api/v1/tickets/{id}/project-links', () => {
       expect(body.data[0]).not.toHaveProperty(field);
     }
     expect(getTicketProjectLinksMock).toHaveBeenCalledWith(TICKET, expect.objectContaining({ tenant: TENANT }));
-    // One record check per project, built from the project's own owner and client.
-    const projectChecks = authorizeReadMock.mock.calls.filter(([a]) => a.kind === 'project');
-    expect(projectChecks).toHaveLength(2);
-    expect(projectChecks[0][0]).toMatchObject({ record: { project_id: PROJECT_A, assigned_to: 'user-9', client_id: 'client-1' } });
+    // The ticket gate and both project decisions are independent. The denied
+    // project contributes no link while visible task and status values survive.
+    expect(authorizeResourceMock.mock.calls.map(([arg]) => arg.resource.type)).toEqual([
+      'ticket', 'project', 'project',
+    ]);
   });
 
   it('serves project-owned values from the project projection, nulling a redacted project name', async () => {
@@ -170,5 +172,111 @@ describe('GET /api/v1/tickets/{id}/project-links', () => {
 
   it('rejects a malformed ticket id', async () => {
     expect((await GET(request('not-a-uuid'))).status).toBe(400);
+  });
+
+  it('independent source projection visible control', async () => {
+    state.links = [linkRow(PROJECT_A, 'private task')];
+    const res = await GET(request());
+    expect(res.status).toBe(200);
+    expect((await res.json()).data[0]).toMatchObject({
+      task_name: 'private task', phase_name: 'Backlog', status_name: 'Backlog',
+      is_closed: false, task_updated_at: '2026-10-18T12:00:00.000Z',
+    });
+  });
+  it.each([
+    ['project_tasks.task_name', 'task_name'],
+    ['values.tasks.task_name', 'task_name'],
+    ['project_phases.phase_name', 'phase_name'],
+    ['values.phases.phase_name', 'phase_name'],
+    ['project_status_mappings.custom_name', 'status_name'],
+    ['values.status_mappings.custom_name', 'status_name'],
+  ])('independent source projection hides %s in link field %s', async (alias, field) => {
+    state.links = [linkRow(PROJECT_A, 'private task')];
+    state.hidden = new Set([alias]);
+    const res = await GET(request());
+    expect(res.status).toBe(200);
+    const rows = (await res.json()).data;
+    expect(rows).toHaveLength(1);
+    expect(rows[0][field] ?? null).toBeNull();
+  });
+  it.each(['project_tasks', 'project_tasks.task_id', 'values.tasks.task_id'])(
+    'independent source projection suppresses linked tasks under %s', async alias => {
+      state.links = [linkRow(PROJECT_A, 'private task')];
+      state.hidden = new Set([alias]);
+      const res = await GET(request());
+      expect(res.status).toBe(200);
+      const rows = (await res.json()).data;
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        project_id: PROJECT_A,
+        phase_id: 'phase-1',
+        phase_name: 'Backlog',
+        task_id: null,
+        task_name: null,
+        project_status_mapping_id: null,
+        status_name: null,
+        is_closed: null,
+        task_updated_at: null,
+        bill_under_project: false,
+        created_at: '2026-10-01T12:00:00.000Z',
+      });
+    });
+  it.each(['project_phases', 'project_phases.phase_id', 'values.phases.phase_id'])(
+    'independent source projection suppresses linked phases under %s', async alias => {
+      state.links = [linkRow(PROJECT_A, 'visible task')];
+      state.hidden = new Set([alias]);
+      const res = await GET(request());
+      expect(res.status).toBe(200);
+      const rows = (await res.json()).data;
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ phase_id: null, phase_name: null });
+      expect(rows[0].task_name).toBe('visible task');
+    });
+  it.each([
+    'project_status_mappings',
+    'project_status_mappings.project_status_mapping_id',
+    'values.status_mappings.project_status_mapping_id',
+  ])('independent source projection suppresses linked status mappings under %s', async alias => {
+    state.links = [linkRow(PROJECT_A, 'visible task')];
+    state.hidden = new Set([alias]);
+    const res = await GET(request());
+    expect(res.status).toBe(200);
+    const rows = (await res.json()).data;
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      task_id: 'task-visible task',
+      task_name: 'visible task',
+      project_status_mapping_id: null,
+      status_name: null,
+      is_closed: null,
+    });
+  });
+  it.each(['project_tasks.updated_at', 'values.tasks.updated_at'])(
+    'independent source projection hides copied task timestamps under %s', async alias => {
+      state.links = [linkRow(PROJECT_A, 'visible task')];
+      state.hidden = new Set([alias]);
+      const res = await GET(request());
+      expect(res.status).toBe(200);
+      expect((await res.json()).data[0]).toMatchObject({
+        task_name: 'visible task', task_updated_at: null,
+      });
+    });
+  it.each(['project_status_mappings', 'project_status_mappings.status_id'])(
+    'independent source projection suppresses linked status values under %s', async alias => {
+      state.links = [linkRow(PROJECT_A, 'visible task')];
+      state.hidden = new Set([alias]);
+      const res = await GET(request());
+      expect(res.status).toBe(200);
+      expect((await res.json()).data[0]).toMatchObject({
+        task_name: 'visible task', status_name: null, is_closed: null,
+      });
+    });
+  it('independent project suppression removes its links while preserving admitted ticket access', async () => {
+    state.links = [linkRow(PROJECT_A, 'visible task')];
+    state.hidden = new Set(['projects.project_id']);
+    const res = await GET(request());
+    expect(res.status).toBe(200);
+    expect((await res.json()).data).toEqual([]);
+    expect(getTicketProjectLinksMock).toHaveBeenCalledOnce();
   });
 });

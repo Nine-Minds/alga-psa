@@ -467,6 +467,41 @@ export const PROJECT_RECORD_SOURCE: RedactableRecordSource = recordSourceFromCoM
     },
   });
 
+/**
+ * The ticket-side link endpoint returns a flattened row assembled from project,
+ * phase, task and task-status records. Keep those copied values attached to
+ * their owning descriptors so the retained project policy can redact or
+ * suppress each source independently.
+ */
+export const TICKET_PROJECT_LINK_SOURCE: RedactableRecordSource = {
+  policySource: PROJECT_RECORD_SOURCE,
+  resource: ['project_ticket_links'],
+  identifier: ids('link_id', 'project_ticket_links.link_id'),
+  fields: {},
+  derived: {
+    project_id: [{ source: PROJECT_RECORD_SOURCE, field: 'project_id' }],
+    project_name: [{ source: PROJECT_RECORD_SOURCE, field: 'project_name' }],
+    project_number: [{ source: PROJECT_RECORD_SOURCE, field: 'project_number' }],
+    phase_id: [{ source: PROJECT_PHASE_RECORD_SOURCE, field: 'phase_id' }],
+    phase_name: [{ source: PROJECT_PHASE_RECORD_SOURCE, field: 'phase_name' }],
+    task_id: [{ source: PROJECT_TASK_RECORD_SOURCE, field: 'task_id' }],
+    task_name: [{ source: PROJECT_TASK_RECORD_SOURCE, field: 'task_name' }],
+    project_status_mapping_id: [
+      { source: PROJECT_TASK_RECORD_SOURCE, field: 'project_status_mapping_id' },
+      { source: PROJECT_STATUS_MAPPING_SOURCE, field: 'project_status_mapping_id' },
+    ],
+    status_name: [
+      { source: PROJECT_TASK_RECORD_SOURCE, field: 'project_status_mapping_id' },
+      { source: PROJECT_STATUS_MAPPING_SOURCE, field: 'status_name' },
+    ],
+    is_closed: [
+      { source: PROJECT_TASK_RECORD_SOURCE, field: 'project_status_mapping_id' },
+      { source: PROJECT_STATUS_MAPPING_SOURCE, field: 'is_closed' },
+    ],
+    task_updated_at: [{ source: PROJECT_TASK_RECORD_SOURCE, field: 'updated_at' }],
+  },
+};
+
 export const TICKET_DOCUMENT_SOURCE: RedactableRecordSource = {
   resource: ['documents', 'document_associations'],
   identifier: ids(
