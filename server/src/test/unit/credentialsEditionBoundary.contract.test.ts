@@ -9,6 +9,8 @@ import ts from 'typescript';
  * ee/server/migrations and its runtime code in ee/ + packages/ee. This guard
  * fails if any other tracked source file touches the credentials vault tables
  * or imports EE credential modules, so the feature cannot leak back into CE.
+ * Shared lifecycle and write-policy catalogs may declare table metadata, but
+ * cannot execute vault queries or import vault implementations.
  *
  * It targets table-name usage and module paths, not the bare word "credentials"
  * (which is common in OAuth/auth/integration code).
@@ -79,14 +81,19 @@ function withoutMetadata(file: string, source: string): string {
   const declaration = METADATA_DECLARATIONS.get(file);
   if (!declaration) return source;
   const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+  const ranges: Array<{ start: number; end: number }> = [];
   for (const statement of ast.statements) {
     if (!ts.isVariableStatement(statement) || !(statement.declarationList.flags & ts.NodeFlags.Const)) continue;
+    if (!statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) continue;
     for (const node of statement.declarationList.declarations) {
       if (ts.isIdentifier(node.name) && node.name.text === declaration
         && node.initializer && isLiteralData(node.initializer)) {
-        return source.slice(0, node.initializer.getStart(ast)) + '[]' + source.slice(node.initializer.end);
+        ranges.push({ start: node.initializer.getStart(ast), end: node.initializer.end });
       }
     }
+  }
+  for (const { start, end } of ranges.sort((left, right) => right.start - left.start)) {
+    source = source.slice(0, start) + ' '.repeat(end - start) + source.slice(end);
   }
   return source;
 }
@@ -199,7 +206,8 @@ describe('credentials edition boundary', () => {
   });
 
   it('every allowlisted explicit path exists', () => {
-    const missing = [...ALLOWED_FILES, ...METADATA_DECLARATIONS.keys()].filter((file) => !fs.existsSync(path.join(repoRoot, file)));
+    const missing = [...ALLOWED_FILES, ...METADATA_DECLARATIONS.keys()]
+      .filter((file) => !fs.existsSync(path.join(repoRoot, file)));
     expect(missing).toEqual([]);
   });
 
@@ -217,5 +225,50 @@ describe('credentials edition boundary', () => {
       expect(ce).not.toMatch(/createTable|knex\./);
       expect(fs.existsSync(path.join(repoRoot, 'ee/server/migrations', name))).toBe(true);
     }
+  });
+});
+
+describe('credentials boundary scanner metadata handling', () => {
+  const catalogs = [...METADATA_DECLARATIONS];
+
+  it.each(catalogs)('accepts literal catalog data in %s', (file, declaration) => {
+    const source = `export const ${declaration} = [
+      { table: 'credentials', deletion: 'ordered', clientKeyed: true },
+      { child: 'credential_associations', parent: 'credentials' },
+      { credential_access_grants: { reason: 'write policy' } },
+    ] as const;`;
+    expect(findViolations(file, source)).toEqual([]);
+    expect(findViolations('packages/example/src/feature.ts', source)).not.toEqual([]);
+  });
+
+  const runtimeSources = [
+    `knex('credentials').select('*')`,
+    `db.table('credential_associations').delete()`,
+    `knex.schema.createTable('credentials', () => {})`,
+    `knex.raw('select * from credentials;')`,
+    `import('@enterprise/lib/credentials/actions')`,
+  ];
+
+  it.each(catalogs)('rejects runtime vault access alongside metadata in %s', (file, declaration) => {
+    for (const runtime of runtimeSources) {
+      const source = `export const ${declaration} = [{ table: 'credentials' }]; ${runtime};`;
+      expect(findViolations(file, source), runtime).not.toEqual([]);
+    }
+  });
+
+  it.each(catalogs)('rejects executable catalog initializers in %s', (file, declaration) => {
+    for (const initializer of [
+      ...runtimeSources,
+      `[{ table: 'credentials', rows: knex('credentials').select() }]`,
+      `[{ table: 'credentials', ...loadMetadata() }]`,
+      `[{ ['credential_associations']: loadMetadata() }]`,
+      `[{ table: 'credentials', get rows() { return knex('credentials'); } }]`,
+    ]) {
+      expect(findViolations(file, `export const ${declaration} = ${initializer};`), initializer).not.toEqual([]);
+    }
+  });
+
+  it.each(catalogs)('rejects vault metadata in other declarations in %s', (file) => {
+    expect(findViolations(file, `export const OTHER_TABLES = [{ table: 'credentials' }];`)).not.toEqual([]);
   });
 });
