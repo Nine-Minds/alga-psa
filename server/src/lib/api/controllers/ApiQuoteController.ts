@@ -36,10 +36,15 @@ import { resolveAllowSelfApprovalFlag } from '@alga-psa/authorization/quoteSelfA
 import {
   buildAuthorizationPrincipalSubject,
   projectApiResourceRead,
+  projectApiResourceReads,
   reprojectUnderDecision,
   type AuthorizedProjection,
 } from './authorizationKernel';
-import { QUOTE_LINE_RECORD_SOURCE, QUOTE_RECORD_SOURCE } from '@alga-psa/co-managed/recordProjection';
+import {
+  QUOTE_CONVERSION_PREVIEW_SOURCE,
+  QUOTE_LINE_RECORD_SOURCE,
+  QUOTE_RECORD_SOURCE,
+} from '@alga-psa/co-managed/recordProjection';
 import { buildQuoteRecordContext } from './recordContexts';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import {
@@ -116,6 +121,13 @@ export class ApiQuoteController extends ApiBaseController {
       if (projected) out.push(projected);
     }
     return out;
+  }
+
+  /** Conversion previews contain quote lines and totals, so project their full declared response shape. */
+  private serializeConversionPreview(gate: AuthorizedProjection<Record<string, any>>, preview: Record<string, any>) {
+    const projected = reprojectUnderDecision(gate, preview, QUOTE_CONVERSION_PREVIEW_SOURCE);
+    if (!projected) throw new NotFoundError('Quote not found');
+    return projected;
   }
 
   private async assertQuoteReadAllowed(
@@ -730,11 +742,11 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const gate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           const preview = await this.quoteService.getConversionPreview(id, apiRequest.context);
 
-          return createSuccessResponse(preview);
+          return createSuccessResponse(this.serializeConversionPreview(gate, preview as unknown as Record<string, any>));
         });
       } catch (error) {
         return handleApiError(error);
@@ -787,8 +799,16 @@ export class ApiQuoteController extends ApiBaseController {
           await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           const versions = await this.quoteService.listVersions(id, apiRequest.context);
+          const projections = await projectApiResourceReads({
+            knex,
+            tenant: apiRequest.context.tenant,
+            user: apiRequest.context.user,
+            apiKeyId: apiRequest.context.apiKeyId,
+            kind: 'quote',
+            records: versions as unknown as Record<string, any>[],
+          });
 
-          return createSuccessResponse(versions);
+          return createSuccessResponse(projections);
         });
       } catch (error) {
         return handleApiError(error);

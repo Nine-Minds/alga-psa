@@ -55,8 +55,8 @@ vi.mock('server/src/lib/authorization/kernel', async () => {
   const hide = (id: string, resource: string, redactedFields: string[], extra: Record<string, unknown> = {}) =>
     ({ id, resource, action: 'read', templateKey: null, constraintKey: 'hide_sensitive_fields', redactedFields, ...extra });
   const restricted = [
-    hide('r-project', 'project', ['description']),
-    hide('r-asset', 'asset', ['serial_number']),
+    hide('r-project', 'project', ['description', 'created_at', 'updated_at', 'start_date', 'end_date']),
+    hide('r-asset', 'asset', ['serial_number', 'created_at', 'updated_at', 'purchase_date', 'warranty_end_date']),
     hide('r-ticket', 'ticket', ['title', 'assigned_to']),
     hide('r-quote', 'billing', ['title']),
   ];
@@ -122,18 +122,18 @@ beforeAll(async () => {
   });
   await t('projects').insert([
     { tenant: state.tenant, project_id: id.projEmerald, project_name: 'Alpha Rollout', project_number: 'P-1', wbs_code: '1',
-      status: id.projStatus, client_id: id.emerald, description: 'zebrafish secret plan' },
+      status: id.projStatus, client_id: id.emerald, description: 'zebrafish secret plan', start_date: '2026-10-15', end_date: '2026-10-25' },
     { tenant: state.tenant, project_id: id.projOz, project_name: 'Beta Rollout', project_number: 'P-2', wbs_code: '2',
-      status: id.projStatus, client_id: id.oz, description: 'zebrafish at oz' },
+      status: id.projStatus, client_id: id.oz, description: 'zebrafish at oz', start_date: '2026-12-15', end_date: '2026-12-25' },
   ]);
   await t('asset_statuses').insert([
     { tenant: state.tenant, slug: 'active', label: 'Active', kind: 'deployable', is_builtin: true, is_active: true, display_order: 0 },
   ]);
   await t('assets').insert([
     { tenant: state.tenant, asset_id: id.assetA, asset_type: 'workstation', client_id: id.emerald, asset_tag: 'TAG-ALPHA',
-      name: 'Alpha Laptop', status: 'active', serial_number: 'SN-QUOKKA-9' },
+      name: 'Alpha Laptop', status: 'active', serial_number: 'SN-QUOKKA-9', purchase_date: '2026-10-15', warranty_end_date: '2026-10-15' },
     { tenant: state.tenant, asset_id: id.assetB, asset_type: 'workstation', client_id: id.emerald, asset_tag: 'TAG-BETA',
-      name: 'Beta Laptop', status: 'active', serial_number: 'SN-OTHER-1' },
+      name: 'Beta Laptop', status: 'active', serial_number: 'SN-OTHER-1', purchase_date: '2026-12-15', warranty_end_date: '2026-12-15' },
   ]);
   await t('tickets').insert([
     { tenant: state.tenant, ticket_id: id.ticketA, ticket_number: 'T-ALPHA-1', client_id: id.emerald, title: 'narwhal outage' },
@@ -268,5 +268,47 @@ describe('quotes: list search honors billing field redactions', () => {
     expect(names(visible.data, 'quote_number')).toEqual(['Q-BETA']);
     const control = await svc.list({ search: 'pangolin' } as any, ctx(CONTROL) as any);
     expect(names(control.data, 'quote_number')).toEqual(['Q-ALPHA']);
+  }, HOOK_TIMEOUT);
+});
+
+describe('project and asset range predicates honor field redactions', () => {
+  it.each([
+    ['created_at', 'created_from', 'created_to'],
+    ['updated_at', 'updated_from', 'updated_to'],
+    ['start_date', 'start_date_from', 'start_date_to'],
+    ['end_date', 'end_date_from', 'end_date_to'],
+  ])('project %s ranges match for control callers and nothing for restricted callers', async (column, fromKey, toKey) => {
+    await t('projects').where('project_id', id.projEmerald).update({ [column]: '2026-10-15' });
+    const { ProjectService } = await import('../../lib/api/services/ProjectService');
+    const svc = new ProjectService();
+    const filters = { [fromKey]: '2026-10-01', [toKey]: '2026-10-31' } as any;
+
+    const control = await svc.list({ page: 1, limit: 25, filters }, ctx(CONTROL) as any, filters);
+    const restricted = await svc.list({ page: 1, limit: 25, filters }, ctx(RESTRICTED) as any, filters);
+
+    expect(control.data.map((row: any) => row.project_id)).toEqual([id.projEmerald]);
+    expect(control.total).toBe(1);
+    expect(restricted.data).toEqual([]);
+    expect(restricted.total).toBe(0);
+  }, HOOK_TIMEOUT);
+
+  it.each([
+    ['created_at', 'created_from', 'created_to'],
+    ['updated_at', 'updated_from', 'updated_to'],
+    ['purchase_date', 'purchase_date_from', 'purchase_date_to'],
+    ['warranty_end_date', 'warranty_end_from', 'warranty_end_to'],
+  ])('asset %s ranges match for control callers and nothing for restricted callers', async (column, fromKey, toKey) => {
+    await t('assets').where('asset_id', id.assetA).update({ [column]: '2026-10-15' });
+    const { AssetService } = await import('../../lib/api/services/AssetService');
+    const svc = new AssetService();
+    const filters = { [fromKey]: '2026-10-01', [toKey]: '2026-10-31' } as any;
+
+    const control = await svc.list({ page: 1, limit: 25, filters }, ctx(CONTROL) as any, filters);
+    const restricted = await svc.list({ page: 1, limit: 25, filters }, ctx(RESTRICTED) as any, filters);
+
+    expect(control.data.map((row: any) => row.asset_id)).toEqual([id.assetA]);
+    expect(control.total).toBe(1);
+    expect(restricted.data).toEqual([]);
+    expect(restricted.total).toBe(0);
   }, HOOK_TIMEOUT);
 });

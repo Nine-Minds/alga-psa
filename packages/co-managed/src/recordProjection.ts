@@ -106,6 +106,7 @@ export function projectRecordByRedactions<T extends Record<string, any>>(
 }
 
 const ids = (...names: string[]) => names;
+const quoteItemSources = (...fields: string[]) => fields.flatMap(field => [field, `quote_items.${field}`]);
 
 export const PROJECT_RECORD_SOURCE: RedactableRecordSource = recordSourceFromCoManaged(
   CO_MANAGED_PROJECT_FIELD_SOURCE, { title: 'project_name', description: 'description' }, {
@@ -156,6 +157,29 @@ export const QUOTE_LINE_RECORD_SOURCE: RedactableRecordSource = {
   },
 };
 
+/** Quote-conversion preview lines preserve the quote-item source and its calculated price dependencies. */
+export const QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE: RedactableRecordSource = {
+  resource: ['quote_items'],
+  identifier: ids('quote_item_id', 'quote_items.quote_item_id'),
+  fields: {},
+  derived: {
+    total_price: ids('unit_price', 'quantity'),
+    location_name: ids('location_id', 'client_locations'),
+    reason: ids('description', 'service_id'),
+  },
+};
+
+/** A carried recurring discount is still derived from the quote item that funds it. */
+export const QUOTE_CONVERSION_PREVIEW_DISCOUNT_SOURCE: RedactableRecordSource = {
+  resource: ['quote_items'],
+  identifier: ids('quote_item_id', 'line_quote_item_id', 'quote_items.quote_item_id'),
+  fields: {},
+  derived: {
+    amount: ids('unit_price', 'quantity', 'discount_value', 'discount_type'),
+    percentage: ids('discount_value', 'discount_type'),
+  },
+};
+
 /** Quotes are read under the kernel's `billing` resource, so a whole-`billing` redaction hides the quote too. */
 export const QUOTE_RECORD_SOURCE: RedactableRecordSource = {
   resource: ['quotes', 'billing'],
@@ -171,6 +195,43 @@ export const QUOTE_RECORD_SOURCE: RedactableRecordSource = {
   children: { items: QUOTE_LINE_RECORD_SOURCE, quote_items: QUOTE_LINE_RECORD_SOURCE },
 };
 
+/** Nested quote-conversion response shape, projected under the quote's original authorization decision. */
+export const QUOTE_CONVERSION_PREVIEW_SOURCE: RedactableRecordSource = {
+  ...QUOTE_RECORD_SOURCE,
+  derived: {
+    ...QUOTE_RECORD_SOURCE.derived,
+    available_actions: ids(
+      ...quoteItemSources(
+        'is_optional', 'is_selected', 'is_recurring', 'is_discount', 'service_id',
+        'quantity', 'unit_price', 'discount_value', 'discount_type',
+      ),
+      'sales_orders',
+    ),
+    invoice_error: ids(
+      ...quoteItemSources('service_id', 'quantity', 'unit_price', 'discount_value', 'discount_type'),
+      'sales_orders.so_id', 'sales_orders.so_number',
+    ),
+    contract_blocked_reason: ids('description', 'quote_items.description', 'quote_items.service_id'),
+    contract_blocked_item_description: ids('description', 'quote_items.description'),
+    contract_monthly_before_discounts: ids('unit_price', 'quantity', 'discount_value', 'quote_items.unit_price', 'quote_items.quantity', 'quote_items.discount_value'),
+    contract_monthly_total: ids('unit_price', 'quantity', 'discount_value', 'quote_items.unit_price', 'quote_items.quantity', 'quote_items.discount_value'),
+  },
+  children: {
+    ...QUOTE_RECORD_SOURCE.children,
+    contract_items: QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE,
+    invoice_items: QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE,
+    sales_order_items: QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE,
+    excluded_items: QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE,
+    contract_discounts: QUOTE_CONVERSION_PREVIEW_DISCOUNT_SOURCE,
+    existing_sales_order: {
+      resource: ['sales_orders'],
+      identifier: ids('so_id', 'sales_orders.so_id'),
+      fields: {},
+      derived: {},
+    },
+  },
+};
+
 export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
   resource: ['assets'],
   identifier: ids('asset_id', 'assets.asset_id', 'asset', 'assetId'),
@@ -180,6 +241,14 @@ export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
     vendor_name: ids('vendor_id', 'vendors'),
     contact_name: ids('contact_name_id', 'contacts', 'contacts.full_name'),
     warranty_status: ids('warranty_end_date'),
+  },
+  children: {
+    maintenance_schedules: {
+      resource: ['asset_maintenance_schedules'],
+      identifier: ids('schedule_id', 'asset_maintenance_schedules.schedule_id'),
+      fields: {},
+      derived: {},
+    },
   },
 };
 

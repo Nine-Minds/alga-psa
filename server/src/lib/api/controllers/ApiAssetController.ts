@@ -29,7 +29,13 @@ import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
 import { guardAssetRead, readAssetProjection } from './assetReadGuard';
-import { projectApiResourceRead, projectApiResourceReads, type AuthorizedProjection } from './authorizationKernel';
+import {
+  projectApiResourceRead,
+  projectApiResourceReads,
+  reprojectUnderDecision,
+  type AuthorizedProjection,
+} from './authorizationKernel';
+import { ASSET_RECORD_SOURCE } from '@alga-psa/co-managed/recordProjection';
 import { resolveAssetAuthorizationRecords } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 
@@ -590,10 +596,54 @@ export class ApiAssetController {
    */
   async getStatistics(req: NextRequest): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    
-    const stats = await this.assetService.getStatistics(context);
-    
-    return createApiResponse(stats);
+    if (!context.user) return createErrorResponse('User context required', 401, 'UNAUTHORIZED');
+
+    const knex = await getConnection(context.tenant);
+    if (!(await hasPermission(context.user, 'asset', 'read', knex))) {
+      return createErrorResponse('Permission denied: Cannot read asset', 403, 'FORBIDDEN');
+    }
+
+    // Page tenant rows and authorize each record before it can contribute to an aggregate.
+    const pageSize = 200;
+    const assets: AuthorizedProjection<Record<string, any>>[] = [];
+    let page = 1;
+    let fetched = 0;
+    let sourceTotal = Number.POSITIVE_INFINITY;
+    while (fetched < sourceTotal) {
+      const result = await this.assetService.list({ page, limit: pageSize }, context);
+      fetched += result.data.length;
+      sourceTotal = result.total;
+      assets.push(...await this.projectAssetRows(context, result.data));
+      if (result.data.length < pageSize) break;
+      page += 1;
+    }
+
+    const visibleAssetIds = assets.map((asset) => String(asset.asset_id));
+    const [deployableStatusSlugs, maintenanceRows] = await Promise.all([
+      this.assetService.getDeployableStatusSlugs(context),
+      this.assetService.getMaintenanceSchedulesForAssets(context, visibleAssetIds),
+    ]);
+    const schedulesByAsset = new Map<string, Array<Record<string, any>>>();
+    for (const schedule of maintenanceRows) {
+      const schedules = schedulesByAsset.get(schedule.asset_id) ?? [];
+      schedules.push(schedule);
+      schedulesByAsset.set(schedule.asset_id, schedules);
+    }
+
+    // Related schedules are projected under each asset's original decision before aggregate logic sees them.
+    const projectionsWithSchedules: Record<string, any>[] = [];
+    for (const asset of assets) {
+      const projection = reprojectUnderDecision(asset, {
+        ...asset,
+        maintenance_schedules: schedulesByAsset.get(String(asset.asset_id)) ?? [],
+      }, ASSET_RECORD_SOURCE);
+      if (projection) projectionsWithSchedules.push(projection);
+    }
+
+    return createApiResponse(this.assetService.getStatisticsFromProjections(
+      projectionsWithSchedules,
+      deployableStatusSlugs,
+    ));
   }
 
   /**

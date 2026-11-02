@@ -210,12 +210,6 @@ export class ProjectService extends BaseService<IProject> {
       const knex = await this.getDbForContext(context);
       const query = scopedTable<IProject>(knex, context.tenant, this.tableName);
 
-      // Common + project-specific range filters (created_*, updated_*,
-      // start_date_*, end_date_*). Unsupported range keys fail loudly.
-      if (filters) {
-        this.applyRangeFilters(query, filters);
-      }
-  
       // Every predicate below goes through the policy guard: a filter or search over a column the caller's
       // redactions hide matches nothing, so it cannot confirm a hidden value.
       // LEVERAGE: pattern filter-key-to-response-field — each `if (filters.x) guard.filter(query, col, ...)` repeats the
@@ -223,6 +217,13 @@ export class ProjectService extends BaseService<IProject> {
       const guard = await createPredicateGuard(knex, context, 'project');
       const col = (name: string) => `${this.tableName}.${name}`;
       if (filters) {
+        // All declared ranges use the same policy guard as scalar predicates, including the cloned count query.
+        this.applyRangeFilters(query, filters, undefined, (q, column, operator, value) => {
+          guard.filter(q, column, (builder, readableColumn) => {
+            if (operator === '>=') builder.where(readableColumn, '>=', value as any);
+            else builder.where(readableColumn, '<=', value as any);
+          });
+        });
         if (filters.project_name) {
           guard.filter(query, col('project_name'), (q, c) => { q.where(c, 'ilike', `%${filters.project_name}%`); });
         }

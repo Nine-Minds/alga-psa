@@ -17,7 +17,12 @@ const state = vi.hoisted(() => ({
   projects: [] as Record<string, any>[],
   tickets: [] as Record<string, any>[],
   quote: null as Record<string, any> | null,
+  quoteVersions: [] as Record<string, any>[],
+  conversionPreview: null as Record<string, any> | null,
   assets: [] as Record<string, any>[],
+  assetReadAllowed: true,
+  deployableStatusSlugs: ['active'] as string[],
+  maintenanceSchedules: [] as Record<string, any>[],
   assetTickets: [] as Record<string, any>[],
   statuses: [] as Record<string, any>[],
   clients: [] as Record<string, any>[],
@@ -56,7 +61,7 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
     })),
   };
 });
-vi.mock('@/lib/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
+vi.mock('@/lib/auth/rbac', () => ({ hasPermission: vi.fn(async () => state.assetReadAllowed) }));
 vi.mock('@/lib/api/rateLimit/enforce', () => ({
   enforceApiRateLimit: vi.fn(async () => null),
   shouldBypassRateLimit: vi.fn(() => false),
@@ -89,6 +94,9 @@ vi.mock('../../../lib/api/services/AssetService', () => ({
     list = vi.fn(async () => ({ data: state.assets, total: state.assets.length }));
     search = vi.fn(async () => state.assets);
     getAssetTickets = vi.fn(async () => state.assetTickets);
+    getDeployableStatusSlugs = vi.fn(async () => state.deployableStatusSlugs);
+    getMaintenanceSchedulesForAssets = vi.fn(async (_context: unknown, assetIds: string[]) =>
+      state.maintenanceSchedules.filter((schedule) => assetIds.includes(schedule.asset_id)));
   },
 }));
 vi.mock('../../../lib/api/services/QuoteService', () => ({
@@ -97,6 +105,8 @@ vi.mock('../../../lib/api/services/QuoteService', () => ({
     requestChanges = vi.fn(async () => ({ ...state.quote, status: 'draft' }));
     getById = vi.fn(async () => state.quote);
     list = vi.fn(async () => ({ data: state.quote ? [state.quote] : [], total: state.quote ? 1 : 0 }));
+    listVersions = vi.fn(async () => state.quoteVersions);
+    getConversionPreview = vi.fn(async () => state.conversionPreview);
   },
 }));
 
@@ -128,7 +138,12 @@ beforeEach(() => {
   state.projects = [project(P1), project(P2, { budgeted_hours: 10 }), project(P3, { budgeted_hours: 5 })];
   state.tickets = [];
   state.quote = null;
+  state.quoteVersions = [];
+  state.conversionPreview = null;
   state.assets = [];
+  state.assetReadAllowed = true;
+  state.deployableStatusSlugs = ['active'];
+  state.maintenanceSchedules = [];
   state.assetTickets = [];
   state.statuses = [{ status_id: 's-1', name: 'Active' }];
   state.clients = [{ client_id: 'c-1', client_name: 'Acme' }];
@@ -367,6 +382,57 @@ describe('quotes: REST reads serialize the projection', () => {
     state.decisions.set(QUOTE, { allowed: true, redactedFields: ['billing'] });
     expect((await new ApiQuoteController().getById()(request(`/api/v1/quotes/${QUOTE}`, { id: QUOTE }))).status).toBe(404);
   });
+
+  it('authorizes and projects each quote revision independently', async () => {
+    const v1 = `${QUOTE}-v1`;
+    const v2 = `${QUOTE}-v2`;
+    const v3 = `${QUOTE}-v3`;
+    state.quoteVersions = [
+      { quote_id: v1, title: 'Visible revision', version: 1, subtotal: 9876 },
+      { quote_id: v2, title: 'Denied revision', version: 2, subtotal: 4321 },
+      { quote_id: v3, title: 'Suppressed revision', version: 3, subtotal: 1111 },
+    ];
+    state.decisions.set(QUOTE, { allowed: true, redactedFields: [] });
+    state.decisions.set(v1, { allowed: true, redactedFields: ['subtotal'] });
+    state.decisions.set(v2, { allowed: false, redactedFields: [] });
+    state.decisions.set(v3, { allowed: true, redactedFields: ['quote_id'] });
+
+    const response = await new ApiQuoteController().listVersions()(
+      request(`/api/v1/quotes/${QUOTE}/revisions`, { id: QUOTE }),
+    );
+    const { data } = await response.json();
+
+    expect(data).toEqual([{ quote_id: v1, title: 'Visible revision', version: 1 }]);
+    expect(authorizeResource.mock.calls.map(([input]) => input.record?.id)).toEqual([QUOTE, v1, v2, v3]);
+  });
+
+  it('projects conversion preview lines and totals from the real preview builder', async () => {
+    const { buildQuoteConversionPreview } = await import('../../../../../packages/billing/src/services/quoteConversionService');
+    const quote = {
+      quote_id: QUOTE,
+      tenant: TENANT,
+      quote_items: [{
+        quote_item_id: 'preview-line', quote_id: QUOTE, tenant: TENANT, description: 'Hidden price line',
+        quantity: 1, unit_price: 4938, total_price: 4938, is_optional: false, is_selected: true,
+        is_recurring: false, is_discount: false,
+      }],
+    } as any;
+    state.conversionPreview = await buildQuoteConversionPreview(quote);
+    state.decisions.set(QUOTE, { allowed: true, redactedFields: ['unit_price'] });
+
+    const response = await new ApiQuoteController().conversionPreview()(
+      request(`/api/v1/quotes/${QUOTE}/conversion-preview`, { id: QUOTE }),
+    );
+    const { data } = await response.json();
+
+    expect(data.invoice_items).toHaveLength(1);
+    expect(data.invoice_items[0]).not.toHaveProperty('unit_price');
+    expect(data.invoice_items[0].total_price).toBeNull();
+    expect(data.contract_monthly_total).toBeNull();
+    expect(data.available_actions).toBeNull();
+    expect(data.invoice_error).toBeNull();
+    expect(JSON.stringify(data)).not.toContain('4938');
+  });
 });
 
 describe('assets / inventory lookup and document adapters', () => {
@@ -475,6 +541,71 @@ describe('asset routes serialize the projection', () => {
     state.decisions.set('t-2', { allowed: true, redactedFields: ['tickets'] });
     const { data } = await (await controller().listTickets(request(`/api/v1/assets/${A1}/tickets`), { id: A1 })).json();
     expect(data).toEqual([{ ticket_id: 't-1', title: 'Visible' }]);
+  });
+
+  it('statistics aggregate authorized asset projections and only their maintenance schedules', async () => {
+    const { AssetService: ActualAssetService } = await vi.importActual<typeof import('../../../lib/api/services/AssetService')>(
+      '../../../lib/api/services/AssetService',
+    );
+    const controller = new ApiAssetController();
+    const mockedService = (controller as any).assetService;
+    mockedService.getStatisticsFromProjections = ActualAssetService.prototype.getStatisticsFromProjections;
+    const now = new Date();
+    const oldPurchaseDate = new Date(now.getTime() - 90 * 86_400_000).toISOString();
+    const oldWarrantyDate = new Date(now.getTime() - 20 * 86_400_000).toISOString();
+    state.assets = [
+      {
+        asset_id: 'a-visible', asset_type: 'workstation', status: 'active', client_id: 'c-1', client_name: 'Acme',
+        created_at: now.toISOString(), purchase_date: oldPurchaseDate, purchase_price: 4938,
+        warranty_end_date: oldWarrantyDate,
+      },
+      {
+        asset_id: 'a-suppressed', asset_type: 'server', status: 'active', client_id: 'c-2', client_name: 'Hidden client',
+        created_at: now.toISOString(), purchase_date: oldPurchaseDate, purchase_price: 90000,
+        warranty_end_date: oldWarrantyDate,
+      },
+    ];
+    state.decisions.set('a-suppressed', { allowed: true, redactedFields: ['assets'] });
+    state.maintenanceSchedules = [
+      { asset_id: 'a-visible', schedule_id: 'm-1', next_maintenance: oldPurchaseDate, is_active: true },
+      { asset_id: 'a-visible', schedule_id: 'm-2', next_maintenance: new Date(now.getTime() + 86_400_000), is_active: true },
+      { asset_id: 'a-suppressed', schedule_id: 'm-3', next_maintenance: oldPurchaseDate, is_active: true },
+    ];
+
+    const visible = await controller.getStatistics(request('/api/v2/assets/stats'));
+    const visibleStats = (await visible.json()).data;
+    expect(visibleStats).toMatchObject({
+      total_assets: 1, deployed_assets: 1, assets_added_this_month: 1, total_asset_value: 4938,
+      assets_by_type: { workstation: 1 }, assets_by_client: { Acme: 1 }, warranty_expired: 1,
+      maintenance_due: 1, maintenance_overdue: 1,
+    });
+
+    state.decisions.set('a-visible', {
+      allowed: true,
+      redactedFields: [
+        'purchase_price', 'purchase_date', 'created_at', 'warranty_end_date', 'client_id',
+        'asset_maintenance_schedules.next_maintenance',
+      ],
+    });
+    const hidden = await controller.getStatistics(request('/api/v2/assets/stats'));
+    const hiddenStats = (await hidden.json()).data;
+    expect(hiddenStats).toMatchObject({
+      total_assets: 1, assets_added_this_month: 0, average_asset_age_days: null, total_asset_value: 0,
+      assets_by_client: { Unknown: 1 }, warranty_expiring_soon: 0, warranty_expired: 0,
+      maintenance_due: 0, maintenance_overdue: 0,
+    });
+    expect(JSON.stringify(hiddenStats)).not.toContain('4938');
+  });
+
+  it('asset statistics require asset:read before querying records', async () => {
+    state.assetReadAllowed = false;
+    const service = (new ApiAssetController() as any).assetService;
+    const list = vi.spyOn(service, 'list');
+
+    const response = await new ApiAssetController().getStatistics(request('/api/v2/assets/stats'));
+
+    expect(response.status).toBe(403);
+    expect(list).not.toHaveBeenCalled();
   });
 });
 
