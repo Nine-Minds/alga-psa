@@ -1,0 +1,7 @@
+[
+  {
+    "file": "server/test-workers/coldRbacFreshProcess.test.ts",
+    "parent": "server/src/test/integration/api/quotePermissionResource.integration.test.ts",
+    "reason": "The parent integration test executes this Vitest worker in six fresh processes: authorized and no-grant API keys across project export, ticket search, and asset detail."
+  }
+]

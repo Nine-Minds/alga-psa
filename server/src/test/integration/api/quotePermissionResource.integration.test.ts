@@ -146,6 +146,8 @@ type ColdProbeResult = {
   finalTenant: string | null;
 };
 
+let firstRequestChildProcessCount = 0;
+
 function runColdApiRequest(
   route: ColdRoute,
   url: string,
@@ -153,6 +155,7 @@ function runColdApiRequest(
   expectedStatus: number,
   assetId?: string,
 ): ColdProbeResult {
+  firstRequestChildProcessCount += 1;
   const connection = db.client.config.connection as Record<string, unknown>;
   const scratch = mkdtempSync(join(tmpdir(), 'alga-cold-rbac-'));
   const resultPath = join(scratch, 'result.json');
@@ -281,6 +284,7 @@ describe('quote API permission resource integration', () => {
   });
 
   it('authorizes first API-key requests in fresh processes with a real connection, and denies valid keys without grants', async () => {
+    firstRequestChildProcessCount = 0;
     const routeCases: Array<{ route: ColdRoute; url: string; resource: string; authorizedStatus: number; assetId?: string }> = [
       { route: 'projects/export', url: 'http://localhost/api/v1/projects/export?format=json', resource: 'project', authorizedStatus: 200 },
       { route: 'tickets', url: 'http://localhost/api/v1/tickets?search=Cold%20RBAC', resource: 'ticket', authorizedStatus: 200 },
@@ -333,6 +337,7 @@ describe('quote API permission resource integration', () => {
       expect(unauthorizedResult.errorCode).toBe('FORBIDDEN');
       expect(unauthorizedResult.finalTenant).toBeNull();
     }
+    expect(firstRequestChildProcessCount).toBe(6);
   }, 180_000);
 
   it('gates approve on quotes:approve rather than billing', async () => {

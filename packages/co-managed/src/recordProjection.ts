@@ -161,11 +161,22 @@ export const QUOTE_LINE_RECORD_SOURCE: RedactableRecordSource = {
 export const QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE: RedactableRecordSource = {
   resource: ['quote_items'],
   identifier: ids('quote_item_id', 'quote_items.quote_item_id'),
-  fields: {},
+  fields: {
+    // Discount preview rows can rebuild unit_price from allocated quote discount amounts.
+    unit_price: quoteItemSources(
+      'unit_price', 'quantity', 'is_optional', 'is_selected', 'is_recurring', 'is_discount',
+      'discount_type', 'discount_percentage', 'applies_to_item_id', 'applies_to_service_id', 'service_id',
+    ),
+  },
   derived: {
-    total_price: ids('unit_price', 'quantity'),
+    // Preview prices can be copied, discounted, or rebuilt from allocated quote discounts.
+    total_price: quoteItemSources(
+      'unit_price', 'quantity', 'is_optional', 'is_selected', 'is_recurring', 'is_discount',
+      'discount_type', 'discount_percentage', 'applies_to_item_id', 'applies_to_service_id', 'service_id',
+    ),
     location_name: ids('location_id', 'client_locations'),
-    reason: ids('description', 'service_id'),
+    target: quoteItemSources('is_optional', 'is_selected', 'is_recurring', 'is_discount', 'service_id'),
+    reason: quoteItemSources('description', 'service_name', 'service_id', 'is_optional', 'is_selected', 'is_recurring', 'is_discount'),
   },
 };
 
@@ -175,8 +186,18 @@ export const QUOTE_CONVERSION_PREVIEW_DISCOUNT_SOURCE: RedactableRecordSource = 
   identifier: ids('quote_item_id', 'line_quote_item_id', 'quote_items.quote_item_id'),
   fields: {},
   derived: {
-    amount: ids('unit_price', 'quantity', 'discount_value', 'discount_type'),
-    percentage: ids('discount_value', 'discount_type'),
+    description: quoteItemSources('description', 'service_name'),
+    line_description: quoteItemSources('description', 'service_name'),
+    discount_type: quoteItemSources(
+      'discount_type', 'discount_percentage', 'unit_price', 'quantity', 'is_optional', 'is_selected',
+      'is_recurring', 'is_discount', 'applies_to_item_id', 'applies_to_service_id', 'service_id',
+    ),
+    amount: quoteItemSources(
+      'unit_price', 'quantity', 'discount_type', 'discount_percentage', 'is_optional', 'is_selected',
+      'is_recurring', 'is_discount', 'applies_to_item_id', 'applies_to_service_id', 'service_id',
+    ),
+    percentage: quoteItemSources('discount_percentage', 'discount_type'),
+    billing_frequency: quoteItemSources('billing_frequency'),
   },
 };
 
@@ -203,18 +224,28 @@ export const QUOTE_CONVERSION_PREVIEW_SOURCE: RedactableRecordSource = {
     available_actions: ids(
       ...quoteItemSources(
         'is_optional', 'is_selected', 'is_recurring', 'is_discount', 'service_id',
-        'quantity', 'unit_price', 'discount_value', 'discount_type',
+        'quantity', 'unit_price', 'discount_percentage', 'discount_type',
       ),
       'sales_orders',
     ),
     invoice_error: ids(
-      ...quoteItemSources('service_id', 'quantity', 'unit_price', 'discount_value', 'discount_type'),
+      ...quoteItemSources(
+        'service_id', 'quantity', 'unit_price', 'discount_percentage', 'discount_type',
+        'is_optional', 'is_selected', 'is_recurring', 'is_discount', 'applies_to_item_id', 'applies_to_service_id',
+      ),
       'sales_orders.so_id', 'sales_orders.so_number',
     ),
-    contract_blocked_reason: ids('description', 'quote_items.description', 'quote_items.service_id'),
+    contract_blocked_reason: quoteItemSources(
+      'description', 'service_id', 'is_optional', 'is_selected', 'is_recurring', 'is_discount',
+    ),
     contract_blocked_item_description: ids('description', 'quote_items.description'),
-    contract_monthly_before_discounts: ids('unit_price', 'quantity', 'discount_value', 'quote_items.unit_price', 'quote_items.quantity', 'quote_items.discount_value'),
-    contract_monthly_total: ids('unit_price', 'quantity', 'discount_value', 'quote_items.unit_price', 'quote_items.quantity', 'quote_items.discount_value'),
+    contract_monthly_before_discounts: quoteItemSources(
+      'unit_price', 'quantity', 'billing_frequency', 'is_optional', 'is_selected', 'is_recurring', 'is_discount',
+    ),
+    contract_monthly_total: quoteItemSources(
+      'unit_price', 'quantity', 'billing_frequency', 'is_optional', 'is_selected', 'is_recurring', 'is_discount',
+      'discount_type', 'discount_percentage', 'applies_to_item_id', 'applies_to_service_id', 'service_id',
+    ),
   },
   children: {
     ...QUOTE_RECORD_SOURCE.children,
@@ -243,6 +274,12 @@ export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
     warranty_status: ids('warranty_end_date'),
   },
   children: {
+    client: {
+      resource: ['clients'],
+      identifier: ids('client_id', 'clients.client_id'),
+      fields: {},
+      derived: {},
+    },
     maintenance_schedules: {
       resource: ['asset_maintenance_schedules'],
       identifier: ids('schedule_id', 'asset_maintenance_schedules.schedule_id'),

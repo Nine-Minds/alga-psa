@@ -352,6 +352,31 @@ describe('tickets: REST reads serialize the projection', () => {
 
 describe('quotes: REST reads serialize the projection', () => {
   const QUOTE = '44444444-4444-4444-4444-444444444441';
+  const buildPreview = async (redactedFields: string[], quote_items: Record<string, any>[]) => {
+    const { buildQuoteConversionPreview } = await import('../../../../../packages/billing/src/services/quoteConversionService');
+    state.quote = { quote_id: QUOTE, tenant: TENANT, created_by: 'u-1', quote_items };
+    state.conversionPreview = await buildQuoteConversionPreview(state.quote as any);
+    state.decisions.set(QUOTE, { allowed: true, redactedFields });
+    const response = await new ApiQuoteController().conversionPreview()(
+      request(`/api/v1/quotes/${QUOTE}/conversion-preview`, { id: QUOTE }),
+    );
+    expect(response.status).toBe(200);
+    return (await response.json()).data;
+  };
+
+  const recurringDiscountItems = () => [
+    {
+      quote_item_id: 'recurring-line', quote_id: QUOTE, tenant: TENANT, description: 'Sensitive recurring description',
+      service_id: 'svc-1', quantity: 1, unit_price: 400, total_price: 400, is_optional: false,
+      is_selected: true, is_recurring: true, is_discount: false, billing_frequency: 'annually',
+    },
+    {
+      quote_item_id: 'recurring-discount', quote_id: QUOTE, tenant: TENANT, description: 'Discount',
+      quantity: 1, unit_price: 0, total_price: 0, is_optional: false, is_selected: true,
+      is_recurring: true, is_discount: true, discount_type: 'percentage', discount_percentage: 25,
+    },
+  ];
+
   beforeEach(() => {
     state.quote = {
       quote_id: QUOTE, title: 'Q', quote_number: 'QUO-1', version: 2,
@@ -433,6 +458,29 @@ describe('quotes: REST reads serialize the projection', () => {
     expect(data.invoice_error).toBeNull();
     expect(JSON.stringify(data)).not.toContain('4938');
   });
+
+  it('projects copied and derived recurring discount fields under their source aliases', async () => {
+    const visible = await buildPreview([], recurringDiscountItems());
+    expect(visible.contract_discounts[0].line_description).toBe('Sensitive recurring description');
+    expect(visible.contract_discounts[0].percentage).toBe(25);
+    expect(visible.contract_monthly_total).toBeGreaterThan(0);
+
+    const hiddenDescription = await buildPreview(['quote_items.description'], recurringDiscountItems());
+    expect(hiddenDescription.contract_discounts[0].line_description).toBeNull();
+    expect(JSON.stringify(hiddenDescription)).not.toContain('Sensitive recurring description');
+
+    const hiddenPercentage = await buildPreview(['quote_items.discount_percentage'], recurringDiscountItems());
+    expect(hiddenPercentage.contract_discounts[0].percentage).toBeNull();
+    expect(hiddenPercentage.contract_discounts[0].amount).toBeNull();
+  });
+
+  it.each(['quote_items.billing_frequency', 'quote_items.is_selected', 'quote_items.is_recurring'])(
+    'nulls recurring monthly totals when %s is hidden', async (field) => {
+      const data = await buildPreview([field], recurringDiscountItems());
+      expect(data.contract_monthly_before_discounts).toBeNull();
+      expect(data.contract_monthly_total).toBeNull();
+    },
+  );
 });
 
 describe('assets / inventory lookup and document adapters', () => {
@@ -497,6 +545,35 @@ describe('asset routes serialize the projection', () => {
     expect(data).not.toHaveProperty('serial_number');
     expect(data.vendor_name).toBeNull();
     expect(authorizeResource).toHaveBeenCalledTimes(1);
+  });
+
+  it('projects nested client details and suppresses them when the client identifier is hidden', async () => {
+    const assetId = 'nested-client-asset';
+    state.assets = [{
+      asset_id: assetId,
+      name: 'Laptop',
+      client_id: 'client-1',
+      client_name: 'Visible Client',
+      client: { client_id: 'client-1', client_name: 'Visible Client', billing_email: 'billing@example.test' },
+    }];
+    const get = () => controller().getById(request(`/api/v2/assets/${assetId}`), { id: assetId });
+
+    const visible = (await (await get()).json()).data;
+    expect(visible.client).toMatchObject({ client_id: 'client-1', client_name: 'Visible Client' });
+
+    for (const alias of ['clients.client_name', 'values.client_name', 'client_name']) {
+      state.decisions.set(assetId, { allowed: true, redactedFields: [alias] });
+      const data = (await (await get()).json()).data;
+      expect(JSON.stringify(data)).not.toContain('Visible Client');
+    }
+
+    for (const alias of ['clients.client_id', 'values.client_id']) {
+      state.decisions.set(assetId, { allowed: true, redactedFields: [alias] });
+      const data = (await (await get()).json()).data;
+      expect(data.client).toBeNull();
+      if (alias === 'values.client_id') expect(data).not.toHaveProperty('client_id');
+      else expect(data.client_id).toBe('client-1');
+    }
   });
 
   it('a suppressed or denied get is 404', async () => {
