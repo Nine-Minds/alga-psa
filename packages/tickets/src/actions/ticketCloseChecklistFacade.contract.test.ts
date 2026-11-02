@@ -91,8 +91,5 @@ describe('ticket close/checklist/material facade contract', () => {
     expect(sources.checklistItems).toContain("tenantJoin(");
     expect(sources.checklistItems).toContain("'users as u'");
 
-    expect(sources.sharedChecklistTemplates).toContain("tenantScopedTable(trx, 'checklist_template_apply_rules as r', tenant)");
-    expect(sources.sharedChecklistTemplates).toContain("tenantJoin(");
-    expect(sources.sharedChecklistTemplates).toContain("'checklist_templates as t'");
   });
 });

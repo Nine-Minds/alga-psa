@@ -4,6 +4,7 @@ import { SyncMappingLedger } from './syncMappingLedger';
 import { MAPPING_SYNC_STATUS, type AccountingSyncCycleStats } from './accountingSync.types';
 import type { SyncExceptionService } from './syncExceptions.types';
 import { isNormalizedDocumentPayload, providerForAdapterType } from './normalizedChange';
+import type { ExternalVoidOutcome } from './externalVoidApplier';
 
 /**
  * Drift detection for exported documents (Invoices now; CreditMemos ride the
@@ -13,8 +14,10 @@ import { isNormalizedDocumentPayload, providerForAdapterType } from './normalize
  * The deliver() snapshot (exported_total, doc_number, sync_token) is the
  * baseline. Payments and credit applications in QBO bump an invoice's
  * SyncToken and Balance WITHOUT changing the total — that is not drift; the
- * stored token is just refreshed. Material drift = total changed, doc number
- * changed, or the document deleted/voided externally.
+ * stored token is just refreshed. Material drift = total changed or doc number
+ * changed. A document deleted/voided externally is mirrored: the Alga invoice
+ * is voided too (the provider is the ledger of record), and only a void that
+ * cannot be applied safely is filed as an exception for a human.
  */
 
 export interface DriftDetectorDeps {
@@ -25,6 +28,8 @@ export interface DriftDetectorDeps {
   stats: AccountingSyncCycleStats;
   /** Adapter that reported the change; drives provider-neutral copy. */
   adapterType?: string;
+  /** Voids the Alga invoice for an external void (see externalVoidApplier). */
+  applyLocalVoid: (invoiceId: string) => Promise<ExternalVoidOutcome>;
 }
 
 function toAmount(value: unknown): number | null {
@@ -68,9 +73,30 @@ export async function applyExternalDocumentChange(
       return;
     }
 
+    const observedAt = new Date().toISOString();
+    const outcome = await deps.applyLocalVoid(mapping.alga_entity_id);
+
+    if (outcome.status === 'applied') {
+      await deps.ledger.update(mapping.id, {
+        syncStatus: MAPPING_SYNC_STATUS.voided,
+        metadata: { ...metadata, external_deleted_at: observedAt, voided_at: observedAt, void_source: 'external' }
+      });
+      deps.stats.externalVoidsApplied += 1;
+      // An earlier drift exception on this invoice is moot once it is void.
+      await deps.exceptions.resolve('accounting_sync_drift', 'invoice', mapping.alga_entity_id);
+      logger.info('[accountingSync] External void mirrored to Alga invoice', {
+        tenantId: deps.tenantId,
+        invoiceId: mapping.alga_entity_id,
+        externalInvoiceId: change.externalId
+      });
+      return;
+    }
+
+    // The void needs a human (payments recorded, consumed credit, used hour
+    // blocks...): flag the mapping and file the exception with the reason.
     await deps.ledger.update(mapping.id, {
       syncStatus: MAPPING_SYNC_STATUS.externalVoided,
-      metadata: { ...metadata, external_deleted_at: new Date().toISOString() }
+      metadata: { ...metadata, external_deleted_at: observedAt, local_void_blocked_reason: outcome.reason }
     });
     deps.stats.driftFound += 1;
 
@@ -78,11 +104,13 @@ export async function applyExternalDocumentChange(
       type: 'accounting_sync_drift',
       entityType: 'invoice',
       entityId: mapping.alga_entity_id,
-      title: `Exported invoice was voided or deleted in ${providerLabel}`,
+      title: `Exported invoice was voided or deleted in ${providerLabel} but could not be voided in Alga`,
       context: {
         alga_invoice_id: mapping.alga_entity_id,
         external_invoice_id: change.externalId,
         drift_kind: 'external_voided',
+        local_void_blocked_reason: outcome.reason,
+        resolution_hint: `${outcome.reason} Then void the invoice in Alga.`,
         alga_snapshot: {
           total: metadata.exported_total ?? null,
           doc_number: metadata.doc_number ?? null

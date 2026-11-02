@@ -76,6 +76,7 @@ vi.mock('@/lib/productSurfaceRegistry', () => ({
 
 vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
   authorizeApiResourceRead: authorizeReadMock,
+  authorizeApiResource: authorizeReadMock,
   buildAuthorizationPrincipalSubject: vi.fn(() => ({})),
 }));
 

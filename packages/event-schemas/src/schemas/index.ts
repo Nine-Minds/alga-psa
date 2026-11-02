@@ -10,3 +10,6 @@ export * from './workflowEventPublishHelpers';
 
 // Domain-specific event payload schemas
 export * from './domain/index';
+
+export * from './collaborationActorSchemas';
+export * from './domain/commonEventPayloadSchemas';

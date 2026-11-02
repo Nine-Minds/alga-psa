@@ -14,12 +14,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/component
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { LOCALE_CONFIG, normalizeLocale, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import { PreviewLocaleSelect } from '../../invoice-designer/preview/PreviewLocaleSelect';
+import { PreviewSheetFrame } from '../../invoice-designer/preview/PreviewSheetFrame';
+import type { PreviewZoomMode } from '../../invoice-designer/preview/previewSheetScale';
 import {
   getErrorMessage,
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import type { TemplateAst } from '@alga-psa/types';
+import {
+  LABEL_CLASSES,
+  LABEL_HIDEABLE_FIELDS,
+  isLabelClass,
+  type LabelClass,
+  type LabelHideableField,
+  type TemplateAst,
+} from '@alga-psa/types';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   listExistingDocumentsForPreview,
   runAuthoritativeTemplatePreview,
@@ -70,6 +80,26 @@ interface DocumentTemplateEditorProps {
 }
 
 type EditorTab = 'visual' | 'code';
+
+export const LABEL_CLASS_DEFAULT_LABELS: Record<LabelClass, string> = {
+  'ticket-work-tag': 'Ticket work tag',
+  'asset-identity': 'Asset label',
+  'stock-unit-identity': 'Stock unit label',
+  'staging-container': 'Staging box label',
+  'rma-work-tag': 'RMA tag',
+};
+
+const LABEL_FIELD_DEFAULT_LABELS: Record<LabelHideableField, string> = {
+  clientName: 'Client name',
+  title: 'Title',
+  detail: 'Detail / reason',
+  secondaryIdentifier: 'Secondary identifier',
+  serialSuffix: 'Serial suffix',
+  custodyLocation: 'Custody location',
+  nextAction: 'Next action',
+  tenantLogo: 'Company logo',
+  tenantName: 'Company name',
+};
 type VisualWorkspaceTab = 'design' | 'transforms' | 'preview';
 
 const isDocumentTemplateActionError = (value: unknown) =>
@@ -103,6 +133,27 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
 
   const [template, setTemplate] = useState<DocumentTemplateDraft>(initialTemplate);
   const isNewTemplate = !initialTemplate.template_id;
+  const isLabelTemplate = documentType === 'work-tag';
+  // Label templates: which class they print and which optional fields they show. The visual
+  // workspace does not round-trip these metadata keys, so they live here and are merged on export.
+  const [labelClass, setLabelClass] = useState<LabelClass>(() => {
+    const value = initialTemplate.templateAst?.metadata?.labelClass;
+    return isLabelClass(value) ? value : 'ticket-work-tag';
+  });
+  const [hiddenFields, setHiddenFields] = useState<LabelHideableField[]>(
+    () => initialTemplate.templateAst?.metadata?.labelSettings?.hiddenFields ?? [],
+  );
+  const withLabelMetadata = (ast: TemplateAst): TemplateAst =>
+    !isLabelTemplate
+      ? ast
+      : {
+          ...ast,
+          metadata: {
+            ...(ast.metadata ?? {}),
+            labelClass,
+            labelSettings: { hiddenFields },
+          },
+        };
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editorTab, setEditorTab] = useState<EditorTab>('visual');
@@ -133,6 +184,12 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewNonce, setPreviewNonce] = useState(0);
+  // The preview is drawn on the printed page's sheet; 'fit' enlarges a label to fill the pane.
+  const [previewZoomMode, setPreviewZoomMode] = useState<PreviewZoomMode>('fit');
+  const [previewScale, setPreviewScale] = useState<number | null>(null);
+  // Only labels are drawn on their printed sheet (see resolveTemplatePreviewSheetFromAst), so only they zoom.
+  const previewIsLabelSheet = isDocumentType(documentType)
+    && getDocumentTypeRegistryEntry(documentType).printGeometry === 'label-cell';
   // Standard templates carry translatable labels, so an author can see the
   // document in the language each client will actually receive it in.
   const [previewLocale, setPreviewLocale] = useState<SupportedLocale>(
@@ -228,7 +285,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
       setPreviewLoading(true);
       setPreviewError(null);
       try {
-        const ast = exportWorkspaceToTemplateAst(designerExportWorkspace());
+        const ast = withLabelMetadata(exportWorkspaceToTemplateAst(designerExportWorkspace()));
         const result = await runAuthoritativeTemplatePreview(documentType, ast, previewLocale, existingDocumentId);
         if (cancelled) return;
         if (isDocumentTemplateActionError(result)) {
@@ -278,7 +335,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
     try {
       let ast: TemplateAst;
       try {
-        ast = exportWorkspaceToTemplateAst(designerExportWorkspace());
+        ast = withLabelMetadata(exportWorkspaceToTemplateAst(designerExportWorkspace()));
       } catch (compileErr) {
         const message = compileErr instanceof Error
           ? compileErr.message
@@ -333,7 +390,7 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="p-6 space-y-4" id="document-template-editor-page">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">
@@ -399,6 +456,49 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
               }
             />
           </label>
+          {isLabelTemplate ? (
+            <>
+              <div className="flex flex-col gap-2 text-sm font-medium text-foreground">
+                {t('documentTemplates.editor.fields.labelClass', { defaultValue: 'Label class' })}
+                <CustomSelect
+                  id="document-template-label-class-select"
+                  value={labelClass}
+                  onValueChange={(value) => isLabelClass(value) && setLabelClass(value)}
+                  options={LABEL_CLASSES.map((value) => ({
+                    value,
+                    label: t(`documentTemplates.labelClasses.${value}`, { defaultValue: LABEL_CLASS_DEFAULT_LABELS[value] }),
+                  }))}
+                />
+              </div>
+              <fieldset className="flex flex-col gap-2 text-sm md:col-span-2">
+                <legend className="font-medium text-foreground">
+                  {t('documentTemplates.editor.fields.labelFields', { defaultValue: 'Fields shown on the label' })}
+                </legend>
+                <p className="text-xs text-muted-foreground">
+                  {t('documentTemplates.editor.fields.labelFieldsHint', {
+                    defaultValue: 'The record link (QR code) and the identifier are always shown.',
+                  })}
+                </p>
+                <div className="flex flex-wrap gap-x-6 gap-y-2">
+                  {LABEL_HIDEABLE_FIELDS.map((field) => (
+                    <label key={field} className="flex items-center gap-2">
+                      <input
+                        id={`document-template-label-field-${field}`}
+                        type="checkbox"
+                        checked={!hiddenFields.includes(field)}
+                        onChange={(event) =>
+                          setHiddenFields((current) =>
+                            event.target.checked ? current.filter((f) => f !== field) : [...current, field],
+                          )
+                        }
+                      />
+                      {t(`documentTemplates.labelFields.${field}`, { defaultValue: LABEL_FIELD_DEFAULT_LABELS[field] })}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            </>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -537,6 +637,30 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                         })}
                     </p>
                     <div className="flex items-center gap-2">
+                      {previewIsLabelSheet && (
+                      <ViewSwitcher
+                        aria-label={t('designer.workspace.preview.zoom.label', { defaultValue: 'Preview zoom' })}
+                        currentView={previewZoomMode}
+                        onChange={(mode: PreviewZoomMode) => setPreviewZoomMode(mode)}
+                        options={[
+                          {
+                            value: 'fit',
+                            id: 'document-designer-preview-zoom-fit',
+                            label: previewZoomMode === 'fit' && previewScale !== null
+                              ? t('designer.workspace.preview.zoom.fitWithScale', {
+                                defaultValue: 'Fit ({{percent}}%)',
+                                percent: Math.round(previewScale * 100),
+                              })
+                              : t('designer.workspace.preview.zoom.fit', { defaultValue: 'Fit' }),
+                          },
+                          {
+                            value: 'actual',
+                            id: 'document-designer-preview-zoom-actual',
+                            label: t('designer.workspace.preview.zoom.actual', { defaultValue: '100%' }),
+                          },
+                        ]}
+                      />
+                      )}
                       <PreviewLocaleSelect
                         id="document-designer-preview-locale-select"
                         value={previewLocale}
@@ -570,14 +694,15 @@ const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({
                   )}
 
                   {!previewLoading && !previewError && previewHtml && (
-                    <iframe
+                    <PreviewSheetFrame
                       title={t('documentTemplates.editor.preview.frameTitle', {
                         defaultValue: '{{type}} preview',
                         type: typeLabel,
                       })}
-                      srcDoc={previewHtml}
-                      className="w-full min-h-[640px] border-0 bg-white"
-                      data-automation-id="document-designer-preview-frame"
+                      html={previewHtml}
+                      zoomMode={previewZoomMode}
+                      onScaleChange={setPreviewScale}
+                      automationId="document-designer-preview-frame"
                     />
                   )}
 

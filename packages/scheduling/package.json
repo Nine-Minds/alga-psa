@@ -41,6 +41,10 @@
       "import": "./src/lib/resourceCapacity.ts",
       "types": "./src/lib/resourceCapacity.ts"
     },
+    "./lib/visibleCalendars": {
+      "import": "./src/lib/visibleCalendars.ts",
+      "types": "./src/lib/visibleCalendars.ts"
+    },
     "./lib/calendarAccess": {
       "import": "./src/lib/calendarAccess.ts",
       "types": "./src/lib/calendarAccess.ts"
@@ -56,6 +60,14 @@
     "./schemas/appointmentSchemas": {
       "types": "./src/schemas/appointmentSchemas.ts",
       "import": "./src/schemas/appointmentSchemas.ts"
+    },
+    "./lib/scheduleMeetingSynchronization": {
+      "types": "./src/lib/scheduleMeetingSynchronization.ts",
+      "import": "./src/lib/scheduleMeetingSynchronization.ts"
+    },
+    "./lib/appointmentMeetingCreation": {
+      "types": "./src/lib/appointmentMeetingCreation.ts",
+      "import": "./src/lib/appointmentMeetingCreation.ts"
     },
     "./context/*": {
       "import": "./src/context/*.tsx",
@@ -87,7 +99,7 @@
     "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "rrule": "^2.7.2",
-    "zod": "^3.22.4"
+    "zod": "^4.6.7"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

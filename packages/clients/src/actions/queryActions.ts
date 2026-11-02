@@ -1,5 +1,6 @@
 'use server'
 
+import { queueContactCreated } from '../lib/contactEvents';
 import type { IClient, IClientWithLocation, IContact, IInteraction } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -13,6 +14,7 @@ import {
 } from '@alga-psa/formatting/avatarUtils';
 import { hasPermissionAsync } from '../lib/authHelpers';
 import { withClientSinceDateString } from '../lib/clientSince';
+import { attachDisplayTags } from '../lib/displayTags';
 import InteractionModel from '../models/interactions';
 import {
   actionError,
@@ -271,7 +273,7 @@ export const getAllClients = withAuth(async (user, { tenant }, includeInactive: 
     logoUrl: logoUrlsMap.get(client.client_id) || null,
   }));
 
-  return clientsWithLogos as IClient[];
+  return (await attachDisplayTags(db, tenant, user, 'client', clientsWithLogos, (client: any) => client.client_id)) as unknown as IClient[];
 });
 
 // --- Contact query actions ---
@@ -371,7 +373,7 @@ export const getContactsByClient = withAuth(async (
       avatarUrl: avatarUrlsMap.get(contact.contact_name_id) || null,
     }));
 
-    return contactsWithAvatars;
+    return (await attachDisplayTags(db, tenant, user, 'contact', contactsWithAvatars, (contact: IContact) => contact.contact_name_id)) as IContact[];
   } catch (err) {
     console.error('Error fetching contacts for client:', err);
 
@@ -509,7 +511,7 @@ export const getAllContacts = withAuth(async (
       avatarUrl: avatarUrlsMap.get(contact.contact_name_id) || null,
     }));
 
-    return contactsWithAvatars;
+    return (await attachDisplayTags(db, tenant, user, 'contact', contactsWithAvatars, (contact: IContact) => contact.contact_name_id)) as IContact[];
   } catch (err) {
     console.error('Error fetching all contacts:', err);
 
@@ -608,6 +610,7 @@ export const createOrFindContactByEmail = withAuth(async (
         role: title,
         is_inactive: false,
       }, tenant, trx);
+      queueContactCreated(trx, tenant, newContact as any, { actorUserId: user?.user_id });
 
       const client = await tenantScopedTable(trx, 'clients', tenant)
         .select('client_name')

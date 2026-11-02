@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import knexLib from 'knex';
 import { activateHourBlocksForFinalizedInvoice } from '../src/actions/invoiceModification';
-import { allocateTimeEntry } from '@alga-psa/shared/billingClients/hourBlockService';
+import { allocateTimeEntry, reconcileLineAllocations, reverseTimeEntryAllocations } from '@alga-psa/shared/billingClients/hourBlockService';
 
 // Guarded DB test for the hour-block lock-discipline gaps closed in 29.8.18
 // mitigation round 3. Two violations of the r2 invariant (every hour_blocks
@@ -408,6 +408,175 @@ describe.runIf(enabled)('hour block lock discipline (29.8.18 mitigation round 3)
     } finally {
       await holderDb.destroy();
       await cleanup();
+    }
+  });
+
+  // ---------------------------------------------------------------------
+  // Prepaid Block lock order (alga-2026-0002695): issuance + config locks are
+  // taken BEFORE block locks; blocks are locked FOR UPDATE in canonical
+  // block_id order. reconcileLineAllocations locks EVERY block of the line
+  // (voided/expired/pending included) up front, so it serializes against any
+  // writer of any of them, and two writers following the order can't deadlock.
+  // ---------------------------------------------------------------------
+  interface LineSeed {
+    clientId: string;
+    serviceId: string;
+    lineId: string;
+    activeBlockId: string;
+    voidedBlockId: string;
+    entry: ActiveBlockSeed['entry'];
+  }
+
+  async function seedBlockLine(): Promise<LineSeed> {
+    const base = await seedActiveBlockWithBurnableEntry(120);
+    // The seeded grant block is ad-hoc; remove it so only contract blocks exist.
+    await db('hour_blocks').where({ tenant, block_id: base.blockId }).delete();
+    const contractId = uuidv4();
+    const lineId = uuidv4();
+    await db('contracts').insert({ tenant, contract_id: contractId, contract_name: 'HB Lock Contract' });
+    await db('client_contracts').insert({
+      tenant, client_contract_id: uuidv4(), client_id: base.clientId, contract_id: contractId,
+      start_date: '2026-01-01', is_active: true,
+    });
+    await db('contract_lines').insert({ tenant, contract_line_id: lineId, contract_id: contractId, contract_line_name: 'HB Lock Line' });
+    await db('contract_line_services').insert({ tenant, contract_line_id: lineId, service_id: base.serviceId });
+    await db('contract_line_prepaid_blocks').insert({ tenant, contract_line_id: lineId, block_minutes: 600, block_price: 100000 });
+    await db('time_entries').where({ tenant, entry_id: base.entry.entry_id }).update({ contract_line_id: lineId });
+    const mk = async (status: string, blockId: string) => {
+      await db('hour_blocks').insert({
+        block_id: blockId, tenant, client_id: base.clientId, service_id: base.serviceId,
+        total_minutes: 600, remaining_minutes: 600, hourly_rate: 10000, purchase_amount: 100000,
+        currency_code: 'USD', status, purchased_at: status === 'pending' ? null : new Date().toISOString(),
+        source_type: 'contract', contract_line_id: lineId, service_period_record_id: uuidv4(),
+      });
+      return blockId;
+    };
+    return {
+      clientId: base.clientId,
+      serviceId: base.serviceId,
+      lineId,
+      activeBlockId: await mk('active', 'ffffffff-ffff-4fff-bfff-ffffffffffff'),
+      voidedBlockId: await mk('voided', '00000000-0000-4000-8000-000000000001'),
+      entry: { ...base.entry, contract_line_id: lineId as unknown as null },
+    };
+  }
+
+  async function cleanupBlockLine() {
+    await db('hour_block_time_allocations').where({ tenant }).delete();
+    await db('hour_block_audit').where({ tenant }).delete();
+    await db('hour_blocks').where({ tenant }).delete();
+    await db('contract_line_prepaid_blocks').where({ tenant }).delete();
+    await db('contract_line_services').where({ tenant }).delete();
+    await db('contract_lines').where({ tenant }).delete();
+    await db('client_contracts').where({ tenant }).delete();
+    await db('contracts').where({ tenant }).delete();
+    await cleanup();
+  }
+
+  it('race: reconcileLineAllocations parks on ANY block of the line (even a voided one) held by another writer, then converges', async () => {
+    const s = await seedBlockLine();
+    const holderDb = knexLib({ client: 'pg', connection: config, pool: { min: 0, max: 1 } });
+    try {
+      const holderTrx = await holderDb.transaction();
+      // A writer mid-flight on the VOIDED block (e.g. release/void bookkeeping).
+      await holderTrx('hour_blocks').where({ tenant, block_id: s.voidedBlockId }).select('block_id').forUpdate();
+
+      let settled = false;
+      const reconcilePromise = (async () => {
+        const n = await db.transaction((trx: Knex.Transaction) => reconcileLineAllocations(trx, tenant, s.lineId));
+        settled = true;
+        return n;
+      })();
+      await sleep(300);
+      expect(settled, 'line reconcile must lock every block of the line up front').toBe(false);
+
+      await holderTrx.commit();
+      expect(await reconcilePromise).toBe(1);
+      const active = await db('hour_blocks').where({ tenant, block_id: s.activeBlockId }).first();
+      expect(Number(active.remaining_minutes)).toBe(480);
+    } finally {
+      await holderDb.destroy();
+      await cleanupBlockLine();
+    }
+  });
+
+  it('reversal waits for the first block of its line before locking a later allocated block', async () => {
+    const s = await seedBlockLine();
+    const holderDb = knexLib({ client: 'pg', connection: config, pool: { min: 0, max: 1 } });
+    let holder: Knex.Transaction | undefined;
+    let reversing: Knex.Transaction | undefined;
+    let reversal: Promise<void> | undefined;
+    try {
+      await db.transaction((trx) => allocateTimeEntry(trx, tenant, s.clientId, s.entry));
+      holder = await holderDb.transaction();
+      await holder('hour_blocks').where({ tenant, block_id: s.voidedBlockId }).forUpdate();
+      const holderPid = (await holder.raw('select pg_backend_pid() as pid')).rows[0].pid;
+      reversing = await db.transaction();
+      const reversingPid = (await reversing.raw('select pg_backend_pid() as pid')).rows[0].pid;
+      let settled = false;
+      reversal = reverseTimeEntryAllocations(reversing, tenant, s.entry.entry_id).finally(() => { settled = true; });
+      // Observe PostgreSQL's wait graph, not elapsed time: the unallocated,
+      // earlier block must serialize the entire reverse-and-redraw operation.
+      let blockers: number[] = [];
+      const deadline = Date.now() + 5000;
+      do {
+        blockers = (await db.raw('select pg_blocking_pids(?) as blockers', [reversingPid])).rows[0].blockers;
+        if (blockers.includes(holderPid) || settled) break;
+        await sleep(10);
+      } while (Date.now() < deadline);
+      expect(blockers).toContain(holderPid);
+      // A line writer can still take the later block. Locking it in the
+      // reversal before waiting on the first block would form a cycle.
+      await db.transaction((trx) => trx('hour_blocks').where({ tenant, block_id: s.activeBlockId }).forUpdate().noWait());
+      // The writer changes the draw while reversal is waiting. Reversal must
+      // restore the committed 60 minutes, not its earlier 120-minute snapshot.
+      await holder('hour_blocks').where({ tenant, block_id: s.activeBlockId }).update({ remaining_minutes: 540 });
+      await holder('hour_block_time_allocations').where({ tenant, time_entry_id: s.entry.entry_id }).update({ minutes: 60 });
+      await holder.commit();
+      await reversal;
+      await allocateTimeEntry(reversing, tenant, s.clientId, s.entry);
+      await reversing.commit();
+      const active = await db('hour_blocks').where({ tenant, block_id: s.activeBlockId }).first();
+      expect(Number(active.remaining_minutes)).toBe(480);
+      const allocations = await db('hour_block_time_allocations').where({ tenant, time_entry_id: s.entry.entry_id });
+      expect(allocations.map((row) => Number(row.minutes))).toEqual([120]);
+    } finally {
+      if (holder && !holder.isCompleted()) await holder.rollback();
+      await reversal?.catch(() => undefined);
+      if (reversing && !reversing.isCompleted()) await reversing.rollback();
+      await holderDb.destroy();
+      await cleanupBlockLine();
+    }
+  });
+
+  it('no deadlock: config-lock-then-block-lock writers, a burn and line re-draws run concurrently on one line', async () => {
+    const s = await seedBlockLine();
+    try {
+      const writer = () =>
+        db.transaction(async (trx: Knex.Transaction) => {
+          // Order under test: config/issuance lock FIRST, then blocks.
+          await trx('contract_line_prepaid_blocks').where({ tenant, contract_line_id: s.lineId }).select('contract_line_id').forUpdate();
+          await reconcileLineAllocations(trx, tenant, s.lineId);
+        });
+      // The save path: reverse the entry's previous draw, then re-allocate.
+      const burner = () =>
+        db.transaction(async (trx: Knex.Transaction) => {
+          await reverseTimeEntryAllocations(trx, tenant, s.entry.entry_id);
+          await allocateTimeEntry(trx, tenant, s.clientId, s.entry as any);
+        });
+
+      const results = await Promise.allSettled([writer(), writer(), burner(), writer(), burner()]);
+      const failures = results.filter((r) => r.status === 'rejected') as PromiseRejectedResult[];
+      expect(failures.map((f) => String(f.reason)), 'deadlock detected or unexpected failure').toEqual([]);
+
+      // Converged state: a final re-draw leaves exactly the entry's 120 minutes drawn once.
+      await db.transaction((trx: Knex.Transaction) => reconcileLineAllocations(trx, tenant, s.lineId));
+      const rows = await db('hour_block_time_allocations').where({ tenant, time_entry_id: s.entry.entry_id });
+      expect(rows.map((r: any) => Number(r.minutes))).toEqual([120]);
+      const active = await db('hour_blocks').where({ tenant, block_id: s.activeBlockId }).first();
+      expect(Number(active.remaining_minutes)).toBe(480);
+    } finally {
+      await cleanupBlockLine();
     }
   });
 });

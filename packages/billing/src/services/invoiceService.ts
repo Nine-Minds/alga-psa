@@ -1,11 +1,12 @@
 import { Temporal } from '@js-temporal/polyfill';
+import { describeContributedEntry } from '../lib/billing/timeEntryWorkContext';
 import { ManualInvoiceError, type HandledManualInvoiceErrorCode } from '../errors/manualInvoiceErrors';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from './taxService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
 import type { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, DiscountType, ManualInvoiceSourceLink } from '@alga-psa/types'; // Renamed for clarity
-import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily, IHourBlockCharge, IBucketCharge, ITimeBasedCharge, InvoiceTimeEntrySnapshot } from '@alga-psa/types'; // Added import
+import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily, IHourBlockCharge, IPrepaidBlockCharge, IBucketCharge, ITimeBasedCharge, InvoiceTimeEntrySnapshot } from '@alga-psa/types'; // Added import
 import type { IClientWithLocation } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
@@ -15,6 +16,10 @@ import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients
 import { isOfflinePaymentMethod } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { canonicalizeRecurringServicePeriodScheduleKey } from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
 import { DEFAULT_UNIT_CODE, HOUR_UNIT_CODE, resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
+import { computePrepaidBlockExpirationDate } from '../lib/prepaidBlockDates';
+import { createPendingHourBlockForInvoiceCharge } from './pendingHourBlockService';
+import { reconcileLineAllocations } from '@alga-psa/shared/billingClients/hourBlockService';
+import { overPrepaidBlockDescription, prepaidBlockFeeDescription } from '../lib/billing/compute/prepaidBlockDescriptions';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
 import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService';
@@ -183,6 +188,15 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
         invoice_window_end: windowEnd,
       })
       .whereNotIn('lifecycle_state', ['archived', 'superseded']);
+
+    // Prepaid Block issuance selectors identify an issuance, not a recurring
+    // obligation: there are no recurring_service_periods rows to claim.
+    if (
+      executionWindow.kind === 'client_cadence_window'
+      && /^schedule:[^:]+:prepaid_block:[^:]+$/.test(executionWindow.scheduleKey ?? '')
+    ) {
+      continue;
+    }
 
     if (executionWindow.kind === 'client_cadence_window') {
       query
@@ -419,6 +433,7 @@ async function linkAndMarkSourceBillingRecord(params: {
   }
 }
 
+// LEVERAGE: pattern line-recurring-streams — maps a charge type back to a recurring family/stream; it should come from the same source as contractLineRecurringStreams once prepaid_block charges are linked
 function getRecurringChargeFamilyForInvoiceLinkage(
   charge: IBillingCharge,
 ): RecurringChargeFamily | null {
@@ -431,12 +446,35 @@ function getRecurringChargeFamilyForInvoiceLinkage(
       return charge.type;
     case 'time':
       return 'hourly';
+    case 'prepaid_block':
+      // Only cadence blocks (no issuance) hold a recurring service period.
+      return (charge as IPrepaidBlockCharge).issuance_id ? null : 'prepaid_block';
     default:
       return null;
   }
 }
 
+/**
+ * Line description for a time charge: overtime segments say so, and late time
+ * names the service period of the invoice that closed its window. Shared by the
+ * preview and persist paths so the preview, PDF and API show the same wording.
+ */
+export function describeTimeCharge(
+  charge: Pick<ITimeBasedCharge, 'serviceName' | 'timeSegment' | 'lateForServicePeriod' | 'overPrepaidBlock'>,
+): string {
+  const base = charge.timeSegment === 'overtime'
+    ? `${charge.serviceName} (overtime)`
+    : charge.overPrepaidBlock
+      ? overPrepaidBlockDescription(charge.serviceName)
+      : charge.serviceName;
+  const late = charge.lateForServicePeriod;
+  return late ? `${base} (late time, service period ${late.servicePeriodStart}–${late.servicePeriodEnd})` : base;
+}
+
 function requiresRecurringServicePeriodLinkage(charge: IBillingCharge): boolean {
+  // Late time belongs to a period an earlier invoice already closed; this
+  // invoice's own period is claimed by its own charges or the chargeless sweep.
+  if (charge.lateForServicePeriod) return false;
   return Boolean(charge.servicePeriodRecordId || charge.client_contract_line_id);
 }
 
@@ -739,6 +777,50 @@ export async function recalculatePercentageDiscountInvoiceCharges(
   return normalizedInvoiceItems;
 }
 
+/** L6a1/T0-2 seam stand-in: manual-invoice time sources owned by a serving work-context contributor. */
+async function validateContributedManualTimeSources(
+  tx: Knex.Transaction,
+  tenant: string,
+  invoice: any,
+  clientId: string,
+  sourceItems: ManualInvoiceItemInput[],
+  reject: () => Error,
+): Promise<Map<ManualInvoiceItemInput, InvoiceTimeEntrySnapshot> | null> {
+  if (invoice.client_id !== clientId || !invoice.is_manual || invoice.is_prepayment) return null;
+  const snapshots = new Map<ManualInvoiceItemInput, InvoiceTimeEntrySnapshot>();
+  const seen = new Set<string>();
+  const ordered = [...sourceItems].sort((a, b) => String((a.source_link as any).entryId).localeCompare(String((b.source_link as any).entryId)));
+  for (const item of ordered) {
+    const entryId = (item.source_link as { entryId: string }).entryId;
+    const described = await describeContributedEntry(tx, tenant, entryId);
+    if (!described) return null;
+    if (seen.has(entryId)) throw reject();
+    seen.add(entryId);
+    const entry = await tenantScopedTable(tx, tenant, 'time_entries').where({ entry_id: entryId }).forUpdate().first();
+    if (!entry || entry.invoiced) {
+      throw new ManualInvoiceError('SOURCE_ALREADY_BILLED', 'The selected time entry is already billed or removed.');
+    }
+    const { context } = described;
+    if (!described.contributor.workItemTypes.includes(entry.work_item_type) || context.clientId !== invoice.client_id ||
+        entry.approval_status !== 'APPROVED' || Number(entry.billable_duration) <= 0 || !entry.service_id) throw reject();
+    const service = await tenantScopedTable(tx, tenant, 'service_catalog').where({ service_id: entry.service_id }).forShare().first();
+    if (!service) throw reject();
+    const minutes = Number(entry.billable_duration);
+    const rate = Math.max(0, Math.round(Number(service.default_rate) || 0));
+    if (item.service_id !== entry.service_id || item.quantity !== minutes / 60 || item.rate !== rate) throw reject();
+    const isTicket = context.sourceKind === 'ticket';
+    snapshots.set(item, {
+      version: 2, rateKind: 'uniform', uniformRate: rate,
+      workItemType: context.sourceKind, workItemId: context.sourceId,
+      ticketNumber: isTicket ? context.ticketNumber : null, title: context.title ?? null,
+      description: null, entryDate: entry.start_time ? new Date(entry.start_time).toISOString() : null,
+      billedMinutes: minutes, rate, netAmount: Math.round(minutes / 60 * rate),
+      serviceId: entry.service_id, serviceName: service.service_name,
+    });
+  }
+  return snapshots;
+}
+
 /** Validate ticket sources under locks held until invoice creation commits. */
 async function validateManualTicketSources(
   tx: Knex.Transaction,
@@ -756,6 +838,13 @@ async function validateManualTicketSources(
   const reject = () => new ManualInvoiceError(
     'SOURCE_NOT_ELIGIBLE', 'The selected source does not match this ticket invoice or is no longer eligible.',
   );
+  // L6a1/T0-2 seam stand-in (timeEntryWorkContext): a ticket-less manual invoice whose sources are all
+  // time entries owned by a serving contributor (shared co-managed work) validates through that contributor.
+  // Native tenants never reach this: no contributor serves them, so the native rejection below is unchanged.
+  if (invoice && !invoice.ticket_id && sourceItems.every(item => item.source_link?.kind === 'time_entry' && !item.is_discount)) {
+    const contributed = await validateContributedManualTimeSources(tx, tenant, invoice, clientId, sourceItems, reject);
+    if (contributed) return contributed;
+  }
   if (!invoice?.ticket_id || invoice.client_id !== clientId || !invoice.is_manual || invoice.is_prepayment) {
     throw reject();
   }
@@ -1715,6 +1804,140 @@ async function persistFixedInvoiceCharges(
 
 
 /**
+ * Materialises a Prepaid Block issuance on the invoice that bills it: creates
+ * the pending block linked to the charge (expiry from the invoice date),
+ * marks the issuance invoiced, then re-draws the line's uninvoiced time.
+ *
+ * Lock order (plan section 5): config and issuance rows first, then blocks
+ * (reconcileLineAllocations locks them in canonical block_id order). The
+ * issuance is locked and must still be 'scheduled', so two concurrent or
+ * repeated generations for the same issuance fail fast instead of issuing two
+ * blocks.
+ */
+export async function persistPrepaidBlockIssuance(params: {
+  tx: Knex.Transaction;
+  tenant: string;
+  invoiceId: string;
+  invoiceChargeId: string;
+  /** The block terms; a full engine charge or the same fields read from the line config (usage-triggered follow-ons). */
+  charge: Pick<
+    IPrepaidBlockCharge,
+    'issuance_id' | 'contract_line_id' | 'serviceId' | 'block_minutes' | 'block_price' | 'rate'
+    | 'currency_code' | 'expiry_months' | 'scope_service_ids'
+  >;
+  clientId: string;
+  createdBy: string | null;
+  now: string;
+}): Promise<void> {
+  const { tx, tenant, invoiceId, invoiceChargeId, charge } = params;
+
+  await tenantScopedTable(tx, tenant, 'contract_line_prepaid_blocks')
+    .where({ contract_line_id: charge.contract_line_id })
+    .forUpdate()
+    .select('contract_line_id')
+    .first();
+
+  const issuance = await tenantScopedTable(tx, tenant, 'contract_line_block_issuances')
+    .where({ issuance_id: charge.issuance_id })
+    .forUpdate()
+    .first();
+  if (!issuance || issuance.status !== 'scheduled') {
+    throw new Error(
+      `Prepaid block issuance ${charge.issuance_id} is ${issuance?.status ?? 'missing'}, not scheduled; it has already been invoiced or is no longer due.`,
+    );
+  }
+
+  const invoice = await tenantScopedTable(tx, tenant, 'invoices')
+    .where({ invoice_id: invoiceId })
+    .select('invoice_date')
+    .first();
+  if (!invoice?.invoice_date) {
+    throw new Error(`Invoice ${invoiceId} has no invoice date; cannot compute prepaid block expiry.`);
+  }
+
+  const { blockId } = await createPendingHourBlockForInvoiceCharge(tx, {
+    tenant,
+    clientId: params.clientId,
+    serviceId: charge.serviceId,
+    minutes: charge.block_minutes,
+    hourlyRate: charge.rate,
+    purchaseAmount: charge.block_price,
+    currencyCode: charge.currency_code,
+    invoiceId,
+    invoiceChargeId,
+    expirationDate: computePrepaidBlockExpirationDate(invoice.invoice_date, charge.expiry_months),
+    scopeServiceIds: charge.scope_service_ids,
+    sourceType: 'contract',
+    contractLineId: charge.contract_line_id,
+    clientContractId: issuance.client_contract_id,
+    issuanceId: charge.issuance_id,
+    createdBy: params.createdBy,
+  });
+
+  await tenantScopedTable(tx, tenant, 'contract_line_block_issuances')
+    .where({ issuance_id: charge.issuance_id })
+    .update({
+      status: 'invoiced',
+      block_id: blockId,
+      invoice_id: invoiceId,
+      invoice_charge_id: invoiceChargeId,
+      block_minutes: charge.block_minutes,
+      block_price: charge.block_price,
+      currency_code: charge.currency_code,
+      updated_at: params.now,
+    });
+
+  // Overflow already logged against the line lands on the new pending block.
+  await reconcileLineAllocations(tx, tenant, charge.contract_line_id);
+}
+
+/**
+ * Creates the pending hour block a cadence Prepaid Block charge bills: dated
+ * and linked to its service period by the charge, with no issuance. The caller
+ * links the period and reconciles the line's time afterwards.
+ */
+async function persistCadencePrepaidBlock(params: {
+  tx: Knex.Transaction;
+  tenant: string;
+  invoiceId: string;
+  invoiceChargeId: string;
+  charge: IPrepaidBlockCharge;
+  clientId: string;
+  createdBy: string | null;
+}): Promise<void> {
+  const { tx, tenant, charge } = params;
+  if (!charge.servicePeriodRecordId || !charge.valid_from || !charge.expiration_date) {
+    throw new Error(
+      `Cadence prepaid block for line ${charge.contract_line_id} is missing its service period or validity dates.`,
+    );
+  }
+  await tenantScopedTable(tx, tenant, 'contract_line_prepaid_blocks')
+    .where({ contract_line_id: charge.contract_line_id })
+    .forUpdate()
+    .select('contract_line_id')
+    .first();
+  await createPendingHourBlockForInvoiceCharge(tx, {
+    tenant,
+    clientId: params.clientId,
+    serviceId: charge.serviceId,
+    minutes: charge.block_minutes,
+    hourlyRate: charge.rate,
+    purchaseAmount: charge.block_price,
+    currencyCode: charge.currency_code,
+    invoiceId: params.invoiceId,
+    invoiceChargeId: params.invoiceChargeId,
+    expirationDate: charge.expiration_date,
+    validFrom: charge.valid_from,
+    scopeServiceIds: charge.scope_service_ids,
+    sourceType: 'contract',
+    contractLineId: charge.contract_line_id,
+    clientContractId: charge.client_contract_id ?? null,
+    servicePeriodRecordId: charge.servicePeriodRecordId,
+    createdBy: params.createdBy,
+  });
+}
+
+/**
  * Persists invoice items generated by the billing engine.
  * Delegates fixed-price items to persistFixedInvoiceCharges.
  * Handles other billing charge types (usage, hourly, etc.).
@@ -1810,12 +2033,14 @@ export async function persistInvoiceCharges(
         ? `Product: ${charge.serviceName}`
         : charge.type === 'license'
           ? `License: ${charge.serviceName}`
+          : charge.type === 'prepaid_block'
+            ? prepaidBlockFeeDescription({ name: charge.serviceName, hours: (charge as IPrepaidBlockCharge).quantity })
           : charge.type === 'hour_block'
             ? `Prepaid hour block (${charge.serviceName}) — ${(charge as IHourBlockCharge).hoursUsed.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} consumed, ${(charge as IHourBlockCharge).hoursRemaining.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} remaining`
-            : charge.type === 'time' && (charge as ITimeBasedCharge).timeSegment === 'overtime'
+            : charge.type === 'time'
               // LEVERAGE: pattern charge-line-description — preview (invoiceGeneration.timeChargeDescription,
               // formatHourBlockChargeDescription) and persist each derive line descriptions from a charge
-              ? `${charge.serviceName} (overtime)`
+              ? describeTimeCharge(charge as ITimeBasedCharge)
               : charge.serviceName;
     const invoiceItem = {
       item_id: uuidv4(),
@@ -1873,6 +2098,35 @@ export async function persistInvoiceCharges(
       requireRecurringServicePeriodLinkage
       && shouldPersistDetail
       && requiresRecurringServicePeriodLinkage(charge);
+
+    let cadenceBlockToReconcile: string | null = null;
+    if (charge.type === 'prepaid_block' && !(charge as IPrepaidBlockCharge).issuance_id) {
+      // Cadence block: created pending and linked to its service period (below)
+      // like any recurring charge; no issuance row exists to flip.
+      await persistCadencePrepaidBlock({
+        tx,
+        tenant,
+        invoiceId,
+        invoiceChargeId: invoiceItem.item_id,
+        charge: charge as IPrepaidBlockCharge,
+        clientId: client.client_id,
+        createdBy: session.user.id,
+      });
+      cadenceBlockToReconcile = (charge as IPrepaidBlockCharge).contract_line_id;
+    } else if (charge.type === 'prepaid_block') {
+      await persistPrepaidBlockIssuance({
+        tx,
+        tenant,
+        invoiceId,
+        invoiceChargeId: invoiceItem.item_id,
+        charge: charge as IPrepaidBlockCharge,
+        clientId: client.client_id,
+        createdBy: session.user.id,
+        now,
+      });
+      otherSubtotal += netAmount;
+      continue;
+    }
 
     await linkAndMarkSourceBillingRecord({
       tx,
@@ -1940,6 +2194,11 @@ export async function persistInvoiceCharges(
           }
         }
       }
+    }
+
+    if (cadenceBlockToReconcile) {
+      // Overflow already logged against the line lands on the new pending block.
+      await reconcileLineAllocations(tx, tenant, cadenceBlockToReconcile);
     }
 
     otherSubtotal += netAmount;

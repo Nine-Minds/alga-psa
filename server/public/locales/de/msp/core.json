@@ -105,7 +105,13 @@
     "passwords": "Passwörter",
     "ticketsAll": "Alle Tickets",
     "ticketsRecurring": "Wiederkehrende Tickets",
-    "ticketsTemplates": "Ticket-Vorlagen"
+    "ticketsTemplates": "Ticket-Vorlagen",
+    "assetsCustody": "Equipment in Verwahrung",
+    "ticketsCannedResponses": "Textbausteine",
+    "profile": "Profil",
+    "signOut": "Abmelden",
+    "coManaged": "Gemeinsam verwaltete IT",
+    "coManagedAdministration": "Zugriff & Administration"
   },
   "sidebar": {
     "backToMain": "Zurück zur Hauptansicht",
@@ -154,7 +160,8 @@
       "extensions": "Erweiterungen",
       "experimentalFeatures": "Experimentelle Funktionen",
       "profile": "Profil",
-      "security": "Sicherheit"
+      "security": "Sicherheit",
+      "tags": "Tags"
     }
   },
   "dashboard": {
@@ -321,6 +328,17 @@
       "calendar": {
         "error": "Die Kalendersynchronisierung für {{providerName}} hat einen Fehler gemeldet und synchronisiert nicht.",
         "disconnected": "Die Kalendersynchronisierung für {{providerName}} ist getrennt und synchronisiert nicht."
+      },
+      "rmm": {
+        "syncError": "{{providerName}} hat einen Synchronisierungsfehler gemeldet, daher sind Geräte- und Alarmdaten möglicherweise veraltet.",
+        "reconnectRequired": "{{providerName}} muss neu verbunden werden — die Anmeldedaten lassen sich nicht mehr erneuern."
+      },
+      "accounting": {
+        "reconnectRequired": "{{providerName}} muss neu verbunden werden, bevor die Buchhaltungssynchronisierung wieder laufen kann.",
+        "syncError": "Die letzte Synchronisierung mit {{providerName}} wurde nicht abgeschlossen, daher sind Rechnungen und Zahlungen möglicherweise veraltet."
+      },
+      "teams": {
+        "botCredentialsMissing": "Der {{providerName}}-Bot kann nicht antworten: Die Anmeldedaten des Bot-Connectors sind auf dem Server nicht konfiguriert."
       },
       "review": "Prüfen",
       "dismiss": "Integrationshinweis schließen"
@@ -811,5 +829,42 @@
   "githubStar": {
     "label": "Mit Stern markieren",
     "ariaLabel": "{{repository}} auf GitHub mit einem Stern markieren"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "MSP-Portal",
+      "dashboard": "Dashboard",
+      "ticketDetails": "Ticketdetails",
+      "tickets": "Tickets",
+      "projectDetails": "Projektdetails",
+      "projects": "Projekte",
+      "clientDetails": "Kundendetails",
+      "clients": "Kunden",
+      "contactDetails": "Kontaktdetails",
+      "contacts": "Kontakte",
+      "assetDetails": "Assetdetails",
+      "assets": "Assets",
+      "billing": "Abrechnung",
+      "settings": "Einstellungen",
+      "settingsSection": "Einstellungen: {{section}}",
+      "chat": "Chat"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Pro-Funktion",
+      "description": "KI-Chatfunktionen erfordern Pro. Führen Sie ein Upgrade durch, um auf diese Funktion zuzugreifen."
+    },
+    "messages": {
+      "proRequired": "Nachrichtenfunktionen erfordern Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Chatfunktionen sind nur in der Enterprise Edition verfügbar"
+    }
+  },
+  "coManagedWorkspace": {
+    "loading": "Arbeitsbereich wird geladen…",
+    "navigation": "Kundenarbeitsbereich",
+    "passwordError": "Der Passwortstatus konnte nicht geprüft werden. Bitte laden Sie diese Seite neu."
   }
 }

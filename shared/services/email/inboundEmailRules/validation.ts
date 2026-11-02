@@ -79,7 +79,7 @@ export const extractAssignClientConfigSchema = z.object({
 });
 
 export const setDestinationConfigSchema = z.object({
-  inbound_ticket_defaults_id: z.string().uuid(),
+  inbound_ticket_defaults_id: z.string().guid(),
 });
 
 export const aiClassifyConfigSchema = z.object({
@@ -98,12 +98,12 @@ export const inboundEmailRuleInputSchema = z
   .object({
     name: z.string().min(1).max(200),
     is_active: z.boolean().default(true),
-    provider_ids: z.array(z.string().uuid()).min(1).nullable().default(null),
+    provider_ids: z.array(z.string().guid()).min(1).nullable().default(null),
     conditions: z.array(inboundEmailRuleConditionSchema).min(1).max(20),
     action_type: z.enum(['skip', 'extract_assign_client', 'set_destination', 'ai_classify']),
-    action_config: z.record(z.unknown()).default({}),
+    action_config: z.record(z.string(), z.unknown()).default({}),
     on_no_match: z.enum(['proceed', 'fallback_destination', 'skip']).default('proceed'),
-    fallback_inbound_ticket_defaults_id: z.string().uuid().nullable().default(null),
+    fallback_inbound_ticket_defaults_id: z.string().guid().nullable().default(null),
   })
   .superRefine((rule, ctx) => {
     const configSchema = ACTION_CONFIG_SCHEMAS[rule.action_type];
@@ -130,7 +130,7 @@ export const inboundEmailRuleInputSchema = z
 export type InboundEmailRuleInput = z.infer<typeof inboundEmailRuleInputSchema>;
 
 export const clientNameAliasInputSchema = z.object({
-  client_id: z.string().uuid(),
+  client_id: z.string().guid(),
   alias: z.string().min(1).max(255),
 });
 

@@ -69,7 +69,9 @@
       "message_one": "O seguinte tipo de telefone personalizado não é mais usado por nenhum contato: {{labels}}. Excluir a definição de tipo ou mantê-la para uso futuro?",
       "message_other": "Os seguintes tipos de telefone personalizados não são mais usados ​​por nenhum contato: {{labels}}. Excluir as definições de tipo ou mantê-las para uso futuro?",
       "deleteType": "Excluir tipo",
-      "keepType": "Mantenha o tipo"
+      "keepType": "Mantenha o tipo",
+      "message_few": "Os seguintes tipos de telefone personalizados não são mais usados ​​por nenhum contato: {{labels}}. Excluir as definições de tipo ou mantê-las para uso futuro?",
+      "message_many": "Os seguintes tipos de telefone personalizados não são mais usados ​​por nenhum contato: {{labels}}. Excluir as definições de tipo ou mantê-las para uso futuro?"
     },
     "print": {
       "title": "Contatos",
@@ -455,7 +457,9 @@
         "invitationNotFound": "Convite não encontrado ou já utilizado."
       },
       "userNotFound": "Usuário do cliente não encontrado"
-    }
+    },
+    "boardCount_few": "Quadros {{count}}",
+    "boardCount_many": "Quadros {{count}}"
   },
   "quickAddContact": {
     "title": "Adicionar novo contato",
@@ -734,7 +738,67 @@
       "visibilityDuplicate": "Já existe um grupo de visibilidade com estes dados para este cliente.",
       "visibilityInvalidData": "Dados de grupo de visibilidade inválidos. Verifique os dados do grupo e os quadros selecionados.",
       "groupNameRequired": "O nome do grupo é obrigatório",
-      "readPermission": "Permissão negada: não é possível ler contatos"
+      "readPermission": "Permissão negada: não é possível ler contatos",
+      "idRequired": "O ID do contato é obrigatório",
+      "schemaError": "Erro no esquema do banco de dados - entre em contato com o suporte",
+      "readFailed": "Ocorreu um erro inesperado ao obter informações do contato",
+      "deleteRecordFailed": "Registro do contato não encontrado ou não foi possível excluí-lo",
+      "updateIdRequired": "O ID do contato é obrigatório para atualizações",
+      "clientMissing": "O cliente selecionado não existe mais",
+      "destinationMissing": "O destino de tickets de entrada selecionado não existe mais",
+      "updateMissing": "O contato que você está tentando atualizar não existe mais",
+      "updateRecordMissing": "A atualização do contato foi concluída sem retornar o registro atualizado",
+      "clientIdRequired": "O ID do cliente é obrigatório",
+      "specifiedClientMissing": "O cliente especificado não existe",
+      "updateDataRequired": "Nenhum dado de atualização fornecido",
+      "emailInvalid": "Informe um endereço de e-mail válido",
+      "bulkUpdateFailed": "A atualização dos contatos do cliente foi concluída sem modificar nenhum registro",
+      "updateFailed": "Ocorreu um erro inesperado ao atualizar os contatos do cliente",
+      "importMultipleMatches": "Os endereços de email importados correspondem a vários contatos existentes",
+      "updatePermission": "Não é possível atualizar contatos",
+      "importDataRequired": "Nenhum dado de contato fornecido",
+      "fullNameRequired": "O nome completo é obrigatório",
+      "importFailed": "Ocorreu um erro inesperado ao importar contatos",
+      "emailsRequired": "Nenhum endereço de email fornecido",
+      "validEmailsRequired": "Nenhum endereço de email válido fornecido",
+      "checkEmailsFailed": "Ocorreu um erro inesperado ao verificar emails existentes",
+      "portalAdminRequired": "É necessário acesso de administrador do portal do cliente",
+      "assignedGroupInvalid": "O grupo de visibilidade atribuído é inválido para este contato",
+      "groupNotFound": "Grupo de visibilidade não encontrado",
+      "boardsInvalid": "Um ou mais quadros são inválidos para este tenant",
+      "groupCreateFailed": "A criação do grupo de visibilidade foi concluída sem retornar um ID de grupo",
+      "groupInUse": "Não é possível excluir o grupo de visibilidade enquanto estiver atribuído a contatos",
+      "importEmailInvalid": "Formato de email inválido para o contato: {{name}}",
+      "importClientMissing": "Cliente não encontrado para o contato: {{name}}",
+      "invalidEmailValue": "Formato de email inválido: {{email}}",
+      "invalidData": "Dados de contato inválidos",
+      "phoneExtensionInvalid": "Telefone {{index}}: Insira um ramal válido",
+      "phoneNumberInvalid": "Telefone {{index}}: Insira um número de telefone válido",
+      "phoneCountryRequired": "Telefone {{index}}: Inclua o código do país, começando com +",
+      "tenantEmailExists": "Um endereço de email de contato já existe neste tenant",
+      "importRowFailed": "Não foi possível importar este contato. Verifique os campos obrigatórios e as referências de clientes.",
+      "deleteMissing": "O contato que você está tentando excluir não existe mais.",
+      "deleteFailed": "Não foi possível excluir o contato. Tente novamente.",
+      "deleteDependencies": "Não é possível excluir o contato porque ele tem registros associados",
+      "connectionFailed": "Problema de conexão com o banco de dados. Tente novamente.",
+      "deleteUnexpected": "Ocorreu um erro inesperado ao excluir o contato",
+      "importFileFailed": "Não foi possível importar contatos. Verifique o arquivo e tente novamente.",
+      "portalAdminUpdateFailed": "Não foi possível atualizar o status de administrador do portal. Atualize a página e tente novamente.",
+      "userLoadFailed": "Falha ao obter usuário",
+      "sharedMailboxAdmin": "Contatos de caixas de correio compartilhadas não podem ser administradores de clientes.",
+      "createFailed": "Ocorreu um erro inesperado ao criar o contato",
+      "importDuplicateEmail": "Já existe um contato com este email: {{value}}",
+      "importDuplicateName": "Já existe um contato com este nome: {{value}}",
+      "permissions": {
+        "readContacts": "Não é possível ler contatos",
+        "deleteContacts": "Não é possível excluir contatos",
+        "createContacts": "Não é possível criar contatos",
+        "updateContacts": "Não é possível atualizar contatos",
+        "managePhoneTypes": "Não é possível gerenciar tipos de telefone",
+        "updateClientUsers": "Você não tem permissão para atualizar usuários de clientes",
+        "viewClientUsers": "Você não tem permissão para visualizar usuários de clientes"
+      },
+      "field": "campo"
     }
   },
   "portal": {
@@ -760,7 +824,30 @@
       "scopeSummaryOwn": "Próprios",
       "managerScopeNote_one": "A visão dele também inclui os registros de {{count}} pessoa que se reporta a ele.",
       "managerScopeNote_many": "A visão dele também inclui os registros de {{count}} de pessoas que se reportam a ele.",
-      "managerScopeNote_other": "A visão dele também inclui os registros de {{count}} pessoas que se reportam a ele."
+      "managerScopeNote_other": "A visão dele também inclui os registros de {{count}} pessoas que se reportam a ele.",
+      "managerScopeNote_few": "A visão dele também inclui os registros de {{count}} pessoas que se reportam a ele."
     }
+  },
+  "messages": {
+    "success": {
+      "updated": "Contato atualizado com sucesso",
+      "created": "Contato criado com sucesso"
+    }
+  },
+  "csvTemplate": {
+    "explorerRole": "Exploradora-chefe",
+    "explorerNotes": "Caiu em uma toca de coelho e descobriu um mundo totalmente novo",
+    "explorerTags": "Curiosa, Aventureira, Corajosa",
+    "teaRole": "Especialista-chefe em cerimônias do chá",
+    "teaNotes": "Sabe por que um corvo se parece com uma escrivaninha",
+    "teaTags": "Criativo, Excêntrico, Especialista em chá"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · última sincronização em {{date}}",
+    "description": "Este contato é sincronizado com uma conta do diretório.",
+    "signInName": "Nome de acesso: {{name}}",
+    "lastSynced": "Última sincronização em {{date}}",
+    "deleted": "Inativo — a conta Microsoft foi excluída.",
+    "disabled": "Inativo — a conta Microsoft está desabilitada."
   }
 }

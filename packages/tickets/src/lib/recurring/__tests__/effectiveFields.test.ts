@@ -83,3 +83,41 @@ describe('resolveEffectiveFields', () => {
     expect(result).toEqual({ ...defaults, priority_id: id(11) });
   });
 });
+
+describe('resolveEffectiveFields: template -> definition overrides -> client overrides', () => {
+  // The template supplies content; null here means the template left it unset.
+  const base = { ...defaults, board_id: id(1), priority_id: null, category_id: null, subcategory_id: null };
+
+  it('a single layer behaves as before (two-argument form)', () => {
+    expect(resolveEffectiveFields(base, { priority: { priority_id: id(20) } }).priority_id).toBe(id(20));
+  });
+
+  it('takes the template value when no layer overrides the group', () => {
+    expect(resolveEffectiveFields(base, {}, {})).toEqual(base);
+  });
+
+  it('a later layer wins over an earlier one, group by group', () => {
+    const definitionLayer = { board: { board_id: id(30), status_id: id(31) }, priority: { priority_id: id(32) } };
+    const clientLayer = { priority: { priority_id: id(33) } };
+    const result = resolveEffectiveFields(base, definitionLayer, clientLayer);
+    expect(result.board_id).toBe(id(30)); // definition board survives
+    expect(result.status_id).toBe(id(31)); // ... together with its status
+    expect(result.priority_id).toBe(id(33)); // client priority wins over the definition's
+  });
+
+  it('a client layer can undo a definition override of the same group', () => {
+    const result = resolveEffectiveFields(
+      base,
+      { category: { category_id: id(40), subcategory_id: id(41) } },
+      { category: { category_id: null, subcategory_id: null } }
+    );
+    expect(result.category_id).toBeNull();
+    expect(result.subcategory_id).toBeNull();
+  });
+
+  it('does not mutate its inputs', () => {
+    const snapshot = JSON.stringify(base);
+    resolveEffectiveFields(base, { board: { board_id: id(50), status_id: null } }, { priority: { priority_id: id(51) } });
+    expect(JSON.stringify(base)).toBe(snapshot);
+  });
+});

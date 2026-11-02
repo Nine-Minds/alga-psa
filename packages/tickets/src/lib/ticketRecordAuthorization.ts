@@ -1,3 +1,4 @@
+import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { ITicket, IUserWithRoles } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
@@ -8,8 +9,11 @@ import {
   createAuthorizationKernel,
   type AuthorizationRecord,
   type AuthorizationSubject,
+  type RelationshipRule,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
+import type { ContactVisibilityContext } from './clientPortalVisibility';
 import { getClientContactVisibilityContext } from './clientPortalVisibility.server';
 
 /**
@@ -109,53 +113,54 @@ function toTicketAuthorizationRecord(ticket: Partial<ITicket>): AuthorizationRec
     assignedUserIds: Array.from(assignees),
     clientId: ticket.client_id ?? null,
     boardId: ticket.board_id ?? null,
+    contactId: ticket.contact_name_id ?? null,
+    // `undefined` (column not selected) can never satisfy a profile grant.
+    billingProfileId: ticket.billing_profile_id,
+    watcherContactIds: extractActiveWatcherContactIds(ticket.attributes),
     teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [],
   };
 }
 
-async function resolveClientSelectedBoardIds(
+async function resolveClientVisibility(
   trx: Conn,
   tenant: string,
   user: IUserWithRoles,
-): Promise<string[] | undefined> {
-  if (user.user_type !== 'client') {
-    return undefined;
-  }
-
-  if (!user.contact_id) {
-    return [];
-  }
-
+): Promise<ContactVisibilityContext | null | undefined> {
+  // `undefined` = internal principal (no portal narrowing).
+  if (isMspPrincipalUserType(user.user_type)) return undefined;
+  // `null` = client principal whose visibility cannot be established: deny all.
+  if (!user.contact_id) return null;
   try {
-    const visibilityContext = await getClientContactVisibilityContext(
-      trx as Knex.Transaction,
-      tenant,
-      user.contact_id,
-    );
-    return visibilityContext.visibleBoardIds ?? undefined;
+    return await getClientContactVisibilityContext(trx as Knex.Transaction, tenant, user.contact_id);
   } catch {
-    // Fail closed for client-portal users when visibility context cannot be
-    // resolved safely.
-    return [];
+    return null;
   }
 }
 
 interface TicketAuthorizationContext {
   authorizationSubject: AuthorizationSubject;
   selectedBoardIds: string[] | undefined;
+  contactVisibility: ContactVisibilityContext | null | undefined;
   authorizationKernel: ReturnType<typeof createAuthorizationKernel>;
   requestCache: RequestLocalAuthorizationCache;
 }
 
-async function createTicketAuthorizationContext(
+// LEVERAGE: pattern ticket-authorization-context — near-duplicate of createTicketAuthorizationContext in actions/optimizedTicketActions.ts (and ticketActions.ts); a shared builder would remove the drift that dropped contact visibility here.
+export async function createTicketAuthorizationContext(
   trx: Conn,
   tenant: string,
   user: IUserWithRoles,
 ): Promise<TicketAuthorizationContext> {
   const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
-  const selectedBoardIds = await resolveClientSelectedBoardIds(trx, tenant, user);
-  const relationshipRules =
-    selectedBoardIds === undefined ? [] : [{ template: 'selected_boards' as const }];
+  const contactVisibility = await resolveClientVisibility(trx, tenant, user);
+  const selectedBoardIds =
+    contactVisibility === null ? [] : contactVisibility?.visibleBoardIds ?? undefined;
+  // Built-in rules combine with OR, so `same_client` must NOT be listed next to
+  // `contact_visibility`: it would admit every same-client ticket and defeat the
+  // board/contact/billing-profile narrowing. `contact_visibility` already requires the
+  // ticket to belong to the contact's client and denies when the context is null.
+  const relationshipRules: RelationshipRule[] =
+    contactVisibility === undefined ? [] : [{ template: 'contact_visibility' }];
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider({
       relationshipRules,
@@ -173,7 +178,13 @@ async function createTicketAuthorizationContext(
   });
   const requestCache = new RequestLocalAuthorizationCache();
 
-  return { authorizationSubject, selectedBoardIds, authorizationKernel, requestCache };
+  return {
+    authorizationSubject,
+    selectedBoardIds,
+    contactVisibility,
+    authorizationKernel,
+    requestCache,
+  };
 }
 
 export interface TicketRecordRow {
@@ -183,6 +194,9 @@ export interface TicketRecordRow {
   client_id: string | null;
   board_id: string | null;
   assigned_team_id: string | null;
+  contact_name_id?: string | null;
+  billing_profile_id?: string | null;
+  attributes?: Record<string, unknown> | null;
 }
 
 async function resolveTicketRecord(
@@ -199,6 +213,9 @@ async function resolveTicketRecord(
       'client_id',
       'board_id',
       'assigned_team_id',
+      'contact_name_id',
+      'billing_profile_id',
+      'attributes',
     )) as TicketRecordRow | undefined;
   return row ?? null;
 }
@@ -216,8 +233,11 @@ export async function authorizeTicketRecordAccess(input: {
   user: IUserWithRoles;
   ticketId: string;
   action: 'read' | 'update';
+  /** Already-loaded ticket row (must include the authorization columns); skips the reload. */
+  ticketRow?: TicketRecordRow;
 }): Promise<TicketRecordRow> {
-  const ticket = await resolveTicketRecord(input.trx, input.tenant, input.ticketId);
+  const ticket =
+    input.ticketRow ?? (await resolveTicketRecord(input.trx, input.tenant, input.ticketId));
   if (!ticket) {
     throw new Error('Ticket not found');
   }
@@ -232,6 +252,7 @@ export async function authorizeTicketRecordAccess(input: {
     },
     record: toTicketAuthorizationRecord(ticket as Partial<ITicket>),
     selectedBoardIds: context.selectedBoardIds,
+    contactVisibility: context.contactVisibility,
     requestCache: context.requestCache,
     knex: input.trx as Knex,
   });
@@ -241,4 +262,38 @@ export async function authorizeTicketRecordAccess(input: {
   }
 
   return ticket;
+}
+
+/**
+ * Same policy as {@link authorizeTicketRecordAccess}, but conceals whether a ticket exists so a
+ * ticket UUID cannot be probed.
+ *
+ * - `conceal: 'client'` (default): a client principal gets the identical `Permission denied`
+ *   error whether the ticket is missing or not visible (not-found -> denied). Internal users keep
+ *   the distinct `Ticket not found` / `Permission denied` errors.
+ * - `conceal: 'all'`: additionally, for non-client (internal) users a kernel denial is reported as
+ *   `Ticket not found` (denied -> not-found), so a missing ticket and a policy-hidden ticket are
+ *   indistinguishable (both map to 404). Only the exact kernel-denial message is remapped; every
+ *   other error passes through unchanged. Client principals behave as in `'client'`.
+ *
+ * Kept separate so existing callers of authorizeTicketRecordAccess are unaffected.
+ */
+export async function authorizeTicketRecordAccessConcealed(
+  input: Parameters<typeof authorizeTicketRecordAccess>[0] & { conceal?: 'client' | 'all' },
+): Promise<TicketRecordRow> {
+  const { conceal = 'client', ...accessInput } = input;
+  try {
+    return await authorizeTicketRecordAccess(accessInput);
+  } catch (error) {
+    if (error instanceof Error) {
+      if (isClientUserType(input.user.user_type)) {
+        if (error.message === 'Ticket not found') {
+          throw new Error('Permission denied: Cannot access ticket');
+        }
+      } else if (conceal === 'all' && error.message === 'Permission denied: Cannot access ticket') {
+        throw new Error('Ticket not found');
+      }
+    }
+    throw error;
+  }
 }

@@ -7,6 +7,8 @@ vi.mock('@alga-psa/db', () => ({
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: async () => ({ getAppSecret: async () => undefined, getTenantSecret: async () => undefined }),
 }));
+const logMocks = vi.hoisted(() => ({ error: vi.fn(), warn: vi.fn(), debug: vi.fn(), info: vi.fn() }));
+vi.mock('@alga-psa/core/logger', () => ({ default: logMocks }));
 vi.mock('@alga-psa/event-bus', () => ({ getRedisConfig: () => ({ url: 'redis://x', prefix: 'alga-psa:' }) }));
 
 import { createThreecxPbxClient, odataPageAll, ThreecxPbxError } from './client';
@@ -115,5 +117,30 @@ describe('ThreecxPbxClient', () => {
     const client = await createThreecxPbxClient(TENANT, { credentials: CREDS, fetchImpl: fetchImpl as any, store: new FakeStore() });
     const all = await odataPageAll<number>(client, '/Users', { $select: 'Id' }, 2);
     expect(all).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('logs a failed request once at error with status, excerpt and capability, and never the secret', async () => {
+    logMocks.error.mockClear();
+    const leaky = JSON.stringify({ error: 'Forbidden', client_secret: 's3cret-value', note: 'Bearer abc.def.ghi' });
+    const { fetchImpl } = fakeFetch(() => ({ status: 403, body: JSON.parse(leaky) }));
+    const client = await createThreecxPbxClient(TENANT, { credentials: CREDS, fetchImpl: fetchImpl as any, store: new FakeStore() });
+    const error: any = await client.xapiGet('/Users', { $top: 1 }).catch((e) => e);
+    expect(error).toBeInstanceOf(ThreecxPbxError);
+    expect(error.status).toBe(403);
+    expect(error.body).toContain('Forbidden');
+    expect(logMocks.error).toHaveBeenCalledTimes(1);
+    const [, fields] = logMocks.error.mock.calls[0];
+    expect(fields).toMatchObject({ tenantId: TENANT, status: 403, capability: 'users', method: 'GET' });
+    const serialized = JSON.stringify(logMocks.error.mock.calls) + error.message + error.body;
+    expect(serialized).toContain('Forbidden');
+    expect(serialized).not.toContain('s3cret');
+    expect(serialized).not.toContain('abc.def.ghi');
+  });
+
+  it('bounds the body excerpt', async () => {
+    const { fetchImpl } = fakeFetch(() => ({ status: 500, body: { detail: 'x'.repeat(5000) } }));
+    const client = await createThreecxPbxClient(TENANT, { credentials: CREDS, fetchImpl: fetchImpl as any, store: new FakeStore() });
+    const error: any = await client.xapiGet('/Users').catch((e) => e);
+    expect(error.body.length).toBeLessThan(600);
   });
 });

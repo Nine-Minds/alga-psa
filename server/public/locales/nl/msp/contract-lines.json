@@ -135,7 +135,6 @@
         "overtime": {
           "enableLabel": "Schakel overurentarieven in",
           "rateHelp": "Tarief toegepast na drempel.",
-          "rateLabel": "Overurentarief ($/uur)",
           "thresholdHelp": "Uren voordat OT van toepassing is.",
           "thresholdLabel": "Drempel voor overuren (uren/periode)",
           "thresholdPlaceholder": "40",
@@ -375,7 +374,6 @@
     },
     "hourlyConfig": {
       "labels": {
-        "hourlyRate": "Uurtarief ($)",
         "minimumBillableTime": "Minimale factureerbare tijd (minuten)",
         "roundUpToNearest": "Naar boven afronden naar dichtstbijzijnde (minuten)"
       },
@@ -398,7 +396,6 @@
           "technician": "Technicus"
         },
         "perHourSuffix": "/uur",
-        "rateSrLabel": "Tarief ($/uur)",
         "selectTypePlaceholder": "Selecteer type",
         "tooltip": "Definieer verschillende uurtarieven voor specifieke gebruikerstypen die aan deze service werken. Deze overschrijven het standaarduurtarief van de service.",
         "userTypeSrLabel": "Gebruikerstype",
@@ -822,7 +819,8 @@
       "notAllowed": "Een van de waarden van de contractregel is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht veld van de contractregel.",
       "missingFieldNamed": "Er ontbreekt een verplicht veld van de contractregel: {{field}}.",
-      "advanceTimingNotAllowed": "Vooraf factureren is alleen beschikbaar voor vaste contractregels. Uren- en verbruiksregels worden altijd achteraf gefactureerd, nadat het werk is uitgevoerd."
+      "advanceTimingNotAllowed": "Vooraf factureren is alleen beschikbaar voor vaste contractregels. Uren- en verbruiksregels worden altijd achteraf gefactureerd, nadat het werk is uitgevoerd.",
+      "versionConflict": "Deze contractregel is door iemand anders gewijzigd sinds u begon met bewerken. Laad de regel opnieuw en pas uw wijziging opnieuw toe."
     },
     "templateLine": {
       "unavailable": "De geselecteerde sjabloonregel is niet meer beschikbaar. Vernieuw de pagina en probeer het opnieuw."

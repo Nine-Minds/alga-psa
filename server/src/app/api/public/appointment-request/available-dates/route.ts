@@ -46,10 +46,10 @@ function isValidTimezone(tz: string): boolean {
 // Validation schema for query parameters
 const availableDatesQuerySchema = z.object({
   tenant: z.string().min(1, 'Tenant is required'),
-  service_id: z.string().uuid('Service ID must be a valid UUID'),
+  service_id: z.string().guid('Service ID must be a valid UUID'),
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Start date must be in YYYY-MM-DD format').optional(),
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be in YYYY-MM-DD format').optional(),
-  user_id: z.string().uuid('User ID must be a valid UUID').optional(),
+  user_id: z.string().guid('User ID must be a valid UUID').optional(),
   timezone: z.string()
     .refine(tz => isValidTimezone(tz), 'Invalid IANA timezone')
     .optional()
@@ -100,14 +100,14 @@ export async function GET(req: NextRequest) {
     } catch (error) {
       if (error instanceof z.ZodError) {
         logger.warn('[available-dates] Validation error', {
-          errors: error.errors
+          errors: error.issues
         });
 
         return NextResponse.json(
           {
             success: false,
             error: 'Invalid query parameters',
-            details: error.errors
+            details: error.issues
           },
           { status: 400 }
         );

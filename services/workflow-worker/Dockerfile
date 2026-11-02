@@ -44,6 +44,7 @@ COPY packages/auth/package.json ./packages/auth/
 COPY packages/billing/package.json ./packages/billing/
 COPY packages/block-content/package.json ./packages/block-content/
 COPY packages/clients/package.json ./packages/clients/
+COPY packages/co-managed/package.json ./packages/co-managed/
 COPY packages/documents/package.json ./packages/documents/
 COPY packages/email/package.json ./packages/email/
 COPY packages/integrations/package.json ./packages/integrations/
@@ -53,6 +54,7 @@ COPY packages/licensing/package.json ./packages/licensing/
 COPY packages/list-views/package.json ./packages/list-views/
 COPY packages/notifications/package.json ./packages/notifications/
 COPY packages/opportunities/package.json ./packages/opportunities/
+COPY packages/predicates/package.json ./packages/predicates/
 COPY packages/projects/package.json ./packages/projects/
 COPY packages/reference-data/package.json ./packages/reference-data/
 COPY packages/scheduling/package.json ./packages/scheduling/
@@ -89,6 +91,7 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=@alga-psa/validation \
   --workspace=@alga-psa/email \
   --workspace=@alga-psa/opportunities \
+  --workspace=@alga-psa/predicates \
   --workspace=@alga-psa/ui \
   && npm install --no-save openai@^4.104.0
 
@@ -101,6 +104,10 @@ COPY server/ ./server/
 COPY packages/ ./packages/
 
 # Build core workspace dependencies that export dist artifacts consumed by runtime packages.
+# Predicates must build first: types and shared/workflow/runtime import it via dist/.
+WORKDIR /app/packages/predicates
+RUN npm run build
+
 WORKDIR /app/packages/core
 RUN npm run build
 

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type TabItem = {
   /** Unique key for the tab */
@@ -72,6 +73,7 @@ export function Tabs({
   variant = 'default',
   style,
 }: TabsProps) {
+  const { t } = useTranslation('common');
   const [internalActiveKey, setInternalActiveKey] = useState(
     defaultActiveKey || tabs[0]?.key || ''
   );
@@ -131,7 +133,7 @@ export function Tabs({
 
   return (
     <div style={{ ...containerStyle, ...style }}>
-      <div role="tablist" style={tabListStyle}>
+      <div role="tablist" aria-label={t('tabs.ariaLabel')} style={tabListStyle}>
         {tabs.map((tab, index) => (
           <button
             key={tab.key}

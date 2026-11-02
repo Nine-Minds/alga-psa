@@ -41,6 +41,11 @@ const testContext = vi.hoisted(() => ({
 // The global test setup mocks `@alga-psa/auth` and resolves the authenticated
 // tenant through server/src/lib/db's getCurrentTenantId; point that at the test
 // tenant so the real `updateEmailProvider` action runs in our workspace.
+// Opt in to the allow-by-default '@alga-psa/auth/rbac' mock (not global on purpose;
+// see ../helpers/allowAllRbac.ts). Fixture tenants here don't seed role_permissions.
+vi.mock('@alga-psa/auth/rbac', async (importOriginal) =>
+  (await import('../helpers/allowAllRbac')).allowAllRbac(importOriginal as any));
+
 vi.mock('../../lib/db', () => ({
   getCurrentTenantId: () => testContext.tenant,
   createTenantKnex: vi.fn(async () => ({ knex: testDb, tenant: testContext.tenant })),

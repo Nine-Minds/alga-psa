@@ -85,7 +85,9 @@
     "noService": "Ingen tjänst",
     "servicePlaceholder": "Välj standardtjänst",
     "serviceHelp": "Används för tidposter på den här fasens uppgifter när uppgiften själv inte anger någon tjänst.",
-    "serviceDisplayLabel": "Tjänst"
+    "serviceDisplayLabel": "Tjänst",
+    "taskCount_few": "{{count}} uppgifter",
+    "taskCount_many": "{{count}} uppgifter"
   },
   "projectList": {
     "addProject": "Lägg till projekt",
@@ -314,7 +316,9 @@
     "confirmMoveTasksMessage": "Vill du flytta de markerade uppgifterna ({{count}}) till fasen ”{{targetPhase}}”?",
     "taskTypeFallback": "Uppgift",
     "timeline": "Tidslinje",
-    "loadingTimeline": "Läser in tidslinje..."
+    "loadingTimeline": "Läser in tidslinje...",
+    "bulkTagsSuccess_few": "Taggar har lagts till på {{count}} uppgifter",
+    "bulkTagsSuccess_many": "Taggar har lagts till på {{count}} uppgifter"
   },
   "taskForm": {
     "addTitle": "Lägg till ny uppgift",
@@ -433,7 +437,15 @@
     "serviceInheritedFromProject": "Ärver {{service}} från projektet.",
     "startDateLabel": "Startdatum",
     "taskStartDateLabel": "Uppgiftens startdatum",
-    "startDatePlaceholder": "Välj startdatum"
+    "startDatePlaceholder": "Välj startdatum",
+    "createdTicketsIntro_few": "Du skapade {{count}} ärenden under den här sessionen:",
+    "createdTicketsIntro_many": "Du skapade {{count}} ärenden under den här sessionen:",
+    "documentCleanupFailure_few": "Det gick inte att radera {{count}} dokument. De blir kvar i Dokument",
+    "documentCleanupFailure_many": "Det gick inte att radera {{count}} dokument. De blir kvar i Dokument",
+    "documentsCleanupIntro_few": "Du har {{count}} dokument som har {{cleanupType}}:",
+    "documentsCleanupIntro_many": "Du har {{count}} dokument som har {{cleanupType}}:",
+    "ticketCleanupFailure_few": "Det gick inte att radera {{count}} ärenden",
+    "ticketCleanupFailure_many": "Det gick inte att radera {{count}} ärenden"
   },
   "taskDependencies": {
     "title": "Beroenden",
@@ -605,7 +617,16 @@
     "invoiceLinksHelp": "Fakturautkast har skapats. Öppna varje valutagrupp för att granska den.",
     "currencyDraftLink": "Fakturautkast i {{currency}}",
     "productCount": "Produkter: {{count}}",
-    "productsMovedToHoldOnClose": "Länkade produkter har pausats ({{count}}) eftersom deras faktureringshändelse annullerades."
+    "productsMovedToHoldOnClose": "Länkade produkter har pausats ({{count}}) eftersom deras faktureringshändelse annullerades.",
+    "availableBadge": "Tillgängligt: {{available}}",
+    "availableByLocation": "Fritt lager per plats",
+    "freeOfOnHand": "{{free}} lediga av {{onHand}}",
+    "stockHeld": "Bara {{free}} tillgängliga. {{held}} i lager är hårt spärrade för försäljningsorder eller projekt och kan inte användas här.",
+    "stockInsufficient": "Bara {{onHand}} i lager, {{requested}} begärda.",
+    "reservedStockTitle": "Lagret är reserverat för en försäljningsorder eller ett projekt",
+    "reservedStockMessage": "Bara {{free}} av den här produkten är lediga. {{reserved}} i lager är reserverade för försäljningsorder eller projekt och du begärde {{requested}}. Om du lägger till det ändå tas lager som en försäljningsorder eller ett projekt räknar med, och det kan bli underfyllt.",
+    "reservedStockConfirm": "Lägg till ändå",
+    "fromStaging": "Från förberedelse"
   },
   "export": {
     "title": "Exportera projektuppgifter",
@@ -644,7 +665,13 @@
     },
     "exportSelected": "Exportera markerade ({{count}})",
     "selectedTasksNotice_one": "Exporterar {{count}} markerad uppgift.",
-    "selectedTasksNotice_other": "Exporterar {{count}} markerade uppgifter."
+    "selectedTasksNotice_other": "Exporterar {{count}} markerade uppgifter.",
+    "phasesSelected_few": "{{selected}} av {{total}} faser valda",
+    "phasesSelected_many": "{{selected}} av {{total}} faser valda",
+    "selectedTasksNotice_few": "Exporterar {{count}} markerade uppgifter.",
+    "selectedTasksNotice_many": "Exporterar {{count}} markerade uppgifter.",
+    "success_few": "{{count}} uppgifter har exporterats till CSV.",
+    "success_many": "{{count}} uppgifter har exporterats till CSV."
   },
   "import": {
     "title": "Importera faser och uppgifter",
@@ -765,7 +792,9 @@
     "statusUnmatchedTooltip": "Statusen matchar ingen befintlig status för den här fasen. Hantera detta i mappningsstegen före importen.",
     "statusFallbackSuffix": "Standard",
     "statusFallbackTooltip": "Använder standardstatusen som reserv för den här fasen.",
-    "inPhaseBadge": "i {{phase}}"
+    "inPhaseBadge": "i {{phase}}",
+    "taskCountLabel_few": "({{count}} uppgifter)",
+    "taskCountLabel_many": "({{count}} uppgifter)"
   },
   "dialogs": {
     "moveTask": {
@@ -839,7 +868,9 @@
       "restrictedTooltip": "Begränsade detaljer – du är inte tilldelad den här uppgiften",
       "badgeCount_one": "{{count}} uppgift",
       "billsToProject": "Tiden debiteras som projekttid",
-      "billsToClient": "Tiden debiteras på kundnivå"
+      "billsToClient": "Tiden debiteras på kundnivå",
+      "badgeCount_few": "{{count}} uppgifter",
+      "badgeCount_many": "{{count}} uppgifter"
     },
     "bulkMoveTask": {
       "title": "Flytta uppgifter",
@@ -1215,7 +1246,9 @@
       "taskCount_other": "{{count}} uppgifter",
       "unknownUser": "Okänd",
       "unknownTask": "Okänd uppgift",
-      "checklistCountTitle": "{{count}} checklistpunkt"
+      "checklistCountTitle": "{{count}} checklistpunkt",
+      "taskCount_few": "{{count}} uppgifter",
+      "taskCount_many": "{{count}} uppgifter"
     },
     "taskForm": {
       "addTitle": "Lägg till uppgift",
@@ -1464,7 +1497,8 @@
     "materials": "Material",
     "hoursUsageDescription": "Visar förbrukningen av budgeterade timmar för hela projektet",
     "templateCreatedSuccess": "Mallen har skapats",
-    "shareTooltip": "Skriv ut, importera och exportera"
+    "shareTooltip": "Skriv ut, importera och exportera",
+    "staging": "Förberedelse"
   },
   "comments": {
     "title": "Kommentarer",
@@ -1476,7 +1510,9 @@
     "addFailed": "Det gick inte att lägga till kommentaren",
     "submitting": "Skickar in…",
     "loading": "Läser in…",
-    "empty": "Inga kommentarer ännu. Skriv den första kommentaren."
+    "empty": "Inga kommentarer ännu. Skriv den första kommentaren.",
+    "loadError": "Det gick inte att läsa in kommentarerna.",
+    "retry": "Försök igen"
   },
   "taskStatusSelect": {
     "ariaLabel": "Uppgiftsstatus",
@@ -1625,7 +1661,9 @@
       "submitting": "Lägger till taggar…",
       "confirm_one": "Lägg till taggar på {{count}} uppgift",
       "confirm_other": "Lägg till taggar på {{count}} uppgifter",
-      "failedHeading": "Det gick inte att lägga till taggar på följande uppgifter:"
+      "failedHeading": "Det gick inte att lägga till taggar på följande uppgifter:",
+      "confirm_few": "Lägg till taggar på {{count}} uppgifter",
+      "confirm_many": "Lägg till taggar på {{count}} uppgifter"
     }
   },
   "common:actions": {
@@ -1688,7 +1726,9 @@
       "lockedSummary_other": "{{count}} poster på totalt {{amount}} är låsta och ändras inte.",
       "edit": "Redigera villkor",
       "saved": "Faktureringsvillkoren har uppdaterats",
-      "dialogTitle": "Redigera faktureringsvillkor"
+      "dialogTitle": "Redigera faktureringsvillkor",
+      "lockedSummary_few": "{{count}} poster på totalt {{amount}} är låsta och ändras inte.",
+      "lockedSummary_many": "{{count}} poster på totalt {{amount}} är låsta och ändras inte."
     },
     "setup": {
       "title": "Fakturera det här projektet",
@@ -2037,5 +2077,202 @@
     "question": "Beroenden tvingas inte, så du kan fortsätta. Vill du det?",
     "proceed": "Fortsätt ändå",
     "cancel": "Avbryt"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Kompakt"
+    },
+    "spacious": {
+      "label": "Rymlig"
+    },
+    "decrease": {
+      "title": "Minska kolumnbredden"
+    },
+    "increase": {
+      "title": "Öka kolumnbredden"
+    },
+    "reset": {
+      "title": "Återställ till standard"
+    }
+  },
+  "staging": {
+    "status": {
+      "reserved": "Reserverad",
+      "staged": "Förberedd",
+      "installed": "Installerad",
+      "released": "Frigjord",
+      "received": "Mottagen"
+    },
+    "kind": {
+      "stock": "Lager",
+      "untracked": "Inte lagerförd",
+      "client": "Tillhandahållen av kunden"
+    },
+    "actionFailed": "Det gick inte. Försök igen.",
+    "installed": "{{count}} artikel(ar) installerad(e). De är nu projektmaterial.",
+    "installFailed": "Installationen misslyckades.",
+    "backToProject": "← Tillbaka till projektet",
+    "title": "Förberedelse",
+    "heading": "Förberedelse",
+    "intro": "Reservera och förbered utrustning inför installationen, packa den i märkta lådor och installera den sedan. Lagret används, och blir fakturerbart, först när en artikel installeras.",
+    "reserveStock": "Reservera lager",
+    "addClientItem": "Lägg till kundartikel",
+    "newBox": "Ny låda",
+    "printLabels": "Skriv ut etiketter",
+    "summary": {
+      "reserved": "{{count}} reserverade",
+      "staged": "{{count}} förberedda",
+      "client": "{{count}} från kunden",
+      "installed": "{{count}} installerade",
+      "boxes": "{{count}} låda/lådor"
+    },
+    "loading": "Läser in förberedelse...",
+    "linesHeading": "Artiklar",
+    "showReleased": "Visa frigjorda",
+    "selected": "{{count}} markerade",
+    "stagedToast": "Förberedd. Lagret hålls nu kvar för detta projekt.",
+    "stage": "Förbered",
+    "install": "Installera",
+    "release": "Frigör",
+    "packInto": "Packa i {{identifier}}",
+    "packIntoPlaceholder": "Packa i låda...",
+    "empty": "Inget är ännu förberett för detta projekt. Reservera lager eller lägg till en artikel som tillhandahålls av kunden för att komma igång.",
+    "col": {
+      "item": "Artikel",
+      "qty": "Antal",
+      "packed": "Packad",
+      "where": "Från / uppgift",
+      "status": "Status"
+    },
+    "selectLine": "Markera {{item}}",
+    "shortfall": "{{count}} saknas: anspråken på denna plats överstiger det som finns tillgängligt (lager har tagits via en åsidosättning).",
+    "changeQuantity": "Ändra antal",
+    "undoneToast": "Installationen ångrad. Artikeln är förberedd igen.",
+    "undoInstall": "Ångra installation",
+    "boxesHeading": "Lådor",
+    "noBoxes": "Inga lådor ännu. Skapa en låda, packa artiklar i den och skriv sedan ut dess etikett och packlista.",
+    "boxPosition": "Låda {{n}} av {{total}}",
+    "boxSealed": "Förseglad",
+    "boxOpen": "Öppen",
+    "boxEmpty": "Tom",
+    "unpack": "Packa upp",
+    "boxLabel": "Etikett",
+    "boxAllLabels": "Alla etiketter",
+    "manifest": "Packlista",
+    "reopen": "Öppna igen",
+    "seal": "Försegla",
+    "editBox": "Redigera låda",
+    "boxDeleted": "Lådan har tagits bort.",
+    "deleteBox": "Ta bort låda",
+    "reprintHint": "”Låda n av m” på en utskriven etikett fastställs vid utskriftstillfället. Skriv ut etiketterna igen efter att lådor har lagts till eller tagits bort.",
+    "reservedToast": "Reserverad. Lagret hålls kvar för detta projekt; inget har använts ännu.",
+    "releasedToast": "Frigjord. Lagret är ledigt igen.",
+    "releaseTitle": "Frigöra artiklar?",
+    "releaseMessage": "Frigjorda artiklar lämnar tillbaka sitt lager och lämnar sina lådor. Detta kan inte ångras; reservera dem igen om du fortfarande behöver dem.",
+    "overrideTitle": "Använda lager som är reserverat för andra?",
+    "overrideMessage": "{{message}} Att installera trots det använder lager som är mjukt reserverat för en försäljningsorder eller ett annat projekt.",
+    "installAnyway": "Installera trots det",
+    "changeQuantityHint": "Att reservera mer lägger till lager (om det finns tillgängligt); mindre ger tillbaka skillnaden. Det kan inte understiga det som redan är packat.",
+    "reserve": {
+      "anyLocation": "Valfri plats (äldsta enheterna först)",
+      "locationOption": "{{name}}: {{free}} lediga",
+      "selectProduct": "Välj en produkt.",
+      "quantityMin": "Antalet måste vara minst 1.",
+      "failed": "Det gick inte att reservera lagret.",
+      "conflictOnHand": "Endast {{onHand}} finns i lager, {{requested}} begärda. Inget reserverades.",
+      "conflictFree": "Endast {{free}} lediga: {{reserved}} reserverade och {{held}} med hård spärr för försäljningsorder eller projekt. Du begärde {{requested}}. Inget reserverades.",
+      "title": "Reservera lager",
+      "intro": "Att reservera håller lager kvar för detta projekt utan att förbruka det. Lagret används, och faktureras, först när du installerar det.",
+      "product": "Produkt",
+      "productPlaceholder": "Välj en produkt...",
+      "productSearch": "Sök produkter...",
+      "noProducts": "Inga produkter hittades",
+      "untracked": "Denna produkt är inte lagerförd. Den läggs till som en planeringsrad och gör inget anspråk på lager.",
+      "location": "Reservera från",
+      "locationPlaceholder": "Välj en plats",
+      "locationDetail": "{{onHand}} i lager, {{reserved}} reserverade, {{held}} med hård spärr.",
+      "units": "Enheter (valfritt: lämna tomt för att ta de äldsta)",
+      "noUnitPicker": "Du kan inte se lagerenheter, så de äldsta enheterna tas.",
+      "quantity": "Antal",
+      "task": "Uppgift",
+      "noTask": "Ingen uppgift",
+      "currency": "Valuta",
+      "currencyPlaceholder": "Standard för tenant",
+      "rate": "Planerat pris (per enhet)",
+      "submit": "Reservera"
+    },
+    "clientItems": {
+      "chooseAsset": "Välj en tillgång.",
+      "describeItem": "Beskriv artikeln.",
+      "failed": "Det gick inte att lägga till artikeln.",
+      "title": "Lägg till artikel som tillhandahålls av kunden",
+      "intro": "Håll koll på utrustning som kunden tillhandahåller via förberedelse och lådor. Den blir aldrig lager och faktureras aldrig.",
+      "kind": "Vad är det?",
+      "kindAsset": "En av kundens tillgångar",
+      "kindItem": "En annan artikel (beskriv den)",
+      "asset": "Tillgång",
+      "assetPlaceholder": "Välj en tillgång...",
+      "assetSearch": "Sök på namn, tagg eller serienummer...",
+      "noAssets": "Inga tillgångar för denna kund är tillgängliga",
+      "description": "Beskrivning",
+      "quantity": "Antal",
+      "task": "Uppgift",
+      "noTask": "Ingen uppgift",
+      "submit": "Lägg till"
+    },
+    "boxForm": {
+      "failed": "Det gick inte att spara lådan.",
+      "editTitle": "Redigera låda {{identifier}}",
+      "createTitle": "Ny låda",
+      "numbering": "Lådor numreras i ordning på detta projekt; ett nummer återanvänds aldrig.",
+      "name": "Namn (valfritt)",
+      "task": "Uppgift",
+      "noTask": "Ingen uppgift",
+      "location": "Var lådan finns",
+      "noLocation": "Inte angett",
+      "locationNote": "Hylla / fack",
+      "notes": "Anteckningar (skrivs ut på packlistan)",
+      "create": "Skapa låda"
+    },
+    "pack": {
+      "nothingChosen": "Välj något att packa.",
+      "failed": "Det gick inte att packa lådan.",
+      "title": "Packa låda {{identifier}}",
+      "intro": "Reserverade artiklar som du packar blir förberedda: deras lager hålls kvar för detta projekt och kan inte längre användas till något annat.",
+      "nothingToPack": "Allt i förberedelse är redan packat eller installerat.",
+      "quantityFor": "Antal för {{item}}",
+      "submit": "Packa"
+    },
+    "print": {
+      "failed": "Etiketterna kunde inte skrivas ut.",
+      "skipped": "{{count}} etikett(er) som du inte kan se utelämnades.",
+      "popupBlocked": "Din webbläsare blockerade PDF-fönstret; tillåt popup-fönster och försök igen.",
+      "title": "Skriv ut förberedelseetiketter",
+      "boxes": "Lådor",
+      "noBoxes": "Inga lådor ännu.",
+      "boxOption": "{{identifier}} (låda {{n}} av {{total}}){{name}}",
+      "includeUnboxed": "Skriv även ut förberedda artiklar som inte ligger i en låda",
+      "layout": "Layout",
+      "count": "{{count}} etikett(er) i en PDF.",
+      "noInventory": "{{count}} lagerenhetsetikett(er) ingår inte eftersom du inte kan se lagret.",
+      "overCap": "En utskrift innehåller högst {{max}} etiketter. Välj färre lådor och skriv ut resten separat.",
+      "submit": "Skriv ut"
+    },
+    "closeWarning": "{{count}} reserverade eller förberedda artiklar håller fortfarande kvar lager för detta projekt.",
+    "releasedAll": "{{count}} artiklar frigjorda. Lagret är ledigt igen.",
+    "releaseAll": "Frigör alla reserverade och förberedda",
+    "keepClaims": "Behåll dem",
+    "packAction": "Packa",
+    "errors": {
+      "notFound": "Projektet hittades inte",
+      "permission": {
+        "read": "Du har inte behörighet att visa projekt.",
+        "update": "Du har inte behörighet att ändra projekt.",
+        "inventory": "Du behöver lagertillgång för att välja lagerenheter.",
+        "billing": "Du behöver faktureringsåtkomst för att installera artiklar i ett projekt.",
+        "asset": "Du behöver tillgångsåtkomst för att länka kundens tillgångar.",
+        "inventoryStock": "Du behöver lagertillgång för att se lagernivåer."
+      }
+    }
   }
 }

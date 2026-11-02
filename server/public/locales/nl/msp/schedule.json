@@ -853,5 +853,81 @@
       "members": "Leden",
       "creatorNote": "U kunt deze agenda beheren."
     }
+  },
+  "ticketDetails": {
+    "title": "Ticketdetails",
+    "numberedTitle": "Ticket nr. {{number}}",
+    "untitled": "Ticket zonder titel",
+    "noDescription": "Geen beschrijving",
+    "notAvailable": "Niet beschikbaar",
+    "unassigned": "Niet toegewezen",
+    "fields": {
+      "title": {
+        "label": "Titel"
+      },
+      "description": {
+        "label": "Beschrijving"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "priority": {
+        "label": "Prioriteit"
+      },
+      "board": {
+        "label": "Bord"
+      },
+      "client": {
+        "label": "Klant"
+      },
+      "contact": {
+        "label": "Contact"
+      },
+      "assignedUser": {
+        "label": "Toegewezen gebruiker"
+      },
+      "entered": {
+        "label": "Ingevoerd"
+      },
+      "updated": {
+        "label": "Bijgewerkt"
+      },
+      "closed": {
+        "label": "Gesloten"
+      }
+    }
+  },
+  "projectTaskDetails": {
+    "title": "Projecttaak",
+    "noDescription": "Geen beschrijving",
+    "notAvailable": "Niet beschikbaar",
+    "unassigned": "Niet toegewezen",
+    "untitledItem": "Item zonder titel",
+    "noChecklistItems": "Geen items in de controlelijst",
+    "fields": {
+      "description": {
+        "label": "Beschrijving"
+      },
+      "project": {
+        "label": "Project"
+      },
+      "phase": {
+        "label": "Fase"
+      },
+      "assignedTo": {
+        "label": "Toegewezen aan"
+      },
+      "dueDate": {
+        "label": "Vervaldatum"
+      },
+      "checklist": {
+        "label": "Controlelijst"
+      }
+    }
+  },
+  "fallback": {
+    "agentSchedule": "De planningsweergave van de medewerker wordt nu beheerd in Planning. (agentId: {{agentId}})",
+    "timeEntry": "Tijdsvermeldingen worden beheerd in Planning.",
+    "scheduling": "De planning wordt beheerd in Planning."
   }
 }

@@ -297,7 +297,7 @@
         "description": "Configura le opzioni avanzate di elaborazione della posta elettronica",
         "folderFiltersLabel": "Filtri delle cartelle",
         "folderFiltersPlaceholder": "Posta in arrivo, Supporto, Cartella personalizzata",
-        "folderFiltersHelp": "Elenco separato da virgole di cartelle da monitorare (impostazione predefinita: Posta in arrivo)",
+        "folderFiltersHelp": "Elenco separato da virgole di cartelle da monitorare (impostazione predefinita: Posta in arrivo). Usa il nome esatto della cartella come appare in Outlook e scrivi le cartelle nidificate come Posta in arrivo/Sottocartella.",
         "maxEmailsPerSync": "Numero massimo di email per sincronizzazione"
       },
       "readiness": {
@@ -424,7 +424,8 @@
         "clientId": "ID cliente OAuth",
         "clientSecret": "Segreto client OAuth",
         "scopes": "Ambiti OAuth",
-        "scopesPlaceholder": "ambiti delimitati da spazi"
+        "scopesPlaceholder": "ambiti delimitati da spazi",
+        "clientSecretHelp": "Il segreto client viene archiviato in modo sicuro e non verrà mostrato. Lascia vuoto per mantenere il segreto esistente."
       },
       "processing": {
         "title": "Impostazioni di elaborazione",
@@ -432,6 +433,9 @@
         "folderFilters": "Filtri delle cartelle",
         "folderFiltersPlaceholder": "Posta in arrivo, supporto, ticket",
         "active": "Attivo"
+      },
+      "messages": {
+        "reconnectRequired": "Le impostazioni OAuth sono cambiate. Ricollega la casella di posta per autorizzarla con le nuove impostazioni."
       }
     }
   },
@@ -556,7 +560,8 @@
       "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
       "senderDisplayName": "Nome visualizzato del mittente",
       "senderDisplayNamePlaceholder": "es. Acme Support",
-      "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della bacheca del ticket."
+      "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della bacheca del ticket.",
+      "oauthClientSecretHelp": "Il segreto client viene archiviato in modo sicuro e non verrà mostrato. Lascia vuoto per mantenere il segreto esistente."
     },
     "authOptions": {
       "password": "Password",
@@ -580,6 +585,9 @@
       "saving": "Salvataggio...",
       "updateProvider": "Aggiorna fornitore",
       "createProvider": "Crea fornitore"
+    },
+    "messages": {
+      "reconnectRequired": "Le impostazioni OAuth sono cambiate. Ricollega la casella di posta per autorizzarla con le nuove impostazioni."
     }
   },
   "microsoftForm": {
@@ -727,6 +735,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Funzionalità Pro",
+      "domainsDescription": "I domini gestiti richiedono Pro.",
+      "settingsDescription": "Le impostazioni delle email gestite richiedono Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Impossibile caricare i domini gestiti",
       "loadOutboundSettingsFailed": "Impossibile caricare le impostazioni di posta in uscita",
@@ -930,6 +943,12 @@
       "copyHostAriaLabel": "Copia host",
       "copyFqdnAriaLabel": "Copia nome completo",
       "hostHint": "Suggerimento: nel tuo provider DNS, inserisci solo l'Host mostrato sopra. La maggior parte dei provider (Namecheap, GoDaddy, Cloudflare e altri) aggiunge automaticamente “{{domain}}”. Se incolli il nome completo, il dominio viene ripetuto (…{{domain}}.{{domain}}) e il record non verrà mai verificato."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Funzionalità Pro",
+        "description": "Le istruzioni per i record DNS richiedono Pro."
+      }
     }
   },
   "inboundRules": {

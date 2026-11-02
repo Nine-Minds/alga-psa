@@ -98,7 +98,9 @@ const clientRow = (): Row => ({
   client_id: CLIENT_ID,
   client_name: 'Northstar Dental Group',
   properties: {},
-  location_address: '1 Parent Plaza, Emerald City',
+  address_line1: '1 Parent Plaza',
+  address_line2: '',
+  city: 'Emerald City',
 });
 
 const profileRow = (overrides: Row = {}): Row => ({
@@ -165,7 +167,9 @@ describe('invoice bill-to follows the billing profile it bills', () => {
         tenant: TENANT,
         client_id: CLIENT_ID,
         location_id: 'loc-site',
-        location_address: '42 Yellow Brick Road, Munchkinland',
+        address_line1: '42 Yellow Brick Road',
+        address_line2: '  ',
+        city: 'Munchkinland',
       }],
     }));
 

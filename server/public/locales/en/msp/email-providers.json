@@ -317,7 +317,7 @@
         "description": "Configure advanced email processing options",
         "folderFiltersLabel": "Folder Filters",
         "folderFiltersPlaceholder": "Inbox, Support, Custom Folder",
-        "folderFiltersHelp": "Comma-separated list of folders to monitor (default: Inbox)",
+        "folderFiltersHelp": "Comma-separated list of folders to monitor (default: Inbox). Use the exact folder name as it appears in Outlook, and write nested folders as Inbox/Subfolder.",
         "maxEmailsPerSync": "Max Emails Per Sync"
       }
     },
@@ -424,7 +424,8 @@
         "clientId": "OAuth Client ID",
         "clientSecret": "OAuth Client Secret",
         "scopes": "OAuth Scopes",
-        "scopesPlaceholder": "space-delimited scopes"
+        "scopesPlaceholder": "space-delimited scopes",
+        "clientSecretHelp": "The client secret is stored securely and will not be displayed. Leave blank to keep the existing secret."
       },
       "processing": {
         "title": "Processing Settings",
@@ -432,6 +433,9 @@
         "folderFilters": "Folder Filters",
         "folderFiltersPlaceholder": "Inbox, Support, Tickets",
         "active": "Active"
+      },
+      "messages": {
+        "reconnectRequired": "OAuth settings changed. Reconnect the mailbox to authorize it with the new settings."
       }
     }
   },
@@ -556,7 +560,8 @@
       "providerNameHelp": "Internal name used to identify this configuration. Not shown in outbound emails.",
       "senderDisplayName": "Sender Display Name",
       "senderDisplayNamePlaceholder": "e.g., Acme Support",
-      "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails (replies, closures). Applied only when this mailbox matches the tenant's outbound ticketing-from address. Leave blank to fall back to the ticket's board name."
+      "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails (replies, closures). Applied only when this mailbox matches the tenant's outbound ticketing-from address. Leave blank to fall back to the ticket's board name.",
+      "oauthClientSecretHelp": "The client secret is stored securely and will not be displayed. Leave blank to keep the existing secret."
     },
     "authOptions": {
       "password": "Password",
@@ -580,6 +585,9 @@
       "saving": "Saving...",
       "updateProvider": "Update Provider",
       "createProvider": "Create Provider"
+    },
+    "messages": {
+      "reconnectRequired": "OAuth settings changed. Reconnect the mailbox to authorize it with the new settings."
     }
   },
   "microsoftForm": {
@@ -727,6 +735,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Pro Feature",
+      "domainsDescription": "Managed domains require Pro.",
+      "settingsDescription": "Managed email settings require Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Failed to load managed domains",
       "loadOutboundSettingsFailed": "Failed to load outbound email settings",
@@ -930,6 +943,12 @@
       "copyHostAriaLabel": "Copy host",
       "copyFqdnAriaLabel": "Copy full name",
       "hostHint": "Tip: in your DNS provider, enter only the Host shown above. Most providers (Namecheap, GoDaddy, Cloudflare, and others) add “{{domain}}” automatically. If you paste the full name instead, the domain gets repeated (…{{domain}}.{{domain}}) and the record will never verify."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Pro Feature",
+        "description": "DNS record instructions require Pro."
+      }
     }
   },
   "inboundRules": {

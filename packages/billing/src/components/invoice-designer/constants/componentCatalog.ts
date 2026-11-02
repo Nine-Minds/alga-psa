@@ -33,7 +33,7 @@ const PALETTE_TYPES: ComponentDefinition['type'][] = [
   'attachment-list',
   'image',
   'logo',
-  'qr',
+  'barcode',
 ];
 
 export const COMPONENT_CATALOG: ComponentDefinition[] = PALETTE_TYPES.map((type) => {

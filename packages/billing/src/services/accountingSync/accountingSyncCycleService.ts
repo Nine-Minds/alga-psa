@@ -20,6 +20,7 @@ import { SyncMappingLedger } from './syncMappingLedger';
 import { applyExternalPaymentChange } from './paymentApplier';
 import { applyExternalCustomerChange } from './customerApplier';
 import { applyExternalDocumentChange } from './driftDetector';
+import { applyExternalVoidToInvoice } from './externalVoidApplier';
 import { getAccountingSyncSettings } from './accountingSyncSettings';
 import { WorkflowTaskSyncExceptionService } from './syncExceptionService';
 import type { SyncExceptionService } from './syncExceptions.types';
@@ -234,7 +235,16 @@ export async function runAccountingSyncCycle(params: RunCycleParams): Promise<Ru
 
       for (const change of [...byType('Invoice'), ...byType('CreditMemo')]) {
         await applyExternalDocumentChange(
-          { tenantId, targetRealm, ledger, exceptions, stats, adapterType },
+          {
+            tenantId,
+            targetRealm,
+            ledger,
+            exceptions,
+            stats,
+            adapterType,
+            applyLocalVoid: (invoiceId) =>
+              applyExternalVoidToInvoice({ knex, tenantId, invoiceId, adapterType, targetRealm })
+          },
           change
         );
       }

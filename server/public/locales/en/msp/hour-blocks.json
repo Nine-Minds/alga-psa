@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Hour Blocks",
-    "description": "One-time prepaid hour blocks. Time that isn't covered by a contract line draws down these blocks, oldest expiration first.",
+    "description": "Ad-hoc prepaid hour blocks. They catch only time that no contract line covers. Blocks issued by a Prepaid Block contract line are drawn only by that line's own time.",
     "availableBalance": "{{hours}} hrs available",
     "noBlocks": "No hour blocks yet. Sell a block to this client or grant comped hours.",
     "loadFailed": "Failed to load hour blocks. Try again."
@@ -30,7 +30,8 @@
     "status": "Status",
     "expiration": "Expiration",
     "source": "Source",
-    "actions": "Actions"
+    "actions": "Actions",
+    "validFrom": "Valid from {{date}}"
   },
   "status": {
     "pending": "Pending",
@@ -53,8 +54,10 @@
     "rateRequired": "Enter a valid rate.",
     "scopeLabel": "Scope — services this block covers (empty = all labor)",
     "serviceLabel": "Service",
+    "serviceNoResults": "No services found",
     "servicePlaceholder": "Select a service",
     "serviceRequired": "Select a service.",
+    "serviceSearchPlaceholder": "Search services...",
     "submit": "Create draft invoice",
     "submitted": "Draft invoice {{invoiceNumber}} created. Finalize it to activate the block.",
     "title": "Sell hour block",
@@ -126,7 +129,10 @@
     "autoExpired": "Auto-expired",
     "voidedLabel": "Voided",
     "purchaseReversed": "Purchase reversed (invoice unfinalized)",
-    "unknownUser": "System"
+    "unknownUser": "System",
+    "sourceContract": "Contract: {{contract}}",
+    "remainingValue": "Value of remaining hours: {{value}}",
+    "validFrom": "Valid from {{date}}"
   },
   "expire": {
     "error": "Could not expire the hour block.",

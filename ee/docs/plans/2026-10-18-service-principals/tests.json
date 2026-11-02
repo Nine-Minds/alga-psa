@@ -1,0 +1,421 @@
+[
+  {
+    "id": "T001",
+    "description": "DB integration: EE migrations apply on a migrated schema \u2014 inserting a user with user_type='service' succeeds and 'robot' fails the CHECK; service_principals, via columns, service_principal_limit and permission rows exist. On a CE-only migrated schema, inserting user_type='service' fails the CHECK",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F004",
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "DB integration: EE agent migration on seeded agents (one active, one inactive) yields service users with is_inactive mirroring agents.active, service_user_id backfilled, service_principals rows; rerun is a no-op; getLicenseUsage.used drops by the agent count",
+    "implemented": false,
+    "featureIds": [
+      "F087",
+      "F088",
+      "F003"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB integration: Pro tenant at its seat limit can still create an API principal and an MCP agent (seat usage unchanged); at the service-principal limit both fail with SERVICE_PRINCIPAL_LIMIT_REACHED and nothing is inserted",
+    "implemented": false,
+    "featureIds": [
+      "F023",
+      "F031",
+      "F072",
+      "F070",
+      "F030"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: limit resolution \u2014 hosted uses tenant override else 10; appliance uses the verified service_principals claim, ignores tenants.service_principal_limit, and falls back to 10 when the claim is missing or the token is invalid",
+    "implemented": false,
+    "featureIds": [
+      "F070",
+      "F071"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB integration: deactivating a principal sets is_inactive, deactivates its keys, and a previously minted mcp_agent session key fails validateApiKey immediately; reactivation is limit-checked and old keys stay inactive",
+    "implemented": false,
+    "featureIds": [
+      "F025",
+      "F026",
+      "F032",
+      "F034"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB integration: deleting a principal referenced by a ticket and mcp_agent_audit archives it (audit kept, IdP binding cleared, hidden from list, subject rebindable to a new agent); deleting an unused principal hard-deletes it; the archived principal no longer counts toward the limit",
+    "implemented": false,
+    "featureIds": [
+      "F027",
+      "F029",
+      "F033",
+      "F072"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: user-type predicates truth table for internal/client/service/unknown",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Integration: authenticateUser rejects a service user even after its hashed_password is set to a real valid hash (proves the gate is not the locked password); omitted userType is rejected",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Integration: signIn callback returns false for a service user on credentials and an OAuth provider, and no sessions row, last_login update or login-success record is written",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: checkTrackedSession, requireLiveSession and sessionAuthMiddleware reject a token whose stored user type is service; Next middleware sends it to sign-in",
+    "implemented": true,
+    "featureIds": [
+      "F037",
+      "F013",
+      "F045"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Integration: mobile \u2014 issueMobileOtt/exchange/refresh, Apple sign-in via a linked identity, and IAP restore all refuse a service user (and an inactive internal user)",
+    "implemented": true,
+    "featureIds": [
+      "F038",
+      "F039",
+      "F040"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Integration: createApiKey refuses a service owner for every purpose (including mobile_session, mcp_user); EE issueServicePrincipalKey creates an active purpose='service' key that validates",
+    "implemented": false,
+    "featureIds": [
+      "F041",
+      "F028"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Integration: adminChangeUserPassword, createResetToken, completePasswordReset and setNewPassword refuse a non-interactive target; deleteUser/invite/reactivate actions refuse it too",
+    "implemented": true,
+    "featureIds": [
+      "F042",
+      "F083"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Integration: REST GET /api/v1/tickets with a service principal key succeeds under its MSP role and 403s without the permission; a client-owned key is still rejected",
+    "implemented": false,
+    "featureIds": [
+      "F012",
+      "F020",
+      "F021",
+      "F022",
+      "F046",
+      "F047",
+      "F048",
+      "F099"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Integration: act-as validation \u2014 principal without allow_act_as \u2192 403 ACT_AS_NOT_ALLOWED; client or inactive or service target \u2192 422 ACT_AS_INVALID_TARGET; header on a human-owned key \u2192 400 ACT_AS_NOT_SUPPORTED",
+    "implemented": false,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Integration: act-as RBAC intersection \u2014 principal allowed but act-as human lacks permission \u2192 403; human allowed but principal lacks it \u2192 403; both allowed \u2192 200",
+    "implemented": false,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "DB integration: POST time entry as a service principal without act-as \u2192 422 ACT_AS_REQUIRED; with act-as \u2192 user_id and created_by are the human and created_via_principal_id is the principal",
+    "implemented": false,
+    "featureIds": [
+      "F055",
+      "F062",
+      "F049"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "DB integration: principal creates a ticket as itself (entered_by = principal, assigned_to = human ok, ticket_audit_logs actor_type service_principal); assigned_to or added resource = a service user \u2192 422 HUMAN_WORK_ASSIGNEE_INVALID",
+    "implemented": false,
+    "featureIds": [
+      "F052",
+      "F053",
+      "F066",
+      "F065"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "DB integration: interaction create and schedule entry create by a principal with no assignees and no act-as \u2192 ACT_AS_REQUIRED (no self-booking); explicit service assignee rejected; with act-as the via column is stamped",
+    "implemented": false,
+    "featureIds": [
+      "F054",
+      "F059",
+      "F060",
+      "F064"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "DB integration: time-sheet approve and time-entry approve by a bare principal \u2192 ACT_AS_REQUIRED; with act-as approved_by is the human and approved_via_principal_id is stamped",
+    "implemented": false,
+    "featureIds": [
+      "F056",
+      "F057",
+      "F063"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "DB integration: project task create/update with assigned_to or task resource = service user is rejected",
+    "implemented": true,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "DB integration: a legacy ticket whose assigned_to is a migrated (now service) agent user can still have its status changed; changing assigned_to to that user is rejected",
+    "implemented": true,
+    "featureIds": [
+      "F061"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "DB integration: act-as ticket update writes ticket_audit_logs actor_type='user', actor_user_id = human, via_principal_user_id = principal; auditLog details carry via",
+    "implemented": false,
+    "featureIds": [
+      "F066",
+      "F067",
+      "F065"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Unit: MCP call with act_as_user_id forwards X-Alga-Act-As on selfFetch and writes mcp_agent_audit.act_as_user_id",
+    "implemented": false,
+    "featureIds": [
+      "F068",
+      "F090"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Unit: two different keys for one principal consume the same sp:<id> bucket; rateLimitConfig resolves per-key row \u2192 principal override \u2192 Pro default; CE enforce honors the context override; override above ceiling rejected",
+    "implemented": false,
+    "featureIds": [
+      "F073",
+      "F074",
+      "F005"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "DB integration: getAllUsers/getAllUsersBasic and UserService list exclude service users by default and include them with includeServicePrincipals; Settings \u2192 Users MSP tab data excludes them",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F019",
+      "F082"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "DB integration: REST UserService.update cannot change user_type to/from service; REST UserService.create rejects 'service' and blocks an internal user at the seat limit",
+    "implemented": false,
+    "featureIds": [
+      "F085",
+      "F086",
+      "F030"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Unit: comment author resolution and authorization-subject normalizers return service for a service user (never client/contact or internal)",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Unit (static guard): no non-test source contains a raw `user_type !== 'client'` or `=== 'client' ? 'client' : 'internal'` pattern outside packages/types predicates",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F013",
+      "F014",
+      "F015",
+      "F017"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Component: Service principals tab lists principals with kind badges and display names, shows 'x of y', disables New at the limit; create dialog saves roles and act-as",
+    "implemented": false,
+    "featureIds": [
+      "F078",
+      "F079",
+      "F075",
+      "F024"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Component: Manage keys dialog shows the new key once, revokes and rotates",
+    "implemented": false,
+    "featureIds": [
+      "F080",
+      "F028"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Component: AccountManagement and LicenseManagementPage render the service-principal usage row; MCP settings shows the shared limit",
+    "implemented": false,
+    "featureIds": [
+      "F076",
+      "F077",
+      "F081"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Component: ticket activity and time-entry detail render '<human> via <principal>'; service-authored comment renders Service badge",
+    "implemented": false,
+    "featureIds": [
+      "F069"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Component: API keys admin list shows principal name + Service badge for principal-owned keys",
+    "implemented": false,
+    "featureIds": [
+      "F084"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "DB integration (EE): on an essentials tenant createServicePrincipal (api) and createAgent both fail with TIER_ACCESS_DENIED and insert nothing; a pre-existing principal's key still authenticates while reactivation and new key issuance are refused",
+    "implemented": false,
+    "featureIds": [
+      "F092",
+      "F093",
+      "F094"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Component: below Pro the Service principals tab and MCP agent create show the upgrade notice, grandfathered principals list with deactivate/delete only, and the license page row reads 'Available on Pro'",
+    "implemented": false,
+    "featureIds": [
+      "F095"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Unit (CE build): with the oss entry, buildAuthenticatedApiContext rejects a key owned by a non-internal, non-client user, getKeyGateReason rejects it, and the @enterprise service-principal component stubs render null",
+    "implemented": false,
+    "featureIds": [
+      "F097",
+      "F098",
+      "F046",
+      "F047"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Unit (static guard): no file outside ee/, packages/product-service-principals/ or packages/ee/ references service_principals, X-Alga-Act-As, the 'service' key purpose or the entitlement constant",
+    "implemented": false,
+    "featureIds": [
+      "F096"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Integration (EE): service-principal server actions refuse callers without an interactive internal session or without service_principal permission",
+    "implemented": false,
+    "featureIds": [
+      "F100"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "DB integration: principal posts a ticket comment with no visibility \u2192 stored internal; explicit is_internal=false without act-as \u2192 422 ACT_AS_REQUIRED and nothing stored; with act-as \u2192 public comment authored by the human with created_via_principal_id; a client-portal user's public comment is unaffected",
+    "implemented": false,
+    "featureIds": [
+      "F101"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Unit: authorization kernel joint-subject evaluation \u2014 allows only when both subjects allow; record-level rules evaluated for each subject; a single-subject call behaves exactly as today",
+    "implemented": false,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "DB integration (CE rule): a ticket comment by a non-interactive author with no visibility is stored internal; explicit is_internal=false throws HumanWorkOwnerRequiredError('is_internal') and stores nothing; client-portal and inbound-email comments unaffected",
+    "implemented": true,
+    "featureIds": [
+      "F101",
+      "F016"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "DB integration (CE guard): assertHumanWorkAssignee rejects a non-interactive id as ticket assignee, ticket resource, schedule assignee, time-entry owner, time-sheet approver and interaction owner; writes that default the owner to a non-internal caller throw HumanWorkOwnerRequiredError; internal ids pass",
+    "implemented": true,
+    "featureIds": [
+      "F052",
+      "F053",
+      "F054",
+      "F055",
+      "F056",
+      "F057",
+      "F059",
+      "F060"
+    ]
+  }
+]

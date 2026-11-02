@@ -6,52 +6,52 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
   const UserIdParam = registry.registerSchema(
     'AccessUserIdParamV1',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('User UUID from users.user_id.'),
+      id: zOpenApi.string().guid().describe('User UUID from users.user_id.'),
     }),
   );
 
   const RoleIdParam = registry.registerSchema(
     'AccessRoleIdParamV1',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Role UUID from roles.role_id.'),
+      id: zOpenApi.string().guid().describe('Role UUID from roles.role_id.'),
     }),
   );
 
   const TeamIdParam = registry.registerSchema(
     'AccessTeamIdParamV1',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Team UUID from teams.team_id.'),
+      id: zOpenApi.string().guid().describe('Team UUID from teams.team_id.'),
     }),
   );
 
   const TeamMemberParams = registry.registerSchema(
     'AccessTeamMemberParamsV1',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Team UUID from teams.team_id.'),
-      userId: zOpenApi.string().uuid().describe('User UUID from users.user_id.'),
+      id: zOpenApi.string().guid().describe('Team UUID from teams.team_id.'),
+      userId: zOpenApi.string().guid().describe('User UUID from users.user_id.'),
     }),
   );
 
   const TeamPermissionParams = registry.registerSchema(
     'AccessTeamPermissionParamsV1',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Team UUID from teams.team_id.'),
-      permissionId: zOpenApi.string().uuid().describe('Permission UUID from permissions.permission_id.'),
+      id: zOpenApi.string().guid().describe('Team UUID from teams.team_id.'),
+      permissionId: zOpenApi.string().guid().describe('Permission UUID from permissions.permission_id.'),
     }),
   );
 
   const UserTeamParams = registry.registerSchema(
     'AccessUserTeamParamsV1',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('User UUID from users.user_id.'),
-      teamId: zOpenApi.string().uuid().describe('Team UUID from teams.team_id.'),
+      id: zOpenApi.string().guid().describe('User UUID from users.user_id.'),
+      teamId: zOpenApi.string().guid().describe('Team UUID from teams.team_id.'),
     }),
   );
 
   const PermissionIdParam = registry.registerSchema(
     'AccessPermissionIdParamV1',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Permission UUID from permissions.permission_id.'),
+      id: zOpenApi.string().guid().describe('Permission UUID from permissions.permission_id.'),
     }),
   );
 
@@ -67,8 +67,8 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
       last_name: zOpenApi.string().optional(),
       email: zOpenApi.string().optional(),
       user_type: zOpenApi.enum(['internal', 'client', 'admin', 'contractor']).optional(),
-      role_id: zOpenApi.string().uuid().optional(),
-      team_id: zOpenApi.string().uuid().optional(),
+      role_id: zOpenApi.string().guid().optional(),
+      team_id: zOpenApi.string().guid().optional(),
       is_inactive: zOpenApi.enum(['true', 'false']).optional(),
       include_permissions: zOpenApi.enum(['true', 'false']).optional(),
       include_teams: zOpenApi.enum(['true', 'false']).optional(),
@@ -82,8 +82,8 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
       query: zOpenApi.string(),
       fields: zOpenApi.string().optional().describe('Controller query parser sends strings; schema expects an array of field names.'),
       user_type: zOpenApi.enum(['internal', 'client', 'admin', 'contractor']).optional(),
-      role_id: zOpenApi.string().uuid().optional(),
-      team_id: zOpenApi.string().uuid().optional(),
+      role_id: zOpenApi.string().guid().optional(),
+      team_id: zOpenApi.string().guid().optional(),
       include_inactive: zOpenApi.enum(['true', 'false']).optional(),
       limit: zOpenApi.string().optional(),
     }),
@@ -148,7 +148,8 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
       sort: zOpenApi.string().optional(),
       order: zOpenApi.enum(['asc', 'desc']).optional(),
       team_name: zOpenApi.string().optional(),
-      manager_id: zOpenApi.string().uuid().optional(),
+      description: zOpenApi.string().optional(),
+      manager_id: zOpenApi.string().guid().optional(),
       fields: zOpenApi.string().optional(),
     }),
   );
@@ -159,7 +160,7 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
       query: zOpenApi.string().optional(),
       page: zOpenApi.string().optional(),
       limit: zOpenApi.string().optional(),
-      manager_id: zOpenApi.string().uuid().optional(),
+      manager_id: zOpenApi.string().guid().optional(),
       has_manager: zOpenApi.enum(['true', 'false']).optional(),
       sort: zOpenApi.string().optional(),
       order: zOpenApi.enum(['asc', 'desc']).optional(),
@@ -187,11 +188,11 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
       phone: zOpenApi.string().optional(),
       timezone: zOpenApi.string().optional(),
       user_type: zOpenApi.enum(['internal', 'client', 'admin', 'contractor']).optional(),
-      contact_id: zOpenApi.string().uuid().optional(),
+      contact_id: zOpenApi.string().guid().optional(),
       two_factor_enabled: zOpenApi.boolean().optional(),
       is_google_user: zOpenApi.boolean().optional(),
       is_inactive: zOpenApi.boolean().optional(),
-      role_ids: zOpenApi.array(zOpenApi.string().uuid()).optional(),
+      role_ids: zOpenApi.array(zOpenApi.string().guid()).optional(),
     }),
   );
 
@@ -212,13 +213,13 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
   const UserRoleIdsBody = registry.registerSchema(
     'AccessUserRoleIdsBodyV1',
     zOpenApi.object({
-      role_ids: zOpenApi.array(zOpenApi.string().uuid()).min(1),
+      role_ids: zOpenApi.array(zOpenApi.string().guid()).min(1),
     }),
   );
 
   const UserPreferenceBody = registry.registerSchema(
     'AccessUserPreferenceBodyV1',
-    zOpenApi.record(zOpenApi.unknown()).describe('Controller forwards request body directly to UserService.updateUserPreferences().'),
+    zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('Controller forwards request body directly to UserService.updateUserPreferences().'),
   );
 
   const Enable2FABody = registry.registerSchema(
@@ -234,8 +235,8 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       role_name: zOpenApi.string(),
       description: zOpenApi.string().optional(),
-      permissions: zOpenApi.array(zOpenApi.string().uuid()).optional(),
-      copy_from_role_id: zOpenApi.string().uuid().optional(),
+      permissions: zOpenApi.array(zOpenApi.string().guid()).optional(),
+      copy_from_role_id: zOpenApi.string().guid().optional(),
       is_template: zOpenApi.boolean().optional(),
     }),
   );
@@ -258,7 +259,7 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
   const RolePermissionsBody = registry.registerSchema(
     'AccessRolePermissionsBodyV1',
     zOpenApi.object({
-      permission_ids: zOpenApi.array(zOpenApi.string().uuid()).min(1),
+      permission_ids: zOpenApi.array(zOpenApi.string().guid()).min(1),
     }),
   );
 
@@ -286,7 +287,7 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
   const PermissionChecksBody = registry.registerSchema(
     'AccessPermissionChecksBodyV1',
     zOpenApi.object({
-      user_id: zOpenApi.string().uuid().optional(),
+      user_id: zOpenApi.string().guid().optional(),
       permissions: zOpenApi
         .array(
           zOpenApi.object({
@@ -302,8 +303,9 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
     'AccessCreateTeamBodyV1',
     zOpenApi.object({
       team_name: zOpenApi.string(),
-      manager_id: zOpenApi.string().uuid().optional(),
-      members: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).optional(),
+      description: zOpenApi.string().max(1000).nullable().optional(),
+      manager_id: zOpenApi.string().guid().optional(),
+      members: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())).optional(),
     }),
   );
 
@@ -315,21 +317,21 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
   const AddTeamMemberBody = registry.registerSchema(
     'AccessAddTeamMemberBodyV1',
     zOpenApi.object({
-      user_id: zOpenApi.string().uuid(),
+      user_id: zOpenApi.string().guid(),
     }),
   );
 
   const BulkAddTeamMembersBody = registry.registerSchema(
     'AccessBulkAddTeamMembersBodyV1',
     zOpenApi.object({
-      user_ids: zOpenApi.array(zOpenApi.string().uuid()).min(1),
+      user_ids: zOpenApi.array(zOpenApi.string().guid()).min(1),
     }),
   );
 
   const AssignTeamManagerBody = registry.registerSchema(
     'AccessAssignTeamManagerBodyV1',
     zOpenApi.object({
-      manager_id: zOpenApi.string().uuid(),
+      manager_id: zOpenApi.string().guid(),
     }),
   );
 
@@ -346,22 +348,22 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
   const TeamHierarchyBody = registry.registerSchema(
     'AccessTeamHierarchyBodyV1',
     zOpenApi.object({
-      parent_team_id: zOpenApi.string().uuid().nullable().optional(),
+      parent_team_id: zOpenApi.string().guid().nullable().optional(),
     }),
   );
 
   const TeamBulkUpdateBody = registry.registerSchema(
     'AccessTeamBulkUpdateBodyV1',
     zOpenApi.object({
-      team_ids: zOpenApi.array(zOpenApi.string().uuid()).min(1),
-      updates: zOpenApi.record(zOpenApi.unknown()),
+      team_ids: zOpenApi.array(zOpenApi.string().guid()).min(1),
+      updates: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
     }),
   );
 
   const TeamBulkDeleteBody = registry.registerSchema(
     'AccessTeamBulkDeleteBodyV1',
     zOpenApi.object({
-      team_ids: zOpenApi.array(zOpenApi.string().uuid()).min(1),
+      team_ids: zOpenApi.array(zOpenApi.string().guid()).min(1),
     }),
   );
 
@@ -380,17 +382,17 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
     'AccessApiSuccessV1',
     zOpenApi.object({
       data: zOpenApi.union([
-        zOpenApi.record(zOpenApi.unknown()),
-        zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+        zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
+        zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
       ]),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
   const ApiPaginated = registry.registerSchema(
     'AccessApiPaginatedV1',
     zOpenApi.object({
-      data: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+      data: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
       pagination: zOpenApi.object({
         page: zOpenApi.number().int(),
         limit: zOpenApi.number().int(),
@@ -399,7 +401,7 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
         hasNext: zOpenApi.boolean(),
         hasPrev: zOpenApi.boolean(),
       }),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 

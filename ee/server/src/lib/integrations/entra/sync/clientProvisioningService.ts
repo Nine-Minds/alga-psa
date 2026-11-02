@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { createDefaultTaxSettings } from '@alga-psa/shared/billingClients';
+import { createClientWithDefaults } from '@alga-psa/shared/models/clientCreation';
 
 export interface ProvisionEntraClientResult {
   client: {
@@ -62,27 +62,23 @@ export async function provisionEntraClientForMapping(
       || managedTenant.entra_tenant_id
       || 'Imported Entra Tenant'
     );
-    const now = new Date().toISOString();
-    const [client] = await db.table('clients')
-      .insert({
-        tenant: params.tenantId,
-        client_name: clientName,
-        url: managedTenant.primary_domain || null,
-        properties: managedTenant.primary_domain
-          ? { website: managedTenant.primary_domain }
-          : {},
-        entra_tenant_id: managedTenant.entra_tenant_id,
-        entra_primary_domain: managedTenant.primary_domain || null,
-        created_at: now,
-        updated_at: now,
-      })
-      .returning(['client_id', 'client_name', 'created_at']);
+    // The shared creation seam owns the insert plus the tenant default
+    // currency, default billing profile, default contract and default tax
+    // settings — all inside this transaction.
+    const client = await createClientWithDefaults(trx, params.tenantId, {
+      client_name: clientName,
+      url: managedTenant.primary_domain || null,
+      properties: managedTenant.primary_domain
+        ? { website: managedTenant.primary_domain }
+        : {},
+      entra_tenant_id: managedTenant.entra_tenant_id,
+      entra_primary_domain: managedTenant.primary_domain || null,
+    });
 
     if (!client?.client_id) {
       throw new Error(`Failed to provision a client for ${clientName}.`);
     }
 
-    await createDefaultTaxSettings(trx, params.tenantId, String(client.client_id));
     await db.table('entra_client_tenant_mappings')
       .where({ mapping_id: activeMapping.mapping_id })
       .update({

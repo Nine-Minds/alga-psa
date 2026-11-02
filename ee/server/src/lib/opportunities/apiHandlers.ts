@@ -49,7 +49,7 @@ export type OpportunityManagementApiOperation =
   | 'qbr-yield'
   | 'seller-rollups';
 
-const uuid = z.string().uuid();
+const uuid = z.string().guid();
 
 function queryObject(request: Request): Record<string, string> {
   return Object.fromEntries(new URL(request.url).searchParams.entries());
@@ -61,7 +61,7 @@ async function parseBody(request: Request): Promise<unknown> {
 
 function validation<T>(schema: z.ZodType<T>, input: unknown): T {
   const parsed = schema.safeParse(input);
-  if (!parsed.success) throw new ValidationError('Validation failed', parsed.error.errors);
+  if (!parsed.success) throw new ValidationError('Validation failed', parsed.error.issues);
   return parsed.data;
 }
 
