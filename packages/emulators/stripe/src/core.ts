@@ -38,10 +38,29 @@ export interface StripeCustomer {
   email: string;
   name: string;
   metadata: Record<string, string>;
+  invoice_settings: { default_payment_method: string | null };
+  currency: string | null;
   created: number;
   livemode: false;
   deleted?: boolean;
   [key: string]: unknown;
+}
+
+export interface StripePaymentMethod {
+  id: string;
+  object: 'payment_method';
+  type: 'card';
+  customer: string | null;
+  created: number;
+  card: { brand: string; last4: string; exp_month: number; exp_year: number; fingerprint: string };
+  metadata: Record<string, string>;
+  allow_redisplay: 'always' | 'limited' | 'unspecified';
+  livemode: false;
+}
+
+export interface StripeSetupIntent {
+  id: string; object: 'setup_intent'; customer: string; payment_method: string;
+  status: 'succeeded'; usage: 'off_session'; created: number; livemode: false;
 }
 
 export interface StripeLineItemInput {
@@ -91,6 +110,7 @@ export interface StripePaymentIntent {
   customer: string;
   metadata: Record<string, string>;
   payment_method: string | null;
+  setup_future_usage?: 'on_session' | 'off_session' | null;
   created: number;
   last_payment_error?: { type: string; code: string; message: string };
   [key: string]: unknown;
@@ -212,6 +232,8 @@ export class StripeEmulatorCore implements EmulatorCore {
   hostedBaseUrl: string | null = null;
 
   readonly customers = new Map<string, StripeCustomer>();
+  readonly paymentMethods = new Map<string, StripePaymentMethod>();
+  readonly setupIntents = new Map<string, StripeSetupIntent>();
   readonly sessions = new Map<string, StripeCheckoutSession>();
   readonly paymentIntents = new Map<string, StripePaymentIntent>();
   readonly products = new Map<string, StripeProduct>();
@@ -231,6 +253,8 @@ export class StripeEmulatorCore implements EmulatorCore {
 
   reset(): void {
     this.customers.clear();
+    this.paymentMethods.clear();
+    this.setupIntents.clear();
     this.sessions.clear();
     this.paymentIntents.clear();
     this.products.clear();
@@ -305,7 +329,7 @@ export class StripeEmulatorCore implements EmulatorCore {
     return { object: 'list', url: '/v1/customers', has_more: false, data };
   }
 
-  createCustomer(input: { id?: string; email: string; name?: string; metadata?: Record<string, string> }): StripeCustomer {
+  createCustomer(input: { id?: string; email: string; name?: string; metadata?: Record<string, string>; defaultPaymentMethod?: string }): StripeCustomer {
     const id = input.id ?? this.newId('cus');
     const customer: StripeCustomer = {
       id,
@@ -313,6 +337,8 @@ export class StripeEmulatorCore implements EmulatorCore {
       email: input.email,
       name: input.name ?? '',
       metadata: input.metadata ?? {},
+      invoice_settings: { default_payment_method: input.defaultPaymentMethod ?? null },
+      currency: 'usd',
       created: this.nowUnix(),
       livemode: false,
     };
@@ -326,6 +352,62 @@ export class StripeEmulatorCore implements EmulatorCore {
       throw new StripeWireError(404, `No such customer: ${id}`);
     }
     return customer;
+  }
+
+  updateCustomer(id: string, input: { metadata?: Record<string, string>; invoice_settings?: { default_payment_method?: string | null } }): StripeCustomer {
+    const customer = this.getCustomer(id);
+    if (input.metadata) customer.metadata = { ...customer.metadata, ...input.metadata };
+    if (input.invoice_settings?.default_payment_method !== undefined) {
+      customer.invoice_settings.default_payment_method = input.invoice_settings.default_payment_method;
+    }
+    return customer;
+  }
+
+  listCustomerPaymentMethods(customerId: string): StripeList<StripePaymentMethod> {
+    this.getCustomer(customerId);
+    return { object: 'list', url: `/v1/customers/${customerId}/payment_methods`, has_more: false,
+      data: [...this.paymentMethods.values()].filter((method) => method.customer === customerId) };
+  }
+
+  createPaymentMethod(input: { id: string; customer: string; brand?: string; last4?: string; expMonth?: number; expYear?: number; fingerprint?: string; metadata?: Record<string, string>; allowRedisplay?: StripePaymentMethod['allow_redisplay']; offSession?: boolean; isDefault?: boolean }): StripePaymentMethod {
+    this.getCustomer(input.customer);
+    const method: StripePaymentMethod = {
+      id: input.id, object: 'payment_method', type: 'card', customer: input.customer, created: this.nowUnix(),
+      card: { brand: input.brand ?? 'visa', last4: input.last4 ?? '4242', exp_month: input.expMonth ?? 12,
+        exp_year: input.expYear ?? 2030, fingerprint: input.fingerprint ?? `fp_${input.id}` },
+      metadata: input.metadata ?? {}, allow_redisplay: input.allowRedisplay ?? 'always', livemode: false,
+    };
+    this.paymentMethods.set(method.id, method);
+    if (input.isDefault) this.updateCustomer(input.customer, { invoice_settings: { default_payment_method: method.id } });
+    if (input.offSession !== false) {
+      const intentId = `seti_${input.id.replace(/^pm_/, '')}`;
+      this.setupIntents.set(intentId, { id: intentId, object: 'setup_intent', customer: input.customer,
+        payment_method: method.id, status: 'succeeded', usage: 'off_session', created: this.nowUnix(), livemode: false });
+    }
+    return method;
+  }
+
+  getPaymentMethod(id: string): StripePaymentMethod {
+    const method = this.paymentMethods.get(id);
+    if (!method) throw new StripeWireError(404, `No such payment_method: ${id}`, 'invalid_request_error', 'resource_missing');
+    return method;
+  }
+
+  updatePaymentMethod(id: string, metadata: Record<string, string>): StripePaymentMethod {
+    const method = this.getPaymentMethod(id);
+    method.metadata = { ...method.metadata, ...metadata };
+    return method;
+  }
+
+  listSetupIntents(customerId?: string): StripeList<StripeSetupIntent> {
+    const data = [...this.setupIntents.values()].filter((intent) => !customerId || intent.customer === customerId);
+    return { object: 'list', url: '/v1/setup_intents', has_more: false, data };
+  }
+
+  listPaymentIntents(customerId?: string): StripeList<Record<string, unknown>> {
+    const data = [...this.paymentIntents.values()].filter((intent) => !customerId || intent.customer === customerId)
+      .map((intent) => ({ ...intent }));
+    return { object: 'list', url: '/v1/payment_intents', has_more: false, data };
   }
 
   // ── Products ──────────────────────────────────────────────────────────────

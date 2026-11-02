@@ -18,13 +18,21 @@ const operation = process.argv[2] || 'seed';
 if (operation === 'reset') {
   await call('/control/stripe/reset', {});
   console.log('Dedicated Stripe emulator reset to repository defaults.');
+} else if (operation === 'mismatch') {
+  await call('/control/stripe/seed/config', { accountId: 'acct_review_other' });
+  console.log('Emulator account changed to acct_review_other. Run the normal seed command to restore acct_review_4089.');
 } else if (operation === 'seed') {
   await call('/control/stripe/seed/config', { secretKey: 'sk_test_algasim', accountId: 'acct_review_4089' });
-  for (const [email, name, id] of [
-    ['legacy-4089@example.invalid', 'Legacy review customer', 'cus_review_4089_legacy'],
-    ['conflict-4089@example.invalid', 'Ownership conflict customer', 'cus_review_4089_conflict'],
-  ]) await call('/control/stripe/seed/customer', { email, name, id });
-  console.log('PR 4089 account and customer fixtures are ready on the dedicated Stripe emulator.');
+  await call('/control/stripe/seed/customer', { email: 'legacy-4089@example.invalid', name: 'Legacy review customer', id: 'cus_review4089legacy' });
+  await call('/control/stripe/seed/payment-method', { id: 'pm_review4089legacy', customer: 'cus_review4089legacy', isDefault: true, offSession: true, last4: '4242', brand: 'visa' });
+  await call('/control/stripe/seed/customer', {
+    email: 'conflict-4089@example.invalid', name: 'Ownership conflict customer', id: 'cus_review4089conflict',
+    metadata: { tenant_id: 'tenant_other_4089', stripe_account_id: 'acct_review_4089' },
+  });
+  await call('/control/stripe/seed/payment-method', {
+    id: 'pm_review4089conflict', customer: 'cus_review4089conflict', isDefault: true, offSession: true, last4: '0005', brand: 'visa',
+  });
+  console.log('PR 4089 emulator fixtures ready: one legacy customer with a default off-session card and one customer owned by another tenant.');
 } else {
-  throw new Error('Usage: node packages/emulators/stripe/scripts/prepare-tenant-binding-review.mjs [seed|reset]');
+  throw new Error('Usage: node packages/emulators/stripe/scripts/prepare-tenant-binding-review.mjs [seed|mismatch|reset]');
 }
