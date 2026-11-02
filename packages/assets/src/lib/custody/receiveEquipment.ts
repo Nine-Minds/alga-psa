@@ -90,7 +90,8 @@ export async function receiveEquipmentForTicket(
   trx: Knex.Transaction,
   tenant: string,
   actorUserId: string,
-  input: ReceiveEquipmentInput
+  input: ReceiveEquipmentInput,
+  authorizeAssetUpdate: (assetId: string) => Promise<void>
 ): Promise<ReceiveEquipmentResult> {
   const db = tenantDb(trx, tenant);
   const ticket = await db
@@ -136,6 +137,10 @@ export async function receiveEquipmentForTicket(
       asset_type: created.asset_type,
     };
   }
+
+  // For a new asset this check runs after creation but before custody rows are written; denial rolls the
+  // newly-created asset back with the caller's transaction. Existing assets are checked at this same boundary.
+  await authorizeAssetUpdate(assetId!);
 
   // openCustody enforces client match, open-episode and location/holder validity.
   const opened = await openCustody(trx, tenant, actorUserId, {
