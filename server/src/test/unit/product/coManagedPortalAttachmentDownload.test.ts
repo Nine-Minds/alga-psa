@@ -22,11 +22,13 @@ it('binds the store to the requester session and transports only an authorized p
   expect(result.headers.get('content-security-policy')).toContain('sandbox'); expect(result.headers.get('x-content-type-options')).toBe('nosniff');
   expect(result.headers.get('content-disposition')).toContain("filename*=UTF-8''R%C3%A9sum%C3%A9%20%22note%22.html");
 });
-it.each(['api', 'internal', 'missing'])('rejects %s credentials before storage access', async kind => {
+it.each(['api', 'internal', 'service', 'unknown', 'missing-type', 'missing-user', 'missing-session-id', 'missing'])('rejects %s credentials before storage access', async kind => {
   if (kind === 'api') mocks.override.mockReturnValue({});
-  if (kind === 'internal') mocks.session.mockResolvedValue({ session_id: 'session', user: { id: 'actor', tenant: 'customer', user_type: 'internal' } });
+  if (['internal', 'service', 'unknown', 'missing-type'].includes(kind)) mocks.session.mockResolvedValue({ session_id: 'session', user: { id: 'actor', tenant: 'customer', user_type: kind === 'missing-type' ? undefined : kind } });
+  if (kind === 'missing-user') mocks.session.mockResolvedValue({ session_id: 'session' });
+  if (kind === 'missing-session-id') mocks.session.mockResolvedValue({ user: { id: 'actor', tenant: 'customer', user_type: 'client' } });
   if (kind === 'missing') mocks.session.mockResolvedValue(null);
-  expect((await GET(request(), params)).status).toBe(401); expect(mocks.download).not.toHaveBeenCalled(); expect(mocks.provider).not.toHaveBeenCalled();
+  expect((await GET(request(), params)).status).toBe(401); expect(mocks.download).not.toHaveBeenCalled(); expect(mocks.provider).not.toHaveBeenCalled(); expect(mocks.db).not.toHaveBeenCalled();
 });
 it('returns opaque denials and storage failures without disclosing paths', async () => {
   mocks.download.mockRejectedValue(new mocks.Forbidden()); expect((await GET(request(), params)).status).toBe(404);

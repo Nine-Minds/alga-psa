@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { isClientUserType } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getPortalConversationAttachmentsAction } from '@/lib/actions/coManagedPortalAttachmentActions';
@@ -15,7 +16,7 @@ export default function CoManagedPortalAttachments(props: TicketConversationAtta
 function PortalAttachments({ ticketId, comment }: TicketConversationAttachmentsProps) {
   const { data: session } = useSession();
   const identity = `${session?.session_id}:${session?.user?.tenant}:${session?.user?.id}:${ticketId}:${comment.thread_id}:${comment.comment_id}`;
-  if (session?.user?.user_type !== 'client' || !session.user.tenant || !session.user.id || !comment.thread_id || !comment.comment_id || comment.deleted_at) return null;
+  if (!isClientUserType(session?.user?.user_type) || !session?.user?.tenant || !session.user.id || !comment.thread_id || !comment.comment_id || comment.deleted_at) return null;
   return <AttachmentList key={identity} tenant={session.user.tenant} userId={session.user.id}
     target={{ ticketId, threadId: comment.thread_id, commentId: comment.comment_id }} />;
 }

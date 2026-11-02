@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, getApiKeyUserOverride } from '@alga-psa/auth';
 import { getConnection } from '@alga-psa/db';
+import { isClientUserType } from '@alga-psa/types';
 import { capabilityRouteGuard } from '@alga-psa/core/capability/server';
 import { CoManagedSharedWorkError } from '@alga-psa/co-managed';
 import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
@@ -10,7 +11,7 @@ import { conversationAttachmentHeaders as headers, conversationAttachmentRespons
 export async function GET(request: NextRequest, { params }: { params: Promise<{ attachmentId: string }> }) {
   try {
     const session = await getSession();
-    if (getApiKeyUserOverride() || !session?.session_id || session.user?.user_type !== 'client' || !session.user.tenant || !session.user.id)
+    if (getApiKeyUserOverride() || !session?.session_id || !isClientUserType(session.user?.user_type) || !session.user?.tenant || !session.user.id)
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers });
     const closed = await capabilityRouteGuard('co-managed', session.user.tenant, 'serves');
     if (closed) return closed;

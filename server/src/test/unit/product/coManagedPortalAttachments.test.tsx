@@ -30,6 +30,12 @@ it('skips deleted or unqualified comments', () => {
   render(view({ ...comment, deleted_at: '2026-09-07T00:00:00Z' })); expect(mocks.load).not.toHaveBeenCalled(); cleanup();
   render(view({ ...comment, thread_id: null })); expect(mocks.load).not.toHaveBeenCalled();
 });
+it.each(['internal', 'service', 'unknown', undefined])('does not load or display requester files for user type %s', userType => {
+  mocks.session.user.user_type = userType as any;
+  render(view());
+  expect(mocks.load).not.toHaveBeenCalled();
+  expect(screen.queryByRole('link')).toBeNull();
+});
 it('clears filenames when periodic access revalidation fails and reloads only through the authorized action', async () => {
   vi.useFakeTimers(); await act(async () => { render(view()); }); expect(screen.getByRole('link')).toBeInTheDocument();
   mocks.load.mockRejectedValue(new Error('Revoked')); await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
