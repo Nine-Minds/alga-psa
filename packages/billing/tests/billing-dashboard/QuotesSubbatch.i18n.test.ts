@@ -56,6 +56,7 @@ describe('Quotes i18n wiring contract', () => {
       'templateEditor',
       'templatesPage',
       'errors',
+      'quoteDecision',
     ]);
   });
 

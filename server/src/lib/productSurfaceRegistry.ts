@@ -116,6 +116,13 @@ export const PORTAL_ROUTE_RULES: readonly RouteRule[] = [
 
 export const API_RULES: readonly ApiRule[] = [
   {
+    // Bearer-link quote review belongs to billing, outside the public v1 API.
+    group: 'api_public_quote',
+    staticPrefixes: ['/api/quote'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false },
+  },
+  {
     // Authenticated app-internal stream used by ticket and project list smart
     // search. It is not part of the public v1 metadata surface.
     group: 'api_smart_search',

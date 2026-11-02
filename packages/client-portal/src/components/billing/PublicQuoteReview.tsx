@@ -148,7 +148,6 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
       {(branding.name || branding.logoUrl) && (
         <div className="flex items-center gap-3" data-testid="public-quote-branding">
           {branding.logoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element -- same-origin tenant logo, validated server-side
             <img src={branding.logoUrl} alt={branding.name ?? ''} className="h-10 w-auto" />
           )}
           {branding.name && <span className="text-lg font-semibold">{branding.name}</span>}

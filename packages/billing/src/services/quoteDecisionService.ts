@@ -165,7 +165,7 @@ async function authorizeActor(
       quoteId,
       ['sent'],
     );
-    if (access.ok) return { ok: true, quote: access.quote };
+    if (access.ok === true) return { ok: true, quote: access.quote };
     switch (access.reason) {
       case 'no_client':
       case 'no_billing_permission':
@@ -303,7 +303,7 @@ async function decideInTransaction(
   }
 
   const authorized = await authorizeActor(trx, input);
-  if (!authorized.ok) {
+  if (authorized.ok === false) {
     return authorized.result;
   }
 
