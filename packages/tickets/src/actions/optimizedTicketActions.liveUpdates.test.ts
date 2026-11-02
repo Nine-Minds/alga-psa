@@ -916,7 +916,10 @@ describe('updateTicketWithCache live updates', () => {
     withTransactionMock.mockImplementation(async (_db: any, callback: (t: any) => Promise<any>) => callback(trx));
     await expect(
       withTransaction({ any: true } as any, (t: any) =>
-        updateTicketInTransaction(t, systemUser, 'tenant-1', 'ticket-1', { status_id: 'closed-status-1' }, { systemActor: true }),
+        updateTicketInTransaction(t, systemUser, 'tenant-1', 'ticket-1', { status_id: 'closed-status-1' }, {
+          systemActor: true,
+          systemAuthorization: { source: 'auto_close' },
+        }),
       ),
     ).resolves.toBe('success');
 
@@ -931,5 +934,22 @@ describe('updateTicketWithCache live updates', () => {
         payload: expect.objectContaining({ ticketId: 'ticket-1', newResponseState: null, trigger: 'close' }),
       }),
     );
+  });
+
+  it('requires an explicit auto-close authorization context for system updates', async () => {
+    const trx = buildTrx({
+      currentTicket: makeTicket({ status_id: 'status-1', response_state: 'awaiting_client' }),
+    });
+    const { updateTicketInTransaction } = await import('./optimizedTicketActions');
+
+    await expect(updateTicketInTransaction(
+      trx,
+      { ...currentUser, user_id: 'system-user-1' },
+      'tenant-1',
+      'ticket-1',
+      { status_id: 'closed-status-1' },
+      { systemActor: true },
+    )).rejects.toThrow('System ticket updates require an explicit authorization context');
+    expect(ticketUpdates).toHaveLength(0);
   });
 });

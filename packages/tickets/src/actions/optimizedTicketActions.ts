@@ -2614,9 +2614,9 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
 /**
  * Core ticket-update logic, executed inside a caller-provided transaction.
  *
- * Intentionally does NOT check permissions — callers must authorize first. The public
- * `updateTicketWithCache` wrapper performs the `ticket:update` check; bulk callers hoist
- * a single check and reuse this core per ticket, avoiding one permission lookup per row.
+ * Public wrappers check coarse `ticket:update` RBAC. This shared boundary also enforces
+ * per-record update access for ordinary actors; admitted collaboration and system actors
+ * carry their respective explicit authorization contexts.
  */
 export interface UpdateTicketInTransactionOptions {
   /** Close despite unmet close rules; honored only with ticket:close_override. */
@@ -2641,6 +2641,8 @@ export interface UpdateTicketInTransactionOptions {
    * referenced for attribution.
    */
   systemActor?: boolean;
+  /** Explicit authority for trusted automation; system attribution alone grants no access. */
+  systemAuthorization?: { source: 'auto_close' };
 }
 
 export async function updateTicketInTransaction(
@@ -2666,6 +2668,9 @@ export async function updateTicketInTransaction(
     // statement in this block is conditional on `collaboration`: a native caller
     // issues exactly the queries it issued before, and takes no additional lock.
     const isSystemActor = options?.systemActor === true;
+    if (isSystemActor && options?.systemAuthorization?.source !== 'auto_close') {
+      throw new Error('System ticket updates require an explicit authorization context');
+    }
     if (collaboration && (isSystemActor || options?.overrideCloseRules || options?.bypassCloseRules ||
         suppressContactNotifications || suppressInternalNotifications)) {
       throw new Error('Shared ticket edits cannot override closure or notification policy');
@@ -2678,6 +2683,19 @@ export async function updateTicketInTransaction(
       const allowed = new Set(['title', 'url', 'status_id', 'priority_id', 'due_date', 'response_state', 'category_id', 'subcategory_id', 'attributes']);
       if (Object.keys(data).some((key) => !allowed.has(key))) throw new Error('Unsupported shared ticket edit fields');
       await collaboration.assertWriteAuthority(trx);
+    } else if (!isSystemActor) {
+      // Coarse ticket:update permission is checked by public wrappers, but it
+      // does not establish that this principal can mutate this particular row.
+      // Keep this gate in the shared action boundary so bulk and other public
+      // callers receive the same record-level policy before the update core
+      // loads or changes the ticket.
+      await authorizeTicketRecordAccess({
+        trx,
+        tenant,
+        user,
+        ticketId: id,
+        action: 'update',
+      });
     }
 
     // Get current ticket state before update
