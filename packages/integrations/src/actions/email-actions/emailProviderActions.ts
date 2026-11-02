@@ -30,6 +30,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import type { Microsoft365DiagnosticsReport } from '@alga-psa/shared/interfaces/microsoft365-diagnostics.interfaces';
+import { kindFromMicrosoftOAuthErrorCode } from '@alga-psa/shared/services/email/microsoftOAuthErrors';
 import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
 import { resolveMicrosoft365DiagnosticsReport } from '../../lib/microsoft365DiagnosticsResult';
 import {
@@ -1674,8 +1675,13 @@ export const testEmailProviderConnection = withAuth(async (
           error_message: result.error || 'Microsoft connection test failed',
           updated_at: knex.fn.now(),
         });
+        // A mapped AADSTS failure from the token refresh carries an actionable,
+        // already-sanitized message; show it instead of the generic wrapper.
+        const mappedKind = kindFromMicrosoftOAuthErrorCode(result.error?.split(':', 1)[0]);
         return emailProviderOperationError(
-          'Microsoft 365 authentication failed. Reconnect the mailbox and try again.',
+          mappedKind && result.error
+            ? result.error
+            : 'Microsoft 365 authentication failed. Reconnect the mailbox and try again.',
           'connection_failed'
         );
       }

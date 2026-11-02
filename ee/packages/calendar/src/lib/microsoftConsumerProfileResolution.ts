@@ -59,6 +59,8 @@ export interface MicrosoftConsumerProfileResolution {
   clientId?: string;
   clientSecret?: string;
   microsoftTenantId?: string;
+  /** `binding` = a tenant-owned Microsoft profile; `app` = the platform-managed app. */
+  credentialSource?: 'binding' | 'app';
   message?: string;
   reasonCode?: MicrosoftConsumerProfileReasonCode;
 }
@@ -441,5 +443,6 @@ export async function resolveMicrosoftConsumerProfileConfig(
     clientId: profile.client_id,
     clientSecret: clientSecret || undefined,
     microsoftTenantId: normalizeTenantId(profile.tenant_id),
+    credentialSource: 'binding',
   };
 }

@@ -105,9 +105,10 @@ and [delegated consent policy](https://learn.microsoft.com/graph/permissions-ove
 
 Confirm all of the following:
 
-* The app's supported account type is **Accounts in any organizational
-  directory**. AlgaPSA starts authorization through the Microsoft `common`
-  authority.
+* The app's supported account type matches the **Tenant ID** on the Microsoft
+  profile. A multi-tenant app (**Accounts in any organizational directory**)
+  works with a blank or `common` Tenant ID. A single-tenant app works only when
+  the profile holds the app's directory (tenant) ID.
 * The **Web** redirect URI in Entra exactly matches the value displayed by Alga
   PSA: `https://<your-host>/api/auth/microsoft/callback`. Scheme, host, path, and
   trailing slash must match.
@@ -123,8 +124,12 @@ Confirm all of the following:
 
 1. In the [Microsoft Entra admin center](https://entra.microsoft.com), open
    **App registrations** and create an app.
-2. Select **Accounts in any organizational directory** as the supported account
-   type.
+2. Select the supported account type. **Accounts in any organizational
+   directory** (multi-tenant) is recommended. A single-tenant app, **Accounts in
+   this organizational directory only**, also works for email and calendar if you
+   enter its directory ID as the **Tenant ID** on the Microsoft profile. AlgaPSA
+   then signs in through that directory. Entra Identity cannot use a
+   single-tenant app, so register a separate multi-tenant app for it.
 3. Under **Authentication**, add the callback from AlgaPSA as a **Web** redirect
    URI: `https://<your-host>/api/auth/microsoft/callback`.
    If this app registration will also serve other AlgaPSA Microsoft integrations,
@@ -145,8 +150,16 @@ Confirm all of the following:
 1. Open **Settings → Integrations → Providers**.
 2. In the Microsoft section, select **New app registration**.
 3. Enter a display name, the **Client ID**, **Tenant ID**, and **Client secret**.
-   Use the directory ID for the Microsoft 365 tenant. Use `common` only when
-   your deployment deliberately uses a multi-tenant app with common authority.
+   Choose the Tenant ID to match the app's supported account type:
+
+   * Single-tenant app: enter the directory (tenant) ID GUID or the verified
+     domain. Without it, Microsoft rejects sign-in with `AADSTS50194`.
+   * Multi-tenant app: leave the field blank, or enter `common` or
+     `organizations`. AlgaPSA treats all three as `common`.
+
+   The Alga platform app always signs in through `common`, whatever Tenant ID
+   the profile holds. The Microsoft app registration screen lists every redirect
+   URI the integrations need, each with a copy button.
 4. Under **Services this app can handle**, enable **Outlook email**, then create
    the profile.
 5. Under **Which Microsoft app each service uses**, select that app for

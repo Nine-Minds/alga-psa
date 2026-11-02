@@ -1,0 +1,13 @@
+name: redirect-uri-missing
+description: App with a registered redirect URI list; authorizing with any other redirect_uri gets AADSTS50011
+# Assumed: AADSTS50011 fires at /authorize as a Microsoft-hosted HTML error page
+# (HTTP 400, no Location header, never redirected to the unregistered URI).
+# Redirect URI matching is exact.
+steps:
+  - reset: msgraph
+  - seed: msgraph/client
+    params:
+      clientId: aaaaaaaa-3333-4333-8333-aaaaaaaaaaaa
+      clientSecret: redirect-secret
+      displayName: Cedar Grove Mail
+      redirectUris: ["http://localhost:3000/api/auth/callback/azure-ad"]

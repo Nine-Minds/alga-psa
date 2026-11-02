@@ -32,6 +32,12 @@ const ALLOWED_FILES = new Set<string>([
 
   // Shared metadata / RBAC catalog (data, not logic).
   'packages/db/src/lib/tenantTableMetadata.ts',
+  // Tenant lifecycle catalogs: declarative per-table entries (EE tenant deletion
+  // ordering, FK snapshot, co-managed write admission) that must cover every
+  // tenant table in either edition.
+  'packages/db/src/lib/tenantTableManifest.ts',
+  'packages/db/src/lib/tenantTableForeignKeys.ts',
+  'packages/db/src/lib/operationalWriteTables.ts',
   'server/migrations/utils/tenantDb.cjs',
   'server/migrations/utils/permissions/catalog.cjs',
 

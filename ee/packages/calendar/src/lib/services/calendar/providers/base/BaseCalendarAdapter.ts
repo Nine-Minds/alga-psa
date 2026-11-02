@@ -1,3 +1,4 @@
+import { toSafeMicrosoftOAuthFailure } from '@alga-psa/shared/services/email/microsoftOAuthErrors';
 import type { CalendarProviderConfig, ExternalCalendarEvent, IScheduleEntry } from '@alga-psa/types';
 
 /**
@@ -75,6 +76,12 @@ export abstract class BaseCalendarAdapter {
    * Handle errors consistently across providers
    */
   protected handleError(error: any, context: string): Error {
+    // A classified Microsoft OAuth rejection already carries the user-facing
+    // `<code>: <message>`; re-wrapping would bury it under `Error in <ctx>:`
+    // and drop the code and kind that the UI and status writers rely on.
+    if (error instanceof Error && (error as any).microsoftOAuthFailureKind) {
+      return error;
+    }
     // Try to extract helpful details from Axios-style errors
     let details = '';
     const res = error?.response;
@@ -88,7 +95,9 @@ export abstract class BaseCalendarAdapter {
     }
 
     const errorMessage = `Error in ${context}: ${error.message || error}${details}`;
-    this.log('error', errorMessage, error);
+    // Never pass a raw axios error to the logger: `config.data` is the
+    // urlencoded token request body and contains client_secret on refresh.
+    this.log('error', errorMessage, toSafeMicrosoftOAuthFailure(error));
     const wrapped = new Error(errorMessage);
     // Propagate metadata for outer catch blocks
     try {
