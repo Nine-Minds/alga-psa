@@ -249,12 +249,17 @@ describe('safeFetch limits and status', () => {
   });
 
   it('rejects a body that exceeds the cap despite a lying Content-Length', async () => {
-    const fetch = vi.fn(async () =>
-      bodyResponse([new Uint8Array(700), new Uint8Array(700)], { headers: { 'content-length': '10' } }),
-    );
+    const cancelled = vi.fn();
+    const fetch = vi.fn(async () => new Response(new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(new Uint8Array(700));
+      },
+      cancel: cancelled,
+    }), { status: 200, headers: { 'content-length': '10' } }));
     await expect(safeFetch('https://example.com/a', opts, { lookup: lookupPublic, fetch })).rejects.toMatchObject({
       reason: 'too_large',
     });
+    expect(cancelled).toHaveBeenCalledOnce();
   });
 
   it('accepts a body exactly at the cap', async () => {
