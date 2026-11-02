@@ -38,6 +38,10 @@ export interface UpsertBundleRuleInput {
   actorUserId?: string | null;
 }
 
+export interface EnsurePublishedBundleRuleInput extends Omit<UpsertBundleRuleInput, 'revisionId' | 'ruleId' | 'position'> {
+  bundleId: string;
+}
+
 export interface CreateAuthorizationBundleInput {
   tenant: string;
   name: string;
@@ -785,6 +789,104 @@ export async function publishBundleRevision(
         updated_by: input.actorUserId ?? null,
         updated_at: trx.fn.now(),
       });
+  });
+}
+
+/**
+ * Ensure a tenant-owned bundle has a required narrowing rule in its published revision.
+ * Repair revisions are based only on published rules; an editor's draft stays unpublished.
+ */
+export async function ensurePublishedBundleRule(
+  knex: Knex | Knex.Transaction,
+  input: EnsurePublishedBundleRuleInput
+): Promise<void> {
+  await knex.transaction(async (trx) => {
+    const scopedDb = tenantDb(trx, input.tenant);
+    const bundle = await scopedDb.table('authorization_bundles')
+      .where({ bundle_id: input.bundleId })
+      .forUpdate()
+      .first<{ published_revision_id: string | null; status: 'active' | 'archived' }>(
+        'published_revision_id', 'status'
+      );
+
+    if (!bundle) {
+      throw new Error('Bundle not found in tenant scope.');
+    }
+    if (bundle.status === 'archived') {
+      return;
+    }
+
+    const matchesRequiredRule = (rule: BundleRuleRecord) =>
+      rule.resourceType === input.resourceType &&
+      rule.action === input.action &&
+      rule.templateKey === input.templateKey &&
+      rule.constraintKey === (input.constraintKey ?? null);
+
+    const publishedRules = bundle.published_revision_id
+      ? await listBundleRulesForRevision(trx, { tenant: input.tenant, revisionId: bundle.published_revision_id })
+      : [];
+    if (publishedRules.some(matchesRequiredRule)) {
+      return;
+    }
+
+    const maxRevision = await scopedDb.table('authorization_bundle_revisions')
+      .where({ bundle_id: input.bundleId })
+      .max<{ max_revision_number: string | null }>('revision_number as max_revision_number')
+      .first();
+    const nextRevisionNumber = Number(maxRevision?.max_revision_number || 0) + 1;
+    const now = trx.fn.now();
+    if (bundle.published_revision_id) {
+      await scopedDb.table('authorization_bundle_revisions')
+        .where({ bundle_id: input.bundleId, revision_id: bundle.published_revision_id, lifecycle_state: 'published' })
+        .update({ lifecycle_state: 'archived', updated_at: now });
+    }
+    const [repairRevision] = await scopedDb.table('authorization_bundle_revisions').insert({
+      tenant: input.tenant,
+      bundle_id: input.bundleId,
+      revision_number: nextRevisionNumber,
+      lifecycle_state: 'published',
+      summary: 'Security repair: add asset delete narrowing rule',
+      published_at: now,
+      published_by: input.actorUserId ?? null,
+      created_by: input.actorUserId ?? null,
+      updated_by: input.actorUserId ?? null,
+    }).returning<{ revision_id: string }[]>('revision_id');
+
+    if (publishedRules.length) {
+      await scopedDb.table('authorization_bundle_rules').insert(publishedRules.map(rule => ({
+        tenant: input.tenant,
+        bundle_id: input.bundleId,
+        revision_id: repairRevision.revision_id,
+        resource_type: rule.resourceType,
+        action: rule.action,
+        template_key: rule.templateKey,
+        effect: 'narrow',
+        constraint_key: rule.constraintKey,
+        config: rule.config,
+        position: rule.position,
+        created_by: input.actorUserId ?? null,
+      })));
+    }
+    await scopedDb.table('authorization_bundle_rules').insert({
+      tenant: input.tenant,
+      bundle_id: input.bundleId,
+      revision_id: repairRevision.revision_id,
+      resource_type: input.resourceType,
+      action: input.action,
+      template_key: input.templateKey,
+      effect: 'narrow',
+      constraint_key: input.constraintKey ?? null,
+      config: input.config ?? {},
+      position: publishedRules.reduce((max, rule) => Math.max(max, rule.position), -1) + 1,
+      created_by: input.actorUserId ?? null,
+    });
+
+    await scopedDb.table('authorization_bundles').where({ bundle_id: input.bundleId }).update({
+      published_revision_id: repairRevision.revision_id,
+      status: 'active',
+      updated_by: input.actorUserId ?? null,
+      updated_at: now,
+    });
   });
 }
 

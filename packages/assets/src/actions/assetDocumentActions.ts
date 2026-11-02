@@ -7,7 +7,7 @@ import type { IDocument, IDocumentAssociation, IDocumentAssociationInput } from 
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
-import { createAssetReadContext, isAssetReadAllowed } from '../lib/assetReadAuthorization';
+import { createAssetReadContext, isAssetActionAllowed, isAssetReadAllowed } from '../lib/assetReadAuthorization';
 import {
     assetActionErrorFrom,
     type AssetActionError,
@@ -32,6 +32,14 @@ export const associateDocumentWithAsset = withAuth(async (
     try {
         // Create association in the standard document_associations table
         const [association] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            const asset = await tenantScopedTable(trx, tenant, 'assets')
+                .where({ asset_id: input.entity_id })
+                .first('asset_id', 'client_id');
+            const context = await createAssetReadContext(trx, tenant, user as any);
+            if (!asset || !await isAssetActionAllowed(trx, tenant, context, asset, 'update')) {
+                throw new Error('Permission denied: Cannot update assets');
+            }
+
             return await tenantScopedTable(trx, tenant, 'document_associations')
                 .insert({
                     tenant,
@@ -76,6 +84,16 @@ export const removeDocumentFromAsset = withAuth(async (
                 .first();
 
             if (association) {
+                if (association.entity_type === 'asset') {
+                    const asset = await tenantScopedTable(trx, tenant, 'assets')
+                        .where({ asset_id: association.entity_id })
+                        .first('asset_id', 'client_id');
+                    const context = await createAssetReadContext(trx, tenant, user as any);
+                    if (!asset || !await isAssetActionAllowed(trx, tenant, context, asset, 'delete')) {
+                        throw new Error('Permission denied: Cannot delete assets');
+                    }
+                }
+
                 // Then delete the association
                 await tenantScopedTable(trx, tenant, 'document_associations')
                     .where({ association_id })
