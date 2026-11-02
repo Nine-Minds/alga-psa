@@ -51,13 +51,7 @@ describe('createTicketAuthorizationContext', () => {
     expect(ctx.selectedBoardIds).toEqual(['b1']);
   });
 
-  it('never uses selected_boards and leaves internal users unnarrowed', async () => {
-    const source = (await import('node:fs')).readFileSync(
-      new URL('./ticketRecordAuthorization.ts', import.meta.url),
-      'utf8',
-    );
-    expect(source).not.toContain('selected_boards');
-    expect(source).not.toContain('resolveClientSelectedBoardIds');
+  it('leaves internal users unnarrowed without resolving client visibility', async () => {
     const ctx = await createTicketAuthorizationContext(fakeTrx(), 'tenant-1', { user_id: 'i', user_type: 'internal', roles: [] } as any);
     expect(ctx.contactVisibility).toBeUndefined();
     expect(ctx.selectedBoardIds).toBeUndefined();

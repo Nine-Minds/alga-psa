@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
   coarsePermissionCalls: [] as unknown[][],
   tableReads: [] as string[],
   clientContractClientIds: [] as unknown[],
+  transactionRejections: 0,
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -51,7 +52,14 @@ vi.mock('@alga-psa/db', () => {
 
   return {
     createTenantKnex: async () => ({ knex: {} }),
-    withTransaction: async (_knex: unknown, work: (trx: unknown) => unknown) => work({ raw: () => '' }),
+    withTransaction: async (_knex: unknown, work: (trx: unknown) => unknown) => {
+      try {
+        return await work({ raw: () => '' });
+      } catch (error) {
+        state.transactionRejections += 1;
+        throw error;
+      }
+    },
     tenantDb: () => ({
       table: (table: string) => {
         state.tableReads.push(table);
@@ -114,6 +122,7 @@ describe('ticket Bento record authorization', () => {
     state.coarsePermissionCalls = [];
     state.tableReads = [];
     state.clientContractClientIds = [];
+    state.transactionRejections = 0;
   });
 
   it('requires bundle record authorization before any of the exported Bento reads fetches protected data', async () => {
@@ -165,6 +174,17 @@ describe('ticket Bento record authorization', () => {
       expect(missing).toEqual(excluded);
       expect(state.tableReads.filter((table) => protectedTables.includes(table))).toEqual([]);
     }
+  });
+
+  it('maps an authorization rejection from the transaction through the action error mapper', async () => {
+    state.deniedTicketIds = new Set(['ticket-1']);
+    const { getTicketSlaPolicyName } = await actions();
+
+    expect(await getTicketSlaPolicyName('ticket-1')).toEqual({
+      permissionError: 'Permission denied: Cannot access ticket',
+    });
+    expect(state.transactionRejections).toBe(1);
+    expect(state.tableReads.filter((table) => protectedTables.includes(table))).toEqual([]);
   });
 
   it('allows an authorized ticket and scopes contract lookup from the authorized ticket row', async () => {
