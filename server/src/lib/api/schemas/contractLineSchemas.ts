@@ -15,6 +15,7 @@ import {
   bulkDeleteSchema,
   bulkUpdateSchema
 } from './common';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 // ============================================================================
 // ENUMS AND CONSTANTS
@@ -354,10 +355,10 @@ export const updatePlanServiceSchema = z.object({
   quantity: z.number().min(0).optional(),
   custom_rate: z.number().min(0).optional(),
   type_config: z.union([
-    createPlanServiceFixedConfigSchema.partial(),
-    createPlanServiceHourlyConfigSchema.partial(),
-    createPlanServiceUsageConfigSchema.partial(),
-    createPlanServiceBucketConfigSchema.partial()
+    partialWithoutDefaults(createPlanServiceFixedConfigSchema),
+    partialWithoutDefaults(createPlanServiceHourlyConfigSchema),
+    partialWithoutDefaults(createPlanServiceUsageConfigSchema),
+    partialWithoutDefaults(createPlanServiceBucketConfigSchema)
   ]).and(
     // The partial branches above strip unknown keys and the hourly/usage/bucket
     // partials accept an empty object, so an invalid base_rate_basis would be
@@ -588,8 +589,8 @@ export const usageMetricsResponseSchema = z.object({
   total_usage: z.number(),
   billable_usage: z.number(),
   overage_usage: z.number(),
-  usage_by_service: z.record(z.number()),
-  usage_by_user: z.record(z.number()),
+  usage_by_service: z.record(z.string(), z.number()),
+  usage_by_user: z.record(z.string(), z.number()),
   cost_breakdown: z.object({
     base_cost: z.number(),
     overage_cost: z.number(),
@@ -703,7 +704,7 @@ export const billingOverviewAnalyticsSchema = z.object({
   total_plans: z.number(),
   total_contracts: z.number(),
   total_assignments: z.number(),
-  plans_by_type: z.record(z.number()),
+  plans_by_type: z.record(z.string(), z.number()),
   revenue_summary: z.object({
     total_monthly_revenue: z.number(),
     average_revenue_per_plan: z.number(),
@@ -719,7 +720,7 @@ export const billingOverviewAnalyticsSchema = z.object({
       count: z.number(),
       percentage: z.number()
     })),
-    billing_frequency_distribution: z.record(z.number())
+    billing_frequency_distribution: z.record(z.string(), z.number())
   })
 });
 

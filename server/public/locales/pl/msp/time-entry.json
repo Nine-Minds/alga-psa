@@ -133,7 +133,8 @@
       "notes": "Notatki",
       "deleteTimeEntry": "Usuń wpis czasu",
       "unsavedChanges": "Niezapisane zmiany",
-      "contractLine": "Pozycja kontraktu"
+      "contractLine": "Pozycja kontraktu",
+      "operational": "Operacyjny – nie rozliczany"
     },
     "placeholders": {
       "selectService": "Wybierz usługę",

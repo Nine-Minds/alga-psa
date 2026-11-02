@@ -317,12 +317,15 @@ describe('ticket comment threading actions', () => {
         'u.user_id as internal_user_id'
       )
       .whereNotNull('t.client_id')
+      // The seeded client user must be able to see this ticket's board in the portal.
+      .whereRaw(`COALESCE((SELECT b.client_portal_visible FROM boards b WHERE b.tenant = t.tenant AND b.board_id = t.board_id), true) <> false`)
       .first();
     expect(context).toBeTruthy();
 
     const generated = await knex.raw(`
       SELECT
         gen_random_uuid() AS client_user_id,
+        gen_random_uuid() AS client_contact_id,
         gen_random_uuid() AS other_client_id,
         gen_random_uuid() AS other_ticket_id
     `);
@@ -353,9 +356,21 @@ describe('ticket comment threading actions', () => {
       updated_at: new Date(),
     });
 
+    // Client principals are authorized by contact_visibility, which needs a contact. This contact
+    // belongs to the ticket's client and has no visibility group (client scope), so it sees every
+    // portal-visible-board ticket of that client but nothing of other_client_id.
+    await scopedDb(context.tenant).table('contacts').insert({
+      tenant: context.tenant,
+      contact_name_id: ids.client_contact_id,
+      full_name: 'T078 Client',
+      email: `t078-contact-${Date.now()}@example.test`,
+      client_id: context.client_id,
+    });
+
     await scopedDb(context.tenant).table('users').insert({
       tenant: context.tenant,
       user_id: ids.client_user_id,
+      contact_id: ids.client_contact_id,
       username: `t078-client-${Date.now()}`,
       hashed_password: 'not-used',
       first_name: 'T078',
@@ -395,6 +410,7 @@ describe('ticket comment threading actions', () => {
         first_name: 'T078',
         last_name: 'Client',
         clientId: context.client_id,
+        contact_id: ids.client_contact_id,
       };
 
       allowedReplyId = await createComment({
@@ -443,9 +459,8 @@ describe('ticket comment threading actions', () => {
         is_resolution: false,
         parent_comment_id: inaccessibleRootId,
       });
-      expect(deniedInaccessibleReply).toMatchObject({
-        actionError: 'Client user cannot access this ticket',
-      });
+      // Record-level denial: a returned permissionError, identical for an invisible and a missing ticket.
+      expect(deniedInaccessibleReply).toEqual({ permissionError: 'Permission denied: Cannot access ticket' });
     } finally {
       userRef.user = originalUser;
       // Remove anything the client user authored, including comments a
@@ -473,6 +488,7 @@ describe('ticket comment threading actions', () => {
       await scopedDb(context.tenant).table('ticket_audit_logs').where({ actor_user_id: ids.client_user_id }).delete();
       await scopedDb(context.tenant).table('ticket_audit_logs').where({ ticket_id: ids.other_ticket_id }).delete();
       await scopedDb(context.tenant).table('users').where({ user_id: ids.client_user_id }).delete();
+      await scopedDb(context.tenant).table('contacts').where({ contact_name_id: ids.client_contact_id }).delete();
       await scopedDb(context.tenant).table('tickets').where({ ticket_id: ids.other_ticket_id }).delete();
       await scopedDb(context.tenant).table('clients').where({ client_id: ids.other_client_id }).delete();
     }
@@ -511,17 +527,27 @@ describe('ticket comment threading actions', () => {
   });
 
   it('refuses a customer-side caller who submits is_internal on their own comment', async () => {
-    const ticket = await scopedDb().table('tickets').select('ticket_id').first();
+    // The client principal must be able to see the ticket (record-level authz runs first), so pick a
+    // client ticket on a portal-visible board and give the user a client-scope contact of that client.
+    const ticket = await scopedDb().table('tickets as t').select('t.ticket_id', 't.client_id')
+      .whereNotNull('t.client_id')
+      .whereRaw(`COALESCE((SELECT b.client_portal_visible FROM boards b WHERE b.tenant = t.tenant AND b.board_id = t.board_id), true) <> false`)
+      .first();
+    expect(ticket).toBeTruthy();
     const author = userRef.user;
     const clientUserId = randomUUID();
+    const clientContactId = randomUUID();
+    await scopedDb().table('contacts').insert({ tenant: dbRef.tenant, contact_name_id: clientContactId, full_name: 'Portal Client',
+      email: `cli-int-${clientContactId}@example.test`, client_id: ticket.client_id });
     await scopedDb().table('users').insert({ tenant: dbRef.tenant, user_id: clientUserId, username: `cli-int-${clientUserId}`,
       email: `cli-int-${clientUserId}@example.test`, first_name: 'Portal', last_name: 'Client', hashed_password: 'not-a-login',
-      user_type: 'client', is_inactive: false });
+      user_type: 'client', is_inactive: false, contact_id: clientContactId });
     const commentId = await createComment({ ticket_id: ticket.ticket_id, user_id: author.user_id,
       note: blockNote('Client visible text'), is_internal: false, is_resolution: false });
     await scopedDb().table('comments').where({ comment_id: commentId }).update({ user_id: clientUserId, author_type: 'client' });
     try {
-      userRef.user = { user_id: clientUserId, user_type: 'client', first_name: 'Portal', last_name: 'Client' };
+      userRef.user = { user_id: clientUserId, user_type: 'client', first_name: 'Portal', last_name: 'Client',
+        contact_id: clientContactId, clientId: ticket.client_id };
       await expect(updateComment(commentId, { note: blockNote('Now hidden from my own portal'), is_internal: true }))
         .resolves.toMatchObject({ actionError: 'Only MSP users can set comments as internal' });
       const stored = await scopedDb().table('comments').where({ comment_id: commentId }).first();
@@ -539,6 +565,7 @@ describe('ticket comment threading actions', () => {
       await scopedDb().table('comments').where({ comment_id: commentId }).delete();
       await scopedDb().table('ticket_audit_logs').where({ actor_user_id: clientUserId }).delete();
       await scopedDb().table('users').where({ user_id: clientUserId }).delete();
+      await scopedDb().table('contacts').where({ contact_name_id: clientContactId }).delete();
     }
   });
 

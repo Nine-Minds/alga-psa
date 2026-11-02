@@ -12,6 +12,24 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: 'tenant-1' })),
+  // getTaskComments runs inside withTaskCommentAccess: one transaction resolving task-1 to its project.
+  withTransaction: async (_db: unknown, fn: (trx: unknown) => unknown) => fn({}),
+  tenantDb: () => ({
+    tenantJoin: () => undefined,
+    table: () => {
+      const q: any = {
+        whereIn: () => q,
+        select: async () => [{ task_id: 'task-1', project_id: 'project-1' }],
+      };
+      return q;
+    },
+  }),
+}));
+vi.mock('../src/models/project', () => ({
+  default: { getById: async (_t: unknown, _tenant: string, id: string) => ({ project_id: id }) },
+}));
+vi.mock('../src/lib/projectReadAuthorization', () => ({
+  createProjectReadAuthorizer: async () => async () => true,
 }));
 vi.mock('../src/lib/taskComments/taskCommentService', () => ({
   countTaskCommentsBatchWithDb: vi.fn(),
@@ -47,7 +65,7 @@ describe('getTaskComments read authorization', () => {
 
     const result = await (getTaskComments as any)('task-1');
 
-    expect(mocks.hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'project_task', 'read');
+    expect(mocks.hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'project_task', 'read', expect.anything());
     expect(result).toEqual(comments);
   });
 });

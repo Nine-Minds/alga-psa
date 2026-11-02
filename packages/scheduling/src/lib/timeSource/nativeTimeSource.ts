@@ -121,6 +121,10 @@ export const nativeTimeSource: TimeSource = Object.freeze({
       handled: true as const,
       value: { workItemType: 'ticket', workItemId: ticketId },
     }),
+    describeItem: async () => ({ handled: false as const }),
+    listSheetItems: async () => ({ handled: false as const }),
+    serviceOptional: async () => ({ handled: false as const }),
+    servesWorkItem: async () => ({ handled: false as const }),
     billingContext: async (_ctx: TimeSourceContext, ...args: any[]) => ({
       handled: true as const,
       value: await (await import('../timeEntryWriteCore')).getWorkItemBillingContext(

@@ -91,7 +91,8 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   workTimeZone,
   isNewEntry = false,
   isSaving = false,
-  disableSave = false
+  disableSave = false,
+  serviceOptional = false
 }: TimeEntryFormProps) {
   const { t } = useTranslation('msp/time-entry');
   const { formatDate } = useFormatters();
@@ -106,6 +107,8 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         : formatTimeForInput(value instanceof Date ? value : parseISO(value)),
     [useSubjectZone, workTimeZone],
   );
+  // The time source said this work needs no service: with none chosen the entry is operational (never billed).
+  const isOperational = serviceOptional && !entry?.service_id?.trim();
   const latestEntry = useRef(entry);
   latestEntry.current = entry;
   // Use work item times for ad-hoc entries - only update if values actually changed
@@ -490,7 +493,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       return;
     }
 
-    if (!entry?.service_id?.trim()) {
+    if (!isOperational && !entry?.service_id?.trim()) {
       setValidationErrors(prev => ({
         ...prev,
         service: t('timeEntryForm.validation.serviceRequired', {
@@ -507,7 +510,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
     // Call parent's onSave with the current entry
     onSave(index);
-  }, [onSave, validateTimes, entry?.service_id, index, setShowErrors, t]);
+  }, [onSave, validateTimes, entry?.service_id, isOperational, index, setShowErrors, t]);
 
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
     if (!isEditable || !entry) return;
@@ -651,8 +654,13 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       <div className="space-y-1.5">
         <label htmlFor={`${id}-service-${index}`} className="flex items-center gap-2 text-sm font-medium text-gray-700">
           <span>
-            {t('timeEntryForm.labels.service', { defaultValue: 'Service' })} <span className="text-red-500">*</span>
+            {t('timeEntryForm.labels.service', { defaultValue: 'Service' })} {!serviceOptional && <span className="text-red-500">*</span>}
           </span>
+          {isOperational && (
+            <span className="chip-primary inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium">
+              {t('timeEntryForm.labels.operational', { defaultValue: 'Operational - not billed' })}
+            </span>
+          )}
           {/* Where the prefilled service came from (task → phase → project).
               Disappears as soon as the value no longer matches the prefill. */}
           {serviceSourceLabel && (
@@ -904,8 +912,8 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           <div className="inline-flex h-10 items-center gap-3 px-1">
             <Switch
               id={`${id}-billable-duration-${index}`}
-              checked={entry?.billable_duration > 0}
-              disabled={!isEditable}
+              checked={!isOperational && entry?.billable_duration > 0}
+              disabled={!isEditable || isOperational}
               onCheckedChange={(checked) => {
                 if (entry?.start_time && entry?.end_time) {
                   const duration = calculateDuration(

@@ -34,7 +34,7 @@ import type {
   TriggerReactivationPasswordResetInput,
   RecordReactivationPaymentAlertInput,
 } from '../types/tenant-deletion-types.js';
-import { insertStripeSubscriptionForTenant } from '../db/tenant-operations.js';
+import { insertStripeSubscriptionForTenant, bindStripeCustomerToTenant } from '../db/tenant-operations.js';
 import { updateSubscriptionMetadata } from '../services/stripe-service.js';
 
 export {
@@ -58,6 +58,10 @@ export {
 export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'email_sender_routes',
   'email_sender_addresses',
+  // rma_cases has a NO ACTION FK to asset_custody (rma_cases_custody_fk) plus FKs to clients/assets/
+  // stock_units/tickets deleted later, so rma_events (FK to rma_cases) then rma_cases precede asset_custody.
+  'rma_events',
+  'rma_cases',
   'asset_custody_events',
   'asset_custody',
   'sessions',
@@ -65,7 +69,6 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'staging_containers',
   'stock_movements',
   'stock_transfer_lines',
-  'rma_cases',
   'kit_components',
   'stock_levels',
   'product_inventory_settings',
@@ -174,6 +177,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'time_entry_suggestion_dismissals',
   'time_sheet_comments',
   'time_entry_change_requests',
+  // Provenance rows of MSP time on shared work restrict the entries they describe.
+  'co_managed_time_work_references',
   'time_entries',
   'time_sheets',
   'user_cost_rates',
@@ -246,6 +251,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'tag_display_rules',
   'ticket_resources',
   'ticket_watchers',
+  'document_fetch_hosts',
   'client_portal_visibility_group_boards',
   'import_job_items',
   'import_jobs',
@@ -339,6 +345,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'stripe_subscriptions',
   'stripe_prices',
   'stripe_products',
+  'stripe_customer_bindings',
   'stripe_customers',
   'stripe_accounts',
   'payment_webhook_events',
@@ -461,8 +468,21 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_management_delegated_grants',
   'co_management_project_scopes',
   'co_management_staff_assignments',
+  // Org-private notes (author tenant): comments -> threads -> receipts, ahead of the actor references they cite.
+  'co_management_private_comments',
+  'co_management_private_threads',
+  'co_management_private_command_receipts',
+  'co_managed_project_task_references',
   'collaboration_actor_references',
   'co_managed_participation_evidence',
+  // Handoffs FK to ticket work, which FKs to relationships: children first. References and
+  // receipts reference the client/board/relationship rows deleted later.
+  'co_management_ticket_handoffs',
+  'co_management_ticket_work',
+  'co_managed_ticket_references',
+  'co_management_command_receipts',
+  // Delivery ledger rows cite tickets/users only by soft id; leaf, before relationships.
+  'co_management_deliveries',
   'co_management_relationships',
 
   // === LEVEL 3: Mid-level entities ===
@@ -2310,6 +2330,7 @@ export async function linkSubscriptionToExistingTenant(
         throw new Error('MASTER_BILLING_TENANT_ID not configured');
       }
 
+      await bindStripeCustomerToTenant(trx, input.tenantId, input.stripeCustomerId);
       [stripeCustomer] = await tenantScopedTrx.table('stripe_customers')
         .insert({
           tenant: input.tenantId,

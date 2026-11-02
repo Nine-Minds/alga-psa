@@ -424,7 +424,8 @@
         "clientId": "ID cliente OAuth",
         "clientSecret": "Segreto client OAuth",
         "scopes": "Ambiti OAuth",
-        "scopesPlaceholder": "ambiti delimitati da spazi"
+        "scopesPlaceholder": "ambiti delimitati da spazi",
+        "clientSecretHelp": "Il segreto client viene archiviato in modo sicuro e non verrà mostrato. Lascia vuoto per mantenere il segreto esistente."
       },
       "processing": {
         "title": "Impostazioni di elaborazione",
@@ -432,6 +433,9 @@
         "folderFilters": "Filtri delle cartelle",
         "folderFiltersPlaceholder": "Posta in arrivo, supporto, ticket",
         "active": "Attivo"
+      },
+      "messages": {
+        "reconnectRequired": "Le impostazioni OAuth sono cambiate. Ricollega la casella di posta per autorizzarla con le nuove impostazioni."
       }
     }
   },
@@ -556,7 +560,8 @@
       "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
       "senderDisplayName": "Nome visualizzato del mittente",
       "senderDisplayNamePlaceholder": "es. Acme Support",
-      "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della bacheca del ticket."
+      "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della bacheca del ticket.",
+      "oauthClientSecretHelp": "Il segreto client viene archiviato in modo sicuro e non verrà mostrato. Lascia vuoto per mantenere il segreto esistente."
     },
     "authOptions": {
       "password": "Password",
@@ -580,6 +585,9 @@
       "saving": "Salvataggio...",
       "updateProvider": "Aggiorna fornitore",
       "createProvider": "Crea fornitore"
+    },
+    "messages": {
+      "reconnectRequired": "Le impostazioni OAuth sono cambiate. Ricollega la casella di posta per autorizzarla con le nuove impostazioni."
     }
   },
   "microsoftForm": {

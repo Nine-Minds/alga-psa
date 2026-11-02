@@ -447,7 +447,27 @@
     "bcc": "Hemlig kopia",
     "ccBccInvalid": "Rätta de markerade adresserna innan du skickar.",
     "ccBccTooMany": "Högst {{max}} mottagare med kopia och hemlig kopia kan kopieras på en kommentar.",
-    "ccBccNotSentOnInternal": "Kopia och hemlig kopia skickas inte med en intern anteckning. Stäng av Intern för att använda dem."
+    "ccBccNotSentOnInternal": "Kopia och hemlig kopia skickas inte med en intern anteckning. Stäng av Intern för att använda dem.",
+    "audience": {
+      "requester": "Beställare",
+      "sharedIt": "Delad IT",
+      "organizationPrivate": "Privat för organisationen",
+      "placeholder": "Vem kan se detta?",
+      "required": "Välj vem som kan se kommentaren innan du publicerar den."
+    },
+    "shared": {
+      "loading": "Läser in den delade konversationen...",
+      "loadError": "Den delade konversationen kunde inte läsas in.",
+      "reload": "Läs in igen",
+      "errors": {
+        "forbidden": "Du har inte behörighet att publicera till den här målgruppen.",
+        "invalid": "Den här kommentaren kan inte publiceras.",
+        "readOnly": "Den här arbetsytan är skrivskyddad just nu.",
+        "operationConflict": "Den här kommentaren krockar med ett tidigare försök. Läs in igen och försök på nytt.",
+        "audienceUnresolved": "Välj vem som kan se den här kommentaren innan du publicerar den.",
+        "unknownOutcome": "Vi kunde inte bekräfta att kommentaren publicerades. Kontrollera konversationen innan du skickar den igen."
+      }
+    }
   },
   "responseState": {
     "awaitingYourResponse": "Väntar på ditt svar",
@@ -1731,6 +1751,9 @@
       "templateRulesTargetOtherClients": "Några av mallens regler för automatisk tillämpning riktar sig mot andra kunder. Ta bort de kunderna från reglerna innan du kopplar mallen till en kund.",
       "predicateClientOutsideScope": "Kunden {{client}} ligger utanför mallens omfattning.",
       "predicateInvalid": "Ogiltig checklistregel: {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Välj vem som kan se kommentaren innan du publicerar den."
     }
   },
   "ticketSection": {

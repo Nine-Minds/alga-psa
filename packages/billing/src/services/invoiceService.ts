@@ -1,4 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill';
+import { describeContributedEntry } from '../lib/billing/timeEntryWorkContext';
 import { ManualInvoiceError, type HandledManualInvoiceErrorCode } from '../errors/manualInvoiceErrors';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
@@ -776,6 +777,50 @@ export async function recalculatePercentageDiscountInvoiceCharges(
   return normalizedInvoiceItems;
 }
 
+/** L6a1/T0-2 seam stand-in: manual-invoice time sources owned by a serving work-context contributor. */
+async function validateContributedManualTimeSources(
+  tx: Knex.Transaction,
+  tenant: string,
+  invoice: any,
+  clientId: string,
+  sourceItems: ManualInvoiceItemInput[],
+  reject: () => Error,
+): Promise<Map<ManualInvoiceItemInput, InvoiceTimeEntrySnapshot> | null> {
+  if (invoice.client_id !== clientId || !invoice.is_manual || invoice.is_prepayment) return null;
+  const snapshots = new Map<ManualInvoiceItemInput, InvoiceTimeEntrySnapshot>();
+  const seen = new Set<string>();
+  const ordered = [...sourceItems].sort((a, b) => String((a.source_link as any).entryId).localeCompare(String((b.source_link as any).entryId)));
+  for (const item of ordered) {
+    const entryId = (item.source_link as { entryId: string }).entryId;
+    const described = await describeContributedEntry(tx, tenant, entryId);
+    if (!described) return null;
+    if (seen.has(entryId)) throw reject();
+    seen.add(entryId);
+    const entry = await tenantScopedTable(tx, tenant, 'time_entries').where({ entry_id: entryId }).forUpdate().first();
+    if (!entry || entry.invoiced) {
+      throw new ManualInvoiceError('SOURCE_ALREADY_BILLED', 'The selected time entry is already billed or removed.');
+    }
+    const { context } = described;
+    if (!described.contributor.workItemTypes.includes(entry.work_item_type) || context.clientId !== invoice.client_id ||
+        entry.approval_status !== 'APPROVED' || Number(entry.billable_duration) <= 0 || !entry.service_id) throw reject();
+    const service = await tenantScopedTable(tx, tenant, 'service_catalog').where({ service_id: entry.service_id }).forShare().first();
+    if (!service) throw reject();
+    const minutes = Number(entry.billable_duration);
+    const rate = Math.max(0, Math.round(Number(service.default_rate) || 0));
+    if (item.service_id !== entry.service_id || item.quantity !== minutes / 60 || item.rate !== rate) throw reject();
+    const isTicket = context.sourceKind === 'ticket';
+    snapshots.set(item, {
+      version: 2, rateKind: 'uniform', uniformRate: rate,
+      workItemType: context.sourceKind, workItemId: context.sourceId,
+      ticketNumber: isTicket ? context.ticketNumber : null, title: context.title ?? null,
+      description: null, entryDate: entry.start_time ? new Date(entry.start_time).toISOString() : null,
+      billedMinutes: minutes, rate, netAmount: Math.round(minutes / 60 * rate),
+      serviceId: entry.service_id, serviceName: service.service_name,
+    });
+  }
+  return snapshots;
+}
+
 /** Validate ticket sources under locks held until invoice creation commits. */
 async function validateManualTicketSources(
   tx: Knex.Transaction,
@@ -793,6 +838,13 @@ async function validateManualTicketSources(
   const reject = () => new ManualInvoiceError(
     'SOURCE_NOT_ELIGIBLE', 'The selected source does not match this ticket invoice or is no longer eligible.',
   );
+  // L6a1/T0-2 seam stand-in (timeEntryWorkContext): a ticket-less manual invoice whose sources are all
+  // time entries owned by a serving contributor (shared co-managed work) validates through that contributor.
+  // Native tenants never reach this: no contributor serves them, so the native rejection below is unchanged.
+  if (invoice && !invoice.ticket_id && sourceItems.every(item => item.source_link?.kind === 'time_entry' && !item.is_discount)) {
+    const contributed = await validateContributedManualTimeSources(tx, tenant, invoice, clientId, sourceItems, reject);
+    if (contributed) return contributed;
+  }
   if (!invoice?.ticket_id || invoice.client_id !== clientId || !invoice.is_manual || invoice.is_prepayment) {
     throw reject();
   }

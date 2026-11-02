@@ -133,7 +133,8 @@
       "notes": "Notas",
       "deleteTimeEntry": "Eliminar entrada de tiempo",
       "unsavedChanges": "Cambios no guardados",
-      "contractLine": "Línea de contrato"
+      "contractLine": "Línea de contrato",
+      "operational": "Operativo: no facturado"
     },
     "placeholders": {
       "selectService": "Seleccione un servicio",

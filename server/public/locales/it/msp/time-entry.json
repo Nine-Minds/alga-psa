@@ -133,7 +133,8 @@
       "notes": "Note",
       "deleteTimeEntry": "Elimina l'immissione dell'ora",
       "unsavedChanges": "Modifiche non salvate",
-      "contractLine": "Riga di contratto"
+      "contractLine": "Riga di contratto",
+      "operational": "Operativo – non fatturato"
     },
     "placeholders": {
       "selectService": "Seleziona un servizio",
