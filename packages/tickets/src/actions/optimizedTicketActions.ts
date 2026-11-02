@@ -109,6 +109,7 @@ import { compilePredicateFragment } from '@alga-psa/predicates/sql';
 import type { PredicateGroup } from '@alga-psa/predicates';
 import { resolveTicketTagIdsByText } from '../lib/ticketTagFilter';
 import { createTicketQuerySchema } from '../lib/ticketQuerySchema';
+import { toTicketFormUserOption, type TicketFormClientOption } from '../lib/ticketFormOptions';
 import { ticketFiltersToPredicates, type TicketFilterCodecContext } from '../lib/ticketFilterPredicates';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
@@ -2431,38 +2432,6 @@ export const getTicketBoardIds = withAuth(async (
  * Get all options needed for ticket forms and filters
  * This consolidates multiple API calls into a single request
  */
-export interface TicketFormUserOption {
-  user_id: string;
-  first_name?: string;
-  last_name?: string;
-  icon?: string;
-  tenant?: string;
-  user_type: string;
-  is_inactive: boolean;
-}
-
-export interface TicketFormClientOption {
-  client_id: string;
-  client_name: string;
-  tenant?: string;
-  is_inactive: boolean;
-  logoUrl: string | null;
-  displayTags: IClient['displayTags'];
-}
-
-export function toTicketFormUserOption(row: Record<string, unknown>): TicketFormUserOption {
-  const safeUser = sanitizeUserForResponse(row);
-  return {
-    user_id: safeUser.user_id,
-    first_name: safeUser.first_name,
-    last_name: safeUser.last_name,
-    icon: safeUser.icon,
-    tenant: safeUser.tenant,
-    user_type: safeUser.user_type,
-    is_inactive: safeUser.is_inactive,
-  };
-}
-
 export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
   const {knex: db} = await createTenantKnex();
 
@@ -2513,7 +2482,7 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('category_name', 'asc'),
       
       tenantScopedTable(trx, 'clients as c', tenant)
-        .select('c.client_id', 'c.client_name', 'c.tenant', 'c.is_inactive')
+        .select('c.client_id', 'c.client_name', 'c.client_type', 'c.tenant', 'c.is_inactive')
         .orderBy('c.client_name', 'asc'),
 
       tenantScopedTable(trx, 'users', tenant)
@@ -2592,7 +2561,7 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
       const userOptions = users.map((user: any) => toTicketFormUserOption(user));
 
       // --- Add Logo URL Processing ---
-      const clientsData = clients as Array<Pick<IClient, 'client_id' | 'client_name' | 'tenant' | 'is_inactive'>>;
+      const clientsData = clients as Array<Pick<IClient, 'client_id' | 'client_name' | 'client_type' | 'tenant' | 'is_inactive'>>;
 
       // Process clients to add logoUrl using batch loading
       const clientIds = clientsData.map((c) => c.client_id);
@@ -2606,6 +2575,7 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         return {
           client_id: clientData.client_id,
           client_name: clientData.client_name,
+          client_type: clientData.client_type,
           tenant: clientData.tenant,
           is_inactive: clientData.is_inactive,
           logoUrl,

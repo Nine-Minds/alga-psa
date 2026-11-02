@@ -47,8 +47,8 @@ function makeBuilder(table: string) {
 
   const resolveRows = (): Row[] => {
     const rows = (tables[baseTable] ?? []).filter((row) => state.filters.every((f) => f(row)));
-    // Only `users` is projected; other tables return whole rows (their select lists use aliases/joins).
-    if (baseTable !== 'users' || !state.selected || state.selected.length === 0) return rows;
+    // Model the projections relevant to ticket form options and sensitive user reads.
+    if (!['users', 'clients'].includes(baseTable) || !state.selected || state.selected.length === 0) return rows;
     return rows.map((row) => {
       const projected: Row = {};
       for (const column of state.selected as string[]) {
@@ -74,7 +74,9 @@ function makeBuilder(table: string) {
       }
       if (prop === 'where') {
         return (arg: unknown, value?: unknown) => {
-          if (arg && typeof arg === 'object') {
+          if (typeof arg === 'function') {
+            arg(builder);
+          } else if (arg && typeof arg === 'object') {
             for (const [k, v] of Object.entries(arg as Row)) {
               state.filters.push((row) => row[k.replace(/^[a-z_]+\./, '')] === v);
             }
@@ -192,7 +194,8 @@ vi.mock('./ticketBundleUtils', () => ({
   mirrorCommentToChild: vi.fn(),
 }));
 
-import { getConsolidatedTicketData, getTicketFormOptions, toTicketFormUserOption } from './optimizedTicketActions';
+import { getConsolidatedTicketData, getTicketFormOptions } from './optimizedTicketActions';
+import { toTicketFormUserOption } from '../lib/ticketFormOptions';
 
 const TICKET_ID = 'ticket-1';
 const sensitiveKeys = new Set<string>(SENSITIVE_USER_FIELDS);
@@ -284,6 +287,40 @@ describe('getConsolidatedTicketData user credential exposure', () => {
     hasPermissionMock.mockResolvedValueOnce(false);
     expect(await getTicketFormOptions()).toMatchObject({ permissionError: expect.stringMatching(/Cannot view ticket options/) });
     expect(optionDataQueries).toEqual([]);
+  });
+
+  it('returns safe user and client option DTOs for an authorized internal principal', async () => {
+    tables.statuses = [];
+    tables.priorities = [];
+    tables.boards = [];
+    tables.categories = [];
+    tables.clients = [{
+      client_id: 'client-1', client_name: 'Acme', client_type: 'company', tenant: 'tenant-1', is_inactive: false,
+      tax_id_number: 'sensitive-client-field', payment_terms: 'NET 45', extra_directory_data: 'private',
+    }];
+    tables.tag_definitions = [];
+    tables.tag_mappings = [];
+    tables.tag_references = [];
+    tables.users = [credentialRow({
+      user_id: 'agent-1', first_name: 'Ada', last_name: 'Agent', icon: 'avatar-1',
+      recovery_codes: ['sensitive-user-field'], arbitrary_directory_metadata: 'private',
+    })];
+
+    const result: any = await getTicketFormOptions();
+    expect(result.users).toEqual([{
+      user_id: 'agent-1', first_name: 'Ada', last_name: 'Agent', icon: 'avatar-1',
+      tenant: 'tenant-1', user_type: 'internal', is_inactive: false,
+    }]);
+    expect(result.clients).toEqual([{
+      client_id: 'client-1', client_name: 'Acme', client_type: 'company', tenant: 'tenant-1',
+      is_inactive: false, logoUrl: null, displayTags: [],
+    }]);
+    expect(findSensitiveKeyPaths(result)).toEqual([]);
+    const serialized = JSON.stringify(result);
+    for (const secret of ['not-a-real-hash', 'JBSWY3DPEHPK3PXP', 'sensitive-client-field', 'sensitive-user-field', 'private']) {
+      expect(serialized).not.toContain(secret);
+    }
+    expect(usersQueries.some((query) => query.selected?.includes('hashed_password'))).toBe(false);
   });
 
   it('sanity: the fake users table really carries credentials (so the test can fail)', () => {

@@ -40,7 +40,7 @@ interface ClientPickerProps {
    * Cards D, E and F are migrating the remaining callers off full lists. Still honoured
    * for small, pre-filtered lists. Ignored when `searchClients` is set.
    */
-  clients?: IClient[];
+  clients?: Array<Pick<IClient, 'client_id' | 'client_name' | 'client_type' | 'is_inactive'> & Partial<Pick<IClient, 'displayTags'>>>;
   /**
    * Async mode: server-side search (pass `searchClientsForPicker`). The picker pages,
    * debounces and hydrates the selected value itself and never needs the full list.
