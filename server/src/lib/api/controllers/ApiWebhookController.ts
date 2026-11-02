@@ -42,7 +42,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import {
-  assertInternalApiUser,
+  assertApiPrincipal,
   ApiRequest,
   UnauthorizedError,
   ForbiddenError,
@@ -111,7 +111,7 @@ export class ApiWebhookController {
     // Get user within tenant context
     const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-    assertInternalApiUser(user);
+    assertApiPrincipal(user);
 
     // Create extended request with context
     const apiRequest = req as ApiRequest;

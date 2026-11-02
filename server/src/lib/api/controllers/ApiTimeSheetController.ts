@@ -42,7 +42,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import {
-  assertInternalApiUser,
+  assertApiPrincipal,
   AuthenticatedApiRequest,
   UnauthorizedError,
   ForbiddenError,
@@ -141,7 +141,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -233,7 +233,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -304,7 +304,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -387,7 +387,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -470,7 +470,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -553,7 +553,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -636,7 +636,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -717,7 +717,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -788,7 +788,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -871,7 +871,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -958,7 +958,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1050,7 +1050,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1118,7 +1118,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1184,7 +1184,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1258,7 +1258,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1336,7 +1336,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1414,7 +1414,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1498,7 +1498,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1572,7 +1572,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1646,7 +1646,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1716,7 +1716,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1782,7 +1782,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1860,7 +1860,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1953,7 +1953,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -2039,7 +2039,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
         await this.assertManualProductAccess(req, keyRecord, user);
 
         const db = await getConnection(tenantId!);
@@ -2110,7 +2110,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -2185,7 +2185,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -2273,7 +2273,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -2387,7 +2387,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 

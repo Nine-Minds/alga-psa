@@ -37,7 +37,7 @@ import { buildProjectRecordContext, buildTicketRecordContext } from './recordCon
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { tenantDb } from '@alga-psa/db';
 import {
-  assertInternalApiUser,
+  assertApiPrincipal,
   ApiRequest,
   AuthenticatedApiRequest,
   UnauthorizedError,
@@ -591,7 +591,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -664,7 +664,7 @@ export class ApiProjectController extends ApiBaseController {
 
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
@@ -736,7 +736,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -899,7 +899,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -977,7 +977,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1055,7 +1055,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1133,7 +1133,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1209,7 +1209,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1289,7 +1289,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1372,7 +1372,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1447,7 +1447,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1523,7 +1523,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1615,7 +1615,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1694,7 +1694,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1786,7 +1786,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1861,7 +1861,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1992,7 +1992,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -2078,7 +2078,7 @@ export class ApiProjectController extends ApiBaseController {
       throw new UnauthorizedError('Invalid API key');
     }
     const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-    assertInternalApiUser(user);
+    assertApiPrincipal(user);
     const apiRequest = req as ApiRequest;
     apiRequest.context = {
       userId: keyRecord.user_id,

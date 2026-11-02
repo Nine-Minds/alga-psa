@@ -32,7 +32,7 @@ vi.mock('@alga-psa/users/actions', () => ({ findUserByIdForApi: mocks.findUserBy
 vi.mock('@/lib/services/apiKeyServiceForApi', () => ({
   ApiKeyServiceForApi: { validateApiKeyAnyTenant: mocks.validateApiKeyAnyTenant },
 }));
-vi.mock('@/lib/api/middleware/apiMiddleware', () => ({ assertInternalApiUser: () => undefined }));
+vi.mock('@/lib/api/middleware/apiMiddleware', () => ({ assertApiPrincipal: () => undefined }));
 vi.mock('server/src/lib/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
 vi.mock('@alga-psa/documents/actions/documentActions', () => ({
   getAuthorizedDocumentById: mocks.getAuthorizedDocumentById,
