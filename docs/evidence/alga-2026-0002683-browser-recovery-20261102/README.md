@@ -1,6 +1,6 @@
 # C5 follow-up 2 browser recovery and smoke attempt
 
-Run time: 2026-11-02 17:23–17:27 UTC
+Run time: 2026-11-02 17:23–17:29 UTC
 Branch: `feature/alga-2026-0002683-c5-follow-up-2-advance-track-v`
 Tested commit: `4f74616f97fae2a34a4387a9018acf35aec80a6c`
 Required origin: `http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536`
@@ -23,6 +23,7 @@ Evidence files:
 - `browser-recovery-preflight.webm`, `.vtt`, `.json`: 2.19-second, three-frame recording of the repeated browser preflight, with chapters.
 - `navigation-*.json`, `pane-url-*.json`, `pane-dom-*.json`, `interaction-1.json`, `network.json`, `screenshot-*.json`: raw CLI outcomes.
 - `previous-failed-pane-*.json`: ownership and repeat operation checks on the earlier pane.
+- `host-state.txt`: captured window/space ownership, host process and resource snapshot, port listener check, and exact-origin HTTP check.
 - `http-headers.txt`: empty because curl could not connect. No response body was produced.
 
 ## Six-flow results
