@@ -10,6 +10,28 @@ import type { ISecretProvider } from './ISecretProvider';
 
 type VaultClient = ReturnType<typeof vault>;
 
+type KvV2Document = {
+  data?: Record<string, unknown>;
+  metadata?: { version?: number };
+};
+
+const MAX_KV_CAS_ATTEMPTS = 12;
+
+function vaultStatus(error: unknown): number | undefined {
+  return (error as { response?: { statusCode?: number } })?.response?.statusCode;
+}
+
+function isKvCasConflict(error: unknown): boolean {
+  const vaultError = error as {
+    response?: { statusCode?: number; body?: { errors?: unknown } };
+    message?: string;
+  };
+  if (vaultError.response?.statusCode !== 400) return false;
+  const errors = vaultError.response.body?.errors;
+  const detail = Array.isArray(errors) ? errors.join(' ') : '';
+  return /check.and.set|cas|current version/i.test(`${detail} ${vaultError.message ?? ''}`);
+}
+
 /**
  * A secret provider that retrieves secrets from HashiCorp Vault.
  *
@@ -163,25 +185,10 @@ export class VaultSecretProvider implements ISecretProvider {
     }
 
     try {
-      // For KV v2, we need to merge the new secret with existing ones at the path
-      let existingData: Record<string, unknown> = {};
-      try {
-        const response = await this.client.read(tenantPath);
-        if (response && response.data && response.data.data) {
-          existingData = response.data.data;
-        }
-      } catch (readError: unknown) {
-        const vaultError = readError as { response?: { statusCode?: number } };
-        // Ignore 404 errors, as the path might not exist yet
-        if (vaultError.response?.statusCode !== 404) {
-          throw readError;
-        }
-        logger.debug(`VaultSecretProvider: Secret path '${tenantPath}' not found during read for set, will create.`);
-      }
-
-      const newData = { ...existingData, [name]: value };
-      logger.debug(`VaultSecretProvider: Writing secret key '${name}' to path: ${tenantPath}`);
-      await this.client.write(tenantPath, { data: newData });
+      await this.mutateTenantSecretDocument(tenantPath, (existingData) => ({
+        ...existingData,
+        [name]: value,
+      }));
       logger.info(`VaultSecretProvider: Successfully set secret key '${name}' for tenant '${tenantId}'.`);
     } catch (error: unknown) {
       const vaultError = error as { response?: { statusCode?: number }; message?: string };
@@ -213,30 +220,13 @@ export class VaultSecretProvider implements ISecretProvider {
     const tenantPath = this.tenantSecretPathTemplate.replace('{tenantId}', tenantId);
 
     try {
-      // Read the current secrets at the path
-      logger.debug(`VaultSecretProvider: Reading path '${tenantPath}' to delete key '${name}'.`);
-      const response = await this.client.read(tenantPath);
-
-      // Check if the path and data exist
-      if (response && response.data && response.data.data) {
-        const currentData = response.data.data as Record<string, unknown>;
-
-        // Check if the key exists
-        if (name in currentData) {
-          logger.debug(`VaultSecretProvider: Found key '${name}' at path '${tenantPath}', preparing to delete.`);
-          delete currentData[name];
-
-          logger.debug(`VaultSecretProvider: Writing updated data (without key '${name}') back to path: ${tenantPath}`);
-          await this.client.write(tenantPath, { data: currentData });
-          logger.info(`VaultSecretProvider: Successfully deleted secret key '${name}' for tenant '${tenantId}'.`);
-        } else {
-          // Key doesn't exist, consider it deleted (idempotent)
-          logger.debug(`VaultSecretProvider: Key '${name}' not found at path '${tenantPath}' during delete operation (already deleted?).`);
-        }
-      } else {
-        // Path doesn't exist, consider it deleted (idempotent)
-        logger.debug(`VaultSecretProvider: Secret path '${tenantPath}' not found during delete operation (already deleted?).`);
-      }
+      await this.mutateTenantSecretDocument(tenantPath, (currentData) => {
+        if (!(name in currentData)) return null;
+        const nextData = { ...currentData };
+        delete nextData[name];
+        return nextData;
+      });
+      logger.info(`VaultSecretProvider: Successfully deleted secret key '${name}' for tenant '${tenantId}'.`);
     } catch (error: unknown) {
       const vaultError = error as { response?: { statusCode?: number }; message?: string };
       const statusCode = vaultError.response?.statusCode;
@@ -250,5 +240,53 @@ export class VaultSecretProvider implements ISecretProvider {
         throw new Error(`Failed to delete tenant secret: ${errorMessage}`);
       }
     }
+  }
+
+  /**
+   * Mutates a KV v2 document with compare-and-set. Vault's version check makes
+   * the read/merge/write atomic across processes; conflicts retry from the latest
+   * version so unrelated tenant keys are preserved.
+   */
+  private async mutateTenantSecretDocument(
+    tenantPath: string,
+    mutate: (data: Record<string, unknown>) => Record<string, unknown> | null,
+  ): Promise<void> {
+    if (!this.client) throw new Error('Vault provider not initialized.');
+
+    for (let attempt = 0; attempt < MAX_KV_CAS_ATTEMPTS; attempt += 1) {
+      let currentData: Record<string, unknown> = {};
+      let version = 0;
+      try {
+        const response = await this.client.read(tenantPath);
+        const document = response?.data as KvV2Document | undefined;
+        currentData = document?.data ?? {};
+        version = Number(document?.metadata?.version);
+        if (!Number.isInteger(version) || version < 1) {
+          throw new Error('Vault KV v2 response did not include a valid secret version.');
+        }
+      } catch (error: unknown) {
+        if (vaultStatus(error) !== 404) throw error;
+      }
+
+      const nextData = mutate(currentData);
+      if (nextData === null) return;
+
+      try {
+        await this.client.write(tenantPath, {
+          options: { cas: version },
+          data: nextData,
+        });
+        return;
+      } catch (error: unknown) {
+        if (isKvCasConflict(error) && attempt < MAX_KV_CAS_ATTEMPTS - 1) {
+          const backoffMs = Math.min(5 * (2 ** attempt), 100) + Math.floor(Math.random() * 11);
+          await new Promise((resolve) => setTimeout(resolve, backoffMs));
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw new Error(`Vault KV v2 compare-and-set did not converge after ${MAX_KV_CAS_ATTEMPTS} attempts.`);
   }
 }
