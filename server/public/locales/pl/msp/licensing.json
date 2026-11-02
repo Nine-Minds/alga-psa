@@ -364,6 +364,21 @@
     "accountManagementRead": "Odmowa uprawnień: wymagane uprawnienie odczytu zarządzania kontami"
   },
   "coManaged": {
+    "portableExport": {
+      "title": "Eksportuj obszar roboczy",
+      "description": "Pobierz zaszyfrowane, przenośne archiwum rekordów i plików z obszaru roboczego.",
+      "recovery": "Przechowuj hasło odzyskiwania w bezpiecznym miejscu. Bez niego nie można otworzyć archiwum.",
+      "connections": "Archiwum zawiera rekordy obszaru roboczego oraz przechowywane w nim pliki. Rekordy i powiązania dokumentów oraz historia czasu pracy, harmonogramów, spotkań i rozmów nie są jeszcze uwzględnione i pojawią się w późniejszej wersji. Dane rozliczeniowe, prywatne dane MSP i sekrety integracji nie są uwzględnione.",
+      "passphrase": "Hasło odzyskiwania",
+      "confirmPassphrase": "Potwierdź hasło odzyskiwania",
+      "download": "Przygotuj i pobierz archiwum",
+      "requested": "Żądanie otworzy się w nowej karcie. Przygotowanie może potrwać kilka minut; przeglądarka pobierze plik, gdy będzie gotowy.",
+      "loadError": "Przy obecnych uprawnieniach nie możesz wyeksportować tego obszaru roboczego.",
+      "lengthError": "Użyj hasła o długości od 16 do 1024 bajtów UTF-8.",
+      "matchError": "Hasła odzyskiwania muszą być zgodne.",
+      "unavailable": "Eksport obszaru roboczego nie jest dostępny w tej edycji.",
+      "loading": "Ładowanie…"
+    },
     "acceptance": {
       "accept": "Zaakceptuj i aktywuj obszar roboczy",
       "administratorRequired": "Lokalny administrator obszaru roboczego musi zaakceptować tę współpracę, zanim Twój zespół zacznie pracę.",

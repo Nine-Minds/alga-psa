@@ -100,6 +100,14 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
   },
   {
+    // Customer-admin workspace export (records). A co_managed customer exports its own workspace, so
+    // it reaches this one page beneath the otherwise-closed /msp/co-management prefix; the co-managed capability
+    // gate in the page (and the export permission in its actions) still decides admission.
+    group: 'msp_co_management_export',
+    staticPrefixes: ['/msp/co-management/export'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
+  },
+  {
     // One side-aware co-managed root: a PSA sponsor sees the overview, a
     // co_managed customer sees its own relationship home. The capability gate
     // in the route layout decides whether a tenant may see either.
@@ -141,6 +149,14 @@ export const PORTAL_ROUTE_RULES: readonly RouteRule[] = [
 ];
 
 export const API_RULES: readonly ApiRule[] = [
+  {
+    // Session-authenticated workspace export download (POST streams the archive). Not part of the public v1
+    // metadata surface; the co-managed capability gate in the route decides admission, so algadesk is denied.
+    group: 'api_co_management_export',
+    staticPrefixes: ['/api/co-management/export'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
+  },
   {
     // Authenticated app-internal stream used by ticket and project list smart
     // search. It is not part of the public v1 metadata surface.
