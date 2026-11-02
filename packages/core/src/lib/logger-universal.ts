@@ -8,33 +8,63 @@
 
 const isServer = typeof window === 'undefined';
 
+type Level = 'error' | 'warn' | 'info' | 'http' | 'verbose' | 'debug' | 'trace' | 'system';
+const LEVELS: readonly Level[] = ['error', 'warn', 'info', 'http', 'verbose', 'debug', 'trace', 'system'];
+
+const consoleLogger: Record<Level, (...args: any[]) => void> = {
+  error: console.error.bind(console),
+  warn: console.warn.bind(console),
+  info: console.info.bind(console),
+  http: console.log.bind(console),
+  verbose: console.log.bind(console),
+  debug: console.debug.bind(console),
+  trace: console.debug.bind(console),
+  system: console.log.bind(console),
+};
+
 let logger: any;
 
 if (isServer) {
-  // Use dynamic import to avoid bundling winston on the client
-  // However, top-level await is not supported in all environments.
-  // We'll use a proxy or a lazily initialized object.
-  logger = {
-    error: (...args: any[]) => import('./logger').then(m => (m.default as any).error(...args)),
-    warn: (...args: any[]) => import('./logger').then(m => (m.default as any).warn(...args)),
-    info: (...args: any[]) => import('./logger').then(m => (m.default as any).info(...args)),
-    http: (...args: any[]) => import('./logger').then(m => (m.default as any).http(...args)),
-    verbose: (...args: any[]) => import('./logger').then(m => (m.default as any).verbose(...args)),
-    debug: (...args: any[]) => import('./logger').then(m => (m.default as any).debug(...args)),
-    trace: (...args: any[]) => import('./logger').then(m => (m.default as any).trace(...args)),
-    system: (...args: any[]) => import('./logger').then(m => (m.default as any).system(...args)),
+  // Load winston lazily so the client bundle never pulls it in. The import is
+  // memoised, and once it lands every call is synchronous. A failed load (or a
+  // log call that throws) falls back to the console: logging is fire-and-forget,
+  // so a rejection here would surface as an unhandled rejection in the caller.
+  let serverLogger: any;
+  let loading: Promise<any> | undefined;
+
+  const loadServerLogger = (): Promise<any> => {
+    loading ??= import('./logger').then(
+      (m) => (serverLogger = m.default),
+      () => {
+        loading = undefined;
+        return consoleLogger;
+      },
+    );
+    return loading;
   };
+
+  const emit = (target: any, level: Level, args: any[]) => {
+    try {
+      target[level](...args);
+    } catch {
+      consoleLogger[level](...args);
+    }
+  };
+
+  logger = Object.fromEntries(
+    LEVELS.map((level) => [
+      level,
+      (...args: any[]): Promise<void> => {
+        if (serverLogger) {
+          emit(serverLogger, level, args);
+          return Promise.resolve();
+        }
+        return loadServerLogger().then((target) => emit(target, level, args));
+      },
+    ]),
+  );
 } else {
-  logger = {
-    error: console.error.bind(console),
-    warn: console.warn.bind(console),
-    info: console.info.bind(console),
-    http: console.log.bind(console),
-    verbose: console.log.bind(console),
-    debug: console.debug.bind(console),
-    trace: console.debug.bind(console),
-    system: console.log.bind(console),
-  };
+  logger = consoleLogger;
 }
 
 export default logger;

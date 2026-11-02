@@ -7,10 +7,15 @@ import {
   type DevelopmentCredentialUser,
 } from '../../lib/developmentCredentials';
 
-const { findUserByEmailMock } = vi.hoisted(() => ({ findUserByEmailMock: vi.fn() }));
+const { findUserByEmailMock, findUsersByEmailAndTypeMock } = vi.hoisted(() => ({
+  findUserByEmailMock: vi.fn(),
+  findUsersByEmailAndTypeMock: vi.fn(),
+}));
 
 vi.mock('@alga-psa/db/models/user', () => ({
-  default: { findUserByEmail: findUserByEmailMock, findUserByEmailAndType: findUserByEmailMock },
+  default: { findUserByEmail: findUserByEmailMock, findUserByEmailAndType: findUserByEmailMock,
+    findUsersByEmailAndType: findUsersByEmailAndTypeMock,
+  },
 }));
 vi.mock('@alga-psa/db', () => ({ getTenantIdBySlug: vi.fn() }));
 // authenticateUser consults the tenant login policy (via passwordLoginGate); return the all-off default
@@ -53,6 +58,7 @@ function makeStore(initialHash: string | null) {
     return true;
   });
   findUserByEmailMock.mockImplementation(async () => user);
+  findUsersByEmailAndTypeMock.mockImplementation(async () => (user ? [user] : []));
   return { user, compareAndSet };
 }
 
@@ -82,6 +88,7 @@ describe('development credential initialization', () => {
   beforeEach(() => {
     vi.stubEnv('NEXTAUTH_SECRET', 'development-credential-regression-secret');
     findUserByEmailMock.mockReset();
+    findUsersByEmailAndTypeMock.mockReset();
   });
   afterEach(() => vi.unstubAllEnvs());
 

@@ -17,7 +17,7 @@ import {
     withDevPortSuffix,
     type PortalSessionTokenPayload,
 } from "./session";
-import { isClientUserType, isInteractiveUserType } from "@alga-psa/types";
+import { isClientUserType, isInteractiveUserType, resolveProductCode, type ProductCode } from "@alga-psa/types";
 import { assertInteractiveUser } from "./assertInteractiveUser";
 import { issuePortalDomainOtt } from "./PortalDomainSessionToken";
 import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
@@ -34,7 +34,7 @@ import type {
 import { isOAuthMappingFailure, OAuthAccountLinkConflictError } from "./sso/types";
 import { SSO_LINK_STATE_COOKIE, SSO_PROFILE_TAB_URL } from "./sso/linkStateCookie";
 import {
-    getMicrosoftSsoEmulatorEndpoints,
+    buildMicrosoftSsoEmulatorProvider,
     isMicrosoftSsoEmulatorEnabled,
 } from "./sso/microsoftSsoEmulator";
 import { mapCeOAuthProfileToExtendedUser } from "./sso/ceOAuthProfileMapper";
@@ -67,6 +67,7 @@ import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";
 import { getLocationFromIp } from "./geolocation";
 import { getConnection, tenantDb } from "@alga-psa/db";
 import { getPortalDomain, getPortalDomainByHostname } from "./PortalDomainModel";
+import { portalDomainServes } from "@alga-psa/shared/core/portalDomainSurface";
 import { resolveMicrosoftConsumerProfileConfig } from "./microsoftConsumerProfileResolution";
 
 /**
@@ -206,7 +207,7 @@ async function checkTrackedSession(
  */
 interface TenantSubscriptionInfo {
     plan?: string;
-    product_code?: 'psa' | 'algadesk';
+    product_code?: ProductCode;
     addons?: string[];
     trial_end?: string | null;
     subscription_status?: string | null;
@@ -280,7 +281,9 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
 
     return {
         plan: tenantRecord?.plan ?? undefined,
-        product_code: tenantRecord?.product_code === 'algadesk' ? 'algadesk' : 'psa',
+        // Unknown or unrecognised values resolve to psa (the same rule as every
+        // other product-code read), so the session can only ever carry a known product.
+        product_code: resolveProductCode(tenantRecord?.product_code).productCode,
         addons: addOns,
         trial_end: trialEnd,
         subscription_status: subscriptionStatus,
@@ -292,33 +295,60 @@ const NEXTAUTH_SECURE_COOKIES = isSecureCookieEnvironment();
 const NEXTAUTH_COOKIE_PREFIX = NEXTAUTH_SECURE_COOKIES ? '__Secure-' : '';
 const PLAYWRIGHT_FAKE_GOOGLE_OAUTH_ENABLED = process.env.PLAYWRIGHT_FAKE_GOOGLE_OAUTH === 'true';
 
-async function getClientPortalSsoProfileHints(
+export interface SsoProfileHints {
+    userType: 'client' | 'internal';
+    /** Client-portal vanity/discovery tenant. Never consulted for internal users. */
+    tenantHint?: string;
+    /** Server-verified tenant an internal sign-in is scoped to. */
+    scopeTenantId?: string;
+}
+
+/**
+ * What the server already knows about this OAuth callback. The Teams context
+ * comes first: buildAuthOptions(context) is assembled explicitly by the server
+ * for the Teams surface, so it is the most trusted scope and no cookie (which
+ * may be a leftover from an earlier MSP SSO attempt) can override it. Otherwise,
+ * from signed state the server issued itself: the client-portal resolution
+ * cookie, then the MSP resolution cookie (whose `scopeTenantId`, or tenant-owned
+ * credential source, scopes the user). IdP profile claims are not consulted here
+ * and must never select an internal user's tenant.
+ */
+export async function getSsoProfileHints(
     provider: MspSsoProviderId,
-): Promise<{ tenantHint?: string; userTypeHint?: 'client' } | null> {
+    context?: { teamsTenantId?: string },
+): Promise<SsoProfileHints | null> {
+    if (context?.teamsTenantId) {
+        return { userType: 'internal', scopeTenantId: context.teamsTenantId };
+    }
+
     try {
         const signingSecret = await getMspSsoSigningSecret();
-        if (!signingSecret) {
-            return null;
+        if (signingSecret) {
+            const cookieStore = await cookies();
+            const clientResolution = parseAndVerifyClientPortalSsoResolutionCookie({
+                value: cookieStore.get(CLIENT_PORTAL_SSO_RESOLUTION_COOKIE)?.value,
+                secret: signingSecret,
+            });
+            if (clientResolution && clientResolution.provider === provider) {
+                return { userType: 'client', tenantHint: clientResolution.tenantId };
+            }
+
+            const mspResolution = parseAndVerifyMspSsoResolutionCookie({
+                value: cookieStore.get(MSP_SSO_RESOLUTION_COOKIE)?.value,
+                secret: signingSecret,
+            });
+            if (mspResolution && mspResolution.provider === provider) {
+                const scopeTenantId =
+                    mspResolution.scopeTenantId ??
+                    (mspResolution.source === 'tenant' ? mspResolution.tenantId : undefined);
+                return { userType: 'internal', scopeTenantId };
+            }
         }
-
-        const cookieStore = await cookies();
-        const resolution = parseAndVerifyClientPortalSsoResolutionCookie({
-            value: cookieStore.get(CLIENT_PORTAL_SSO_RESOLUTION_COOKIE)?.value,
-            secret: signingSecret,
-        });
-
-        if (!resolution || resolution.provider !== provider) {
-            return null;
-        }
-
-        return {
-            tenantHint: resolution.tenantId,
-            userTypeHint: 'client',
-        };
     } catch (error) {
-        console.warn('[client-portal-sso] failed to read OAuth profile hints', error);
-        return null;
+        console.warn('[sso] failed to read OAuth profile hints', error);
     }
+
+    return null;
 }
 
 const NEXTAUTH_COOKIES = {
@@ -372,14 +402,17 @@ const NEXTAUTH_COOKIES = {
     },
 } as const;
 
-async function mapGoogleProfile(profile: Record<string, any>): Promise<ExtendedUser> {
+async function mapGoogleProfile(
+    profile: Record<string, any>,
+    context?: { teamsTenantId?: string },
+): Promise<ExtendedUser> {
     const googleProfile = profile as Record<string, unknown>;
-    const clientPortalHints = await getClientPortalSsoProfileHints('google');
+    const clientPortalHints = await getSsoProfileHints('google', context);
     const tenantHint =
         clientPortalHints?.tenantHint ??
         (typeof googleProfile.hd === 'string' ? googleProfile.hd : undefined);
     const userTypeHint =
-        clientPortalHints?.userTypeHint ??
+        clientPortalHints?.userType ??
         (typeof googleProfile.user_type === 'string'
             ? googleProfile.user_type
             : undefined);
@@ -395,6 +428,7 @@ async function mapGoogleProfile(profile: Record<string, any>): Promise<ExtendedU
         tenantHint,
         vanityHostHint,
         userTypeHint,
+        scopeTenantId: clientPortalHints?.scopeTenantId,
     }) as Promise<ExtendedUser>;
 }
 
@@ -402,7 +436,7 @@ function getLocalGoogleOauthBaseUrl(): string {
     return new URL('/api/auth/e2e/google/', process.env.NEXTAUTH_URL || 'http://localhost:3000').toString();
 }
 
-function buildGoogleProvider(clientId: string, clientSecret: string) {
+function buildGoogleProvider(clientId: string, clientSecret: string, context?: { teamsTenantId?: string }) {
     if (PLAYWRIGHT_FAKE_GOOGLE_OAUTH_ENABLED) {
         const localBaseUrl = getLocalGoogleOauthBaseUrl();
         return {
@@ -424,60 +458,38 @@ function buildGoogleProvider(clientId: string, clientSecret: string) {
             userinfo: {
                 url: new URL('userinfo', localBaseUrl).toString(),
             },
-            profile: mapGoogleProfile,
+            profile: (profile: Record<string, any>) => mapGoogleProfile(profile, context),
         };
     }
 
     return GoogleProvider({
         clientId,
         clientSecret,
-        profile: mapGoogleProfile,
+        profile: (profile: Record<string, any>) => mapGoogleProfile(profile, context),
     });
 }
 
 /**
  * Microsoft sign-in, against Entra or — when the simulator gate is on — against
- * the algasim Microsoft simulator. The simulator issues no signed id_token, so
- * that branch runs as plain OAuth2 and resolves the account from Graph `/me`,
- * which carries the same `mail`/`userPrincipalName` pair `profile()` reads.
+ * the algasim Microsoft simulator. That branch uses discovery and signed OIDC
+ * tokens with the same state, PKCE and nonce checks as the production provider.
  */
 function buildAzureADProvider(config: {
     clientId: string;
     clientSecret: string;
     authority: string;
-    checks?: Array<'pkce' | 'state'>;
+    checks: Array<'pkce' | 'state' | 'nonce'>;
     profile: (profile: Record<string, any>) => Promise<ExtendedUser>;
 }) {
     if (isMicrosoftSsoEmulatorEnabled()) {
-        const endpoints = getMicrosoftSsoEmulatorEndpoints(config.authority);
-        return {
-            id: 'azure-ad',
-            name: 'Microsoft',
-            type: 'oauth' as const,
-            clientId: config.clientId,
-            clientSecret: config.clientSecret,
-            checks: (config.checks ?? ['pkce', 'state']) as Array<'pkce' | 'state'>,
-            authorization: {
-                url: endpoints.authorization,
-                params: {
-                    scope: 'openid email profile https://graph.microsoft.com/User.Read',
-                },
-            },
-            token: {
-                url: endpoints.token,
-            },
-            userinfo: {
-                url: endpoints.userinfo,
-            },
-            profile: config.profile,
-        };
+        return buildMicrosoftSsoEmulatorProvider(config);
     }
 
     return AzureADProvider({
         clientId: config.clientId,
         clientSecret: config.clientSecret,
         issuer: `https://login.microsoftonline.com/${config.authority}/v2.0`,
-        ...(config.checks ? { checks: config.checks } : {}),
+        checks: config.checks,
         profile: config.profile,
     });
 }
@@ -510,6 +522,15 @@ async function ensureEnterpriseSsoRegistryInitialized(): Promise<void> {
         // when invoked via the default registry stubs.
         console.error('[auth] Failed to initialize Enterprise SSO registry', error);
     }
+}
+
+/**
+ * A custom domain a signed-in client user may be handed off to: active AND serving the client
+ * portal. An MSP-only domain would land the user on the middleware surface gate, which sends
+ * portal paths on that host to /auth/signin (alga-2026-0002799).
+ */
+export function isClientPortalHandoffDomain(portalDomain: { status: string; surface?: unknown }): boolean {
+    return portalDomain.status === 'active' && portalDomainServes(portalDomain.surface, 'client_portal');
 }
 
 async function computeVanityRedirect({
@@ -556,7 +577,13 @@ async function computeVanityRedirect({
 
         const fetchPortalDomainForTenant = async () => {
             const portalDomain = await getPortalDomain(knex, tenantId);
-            if (!portalDomain || portalDomain.status !== 'active') {
+            if (!portalDomain || !isClientPortalHandoffDomain(portalDomain)) {
+                return null;
+            }
+            // Already on the tenant's own custom domain (an MSP/both domain authenticates in
+            // place, see nextauth/customHostAuth.ts): the session cookie is host-only on this
+            // host, so a handoff to ourselves would be a pointless redirect loop.
+            if (portalDomain.domain.toLowerCase() === base.host.toLowerCase()) {
                 return null;
             }
             return portalDomain;
@@ -570,7 +597,7 @@ async function computeVanityRedirect({
 
             for (const candidate of candidates) {
                 const portalDomain = await getPortalDomainByHostname(knex, candidate);
-                if (!portalDomain || portalDomain.status !== 'active') {
+                if (!portalDomain || !isClientPortalHandoffDomain(portalDomain)) {
                     continue;
                 }
                 if (portalDomain.tenant !== tenantId) {
@@ -703,7 +730,7 @@ interface ExtendedUser {
     contactId?: string;
     authFailure?: OAuthMappingFailure;
     plan?: string;
-    product_code?: 'psa' | 'algadesk';
+    product_code?: ProductCode;
     deviceInfo?: {
         ip: string;
         userAgent: string;
@@ -760,13 +787,16 @@ const OAUTH_PROVIDER_ALIASES: Record<string, OAuthLinkProvider> = {
 // Keycloak (or any OIDC realm fronted by it) resolves the AlgaPSA user by email,
 // exactly like Google and Microsoft. Standard realms emit no tenant/user_type
 // claims, so anything beyond email is a hint, never the source of truth.
-async function mapKeycloakProfile(profile: Record<string, any>): Promise<ExtendedUser> {
-    const clientPortalHints = await getClientPortalSsoProfileHints('keycloak');
+async function mapKeycloakProfile(
+    profile: Record<string, any>,
+    context?: { teamsTenantId?: string },
+): Promise<ExtendedUser> {
+    const clientPortalHints = await getSsoProfileHints('keycloak', context);
     const tenantHint =
         clientPortalHints?.tenantHint ??
         (typeof profile.tenant === 'string' ? profile.tenant : undefined);
     const userTypeHint =
-        clientPortalHints?.userTypeHint ??
+        clientPortalHints?.userType ??
         (typeof profile.user_type === 'string' ? profile.user_type : undefined);
     return mapOAuthProfileToExtendedUser({
         provider: 'keycloak',
@@ -775,6 +805,7 @@ async function mapKeycloakProfile(profile: Record<string, any>): Promise<Extende
         profile,
         tenantHint,
         userTypeHint,
+        scopeTenantId: clientPortalHints?.scopeTenantId,
     });
 }
 
@@ -783,12 +814,12 @@ function buildKeycloakProvider(config: {
     clientSecret: string;
     url: string;
     realm: string;
-}) {
+}, context?: { teamsTenantId?: string }) {
     return KeycloakProvider({
         clientId: config.clientId,
         clientSecret: config.clientSecret,
         issuer: buildKeycloakIssuer(config.url, config.realm),
-        profile: mapKeycloakProfile,
+        profile: (profile: Record<string, any>) => mapKeycloakProfile(profile, context),
     });
 }
 
@@ -1562,7 +1593,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
     providers: [
         ...(secrets.googleClientId && secrets.googleClientSecret
             ? [
-                buildGoogleProvider(secrets.googleClientId, secrets.googleClientSecret),
+                buildGoogleProvider(secrets.googleClientId, secrets.googleClientSecret, context),
             ]
             : []),
         ...(secrets.microsoftClientId && secrets.microsoftClientSecret
@@ -1571,9 +1602,15 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     clientId: secrets.microsoftClientId,
                     clientSecret: secrets.microsoftClientSecret,
                     authority: secrets.microsoftTenantId || 'common',
-                    checks: ['pkce', 'state'],
+                    // `nonce` is load-bearing, not belt-and-braces. `state` binds the
+                    // callback to the browser that started it; `pkce` binds the code to
+                    // the client that requested it; only `nonce` binds the *ID token*
+                    // to this authorization request, which is what stops a token minted
+                    // for another request being replayed into this session. Auth.js only
+                    // sends and verifies a nonce when it is listed here.
+                    checks: ['pkce', 'state', 'nonce'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
-                        const clientPortalHints = await getClientPortalSsoProfileHints('azure-ad');
+                        const clientPortalHints = await getSsoProfileHints('azure-ad', context);
                         const emailCandidate =
                             profile.email ??
                             profile.mail ??
@@ -1593,7 +1630,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         const vanityHostHint =
                             typeof profile.vanity_host === 'string' ? profile.vanity_host : undefined;
                         const userTypeHint =
-                            clientPortalHints?.userTypeHint ??
+                            clientPortalHints?.userType ??
                             (typeof profile.user_type === 'string' ? profile.user_type : undefined);
                         return mapOAuthProfileToExtendedUser({
                             provider: 'microsoft',
@@ -1603,6 +1640,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                             tenantHint,
                             vanityHostHint,
                             userTypeHint,
+                            scopeTenantId: clientPortalHints?.scopeTenantId,
                         }) as Promise<ExtendedUser>;
                     },
                 }),
@@ -1839,7 +1877,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     clientSecret: secrets.keycloakClientSecret,
                     url: secrets.keycloakUrl,
                     realm: secrets.keycloakRealm,
-                }),
+                }, context),
             ]
             : []),
     ],
@@ -2347,7 +2385,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
                 user.plan = token.plan as string | undefined;
-                user.product_code = (token.product_code as 'psa' | 'algadesk' | undefined) ?? 'psa';
+                user.product_code = (token.product_code as ProductCode | undefined) ?? 'psa';
                 (user as any).addons = (token.addons as string[] | undefined) ?? [];
                 (user as any).trial_end = token.trial_end ?? null;
                 (user as any).subscription_status = token.subscription_status ?? null;

@@ -105,7 +105,13 @@
     "extensions": "Extensions",
     "ticketsAll": "All Tickets",
     "ticketsRecurring": "Recurring Tickets",
-    "ticketsTemplates": "Ticket Templates"
+    "ticketsTemplates": "Ticket Templates",
+    "assetsCustody": "Equipment in custody",
+    "ticketsCannedResponses": "Canned Responses",
+    "profile": "Profile",
+    "signOut": "Sign out",
+    "coManaged": "Co-managed IT",
+    "coManagedAdministration": "Access & administration"
   },
   "marketing": {
     "dialogs": {
@@ -506,7 +512,8 @@
       "extensions": "Extensions",
       "experimentalFeatures": "Experimental Features",
       "profile": "Profile",
-      "security": "Security"
+      "security": "Security",
+      "tags": "Tags"
     }
   },
   "dashboard": {
@@ -673,6 +680,17 @@
       "calendar": {
         "error": "Calendar sync for {{providerName}} reported an error and is not syncing.",
         "disconnected": "Calendar sync for {{providerName}} is disconnected and is not syncing."
+      },
+      "rmm": {
+        "syncError": "{{providerName}} reported a sync error, so device and alert data may be out of date.",
+        "reconnectRequired": "{{providerName}} needs to be reconnected — its credentials can no longer be refreshed."
+      },
+      "accounting": {
+        "reconnectRequired": "{{providerName}} needs to be reconnected before accounting sync can run again.",
+        "syncError": "The last {{providerName}} sync did not finish, so invoices and payments may be out of date."
+      },
+      "teams": {
+        "botCredentialsMissing": "The {{providerName}} bot cannot reply: its bot connector credentials are not configured on the server."
       },
       "review": "Review",
       "dismiss": "Dismiss integration alert"
@@ -843,5 +861,10 @@
     "errors": {
       "enterpriseOnly": "Chat features are only available in Enterprise Edition"
     }
+  },
+  "coManagedWorkspace": {
+    "loading": "Loading workspace…",
+    "navigation": "Customer workspace",
+    "passwordError": "Unable to check password status. Please reload this page."
   }
 }

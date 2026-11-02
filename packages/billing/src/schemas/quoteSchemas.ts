@@ -1,6 +1,7 @@
+import { canTransitionQuoteStatus } from '@alga-psa/shared/lib/quotes/quoteStatusTransitions';
 import { z } from 'zod';
 import { isUnitOfMeasureCode } from '@alga-psa/core/unitOfMeasure';
-import type { QuoteStatus } from '@alga-psa/types';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 export const quoteStatusSchema = z.enum([
   'draft',
@@ -20,8 +21,8 @@ export const quoteItemBillingMethodSchema = z.enum(['fixed', 'hourly', 'usage'])
 export const quoteDiscountTypeSchema = z.enum(['percentage', 'fixed']);
 
 const createQuoteBaseSchema = z.object({
-  client_id: z.string().uuid().optional().nullable(),
-  contact_id: z.string().uuid().optional().nullable(),
+  client_id: z.string().guid().optional().nullable(),
+  contact_id: z.string().guid().optional().nullable(),
   title: z.string().trim().min(1),
   description: z.string().trim().optional().nullable(),
   quote_date: z.coerce.date(),
@@ -29,7 +30,7 @@ const createQuoteBaseSchema = z.object({
   po_number: z.string().trim().max(255).optional().nullable(),
   recurring_section_title: z.string().trim().max(255).optional().nullable().transform((value) => value || null),
   onetime_section_title: z.string().trim().max(255).optional().nullable().transform((value) => value || null),
-  opportunity_id: z.string().uuid().optional().nullable(),
+  opportunity_id: z.string().guid().optional().nullable(),
   internal_notes: z.string().optional().nullable(),
   client_notes: z.string().optional().nullable(),
   terms_and_conditions: z.string().optional().nullable(),
@@ -45,7 +46,7 @@ const createQuoteBaseSchema = z.object({
   currency_code: z.string().trim().length(3).optional(),
   tax_source: z.enum(['internal', 'external', 'pending_external']).default('internal'),
   is_template: z.boolean().default(false),
-  created_by: z.string().uuid().optional().nullable(),
+  created_by: z.string().guid().optional().nullable(),
 });
 
 export const createQuoteSchema = createQuoteBaseSchema.superRefine((value, ctx) => {
@@ -66,10 +67,10 @@ export const createQuoteSchema = createQuoteBaseSchema.superRefine((value, ctx) 
   }
 });
 
-export const updateQuoteSchema = createQuoteBaseSchema.partial().extend({
+export const updateQuoteSchema = partialWithoutDefaults(createQuoteBaseSchema).extend({
   status: quoteStatusSchema.optional().nullable(),
-  template_id: z.string().uuid().optional().nullable(),
-  updated_by: z.string().uuid().optional().nullable(),
+  template_id: z.string().guid().optional().nullable(),
+  updated_by: z.string().guid().optional().nullable(),
   archived_at: z.coerce.date().optional().nullable(),
   sent_at: z.coerce.date().optional().nullable(),
   viewed_at: z.coerce.date().optional().nullable(),
@@ -78,13 +79,13 @@ export const updateQuoteSchema = createQuoteBaseSchema.partial().extend({
   cancelled_at: z.coerce.date().optional().nullable(),
   expired_at: z.coerce.date().optional().nullable(),
   converted_at: z.coerce.date().optional().nullable(),
-  converted_contract_id: z.string().uuid().optional().nullable(),
-  converted_invoice_id: z.string().uuid().optional().nullable(),
+  converted_contract_id: z.string().guid().optional().nullable(),
+  converted_invoice_id: z.string().guid().optional().nullable(),
 });
 
 const createQuoteItemBaseSchema = z.object({
-  quote_id: z.string().uuid(),
-  service_id: z.string().uuid().optional().nullable(),
+  quote_id: z.string().guid(),
+  service_id: z.string().guid().optional().nullable(),
   description: z.string().trim().min(1),
   // The catalog-description snapshot is intentionally absent from this input
   // shape: it is a server-captured, tenant-scoped snapshot of the catalog row,
@@ -105,15 +106,15 @@ const createQuoteItemBaseSchema = z.object({
   is_discount: z.boolean().default(false),
   discount_type: quoteDiscountTypeSchema.optional().nullable(),
   discount_percentage: z.number().int().min(0).max(100).optional().nullable(),
-  applies_to_item_id: z.string().uuid().optional().nullable(),
-  applies_to_service_id: z.string().uuid().optional().nullable(),
+  applies_to_item_id: z.string().guid().optional().nullable(),
+  applies_to_service_id: z.string().guid().optional().nullable(),
   is_taxable: z.boolean().default(true),
   tax_region: z.string().trim().optional().nullable(),
   tax_rate: z.number().int().min(0).optional().nullable(),
-  location_id: z.string().uuid().optional().nullable(),
+  location_id: z.string().guid().optional().nullable(),
   cost: z.number().int().min(0).optional().nullable(),
   cost_currency: z.string().trim().length(3).optional().nullable(),
-  created_by: z.string().uuid().optional().nullable(),
+  created_by: z.string().guid().optional().nullable(),
 });
 
 export const createQuoteItemSchema = createQuoteItemBaseSchema.superRefine((value, ctx) => {
@@ -142,31 +143,12 @@ export const createQuoteItemSchema = createQuoteItemBaseSchema.superRefine((valu
   }
 });
 
-export const updateQuoteItemSchema = createQuoteItemBaseSchema.partial().extend({
-  updated_by: z.string().uuid().optional().nullable()
+export const updateQuoteItemSchema = partialWithoutDefaults(createQuoteItemBaseSchema).extend({
+  updated_by: z.string().guid().optional().nullable()
 });
 
-export const QUOTE_ALLOWED_STATUS_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
-  draft: ['pending_approval', 'sent', 'cancelled'],
-  pending_approval: ['approved', 'draft', 'cancelled'],
-  approved: ['sent', 'cancelled'],
-  sent: ['accepted', 'rejected', 'expired', 'cancelled'],
-  accepted: ['converted', 'cancelled'],
-  rejected: ['cancelled'],
-  expired: ['cancelled'],
-  converted: [],
-  cancelled: [],
-  superseded: [],
-  archived: []
-};
+export { QUOTE_ALLOWED_STATUS_TRANSITIONS, canTransitionQuoteStatus } from '@alga-psa/shared/lib/quotes/quoteStatusTransitions';
 
-export function canTransitionQuoteStatus(currentStatus: QuoteStatus, nextStatus: QuoteStatus): boolean {
-  if (currentStatus === nextStatus) {
-    return true;
-  }
-
-  return QUOTE_ALLOWED_STATUS_TRANSITIONS[currentStatus]?.includes(nextStatus) ?? false;
-}
 
 export const quoteStatusTransitionSchema = z.object({
   currentStatus: quoteStatusSchema,

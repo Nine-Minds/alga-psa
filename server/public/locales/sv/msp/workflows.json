@@ -881,6 +881,7 @@
       "add": "Lägg till",
       "remove": "Ta bort",
       "empty": "Inga mappningar ännu.",
+      "nameRequired": "Ange ett namn för den här mappningen.",
       "expressionLabel": "Uttryck"
     },
     "schemaForm": {
@@ -1356,6 +1357,9 @@
         "contains": "innehåller",
         "starts_with": "börjar med",
         "ends_with": "slutar med",
+        "not_contains": "innehåller inte",
+        "not_starts_with": "börjar inte med",
+        "not_ends_with": "slutar inte med",
         "is_empty": "är tomt",
         "is_not_empty": "är inte tomt"
       },

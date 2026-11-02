@@ -26,6 +26,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
+import { ticketActivityAttribution } from '../../lib/ticketActivityAttribution';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -37,7 +38,7 @@ import type {
   TicketTimelineEntry,
 } from '@alga-psa/shared/lib/ticketActivity';
 
-import { getTicketTimelineEntries } from '../../actions/ticketActivityActions';
+import { useTicketDataSource } from './TicketDataSourceContext';
 
 interface TicketActivityTimelineProps {
   ticketId: string;
@@ -62,7 +63,8 @@ interface FormattedEntry {
 }
 
 function actorLabel(activity: TicketActivityRow): string {
-  if (activity.actor_display_name) return activity.actor_display_name;
+  const snapshot = ticketActivityAttribution(activity);
+  if (snapshot) return snapshot;
   switch (activity.actor_type) {
     case 'user':
       return 'A user';
@@ -500,6 +502,7 @@ function sourceBadge(source: string): { label: string; className: string } {
 }
 
 export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActivityTimelineProps) {
+  const { getTicketTimelineEntries } = useTicketDataSource().activity;
   const { t: tCommon } = useTranslation('common');
   const { t: tTickets } = useTranslation('features/tickets');
   const { formatDate } = useFormatters();
@@ -537,7 +540,7 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
     return () => {
       cancelled = true;
     };
-  }, [ticketId, refreshKey]);
+  }, [ticketId, refreshKey, getTicketTimelineEntries]);
 
   // All hooks must run unconditionally on every render — keep useMemo/etc.
   // above the loading/error early returns to satisfy the rules of hooks.

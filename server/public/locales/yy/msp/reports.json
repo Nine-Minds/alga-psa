@@ -310,7 +310,9 @@
       "hourlyRate": "〖Řȧŧḗ / ħř ····〗",
       "expirationDate": "〖Ḗẋƥīřḗş ···〗",
       "neverExpires": "〖Ƞḗṽḗř ··〗",
-      "adhocBlock": "〖Ȧḓ-ħȯƈ ···〗"
+      "adhocBlock": "〖Ȧḓ-ħȯƈ ···〗",
+      "remainingValue": "〖Řḗḿȧīƞīƞɠ ṽȧŀŭḗ ······〗",
+      "validFrom": "〖Ṽȧŀīḓ ƒřȯḿ ····〗"
     },
     "statusValues": {
       "active": "〖Ȧƈŧīṽḗ ···〗",
@@ -318,7 +320,8 @@
       "yes": "〖Ẏḗş ··〗",
       "no": "〖Ƞȯ ·〗",
       "expired": "〖Ḗẋƥīřḗḓ ···〗",
-      "voided": "〖Ṽȯīḓḗḓ ···〗"
+      "voided": "〖Ṽȯīḓḗḓ ···〗",
+      "all": "〖Ȧŀŀ şŧȧŧŭşḗş ·····〗"
     },
     "profitability": {
       "formats": {

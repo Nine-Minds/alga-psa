@@ -105,7 +105,7 @@ const ok = <T,>(result: T): T => {
   expect(result, JSON.stringify(result)).toBeTruthy();
   // Wizard actions report expected failures as values ({ actionError } / { permissionError }), not throws.
   expect(result).not.toHaveProperty('error');
-  expect(result).not.toHaveProperty('actionError');
+  expect(result, JSON.stringify(result)).not.toHaveProperty('actionError');
   expect(result).not.toHaveProperty('permissionError');
   return result;
 };
@@ -180,6 +180,8 @@ describe('getContractOverview effective billing timing', () => {
       await createContractTemplateFromWizard({
         contract_name: `Timing template ${uuidv4().slice(0, 6)}`,
         billing_frequency: 'monthly',
+        // Templates carry their own base currency and the action rejects a
+        // submission without a valid ISO 4217 code.
         currency_code: 'USD',
         fixed_services: [{ service_id: svc.serviceId, pricing_basis: 'unit', quantity: 1, unit_rate: 10000 }],
       } as any),

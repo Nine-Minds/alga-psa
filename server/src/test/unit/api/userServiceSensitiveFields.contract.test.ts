@@ -129,7 +129,7 @@ describe('UserService API response sensitive field contract', () => {
 
   it('projects only allowlisted columns for enhanced user responses', () => {
     const source = readRepoFile('packages/users/src/services/UserService.ts');
-    const sanitizerSource = readRepoFile('packages/users/src/services/userResponseSanitizer.ts');
+    const sanitizerSource = readRepoFile('packages/types/src/constants/userResponseSanitizer.ts');
 
     expect(sanitizerSource).toContain('USER_RESPONSE_FIELD_NAMES_TUPLE = [');
     expect(sanitizerSource).toContain('export const USER_RESPONSE_FIELD_NAMES');

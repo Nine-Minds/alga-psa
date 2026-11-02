@@ -7,6 +7,7 @@ import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTi
 import { getTicketCategories } from '@alga-psa/tickets/actions/ticketCategoryActions';
 import { getAllBoards } from '@alga-psa/reference-data/actions/boardActions';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
+import { renderQuickAddAssetPicker } from '../tickets/renderQuickAddAssetPicker';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { ticketDetailsInitialProps } from '../tickets/ticketDetailsInitialProps';
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
@@ -41,6 +42,7 @@ export function useTicketIntegrationValue(): TicketIntegrationContextType {
           initialClient={ticketData.client}
           initialContacts={ticketData.contacts}
           initialContactInfo={ticketData.contactInfo}
+          initialDisplayTags={ticketData.displayTags}
           {...ticketDetailsInitialProps(ticketData)}
           initialAdditionalAgents={ticketData.additionalAgents}
           statusOptions={ticketData.options.status}
@@ -78,6 +80,7 @@ export function useTicketIntegrationValue(): TicketIntegrationContextType {
           prefilledAdditionalAgents={renderProps.prefilledAdditionalAgents}
           isEmbedded={renderProps.isEmbedded}
           renderBeforeFooter={renderProps.renderBeforeFooter}
+          renderAssetPicker={renderQuickAddAssetPicker}
         />
       </div>
     ),

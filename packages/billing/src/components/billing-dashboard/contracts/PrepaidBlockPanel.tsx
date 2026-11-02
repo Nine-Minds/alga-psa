@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { AlertTriangle, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { describeRollover, isCadenceBlock } from './prepaidBlockLabels';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
@@ -292,9 +293,15 @@ export const PrepaidBlockPanel: React.FC<PrepaidBlockPanelProps> = ({
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">{t('prepaidBlock.summary.expiry', { defaultValue: 'Expiry' })}</dt>
+            <dt className="text-muted-foreground">
+                {isCadenceBlock(config)
+                  ? t('prepaidBlock.fields.rolloverPeriods', { defaultValue: 'Unused hours' })
+                  : t('prepaidBlock.summary.expiry', { defaultValue: 'Expiry' })}
+              </dt>
             <dd id={`${idPrefix}-config-expiry`}>
-              {config.expiry_months == null
+              {isCadenceBlock(config)
+                ? describeRollover(t, Number(config.rollover_periods ?? 0))
+                : config.expiry_months == null
                 ? t('prepaidBlock.summary.neverExpires', { defaultValue: 'Never expires' })
                 : t('prepaidBlock.summary.expiresAfterMonths', { defaultValue: '{{months}} months', months: config.expiry_months })}
             </dd>
@@ -304,8 +311,11 @@ export const PrepaidBlockPanel: React.FC<PrepaidBlockPanelProps> = ({
             <dd id={`${idPrefix}-config-sold-as`}>{soldAsName ?? ''}</dd>
           </div>
           <div className="md:col-span-3">
-            <dt className="text-muted-foreground">{t('prepaidBlock.summary.triggers', { defaultValue: 'Next block is invoiced when' })}</dt>
+            <dt className="text-muted-foreground">{isCadenceBlock(config)
+                ? t('prepaidBlock.fields.issueMode', { defaultValue: 'Issue blocks' })
+                : t('prepaidBlock.summary.triggers', { defaultValue: 'Next block is invoiced when' })}</dt>
             <dd id={`${idPrefix}-config-triggers`} className="flex flex-wrap gap-1 pt-1">
+              {isCadenceBlock(config) && <Badge variant="default-muted">{t('prepaidBlock.fields.issueModeCadence', { defaultValue: 'Every billing period' })}</Badge>}
               {config.trigger_on_exhaustion && <Badge variant="default-muted">{t('prepaidBlock.summary.onExhaustion', { defaultValue: 'The block runs out' })}</Badge>}
               {config.trigger_threshold_percent != null && (
                 <Badge variant="default-muted">
@@ -314,14 +324,21 @@ export const PrepaidBlockPanel: React.FC<PrepaidBlockPanelProps> = ({
               )}
               {config.trigger_on_expiry && <Badge variant="default-muted">{t('prepaidBlock.summary.onExpiry', { defaultValue: 'The block expires' })}</Badge>}
               {config.trigger_on_renewal && <Badge variant="default-muted">{t('prepaidBlock.summary.onRenewal', { defaultValue: 'The contract renews' })}</Badge>}
+              {!isCadenceBlock(config) && (
               <Badge variant="outline">
                 {config.replenishment_tier === 'auto_issue'
                   ? t('prepaidBlock.summary.tierAutoIssue', { defaultValue: 'Finalized automatically' })
                   : t('prepaidBlock.summary.tierDraft', { defaultValue: 'Draft for review' })}
               </Badge>
+              )}
             </dd>
           </div>
         </dl>
+      )}
+      {config && isCadenceBlock(config) && !editing && (
+        <p id={`${idPrefix}-fee-in-advance-note`} className="text-xs text-muted-foreground">
+          {t('prepaidBlock.fields.blockFeeInAdvance', { defaultValue: 'The line bills in arrears; the block fee bills in advance.' })}
+        </p>
       )}
 
       <div id={`${idPrefix}-balance`} className="space-y-1">
@@ -400,7 +417,7 @@ export const PrepaidBlockPanel: React.FC<PrepaidBlockPanelProps> = ({
             ? `${triggerLabel(summary.next_issuance.trigger_kind)} (${dateText(summary.next_issuance.due_date)})`
             : t('prepaidBlock.next.none', { defaultValue: 'None' })}
         </div>
-        {!isReadOnly && (
+        {!isReadOnly && !isCadenceBlock(config) && (
           <Button
             id={`${idPrefix}-issue-next`}
             type="button"

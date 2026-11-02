@@ -7,6 +7,8 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { useClientDrawer } from '@alga-psa/ui';
 import { Card } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { CustodyBadge, useCustodyBadges } from './custody/CustodyBadge';
+import { RmaBadge, useRmaBadges } from './warranty/RmaBadge';
 import { AssetAgentCell, AssetCoverageCell, AssetIdentityMeta, AssetPatchingCell } from './assetListCells';
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -47,7 +49,8 @@ import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { AssetTypeBreakdownCard } from './AssetTypeBreakdownCard';
 import { useAssetTypeRegistry } from './shared/useAssetTypeOptions';
-import { buildAssetStatusOptions, resolveAssetStatusLabel, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { buildAssetStatusOptions, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { assetStatusLabel } from '../lib/assetStatus';
 import { fallbackAssetTypeLabel, resolveAssetTypeLabel } from '../lib/assetTypeDisplay';
 import { isBuiltinAssetTypeSlug } from '../lib/assetTypeAttributes';
 import { getIconComponent } from '@alga-psa/ui/components/IconPicker';
@@ -236,6 +239,9 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupKind, setNewGroupKind] = useState<AssetGroupKind>('bundle');
   const [groupFilter, setGroupFilter] = useState<string>('');
+  // C4: '' = any. Ownership and "in MSP custody" are server-side listAssets params.
+  const [ownershipFilter, setOwnershipFilter] = useState<'' | 'client' | 'msp'>('');
+  const [inCustodyFilter, setInCustodyFilter] = useState<'' | 'yes' | 'no'>('');
   const [confirmBulkWorkspace, setConfirmBulkWorkspace] = useState(false);
   const [isBulkLocationOpen, setIsBulkLocationOpen] = useState(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
@@ -465,7 +471,9 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     typeFilters.length > 0 ||
     clientFilters.length > 0 ||
     agentStatusFilters.length > 0 ||
-    rmmManagedFilter.length > 0
+    rmmManagedFilter.length > 0 ||
+    ownershipFilter !== '' ||
+    inCustodyFilter !== ''
   );
 
   const isAllSelected = filteredCount > 0 && assets.every(asset => selectedAssetIds.includes(asset.asset_id));
@@ -545,6 +553,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       agent_status: agentStatusFilters.length > 0 ? (agentStatusFilters[0] as AssetQueryParams['agent_status']) : undefined,
       rmm_managed: rmmManaged,
       group_id: groupFilter || undefined,
+      ownership: ownershipFilter || undefined,
+      in_custody: inCustodyFilter === '' ? undefined : inCustodyFilter === 'yes',
       // Patch/OS state lives on the per-type extension row.
       include_extension_data: true,
       sort_by: sortBy,
@@ -556,6 +566,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     clientFilters,
     debouncedSearchTerm,
     groupFilter,
+    inCustodyFilter,
+    ownershipFilter,
     rmmManagedFilter,
     sortBy,
     sortDirection,
@@ -593,11 +605,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       client: clientFilters,
       agentStatus: agentStatusFilters,
       rmmManaged: rmmManagedFilter,
+      ownership: ownershipFilter,
+      inCustody: inCustodyFilter,
       pageSize,
       sortBy,
       sortDirection,
     });
-  }, [agentStatusFilters, clientFilters, debouncedSearchTerm, pageSize, rmmManagedFilter, sortBy, sortDirection, statusFilters, typeFilters]);
+  }, [agentStatusFilters, clientFilters, debouncedSearchTerm, inCustodyFilter, ownershipFilter, pageSize, rmmManagedFilter, sortBy, sortDirection, statusFilters, typeFilters]);
 
   useEffect(() => {
     const queryChanged = assetsQueryKey !== lastAssetsQueryKeyRef.current;
@@ -668,6 +682,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     setClientFilters([]);
     setAgentStatusFilters([]);
     setRmmManagedFilter([]);
+    setOwnershipFilter('');
+    setInCustodyFilter('');
   };
 
   const bulkLocationOptions = useMemo<SelectOption[]>(() => (
@@ -977,7 +993,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   // only an untouched builtin is translated, so a renamed status reads the
   // same here, in the drawer and on the details page.
   const getAssetStatusLabel = useCallback(
-    (status: string) => resolveAssetStatusLabel(t, status, assetStatuses),
+    (status: string) => assetStatusLabel(t, status, assetStatuses),
     [assetStatuses, t]
   );
 
@@ -1011,6 +1027,9 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       return [...prev, key];
     });
   }, []);
+
+  const custodyBadges = useCustodyBadges(useMemo(() => assets.map((a) => a.asset_id), [assets]));
+  const rmaBadges = useRmaBadges(useMemo(() => assets.map((a) => a.asset_id), [assets]));
 
   const columnLibrary: Record<ColumnKey, ColumnDefinition<Asset>> = useMemo(() => ({
     select: {
@@ -1109,6 +1128,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
             typeLabel={getAssetTypeLabel(record.asset_type)}
             typeIcon={getAssetTypeIcon(record.asset_type)}
           />
+          <CustodyBadge id={`asset-custody-badge-${record.asset_id}`} badge={custodyBadges.get(record.asset_id)} />
+          <RmaBadge id={`asset-rma-badge-${record.asset_id}`} badge={rmaBadges.get(record.asset_id)} />
         </div>
       )
     },
@@ -1320,6 +1341,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     getAssetStatusLabel,
     getAssetTypeLabel,
     assetStatuses,
+    custodyBadges,
+    rmaBadges,
   ]);
 
   const columns: ColumnDefinition<Asset>[] = useMemo(() => {
@@ -1500,7 +1523,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                     variant="ghost"
                     size="sm"
                     onClick={clearFilters}
-                    disabled={!searchTerm && statusFilters.length === 0 && typeFilters.length === 0 && clientFilters.length === 0}
+                    disabled={!searchTerm && statusFilters.length === 0 && typeFilters.length === 0 && clientFilters.length === 0 && ownershipFilter === '' && inCustodyFilter === ''}
                   >
                   {t('assetDashboardClient.filters.reset', { defaultValue: 'Reset' })}
                   </Button>
@@ -1544,6 +1567,29 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                     className="min-w-[180px]"
                   />
                 ) : null}
+
+                <CustomSelect
+                  id="ownership-filter-select"
+                  value={ownershipFilter}
+                  onValueChange={(value) => setOwnershipFilter(value as '' | 'client' | 'msp')}
+                  options={[
+                    { value: '', label: t('assetDashboardClient.filters.ownership.any', { defaultValue: 'Any ownership' }) },
+                    { value: 'client', label: t('assetDashboardClient.filters.ownership.client', { defaultValue: 'Client-owned' }) },
+                    { value: 'msp', label: t('assetDashboardClient.filters.ownership.msp', { defaultValue: 'MSP-owned' }) },
+                  ]}
+                  className="min-w-[160px]"
+                />
+                <CustomSelect
+                  id="in-custody-filter-select"
+                  value={inCustodyFilter}
+                  onValueChange={(value) => setInCustodyFilter(value as '' | 'yes' | 'no')}
+                  options={[
+                    { value: '', label: t('assetDashboardClient.filters.custody.any', { defaultValue: 'Any custody' }) },
+                    { value: 'yes', label: t('assetDashboardClient.filters.custody.inCustody', { defaultValue: 'In MSP custody' }) },
+                    { value: 'no', label: t('assetDashboardClient.filters.custody.notInCustody', { defaultValue: 'Not in MSP custody' }) },
+                  ]}
+                  className="min-w-[160px]"
+                />
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

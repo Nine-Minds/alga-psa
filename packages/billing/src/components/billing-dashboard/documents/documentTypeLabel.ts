@@ -28,6 +28,10 @@ export function documentTypeLabel(documentType: string, t: TFunction): string {
       return t('documentTemplates.types.pickList', { defaultValue: 'Pick List' });
     case 'work-tag':
       return t('documentTemplates.types.workTag', { defaultValue: 'Work Tag / Label' });
+    case 'rma-return-slip':
+      return t('documentTemplates.types.rmaReturnSlip', { defaultValue: 'RMA Return Slip' });
+    case 'staging-manifest':
+      return t('documentTemplates.types.stagingManifest', { defaultValue: 'Packing Manifest' });
     default:
       // A type in the registry but not here: fall back to its English label
       // rather than a raw key, so a newly added type degrades gracefully.

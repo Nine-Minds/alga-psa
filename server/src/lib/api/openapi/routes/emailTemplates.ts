@@ -87,7 +87,7 @@ export function registerEmailTemplateRoutes(
     'EmailTemplateEnvelope',
     zOpenApi.object({
       data: EmailTemplateDetail,
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -103,7 +103,7 @@ export function registerEmailTemplateRoutes(
         hasNext: zOpenApi.boolean(),
         hasPrev: zOpenApi.boolean(),
       }),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 

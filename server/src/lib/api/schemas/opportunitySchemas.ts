@@ -54,13 +54,13 @@ export const opportunitySuggestionListQuerySchema = z.object({
 export const opportunityListQuerySchema = z.object({
   status: z.enum(['open', 'won', 'lost', 'all']).optional(),
   stage: z.enum(['identified', 'qualified', 'assessment', 'proposed', 'verbal', 'won', 'lost']).optional(),
-  owner_id: z.string().uuid().optional(),
-  client_id: z.string().uuid().optional(),
+  owner_id: z.string().guid().optional(),
+  client_id: z.string().guid().optional(),
   opportunity_type: z.enum(['new_logo', 'expansion', 'renewal', 'project']).optional(),
   stalled_only: z.enum(['true', 'false']).optional().transform((value) => value === undefined ? undefined : value === 'true'),
   search: z.string().trim().min(1).optional(),
-  page: positiveIntegerQuery.optional().default('1'),
-  page_size: positiveIntegerQuery.optional().default('25').transform((value) => Math.min(value, 100)),
+  page: positiveIntegerQuery.prefault('1'),
+  page_size: positiveIntegerQuery.prefault('25').transform((value) => Math.min(value, 100)),
   sort_by: z.enum([
     'next_action_due',
     'expected_close_date',

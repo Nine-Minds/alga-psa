@@ -799,4 +799,45 @@ describe('mspSsoResolution helpers', () => {
       })
     ).toBeNull();
   });
+  it('signs scopeTenantId into the resolution cookie and rejects tampering or a non-string scope', () => {
+    const now = 1_700_000_000_000;
+    const resolution = createSignedMspSsoResolutionCookie({
+      provider: 'google',
+      source: 'app',
+      scopeTenantId: 'tenant-a',
+      secret: 'unit-secret',
+      now,
+      ttlSeconds: 300,
+    });
+
+    expect(
+      parseAndVerifyMspSsoResolutionCookie({ value: resolution.value, secret: 'unit-secret', now: now + 1000 })
+    ).toMatchObject({ provider: 'google', scopeTenantId: 'tenant-a' });
+
+    // Swap the payload for one naming a different tenant, keeping the old signature.
+    const [body, signature] = resolution.value.split('.');
+    const decoded = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    const forgedBody = Buffer.from(JSON.stringify({ ...decoded, scopeTenantId: 'tenant-b' })).toString('base64url');
+    expect(
+      parseAndVerifyMspSsoResolutionCookie({ value: `${forgedBody}.${signature}`, secret: 'unit-secret', now: now + 1000 })
+    ).toBeNull();
+
+    // A wrong secret never yields a scope.
+    expect(
+      parseAndVerifyMspSsoResolutionCookie({ value: resolution.value, secret: 'other-secret', now: now + 1000 })
+    ).toBeNull();
+
+    // A correctly signed payload with a non-string scope is rejected.
+    const bad = createSignedMspSsoResolutionCookie({
+      provider: 'google',
+      source: 'app',
+      scopeTenantId: 42 as unknown as string,
+      secret: 'unit-secret',
+      now,
+      ttlSeconds: 300,
+    });
+    expect(
+      parseAndVerifyMspSsoResolutionCookie({ value: bad.value, secret: 'unit-secret', now: now + 1000 })
+    ).toBeNull();
+  });
 });

@@ -11,9 +11,11 @@ interface BackNavProps extends AutomationProps {
   href?: string;
   /** Stable id for the button; defaults to the shared back-navigation id. */
   id?: string;
+  variant?: 'soft' | 'ghost';
+  size?: 'default' | 'sm';
 }
 
-export default function BackNav({ children, href, id = 'back-navigation-button' }: BackNavProps) {
+export default function BackNav({ children, href, id = 'back-navigation-button', variant = 'soft', size = 'default' }: BackNavProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -52,7 +54,8 @@ export default function BackNav({ children, href, id = 'back-navigation-button' 
   return (
     <Button
       id={id}
-      variant="soft"
+      variant={variant}
+      size={size}
       onClick={handleNavigation}
     >
       {children}

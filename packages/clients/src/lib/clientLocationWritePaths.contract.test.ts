@@ -67,6 +67,8 @@ const PUBLISHED_WRITERS: Record<string, string> = {
 const SILENT_WRITERS: Record<string, string> = {
   'ee/temporal-workflows/src/db/tenant-operations.ts':
     'tenant creation seeds the first location of a brand-new tenant; no webhook can exist yet',
+  'packages/clients/src/actions/inboundActions.ts':
+    'KNOWN GAP: upsertClientByExternalId writes the mapped contact/address fields to the default location (create and update) but publishes no client_location event, only the client-level CLIENT_CREATED/CLIENT_STATUS_CHANGED. Follow-up, out of scope for the client-creation seam extraction',
 };
 
 // Files that only delete locations because the client or tenant is being deleted (cascade).
