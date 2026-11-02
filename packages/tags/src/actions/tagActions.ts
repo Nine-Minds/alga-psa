@@ -5,6 +5,7 @@ import TagMapping, { ITagMapping, ITagWithDefinition } from '../models/tagMappin
 import { ITag, TaggedEntityType, PendingTag, IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
+import { authorizeProjectsByIds } from '@alga-psa/authorization/projectReadAuthorization';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
 import { isTagTextValidationFailure, validateTagText } from '../lib/tagTextValidation';
@@ -38,6 +39,32 @@ function getPermissionResource(taggedType: TaggedEntityType): string {
 }
 
 type TagTextSnapshot = string[];
+
+function projectTagsAreRedacted(fields: string[]): boolean {
+  return fields.some((field) => ['tags', 'project.tags', 'projects.tags'].includes(field.trim().toLowerCase()));
+}
+
+async function readableProjectIdsForTags(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  projectIds: string[],
+): Promise<Set<string>> {
+  if (projectIds.length === 0 || !(await hasPermissionAsync(user, 'project', 'read', trx))) return new Set();
+  const decisions = await authorizeProjectsByIds(trx, tenant, user, projectIds);
+  return new Set(decisions.filter(({ project, allowed, redactedFields }) =>
+    allowed && !projectTagsAreRedacted(redactedFields) && project.project_id,
+  ).map(({ project }) => project.project_id!));
+}
+
+async function filterProjectTagMappings<T extends { tagged_id: string; tagged_type: TaggedEntityType }>(
+  trx: Knex.Transaction, tenant: string, user: IUserWithRoles, tags: T[],
+): Promise<T[]> {
+  const projectTags = tags.filter((tag) => tag.tagged_type === 'project');
+  if (projectTags.length === 0) return tags;
+  const readableIds = await readableProjectIdsForTags(trx, tenant, user, projectTags.map((tag) => tag.tagged_id));
+  return tags.filter((tag) => tag.tagged_type !== 'project' || readableIds.has(tag.tagged_id));
+}
 
 function tagActionErrorFrom(error: unknown): TagActionError | null {
   if (isTagActionError(error)) {
@@ -270,7 +297,10 @@ export const findTagsByEntityId = withAuth(async (user: IUserWithRoles, { tenant
         return permissionError('Permission denied: Cannot read tags');
       }
       const tagsWithDefinitions = await TagMapping.getByEntity(trx, tenant, entityId, entityType as TaggedEntityType);
-      return tagsWithDefinitions.map(tag => ({
+      const visibleTags = entityType === 'project'
+        ? await filterProjectTagMappings(trx, tenant, user, tagsWithDefinitions)
+        : tagsWithDefinitions;
+      return visibleTags.map(tag => ({
         tag_id: tag.mapping_id,
         tenant,
         board_id: tag.board_id || undefined,
@@ -708,7 +738,10 @@ export const findTagsByEntityIds = withAuth(async (user: IUserWithRoles, { tenan
         return permissionError('Permission denied: Cannot read tags');
       }
       const tagsWithDefinitions = await TagMapping.getByEntities(trx, tenant, entityIds, entityType);
-      return tagsWithDefinitions.map(tag => ({
+      const visibleTags = entityType === 'project'
+        ? await filterProjectTagMappings(trx, tenant, user, tagsWithDefinitions)
+        : tagsWithDefinitions;
+      return visibleTags.map(tag => ({
         tag_id: tag.mapping_id,
         tenant,
         board_id: tag.board_id || undefined,
@@ -752,7 +785,7 @@ export const getAllTags = withOptionalAuth(async (user: IUserWithRoles | null, c
           'tm.tenant'
         ) as ITag[];
 
-      return tags;
+      return filterProjectTagMappings(trx, tenant, user, tags);
     });
   } catch (error) {
     console.error('Error getting all tags:', error);
@@ -795,8 +828,23 @@ export const findAllTagsByType = withOptionalAuth(async (user: IUserWithRoles | 
         .orderBy('td.tag_text', 'asc')
         .orderBy('td.created_at', 'asc');
 
+      let visibleDefinitions = definitions;
+      if (entityType === 'project' && definitions.length > 0) {
+        const mappings = await scopedDb.table('tag_mappings')
+          .whereIn('tag_id', definitions.map((definition: any) => definition.tag_id))
+          .where('tagged_type', 'project')
+          .select<Array<{ tag_id: string; tagged_id: string }>>('tag_id', 'tagged_id');
+        const readableProjectIds = await readableProjectIdsForTags(
+          trx, tenant, user, mappings.map((mapping) => mapping.tagged_id),
+        );
+        const visibleDefinitionIds = new Set(mappings
+          .filter((mapping) => readableProjectIds.has(mapping.tagged_id))
+          .map((mapping) => mapping.tag_id));
+        visibleDefinitions = definitions.filter((definition: any) => visibleDefinitionIds.has(definition.tag_id));
+      }
+
       // Convert to ITag format (use definition ID as tag_id since these are unique)
-      return definitions.map((def: any) => ({
+      return visibleDefinitions.map((def: any) => ({
         tag_id: def.tag_id,
         tenant,
         board_id: def.board_id || undefined,

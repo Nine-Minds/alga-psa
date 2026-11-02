@@ -5,7 +5,6 @@ import { parse } from 'date-fns';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IProject, IClient, DeletionValidationResult } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
@@ -16,7 +15,7 @@ import { deleteProject, loadProjectListItemsByIds, searchProjectListIds } from '
 import { findUserById } from '@alga-psa/user-composition/actions';
 import { isTagActionError } from '@alga-psa/tags/actions';
 import { getAuthorizedProjectTags, getAuthorizedProjectTagSuggestions } from '../actions/projectActions';
-import { projectClientPresentation } from '../lib/projectClientPresentation';
+import { ProjectClientCell } from './ProjectClientCell';
 import { TagFilter } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
@@ -858,25 +857,8 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
       title: projectListT('columns.client', 'Client'),
       dataIndex: 'client_id',
       width: '12%',
-      render: (value, record) => {
-        // A null client_name is the masked projection's authorization signal. Never
-        // rehydrate it from the global client options, which contain unmasked data.
-        const client = projectClientPresentation(record, clients);
-        if (!client) return <ClientNameCell clientName={null} />;
-
-        return (
-          <ClientNameCell clientId={client.client_id} clientName={client.client_name} logoUrl={client.logoUrl ?? null}>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onQuickViewClient(value);
-              }}
-              className="text-blue-500 hover:underline text-left whitespace-normal break-words"
-            >
-              {client.client_name}
-            </button>
-          </ClientNameCell>
-        );
+      render: (_value, record) => {
+        return <ProjectClientCell project={record} clients={clients} onQuickView={onQuickViewClient} />;
       }
     },
     {

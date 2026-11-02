@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-const sharedAuthorizationSource = readFileSync(resolve(__dirname, '../lib/projectReadAuthorization.ts'), 'utf8');
+const sharedAuthorizationSource = readFileSync(resolve(__dirname, '../../../authorization/src/projectReadAuthorization.ts'), 'utf8');
 const source = readFileSync(resolve(__dirname, 'projectActions.ts'), 'utf8');
 
 function sectionBetween(startMarker: string, endMarker: string): string {
@@ -27,7 +27,7 @@ describe('project actions tenant-scoped query contract', () => {
     expect(source).toContain("tenantScopedTable(trx, 'clients', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'projects', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_status_mappings as psm', tenant)");
-    expect(source).toContain("db.tenantJoin(statusMappingsQuery, 'standard_statuses as ss'");
+    expect(source).toContain("db.tenantJoin(statusQuery, 'standard_statuses as ss'");
     expect(source).toContain("tenantScopedTable(trx as Knex.Transaction, 'project_tasks', tenantId)");
     expect(source).toContain("tenantScopedTable(trx as Knex.Transaction, 'project_ticket_links', tenantId)");
     expect(source).toContain("tenantScopedTable(trx as Knex.Transaction, 'email_reply_tokens', tenantId)");

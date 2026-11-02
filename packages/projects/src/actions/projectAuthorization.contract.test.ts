@@ -11,7 +11,7 @@ describe('project authorization kernel contracts', () => {
   // The comment rules live in the shared service used by the web actions and the REST API.
   const commentActionsSource = readSource('../lib/taskComments/taskCommentService.ts');
   // The record-level project read decision has one implementation (C6 extracted the private copies).
-  const projectReadAuthorizationSource = readSource('../lib/projectReadAuthorization.ts');
+  const projectReadAuthorizationSource = readFileSync(path.resolve(__dirname, '../../../authorization/src/projectReadAuthorization.ts'), 'utf8');
 
   it('T020: preserves own-comment/internal-user behavior and supports bundle narrowing on project list/detail', () => {
     // Ownership/record authorization now lives only in withTaskCommentAccess; the service grants no blanket edit/delete.
@@ -23,7 +23,7 @@ describe('project authorization kernel contracts', () => {
     expect(projectReadAuthorizationSource).toContain('builtinProvider: new BuiltinAuthorizationKernelProvider(),');
     expect(projectReadAuthorizationSource).toContain('bundleProvider: new BundleAuthorizationKernelProvider({');
     expect(projectReadAuthorizationSource).toContain('return await resolveBundleNarrowingRulesForEvaluation(conn, input);');
-    expect(projectReadAuthorizationSource).toContain('record: toProjectAuthorizationRecord(project),');
+    expect(projectReadAuthorizationSource).toContain('record: toAuthorizationRecord(project),');
   });
 
   it('T038: narrows project tree/phase/detail/status mutation surfaces through shared project read authorization helpers', () => {
@@ -118,11 +118,12 @@ describe('project authorization kernel contracts', () => {
     // the record-level check a restricted user could read a project by exporting
     // it, or write to one by importing into it.
     const sharedAuthorizationSource = readSource('../lib/projectReadAuthorization.ts');
+    const projectDecisionSource = readFileSync(path.resolve(__dirname, '../../../authorization/src/projectReadAuthorization.ts'), 'utf8');
     const importActionsSource = readSource('phaseTaskImportActions.ts');
     const exportActionsSource = readSource('projectTaskExportActions.ts');
 
     expect(sharedAuthorizationSource).toContain('export async function assertProjectReadAllowed(');
-    expect(sharedAuthorizationSource).toContain("resource: { type: 'project', action, id: projectId },");
+    expect(projectDecisionSource).toContain("resource: { type: 'project', action, id: project.project_id },");
     expect(sharedAuthorizationSource).toContain("throw new Error('Permission denied: Cannot read project');");
 
     expect(importActionsSource).toContain("import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';");
