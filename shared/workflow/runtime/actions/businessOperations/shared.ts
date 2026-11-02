@@ -582,7 +582,7 @@ const DEFINITE_NOT_SERVED_REASONS = new Set(['forced-off', 'not-participating'])
  * Fails closed: whenever no authority resolves (no provider, or a registered provider whose serves() verdict is unknown, e.g. participation-error), anything but a definite not-served throws,
  * so a worker that missed the co-managed registration can never fall back to the coarse role check.
  */
-export async function retainWorkflowTicketAuthority(ctx: ActionContext, tx: TenantTxContext, ticketId: string, fields: string[], readFields: string[] = []): Promise<void> {
+async function resolveWorkflowTicketAuthority(tx: TenantTxContext) {
   const authority = await coManagedWorkflowTicketSeam.resolve(tx.tenantId);
   if (!authority) {
     // resolve() is null for "not served" AND for no provider / unknown verdict; only a definite not-served may proceed.
@@ -592,7 +592,25 @@ export async function retainWorkflowTicketAuthority(ctx: ActionContext, tx: Tena
     if (verdict.served || !DEFINITE_NOT_SERVED_REASONS.has(verdict.reasons.served)) {
       throw new WorkflowTicketAuthorityUnavailableError(verdict.served ? 'served' : verdict.reasons.served, coManagedWorkflowTicketSeam.hasProvider());
     }
-    return;
+    return null;
   }
+  return authority;
+}
+
+export async function retainWorkflowTicketAuthority(ctx: ActionContext, tx: TenantTxContext, ticketId: string, fields: string[], readFields: string[] = []): Promise<void> {
+  const authority = await resolveWorkflowTicketAuthority(tx);
+  if (!authority) return;
   await authority.retain(tx.trx, { tenant: tx.tenantId, ticketId, workflowRunId: ctx.runId, actorUserId: tx.actorUserId, fields, readFields });
+}
+
+/** Operation-aware entry point; an old mutation-only provider must fail closed. */
+export async function authorizeWorkflowTicket(
+  ctx: ActionContext,
+  tx: TenantTxContext,
+  input: Omit<import('../../../../lib/coManagedDelivery').WorkflowTicketAuthorizationInput, 'tenant' | 'workflowRunId' | 'actorUserId'>
+): Promise<{ redactedFields: string[] }> {
+  const authority = await resolveWorkflowTicketAuthority(tx);
+  if (!authority) return { redactedFields: [] };
+  if (!authority.authorize) throw new WorkflowTicketAuthorityUnavailableError('operation-authorizer-missing', true);
+  return authority.authorize(tx.trx, { ...input, tenant: tx.tenantId, workflowRunId: ctx.runId, actorUserId: tx.actorUserId });
 }

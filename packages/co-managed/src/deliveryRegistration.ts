@@ -14,7 +14,10 @@ if (!coManagedDeliverySeam.hasProvider()) coManagedDeliverySeam.register(() => c
 
 // Workflow ticket-mutation authority (L4a). Same best-effort boot import as the delivery provider.
 if (!coManagedWorkflowTicketSeam.hasProvider()) {
-  coManagedWorkflowTicketSeam.register(() => ({ retain: async (trx, input) => { await retainCoManagedWorkflowTicketAuthority(trx as never, input); } }));
+  coManagedWorkflowTicketSeam.register(() => ({ authorize: async (trx, input) => {
+    const authority = await retainCoManagedWorkflowTicketAuthority(trx as never, { ...input, readFields: input.readFields ?? [] });
+    return { redactedFields: authority.redactedFields };
+  }, retain: async (trx, input) => { await retainCoManagedWorkflowTicketAuthority(trx as never, input); } }));
 }
 
 // Inbound reply writer (CM L5). Registered here, not in server/, so every process that handles

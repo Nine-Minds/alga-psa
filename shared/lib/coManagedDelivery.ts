@@ -186,7 +186,21 @@ export const coManagedDeliverySeam = sharedWorkSeam<CoManagedDeliveryProvider>('
  * lives in shared/ and cannot import the co-managed package, so it asks this seam: not served / not
  * registered answers null with 0 SQL and the native action runs unchanged.
  */
+export interface WorkflowTicketAuthorizationInput {
+  tenant: string;
+  workflowRunId: string;
+  actorUserId: string;
+  operation: 'read' | 'create' | 'update';
+  ticketId?: string;
+  prospective?: { clientId: string; boardId: string; assignedUserIds: string[]; teamIds: string[] };
+  fields: string[];
+  readFields?: string[];
+  assignment?: { assignedUserIds: string[]; teamIds: string[] };
+}
+
 export interface CoManagedWorkflowTicketAuthority {
+  authorize?(trx: unknown, input: WorkflowTicketAuthorizationInput): Promise<{ redactedFields: string[] }>;
+
   retain(trx: unknown, input: { tenant: string; ticketId: string; workflowRunId: string; actorUserId: string; fields: string[]; readFields: string[] }): Promise<void>;
 }
 export const coManagedWorkflowTicketSeam = sharedWorkSeam<CoManagedWorkflowTicketAuthority>('workflow-ticket');
