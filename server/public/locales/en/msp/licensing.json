@@ -709,6 +709,7 @@
       "noTasks": "This project has no tasks you can see.",
       "assignment": "Assignment",
       "assignedTo": "Assigned to {{name}}",
+      "assignedHidden": "Assigned (name hidden)",
       "assignConflict": "This task was assigned or changed by someone else. It has been reloaded; try again if you still need to.",
       "assignFailed": "This task could not be assigned.",
       "assignMe": "Assign to me",

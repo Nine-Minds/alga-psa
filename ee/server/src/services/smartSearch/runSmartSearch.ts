@@ -21,7 +21,7 @@ import { isActionMessageError, isActionPermissionError, getErrorMessage } from '
 
 import { SMART_SEARCH_BUDGETS } from './budgets';
 import type { SmartSearchCandidate } from './candidate';
-import type { SmartSearchEntityDefinition } from './entityDefinition';
+import type { SmartSearchEntityDefinition, SmartSearchRedactions, SmartSearchTarget } from './entityDefinition';
 import { packCandidateBatches, scoreBatch, type ScoredBatch } from './scoreBatch';
 import { resolveTypeSafeClient } from './typesafeClient';
 
@@ -149,7 +149,11 @@ export async function* runSmartSearch<TScope, TRow, TMetadata>(
   if (isActionMessageError(enumerated)) {
     throw new Error(getErrorMessage(enumerated));
   }
-  const ids = enumerated as string[];
+  const targets = enumerated as SmartSearchTarget[];
+  const ids = targets.map((target) => target.id);
+  const redactions: SmartSearchRedactions = new Map(
+    targets.flatMap((target) => (target.redactedFields?.length ? [[target.id, target.redactedFields] as const] : []))
+  );
   const total = ids.length;
 
   yield { type: 'started', searchId, total };
@@ -170,7 +174,7 @@ export async function* runSmartSearch<TScope, TRow, TMetadata>(
   // Candidate loading happens in chunks so the first TypeSafe request leaves
   // before the last row's text has been read from the database.
   const loadChunk = async (chunk: string[]): Promise<SmartSearchCandidate[]> =>
-    withTransaction(knex, (trx) => definition.loadCandidates(trx, tenant, user, chunk));
+    withTransaction(knex, (trx) => definition.loadCandidates(trx, tenant, user, chunk, redactions));
 
   const chunks: string[][] = [];
   for (let i = 0; i < ids.length; i += SMART_SEARCH_BUDGETS.candidateLoadChunk) {
@@ -266,7 +270,8 @@ export async function* runSmartSearch<TScope, TRow, TMetadata>(
           inputTokens += outcome.result.inputTokens;
           const hydrated = await definition.hydrateRows(
             scope,
-            outcome.result.scores.map((entry) => entry.id)
+            outcome.result.scores.map((entry) => entry.id),
+            redactions
           );
           if (isActionMessageError(hydrated) || isActionPermissionError(hydrated)) {
             throw new Error(getErrorMessage(hydrated));

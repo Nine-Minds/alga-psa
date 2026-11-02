@@ -1,5 +1,5 @@
 import { readPath } from './path';
-import { isPredicateGroup } from './types';
+import { COMPLEMENTS, TEXT_OPERATORS, isPredicateGroup } from './types';
 import type { PredicateClause, PredicateLiteral, PredicateNode } from './types';
 
 const isMissing = (value: unknown): boolean => value === undefined || value === null;
@@ -19,18 +19,14 @@ const listOf = (value: PredicateClause['value']): PredicateLiteral[] =>
 const single = (value: PredicateClause['value']): PredicateLiteral =>
   Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
 
-/** Scalar form of a positive/complement-free operator. Two-valued: never throws, never "unknown". */
+/** Scalar form of a positive operator (complements are resolved by `evaluateClause`). Two-valued: never throws, never "unknown". */
 const evaluateScalar = (clause: PredicateClause, actual: unknown): boolean => {
   const { operator } = clause;
   switch (operator) {
-    case 'is_empty':
-      return isMissing(actual) || actual === '';
     case 'is_not_empty':
       return !(isMissing(actual) || actual === '');
     case 'in':
       return isPlainScalar(actual) && listOf(clause.value).some((candidate) => candidate === actual);
-    case 'not_in':
-      return !(isPlainScalar(actual) && listOf(clause.value).some((candidate) => candidate === actual));
     default:
       break;
   }
@@ -69,25 +65,27 @@ const evaluateScalar = (clause: PredicateClause, actual: unknown): boolean => {
   }
 };
 
-/** Set form: `in` = has any of, `not_in` = has none of, `is_empty` / `is_not_empty` = no / some elements. */
+/** Set form of a positive operator: `in` = has any of, `is_not_empty` = some element, text tests = some element passes. */
 const evaluateSet = (clause: PredicateClause, elements: unknown[]): boolean => {
   const present = elements.filter(isPlainScalar);
   switch (clause.operator) {
-    case 'is_empty':
-      return present.length === 0;
     case 'is_not_empty':
       return present.length > 0;
     case 'in':
       return present.some((element) => listOf(clause.value).includes(element));
-    case 'not_in':
-      return !present.some((element) => listOf(clause.value).includes(element));
     default:
+      // A text test over several values (a `many` relation hop) means "some row passes".
+      if (TEXT_OPERATORS.includes(clause.operator)) return present.some((element) => evaluateScalar(clause, element));
       // Comparisons are not defined on sets (query schemas reject them); never satisfied.
       return false;
   }
 };
 
 export const evaluateClause = (clause: PredicateClause, record: unknown): boolean => {
+  // Complements are `NOT <positive>` over the full path, so they are resolved before any missing-value
+  // or type guard: a missing or non-string value satisfies `not_contains`.
+  const positive = COMPLEMENTS[clause.operator];
+  if (positive) return !evaluateClause({ ...clause, operator: positive }, record);
   const actual = readPath(record, clause.path);
   return Array.isArray(actual) ? evaluateSet(clause, actual) : evaluateScalar(clause, actual);
 };

@@ -16,7 +16,7 @@ const sources = {
   reassignTicketResources: readRepoFile('packages/db/src/lib/reassignTicketResources.ts'),
   teamAssignmentCore: readRepoFile('shared/services/tickets/teamAssignmentCore.ts'),
   ticketBundleUtils: readRepoFile('packages/tickets/src/actions/ticketBundleUtils.ts'),
-  ticketActivityActions: readRepoFile('packages/tickets/src/actions/ticketActivityActions.ts'),
+  ticketRecordAuthorization: readRepoFile('packages/tickets/src/lib/ticketRecordAuthorization.ts'),
   ticketNumberActions: readRepoFile('packages/tickets/src/actions/ticket-number-actions/ticketNumberActions.ts'),
   responseState: readRepoFile('shared/lib/tickets/responseState.ts'),
   ticketAuthorizationSql: readRepoFile('packages/tickets/src/lib/ticketAuthorizationSql.ts'),
@@ -68,6 +68,13 @@ describe('ticket support facade contract', () => {
         expect(source).not.toMatch(directRootPattern(table));
       }
     }
+  });
+
+  it('keeps ticket activity actions on the concealed record authorization helper', () => {
+    const ticketActivityActionsSource = readRepoFile('packages/tickets/src/actions/ticketActivityActions.ts');
+
+    expect(ticketActivityActionsSource).toContain('authorizeTicketRecordAccessConcealed');
+    expect(ticketActivityActionsSource).not.toMatch(directRootPattern('tickets'));
   });
 
   it('uses facade joins for migrated support joins', () => {

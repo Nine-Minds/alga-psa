@@ -68,20 +68,20 @@ export const ENTRY_POINT_GLOBS: readonly string[] = ENTRY_POINT_FAMILIES.map((f)
 export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string; files: number }>> = {
   'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 11 },
   'rest-routes': { glob: 'server/src/app/api/**/co-management/**', files: 1 },
-  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 17 },
+  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 18 },
   'package-actions': { glob: 'packages/co-managed/src/**/actions*', files: 0 },
   'user-invitation-actions': { glob: 'packages/users/src/actions/user-actions/userInvitationActions.ts', files: 1 },
   'user-invitation-service': { glob: 'packages/users/src/services/UserInvitationService.ts', files: 1 },
   'user-invitation-gate': { glob: 'packages/users/src/lib/coManagedInvitationCapability.ts', files: 1 },
   jobs: { glob: 'packages/jobs/**/coManaged*', files: 0 },
-  subscribers: { glob: 'server/src/lib/eventBus/subscribers/coManaged*', files: 0 },
+  subscribers: { glob: 'server/src/lib/eventBus/subscribers/coManaged*', files: 1 },
   'temporal-activities': { glob: 'ee/temporal-workflows/src/activities/coManaged*', files: 0 },
   'temporal-workflows': { glob: 'ee/temporal-workflows/src/workflows/coManaged*', files: 0 },
   'temporal-activities-kebab': { glob: 'ee/temporal-workflows/src/activities/co-managed*', files: 1 },
   'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 1 },
   'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 2 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 37 },
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 44 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 
@@ -537,6 +537,8 @@ export function registrySanity(families: readonly EntryPointFamily[], files: Sou
 // ---------------------------------------------------------------------------
 
 const repoFiles = scanRepo();
+/** Walking the worker and capability import graphs parses ~1,100 repo files; that is not a per-unit workload. */
+const IMPORT_GRAPH_WALK_TIMEOUT_MS = 120_000;
 const workerEntries = repoFiles
   .map((f) => f.path)
   .filter((p) => WORKER_ENTRY_GLOBS.some((g) => globToRegExp(g).test(p)));
@@ -572,7 +574,7 @@ describe('capability gate coverage (AST) — branch is green', () => {
       expect(workerEntries).toContain(e);
     }
     expect(ruleD(workerEntries)).toEqual([]);
-  });
+  }, IMPORT_GRAPH_WALK_TIMEOUT_MS);
 
   it('Rule E: no production file imports the capability test hatch; the pure entry exports none', () => {
     expect(ruleE(repoFiles)).toEqual([]);
@@ -585,7 +587,7 @@ describe('capability gate coverage (AST) — branch is green', () => {
   it('Rule D baseline for the Temporal worker has no stale entries', () => {
     const reached = new Set([...closure('ee/temporal-workflows/src/worker.ts').bare].filter(isForbiddenForWorkers));
     for (const spec of Object.keys(TEMPORAL_PREEXISTING_FORBIDDEN)) expect(reached.has(spec), spec).toBe(true);
-  });
+  }, IMPORT_GRAPH_WALK_TIMEOUT_MS);
 
   it('registry sanity: exactly the expected families, globs and per-family file counts', () => {
     expect(registrySanity(ENTRY_POINT_FAMILIES, repoFiles)).toEqual([]);

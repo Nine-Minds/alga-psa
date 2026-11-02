@@ -133,7 +133,8 @@
       "notes": "Anteckningar",
       "deleteTimeEntry": "Radera tidpost",
       "unsavedChanges": "Osparade ändringar",
-      "contractLine": "Avtalsrad"
+      "contractLine": "Avtalsrad",
+      "operational": "Operativ – faktureras inte"
     },
     "placeholders": {
       "selectService": "Välj en tjänst",

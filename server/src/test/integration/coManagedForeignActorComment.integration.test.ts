@@ -44,7 +44,7 @@ beforeAll(async () => {
 });
 afterAll(async () => { await db?.destroy(); });
 
-const create = async (request: any) => (await import('../../lib/co-managed/createTicketComment')).createSharedTicketComment(db, actor, resource, request);
+const create = async (request: any) => (await import('@alga-psa/co-managed/sharedTicketCommentWriter')).createSharedTicketComment(db, actor, resource, request);
 
 describe('foreign actor shared comment', () => {
   it.each(['shared_it', 'requester'] as const)('persists a %s comment with its audit row and actor attribution', async audience => {
