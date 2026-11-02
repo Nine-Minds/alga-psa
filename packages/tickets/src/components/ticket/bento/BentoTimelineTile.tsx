@@ -55,6 +55,8 @@ import { BentoTile, BentoTileEmpty, BentoTileEmptyScope } from '@alga-psa/ui/com
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from '../TicketNotificationSuppressionControl';
+import { defaultNotificationSuppression } from '../../../lib/notificationSuppressionDefaults';
+import { useReseedNotificationSuppression } from '../../../lib/useTicketNotificationSuppressionDefault';
 import { dateToWallTimeString, getUserTimeZone, workedMinutes, zonedWallTimeToUtc } from '@alga-psa/core';
 
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
@@ -149,11 +151,6 @@ interface BentoTimelineTileProps {
 }
 
 const NO_STATUS_CHANGE = '__no_status_change__';
-
-const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
-  suppressContactNotifications: false,
-  suppressInternalNotifications: false,
-});
 
 type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
 
@@ -510,6 +507,7 @@ export function BentoTimelineTile({
   const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(
     defaultNotificationSuppression
   );
+  useReseedNotificationSuppression(notificationSuppression, setNotificationSuppression);
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
   // Threading: which comment currently has its inline reply composer open.

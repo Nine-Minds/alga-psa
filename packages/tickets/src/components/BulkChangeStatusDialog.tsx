@@ -16,6 +16,8 @@ import type { BundleStatusPropagationPreview } from '../lib/ticketBundlePropagat
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from './ticket/TicketNotificationSuppressionControl';
+import { defaultNotificationSuppression } from '../lib/notificationSuppressionDefaults';
+import { useReseedNotificationSuppression } from '../lib/useTicketNotificationSuppressionDefault';
 
 export type BulkStatusConfirmOptions = {
   suppressContactNotifications?: boolean;
@@ -63,10 +65,8 @@ export default function BulkChangeStatusDialog({
 }: BulkChangeStatusDialogProps) {
   const { t } = useTranslation(['features/tickets', 'common']);
   const [selectedStatusId, setSelectedStatusId] = useState<string>('');
-  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>({
-    suppressContactNotifications: false,
-    suppressInternalNotifications: false,
-  });
+  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(defaultNotificationSuppression);
+  useReseedNotificationSuppression(notificationSuppression, setNotificationSuppression);
   const [bundlePreviews, setBundlePreviews] = useState<Record<string, BundleStatusPropagationPreview>>({});
   const [isLoadingPreviews, setIsLoadingPreviews] = useState(false);
   const [propagationMode, setPropagationMode] = useState<'children' | 'masters'>('children');
@@ -76,10 +76,7 @@ export default function BulkChangeStatusDialog({
   useEffect(() => {
     if (isOpen) {
       setSelectedStatusId('');
-      setNotificationSuppression({
-        suppressContactNotifications: false,
-        suppressInternalNotifications: false,
-      });
+      setNotificationSuppression(defaultNotificationSuppression());
       setBundlePreviews({});
       setPropagationMode('children');
       setResolution('');

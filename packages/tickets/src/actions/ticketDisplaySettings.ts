@@ -23,6 +23,12 @@ export type TicketingDisplaySettings = {
   showWeekday?: boolean; // default false — prefixes the weekday name to ticket timestamps
   responseStateTrackingEnabled?: boolean; // default true — when false, response state is not tracked or displayed
   defaultReplyInternal?: boolean;
+  /**
+   * When true, every "Don't notify the customer" checkbox starts ticked:
+   * status changes, contact changes, closure and comments suppress customer
+   * notifications unless the agent unticks the box for that action.
+   */
+  defaultDontNotifyCustomer?: boolean;
   list?: TicketListSettings;
 };
 
@@ -57,6 +63,7 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
       showWeekday: resolveShowWeekday(display),
       responseStateTrackingEnabled: display.responseStateTrackingEnabled ?? true,
       defaultReplyInternal: display.defaultReplyInternal === true,
+      defaultDontNotifyCustomer: display.defaultDontNotifyCustomer === true,
       list: {
         // Defaults (and the "Refined List" fold behavior) come from the shared
         // ticket-column catalog so this list can't drift from the renderer.
@@ -77,6 +84,7 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
       showWeekday: false,
       responseStateTrackingEnabled: true,
       defaultReplyInternal: false,
+      defaultDontNotifyCustomer: false,
       list: {
         columnVisibility: resolveTicketColumnVisibility(),
         tagsInlineUnderTitle: true,
@@ -109,6 +117,10 @@ export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, 
 
   if (updated.defaultReplyInternal !== undefined && typeof updated.defaultReplyInternal !== 'boolean') {
     throw new Error('defaultReplyInternal must be a boolean');
+  }
+
+  if (updated.defaultDontNotifyCustomer !== undefined && typeof updated.defaultDontNotifyCustomer !== 'boolean') {
+    throw new Error('defaultDontNotifyCustomer must be a boolean');
   }
 
   // Read existing values for both the dedicated column and the legacy nested settings path.

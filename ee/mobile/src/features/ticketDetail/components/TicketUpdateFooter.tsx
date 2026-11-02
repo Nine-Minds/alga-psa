@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Pressable, Switch, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { TicketNotificationSuppressionOptions } from "../../../api/tickets";
+import { useDontNotifyCustomerDefault } from "../../../capabilities/CapabilitiesContext";
 import { useTheme } from "../../../ui/ThemeContext";
 import { PrimaryButton } from "../../../ui/components/PrimaryButton";
 
@@ -9,6 +10,30 @@ export const DEFAULT_TICKET_NOTIFICATION_SUPPRESSION: TicketNotificationSuppress
   suppressContactNotifications: false,
   suppressInternalNotifications: false,
 };
+
+/**
+ * The starting value for a "Don't notify the customer" checkbox, honoring the
+ * tenant's `defaultDontNotifyCustomer` setting (the web product's ticketing
+ * display setting, surfaced through the capabilities endpoint). Only the
+ * customer box is pre-ticked; "also don't notify agents" stays off — silencing
+ * the internal team is a much larger footgun than a routine customer request.
+ */
+export function defaultTicketNotificationSuppressionFor(
+  dontNotifyCustomer: boolean,
+): TicketNotificationSuppressionOptions {
+  return dontNotifyCustomer
+    ? { suppressContactNotifications: true, suppressInternalNotifications: false }
+    : DEFAULT_TICKET_NOTIFICATION_SUPPRESSION;
+}
+
+/** Reactive form of {@link defaultTicketNotificationSuppressionFor}. */
+export function useDefaultTicketNotificationSuppression(): TicketNotificationSuppressionOptions {
+  const dontNotifyCustomer = useDontNotifyCustomerDefault();
+  return useMemo(
+    () => defaultTicketNotificationSuppressionFor(dontNotifyCustomer),
+    [dontNotifyCustomer],
+  );
+}
 
 export function activeTicketNotificationSuppression(
   value: TicketNotificationSuppressionOptions,
@@ -20,10 +45,12 @@ export function TicketNotificationSuppressionControl({
   value,
   onChange,
   disabled = false,
+  idPrefix = "ticket-notification",
 }: {
   value: TicketNotificationSuppressionOptions;
   onChange: (next: TicketNotificationSuppressionOptions) => void;
   disabled?: boolean;
+  idPrefix?: string;
 }) {
   const { t } = useTranslation("tickets");
   const { colors, spacing, typography } = useTheme();
@@ -49,6 +76,7 @@ export function TicketNotificationSuppressionControl({
           </Text>
         </View>
         <Switch
+          nativeID={`${idPrefix}-suppress-contact-notifications`}
           testID="ticket-suppress-contact-notifications"
           accessibilityLabel={t("notifications.suppression.contactLabel", "Don't notify the customer")}
           value={value.suppressContactNotifications}
@@ -79,6 +107,7 @@ export function TicketNotificationSuppressionControl({
           </Text>
         </View>
         <Switch
+          nativeID={`${idPrefix}-suppress-internal-notifications`}
           testID="ticket-suppress-internal-notifications"
           accessibilityLabel={t("notifications.suppression.internalLabel", "Also don't notify agents and watchers")}
           value={value.suppressContactNotifications && value.suppressInternalNotifications}
@@ -106,6 +135,7 @@ export function TicketUpdateFooter({
   cancelLabel,
   applyDisabled = false,
   busy = false,
+  idPrefix = "ticket-update",
 }: {
   suppression: TicketNotificationSuppressionOptions;
   onSuppressionChange: (next: TicketNotificationSuppressionOptions) => void;
@@ -115,6 +145,7 @@ export function TicketUpdateFooter({
   cancelLabel?: string;
   applyDisabled?: boolean;
   busy?: boolean;
+  idPrefix?: string;
 }) {
   const { t } = useTranslation("tickets");
   const { colors, spacing, typography } = useTheme();
@@ -125,9 +156,12 @@ export function TicketUpdateFooter({
         value={suppression}
         onChange={onSuppressionChange}
         disabled={busy}
+        idPrefix={idPrefix}
       />
       <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
         <Pressable
+          nativeID={`${idPrefix}-cancel-button`}
+          testID={`${idPrefix}-cancel-button`}
           accessibilityRole="button"
           accessibilityLabel={cancelLabel ?? t("common:cancel")}
           disabled={busy}
@@ -149,6 +183,8 @@ export function TicketUpdateFooter({
         </Pressable>
         <View style={{ flex: 1 }}>
           <PrimaryButton
+            nativeID={`${idPrefix}-apply-button`}
+            testID={`${idPrefix}-apply-button`}
             onPress={onApply}
             disabled={busy || applyDisabled}
             accessibilityLabel={applyLabel ?? t("common:apply", "Apply")}

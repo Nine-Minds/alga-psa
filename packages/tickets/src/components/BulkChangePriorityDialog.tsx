@@ -10,6 +10,8 @@ import { useTranslation } from 'react-i18next';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from './ticket/TicketNotificationSuppressionControl';
+import { defaultNotificationSuppression } from '../lib/notificationSuppressionDefaults';
+import { useReseedNotificationSuppression } from '../lib/useTicketNotificationSuppressionDefault';
 
 interface BulkChangePriorityDialogProps {
   isOpen: boolean;
@@ -34,18 +36,13 @@ export default function BulkChangePriorityDialog({
 }: BulkChangePriorityDialogProps) {
   const { t } = useTranslation(['features/tickets', 'common']);
   const [priorityId, setPriorityId] = useState<string>('');
-  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>({
-    suppressContactNotifications: false,
-    suppressInternalNotifications: false,
-  });
+  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(defaultNotificationSuppression);
+  useReseedNotificationSuppression(notificationSuppression, setNotificationSuppression);
 
   useEffect(() => {
     if (isOpen) {
       setPriorityId('');
-      setNotificationSuppression({
-        suppressContactNotifications: false,
-        suppressInternalNotifications: false,
-      });
+      setNotificationSuppression(defaultNotificationSuppression());
     }
   }, [isOpen]);
 

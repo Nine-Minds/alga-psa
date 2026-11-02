@@ -74,3 +74,30 @@ composer. Users can still switch an individual reply to Client. In the classic
 view, explicitly selecting the Client, Internal, or Resolution tab keeps that
 tab's existing composer behavior. Replies within existing threads still inherit
 their parent comment's visibility, and client portal replies are unchanged.
+
+## Default for "Don't notify the customer"
+
+Under **Settings > Ticketing > Display**, enable **Start actions with customer
+notifications off** to start every "Don't notify the customer" checkbox ticked
+for every team member. This tenant-wide setting is off by default, preserving
+the existing behavior where each action notifies the customer unless the agent
+ticks the box.
+
+This adds only the `defaultDontNotifyCustomer` JSON property to the existing
+`tenant_settings.ticket_display_settings` column, alongside `defaultReplyInternal`.
+It uses the existing display-settings action, including its compatibility copy
+in `tenant_settings.settings.ticketing.display`. No new table, column, or
+database migration is required.
+
+The setting covers every place the checkbox appears: comments, status changes
+(including bulk status changes), contact changes, ticket closure and resolution,
+bulk assign / priority / due-date dialogs, and the mobile ticket screens. Only
+the customer box is pre-ticked — "also don't notify agents" always starts off,
+because silencing the internal team is a much larger change in behavior than a
+routine "don't email me" request.
+
+The setting only supplies the starting value. An agent can untick (or tick) the
+box for any single action and that choice is what is saved; the default never
+overwrites a deliberate selection. If the settings read fails, the checkboxes
+fall back to unticked. The mobile app receives the same flag through its
+capabilities endpoint, so an older server simply leaves mobile checkboxes off.

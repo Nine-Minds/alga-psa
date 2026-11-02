@@ -69,6 +69,7 @@ describe('MobileCapabilitiesService', () => {
       opportunitiesCreate: true,
       projects: true,
       ...ASSETS_ALL,
+      dontNotifyCustomerDefault: false,
       ...CRM_ALL,
     });
     expect(result.formatting).toEqual(SYSTEM_DATE_FORMAT);
@@ -90,6 +91,7 @@ describe('MobileCapabilitiesService', () => {
       projects: false,
       assets: false,
       assetAudit: false,
+      dontNotifyCustomerDefault: false,
       ...CRM_ALL,
     });
     expect(result.formatting).toEqual(SYSTEM_DATE_FORMAT);
@@ -141,6 +143,14 @@ describe('MobileCapabilitiesService', () => {
     expect(result.features.assetAudit).toBe(false);
   });
 
+  it('surfaces the tenant dont-notify-customer default as a feature flag', async () => {
+    const service = new MobileCapabilitiesService();
+    vi.spyOn(service as any, 'getDontNotifyCustomerDefault').mockResolvedValue(true);
+
+    const result = await service.getMyCapabilities(context);
+    expect(result.features.dontNotifyCustomerDefault).toBe(true);
+  });
+
   it('reports client and contact write permissions for every product', async () => {
     mocks.getTenantProduct.mockResolvedValue('algadesk');
     mocks.hasPermission.mockImplementation(async (_user, resource, action) => (
@@ -179,6 +189,7 @@ describe('MobileCapabilitiesService', () => {
       opportunitiesCreate: expectedOpportunities,
       projects: true,
       ...ASSETS_ALL,
+      dontNotifyCustomerDefault: false,
       ...CRM_ALL,
     });
   });
@@ -196,6 +207,7 @@ describe('MobileCapabilitiesService', () => {
       opportunitiesCreate: false,
       projects: true,
       ...ASSETS_ALL,
+      dontNotifyCustomerDefault: false,
       ...CRM_ALL,
     });
   });
@@ -295,6 +307,7 @@ describe('MobileCapabilitiesService', () => {
         opportunitiesCreate: true,
         projects: true,
         ...ASSETS_ALL,
+        dontNotifyCustomerDefault: false,
         ...CRM_ALL,
       });
     });
