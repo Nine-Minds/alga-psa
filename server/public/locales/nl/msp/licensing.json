@@ -436,7 +436,8 @@
       "workspace": "Werkruimte",
       "capacity": "{{allocated}} van {{count}} co-managed plekken toegewezen.",
       "openClient": "Co-managed IT instellen voor deze klant",
-      "readOnly": "Co-managed IT is alleen-lezen voor deze werkruimte. Bestaande relaties worden getoond; nieuwe configuratie is niet beschikbaar."
+      "readOnly": "Co-managed IT is alleen-lezen voor deze werkruimte. Bestaande relaties worden getoond; nieuwe configuratie is niet beschikbaar.",
+      "slaPriorities": "SLA-prioriteitstoewijzingen"
     },
     "provisioning": {
       "administrator": "Beheerder",
@@ -659,7 +660,8 @@
       "viewer": "Kijker",
       "viewOnly": "Alleen weergeven",
       "visibility": "Zichtbaarheid van tickets",
-      "whyTitle": "Waarom kan iemand dit niet zien?"
+      "whyTitle": "Waarom kan iemand dit niet zien?",
+      "readOnly": "U kunt deze configuratie bekijken maar niet wijzigen."
     },
     "sharedTasks": {
       "link": "Gedeelde taken",
@@ -716,6 +718,14 @@
       "rejected": "Deze taak kon niet worden opgeslagen.",
       "saved": "Opgeslagen.",
       "save": "Opslaan"
+    },
+    "sla": {
+      "title": "SLA-prioriteiten bij gedeeld beheer",
+      "description": "Kies welke van uw prioriteiten, en dus welk van uw SLA-doelen, geldt wanneer een klant een ticket van elke prioriteit escaleert.",
+      "missingPolicy": "Er is geen SLA-beleid geconfigureerd",
+      "settings": "SLA-beleid beheren",
+      "mappingFor": "Klantprioriteit {{name}} komt overeen met",
+      "unmapped": "Niet gekoppeld"
     }
   },
   "common": {

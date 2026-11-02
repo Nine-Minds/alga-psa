@@ -436,7 +436,8 @@
       "workspace": "Espacio de trabajo",
       "capacity": "{{allocated}} de {{count}} puestos cogestionados asignados.",
       "openClient": "Configurar TI cogestionada para este cliente",
-      "readOnly": "La TI cogestionada es de solo lectura para este espacio de trabajo. Se muestran las relaciones existentes; la configuración nueva no está disponible."
+      "readOnly": "La TI cogestionada es de solo lectura para este espacio de trabajo. Se muestran las relaciones existentes; la configuración nueva no está disponible.",
+      "slaPriorities": "Asignaciones de prioridad de SLA"
     },
     "provisioning": {
       "administrator": "Administrador",
@@ -659,7 +660,8 @@
       "viewer": "Lector",
       "viewOnly": "Solo lectura",
       "visibility": "Visibilidad de tickets",
-      "whyTitle": "¿Por qué alguien no puede ver esto?"
+      "whyTitle": "¿Por qué alguien no puede ver esto?",
+      "readOnly": "Puede ver esta configuración, pero no cambiarla."
     },
     "sharedTasks": {
       "link": "Tareas compartidas",
@@ -716,6 +718,14 @@
       "rejected": "No se pudo guardar esta tarea.",
       "saved": "Guardado.",
       "save": "Guardar"
+    },
+    "sla": {
+      "title": "Prioridades de SLA en cogestión",
+      "description": "Elija cuál de sus prioridades, y por tanto cuál de sus objetivos de SLA, se aplica cuando un cliente escala un ticket de cada prioridad.",
+      "missingPolicy": "No hay ninguna política de SLA configurada",
+      "settings": "Gestionar políticas de SLA",
+      "mappingFor": "La prioridad del cliente {{name}} corresponde a",
+      "unmapped": "Sin asignar"
     }
   },
   "common": {

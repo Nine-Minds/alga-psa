@@ -541,6 +541,9 @@
         "title": "Udostępnione zadania",
         "taskTitle": "Udostępnione zadanie",
         "projectTitle": "Udostępniony projekt"
+      },
+      "sla": {
+        "title": "Priorytety SLA współzarządzania"
       }
     }
   },

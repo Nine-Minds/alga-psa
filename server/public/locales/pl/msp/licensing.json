@@ -436,7 +436,8 @@
       "workspace": "Obszar roboczy",
       "capacity": "Przydzielono {{allocated}} z {{count}} stanowisk współzarządzania.",
       "openClient": "Skonfiguruj współzarządzane IT dla tego klienta",
-      "readOnly": "Współzarządzane IT jest w tym obszarze roboczym tylko do odczytu. Wyświetlane są istniejące relacje; nowa konfiguracja jest niedostępna."
+      "readOnly": "Współzarządzane IT jest w tym obszarze roboczym tylko do odczytu. Wyświetlane są istniejące relacje; nowa konfiguracja jest niedostępna.",
+      "slaPriorities": "Mapowanie priorytetów SLA"
     },
     "provisioning": {
       "administrator": "Administrator",
@@ -663,7 +664,8 @@
       "viewer": "Przeglądający",
       "viewOnly": "Tylko podgląd",
       "visibility": "Widoczność zgłoszeń",
-      "whyTitle": "Dlaczego ktoś nie może tego zobaczyć?"
+      "whyTitle": "Dlaczego ktoś nie może tego zobaczyć?",
+      "readOnly": "Możesz wyświetlić tę konfigurację, ale nie możesz jej zmienić."
     },
     "sharedTasks": {
       "link": "Udostępnione zadania",
@@ -720,6 +722,14 @@
       "rejected": "Nie udało się zapisać tego zadania.",
       "saved": "Zapisano.",
       "save": "Zapisz"
+    },
+    "sla": {
+      "title": "Priorytety SLA we współzarządzaniu",
+      "description": "Wybierz, który z Twoich priorytetów, a tym samym który z Twoich celów SLA, obowiązuje, gdy klient eskaluje zgłoszenie o danym priorytecie.",
+      "missingPolicy": "Nie skonfigurowano polityki SLA",
+      "settings": "Zarządzaj politykami SLA",
+      "mappingFor": "Priorytet klienta {{name}} odpowiada",
+      "unmapped": "Nieprzypisany"
     }
   },
   "common": {

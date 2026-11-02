@@ -97,6 +97,25 @@ export async function finishDelivery(
   });
 }
 
+/**
+ * Flag claims that never finished: `sending` rows of the given delivery kinds older than `olderThanMs` lost their
+ * worker between claim and finish, so the provider outcome is unknown. They are marked `requires_reconciliation`
+ * and are never re-sent (`claimDelivery` does not reclaim `sending`). Returns the number flagged. Each kind family
+ * (routing, SLA) passes its own kinds, so recovery is one query rather than a copy per family.
+ */
+export async function flagStaleSendingDeliveries(
+  db: Knex | Knex.Transaction,
+  ledger: DeliveryLedger,
+  tenant: string,
+  kinds: readonly string[],
+  olderThanMs: number,
+): Promise<number> {
+  return tenantDb(db, tenant).table(ledger.table)
+    .whereIn('delivery_kind', [...kinds]).where({ state: 'sending', requires_reconciliation: false })
+    .where('updated_at', '<', new Date(Date.now() - olderThanMs))
+    .update({ requires_reconciliation: true, error_code: 'unknown_outcome', last_error: 'Delivery was claimed but never finished; reconcile before resending.', updated_at: new Date() });
+}
+
 /** Co-managed deliveries (in-app, email, per audience recipient). Rows exist only for served tenants. */
 export const CO_MANAGED_LEDGER: DeliveryLedger = {
   table: 'co_management_deliveries',

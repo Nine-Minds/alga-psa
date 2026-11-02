@@ -541,6 +541,9 @@
         "title": "Attività condivise",
         "taskTitle": "Attività condivisa",
         "projectTitle": "Progetto condiviso"
+      },
+      "sla": {
+        "title": "Priorità SLA cogestite"
       }
     }
   },

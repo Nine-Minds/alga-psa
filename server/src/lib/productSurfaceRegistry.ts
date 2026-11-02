@@ -91,6 +91,13 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
   },
   {
+    // Sponsor-only SLA priority mappings for tickets customers escalate to the sponsor. The page is gated by the
+    // co-managed capability ('admits'); a co_managed customer has no such configuration.
+    group: 'msp_co_managed_sla',
+    staticPrefixes: ['/msp/co-management/sla'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
+  },
+  {
     // Customer-owned Google / Microsoft provider setup. The page itself is
     // gated by the co-managed capability ('serves'), so a co_managed workspace
     // reaches this one capability-scoped page without the wider integrations

@@ -623,6 +623,9 @@
         "title": "Delade uppgifter",
         "taskTitle": "Delad uppgift",
         "projectTitle": "Delat projekt"
+      },
+      "sla": {
+        "title": "Samhanterade SLA-prioriteter"
       }
     }
   },

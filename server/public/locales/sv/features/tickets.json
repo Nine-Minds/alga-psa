@@ -2832,5 +2832,35 @@
       "notAvailable": "Det här färdiga svaret är inte tillgängligt för det här ärendet.",
       "notATeamMember": "Du kan bara hantera teamsvar för team som du tillhör."
     }
+  },
+  "sharedSla": {
+    "title": "Servicenivå",
+    "msp": "MSP:ns servicenivå",
+    "customer": "Kundens servicenivå",
+    "state": {
+      "running": "Pågår",
+      "paused": "Pausad",
+      "met": "Uppfylld",
+      "breached": "Överträdd"
+    },
+    "target": {
+      "response": "Första svar",
+      "resolution": "Lösning"
+    },
+    "elapsed": "Förflutet: {{time}}",
+    "dueAt": "Förfaller: {{date}}",
+    "completedAt": "Uppfylld {{date}}",
+    "breached": "Överträdd",
+    "targetPaused": "Pausad",
+    "noTarget": "Inget mål",
+    "duration": {
+      "hoursMinutes": "{{hours}} h {{minutes}} min",
+      "minutes": "{{minutes}} min"
+    },
+    "notStarted": "Klockan startar när ärendet eskaleras.",
+    "unavailable": "Den här servicenivån är inte längre tillgänglig.",
+    "notConfigured": "Ingen servicenivå gäller.",
+    "empty": "Ingen servicenivå följs ännu upp för det här ärendet.",
+    "loadError": "Servicenivån kunde inte laddas."
   }
 }

@@ -2832,5 +2832,35 @@
       "notAvailable": "Dieser Textbaustein ist für dieses Ticket nicht verfügbar.",
       "notATeamMember": "Sie können Team-Textbausteine nur für Teams verwalten, denen Sie angehören."
     }
+  },
+  "sharedSla": {
+    "title": "Servicelevel",
+    "msp": "Servicelevel des MSP",
+    "customer": "Servicelevel des Kunden",
+    "state": {
+      "running": "Läuft",
+      "paused": "Pausiert",
+      "met": "Eingehalten",
+      "breached": "Verletzt"
+    },
+    "target": {
+      "response": "Erste Antwort",
+      "resolution": "Lösung"
+    },
+    "elapsed": "Verstrichen: {{time}}",
+    "dueAt": "Fällig: {{date}}",
+    "completedAt": "Eingehalten am {{date}}",
+    "breached": "Verletzt",
+    "targetPaused": "Pausiert",
+    "noTarget": "Kein Ziel",
+    "duration": {
+      "hoursMinutes": "{{hours}} Std. {{minutes}} Min.",
+      "minutes": "{{minutes}} Min."
+    },
+    "notStarted": "Die Uhr startet, sobald das Ticket eskaliert wird.",
+    "unavailable": "Dieser Servicelevel ist nicht mehr verfügbar.",
+    "notConfigured": "Es gilt kein Servicelevel.",
+    "empty": "Für dieses Ticket wird noch kein Servicelevel verfolgt.",
+    "loadError": "Der Servicelevel konnte nicht geladen werden."
   }
 }

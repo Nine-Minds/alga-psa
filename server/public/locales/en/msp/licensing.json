@@ -436,7 +436,8 @@
       "workspace": "Workspace",
       "capacity": "{{allocated}} of {{count}} co-managed seats allocated.",
       "openClient": "Set up co-managed IT for this client",
-      "readOnly": "Co-managed IT is read-only for this workspace. Existing relationships are shown; new setup is not available."
+      "readOnly": "Co-managed IT is read-only for this workspace. Existing relationships are shown; new setup is not available.",
+      "slaPriorities": "SLA priority mappings"
     },
     "provisioning": {
       "administrator": "Administrator",
@@ -659,7 +660,8 @@
       "viewer": "Viewer",
       "viewOnly": "View only",
       "visibility": "Ticket visibility",
-      "whyTitle": "Why can't someone see this?"
+      "whyTitle": "Why can't someone see this?",
+      "readOnly": "You can view this configuration but not change it."
     },
     "sharedTasks": {
       "link": "Shared Tasks",
@@ -716,6 +718,14 @@
       "rejected": "This task could not be saved.",
       "saved": "Saved.",
       "save": "Save"
+    },
+    "sla": {
+      "title": "Co-managed SLA priorities",
+      "description": "Choose which of your priorities, and so which of your SLA targets, applies when a customer escalates a ticket of each priority.",
+      "missingPolicy": "No SLA policy is configured",
+      "settings": "Manage SLA policies",
+      "mappingFor": "Customer priority {{name}} maps to",
+      "unmapped": "Not mapped"
     }
   },
   "common": {

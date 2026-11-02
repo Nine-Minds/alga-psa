@@ -80,6 +80,16 @@ export { retainCoManagedConversationBeforeSourceChange } from './sourceChangeRet
 export { snapshotConversationContent, encodeConversationContent, plainTextContent } from './conversationContent';
 export type { CoManagedConversationContent } from './conversationContent';
 export { projectTaskAudience, projectTaskAudienceSql } from './projectTaskAudience';
+export { readCoManagedSlaPolicyScreen, replaceCoManagedSlaPriorityMappings } from './slaPriorityMappings';
+export type { CoManagedSlaPolicyScreen, CoManagedSlaPriorityMapping } from './slaPriorityMappings';
+export { withCoManagedSlaNotification, fanoutCoManagedSlaNotification } from './slaNotification';
+export type { CoManagedSlaNotification, CoManagedSlaNotificationChannel } from './slaNotification';
+export { withCoManagedStoredSlaNotification } from './storedSlaNotification';
+export type { CoManagedStoredSlaNotification } from './storedSlaNotification';
+export { enqueueCoManagedSlaDeliveries, pendingCoManagedSlaDeliveries, flagStaleCoManagedSlaSending, SLA_STALE_SENDING_MS, SLA_IN_APP_KIND, SLA_EMAIL_KIND } from './slaDeliveries';
+export type { CoManagedSlaDeliveryRow, CoManagedSlaDeliveryPayload } from './slaDeliveries';
+export { observeDueCoManagedTicketSlas } from './ticketSla';
+export { getCoManagedTicketSlaDisplay, type CoManagedTicketSlaDisplay, type CoManagedSlaDisplay, type CoManagedSlaTargetDisplay } from './ticketSlaRead';
 // Time, effort and billing modes (L6a2).
 export * from './effortTotals';
 export * from './timeEntryBillingMode';

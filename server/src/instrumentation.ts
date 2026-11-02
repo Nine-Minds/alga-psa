@@ -37,6 +37,14 @@ export async function register() {
       console.error('Failed to register the co-managed scheduling providers:', error);
     }
 
+    // CM L6b: organization-SLA handlers on the ticket-lifecycle registry. Best-effort: without them
+    // the registry stays empty and every ticket write is unchanged.
+    try {
+      await import('@alga-psa/co-managed/ticketSlaRegistration');
+    } catch (error) {
+      console.error('Failed to register the co-managed SLA lifecycle handlers:', error);
+    }
+
     // Co-managed time source (L6a2): registers into the scheduling time-source registry. Best-effort:
     // without it every time call resolves to native and behaves exactly as before.
     try {
