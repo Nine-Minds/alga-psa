@@ -11,9 +11,13 @@ export async function verifyProviderRouting({ env = process.env, request = fetch
   assert.ok(['server', 'email-service', 'workflow-worker', 'temporal-worker'].includes(env.PROVIDER_PROBE_SERVICE), 'Expected an application process identity');
   assert.match(env.PROVIDER_PROBE_CONTAINER_ID ?? '', /^[a-f0-9]{64}$/, 'Expected full container identity');
   assert.match(env.E2E_CANDIDATE_REVISION ?? '', /^[a-f0-9]{40}$/, 'Expected candidate revision');
+  const isIsolatedEndpoint = (name, url) => ['algasim', 'algasim.test'].includes(url.hostname) ||
+    (name === 'STRIPE_API_BASE_URL' && env.PROVIDER_PROBE_SERVICE === 'server' &&
+      env.ALGA_STRIPE_LOCAL_REVIEW === 'true' && env.STRIPE_SECRET_KEY?.startsWith('sk_test_') &&
+      url.origin === 'http://127.0.0.1:4050');
   for (const name of endpointNames) {
     const url = new URL(env[name]);
-    assert.ok(['http:', 'https:'].includes(url.protocol) && ['algasim', 'algasim.test'].includes(url.hostname), 'Expected isolated provider endpoint');
+    assert.ok(['http:', 'https:'].includes(url.protocol) && isIsolatedEndpoint(name, url), 'Expected isolated provider endpoint');
     assert.ok(!url.username && !url.password && !url.search && !url.hash, 'Provider endpoint must not contain credentials or query data');
   }
   const probe = (input, options = {}) => request(input, { ...options, redirect: 'error' });
@@ -39,7 +43,7 @@ export async function verifyProviderRouting({ env = process.env, request = fetch
   for (const [provider, variable, suffix, status] of providers) {
     assert.ok(env[variable], `${variable} must be configured`);
     const url = new URL(`${env[variable]}${suffix}`);
-    assert.ok(['algasim', 'algasim.test'].includes(url.hostname), `${provider} must target this run's emulator`);
+    assert.ok(isIsolatedEndpoint(variable, url), `${provider} must target this run's emulator`);
     const beforeSequence = await journalCursor(provider);
     const response = await probe(url, {
       signal: AbortSignal.timeout(5000),
