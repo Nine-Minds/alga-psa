@@ -33,11 +33,14 @@ exports.up = async function up(knex) {
     if (rows.length === 0) break;
 
     for (const row of rows) {
+      const digest = createHash('sha256').update(`${row.tenant}:${row.id}:legacy-notes`).digest('hex');
+      const variant = ((parseInt(digest[16], 16) & 0x3) | 0x8).toString(16);
+      const noteId = `${digest.slice(0, 8)}-${digest.slice(8, 12)}-4${digest.slice(13, 16)}-${variant}${digest.slice(17, 20)}-${digest.slice(20, 32)}`;
       await knex('time_sheet_notes').insert({
         tenant: row.tenant,
         time_sheet_id: row.id,
         // Stable ID makes retrying this non-transactional migration idempotent.
-        note_id: createHash('sha256').update(`${row.tenant}:${row.id}:legacy-notes`).digest('hex').slice(0, 32).replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-4$3-a$4-$5'),
+        note_id: noteId,
         kind: 'legacy',
         note: row.notes,
         detail: 'Migrated from time_sheets.notes; original kind, author, and creation time were not recorded.',

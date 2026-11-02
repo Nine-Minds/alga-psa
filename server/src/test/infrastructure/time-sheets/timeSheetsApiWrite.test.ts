@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } 
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { TestContext } from '../../../../test-utils/testContext';
+import { createTenant, createUser } from '../../../../test-utils/testDataFactory';
 import { setupCommonMocks } from '../../../../test-utils/testMocks';
 import { TimeSheetService } from '../../../lib/api/services/TimeSheetService';
 import {
@@ -139,7 +140,7 @@ describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
 
   describe('update', () => {
     it('updates approval_status and returns the row', async () => {
-      const sheet = await create({ period_id: periodId });
+      const sheet = await draftWithEntry();
 
       const updated = await service.update(sheet.id, updateTimeSheetSchema.parse({ approval_status: 'SUBMITTED' }), ctx);
 
@@ -152,6 +153,30 @@ describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
       const sheet = await create({ period_id: periodId });
       const updated = await service.update(sheet.id, updateTimeSheetSchema.parse({}), ctx);
       expect(updated.approval_status).toBe('DRAFT');
+    });
+
+    it('routes a requested status through the guarded transition and persists matching history', async () => {
+      const sheet = await draftWithEntry();
+      const updated = await service.update(sheet.id, updateTimeSheetSchema.parse({ approval_status: 'SUBMITTED' }), ctx);
+      expect(updated.approval_status).toBe('SUBMITTED');
+      expect((await sheetRow(sheet.id)).submitted_at).toBeInstanceOf(Date);
+      expect(await notesFor(sheet.id)).toHaveLength(0);
+      timeSheetResponseSchema.parse(wire(updated));
+    });
+
+    it('does not write state or history for a denied or invalid transition', async () => {
+      const sheet = await draftWithEntry();
+      rbac.allow = false;
+      await expect(service.update(sheet.id, updateTimeSheetSchema.parse({ approval_status: 'SUBMITTED' }), ctx))
+        .rejects.toMatchObject({ statusCode: 403 });
+      expect((await sheetRow(sheet.id)).approval_status).toBe('DRAFT');
+      expect(await notesFor(sheet.id)).toHaveLength(0);
+
+      rbac.allow = true;
+      await expect(service.update(sheet.id, updateTimeSheetSchema.parse({ approval_status: 'APPROVED' }), ctx))
+        .rejects.toMatchObject({ statusCode: 409 });
+      expect((await sheetRow(sheet.id)).approval_status).toBe('DRAFT');
+      expect(await notesFor(sheet.id)).toHaveLength(0);
     });
   });
 
@@ -265,7 +290,8 @@ describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
       const entries = await table('time_entries').where({ time_sheet_id: sheet.id });
       expect(entries.map((e: any) => e.approval_status)).toEqual(['CHANGES_REQUESTED']);
       expect((await notesFor(sheet.id)).map((n: any) => n.kind)).toEqual(['approval', 'reverse_approval']);
-      expect((await commentsFor(sheet.id))[0].comment).toBe('Approval reversed: Billed to wrong client');
+      expect((await commentsFor(sheet.id)).map((comment: any) => comment.comment))
+        .toContain('Approval reversed: Billed to wrong client');
       timeSheetResponseSchema.parse(wire(result));
     });
   });
@@ -292,10 +318,10 @@ describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
       const details = await service.getWithDetails(sheet.id, ctx);
       const parsed = detailsSchema.parse(wire(details));
 
-      expect(parsed.notes?.map((n) => [n.kind, n.note])).toEqual([
+      expect(parsed.notes?.map((n) => [n.kind, n.note])).toEqual(expect.arrayContaining([
         ['request_changes', 'fix it'],
         ['submission', 'first'],
-      ]);
+      ]));
       expect(parsed.comments).toHaveLength(1);
       expect(parsed.time_period?.period_id).toBe(periodId);
       expect(parsed).not.toHaveProperty('created_at');
@@ -365,6 +391,50 @@ describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
         ctx
       );
       expect(withEntries.find((r: any) => r.id === ids[0]).time_entries).toHaveLength(1);
+    });
+  });
+
+  describe('legacy notes forward migration', () => {
+    it('preserves populated notes per tenant, skips nulls, records uncertain provenance and removes the source column', async () => {
+      const migration = await import('../../../../migrations/20261101130000_move_time_sheet_notes_to_history.cjs');
+      await context.db.schema.alterTable('time_sheets', (table) => table.text('notes').nullable());
+
+      const legacySheet = await create({ period_id: periodId });
+      const nullPeriod = await addPeriod('2026-11-08', '2026-11-15');
+      const nullSheet = await create({ period_id: nullPeriod });
+      await table('time_sheets').where({ id: legacySheet.id }).update({ notes: 'Imported legacy note — preserve exactly' });
+      await table('time_sheets').where({ id: nullSheet.id }).update({ notes: null });
+
+      const otherTenant = await createTenant(context.db, 'Legacy notes tenant');
+      const otherUser = await createUser(context.db, otherTenant);
+      const otherPeriod = uuidv4();
+      const otherSheet = uuidv4();
+      await tenantDb(context.db, otherTenant).table('time_periods').insert({
+        tenant: otherTenant, period_id: otherPeriod,
+        start_date: '2026-11-01T00:00:00Z', end_date: '2026-11-08T00:00:00Z',
+      });
+      await tenantDb(context.db, otherTenant).table('time_sheets').insert({
+        tenant: otherTenant, id: otherSheet, user_id: otherUser, period_id: otherPeriod,
+        approval_status: 'DRAFT', notes: 'Second tenant note',
+      });
+
+      await migration.up(context.db);
+
+      const legacyRows = await table('time_sheet_notes').where({ time_sheet_id: legacySheet.id });
+      expect(legacyRows).toHaveLength(1);
+      expect(legacyRows[0]).toMatchObject({
+        tenant: context.tenantId,
+        kind: 'legacy',
+        note: 'Imported legacy note — preserve exactly',
+        created_by: null,
+      });
+      expect(legacyRows[0].note_id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+      expect(legacyRows[0].detail).toContain('original kind, author, and creation time were not recorded');
+      expect(await table('time_sheet_notes').where({ time_sheet_id: nullSheet.id })).toHaveLength(0);
+      expect(await tenantDb(context.db, otherTenant).table('time_sheet_notes').where({ time_sheet_id: otherSheet }).first())
+        .toMatchObject({ tenant: otherTenant, kind: 'legacy', note: 'Second tenant note', created_by: null });
+      expect(await table('time_sheet_notes').where({ time_sheet_id: otherSheet })).toHaveLength(0);
+      expect(await context.db.schema.hasColumn('time_sheets', 'notes')).toBe(false);
     });
   });
 });

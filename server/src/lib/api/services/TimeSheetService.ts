@@ -54,6 +54,7 @@ import {
 import { assertCanActOnBehalf } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 import { loadVisibleCalendars } from '@alga-psa/scheduling/lib/visibleCalendars';
 import type { IVisibleCalendar } from '@alga-psa/types';
+import { assertTransitionTarget, transitionTimeSheet } from './timeSheetStatus';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 /**
@@ -438,6 +439,7 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async update(id: string, data: UpdateTimeSheetData, context: ServiceContext): Promise<any> {
+    if (data.approval_status !== undefined) assertTransitionTarget(data.approval_status);
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'update', [id, data, context]);
     if (delegated.handled) return delegated.value;
@@ -459,13 +461,8 @@ export class TimeSheetService extends BaseService<any> {
           throw new ConflictError('Cannot modify approved time sheets');
         }
   
-        const updateData: Record<string, unknown> = {};
-        if (data.approval_status !== undefined) updateData.approval_status = data.approval_status;
-  
-        if (Object.keys(updateData).length > 0) {
-          await this.buildTenantScopedQuery(trx, context)
-            .where({ [this.primaryKey]: id })
-            .update(updateData);
+        if (data.approval_status !== undefined && data.approval_status !== existing.approval_status) {
+          await transitionTimeSheet(trx, id, data.approval_status, context);
         }
   
       });
@@ -536,37 +533,15 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       await withTransaction(knex, async (trx) => {
-        const timeSheet = await this.getById(id, context);
+        const timeSheet = await tenantDb(trx, context.tenant).table(this.tableName)
+          .where({ id })
+          .forUpdate()
+          .first();
         if (!timeSheet) {
           throw new NotFoundError('Time sheet not found');
         }
   
-        // Check permissions
-        if (timeSheet.user_id !== context.userId) {
-          throw new ForbiddenError('Permission denied: Can only submit your own time sheets');
-        }
-  
-        // Check current status
-        if (timeSheet.approval_status !== 'DRAFT' && timeSheet.approval_status !== 'CHANGES_REQUESTED') {
-          throw new ConflictError('Time sheet can only be submitted from DRAFT or CHANGES_REQUESTED status');
-        }
-  
-        // Validate time sheet has entries
-        const hasEntries = await this.hasTimeEntries(id, context);
-        if (!hasEntries) {
-          throw new ConflictError('Cannot submit time sheet without time entries');
-        }
-  
-        await this.buildTenantScopedQuery(trx, context)
-          .where({ id })
-          .update({
-            approval_status: 'SUBMITTED',
-            submitted_at: new Date()
-          });
-  
-        if (data.submission_notes) {
-          await this.recordNote(trx, id, 'submission', { note: data.submission_notes }, context);
-        }
+        await transitionTimeSheet(trx, id, 'SUBMITTED', context, { submission_notes: data.submission_notes });
   
       });
 
@@ -599,52 +574,7 @@ export class TimeSheetService extends BaseService<any> {
           throw new NotFoundError('Time sheet not found');
         }
   
-        // Check permissions
-        if (!await this.canApproveTimeSheets(context)) {
-          throw new ForbiddenError('Permission denied: Cannot approve time sheets');
-        }
-  
-        // Check current status
-        if (timeSheet.approval_status !== 'SUBMITTED') {
-          throw new ConflictError('Time sheet must be submitted before approval');
-        }
-
-        // Human-work guard: approval requires a human approver.
-        await assertHumanWorkOwner(trx, context.tenant, context.userId, 'approved_by');
-  
-        await this.buildTenantScopedQuery(trx, context)
-          .where({ id })
-          .update({
-            approval_status: 'APPROVED',
-            approved_at: new Date(),
-            approved_by: context.userId
-          });
-
-        // time_sheets has neither approval_notes nor updated_at; keep the notes as an approver comment
-        // using the real time_sheet_comments columns (same shape the workflow runtime writes).
-        if (data.approval_notes) {
-          await tenantDb(trx, context.tenant).table('time_sheet_comments').insert({
-            comment_id: uuidv4(),
-            time_sheet_id: id,
-            user_id: context.userId,
-            comment: data.approval_notes,
-            is_approver: true,
-            created_at: trx.fn.now(),
-            tenant: context.tenant
-          });
-        }
-  
-        if (data.approval_notes) {
-          await this.recordNote(trx, id, 'approval', { note: data.approval_notes }, context);
-        }
-
-        // time_entries has no approved_at/approved_by columns.
-        await tenantDb(trx, context.tenant).table('time_entries')
-          .where({ time_sheet_id: id })
-          .update({
-            approval_status: 'APPROVED',
-            updated_at: new Date()
-          });
+        await transitionTimeSheet(trx, id, 'APPROVED', context, { approval_notes: data.approval_notes });
   
       });
 
@@ -677,31 +607,10 @@ export class TimeSheetService extends BaseService<any> {
           throw new NotFoundError('Time sheet not found');
         }
   
-        // Check permissions
-        if (!await this.canApproveTimeSheets(context)) {
-          throw new ForbiddenError('Permission denied: Cannot request changes to time sheets');
-        }
-  
-        // Check current status
-        if (timeSheet.approval_status !== 'SUBMITTED') {
-          throw new ConflictError('Time sheet must be submitted before requesting changes');
-        }
-  
-        await this.buildTenantScopedQuery(trx, context)
-          .where({ id })
-          .update({
-            approval_status: 'CHANGES_REQUESTED'
-          });
-  
-        await this.recordNote(trx, id, 'request_changes', {
-          note: data.change_reason,
-          detail: data.detailed_feedback
-        }, context);
-  
-        // Add comment with feedback
-        await this.insertComment(trx, id, {
-          comment: `Changes requested: ${data.change_reason}${data.detailed_feedback ? `\n\nDetails: ${data.detailed_feedback}` : ''}`
-        }, context);
+        await transitionTimeSheet(trx, id, 'CHANGES_REQUESTED', context, {
+          change_reason: data.change_reason,
+          detailed_feedback: data.detailed_feedback,
+        });
   
       });
 
@@ -750,7 +659,10 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       await withTransaction(knex, async (trx) => {
-        const timeSheet = await this.getById(id, context);
+        const timeSheet = await tenantDb(trx, context.tenant).table(this.tableName)
+          .where({ id })
+          .forUpdate()
+          .first();
         if (!timeSheet) {
           throw new NotFoundError('Time sheet not found');
         }
