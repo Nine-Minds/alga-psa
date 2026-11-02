@@ -225,4 +225,70 @@ describe('suggestMappingTargets', () => {
       expect(result.get('b')).toMatchObject({ externalId: 'item:PBI' });
     });
   });
+
+  describe('shareable vs exclusive targets', () => {
+    const shareable = (option: Opt) => option.kind === 'account';
+    const exclusiveUnlessAccount = (option: Opt) => !shareable(option);
+
+    it('keeps an exact suggestion for every row when the target is shareable', () => {
+      const algas = [svc('s1', 'Managed Services'), svc('s2', 'Managed Services')];
+      const externals = [item('MS', 'Managed Services')];
+      const result = suggestMappingTargets(algas, externals, { isExclusiveTarget: () => false });
+      expect(result.get('s1')).toMatchObject({ externalId: 'item:MS', matchedBy: 'name' });
+      expect(result.get('s2')).toMatchObject({ externalId: 'item:MS', matchedBy: 'name' });
+    });
+
+    it('treats a duplicate exact claim on an exclusive target as ambiguous, in either input order', () => {
+      const algas = [svc('s1', 'Managed Services'), svc('s2', 'Managed Services')];
+      const externals = [item('MS', 'Managed Services')];
+      const forward = suggestMappingTargets(algas, externals, { isExclusiveTarget: () => true });
+      const reversed = suggestMappingTargets([...algas].reverse(), [...externals].reverse(), {
+        isExclusiveTarget: () => true,
+      });
+      expect([...forward.keys()]).toEqual([]);
+      expect([...reversed.keys()]).toEqual([]);
+    });
+
+    it('defaults to exclusive when no callback is supplied', () => {
+      const result = suggestMappingTargets(
+        [svc('s1', 'Managed Services'), svc('s2', 'Managed Services')],
+        [item('MS', 'Managed Services')]
+      );
+      expect(result.size).toBe(0);
+    });
+
+    it('decides per target kind: shared account suggested twice, exclusive item not', () => {
+      const algas = [svc('s1', 'Hosting'), svc('s2', 'Hosting')];
+      const sharedOnly = suggestMappingTargets(algas, [account('200', 'Hosting')], {
+        isExclusiveTarget: exclusiveUnlessAccount,
+      });
+      expect([...sharedOnly.keys()].sort()).toEqual(['s1', 's2']);
+      const itemOnly = suggestMappingTargets(algas, [item('200', 'Hosting')], {
+        isExclusiveTarget: exclusiveUnlessAccount,
+      });
+      expect(itemOnly.size).toBe(0);
+    });
+
+    it('does not remove a shareable exact claim from the fuzzy pool, but does remove an exclusive one', () => {
+      const algas = [svc('s1', 'Power BI Pro Annual'), svc('s2', 'Power BI Pro Annual Plan')];
+      const externals = [item('PBI', 'Power BI Pro Annual')];
+      const shared = suggestMappingTargets(algas, externals, { isExclusiveTarget: () => false });
+      expect(shared.get('s1')).toMatchObject({ matchedBy: 'name', externalId: 'item:PBI' });
+      expect(shared.get('s2')).toMatchObject({ matchedBy: 'fuzzy', externalId: 'item:PBI' });
+      const exclusive = suggestMappingTargets(algas, externals, { isExclusiveTarget: () => true });
+      expect(exclusive.get('s1')).toMatchObject({ externalId: 'item:PBI' });
+      expect(exclusive.has('s2')).toBe(false);
+    });
+
+    it('gives identical results regardless of input order for shareable targets', () => {
+      const algas = [svc('s1', 'Consulting'), svc('s2', 'Consulting'), svc('s3', 'Backup Plan Pro')];
+      const externals = [item('C', 'Consulting'), item('B', 'Backup Plan Pro')];
+      const opts = { isExclusiveTarget: () => false };
+      const a = suggestMappingTargets(algas, externals, opts);
+      const b = suggestMappingTargets([...algas].reverse(), [...externals].reverse(), opts);
+      const dump = (m: Map<string, unknown>) => JSON.stringify([...m.entries()].sort());
+      expect(dump(a)).toBe(dump(b));
+      expect(a.size).toBe(3);
+    });
+  });
 });

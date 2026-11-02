@@ -123,6 +123,45 @@ describe('validateQuickBooksMappingDecisions', () => {
     expect(validateQuickBooksMappingDecisions('quickbooks_desktop', desktopItems, decisions)).toBeNull();
   });
 
+  describe('shared mapping-target policy', () => {
+    const svc2 = { code: 'missing_service_mapping', resolution_state: 'open', metadata: { alga_entity_id: 'svc-2', alga_name: 'Dell 16 Laptop 2' } };
+    const existingService = (id: string, externalName: string) =>
+      ({ algaEntityType: 'service' as const, algaEntityId: id, externalName, mode: 'existing' as const });
+
+    it('quickbooks_online accepts two services, or a service and the discount, on one existing item name', () => {
+      const items = collectUnmappedQuickBooksEntities('quickbooks_online', [...errors, svc2]);
+      expect(
+        validateQuickBooksMappingDecisions('quickbooks_online', items, [existingService('svc-1', 'Support'), existingService('svc-2', 'Support')])
+      ).toBeNull();
+      expect(
+        validateQuickBooksMappingDecisions('quickbooks_online', items, [
+          existingService('svc-1', 'Support'),
+          { algaEntityType: 'discount', algaEntityId: 'automatic_discount', externalName: 'Support', mode: 'existing' }
+        ])
+      ).toBeNull();
+    });
+
+    it('quickbooks_online still rejects two clients on one name', () => {
+      const clients = collectUnmappedQuickBooksEntities('quickbooks_online', [
+        { code: 'missing_client_mapping', resolution_state: 'open', metadata: { alga_entity_id: 'client-1', alga_name: 'A' } },
+        { code: 'missing_client_mapping', resolution_state: 'open', metadata: { alga_entity_id: 'client-2', alga_name: 'B' } }
+      ]);
+      expect(
+        validateQuickBooksMappingDecisions('quickbooks_online', clients, [
+          { algaEntityType: 'client', algaEntityId: 'client-1', externalName: 'Acme', mode: 'existing' },
+          { algaEntityType: 'client', algaEntityId: 'client-2', externalName: 'Acme', mode: 'existing' }
+        ])
+      ).toMatchObject({ key: 'errors.accountingExport.quickbooksMapping.duplicateClientName' });
+    });
+
+    it('quickbooks_csv still rejects two services on one name', () => {
+      const items = collectUnmappedQuickBooksEntities('quickbooks_csv', [...errors, svc2]);
+      expect(
+        validateQuickBooksMappingDecisions('quickbooks_csv', items, [existingService('svc-1', 'Support'), existingService('svc-2', 'Support')])
+      ).toMatchObject({ key: 'errors.accountingExport.quickbooksMapping.duplicateItemName' });
+    });
+  });
+
   it('carries an existing Desktop account so the prompt completes that mapping in place', () => {
     const [entity] = collectUnmappedQuickBooksEntities('quickbooks_desktop', [
       { code: 'missing_service_mapping', resolution_state: 'open', metadata: { alga_entity_id: 'svc-9', alga_name: 'Backup', desktop_account: 'Backup Income', desktop_mapping_source: 'service' } }
@@ -158,7 +197,8 @@ describe('findQuickBooksNameConflict', () => {
         pending,
         [{ algaEntityType: 'service', algaEntityId: 'svc-1', externalName: 'Laptop', mode: 'existing' }],
         [{ alga_entity_type: 'service', alga_entity_id: 'svc-other', external_entity_id: 'Laptop' }],
-        stored
+        stored,
+        'quickbooks_csv'
       )
     ).toMatchObject({
       key: 'errors.accountingExport.quickbooksMapping.nameTakenByItem',
@@ -177,8 +217,51 @@ describe('findQuickBooksNameConflict', () => {
           { alga_entity_type: 'client', alga_entity_id: 'client-9', external_entity_id: 'Laptop' },
           { alga_entity_type: 'service', alga_entity_id: 'svc-9', external_entity_id: 'Desktop' }
         ],
-        stored
+        stored,
+        'quickbooks_csv'
       )
     ).toBeNull();
+  });
+});
+
+describe('findQuickBooksNameConflict shared mapping-target policy', () => {
+  const pending = collectUnmappedQuickBooksEntities('quickbooks_online', errors);
+  const stored = (type: string) => type;
+  const held = (type: string) => [{ alga_entity_type: type, alga_entity_id: 'other', external_entity_id: 'Support' }];
+
+  it('quickbooks_online: a name held by another service is not a clash', () => {
+    expect(
+      findQuickBooksNameConflict(
+        pending,
+        [{ algaEntityType: 'service', algaEntityId: 'svc-1', externalName: 'Support', mode: 'existing' }],
+        held('service'),
+        stored,
+        'quickbooks_online'
+      )
+    ).toBeNull();
+  });
+
+  it('quickbooks_online: a name held by another client is still a clash', () => {
+    expect(
+      findQuickBooksNameConflict(
+        pending,
+        [{ algaEntityType: 'client', algaEntityId: 'client-1', externalName: 'Support', mode: 'existing' }],
+        held('client'),
+        stored,
+        'quickbooks_online'
+      )
+    ).toMatchObject({ key: 'errors.accountingExport.quickbooksMapping.nameTakenByClient' });
+  });
+
+  it('quickbooks_csv: a name held by another service is still a clash', () => {
+    expect(
+      findQuickBooksNameConflict(
+        pending,
+        [{ algaEntityType: 'service', algaEntityId: 'svc-1', externalName: 'Support', mode: 'existing' }],
+        held('service'),
+        stored,
+        'quickbooks_csv'
+      )
+    ).toMatchObject({ key: 'errors.accountingExport.quickbooksMapping.nameTakenByItem' });
   });
 });

@@ -19,6 +19,12 @@ import type { AccountingMappingEntityOption } from './types';
  * included. If exactly one available candidate remains it is suggested; if
  * several remain the match is ambiguous as usual. Unavailable targets never
  * enter the fuzzy pool.
+ *
+ * Exclusive vs shareable (`isExclusiveTarget`): when several Alga rows exact-
+ * match one target, an EXCLUSIVE target is ambiguous and suggested to none of
+ * them (the unique index would reject all but one, and input order must not
+ * pick the winner). A SHAREABLE target may be suggested to every matching row,
+ * and stays in the fuzzy pool after an exact claim.
  */
 
 export type MappingSuggestion = {
@@ -73,6 +79,12 @@ export type SuggestOptions = {
    * a row whose exact match is only unavailable targets gets no suggestion.
    */
   unavailableExternalIds?: ReadonlySet<string>;
+  /**
+   * Whether the server's unique index lets only ONE live mapping hold this
+   * target. Derive it from the shared policy (isSharedMappingTarget); the engine
+   * knows no provider. Omitted = every target is exclusive (conservative).
+   */
+  isExclusiveTarget?: (option: AccountingMappingEntityOption) => boolean;
 };
 
 export function suggestMappingTargets(
@@ -82,6 +94,7 @@ export function suggestMappingTargets(
 ): Map<string, MappingSuggestion> {
   const preferredKind = options.preferredKind ?? FUZZY_KIND;
   const unavailable = options.unavailableExternalIds ?? new Set<string>();
+  const isExclusiveTarget = options.isExclusiveTarget ?? (() => true);
   const result = new Map<string, MappingSuggestion>();
   const blocked = new Set<string>();
 
@@ -159,12 +172,18 @@ export function suggestMappingTargets(
   // names) would preselect one target twice and hit the unique index on save.
   // Treat those as ambiguous: suggest it for neither. The target stays
   // claimed so the fuzzy pass can't hand it to a third row either.
+  const optionById = new Map(prepared.map((p) => [p.option.id, p.option]));
   const claimedByExact = new Map<string, string[]>();
   for (const [algaId, suggestion] of result) {
     claimedByExact.set(suggestion.externalId, [...(claimedByExact.get(suggestion.externalId) ?? []), algaId]);
   }
-  const exactClaims = new Set(claimedByExact.keys());
-  for (const algaIds of claimedByExact.values()) {
+  // Only EXCLUSIVE targets are claimed: a shareable one can be handed to many
+  // rows, and to the fuzzy pass.
+  const exactClaims = new Set<string>();
+  for (const [externalId, algaIds] of claimedByExact) {
+    const option = optionById.get(externalId);
+    if (option && !isExclusiveTarget(option)) continue;
+    exactClaims.add(externalId);
     if (algaIds.length > 1) for (const id of algaIds) result.delete(id);
   }
 

@@ -93,6 +93,21 @@ export class SyncMappingLedger {
     externalEntityId: string,
     targetRealm?: string | null
   ): Promise<ExternalEntityMappingRow | undefined> {
+    const rows = await this.findAllByExternalId(algaEntityType, externalEntityId, targetRealm);
+    return rows[0];
+  }
+
+  /**
+   * Every LIVE mapping on an external target. Targets that several Alga
+   * entities may share (QBO items for services) have more than one; callers that
+   * reason about such a target must use this, never the single-row lookup above
+   * (which silently picks one). Ordered by id so the result is deterministic.
+   */
+  async findAllByExternalId(
+    algaEntityType: string,
+    externalEntityId: string,
+    targetRealm?: string | null
+  ): Promise<ExternalEntityMappingRow[]> {
     const query = this.table<ExternalEntityMappingRow>()
       .where({
         integration_type: this.integrationType,
@@ -105,7 +120,7 @@ export class SyncMappingLedger {
     const aliases = targetRealm ? await this.acceptedRealmAliases(targetRealm) : undefined;
     this.applyRealmScope(query, targetRealm, aliases);
 
-    return query.first();
+    return query.orderBy('id');
   }
 
   async findByAlgaId(
