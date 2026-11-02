@@ -12,7 +12,7 @@ import type {
   AttentionItem,
   AttentionKind,
 } from '../../actions/inventoryDashboardActions';
-import { AgePill, Dot, count, shortDate, useCurrencyFormat, type CurrencyFormat } from './shared';
+import { AgePill, Dot, count, shortCalendarDate, shortDate, useCurrencyFormat, type CurrencyFormat } from './shared';
 
 type Filter = 'all' | AttentionCategory;
 
@@ -147,7 +147,7 @@ function rowFact(item: AttentionItem, t: ReturnType<typeof useTranslation>['t'])
       return t('dashboard.attention.fact.rmaClient', 'replacement unit still owed');
     case 'rma_vendor_return':
       return t('dashboard.attention.fact.rmaVendorReturn', 'vendor return due {{date}} — {{days}}d overdue', {
-        date: formatMaybeDate(param(item, 'return_by')),
+        date: shortCalendarDate(param(item, 'return_by')),
         days: paramNumber(item, 'overdue_days'),
       });
     case 'price_creep_so':
