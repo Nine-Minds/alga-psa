@@ -2,6 +2,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
+import { createAuthorizationBundle, createBundleAssignment, publishBundleRevision, upsertBundleRule } from '@alga-psa/authorization/bundles/service';
+import { createAuthorizationKernel, BundleAuthorizationKernelProvider, BuiltinAuthorizationKernelProvider } from '@alga-psa/authorization/kernel';
 
 import { createTestDbConnection, createTenant, createUser } from './_dbTestUtils';
 
@@ -1830,27 +1832,51 @@ describe('project business operation db actions', () => {
     const phaseA = await createPhase(db, tenant, projectA, { name: 'Writable phase' });
     const phaseB = await createPhase(db, tenant, projectB, { name: 'Read-only phase' });
 
-    const bundleId = uuidv4();
-    const revisionId = uuidv4();
-    await tenantTable(db, tenant, 'authorization_bundles').insert({
-      tenant, bundle_id: bundleId, bundle_key: `project-scope-${bundleId.slice(0, 8)}`,
-      name: 'Project mutation scope', is_system: false, status: 'active',
+    const { bundleId, revisionId } = await createAuthorizationBundle(db, {
+      tenant, name: 'Project mutation scope', bundleKey: `project-scope-${uuidv4().slice(0, 8)}`,
+      actorUserId: runtimeState.actorUserId,
     });
-    await tenantTable(db, tenant, 'authorization_bundle_revisions').insert({
-      tenant, revision_id: revisionId, bundle_id: bundleId, revision_number: 1, lifecycle_state: 'published',
-    });
-    await tenantTable(db, tenant, 'authorization_bundles').where({ bundle_id: bundleId }).update({ published_revision_id: revisionId });
-    for (const action of ['read', 'update', 'delete', 'create_task']) {
-      await tenantTable(db, tenant, 'authorization_bundle_rules').insert({
-        tenant, bundle_id: bundleId, revision_id: revisionId, resource_type: 'project', action,
-        template_key: 'selected_clients', effect: 'narrow',
-        config: JSON.stringify({ selectedClientIds: action === 'read' ? [clientA.clientId, clientB.clientId] : [clientA.clientId] }),
-        position: 0,
+    for (const action of ['read', 'create', 'update', 'delete', 'create_task']) {
+      await upsertBundleRule(db, {
+        tenant, bundleId, revisionId, resourceType: 'project', action,
+        templateKey: 'selected_clients',
+        config: { selectedClientIds: action === 'read' ? [clientA.clientId, clientB.clientId] : [clientA.clientId] },
+        actorUserId: runtimeState.actorUserId,
       });
     }
-    await tenantTable(db, tenant, 'authorization_bundle_assignments').insert({
-      tenant, bundle_id: bundleId, target_type: 'user', target_id: runtimeState.actorUserId, status: 'active',
+    await publishBundleRevision(db, { tenant, bundleId, revisionId, actorUserId: runtimeState.actorUserId });
+    await createBundleAssignment(db, {
+      tenant, bundleId, targetType: 'user', targetId: runtimeState.actorUserId, actorUserId: runtimeState.actorUserId,
     });
+
+    const persistedTaskRule = await tenantTable(db, tenant, 'authorization_bundle_rules')
+      .where({ bundle_id: bundleId, resource_type: 'project', action: 'create_task' })
+      .first('action', 'config');
+    expect(persistedTaskRule?.action).toBe('create_task');
+
+    const publishedRules = await tenantTable(db, tenant, 'authorization_bundle_rules')
+      .where({ bundle_id: bundleId, revision_id: revisionId })
+      .select('rule_id', 'resource_type', 'action', 'template_key', 'config');
+    const simulationKernel = createAuthorizationKernel({
+      builtinProvider: new BuiltinAuthorizationKernelProvider(),
+      bundleProvider: new BundleAuthorizationKernelProvider({
+        resolveRules: async () => publishedRules.map((rule: any) => ({
+          id: rule.rule_id,
+          resource: rule.resource_type,
+          action: rule.action,
+          templateKey: rule.template_key,
+          selectedClientIds: rule.config.selectedClientIds,
+        })),
+      }),
+      rbacEvaluator: async () => true,
+    });
+    const simulationInput = (projectId: string, clientId: string) => ({
+      subject: { tenant, userId: runtimeState.actorUserId, userType: 'internal' as const },
+      resource: { type: 'project', action: 'create_task', id: projectId },
+      record: { id: projectId, clientId },
+    });
+    expect((await simulationKernel.authorizeResource(simulationInput(projectA, clientA.clientId))).allowed).toBe(true);
+    expect((await simulationKernel.authorizeResource(simulationInput(projectB, clientB.clientId))).allowed).toBe(false);
 
     const originalName = (await tenantTable(db, tenant, 'projects').where({ project_id: projectB }).first('project_name'))?.project_name;
     await expect(invokeAction('projects.update', {

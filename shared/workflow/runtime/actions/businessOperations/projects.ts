@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { generateKeyBetween } from 'fractional-indexing';
 import { getDeletionConfig, validateDeletion } from '@alga-psa/core/server';
 import { tenantDb } from '@alga-psa/db';
+import type { AUTHORIZATION_RESOURCE_ACTIONS } from '@alga-psa/authorization/bundles/resourceActions';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -29,6 +30,7 @@ import {
 } from './shared';
 
 const nullableUuidSchema = z.union([uuidSchema, z.null()]);
+type ProjectResourceAction = (typeof AUTHORIZATION_RESOURCE_ACTIONS.project)[number];
 
 const projectSummarySchema = z.object({
   project_id: withWorkflowPicker(uuidSchema, 'Project', 'project'),
@@ -1091,7 +1093,7 @@ async function resolveActorAuthorizationSubject(tx: TenantTxContext): Promise<Au
 
 async function createProjectAuthorizer(
   tx: TenantTxContext,
-  action: 'read' | 'update' | 'delete' | 'create_task'
+  action: ProjectResourceAction
 ): Promise<(project: Record<string, unknown>) => Promise<boolean>> {
   const subject = await resolveActorAuthorizationSubject(tx);
   const authorizationKernel = createAuthorizationKernel({
@@ -1159,7 +1161,7 @@ async function assertProjectAuthorized(
   ctx: any,
   tx: TenantTxContext,
   project: Record<string, unknown>,
-  action: 'read' | 'update' | 'delete' | 'create_task'
+  action: ProjectResourceAction
 ): Promise<void> {
   const authorize = await createProjectAuthorizer(tx, action);
   const allowed = await authorize(project);
