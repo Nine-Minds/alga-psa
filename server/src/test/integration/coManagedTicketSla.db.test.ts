@@ -9,8 +9,9 @@
  *      pauses it, and re-escalation resumes it with the elapsed time kept.
  *  (c) Work escalated before any obligation existed (pre-migration) re-escalates untimed.
  *
- * The capability gate is forced on (FORCE_CAPABILITIES) so the test exercises the handlers, not the
- * entitlement lookup. Own scratch database; the tests run in order and share state.
+ * Production capability/lifecycle registration runs against an entitled, allocated sponsor. Handoffs
+ * force the release gate on; the neutrality case uses real participation discovery and its cache.
+ * Own scratch database; the tests run in order and share state.
  */
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
@@ -19,6 +20,10 @@ import { escalateCoManagedTicket, handBackCoManagedTicket, getCoManagedTicketSla
   type CoManagedSessionActor, type CoManagedSharedResource } from '@alga-psa/co-managed';
 import { organizationSlaElapsedMinutes } from '@alga-psa/shared/lib/sla/organizationSlaClock';
 import { registerCoManagedTicketSlaHandlers } from '@alga-psa/co-managed/ticketSlaRegistration';
+import { coManagedParticipants, registerCoManagedCapability } from '@alga-psa/co-managed/capability';
+import { registerCapabilityParticipation, serves } from '@alga-psa/core/capability';
+import { dispatchTicketLifecycle } from '@alga-psa/tickets/lib/ticketLifecycleHooks';
+import { applyOrganizationSlaEvent, findActiveOrganizationSlaObligation } from '@alga-psa/shared/lib/sla/organizationSlaStore';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { createClient, createTenant, createUser } from '../../../test-utils/testDataFactory';
@@ -66,6 +71,8 @@ describeDb('co-managed organization SLA on the real handoff path (handlers regis
     await db('co_management_relationships').insert({ tenant: target.tenant, relationship_id: target.relationshipId, sponsor_tenant: msp,
       sponsor_client_id: sponsorClient, state: 'active', visibility_mode: 'board_scope', escalation_board_id: mspBoard,
       accepted_by: target.admin.userId, accepted_at: new Date() });
+    await db('co_managed_allocations').insert({ tenant: msp, allocation_id: randomUUID(), operation_id: randomUUID(),
+      request_fingerprint: 'a'.repeat(64), customer_tenant: target.tenant, relationship_id: target.relationshipId, seats: 1, state: 'active' });
     await db('co_management_board_scopes').insert({ tenant: target.tenant, relationship_id: target.relationshipId, board_id: board, can_collaborate: true });
     await db('co_management_staff_assignments').insert({ tenant: msp, customer_tenant: target.tenant, relationship_id: target.relationshipId,
       principal_type: 'user', principal_id: tech.userId, relationship_role: 'technician' });
@@ -88,12 +95,17 @@ describeDb('co-managed organization SLA on the real handoff path (handlers regis
   const obligations = (c: Customer) => db('sla_organization_obligations').where({ tenant: msp, source_tenant: c.tenant }).orderBy('generation');
   const events = async (obligationId: string) => (await db('sla_organization_events').where({ tenant: msp, obligation_id: obligationId }).orderBy('revision')).map(e => e.event_type);
   const display = (c: Customer, key: string) => getCoManagedTicketSlaDisplay(db, c.admin, resource(c, key));
+  const nativeSla = async (c: Customer, key: string) => Object.fromEntries(Object.entries(
+    await db('tickets').where({ tenant: c.tenant, ticket_id: c.tickets[key] }).first()
+  ).filter(([column]) => column.startsWith('sla_')));
 
   beforeAll(async () => {
     process.env.FORCE_CAPABILITIES = 'co-managed:on';
     registerCoManagedTicketSlaHandlers();
     db = await createTestDbConnection({ databaseName: 'l6b_sla_path_test' });
     msp = await createTenant(db, 'Sponsor MSP', { productCode: 'psa' });
+    await db('co_managed_entitlements').insert({ tenant: msp, source: 'admin_grant', source_reference: randomUUID(), capacity: 10,
+      verified_at: new Date(), valid_until: new Date(Date.now() + 365 * 86400000) });
     mspBoard = randomUUID();
     await db('boards').insert({ tenant: msp, board_id: mspBoard, board_name: 'Escalations', is_inactive: false });
     tech = await actorFor(msp, [['ticket', 'read'], ['ticket', 'update']], true);
@@ -136,11 +148,21 @@ describeDb('co-managed organization SLA on the real handoff path (handlers regis
     await db('sla_policy_targets').insert({ tenant: msp, target_id: randomUUID(), sla_policy_id: policy, priority_id: mspPriority,
       response_time_minutes: 60, resolution_time_minutes: 480, escalation_1_percent: 50, escalation_2_percent: 75, escalation_3_percent: 90, is_24x7: true });
 
+    // A real, independent customer promise is already running before the MSP accepts work.
+    const customerPolicy = randomUUID();
+    await db('sla_policies').insert({ tenant: M.tenant, sla_policy_id: customerPolicy, policy_name: 'Customer policy', is_default: true });
+    await db('tickets').where({ tenant: M.tenant, ticket_id: M.tickets.m1 }).update({ sla_policy_id: customerPolicy,
+      sla_started_at: new Date('2026-01-01T00:00:00Z'), sla_response_due_at: new Date('2026-01-01T02:00:00Z'),
+      sla_response_at: new Date('2026-01-01T01:00:00Z'), sla_response_met: true,
+      sla_resolution_due_at: new Date('2026-01-02T00:00:00Z'), sla_total_pause_minutes: 7 });
+    const nativeBefore = await nativeSla(M, 'm1');
+
     expect(await escalate(M, 'm1', 0)).toMatchObject({ transition: 'escalated', appliedRevision: 1 });
     const [started] = await obligations(M);
     expect(started).toMatchObject({ source_tenant: M.tenant, ticket_id: M.tickets.m1, generation: 1 });
     expect(started.clock.pauseReasons).toEqual([]);
     expect(await events(started.obligation_id)).toEqual(['started']);
+    expect(await nativeSla(M, 'm1')).toEqual(nativeBefore);
     const running = (await display(M, 'm1')).msp!;
     expect(running).toMatchObject({ state: 'tracking', paused: false });
 
@@ -153,15 +175,32 @@ describeDb('co-managed organization SLA on the real handoff path (handlers regis
     const elapsedAtPause = organizationSlaElapsedMinutes(paused.clock);
     expect(elapsedAtPause).toBeGreaterThan(0); // the clock ran before it was paused
     expect((await display(M, 'm1')).msp).toMatchObject({ state: 'tracking', paused: true });
+    expect(await nativeSla(M, 'm1')).toEqual(nativeBefore);
+
+    // Editing the mapping while the ticket is with the customer must not retarget its existing promise.
+    const urgent = randomUUID();
+    await db('priorities').insert({ tenant: msp, priority_id: urgent, priority_name: 'Urgent', order_number: 2, item_type: 'ticket' });
+    await db('sla_policy_targets').insert({ tenant: msp, target_id: randomUUID(), sla_policy_id: policy, priority_id: urgent,
+      response_time_minutes: 5, resolution_time_minutes: 15, is_24x7: true });
+    await db('co_managed_sla_priority_mappings').where({ tenant: msp, customer_tenant: M.tenant, relationship_id: M.relationshipId,
+      customer_priority_id: M.priority }).update({ msp_priority_id: urgent });
 
     expect(await escalate(M, 'm1', 2)).toMatchObject({ transition: 'escalated', appliedRevision: 3 });
     const rows = await obligations(M).where('ticket_id', M.tickets.m1);
     expect(rows).toHaveLength(1); // resumed, not restarted
     expect(rows[0].obligation_id).toBe(started.obligation_id);
     expect(rows[0].clock.pauseReasons).toEqual([]);
+    expect(rows[0].priority_id).toBe(mspPriority);
+    expect(rows[0].clock.response.targetMinutes).toBe(60);
+    expect(rows[0].clock.resolution.targetMinutes).toBe(480);
     expect(await events(started.obligation_id)).toEqual(['started', 'paused', 'resumed']);
     // Elapsed time accrued before the pause is kept across the resume (never reset to zero).
-    expect(organizationSlaElapsedMinutes(rows[0].clock)).toBeGreaterThanOrEqual(elapsedAtPause);
+    expect(organizationSlaElapsedMinutes(rows[0].clock)).toBe(elapsedAtPause);
+    const pausedMs = Date.parse(rows[0].clock.observedAt) - Date.parse(paused.clock.observedAt);
+    for (const target of ['response', 'resolution'] as const) {
+      expect(Date.parse(rows[0].clock[target].dueAt) - Date.parse(started.clock[target].dueAt)).toBe(pausedMs);
+    }
+    expect(await nativeSla(M, 'm1')).toEqual(nativeBefore);
     expect((await display(M, 'm1')).msp).toMatchObject({ state: 'tracking', paused: false });
   });
 
@@ -171,5 +210,76 @@ describeDb('co-managed organization SLA on the real handoff path (handlers regis
     expect(await escalate(M, 'm2', 2)).toMatchObject({ transition: 'escalated' });
     expect((await obligations(M)).filter(o => o.ticket_id === M.tickets.m2)).toEqual([]);
     expect((await display(M, 'm2')).msp).toEqual({ state: 'not_configured' });
+  });
+
+  it('(d) persisted warning and breach crossings are deduplicated, and leave the native promise unchanged', async () => {
+    const [row] = await obligations(M).where('ticket_id', M.tickets.m1);
+    const identity = row.clock.identity;
+    const nativeBefore = await nativeSla(M, 'm1');
+    for (const percent of [50, 100]) await db('sla_notification_thresholds').insert({ tenant: msp,
+      threshold_id: randomUUID(), sla_policy_id: row.sla_policy_id, threshold_percent: percent,
+      notification_type: percent === 100 ? 'breach' : 'warning', notify_assignee: true, channels: ['in_app'] });
+    const observeAt = async (elapsedMinutes: number, operationId = randomUUID()) => {
+      const occurredAt = new Date(Date.parse(row.clock.observedAt) + elapsedMinutes * 60000).toISOString();
+      return db.transaction(trx => applyOrganizationSlaEvent(trx, identity, operationId, { kind: 'observed', occurredAt }));
+    };
+    const notices = () => db('sla_organization_notification_events').where({ tenant: msp, obligation_id: row.obligation_id }).orderBy('threshold_percent');
+    await observeAt(30);
+    expect(await notices()).toMatchObject([{ sla_type: 'response', notification_type: 'warning', threshold_percent: 50, status: 'pending' }]);
+    const operationId = randomUUID();
+    await observeAt(61, operationId);
+    const saved = await notices();
+    expect(saved).toMatchObject([
+      { sla_type: 'response', notification_type: 'warning', threshold_percent: 50 },
+      { sla_type: 'response', notification_type: 'breach', threshold_percent: 100 },
+    ]);
+    expect(await observeAt(61, operationId)).toMatchObject({ deduplicated: true });
+    await observeAt(62);
+    expect(await notices()).toEqual(saved);
+    expect(await nativeSla(M, 'm1')).toEqual(nativeBefore);
+  });
+
+  it('(e) a foreign owner cannot read or mutate an obligation, and a forged source rolls back without changing it', async () => {
+    const [before] = await obligations(M).where('ticket_id', M.tickets.m1);
+    const identity = before.clock.identity;
+    const beforeEvents = await events(before.obligation_id);
+    expect(await findActiveOrganizationSlaObligation(db, N.tenant, M.tenant, M.tickets.m1)).toBeUndefined();
+    const event = { kind: 'observed' as const, occurredAt: before.clock.observedAt };
+    await expect(db.transaction(trx => applyOrganizationSlaEvent(trx, { ...identity, tenant: N.tenant }, randomUUID(), event)))
+      .rejects.toThrow('does not exist');
+    await expect(db.transaction(trx => applyOrganizationSlaEvent(trx, { ...identity, sourceTenant: N.tenant }, randomUUID(), event)))
+      .rejects.toThrow('source does not match');
+    expect(await obligations(M).where('ticket_id', M.tickets.m1)).toEqual([before]);
+    expect(await events(before.obligation_id)).toEqual(beforeEvents);
+  });
+
+  it.each(['plain PSA', 'kill switch'] as const)('(f) %s executes every lifecycle hook with zero SQL', async mode => {
+    const tenant = mode === 'plain PSA' ? await createTenant(db, 'Plain PSA control', { productCode: 'psa' }) : M.tenant;
+    if (mode === 'plain PSA') delete process.env.FORCE_CAPABILITIES;
+    else process.env.FORCE_CAPABILITIES = 'co-managed:off';
+    registerCapabilityParticipation('co-managed', ({ tenantIds }) => coManagedParticipants(tenantIds, db));
+    try {
+      expect(await serves('co-managed', tenant)).toMatchObject({ served: false,
+        reasons: { served: mode === 'plain PSA' ? 'not-participating' : 'forced-off' } });
+      await db.transaction(async trx => {
+        const statements: string[] = [];
+        const record = (query: { sql: string }) => statements.push(query.sql);
+        db.on('query', record);
+        try {
+          const base = { tenant, ticketId: M.tickets.m1 };
+          await dispatchTicketLifecycle(trx, { ...base, kind: 'resolved' });
+          await dispatchTicketLifecycle(trx, { ...base, kind: 'reopened' });
+          await dispatchTicketLifecycle(trx, { ...base, kind: 'awaitingClient', previous: null, next: 'awaiting_client' });
+          await dispatchTicketLifecycle(trx, { ...base, kind: 'firstResponse', relationshipId: M.relationshipId,
+            commentId: randomUUID(), actorTenant: msp, actorUserId: tech.userId, actorReferenceId: randomUUID() });
+          await dispatchTicketLifecycle(trx, { ...base, kind: 'handoff', relationshipId: M.relationshipId,
+            workId: randomUUID(), operationId: randomUUID(), transition: 'escalated', firstEscalatedAt: null, occurredAt: new Date().toISOString() });
+          expect(statements).toEqual([]);
+        } finally { db.off('query', record); }
+      });
+    } finally {
+      process.env.FORCE_CAPABILITIES = 'co-managed:on';
+      registerCoManagedCapability();
+    }
   });
 });

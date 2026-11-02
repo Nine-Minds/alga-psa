@@ -9,6 +9,7 @@ import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { escalateCoManagedTicket, enqueueCoManagedSlaDeliveries, flagStaleCoManagedSlaSending, pendingCoManagedSlaDeliveries,
   type CoManagedSessionActor } from '@alga-psa/co-managed';
 import { registerCoManagedTicketSlaHandlers } from '@alga-psa/co-managed/ticketSlaRegistration';
+import '@alga-psa/co-managed/capability';
 import { persistCoManagedSlaNotifications } from '@alga-psa/notifications/lib/coManagedSlaNotifications';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
@@ -65,6 +66,8 @@ describeDb('co-managed organization SLA notices: fanout and delivery through the
     registerCoManagedTicketSlaHandlers();
     db = testDb = await createTestDbConnection({ databaseName: 'l6b_sla_delivery_test' });
     msp = await createTenant(db, 'Sponsor MSP', { productCode: 'psa' });
+    await db('co_managed_entitlements').insert({ tenant: msp, source: 'admin_grant', source_reference: randomUUID(), capacity: 10,
+      verified_at: new Date(), valid_until: new Date(Date.now() + 365 * 86400000) });
     mspBoard = randomUUID();
     await db('boards').insert({ tenant: msp, board_id: mspBoard, board_name: 'Escalations', is_inactive: false });
     const customer = await createTenant(db, 'Customer', { productCode: 'co_managed' });
@@ -80,6 +83,8 @@ describeDb('co-managed organization SLA notices: fanout and delivery through the
     await db('priorities').insert({ tenant: msp, priority_id: mspPriority, priority_name: 'MSP Normal', order_number: 1, item_type: 'ticket' });
     await db('co_management_relationships').insert({ tenant: customer, relationship_id: relationshipId, sponsor_tenant: msp, sponsor_client_id: sponsorClient,
       state: 'active', visibility_mode: 'board_scope', escalation_board_id: mspBoard, accepted_by: admin.userId, accepted_at: new Date() });
+    await db('co_managed_allocations').insert({ tenant: msp, allocation_id: randomUUID(), operation_id: randomUUID(),
+      request_fingerprint: 'a'.repeat(64), customer_tenant: customer, relationship_id: relationshipId, seats: 1, state: 'active' });
     await db('co_management_board_scopes').insert({ tenant: customer, relationship_id: relationshipId, board_id: board, can_collaborate: true });
     await db('co_managed_sla_priority_mappings').insert({ tenant: msp, customer_tenant: customer, relationship_id: relationshipId, customer_priority_id: priority, msp_priority_id: mspPriority });
     const schedule = randomUUID(), policy = randomUUID();

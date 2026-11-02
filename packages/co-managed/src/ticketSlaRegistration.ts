@@ -3,9 +3,9 @@
  * registry (@alga-psa/tickets). Native ticket code never imports this package and never calls
  * ticketSla directly: it dispatches lifecycle events, and these handlers answer them.
  *
- * Neutrality (R4): every handler first asks the capability gate, which is cached per tenant
- * (and answers false without SQL when the flag is off or FORCE_CAPABILITIES says off). A plain
- * PSA tenant therefore reaches this code and returns before touching the transaction.
+ * Neutrality (R4): every handler first asks the participation-based capability gate. A cached
+ * negative decision, or FORCE_CAPABILITIES=co-managed:off, returns before touching the transaction.
+ * Existing participants keep being served independently of the rollout flag.
  */
 import { registerTicketLifecycleHandler, type TicketLifecycleEvent } from '@alga-psa/tickets/lib/ticketLifecycleHooks';
 import { serves } from '@alga-psa/core/capability';
