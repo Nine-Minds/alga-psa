@@ -1,5 +1,12 @@
 import puppeteer from 'puppeteer';
+import createDOMPurify from 'dompurify';
+import { JSDOM } from 'jsdom';
 import { fetchPublicBytes } from '@alga-psa/core/net/safeFetch';
+
+export type RenderContent =
+  | { kind: 'text'; text: string }
+  | { kind: 'rich-html'; html: string }
+  | { kind: 'file-placeholder'; fileName: string; fileType: string; fileSize: string; icon: string };
 
 export interface RenderHtmlToPngOptions {
   width?: number;
@@ -25,8 +32,57 @@ const TRANSPARENT_PIXEL =
 
 const REMOTE_URL = /^\s*https?:\/\//i;
 
+const purifier = createDOMPurify(new JSDOM('').window);
+const FAILURE_PLACEHOLDER = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+  'base64'
+);
+
+async function fallbackPlaceholder(): Promise<Buffer> {
+  try {
+    const sharpModule = await import('sharp');
+    const sharp = (sharpModule as any).default ?? sharpModule;
+    return await sharp(Buffer.from('<svg width="400" height="300"><rect width="100%" height="100%" fill="#e5e7eb"/><text x="20" y="150" fill="#4b5563" font-size="16">Preview unavailable</text></svg>'))
+      .png()
+      .toBuffer();
+  } catch {
+    return Buffer.from(FAILURE_PLACEHOLDER);
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function toHtml(content: RenderContent): string {
+  if (content.kind === 'text') {
+    return `<pre>${escapeHtml(content.text)}</pre>`;
+  }
+  if (content.kind === 'rich-html') {
+    return purifier.sanitize(content.html, { USE_PROFILES: { html: true } });
+  }
+
+  return `<div style="font-family: sans-serif; padding: 20px; text-align: center; background: #f9f9f9; width: 100%; height: 100%;">
+    <div style="font-size: 64px; margin-bottom: 15px;">${escapeHtml(content.icon)}</div>
+    <div style="background: #607d8b; color: white; padding: 10px; margin-bottom: 15px;"><strong>${escapeHtml(content.fileType)}</strong></div>
+    <div style="font-size: 14px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 10px;">${escapeHtml(content.fileName)}</div>
+    <div style="font-size: 12px; color: #666;">${escapeHtml(content.fileSize)}</div>
+    <div style="margin-top: 15px; font-size: 12px; color: #999;">Preview not available. Download to view.</div>
+  </div>`;
 }
 function decodeAttr(s: string): string {
   return s.replace(/&amp;/gi, '&').replace(/&quot;/gi, '"').replace(/&#39;|&#x27;/gi, "'");
@@ -116,37 +172,39 @@ export async function resolveRemoteAssets(
  * caller-controlled HTML cannot make the server issue requests (SSRF) or read responses back.
  * Remote images are fetched by us through safeFetch and inlined (see resolveRemoteAssets).
  */
-export async function renderHtmlToPng(html: string, opts: RenderHtmlToPngOptions = {}): Promise<Buffer> {
+export async function renderHtmlToPng(content: RenderContent, opts: RenderHtmlToPngOptions = {}): Promise<Buffer> {
   const width = opts.width ?? 400;
   const height = opts.height ?? 300;
-  const safeHtml = await resolveRemoteAssets(html, opts);
-
   let browser;
   try {
+    // Escape structured values and sanitize all supported rich HTML before resolving image URLs.
+    const sanitizedHtml = toHtml(content);
+    const safeHtml = await withTimeout(resolveRemoteAssets(sanitizedHtml, opts), 6000, 'Asset resolution');
     const puppeteerOptions: any = {
       headless: true,
-      // --no-sandbox etc. are kept for the container runtime; they are unrelated to the SSRF
-      // fix and intentionally out of scope for it.
       args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--disable-features=IsolateOrigins',
         '--disable-site-isolation-trials',
-        // Defense in depth below request interception: route everything through a dead proxy
-        // (and do not bypass it for loopback) so no socket can be opened even by Chromium's own
-        // pre-connect logic for <iframe>/<object> navigations.
+        // Defense in depth below interception. A dead proxy prevents Chromium preconnects.
         '--proxy-server=socks5://127.0.0.1:1',
         '--proxy-bypass-list=<-loopback>',
       ],
     };
+
+    // Chromium sandboxing is active whenever the process is not root. Root containers cannot
+    // use Chromium's sandbox; the request-deny policy below remains the security boundary.
+    if (typeof process.getuid === 'function' && process.getuid() === 0) {
+      puppeteerOptions.args.push('--no-sandbox', '--disable-setuid-sandbox');
+    }
 
     // Use system chromium if available (Docker environment)
     if (process.env.PUPPETEER_EXECUTABLE_PATH) {
       puppeteerOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
     }
 
+    puppeteerOptions.timeout = 10000;
     browser = await puppeteer.launch(puppeteerOptions);
     const page = await browser.newPage();
     await page.setViewport({ width, height });
@@ -178,13 +236,20 @@ export async function renderHtmlToPng(html: string, opts: RenderHtmlToPngOptions
         </style>
         <div>${safeHtml}</div>
       `;
-    await page.setContent(styledHtml, { waitUntil: 'domcontentloaded' });
-    const imageBuffer = await page.screenshot({ type: 'png' });
+    await page.setContent(styledHtml, { waitUntil: 'domcontentloaded', timeout: 5000 });
+    const imageBuffer = await withTimeout(page.screenshot({ type: 'png' }), 10000, 'Chromium screenshot');
 
     return Buffer.from(imageBuffer);
+  } catch (error) {
+    console.error('[renderHtmlToPng] Preview rendering failed; returning placeholder image:', error);
+    return await fallbackPlaceholder();
   } finally {
     if (browser) {
-      await browser.close();
+      try {
+        await withTimeout(browser.close(), 2000, 'Chromium close');
+      } catch {
+        browser.process()?.kill('SIGKILL');
+      }
     }
   }
 }
