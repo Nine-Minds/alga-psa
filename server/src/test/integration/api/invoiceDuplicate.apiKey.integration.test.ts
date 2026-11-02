@@ -3,6 +3,18 @@ import { NextRequest } from 'next/server';
 import { TestContext } from '../../../../test-utils/testContext';
 import { ensureDefaultBillingSettings } from '../../../../test-utils/billingTestHelpers';
 
+const sessionAuth = vi.hoisted(() => ({ resolve: vi.fn(async () => null) }));
+
+// The global server test setup installs a permissive @alga-psa/auth facade
+// whose withAuth supplies a fallback user. This suite exercises the production
+// wrapper and API-key AsyncLocalStorage so numbering cannot pass via that user.
+vi.unmock('@alga-psa/auth');
+vi.mock('../../../../../packages/auth/src/lib/getSession', () => ({
+  getSession: sessionAuth.resolve,
+  getSessionWithRevocationCheck: sessionAuth.resolve,
+  logSessionRejection: vi.fn(async () => undefined),
+}));
+
 const identity = vi.hoisted(() => ({
   tenant: '',
   userId: '',
@@ -105,6 +117,7 @@ describe('POST /api/v1/invoices/{id}/duplicate with API-key identity', () => {
     const response = await duplicate(source.invoice_id, 'authorized-key');
 
     expect(response.status).toBe(201);
+    expect(sessionAuth.resolve).not.toHaveBeenCalled();
     const { data } = await response.json();
     const header = await context.db('invoices').where({ tenant: context.tenantId, invoice_id: data.invoice_id }).first();
     const sourceHeader = await context.db('invoices').where({ tenant: context.tenantId, invoice_id: source.invoice_id }).first();
