@@ -135,7 +135,7 @@ describe('ticket Bento action access boundaries', () => {
     const { getTicketScheduleEntries } = await actions();
 
     expect(await outcome(getTicketScheduleEntries)).toEqual({
-      thrown: 'Permission denied: cannot read ticket',
+      permissionError: 'Permission denied: cannot read ticket',
     });
     expect(state.permissionCalls).toHaveLength(1);
     expect(state.permissionCalls[0].slice(1, 3)).toEqual(['ticket', 'read']);

@@ -171,7 +171,7 @@ export const getTicketScheduleEntries = withAuth(
 
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       await assertCanReadTicket(user, trx, tenant, ticketId);
 
       const now = new Date();
@@ -244,7 +244,7 @@ export const getTicketInteractions = withAuth(
 
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       await assertCanReadTicket(user, trx, tenant, ticketId);
 
       const query = tenantScopedTable(trx, 'interactions as i', tenant)
@@ -304,7 +304,7 @@ export const getTicketBillingRollup = withAuth(
 
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const ticket = await assertCanReadTicket(user, trx, tenant, ticketId);
 
       const timeEntryRows = (await tenantScopedTable(trx, 'time_entries', tenant)
@@ -422,7 +422,7 @@ export const getTicketAppointmentRequests = withAuth(
 
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       await assertCanReadTicket(user, trx, tenant, ticketId);
 
       const query = tenantScopedTable(trx, 'appointment_requests as ar', tenant)
@@ -481,7 +481,7 @@ export const getTicketSlaPolicyName = withAuth(
 
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       await assertCanReadTicket(user, trx, tenant, ticketId);
 
       const row = await tenantScopedTable(trx, 'tickets as t', tenant)

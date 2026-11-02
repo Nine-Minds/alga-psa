@@ -133,7 +133,7 @@ describe('ticket Bento record authorization', () => {
       state.coarsePermissionCalls = [];
       state.tableReads = [];
       const result = await outcome(read, actionArgs[0]);
-      expect(result).toEqual({ thrown: 'Permission denied: Cannot access ticket' });
+      expect(result).toEqual({ permissionError: 'Permission denied: Cannot access ticket' });
       expect(state.authorizationCalls).toEqual([
         { tenant: 'tenant-1', ticketId: 'ticket-1', action: 'read', userId: 'internal-1' },
       ]);
@@ -143,17 +143,28 @@ describe('ticket Bento record authorization', () => {
     }
   });
 
-  it('returns the same action-boundary denial for a missing ticket and a ticket excluded by the bundle', async () => {
-    const { getTicketScheduleEntries } = await actions();
-    state.deniedTicketIds.add('excluded-ticket');
-    state.missingTicketIds.add('missing-ticket');
+  it('maps missing and bundle-excluded tickets to equal permission payloads for every Bento read', async () => {
+    const bento = await actions();
+    const reads = [
+      bento.getTicketScheduleEntries,
+      bento.getTicketInteractions,
+      bento.getTicketBillingRollup,
+      bento.getTicketAppointmentRequests,
+      bento.getTicketSlaPolicyName,
+    ];
 
-    const excluded = await outcome(getTicketScheduleEntries, 'excluded-ticket');
-    const missing = await outcome(getTicketScheduleEntries, 'missing-ticket');
+    for (const read of reads) {
+      state.deniedTicketIds = new Set(['excluded-ticket']);
+      state.missingTicketIds = new Set(['missing-ticket']);
+      state.tableReads = [];
 
-    expect(excluded).toEqual({ thrown: 'Permission denied: Cannot access ticket' });
-    expect(missing).toEqual(excluded);
-    expect(state.tableReads.filter((table) => protectedTables.includes(table))).toEqual([]);
+      const excluded = await read('excluded-ticket');
+      const missing = await read('missing-ticket');
+
+      expect(excluded).toEqual({ permissionError: 'Permission denied: Cannot access ticket' });
+      expect(missing).toEqual(excluded);
+      expect(state.tableReads.filter((table) => protectedTables.includes(table))).toEqual([]);
+    }
   });
 
   it('allows an authorized ticket and scopes contract lookup from the authorized ticket row', async () => {
