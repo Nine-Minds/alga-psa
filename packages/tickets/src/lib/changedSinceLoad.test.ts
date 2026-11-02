@@ -28,4 +28,23 @@ describe('ChangedSinceLoad', () => {
     expect(state.getCounts()).toEqual({ newCount: 1, updatedCount: 0 });
     expect(state.boards()).toEqual(new Set(['board-a']));
   });
+
+  it('acknowledges only activity covered by a successful snapshot and preserves events during refresh', async () => {
+    const state = new ChangedSinceLoad();
+    state.load(['loaded'], {}, 'me', Date.parse('2026-01-01T00:00:00Z'));
+    state.record(event('loaded', '2026-01-01T00:01:00Z'));
+    const acknowledgeRefresh = async (ok: boolean, snapshotAt: number) => {
+      if (ok) state.load(['loaded'], {}, 'me', snapshotAt);
+    };
+
+    // A failed request has no acknowledgement boundary.
+    await acknowledgeRefresh(false, Date.parse('2026-01-01T00:02:00Z'));
+    expect(state.getCounts()).toEqual({ newCount: 0, updatedCount: 1 });
+
+    // This event arrives after the server snapshot completed but before React
+    // commits it; it stays pending after the successful acknowledgement.
+    state.record(event('loaded', '2026-01-01T00:03:00Z'));
+    await acknowledgeRefresh(true, Date.parse('2026-01-01T00:02:00Z'));
+    expect(state.getCounts()).toEqual({ newCount: 0, updatedCount: 1 });
+  });
 });

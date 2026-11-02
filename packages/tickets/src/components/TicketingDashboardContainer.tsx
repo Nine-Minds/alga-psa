@@ -180,6 +180,7 @@ interface TicketingDashboardContainerProps {
     options: TicketFormOptions;
     tickets: ITicketListItem[];
     totalCount: number;
+    loadedAt?: number;
     metadata?: TicketListMetadata;
   };
   currentUser: IUser;
@@ -244,7 +245,7 @@ export default function TicketingDashboardContainer({
   const emptyMetadata: TicketListMetadata = { agentAvatarUrls: {}, teamAvatarUrls: {}, ticketTags: {} };
   const [isLoading, setIsLoading] = useState(false);
   const [tickets, setTickets] = useState<ITicketListItem[]>(consolidatedData.tickets);
-  const [loadedAt, setLoadedAt] = useState(() => Date.now());
+  const [loadedAt, setLoadedAt] = useState(() => consolidatedData.loadedAt ?? Date.now());
   const [loadedFilters, setLoadedFilters] = useState<Partial<ITicketListFilters>>(initialFilters ?? {});
   const [totalCount, setTotalCount] = useState<number>(consolidatedData.totalCount);
   const [ticketMetadata, setTicketMetadata] = useState<TicketListMetadata>(consolidatedData.metadata ?? emptyMetadata);
@@ -278,6 +279,7 @@ export default function TicketingDashboardContainer({
   useEffect(() => {
     setTickets(consolidatedData.tickets);
     setTotalCount(consolidatedData.totalCount);
+    setLoadedAt(consolidatedData.loadedAt ?? Date.now());
     if (consolidatedData.metadata) {
       setTicketMetadata(consolidatedData.metadata);
     }

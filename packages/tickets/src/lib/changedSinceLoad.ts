@@ -15,7 +15,12 @@ export class ChangedSinceLoad {
   load(ticketIds: Iterable<string>, filters: Partial<ITicketListFilters>, currentUserId: string, loadedAt = Date.now()): ChangeSnapshot {
     this.generation += 1;
     this.snapshot = { loadedAt, ticketIds: new Set(ticketIds), generation: this.generation };
-    this.entries.clear();
+    // A query acknowledges activity through the instant its result resolved.
+    // Events newer than that boundary may have arrived while the request was
+    // in flight and must remain visible.
+    for (const [ticketId, entry] of this.entries) {
+      if (Date.parse(entry.updatedAt) <= loadedAt) this.entries.delete(ticketId);
+    }
     this.filters = filters;
     this.currentUserId = currentUserId;
     return this.snapshot;
@@ -25,7 +30,12 @@ export class ChangedSinceLoad {
     const eventTime = Date.parse(event.updatedAt);
     const previous = this.entries.get(event.ticketId);
     if (!Number.isFinite(eventTime) || eventTime <= this.snapshot.loadedAt || event.actorUserId === this.currentUserId) return false;
-    if (previous?.kind === 'new') return true;
+    if (previous?.kind === 'new') {
+      if (Date.parse(previous.updatedAt) < eventTime) {
+        this.entries.set(event.ticketId, { ...previous, updatedAt: event.updatedAt, boardId: event.boardId ?? previous.boardId });
+      }
+      return true;
+    }
     const kind = classifyTicketListChange({ change: event, loadedTicketIds: this.snapshot.ticketIds, filters: this.filters,
       currentUserId: this.currentUserId, loadedAt: this.snapshot.loadedAt });
     if (kind === 'ignore') return false;

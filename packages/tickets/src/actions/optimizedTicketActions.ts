@@ -2147,7 +2147,7 @@ export const getTicketsForList = withAuth(async (
   filters: ITicketListFilters,
   page: number = 1,
   pageSize: number = 10
-): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> } } | TicketActionError> => {
+): Promise<{ tickets: ITicketListItem[], totalCount: number, loadedAt: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> } } | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
@@ -2216,6 +2216,9 @@ export const getTicketsForList = withAuth(async (
     return {
       tickets: enriched.tickets,
       totalCount,
+      // Classification starts at query completion, so an event during a slow
+      // request is either represented by this snapshot or remains pending.
+      loadedAt: Date.now(),
       metadata: enriched.metadata,
     };
     } catch (error) {
@@ -3931,6 +3934,7 @@ export const getConsolidatedTicketListData = withAuth(async (
           options: formOptions,
           tickets: ticketsData.tickets,
           totalCount: ticketsData.totalCount,
+          loadedAt: ticketsData.loadedAt,
           metadata: ticketsData.metadata
         };
       } catch (error) {
