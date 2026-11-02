@@ -10,6 +10,7 @@ export function PrimaryButton({
   accessibilityLabel,
   accessibilityHint,
   testID,
+  nativeID,
 }: {
   children: ReactNode;
   onPress: () => void;
@@ -17,11 +18,13 @@ export function PrimaryButton({
   accessibilityLabel?: string;
   accessibilityHint?: string;
   testID?: string;
+  nativeID?: string;
 }) {
   const theme = useTheme();
   return (
     <Pressable
       testID={testID}
+      nativeID={nativeID}
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"

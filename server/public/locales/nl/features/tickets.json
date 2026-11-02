@@ -1346,7 +1346,10 @@
       },
       "requiredSuffix": "(verplicht)",
       "tagsUnderTitle": "Onder titel weergeven",
-      "tagsSeparateColumn": "In een aparte kolom weergeven"
+      "tagsSeparateColumn": "In een aparte kolom weergeven",
+      "defaultDontNotifyCustomerTitle": "De klant niet informeren",
+      "defaultDontNotifyCustomerDescription": "Begin met aangevinkt selectievakje \"Klant niet informeren\" voor alle teamleden — statuswijzigingen, contactwijzigingen, afsluiting en opmerkingen. Gebruikers kunnen het vakje nog steeds uitschakelen om de melding voor een enkele actie te verzenden.",
+      "defaultDontNotifyCustomerLabel": "Acties starten zonder klantenmeldingen"
     }
   },
   "export": {

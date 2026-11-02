@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import {
   BaseService,
+  tenantDb,
   type ServiceContext,
 } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -49,6 +50,11 @@ export interface MobileFeatureCapabilities {
     clientsUpdate: boolean;
     contactsCreate: boolean;
     contactsUpdate: boolean;
+    /**
+     * Tenant setting: every "Don't notify the customer" checkbox starts ticked.
+     * Mirrors `defaultDontNotifyCustomer` in the web ticketing display settings.
+     */
+    dontNotifyCustomerDefault: boolean;
   };
   /**
    * How this user's dates are written, resolved from their country exactly as
@@ -114,6 +120,22 @@ export class MobileCapabilitiesService extends BaseService<never> {
     }
   }
 
+  private async getDontNotifyCustomerDefault(knex: Parameters<typeof tenantDb>[0], tenant: string): Promise<boolean> {
+    try {
+      const row = await tenantDb(knex, tenant)
+        .table('tenant_settings')
+        .select('ticket_display_settings', 'settings')
+        .first();
+      const fromColumn = (row?.ticket_display_settings as { defaultDontNotifyCustomer?: unknown } | null) ?? {};
+      const nested = ((row?.settings as { ticketing?: { display?: { defaultDontNotifyCustomer?: unknown } } } | null)?.ticketing?.display) ?? {};
+      const source = Object.keys(fromColumn).length ? fromColumn : nested;
+      return source.defaultDontNotifyCustomer === true;
+    } catch {
+      // Fail open: the historical behavior is unticked checkboxes.
+      return false;
+    }
+  }
+
   async getMyCapabilities(context: ServiceContext): Promise<MobileFeatureCapabilities> {
     const formatting = await this.getFormatting(context);
     const theme = await this.resolveTheme(context.tenant);
@@ -127,6 +149,7 @@ export class MobileCapabilitiesService extends BaseService<never> {
       hasPermission(context.user, 'contact', 'update', knex),
     ]);
     const crm = { clientsCreate, clientsUpdate, contactsCreate, contactsUpdate };
+    const dontNotifyCustomerDefault = await this.getDontNotifyCustomerDefault(knex, context.tenant);
 
     if (productCode !== 'psa') {
       return {
@@ -135,6 +158,7 @@ export class MobileCapabilitiesService extends BaseService<never> {
           opportunities: false,
           opportunitiesCreate: false,
           projects: false,
+          dontNotifyCustomerDefault,
           ...crm,
         },
         formatting,
@@ -155,6 +179,7 @@ export class MobileCapabilitiesService extends BaseService<never> {
         opportunities,
         opportunitiesCreate,
         projects,
+        dontNotifyCustomerDefault,
         ...crm,
       },
       formatting,

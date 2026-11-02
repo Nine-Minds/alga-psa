@@ -41,6 +41,7 @@ export function registerMobileCapabilitiesV1Routes(registry: ApiOpenApiRegistry)
           clientsUpdate: zOpenApi.boolean(),
           contactsCreate: zOpenApi.boolean(),
           contactsUpdate: zOpenApi.boolean(),
+          dontNotifyCustomerDefault: zOpenApi.boolean().describe('Tenant setting: every "Don\'t notify the customer" checkbox starts ticked.'),
         }),
         // Date shape resolved from the user's country, so the device locale
         // never decides how a tenant's dates read.

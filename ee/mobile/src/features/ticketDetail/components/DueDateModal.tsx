@@ -7,9 +7,9 @@ import { formatDateTimeWithRelative } from "../../../ui/formatters/dateTime";
 import { ActionChip } from "./ActionChip";
 import {
   activeTicketNotificationSuppression,
-  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
   TicketUpdateFooter,
 } from "./TicketUpdateFooter";
+import { useTicketNotificationSuppression } from "./useTicketNotificationSuppression";
 
 function parseIsoToDate(iso: string | null): Date | undefined {
   if (!iso) return undefined;
@@ -35,13 +35,13 @@ export function DueDateModal({
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+  const { suppression, setSuppression, reset: resetSuppression } = useTicketNotificationSuppression();
 
   // Sync selected date when modal opens or currentDueDateIso changes
   useEffect(() => {
     if (visible) {
       setSelectedDate(parseIsoToDate(currentDueDateIso));
-      setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+      resetSuppression();
     }
   }, [visible, currentDueDateIso]);
 
@@ -132,6 +132,7 @@ export function DueDateModal({
         </Pressable>
 
         <TicketUpdateFooter
+          idPrefix="ticket-due-date-update"
           suppression={suppression}
           onSuppressionChange={setSuppression}
           onCancel={onClose}

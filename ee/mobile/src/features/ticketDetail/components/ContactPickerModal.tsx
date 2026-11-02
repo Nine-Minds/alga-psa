@@ -8,9 +8,9 @@ import { listContacts, type ContactListItem } from "../../../api/referenceData";
 import type { ApiClient } from "../../../api/client";
 import {
   activeTicketNotificationSuppression,
-  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
   TicketUpdateFooter,
 } from "./TicketUpdateFooter";
+import { useTicketNotificationSuppression } from "./useTicketNotificationSuppression";
 
 export function ContactPickerModal({
   visible,
@@ -51,7 +51,7 @@ export function ContactPickerModal({
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedContact, setSelectedContact] = useState<{ id: string | null; name: string | null } | null>(null);
-  const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+  const { suppression, setSuppression, reset: resetSuppression } = useTicketNotificationSuppression();
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -97,7 +97,7 @@ export function ContactPickerModal({
     if (visible) {
       setSearch("");
       setSelectedContact(preselect ? { id: preselect.id, name: preselect.name } : null);
-      setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+      resetSuppression();
       void fetchContacts("");
     } else {
       abortRef.current?.abort();
@@ -278,6 +278,7 @@ export function ContactPickerModal({
             </Text>
           ) : null}
           <TicketUpdateFooter
+            idPrefix="ticket-contact-update"
             suppression={suppression}
             onSuppressionChange={setSuppression}
             onCancel={onClose}

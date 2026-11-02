@@ -1346,7 +1346,10 @@
       },
       "requiredSuffix": "(obbligatorio)",
       "tagsUnderTitle": "Mostra sotto il titolo",
-      "tagsSeparateColumn": "Mostra in una colonna separata"
+      "tagsSeparateColumn": "Mostra in una colonna separata",
+      "defaultDontNotifyCustomerTitle": "Non notificare il cliente",
+      "defaultDontNotifyCustomerDescription": "Avviare tutte le caselle \"Non notificare il cliente\" selezionate per tutti i membri del team: cambi di stato, cambi di contatto, chiusura e commenti. Gli utenti possono comunque deselezionare la casella per inviare la notifica per una singola azione.",
+      "defaultDontNotifyCustomerLabel": "Iniziare le azioni senza notifiche al cliente"
     }
   },
   "export": {

@@ -60,9 +60,9 @@ import { ContactFormModal } from "../features/contacts/components/ContactFormMod
 import { useCapabilities } from "../capabilities/CapabilitiesContext";
 import {
   activeTicketNotificationSuppression,
-  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
   TicketUpdateFooter,
 } from "../features/ticketDetail/components/TicketUpdateFooter";
+import { useTicketNotificationSuppression } from "../features/ticketDetail/components/useTicketNotificationSuppression";
 import { TagsSection } from "../features/ticketDetail/components/TagsSection";
 import { ClientNotesSection } from "../features/clients/components/ClientNotesSection";
 import { TagPickerModal } from "../features/ticketDetail/components/TagPickerModal";
@@ -292,7 +292,11 @@ export function TicketDetailBody({
 
   const [composerCollapsed, setComposerCollapsed] = useState(true);
   const [moreActionsOpen, setMoreActionsOpen] = useState(false);
-  const [titleSuppression, setTitleSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+  const {
+    suppression: titleSuppression,
+    setSuppression: setTitleSuppression,
+    reset: resetTitleSuppression,
+  } = useTicketNotificationSuppression();
 
   const renderEntityValue = useCallback((name: string | null | undefined, imageUri: string | null | undefined, accessibilityLabel: string) => (
     <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
@@ -451,15 +455,16 @@ export function TicketDetailBody({
               </Text>
             ) : null}
             <TicketUpdateFooter
+              idPrefix="ticket-title-update"
               suppression={titleSuppression}
               onSuppressionChange={setTitleSuppression}
               onCancel={() => {
                 titleHook.cancelTitleEditing();
-                setTitleSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+                resetTitleSuppression();
               }}
               onApply={() => {
                 void titleHook.saveTitle(activeTicketNotificationSuppression(titleSuppression)).then((saved) => {
-                  if (saved) setTitleSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+                  if (saved) resetTitleSuppression();
                 });
               }}
               applyLabel={t("detail.saveTitle", "Save title")}
@@ -470,7 +475,7 @@ export function TicketDetailBody({
         ) : (
           <Pressable
             onPress={() => {
-              setTitleSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+              resetTitleSuppression();
               titleHook.startTitleEditing();
             }}
             accessibilityRole="button"

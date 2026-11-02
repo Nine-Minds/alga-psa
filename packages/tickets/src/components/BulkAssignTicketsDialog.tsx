@@ -13,6 +13,8 @@ import type { BulkTicketAssignSelection } from '../actions/ticketActions';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from './ticket/TicketNotificationSuppressionControl';
+import { defaultNotificationSuppression } from '../lib/notificationSuppressionDefaults';
+import { useReseedNotificationSuppression } from '../lib/useTicketNotificationSuppressionDefault';
 
 interface BulkAssignTicketsDialogProps {
   isOpen: boolean;
@@ -44,20 +46,15 @@ export default function BulkAssignTicketsDialog({
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [isLoadingTeams, setIsLoadingTeams] = useState(false);
   const [teamsLoadError, setTeamsLoadError] = useState<string | null>(null);
-  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>({
-    suppressContactNotifications: false,
-    suppressInternalNotifications: false,
-  });
+  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(defaultNotificationSuppression);
+  useReseedNotificationSuppression(notificationSuppression, setNotificationSuppression);
 
   useEffect(() => {
     if (!isOpen) return;
     setPickerValue('');
     setPendingTeamId(null);
     setTeamsLoadError(null);
-    setNotificationSuppression({
-      suppressContactNotifications: false,
-      suppressInternalNotifications: false,
-    });
+    setNotificationSuppression(defaultNotificationSuppression());
     let cancelled = false;
     setIsLoadingTeams(true);
     getTeams()
