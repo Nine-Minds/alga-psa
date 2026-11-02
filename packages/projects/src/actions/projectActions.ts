@@ -63,6 +63,10 @@ import {
   coManagedProjectFamilyMask,
   CO_MANAGED_TASK_COLUMNS,
 } from '@alga-psa/co-managed/projectFieldMask';
+import {
+  CO_MANAGED_ASSIGNEE_NAME_ALIASES,
+  CO_MANAGED_ORGANIZATION_NAME_ALIASES,
+} from '@alga-psa/co-managed/sharedWorkProjection';
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
 import { loadAuthorizedProjectProjections } from '../lib/projectReadProjection';
 
@@ -417,9 +421,8 @@ async function loadAuthorizedProjectTasks(
   const taskName = mask.title
     ? trx.raw('?::text as task_name', [mask.neutralTitle])
     : maskColumn('task_name', 'text');
-  const assignedNameHidden = coManagedColumnHidden(redactedFields, 'project_tasks', 'assigned_to_name', [
-    'assignee_name', 'assigned_to', 'users', 'teams',
-  ]);
+  const assignedNameHidden = hidden.has('assigned_to') || hidden.has('assigned_team_id') ||
+    coManagedColumnHidden(redactedFields, 'project_tasks', 'assigned_to_name', CO_MANAGED_ASSIGNEE_NAME_ALIASES);
   const assignedName = assignedNameHidden
     ? trx.raw('NULL::text as assigned_to_name')
     : trx.raw("CONCAT(users.first_name, ' ', users.last_name) as assigned_to_name");
@@ -446,17 +449,39 @@ async function loadAuthorizedProjectTasks(
 }
 
 function projectStatusesHidden(redactedFields: string[]): boolean {
-  return [
-    ['name', ['status', 'statuses', 'standard_statuses']],
-    ['is_closed', ['status', 'statuses', 'standard_statuses']],
-    ['project_status_mapping_id', ['status', 'statuses', 'standard_statuses', 'mapping_id']],
-    ['status_id', ['statuses', 'statuses.status_id']],
-    ['standard_status_id', ['statuses', 'standard_statuses', 'statuses.standard_status_id']],
-    ['phase_id', ['statuses', 'project_phases.phase_id']],
-    ['project_id', ['statuses', 'projects.project_id']],
-  ].some(([field, aliases]) => coManagedColumnHidden(
-    redactedFields, 'project_status_mappings', field as string, aliases as string[]
+  const fieldsByTable: Record<string, string[]> = {
+    project_status_mappings: [
+      'project_status_mapping_id', 'project_id', 'phase_id', 'status_id', 'standard_status_id',
+      'is_standard', 'custom_name', 'display_order', 'is_visible', 'status_name', 'name', 'is_closed',
+    ],
+    statuses: [
+      'status_id', 'board_id', 'name', 'status_type', 'item_type', 'is_closed', 'is_default', 'order_number',
+      'created_by', 'standard_status_id', 'is_custom', 'created_at', 'updated_at', 'color', 'icon', 'portal_selectable',
+    ],
+    standard_statuses: ['standard_status_id', 'name', 'item_type', 'display_order', 'is_closed', 'is_default'],
+  };
+  return Object.entries(fieldsByTable).some(([table, fields]) => fields.some((field) =>
+    coManagedColumnHidden(redactedFields, table, field, ['status', 'statuses'])
   ));
+}
+
+function projectAssigneeHidden(redactedFields: string[]): boolean {
+  return coManagedColumnHidden(redactedFields, 'projects', 'assigned_to', [
+    'manager_name', ...CO_MANAGED_ASSIGNEE_NAME_ALIASES,
+  ]);
+}
+
+function redactionTouchesTable(redactedFields: string[], table: string): boolean {
+  return redactedFields.some((field) => {
+    const path = field.startsWith('fields.') ? field.slice(7) : field;
+    return path === '*' || path === 'fields' || path === table || path.startsWith(`${table}.`);
+  });
+}
+
+function relatedCollectionHidden(redactedFields: string[], table: string, columns: string[]): boolean {
+  return redactionTouchesTable(redactedFields, table) || columns.some((column) =>
+    coManagedColumnHidden(redactedFields, table, column)
+  );
 }
 
 async function assertProjectReadAllowed(
@@ -2117,14 +2142,18 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
             return { project, phases, statuses, redactedFields };
         });
         const { project, phases, statuses, redactedFields } = projectData;
-        const users = coManagedColumnHidden(redactedFields, 'projects', 'manager_name', ['assigned_to', 'assignee', 'users', 'teams'])
+        const users = projectAssigneeHidden(redactedFields)
             ? [] : await getAllUsers();
-        const clients = coManagedColumnHidden(redactedFields, 'projects', 'client_name', ['client_id', 'tenants'])
+        const clients = coManagedColumnHidden(redactedFields, 'projects', 'client_name', ['client_id', ...CO_MANAGED_ORGANIZATION_NAME_ALIASES])
             ? [] : await getAllClientsForProjectsInternal(tenant);
+
+        if (projectAssigneeHidden(redactedFields)) {
+            project.assigned_user = null;
+        }
 
         // Fetch assigned user details if assigned_to exists
         let assignedUser: IUserWithRoles | null = null;
-        if (project.assigned_to) {
+        if (project.assigned_to && !projectAssigneeHidden(redactedFields)) {
             const foundUser = await findUserById(project.assigned_to);
             assignedUser = foundUser || null;
         }
@@ -2325,28 +2354,42 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
             const taskFields = ['task_name', 'description', 'description_rich_text', 'assigned_to', 'assigned_team_id',
                 'estimated_hours', 'actual_hours', 'project_status_mapping_id', 'wbs_code', 'start_date', 'due_date', 'priority_id'];
             const taskDataHidden = taskMask.dropRow || taskMask.title || taskMask.body || taskFields.some((field) =>
-                coManagedColumnHidden(redactedFields, 'project_tasks', field, field === 'assigned_to' ? ['assignee_name', 'users', 'teams'] : [])
+                coManagedColumnHidden(redactedFields, 'project_tasks', field,
+                    field === 'assigned_to' || field === 'assigned_team_id' ? [...CO_MANAGED_ASSIGNEE_NAME_ALIASES, 'assigned_to_name'] :
+                    field === 'project_status_mapping_id' ? ['status', 'statuses', 'project_status_mappings'] : [])
             );
-            const [checklistItemsMap, ticketLinksMap, taskResourcesMap] = taskDataHidden
-                ? [{}, {}, {}]
-                : await Promise.all([
-                    ProjectTaskModel.getAllTaskChecklistItems(trx, tenant, projectId),
-                    ProjectTaskModel.getAllTaskTicketLinks(trx, tenant, projectId),
-                    ProjectTaskModel.getAllTaskResources(trx, tenant, projectId),
-                ]);
+            const checklistHidden = taskDataHidden || relatedCollectionHidden(redactedFields, 'task_checklist_items', [
+                'checklist_item_id', 'task_id', 'item_name', 'description', 'assigned_to', 'completed', 'due_date',
+                'created_at', 'updated_at', 'order_number',
+            ]);
+            const resourcesHidden = taskDataHidden || relatedCollectionHidden(redactedFields, 'task_resources', [
+                'assignment_id', 'task_id', 'assigned_to', 'additional_user_id', 'role', 'assigned_at',
+                'first_name', 'last_name',
+            ]);
+            const ticketLinksHidden = taskDataHidden || relatedCollectionHidden(redactedFields, 'project_ticket_links', [
+                'link_id', 'project_id', 'phase_id', 'task_id', 'ticket_id', 'ticket_number', 'title',
+                'status_name', 'is_closed', 'bill_under_project', 'created_at',
+            ]);
+            const [checklistItemsMap, ticketLinksMap, taskResourcesMap] = await Promise.all([
+                checklistHidden ? {} as Record<string, ITaskChecklistItem[]> : ProjectTaskModel.getAllTaskChecklistItems(trx, tenant, projectId),
+                ticketLinksHidden ? {} as Record<string, IProjectTicketLinkWithDetails[]> : ProjectTaskModel.getAllTaskTicketLinks(trx, tenant, projectId),
+                resourcesHidden ? {} as Record<string, any[]> : ProjectTaskModel.getAllTaskResources(trx, tenant, projectId),
+            ]);
             return { project, phases, rawTasks, checklistItemsMap, ticketLinksMap, taskResourcesMap, statuses, redactedFields };
         });
 
         const { project, phases, rawTasks, checklistItemsMap, ticketLinksMap, taskResourcesMap, statuses, redactedFields } = projectData;
-        const users = coManagedColumnHidden(redactedFields, 'projects', 'manager_name', ['assigned_to', 'assignee', 'users', 'teams'])
+        const users = projectAssigneeHidden(redactedFields)
             ? [] : await getAllUsers();
-        const clients = coManagedColumnHidden(redactedFields, 'projects', 'client_name', ['client_id', 'tenants'])
+        const clients = coManagedColumnHidden(redactedFields, 'projects', 'client_name', ['client_id', ...CO_MANAGED_ORGANIZATION_NAME_ALIASES])
             ? [] : await getAllClientsForProjectsInternal(tenant);
 
         // Fetch assigned user details if assigned_to exists
-        if (project.assigned_to) {
+        if (project.assigned_to && !projectAssigneeHidden(redactedFields)) {
             const assignedUser = await findUserById(project.assigned_to);
             project.assigned_user = assignedUser || null;
+        } else {
+            project.assigned_user = null;
         }
 
         const tasks = rawTasks.map((task): IProjectTask & {
