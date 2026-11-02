@@ -231,18 +231,27 @@ export function TicketTemplatesPage({ isAlgaDeskMode = false }: { isAlgaDeskMode
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">{t('templates.list.title', 'Ticket templates')}</h1>
         <div className="flex items-center gap-4">
-          <div className="w-64">
-            <ClientPicker
-              id="ticket-templates-client-filter"
-              clients={clients}
-              selectedClientId={clientFilter}
-              onSelect={setClientFilter}
-              filterState={clientFilterState}
-              onFilterStateChange={setClientFilterState}
-              clientTypeFilter={clientTypeFilter}
-              onClientTypeFilterChange={setClientTypeFilter}
-              placeholder={t('templates.list.clientFilter', 'All clients')}
-            />
+          <div className="flex items-center gap-2">
+            <div className="w-64">
+              <ClientPicker
+                id="ticket-templates-client-filter"
+                clients={clients}
+                selectedClientId={clientFilter}
+                onSelect={setClientFilter}
+                filterState={clientFilterState}
+                onFilterStateChange={setClientFilterState}
+                clientTypeFilter={clientTypeFilter}
+                onClientTypeFilterChange={setClientTypeFilter}
+                placeholder={t('templates.list.clientFilter', 'All clients')}
+              />
+            </div>
+            {/* The picker has no empty entry, so clearing the filter needs its own control. */}
+            {clientFilter && (
+              <Button id="ticket-templates-client-filter-clear" type="button" variant="outline" size="sm"
+                onClick={() => setClientFilter(null)}>
+                {t('templates.list.allClients', 'All clients')}
+              </Button>
+            )}
           </div>
           <SwitchWithLabel
             id="ticket-templates-show-inactive"

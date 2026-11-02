@@ -452,18 +452,26 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
         </div>
         <div className="md:max-w-md">
           <Label htmlFor={`${ID}-client`}>{t('templates.fields.client', 'Client')}</Label>
-          <ClientPicker
-            id={`${ID}-client`}
-            clients={clients}
-            selectedClientId={form.client_id}
-            onSelect={(clientId) => patch({ client_id: clientId })}
-            filterState={clientFilterState}
-            onFilterStateChange={setClientFilterState}
-            clientTypeFilter={clientTypeFilter}
-            onClientTypeFilterChange={setClientTypeFilter}
-            placeholder={t('templates.fields.clientPlaceholder', 'All clients')}
-            disabled={readOnly}
-          />
+          <div className="flex items-center gap-2">
+            <ClientPicker
+              id={`${ID}-client`}
+              clients={clients}
+              selectedClientId={form.client_id}
+              onSelect={(clientId) => patch({ client_id: clientId })}
+              filterState={clientFilterState}
+              onFilterStateChange={setClientFilterState}
+              clientTypeFilter={clientTypeFilter}
+              onClientTypeFilterChange={setClientTypeFilter}
+              placeholder={t('templates.fields.clientPlaceholder', 'All clients')}
+              disabled={readOnly}
+            />
+            {/* The picker has no empty entry, so widening the template back to every client needs its own control. */}
+            {form.client_id && !readOnly && (
+              <Button id={`${ID}-client-clear`} type="button" variant="outline" size="sm" onClick={() => patch({ client_id: null })}>
+                {t('templates.fields.clientPlaceholder', 'All clients')}
+              </Button>
+            )}
+          </div>
           <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
             {t('templates.fields.clientHelp', 'Leave empty to offer the template for every client. Pick one to offer it only on that client\u2019s tickets.')}
           </p>
