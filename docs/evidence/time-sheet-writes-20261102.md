@@ -211,3 +211,63 @@ in the card service list. No PSA app server was started, resumed, or restarted.
 Fresh sign-in, reversal feedback, response save/reload, database verification,
 and the walkthrough remain blocked pending owner restoration of the app
 service.
+
+## Durable viewer recovery, 22:55 UTC
+
+The 22:49 interactive launch was transient: after its builder exited, the IDE
+process ended and the CLI again routed `space-new-tab` through the headless
+agent's shared hub queue. The reviewer reproduced a timeout and an empty
+`list-spaces`. I confirmed that the local viewer and agent use separate Unix
+socket candidates: the agent owns `cli.sock`, while the desktop IDE falls back
+to `cli-fallback.sock`. Viewer space commands sent through the agent can land
+on another hub viewer with no local card window.
+
+I made the viewer lifecycle independent of the builder by installing and
+enabling `/home/robert/.config/systemd/user/ghostty-pane-ide-viewer.service`
+on `graphical-session.target`, with `Restart=on-failure`. It launches the
+existing Ghostty Pane IDE build with the host-required `--no-sandbox` flag;
+the user systemd manager has lingering enabled. The PSA service is not part of
+this unit. I also changed Alga Dev's `scripts/cli.mjs` so `list-spaces` and
+`space-new-tab` prefer the local viewer socket when both viewer and agent are
+available, while retaining agent fallback if the viewer socket is absent.
+
+After the `systemctl --user enable --now` command returned and its launching
+terminal ended, the service reported active. The exact card-scoped command
+then returned a new browser pane:
+
+```text
+spaceId=31c7d2bc-1750-4792-8ebc-359139064f86
+tabId=e4c4624f-2eba-4fbf-9ba4-324d4d933e59
+paneId=a76391d9-f6e9-4b80-a421-9355af24be1f
+```
+
+`list-spaces` showed that space bound to project
+`7ea8e6c6-3c89-40e5-be8b-4c9f4c4d1e04`. On the new pane, navigation to a data
+page and JavaScript evaluation returned the heading `detached viewer pane`;
+screenshot capture succeeded. The image is preserved at
+`/home/robert/.alga-reviews/7ea8e6c6-3c89-40e5-be8b-4c9f4c4d1e04/evidence/takeover-20261102/card-browser-supervised-20261102.png`.
+The service remained active through these checks. This verifies durable Alga
+Dev pane creation, not PSA UI behavior.
+
+The CLI routing correction is on Alga Dev branch
+`fix/cli-local-viewer-space-routing`, pushed at commit `d565c95`. Its
+behavioral socket-routing test passed:
+`npx vitest run tests/cli/cli-socket-routing.test.ts` (1 test). The test sends
+space creation to the viewer socket when both sockets exist and keeps workflow
+commands on the agent socket. No PR was opened. The active checkout used by
+this host's `alga-dev` command has the same routing change, which is why the
+exact command above used the normal CLI successfully.
+
+For the final installed-path check, `/home/robert/.local/bin/alga-dev` now
+resolves to the pushed branch worktree's `scripts/cli.mjs`. After that
+installer command had exited, the exact command returned another new pane,
+`2d187967-2e0b-471f-96f7-0a329e4606b0`, in the same card space. Navigation,
+JavaScript evaluation (heading `persistent viewer verified`), and screenshot
+capture succeeded; the final image is
+`/home/robert/.alga-reviews/7ea8e6c6-3c89-40e5-be8b-4c9f4c4d1e04/evidence/takeover-20261102/card-browser-persistent-20261102.png`.
+The systemd viewer service remained active throughout.
+
+The app URL on port 3867 still refused connections after recovery, and
+`workflow-list-services` showed no `dev-server`. Fresh application QA remains
+blocked pending owner restoration; no PSA app server was started, resumed, or
+restarted.
