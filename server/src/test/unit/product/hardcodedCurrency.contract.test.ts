@@ -258,7 +258,7 @@ function scanFile(absFile: string, out: Violation[]): void {
     true,
     scriptKind,
   );
-  const file = path.relative(REPO_ROOT, absFile);
+  const file = path.relative(REPO_ROOT, absFile).split(path.sep).join("/");
 
   const record = (node: ts.Node, snippet: string) => {
     const { line } = sourceFile.getLineAndCharacterOfPosition(
@@ -505,7 +505,7 @@ function scanFileArgs(absFile: string, out: Violation[]): void {
     true,
     scriptKind,
   );
-  const file = path.relative(REPO_ROOT, absFile);
+  const file = path.relative(REPO_ROOT, absFile).split(path.sep).join("/");
 
   const record = (node: ts.Node, snippet: string) => {
     const { line } = sourceFile.getLineAndCharacterOfPosition(
@@ -666,7 +666,7 @@ function collectLocaleViolations(): Map<string, Set<string>> {
     };
     collectJson(localeDir);
     for (const file of files) {
-      const nsPath = path.relative(localeDir, file);
+      const nsPath = path.relative(localeDir, file).split(path.sep).join("/");
       walkJson(
         JSON.parse(fs.readFileSync(file, "utf8")),
         "",
@@ -732,7 +732,7 @@ function scanLabelDefaults(absFile: string, out: Violation[]): void {
     true,
     /x$/.test(absFile) ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
-  const file = path.relative(REPO_ROOT, absFile);
+  const file = path.relative(REPO_ROOT, absFile).split(path.sep).join("/");
   const report = (node: ts.Node, snippet: string): void => {
     const { line } = sourceFile.getLineAndCharacterOfPosition(
       node.getStart(sourceFile),

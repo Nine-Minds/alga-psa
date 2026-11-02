@@ -2928,6 +2928,126 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "description": "Subcategory; template uses categoryDetails instead.",
             "example": "Printer",
             "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets",
+            "type": "array",
+            "description": "Ticket Closed only (client and internal emails): linked assets with individually selectable fields. Use {{#each ticket.assets}} to control the HTML or plain-text layout; include only the fields you want.",
+            "example": "<table style=\"border-collapse:collapse;width:100%;margin:0;font-size:13px;\"><thead><tr><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Name</th><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Type</th><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Manufacturer / Model</th><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Serial #</th></tr></thead><tbody>{{#each ticket.assets}}<tr><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">{{name}}</td><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">{{assetType}}</td><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">{{manufacturer}} {{model}}</td><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">{{serialNumber}}</td></tr>{{/each}}</tbody></table>",
+            "availability": "available-unused",
+            "notes": "Added 2026-10-30. All fields are optional in your markup, including assetTag. Inside the row loop use {{assetTag}}, {{name}}, {{assetType}}, {{manufacturer}}, {{model}}, {{serialNumber}}, {{status}}, {{location}}, or {{relationship}}. Use double braces to escape asset values safely. Empty list when no assets are linked. The editable table example deliberately omits assetTag, status, location, and relationship. To add or omit a column, change both its header th and its row td; retain empty cells for missing values so columns stay aligned. ticket.assetsHtml remains the fixed-layout alternative."
+          },
+          {
+            "path": "ticket.assets[].assetTag",
+            "type": "string",
+            "description": "Asset tag. Optional: include {{assetTag}} inside {{#each ticket.assets}}, or leave it out.",
+            "example": "AST-0042",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].name",
+            "type": "string",
+            "description": "Asset name. Use {{name}} inside {{#each ticket.assets}}.",
+            "example": "Office Printer",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].assetType",
+            "type": "string",
+            "description": "Asset type display name (or stored type slug if no registry entry exists). Use {{assetType}} inside {{#each ticket.assets}}.",
+            "example": "Printer",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].manufacturer",
+            "type": "string",
+            "description": "Manufacturer. Use {{manufacturer}} inside {{#each ticket.assets}}; empty when not recorded.",
+            "example": "Brother",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].model",
+            "type": "string",
+            "description": "Model. Use {{model}} inside {{#each ticket.assets}}; empty when not recorded.",
+            "example": "HL-L6200DW",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].serialNumber",
+            "type": "string",
+            "description": "Serial number. Use {{serialNumber}} inside {{#each ticket.assets}}; empty when not recorded.",
+            "example": "SN-0042",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].status",
+            "type": "string",
+            "description": "Stored asset status. Use {{status}} inside {{#each ticket.assets}}.",
+            "example": "active",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].location",
+            "type": "string",
+            "description": "Asset location. Use {{location}} inside {{#each ticket.assets}}; empty when not recorded.",
+            "example": "Main Office",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assets[].relationship",
+            "type": "string",
+            "description": "Ticket relationship label (Affected or Related). Use {{relationship}} inside {{#each ticket.assets}}.",
+            "example": "Affected",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assetsHtml",
+            "type": "raw-html",
+            "description": "Ticket Closed only (client and internal emails): pre-rendered asset table (Asset Tag, Name, Serial #, Status, Relationship). For adjustable fields, use {{#each ticket.assets}} instead. Empty string when no assets are linked; guard with {{#if ticket.assetsHtml}}.",
+            "example": "<table style=\"border-collapse:collapse;width:100%;margin:0;font-size:13px;\"><thead><tr><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Asset Tag</th><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Name</th><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Serial #</th><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Status</th><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Relationship</th></tr></thead><tbody><tr><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">AST-0042</td><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">Office Printer</td><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">SN-0042</td><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">active</td><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">Affected</td></tr></tbody></table>",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.materialsHtml",
+            "type": "raw-html",
+            "description": "Ticket Closed only (client and internal emails): pre-rendered materials/services table (Item, Qty, Rate, Amount, Billed). Empty string when none; guard with {{#if ticket.materialsHtml}}.",
+            "example": "<table style=\"border-collapse:collapse;width:100%;margin:0;font-size:13px;\"><thead><tr><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Item</th><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Qty</th><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Rate</th><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Amount</th><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Billed</th></tr></thead><tbody><tr><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">Toner cartridge</td><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">1</td><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">145.00 USD</td><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">145.00 USD</td><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">No</td></tr></tbody></table>",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.materialsTotal",
+            "type": "string",
+            "description": "Ticket Closed only (client and internal emails): currency-formatted total of all material line amounts, using the tenant email locale and material currency; zero when there are no materials.",
+            "example": "145.00 USD",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.timeHtml",
+            "type": "raw-html",
+            "description": "Ticket Closed only (client and internal emails): pre-rendered time-entry table (Technician, Date in the resolved email timezone, Worked, Billable). Empty string when none; guard with {{#if ticket.timeHtml}}.",
+            "example": "<table style=\"border-collapse:collapse;width:100%;margin:0;font-size:13px;\"><thead><tr><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Technician</th><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Date</th><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Worked</th><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Billable</th></tr></thead><tbody><tr><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">Jane Smith</td><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">Oct 30, 2026, 9:00 AM</td><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">3 hrs 30 min</td><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">2 hrs 15 min</td></tr></tbody></table>",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.totalTimeWorked",
+            "type": "string",
+            "description": "Ticket Closed only (client and internal emails): total time worked across all ticket time entries (end-start interval), formatted like '3 hrs 30 min'.",
+            "example": "3 hrs 30 min",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.totalTimeBillable",
+            "type": "string",
+            "description": "Ticket Closed only (client and internal emails): total recorded billable time, including time not yet invoiced (0 for non-billable entries), formatted like '2 hrs 15 min'.",
+            "example": "2 hrs 15 min",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.remainingBlockHours",
+            "type": "string",
+            "description": "Ticket Closed only (client and internal emails): client's remaining prepaid hour-block balance at send time (active, non-expired blocks; already-allocated even time deducted), formatted like '12 hrs 45 min'. '0 hrs' when the client has no blocks.",
+            "example": "12 hrs 45 min",
+            "availability": "available-unused"
           }
         ]
       },
