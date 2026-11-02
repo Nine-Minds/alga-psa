@@ -20,12 +20,19 @@ vi.mock('@alga-psa/assets/lib/assetReadAuthorization', async (importOriginal) =>
   const actual = await importOriginal<typeof import('@alga-psa/assets/lib/assetReadAuthorization')>();
   return {
     ...actual,
-    isAssetReadAllowed: async (...args: Parameters<typeof actual.isAssetReadAllowed>) =>
-      denied.assetIds.has(args[3].asset_id) ? false : actual.isAssetReadAllowed(...args),
-    isAssetActionAllowed: async (...args: Parameters<typeof actual.isAssetActionAllowed>) =>
-      denied.assetIds.has(args[3].asset_id) ? false : actual.isAssetActionAllowed(...args),
-    filterReadableAssets: async (...args: Parameters<typeof actual.filterReadableAssets>) =>
-      (await actual.filterReadableAssets(...args)).filter((a) => !denied.assetIds.has(a.asset_id)),
+    // Deny at the kernel decision boundary so membership-only and projection-aware consumers
+    // exercise the same policy rather than depending on a particular authorization wrapper.
+    createAssetReadContext: async (...args: Parameters<typeof actual.createAssetReadContext>) => {
+      const context = await actual.createAssetReadContext(...args);
+      const authorize = context.authorizationKernel.authorizeResource.bind(context.authorizationKernel);
+      vi.spyOn(context.authorizationKernel, 'authorizeResource').mockImplementation(async input => {
+        const decision = await authorize(input);
+        return denied.assetIds.has(String(input.record?.id ?? input.resource.id))
+          ? { ...decision, allowed: false }
+          : decision;
+      });
+      return context;
+    },
   };
 });
 vi.mock('@alga-psa/event-bus/publishers', () => ({

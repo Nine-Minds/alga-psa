@@ -500,6 +500,13 @@ const ASSET_EXTENSION_SOURCES: Readonly<Record<string, RedactableRecordSource>> 
   }]),
 );
 
+/** These extension fields jointly determine the security summary; loading and projection share their provenance. */
+export const ASSET_SECURITY_FIELDS = ['antivirus_status', 'antivirus_product', 'pending_patches', 'failed_patches'] as const;
+
+export function assetSecurityRecordSource(assetType: string): RedactableRecordSource | undefined {
+  return assetType === 'workstation' || assetType === 'server' ? ASSET_EXTENSION_SOURCES[assetType] : undefined;
+}
+
 /** Asset document rows combine an association with document and external-file metadata. */
 export const ASSET_DOCUMENT_SOURCE: RedactableRecordSource = {
   resource: ['documents', 'document_associations', 'external_files'],
@@ -541,6 +548,35 @@ export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
     documents: ASSET_DOCUMENT_SOURCE,
   },
 };
+
+/** Calculated summary fields retain both asset aliases and the actual extension variant's original scope. */
+export function assetSummaryRecordSource(assetType: string): RedactableRecordSource {
+  const extension = assetSecurityRecordSource(assetType);
+  const securityDependencies: readonly RecordFieldReference[] = [
+    { source: ASSET_RECORD_SOURCE, field: 'asset_type' },
+    ...(extension ? ASSET_SECURITY_FIELDS.map(field => ({ source: extension, field })) : []),
+  ];
+  const healthDependencies = [
+    { source: ASSET_RECORD_SOURCE, field: 'agent_status' },
+    { source: ASSET_RECORD_SOURCE, field: 'last_seen_at' },
+  ];
+  return {
+    policySource: ASSET_RECORD_SOURCE,
+    resource: ASSET_RECORD_SOURCE.resource,
+    identifier: ASSET_RECORD_SOURCE.identifier,
+    fields: {},
+    derived: {
+      health_status: healthDependencies,
+      health_reason: healthDependencies,
+      security_status: securityDependencies,
+      security_issues: securityDependencies,
+      warranty_status: [{ source: ASSET_RECORD_SOURCE, field: 'warranty_status' }],
+      warranty_days_remaining: [{ source: ASSET_RECORD_SOURCE, field: 'warranty_end_date' }],
+      // The REST boundary counts only projected association rows; direct summary-field rules still apply here.
+      open_tickets_count: [],
+    },
+  };
+}
 
 /** Custody episodes retain the asset policy and the ownership of joined holder labels. */
 export const ASSET_CUSTODY_SOURCE: RedactableRecordSource = {

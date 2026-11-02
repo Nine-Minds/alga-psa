@@ -560,6 +560,7 @@ export const ASSET_TICKET_ASSOCIATION_SOURCE: RedactableRecordSource = {
     'association_id', 'asset_associations.association_id',
     'asset_id', 'assets.asset_id', 'asset_associations.asset_id',
     'entity_id', 'tickets.ticket_id', 'asset_associations.entity_id',
+    'entity_type', 'asset_associations.entity_type',
   ),
   fields: {
     relationship_type: ids('relationship_type', 'asset_associations.relationship_type'),
@@ -577,6 +578,22 @@ export const ASSET_TICKETS_RESPONSE_SOURCE: RedactableRecordSource = {
   identifier: [...TICKET_RECORD_SOURCE.identifier, ...ASSET_TICKET_ASSOCIATION_SOURCE.identifier],
   fields: { ...TICKET_RECORD_SOURCE.fields, ...ASSET_TICKET_ASSOCIATION_SOURCE.fields },
   derived: { ...TICKET_RECORD_SOURCE.derived, ...ASSET_TICKET_ASSOCIATION_SOURCE.derived },
+};
+
+const ASSET_SUMMARY_TICKET_STATUS_SOURCE: RedactableRecordSource = {
+  resource: ['statuses'],
+  identifier: ['status_id', 'statuses.status_id'],
+  fields: {},
+  derived: {},
+};
+
+/** The open-ticket aggregate uses the joined status, independently of other status labels. */
+export const ASSET_SUMMARY_TICKET_SOURCE: RedactableRecordSource = {
+  ...ASSET_TICKETS_RESPONSE_SOURCE,
+  derived: {
+    ...ASSET_TICKETS_RESPONSE_SOURCE.derived,
+    status_is_closed: ['status_id', { source: ASSET_SUMMARY_TICKET_STATUS_SOURCE, field: 'is_closed' }],
+  },
 };
 
 /** Ticket-to-asset rows retain the canonical asset descriptor and add association-owned aliases. */

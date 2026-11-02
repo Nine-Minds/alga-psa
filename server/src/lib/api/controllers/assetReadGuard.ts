@@ -168,22 +168,25 @@ export async function readAssetGateForRequest(
   request: Request,
   assetId: string,
 ): Promise<
-  | { projection: AuthorizedProjection<Record<string, any>>; denied: null }
-  | { projection: null; denied: NextResponse }
+  | { projection: AuthorizedProjection<Record<string, any>>; context: ApiContext; denied: null }
+  | { projection: null; context: null; denied: NextResponse }
 > {
   return runWithApiKeyOrSession(request, async () => {
     const user = await getCurrentUser();
     if (!user) {
       return {
         projection: null,
+        context: null,
         denied: createErrorResponse('User context required', 401, 'UNAUTHORIZED'),
       };
     }
     const apiKeyId = (request as Request & { context?: { apiKeyId?: string } }).context?.apiKeyId;
-    return readAssetGateProjection(
-      { tenant: user.tenant, user, apiKeyId } as ApiContext,
+    const context = { tenant: user.tenant, user, apiKeyId } as ApiContext;
+    const gate = await readAssetGateProjection(
+      context,
       assetId,
       new AssetService(),
     );
+    return gate.denied ? { ...gate, context: null } : { ...gate, context };
   });
 }

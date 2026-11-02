@@ -3263,6 +3263,7 @@ describe('asset-ticket association reads retain both resource and association pr
         'asset_associations',
         'asset_associations.asset_id',
         'asset_associations.entity_id',
+        'asset_associations.entity_type',
       ])(`${direction} suppresses association rows hidden by ${owner} %s`, async (alias) => {
         state.decisions.set(ownerId, { allowed: true, redactedFields: [alias] });
         const response = await read(direction);
