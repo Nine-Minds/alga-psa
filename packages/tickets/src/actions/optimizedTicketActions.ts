@@ -1,7 +1,13 @@
 'use server';
 
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
-import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
+import {
+  isClientUserType,
+  isMspPrincipalUserType,
+  USER_RESPONSE_FIELD_NAMES,
+  sanitizeUserForResponse,
+  type SafeApiUser,
+} from '@alga-psa/types';
 import { resolveTicketMutationCollaborator, type TicketMutationCollaborationContext } from '../lib/ticketMutationActor';
 import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaboration';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
@@ -460,6 +466,12 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
 }
 
 /**
+ * A `users` row as this bundle may expose it: allow-listed columns only
+ * (never hashed_password, two_factor_secret, ...), see USER_RESPONSE_FIELD_NAMES.
+ */
+type SafeConsolidatedUser = SafeApiUser; // Pick<IUserWithRoles, AllowlistedUserField> & { roles, avatarUrl?, clientId? }
+
+/**
  * Consolidated function to get all ticket data for the ticket details page
  * This reduces multiple network calls by fetching all related data in a single server action
  */
@@ -470,6 +482,12 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     return await withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'read', trx)) {
       throw new Error('Permission denied: Cannot view ticket');
+    }
+
+    // This bundle is an MSP view (tenant-wide client list, raw comments, agent pickers);
+    // every caller is MSP composition. Client-portal principals never receive it.
+    if (user.user_type === 'client') {
+      throw new Error('Permission denied: consolidated ticket data is an MSP view');
     }
 
     try {
@@ -529,7 +547,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       documentRows,
       clients,
       resources,
-      users,
+      rawUsers,
       statuses,
       boards,
       priorities,
@@ -576,7 +594,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       
       // Users - removed document joins that were causing duplicates
       // Avatar URLs are fetched later using getUserAvatarUrl()
+      // LEVERAGE: pattern users-star-projection — every ticket loader's users fetch should route through USER_RESPONSE_FIELD_NAMES (users.* carries hashed_password / two_factor_secret)
       tenantScopedTable(trx, 'users', tenant)
+        .select(...USER_RESPONSE_FIELD_NAMES)
         .where('user_type', 'internal')
         .where('is_inactive', false)
         .orderBy('first_name', 'asc'),
@@ -645,6 +665,12 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           .orderBy('category_name', 'asc');
       })()
     ]);
+
+    // Projection is the fix; this is the guarantee that a future edit to the query
+    // above cannot silently re-widen what leaves this action.
+    const users: SafeConsolidatedUser[] = (rawUsers as Array<Record<string, unknown>>).map(
+      (row) => sanitizeUserForResponse(row)
+    );
 
     // Use the same document policy as subsequent fetches before returning rows
     // or deriving counts. This also annotates effective comment visibility.
@@ -773,20 +799,31 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     };
 
     // Fetch created by user
-    const createdByUser = ticket.entered_by ? 
+    // LEVERAGE: pattern users-star-projection — see availableAgents query above
+    const createdByUserRow = ticket.entered_by ? 
       await tenantScopedTable(trx, 'users', tenant)
+        .select(...USER_RESPONSE_FIELD_NAMES)
         .where({
           user_id: ticket.entered_by
         })
         .first() : null;
 
     // Fetch last updated by user
-    const updatedByUser = ticket.updated_by ?
+    // LEVERAGE: pattern users-star-projection — see availableAgents query above
+    const updatedByUserRow = ticket.updated_by ?
       await tenantScopedTable(trx, 'users', tenant)
+        .select(...USER_RESPONSE_FIELD_NAMES)
         .where({
           user_id: ticket.updated_by
         })
         .first() : null;
+
+    const createdByUser: SafeConsolidatedUser | null = createdByUserRow
+      ? sanitizeUserForResponse(createdByUserRow)
+      : null;
+    const updatedByUser: SafeConsolidatedUser | null = updatedByUserRow
+      ? sanitizeUserForResponse(updatedByUserRow)
+      : null;
 
     // Fetch board
     const board = ticket.board_id ?
@@ -815,7 +852,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     const extraCommentAuthors: Array<{ user_id: string; user_type?: string | null; contact_id?: string | null }> =
       extraAuthorIds.length > 0
+        // LEVERAGE: pattern users-star-projection — see availableAgents query above
         ? await tenantScopedTable(trx, 'users', tenant).whereIn('user_id', extraAuthorIds)
+          .select(...USER_RESPONSE_FIELD_NAMES)
         : [];
 
     // Client-portal authors carry their avatar on the linked contact, not the user

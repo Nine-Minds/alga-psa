@@ -71,6 +71,7 @@ export type { CoManagedCommentMutationRequest, CoManagedCommentMutationReceipt, 
 export { mutateCoManagedPrivateTicketComment, mutateCoManagedPrivateTaskComment, CoManagedPrivateCommentError } from './privateTicketConversation';
 export type { CoManagedPrivateCommentReference, CoManagedPrivateCommentCommand, CoManagedPrivateCommentReceipt } from './privateTicketConversation';
 export { getCoManagedTicketConversation, getCoManagedConversationContributionHints, getCoManagedConversationWriteAudiences } from './ticketConversation';
+export { localAuthorReference, LOCAL_AUTHOR_REFERENCE_NAMESPACE } from './conversationAuthorReference';
 export type { CoManagedConversationCursor, CoManagedConversationItem, CoManagedConversationAuthor, CoManagedTicketConversation } from './ticketConversation';
 export { retainCoManagedConversationParticipation, retainCoManagedSharedConversationBeforeReduction } from './conversationParticipationEvidence';
 export type { CoManagedCaptureIntent, CoManagedConversationCapture } from './conversationParticipationEvidence';
@@ -80,3 +81,11 @@ export { retainCoManagedConversationBeforeSourceChange } from './sourceChangeRet
 export { snapshotConversationContent, encodeConversationContent, plainTextContent } from './conversationContent';
 export type { CoManagedConversationContent } from './conversationContent';
 export { projectTaskAudience, projectTaskAudienceSql } from './projectTaskAudience';
+// Time, effort and billing modes (L6a2).
+export * from './effortTotals';
+export * from './timeEntryBillingMode';
+export * from './timeWorkItem';
+export type { CoManagedLocalWorkReference, CoManagedWorkSourceKind } from './timeWorkReference';
+export { findCoManagedLocalWorkReference, loadCoManagedLocalWorkReference, recordCoManagedWorkReference } from './timeWorkReference';
+export { retainCoManagedTimeParticipation } from './timeParticipationEvidence';
+export * from './timeBillingProfile';

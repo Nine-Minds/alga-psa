@@ -15,7 +15,15 @@
 import type { Knex } from 'knex';
 import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
-import { authorizeProjectIds, loadProjectListItemsByIds } from '@alga-psa/projects/actions/projectActions';
+import { serves } from '@alga-psa/core/capability';
+import { isCoManagedWorkspace } from '@alga-psa/co-managed/coManagedWorkspace';
+import {
+  CO_MANAGED_PROJECT_COLUMNS,
+  CO_MANAGED_TASK_COLUMNS,
+  coManagedHiddenColumns,
+  coManagedProjectFamilyMask,
+} from '@alga-psa/co-managed/projectFieldMask';
+import { authorizeProjectIdsWithRedactions, loadProjectListItemsByIds } from '@alga-psa/projects/actions/projectActions';
 import type { ProjectSmartSearchRowMetadata, ProjectSmartSearchScope } from '@alga-psa/projects/lib/smartProjectSearch/types';
 import { aclPredicateSql, resolveSearchAclPrincipal, type SearchAclPrincipal } from '@alga-psa/search/acl';
 import type { IProject, IUserWithRoles } from '@alga-psa/types';
@@ -30,7 +38,7 @@ import {
   type CandidateChild,
   type SmartSearchCandidate,
 } from '../candidate';
-import type { SmartSearchEntityDefinition } from '../entityDefinition';
+import type { SmartSearchEntityDefinition, SmartSearchRedactions } from '../entityDefinition';
 import type { RelevancePrompt } from '../scoreBatch';
 
 export const projectSmartSearchScopeSchema = z.object({
@@ -130,7 +138,23 @@ export function assembleProjectCandidate(
   );
 }
 
-async function loadProjectTextRows(trx: Knex.Transaction, tenant: string, projectIds: string[]): Promise<ProjectTextRow[]> {
+/** A column the reader's redactions hide is selected as a typed NULL, so the value never leaves the database. */
+function maskedColumn(trx: Knex.Transaction, hidden: ReadonlySet<string>, column: string, type: string, expression: string): Knex.Raw {
+  return hidden.has(column) ? trx.raw(`NULL::${type} as ??`, [column]) : trx.raw(`${expression} as ??`, [column]);
+}
+
+export async function loadProjectTextRows(
+  trx: Knex.Transaction,
+  tenant: string,
+  projectIds: string[],
+  redactedFields: readonly string[]
+): Promise<ProjectTextRow[]> {
+  // A hidden project (or identifier) yields no row; hidden columns are NULL, a hidden title the neutral one.
+  const mask = coManagedProjectFamilyMask(redactedFields, 'project');
+  if (mask.dropRow) {
+    return [];
+  }
+  const hidden = coManagedHiddenColumns(redactedFields, 'projects', CO_MANAGED_PROJECT_COLUMNS);
   const db = tenantDb(trx, tenant);
   const query = db.table('projects as p');
   db.tenantJoin(query, 'clients as c', 'p.client_id', 'c.client_id', { type: 'left' });
@@ -141,24 +165,36 @@ async function loadProjectTextRows(trx: Knex.Transaction, tenant: string, projec
     .whereIn('p.project_id', projectIds)
     .select(
       'p.project_id',
-      'p.project_number',
-      'p.project_name',
-      'p.description',
-      'c.client_name',
-      'ct.full_name as contact_name',
-      's.name as status_name',
-      's.is_closed',
-      'p.is_inactive',
-      trx.raw("NULLIF(TRIM(CONCAT(mu.first_name, ' ', mu.last_name)), '') as manager_name"),
-      'p.start_date',
-      'p.end_date',
-      'p.created_at',
-      'p.updated_at',
-      'p.budgeted_hours'
+      maskedColumn(trx, hidden, 'project_number', 'text', 'p.project_number'),
+      mask.title ? trx.raw('?::text as project_name', [mask.neutralTitle]) : 'p.project_name',
+      mask.body ? trx.raw('NULL::text as description') : 'p.description',
+      maskedColumn(trx, hidden, 'client_name', 'text', 'c.client_name'),
+      maskedColumn(trx, hidden, 'contact_name', 'text', 'ct.full_name'),
+      maskedColumn(trx, hidden, 'status_name', 'text', 's.name'),
+      maskedColumn(trx, hidden, 'is_closed', 'boolean', 's.is_closed'),
+      maskedColumn(trx, hidden, 'is_inactive', 'boolean', 'p.is_inactive'),
+      maskedColumn(trx, hidden, 'manager_name', 'text', "NULLIF(TRIM(CONCAT(mu.first_name, ' ', mu.last_name)), '')"),
+      maskedColumn(trx, hidden, 'start_date', 'timestamptz', 'p.start_date'),
+      maskedColumn(trx, hidden, 'end_date', 'timestamptz', 'p.end_date'),
+      maskedColumn(trx, hidden, 'created_at', 'timestamptz', 'p.created_at'),
+      maskedColumn(trx, hidden, 'updated_at', 'timestamptz', 'p.updated_at'),
+      maskedColumn(trx, hidden, 'budgeted_hours', 'numeric', 'p.budgeted_hours')
     );
 }
 
-async function loadProjectTaskRows(trx: Knex.Transaction, tenant: string, projectIds: string[]): Promise<ProjectTaskRow[]> {
+export async function loadProjectTaskRows(
+  trx: Knex.Transaction,
+  tenant: string,
+  projectIds: string[],
+  redactedFields: readonly string[]
+): Promise<ProjectTaskRow[]> {
+  // A task is shown through its phase: hiding either resource (or an identifier) hides the task.
+  const taskMask = coManagedProjectFamilyMask(redactedFields, 'project_task');
+  const phaseMask = coManagedProjectFamilyMask(redactedFields, 'project_phase');
+  if (taskMask.dropRow || phaseMask.dropRow) {
+    return [];
+  }
+  const hidden = coManagedHiddenColumns(redactedFields, 'project_tasks', CO_MANAGED_TASK_COLUMNS);
   const db = tenantDb(trx, tenant);
   // Newest-updated first per project, capped per project so a 300-task project
   // does not pull 300 rows the budget will throw away.
@@ -173,15 +209,15 @@ async function loadProjectTaskRows(trx: Knex.Transaction, tenant: string, projec
     .whereIn('ph.project_id', projectIds)
     .select(
       'ph.project_id',
-      'ph.phase_name',
-      'pt.task_name',
-      'pt.description',
-      trx.raw("COALESCE(NULLIF(psm.custom_name, ''), ts.name, ss.name) as status_name"),
-      trx.raw('COALESCE(ts.is_closed, ss.is_closed, false) as is_closed'),
-      'pr.priority_name',
-      trx.raw("NULLIF(TRIM(CONCAT(au.first_name, ' ', au.last_name)), '') as assigned_to_name"),
-      'pt.due_date',
-      'pt.updated_at',
+      phaseMask.title ? trx.raw('?::text as phase_name', [phaseMask.neutralTitle]) : 'ph.phase_name',
+      taskMask.title ? trx.raw('?::text as task_name', [taskMask.neutralTitle]) : 'pt.task_name',
+      taskMask.body ? trx.raw('NULL::text as description') : 'pt.description',
+      maskedColumn(trx, hidden, 'status_name', 'text', "COALESCE(NULLIF(psm.custom_name, ''), ts.name, ss.name)"),
+      maskedColumn(trx, hidden, 'is_closed', 'boolean', 'COALESCE(ts.is_closed, ss.is_closed, false)'),
+      maskedColumn(trx, hidden, 'priority_name', 'text', 'pr.priority_name'),
+      maskedColumn(trx, hidden, 'assigned_to_name', 'text', "NULLIF(TRIM(CONCAT(au.first_name, ' ', au.last_name)), '')"),
+      maskedColumn(trx, hidden, 'due_date', 'timestamptz', 'pt.due_date'),
+      maskedColumn(trx, hidden, 'updated_at', 'timestamptz', 'pt.updated_at'),
       trx.raw('ROW_NUMBER() OVER (PARTITION BY ph.project_id ORDER BY pt.updated_at DESC NULLS LAST) AS rn')
     )
     .as('ranked');
@@ -208,8 +244,14 @@ async function loadVisibleCommentRows(
   trx: Knex.Transaction,
   tenant: string,
   principal: SearchAclPrincipal,
-  projectIds: string[]
+  projectIds: string[],
+  coManaged: boolean
 ): Promise<ProjectCommentRow[]> {
+  // Task conversations are L4c for a co-managed reader: they never reach the scorer, as keyword search
+  // (`withProjectSearchAccess`) excludes `project_task_comment` for the same reader.
+  if (coManaged) {
+    return [];
+  }
   const acl = aclPredicateSql(principal);
   const db = tenantDb(trx, tenant);
   // Task comments index under their task, and the index stores `parent_id` as
@@ -256,21 +298,49 @@ function groupBy<T extends { project_id: string }>(rows: T[]): Map<string, T[]> 
   return map;
 }
 
+/** Whether the co-managed project policy applies to this tenant, gated as `withProjectSearchAccess` gates it. */
+async function isCoManagedProjectPolicy(trx: Knex.Transaction, tenant: string): Promise<boolean> {
+  return (await serves('co-managed', tenant)).served && (await isCoManagedWorkspace(trx, tenant));
+}
+
 export async function loadProjectCandidates(
   trx: Knex.Transaction,
   tenant: string,
   user: IUserWithRoles,
-  projectIds: string[]
+  projectIds: string[],
+  redactions: SmartSearchRedactions = new Map()
 ): Promise<SmartSearchCandidate[]> {
   if (projectIds.length === 0) {
     return [];
   }
   const principal = await resolveSearchAclPrincipal(trx, user);
-  const [projectRows, taskRows, commentRows] = await Promise.all([
-    loadProjectTextRows(trx, tenant, projectIds),
-    loadProjectTaskRows(trx, tenant, projectIds),
-    loadVisibleCommentRows(trx, tenant, principal, projectIds),
-  ]);
+  const coManaged = await isCoManagedProjectPolicy(trx, tenant);
+
+  // Projects can carry different redaction sets; each set is read with its own masked projection and
+  // sets are never merged (a union over-masks, an intersection leaks).
+  const groups = new Map<string, { redactedFields: string[]; ids: string[] }>();
+  for (const projectId of projectIds) {
+    const fields = Array.from(new Set(redactions.get(projectId) ?? [])).sort();
+    const key = JSON.stringify(fields);
+    const group = groups.get(key) ?? { redactedFields: fields, ids: [] };
+    group.ids.push(projectId);
+    groups.set(key, group);
+  }
+
+  const projectRows: ProjectTextRow[] = [];
+  const taskRows: ProjectTaskRow[] = [];
+  const commentRows: ProjectCommentRow[] = [];
+  for (const { redactedFields, ids } of groups.values()) {
+    const [projects, tasks, comments] = await Promise.all([
+      loadProjectTextRows(trx, tenant, ids, redactedFields),
+      loadProjectTaskRows(trx, tenant, ids, redactedFields),
+      // A reader with any redaction gets no comment text either: comments are not field-maskable.
+      loadVisibleCommentRows(trx, tenant, principal, ids, coManaged || redactedFields.length > 0),
+    ]);
+    projectRows.push(...projects);
+    taskRows.push(...tasks);
+    commentRows.push(...comments);
+  }
   const tasksByProject = groupBy(taskRows);
   const commentsByProject = groupBy(commentRows);
 
@@ -279,7 +349,7 @@ export async function loadProjectCandidates(
   for (const projectId of projectIds) {
     const row = rowsById.get(projectId);
     if (!row) {
-      // Deleted between enumeration and load; the runner reports it as unscored.
+      // Deleted between enumeration and load, or hidden from this reader; the runner reports it as unscored.
       continue;
     }
     candidates.push(
@@ -327,10 +397,18 @@ export const projectSmartSearch: SmartSearchEntityDefinition<ProjectSmartSearchS
   noun: 'projects',
   scopeSchema: projectSmartSearchScopeSchema,
   normalizeScope: (scope) => ({ projectIds: uniqueIds(scope.projectIds) }),
-  enumerate: (scope) => authorizeProjectIds(scope.projectIds),
+  enumerate: async (scope) => {
+    const authorized = await authorizeProjectIdsWithRedactions(scope.projectIds);
+    if (isActionMessageError(authorized) || isActionPermissionError(authorized)) {
+      return authorized;
+    }
+    return authorized.map(({ projectId, redactedFields }) => ({ id: projectId, redactedFields }));
+  },
   loadCandidates: loadProjectCandidates,
-  hydrateRows: async (_scope, ids) => {
-    const result = await loadProjectListItemsByIds(ids);
+  hydrateRows: async (_scope, ids, redactions) => {
+    const result = await loadProjectListItemsByIds(ids, Object.fromEntries(
+      ids.flatMap((id) => (redactions.has(id) ? [[id, [...(redactions.get(id) ?? [])]] as const] : []))
+    ));
     if (isActionMessageError(result) || isActionPermissionError(result)) {
       return result;
     }

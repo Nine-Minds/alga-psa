@@ -110,6 +110,10 @@
       "types": "./src/projectTaskQueue.ts",
       "import": "./src/projectTaskQueue.ts"
     },
+    "./projectFieldMask": {
+      "types": "./src/projectFieldMask.ts",
+      "import": "./src/projectFieldMask.ts"
+    },
     "./sharedWorkProjection": {
       "types": "./src/sharedWorkProjection.ts",
       "import": "./src/sharedWorkProjection.ts"
@@ -181,7 +185,8 @@
     "@alga-psa/tickets": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/event-schemas": "*",
-    "@alga-psa/shared": "*"
+    "@alga-psa/shared": "*",
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
     "typescript": "^5.4.0"
