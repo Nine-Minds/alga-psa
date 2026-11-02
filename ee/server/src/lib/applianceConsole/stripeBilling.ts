@@ -8,7 +8,7 @@
  */
 
 import Stripe from 'stripe';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { createOperatorStripeClient } from '../payments/operatorStripeConfig';
 
 export interface ApplianceBillingView {
   subscription_id: string;
@@ -42,11 +42,7 @@ let stripeClient: Stripe | null = null;
 
 async function getStripe(): Promise<Stripe> {
   if (stripeClient) return stripeClient;
-  const secretProvider = await getSecretProviderInstance();
-  let secretKey = await secretProvider.getAppSecret('stripe_secret_key');
-  if (!secretKey && process.env.STRIPE_SECRET_KEY) secretKey = process.env.STRIPE_SECRET_KEY;
-  if (!secretKey) throw new Error('STRIPE_SECRET_KEY not found in secrets or environment');
-  stripeClient = new Stripe(secretKey, { apiVersion: '2024-12-18.acacia' as any, typescript: true });
+  stripeClient = await createOperatorStripeClient();
   return stripeClient;
 }
 
