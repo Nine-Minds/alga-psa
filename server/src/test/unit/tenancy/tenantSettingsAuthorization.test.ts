@@ -39,10 +39,10 @@ vi.mock('@alga-psa/db', () => ({
     },
   }),
 }));
-vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({ getCurrentUserPermissions: async () => ['settings:update'] }));
+vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({ getCurrentUserPermissions: async () => [...state.permissions] }));
 vi.mock('@alga-psa/core/server', () => ({ featureFlags: { isEnabled: async () => true } }));
 
-import { getTenantSettings, getTenantTimezoneAuth, setTenantTimezone, updateTenantOnboardingStatus } from '../../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions';
+import { getTenantSettings, getTenantTimezoneAuth, setTenantTimezone, updateExperimentalFeatures, updateTenantOnboardingStatus } from '../../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions';
 
 describe('tenant settings action authorization', () => {
   beforeEach(() => {
@@ -90,6 +90,16 @@ describe('tenant settings action authorization', () => {
     state.permissions.add('settings:update');
     await expect(updateTenantOnboardingStatus(false, { arbitrarySettings: { sso: 'attacker' } } as any))
       .rejects.toThrow('Invalid tenant onboarding update');
+    expect(state.calls).toEqual([]);
+  });
+
+  it('rejects unauthorized and unexpected experimental feature writes before persistence', async () => {
+    await expect(updateExperimentalFeatures({ aiAssistant: true })).resolves.toHaveProperty('permissionError');
+    expect(state.calls).toEqual([]);
+
+    state.permissions.add('settings:update');
+    await expect(updateExperimentalFeatures({ aiAssistant: true, arbitrary: { credential: 'attacker' } } as any))
+      .resolves.toHaveProperty('actionError');
     expect(state.calls).toEqual([]);
   });
 
