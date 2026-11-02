@@ -36,6 +36,9 @@ import {
   TICKET_DOCUMENT_DOWNLOAD_SOURCE,
   TICKET_DOCUMENT_SOURCE,
   TICKET_DOCUMENT_VARIANT_SOURCES,
+  TICKET_AGENT_RESPONSE_SOURCE,
+  TICKET_COMMENT_SOURCE,
+  TICKET_MATERIAL_SOURCE,
   TICKET_RECORD_SOURCE,
   type RedactableRecordSource,
 } from '@alga-psa/co-managed/recordProjection';
@@ -766,15 +769,18 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           const comments = await this.ticketService.getTicketComments(
             ticketId,
             apiRequest.context!,
             { limit, offset, order, contentFormat }
           );
+          const projectedComments = comments
+            .map((comment) => reprojectUnderDecision(ticketGate, comment as Record<string, any>, TICKET_COMMENT_SOURCE))
+            .filter((comment) => comment !== null);
 
-          return createSuccessResponse(comments, 200, undefined, apiRequest);
+          return createSuccessResponse(projectedComments, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1200,11 +1206,12 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           const agents = await this.ticketService.getTicketAgents(ticketId, apiRequest.context!);
+          const projection = reprojectUnderDecision(ticketGate, agents as Record<string, any>, TICKET_AGENT_RESPONSE_SOURCE);
 
-          return createSuccessResponse(agents, 200, undefined, apiRequest);
+          return createSuccessResponse(projection, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1225,7 +1232,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const body = await req.json();
           const validation = addTicketAgentSchema.safeParse(body);
@@ -1234,8 +1241,9 @@ export class ApiTicketController extends ApiBaseController {
           }
 
           const agents = await this.ticketService.addTicketAgent(ticketId, validation.data, apiRequest.context!);
+          const projection = reprojectUnderDecision(ticketGate, agents as Record<string, any>, TICKET_AGENT_RESPONSE_SOURCE);
 
-          return createSuccessResponse(agents, 201, undefined, apiRequest);
+          return createSuccessResponse(projection, 201, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1688,10 +1696,13 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           const materials = await this.ticketService.getTicketMaterials(ticketId, apiRequest.context!);
+          const projectedMaterials = materials
+            .map((material) => reprojectUnderDecision(ticketGate, material as Record<string, any>, TICKET_MATERIAL_SOURCE))
+            .filter((material) => material !== null);
 
-          return createSuccessResponse(materials, 200, undefined, apiRequest);
+          return createSuccessResponse(projectedMaterials, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);

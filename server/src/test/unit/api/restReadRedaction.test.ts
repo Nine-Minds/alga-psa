@@ -380,6 +380,93 @@ describe('tickets: REST reads serialize the projection', () => {
     expect(hiddenData.title).toBe('Printer');
   });
 
+  it.each(['tickets.assigned_to', 'values.assigned_to', 'fields.tickets.assigned_to'])(
+    'agents GET and add response suppress the primary representation when %s is hidden', async (alias) => {
+      const assignee = '33333333-3333-3333-3333-333333333333';
+      const ticket = { ...state.tickets[0], assigned_to: assignee };
+      state.tickets = [ticket];
+      const controller = new ApiTicketController();
+      const actual = await vi.importActual<any>('../../../lib/api/services/TicketService');
+      const agents = await actual.TicketService.prototype.buildTicketAgentsResponse.call({}, {}, context, ticket, []);
+      (controller as any).ticketService.getTicketAgents = vi.fn(async () => agents);
+      (controller as any).ticketService.addTicketAgent = vi.fn(async () => agents);
+
+      const get = () => controller.getAgents()(request(`/api/v1/tickets/${TICKET}/agents`, { id: TICKET }));
+      const visible = await get();
+      expect((await visible.json()).data.primary_agent.user_id).toBe(assignee);
+
+      state.decisions.set(TICKET, { allowed: true, redactedFields: [alias] });
+      const hiddenGet = await get();
+      expect(hiddenGet.status).toBe(200);
+      expect((await hiddenGet.json()).data.primary_agent).toBeNull();
+
+      const post = () => {
+        const req = new NextRequest(`http://localhost/api/v1/tickets/${TICKET}/agents`, {
+          method: 'POST', headers: { 'x-api-key': 'k', 'content-type': 'application/json' },
+          body: JSON.stringify({ user_id: '44444444-4444-4444-4444-444444444444' }),
+        }) as any;
+        req.params = Promise.resolve({ id: TICKET });
+        return controller.addAgent()(req);
+      };
+      const hiddenPost = await post();
+      expect(hiddenPost.status).toBe(201);
+      expect((await hiddenPost.json()).data.primary_agent).toBeNull();
+    },
+  );
+
+  it('comments GET projects note-derived values and suppresses hidden comment rows', async () => {
+    const controller = new ApiTicketController();
+    const comment = {
+      comment_id: P2, ticket_id: TICKET, note: 'Private note', comment_text: 'Private note',
+      comment_html: '<p>Private note</p>',
+    };
+    (controller as any).ticketService.getTicketComments = vi.fn(async () => [comment]);
+    const get = () => controller.getComments()(request(`/api/v1/tickets/${TICKET}/comments`, { id: TICKET }));
+    const visible = await get();
+    expect((await visible.json()).data[0]).toMatchObject({ note: 'Private note', comment_text: 'Private note', comment_html: '<p>Private note</p>' });
+
+    for (const alias of ['comments.note', 'fields.comments.note']) {
+      state.decisions.set(TICKET, { allowed: true, redactedFields: [alias] });
+      const data = (await (await get()).json()).data;
+      expect(data).toHaveLength(1);
+      expect(data[0]).not.toHaveProperty('note');
+      expect(data[0].comment_text).toBeNull();
+      expect(data[0].comment_html).toBeNull();
+      state.decisions.delete(TICKET);
+    }
+    for (const alias of ['comments', 'comments.comment_id', 'values.comments.comment_id']) {
+      state.decisions.set(TICKET, { allowed: true, redactedFields: [alias] });
+      expect((await (await get()).json()).data).toEqual([]);
+      state.decisions.delete(TICKET);
+    }
+  });
+
+  it('materials GET omits hidden rates and suppresses hidden material rows', async () => {
+    const controller = new ApiTicketController();
+    const material = {
+      ticket_material_id: P2, ticket_id: TICKET, rate: 4938, quantity: 1,
+      description: 'Visible material', service_id: 'service-1', service_name: 'Visible service',
+    };
+    (controller as any).ticketService.getTicketMaterials = vi.fn(async () => [material]);
+    const get = () => controller.getMaterials()(request(`/api/v1/tickets/${TICKET}/materials`, { id: TICKET }));
+    const visible = await get();
+    expect((await visible.json()).data[0]).toMatchObject({ rate: 4938, service_name: 'Visible service' });
+
+    for (const alias of ['ticket_materials.rate', 'fields.ticket_materials.rate']) {
+      state.decisions.set(TICKET, { allowed: true, redactedFields: [alias] });
+      const data = (await (await get()).json()).data;
+      expect(data).toHaveLength(1);
+      expect(data[0]).not.toHaveProperty('rate');
+      expect(data[0].service_name).toBe('Visible service');
+      state.decisions.delete(TICKET);
+    }
+    for (const alias of ['ticket_materials', 'ticket_materials.ticket_material_id', 'values.ticket_materials.ticket_material_id']) {
+      state.decisions.set(TICKET, { allowed: true, redactedFields: [alias] });
+      expect((await (await get()).json()).data).toEqual([]);
+      state.decisions.delete(TICKET);
+    }
+  });
+
   it('update response keeps hidden ticket fields hidden while preserving visible fields', async () => {
     state.tickets = [{ ...state.tickets[0], description: 'Sensitive details', priority: 'high' }];
     state.decisions.set(TICKET, { allowed: true, redactedFields: ['tickets.title', 'description'] });

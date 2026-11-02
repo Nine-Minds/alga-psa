@@ -387,6 +387,70 @@ export const TICKET_DOCUMENT_VARIANT_SOURCES = {
   preview: ticketDocumentVariantSource('preview_file_id'),
 } as const;
 
+/** Detached ticket comments retain the comment row's source, including rendered text derived from `note`. */
+export const TICKET_COMMENT_SOURCE: RedactableRecordSource = {
+  resource: ['comments'],
+  identifier: ids('comment_id', 'comments.comment_id'),
+  fields: {},
+  derived: {
+    comment_text: ids('note', 'comments.note'),
+    comment_html: ids('note', 'comments.note'),
+    created_by_name: ids('user_id', 'users', 'users.first_name', 'users.last_name', 'users.email', 'contact_id', 'contacts'),
+    created_by_avatar_url: ids('user_id', 'users'),
+    author_contact_name: ids('author_contact_id', 'contacts', 'contacts.full_name'),
+    author_contact_email: ids('author_contact_id', 'contacts', 'contacts.email'),
+    reactions: ids('comment_id', 'comment_reactions'),
+    reaction_user_names: ids('comment_id', 'comment_reactions', 'users'),
+  },
+};
+
+/** Detached material rows keep their table aliases and the joined service name dependency. */
+export const TICKET_MATERIAL_SOURCE: RedactableRecordSource = {
+  resource: ['ticket_materials'],
+  identifier: ids('ticket_material_id', 'ticket_materials.ticket_material_id', 'values.ticket_materials.ticket_material_id'),
+  fields: {},
+  derived: {
+    service_name: ids('service_id', 'service_catalog', 'service_catalog.service_name'),
+    sku: ids('service_id', 'service_catalog', 'service_catalog.sku'),
+  },
+};
+
+const TICKET_PRIMARY_AGENT_SOURCE: RedactableRecordSource = {
+  resource: ['users'],
+  // The primary agent object exists only because tickets.assigned_to exists. Hiding that source suppresses the
+  // representation as a whole, including its copied user_id.
+  identifier: ids('user_id', 'assigned_to', 'tickets.assigned_to', 'values.assigned_to', 'fields.tickets.assigned_to'),
+  fields: {},
+  derived: {
+    first_name: ids('tickets.assigned_to', 'users.first_name'),
+    last_name: ids('tickets.assigned_to', 'users.last_name'),
+    email: ids('tickets.assigned_to', 'users.email'),
+  },
+};
+
+const TICKET_ADDITIONAL_AGENT_SOURCE: RedactableRecordSource = {
+  resource: ['ticket_resources'],
+  identifier: ids('assignment_id', 'ticket_resources.assignment_id', 'additional_user_id', 'ticket_resources.additional_user_id'),
+  fields: {},
+  derived: {
+    first_name: ids('additional_user_id', 'users.first_name'),
+    last_name: ids('additional_user_id', 'users.last_name'),
+    email: ids('additional_user_id', 'users.email'),
+  },
+};
+
+/** Agent service response is an alternate ticket representation, projected under the ticket's original decision. */
+export const TICKET_AGENT_RESPONSE_SOURCE: RedactableRecordSource = {
+  resource: ['tickets'],
+  identifier: ids('ticket_id', 'tickets.ticket_id'),
+  fields: {},
+  derived: {},
+  children: {
+    primary_agent: TICKET_PRIMARY_AGENT_SOURCE,
+    additional_agents: TICKET_ADDITIONAL_AGENT_SOURCE,
+  },
+};
+
 export const TICKET_RECORD_SOURCE: RedactableRecordSource = {
   resource: ['tickets'],
   identifier: ids('ticket_id', 'tickets.ticket_id', 'ticket', 'ticketId'),
@@ -415,6 +479,12 @@ export const TICKET_RECORD_SOURCE: RedactableRecordSource = {
   },
   children: {
     documents: TICKET_DOCUMENT_SOURCE,
+    comments: TICKET_COMMENT_SOURCE,
+    materials: TICKET_MATERIAL_SOURCE,
+    // The service names its response keys `additional_agents` / `primary_agent`; these nested sources are also
+    // used by the detached agents endpoint below.
+    primary_agent: TICKET_PRIMARY_AGENT_SOURCE,
+    additional_agents: TICKET_ADDITIONAL_AGENT_SOURCE,
   },
 };
 
