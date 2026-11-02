@@ -2321,9 +2321,9 @@ export const getTicketChangeCounts = withAuth(async (
       const loaded = new Set(loadedTicketIds.filter((id: string) => typeof id === 'string'));
       const asOf = Date.now();
       const commentRows = await tenantDb(trx, tenant).table('comments')
-        .where(builder => builder.where(query => query.where('created_at', '>', new Date(recoverySince)).andWhere('created_at', '<=', new Date(asOf)))
-          .orWhere(query => query.where('updated_at', '>', new Date(recoverySince)).andWhere('updated_at', '<=', new Date(asOf))))
-        .select('ticket_id', 'user_id', 'created_at', 'updated_at');
+        .where('created_at', '>', new Date(recoverySince))
+        .andWhere('created_at', '<=', new Date(asOf))
+        .select('ticket_id', 'user_id', 'created_at');
       const activityRows = await tenantDb(trx, tenant).table('ticket_audit_logs')
         .where('occurred_at', '>', new Date(recoverySince))
         .andWhere('occurred_at', '<=', new Date(asOf))
@@ -2334,9 +2334,9 @@ export const getTicketChangeCounts = withAuth(async (
         entries.push(entry);
         historyByTicket.set(ticketId, entries);
       };
-      for (const comment of commentRows as Array<{ ticket_id: string; user_id?: string | null; created_at?: Date | string | null; updated_at?: Date | string | null }>) {
-        for (const value of [comment.created_at, comment.updated_at]) {
-          if (value) appendHistory(comment.ticket_id, { actorUserId: comment.user_id ?? null, occurredAt: value });
+      for (const comment of commentRows as Array<{ ticket_id: string; user_id?: string | null; created_at?: Date | string | null }>) {
+        if (comment.created_at) {
+          appendHistory(comment.ticket_id, { actorUserId: comment.user_id ?? null, occurredAt: comment.created_at });
         }
       }
       for (const activity of activityRows as Array<{ ticket_id: string; actor_user_id?: string | null; occurred_at: Date | string }>) {
