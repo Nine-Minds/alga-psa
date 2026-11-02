@@ -9,6 +9,7 @@ import type { ProjectListFilters } from '@alga-psa/projects/components/Projects'
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 import CoManagedProjectTaskQueueLink from '@/components/co-managed/CoManagedProjectTaskQueueLink';
 import { getSmartSearchAvailability } from '@enterprise/lib/actions/smartSearchActions';
+import { projectClientListsForPage } from '@alga-psa/projects/lib/projectListProjection';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslation(undefined, 'metadata');
@@ -40,11 +41,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   ]);
 
   const projectsData: IProject[] = isActionPermissionError(projectsResult) ? [] : projectsResult;
-  const visibleProjectClientIds = new Set(projectsData
-    .filter((project) => Boolean(project.client_name))
-    .map((project) => project.client_id)
-    .filter((id): id is string => typeof id === 'string'));
-  const visibleClientsData = clientsData.filter((client) => visibleProjectClientIds.has(client.client_id) && Boolean(client.client_name));
+  const { pickerClients, tableMetadata } = projectClientListsForPage(projectsData, clientsData);
 
   // Fetch tags alongside projects so URL-based tag filters work on the first render.
   // Without this, `findTagsByEntityIds` runs in a client `useEffect` and the filter
@@ -137,7 +134,8 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     <CoManagedProjectTaskQueueLink />
     <Projects
       initialProjects={projectsData}
-      clients={visibleClientsData}
+      clients={pickerClients}
+      projectClientMetadata={tableMetadata}
       initialFilters={initialFilters}
       initialProjectTags={initialProjectTags}
       initialAllUniqueTags={allProjectTags}

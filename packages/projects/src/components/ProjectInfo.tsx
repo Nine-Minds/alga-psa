@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IClient, IProject, IProjectPhase, IUserWithRoles } from '@alga-psa/types';
+import { IProject, IProjectPhase, IUserWithRoles } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import HoursProgressBar from './HoursProgressBar';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
@@ -22,6 +22,7 @@ import { useTaskShareActions } from './TaskShareActionsContext';
 import { useTaskSelection } from './TaskSelectionContext';
 import { useTranslation } from 'react-i18next';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ClientPickerOption } from '@alga-psa/ui/components/ClientPicker';
 
 interface ProjectBilledSummary {
   invoicedCents: number;
@@ -39,7 +40,7 @@ interface ProjectInfoProps {
   };
   assignedUser?: IUserWithRoles;
   users: IUserWithRoles[];
-  clients: IClient[];
+  clients: ClientPickerOption[];
   onContactChange?: (contactId: string | null) => void;
   onAssignedUserChange?: (userId: string | null) => void;
   onProjectUpdate?: (project: IProject) => void;

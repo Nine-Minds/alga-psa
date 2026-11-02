@@ -20,6 +20,7 @@ import { getTenantProjectStatuses } from '../actions/projectTaskStatusActions';
 import { getServices } from '../actions/serviceCatalogActions';
 import { timeEntryServiceChoices, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import type { ClientPickerOption } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
@@ -42,7 +43,7 @@ import { useTranslation } from 'react-i18next';
 interface ProjectQuickAddProps {
   onClose: () => void;
   onProjectAdded: (newProject: IProject) => void;
-  clients: IClient[];
+  clients: ClientPickerOption[];
 }
 
 const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdded, clients }) => {

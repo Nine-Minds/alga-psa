@@ -58,6 +58,7 @@ import { revalidatePath } from 'next/cache';
 import { createClientReadDecider, createProjectReadAuthorizer, createProjectReadDecider } from '../lib/projectReadAuthorization';
 import { loadProjectRowsByDecision, projectPickerProjection } from '../lib/projectListProjection';
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
+import type { ClientPickerOption } from '@alga-psa/ui/components/ClientPicker';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
 
@@ -384,20 +385,22 @@ async function resolveProjectIdsForStatus(
   return Array.from(new Set(rows.map((row) => row.project_id)));
 }
 
-export type ProjectPickerClient = Pick<IClient, 'client_id'> & { client_name: string | null; client_type: IClient['client_type']; is_inactive: boolean | null; logoUrl: string | null };
+export type ProjectPickerClient = ClientPickerOption & { logoUrl: string | null };
 
 async function getAuthorizedProjectPickerClients(
   trx: Knex.Transaction,
   tenant: string,
   user: IUserWithRoles,
-): Promise<Array<Omit<ProjectPickerClient, 'logoUrl'>>> {
+): Promise<ClientPickerOption[]> {
   if (!await hasPermission(user, 'client', 'read', trx)) return [];
   const rows = await tenantScopedTable(trx, 'clients', tenant)
     .select('client_id', 'client_name', 'client_type', 'is_inactive').orderBy('client_name', 'asc');
   const decide = await createClientReadDecider(trx, tenant, user);
   const clients = rows as Array<{ client_id: string; client_name: string; client_type: IClient['client_type']; is_inactive: boolean }>;
   const decisions = await Promise.all(clients.map((client) => decide(client)));
-  return projectPickerProjection(clients, decisions) as Array<Omit<ProjectPickerClient, 'logoUrl'>>;
+  return projectPickerProjection(clients, decisions)
+    .filter((client) => client.client_name !== null)
+    .map((client) => ({ ...client, client_name: client.client_name! }));
 }
 
 export const getAllClientsForProjects = withAuth(async (user, { tenant }): Promise<ProjectPickerClient[]> => {
@@ -413,11 +416,11 @@ export const getAllClientsForProjects = withAuth(async (user, { tenant }): Promi
   }
 
   // Batch-resolve logo URLs once (no N+1) so the projects table can show real logos.
-  const logoUrlsMap = await getClientLogoUrlsBatch(clients.filter((c) => c.client_name).map((c: any) => c.client_id), tenant);
+  const logoUrlsMap = await getClientLogoUrlsBatch(clients.map((client) => client.client_id), tenant);
 
-  return clients.map((c: any) => ({
-    ...c,
-    logoUrl: c.client_name ? logoUrlsMap.get(c.client_id) ?? null : null,
+  return clients.map((client) => ({
+    ...client,
+    logoUrl: logoUrlsMap.get(client.client_id) ?? null,
   }));
 });
 
@@ -1977,7 +1980,7 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
     users: IUserWithRoles[];
     contact?: { full_name: string };
     assignedUser: IUserWithRoles | null;
-    clients: IClient[];
+    clients: ClientPickerOption[];
 }> => {
     try {
         const { knex } = await createTenantKnex();
@@ -2050,10 +2053,10 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
 });
 
 // Internal helper for getAllClientsForProjects
-async function getAllClientsForProjectsInternal(tenant: string, user: IUserWithRoles): Promise<IClient[]> {
+async function getAllClientsForProjectsInternal(tenant: string, user: IUserWithRoles): Promise<ClientPickerOption[]> {
     const { knex: db } = await createTenantKnex();
     const clients = await withTransaction(db, (trx: Knex.Transaction) => getAuthorizedProjectPickerClients(trx, tenant, user));
-    return clients as IClient[];
+    return clients;
 }
 
 // Internal helper for getProjectTaskStatuses
@@ -2196,7 +2199,7 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
     users: IUserWithRoles[];
     contact?: { full_name: string };
     assignedUser: IUserWithRoles | null;
-    clients: IClient[];
+    clients: ClientPickerOption[];
 }> => {
     try {
         const { knex } = await createTenantKnex();

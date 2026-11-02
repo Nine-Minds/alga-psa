@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const kernel = vi.hoisted(() => ({ authorizeResource: vi.fn() }));
+const kernel = vi.hoisted(() => ({ authorizeResource: vi.fn(), bundleOptions: null as null | { resolveRules: (input: unknown) => Promise<unknown> }, resolveRules: vi.fn() }));
 
 vi.mock('@alga-psa/db', () => ({
   tenantDb: () => ({ table: () => ({ where: () => ({ select: async () => [] }) }) }),
 }));
 vi.mock('@alga-psa/authorization/kernel', () => ({
   BuiltinAuthorizationKernelProvider: class {},
-  BundleAuthorizationKernelProvider: class {},
+  BundleAuthorizationKernelProvider: class { constructor(options: typeof kernel.bundleOptions) { kernel.bundleOptions = options; } },
   RequestLocalAuthorizationCache: class {},
   createAuthorizationKernel: () => ({ authorizeResource: kernel.authorizeResource }),
 }));
-vi.mock('@alga-psa/authorization/bundles/service', () => ({ resolveBundleNarrowingRulesForEvaluation: vi.fn() }));
+vi.mock('@alga-psa/authorization/bundles/service', () => ({ resolveBundleNarrowingRulesForEvaluation: (...args: unknown[]) => kernel.resolveRules(...args) }));
 vi.mock('../models/project', () => ({ default: {} }));
 
 import { createClientReadDecider, createProjectReadAuthorizer, createProjectReadDecider } from './projectReadAuthorization';
@@ -21,6 +21,8 @@ const conn = {} as never;
 
 beforeEach(() => {
   kernel.authorizeResource.mockReset();
+  kernel.resolveRules.mockReset().mockResolvedValue([]);
+  kernel.bundleOptions = null;
 });
 
 describe('project read authorization', () => {
@@ -76,5 +78,19 @@ describe('client read authorization', () => {
     const decide = await createClientReadDecider(conn, 't1', user);
     await expect(decide({})).resolves.toEqual({ allowed: false, redactedFields: [] });
     expect(kernel.authorizeResource).not.toHaveBeenCalled();
+  });
+
+  it('propagates client policy lookup failures instead of treating them as unrestricted', async () => {
+    const failure = new Error('policy store unavailable');
+    kernel.resolveRules.mockRejectedValue(failure);
+    await createClientReadDecider(conn, 't1', user);
+    await expect(kernel.bundleOptions!.resolveRules({})).rejects.toBe(failure);
+  });
+
+  it('propagates project policy lookup failures used by the shared list loader', async () => {
+    const failure = new Error('policy store unavailable');
+    kernel.resolveRules.mockRejectedValue(failure);
+    await createProjectReadDecider(conn, 't1', user);
+    await expect(kernel.bundleOptions!.resolveRules({})).rejects.toBe(failure);
   });
 });

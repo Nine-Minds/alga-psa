@@ -11,7 +11,6 @@ import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { IProjectTemplate, IStatus } from '@alga-psa/types';
-import { IClient } from '@alga-psa/types';
 import { useToast } from '@alga-psa/ui';
 import { useRouter } from 'next/navigation';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -317,7 +316,7 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
             </label>
             <ClientPicker
               id="apply-template-client"
-              clients={clients as IClient[]}
+              clients={clients}
               selectedClientId={formData.client_id || null}
               onSelect={(clientId) => setFormData({ ...formData, client_id: clientId || '' })}
               filterState={clientFilterState}

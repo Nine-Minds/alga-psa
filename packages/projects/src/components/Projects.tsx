@@ -7,13 +7,13 @@ import dynamic from 'next/dynamic';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import ClientNameCell from '@alga-psa/ui/components/ClientNameCell';
 import { ColumnDefinition } from '@alga-psa/types';
-import { IProject, IClient, DeletionValidationResult } from '@alga-psa/types';
+import { IProject, DeletionValidationResult } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import ProjectQuickAdd from './ProjectQuickAdd';
 import { projectClientPresentation } from '../lib/projectListProjection';
-import { deleteProject, loadProjectListItemsByIds, searchProjectListIds } from '../actions/projectActions';
+import { deleteProject, loadProjectListItemsByIds, searchProjectListIds, type ProjectPickerClient } from '../actions/projectActions';
 import { findUserById } from '@alga-psa/user-composition/actions';
 import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
 import { TagFilter } from '@alga-psa/ui/components';
@@ -23,10 +23,11 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
 import { Search, MoreVertical, Pen, Trash2, XCircle, ExternalLink, FileText, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
-import { useDrawer, useClientDrawer } from "@alga-psa/ui";
+import { useDrawer } from "@alga-psa/ui";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
 import { Input } from '@alga-psa/ui/components/Input';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import Drawer from '@alga-psa/ui/components/Drawer';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -38,7 +39,6 @@ import { DeadlineFilter, DeadlineFilterValue } from './DeadlineFilter';
 import { IContact } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import Drawer from '@alga-psa/ui/components/Drawer';
 import { ApplyTemplateDialog } from './project-templates/ApplyTemplateDialog';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
 import { useTranslation } from 'react-i18next';
@@ -165,7 +165,8 @@ function parseFiltersFromSearch(search: string): ProjectListFilters {
 
 interface ProjectsProps {
   initialProjects: IProject[];
-  clients: Array<Pick<IClient, 'client_id' | 'client_type'> & { is_inactive: boolean | null; client_name: string | null; logoUrl?: string | null }>;
+  clients: ProjectPickerClient[];
+  projectClientMetadata: ProjectPickerClient[];
   initialFilters?: Partial<ProjectListFilters>;
   initialProjectTags?: Record<string, ITag[]>;
   initialAllUniqueTags?: ITag[];
@@ -188,13 +189,13 @@ export const DEFAULT_PROJECT_FILTERS: ProjectListFilters = {
   pageSize: 10,
 };
 
-export default function Projects({ initialProjects, clients, initialFilters, initialProjectTags, initialAllUniqueTags, smartSearchAvailable = false }: ProjectsProps) {
+export default function Projects({ initialProjects, clients, projectClientMetadata, initialFilters, initialProjectTags, initialAllUniqueTags, smartSearchAvailable = false }: ProjectsProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   // toLocaleDateString() with no locale follows the browser, not the app.
   const { formatDate } = useFormatters();
   const projectListT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
     t(`projectList.${key}`, { defaultValue: fallback, ...(options ?? {}) }), [t]);
-  const { getAllContacts, getContactByContactNameId, renderQuickAddContact, renderClientDetails } = useClientIntegration();
+  const { getAllContacts, getContactByContactNameId, renderQuickAddContact } = useClientIntegration();
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['project']);
 
@@ -241,7 +242,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
   const [isDeleteValidating, setIsDeleteValidating] = useState(false);
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const { openDrawer, closeDrawer } = useDrawer();
-  const clientDrawer = useClientDrawer();
+  const [clientSummary, setClientSummary] = useState<ProjectPickerClient | null>(null);
 
   // Tag-related state. Seeded from server-fetched tags so URL-based tag filters
   // work on the very first render (bookmarked/pasted URLs).
@@ -257,10 +258,6 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
   // Data for pickers
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
-
-  // Quick View state
-  const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
-  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
 
   // Ref to track last applied URL search string (prevents duplicate updates)
   const lastAppliedSearchRef = useRef<string>('');
@@ -713,7 +710,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
     openDrawer(
       <ProjectDetailsEdit
         initialProject={project}
-        clients={clients as IClient[]}
+        clients={clients}
         onSave={(updatedProject) => {
           setProjects(prevProjects =>
             prevProjects.map((p): IProject =>
@@ -794,18 +791,6 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
     }
   };
 
-  const onQuickViewClient = (clientId: string) => {
-    if (clientDrawer) {
-      clientDrawer.openClientDrawer(clientId);
-      return;
-    }
-    const client = clients.find(c => c.client_id === clientId);
-    if (client) {
-      setQuickViewClient(client as IClient);
-      setIsQuickViewOpen(true);
-    }
-  };
-
   const formatDisplayDate = (value: unknown): string => {
     if (value == null) return projectListT('notAvailable', 'N/A');
 
@@ -857,26 +842,29 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
       title: projectListT('columns.client', 'Client'),
       dataIndex: 'client_id',
       width: '12%',
-      render: (value, record) => {
-        const presentation = projectClientPresentation(record, clients);
-        const client = presentation.quickViewClientId ? clients.find(c => c.client_id === presentation.quickViewClientId) : undefined;
+      render: (_value, record) => {
+        const presentation = projectClientPresentation(record, projectClientMetadata);
         const clientName = presentation.clientName;
         if (!clientName) return <ClientNameCell clientName={null} />;
-        if (!client) return <ClientNameCell clientName={clientName}>{clientName}</ClientNameCell>;
-
-        return client.client_name ? (
-          <ClientNameCell clientId={client.client_id} clientName={clientName} logoUrl={presentation.logoUrl}>
+        const visibleClient = presentation.visibleClientId
+          ? projectClientMetadata.find((client) => client.client_id === presentation.visibleClientId)
+          : undefined;
+        if (!visibleClient) return <ClientNameCell clientName={clientName} />;
+        return (
+          <ClientNameCell clientId={visibleClient.client_id} clientName={clientName} logoUrl={presentation.logoUrl}>
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onQuickViewClient(value);
+              id={`project-client-summary-${record.project_id}`}
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setClientSummary(visibleClient);
               }}
-              className="text-blue-500 hover:underline text-left whitespace-normal break-words"
+              className="text-left whitespace-normal break-words text-[rgb(var(--color-primary-600))] hover:underline"
             >
               {clientName}
             </button>
           </ClientNameCell>
-        ) : <ClientNameCell clientName={clientName}>{clientName}</ClientNameCell>;
+        );
       }
     },
     {
@@ -1141,7 +1129,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
           {/* Client filter */}
           <ClientPicker
             id="project-client-filter"
-            clients={clients as IClient[]}
+            clients={clients}
             onSelect={(clientId) => handleFilterChange({ clientId: clientId || undefined })}
             selectedClientId={activeFilters.clientId || null}
             filterState={clientFilterState}
@@ -1179,7 +1167,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
               handleFilterChange({ contactId: newContact.contact_name_id });
               setIsQuickAddContactOpen(false);
             },
-            clients: clients as IClient[],
+            clients,
             selectedClientId: activeFilters.clientId || undefined,
           })}
 
@@ -1305,7 +1293,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
         <ProjectQuickAdd
           onClose={() => setShowQuickAdd(false)}
           onProjectAdded={handleProjectAdded}
-          clients={clients as IClient[]}
+          clients={clients}
         />
       )}
 
@@ -1332,20 +1320,21 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
         isDeleting={isDeleteProcessing}
       />
 
-      {/* Client Quick View Drawer */}
       <Drawer
-        isOpen={isQuickViewOpen}
-        onClose={() => {
-          setIsQuickViewOpen(false);
-          setQuickViewClient(null);
-        }}
+        id="project-client-summary-drawer"
+        isOpen={clientSummary !== null}
+        onClose={() => setClientSummary(null)}
+        width="24rem"
       >
-        {quickViewClient && renderClientDetails({
-            client: quickViewClient,
-            isInDrawer: true,
-            quickView: true,
-          })}
+        {clientSummary && (
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">{clientSummary.client_name}</h2>
+            {clientSummary.client_type && <p>{clientSummary.client_type}</p>}
+            {clientSummary.is_inactive !== null && <p>{clientSummary.is_inactive ? 'Inactive' : 'Active'}</p>}
+          </section>
+        )}
       </Drawer>
+
     </div>
   );
 }

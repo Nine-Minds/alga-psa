@@ -114,7 +114,7 @@ export async function createClientReadDecider(
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
     bundleProvider: new BundleAuthorizationKernelProvider({
       resolveRules: async (input) => {
-        try { return await resolveBundleNarrowingRulesForEvaluation(conn, input); } catch { return []; }
+        return await resolveBundleNarrowingRulesForEvaluation(conn, input);
       },
     }),
     rbacEvaluator: async () => true,
@@ -149,11 +149,7 @@ export async function createProjectReadDecider(
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
     bundleProvider: new BundleAuthorizationKernelProvider({
       resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(conn, input);
-        } catch {
-          return [];
-        }
+        return await resolveBundleNarrowingRulesForEvaluation(conn, input);
       },
     }),
     rbacEvaluator: async () => true,

@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { IProject } from '@alga-psa/types';
 import { IStatus } from '@alga-psa/types';
-import { IClient } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -12,6 +11,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import type { ClientPickerOption } from '@alga-psa/ui/components/ClientPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { TagManager } from '@alga-psa/tags/components';
@@ -45,7 +45,7 @@ import { useTranslation } from 'react-i18next';
 
 interface ProjectDetailsEditProps {
   initialProject: IProject;
-  clients: IClient[];
+  clients: ClientPickerOption[];
   onSave: (updatedProject: IProject) => void;
   onCancel: () => void;
   onChange?: () => void;

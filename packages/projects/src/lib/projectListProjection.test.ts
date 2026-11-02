@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { loadProjectRowsByDecision, projectClientPresentation, projectPickerProjection } from './projectListProjection';
+import { loadProjectRowsByDecision, projectClientListsForPage, projectClientPresentation, projectPickerProjection } from './projectListProjection';
 import type { IProject } from '@alga-psa/types';
 
 const row = (project_id: string, client_name: string | null = 'Acme') => ({ project_id, client_name }) as IProject;
@@ -60,15 +60,23 @@ describe('project client presentation', () => {
   it('never rebuilds a hidden project name from a visible picker record', () => {
     expect(projectClientPresentation({ client_id: 'c1', client_name: null }, [
       { client_id: 'c1', client_name: 'Acme', logoUrl: '/logo.png' },
-    ])).toEqual({ clientName: null, logoUrl: null, quickViewClientId: null });
+    ])).toEqual({ clientName: null, logoUrl: null, visibleClientId: null });
   });
 
-  it('adds logo and quick-view metadata only when both names are visible', () => {
+  it('adds logo and summary metadata only when both names are visible', () => {
     expect(projectClientPresentation({ client_id: 'c1', client_name: 'Acme' }, [
       { client_id: 'c1', client_name: 'Acme', logoUrl: '/logo.png' },
-    ])).toEqual({ clientName: 'Acme', logoUrl: '/logo.png', quickViewClientId: 'c1' });
+    ])).toEqual({ clientName: 'Acme', logoUrl: '/logo.png', visibleClientId: 'c1' });
     expect(projectClientPresentation({ client_id: 'c1', client_name: 'Acme' }, [])).toEqual({
-      clientName: 'Acme', logoUrl: null, quickViewClientId: null,
+      clientName: 'Acme', logoUrl: null, visibleClientId: null,
+    });
+  });
+
+  it('keeps authorized picker options available when there are no visible projects', () => {
+    const authorizedPickerClients = [{ client_id: 'c1', client_name: 'Acme', client_type: 'company' as const, is_inactive: false }];
+    expect(projectClientListsForPage([], authorizedPickerClients)).toEqual({
+      pickerClients: authorizedPickerClients,
+      tableMetadata: [],
     });
   });
 });

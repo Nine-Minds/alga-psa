@@ -2,6 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 import type { IClient, IContact } from '@alga-psa/types';
+import type { ClientPickerOption } from '@alga-psa/ui/components/ClientPicker';
 
 export type ContactFilterStatus = 'active' | 'inactive' | 'all';
 
@@ -9,7 +10,7 @@ export interface QuickAddContactRenderProps {
   isOpen: boolean;
   onClose: () => void;
   onContactAdded: (newContact: IContact) => void;
-  clients: IClient[];
+  clients: ClientPickerOption[];
   selectedClientId?: string | null;
 }
 

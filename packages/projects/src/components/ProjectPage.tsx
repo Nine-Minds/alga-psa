@@ -7,7 +7,7 @@ import { TaskShareActionsProvider } from './TaskShareActionsContext';
 import { TaskSelectionProvider } from './TaskSelectionContext';
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
-import type { IClient, IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ITag, IUserWithRoles, ProjectStatus } from '@alga-psa/types';
+import type { IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ITag, IUserWithRoles, ProjectStatus } from '@alga-psa/types';
 import {
   getErrorMessage,
   handleError,
@@ -15,6 +15,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from 'react-i18next';
+import type { ClientPickerOption } from '@alga-psa/ui/components/ClientPicker';
 
 interface ProjectMetadata {
   project: IProject;
@@ -23,7 +24,7 @@ interface ProjectMetadata {
   users: IUserWithRoles[];
   contact?: { full_name: string };
   assignedUser?: IUserWithRoles | null;
-  clients: IClient[];
+  clients: ClientPickerOption[];
 }
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
