@@ -1820,4 +1820,94 @@ describe('project business operation db actions', () => {
     expect(persistedTask?.task_name).toBe('Compatibility Task');
     expect(persistedTask?.phase_id).toBe(phaseId);
   });
+
+  it('enforces action-specific project bundle scopes for update, delete, and task creation', async () => {
+    const tenant = runtimeState.tenantId;
+    const clientA = await createClientOrCompany(db, tenant);
+    const clientB = await createClientOrCompany(db, tenant);
+    const projectA = await createProject(db, tenant, { name: 'Writable project', clientOrCompanyId: clientA.clientId });
+    const projectB = await createProject(db, tenant, { name: 'Read-only project', clientOrCompanyId: clientB.clientId });
+    const phaseA = await createPhase(db, tenant, projectA, { name: 'Writable phase' });
+    const phaseB = await createPhase(db, tenant, projectB, { name: 'Read-only phase' });
+
+    const bundleId = uuidv4();
+    const revisionId = uuidv4();
+    await tenantTable(db, tenant, 'authorization_bundles').insert({
+      tenant, bundle_id: bundleId, bundle_key: `project-scope-${bundleId.slice(0, 8)}`,
+      name: 'Project mutation scope', is_system: false, status: 'active',
+    });
+    await tenantTable(db, tenant, 'authorization_bundle_revisions').insert({
+      tenant, revision_id: revisionId, bundle_id: bundleId, revision_number: 1, lifecycle_state: 'published',
+    });
+    await tenantTable(db, tenant, 'authorization_bundles').where({ bundle_id: bundleId }).update({ published_revision_id: revisionId });
+    for (const action of ['read', 'update', 'delete', 'create_task']) {
+      await tenantTable(db, tenant, 'authorization_bundle_rules').insert({
+        tenant, bundle_id: bundleId, revision_id: revisionId, resource_type: 'project', action,
+        template_key: 'selected_clients', effect: 'narrow',
+        config: JSON.stringify({ selectedClientIds: action === 'read' ? [clientA.clientId, clientB.clientId] : [clientA.clientId] }),
+        position: 0,
+      });
+    }
+    await tenantTable(db, tenant, 'authorization_bundle_assignments').insert({
+      tenant, bundle_id: bundleId, target_type: 'user', target_id: runtimeState.actorUserId, status: 'active',
+    });
+
+    const originalName = (await tenantTable(db, tenant, 'projects').where({ project_id: projectB }).first('project_name'))?.project_name;
+    await expect(invokeAction('projects.update', {
+      project_id: projectB, patch: { project_name: 'Must remain unchanged' },
+    })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    expect((await tenantTable(db, tenant, 'projects').where({ project_id: projectB }).first('project_name'))?.project_name).toBe(originalName);
+
+    await expect(invokeAction('projects.delete', { project_id: projectB })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    expect(await tenantTable(db, tenant, 'projects').where({ project_id: projectB }).first('project_id')).toBeDefined();
+
+    await expect(invokeAction('projects.create_task', {
+      project_id: projectB, phase_id: phaseB, title: 'Must not be inserted',
+    })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    expect(await tenantTable(db, tenant, 'project_tasks').where({ phase_id: phaseB, task_name: 'Must not be inserted' }).first()).toBeUndefined();
+
+    const restrictedTask = await createTask(db, tenant, phaseB, projectB, { taskName: 'Existing restricted task' });
+    const sourceTask = await createTask(db, tenant, phaseA, projectA, { taskName: 'Authorized source task' });
+    await expect(invokeAction('projects.update_phase', {
+      phase_id: phaseB, patch: { phase_name: 'Must remain unchanged' },
+    })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    await expect(invokeAction('projects.update_task', {
+      task_id: restrictedTask, patch: { task_name: 'Must remain unchanged' },
+    })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    await expect(invokeAction('projects.assign_task', {
+      task_id: restrictedTask, primary_user_id: runtimeState.actorUserId,
+    })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    await expect(invokeAction('projects.delete_task', { task_id: restrictedTask })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    await expect(invokeAction('projects.delete_phase', { phase_id: phaseB })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    await expect(invokeAction('projects.move_task', {
+      task_id: sourceTask, target_phase_id: phaseB, target_project_id: projectB,
+    })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    await expect(invokeAction('projects.duplicate_task', {
+      source_task_id: sourceTask, target_phase_id: phaseB, target_project_id: projectB,
+    })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    await expect(invokeAction('projects.link_ticket_to_task', {
+      task_id: restrictedTask, ticket_id: uuidv4(),
+    })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    await expect(invokeAction('projects.add_tag', {
+      project_id: projectB, tags: ['restricted-project-tag'],
+    })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    await expect(invokeAction('projects.add_task_tag', {
+      task_id: restrictedTask, tags: ['restricted-task-tag'],
+    })).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+    expect(await tenantTable(db, tenant, 'project_tasks').where({ task_id: restrictedTask }).first('task_name', 'phase_id')).toMatchObject({
+      task_name: 'Existing restricted task', phase_id: phaseB,
+    });
+    expect(await tenantTable(db, tenant, 'project_phases').where({ phase_id: phaseB }).first('phase_id')).toBeDefined();
+
+    const updated = await invokeAction('projects.update', {
+      project_id: projectA, patch: { project_name: 'Updated with scope' },
+    });
+    expect(updated.project.project_name).toBe('Updated with scope');
+    const created = await invokeAction('projects.create_task', {
+      project_id: projectA, phase_id: phaseA, title: 'Authorized task',
+    });
+    expect(await tenantTable(db, tenant, 'project_tasks').where({ task_id: created.task_id }).first('task_name')).toMatchObject({ task_name: 'Authorized task' });
+    const deleted = await invokeAction('projects.delete', { project_id: projectA });
+    expect(deleted.deleted).toBe(true);
+  });
 });

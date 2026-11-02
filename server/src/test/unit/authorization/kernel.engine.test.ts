@@ -121,6 +121,38 @@ describe('authorization kernel engine', () => {
     expect(rbacEvaluator).toHaveBeenCalledTimes(1);
   });
 
+  it('reevaluates bundle narrowing for each action after a read in the same request', async () => {
+    const cache = new RequestLocalAuthorizationCache();
+    const bundleProvider: BundleAuthorizationProvider = {
+      evaluateNarrowing: vi.fn(async (input) => ({
+        scope: {
+          allowAll: false,
+          denied: input.resource.action !== 'read',
+          constraints: [],
+        },
+        reasons: [],
+      })),
+    };
+    const kernel = createAuthorizationKernel({
+      builtinProvider: new BuiltinAuthorizationKernelProvider(),
+      bundleProvider,
+      rbacEvaluator: vi.fn(async () => true),
+    });
+
+    const read = await kernel.authorizeResource(baseInput({
+      requestCache: cache,
+      resource: { type: 'project', action: 'read', id: 'project-b' },
+    }));
+    const update = await kernel.authorizeResource(baseInput({
+      requestCache: cache,
+      resource: { type: 'project', action: 'update', id: 'project-b' },
+    }));
+
+    expect(read.allowed).toBe(true);
+    expect(update.allowed).toBe(false);
+    expect(bundleProvider.evaluateNarrowing).toHaveBeenCalledTimes(2);
+  });
+
   it('combines mutation checks with authorization reasons', async () => {
     const builtinProvider = new BuiltinAuthorizationKernelProvider({
       mutationGuards: [
