@@ -4,7 +4,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, type TenantScopedQuery } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withTransaction, type TenantScopedQuery } from '@alga-psa/db';
 import {
   CreateAssetData,
   CreateAssetWithExtensionData,
@@ -1188,24 +1188,47 @@ export class AssetService extends BaseService<any> {
   async getAssetDocuments(assetId: string, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
     const db = tenantDb(knex, context.tenant);
-    const query = db.table('document_associations');
-    db.tenantJoin(query, 'documents', 'document_associations.document_id', 'documents.document_id');
+    const query = db.table('document_associations as da');
+    db.tenantJoin(query, 'documents', 'da.document_id', 'documents.document_id');
+    query.leftJoin('asset_document_associations as ada', function () {
+      this.on('ada.document_id', '=', 'da.document_id')
+        .andOn('ada.asset_id', '=', 'da.entity_id')
+        .andOn('ada.tenant', '=', 'da.tenant');
+    });
     // documents has no original_filename/uploaded_at: the upload name and time
     // live on external_files (absent for in-app documents), so fall back to the
     // document's own name and timestamps.
     db.tenantJoin(query, 'external_files', 'documents.file_id', 'external_files.file_id', { type: 'left' });
-    return query
-      .where({
-        'document_associations.entity_type': 'asset',
-        'document_associations.entity_id': assetId
-      })
+    const rows = await query
+      .where({ 'da.entity_type': 'asset', 'da.entity_id': assetId })
       .select(
-        'document_associations.*',
+        'da.association_id', 'da.tenant', 'da.document_id', 'da.entity_id as asset_id', 'da.created_at',
+        'ada.notes',
         knex.raw('COALESCE(external_files.original_name, documents.document_name) AS original_filename'),
         'documents.file_size',
         'documents.mime_type',
         knex.raw('COALESCE(external_files.created_at, documents.entered_at, documents.updated_at) AS uploaded_at')
       );
+    return rows.map((row) => this.mapAssetDocumentAssociation(row));
+  }
+
+  private mapAssetDocumentAssociation(row: Record<string, any>) {
+    const { original_filename, file_size, mime_type, uploaded_at, ...association } = row;
+    return {
+      association_id: association.association_id,
+      asset_id: association.asset_id,
+      document_id: association.document_id,
+      notes: association.notes ?? null,
+      created_at: association.created_at,
+      tenant: association.tenant,
+      document: original_filename == null ? undefined : {
+        document_id: association.document_id,
+        original_filename,
+        file_size,
+        mime_type,
+        uploaded_at,
+      },
+    };
   }
 
   async associateDocument(assetId: string, data: CreateAssetDocumentData, context: ServiceContext): Promise<any> {
@@ -1213,38 +1236,64 @@ export class AssetService extends BaseService<any> {
     await this.assertAssetExists(knex, context.tenant, assetId);
     await this.assertDocumentExists(knex, context.tenant, data.document_id);
 
-    const associationData = {
-      entity_type: 'asset',
-      entity_id: assetId,
-      document_id: data.document_id,
-      notes: data.notes || null,
-      tenant: context.tenant,
-      created_at: new Date()
-    };
+    return withTransaction(knex, async (trx) => {
+      const db = tenantDb(trx, context.tenant);
+      const genericAssociation = {
+        entity_type: 'asset', entity_id: assetId, document_id: data.document_id,
+        tenant: context.tenant, created_at: new Date(),
+      };
+      const inserted = await db.table('document_associations')
+        .insert(genericAssociation)
+        .onConflict(['tenant', 'document_id', 'entity_id', 'entity_type'])
+        .ignore()
+        .returning('*');
+      const genericRow = inserted[0] ?? await db.table('document_associations')
+        .where({ entity_type: 'asset', entity_id: assetId, document_id: data.document_id })
+        .first();
 
-    const [association] = await tenantDb(knex, context.tenant).table('document_associations')
-      .insert(associationData)
-      .returning('*');
+      const assetAssociation = {
+        asset_id: assetId, document_id: data.document_id, notes: data.notes ?? null,
+        tenant: context.tenant, created_by: context.userId, created_at: new Date(),
+      };
+      const associationRows = await db.table('asset_document_associations')
+        .insert(assetAssociation)
+        .onConflict(['tenant', 'asset_id', 'document_id'])
+        .merge({ notes: data.notes ?? null, created_by: context.userId })
+        .returning('*');
 
-    return association;
+      return this.mapAssetDocumentAssociation({ ...associationRows[0], association_id: genericRow.association_id });
+    });
   }
 
   async removeDocumentAssociation(associationId: string, context: ServiceContext): Promise<void> {
     const knex = await this.getDbForContext(context);
-    const deleted = await scopedTable(knex, context.tenant, 'document_associations')
-      .where({ association_id: associationId })
-      .del();
-
-    if (!deleted) {
+    const db = tenantDb(knex, context.tenant);
+    const genericRow = await db.table('document_associations')
+      .where({ association_id: associationId, entity_type: 'asset' })
+      .first('entity_id', 'document_id');
+    const assetRow = genericRow ? null : await db.table('asset_document_associations')
+      .where({ association_id: associationId }).first('asset_id', 'document_id');
+    const association = genericRow ?? (assetRow && { entity_id: assetRow.asset_id, document_id: assetRow.document_id });
+    if (!association) {
       throw new NotFoundError('Asset document association not found');
     }
+
+    await withTransaction(knex, async (trx) => {
+      const scoped = tenantDb(trx, context.tenant);
+      await scoped.table('document_associations').where({ entity_type: 'asset', entity_id: association.entity_id, document_id: association.document_id }).del();
+      await scoped.table('asset_document_associations').where({ asset_id: association.entity_id, document_id: association.document_id }).del();
+    });
   }
 
   async getDocumentAssociationAssetId(associationId: string, context: ServiceContext): Promise<string | null> {
     const knex = await this.getDbForContext(context);
-    const row = await scopedTable(knex, context.tenant, 'document_associations')
+    const db = tenantDb(knex, context.tenant);
+    const genericRow = await db.table('document_associations')
       .where({ association_id: associationId, entity_type: 'asset' }).first('entity_id');
-    return row?.entity_id ?? null;
+    if (genericRow) return genericRow.entity_id;
+    const assetRow = await db.table('asset_document_associations')
+      .where({ association_id: associationId }).first('asset_id');
+    return assetRow?.asset_id ?? null;
   }
 
   // Maintenance management

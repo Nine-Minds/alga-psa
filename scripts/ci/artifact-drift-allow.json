@@ -96,6 +96,96 @@
   },
   {
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/entity_type",
+    "reason": "The asset document API now returns its asset_id based response model; notes and asset association metadata are persisted through asset_document_associations."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/entity_id",
+    "reason": "The asset document API now maps the stored association to its documented asset_id response field."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/original_filename",
+    "reason": "Document details are now nested under the response document object to match assetDocumentResponseSchema."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/file_size",
+    "reason": "Document details are now nested under the response document object to match assetDocumentResponseSchema."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/mime_type",
+    "reason": "Document details are now nested under the response document object to match assetDocumentResponseSchema."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/uploaded_at",
+    "reason": "Document details are now nested under the response document object to match assetDocumentResponseSchema."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1assets~1relationships~1{relationshipId}/delete/parameters/path:relationshipId/schema/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetRelationshipParams/properties/relationshipId/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetRelationshipRow/properties/relationship_id/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/entity_type",
+    "reason": "The asset document API now returns its asset_id based response model; notes and asset association metadata are persisted through asset_document_associations."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/entity_id",
+    "reason": "The asset document API now maps the stored association to its documented asset_id response field."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/original_filename",
+    "reason": "Document details are now nested under the response document object to match assetDocumentResponseSchema."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/file_size",
+    "reason": "Document details are now nested under the response document object to match assetDocumentResponseSchema."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/mime_type",
+    "reason": "Document details are now nested under the response document object to match assetDocumentResponseSchema."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/uploaded_at",
+    "reason": "Document details are now nested under the response document object to match assetDocumentResponseSchema."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1assets~1relationships~1{relationshipId}/delete/parameters/path:relationshipId/schema/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetRelationshipParams/properties/relationshipId/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetRelationshipRow/properties/relationship_id/format",
+    "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
     "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/cost/anyOf/2",
     "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
   },

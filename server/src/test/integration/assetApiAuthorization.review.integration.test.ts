@@ -50,6 +50,8 @@ let assetItemPut: typeof import('../../app/api/v1/assets/[id]/route').PUT;
 let assetItemDelete: typeof import('../../app/api/v1/assets/[id]/route').DELETE;
 let relationshipDelete: typeof import('../../app/api/v1/assets/relationships/[relationshipId]/route').DELETE;
 let documentAssociationDelete: typeof import('../../app/api/v1/assets/documents/[associationId]/route').DELETE;
+let assetDocumentsGet: typeof import('../../app/api/v1/assets/[id]/documents/route').GET;
+let assetDocumentsPost: typeof import('../../app/api/v1/assets/[id]/documents/route').POST;
 let exportGet: typeof import('../../app/api/v1/assets/export/route').GET;
 let searchGet: typeof import('../../app/api/v1/assets/search/route').GET;
 let statsGet: typeof import('../../app/api/v1/assets/stats/route').GET;
@@ -126,6 +128,7 @@ beforeAll(async () => {
   ({ GET: assetItemGet, PUT: assetItemPut, DELETE: assetItemDelete } = await import('../../app/api/v1/assets/[id]/route'));
   ({ DELETE: relationshipDelete } = await import('../../app/api/v1/assets/relationships/[relationshipId]/route'));
   ({ DELETE: documentAssociationDelete } = await import('../../app/api/v1/assets/documents/[associationId]/route'));
+  ({ GET: assetDocumentsGet, POST: assetDocumentsPost } = await import('../../app/api/v1/assets/[id]/documents/route'));
   ({ GET: exportGet } = await import('../../app/api/v1/assets/export/route'));
   ({ GET: searchGet } = await import('../../app/api/v1/assets/search/route'));
   ({ GET: statsGet } = await import('../../app/api/v1/assets/stats/route'));
@@ -377,6 +380,96 @@ describe('asset API-key authorization through public routes and migrated Postgre
     } finally { globalThis.__algaAuthorizationKernelSingleton = previousKernel; }
   }, 180_000);
 
+  it('persists optional document-association notes through authenticated POST, GET, and DELETE routes', async () => {
+    const { a } = await clients();
+    const assetId = await createAsset(a, 'Document association target');
+    const caller = await createCaller(['read', 'update']);
+    const typeId = randomUUID();
+    const documentIds = [randomUUID(), randomUUID(), randomUUID()];
+    await table('document_types').insert({ tenant, type_id: typeId, type_name: `Asset docs ${typeId}`, icon: 'file' });
+    await table('documents').insert(documentIds.map((documentId, index) => ({
+      tenant, document_id: documentId, document_name: `Asset document ${index}`, type_id: typeId,
+      user_id: caller.userId, created_by: caller.userId, entered_at: db.fn.now(), updated_at: db.fn.now(),
+    })));
+    const legacyAssociationId = randomUUID();
+    await table('document_associations').insert({ tenant, association_id: legacyAssociationId, entity_type: 'asset', entity_id: assetId, document_id: documentIds[2] });
+
+    const previousKernel = globalThis.__algaAuthorizationKernelSingleton;
+    const { createEnterpriseAuthorizationKernel } = await import('../../../../ee/server/src/lib/authorization/kernel');
+    globalThis.__algaAuthorizationKernelSingleton = await createEnterpriseAuthorizationKernel();
+    try {
+      const cases = [
+        { documentId: documentIds[0], body: { document_id: documentIds[0] }, expectedNotes: null },
+        { documentId: documentIds[1], body: { document_id: documentIds[1], notes: 'Return to vendor before warranty expires.' }, expectedNotes: 'Return to vendor before warranty expires.' },
+      ];
+      for (const { documentId, body, expectedNotes } of cases) {
+        const beforeGeneric = await table('document_associations').where({ tenant, entity_type: 'asset' }).select('association_id', 'entity_id', 'document_id');
+        const beforeAssetSpecific = await table('asset_document_associations').where({ tenant }).select('association_id', 'asset_id', 'document_id', 'notes');
+        const created = await invoke(assetDocumentsPost, request(caller, `/api/v1/assets/${assetId}/documents`, 'POST', body), { id: assetId });
+        expect(created.status, JSON.stringify(await created.clone().json())).toBe(201);
+        const createdBody = await created.json();
+        expect(createdBody.data).toMatchObject({ asset_id: assetId, document_id: documentId, notes: expectedNotes });
+        const persisted = await table('asset_document_associations').where({ tenant, asset_id: assetId, document_id: documentId }).first();
+        expect(persisted).toMatchObject({ tenant, asset_id: assetId, document_id: documentId, notes: expectedNotes, created_by: caller.userId });
+        expect(await table('document_associations').where({ tenant, association_id: createdBody.data.association_id, entity_id: assetId, document_id: documentId, entity_type: 'asset' })).toHaveLength(1);
+
+        const listed = await invoke(assetDocumentsGet, request(caller, `/api/v1/assets/${assetId}/documents`), { id: assetId });
+        expect(listed.status).toBe(200);
+        const listedBody = await listed.json();
+        expect(listedBody.data).toContainEqual(expect.objectContaining({
+          association_id: createdBody.data.association_id, asset_id: assetId, document_id: documentId, notes: expectedNotes,
+        }));
+        expect(listedBody.data).toContainEqual(expect.objectContaining({
+          association_id: legacyAssociationId, asset_id: assetId, document_id: documentIds[2], notes: null,
+        }));
+
+        const deleted = await invoke(documentAssociationDelete, request(caller, `/api/v1/assets/documents/${createdBody.data.association_id}`, 'DELETE'), { associationId: createdBody.data.association_id });
+        expect(deleted.status).toBe(204);
+        expect(await table('document_associations').where({ tenant, association_id: createdBody.data.association_id })).toHaveLength(0);
+        expect(await table('asset_document_associations').where({ tenant, asset_id: assetId, document_id: documentId })).toHaveLength(0);
+        expect(await table('document_associations').where({ tenant, entity_type: 'asset' }).select('association_id', 'entity_id', 'document_id')).toEqual(beforeGeneric);
+        expect(await table('asset_document_associations').where({ tenant }).select('association_id', 'asset_id', 'document_id', 'notes')).toEqual(beforeAssetSpecific);
+      }
+
+      // Coarse permission denial happens before insert and leaves existing
+      // association rows intact, including when notes are supplied.
+      const deniedCaller = await createCaller([]);
+      const beforeDeniedGeneric = await table('document_associations').where({ tenant, entity_type: 'asset' }).select('association_id', 'entity_id', 'document_id');
+      const beforeDeniedAssetSpecific = await table('asset_document_associations').where({ tenant }).select('association_id', 'asset_id', 'document_id', 'notes');
+      const denied = await invoke(assetDocumentsPost, request(deniedCaller, `/api/v1/assets/${assetId}/documents`, 'POST', { document_id: documentIds[0], notes: 'Must not persist' }), { id: assetId });
+      expect(denied.status).toBe(403);
+      expect(await table('document_associations').where({ tenant, entity_type: 'asset' }).select('association_id', 'entity_id', 'document_id')).toEqual(beforeDeniedGeneric);
+      expect(await table('asset_document_associations').where({ tenant }).select('association_id', 'asset_id', 'document_id', 'notes')).toEqual(beforeDeniedAssetSpecific);
+
+      // A foreign-tenant association ID is a tenant-scoped miss and remains
+      // untouched. The foreign association is constructed with the migrated
+      // schema, including its tenant-bound asset/document/user references.
+      const foreignTenant = randomUUID();
+      const foreignClient = randomUUID();
+      const foreignAsset = randomUUID();
+      const foreignUser = randomUUID();
+      const foreignType = randomUUID();
+      const foreignDocument = randomUUID();
+      const foreignAssociation = randomUUID();
+      const tenantColumns = await schema('tenants').columnInfo();
+      await tenantDb(connection.db!, '__asset_authz_foreign__').unscoped('tenants', 'create foreign document association tenant').insert({
+        tenant: foreignTenant, email: `${foreignTenant}@example.test`,
+        ...(tenantColumns.company_name ? { company_name: 'Foreign document scope' } : { client_name: 'Foreign document scope' }),
+        ...(tenantColumns.product_code ? { product_code: 'psa' } : {}),
+      });
+      await tenantDb(connection.db!, foreignTenant).table('clients').insert({ tenant: foreignTenant, client_id: foreignClient, client_name: 'Foreign client' });
+      await tenantDb(connection.db!, foreignTenant).table('users').insert({ tenant: foreignTenant, user_id: foreignUser, username: `foreign-${foreignUser}`, email: `${foreignUser}@example.test`, first_name: 'Foreign', last_name: 'User', hashed_password: 'unused', user_type: 'internal', is_inactive: false });
+      await tenantDb(connection.db!, foreignTenant).table('assets').insert({ tenant: foreignTenant, asset_id: foreignAsset, client_id: foreignClient, asset_type: 'workstation', asset_tag: `foreign-${foreignAsset}`, name: 'Foreign asset', status: 'active' });
+      await tenantDb(connection.db!, foreignTenant).table('document_types').insert({ tenant: foreignTenant, type_id: foreignType, type_name: `Foreign ${foreignType}`, icon: 'file' });
+      await tenantDb(connection.db!, foreignTenant).table('documents').insert({ tenant: foreignTenant, document_id: foreignDocument, document_name: 'Foreign document', type_id: foreignType, user_id: foreignUser, created_by: foreignUser });
+      await tenantDb(connection.db!, foreignTenant).table('asset_document_associations').insert({ tenant: foreignTenant, association_id: foreignAssociation, asset_id: foreignAsset, document_id: foreignDocument, created_by: foreignUser });
+      await tenantDb(connection.db!, foreignTenant).table('document_associations').insert({ tenant: foreignTenant, association_id: foreignAssociation, entity_type: 'asset', entity_id: foreignAsset, document_id: foreignDocument });
+      const foreignDelete = await invoke(documentAssociationDelete, request(caller, `/api/v1/assets/documents/${foreignAssociation}`, 'DELETE'), { associationId: foreignAssociation });
+      expect(foreignDelete.status).toBe(404);
+      expect(await tenantDb(connection.db!, foreignTenant).table('asset_document_associations').where({ tenant: foreignTenant, association_id: foreignAssociation })).toHaveLength(1);
+    } finally { globalThis.__algaAuthorizationKernelSingleton = previousKernel; }
+  }, 180_000);
+
   it('rejects target-client moves and mixed-scope bulk updates without partial writes', async () => {
     const { a, b } = await clients();
     const firstId = await createAsset(a, 'First');
@@ -388,6 +481,7 @@ describe('asset API-key authorization through public routes and migrated Postgre
     const associationId = randomUUID();
     await table('document_types').insert({ tenant, type_id: documentTypeId, type_name: `Authz ${documentTypeId}`, icon: 'file' });
     await table('documents').insert({ tenant, document_id: documentId, document_name: 'Denied association', type_id: documentTypeId, user_id: caller.userId, created_by: caller.userId, entered_at: db.fn.now(), updated_at: db.fn.now() });
+    await table('asset_document_associations').insert({ tenant, association_id: associationId, document_id: documentId, asset_id: secondId, created_by: caller.userId });
     await table('document_associations').insert({ tenant, association_id: associationId, document_id: documentId, entity_id: secondId, entity_type: 'asset' });
     const previousKernel = globalThis.__algaAuthorizationKernelSingleton;
     const { createEnterpriseAuthorizationKernel } = await import('../../../../ee/server/src/lib/authorization/kernel');
@@ -403,6 +497,7 @@ describe('asset API-key authorization through public routes and migrated Postgre
       expect(deniedBulk.status).toBe(404);
       const deniedDocumentRemoval = await invoke(documentAssociationDelete, request(caller, `/api/v1/assets/documents/${associationId}`, 'DELETE'), { associationId });
       expect(deniedDocumentRemoval.status).toBe(404);
+      expect(await table('asset_document_associations').where({ tenant, association_id: associationId })).toHaveLength(1);
       expect(await table('document_associations').where({ tenant, association_id: associationId })).toHaveLength(1);
       const unchanged = await table('assets').where({ tenant }).whereIn('asset_id', [firstId, secondId]).select('name');
       expect(unchanged.map((row: any) => row.name).sort()).toEqual(['First', 'Second']);

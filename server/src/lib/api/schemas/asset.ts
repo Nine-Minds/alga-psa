@@ -235,8 +235,8 @@ export const assetWithDetailsResponseSchema = assetResponseSchema.extend({
   documents: z.array(z.object({
     document_id: uuidSchema,
     original_filename: z.string(),
-    file_size: z.number(),
-    mime_type: z.string(),
+    file_size: z.number().nullable().optional(),
+    mime_type: z.string().nullable().optional(),
     uploaded_at: z.string().datetime(),
     notes: z.string().nullable()
   })).optional(),
@@ -300,8 +300,8 @@ export const assetDocumentResponseSchema = z.object({
   document: z.object({
     document_id: uuidSchema,
     original_filename: z.string(),
-    file_size: z.number(),
-    mime_type: z.string(),
+    file_size: z.number().nullable().optional(),
+    mime_type: z.string().nullable().optional(),
     uploaded_at: z.string().datetime()
   }).optional()
 });
