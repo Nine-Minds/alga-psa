@@ -133,7 +133,8 @@
       "notes": "Notizen",
       "deleteTimeEntry": "Zeiteintrag löschen",
       "unsavedChanges": "Nicht gespeicherte Änderungen",
-      "contractLine": "Vertragsposition"
+      "contractLine": "Vertragsposition",
+      "operational": "Operativ – nicht abgerechnet"
     },
     "placeholders": {
       "selectService": "Wählen Sie einen Dienst aus",

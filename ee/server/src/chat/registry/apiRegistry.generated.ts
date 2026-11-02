@@ -21493,7 +21493,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices/bulk",
     "displayName": "Bulk update invoice status",
     "summary": "Bulk update invoice status",
-    "description": "Bulk status transition route using bulkInvoiceStatusUpdateSchema.",
+    "description": "Bulk status transition route using bulkInvoiceStatusUpdateSchema. Only metadata transitions are applied; paid, cancelled and finalize transitions are reported as per-invoice errors naming the dedicated command. finalized_at is not accepted.",
     "tags": [
       "Invoices"
     ],
@@ -21523,9 +21523,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "prepayment",
             "partially_applied"
           ]
-        },
-        "finalized_at": {
-          "type": "string"
         }
       },
       "required": [
@@ -48385,7 +48382,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "project_task",
             "non_billable_category",
             "ad_hoc",
-            "interaction"
+            "interaction",
+            "co_managed"
           ]
         },
         "start_time": {
@@ -48640,7 +48638,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "project_task",
                   "non_billable_category",
                   "ad_hoc",
-                  "interaction"
+                  "interaction",
+                  "co_managed"
                 ]
               },
               "start_time": {
@@ -48764,7 +48763,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "project_task",
                       "non_billable_category",
                       "ad_hoc",
-                      "interaction"
+                      "interaction",
+                      "co_managed"
                     ]
                   },
                   "start_time": {
@@ -49642,7 +49642,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "project_task",
             "non_billable_category",
             "ad_hoc",
-            "interaction"
+            "interaction",
+            "co_managed"
           ]
         },
         "start_time": {
@@ -51051,6 +51052,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "non_billable_category",
                         "ad_hoc",
                         "interaction",
+                        "co_managed",
                         null
                       ]
                     },
@@ -51609,6 +51611,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "non_billable_category",
                   "ad_hoc",
                   "interaction",
+                  "co_managed",
                   null
                 ]
               },

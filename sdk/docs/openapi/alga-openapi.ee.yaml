@@ -9667,8 +9667,6 @@ components:
             - pending
             - prepayment
             - partially_applied
-        finalized_at:
-          type: string
       required:
         - invoice_ids
         - status
@@ -17242,6 +17240,7 @@ components:
             - non_billable_category
             - ad_hoc
             - interaction
+            - co_managed
         start_time:
           type: string
           format: date-time
@@ -17301,6 +17300,7 @@ components:
             - non_billable_category
             - ad_hoc
             - interaction
+            - co_managed
         start_time:
           type: string
           format: date-time
@@ -17359,6 +17359,7 @@ components:
                   - non_billable_category
                   - ad_hoc
                   - interaction
+                  - co_managed
               start_time:
                 type: string
                 format: date-time
@@ -17433,6 +17434,7 @@ components:
                       - non_billable_category
                       - ad_hoc
                       - interaction
+                      - co_managed
                   start_time:
                     type: string
                     format: date-time
@@ -17794,6 +17796,7 @@ components:
                   - non_billable_category
                   - ad_hoc
                   - interaction
+                  - co_managed
                   - null
               approval_status:
                 type:
@@ -18087,6 +18090,7 @@ components:
                         - non_billable_category
                         - ad_hoc
                         - interaction
+                        - co_managed
                         - null
                     approval_status:
                       type:
@@ -39970,6 +39974,9 @@ paths:
     post:
       summary: Bulk update invoice status
       description: Bulk status transition route using bulkInvoiceStatusUpdateSchema.
+        Only metadata transitions are applied; paid, cancelled and finalize
+        transitions are reported as per-invoice errors naming the dedicated
+        command. finalized_at is not accepted.
       tags:
         - Invoices
       security:

@@ -13,6 +13,7 @@ import { formatLocationAddress } from '@alga-psa/core';
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '../../auth/rbac';
+import { describeStatusChangeBlock } from '../../invoices/invoiceStatusPolicy';
 import { auditLog } from '../../logging/auditLog';
 import { publishEvent, publishUnregisteredEventType, publishWorkflowEvent } from '../../eventBus/publishers';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, NotImplementedError, ValidationError } from '../middleware/apiMiddleware';
@@ -1931,9 +1932,11 @@ export class InvoiceService extends BaseService<IInvoice> {
             continue;
           }
 
-          // Validate status transition
-          if (!this.isValidStatusTransition(invoice.status, data.status)) {
-            results.errors.push(`Invalid status transition from ${invoice.status} to ${data.status} for invoice ${invoiceId}`);
+          // Shared transition policy: command-owned and invalid transitions
+          // become per-invoice errors; side effects are never performed inline.
+          const blocked = describeStatusChangeBlock(invoice.status, data.status);
+          if (blocked) {
+            results.errors.push(`${blocked} (invoice ${invoiceId})`);
             continue;
           }
 
@@ -1941,7 +1944,6 @@ export class InvoiceService extends BaseService<IInvoice> {
             .where({ invoice_id: invoiceId })
             .update(await this.filterAuditFields(trx, {
               status: data.status,
-              finalized_at: data.finalized_at,
               updated_by: context.userId,
               updated_at: new Date()
             }, 'invoices'));
@@ -2617,21 +2619,6 @@ export class InvoiceService extends BaseService<IInvoice> {
       throw new ForbiddenError(`Permission denied: ${action} - No user ID provided`);
     }
     // TODO: Implement proper permission checking when user object is available in context
-  }
-
-  private isValidStatusTransition(currentStatus: string, newStatus: string): boolean {
-    const validTransitions: Record<string, string[]> = {
-      'draft': ['sent', 'cancelled'],
-      'sent': ['paid', 'partially_applied', 'overdue', 'cancelled'],
-      'partially_applied': ['paid', 'sent', 'overdue', 'cancelled'], // 'sent' for full refund
-      'overdue': ['paid', 'partially_applied', 'cancelled'],
-      'paid': ['partially_applied', 'sent'], // Allow refund transitions
-      'cancelled': [],
-      'pending': ['sent', 'cancelled'],
-      'prepayment': ['paid', 'cancelled']
-    };
-
-    return validTransitions[currentStatus]?.includes(newStatus) || false;
   }
 
   // Additional helper methods...

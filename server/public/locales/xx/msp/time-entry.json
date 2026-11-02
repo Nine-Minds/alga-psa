@@ -133,7 +133,8 @@
       "notes": "⟦Ƞȯŧḗş⟧",
       "deleteTimeEntry": "⟦Ḓḗŀḗŧḗ Ŧīḿḗ Ḗƞŧřẏ⟧",
       "unsavedChanges": "⟦Ŭƞşȧṽḗḓ ƈħȧƞɠḗş⟧",
-      "contractLine": "⟦Ƈȯƞŧřȧƈŧ ŀīƞḗ⟧"
+      "contractLine": "⟦Ƈȯƞŧřȧƈŧ ŀīƞḗ⟧",
+      "operational": "⟦Ȯƥḗřȧŧīȯƞȧŀ - ƞȯŧ ƀīŀŀḗḓ⟧"
     },
     "placeholders": {
       "selectService": "⟦Şḗŀḗƈŧ ȧ şḗřṽīƈḗ⟧",

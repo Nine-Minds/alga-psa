@@ -90,3 +90,11 @@ export { enqueueCoManagedSlaDeliveries, pendingCoManagedSlaDeliveries, flagStale
 export type { CoManagedSlaDeliveryRow, CoManagedSlaDeliveryPayload } from './slaDeliveries';
 export { observeDueCoManagedTicketSlas } from './ticketSla';
 export { getCoManagedTicketSlaDisplay, type CoManagedTicketSlaDisplay, type CoManagedSlaDisplay, type CoManagedSlaTargetDisplay } from './ticketSlaRead';
+// Time, effort and billing modes (L6a2).
+export * from './effortTotals';
+export * from './timeEntryBillingMode';
+export * from './timeWorkItem';
+export type { CoManagedLocalWorkReference, CoManagedWorkSourceKind } from './timeWorkReference';
+export { findCoManagedLocalWorkReference, loadCoManagedLocalWorkReference, recordCoManagedWorkReference } from './timeWorkReference';
+export { retainCoManagedTimeParticipation } from './timeParticipationEvidence';
+export * from './timeBillingProfile';

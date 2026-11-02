@@ -251,6 +251,23 @@ type ProjectBillingContext = {
 
 export type { ProjectCapThresholdCrossing } from './domain/projectCapAdjustments';
 import type { ProjectCapThresholdCrossing } from './domain/projectCapAdjustments';
+// L6a1/T0-2 seam stand-in (timeEntryWorkContext): contributed work context for time whose work item is not a native ticket/task.
+import {
+  activeTimeEntryWorkContributors,
+  joinContributedTimeEntryWork,
+  CONTRIBUTED_WORK_ALIAS,
+} from './timeEntryWorkContext';
+
+/** L6a1/T0-2 seam stand-in: retained source evidence for contributed (shared) work, selected only when a contributor serves the tenant. */
+function contributedSourceSelects(knex: Knex) {
+  return [
+    knex.raw(`${CONTRIBUTED_WORK_ALIAS}.source_tenant as work_source_tenant`),
+    knex.raw(`${CONTRIBUTED_WORK_ALIAS}.source_kind as work_source_kind`),
+    knex.raw(`${CONTRIBUTED_WORK_ALIAS}.source_id as work_source_id`),
+    knex.raw(`${CONTRIBUTED_WORK_ALIAS}.relationship_id as work_relationship_id`),
+  ];
+}
+
 
 export type ProjectBillingEngineResult = IBillingResult & {
   error?: string;
@@ -2620,6 +2637,8 @@ export class BillingEngine {
     const clientDefaultBillingProfileId =
       await this.getClientDefaultBillingProfileId(clientId);
 
+    // L6a1/T0-2 seam stand-in: [] unless a contributor is registered and serves this tenant (SQL then unchanged).
+    const contributors = await activeTimeEntryWorkContributors(this.tenant);
     const timeEntriesQuery = db.table<any>("time_entries");
     db.tenantJoin(
       timeEntriesQuery,
@@ -2671,6 +2690,9 @@ export class BillingEngine {
       { type: "left" },
     );
 
+    const contributed = joinContributedTimeEntryWork(
+      this.knex, this.tenant, timeEntriesQuery, contributors,
+    );
     timeEntriesQuery
       .where({
         "time_entries.tenant": this.tenant,
@@ -2685,6 +2707,8 @@ export class BillingEngine {
           "tickets.client_id",
           clientId,
         );
+        // L6a1/T0-2 seam stand-in
+        if (contributed) this.orWhere(`${CONTRIBUTED_WORK_ALIAS}.client_id`, clientId);
       });
 
     if (projectTarget) {
@@ -2715,17 +2739,27 @@ export class BillingEngine {
       "service_catalog.tax_rate_id",
       // Same customer-visible work-item fields as the contract-line loader,
       // so unresolved/catalog-priced time carries an identical snapshot.
-      "tickets.ticket_number as ticket_number",
-      "tickets.title as ticket_title",
+      // L6a1/T0-2 seam stand-in: COALESCE with contributed work only when a contributor serves the tenant.
+      ...(contributed
+        ? [
+            this.knex.raw(`COALESCE(tickets.ticket_number, ${CONTRIBUTED_WORK_ALIAS}.ticket_number) as ticket_number`),
+            this.knex.raw(`COALESCE(tickets.title, ${CONTRIBUTED_WORK_ALIAS}.ticket_title) as ticket_title`),
+          ]
+        : ["tickets.ticket_number as ticket_number", "tickets.title as ticket_title"]),
       this.knex.raw(
         "tickets.attributes->>'description' as ticket_description",
       ),
-      "project_tasks.task_name as project_task_name",
+      ...(contributed
+        ? [this.knex.raw(`COALESCE(project_tasks.task_name, ${CONTRIBUTED_WORK_ALIAS}.project_task_name) as project_task_name`)]
+        : ["project_tasks.task_name as project_task_name"]),
       "project_phases.phase_id as project_phase_id",
       "projects.project_id as project_id",
       this.knex.raw(
-        "COALESCE(tickets.billing_profile_id, projects.billing_profile_id) as work_item_billing_profile_id",
+        contributed
+          ? `COALESCE(tickets.billing_profile_id, projects.billing_profile_id, ${CONTRIBUTED_WORK_ALIAS}.billing_profile_id) as work_item_billing_profile_id`
+          : "COALESCE(tickets.billing_profile_id, projects.billing_profile_id) as work_item_billing_profile_id",
       ),
+      ...(contributed ? contributedSourceSelects(this.knex) : []),
       this.knex.raw(
         "COALESCE((SELECT SUM(a.minutes) FROM hour_block_time_allocations a " +
           "WHERE a.tenant = time_entries.tenant AND a.time_entry_id = time_entries.entry_id), 0) " +
@@ -5879,6 +5913,8 @@ export class BillingEngine {
           servicePeriodEndExclusive,
         );
 
+    // L6a1/T0-2 seam stand-in: [] unless a contributor is registered and serves this tenant (SQL then unchanged).
+    const contributors = await activeTimeEntryWorkContributors(client.tenant);
     const query = db.table<any>("time_entries");
     db.tenantJoin(query, "users", "time_entries.user_id", "users.user_id");
     db.tenantJoin(
@@ -5931,6 +5967,9 @@ export class BillingEngine {
       { type: "left" },
     );
 
+    const contributed = joinContributedTimeEntryWork(
+      this.knex, client.tenant, query, contributors,
+    );
     query
       .where({
         "time_entries.tenant": client.tenant,
@@ -5966,12 +6005,23 @@ export class BillingEngine {
             "tickets.ticket_id",
           );
         });
+        // L6a1/T0-2 seam stand-in: work owned by a serving contributor.
+        if (contributed) {
+          this.orWhere(function (this: Knex.QueryBuilder) {
+            this.whereIn(
+              "time_entries.work_item_type",
+              contributors.flatMap((c) => [...c.workItemTypes]),
+            ).whereNotNull(`${CONTRIBUTED_WORK_ALIAS}.entry_id`);
+          });
+        }
       })
       .where(function (this: Knex.QueryBuilder) {
         this.where("projects.client_id", clientId).orWhere(
           "tickets.client_id",
           clientId,
         );
+        // L6a1/T0-2 seam stand-in
+        if (contributed) this.orWhere(`${CONTRIBUTED_WORK_ALIAS}.client_id`, clientId);
       })
       .where("time_entries.approval_status", "APPROVED");
 
@@ -6032,25 +6082,37 @@ export class BillingEngine {
       "service_catalog.tax_rate_id",
       "sp.rate as currency_rate",
       this.knex.raw(
-        "COALESCE(project_tasks.task_name, tickets.title) as work_item_name",
+        contributed
+          ? `COALESCE(project_tasks.task_name, tickets.title, ${CONTRIBUTED_WORK_ALIAS}.work_item_name) as work_item_name`
+          : "COALESCE(project_tasks.task_name, tickets.title) as work_item_name",
       ),
       // Work-item identity + customer-visible fields for the immutable
       // invoice snapshot. Same joins as work_item_name; internal comments and
       // time-entry notes are deliberately excluded.
-      "tickets.ticket_number as ticket_number",
-      "tickets.title as ticket_title",
+      // L6a1/T0-2 seam stand-in: COALESCE with contributed work only when a contributor serves the tenant.
+      ...(contributed
+        ? [
+            this.knex.raw(`COALESCE(tickets.ticket_number, ${CONTRIBUTED_WORK_ALIAS}.ticket_number) as ticket_number`),
+            this.knex.raw(`COALESCE(tickets.title, ${CONTRIBUTED_WORK_ALIAS}.ticket_title) as ticket_title`),
+          ]
+        : ["tickets.ticket_number as ticket_number", "tickets.title as ticket_title"]),
       this.knex.raw(
         "tickets.attributes->>'description' as ticket_description",
       ),
-      "project_tasks.task_name as project_task_name",
+      ...(contributed
+        ? [this.knex.raw(`COALESCE(project_tasks.task_name, ${CONTRIBUTED_WORK_ALIAS}.project_task_name) as project_task_name`)]
+        : ["project_tasks.task_name as project_task_name"]),
       "project_phases.phase_id as project_phase_id",
       "projects.project_id as project_id",
       // Step 4 of the billing-profile resolution chain. The ticket and project
       // joins already exist for work-item naming; this is the whole cost of
       // making the work-item step reachable for time charges.
       this.knex.raw(
-        "COALESCE(tickets.billing_profile_id, projects.billing_profile_id) as work_item_billing_profile_id",
+        contributed
+          ? `COALESCE(tickets.billing_profile_id, projects.billing_profile_id, ${CONTRIBUTED_WORK_ALIAS}.billing_profile_id) as work_item_billing_profile_id`
+          : "COALESCE(tickets.billing_profile_id, projects.billing_profile_id) as work_item_billing_profile_id",
       ),
+      ...(contributed ? contributedSourceSelects(this.knex) : []),
     );
 
     const loadedTimeEntries = await query;

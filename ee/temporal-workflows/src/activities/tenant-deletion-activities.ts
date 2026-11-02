@@ -177,6 +177,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'time_entry_suggestion_dismissals',
   'time_sheet_comments',
   'time_entry_change_requests',
+  // Provenance rows of MSP time on shared work restrict the entries they describe.
+  'co_managed_time_work_references',
   'time_entries',
   'time_sheets',
   'user_cost_rates',
