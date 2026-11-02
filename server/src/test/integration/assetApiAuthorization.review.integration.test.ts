@@ -540,4 +540,92 @@ describe('asset API-key authorization through public routes and migrated Postgre
       }
     }
   }, 180_000);
+
+  it.each(['own', 'assigned', 'managed', 'own_or_assigned', 'own_or_managed', 'same_team'] as const)(
+    'preserves record relationships when authorizing proposed item and bulk updates under %s',
+    async (template) => {
+      const { a, b } = await clients();
+      const deniedClient = randomUUID();
+      await table('clients').insert({ tenant, client_id: deniedClient, client_name: 'Outside update scope' });
+      const caller = await createCaller(['update']);
+      const firstId = await createAsset(a, 'First transition');
+      const secondId = await createAsset(a, 'Second transition');
+      const unrelatedId = await createAsset(a, 'Unrelated asset');
+      let entityId = caller.userId;
+      let entityType = 'user';
+      if (template === 'managed') {
+        const subordinate = await createCaller([]);
+        await table('users').where({ user_id: subordinate.userId }).update({ reports_to: caller.userId });
+        entityId = subordinate.userId;
+      } else if (template === 'same_team') {
+        entityId = randomUUID();
+        entityType = 'team';
+        await table('teams').insert({ tenant, team_id: entityId, team_name: 'Transition team', manager_id: caller.userId });
+        await table('team_members').insert({ tenant, team_id: entityId, user_id: caller.userId });
+      }
+      await table('asset_associations').insert([firstId, secondId].map((assetId) => ({
+        tenant, asset_id: assetId, entity_id: entityId, entity_type: entityType, created_by: caller.userId,
+      })));
+
+      const bundle = await createAuthorizationBundle(connection.db!, {
+        tenant, name: `Transition scope ${randomUUID()}`, actorUserId: caller.userId,
+      });
+      for (const rule of [
+        { templateKey: template, config: {} },
+        { templateKey: 'selected_clients' as const, config: { selectedClientIds: [a, b] } },
+      ]) {
+        await upsertBundleRule(connection.db!, {
+          tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId,
+          resourceType: 'asset', action: 'update', actorUserId: caller.userId, ...rule,
+        });
+      }
+      await publishBundleRevision(connection.db! as Knex.Transaction, {
+        tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId, actorUserId: caller.userId,
+      });
+      await createBundleAssignment(connection.db!, {
+        tenant, bundleId: bundle.bundleId, targetType: 'api_key', targetId: caller.apiKeyId, actorUserId: caller.userId,
+      });
+
+      const previousKernel = globalThis.__algaAuthorizationKernelSingleton;
+      const { createEnterpriseAuthorizationKernel } = await import('../../../../ee/server/src/lib/authorization/kernel');
+      globalThis.__algaAuthorizationKernelSingleton = createEnterpriseAuthorizationKernel();
+      const update = (assetId: string, data: Record<string, unknown>) => invoke(
+        assetItemPut, request(caller, `/api/v1/assets/${assetId}`, 'PUT', data), { id: assetId },
+      );
+      const bulk = (assets: Array<{ asset_id: string; data: Record<string, unknown> }>) => invoke(
+        bulkUpdate, request(caller, '/api/v1/assets/bulk-update', 'PUT', { assets }),
+      );
+      const snapshot = () => table('assets').whereIn('asset_id', [firstId, secondId, unrelatedId])
+        .select('asset_id', 'client_id', 'name').orderBy('asset_id');
+      try {
+        expect((await update(firstId, { name: 'Name only' })).status).toBe(200);
+        expect((await update(firstId, { name: 'Same client', client_id: a })).status).toBe(200);
+        expect((await update(firstId, { name: 'Moved client', client_id: b })).status).toBe(200);
+        const allowedBulk = await bulk([
+          { asset_id: firstId, data: { name: 'Bulk first', client_id: a } },
+          { asset_id: secondId, data: { name: 'Bulk second', client_id: b } },
+        ]);
+        expect(allowedBulk.status).toBe(200);
+        const beforeDenied = await snapshot();
+        expect(beforeDenied.find((row) => row.asset_id === firstId)).toMatchObject({ client_id: a, name: 'Bulk first' });
+        expect(beforeDenied.find((row) => row.asset_id === secondId)).toMatchObject({ client_id: b, name: 'Bulk second' });
+
+        expect((await update(firstId, { client_id: deniedClient })).status).toBe(404);
+        expect((await bulk([
+          { asset_id: firstId, data: { name: 'Must stay unchanged', client_id: b } },
+          { asset_id: secondId, data: { client_id: deniedClient } },
+        ])).status).toBe(404);
+        // The proposed client is allowed, but the source record is unrelated to the caller.
+        expect((await update(unrelatedId, { client_id: a })).status).toBe(404);
+        expect((await bulk([
+          { asset_id: firstId, data: { name: 'Must also stay unchanged', client_id: b } },
+          { asset_id: unrelatedId, data: { client_id: a } },
+        ])).status).toBe(404);
+        expect(await snapshot()).toEqual(beforeDenied);
+      } finally {
+        globalThis.__algaAuthorizationKernelSingleton = previousKernel;
+      }
+    },
+    180_000,
+  );
 });

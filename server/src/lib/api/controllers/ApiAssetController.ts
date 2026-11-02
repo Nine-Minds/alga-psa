@@ -28,6 +28,7 @@ import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
 import { authorizeApiResource } from './authorizationKernel';
+import type { AuthorizationRecord } from '@alga-psa/authorization/kernel';
 
 type AssetAction = { resource: 'asset' | 'ticket'; action: 'read' | 'create' | 'update' | 'delete' };
 const ASSET_READ: AssetAction[] = [{ resource: 'asset', action: 'read' }];
@@ -64,24 +65,39 @@ export class ApiAssetController {
     return { context, denied: null };
   }
 
-  private async authorizeRecord(context: ApiContext, assetId: string, action: 'read' | 'update' | 'delete'): Promise<NextResponse | null> {
+  private async authorizeRecord(
+    context: ApiContext,
+    assetId: string,
+    action: 'read' | 'update' | 'delete',
+    proposedChanges?: AuthorizationRecord,
+  ): Promise<NextResponse | null> {
     const record = await this.assetService.getAuthorizationRecord(assetId, context);
     if (!record) return createErrorResponse('Asset not found', 404, 'NOT_FOUND');
-    const knex = await getConnection(context.tenant);
-    const allowed = await authorizeApiResource({ knex, tenant: context.tenant, user: context.user, apiKeyId: context.apiKeyId, resource: 'asset', action, recordContext: record });
-    return allowed ? null : createErrorResponse('Asset not found', 404, 'NOT_FOUND');
+    // A transition must be allowed at both ends. Retain relationships when
+    // projecting changes so ownership/team rules still apply to the destination.
+    const records = proposedChanges ? [record, { ...record, ...proposedChanges }] : [record];
+    for (const recordContext of records) {
+      const denied = await this.authorizeRecordContext(context, action, recordContext);
+      if (denied) return denied;
+    }
+    return null;
   }
 
-  private async authorizeTargetClient(context: ApiContext, action: 'create' | 'update', clientId: string | null | undefined): Promise<boolean> {
-    return authorizeApiResource({
+  private async authorizeRecordContext(
+    context: ApiContext,
+    action: AssetAction['action'],
+    recordContext: AuthorizationRecord,
+  ): Promise<NextResponse | null> {
+    const allowed = await authorizeApiResource({
       knex: await getConnection(context.tenant),
       tenant: context.tenant,
       user: context.user,
       apiKeyId: context.apiKeyId,
       resource: 'asset',
       action,
-      recordContext: { clientId: clientId ?? null },
+      recordContext,
     });
+    return allowed ? null : createErrorResponse('Asset not found', 404, 'NOT_FOUND');
   }
 
   /**
@@ -156,10 +172,8 @@ export class ApiAssetController {
       return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
-    const targetAllowed = await this.authorizeTargetClient(context, 'create', validation.data.client_id);
-    if (!targetAllowed) {
-      return createErrorResponse('Asset not found', 404, 'NOT_FOUND');
-    }
+    const recordDenied = await this.authorizeRecordContext(context, 'create', { clientId: validation.data.client_id });
+    if (recordDenied) return recordDenied;
     const asset = await this.assetService.create(validation.data, context);
 
     return createApiResponse({
@@ -182,12 +196,9 @@ export class ApiAssetController {
       return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
-    const recordDenied = await this.authorizeRecord(context, params.id, 'update');
+    const proposedChanges = validation.data.client_id === undefined ? undefined : { clientId: validation.data.client_id };
+    const recordDenied = await this.authorizeRecord(context, params.id, 'update', proposedChanges);
     if (recordDenied) return recordDenied;
-    if (validation.data.client_id !== undefined &&
-        !await this.authorizeTargetClient(context, 'update', validation.data.client_id)) {
-      return createErrorResponse('Asset not found', 404, 'NOT_FOUND');
-    }
     const asset = await this.assetService.update(params.id, validation.data, context);
 
     return createApiResponse({
@@ -610,12 +621,9 @@ export class ApiAssetController {
     }
 
     for (const { asset_id, data: updateData } of validation.data.assets) {
-      const denied = await this.authorizeRecord(context, asset_id, 'update');
+      const proposedChanges = updateData.client_id === undefined ? undefined : { clientId: updateData.client_id };
+      const denied = await this.authorizeRecord(context, asset_id, 'update', proposedChanges);
       if (denied) return denied;
-      if (updateData.client_id !== undefined &&
-          !await this.authorizeTargetClient(context, 'update', updateData.client_id)) {
-        return createErrorResponse('Asset not found', 404, 'NOT_FOUND');
-      }
     }
     const results = await Promise.all(
       validation.data.assets.map(({ asset_id, data: updateData }) =>
