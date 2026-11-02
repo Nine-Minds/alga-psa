@@ -7,6 +7,8 @@ import ContractLines from '../src/components/billing-dashboard/contracts/Contrac
 import { ServiceSelectionDialog } from '../src/components/billing-dashboard/service-config/ServiceSelectionDialog';
 
 const actionMocks = vi.hoisted(() => ({
+  saveContractLineEdit: vi.fn(),
+  getContractLineEditVersion: vi.fn(),
   applyContractLineServiceMembershipChanges: vi.fn(),
   checkContractHasInvoices: vi.fn(),
   getActiveClientLocationsForBilling: vi.fn(),
@@ -51,6 +53,11 @@ vi.mock('@alga-psa/billing/actions/contractLineServiceActions', () => ({
   applyContractLineServiceMembershipChanges: actionMocks.applyContractLineServiceMembershipChanges,
   getContractLineServicesWithConfigurations: actionMocks.getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations: actionMocks.getTemplateLineServicesWithConfigurations,
+}));
+
+vi.mock('@alga-psa/billing/actions/contractLineSaveAction', () => ({
+  saveContractLineEdit: actionMocks.saveContractLineEdit,
+  getContractLineEditVersion: actionMocks.getContractLineEditVersion,
 }));
 
 vi.mock('@alga-psa/billing/actions/contractLineAction', () => ({
@@ -283,6 +290,8 @@ const renderContractLines = () => render(
 describe('contract line service membership editing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    actionMocks.getContractLineEditVersion.mockResolvedValue('v1');
+    actionMocks.saveContractLineEdit.mockResolvedValue({ status: 'saved', line: { contract_line_id: 'line-1' }, version: 'v2', rematerialized: false });
     actionMocks.updateContractLine.mockReset();
     actionMocks.updateContractLine.mockResolvedValue({ contract_line_id: 'line-1' });
     actionMocks.hasContractLineProtectedHistory.mockResolvedValue(false);
@@ -316,7 +325,7 @@ describe('contract line service membership editing', () => {
     actionMocks.upsertBucketConfiguration.mockResolvedValue(true);
   });
 
-  it('edits billed fixed-line invoice text and dates through updateContractLine and displays a protected-period rejection', async () => {
+  it('edits billed fixed-line invoice text and dates through saveContractLineEdit and displays a protected-period rejection', async () => {
     actionMocks.hasContractLineProtectedHistory.mockResolvedValue(true);
     actionMocks.getDetailedContractLines.mockResolvedValue([{
       contract_id: 'contract-1', contract_line_id: 'line-1', contract_line_name: 'Billed fixed line',
@@ -333,15 +342,17 @@ describe('contract line service membership editing', () => {
     fireEvent.change(invoiceText, {target: {value: 'Support and monitoring'}});
     fireEvent.change(endDate, {target: {value: '2027-01-01'}});
     fireEvent.click(screen.getByRole('button', {name: 'Save'}));
-    await waitFor(() => expect(actionMocks.updateContractLine).toHaveBeenCalledWith('line-1', {
-      invoice_line_description: 'Support and monitoring', start_date: null, end_date: '2027-01-01',
-    }));
+    await waitFor(() => expect(actionMocks.saveContractLineEdit).toHaveBeenCalledWith('line-1', expect.objectContaining({
+      line: { invoice_line_description: 'Support and monitoring', start_date: null, end_date: '2027-01-01' },
+      expected_version: 'v1',
+    })));
+    expect(actionMocks.updateContractLine).not.toHaveBeenCalled();
 
   });
 
   it('shows an actionable server rejection when a billed line date cuts into protected history', async () => {
     actionMocks.hasContractLineProtectedHistory.mockResolvedValue(true);
-    actionMocks.updateContractLine.mockResolvedValue({
+    actionMocks.saveContractLineEdit.mockResolvedValue({
       actionError: 'server fallback',
       messageKey: 'msp/contracts:contractLines.errors.protectedEndDate',
       messageParams: { boundary: '2026-07-01' },
@@ -357,7 +368,9 @@ describe('contract line service membership editing', () => {
     fireEvent.change(document.getElementById('line-end-date-line-1')!, {target: {value: '2026-06-01'}});
     fireEvent.click(screen.getByRole('button', {name: 'Save'}));
     expect(await screen.findByText('End date must be on or after 2026-07-01 to include protected service history.')).toBeTruthy();
-    expect(actionMocks.updateContractLine).toHaveBeenCalledWith('line-1', expect.objectContaining({end_date: '2026-06-01'}));
+    expect(actionMocks.saveContractLineEdit).toHaveBeenCalledWith('line-1', expect.objectContaining({ line: expect.objectContaining({end_date: '2026-06-01'}) }));
+    // The rejected save keeps the editor (and so the draft) open.
+    expect(screen.getByRole('button', {name: 'Save'})).toBeTruthy();
   });
 
   it('returns selected services to the editor with contract-currency defaults without persisting them', async () => {
@@ -430,10 +443,16 @@ describe('contract line service membership editing', () => {
     expect(screen.getAllByText('Recurring seats/units').length).toBeGreaterThan(0);
     fireEvent.change(document.getElementById('quantity-existing-config')!, {target: {value: '0'}});
     fireEvent.click(screen.getByRole('button', {name: 'Save'}));
-    await waitFor(() => expect(actionMocks.updateConfiguration).toHaveBeenCalledWith('existing-config', expect.objectContaining({quantity: 0}), expect.objectContaining({effective_period_start: '2026-10-01', base_rate: 10000})));
-    expect(actionMocks.updateContractLine).toHaveBeenCalledWith('line-1', {
-      invoice_line_description: null, start_date: null, end_date: null,
-    });
+    await waitFor(() => expect(actionMocks.saveContractLineEdit).toHaveBeenCalledWith('line-1', expect.objectContaining({
+      // Pricing-only after billing: only the narrow invoice fields travel with the line.
+      line: { invoice_line_description: null, start_date: null, end_date: null },
+      members: [expect.objectContaining({config_id: 'existing-config', quantity: 0, base_rate: 10000})],
+      effective_boundary: '2026-10-01',
+      added_service_ids: [],
+      removed_service_ids: [],
+    })));
+    expect(actionMocks.updateConfiguration).not.toHaveBeenCalled();
+    expect(actionMocks.updateContractLine).not.toHaveBeenCalled();
     expect(actionMocks.applyContractLineServiceMembershipChanges).not.toHaveBeenCalled();
   });
   it('persists the complete staged membership change only when the outer editor is saved', async () => {
@@ -451,19 +470,18 @@ describe('contract line service membership editing', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => expect(actionMocks.applyContractLineServiceMembershipChanges).toHaveBeenCalledWith(
-      'line-1',
-      {
-        additions: [{
-          serviceId: 'new-service',
-          quantity: 1,
-          customRate: 25000,
-          configurationType: 'Fixed',
-          typeConfig: { base_rate: 25000, base_rate_basis: 'per_unit' },
-        }],
-        removals: ['existing-service'],
-      },
-    ));
+    await waitFor(() => expect(actionMocks.saveContractLineEdit).toHaveBeenCalledTimes(1));
+    expect(actionMocks.saveContractLineEdit).toHaveBeenCalledWith('line-1', expect.objectContaining({
+      added_service_ids: ['new-service'],
+      removed_service_ids: ['existing-service'],
+      members: expect.arrayContaining([
+        expect.objectContaining({ service_id: 'new-service', configuration_type: 'Fixed', quantity: 1, custom_rate: 25000, base_rate: 25000 }),
+      ]),
+    }));
+    // One intent, one call: no separate membership/config/line mutations.
+    expect(actionMocks.applyContractLineServiceMembershipChanges).not.toHaveBeenCalled();
+    expect(actionMocks.updateConfiguration).not.toHaveBeenCalled();
+    expect(actionMocks.updateContractLine).not.toHaveBeenCalled();
   });
 
   it('preserves the selected base rate when creating a usage-service configuration', async () => {
@@ -559,6 +577,8 @@ describe('active usage line measurement editing', () => {
   };
   beforeEach(() => {
     vi.clearAllMocks();
+    actionMocks.getContractLineEditVersion.mockResolvedValue('v1');
+    actionMocks.saveContractLineEdit.mockResolvedValue({ status: 'saved', line: { contract_line_id: 'line-1' }, version: 'v2', rematerialized: false });
     actionMocks.hasContractLineProtectedHistory.mockResolvedValue(true);
     actionMocks.getDetailedContractLines.mockResolvedValue([{
       contract_line_id: 'line-1', contract_line_name: 'Usage agreement', contract_line_type: 'Usage', billing_frequency: 'monthly', display_order: 0,
@@ -581,11 +601,11 @@ describe('active usage line measurement editing', () => {
     fireEvent.change(document.getElementById('existing-config-minimum-usage')!, {target: {value: '9'}});
     fireEvent.change(document.getElementById('rate-existing-config')!, {target: {value: '120.50'}});
     fireEvent.click(screen.getByRole('button', {name: 'Save'}));
-    await waitFor(() => expect(actionMocks.updateConfiguration).toHaveBeenCalledWith('existing-config',
-      {custom_rate: 12050}, expect.objectContaining({measurement_mode: 'period_total', minimum_usage: 9, base_rate: 12050, effective_period_start: '2026-10-01'}), []));
-    expect(actionMocks.updateContractLine).toHaveBeenCalledWith('line-1', expect.objectContaining({
-      invoice_line_description: null, start_date: null, end_date: null,
-    }));
+    await waitFor(() => expect(actionMocks.saveContractLineEdit).toHaveBeenCalledWith('line-1', expect.objectContaining({
+      line: expect.objectContaining({ invoice_line_description: null, start_date: null, end_date: null }),
+      members: [expect.objectContaining({config_id: 'existing-config', measurement_mode: 'period_total', minimum_usage: 9, base_rate: 12050})],
+      effective_boundary: '2026-10-01',
+    })));
     expect(actionMocks.applyContractLineServiceMembershipChanges).not.toHaveBeenCalled();
   });
   it('reloads the effective settings when the boundary changes and preserves that exact date on Save', async () => {
@@ -601,20 +621,22 @@ describe('active usage line measurement editing', () => {
     await waitFor(() => expect((document.getElementById('existing-config-minimum-usage') as HTMLInputElement).value).toBe('12'));
     expect(document.getElementById('existing-config-tier-old-tier-rate')).toBeNull();
     fireEvent.click(screen.getByRole('button', {name: 'Save'}));
-    await waitFor(() => expect(actionMocks.updateConfiguration).toHaveBeenCalledWith('existing-config',
-      {custom_rate: 13000}, expect.objectContaining({measurement_mode: 'period_total', minimum_usage: 12, effective_period_start: '2026-11-01'}), []));
+    await waitFor(() => expect(actionMocks.saveContractLineEdit).toHaveBeenCalledWith('line-1', expect.objectContaining({
+      members: [expect.objectContaining({config_id: 'existing-config', measurement_mode: 'period_total', minimum_usage: 12})],
+      effective_boundary: '2026-11-01',
+    })));
   });
   it('requires the displayed effective boundary instead of silently substituting one', async () => {
     await edit();
     fireEvent.change(document.getElementById('quantity-effective-line-1')!, {target: {value: ''}});
     expect((screen.getByRole('button', {name: 'Save'}) as HTMLButtonElement).disabled).toBe(true);
-    expect(actionMocks.updateConfiguration).not.toHaveBeenCalled();
+    expect(actionMocks.saveContractLineEdit).not.toHaveBeenCalled();
   });
   it('keeps the editor open when the effective-period transition is rejected', async () => {
     await edit();
-    actionMocks.updateConfiguration.mockRejectedValue(new Error('Existing usage blocks this boundary. Choose a later period.'));
+    actionMocks.saveContractLineEdit.mockResolvedValue({ actionError: 'Existing usage blocks this boundary. Choose a later period.' });
     fireEvent.click(screen.getByRole('button', {name: 'Save'}));
-    expect(await screen.findByText(/Existing usage blocks this boundary/)).toBeTruthy();
+    expect(await screen.findByText('action error')).toBeTruthy(); // errorHandling is mocked in this file
     expect(screen.getByRole('button', {name: 'Save'})).toBeTruthy();
   });
 });

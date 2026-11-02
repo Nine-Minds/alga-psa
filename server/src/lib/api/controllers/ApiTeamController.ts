@@ -124,7 +124,7 @@ export class ApiTeamController extends ApiBaseController {
           filters = advancedTeamSearchSchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid search parameters', error.errors);
+            throw new ValidationError('Invalid search parameters', error.issues);
           }
           throw error;
         }
@@ -428,7 +428,7 @@ export class ApiTeamController extends ApiBaseController {
           memberData = addTeamMemberSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid member data', error.errors);
+            throw new ValidationError('Invalid member data', error.issues);
           }
           throw error;
         }
@@ -579,7 +579,7 @@ export class ApiTeamController extends ApiBaseController {
           membersData = bulkAddTeamMembersSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid members data', error.errors);
+            throw new ValidationError('Invalid members data', error.issues);
           }
           throw error;
         }
@@ -658,7 +658,7 @@ export class ApiTeamController extends ApiBaseController {
           managerData = assignManagerSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid manager data', error.errors);
+            throw new ValidationError('Invalid manager data', error.issues);
           }
           throw error;
         }
@@ -739,7 +739,7 @@ export class ApiTeamController extends ApiBaseController {
           filters = teamAnalyticsQuerySchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid analytics parameters', error.errors);
+            throw new ValidationError('Invalid analytics parameters', error.issues);
           }
           throw error;
         }

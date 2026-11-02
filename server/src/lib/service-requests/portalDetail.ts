@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getServiceRequestVisibilityProvider } from './providers/registry';
 import type { ServiceRequestDefinitionShape } from './domain';
+import { isAudienceSatisfied, loadRequesterRecord } from './definitionAudience';
 import type { ServiceRequestPortalCatalogContext } from './portalCatalog';
 import { resolveStaticDefaultValues } from './basicFormBuilder';
 import { getServiceRequestFormBehaviorProvider } from './providers/registry';
@@ -10,6 +11,7 @@ interface PublishedDefinitionRow {
   tenant: string;
   definition_id: string;
   lifecycle_state: 'draft' | 'published' | 'archived';
+  audience: unknown;
 }
 
 interface DefinitionVersionRow {
@@ -56,7 +58,7 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
   const definition = (await db.table('service_request_definitions')
     .where({ definition_id: definitionId })
     .whereNot('lifecycle_state', 'archived')
-    .first('tenant', 'definition_id', 'lifecycle_state')) as PublishedDefinitionRow | undefined;
+    .first('tenant', 'definition_id', 'lifecycle_state', 'audience')) as PublishedDefinitionRow | undefined;
 
   if (!definition) {
     return null;
@@ -115,9 +117,9 @@ export async function getVisiblePublishedServiceRequestDefinitionDetail(
     definitionForVisibility,
     latestVersion.visibility_config ?? {}
   );
-  if (!canAccess) {
-    return null;
-  }
+  if (!canAccess) return null;
+  const requester = await loadRequesterRecord(knex, context.tenant, context);
+  if (!isAudienceSatisfied(definition.audience, requester)) return null;
 
   const formBehaviorProvider = getServiceRequestFormBehaviorProvider(
     latestVersion.form_behavior_provider

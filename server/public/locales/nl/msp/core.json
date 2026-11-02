@@ -105,7 +105,13 @@
     "passwords": "Wachtwoorden",
     "ticketsAll": "Alle tickets",
     "ticketsRecurring": "Terugkerende tickets",
-    "ticketsTemplates": "Ticketsjablonen"
+    "ticketsTemplates": "Ticketsjablonen",
+    "assetsCustody": "Apparatuur in bewaring",
+    "ticketsCannedResponses": "Standaardantwoorden",
+    "profile": "Profiel",
+    "signOut": "Afmelden",
+    "coManaged": "Gezamenlijk beheerde IT",
+    "coManagedAdministration": "Toegang en beheer"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",
@@ -154,7 +160,8 @@
       "extensions": "Extensies",
       "experimentalFeatures": "Experimentele functies",
       "profile": "Profiel",
-      "security": "Beveiliging"
+      "security": "Beveiliging",
+      "tags": "Labels"
     }
   },
   "dashboard": {
@@ -321,6 +328,17 @@
       "calendar": {
         "error": "Kalendersynchronisatie voor {{providerName}} heeft een fout gemeld en synchroniseert niet.",
         "disconnected": "Kalendersynchronisatie voor {{providerName}} is verbroken en synchroniseert niet."
+      },
+      "rmm": {
+        "syncError": "{{providerName}} heeft een synchronisatiefout gemeld, dus apparaat- en meldingsgegevens zijn mogelijk verouderd.",
+        "reconnectRequired": "{{providerName}} moet opnieuw worden verbonden: de inloggegevens kunnen niet meer worden vernieuwd."
+      },
+      "accounting": {
+        "reconnectRequired": "{{providerName}} moet opnieuw worden verbonden voordat de boekhoudsynchronisatie weer kan lopen.",
+        "syncError": "De laatste synchronisatie met {{providerName}} is niet afgerond, dus facturen en betalingen zijn mogelijk verouderd."
+      },
+      "teams": {
+        "botCredentialsMissing": "De {{providerName}}-bot kan niet antwoorden: de inloggegevens van de botconnector zijn niet geconfigureerd op de server."
       },
       "review": "Bekijken",
       "dismiss": "Integratiemelding sluiten"
@@ -843,5 +861,10 @@
     "errors": {
       "enterpriseOnly": "Chatfuncties zijn alleen beschikbaar in Enterprise Edition"
     }
+  },
+  "coManagedWorkspace": {
+    "loading": "Werkruimte laden…",
+    "navigation": "Klantwerkruimte",
+    "passwordError": "Kan de wachtwoordstatus niet controleren. Laad deze pagina opnieuw."
   }
 }

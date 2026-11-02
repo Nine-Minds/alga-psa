@@ -7,6 +7,11 @@ import {
 
 export type BoardActionError = ActionMessageError | ActionPermissionError;
 
+export const CO_MANAGED_ESCALATION_QUEUE_MESSAGE =
+  'This board receives escalated tickets from a co-managed IT workspace, so it cannot be deactivated while that workspace is being set up or is active.';
+export const CO_MANAGED_SHARED_BOARD_MESSAGE =
+  'This board is shared with your MSP under co-managed IT, so it cannot be deactivated while the relationship is active.';
+
 const EXPECTED_BOARD_MESSAGES = [
   'Board not found',
   'Select a source board that has ticket statuses to copy',
@@ -39,6 +44,9 @@ export function boardActionErrorFrom(error: unknown): BoardActionError | null {
   if (error instanceof Error) {
     if (error.message.includes('Permission denied')) {
       return permissionError(error.message);
+    }
+    if (error.message === CO_MANAGED_ESCALATION_QUEUE_MESSAGE || error.message === CO_MANAGED_SHARED_BOARD_MESSAGE) {
+      return actionError(error.message);
     }
     if (EXPECTED_BOARD_MESSAGES.some((message) => error.message.startsWith(message))) {
       return actionError(error.message);

@@ -193,7 +193,7 @@ export const contactImportSchema = z.object({
 
 export const contactExportQuerySchema = z.object({
   format: z.enum(['csv', 'json']).optional().default('csv'),
-  include_inactive: booleanTransform.optional().default("false"),
+  include_inactive: booleanTransform.prefault("false"),
   client_id: uuidSchema.optional(),
   fields: z.array(z.string()).optional()
 });
@@ -205,7 +205,7 @@ export const contactStatsResponseSchema = z.object({
   inactive_contacts: z.number(),
   contacts_with_client: z.number(),
   contacts_without_client: z.number(),
-  contacts_by_role: z.record(z.number()),
+  contacts_by_role: z.record(z.string(), z.number()),
   recent_contacts: z.number() // contacts created in last 30 days
 });
 
@@ -217,8 +217,8 @@ export const contactSearchSchema = z.object({
     z.string().transform(val => val.split(',').map(f => f.trim()))
   ]).optional(),
   client_id: uuidSchema.optional(),
-  include_inactive: booleanTransform.optional().default("false"),
-  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
+  include_inactive: booleanTransform.prefault("false"),
+  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).prefault('25')
 });
 
 // Export types for TypeScript

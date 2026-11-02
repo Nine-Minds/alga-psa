@@ -1,6 +1,7 @@
 'use server';
 
 import { randomUUID } from 'crypto';
+import { canReadKnowledgeBase } from '@alga-psa/auth/lib/knowledgeBasePermissions';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -16,9 +17,11 @@ import {
 } from '../lib/kbImportLimits';
 import {
   KB_ARTICLE_SELECT_COLUMNS,
+  buildKbArticleContentFromTicket,
   createKbArticle,
   generateKbArticleSlug as generateSlug,
   publishKbArticleCreated,
+  syncKbArticleClientVisibility,
 } from '@alga-psa/shared/models/kbArticleModel';
 import type {
   ArticleAudience,
@@ -133,7 +136,9 @@ export const createArticle = withAuth(
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
-    const article = await createKbArticle(knex, { tenant, userId: user.user_id }, input);
+    const article = await withTransaction(knex, (trx) =>
+      createKbArticle(trx, { tenant, userId: user.user_id }, input)
+    );
 
     // Published after the writes land, never from inside a transaction.
     await publishKbArticleCreated(tenant, article, user.user_id);
@@ -166,6 +171,7 @@ export const updateArticle = withAuth(
     const article = await withTransaction(knex, async (trx) => {
       const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
         .where({ article_id: articleId })
+        .forUpdate()
         .first();
 
       if (!existing) {
@@ -233,6 +239,8 @@ export const updateArticle = withAuth(
         .where({ article_id: articleId })
         .first();
 
+      await syncKbArticleClientVisibility(trx, tenant, article);
+
       return article as unknown as IKBArticle;
     });
 
@@ -269,6 +277,7 @@ export const publishArticle = withAuth(
     const article = await withTransaction(knex, async (trx) => {
       const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
         .where({ article_id: articleId })
+        .forUpdate()
         .first();
 
       if (!existing) {
@@ -286,20 +295,13 @@ export const publishArticle = withAuth(
           updated_by: user.user_id,
         });
 
-      // Auto-set is_client_visible for client/public audience
-      if (existing.audience === 'client' || existing.audience === 'public') {
-        await tenantScopedTable(trx, 'documents', tenant)
-          .where({ document_id: existing.document_id })
-          .update({
-            is_client_visible: true,
-            updated_at: trx.fn.now(),
-          });
-      }
-
       const article = await tenantScopedTable(trx, 'kb_articles', tenant)
         .select(KB_ARTICLE_SELECT_COLUMNS)
         .where({ article_id: articleId })
         .first();
+
+      // Visibility follows the article: internal audience actively clears a stale true.
+      await syncKbArticleClientVisibility(trx, tenant, article);
 
       return article as unknown as IKBArticle;
     });
@@ -337,6 +339,7 @@ export const archiveArticle = withAuth(
     const article = await withTransaction(knex, async (trx) => {
       const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
         .where({ article_id: articleId })
+        .forUpdate()
         .first();
 
       if (!existing) {
@@ -352,18 +355,12 @@ export const archiveArticle = withAuth(
           updated_by: user.user_id,
         });
 
-      // Clear is_client_visible
-      await tenantScopedTable(trx, 'documents', tenant)
-        .where({ document_id: existing.document_id })
-        .update({
-          is_client_visible: false,
-          updated_at: trx.fn.now(),
-        });
-
       const article = await tenantScopedTable(trx, 'kb_articles', tenant)
         .select(KB_ARTICLE_SELECT_COLUMNS)
         .where({ article_id: articleId })
         .first();
+
+      await syncKbArticleClientVisibility(trx, tenant, article);
 
       return article as unknown as IKBArticle;
     });
@@ -468,48 +465,75 @@ export const submitForReview = withAuth(
       throw new Error('At least one reviewer is required');
     }
 
-    const existing = await tenantScopedTable(knex, 'kb_articles', tenant)
-      .where({ article_id: articleId })
-      .first();
+    // Dedupe so a repeated id cannot collide with itself on the unique index.
+    const uniqueReviewerIds = Array.from(new Set(reviewerUserIds));
 
-    if (!existing) {
-      throw new Error('Article not found');
-    }
+    await withTransaction(knex, async (trx) => {
+      // Lock order is article -> reviewer rows, same as completeReview.
+      const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
+        .forUpdate()
+        .first();
 
-    // Update article status to review
-    await tenantScopedTable(knex, 'kb_articles', tenant)
-      .where({ article_id: articleId })
-      .update({
-        status: 'review',
-        updated_at: knex.fn.now(),
-        updated_by: user.user_id,
+      if (!existing) {
+        throw new Error('Article not found');
+      }
+
+      // Validate all reviewer user IDs belong to this tenant. A failure throws and
+      // rolls the whole transaction back, leaving the article status unchanged.
+      const validUsers = await tenantScopedTable(trx, 'users', tenant)
+        .select('user_id')
+        .whereIn('user_id', uniqueReviewerIds);
+      const validUserIds = new Set(validUsers.map((u: { user_id: string }) => u.user_id));
+      const invalidIds = uniqueReviewerIds.filter((id) => !validUserIds.has(id));
+      if (invalidIds.length > 0) {
+        throw new Error(`Invalid reviewer user IDs: ${invalidIds.join(', ')}`);
+      }
+
+      // D1/D3: a published article is not demoted, so it stays visible to clients.
+      // Anything else moves to review (and is therefore not client-visible).
+      let nextStatus = existing.status;
+      if (existing.status !== 'published') {
+        nextStatus = 'review';
+      }
+      await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
+        .update({
+          status: nextStatus,
+          updated_at: trx.fn.now(),
+          updated_by: user.user_id,
+        });
+      await syncKbArticleClientVisibility(trx, tenant, {
+        document_id: existing.document_id,
+        status: nextStatus,
+        audience: existing.audience,
       });
 
-    // Validate all reviewer user IDs belong to this tenant
-    const validUsers = await tenantScopedTable(knex, 'users', tenant)
-      .select('user_id')
-      .whereIn('user_id', reviewerUserIds);
-    const validUserIds = new Set(validUsers.map((u: { user_id: string }) => u.user_id));
-    const invalidIds = reviewerUserIds.filter((id) => !validUserIds.has(id));
-    if (invalidIds.length > 0) {
-      throw new Error(`Invalid reviewer user IDs: ${invalidIds.join(', ')}`);
-    }
+      // Remove pending assignments for reviewers no longer selected; non-pending rows
+      // for them stay as review history.
+      await tenantScopedTable(trx, 'kb_article_reviewers', tenant)
+        .where({ article_id: articleId, review_status: 'pending' })
+        .whereNotIn('user_id', uniqueReviewerIds)
+        .del();
 
-    // Create reviewer assignments (remove existing pending ones first)
-    await tenantScopedTable(knex, 'kb_article_reviewers', tenant)
-      .where({ article_id: articleId, review_status: 'pending' })
-      .del();
+      const reviewerRecords = uniqueReviewerIds.map((userId) => ({
+        tenant,
+        reviewer_id: randomUUID(),
+        article_id: articleId,
+        user_id: userId,
+        review_status: 'pending',
+        assigned_by: user.user_id,
+        assigned_at: trx.fn.now(),
+        reviewed_at: null,
+        review_notes: null,
+      }));
 
-    const reviewerRecords = reviewerUserIds.map((userId) => ({
-      tenant,
-      reviewer_id: randomUUID(),
-      article_id: articleId,
-      user_id: userId,
-      review_status: 'pending',
-      assigned_by: user.user_id,
-    }));
-
-    await tenantScopedTable(knex, 'kb_article_reviewers', tenant).insert(reviewerRecords);
+      // Re-requesting a reviewer who already decided resets their row to pending.
+      await tenantScopedTable(trx, 'kb_article_reviewers', tenant)
+        .insert(reviewerRecords)
+        .onConflict(['tenant', 'article_id', 'user_id'])
+        .merge(['review_status', 'assigned_by', 'assigned_at', 'reviewed_at', 'review_notes']);
+    });
 
     return true;
   }
@@ -537,31 +561,43 @@ export const completeReview = withAuth(
       throw new Error('articleId is required');
     }
 
-    // Update the reviewer record
-    const updated = await tenantScopedTable(knex, 'kb_article_reviewers', tenant)
-      .where({
-        article_id: articleId,
-        user_id: user.user_id,
-      })
-      .update({
-        review_status: status,
-        review_notes: notes || null,
-        reviewed_at: knex.fn.now(),
-      });
+    await withTransaction(knex, async (trx) => {
+      // Lock the article first so this and submitForReview take locks in the same order.
+      const article = await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
+        .forUpdate()
+        .first();
 
-    if (updated === 0) {
-      throw new Error('You are not assigned as a reviewer for this article');
-    }
+      if (!article) {
+        throw new Error('Article not found');
+      }
 
-    // Update article's last_reviewed metadata
-    await tenantScopedTable(knex, 'kb_articles', tenant)
-      .where({ article_id: articleId })
-      .update({
-        last_reviewed_at: knex.fn.now(),
-        last_reviewed_by: user.user_id,
-        updated_at: knex.fn.now(),
-        updated_by: user.user_id,
-      });
+      // Update the reviewer record
+      const updated = await tenantScopedTable(trx, 'kb_article_reviewers', tenant)
+        .where({
+          article_id: articleId,
+          user_id: user.user_id,
+        })
+        .update({
+          review_status: status,
+          review_notes: notes || null,
+          reviewed_at: trx.fn.now(),
+        });
+
+      if (updated === 0) {
+        throw new Error('You are not assigned as a reviewer for this article');
+      }
+
+      // Update article's last_reviewed metadata
+      await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
+        .update({
+          last_reviewed_at: trx.fn.now(),
+          last_reviewed_by: user.user_id,
+          updated_at: trx.fn.now(),
+          updated_by: user.user_id,
+        });
+    });
 
     return true;
   }
@@ -577,7 +613,7 @@ export const getKnowledgeBaseCategories = withAuth(
   ): Promise<IKBArticleCategory[] | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!tenant || !(await hasPermission(user, 'document', 'read'))) {
+    if (!tenant || !(await canReadKnowledgeBase(user))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -617,7 +653,7 @@ export const getArticles = withAuth(
 
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'read'))) {
+    if (!(await canReadKnowledgeBase(user))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -763,7 +799,7 @@ export const getArticlesWithTags = withAuth(
     const effectivePageSize = Math.min(Math.max(pageSize, 1), 100);
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'read'))) {
+    if (!(await canReadKnowledgeBase(user))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -902,7 +938,7 @@ export const getArticle = withAuth(
   ): Promise<IKBArticleWithDocument | null | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'read'))) {
+    if (!(await canReadKnowledgeBase(user))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -946,7 +982,7 @@ export const getStaleArticles = withAuth(
   ): Promise<IKBArticleWithDocument[] | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'read'))) {
+    if (!(await canReadKnowledgeBase(user))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -1031,7 +1067,7 @@ export const getArticleTemplates = withAuth(
   ): Promise<IKBArticleTemplate[] | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'read'))) {
+    if (!(await canReadKnowledgeBase(user))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -1294,36 +1330,19 @@ export const createArticleFromTicket = withAuth(
       throw new Error('Ticket not found');
     }
 
-    // Build article content from ticket data
+    // Build article content from ticket data (real description under "Problem")
     const title = `${ticket.title} - Resolution`;
-    const content = [
-      {
-        type: 'heading',
-        props: { level: 2 },
-        content: [{ type: 'text', text: 'Problem' }],
-      },
-      {
-        type: 'paragraph',
-        content: [{ type: 'text', text: ticket.description || 'No description provided.' }],
-      },
-      {
-        type: 'heading',
-        props: { level: 2 },
-        content: [{ type: 'text', text: 'Resolution' }],
-      },
-      {
-        type: 'paragraph',
-        content: [{ type: 'text', text: ticket.resolution || 'Enter resolution details here.' }],
-      },
-    ];
+    const content = buildKbArticleContentFromTicket(ticket);
 
     // Create the article through the shared model (avoids nested withAuth calls)
-    const article = await createKbArticle(knex, { tenant, userId: user.user_id }, {
-      title,
-      articleType: 'troubleshooting',
-      audience: 'internal',
-      content,
-    });
+    const article = await withTransaction(knex, (trx) =>
+      createKbArticle(trx, { tenant, userId: user.user_id }, {
+        title,
+        articleType: 'troubleshooting',
+        audience: 'internal',
+        content,
+      })
+    );
 
     await publishKbArticleCreated(tenant, article, user.user_id);
 

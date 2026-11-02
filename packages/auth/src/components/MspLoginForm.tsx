@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
-import { Label, Input, Button, Alert, AlertDescription, Checkbox } from '@alga-psa/ui/components';
+import { Label, Input, Button, Alert, AlertDescription, AlertTitle, Checkbox } from '@alga-psa/ui/components';
 import type { AlertProps } from '@alga-psa/types';
 import { useRegisterUIComponent, withDataAutomationId } from '@alga-psa/ui/ui-reflection';
 import type { FormComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection';
@@ -12,16 +12,34 @@ import SsoProviderButtons from '@alga-psa/auth/sso/entry';
 import CaptchaChallenge from './CaptchaChallenge';
 import { useLoginCaptcha } from './useLoginCaptcha';
 
+/**
+ * Server action that emails the user one sign-in link per organization. Injected
+ * by the app (it needs @alga-psa/tenancy and @alga-psa/email, which depend on
+ * this package), so this component never imports the concrete action.
+ */
+export type RequestSignInLinks = (
+  email: string,
+  callbackUrl?: string,
+) => Promise<{ success: boolean; message?: string; error?: string }>;
+
 interface MspLoginFormProps {
+  requestSignInLinks: RequestSignInLinks;
   callbackUrl: string;
   initialEmail?: string;
+  /** Validated organization slug from `?tenant=`; scopes password and SSO sign-in. */
+  tenantSlug?: string;
+  /** Open with the "email me sign-in links" offer (SSO `tenant_required` hand-off). */
+  initialTenantRequired?: boolean;
   onError: (alertInfo: AlertProps) => void;
   onTwoFactorRequired: () => void;
 }
 
 export default function MspLoginForm({
+  requestSignInLinks,
   callbackUrl,
   initialEmail,
+  tenantSlug,
+  initialTenantRequired = false,
   onError,
   onTwoFactorRequired,
 }: MspLoginFormProps) {
@@ -31,6 +49,9 @@ export default function MspLoginForm({
   const [isPublicWorkstation, setIsPublicWorkstation] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [tenantRequired, setTenantRequired] = useState(initialTenantRequired);
+  const [linksRequested, setLinksRequested] = useState(false);
+  const [isSendingLinks, setIsSendingLinks] = useState(false);
   const captcha = useLoginCaptcha();
   const { t } = useTranslation('msp/auth', { useSuspense: false });
 
@@ -61,20 +82,33 @@ export default function MspLoginForm({
     }
   };
 
+  const handleSendOrgLinks = async () => {
+    setIsSendingLinks(true);
+    try {
+      await requestSignInLinks(email, callbackUrl);
+    } catch {
+      // The confirmation is deliberately identical whatever happened.
+    } finally {
+      setLinksRequested(true);
+      setIsSendingLinks(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLookupError(null);
     setIsSubmitting(true);
 
     try {
-      const result = await signIn('credentials', {
+      const result = (await signIn('credentials', {
         email,
         password,
         userType: 'internal',
+        ...(tenantSlug ? { tenant: tenantSlug } : {}),
         redirect: false,
         callbackUrl,
         ...(captcha.token ? { captchaToken: captcha.token } : {}),
-      });
+      })) as unknown as { error?: string; code?: string; url?: string } | undefined;
 
       if (result?.error === '2FA_REQUIRED') {
         onTwoFactorRequired();
@@ -87,6 +121,12 @@ export default function MspLoginForm({
           title: t('signIn.errors.rateLimitedTitle', 'Too Many Attempts'),
           message: t('signIn.errors.rateLimitedMessage', 'Too many failed sign-in attempts. Please wait a few minutes before trying again.')
         });
+      } else if (result?.code === 'TENANT_REQUIRED') {
+        // The credentials were right, but the email belongs to internal users in
+        // more than one organization. Offer to email one scoped sign-in link per
+        // organization. Not a failed attempt, so leave the captcha alone.
+        setTenantRequired(true);
+        setLinksRequested(false);
       } else if (result?.error) {
         if (captcha.required) {
           captcha.refreshChallenge();
@@ -128,7 +168,12 @@ export default function MspLoginForm({
             name="email"
             placeholder={t('signIn.form.emailPlaceholder', 'Enter your email')}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              // The offer is about the previous address.
+              setTenantRequired(false);
+              setLinksRequested(false);
+            }}
             required
             autoComplete="email"
           />
@@ -177,6 +222,39 @@ export default function MspLoginForm({
         </Alert>
       )}
 
+      {tenantRequired && (
+        <Alert variant="info" id="msp-tenant-required-alert">
+          <AlertTitle>{t('signIn.tenantRequired.title', 'Choose your organization')}</AlertTitle>
+          <AlertDescription>
+            <p>
+              {t(
+                'signIn.tenantRequired.message',
+                'This email is used in more than one organization. We can email you a sign-in link for each one.'
+              )}
+            </p>
+            {linksRequested ? (
+              <p className="mt-2" id="msp-send-org-links-confirmation" role="status">
+                {t(
+                  'signIn.tenantRequired.sent',
+                  'If an account exists with that email, sign-in links have been sent.'
+                )}
+              </p>
+            ) : null}
+            <Button
+              type="button"
+              id="msp-send-org-links-button"
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              disabled={linksRequested || isSendingLinks || !email}
+              onClick={handleSendOrgLinks}
+            >
+              {t('signIn.tenantRequired.button', 'Email me my sign-in links')}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {captcha.required && captcha.config?.siteKey && (
         <CaptchaChallenge
           siteKey={captcha.config.siteKey}
@@ -222,6 +300,7 @@ export default function MspLoginForm({
        callbackUrl={callbackUrl}
        email={email}
        publicWorkstation={isPublicWorkstation}
+       tenantHint={tenantSlug}
        onError={(message) => setLookupError(message || null)}
      />
 

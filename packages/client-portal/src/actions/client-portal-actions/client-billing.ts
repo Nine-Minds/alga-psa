@@ -2,6 +2,7 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal billing actions intentionally compose billing feature APIs for end-user self-service flows. */
 
+import { recordQuoteLifecycleTransition } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
 import { getConnection, createTenantKnex, withTransaction, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { buildDocumentFileName } from '@alga-psa/core/fileNames';
@@ -33,6 +34,7 @@ import { withAuth } from '@alga-psa/auth';
 import { scheduleInvoiceEmailAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { JobStatus } from '@alga-psa/types';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { computeRemainingBlockValueMinor } from '@alga-psa/shared/billingClients/hourBlockService';
 import { getAvailableCredit } from '@alga-psa/billing/lib/creditBalance';
 import { onQuoteAccepted } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 import {
@@ -145,6 +147,11 @@ async function getAuthorizedClientQuote(
     return permissionError('Unauthorized to access quote data', 'client-portal:errors.access.quoteData');
   }
 
+  if (allowedStatuses?.length) {
+    // Serialize selection and acceptance together; a second accepter must recheck status
+    // before it can change the optional items represented by the first acceptance event.
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first('quote_id');
+  }
   const quote = await Quote.getById(trx, tenant, quoteId);
   if (!quote || quote.client_id !== clientId || quote.is_template || quote.status === 'draft') {
     return actionError('Quote not found or access denied', 'client-portal:errors.billing.quoteNotFound');
@@ -553,7 +560,7 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
           });
 
         if (markedViewed) {
-          await QuoteActivity.create(trx, tenant, {
+          const activity = await QuoteActivity.create(trx, tenant, {
             quote_id: quoteId,
             activity_type: 'viewed',
             description: 'Quote viewed by client in portal',
@@ -562,6 +569,7 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
               viewed_at: viewedAt,
             },
           });
+          await recordQuoteLifecycleTransition(trx, tenant, quote, { ...quote, viewed_at: viewedAt }, activity, { actor: { actorType: 'CONTACT', actorContactId: user.contact_id! } }, 'QUOTE_VIEWED');
         }
       }
 
@@ -651,7 +659,7 @@ export const acceptClientQuote = withAuth(async (
         accepted_at: acceptedAt,
         accepted_by: user.user_id,
         updated_by: user.user_id,
-      });
+      }, { actor: { actorType: 'CONTACT', actorContactId: user.contact_id! }, acceptedOnBehalf: false });
 
       await QuoteActivity.create(trx, tenant, {
         quote_id: quoteId,
@@ -709,7 +717,7 @@ export const rejectClientQuote = withAuth(async (
         rejected_at: rejectedAt,
         rejection_reason: trimmedReason,
         updated_by: user.user_id,
-      });
+      }, { actor: { actorType: 'CONTACT', actorContactId: user.contact_id! }, acceptedOnBehalf: false });
 
       await QuoteActivity.create(trx, tenant, {
         quote_id: quoteId,
@@ -1448,6 +1456,16 @@ export interface ClientPortalHourBlock {
   expiration_date: string | null;
   status: string;
   currency_code: string | null;
+  /** The block's hourly rate in minor units of `currency_code`; null when it carries none. */
+  hourly_rate: number | null;
+  /**
+   * Value of the remaining hours in minor units of `currency_code` (remaining hours x the
+   * block's hourly rate), rounded once here so the portal only formats it. 0 when the block
+   * carries no rate.
+   */
+  remaining_value: number;
+  /** First day the block can be drawn (cadence blocks); null when it has no lower bound. */
+  valid_from: string | null;
   /** Owning contract's name for contract-issued (Prepaid Block) blocks; null for ad-hoc blocks. */
   contract_name: string | null;
   expiring_soon_days: number | null;
@@ -1504,6 +1522,8 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
           'hb.total_minutes',
           'hb.remaining_minutes',
           'hb.expiration_date',
+          'hb.valid_from',
+          'hb.hourly_rate',
           'hb.status',
           'hb.currency_code',
           { service_name: 'sc.service_name' },
@@ -1540,6 +1560,12 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
           expiration_date: expirationDate,
           status: String(row.status),
           currency_code: (row.currency_code as string) ?? null,
+          hourly_rate: row.hourly_rate == null ? null : Number(row.hourly_rate),
+          remaining_value: computeRemainingBlockValueMinor({
+            remaining_minutes: remaining,
+            hourly_rate: row.hourly_rate as number | string | null,
+          }),
+          valid_from: toCalendarDateString(row.valid_from as string | Date | null),
           contract_name: (row.contract_name as string | null) ?? null,
           expiring_soon_days: expiringSoonDays,
         };

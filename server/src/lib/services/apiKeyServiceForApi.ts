@@ -4,6 +4,7 @@ import { isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { shouldTouchApiKeyLastUsed } from '@alga-psa/auth';
 import { getConnection } from '../db/db';
 import { servicePrincipalKeyGate } from '@product/service-principals/entry';
+import { coManagedAcceptancePendingError, isCoManagedAwaitingAcceptanceLazily, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 
 interface ApiKey {
   api_key_id: string;
@@ -78,6 +79,12 @@ export class ApiKeyServiceForApi {
         return null;
       }
 
+      // Some controllers validate keys directly instead of using the API
+      // middleware. Refuse pending workspaces before updating key state.
+      if (await isCoManagedAwaitingAcceptanceLazily(async () => knex, tenantId)) {
+        throw coManagedAcceptancePendingError();
+      }
+
       const gateReason = await this.getKeyGateReason(knex, tenantId, record.user_id);
       if (gateReason) {
         console.log(`API key rejected (${gateReason}) in tenant ${tenantId}`);
@@ -112,6 +119,7 @@ export class ApiKeyServiceForApi {
 
       return record;
     } catch (error) {
+      if (isCoManagedLifecycleError(error)) throw error;
       console.error(`Error validating API key in tenant ${tenantId}:`, error);
       return null;
     }
@@ -156,6 +164,10 @@ export class ApiKeyServiceForApi {
         return null;
       }
 
+      if (await isCoManagedAwaitingAcceptanceLazily(async () => knex, record.tenant)) {
+        throw coManagedAcceptancePendingError();
+      }
+
       const gateReason = await this.getKeyGateReason(knex, record.tenant, record.user_id);
       if (gateReason) {
         console.log(`API key rejected (${gateReason}) in tenant ${record.tenant}`);
@@ -190,6 +202,7 @@ export class ApiKeyServiceForApi {
 
       return record;
     } catch (error) {
+      if (isCoManagedLifecycleError(error)) throw error;
       console.error('Error validating API key:', error);
       return null;
     }

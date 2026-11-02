@@ -149,6 +149,8 @@ export enum IEditScope {
 export interface CreateScheduleEntryOptions {
   assignedUserIds: string[];
   assignedByUserId?: string;
+  /** Pre-reserved entry id (a durable operation names the entry before it exists). */
+  entryId?: string;
 }
 
 export enum Views {

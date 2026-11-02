@@ -33,6 +33,7 @@ export interface ITeamMember extends IUserWithRoles {
 export interface ITeam extends TenantEntity {
   team_id: string;
   team_name: string;
+  description?: string | null;
   manager_id: string | null;
   created_at?: Date;
   updated_at?: Date;

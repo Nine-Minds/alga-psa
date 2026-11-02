@@ -881,6 +881,7 @@
       "add": "Añadir",
       "remove": "Eliminar",
       "empty": "Aún no hay mapeos.",
+      "nameRequired": "Ingrese un nombre para este mapeo.",
       "expressionLabel": "Expresión"
     },
     "schemaForm": {
@@ -1478,6 +1479,9 @@
         "contains": "contiene",
         "starts_with": "empieza por",
         "ends_with": "termina en",
+        "not_contains": "no contiene",
+        "not_starts_with": "no empieza por",
+        "not_ends_with": "no termina en",
         "is_empty": "está vacío",
         "is_not_empty": "no está vacío"
       },

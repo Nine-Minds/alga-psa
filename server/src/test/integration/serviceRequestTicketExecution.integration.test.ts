@@ -45,6 +45,11 @@ function schemaTable(table: string) {
 }
 
 async function cleanupTenant(tenant: string): Promise<void> {
+  await tenantTable(tenant, 'ticket_audit_logs').del();
+  await tenantTable(tenant, 'ticket_checklist_items').del();
+  await tenantTable(tenant, 'checklist_template_apply_rules').del();
+  await tenantTable(tenant, 'checklist_template_items').del();
+  await tenantTable(tenant, 'checklist_templates').del();
   await tenantTable(tenant, 'service_request_submission_attachments').del();
   await tenantTable(tenant, 'service_request_submissions').del();
   await tenantTable(tenant, 'service_request_definition_versions').del();
@@ -259,6 +264,11 @@ describe('service request ticket-only execution', () => {
       },
     });
 
+    const templateId = uuidv4();
+    await tenantTable(fixture.tenant, 'checklist_templates').insert({ tenant: fixture.tenant, template_id: templateId, name: 'Service request steps', is_active: true });
+    await tenantTable(fixture.tenant, 'checklist_template_items').insert({ tenant: fixture.tenant, template_id: templateId, item_name: 'Linked before auto-apply', order_number: 0, is_required: false });
+    await tenantTable(fixture.tenant, 'checklist_template_apply_rules').insert({ tenant: fixture.tenant, template_id: templateId, is_enabled: true, where: JSON.stringify({ join: 'and', clauses: [{ path: 'service_request_definition_id', operator: 'equals', value: definitionId }] }) });
+
     const result = await submitPortalServiceRequest({
       knex: db,
       tenant: fixture.tenant,
@@ -286,6 +296,9 @@ describe('service request ticket-only execution', () => {
       .where({ ticket_id: result.createdTicketId })
       .first();
     expect(createdTicket).toBeTruthy();
+    const appliedItem = await tenantTable(fixture.tenant, 'ticket_checklist_items')
+      .where({ ticket_id: result.createdTicketId, template_id: templateId }).first();
+    expect(appliedItem?.item_name).toBe('Linked before auto-apply');
     expect(createdTicket.title).toBe('New Hire Laptop');
     expect(createdTicket.board_id).toBe(fixture.boardId);
     expect(createdTicket.status_id).toBe(fixture.statusId);

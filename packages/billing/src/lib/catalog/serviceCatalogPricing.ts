@@ -57,13 +57,13 @@ const supportedCurrencies = (): string[] => CURRENCY_OPTIONS.map((option) => opt
 
 export const currencyCodeSchema = z.string().refine(
   (code) => supportedCurrencies().includes(code),
-  () => ({ message: `currency_code must be one of: ${supportedCurrencies().join(', ')}` }),
+  { error: () => `currency_code must be one of: ${supportedCurrencies().join(', ')}` },
 );
 
 /** Integer minor units. A numeric string is accepted so a GET response can be PUT back. */
 export const minorUnitRateSchema = z.preprocess(
   (value) => (typeof value === 'string' && /^\d+$/.test(value.trim()) ? Number(value.trim()) : value),
-  z.number({ invalid_type_error: 'rate must be an integer number of minor units' })
+  z.number({ error: 'rate must be an integer number of minor units' })
     .int('rate must be an integer number of minor units (no fractions)')
     .min(0, 'rate must not be negative'),
 );
@@ -111,7 +111,7 @@ export const scheduledServicePriceInputSchema = z
   .object({
     currency_code: currencyCodeSchema,
     rate: minorUnitRateSchema,
-    effective_date: z.unknown(),
+    effective_date: z.unknown().optional(),
     ...echoShape,
   })
   .strict()
@@ -193,7 +193,7 @@ export interface WriteServiceCatalogPricingResult {
   servicePatch: { default_rate?: number };
 }
 
-function parseOrThrow<T>(schema: z.ZodType<T, z.ZodTypeDef, unknown>, value: unknown, label: string): T {
+function parseOrThrow<T>(schema: z.ZodType<T, unknown>, value: unknown, label: string): T {
   const parsed = schema.safeParse(value);
   if (!parsed.success) {
     throw new ServiceCatalogPricingError(
@@ -240,7 +240,7 @@ export async function writeServiceCatalogPricing(
     throw new ServiceCatalogPricingError([DEFAULT_RATE_CONFLICT_MESSAGE]);
   }
   if (current === undefined && input.defaultRate !== undefined) {
-    parseOrThrow(minorUnitRateSchema as z.ZodType<number, z.ZodTypeDef, unknown>, input.defaultRate, 'default_rate');
+    parseOrThrow(minorUnitRateSchema as z.ZodType<number, unknown>, input.defaultRate, 'default_rate');
   }
 
   await lockTenantBilling(trx, tenant);

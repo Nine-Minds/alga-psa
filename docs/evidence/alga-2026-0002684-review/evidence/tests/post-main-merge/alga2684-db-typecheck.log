@@ -1,0 +1,2 @@
+Command: node --max-old-space-size=12288 node_modules/typescript/bin/tsc --noEmit -p packages/db/tsconfig.json
+Exit code: 0

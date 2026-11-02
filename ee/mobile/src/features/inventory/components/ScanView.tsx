@@ -116,7 +116,7 @@ export function ScanView() {
             navigation.navigate("ProjectTaskDetail", { taskId: id });
             return;
           default:
-            // project, rma: no mobile screen. Rebuild the URL on the
+            // project, rma, staging_container: no mobile screen. Rebuild the URL on the
             // connected server; never open the scanned string.
             if (baseUrl) {
               setRecordNotice({ kind: "browser", url: recordUrl(entityType, id, baseUrl, { projectId }) });

@@ -13,6 +13,7 @@ import { formatLocationAddress } from '@alga-psa/core';
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '../../auth/rbac';
+import { describeStatusChangeBlock } from '../../invoices/invoiceStatusPolicy';
 import { auditLog } from '../../logging/auditLog';
 import { publishEvent, publishUnregisteredEventType, publishWorkflowEvent } from '../../eventBus/publishers';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, NotImplementedError, ValidationError } from '../middleware/apiMiddleware';
@@ -42,6 +43,9 @@ import {
 } from '@alga-psa/billing/actions/invoiceGeneration.constants';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
+import { changeInvoiceTaxSourceInternal } from '@alga-psa/billing/actions/taxSourceActions';
+import { assertInvoiceNotExported } from '@alga-psa/billing/services/accountingSync/invoiceExportGuards';
+import type { TaxSource } from '@alga-psa/types';
 import {
   settlePrepaidReplenishmentInvoice,
   deleteInvoiceWithKnex,
@@ -53,6 +57,7 @@ import { NumberingService } from '@shared/services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
 import { notifyInvoiceTerminalStatus } from '@alga-psa/billing/services';
 import { StorageService } from '@alga-psa/storage/StorageService';
+import { resolveInvoiceBillingTerms } from '@alga-psa/billing/lib/billing/invoiceDueDate';
 import InvoiceModel from '@alga-psa/billing/models/invoice';
 
 // Import schemas and interfaces
@@ -78,6 +83,7 @@ import {
   UpdateRecurringInvoiceTemplate,
   InvoicePreviewRequest,
 } from '../schemas/invoiceSchemas';
+import { INVOICE_UPDATE_FIELDS, LIFECYCLE_OWNED_FIELDS } from '../schemas/invoiceUpdateFields';
 
 import {
   IInvoice,
@@ -98,7 +104,7 @@ import {
   updateInvoiceTotalsAndRecordTransaction
 } from '@alga-psa/billing/services/invoiceService';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
-import { paymentTermDays } from '@alga-psa/shared/billingClients/paymentPreferences';
+import { repointHeaderFollowingCharges } from '@alga-psa/billing/lib/billing/repointHeaderFollowingCharges';
 import { getClientDefaultBillingProfileId } from '@alga-psa/billing/lib/billing/billingProfileLookup';
 
 type DeferredEvent = () => Promise<void>;
@@ -258,6 +264,12 @@ export interface InvoiceHATEOASLinks {
   payment?: string;
 }
 
+const TAX_SOURCES: ReadonlySet<string> = new Set<TaxSource>(['internal', 'external', 'pending_external']);
+// The update schema already validates tax_source; this narrows the inferred
+// request type to TaxSource for the shared tax-source change.
+const isTaxSource = (value: unknown): value is TaxSource =>
+  typeof value === 'string' && TAX_SOURCES.has(value);
+
 export class InvoiceService extends BaseService<IInvoice> {
   private taxService: TaxService;
   private billingEngine: BillingEngine;
@@ -325,16 +337,25 @@ export class InvoiceService extends BaseService<IInvoice> {
     return summarizeInvoiceRecurringProvenance(charges);
   }
 
-  private async computeDueDate(trx: Knex.Transaction, tenant: string, clientId: string, invoiceDate: string): Promise<string> {
-    const client = await tenantDb(trx, tenant).table('clients')
-      .where({ client_id: clientId })
-      .select('payment_terms')
-      .first();
-
-    const plainInvoiceDate = Temporal.PlainDate.from(invoiceDate);
-    return plainInvoiceDate
-      .add({ days: paymentTermDays(client?.payment_terms) })
-      .toString();
+  /**
+   * A billing profile may only be attached to an invoice of the client that
+   * owns it, and only while the profile is active.
+   */
+  private async assertBillingProfileBelongsToClient(
+    trx: Knex.Transaction,
+    tenant: string,
+    clientId: string,
+    billingProfileId: string,
+  ): Promise<void> {
+    const profile = await tenantDb(trx, tenant).table('client_billing_profiles')
+      .where({ billing_profile_id: billingProfileId })
+      .first('client_id', 'is_active');
+    if (!profile || profile.client_id !== clientId || profile.is_active === false) {
+      throw new ValidationError('The selected billing profile is not available for this client', {
+        code: 'BILLING_PROFILE_NOT_FOUND',
+        billingProfileId,
+      });
+    }
   }
 
   /**
@@ -637,6 +658,23 @@ export class InvoiceService extends BaseService<IInvoice> {
         }
       }
 
+      const invoiceDate = data.invoice_date || new Date().toISOString().split('T')[0];
+
+      // Terms follow the client's effective billing identity; explicit caller
+      // values win.
+      if (data.billing_profile_id) {
+        await this.assertBillingProfileBelongsToClient(trx, context.tenant, data.client_id, data.billing_profile_id);
+      }
+      const billingTerms = data.client_id
+        ? await resolveInvoiceBillingTerms(
+            trx,
+            context.tenant,
+            data.client_id,
+            invoiceDate,
+            data.billing_profile_id,
+          )
+        : null;
+
       // Prepare invoice data
       const invoiceData = await this.filterAuditFields(trx, {
         invoice_id: uuidv4(),
@@ -644,8 +682,10 @@ export class InvoiceService extends BaseService<IInvoice> {
         client_id: data.client_id,
         billing_cycle_id: data.billing_cycle_id,
         status: data.status || 'draft',
-        invoice_date: data.invoice_date || new Date().toISOString().split('T')[0],
-        due_date: data.due_date,
+        invoice_date: invoiceDate,
+        due_date: data.due_date ?? billingTerms?.dueDate,
+        payment_method: data.payment_method ?? billingTerms?.paymentMethod ?? null,
+        billing_profile_id: data.billing_profile_id ?? billingTerms?.billingProfileId ?? null,
         subtotal: data.subtotal || 0,
         tax: taxCalculation?.tax_amount || 0,
         total_amount: data.total_amount || 0,
@@ -668,7 +708,9 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       // Create line items if provided
       if (data.items?.length) {
-        await this.createInvoiceLineItems(invoice.invoice_id, data.items, trx, context);
+        // Only a caller-supplied profile makes the charges 'explicit'; a header
+        // profile back-filled from billingTerms keeps them 'client_default'.
+        await this.createInvoiceLineItems(invoice.invoice_id, data.items, trx, context, data.billing_profile_id ?? null);
       }
 
       // Audit log
@@ -708,21 +750,91 @@ export class InvoiceService extends BaseService<IInvoice> {
   async update(id: string, data: UpdateInvoice, context: ServiceContext): Promise<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'update');
 
+    // Defense in depth behind updateInvoiceSchema: status, identity and monetary
+    // fields are owned by dedicated commands (finalize/send/recordPayment/void/...),
+    // so a caller holding only invoice:update can never write them here.
+    const allowedFields: readonly string[] = INVOICE_UPDATE_FIELDS;
+    const lifecycleFields: readonly string[] = LIFECYCLE_OWNED_FIELDS;
+    const submittedKeys = Object.keys(data ?? {}).filter(
+      (key) => (data as Record<string, unknown>)[key] !== undefined
+    );
+    const lifecycleKey = submittedKeys.find((key) => lifecycleFields.includes(key));
+    if (lifecycleKey) {
+      throw new ValidationError(
+        `Field '${lifecycleKey}' cannot be changed by updating an invoice; use the dedicated invoice command instead`,
+        [{ path: [lifecycleKey], message: 'Field is managed by an invoice lifecycle command' }]
+      );
+    }
+    const unknownKey = submittedKeys.find((key) => !allowedFields.includes(key));
+    if (unknownKey) {
+      throw new ValidationError(`Field '${unknownKey}' is not editable on an invoice`, [
+        { path: [unknownKey], message: 'Unrecognized field' },
+      ]);
+    }
+
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
 
     await withTransaction(knex, async (trx) => {
       const existing = await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: id })
+        .forUpdate()
         .first();
 
       if (!existing) {
         throw new NotFoundError('Invoice not found');
       }
 
-      // Validate business rules
-      if (existing.status === 'paid' && data.status && data.status !== 'paid') {
-        throw new ConflictError('Cannot modify paid invoice status');
+      // An invoice already exported (or being exported) to an accounting system
+      // is frozen; same guard as the invoice editor, inside this transaction.
+      if (submittedKeys.length > 0) {
+        try {
+          await assertInvoiceNotExported(trx, context.tenant, id, 'edit');
+        } catch (error) {
+          throw new ConflictError(error instanceof Error ? error.message : 'Invoice has been exported');
+        }
+      }
+
+      // Invoice and due dates are draft-only billing terms, as in the editor.
+      for (const dateField of ['invoice_date', 'due_date'] as const) {
+        const next = data[dateField];
+        if (next !== undefined && existing.status !== 'draft') {
+          const toDay = (value: unknown) =>
+            value instanceof Date ? value.toISOString().slice(0, 10) : String(value ?? '').slice(0, 10);
+          if (toDay(next) !== toDay(existing[dateField])) {
+            throw new ConflictError(`${dateField} can only be changed on draft invoices`);
+          }
+        }
+      }
+
+      // Payment method is a draft-only term; an unchanged value (null and
+      // undefined alike) is a harmless round-trip. Billing profile must belong
+      // to the invoice's client and is locked once any payment is recorded.
+      if (
+        data.payment_method !== undefined
+        && existing.status !== 'draft'
+        && (data.payment_method ?? null) !== (existing.payment_method ?? null)
+      ) {
+        throw new ConflictError('Payment method can only be changed on draft invoices');
+      }
+      if (data.billing_profile_id) {
+        await this.assertBillingProfileBelongsToClient(
+          trx,
+          context.tenant,
+          existing.client_id,
+          data.billing_profile_id,
+        );
+      }
+      if (
+        data.billing_profile_id !== undefined
+        && data.billing_profile_id !== existing.billing_profile_id
+      ) {
+        const recordedPayment = await tenantDb(trx, context.tenant).table('invoice_payments')
+          .where({ invoice_id: id })
+          .first('invoice_id');
+        if (recordedPayment) {
+          throw new ConflictError('Billing profile cannot be changed once payments exist against the invoice');
+        }
       }
 
       // Item replacement rewrites invoice_charges, so it is only valid for drafts
@@ -749,9 +861,57 @@ export class InvoiceService extends BaseService<IInvoice> {
         }
       }
 
-      // Prepare update data. `items` is not an invoices column; it is handled below.
-      const { items: _items, ...headerData } = data;
+      // A tax-source change has its own rules and side effects (draft tax
+      // recalculation, finalized-invoice guard), so it never rides the header
+      // update below.
+      if (isTaxSource(data.tax_source) && data.tax_source !== existing.tax_source) {
+        const taxSourceChange = await changeInvoiceTaxSourceInternal(trx, context.tenant, id, data.tax_source);
+        if (!taxSourceChange.success) {
+          throw new ConflictError(taxSourceChange.error);
+        }
+      }
+
+      // Prepare update data. `items` and `tax_source` are handled separately.
+      const { items: _items, tax_source: _taxSource, ...headerData } = data;
       const updateData: any = await this.addUpdateAuditFields(trx, headerData, context, 'invoices');
+
+      // Changing the billing profile of a draft re-resolves the profile-derived
+      // terms (payment method, due date); caller-supplied values in the same
+      // request win. Clearing the profile (null) falls back to the client default.
+      const profileChangedOnDraft = existing.status === 'draft'
+        && data.billing_profile_id !== undefined
+        && data.billing_profile_id !== existing.billing_profile_id;
+      let repointToProfileId: string | null | undefined;
+      let repointSource: 'explicit' | 'client_default' = 'client_default';
+      if (profileChangedOnDraft) {
+        const termsClientId = existing.client_id;
+        if (termsClientId) {
+          const rawInvoiceDate = data.invoice_date ?? existing.invoice_date;
+          const termsInvoiceDate = rawInvoiceDate instanceof Date
+            ? rawInvoiceDate.toISOString()
+            : String(rawInvoiceDate);
+          const terms = await resolveInvoiceBillingTerms(
+            trx,
+            context.tenant,
+            termsClientId,
+            termsInvoiceDate,
+            data.billing_profile_id,
+          );
+          if (data.payment_method === undefined) {
+            updateData.payment_method = terms.paymentMethod;
+          }
+          if (data.due_date === undefined) {
+            updateData.due_date = terms.dueDate;
+          }
+          repointToProfileId = terms.billingProfileId;
+          // A caller-chosen profile is 'explicit' (same rule as create); a
+          // cleared profile falls back to the default -> 'client_default'.
+          repointSource = data.billing_profile_id ? 'explicit' : 'client_default';
+          if (!data.billing_profile_id) {
+            updateData.billing_profile_id = terms.billingProfileId;
+          }
+        }
+      }
 
       // Remove undefined values
       Object.keys(updateData).forEach(key => {
@@ -764,6 +924,21 @@ export class InvoiceService extends BaseService<IInvoice> {
       await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: id })
         .update(updateData);
+
+      // Re-point only the charges that were following the header (same rule as
+      // the invoice editor: profile equals the old header profile or is NULL).
+      // Charges attributed elsewhere keep profile and source; contract_line /
+      // contract / work_item charges that move keep their source. Skipped when
+      // items are replaced below (createInvoiceLineItems attributes the new ones).
+      if (repointToProfileId !== undefined && !data.items) {
+        await repointHeaderFollowingCharges(trx, {
+          tenant: context.tenant,
+          invoiceId: id,
+          fromProfileId: existing.billing_profile_id,
+          toProfileId: repointToProfileId,
+          source: repointSource,
+        });
+      }
 
       // Update line items if provided
       if (data.items) {
@@ -798,7 +973,20 @@ export class InvoiceService extends BaseService<IInvoice> {
         return it;
       });
 
-      await this.createInvoiceLineItems(id, normalizedItems, trx, context);
+      // Caller intent: a profile named in this request, else the header's
+      // existing profile unless it is just the client default.
+      let callerProfileId: string | null;
+      if (data.billing_profile_id !== undefined) {
+        callerProfileId = data.billing_profile_id;
+      } else {
+        const defaultProfileId = existing.client_id
+          ? await getClientDefaultBillingProfileId(trx, context.tenant, existing.client_id)
+          : null;
+        callerProfileId = existing.billing_profile_id && existing.billing_profile_id !== defaultProfileId
+          ? existing.billing_profile_id
+          : null;
+      }
+      await this.createInvoiceLineItems(id, normalizedItems, trx, context, callerProfileId);
       }
 
       const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, id);
@@ -1744,9 +1932,11 @@ export class InvoiceService extends BaseService<IInvoice> {
             continue;
           }
 
-          // Validate status transition
-          if (!this.isValidStatusTransition(invoice.status, data.status)) {
-            results.errors.push(`Invalid status transition from ${invoice.status} to ${data.status} for invoice ${invoiceId}`);
+          // Shared transition policy: command-owned and invalid transitions
+          // become per-invoice errors; side effects are never performed inline.
+          const blocked = describeStatusChangeBlock(invoice.status, data.status);
+          if (blocked) {
+            results.errors.push(`${blocked} (invoice ${invoiceId})`);
             continue;
           }
 
@@ -1754,7 +1944,6 @@ export class InvoiceService extends BaseService<IInvoice> {
             .where({ invoice_id: invoiceId })
             .update(await this.filterAuditFields(trx, {
               status: data.status,
-              finalized_at: data.finalized_at,
               updated_by: context.userId,
               updated_at: new Date()
             }, 'invoices'));
@@ -2048,7 +2237,19 @@ export class InvoiceService extends BaseService<IInvoice> {
     try {
       await withTransaction(knex, async (trx) => {
         const client = await getClientDetails(trx, tenant, data.clientId);
-        const computedDueDate = await this.computeDueDate(trx, tenant, data.clientId, currentDate);
+
+        // A caller-selected profile must belong to this client (and be active);
+        // otherwise the client's default profile supplies the terms.
+        if (data.billingProfileId) {
+          await this.assertBillingProfileBelongsToClient(trx, tenant, data.clientId, data.billingProfileId);
+        }
+        const billingTerms = await resolveInvoiceBillingTerms(
+          trx,
+          tenant,
+          data.clientId,
+          currentDate,
+          data.billingProfileId,
+        );
 
         await tenantDb(trx, tenant).table('invoices').insert({
           invoice_id: invoiceId,
@@ -2056,7 +2257,9 @@ export class InvoiceService extends BaseService<IInvoice> {
           client_id: data.clientId,
           invoice_number: invoiceNumber,
           invoice_date: currentDate,
-          due_date: computedDueDate,
+          due_date: billingTerms.dueDate,
+          payment_method: billingTerms.paymentMethod,
+          billing_profile_id: billingTerms.billingProfileId,
           status: 'draft',
           subtotal: 0,
           tax: 0,
@@ -2069,9 +2272,17 @@ export class InvoiceService extends BaseService<IInvoice> {
         await persistManualInvoiceCharges(
           trx,
           invoiceId,
+          // Mirrors the UI manual path (manualInvoiceActions): a charge carries
+          // the profile the caller named, else nothing -
+          // persistManualInvoiceCharges then attributes it to the client
+          // default ('client_default'). The header still uses the resolved
+          // profile; only caller-supplied profiles make charges 'explicit'.
           data.items.map((item) => ({
             ...item,
-            rate: Math.round(item.rate)
+            rate: Math.round(item.rate),
+            // LEVERAGE: pattern item-profile-or-caller-profile — see createInvoiceLineItems
+            // (the REST manual item schema has no per-item profile, so only the caller's argument applies)
+            billing_profile_id: data.billingProfileId ?? undefined
           })),
           client,
           sessionLike as any,
@@ -2410,21 +2621,6 @@ export class InvoiceService extends BaseService<IInvoice> {
     // TODO: Implement proper permission checking when user object is available in context
   }
 
-  private isValidStatusTransition(currentStatus: string, newStatus: string): boolean {
-    const validTransitions: Record<string, string[]> = {
-      'draft': ['sent', 'cancelled'],
-      'sent': ['paid', 'partially_applied', 'overdue', 'cancelled'],
-      'partially_applied': ['paid', 'sent', 'overdue', 'cancelled'], // 'sent' for full refund
-      'overdue': ['paid', 'partially_applied', 'cancelled'],
-      'paid': ['partially_applied', 'sent'], // Allow refund transitions
-      'cancelled': [],
-      'pending': ['sent', 'cancelled'],
-      'prepayment': ['paid', 'cancelled']
-    };
-
-    return validTransitions[currentStatus]?.includes(newStatus) || false;
-  }
-
   // Additional helper methods...
   async getInvoiceLineItems(
     invoiceId: string,
@@ -2603,7 +2799,23 @@ export class InvoiceService extends BaseService<IInvoice> {
       .orderBy('created_at', 'desc');
   }
 
-  private async createInvoiceLineItems(invoiceId: string, lineItems: any[], trx: Knex.Transaction, context: ServiceContext): Promise<void> {
+  /**
+   * `callerBillingProfileId` is the profile the CALLER chose for the invoice
+   * header (not whatever the header row happens to hold). Attribution rule,
+   * shared with the UI manual path (manualInvoiceActions: `item ?? caller`):
+   *   - item names a profile            -> that profile, source 'explicit'
+   *   - else caller chose a header one  -> that profile, source 'explicit'
+   *   - else (nothing chosen)           -> client default, 'client_default'
+   * A header profile that create() back-filled from the client default is NOT
+   * caller intent, so it must not be passed here.
+   */
+  private async createInvoiceLineItems(
+    invoiceId: string,
+    lineItems: any[],
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    callerBillingProfileId: string | null = null,
+  ): Promise<void> {
     // Line items persist to the canonical `invoice_charges` table (surfaced to
     // the `invoice_items` view). `total_price`/`net_amount` are calculated
     // server-side from `unit_price`/`quantity` when the caller omits them.
@@ -2645,8 +2857,9 @@ export class InvoiceService extends BaseService<IInvoice> {
         applies_to_service_id: item.applies_to_service_id,
         client_contract_id: item.client_contract_id,
         location_id: item.location_id,
-        billing_profile_id: item.billing_profile_id ?? defaultBillingProfileId,
-        billing_profile_source: item.billing_profile_id ? 'explicit' : 'client_default',
+        // LEVERAGE: pattern item-profile-or-caller-profile — item ?? caller, source explicit/client_default (also manualInvoiceActions, persistManualInvoiceCharges)
+        billing_profile_id: item.billing_profile_id ?? callerBillingProfileId ?? defaultBillingProfileId,
+        billing_profile_source: (item.billing_profile_id ?? callerBillingProfileId) ? 'explicit' : 'client_default',
         created_by: context.userId,
         tenant: context.tenant,
         created_at: new Date()

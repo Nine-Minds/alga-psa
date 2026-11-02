@@ -281,7 +281,7 @@ export interface AssetDocument {
 
 // Maintenance interfaces
 export type MaintenanceFrequency = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom';
-export type MaintenanceType = 'preventive' | 'inspection' | 'calibration' | 'replacement';
+export type MaintenanceType = 'preventive' | 'corrective' | 'inspection' | 'calibration' | 'replacement';
 export type MaintenanceStatus = 'due' | 'overdue' | 'upcoming' | 'completed';
 
 export interface AssetMaintenanceSchedule {

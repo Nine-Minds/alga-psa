@@ -1,5 +1,6 @@
 import type { FixedPricingBasis } from '@alga-psa/types';
 import { isUnitPricedFixedConfig } from './usageSemantics';
+import { normalizeToMonthlyCents } from '@alga-psa/shared/billingClients/recurringMemberRate';
 
 // Client-safe re-export, as resolveFixedLineRate is re-exported for billing.
 export * from '@alga-psa/shared/billingClients/fixedMemberRate';
@@ -64,23 +65,21 @@ export function fixedServicesRecurringTotalCents(
   return unitTotal + (hasBundleFixedService(services) ? Number(bundleBaseRateCents ?? 0) : 0);
 }
 
-// LEVERAGE: pattern monthly-cadence-normalization — twin of shared/billingClients/contractMonthlyValue.normalizeToMonthlyCents;
-// that module imports the server DB layer, so client-side wizard code cannot import it. The pure cadence math
-// belongs in a client-safe layer both import.
-function normalizeToMonthlyCents(amountCents: number, billingFrequency: string | null | undefined): number {
-  switch (billingFrequency) {
-    case 'weekly':
-      return Math.round(amountCents * 4.33);
-    case 'quarterly':
-      return Math.round(amountCents / 3);
-    case 'semi-annually':
-    case 'semi_annually':
-      return Math.round(amountCents / 6);
-    case 'annually':
-      return Math.round(amountCents / 12);
-    default:
-      return Math.round(amountCents);
-  }
+export type FixedLinePeriodInput = {
+  billing_frequency?: string | null;
+  base_rate?: number | null;
+  services: ReadonlyArray<FixedServiceBasisFields>;
+};
+
+/**
+ * Un-normalized recurring amount of ONE billing period of a fixed line. A
+ * service-less line contributes only its base rate, matching the stored-contract
+ * valuation.
+ */
+export function fixedLinePeriodCents(line: FixedLinePeriodInput): number {
+  return line.services.length === 0
+    ? Number(line.base_rate ?? 0)
+    : fixedServicesRecurringTotalCents(line.services, line.base_rate);
 }
 
 /**
@@ -91,20 +90,14 @@ function normalizeToMonthlyCents(amountCents: number, billingFrequency: string |
  * matching the stored-contract valuation.
  */
 export function fixedLinesRecurringTotalCents(
-  lines: ReadonlyArray<{
-    billing_frequency?: string | null;
-    base_rate?: number | null;
-    services: ReadonlyArray<FixedServiceBasisFields>;
-  }>,
+  lines: ReadonlyArray<FixedLinePeriodInput>,
   defaultBillingFrequency?: string | null,
 ): number {
-  return lines.reduce((sum, line) => {
-    const amount =
-      line.services.length === 0
-        ? Number(line.base_rate ?? 0)
-        : fixedServicesRecurringTotalCents(line.services, line.base_rate);
-    return sum + normalizeToMonthlyCents(amount, line.billing_frequency ?? defaultBillingFrequency);
-  }, 0);
+  return lines.reduce(
+    (sum, line) =>
+      sum + normalizeToMonthlyCents(fixedLinePeriodCents(line), line.billing_frequency ?? defaultBillingFrequency),
+    0,
+  );
 }
 
 /**

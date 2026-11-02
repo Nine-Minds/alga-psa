@@ -8,6 +8,11 @@ import { ApiKeyServiceForApi } from '../../services/apiKeyServiceForApi';
 import { runWithTenant } from '../../db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { runWithApiKeyUser } from '@alga-psa/auth';
+import { getAdminConnection } from '@alga-psa/db';
+import {
+  coManagedAcceptancePendingError,
+  isCoManagedAwaitingAcceptanceLazily,
+} from '@alga-psa/licensing/lifecycle';
 import { getTenantProduct, ProductAccessError } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import { 
@@ -72,6 +77,12 @@ export async function authenticateApiKeyRequest(
 
   if (!tenantId) {
     throw new UnauthorizedError('Tenant ID not found');
+  }
+
+  // A co-managed workspace awaiting its customer's acceptance has no API yet. Cached per
+  // process, so a plain PSA tenant pays no statement here after the first probe.
+  if (await isCoManagedAwaitingAcceptanceLazily(() => getAdminConnection(), tenantId)) {
+    throw coManagedAcceptancePendingError();
   }
 
   const apiRequest = req as AuthenticatedApiRequest;

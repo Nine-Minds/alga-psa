@@ -1615,4 +1615,26 @@ describe('titled sections with nothing to head', () => {
     expect(rendered.css).toContain('section > h2 + * { break-before: avoid; }');
     expect(rendered.css).toContain('#signature-block { break-inside: avoid; }');
   });
+
+  it('drops blank text lines from column stacks (no gap for an empty line) but keeps them in rows', async () => {
+    const line = (id: string) => ({ id, type: 'text', content: { type: 'binding', bindingId: id } }) as const;
+    const ast = {
+      kind: 'invoice-template-ast', version: TEMPLATE_AST_VERSION,
+      bindings: { values: {}, collections: {} },
+      layout: { id: 'root', type: 'document', children: [
+        { id: 'col', type: 'stack', direction: 'column', children: [line('filled'), line('blank'), line('spaces')] },
+        { id: 'row', type: 'stack', direction: 'row', children: [line('rowBlank'), line('rowFilled')] },
+      ] },
+    } as unknown as TemplateAst;
+    const evaluation = {
+      bindings: { filled: 'Shown', blank: null, spaces: '  ', rowBlank: '', rowFilled: 'Right' },
+      rows: {}, aggregates: {},
+    } as unknown as TemplateEvaluationResult;
+    const { html } = await renderEvaluatedTemplateAst(ast, evaluation);
+    expect(html).toContain('id="filled"');
+    expect(html).not.toContain('id="blank"');
+    expect(html).not.toContain('id="spaces"');
+    expect(html).toContain('id="rowBlank"');
+    expect(html).toContain('id="rowFilled"');
+  });
 });

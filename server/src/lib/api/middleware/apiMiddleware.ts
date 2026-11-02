@@ -17,6 +17,7 @@ import { enforceApiRateLimit } from '../rateLimit/enforce';
 import { redactSensitiveFields } from '../utils/redactSensitiveFields';
 import type { BucketConfig } from '@alga-psa/core/rateLimit';
 import { resolveServicePrincipalApiContext } from '@product/service-principals/entry';
+import { isInteractiveUserType } from '@alga-psa/types';
 
 /** Who the request is made as. Defaults to the key owner (`kind: 'user'`). */
 export interface ApiPrincipal {
@@ -58,121 +59,20 @@ export interface AuthenticatedApiRequest extends NextRequest {
   params?: any;
 }
 
-export interface ApiError extends Error {
-  statusCode: number;
-  code?: string;
-  details?: any;
-  headers?: Record<string, string>;
-}
-
-export class ValidationError extends Error implements ApiError {
-  statusCode = 400;
-  code = 'VALIDATION_ERROR';
-  details: any;
-
-  constructor(message: string, details?: any) {
-    super(message);
-    this.name = 'ValidationError';
-    this.details = details;
-  }
-}
-
-export class UnauthorizedError extends Error implements ApiError {
-  statusCode = 401;
-  code = 'UNAUTHORIZED';
-
-  constructor(message: string = 'Unauthorized') {
-    super(message);
-    this.name = 'UnauthorizedError';
-  }
-}
-
-export class ForbiddenError extends Error implements ApiError {
-  statusCode = 403;
-  code = 'FORBIDDEN';
-
-  constructor(message: string = 'Forbidden') {
-    super(message);
-    this.name = 'ForbiddenError';
-  }
-}
-
-export class NotFoundError extends Error implements ApiError {
-  statusCode = 404;
-  code = 'NOT_FOUND';
-
-  constructor(message: string = 'Resource not found') {
-    super(message);
-    this.name = 'NotFoundError';
-  }
-}
-
-export class ConflictError extends Error implements ApiError {
-  statusCode = 409;
-  code = 'CONFLICT';
-  details: any;
-
-  constructor(message: string = 'Resource conflict', details?: any) {
-    super(message);
-    this.name = 'ConflictError';
-    this.details = details;
-  }
-}
-
-export class BadRequestError extends Error implements ApiError {
-  statusCode = 400;
-  code = 'BAD_REQUEST';
-
-  constructor(message: string = 'Bad request') {
-    super(message);
-    this.name = 'BadRequestError';
-  }
-}
-
-export class UnprocessableEntityError extends Error implements ApiError {
-  statusCode = 422;
-  code = 'UNPROCESSABLE_ENTITY';
-  details: any;
-
-  constructor(message: string = 'Unprocessable entity', details?: any) {
-    super(message);
-    this.name = 'UnprocessableEntityError';
-    this.details = details;
-  }
-}
-
-export class BadGatewayError extends Error implements ApiError {
-  statusCode = 502;
-  code = 'BAD_GATEWAY';
-
-  constructor(message: string = 'Bad gateway') {
-    super(message);
-    this.name = 'BadGatewayError';
-  }
-}
-
-export class NotImplementedError extends Error implements ApiError {
-  statusCode = 501;
-  code = 'NOT_IMPLEMENTED';
-
-  constructor(message: string = 'Not implemented') {
-    super(message);
-    this.name = 'NotImplementedError';
-  }
-}
-
-export class TooManyRequestsError extends Error implements ApiError {
-  statusCode = 429;
-  code = 'RATE_LIMITED';
-  details: any;
-  headers?: Record<string, string>;
-
-  constructor(message: string = 'Too many requests', details?: any) {
-    super(message);
-    this.name = 'TooManyRequestsError';
-    this.details = details;
-  }
-}
+export * from './apiErrors';
+import {
+  ValidationError,
+  UnauthorizedError,
+  ForbiddenError,
+  NotFoundError,
+  ConflictError,
+  BadRequestError,
+  UnprocessableEntityError,
+  BadGatewayError,
+  NotImplementedError,
+  TooManyRequestsError,
+  type ApiError,
+} from './apiErrors';
 
 export type ServerActionErrorResult =
   | { readonly permissionError: string }
@@ -221,6 +121,12 @@ export function createServerActionErrorResponse(error: ServerActionErrorResult):
 }
 
 const APPLICATION_ERROR_STATUS: Record<string, number> = {
+  CO_MANAGED_NOT_ACTIVE: 409,
+  CO_MANAGED_SEAT_LIMIT: 403,
+  CO_MANAGED_LICENSE_LAPSED: 403,
+  CO_MANAGED_ALLOCATION_CONFLICT: 409,
+  CO_MANAGED_INVITATION_INVALID: 409,
+  CO_MANAGED_READ_ONLY: 423,
   HUMAN_WORK_ASSIGNEE_INVALID: 422,
   QBO_AUTH_ERROR: 401,
   QBO_CONFIG_MISSING: 400,
@@ -337,7 +243,7 @@ export async function buildAuthenticatedApiContext(
 
   // Owners that are neither internal nor client belong to the edition boundary.
   // The CE implementation returns null, which rejects the key exactly as before.
-  if (user && user.user_type !== 'internal' && user.user_type !== 'client') {
+  if (user && !isInteractiveUserType(user.user_type)) {
     const boundaryContext = await resolveServicePrincipalApiContext(
       keyRecord,
       user,
@@ -516,7 +422,7 @@ export function withValidation(schema: ZodSchema) {
         return await handler(req, validatedData);
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -538,7 +444,7 @@ export function withQueryValidation(schema: ZodSchema) {
         return await handler(req, validatedQuery);
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Query validation failed', error.errors));
+          return handleApiError(new ValidationError('Query validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -623,7 +529,7 @@ export function handleApiError(error: any): NextResponse {
       error: {
         code: 'VALIDATION_ERROR',
         message: 'Validation failed',
-        details: redactSensitiveFields(error.errors)
+        details: redactSensitiveFields(error.issues)
       }
     }, { status: 400 });
   }
