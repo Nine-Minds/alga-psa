@@ -37,7 +37,7 @@ import {
   type RelationshipSqlAdapter,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
-import { buildAuthorizationPrincipalSubject } from '../controllers/authorizationKernel';
+import { resolveAuthorizationSubjectForUser } from '@alga-psa/authorization/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
 import { getAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
 import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
@@ -363,6 +363,8 @@ export class AssetService extends BaseService<any> {
       'asset_associations',
     )
       .where({ asset_id: id })
+      .orderByRaw('created_at ASC NULLS LAST')
+      .orderBy('entity_id', 'asc')
       .select('entity_type', 'entity_id');
 
     const assignedUserIds = associations.filter((a) => a.entity_type === 'user').map((a) => a.entity_id);
@@ -1568,8 +1570,22 @@ export class AssetService extends BaseService<any> {
       // an unscoped collection query.
       return (query) => { query.whereRaw('1 = 0'); };
     }
-    const subject = buildAuthorizationPrincipalSubject(context.user, (context as ServiceContext & { apiKeyId?: string }).apiKeyId);
-    subject.tenant = context.tenant;
+    const apiKeyId = (context as ServiceContext & { apiKeyId?: string }).apiKeyId;
+    const subject = await resolveAuthorizationSubjectForUser(
+      knex,
+      context.tenant,
+      {
+        ...context.user,
+        user_id: context.user.user_id,
+        user_type: context.user.user_type === 'client' ? 'client' : context.user.user_type === 'service' ? 'service' : 'internal',
+        clientId: context.user.client_id ?? context.user.clientId,
+        role_ids: [
+          ...(Array.isArray(context.user.role_ids) ? context.user.role_ids : []),
+          ...(Array.isArray(context.user.roles) ? context.user.roles.map((role: any) => typeof role === 'string' ? role : role?.role_id).filter(Boolean) : []),
+        ],
+      },
+      apiKeyId,
+    );
     const bundleRules = await resolveBundleNarrowingRulesForEvaluation(knex, {
       subject,
       resource: { type: 'asset', action: 'read' },
@@ -1580,12 +1596,9 @@ export class AssetService extends BaseService<any> {
       resource: { type: 'asset', action: 'read' },
     });
     const adapter: RelationshipSqlAdapter = {
-      ownerColumn: 'assets.asset_id',
       clientColumn: 'assets.client_id',
-      boardColumn: 'assets.asset_id',
-      teamColumn: 'assets.asset_id',
       applyAssignedUsers: (query, ids) => this.applyAssetAssociationScope(query, ids, 'user'),
-      applyOwnerUsers: (query, ids) => this.applyAssetAssociationScope(query, ids, 'user'),
+      applyOwnerUsers: (query, ids) => this.applyAssetOwnerScope(query, ids),
       applyTeams: (query, ids) => this.applyAssetAssociationScope(query, ids, 'team'),
     };
     const apply = (query: Knex.QueryBuilder) => {
@@ -1627,6 +1640,25 @@ export class AssetService extends BaseService<any> {
         .where('auth_aa.entity_type', entityType)
         .whereIn('auth_aa.entity_id', normalized);
     });
+  }
+
+  private applyAssetOwnerScope(query: Knex.QueryBuilder, ids: string[]): void {
+    const normalized = [...new Set(ids.filter(Boolean))];
+    if (normalized.length === 0) {
+      query.whereRaw('1 = 0');
+      return;
+    }
+    const placeholders = normalized.map(() => '?').join(', ');
+    query.whereRaw(
+      `(SELECT owner_aa.entity_id
+          FROM asset_associations AS owner_aa
+         WHERE owner_aa.tenant = assets.tenant
+           AND owner_aa.asset_id = assets.asset_id
+           AND owner_aa.entity_type = 'user'
+         ORDER BY owner_aa.created_at ASC NULLS LAST, owner_aa.entity_id ASC
+         LIMIT 1) IN (${placeholders})`,
+      normalized,
+    );
   }
 
   private applyAssetScopeFromContext(query: Knex.QueryBuilder, context: ServiceContext): void {
