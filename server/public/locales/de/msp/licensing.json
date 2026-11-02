@@ -715,7 +715,8 @@
       "reloadLatest": "Neueste Version laden",
       "rejected": "Diese Aufgabe konnte nicht gespeichert werden.",
       "saved": "Gespeichert.",
-      "save": "Speichern"
+      "save": "Speichern",
+      "projectNotFound": "Dieses Projekt ist nicht verfügbar. Es wird möglicherweise nicht mehr mit Ihnen geteilt."
     }
   },
   "common": {

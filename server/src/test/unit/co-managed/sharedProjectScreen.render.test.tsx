@@ -127,10 +127,18 @@ describe('shared project screen renders through the real provider stack', () => 
   it('project route: board renders, with no native action and no tag lookup for a customer id', async () => {
     await renderRoute();
     expect((await screen.findAllByText('Patch servers', {}, { timeout: 8000 })).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /back to shared tasks/i })).toBeInTheDocument();
     expect((await screen.findAllByText('To Do')).length).toBeGreaterThan(0);
     expect((await screen.findAllByText('In Progress')).length).toBeGreaterThan(0);
     expect(h.nativeCalls).toEqual([]);
     expect(noCustomerIdReachedTags()).toEqual([]);
+  });
+
+  it('an unavailable shared project displays the localized access message and a route back to shared tasks', async () => {
+    h.read = null;
+    await renderRoute();
+    expect(await screen.findByText('This project is not available. It may no longer be shared with you.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /back to shared tasks/i })).toHaveAttribute('href', '/msp/co-management/tasks');
   });
 
   it('project route: list view renders the task', async () => {

@@ -715,7 +715,8 @@
       "reloadLatest": "Recargar la última versión",
       "rejected": "No se pudo guardar esta tarea.",
       "saved": "Guardado.",
-      "save": "Guardar"
+      "save": "Guardar",
+      "projectNotFound": "Este proyecto no está disponible. Es posible que ya no se comparta contigo."
     }
   },
   "common": {
