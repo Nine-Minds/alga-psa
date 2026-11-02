@@ -1542,3 +1542,94 @@ describe('asset document projections', () => {
     },
   );
 });
+
+
+describe('standalone child responses retain the parent policy', () => {
+  const assetId = '33333333-3333-3333-3333-333333333333';
+  const targetId = '33333333-3333-3333-3333-333333333334';
+  const quoteId = '44444444-4444-4444-4444-444444444441';
+  const quoteItems = () => [{ quote_item_id: 'line-1', quote_id: quoteId, tenant: TENANT,
+    description: 'Visible line', unit_price: 4938, quantity: 1, total_price: 4938, net_amount: 4938, tax_amount: 0,
+    is_optional: false, is_selected: true, is_discount: false, is_recurring: false }];
+  it.each(['items.unit_price', 'values.items.unit_price', 'quotes.items.unit_price'])(
+    'items GET honors the same %s decision as quote GET', async (alias) => {
+      state.quote = { quote_id: quoteId, title: 'Visible quote', created_by: 'u-1', items: quoteItems(), subtotal: 4938, total_amount: 4938 };
+      const controller = new ApiQuoteController();
+      const getItems = async () => (await (await controller.listItems()(request(`/api/v1/quotes/${quoteId}/items`, { id: quoteId }))).json()).data;
+      expect((await getItems())[0].unit_price).toBe(4938);
+      state.decisions.set(quoteId, { allowed: true, redactedFields: [alias] });
+      const parent = (await (await controller.getById()(request(`/api/v1/quotes/${quoteId}`, { id: quoteId }))).json()).data;
+      expect(parent.items[0]).not.toHaveProperty('unit_price');
+      expect((await getItems())[0]).not.toHaveProperty('unit_price');
+    });
+  it.each(['items', 'values.items', 'values.items.quote_item_id'])(
+    'items GET suppresses quote children hidden by %s', async (alias) => {
+      state.quote = { quote_id: quoteId, title: 'Visible quote', created_by: 'u-1', items: quoteItems() };
+      const get = () => new ApiQuoteController().listItems()(request(`/api/v1/quotes/${quoteId}/items`, { id: quoteId }));
+      expect((await (await get()).json()).data[0].unit_price).toBe(4938);
+      state.decisions.set(quoteId, { allowed: true, redactedFields: [alias] });
+      const response = await get();
+      expect(response.status).toBe(200);
+      expect((await response.json()).data).toEqual([]);
+    });
+  it.each(['values.maintenance_schedules.next_maintenance', 'values.maintenance_schedules.schedule_id'])(
+    'maintenance GET honors %s identically to asset detail', async (alias) => {
+      state.assets = [{ asset_id: assetId, name: 'Visible asset', maintenance_schedules: [
+        { asset_id: assetId, schedule_id: 'schedule-1', schedule_name: 'Visible schedule', next_maintenance: '2027-01-01T00:00:00Z' },
+      ] }];
+      const controller = new ApiAssetController();
+      const get = async () => (await (await controller.listMaintenanceSchedules(request(`/api/v1/assets/${assetId}/maintenance`), { id: assetId })).json()).data;
+      expect((await get())[0].next_maintenance).toBe('2027-01-01T00:00:00Z');
+      state.decisions.set(assetId, { allowed: true, redactedFields: [alias] });
+      const parent = (await (await controller.getById(request(`/api/v1/assets/${assetId}`), { id: assetId })).json()).data;
+      const rows = await get();
+      if (alias.endsWith('schedule_id')) {
+        expect(parent.maintenance_schedules).toEqual([]);
+        expect(rows).toEqual([]);
+      } else {
+        expect(parent.maintenance_schedules[0]).not.toHaveProperty('next_maintenance');
+        expect(rows[0]).not.toHaveProperty('next_maintenance');
+      }
+    });
+  it.each(['values.relationships.related_asset_name', 'values.relationships.related_asset_id'])(
+    'relationships GET honors %s identically to asset detail', async (alias) => {
+      state.assets = [
+        { asset_id: assetId, name: 'Visible asset', relationships: [{ relationship_id: 'rel-1', related_asset_id: targetId, related_asset_name: 'PRIVATE related name' }] },
+        { asset_id: targetId, name: 'PRIVATE related name' },
+      ];
+      const controller = new ApiAssetController();
+      const visible = await controller.listRelationships(request(`/api/v1/assets/${assetId}/relationships`), { id: assetId });
+      expect((await visible.json()).data[0].related_asset_name).toBe('PRIVATE related name');
+      state.decisions.set(assetId, { allowed: true, redactedFields: [alias] });
+      const parent = (await (await controller.getById(request(`/api/v1/assets/${assetId}`), { id: assetId })).json()).data;
+      const rows = (await (await controller.listRelationships(request(`/api/v1/assets/${assetId}/relationships`), { id: assetId })).json()).data;
+      if (alias.endsWith('related_asset_id')) {
+        expect(parent.relationships).toEqual([]);
+        expect(rows).toEqual([]);
+      } else {
+        expect(parent.relationships[0]).not.toHaveProperty('related_asset_name');
+        expect(rows[0]).not.toHaveProperty('related_asset_name');
+      }
+    });
+  it.each(['values.items.unit_price', 'values.items.quote_item_id', 'items'])(
+    'conversion preview preserves the quote child policy for %s', async alias => {
+      const { buildQuoteConversionPreview } = await import('../../../../../packages/billing/src/services/quoteConversionService');
+      state.quote = { quote_id: quoteId, tenant: TENANT, created_by: 'u-1', items: quoteItems() };
+      state.conversionPreview = await buildQuoteConversionPreview({ ...state.quote, quote_items: quoteItems() } as any);
+      const get = () => new ApiQuoteController().conversionPreview()(request(`/api/v1/quotes/${quoteId}/conversion-preview`, { id: quoteId }));
+      expect((await (await get()).json()).data.invoice_items[0].unit_price).toBe(4938);
+      state.decisions.set(quoteId, { allowed: true, redactedFields: [alias] });
+      const response = await get();
+      expect(response.status).toBe(200);
+      const data = (await response.json()).data;
+      if (alias === 'values.items.unit_price') {
+        expect(data.invoice_items).toHaveLength(1);
+        expect(data.invoice_items[0]).not.toHaveProperty('unit_price');
+        expect(data.invoice_items[0].total_price).toBeNull();
+      } else {
+        expect(data.invoice_items).toEqual([]);
+      }
+      expect(JSON.stringify(data)).not.toContain('4938');
+    },
+  );
+});

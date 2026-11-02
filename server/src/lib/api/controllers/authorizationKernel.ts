@@ -5,8 +5,8 @@ import {
   PROJECT_RECORD_SOURCE,
   QUOTE_RECORD_SOURCE,
   TICKET_RECORD_SOURCE,
-  isRecordFieldReadable,
-  projectRecordByRedactions,
+  createRecordProjectionPolicy,
+  type RecordProjectionPolicy,
   type RedactableRecordSource,
 } from '@alga-psa/co-managed/recordProjection';
 import { buildProjectRecordContext, buildQuoteRecordContext, buildTicketRecordContext } from './recordContexts';
@@ -139,24 +139,31 @@ const projectionMark = Symbol('authorizedProjection');
  */
 export type AuthorizedProjection<T = Record<string, any>> = Partial<T> & { readonly [authorizedProjectionBrand]: true };
 
-const projectionRedactions = Symbol('authorizedProjectionRedactions');
+const projectionPolicy = Symbol('authorizedProjectionPolicy');
+
+function markProjection<R extends Record<string, any>>(
+  record: Partial<R>, policy: RecordProjectionPolicy,
+): AuthorizedProjection<R> {
+  Object.defineProperty(record, projectionMark, { value: true, enumerable: false });
+  Object.defineProperty(record, projectionPolicy, { value: policy, enumerable: false });
+  return record as AuthorizedProjection<R>;
+}
 
 /**
  * Projects another record owned by the same authorized resource (a mutation result, quote lines, ...) under the
  * decision that produced `projection`, so it is never re-authorized and never served unredacted. Returns null when the
- * redactions suppress the record under `source` (default: the projection's own record kind).
+ * redactions suppress the record under `source`. Parent namespaces remain available for detached child records.
  */
 export function reprojectUnderDecision<R extends Record<string, any>>(
   projection: AuthorizedProjection<any>,
   record: R,
   source: RedactableRecordSource,
 ): AuthorizedProjection<R> | null {
-  const redactions: readonly string[] = (projection as any)[projectionRedactions] ?? [];
-  const projected = projectRecordByRedactions(redactions, record, source);
+  const policy: RecordProjectionPolicy | undefined = (projection as any)[projectionPolicy];
+  if (!policy) throw new Error('reprojectUnderDecision requires an authorized projection with its original policy');
+  const projected = policy.project(record, source);
   if (projected === null) return null;
-  Object.defineProperty(projected, projectionMark, { value: true, enumerable: false });
-  Object.defineProperty(projected, projectionRedactions, { value: redactions, enumerable: false });
-  return projected as AuthorizedProjection<R>;
+  return markProjection<R>(projected, policy);
 }
 
 export function isAuthorizedProjection(value: unknown): value is AuthorizedProjection {
@@ -218,13 +225,12 @@ export async function projectApiResourceRead<T extends Record<string, any>>(
     redactedFields = decision.redactedFields ?? [];
   }
 
-  const projected = projectRecordByRedactions(redactedFields, input.record, input.source ?? kind.source);
+  const policy = createRecordProjectionPolicy(redactedFields, kind.source);
+  const projected = policy.project(input.record, input.source ?? kind.source);
   if (projected === null) {
     return null;
   }
-  Object.defineProperty(projected, projectionMark, { value: true, enumerable: false });
-  Object.defineProperty(projected, projectionRedactions, { value: redactedFields, enumerable: false });
-  return projected as AuthorizedProjection<T>;
+  return markProjection<T>(projected, policy);
 }
 
 /** Batch form for list paths: projects every row, dropping denied/suppressed ones (order preserved). */
@@ -294,7 +300,8 @@ const fieldName = (c: PredicateColumn) => (typeof c === 'string' ? c.slice(c.las
 
 export function buildPredicateGuard(kind: ApiReadKind, redactions: readonly string[]): PredicateGuard {
   const source = API_READ_KINDS[kind].source;
-  const readable = (c: PredicateColumn) => isRecordFieldReadable(redactions, source, fieldName(c));
+  const policy = createRecordProjectionPolicy(redactions, source);
+  const readable = (c: PredicateColumn) => policy.readable(fieldName(c), source);
   const guard: PredicateGuard = {
     readable,
     columns: (columns) => columns.filter(readable).map(columnName),

@@ -26,6 +26,8 @@ export interface RedactableRecordSource {
   readonly fields: Readonly<Record<string, readonly string[]>>;
   readonly derived: Readonly<Record<string, readonly string[]>>;
   readonly children?: Readonly<Record<string, RedactableRecordSource | RedactableRecordVariants>>;
+  /** The original source of an alternate response shape (for example quote lines in a conversion preview). */
+  readonly policySource?: RedactableRecordSource;
 }
 
 /** A nested record's source selected by a discriminator on its parent (for example an asset's extension table). */
@@ -127,6 +129,7 @@ function childScopedRedactions(
   childKey: string,
   childSource: RedactableRecordSource,
 ): readonly string[] {
+  if (isRecordFieldExplicitlyHidden(redactions, recordFieldAliases(source, childKey))) return ['*'];
   const routes = childRouteAliases(source, childKey, childSource);
   const scoped = redactions.flatMap(redaction => {
     const path = redaction.startsWith('fields.') ? redaction.slice('fields.'.length) : redaction;
@@ -205,12 +208,86 @@ export function isRecordSuppressed(redactions: readonly string[], source: Redact
   return isCoManagedResourceHidden(redactions, source.resource) || isCoManagedReadFieldHidden(redactions, identifierAliases);
 }
 
-/**
- * Applies a reader's redactions to one record. Returns null when the row is suppressed; otherwise a copy with hidden
- * fields omitted and hidden derived fields nulled. A field-level redaction such as `projects.description` never suppresses.
- */
-export function projectRecordByRedactions<T extends Record<string, any>>(
-  redactions: readonly string[], record: T, source: RedactableRecordSource): Partial<T> | null {
+/** One decision, retaining its source namespaces across nested, detached and alternate response shapes. */
+export interface RecordProjectionPolicy {
+  project<T extends Record<string, any>>(record: T, source: RedactableRecordSource): Partial<T> | null;
+  readable(field: string, source: RedactableRecordSource): boolean;
+}
+
+function collectSourceRedactions(redactions: readonly string[], origin: RedactableRecordSource) {
+  // Keep child suppression attached to its descriptor. Relationships and their parent both use `assets`,
+  // so flattening a whole-child redaction into a table-wide rule would also suppress the parent.
+  const scopes = new Map<RedactableRecordSource, Set<string>>();
+  const pending = [{ source: origin, redactions }];
+  while (pending.length > 0) {
+    const next = pending.pop()!;
+    const previous = scopes.get(next.source);
+    if (previous && next.redactions.every(redaction => previous.has(redaction))) continue;
+    const combined = new Set([...(previous ?? []), ...next.redactions]);
+    scopes.set(next.source, combined);
+    const scoped = [...combined];
+    const suppressed = isRecordSuppressed(scoped, next.source);
+    for (const [key, child] of Object.entries(next.source.children ?? {})) {
+      for (const childSource of childSources(child)) {
+        pending.push({
+          source: childSource,
+          redactions: suppressed ? ['*'] : childScopedRedactions(scoped, next.source, key, childSource),
+        });
+      }
+    }
+  }
+  return scopes;
+}
+
+/** Compile the decision's source graph once; response shapes can then reuse it without losing parent-path rules. */
+export function createRecordProjectionPolicy(
+  redactions: readonly string[], origin: RedactableRecordSource,
+): RecordProjectionPolicy {
+  const sourceRedactions = [...redactions];
+  // Resolve lazily so an invalid decision still fails closed inside readable(), while serialization throws.
+  let scopes: ReturnType<typeof collectSourceRedactions> | undefined;
+  const redactionsFor = (source: RedactableRecordSource): readonly string[] => {
+    scopes ??= collectSourceRedactions(sourceRedactions, origin);
+    const combined = new Set(sourceRedactions);
+    const visited = new Set<RedactableRecordSource>();
+    for (let current: RedactableRecordSource | undefined = source; current && !visited.has(current); current = current.policySource) {
+      visited.add(current);
+      scopes.get(current)?.forEach(redaction => combined.add(redaction));
+    }
+    return [...combined];
+  };
+  const readable = (field: string, source: RedactableRecordSource, inherited: readonly string[]): boolean => {
+    const scoped = [...new Set([...redactionsFor(source), ...inherited])];
+    if (isRecordSuppressed(scoped, source)) return false;
+    const local = recordFieldLocalPath(source, field);
+    const separator = local.indexOf('.');
+    const key = separator > 0 ? local.slice(0, separator) : local;
+    const child = source.children && Object.hasOwn(source.children, key) ? source.children[key] : undefined;
+    if (child && separator > 0) {
+      if (isRecordFieldExplicitlyHidden(scoped, recordFieldAliases(source, key))) return false;
+      return childSources(child).every(childSource => readable(
+        local.slice(separator + 1), childSource, childScopedRedactions(scoped, source, key, childSource),
+      ));
+    }
+    return !isCoManagedReadFieldHidden(scoped, recordFieldAliases(source, local));
+  };
+  return {
+    project: (record, source) => projectRecordWithPolicy(record, source, redactionsFor, []),
+    readable(field, source) {
+      try {
+        return readable(field, source, []);
+      } catch {
+        return false;
+      }
+    },
+  };
+}
+
+function projectRecordWithPolicy<T extends Record<string, any>>(
+  record: T, source: RedactableRecordSource,
+  redactionsFor: (source: RedactableRecordSource) => readonly string[], inherited: readonly string[],
+): Partial<T> | null {
+  const redactions = [...new Set([...redactionsFor(source), ...inherited])];
   if (isRecordSuppressed(redactions, source)) return null;
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(record)) {
@@ -229,15 +306,22 @@ export function projectRecordByRedactions<T extends Record<string, any>>(
       out[key] = Array.isArray(value) ? [] : null;
     } else if (childSource && Array.isArray(value)) {
       const nestedRedactions = childScopedRedactions(redactions, source, key, childSource);
-      out[key] = value.map(item => (item && typeof item === 'object' ? projectRecordByRedactions(nestedRedactions, item, childSource) : item)).filter(item => item !== null);
+      out[key] = value.map(item => (item && typeof item === 'object' ? projectRecordWithPolicy(item, childSource, redactionsFor, nestedRedactions) : item)).filter(item => item !== null);
     } else if (childSource && value && typeof value === 'object') {
       const nestedRedactions = childScopedRedactions(redactions, source, key, childSource);
-      out[key] = projectRecordByRedactions(nestedRedactions, value as Record<string, any>, childSource);
+      out[key] = projectRecordWithPolicy(value as Record<string, any>, childSource, redactionsFor, nestedRedactions);
     } else {
       out[key] = value;
     }
   }
   return out as Partial<T>;
+}
+
+/** Projects one record, omitting hidden fields, nulling hidden derived fields and suppressing hidden identifiers. */
+export function projectRecordByRedactions<T extends Record<string, any>>(
+  redactions: readonly string[], record: T, source: RedactableRecordSource,
+): Partial<T> | null {
+  return createRecordProjectionPolicy(redactions, source).project(record, source);
 }
 
 const ids = (...names: string[]) => names;
@@ -296,6 +380,7 @@ export const QUOTE_LINE_RECORD_SOURCE: RedactableRecordSource = {
 
 /** Quote-conversion preview lines preserve the quote-item source and its calculated price dependencies. */
 export const QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE: RedactableRecordSource = {
+  policySource: QUOTE_LINE_RECORD_SOURCE,
   resource: ['quote_items'],
   identifier: ids('quote_item_id', 'quote_items.quote_item_id'),
   fields: {
@@ -319,6 +404,7 @@ export const QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE: RedactableRecordSource = {
 
 /** A carried recurring discount is still derived from the quote item that funds it. */
 export const QUOTE_CONVERSION_PREVIEW_DISCOUNT_SOURCE: RedactableRecordSource = {
+  policySource: QUOTE_LINE_RECORD_SOURCE,
   resource: ['quote_items'],
   identifier: ids('quote_item_id', 'line_quote_item_id', 'quote_items.quote_item_id'),
   fields: {},
@@ -364,6 +450,7 @@ export const QUOTE_RECORD_SOURCE: RedactableRecordSource = {
 /** Nested quote-conversion response shape, projected under the quote's original authorization decision. */
 export const QUOTE_CONVERSION_PREVIEW_SOURCE: RedactableRecordSource = {
   ...QUOTE_RECORD_SOURCE,
+  policySource: QUOTE_RECORD_SOURCE,
   derived: {
     ...QUOTE_RECORD_SOURCE.derived,
     available_actions: ids(
@@ -504,9 +591,7 @@ export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
       fields: { client_name: recordFieldAliases(ASSET_ROW_SOURCE, 'client_name') },
       derived: {},
     },
-    maintenance_schedules: {
-      ...ASSET_MAINTENANCE_SCHEDULE_SOURCE,
-    },
+    maintenance_schedules: ASSET_MAINTENANCE_SCHEDULE_SOURCE,
     relationships: ASSET_RELATIONSHIP_SOURCE,
     documents: ASSET_DOCUMENT_SOURCE,
   },
@@ -523,10 +608,5 @@ export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
  */
 export function isRecordFieldReadable(
   redactions: readonly string[], source: RedactableRecordSource, field: string): boolean {
-  try {
-    if (isRecordSuppressed(redactions, source)) return false;
-    return !isCoManagedReadFieldHidden(redactions, recordFieldAliases(source, field));
-  } catch {
-    return false;
-  }
+  return createRecordProjectionPolicy(redactions, source).readable(field, source);
 }

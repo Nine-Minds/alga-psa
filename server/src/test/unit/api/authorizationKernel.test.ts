@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildAuthorizationPrincipalSubject, isAuthorizedProjection, projectApiResourceRead, projectApiResourceReads } from 'server/src/lib/api/controllers/authorizationKernel';
+import { buildAuthorizationPrincipalSubject, isAuthorizedProjection, projectApiResourceRead, projectApiResourceReads, reprojectUnderDecision } from 'server/src/lib/api/controllers/authorizationKernel';
+import { QUOTE_LINE_RECORD_SOURCE, QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE } from '@alga-psa/co-managed/recordProjection';
 
 const authorizeResourceMock = vi.fn();
 
@@ -102,6 +103,24 @@ describe('api authorization kernel helper', () => {
     expect(isAuthorizedProjection(projection)).toBe(true);
     expect(isAuthorizedProjection({ ...project })).toBe(false);
     expect(JSON.parse(JSON.stringify(projection))).toEqual(project);
+  });
+
+  it('retains source policy through successive response projections without serializing it', async () => {
+    const gate = await read(['values.items.unit_price'], { quote_id: 'quote-1' }, 'quote');
+    const line = { quote_item_id: 'line-1', unit_price: 4938, total_price: 4938, description: 'Visible line' };
+    const projectedLine = reprojectUnderDecision(gate!, line, QUOTE_LINE_RECORD_SOURCE);
+    const preview = reprojectUnderDecision(projectedLine!, line, QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE);
+    expect(isAuthorizedProjection(preview)).toBe(true);
+    expect(JSON.parse(JSON.stringify(preview))).toEqual({
+      quote_item_id: 'line-1', total_price: null, description: 'Visible line',
+    });
+    expect(authorizeResourceMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects reprojection if copying the record discarded its authorization policy', async () => {
+    const gate = await read([], { quote_id: 'quote-1' }, 'quote');
+    expect(() => reprojectUnderDecision({ ...gate! }, { quote_item_id: 'line-1' }, QUOTE_LINE_RECORD_SOURCE))
+      .toThrow('requires an authorized projection');
   });
 
   it('omits a field hidden by its direct name', async () => {
