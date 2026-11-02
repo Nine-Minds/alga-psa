@@ -22,6 +22,16 @@ describe('isRecordFieldReadable (descriptor-driven)', () => {
     expect(isRecordFieldReadable(['assigned_to'], TICKET_RECORD_SOURCE, 'title')).toBe(true);
   });
 
+  it.each(['tickets.assigned_to', 'values.assigned_to'])(
+    'hides derived ticket names when the dependency is redacted as %s', (alias) => {
+      expect(isRecordFieldReadable([alias], TICKET_RECORD_SOURCE, 'assigned_to_name')).toBe(false);
+      expect(buildPredicateGuard('ticket', [alias]).columns([
+        { column: 't.assigned_to_name', field: 'assigned_to_name' },
+        { column: 't.title', field: 'title' },
+      ])).toEqual(['t.title']);
+    },
+  );
+
   it('fails closed on wildcard, suppression and uninterpretable entries', () => {
     expect(isRecordFieldReadable(['*'], PROJECT_RECORD_SOURCE, 'project_name')).toBe(false);
     expect(isRecordFieldReadable(['projects'], PROJECT_RECORD_SOURCE, 'project_name')).toBe(false);

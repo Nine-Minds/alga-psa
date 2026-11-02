@@ -183,12 +183,27 @@ describe('projects: REST reads serialize the projection', () => {
   it('stats exclude hidden values from aggregates', async () => {
     const visible = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
     expect(visible.data.total_budgeted_hours).toBe(55);
+    expect(visible.data.top_clients_by_project_count).toEqual([
+      { client_name: 'Acme', project_count: 3 },
+    ]);
 
     hideProjectFields('budgeted_hours');
     state.decisions.set(P3, { allowed: true, redactedFields: ['projects'] });
     const hidden = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
     expect(hidden.data.total_projects).toBe(2);
     expect(hidden.data.total_budgeted_hours).toBe(0);
+  });
+
+  it('stats preserve projected client-name redactions despite populated client lookup data', async () => {
+    hideProjectFields('client_name');
+
+    const detail = await (await controller().getById()(request(`/api/v1/projects/${P1}`, { id: P1 }))).json();
+    expect(detail.data.client_name).toBeNull();
+
+    const stats = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
+    expect(stats.data.top_clients_by_project_count).toEqual([
+      { client_name: null, project_count: 3 },
+    ]);
   });
 });
 
@@ -210,6 +225,18 @@ describe('tickets: REST reads serialize the projection', () => {
     const hidden = await new ApiTicketController().getById()(request(`/api/v1/tickets/${TICKET}`, { id: TICKET }));
     expect(hidden.status).toBe(404);
   });
+
+  it.each(['tickets.assigned_to', 'values.assigned_to'])(
+    'get nulls assigned_to_name when its dependency is redacted as %s', async (alias) => {
+      state.decisions.set(TICKET, { allowed: true, redactedFields: [alias] });
+      const res = await new ApiTicketController().getById()(request(`/api/v1/tickets/${TICKET}`, { id: TICKET }));
+      const { data } = await res.json();
+
+      expect(data).not.toHaveProperty('assigned_to');
+      expect(data.assigned_to_name).toBeNull();
+      expect(data.title).toBe('Printer');
+    },
+  );
 });
 
 describe('quotes: REST reads serialize the projection', () => {

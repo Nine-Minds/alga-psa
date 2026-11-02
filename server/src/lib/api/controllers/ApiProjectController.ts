@@ -160,26 +160,15 @@ export class ApiProjectController extends ApiBaseController {
     // Aggregates are computed from projected rows only: a redacted numeric (budgeted_hours) is absent and adds 0.
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const statusIds = Array.from(new Set(projects.map((project) => project.status).filter(Boolean)));
-    const clientIds = Array.from(new Set(projects.map((project) => project.client_id).filter(Boolean)));
 
-    const [statuses, clients] = await Promise.all([
-      statusIds.length > 0
-        ? tenantDb(resolvedKnex, apiRequest.context.tenant).table('statuses')
-            .whereIn('status_id', statusIds)
-            .select('status_id', 'name')
-        : Promise.resolve([]),
-      clientIds.length > 0
-        ? tenantDb(resolvedKnex, apiRequest.context.tenant).table('clients')
-            .whereIn('client_id', clientIds)
-            .select('client_id', 'client_name')
-        : Promise.resolve([]),
-    ]);
+    const statuses = statusIds.length > 0
+      ? await tenantDb(resolvedKnex, apiRequest.context.tenant).table('statuses')
+          .whereIn('status_id', statusIds)
+          .select('status_id', 'name')
+      : [];
 
     const statusNameById = new Map<string, string>(
       (statuses as any[]).map((row) => [String(row.status_id), String(row.name)] as [string, string])
-    );
-    const clientNameById = new Map<string, string>(
-      (clients as any[]).map((row) => [String(row.client_id), String(row.client_name)] as [string, string])
     );
     const monthStart = new Date();
     monthStart.setDate(1);
@@ -191,17 +180,29 @@ export class ApiProjectController extends ApiBaseController {
       return acc;
     }, {});
 
-    const clientCounts = projects.reduce((acc: Map<string, number>, project) => {
+    const clientCounts = new Map<string, { count: number; clientName: string | null }>();
+    for (const project of projects) {
       if (!project.client_id) {
-        return acc;
+        continue;
       }
-      acc.set(project.client_id, (acc.get(project.client_id) ?? 0) + 1);
-      return acc;
-    }, new Map<string, number>());
+      const existing = clientCounts.get(project.client_id);
+      if (existing) {
+        existing.count += 1;
+        // A name may only come from a project projection where it remains readable.
+        if (existing.clientName === null && typeof project.client_name === 'string') {
+          existing.clientName = project.client_name;
+        }
+      } else {
+        clientCounts.set(project.client_id, {
+          count: 1,
+          clientName: typeof project.client_name === 'string' ? project.client_name : null,
+        });
+      }
+    }
 
-    const topClientsByProjectCount = Array.from(clientCounts.entries())
-      .map(([clientId, count]) => ({
-        client_name: clientNameById.get(clientId) ?? clientId,
+    const topClientsByProjectCount = Array.from(clientCounts.values())
+      .map(({ clientName, count }) => ({
+        client_name: clientName,
         project_count: count,
       }))
       .sort((left, right) => right.project_count - left.project_count)

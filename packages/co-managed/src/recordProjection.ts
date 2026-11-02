@@ -49,12 +49,28 @@ export function recordSourceFromCoManaged(
   };
 }
 
+/** Every spelling of a bare dependency in this record's value and table namespaces. */
+function dependencyFieldAliases(source: RedactableRecordSource, dependency: string): readonly string[] {
+  const table = source.resource.find(resource => dependency.startsWith(`${resource}.`));
+  const field = dependency.startsWith('values.')
+    ? dependency.slice('values.'.length)
+    : table
+      ? dependency.slice(table.length + 1)
+      : dependency.includes('.')
+        ? null
+        : dependency;
+  if (field === null) return [dependency];
+  return [dependency, field, `values.${field}`, ...source.resource.map(resource => `${resource}.${field}`)];
+}
+
 /** Every alias a record key is matched against: itself, `values.`/`<table>.` forms, declared extras, and derived sources. */
 export function recordFieldAliases(source: RedactableRecordSource, key: string): readonly string[] {
   return [
     key, `values.${key}`, ...source.resource.map(table => `${table}.${key}`),
     ...(Object.hasOwn(source.fields, key) ? source.fields[key] : []),
-    ...(Object.hasOwn(source.derived, key) ? source.derived[key] : []),
+    ...(Object.hasOwn(source.derived, key)
+      ? source.derived[key].flatMap(dependency => dependencyFieldAliases(source, dependency))
+      : []),
   ];
 }
 
