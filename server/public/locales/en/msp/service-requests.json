@@ -93,6 +93,36 @@
         "checkbox": "checkbox",
         "date": "date",
         "file-upload": "file-upload"
+      },
+      "visibility": {
+        "title": "Show when…",
+        "none": "Always shown",
+        "addRule": "Add condition",
+        "removeRule": "Remove condition",
+        "source": "Field",
+        "selectSource": "Select a field",
+        "operator": "Condition",
+        "value": "Value",
+        "valueTrue": "Checked",
+        "valueFalse": "Unchecked",
+        "selectValue": "Select a value",
+        "legacyBooleanWarning": "This rule compares against text, but a checkbox holds true/false, so it will never match. Re-select the value to fix it.",
+        "saveFailed": "Failed to save the visibility rules.",
+        "contextSources": {
+          "requesterUserId": "Requesting user",
+          "clientId": "Requesting client",
+          "contactId": "Requesting contact"
+        },
+        "operators": {
+          "equals": "equals",
+          "not-equals": "does not equal",
+          "is-true": "is checked / true",
+          "is-false": "is unchecked / false",
+          "has-value": "has a value",
+          "is-empty": "is empty"
+        },
+        "advancedJson": "Advanced (JSON)",
+        "advancedJsonHelp": "The full saved configuration, including context defaults. Visibility rules are easier to change with “Show when…” on each field. Unsaved edits here are discarded if a rule is changed there."
       }
     },
     "execution": {
@@ -144,7 +174,50 @@
       "visibility": {
         "title": "Visibility Configuration",
         "config": "Visibility Config (JSON object)",
-        "save": "Save Visibility Config"
+        "save": "Save Visibility Config",
+        "audience": {
+          "removedReferences": "Unavailable audience selections were removed. Review and save the audience.",
+          "reference_client_id": "Client",
+          "reference_client_tags": "Client tag",
+          "reference_contact_id": "Contact",
+          "reference_contact_tags": "Contact tag",
+          "reference_contact_group_id": "Client group",
+          "chooseTags": "Choose tags",
+          "loadError": "Could not load audience choices.",
+          "saveError": "Could not save audience.",
+          "saved": "Audience saved",
+          "convertedReadOnly": "This migrated audience is preserved as a read-only policy.",
+          "replace": "Replace with a new audience",
+          "clientTags": "Client tags",
+          "contactTags": "Contact tags",
+          "allUsers": "All users of this client",
+          "missingClient": "Unavailable client",
+          "missingContact": "Unavailable contact",
+          "narrowTags": "Only contacts tagged",
+          "remove": "Remove",
+          "allPortalUsers": "All client portal users",
+          "reach": "Visible to {{count}} contacts at {{clients}} clients",
+          "reachUnavailable": "Reach unavailable",
+          "title": "Who can see this form",
+          "everyone": "Everyone",
+          "everyoneHelp": "All authenticated client users can see and submit this form.",
+          "scoped": "Selected clients and client users",
+          "scopedHelp": "Users can see this form when they match an audience entry.",
+          "addClient": "Add a client",
+          "clientPlaceholder": "Search clients...",
+          "noClients": "No clients selected yet.",
+          "selectedClients": "Selected clients",
+          "removeClient": "Remove {{name}}",
+          "groupsOf": "Client-user groups of {{name}}",
+          "groupLabel": "{{group}} ({{client}})",
+          "loadingGroups": "Loading groups...",
+          "noGroups": "This client has no client-user groups.",
+          "groupsHelp": "Each client is either all of its users, or only the members of selected groups. A group only grants access to its own client's members. A client cannot be set to all users and also have its groups selected.",
+          "emptyWarning": "Nobody can see this form until you add an audience.",
+          "save": "Save audience",
+          "allUsersOf": "All users of {{name}}",
+          "onlyGroups": "Only members of selected groups"
+        }
       },
       "fields": {
         "executionProvider": "Execution Provider",
@@ -387,7 +460,8 @@
       "ticketRoutingUpdated": "Ticket routing configuration updated",
       "workflowConfigurationUpdated": "Workflow configuration updated",
       "formBehaviorConfigUpdated": "Form behavior config updated",
-      "visibilityConfigUpdated": "Visibility config updated"
+      "visibilityConfigUpdated": "Visibility config updated",
+      "audienceUpdated": "Audience updated"
     },
     "error": {
       "loadFailed": "Failed to load service requests",
@@ -410,7 +484,8 @@
       "formBehaviorInvalid": "Invalid form behavior JSON",
       "visibilityNotObject": "Visibility config must be a JSON object",
       "visibilityInvalid": "Invalid visibility JSON",
-      "saveAllPartial": "Some sections couldn't be saved: {{sections}}"
+      "saveAllPartial": "Some sections couldn't be saved: {{sections}}",
+      "audienceSaveFailed": "Failed to update audience"
     }
   }
 }

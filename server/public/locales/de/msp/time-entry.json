@@ -132,12 +132,16 @@
       "billable": "Abrechnungsfähig",
       "notes": "Notizen",
       "deleteTimeEntry": "Zeiteintrag löschen",
-      "unsavedChanges": "Nicht gespeicherte Änderungen"
+      "unsavedChanges": "Nicht gespeicherte Änderungen",
+      "contractLine": "Vertragsposition",
+      "operational": "Operativ – nicht abgerechnet"
     },
     "placeholders": {
       "selectService": "Wählen Sie einen Dienst aus",
+      "searchServices": "Dienste suchen...",
       "selectDate": "Datum auswählen",
-      "addNotes": "Notizen hinzufügen"
+      "addNotes": "Notizen hinzufügen",
+      "selectContractLine": "Vertragsposition auswählen"
     },
     "validation": {
       "startBeforeEnd": "Die Startzeit muss vor der Endzeit liegen",
@@ -155,6 +159,10 @@
       "task": "Standard aus Aufgabe",
       "phase": "Standard aus Phase",
       "project": "Standard aus Projekt"
+    },
+    "options": {
+      "resolveContractLineLater": "Keine Position - später zuordnen",
+      "noServicesFound": "Keine Dienste gefunden"
     }
   },
   "workItemPicker": {
@@ -401,7 +409,7 @@
     "noContract": "Für diesen Service wurde keine Vertragszeile gefunden. Die Zeit wird an den systemverwalteten Standardvertrag weitergeleitet.",
     "contract": "Vertrag: {{name}}",
     "defaultContract": "Systemverwalteter Standardvertrag",
-    "multipleLines": "Mehrere Vertragszeilen verfügbar – Standardauswahl verwenden"
+    "multipleEligible": "Für dieses Datum kommen mehrere Vertragspositionen infrage. Wählen Sie eine Vertragsposition, um die Zuordnung zu speichern."
   },
   "billableLegend": {
     "title": "Abrechnungsfähige Legende",

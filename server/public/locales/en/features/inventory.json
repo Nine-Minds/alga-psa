@@ -32,7 +32,8 @@
     "to": "To",
     "today": "Today",
     "total": "Total",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "recordUnavailable": "Not found, or you don't have access"
   },
   "counts": {
     "adjustments": "{{count}} adjustment(s)",
@@ -588,7 +589,32 @@
       "returnLocationRequired": "Select a location before receiving the return.",
       "returnedUnitNotFound": "Returned stock unit not found. Please refresh and choose another unit.",
       "returnedUnitRequired": "Returned unit ID is required.",
-      "vendorRequired": "Select a vendor before sending the RMA."
+      "vendorRequired": "Select a vendor before sending the RMA.",
+      "warrantyUnitTracked": "This RMA is for a stock unit. Use the stock-unit RMA actions.",
+      "warrantyStockTrackedAsset": "This device was sold from stock. Open an RMA from its stock unit instead.",
+      "warrantyNotClientOwned": "Warranty claims are for client-owned equipment.",
+      "warrantyNoCustody": "The device is not in custody. Receive the equipment first.",
+      "warrantyCustodyWrongState": "The device is not in the right place for this step. Refresh and check its custody.",
+      "warrantyLocationRequired": "Choose where the device is now so it can be received back.",
+      "warrantyInvalidTransition": "That step is not available in the RMA’s current status. Refresh and try again.",
+      "warrantyReviewClose": "Approve or deny the claim before closing it.",
+      "duplicateReference": "That RMA reference or number is already in use.",
+      "checkViolation": "That value is not allowed for this RMA.",
+      "ticketNotFound": "Ticket not found.",
+      "noTicket": "This RMA is not linked to a ticket.",
+      "referenceRequired": "Add the vendor's case number first.",
+      "warrantyClaimUnitAction": "This is a warranty claim on client equipment. Use the warranty actions on the RMA.",
+      "warrantyReasonRequired": "Describe what is wrong with the device.",
+      "warrantyDenialReasonRequired": "Give the reason the claim is not covered.",
+      "warrantyCarrierRequired": "Enter the carrier.",
+      "warrantyTrackingRequired": "Enter the tracking number.",
+      "warrantyReplacementSerialRequired": "Enter the replacement serial number.",
+      "warrantyDateFormat": "Use the format YYYY-MM-DD.",
+      "warrantyDateInvalid": "That is not a real calendar date.",
+      "warrantyInputInvalid": "Some of the details are not valid. Check them and try again.",
+      "baseUrlMissing": "The application URL is not configured.",
+      "vendorSystemNotFound": "That vendor-case system is not available.",
+      "vendorSystemTemplateInvalid": "That system's link template can't be used for a vendor case."
     },
     "salesOrders": {
       "clientRequired": "Select a client before creating the sales order.",
@@ -1255,7 +1281,9 @@
       "type": "Type",
       "vendor": "Vendor",
       "creditAtStake": "Credit at stake",
-      "rmaNumber": "RMA #"
+      "rmaNumber": "RMA #",
+      "ticket": "Ticket",
+      "returnBy": "Return by"
     },
     "deadUnitsOwed": "Dead units owed",
     "fields": {
@@ -1300,11 +1328,128 @@
       "replaced": "Replaced",
       "credited": "Credited",
       "charged": "Charged",
-      "closed": "Closed"
+      "closed": "Closed",
+      "warrantyReview": "Warranty review",
+      "repaired": "Repaired"
     },
     "ageAtVendor": "{{days}}d at vendor",
     "filters": {
       "statusActive": "Showing {{status}} RMA cases."
+    },
+    "detail": {
+      "title": "RMA {{id}}",
+      "reference": "RMA reference",
+      "product": "Product",
+      "returnedSerial": "Returned unit serial",
+      "opened": "Opened",
+      "updated": "Updated",
+      "age": "Age (days)",
+      "reason": "Reason",
+      "viewUnit": "View unit",
+      "viewAsset": "View asset"
+    },
+    "tabs": {
+      "all": "All",
+      "review": "Warranty review",
+      "inProgress": "In progress",
+      "closed": "Closed"
+    },
+    "warranty": {
+      "openDetail": "Open",
+      "updated": "RMA updated.",
+      "updateFailed": "Couldn't update the RMA.",
+      "printTag": "Print RMA tag",
+      "printTagFailed": "Couldn't print the RMA tag.",
+      "popupBlocked": "Allow pop-ups to see the label.",
+      "printSlip": "Print return slip",
+      "mirrorToTicket": "Mirror vendor case to ticket",
+      "mirrored": "Vendor case added to the ticket.",
+      "mirrorFailed": "Couldn't add the vendor case to the ticket.",
+      "mirrorSystem": "Vendor case system",
+      "mirrorSystemGeneric": "Generic link",
+      "assetLink": "Asset: {{name}}",
+      "ticketLink": "Ticket: {{number}}",
+      "timeline": "History",
+      "noEvents": "No history yet.",
+      "confirmReceived": "Confirm the device is in the office. Its custody must be in the office.",
+      "confirmCredit": "Record that the vendor credited this device. The custody episode is closed as disposed.",
+      "actions": {
+        "approveStandard": "Approve (standard)",
+        "approveAdvance": "Approve (advance replacement)",
+        "deny": "Deny claim",
+        "cancel": "Cancel claim",
+        "markDeviceReceived": "Mark device received",
+        "shipToVendor": "Ship to vendor",
+        "receiveReplacement": "Receive replacement",
+        "recordRepair": "Record repair",
+        "recordCredit": "Record vendor credit",
+        "returnToClient": "Return to client",
+        "close": "Close RMA"
+      },
+      "events": {
+        "opened": "Claim opened",
+        "warrantyApproved": "Warranty approved",
+        "warrantyDenied": "Warranty denied",
+        "deviceReceived": "Device received",
+        "shippedOutbound": "Shipped to vendor",
+        "vendorCaseRecorded": "Vendor case recorded",
+        "replacementReceived": "Replacement received",
+        "repairReceived": "Repair received",
+        "vendorCredited": "Vendor credited",
+        "returnedToClient": "Returned to client",
+        "closed": "Closed",
+        "note": "Note"
+      },
+      "outcome": {
+        "covered": "Covered",
+        "notCovered": "Not covered",
+        "unknown": "Unknown"
+      },
+      "closeReason": {
+        "resolved": "Resolved",
+        "warrantyDenied": "Warranty denied",
+        "cancelled": "Cancelled",
+        "duplicate": "Duplicate",
+        "vendorCredited": "Vendor credited"
+      },
+      "fields": {
+        "outcome": "Warranty decision",
+        "decidedAt": "Decided",
+        "denialReason": "Denial reason",
+        "vendorRef": "Vendor RMA reference",
+        "returnBy": "Return by",
+        "outbound": "Outbound shipment",
+        "inbound": "Inbound shipment",
+        "replacementSerial": "Replacement serial",
+        "returnShipTo": "Return ship-to",
+        "closedReason": "Closed reason",
+        "cancelReason": "Reason",
+        "carrier": "Carrier",
+        "tracking": "Tracking number",
+        "model": "Model",
+        "manufacturer": "Manufacturer",
+        "warrantyEnd": "Warranty end date",
+        "inboundCarrier": "Inbound carrier",
+        "inboundTracking": "Inbound tracking number",
+        "counterparty": "Returned to",
+        "closeReason": "Closed reason",
+        "note": "Note"
+      },
+      "claim": {
+        "title": "New warranty claim",
+        "loadAssetsFailed": "Couldn't load equipment.",
+        "assetRequired": "Choose the equipment.",
+        "reasonRequired": "Describe what is wrong with the device.",
+        "opened": "Warranty claim opened.",
+        "openFailed": "Couldn't open the warranty claim.",
+        "search": "Find equipment",
+        "searchPlaceholder": "Name, tag or serial number",
+        "asset": "Equipment",
+        "assetPlaceholder": "Select equipment…",
+        "track": "Track",
+        "stockHint": "Devices sold from stock cannot be claimed here. Use Open RMA from the stock unit instead.",
+        "submit": "Open claim"
+      }
     }
   },
   "salesOrders": {
@@ -1564,6 +1709,10 @@
       "inProgress": "Rebuilding…"
     },
     "receive": {
+      "searchProducts": "Search products or SKU...",
+      "noProductsFound": "No products found",
+      "searchLocations": "Search locations...",
+      "noLocationsFound": "No locations found",
       "costNonNegative": "Unit cost can't be negative.",
       "failed": "Couldn't receive stock.",
       "inProgress": "Receiving…",
@@ -1698,6 +1847,14 @@
       "failed": "Couldn't restock the return.",
       "restocking": "Restocking…",
       "submit": "Restock"
+    },
+    "printLabel": "Print label",
+    "printPopupBlocked": "Allow pop-ups to open the label.",
+    "printFailed": "Could not print this label.",
+    "printWithTemplate": "Print with {{code}}",
+    "claimant": {
+      "project": "Project {{number}}",
+      "salesOrder": "Sales order {{number}}"
     }
   },
   "transfers": {

@@ -67,6 +67,7 @@
     "taxBreakdown": "Belastingoverzicht",
     "manualInvoice": "Handmatige factuur",
     "credits": "Kredieten",
+    "currency": "Valuta",
     "financialArtifactSummary": "Alleen financiële factuur. Terugkerende serviceperioden verschijnen alleen op terugkerende detailregels.",
     "servicePeriod": "Serviceperiode",
     "servicePeriods": "Serviceperioden",
@@ -289,6 +290,13 @@
       "pending": "Facturen die wachten op goedkeuring of verdere verwerking",
       "prepayment": "Facturen voor vooruitbetaling of aanbetaling",
       "partially_applied": "Facturen met gedeeltelijke betalingen toegepast"
+    },
+    "billingPeriod": {
+      "weekly": "per week",
+      "monthly": "per maand",
+      "quarterly": "per kwartaal",
+      "semi-annually": "per halfjaar",
+      "annually": "per jaar"
     }
   },
   "quoteForm": {
@@ -444,7 +452,13 @@
     "expires": "Vervalt op {{date}}",
     "recentBurn": "Recent verbruik",
     "timeEntry": "Tijdsvermelding",
-    "contractLabel": "Contract: {{contract}}"
+    "contractLabel": "Contract: {{contract}}",
+    "hoursLeftValue": "{{hours}} u over · {{value}}",
+    "validFrom": "Geldig vanaf {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — prepaid blok, {{hours}} u",
+    "overPrepaidBlock": "{{name}} (boven prepaid blok)"
   },
   "bucketUsage": {
     "contractLine": "Contractregel voor urenbundel",
@@ -452,5 +466,20 @@
     "hoursUsed": "{{hours}} uur gebruikt",
     "hoursTotal": "{{hours}} uur in totaal",
     "rolloverHours": "Inclusief {{hours}} overgedragen uren"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Verschuldigd bij ontvangst",
+      "net14": "Netto 14",
+      "net15": "Netto 15",
+      "net30": "Netto 30",
+      "net7": "Netto 7"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Bankoverschrijving",
+      "check": "Rekening",
+      "creditCard": "Creditcard"
+    },
+    "tenantDefault": "Standaard van de tenant ({{value}})"
   }
 }

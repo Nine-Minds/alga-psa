@@ -19,6 +19,12 @@ const ticketUpdates: Record<string, unknown>[] = [];
 // transaction resolves, matching production's flush-after-commit semantics.
 const afterCommitHooksQueue: Array<() => unknown | Promise<unknown>> = [];
 
+// The human-work guard is covered against a real database in T043; this fake DB has no users table.
+vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
+  assertHumanWorkAssignee: vi.fn(async () => undefined),
+  assertHumanWorkOwner: vi.fn(async () => undefined),
+}));
+
 vi.mock('@alga-psa/shared/lib/tickets/ticketLifecycleEvents', () => ({
   publishTicketTransitionsAfterCommit: vi.fn(async () => []),
   captureTicketTransitionSnapshot: vi.fn(async () => null),
@@ -897,5 +903,33 @@ describe('updateTicketWithCache live updates', () => {
         trigger: 'close',
       },
     });
+  });
+  it('keeps the USER actor on TICKET_RESPONSE_STATE_CHANGED for a native systemActor update (auto-close)', async () => {
+    const trx = buildTrx({
+      currentTicket: makeTicket({ status_id: 'status-1', response_state: 'awaiting_client' }),
+    });
+
+    const { updateTicketInTransaction } = await import('./optimizedTicketActions');
+    const systemUser = { ...currentUser, user_id: 'system-user-1' };
+    // Run inside the mocked withTransaction so registerAfterCommit hooks flush.
+    const { withTransaction } = await import('@alga-psa/db');
+    withTransactionMock.mockImplementation(async (_db: any, callback: (t: any) => Promise<any>) => callback(trx));
+    await expect(
+      withTransaction({ any: true } as any, (t: any) =>
+        updateTicketInTransaction(t, systemUser, 'tenant-1', 'ticket-1', { status_id: 'closed-status-1' }, { systemActor: true }),
+      ),
+    ).resolves.toBe('success');
+
+    // Main always published a USER actor here; a SYSTEM actor would be a native regression.
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_RESPONSE_STATE_CHANGED',
+        ctx: expect.objectContaining({
+          tenantId: 'tenant-1',
+          actor: { actorType: 'USER', actorUserId: 'system-user-1' },
+        }),
+        payload: expect.objectContaining({ ticketId: 'ticket-1', newResponseState: null, trigger: 'close' }),
+      }),
+    );
   });
 });

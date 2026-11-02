@@ -324,6 +324,21 @@
       "any": "alle",
       "clear": "Wissen",
       "countSummary": "{{groups}} groep(en) · {{obligations}} post(en)"
+    },
+    "lateTime": {
+      "title": "Laat goedgekeurde uurtijd",
+      "description": "Deze tijd is goedgekeurd nadat de factuur voor de bijbehorende serviceperiode al was uitgegeven. Invoer die wacht op facturering wordt eenmalig aan de volgende factuur toegevoegd, gemarkeerd als late tijd. Invoer buiten de terugkijkperiode wordt niet gefactureerd.",
+      "columns": {
+        "client": "Klant",
+        "technician": "Technicus",
+        "service": "Dienst",
+        "workDate": "Werkdatum",
+        "hours": "Uren",
+        "closedPeriod": "Afgesloten serviceperiode",
+        "status": "Status"
+      },
+      "nextInvoice": "Wordt gefactureerd op de volgende factuur",
+      "outsideLookback": "Buiten de terugkijkperiode — niet gefactureerd"
     }
   },
   "manualInvoices": {
@@ -558,6 +573,17 @@
         "selectedCount": "{{count}} geselecteerd",
         "clear": "Selectie wissen"
       }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Factuur definitief gemaakt, maar een vervolgstap is niet voltooid: {{steps}}. De factuur is definitief; u kunt die stap opnieuw proberen.",
+      "steps": {
+        "credit_auto_apply": "automatische tegoedtoepassing",
+        "project_deposit_credits": "projectaanbetalingstegoeden",
+        "workflow_events": "workflowgebeurtenissen",
+        "accounting_export": "boekhoudexport",
+        "replenishment_status": "status prepaid-aanvulling",
+        "autopay": "automatische betaling"
+      }
     }
   },
   "finalizedTab": {
@@ -596,7 +622,9 @@
       "bulkPdfFailed": "Kan geen PDF's genereren. Probeer het opnieuw.",
       "unfinalizeFailed": "Kan de finalisatie van de factuur niet ongedaan maken. Probeer het opnieuw.",
       "bulkUnfinalizeFailed": "Kan de finalisatie van facturen niet ongedaan maken. Probeer het opnieuw.",
-      "bulkUnfinalizeInvoiceFailed": "{{invoiceNumber}} kon niet worden heropend: {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "{{invoiceNumber}} kon niet worden heropend: {{reason}}",
+      "explainThis": "Toelichting tonen",
+      "usedHourBlockExplanation": "Door deze factuur definitief te maken, werden de vooruitbetaalde uren beschikbaar voor tijdregistraties. Sindsdien is er tijd aan het urenblok toegewezen. Als de factuur opnieuw wordt geopend, wordt het blok ongedaan gemaakt, terwijl die toewijzingen en eventuele latere kosten er nog van afhankelijk kunnen zijn. Om de facturatie consistent te houden, kunnen facturen voor blokken die ooit zijn gebruikt niet worden teruggezet naar concept, ook niet als de tijd later is teruggedraaid. Overweeg een afzonderlijke aanpassing of creditnota om de factuur te corrigeren."
     },
     "bulk": {
       "actionBar": {
@@ -829,6 +857,7 @@
       "syncNow": "Synchroniseren met QuickBooks",
       "viewInQbo": "Bekijken in QuickBooks",
       "voidInvoice": "Factuur ongeldig maken",
+      "delegateTax": "Belasting uit het boekhoudsysteem gebruiken",
       "viewInXero": "Bekijken in Xero"
     },
     "loading": "Voorbeeld laden...",
@@ -851,6 +880,13 @@
     "applyCreditDialog": {
       "title": "Tegoed toepassen"
     },
+    "delegateTaxDialog": {
+      "title": "Belasting uit het boekhoudsysteem gebruiken",
+      "description": "Het boekhoudsysteem berekent de belasting voor deze factuur bij de volgende export, waarna AlgaPSA de belasting en het totaal vervangt door dat resultaat. Nummers, regels, prijzen en geregistreerde betalingen blijven ongewijzigd.",
+      "cancel": "Annuleren",
+      "confirm": "Overschakelen naar belasting uit het boekhoudsysteem",
+      "switching": "Bezig met overschakelen..."
+    },
     "voidDialog": {
       "title": "Factuur ongeldig maken",
       "description": "Het ongeldig maken van deze factuur is definitief. Geef een reden op.",
@@ -858,6 +894,19 @@
       "cancel": "Annuleren",
       "confirm": "Factuur ongeldig maken",
       "voiding": "Ongeldig maken…"
+    },
+    "history": {
+      "title": "Geschiedenis",
+      "empty": "Geen geschiedenis vastgelegd.",
+      "loadFailed": "Factuurgeschiedenis laden mislukt.",
+      "system": "Systeem",
+      "ops": {
+        "invoice_finalized": "Definitief gemaakt",
+        "invoice_unfinalized": "Heropend",
+        "invoice_deleted": "Verwijderd"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "geen"
     }
   },
   "templateEditor": {
@@ -1378,7 +1427,7 @@
       "mediaSource": "Afbeeldingsbron",
       "mediaSourceLogo": "Bedrijfslogo",
       "mediaSourceCustom": "Eigen afbeelding",
-      "mediaSourceLogoHint": "Toont op elk document het logo uit de huisstijlinstellingen van uw bedrijf.",
+      "mediaSourceLogoHint": "Toont op elk document het logo uit het klantrecord van uw eigen bedrijf.",
       "mediaSourceUrl": "Bron-URL",
       "renameInner": "Ook {{count}} onderliggende lagen hernoemen ({{from}} → {{to}}…)?",
       "renameInnerApply": "Hernoemen",
@@ -1428,7 +1477,14 @@
           "widthTooltip": "De hieronder ingevoerde exacte breedte gebruiken",
           "heightTooltip": "De hieronder ingevoerde exacte hoogte gebruiken"
         }
-      }
+      },
+      "barcode": "Streepjescode",
+      "barcodeSymbology": "Type",
+      "barcodeQr": "QR-code",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Waarde",
+      "barcodeHintWorkTag": "Tekst, of een veld zoals {{example}} (de link naar het record). Houd de code minstens ongeveer 20 mm breed zodat hij scanbaar blijft.",
+      "barcodeHint": "De tekst die wordt gecodeerd. Houd de code minstens ongeveer 20 mm breed zodat hij scanbaar blijft."
     },
     "shell": {
       "selectedLabel": "Geselecteerd:",
@@ -1441,7 +1497,11 @@
       "title": "Pagina-instelling",
       "description": "Kies een papierpreset en paginamarge zonder het verborgen pagina-knooppunt te selecteren.",
       "paperPreset": "Papierpreset",
-      "marginMm": "Marge (mm)"
+      "marginMm": "Marge (mm)",
+      "customSize": "Aangepast formaat…",
+      "customWidth": "Breedte",
+      "customHeight": "Hoogte",
+      "customUnit": "Eenheid"
     },
     "breadcrumbs": {
       "emptyHelp": "Selecteer een component in het canvas om de hiërarchie te zien.",
@@ -1472,7 +1532,13 @@
         "noQuotesFound": "Geen offertes gevonden.",
         "selectQuote": "Offerte kiezen",
         "loadingQuoteDetails": "Offertedetails worden geladen…",
-        "loadingDocumentDetails": "Documentdetails worden geladen…"
+        "loadingDocumentDetails": "Documentdetails worden geladen…",
+        "zoom": {
+          "fit": "Passend",
+          "actual": "100%",
+          "label": "Zoom voorbeeld",
+          "fitWithScale": "Passend ({{percent}}%)"
+        }
       },
       "tabs": {
         "design": "Ontwerp",
@@ -2366,7 +2432,7 @@
     },
     "imagePicker": {
       "browse": "Documenten doorzoeken",
-      "hiddenFromClients": "{{document}} is verborgen voor klanten. Het wordt niet weergegeven op offertes of facturen die via het klantenportaal worden bekeken.",
+      "hiddenFromClients": "{{document}} is verborgen voor klanten, dus zij kunnen het niet openen in het klantenportaal. Het wordt nog steeds weergegeven op facturen en in PDF's van offertes die het gebruiken.",
       "updating": "Bijwerken...",
       "markVisible": "Markeren als zichtbaar voor klanten",
       "visibleInPortal": "Zichtbaar in het klantenportaal",
@@ -2415,11 +2481,13 @@
     "description": "Ontwerp de indelingen waarmee pdf’s en voorbeelden voor {{type}} worden weergegeven.",
     "availableLayouts": "Beschikbare indelingen",
     "actions": {
-      "newLayout": "Nieuwe indeling"
+      "newLayout": "Nieuwe indeling",
+      "setDefaultForClass": "Instellen als standaard voor {{class}}"
     },
     "columns": {
       "name": "Naam",
-      "source": "Bron"
+      "source": "Bron",
+      "labelClass": "Klasse"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (Standaard)",
@@ -2451,7 +2519,10 @@
         "details": "Indelingsgegevens"
       },
       "fields": {
-        "version": "Versie"
+        "version": "Versie",
+        "labelClass": "Labelklasse",
+        "labelFields": "Velden die op het label worden getoond",
+        "labelFieldsHint": "De recordlink (QR-code) en de identificatie worden altijd getoond."
       },
       "placeholders": {
         "templateName": "Sjabloon voor {{type}}"
@@ -2488,7 +2559,10 @@
     "types": {
       "salesOrder": "Verkooporder",
       "packingSlip": "Pakbon",
-      "pickList": "Picklijst"
+      "pickList": "Picklijst",
+      "workTag": "Werklabel / Label",
+      "stagingManifest": "Paklijst",
+      "rmaReturnSlip": "RMA-retourbon"
     }
   },
   "errors": {
@@ -2496,7 +2570,8 @@
       "invoiceUpdate": "Toestemming geweigerd: bijwerkrechten voor facturen vereist",
       "invoiceDelete": "Toestemming geweigerd: verwijderrechten voor facturen vereist",
       "invoiceAccess": "Toestemming geweigerd: toegang tot de factuur geweigerd",
-      "otherClientInvoices": "Toestemming geweigerd: facturen van een andere klant zijn niet toegankelijk"
+      "otherClientInvoices": "Toestemming geweigerd: facturen van een andere klant zijn niet toegankelijk",
+      "invoiceRead": "Toegang geweigerd: leesrechten voor facturen vereist"
     },
     "invoice": {
       "notFound": "Factuur niet gevonden",
@@ -2510,6 +2585,7 @@
       "onlyDraftEditable": "Alleen conceptfacturen kunnen worden bewerkt",
       "numberExists": "Het factuurnummer bestaat al. Kies een ander nummer.",
       "notFinalized": "De factuur is niet definitief gemaakt",
+      "usedHourBlockUnfinalize": "Deze factuur kan niet worden teruggezet naar concept: het urenblok {{blockId}} is al gebruikt ({{usedHours}} van {{totalHours}} uur). Overweeg een afzonderlijke aanpassing of creditnota om de factuur te corrigeren.",
       "unfinalizeFailed": "De factuur kon niet ongedaan definitief worden gemaakt door een onverwachte gegevensfout. Vernieuw de pagina en probeer het opnieuw.",
       "paidOrCancelled": "Een betaalde of geannuleerde factuur kan niet worden gewijzigd",
       "syncedVoidInstead": "Deze factuur is gesynchroniseerd met een boekhoudsysteem — storneer deze in plaats van te verwijderen.",
@@ -2518,7 +2594,9 @@
       "duplicate": "Er bestaat al een conflicterende factuur. Vernieuw de pagina en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht factuurveld.",
       "missingFieldNamed": "Er ontbreekt een verplicht factuurveld: {{field}}.",
-      "billingProfileUnavailable": "Het geselecteerde factureringsprofiel is niet beschikbaar voor deze klant."
+      "billingProfileUnavailable": "Het geselecteerde factureringsprofiel is niet beschikbaar voor deze klant.",
+      "deleteNotDraft": "Alleen conceptfacturen kunnen worden verwijderd; annuleer de factuur in plaats daarvan.",
+      "deleteHasPayments": "Facturen met geregistreerde betalingen kunnen niet worden verwijderd."
     },
     "billingCycle": {
       "notFoundRefresh": "Factuurcyclus niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",

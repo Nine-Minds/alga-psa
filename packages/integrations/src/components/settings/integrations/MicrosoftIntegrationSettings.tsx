@@ -10,7 +10,8 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { MAILBOX_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import {
   archiveMicrosoftProfile,
   getMicrosoftIntegrationStatus,
@@ -29,6 +30,11 @@ import {
 import type { MicrosoftConsumerDescriptor, TranslateFn } from './MicrosoftProfileFormDialog';
 import { resolveTeamsAvailability } from '../../../lib/teamsAvailabilityCore';
 import { MicrosoftEmailSetupDialog } from './MicrosoftEmailSetupDialog';
+import {
+  formatMicrosoftEmailSetupFailure,
+  useMicrosoftEmailSetupCallback,
+  type MicrosoftEmailSetupCallbackResult,
+} from './useMicrosoftEmailSetupCallback';
 import { getMicrosoftEmailAdminConsentUrl } from '../../../actions/integrations/microsoftEmailSetupActions';
 import {
   AlertTriangle,
@@ -309,6 +315,8 @@ export function MicrosoftIntegrationSettings({
   onStatusChange,
 }: MicrosoftIntegrationSettingsProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { t } = useTranslation('msp/integrations');
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(true);
@@ -326,6 +334,10 @@ export function MicrosoftIntegrationSettings({
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
   const advancedChoiceInitializedRef = React.useRef(false);
   const [emailSetupOpen, setEmailSetupOpen] = React.useState(false);
+  const [setupFailure, setSetupFailure] = React.useState<string | null>(null);
+  const handledSetupOutcomeRef = React.useRef(false);
+  // Set only for a URL-driven (full-page) outcome; popup outcomes already show in-place.
+  const pendingOutcomeScrollRef = React.useRef<'ok' | 'error' | null>(null);
 
   const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
   const profiles = status?.success ? status.profiles ?? [] : [];
@@ -422,8 +434,72 @@ export function MicrosoftIntegrationSettings({
 
   const approvePendingEmailSetup = React.useCallback(async () => {
     const url = await getPendingEmailApprovalUrl();
-    if (url) window.location.assign(url);
+    if (!url) return;
+    setSetupFailure(null);
+    // Popup first so the outcome returns through postMessage; when it is
+    // blocked, the full-page round trip lands back here via query params.
+    const popup = window.open(url, 'microsoft-email-admin-consent', 'popup,width=520,height=680');
+    if (!popup) {
+      window.location.assign(url);
+      return;
+    }
+    popup.focus?.();
   }, [getPendingEmailApprovalUrl]);
+
+  const handleEmailSetupOutcome = React.useCallback((data: MicrosoftEmailSetupCallbackResult) => {
+    if (data.success) {
+      setSetupFailure(null);
+      toast({
+        title: t('integrations.microsoft.emailSetup.consent.confirmedTitle', { defaultValue: 'Administrator consent confirmed' }),
+        description: t('integrations.microsoft.emailSetup.consent.confirmedDescription', { defaultValue: 'The Microsoft app is ready for mailbox authorization.' }),
+      });
+    } else {
+      setSetupFailure(formatMicrosoftEmailSetupFailure(t, data));
+    }
+    void load();
+  }, [load, t, toast]);
+  // The dialog listens while it is open; this covers the Providers-card popup.
+  useMicrosoftEmailSetupCallback(handleEmailSetupOutcome, !emailSetupOpen);
+
+  // Full-page return (no opener): read the outcome once, strip it from the URL.
+  React.useEffect(() => {
+    const outcome = searchParams?.get('microsoft_email_setup');
+    if (!outcome || handledSetupOutcomeRef.current) return;
+    handledSetupOutcomeRef.current = true;
+    pendingOutcomeScrollRef.current = outcome === 'ok' ? 'ok' : 'error';
+    handleEmailSetupOutcome(
+      outcome === 'ok'
+        ? { success: true, stage: 'admin_consent' }
+        : {
+            success: false,
+            errorCode: searchParams?.get('error_code') || undefined,
+            // Query params are user-editable; accept only well-formed diagnostics.
+            aadsts: /^\d{4,7}$/.test(searchParams?.get('aadsts') ?? '') ? searchParams?.get('aadsts') ?? undefined : undefined,
+            correlationId: /^[0-9a-fA-F-]{8,64}$/.test(searchParams?.get('correlation_id') ?? '')
+              ? searchParams?.get('correlation_id') ?? undefined
+              : undefined,
+          },
+    );
+    const remaining = new URLSearchParams(searchParams?.toString());
+    ['microsoft_email_setup', 'error_code', 'aadsts', 'correlation_id'].forEach((key) => remaining.delete(key));
+    const query = remaining.toString();
+    const base = pathname ?? window.location.pathname;
+    router.replace(query ? `${base}?${query}` : base);
+  }, [handleEmailSetupOutcome, pathname, router, searchParams]);
+
+  // Bring the URL-driven outcome into view once it has rendered.
+  React.useEffect(() => {
+    const pending = pendingOutcomeScrollRef.current;
+    if (!pending) return;
+    const target = document.getElementById(
+      pending === 'error' ? 'microsoft-email-setup-failure' : 'microsoft-email-setup-ready',
+    );
+    if (!target) return;
+    pendingOutcomeScrollRef.current = null;
+    if (typeof target.scrollIntoView === 'function') {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [setupFailure, emailSetup?.state]);
 
   const copyPendingEmailApprovalLink = React.useCallback(async () => {
     const url = await getPendingEmailApprovalUrl();
@@ -643,8 +719,14 @@ export function MicrosoftIntegrationSettings({
             </Alert>
           )}
 
+          {setupFailure && (
+            <Alert variant="destructive" id="microsoft-email-setup-failure">
+              <AlertDescription>{setupFailure}</AlertDescription>
+            </Alert>
+          )}
+
           {emailSetup?.state === 'ready' && (
-            <Alert variant="success">
+            <Alert variant="success" id="microsoft-email-setup-ready">
               <AlertDescription>
                 <div className="font-medium">
                   {t('integrations.microsoft.settings.platform.title', { defaultValue: 'Microsoft email is ready to connect' })}
@@ -656,7 +738,7 @@ export function MicrosoftIntegrationSettings({
                   id="microsoft-platform-connect-email"
                   type="button"
                   className="mt-3"
-                  onClick={() => router.push('/msp/settings/integrations?category=communication')}
+                  onClick={() => router.push(MAILBOX_SETUP_ENTRY_PATH)}
                 >
                   {t('integrations.microsoft.settings.platform.connectAction', { defaultValue: 'Connect a mailbox →' })}
                 </Button>

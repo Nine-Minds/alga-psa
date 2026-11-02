@@ -20,6 +20,7 @@ vi.mock('@alga-psa/auth', () => ({
       action(
         {
           user_id: 'user-1',
+          user_type: 'internal',
           tenant: 'tenant-1',
         },
         { tenant: 'tenant-1' },

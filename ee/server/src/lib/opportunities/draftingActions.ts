@@ -108,7 +108,7 @@ export const generateFollowUpDraft = withAuth(async (
 ): Promise<IOpportunityFollowUpDraft> => {
   await assertOpportunityDraftingAccess(user, tenant);
   await requireOpportunityPermission(user, 'read');
-  const id = z.string().uuid().parse(opportunityId);
+  const id = z.string().guid().parse(opportunityId);
   const request = generateDraftSchema.parse(input) as {
     instructions: string;
     current_draft?: IOpportunityFollowUpDraft;
@@ -128,7 +128,7 @@ export const logDraftSent = withAuth(async (
 ): Promise<void> => {
   await assertOpportunityDraftingAccess(user, tenant);
   await requireOpportunityPermission(user, 'update');
-  const id = z.string().uuid().parse(opportunityId);
+  const id = z.string().guid().parse(opportunityId);
   const data = draftSentSchema.parse(input) as { subject: string; summary: string };
   const { knex } = await createTenantKnex(tenant);
   await withTransaction(knex, (trx) => logDraftSentData(
@@ -162,7 +162,7 @@ export const getOpportunityFollowUpRecipient = withAuth(async (
 ): Promise<string | null> => {
   await assertOpportunityDraftingAccess(user, tenant);
   await requireOpportunityPermission(user, 'read');
-  const id = z.string().uuid().parse(opportunityId);
+  const id = z.string().guid().parse(opportunityId);
   const { knex } = await createTenantKnex(tenant);
   const recipient = await resolveRecipient(knex, tenant, id);
   return recipient?.email?.trim() || null;
@@ -179,7 +179,7 @@ export const sendOpportunityFollowUp = withAuth(async (
   if (!await hasPermission(user, 'email', 'process')) {
     throw new Error('Permission denied: email process required');
   }
-  const id = z.string().uuid().parse(opportunityId);
+  const id = z.string().guid().parse(opportunityId);
   const data = sendDraftSchema.parse(input);
   const actor = userId(user);
   const { knex } = await createTenantKnex(tenant);

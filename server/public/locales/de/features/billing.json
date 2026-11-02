@@ -67,6 +67,7 @@
     "taxBreakdown": "Steueraufstellung",
     "manualInvoice": "Manuelle Rechnung",
     "credits": "Gutschriften",
+    "currency": "Währung",
     "financialArtifactSummary": "Nur-Finanzrechnung. Wiederkehrende Leistungszeiträume erscheinen nur auf wiederkehrenden Detailzeilen.",
     "servicePeriod": "Leistungszeitraum",
     "servicePeriods": "Leistungszeiträume",
@@ -289,6 +290,13 @@
       "pending": "Rechnungen, die auf Genehmigung oder weitere Bearbeitung warten",
       "prepayment": "Anzahlungs- oder Vorauszahlungsrechnungen",
       "partially_applied": "Rechnungen mit teilweise zugeordneten Zahlungen"
+    },
+    "billingPeriod": {
+      "weekly": "pro Woche",
+      "monthly": "pro Monat",
+      "quarterly": "pro Quartal",
+      "semi-annually": "pro Halbjahr",
+      "annually": "pro Jahr"
     }
   },
   "quoteForm": {
@@ -444,7 +452,13 @@
     "expires": "Läuft am {{date}} ab",
     "recentBurn": "Letzte Nutzung",
     "timeEntry": "Zeiteintrag",
-    "contractLabel": "Vertrag: {{contract}}"
+    "contractLabel": "Vertrag: {{contract}}",
+    "hoursLeftValue": "{{hours}} Std. übrig · {{value}}",
+    "validFrom": "Gültig ab {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — Prepaid-Block, {{hours}} Std.",
+    "overPrepaidBlock": "{{name}} (über Prepaid-Block hinaus)"
   },
   "bucketUsage": {
     "contractLine": "Vertragslinie für Stundenkontingent",
@@ -452,5 +466,20 @@
     "hoursUsed": "{{hours}} Stunden verbraucht",
     "hoursTotal": "{{hours}} Stunden insgesamt",
     "rolloverHours": "Enthält {{hours}} übertragene Stunden"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Fällig bei Erhalt",
+      "net14": "Netto 14",
+      "net15": "Netto 15",
+      "net30": "Netto 30",
+      "net7": "Netto 7"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Banküberweisung",
+      "check": "Scheck",
+      "creditCard": "Kreditkarte"
+    },
+    "tenantDefault": "Mandantenstandard ({{value}})"
   }
 }

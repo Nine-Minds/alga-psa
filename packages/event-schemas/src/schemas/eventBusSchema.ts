@@ -1,4 +1,24 @@
+import {
+  quoteSentEventPayloadSchema,
+  quoteViewedEventPayloadSchema,
+  quoteApprovedEventPayloadSchema,
+  quoteAcceptedEventPayloadSchema,
+  quoteRejectedEventPayloadSchema,
+  quoteExpiredEventPayloadSchema,
+  quoteConvertedEventPayloadSchema,
+  quoteConversionRevertedEventPayloadSchema,
+  quoteSupersededEventPayloadSchema,
+  quoteCancelledEventPayloadSchema,
+} from './domain/quoteEventSchemas';
 import { z } from 'zod';
+import { collaborationActorPayloadIssue, collaborationActorReferenceSchema } from './collaborationActorSchemas';
+import { actorTypeSchema } from './domain/commonEventPayloadSchemas';
+import {
+  EXTENSION_EVENT_TYPES,
+  EXTENSION_PAYLOAD_SCHEMAS,
+  assertEventExtensionsCompose,
+  type ExtensionEventType,
+} from './extensions';
 import {
   emailProviderConnectedEventPayloadSchema,
   emailProviderDisconnectedEventPayloadSchema,
@@ -65,6 +85,10 @@ import {
   clientArchivedEventPayloadSchema,
   clientCreatedEventPayloadSchema,
   clientDeletedEventPayloadSchema,
+  clientLocationCreatedEventPayloadSchema,
+  clientLocationUpdatedEventPayloadSchema,
+  clientLocationDeactivatedEventPayloadSchema,
+  clientLocationDeletedEventPayloadSchema,
   clientMergedEventPayloadSchema,
   clientOwnerAssignedEventPayloadSchema,
   clientStatusChangedEventPayloadSchema,
@@ -136,6 +160,7 @@ import {
 import {
   assetAssignedEventPayloadSchema,
   assetCreatedEventPayloadSchema,
+  assetCustodyChangedEventPayloadSchema,
   assetUnassignedEventPayloadSchema,
   assetUpdatedEventPayloadSchema,
   assetWarrantyExpiringEventPayloadSchema,
@@ -182,6 +207,7 @@ import {
   inventoryPurchaseOrderDeletedEventPayloadSchema,
   inventoryPurchaseOrderUpdatedEventPayloadSchema,
   inventoryRmaCreatedEventPayloadSchema,
+  inventoryRmaUpdatedEventPayloadSchema,
   inventorySalesOrderCreatedEventPayloadSchema,
   inventorySalesOrderDeletedEventPayloadSchema,
   inventorySalesOrderUpdatedEventPayloadSchema,
@@ -193,7 +219,7 @@ import {
 } from './domain/inventoryEventSchemas';
 
 // Define event types
-export const EVENT_TYPES = [
+const CORE_EVENT_TYPES = [
   // Tickets (existing + legacy)
   'TICKET_CREATED',
   'TICKET_UPDATED',
@@ -366,6 +392,20 @@ export const EVENT_TYPES = [
   'CLIENT_MERGED',
   'CLIENT_ARCHIVED',
   'CLIENT_DELETED',
+  'QUOTE_SENT',
+  'QUOTE_VIEWED',
+  'QUOTE_APPROVED',
+  'QUOTE_ACCEPTED',
+  'QUOTE_REJECTED',
+  'QUOTE_EXPIRED',
+  'QUOTE_CONVERTED',
+  'QUOTE_CONVERSION_REVERTED',
+  'QUOTE_SUPERSEDED',
+  'QUOTE_CANCELLED',
+  'CLIENT_LOCATION_CREATED',
+  'CLIENT_LOCATION_UPDATED',
+  'CLIENT_LOCATION_DEACTIVATED',
+  'CLIENT_LOCATION_DELETED',
   'CONTACT_CREATED',
   'CONTACT_UPDATED',
   'CONTACT_PRIMARY_SET',
@@ -495,6 +535,7 @@ export const EVENT_TYPES = [
   'ASSET_ASSIGNED',
   'ASSET_UNASSIGNED',
   'ASSET_WARRANTY_EXPIRING',
+  'ASSET_CUSTODY_CHANGED',
   'FILE_UPLOADED',
   'MEDIA_PROCESSING_SUCCEEDED',
   'MEDIA_PROCESSING_FAILED',
@@ -517,6 +558,7 @@ export const EVENT_TYPES = [
   'INVENTORY_PO_RECEIVED',
   'INVENTORY_SO_FULFILLED',
   'INVENTORY_RMA_CREATED',
+  'INVENTORY_RMA_UPDATED',
   'INVENTORY_SALES_ORDER_CREATED',
   'INVENTORY_SALES_ORDER_UPDATED',
   'INVENTORY_SALES_ORDER_DELETED',
@@ -536,13 +578,29 @@ export const EVENT_TYPES = [
   'UNKNOWN',
 ] as const satisfies readonly [string, ...string[]];
 
+// An extension may add event types, never redeclare one: a collision with a core
+// name fails here at compile time and in assertEventExtensionsCompose at load.
+type AssertNoCoreCollision<T extends never> = T;
+export type EventExtensionCoreCollisions = AssertNoCoreCollision<
+  Extract<ExtensionEventType, (typeof CORE_EVENT_TYPES)[number]>
+>;
+assertEventExtensionsCompose(CORE_EVENT_TYPES);
+
+// Core plus extension event types; the extension list is empty natively.
+export const EVENT_TYPES = [...CORE_EVENT_TYPES, ...EXTENSION_EVENT_TYPES] as const satisfies readonly [
+  string,
+  ...string[],
+];
+
 export const EventTypeEnum = z.enum(EVENT_TYPES);
 
 export type EventType = z.infer<typeof EventTypeEnum>;
 
 // Base payload schema with tenant information
 export const BasePayloadSchema = z.object({
-  tenantId: z.string().uuid(),
+  actorType: actorTypeSchema.optional(),
+  actorReference: collaborationActorReferenceSchema.optional(),
+  tenantId: z.string().guid(),
 });
 
 const TicketNotificationSuppressionSchema = {
@@ -552,30 +610,30 @@ const TicketNotificationSuppressionSchema = {
 
 // Base event schema
 export const BaseEventSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().guid(),
   eventType: EventTypeEnum,
   timestamp: z.string().datetime(),
-  payload: z.unknown(),
+  payload: z.unknown().optional(),
 });
 
 // Ticket event payload schema
 export const TicketEventPayloadSchema = BasePayloadSchema.extend({
-  ticketId: z.string().uuid(),
+  ticketId: z.string().guid(),
   // Acting user. Present only when a user acted; see actorType. Never a substitute id.
   // (TICKET_ASSIGNED requires it and means the assignee: TicketAssignedLegacyPayloadSchema.)
-  userId: z.string().uuid().optional(),
-  assignedByUserId: z.string().uuid().optional(), // The user who performed the action
+  userId: z.string().guid().optional(),
+  assignedByUserId: z.string().guid().optional(), // The user who performed the action
   // Declared so the legacy branch keeps them: consumers receive the parsed object.
-  actorType: z.enum(['USER', 'CONTACT', 'SYSTEM']).optional(),
-  actorUserId: z.string().uuid().optional(),
-  actorContactId: z.string().uuid().optional(),
+  actorType: actorTypeSchema.optional(),
+  actorUserId: z.string().guid().optional(),
+  actorContactId: z.string().guid().optional(),
   occurredAt: z.string().optional(),
-  commentId: z.string().uuid().optional(),
-  changes: z.record(z.unknown()).optional(),
-  externalLinks: z.array(z.record(z.unknown())).optional(),
+  commentId: z.string().guid().optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
+  externalLinks: z.array(z.record(z.string(), z.unknown())).optional(),
   ...TicketNotificationSuppressionSchema,
   comment: z.object({
-    id: z.string().uuid(),
+    id: z.string().guid(),
     content: z.string(),
     author: z.string(),
     isInternal: z.boolean().optional(),
@@ -585,19 +643,19 @@ export const TicketEventPayloadSchema = BasePayloadSchema.extend({
 
 // Ticket additional agent event payload schema
 export const TicketAdditionalAgentPayloadSchema = BasePayloadSchema.extend({
-  ticketId: z.string().uuid(),
-  primaryAgentId: z.string().uuid(),      // Existing primary agent
-  additionalAgentId: z.string().uuid(),   // New additional agent
-  assignedByUserId: z.string().uuid(),    // Who performed the action
+  ticketId: z.string().guid(),
+  primaryAgentId: z.string().guid(),      // Existing primary agent
+  additionalAgentId: z.string().guid(),   // New additional agent
+  assignedByUserId: z.string().guid(),    // Who performed the action
   ...TicketNotificationSuppressionSchema,
 });
 
 // Project event payload schema
 export const ProjectEventPayloadSchema = BasePayloadSchema.extend({
-  projectId: z.string().uuid(),
-  userId: z.string().uuid(),
-  changes: z.record(z.unknown()).optional(),
-  assignedTo: z.string().uuid().optional(),
+  projectId: z.string().guid(),
+  userId: z.string().guid(),
+  changes: z.record(z.string(), z.unknown()).optional(),
+  assignedTo: z.string().guid().optional(),
 });
 
 export const ProjectClosedPayloadSchema = ProjectEventPayloadSchema.extend({
@@ -609,31 +667,31 @@ export const ProjectClosedPayloadSchema = ProjectEventPayloadSchema.extend({
 });
 
 export const ProjectPhaseEventPayloadSchema = BasePayloadSchema.extend({
-  projectId: z.string().uuid(),
-  phaseId: z.string().uuid(),
-  userId: z.string().uuid().optional(),
+  projectId: z.string().guid(),
+  phaseId: z.string().guid(),
+  userId: z.string().guid().optional(),
   timestamp: z.string().datetime().optional(),
-  changes: z.record(z.unknown()).optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const ProjectMilestoneReadyPayloadSchema = BasePayloadSchema.extend({
-  projectId: z.string().uuid(),
-  entryId: z.string().uuid(),
+  projectId: z.string().guid(),
+  entryId: z.string().guid(),
   description: z.string().min(1),
   computedAmount: z.number().int().nonnegative(),
   trigger: z.enum(['phase', 'date', 'manual']),
 });
 
 export const ProjectBudgetThresholdReachedPayloadSchema = BasePayloadSchema.extend({
-  projectId: z.string().uuid(),
+  projectId: z.string().guid(),
   threshold: z.number().int().nonnegative(),
   billed: z.number().int().nonnegative(),
   cap: z.number().int().nonnegative(),
 });
 
 export const ProjectBudgetExceededPayloadSchema = BasePayloadSchema.extend({
-  projectId: z.string().uuid(),
-  invoiceId: z.string().uuid(),
+  projectId: z.string().guid(),
+  invoiceId: z.string().guid(),
   billed: z.number().int().nonnegative(),
   attempted: z.number().int().positive(),
   cap: z.number().int().nonnegative(),
@@ -641,24 +699,24 @@ export const ProjectBudgetExceededPayloadSchema = BasePayloadSchema.extend({
 });
 
 export const ProjectBillingConfigEventPayloadSchema = BasePayloadSchema.extend({
-  projectId: z.string().uuid(),
-  configId: z.string().uuid(),
+  projectId: z.string().guid(),
+  configId: z.string().guid(),
   billingModel: z.enum(['fixed_price', 'time_and_materials']),
   invoiceMode: z.enum(['recurring', 'standalone']),
-  userId: z.string().uuid().optional(),
-  changes: z.record(z.unknown()).optional(),
+  userId: z.string().guid().optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const ProjectBillingScheduleEventPayloadSchema = BasePayloadSchema.extend({
-  projectId: z.string().uuid(),
-  configId: z.string().uuid(),
-  entryId: z.string().uuid(),
+  projectId: z.string().guid(),
+  configId: z.string().guid(),
+  entryId: z.string().guid(),
   description: z.string().min(1),
   status: z.enum(['pending', 'ready', 'held', 'approved', 'invoiced', 'canceled']),
   previousStatus: z.enum(['pending', 'ready', 'held', 'approved', 'invoiced', 'canceled']).nullable().optional(),
   requiresPaymentBeforeWork: z.boolean(),
-  userId: z.string().uuid().optional(),
-  changes: z.record(z.unknown()).optional(),
+  userId: z.string().guid().optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
 });
 
 const ProjectBillingPaymentStateSchema = z.enum([
@@ -668,65 +726,65 @@ const ProjectBillingPaymentStateSchema = z.enum([
 ]);
 
 export const ProjectBillingPaymentStatusEventPayloadSchema = BasePayloadSchema.extend({
-  projectId: z.string().uuid(),
-  configId: z.string().uuid(),
-  entryId: z.string().uuid(),
-  invoiceId: z.string().uuid(),
+  projectId: z.string().guid(),
+  configId: z.string().guid(),
+  entryId: z.string().guid(),
+  invoiceId: z.string().guid(),
   previousState: ProjectBillingPaymentStateSchema,
   newState: ProjectBillingPaymentStateSchema,
   previousInvoiceStatus: z.string().min(1),
   newInvoiceStatus: z.string().min(1),
   requiresPaymentBeforeWork: z.literal(true),
-  userId: z.string().uuid().optional(),
+  userId: z.string().guid().optional(),
 });
 
 // Project task event payload schema
 export const ProjectTaskEventPayloadSchema = BasePayloadSchema.extend({
-  projectId: z.string().uuid(),
-  taskId: z.string().uuid(),
-  assignedToId: z.string().uuid(),
+  projectId: z.string().guid(),
+  taskId: z.string().guid(),
+  assignedToId: z.string().guid(),
   assignedToType: z.enum(['user', 'team']),
-  assignedByUserId: z.string().uuid().optional(),
+  assignedByUserId: z.string().guid().optional(),
   assignedByName: z.string().optional(),
   assignedAt: z.string().datetime().optional(),
 });
 
 // Project task additional agent event payload schema
 export const ProjectTaskAdditionalAgentPayloadSchema = BasePayloadSchema.extend({
-  projectId: z.string().uuid(),
-  taskId: z.string().uuid(),
-  primaryAgentId: z.string().uuid(),      // Existing primary agent
-  additionalAgentId: z.string().uuid(),   // New additional agent
-  assignedByUserId: z.string().uuid(),    // Who performed the action
+  projectId: z.string().guid(),
+  taskId: z.string().guid(),
+  primaryAgentId: z.string().guid(),      // Existing primary agent
+  additionalAgentId: z.string().guid(),   // New additional agent
+  assignedByUserId: z.string().guid(),    // Who performed the action
 });
 
 export const ProjectTaskSearchEventPayloadSchema = BasePayloadSchema.extend({
-  projectId: z.string().uuid(),
-  taskId: z.string().uuid(),
+  projectId: z.string().guid(),
+  taskId: z.string().guid(),
   // Optional: the task's (destination) phase. Carried so webhook/workflow
   // consumers can react to phase moves without re-querying.
-  phaseId: z.string().uuid().optional(),
-  userId: z.string().uuid().optional(),
+  phaseId: z.string().guid().optional(),
+  userId: z.string().guid().optional(),
   timestamp: z.string().datetime().optional(),
-  changes: z.record(z.unknown()).optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
 });
 
 // Task comment event payload schemas
 export const TaskCommentAddedPayloadSchema = BasePayloadSchema.extend({
-  taskId: z.string().uuid(),
-  projectId: z.string().uuid(),
-  userId: z.string().uuid(), // User who created the comment
-  taskCommentId: z.string().uuid(),
+  taskId: z.string().guid(),
+  projectId: z.string().guid(),
+  userId: z.string().guid(), // User who created the comment
+  taskCommentId: z.string().guid(),
   taskName: z.string(),
   commentContent: z.string(), // BlockNote JSON with embedded mentions
   isUpdate: z.boolean().optional(), // Always false for ADDED
 });
 
 export const TaskCommentUpdatedPayloadSchema = BasePayloadSchema.extend({
-  taskId: z.string().uuid(),
-  projectId: z.string().uuid(),
-  userId: z.string().uuid(), // User who updated the comment
-  taskCommentId: z.string().uuid(),
+  taskId: z.string().guid(),
+  projectId: z.string().guid(),
+  userId: z.string().guid(), // User who updated the comment
+  taskCommentId: z.string().guid(),
   taskName: z.string(),
   oldCommentContent: z.string(), // Old BlockNote JSON
   newCommentContent: z.string(), // New BlockNote JSON
@@ -734,10 +792,10 @@ export const TaskCommentUpdatedPayloadSchema = BasePayloadSchema.extend({
 });
 
 export const TaskCommentDeletedPayloadSchema = BasePayloadSchema.extend({
-  taskId: z.string().uuid(),
-  projectId: z.string().uuid(),
-  userId: z.string().uuid().optional(),
-  taskCommentId: z.string().uuid(),
+  taskId: z.string().guid(),
+  projectId: z.string().guid(),
+  userId: z.string().guid().optional(),
+  taskCommentId: z.string().guid(),
   taskName: z.string().optional(),
   timestamp: z.string().datetime().optional(),
 });
@@ -745,22 +803,22 @@ export const TaskCommentDeletedPayloadSchema = BasePayloadSchema.extend({
 // Ticket comment delete event payload schema.
 // commentId is top-level so the search index subscriber's extractObjectId can resolve it.
 export const TicketCommentDeletedPayloadSchema = BasePayloadSchema.extend({
-  ticketId: z.string().uuid(),
-  commentId: z.string().uuid(),
-  userId: z.string().uuid().optional(),
+  ticketId: z.string().guid(),
+  commentId: z.string().guid(),
+  userId: z.string().guid().optional(),
   isInternal: z.boolean().optional(),
 });
 
 // Ticket comment update event payload schema
 export const TicketCommentUpdatedPayloadSchema = TicketEventPayloadSchema.extend({
   oldComment: z.object({
-    id: z.string().uuid(),
+    id: z.string().guid(),
     content: z.string(),
     author: z.string(),
     isInternal: z.boolean().optional(),
   }).optional(),
   newComment: z.object({
-    id: z.string().uuid(),
+    id: z.string().guid(),
     content: z.string(),
     author: z.string(),
     isInternal: z.boolean().optional(),
@@ -769,94 +827,94 @@ export const TicketCommentUpdatedPayloadSchema = TicketEventPayloadSchema.extend
 
 // Time entry event payload schema
 export const TimeEntryEventPayloadSchema = BasePayloadSchema.extend({
-  timeEntryId: z.string().uuid(),
-  userId: z.string().uuid().optional(),
+  timeEntryId: z.string().guid(),
+  userId: z.string().guid().optional(),
   workItemId: z.string().nullable().optional(),
   workItemType: z.string().nullable().optional(),
-  approvedBy: z.string().uuid().optional(),
-  requestedBy: z.string().uuid().optional(),
+  approvedBy: z.string().guid().optional(),
+  requestedBy: z.string().guid().optional(),
   reason: z.string().optional(),
-  changes: z.record(z.unknown()).optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
   timestamp: z.string().datetime().optional(),
 });
 
 // Invoice event payload schema
 export const InvoiceEventPayloadSchema = BasePayloadSchema.extend({
-  invoiceId: z.string().uuid(),
-  clientId: z.string().uuid(),
-  userId: z.string().uuid(),
+  invoiceId: z.string().guid(),
+  clientId: z.string().guid(),
+  userId: z.string().guid(),
   amount: z.number(),
 });
 
 export const InvoiceSearchEventPayloadSchema = BasePayloadSchema.extend({
-  invoiceId: z.string().uuid(),
-  clientId: z.string().uuid().optional(),
-  userId: z.string().uuid().optional(),
-  changes: z.record(z.unknown()).optional(),
+  invoiceId: z.string().guid(),
+  clientId: z.string().guid().optional(),
+  userId: z.string().guid().optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
   timestamp: z.string().datetime().optional(),
 });
 
 export const InvoiceItemEventPayloadSchema = BasePayloadSchema.extend({
-  invoiceId: z.string().uuid(),
-  itemId: z.string().uuid(),
-  userId: z.string().uuid().optional(),
-  changes: z.record(z.unknown()).optional(),
+  invoiceId: z.string().guid(),
+  itemId: z.string().guid(),
+  userId: z.string().guid().optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
   timestamp: z.string().datetime().optional(),
 });
 
 export const InvoiceAnnotationEventPayloadSchema = BasePayloadSchema.extend({
-  invoiceId: z.string().uuid(),
-  annotationId: z.string().uuid(),
-  userId: z.string().uuid().optional(),
-  changes: z.record(z.unknown()).optional(),
+  invoiceId: z.string().guid(),
+  annotationId: z.string().guid(),
+  userId: z.string().guid().optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
   timestamp: z.string().datetime().optional(),
 });
 
 export const ContractSearchEventPayloadSchema = BasePayloadSchema.extend({
-  contractId: z.string().uuid(),
-  clientId: z.string().uuid().optional(),
-  userId: z.string().uuid().optional(),
+  contractId: z.string().guid(),
+  clientId: z.string().guid().optional(),
+  userId: z.string().guid().optional(),
   status: z.string().optional(),
-  changes: z.record(z.unknown()).optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
   timestamp: z.string().datetime().optional(),
 });
 
 export const ClientContractEventPayloadSchema = BasePayloadSchema.extend({
-  clientContractId: z.string().uuid(),
-  contractId: z.string().uuid(),
-  clientId: z.string().uuid(),
-  userId: z.string().uuid().optional(),
-  changes: z.record(z.unknown()).optional(),
+  clientContractId: z.string().guid(),
+  contractId: z.string().guid(),
+  clientId: z.string().guid(),
+  userId: z.string().guid().optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
   timestamp: z.string().datetime().optional(),
 });
 
 export const AssetDeletedPayloadSchema = BasePayloadSchema.extend({
-  assetId: z.string().uuid(),
-  userId: z.string().uuid().optional(),
+  assetId: z.string().guid(),
+  userId: z.string().guid().optional(),
   timestamp: z.string().datetime().optional(),
 });
 
 export const ServiceCatalogEventPayloadSchema = BasePayloadSchema.extend({
-  serviceId: z.string().uuid(),
-  userId: z.string().uuid().optional(),
+  serviceId: z.string().guid(),
+  userId: z.string().guid().optional(),
   itemKind: z.enum(['service', 'product']).optional(),
   changedFields: z.array(z.string()).optional(),
   timestamp: z.string().datetime().optional(),
 });
 
 export const ServiceRequestSubmissionEventPayloadSchema = BasePayloadSchema.extend({
-  submissionId: z.string().uuid(),
-  definitionId: z.string().uuid().optional(),
-  clientId: z.string().uuid().optional(),
-  requesterUserId: z.string().uuid().optional(),
+  submissionId: z.string().guid(),
+  definitionId: z.string().guid().optional(),
+  clientId: z.string().guid().optional(),
+  requesterUserId: z.string().guid().optional(),
   executionStatus: z.string().optional(),
   changedFields: z.array(z.string()).optional(),
   timestamp: z.string().datetime().optional(),
 });
 
 export const ServiceRequestDefinitionEventPayloadSchema = BasePayloadSchema.extend({
-  definitionId: z.string().uuid(),
-  userId: z.string().uuid().optional(),
+  definitionId: z.string().guid(),
+  userId: z.string().guid().optional(),
   lifecycleState: z.string().optional(),
   changedFields: z.array(z.string()).optional(),
   timestamp: z.string().datetime().optional(),
@@ -864,36 +922,36 @@ export const ServiceRequestDefinitionEventPayloadSchema = BasePayloadSchema.exte
 
 export const WorkflowTaskEventPayloadSchema = BasePayloadSchema.extend({
   taskId: z.string().min(1),
-  userId: z.string().uuid().optional(),
+  userId: z.string().guid().optional(),
   status: z.string().optional(),
-  assignedUserIds: z.array(z.string().uuid()).optional(),
+  assignedUserIds: z.array(z.string().guid()).optional(),
   changedFields: z.array(z.string()).optional(),
   timestamp: z.string().datetime().optional(),
 });
 
 export const InteractionEventPayloadSchema = BasePayloadSchema.extend({
-  interactionId: z.string().uuid(),
-  clientId: z.string().uuid().optional(),
-  contactId: z.string().uuid().optional(),
-  userId: z.string().uuid().optional(),
+  interactionId: z.string().guid(),
+  clientId: z.string().guid().optional(),
+  contactId: z.string().guid().optional(),
+  userId: z.string().guid().optional(),
   changedFields: z.array(z.string()).optional(),
   timestamp: z.string().datetime().optional(),
 });
 
 // Client event payload schema
 export const ClientEventPayloadSchema = BasePayloadSchema.extend({
-  clientId: z.string().uuid(),
-  userId: z.string().uuid().optional(), // User might not always be available for system-triggered events
-  changes: z.record(z.unknown()).optional(), // Details of what changed
+  clientId: z.string().guid(),
+  userId: z.string().guid().optional(), // User might not always be available for system-triggered events
+  changes: z.record(z.string(), z.unknown()).optional(), // Details of what changed
 });
 
 export const UserEventPayloadSchema = BasePayloadSchema.extend({
-  userId: z.string().uuid(),
-  userType: z.enum(['internal', 'client']).optional(),
+  userId: z.string().guid(),
+  userType: z.enum(['internal', 'client', 'service']).optional(),
   email: z.string().email().optional(),
   changedFields: z.array(z.string()).optional(),
-  roleIds: z.array(z.string().uuid()).optional(),
-  actorUserId: z.string().uuid().optional(),
+  roleIds: z.array(z.string().guid()).optional(),
+  actorUserId: z.string().guid().optional(),
   createdAt: z.string().datetime().optional(),
   updatedAt: z.string().datetime().optional(),
   deletedAt: z.string().datetime().optional(),
@@ -957,9 +1015,9 @@ export const InboundEmailEventPayloadSchema = BasePayloadSchema.extend({
 });
 
 export const AccountingExportEventPayloadSchema = BasePayloadSchema.extend({
-  batchId: z.string().uuid(),
+  batchId: z.string().guid(),
   adapterType: z.string(),
-  deliveredLineIds: z.array(z.string().uuid()).optional(),
+  deliveredLineIds: z.array(z.string().guid()).optional(),
   error: z
     .object({
       message: z.string(),
@@ -972,58 +1030,58 @@ export const AccountingExportEventPayloadSchema = BasePayloadSchema.extend({
 // Schedule entry event payload schema
 // Shared calendars: a user or team was granted (or had changed) access to a calendar.
 export const CalendarShareGrantedPayloadSchema = BasePayloadSchema.extend({
-  calendarId: z.string().uuid(),
+  calendarId: z.string().guid(),
   calendarType: z.enum(['personal', 'group']),
-  ownerUserId: z.string().uuid().nullable(),
+  ownerUserId: z.string().guid().nullable(),
   calendarName: z.string().nullable().optional(),
   granteeType: z.enum(['user', 'team']),
-  granteeId: z.string().uuid(),
+  granteeId: z.string().guid(),
   accessLevel: z.enum(['free_busy', 'read', 'edit', 'manage']),
-  grantedByUserId: z.string().uuid(),
+  grantedByUserId: z.string().guid(),
 });
 
 export const ScheduleEntryEventPayloadSchema = BasePayloadSchema.extend({
-  entryId: z.string().uuid(),
-  userId: z.string().uuid(),
-  changes: z.record(z.unknown()).optional(),
+  entryId: z.string().guid(),
+  userId: z.string().guid(),
+  changes: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const BoardEventPayloadSchema = BasePayloadSchema.extend({
-  boardId: z.string().uuid(),
-  userId: z.string().uuid().optional(),
-  changes: z.record(z.unknown()).optional(),
+  boardId: z.string().guid(),
+  userId: z.string().guid().optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
   timestamp: z.string().datetime().optional(),
 });
 
 export const CategoryEventPayloadSchema = BasePayloadSchema.extend({
-  categoryId: z.string().uuid(),
-  boardId: z.string().uuid().nullable().optional(),
-  userId: z.string().uuid().optional(),
-  changes: z.record(z.unknown()).optional(),
+  categoryId: z.string().guid(),
+  boardId: z.string().guid().nullable().optional(),
+  userId: z.string().guid().optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
   timestamp: z.string().datetime().optional(),
 });
 
 // Status reference-data event payload. statusId is top-level so the search
 // index subscriber's extractObjectId can resolve it on every STATUS_* event.
 export const StatusEventPayloadSchema = BasePayloadSchema.extend({
-  statusId: z.string().uuid(),
+  statusId: z.string().guid(),
   statusType: z.enum(['ticket', 'project', 'project_task', 'interaction']).optional(),
-  boardId: z.string().uuid().nullable().optional(),
-  userId: z.string().uuid().optional(),
-  changes: z.record(z.unknown()).optional(),
+  boardId: z.string().guid().nullable().optional(),
+  userId: z.string().guid().optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
   timestamp: z.string().datetime().optional(),
 });
 
 export const TagDefinitionDeletedPayloadSchema = BasePayloadSchema.extend({
-  tagId: z.string().uuid(),
-  userId: z.string().uuid().optional(),
+  tagId: z.string().guid(),
+  userId: z.string().guid().optional(),
   timestamp: z.string().datetime().optional(),
 });
 
 // Calendar sync event payload schema
 export const CalendarSyncEventPayloadSchema = BasePayloadSchema.extend({
-  calendarProviderId: z.string().uuid(),
-  scheduleEntryId: z.string().uuid().optional(),
+  calendarProviderId: z.string().guid(),
+  scheduleEntryId: z.string().guid().optional(),
   externalEventId: z.string().optional(),
   syncDirection: z.enum(['to_external', 'from_external', 'bidirectional']),
   error: z
@@ -1036,43 +1094,43 @@ export const CalendarSyncEventPayloadSchema = BasePayloadSchema.extend({
 
 // Calendar conflict event payload schema
 export const CalendarConflictEventPayloadSchema = BasePayloadSchema.extend({
-  mappingId: z.string().uuid(),
-  calendarProviderId: z.string().uuid(),
-  scheduleEntryId: z.string().uuid(),
+  mappingId: z.string().guid(),
+  calendarProviderId: z.string().guid(),
+  scheduleEntryId: z.string().guid(),
   externalEventId: z.string(),
   algaLastModified: z.string().datetime(),
   externalLastModified: z.string().datetime(),
 });
 
 export const SurveyInvitationSentPayloadSchema = BasePayloadSchema.extend({
-  invitationId: z.string().uuid(),
-  ticketId: z.string().uuid(),
-  companyId: z.string().uuid().optional(),
-  contactId: z.string().uuid().optional(),
+  invitationId: z.string().guid(),
+  ticketId: z.string().guid(),
+  companyId: z.string().guid().optional(),
+  contactId: z.string().guid().optional(),
   surveyTokenHash: z.string(),
 });
 
 export const SurveyResponseSubmittedPayloadSchema = BasePayloadSchema.extend({
-  responseId: z.string().uuid(),
-  ticketId: z.string().uuid().optional(),
-  projectId: z.string().uuid().optional(),
-  companyId: z.string().uuid().optional(),
+  responseId: z.string().guid(),
+  ticketId: z.string().guid().optional(),
+  projectId: z.string().guid().optional(),
+  companyId: z.string().guid().optional(),
   rating: z.number(),
   hasComment: z.boolean(),
 }).refine(value => Boolean(value.ticketId) !== Boolean(value.projectId), { message: 'Exactly one survey subject is required' });
 
 export const SurveyNegativeResponsePayloadSchema = BasePayloadSchema.extend({
-  responseId: z.string().uuid(),
-  ticketId: z.string().uuid().optional(),
-  projectId: z.string().uuid().optional(),
+  responseId: z.string().guid(),
+  ticketId: z.string().guid().optional(),
+  projectId: z.string().guid().optional(),
   ticketNumber: z.string().optional(),
   projectNumber: z.string().optional(),
-  companyId: z.string().uuid().optional(),
+  companyId: z.string().guid().optional(),
   companyName: z.string().optional(),
   contactName: z.string().optional(),
   rating: z.number(),
   comment: z.string().optional(),
-  assignedTo: z.string().uuid().optional(),
+  assignedTo: z.string().guid().optional(),
 }).refine(value => Boolean(value.ticketId) !== Boolean(value.projectId), { message: 'Exactly one survey subject is required' })
   .refine(value => value.projectId
     ? value.projectNumber !== undefined && value.ticketNumber === undefined
@@ -1080,69 +1138,69 @@ export const SurveyNegativeResponsePayloadSchema = BasePayloadSchema.extend({
   { message: 'Survey subject number must match its subject type' });
 
 export const TicketResponseStateChangedPayloadSchema = BasePayloadSchema.extend({
-  ticketId: z.string().uuid(),
-  userId: z.string().uuid().nullable(),
+  ticketId: z.string().guid(),
+  userId: z.string().guid().nullable(),
   previousState: z.enum(['awaiting_client', 'awaiting_internal']).nullable(),
   newState: z.enum(['awaiting_client', 'awaiting_internal']).nullable(),
   trigger: z.enum(['comment', 'manual', 'close']),
 });
 
 export const AppointmentRequestEventPayloadSchema = BasePayloadSchema.extend({
-  appointmentRequestId: z.string().uuid(),
-  clientId: z.string().uuid().nullable().optional(),
-  contactId: z.string().uuid().nullable().optional(),
-  clientUserId: z.string().uuid().nullable().optional(),
-  serviceId: z.string().uuid(),
+  appointmentRequestId: z.string().guid(),
+  clientId: z.string().guid().nullable().optional(),
+  contactId: z.string().guid().nullable().optional(),
+  clientUserId: z.string().guid().nullable().optional(),
+  serviceId: z.string().guid(),
   serviceName: z.string(),
   requestedDate: z.string(),
   requestedTime: z.string(),
   requestedDuration: z.number(),
-  preferredAssignedUserId: z.string().uuid().optional(),
+  preferredAssignedUserId: z.string().guid().optional(),
   isAuthenticated: z.boolean(),
   requesterName: z.string().nullable().optional(),
   requesterEmail: z.string(),
   requesterPhone: z.string().nullable().optional(),
   companyName: z.string().nullable().optional(),
-  ticketId: z.string().uuid().optional(),
+  ticketId: z.string().guid().optional(),
   description: z.string().optional(),
-  approvedByUserId: z.string().uuid().optional(),
-  assignedUserId: z.string().uuid().optional(),
-  scheduleEntryId: z.string().uuid().optional(),
+  approvedByUserId: z.string().guid().optional(),
+  assignedUserId: z.string().guid().optional(),
+  scheduleEntryId: z.string().guid().optional(),
   declineReason: z.string().optional(),
 });
 
 // Document mention event payload schema
 export const DocumentMentionPayloadSchema = BasePayloadSchema.extend({
-  documentId: z.string().uuid(),
+  documentId: z.string().guid(),
   documentName: z.string(),
-  userId: z.string().uuid(), // User who updated the document
+  userId: z.string().guid(), // User who updated the document
   content: z.string(), // Document content with mentions
   oldContent: z.unknown().optional(), // Can be array (BlockNote blocks) or string
   newContent: z.string().optional(),
   isUpdate: z.boolean().optional(),
-  changes: z.record(z.unknown()).optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
 });
 
 // Message sent event payload schema
 export const MessageSentPayloadSchema = BasePayloadSchema.extend({
-  messageId: z.string().uuid(),
-  senderId: z.string().uuid(),
-  recipientId: z.string().uuid(),
-  conversationId: z.string().uuid().optional(),
+  messageId: z.string().guid(),
+  senderId: z.string().guid(),
+  recipientId: z.string().guid(),
+  conversationId: z.string().guid().optional(),
   messagePreview: z.string(),
   senderName: z.string(),
 });
 
 // RMM Device event payload schema
 export const RmmDeviceEventPayloadSchema = BasePayloadSchema.extend({
-  integrationId: z.string().uuid(),
+  integrationId: z.string().guid(),
   provider: z.string(), // 'ninjaone', etc.
-  assetId: z.string().uuid().optional(), // Alga asset ID if mapped
+  assetId: z.string().guid().optional(), // Alga asset ID if mapped
   externalDeviceId: z.string(),
   externalOrganizationId: z.string().optional(),
   deviceName: z.string().optional(),
   deviceType: z.string().optional(), // 'workstation', 'server', etc.
-  changes: z.record(z.unknown()).optional(),
+  changes: z.record(z.string(), z.unknown()).optional(),
 });
 
 // RMM Device status event payload schema
@@ -1154,13 +1212,13 @@ export const RmmDeviceStatusEventPayloadSchema = RmmDeviceEventPayloadSchema.ext
 
 // RMM Alert event payload schema
 export const RmmAlertEventPayloadSchema = BasePayloadSchema.extend({
-  integrationId: z.string().uuid(),
+  integrationId: z.string().guid(),
   provider: z.string(),
-  alertId: z.string().uuid(),
+  alertId: z.string().guid(),
   externalAlertId: z.string(),
   externalDeviceId: z.string().optional(),
-  assetId: z.string().uuid().optional(),
-  ticketId: z.string().uuid().optional(),
+  assetId: z.string().guid().optional(),
+  ticketId: z.string().guid().optional(),
   severity: z.string(), // 'critical', 'major', 'moderate', 'minor', 'none'
   priority: z.string().optional(),
   message: z.string().optional(),
@@ -1172,7 +1230,7 @@ export const RmmAlertEventPayloadSchema = BasePayloadSchema.extend({
 
 // RMM Sync event payload schema
 export const RmmSyncEventPayloadSchema = BasePayloadSchema.extend({
-  integrationId: z.string().uuid(),
+  integrationId: z.string().guid(),
   provider: z.string(),
   syncType: z.enum(['full', 'incremental', 'organizations', 'devices', 'alerts']),
   itemsProcessed: z.number().optional(),
@@ -1187,19 +1245,28 @@ export const RmmSyncEventPayloadSchema = BasePayloadSchema.extend({
 
 // RMM Webhook event payload schema
 export const RmmWebhookEventPayloadSchema = BasePayloadSchema.extend({
-  integrationId: z.string().uuid(),
+  integrationId: z.string().guid(),
   provider: z.string(),
   webhookEventType: z.string(), // Provider-specific event type
   externalDeviceId: z.string().optional(),
-  assetId: z.string().uuid().optional(),
-  rawPayload: z.record(z.unknown()), // Full webhook payload for processing
+  assetId: z.string().guid().optional(),
+  rawPayload: z.record(z.string(), z.unknown()), // Full webhook payload for processing
 });
 
 // The legacy branch parses first and strips unknown keys, and with `userId` optional it matches
 // domain payloads too. Give it the domain fields as optional extras (legacy definitions win on
 // shared keys) so a domain payload parsed by it keeps fields like contactNameId or closedAt.
-function legacyTicketUnion<D extends z.AnyZodObject>(domainSchema: D) {
-  return z.union([domainSchema.partial().merge(TicketEventPayloadSchema), domainSchema]);
+const withoutDefault = (schema: z.ZodType): z.ZodType => {
+  const def = schema._zod.def as { type: string; innerType?: z.ZodType };
+  return (def.type === 'default' || def.type === 'prefault') && def.innerType ? withoutDefault(def.innerType) : schema;
+};
+
+function legacyTicketUnion<D extends z.ZodObject>(domainSchema: D) {
+  // Zod 4's .partial() would fill the domain defaults into a legacy payload; Zod 3 did not.
+  const optionalDomain = domainSchema
+    .extend(Object.fromEntries(Object.entries(domainSchema.shape).map(([key, field]) => [key, withoutDefault(field as z.ZodType)])))
+    .partial();
+  return z.union([optionalDomain.merge(TicketEventPayloadSchema), domainSchema]);
 }
 const TicketCreatedPayloadSchema = legacyTicketUnion(ticketCreatedEventPayloadSchema);
 const TicketUpdatedPayloadSchema = legacyTicketUnion(ticketUpdatedEventPayloadSchema);
@@ -1208,7 +1275,7 @@ const TicketAutoCloseWarningPayloadSchema = legacyTicketUnion(ticketAutoCloseWar
 const MaintenanceJobRequestedPayloadSchema = maintenanceJobRequestedEventPayloadSchema;
 const InboundEmailProviderAutoPausedPayloadSchema = inboundEmailProviderAutoPausedEventPayloadSchema;
 // On TICKET_ASSIGNED `userId` is the assignee (the notification recipient), so it stays required.
-export const TicketAssignedLegacyPayloadSchema = TicketEventPayloadSchema.extend({ userId: z.string().uuid() });
+export const TicketAssignedLegacyPayloadSchema = TicketEventPayloadSchema.extend({ userId: z.string().guid() });
 const TicketAssignedPayloadSchema = z.union([TicketAssignedLegacyPayloadSchema, ticketAssignedEventPayloadSchema]);
 const TicketResponseStateChangedPayloadSchemaV2 = z.union([
   TicketResponseStateChangedPayloadSchema,
@@ -1231,7 +1298,8 @@ const InboundEmailReceivedPayloadSchema = z.union([
 ]);
 
 // Map event types to their payload schemas
-export const EventPayloadSchemas = {
+/** Core payload schemas; `EventPayloadSchemas` hands out these same objects. */
+export const CorePayloadSchemas = {
   // Tickets (existing + legacy)
   TICKET_CREATED: TicketCreatedPayloadSchema,
   TICKET_UPDATED: TicketUpdatedPayloadSchema,
@@ -1399,6 +1467,20 @@ export const EventPayloadSchemas = {
   CLIENT_MERGED: clientMergedEventPayloadSchema,
   CLIENT_ARCHIVED: clientArchivedEventPayloadSchema,
   CLIENT_DELETED: clientDeletedEventPayloadSchema,
+  QUOTE_SENT: quoteSentEventPayloadSchema,
+  QUOTE_VIEWED: quoteViewedEventPayloadSchema,
+  QUOTE_APPROVED: quoteApprovedEventPayloadSchema,
+  QUOTE_ACCEPTED: quoteAcceptedEventPayloadSchema,
+  QUOTE_REJECTED: quoteRejectedEventPayloadSchema,
+  QUOTE_EXPIRED: quoteExpiredEventPayloadSchema,
+  QUOTE_CONVERTED: quoteConvertedEventPayloadSchema,
+  QUOTE_CONVERSION_REVERTED: quoteConversionRevertedEventPayloadSchema,
+  QUOTE_SUPERSEDED: quoteSupersededEventPayloadSchema,
+  QUOTE_CANCELLED: quoteCancelledEventPayloadSchema,
+  CLIENT_LOCATION_CREATED: clientLocationCreatedEventPayloadSchema,
+  CLIENT_LOCATION_UPDATED: clientLocationUpdatedEventPayloadSchema,
+  CLIENT_LOCATION_DEACTIVATED: clientLocationDeactivatedEventPayloadSchema,
+  CLIENT_LOCATION_DELETED: clientLocationDeletedEventPayloadSchema,
   CONTACT_CREATED: contactCreatedEventPayloadSchema,
   CONTACT_UPDATED: contactUpdatedEventPayloadSchema,
   CONTACT_PRIMARY_SET: contactPrimarySetEventPayloadSchema,
@@ -1529,6 +1611,7 @@ export const EventPayloadSchemas = {
   ASSET_ASSIGNED: assetAssignedEventPayloadSchema,
   ASSET_UNASSIGNED: assetUnassignedEventPayloadSchema,
   ASSET_WARRANTY_EXPIRING: assetWarrantyExpiringEventPayloadSchema,
+  ASSET_CUSTODY_CHANGED: assetCustodyChangedEventPayloadSchema,
   FILE_UPLOADED: fileUploadedEventPayloadSchema,
   MEDIA_PROCESSING_SUCCEEDED: mediaProcessingSucceededEventPayloadSchema,
   MEDIA_PROCESSING_FAILED: mediaProcessingFailedEventPayloadSchema,
@@ -1551,6 +1634,7 @@ export const EventPayloadSchemas = {
   INVENTORY_PO_RECEIVED: inventoryPoReceivedEventPayloadSchema,
   INVENTORY_SO_FULFILLED: inventorySoFulfilledEventPayloadSchema,
   INVENTORY_RMA_CREATED: inventoryRmaCreatedEventPayloadSchema,
+  INVENTORY_RMA_UPDATED: inventoryRmaUpdatedEventPayloadSchema,
   INVENTORY_SALES_ORDER_CREATED: inventorySalesOrderCreatedEventPayloadSchema,
   INVENTORY_SALES_ORDER_UPDATED: inventorySalesOrderUpdatedEventPayloadSchema,
   INVENTORY_SALES_ORDER_DELETED: inventorySalesOrderDeletedEventPayloadSchema,
@@ -1569,6 +1653,8 @@ export const EventPayloadSchemas = {
   UNKNOWN: CustomEventPayloadSchema,
 } as const;
 
+export const EventPayloadSchemas = { ...CorePayloadSchemas, ...EXTENSION_PAYLOAD_SCHEMAS } as const;
+
 const missingPayloadSchemas = EVENT_TYPES.filter((t) => !(t in EventPayloadSchemas));
 if (missingPayloadSchemas.length > 0) {
   throw new Error(
@@ -1580,12 +1666,15 @@ if (missingPayloadSchemas.length > 0) {
 export const EventSchemas = Object.entries(EventPayloadSchemas).reduce(
   (schemas, [eventType, payloadSchema]) => ({
     ...schemas,
-    [eventType]: BaseEventSchema.extend({
+    [eventType]: BaseEventSchema.superRefine((event, context) => {
+      const issue = collaborationActorPayloadIssue(event.payload);
+      if (issue) context.addIssue({ code: z.ZodIssueCode.custom, path: ['payload', 'actorReference'], message: issue });
+    }).pipe(BaseEventSchema.extend({
       eventType: z.literal(eventType as EventType),
       payload: payloadSchema,
-    }),
+    })),
   }),
-  {} as Record<EventType, z.ZodType>
+  {} as Record<EventType, z.ZodType<any, any>>
 );
 
 // TypeScript types
@@ -1681,6 +1770,7 @@ export type InventoryStockLowEvent = z.infer<typeof EventSchemas.INVENTORY_STOCK
 export type InventoryPoReceivedEvent = z.infer<typeof EventSchemas.INVENTORY_PO_RECEIVED>;
 export type InventorySoFulfilledEvent = z.infer<typeof EventSchemas.INVENTORY_SO_FULFILLED>;
 export type InventoryRmaCreatedEvent = z.infer<typeof EventSchemas.INVENTORY_RMA_CREATED>;
+export type InventoryRmaUpdatedEvent = z.infer<typeof EventSchemas.INVENTORY_RMA_UPDATED>;
 export type InventorySalesOrderCreatedEvent = z.infer<typeof EventSchemas.INVENTORY_SALES_ORDER_CREATED>;
 export type InventorySalesOrderUpdatedEvent = z.infer<typeof EventSchemas.INVENTORY_SALES_ORDER_UPDATED>;
 export type InventorySalesOrderDeletedEvent = z.infer<typeof EventSchemas.INVENTORY_SALES_ORDER_DELETED>;
@@ -1719,7 +1809,9 @@ export function convertToWorkflowEvent(event: Event, hooks?: WorkflowPublishHook
   // matching workflow at payload validation. Default it at the stream boundary
   // so no publisher can silently opt out of workflow triggers (alga-2026-0002379).
   // LEVERAGE: friction workflow-payload-occurred-at — publishers should build payloads with
-  // buildWorkflowPayload; this default is the backstop for the raw publishEvent callers.
+  // buildWorkflowPayload; this default is the backstop for the raw publishEvent callers. The workflow
+  // worker repeats the default from the envelope timestamp at its consumer boundary
+  // (WorkflowRuntimeV2EventStreamWorker.normalizeSourcePayload), so three layers now stamp one field.
   const rawPayload = event.payload as Record<string, unknown> | undefined;
   const payload =
     rawPayload && typeof rawPayload === 'object' && typeof rawPayload.occurredAt !== 'string'

@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { describeRollover, isCadenceBlock } from './prepaidBlockLabels';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -23,11 +24,13 @@ import {
   minutesToHoursText,
   type PrepaidBlockConfigDraft,
 } from './prepaidBlockConfigDraft';
-import { useTemplateNeutralRate } from './templateNeutralRate';
+import { useTemplateMoney } from './useTemplateMoney';
 
 interface TemplatePrepaidBlockPanelProps {
   /** contract_template_lines.template_line_id of an Hourly template line. */
   templateLineId: string;
+  /** The template's base currency; falls back to the ambient authoring currency. */
+  currencyCode?: string;
   isReadOnly?: boolean;
   /** Called after a save/remove with whether the line now has a block config (to update the badge). */
   onChanged?: (hasConfig: boolean) => void;
@@ -38,18 +41,20 @@ const isActionFailure = (value: unknown): boolean =>
 
 /**
  * Display and edit of a template line's Prepaid Block config
- * (contract_template_line_prepaid_blocks). Templates are currency-neutral, so the
- * price is a plain amount that takes the client's currency when a contract is created.
+ * (contract_template_line_prepaid_blocks). The price is stored and shown in the
+ * template's base currency; it is copied as-is when a contract is created.
  */
 export const TemplatePrepaidBlockPanel: React.FC<TemplatePrepaidBlockPanelProps> = ({
   templateLineId,
+  currencyCode,
   isReadOnly = false,
   onChanged,
 }) => {
   const { t } = useTranslation('msp/contracts');
   const idPrefix = `template-prepaid-block-${templateLineId}`;
   const { currencyCode: authoringCurrency } = useCurrencyFormat();
-  const formatNeutralRate = useTemplateNeutralRate();
+  const templateCurrency = currencyCode ?? authoringCurrency;
+  const formatTemplateAmount = useTemplateMoney(templateCurrency);
   const errorText = usePrepaidBlockDraftErrorText();
 
   const [view, setView] = useState<TemplateLinePrepaidBlockView | null>(null);
@@ -186,7 +191,7 @@ export const TemplatePrepaidBlockPanel: React.FC<TemplatePrepaidBlockPanelProps>
             idPrefix={`${idPrefix}-edit`}
             value={draft}
             onChange={setDraft}
-            currencyCode={authoringCurrency}
+            currencyCode={templateCurrency}
             coveredServices={coveredServices}
             disabled={busy}
             errors={draftErrors}
@@ -210,14 +215,20 @@ export const TemplatePrepaidBlockPanel: React.FC<TemplatePrepaidBlockPanelProps>
                 {t('templateDetail.prepaidBlock.blockNeutral', {
                   defaultValue: "{{hours}} h / {{price}} (in the client's currency)",
                   hours: minutesToHoursText(Number(config.block_minutes)),
-                  price: formatNeutralRate(Number(config.block_price)),
+                  price: formatTemplateAmount(Number(config.block_price)),
                 })}
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">{t('prepaidBlock.summary.expiry', { defaultValue: 'Expiry' })}</dt>
+              <dt className="text-muted-foreground">
+                {isCadenceBlock(config)
+                  ? t('prepaidBlock.fields.rolloverPeriods', { defaultValue: 'Unused hours' })
+                  : t('prepaidBlock.summary.expiry', { defaultValue: 'Expiry' })}
+              </dt>
               <dd id={`${idPrefix}-config-expiry`}>
-                {config.expiry_months == null
+                {isCadenceBlock(config)
+                ? describeRollover(t, Number(config.rollover_periods ?? 0))
+                : config.expiry_months == null
                   ? t('prepaidBlock.summary.neverExpires', { defaultValue: 'Never expires' })
                   : t('prepaidBlock.summary.expiresAfterMonths', { defaultValue: '{{months}} months', months: config.expiry_months })}
               </dd>
@@ -227,9 +238,12 @@ export const TemplatePrepaidBlockPanel: React.FC<TemplatePrepaidBlockPanelProps>
               <dd id={`${idPrefix}-config-sold-as`}>{soldAsName ?? ''}</dd>
             </div>
             <div className="md:col-span-3">
-              <dt className="text-muted-foreground">{t('prepaidBlock.summary.triggers', { defaultValue: 'Next block is invoiced when' })}</dt>
+              <dt className="text-muted-foreground">{isCadenceBlock(config)
+                ? t('prepaidBlock.fields.issueMode', { defaultValue: 'Issue blocks' })
+                : t('prepaidBlock.summary.triggers', { defaultValue: 'Next block is invoiced when' })}</dt>
               <dd id={`${idPrefix}-config-triggers`} className="flex flex-wrap gap-1 pt-1">
-                {config.trigger_on_exhaustion && <Badge variant="default-muted">{t('prepaidBlock.summary.onExhaustion', { defaultValue: 'The block runs out' })}</Badge>}
+                {isCadenceBlock(config) && <Badge variant="default-muted">{t('prepaidBlock.fields.issueModeCadence', { defaultValue: 'Every billing period' })}</Badge>}
+              {config.trigger_on_exhaustion && <Badge variant="default-muted">{t('prepaidBlock.summary.onExhaustion', { defaultValue: 'The block runs out' })}</Badge>}
                 {config.trigger_threshold_percent != null && (
                   <Badge variant="default-muted">
                     {t('prepaidBlock.summary.onThreshold', { defaultValue: '{{percent}}% used', percent: config.trigger_threshold_percent })}
@@ -237,11 +251,13 @@ export const TemplatePrepaidBlockPanel: React.FC<TemplatePrepaidBlockPanelProps>
                 )}
                 {config.trigger_on_expiry && <Badge variant="default-muted">{t('prepaidBlock.summary.onExpiry', { defaultValue: 'The block expires' })}</Badge>}
                 {config.trigger_on_renewal && <Badge variant="default-muted">{t('prepaidBlock.summary.onRenewal', { defaultValue: 'The contract renews' })}</Badge>}
+                {!isCadenceBlock(config) && (
                 <Badge variant="outline">
                   {config.replenishment_tier === 'auto_issue'
                     ? t('prepaidBlock.summary.tierAutoIssue', { defaultValue: 'Finalized automatically' })
                     : t('prepaidBlock.summary.tierDraft', { defaultValue: 'Draft for review' })}
                 </Badge>
+              )}
               </dd>
             </div>
           </dl>

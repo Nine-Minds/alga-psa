@@ -67,6 +67,7 @@
     "taxBreakdown": "Ventilation des taxes",
     "manualInvoice": "Facture manuelle",
     "credits": "Crédits",
+    "currency": "Devise",
     "financialArtifactSummary": "Facture financière uniquement. Les périodes de service récurrentes n'apparaissent que sur les lignes de détail récurrentes.",
     "servicePeriod": "Période de service",
     "servicePeriods": "Périodes de service",
@@ -289,6 +290,13 @@
       "pending": "Factures en attente d'approbation ou de traitement",
       "prepayment": "Factures d'acompte ou de dépôt",
       "partially_applied": "Factures avec paiements partiels appliqués"
+    },
+    "billingPeriod": {
+      "weekly": "par semaine",
+      "monthly": "par mois",
+      "quarterly": "par trimestre",
+      "semi-annually": "par semestre",
+      "annually": "par an"
     }
   },
   "quoteForm": {
@@ -444,7 +452,13 @@
     "expires": "Expire le {{date}}",
     "recentBurn": "Consommation récente",
     "timeEntry": "Entrée de temps",
-    "contractLabel": "Contrat : {{contract}}"
+    "contractLabel": "Contrat : {{contract}}",
+    "hoursLeftValue": "{{hours}} h restantes · {{value}}",
+    "validFrom": "Valide à partir du {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — bloc prépayé, {{hours}} h",
+    "overPrepaidBlock": "{{name}} (au-delà du bloc prépayé)"
   },
   "bucketUsage": {
     "contractLine": "Ligne de contrat de forfait d’heures",
@@ -452,5 +466,20 @@
     "hoursUsed": "{{hours}} heures utilisées",
     "hoursTotal": "{{hours}} heures au total",
     "rolloverHours": "Comprend {{hours}} heures reportées"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Exigible à réception",
+      "net14": "Net à 14 jours",
+      "net15": "Net à 15 jours",
+      "net30": "Net à 30 jours",
+      "net7": "Net à 7 jours"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Virement bancaire",
+      "check": "Chèque",
+      "creditCard": "Carte de crédit"
+    },
+    "tenantDefault": "Valeur par défaut du locataire ({{value}})"
   }
 }

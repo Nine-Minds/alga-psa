@@ -62,6 +62,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 
 vi.mock('@alga-psa/billing/actions/billingAndTax', () => ({
   getAvailableRecurringDueWork: mockGetAvailableRecurringDueWork,
+  getLateApprovedHourlyTime: vi.fn(async () => []),
 }));
 
 vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({

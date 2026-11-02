@@ -5,6 +5,10 @@ export const isEnterprise =
   (process.env.EDITION ?? '').toLowerCase() === 'enterprise' ||
   (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise';
 
+import { resolveFlagTargeting } from './featureFlagTargeting';
+
+export { flagTargetingEnvName, resolveFlagTargeting } from './featureFlagTargeting';
+
 const FEATURE_FLAG_DISABLE_VALUES = new Set(['true', '1', 'yes', 'on']);
 
 function featureFlagsAreDisabled(env: NodeJS.ProcessEnv = process.env): boolean {
@@ -56,6 +60,11 @@ export async function isFeatureFlagEnabled(
   flagKey: string,
   context: FeatureFlagContext = {},
 ): Promise<boolean> {
+  // Flag-agnostic tenant targeting (see featureFlagTargeting.ts). Authoritative
+  // for a targeted flag, including over the global disable override.
+  const targeted = resolveFlagTargeting(flagKey, context.tenantId);
+  if (targeted !== null) return targeted;
+
   if (featureFlagsAreDisabled()) {
     return true;
   }

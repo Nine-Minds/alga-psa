@@ -475,9 +475,11 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
                     const artifactLabel = artifact.artifact_type === 'transcript'
                       ? t('interactions.onlineMeeting.viewTranscript', { defaultValue: 'View transcript' })
                       : t('interactions.onlineMeeting.downloadRecording', { defaultValue: 'Download recording' });
-                    const artifactUrl = artifact.artifact_type === 'transcript' && artifact.document_id
+                    // A shared-work artifact carries its own access-checked download_url and
+                    // must win; otherwise a transcript opens in the document viewer.
+                    const artifactUrl = artifact.download_url ?? (artifact.artifact_type === 'transcript' && artifact.document_id
                       ? `/msp/documents?doc=${encodeURIComponent(artifact.document_id)}`
-                      : `/api/online-meetings/recordings/${encodeURIComponent(artifact.artifact_id)}`;
+                      : `/api/online-meetings/recordings/${encodeURIComponent(artifact.artifact_id)}`);
 
                     return (
                       <div

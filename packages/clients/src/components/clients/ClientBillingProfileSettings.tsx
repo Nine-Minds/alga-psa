@@ -33,7 +33,7 @@ import {
   paymentMethodOptions,
   paymentTermsLabels,
   paymentTermsOptions,
-} from './paymentPreferenceOptions';
+} from '@alga-psa/shared/billingClients/paymentPreferenceOptions';
 import BillingProfileContacts from './BillingProfileContacts';
 
 /**
@@ -70,6 +70,8 @@ export function ClientBillingProfileSettings({
   billingProfileId,
 }: ClientBillingProfileSettingsProps) {
   const { t } = useTranslation('msp/clients');
+  // Option labels live in `features/billing`, shared with tenant billing settings.
+  const { t: tBilling } = useTranslation('features/billing');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [draft, setDraft] = useState<Draft>({});
@@ -77,6 +79,7 @@ export function ClientBillingProfileSettings({
   const [clientValues, setClientValues] = useState<ClientBillingProfileInheritedValues>({
     paymentTerms: null,
     preferredPaymentMethod: null,
+    tenantDefaultPaymentTerms: DEFAULT_PAYMENT_TERMS,
   });
   const [cardOnFile, setCardOnFile] = useState<ClientBillingProfileCardOnFile | null>(null);
   const [legacyPaymentTerms, setLegacyPaymentTerms] = useState<string | null>(null);
@@ -209,8 +212,8 @@ export function ClientBillingProfileSettings({
     </div>
   );
 
-  const methodLabels = paymentMethodLabels(t);
-  const termsLabels = paymentTermsLabels(t);
+  const methodLabels = paymentMethodLabels(tBilling);
+  const termsLabels = paymentTermsLabels(tBilling);
 
   const cardOnFileText = cardOnFile
     ? t('clientBillingProfileSettings.cardOnFile', {
@@ -296,19 +299,18 @@ export function ClientBillingProfileSettings({
         {selectField(
           'payment_terms',
           t('clientBillingProfileSettings.paymentTerms', { defaultValue: 'Payment terms' }),
-          paymentTermsOptions(t),
-          // With no normalized client terms an invoice under this profile is
-          // still due Net 30, so the option says so rather than "Not set".
-          // `notSetLabel` stays for free-text fields that really have no value.
-          clientValues.paymentTerms
-            ? t('clientBillingProfileSettings.inheritFromClient', {
-                value: termsLabels[clientValues.paymentTerms],
-                defaultValue: 'Inherit from client ({{value}})',
-              })
-            : t('clientBillingProfileSettings.inheritDefaultTerms', {
-                value: termsLabels[DEFAULT_PAYMENT_TERMS],
-                defaultValue: 'Inherit from client (no terms set — {{value}} applies)',
-              }),
+          paymentTermsOptions(tBilling),
+          // With no client terms an invoice under this profile falls back to
+          // the tenant default (Billing Settings), then Net 30.
+          t('clientBillingProfileSettings.inheritFromClient', {
+            value: clientValues.paymentTerms
+              ? termsLabels[clientValues.paymentTerms]
+              : t('clientBillingProfileSettings.tenantDefaultValue', {
+                  value: termsLabels[clientValues.tenantDefaultPaymentTerms],
+                  defaultValue: 'Tenant default: {{value}}',
+                }),
+            defaultValue: 'Inherit from client ({{value}})',
+          }),
           legacyPaymentTerms
             ? t('clientBillingProfileSettings.legacyPaymentTerms', {
                 value: legacyPaymentTerms,
@@ -320,7 +322,7 @@ export function ClientBillingProfileSettings({
         {selectField(
           'preferred_payment_method',
           t('clientBillingProfileSettings.paymentMethod', { defaultValue: 'Payment method' }),
-          paymentMethodOptions(t),
+          paymentMethodOptions(tBilling),
           t('clientBillingProfileSettings.inheritFromClient', {
             value: clientValues.preferredPaymentMethod
               ? methodLabels[clientValues.preferredPaymentMethod]

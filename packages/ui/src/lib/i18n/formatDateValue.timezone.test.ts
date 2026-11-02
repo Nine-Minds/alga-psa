@@ -55,6 +55,20 @@ describe('formatDateValue date-only handling (TZ=America/New_York)', () => {
     ).toBe('29/09/2026');
   });
 
+  it('renders a created_at instant as the viewer\'s local day, not the UTC day (alga0002302)', () => {
+    // 02:00Z is still the evening of the 29th in New York: instants stay on the
+    // instant path and are not collapsed into calendar-date handling.
+    expect(formatDateValue(new Date('2026-09-30T02:00:00.000Z'), 'en', PADDED, AU)).toBe(
+      '29/09/2026',
+    );
+    expect(formatDateValue('2026-09-30T02:00:00.000Z', 'en', PADDED, AU)).toBe('29/09/2026');
+  });
+
+  it('shows why contract dates must reach the formatter as strings: a UTC-midnight Date is an instant', () => {
+    expect(formatDateValue(new Date('2026-04-01T00:00:00Z'), 'en', PADDED)).toBe('03/31/2026');
+    expect(formatDateValue('2026-04-01', 'en', PADDED)).toBe('04/01/2026');
+  });
+
   it('recognizes only bare YYYY-MM-DD strings as date-only', () => {
     expect(isDateOnlyString('2026-09-30')).toBe(true);
     expect(isDateOnlyString('2026-09-30T00:00:00Z')).toBe(false);

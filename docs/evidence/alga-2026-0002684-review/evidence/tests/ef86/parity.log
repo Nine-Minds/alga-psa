@@ -1,0 +1,17 @@
+ DEPRECATED  `test.poolOptions` was removed in Vitest 4. All previous `poolOptions` are now top-level options. Please, refer to the migration guide: https://vitest.dev/guide/migration#pool-rework
+
+ RUN  v4.1.11 /home/robert/alga-copies/feature-prepaid-hours-on-contracts-priced-block-in-advan/ee/server
+
+Environment file path: /home/robert/alga-copies/feature-prepaid-hours-on-contracts-priced-block-in-advan/.env.localtest
+Using environment variable fallback for secret DB_PASSWORD_ADMIN.
+Using environment variable fallback for secret DB_PASSWORD_SERVER.
+🚀 Starting EE server test global setup...
+✅ EE server test environment configured
+
+ Test Files  1 passed (1)
+      Tests  29 passed (29)
+   Start at  17:39:23
+   Duration  13.23s (transform 3.77s, setup 55ms, import 6.04s, tests 6.64s, environment 0ms)
+
+🧹 EE server test global teardown complete
+parity exit 0

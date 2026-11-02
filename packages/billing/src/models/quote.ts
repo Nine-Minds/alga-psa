@@ -1,11 +1,11 @@
+import { assertQuoteLifecycleTransition, recordQuoteLifecycleTransition, transitionQuoteStatus, type QuoteLifecycleOptions } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
 import type { Knex } from 'knex';
 import { REVISABLE_QUOTE_STATUSES, type IQuote, type IQuoteItem, type IQuoteListItem, type IQuoteWithClient, type PaginatedResult, type QuoteStatus } from '@alga-psa/types';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import QuoteItem from './quoteItem';
 import QuoteActivity from './quoteActivity';
-import { canTransitionQuoteStatus } from '../schemas/quoteSchemas';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 import { prepareQuoteTermsForDb } from '../lib/quoteTermsContent';
 
@@ -49,6 +49,7 @@ function quoteTable<Row extends object = Record<string, unknown>>(
 
 type QuoteWithClientRow = IQuoteWithClient;
 
+// LEVERAGE: pattern quote-expire-on-read — billing and worker duplicate the same transition.
 async function expireQuoteIfNeeded(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
@@ -58,24 +59,32 @@ async function expireQuoteIfNeeded(
     return quote;
   }
 
-  const [expiredQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-    .where({ quote_id: quote.quote_id })
-    .update({
-      status: 'expired',
-      expired_at: knexOrTrx.fn.now(),
-      updated_at: knexOrTrx.fn.now()
-    })
-    .returning('*');
+  const candidate = quote;
+  return withTransaction(knexOrTrx, async (trx) => {
+    const [expiredQuote] = await quoteTable<IQuote>(trx, tenant, 'quotes')
+      .where({ quote_id: candidate.quote_id, status: 'sent' }).where('valid_until', '<', getTodayStartUTC().toISOString())
+      .update({
+        status: 'expired',
+        expired_at: trx.fn.now(),
+        updated_at: trx.fn.now()
+      })
+      .returning('*');
 
-  await QuoteActivity.create(knexOrTrx, tenant, {
-    quote_id: quote.quote_id,
-    activity_type: 'expired',
-    description: 'Quote automatically expired on access',
-    performed_by: null,
-    metadata: { previous_status: quote.status }
+    if (!expiredQuote) {
+      return (await quoteTable<IQuote>(trx, tenant, 'quotes').where({ quote_id: candidate.quote_id }).first()) ?? null;
+    }
+
+    const activity = await QuoteActivity.create(trx, tenant, {
+      quote_id: candidate.quote_id,
+      activity_type: 'expired',
+      description: 'Quote automatically expired on access',
+      performed_by: null,
+      metadata: { previous_status: candidate.status }
+    });
+
+    await recordQuoteLifecycleTransition(trx, tenant, candidate, expiredQuote as IQuote, activity, { actor: { actorType: 'SYSTEM' } });
+    return expiredQuote;
   });
-
-  return expiredQuote;
 }
 
 async function mapQuoteRecord(
@@ -94,6 +103,7 @@ async function mapQuoteRecord(
 }
 
 const Quote = {
+  transitionStatus: transitionQuoteStatus,
   async getById(
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
@@ -277,58 +287,33 @@ const Quote = {
     return createdQuote;
   },
 
+  // LEVERAGE: pattern quote-update-dal — billing and worker share transition semantics but duplicate record persistence and recalculation.
   async update(
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
     quoteId: string,
-    updateData: Partial<IQuote>
+    updateData: Partial<IQuote>,
+    options: QuoteLifecycleOptions = {}
   ): Promise<IQuote> {
-    if (!tenant) {
-      throw new Error('Tenant context is required for updating quote');
-    }
-
-    const existingQuote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-      .where({ quote_id: quoteId })
-      .first();
-
-    if (!existingQuote) {
-      throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
-    }
-
-    if (existingQuote.is_template && updateData.status !== undefined && updateData.status !== null) {
-      throw new Error('Quote templates do not participate in status transitions');
-    }
-
-    if (updateData.status && existingQuote.status && !canTransitionQuoteStatus(existingQuote.status, updateData.status)) {
-      throw new Error(`Invalid quote status transition from ${existingQuote.status} to ${updateData.status}`);
-    }
-
-    const [updatedQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-      .where({ quote_id: quoteId })
-      .update({ ...prepareQuoteTermsForDb(updateData as Record<string, unknown>), updated_at: knexOrTrx.fn.now() })
-      .returning('*');
-
-    await QuoteActivity.create(knexOrTrx, tenant, {
-      quote_id: quoteId,
-      activity_type: updateData.status && updateData.status !== existingQuote.status ? 'status_changed' : 'updated',
-      description: updateData.status && updateData.status !== existingQuote.status
-        ? `Quote status changed from ${existingQuote.status} to ${updateData.status}`
-        : 'Quote updated',
-      performed_by: updatedQuote.updated_by ?? null,
-      metadata: updateData.status && updateData.status !== existingQuote.status
-        ? { previous_status: existingQuote.status, next_status: updateData.status }
-        : {}
+    if (!tenant) throw new Error('Tenant context is required for updating quote');
+    return withTransaction(knexOrTrx, async (trx) => {
+      const existingQuote = await quoteTable<IQuote>(trx, tenant, 'quotes').where({ quote_id: quoteId }).forUpdate().first();
+      if (!existingQuote) throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+      if (updateData.status) assertQuoteLifecycleTransition(existingQuote as IQuote, updateData.status, options);
+      const [updatedQuote] = await quoteTable<IQuote>(trx, tenant, 'quotes').where({ quote_id: quoteId })
+        .update({ ...prepareQuoteTermsForDb(updateData as Record<string, unknown>), updated_at: trx.fn.now() }).returning('*');
+      const changed = updateData.status && updateData.status !== existingQuote.status;
+      const activity = await QuoteActivity.create(trx, tenant, {
+        quote_id: quoteId, activity_type: changed ? 'status_changed' : 'updated',
+        description: changed ? `Quote status changed from ${existingQuote.status} to ${updateData.status}` : 'Quote updated',
+        performed_by: updateData.updated_by ?? null,
+        metadata: changed ? { previous_status: existingQuote.status, next_status: updateData.status } : {},
+      });
+      if (!updatedQuote.is_template) await recalculateQuoteFinancials(trx, tenant, quoteId);
+      const finalQuote = (await quoteTable<IQuote>(trx, tenant, 'quotes').where({ quote_id: quoteId }).first() ?? updatedQuote) as IQuote;
+      await recordQuoteLifecycleTransition(trx, tenant, existingQuote as IQuote, finalQuote, activity, options);
+      return finalQuote;
     });
-
-    if (!updatedQuote.is_template) {
-      await recalculateQuoteFinancials(knexOrTrx, tenant, quoteId);
-      const recalculatedQuote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-        .where({ quote_id: quoteId })
-        .first();
-      return recalculatedQuote ?? updatedQuote;
-    }
-
-    return updatedQuote;
   },
 
   async delete(
@@ -358,115 +343,109 @@ const Quote = {
     quoteId: string,
     performedBy?: string | null
   ): Promise<IQuote> {
-    if (!tenant) {
-      throw new Error('Tenant context is required for revising quote');
-    }
+    return withTransaction(knexOrTrx, async (trx) => {
+      if (!tenant) {
+        throw new Error('Tenant context is required for revising quote');
+      }
 
-    const sourceQuote = await Quote.getById(knexOrTrx, tenant, quoteId);
-    if (!sourceQuote) {
-      throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
-    }
+      await quoteTable(trx, tenant, 'quotes').where({ quote_id: quoteId }).forUpdate().first();
+      const sourceQuote = await Quote.getById(trx, tenant, quoteId);
+      if (!sourceQuote) {
+        throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+      }
 
-    if (sourceQuote.is_template) {
-      throw new Error('Quote templates cannot be revised');
-    }
+      if (sourceQuote.is_template) {
+        throw new Error('Quote templates cannot be revised');
+      }
 
-    if (!sourceQuote.status || !REVISABLE_QUOTE_STATUSES.includes(sourceQuote.status)) {
-      throw new Error('Only sent, rejected, expired, cancelled, or accepted quotes can be revised');
-    }
+      if (!sourceQuote.status || !REVISABLE_QUOTE_STATUSES.includes(sourceQuote.status)) {
+        throw new Error('Only sent, rejected, expired, cancelled, or accepted quotes can be revised');
+      }
 
-    const rootQuoteId = sourceQuote.parent_quote_id ?? sourceQuote.quote_id;
-    const versionRows = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-      .where((builder) => {
-        builder.where('quote_id', rootQuoteId).orWhere('parent_quote_id', rootQuoteId);
-      })
-      .select('version');
-
-    const nextVersion = Math.max(sourceQuote.version, ...versionRows.map((row) => Number(row.version ?? 0))) + 1;
-
-    const [revisedQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
-      .insert(prepareQuoteTermsForDb({
-        tenant,
-        client_id: sourceQuote.client_id ?? null,
-        contact_id: sourceQuote.contact_id ?? null,
-        title: sourceQuote.title,
-        description: sourceQuote.description ?? null,
-        quote_date: sourceQuote.quote_date ?? null,
-        valid_until: sourceQuote.valid_until ?? null,
-        status: 'draft',
-        version: nextVersion,
-        parent_quote_id: rootQuoteId,
-        po_number: sourceQuote.po_number ?? null,
-        recurring_section_title: sourceQuote.recurring_section_title?.trim() || null,
-        onetime_section_title: sourceQuote.onetime_section_title?.trim() || null,
-        subtotal: 0,
-        discount_total: 0,
-        tax: 0,
-        total_amount: 0,
-        currency_code: sourceQuote.currency_code,
-        tax_source: sourceQuote.tax_source ?? 'internal',
-        internal_notes: sourceQuote.internal_notes ?? null,
-        client_notes: sourceQuote.client_notes ?? null,
-        terms_and_conditions: sourceQuote.terms_and_conditions ?? null,
-        terms_and_conditions_block: sourceQuote.terms_and_conditions_block ?? null,
-        is_template: false,
-        template_id: sourceQuote.template_id ?? null,
-        quote_number: sourceQuote.quote_number,
-        created_by: performedBy ?? sourceQuote.updated_by ?? sourceQuote.created_by ?? null,
-        updated_by: performedBy ?? sourceQuote.updated_by ?? sourceQuote.created_by ?? null,
-      }) as any)
-      .returning('*');
-
-    const sourceItems = sourceQuote.quote_items ?? [];
-    const oldToNew = new Map<string, string>();
-    const insertCopiedItem = async (item: IQuoteItem, appliesToItemId: string | null) => {
-      const { quote_item_id: _quoteItemId, tenant: _itemTenant, created_at, updated_at, ...itemData } = item;
-      const [created] = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
-        .insert({
-          tenant,
-          ...itemData,
-          quote_id: revisedQuote.quote_id,
-          applies_to_item_id: appliesToItemId,
+      const rootQuoteId = sourceQuote.parent_quote_id ?? sourceQuote.quote_id;
+      const versionRows = await quoteTable<IQuote>(trx, tenant, 'quotes')
+        .where((builder) => {
+          builder.where('quote_id', rootQuoteId).orWhere('parent_quote_id', rootQuoteId);
         })
-        .returning('quote_item_id');
-      return created;
-    };
+        .select('version');
 
-    // Item-targeted discounts reference base items by id. Base rows are copied
-    // first so their new ids can remap applies_to_item_id on the discount rows,
-    // regardless of display order in the source quote.
-    for (const item of sourceItems.filter((i) => !i.is_discount)) {
-      const created = await insertCopiedItem(item, null);
-      oldToNew.set(item.quote_item_id, created.quote_item_id);
-    }
-    for (const item of sourceItems.filter((i) => i.is_discount)) {
-      // Preserve unmatched scope for removed targets: keep the original target
-      // id when it was not among the copied base rows, so the copied discount
-      // stays item-scoped and resolves to zero instead of broadening into a
-      // whole-quote discount.
-      const remapped = item.applies_to_item_id
-        ? (oldToNew.get(item.applies_to_item_id) ?? item.applies_to_item_id)
-        : null;
-      await insertCopiedItem(item, remapped);
-    }
+      const nextVersion = Math.max(sourceQuote.version, ...versionRows.map((row) => Number(row.version ?? 0))) + 1;
 
-    await quoteTable(knexOrTrx, tenant, 'quotes')
-      .where({ quote_id: sourceQuote.quote_id })
-      .update({
-        status: 'superseded',
-        updated_at: knexOrTrx.fn.now(),
-        updated_by: performedBy ?? sourceQuote.updated_by ?? sourceQuote.created_by ?? null,
-      });
+      const [revisedQuote] = await quoteTable<IQuote>(trx, tenant, 'quotes')
+        .insert(prepareQuoteTermsForDb({
+          tenant,
+          client_id: sourceQuote.client_id ?? null,
+          contact_id: sourceQuote.contact_id ?? null,
+          title: sourceQuote.title,
+          description: sourceQuote.description ?? null,
+          quote_date: sourceQuote.quote_date ?? null,
+          valid_until: sourceQuote.valid_until ?? null,
+          status: 'draft',
+          version: nextVersion,
+          parent_quote_id: rootQuoteId,
+          po_number: sourceQuote.po_number ?? null,
+          recurring_section_title: sourceQuote.recurring_section_title?.trim() || null,
+          onetime_section_title: sourceQuote.onetime_section_title?.trim() || null,
+          subtotal: 0,
+          discount_total: 0,
+          tax: 0,
+          total_amount: 0,
+          currency_code: sourceQuote.currency_code,
+          tax_source: sourceQuote.tax_source ?? 'internal',
+          internal_notes: sourceQuote.internal_notes ?? null,
+          client_notes: sourceQuote.client_notes ?? null,
+          terms_and_conditions: sourceQuote.terms_and_conditions ?? null,
+          terms_and_conditions_block: sourceQuote.terms_and_conditions_block ?? null,
+          is_template: false,
+          template_id: sourceQuote.template_id ?? null,
+          quote_number: sourceQuote.quote_number,
+          created_by: performedBy ?? sourceQuote.updated_by ?? sourceQuote.created_by ?? null,
+          updated_by: performedBy ?? sourceQuote.updated_by ?? sourceQuote.created_by ?? null,
+        }) as any)
+        .returning('*');
 
-    await QuoteActivity.create(knexOrTrx, tenant, {
-      quote_id: sourceQuote.quote_id,
-      activity_type: 'superseded',
-      description: `Quote superseded by version ${nextVersion}`,
-      performed_by: performedBy ?? null,
-      metadata: { next_version: nextVersion, revised_quote_id: revisedQuote.quote_id }
+      const sourceItems = sourceQuote.quote_items ?? [];
+      const oldToNew = new Map<string, string>();
+      const insertCopiedItem = async (item: IQuoteItem, appliesToItemId: string | null) => {
+        const { quote_item_id: _quoteItemId, tenant: _itemTenant, created_at, updated_at, ...itemData } = item;
+        const [created] = await quoteTable<IQuoteItem>(trx, tenant, 'quote_items')
+          .insert({
+            tenant,
+            ...itemData,
+            quote_id: revisedQuote.quote_id,
+            applies_to_item_id: appliesToItemId,
+          })
+          .returning('quote_item_id');
+        return created;
+      };
+
+      // Item-targeted discounts reference base items by id. Base rows are copied
+      // first so their new ids can remap applies_to_item_id on the discount rows,
+      // regardless of display order in the source quote.
+      for (const item of sourceItems.filter((i) => !i.is_discount)) {
+        const created = await insertCopiedItem(item, null);
+        oldToNew.set(item.quote_item_id, created.quote_item_id);
+      }
+      for (const item of sourceItems.filter((i) => i.is_discount)) {
+        // Preserve unmatched scope for removed targets: keep the original target
+        // id when it was not among the copied base rows, so the copied discount
+        // stays item-scoped and resolves to zero instead of broadening into a
+        // whole-quote discount.
+        const remapped = item.applies_to_item_id
+          ? (oldToNew.get(item.applies_to_item_id) ?? item.applies_to_item_id)
+          : null;
+        await insertCopiedItem(item, remapped);
+      }
+
+      await transitionQuoteStatus(trx, tenant, sourceQuote.quote_id, 'superseded', {
+        system: true, reason: `Quote superseded by version ${nextVersion}`,
+        activity: { activity_type: 'superseded', metadata: { next_version: nextVersion, revised_quote_id: revisedQuote.quote_id } },
+        actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
+        details: { supersededByQuoteId: revisedQuote.quote_id, nextVersion },
+        patch: { updated_by: performedBy ?? null },
     });
 
-    await QuoteActivity.create(knexOrTrx, tenant, {
+    await QuoteActivity.create(trx, tenant, {
       quote_id: revisedQuote.quote_id,
       activity_type: 'created_revision',
       description: `Quote revision created from version ${sourceQuote.version}`,
@@ -474,9 +453,10 @@ const Quote = {
       metadata: { source_quote_id: sourceQuote.quote_id, source_version: sourceQuote.version }
     });
 
-    await recalculateQuoteFinancials(knexOrTrx, tenant, revisedQuote.quote_id);
+    await recalculateQuoteFinancials(trx, tenant, revisedQuote.quote_id);
 
-    return await Quote.getById(knexOrTrx, tenant, revisedQuote.quote_id) as IQuote;
+    return await Quote.getById(trx, tenant, revisedQuote.quote_id) as IQuote;
+    });
   },
 
   async listVersions(

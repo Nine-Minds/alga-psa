@@ -2,15 +2,49 @@ import type { Knex } from 'knex';
 import type { ISO8601String } from '@alga-psa/types';
 import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
 import { dueDateForPaymentTerms } from '@alga-psa/shared/billingClients/paymentDueDate';
+import type { PreferredPaymentMethod } from '@alga-psa/shared/billingClients/paymentPreferences';
 
 export { dueDateForPaymentTerms };
 
 /**
  * Invoice due dates follow the payment terms of the billing profile that the
- * invoice bills. The terms resolve field by field, profile first and then
- * client, so a client with no profile overrides gets exactly the due date it
- * always got.
+ * invoice bills. The terms resolve field by field: the profile, then the
+ * client, then the tenant default (Billing Settings), then Net 30. A client
+ * with no profile overrides and a tenant with no default gets exactly the due
+ * date it always got.
  */
+
+/** Terms an invoice header carries, taken from the effective billing identity. */
+export interface InvoiceBillingTerms {
+  /** The profile actually resolved: the one passed in, else the client default. */
+  billingProfileId: string;
+  dueDate: ISO8601String;
+  paymentMethod: PreferredPaymentMethod | null;
+}
+
+/**
+ * Header terms (profile, due date, payment method) for an invoice billed under
+ * `billingProfileId`, or under the client's default profile when none is given.
+ * Fields resolve profile first, then client. Runs on the caller's transaction;
+ * resolving the default profile may write (lazy provision) inside it.
+ *
+ * `invoiceDate` may be an ISO date or a full ISO timestamp; a timestamp is
+ * reduced to its UTC calendar date before the term days are added.
+ */
+export async function resolveInvoiceBillingTerms(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  invoiceDate: ISO8601String,
+  billingProfileId?: string | null,
+): Promise<InvoiceBillingTerms> {
+  const identity = await resolveEffectiveBillingIdentity(trx, tenant, clientId, billingProfileId);
+  return {
+    billingProfileId: identity.billingProfileId,
+    dueDate: dueDateForPaymentTerms(invoiceDate, identity.paymentTerms),
+    paymentMethod: identity.preferredPaymentMethod,
+  };
+}
 
 /**
  * Due date for an invoice billed under `billingProfileId`, or under the
@@ -24,6 +58,5 @@ export async function resolveInvoiceDueDate(
   invoiceDate: ISO8601String,
   billingProfileId?: string | null,
 ): Promise<ISO8601String> {
-  const identity = await resolveEffectiveBillingIdentity(knex, tenant, clientId, billingProfileId);
-  return dueDateForPaymentTerms(invoiceDate, identity.paymentTerms);
+  return (await resolveInvoiceBillingTerms(knex, tenant, clientId, invoiceDate, billingProfileId)).dueDate;
 }

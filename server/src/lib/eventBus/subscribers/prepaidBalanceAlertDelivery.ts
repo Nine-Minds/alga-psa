@@ -55,6 +55,7 @@ import {
   replenishmentOutcomeFromStatus,
   clientAlertLink,
   managerAlertLink,
+  resolveAlertBaseUrl,
 } from '../../notifications/prepaidBalanceAlertTemplates';
 
 const CLAIM_BATCH_SIZE = 50;
@@ -1043,7 +1044,7 @@ async function processDelivery(
         await supersedeClaimedDelivery(trx, tenantId, delivery, summary);
         return;
       }
-      const link = managerAlertLink(delivery.alert.client_id);
+      const link = managerAlertLink(delivery.alert.client_id, await resolveAlertBaseUrl(tenantId, 'msp', knex));
       // The internal channel is account-manager-only (asserted just above), so
       // the replenishment notice is always the right one here.
       const data = buildInternalAlertContextForDelivery(delivery.alert, locale, link, hasReplenishment);
@@ -1137,8 +1138,8 @@ async function processDelivery(
         ...(isManager ? {} : { clientId: delivery.alert.client_id }),
       });
       const link = isManager
-        ? managerAlertLink(delivery.alert.client_id)
-        : clientAlertLink();
+        ? managerAlertLink(delivery.alert.client_id, await resolveAlertBaseUrl(tenantId, 'msp', knex))
+        : clientAlertLink(await resolveAlertBaseUrl(tenantId, 'client_portal', knex));
       const useReplenishment = hasReplenishment && replenishmentTemplateAllowedForRole(selectedRole);
       return {
         isManager,

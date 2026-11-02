@@ -6,6 +6,12 @@ import type { CadenceOwner } from './recurringTiming.interfaces';
  * Contract status types
  */
 export type ContractStatus = 'active' | 'draft' | 'terminated' | 'expired' | 'published' | 'archived';
+/**
+ * Derived (never stored) assignment lifecycle status: ContractStatus plus `scheduled`, a confirmed
+ * contract whose assignment starts after today. See shared/billingClients/clientContractStatus.ts.
+ * Kept out of ContractStatus so the contracts.status column/enum is unaffected.
+ */
+export type ClientContractDerivedStatus = ContractStatus | 'scheduled';
 export type RenewalWorkItemStatus = 'pending' | 'renewing' | 'non_renewing' | 'snoozed' | 'completed';
 
 /**
@@ -39,7 +45,7 @@ export interface IContractWithClient extends IContract {
   logoUrl?: string | null;
   owner_client_name?: string | null;
   client_contract_id?: string;
-  assignment_status?: ContractStatus;
+  assignment_status?: ClientContractDerivedStatus;
   contract_header_status?: ContractStatus;
   start_date?: ISO8601String;
   end_date?: ISO8601String | null;
@@ -76,7 +82,7 @@ export interface IClientContract extends TenantEntity {
   client_contract_id: string;
   client_id: string;
   contract_id: string;
-  assignment_status?: ContractStatus;
+  assignment_status?: ClientContractDerivedStatus;
   contract_status?: ContractStatus;
   /** Provenance-only metadata for template origin; not a runtime identity key. */
   template_contract_id?: string | null;
@@ -152,7 +158,7 @@ export interface IContractAssignmentSummary extends TenantEntity {
   /** Profile this assignment bills; NULL falls back to the client default. */
   billing_profile_id?: string | null;
   billing_profile_name?: string | null;
-  assignment_status?: ContractStatus;
+  assignment_status?: ClientContractDerivedStatus;
   start_date: ISO8601String | null;
   end_date: ISO8601String | null;
   renewal_mode?: 'none' | 'manual' | 'auto';

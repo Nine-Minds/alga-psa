@@ -130,6 +130,12 @@ export const updateSsoPreferencesAction = withAuth(async (
   return nextPreferences;
 });
 
+/** Whether the caller may configure the tenant's own Google / Microsoft
+ * application (the provider actions require system_settings:update), so the
+ * profile can offer setup instead of only "ask your administrator". */
+export const canConfigureSsoProvidersAction = withAuth(async (user) =>
+  hasPermission(user, 'system_settings', 'update'));
+
 export interface LinkedSsoAccount {
   provider: string;
   provider_account_id: string;
@@ -156,7 +162,11 @@ export async function getLinkedSsoAccountsAction(): Promise<GetLinkedSsoAccounts
     }
 
     const email = session.user.email;
-    const userRecord = await User.findUserByEmail(email.toLowerCase());
+    // SSO linking is an MSP-side feature: resolve the typed internal user in the session's tenant.
+    const sessionTenant = (session.user as { tenant?: string }).tenant;
+    const userRecord = sessionTenant
+      ? await User.findUserByEmailTenantAndType(email.toLowerCase(), sessionTenant, 'internal')
+      : await User.findUserByEmailAndType(email.toLowerCase(), 'internal');
     if (!userRecord || !userRecord.user_id) {
       return { success: false, error: "User not found" };
     }

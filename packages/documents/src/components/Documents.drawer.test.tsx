@@ -58,6 +58,8 @@ vi.mock('@alga-psa/users/actions', () => ({
 }));
 
 vi.mock('../actions/documentActions', () => ({
+  getDocument: vi.fn(),
+  getDocumentThumbnailUrl: vi.fn(),
   getDocumentsByEntity: vi.fn(),
   getDocumentsByFolder: vi.fn(),
   moveDocumentsToFolder: vi.fn(),
@@ -273,6 +275,25 @@ describe('Documents drawer', () => {
     expect(screen.getByTestId('doc-card')).toBeInTheDocument();
     expect(screen.queryByTestId('folder-tree-view')).not.toBeInTheDocument();
     expect(mockFolderTreeView).not.toHaveBeenCalled();
+  });
+
+  it('changes an open single-document viewer without reporting a close until dismissal', async () => {
+    const image = { document_id: 'image', document_name: 'image.jpg', file_id: 'file', mime_type: 'image/jpeg' } as any;
+    const note = { document_id: 'note', document_name: 'Note', type_name: 'text/plain' } as any;
+    const onDocumentClosed = vi.fn();
+    const props = { id: 'documents', documents: [], userId: 'user-1', drawerOnly: true, onDocumentClosed };
+    const { rerender } = render(<Documents {...props} documentToOpen={image} />);
+    expect(await screen.findByAltText('image.jpg')).toBeInTheDocument();
+    rerender(<Documents {...props} documentToOpen={note} />);
+    expect(await screen.findByTestId('collab-editor')).toBeInTheDocument();
+    expect(screen.queryByAltText('image.jpg')).not.toBeInTheDocument();
+    expect(onDocumentClosed).not.toHaveBeenCalled();
+    rerender(<Documents {...props} documentToOpen={image} />);
+    expect(await screen.findByAltText('image.jpg')).toBeInTheDocument();
+    expect(screen.queryByTestId('collab-editor')).not.toBeInTheDocument();
+    expect(onDocumentClosed).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Close preview' }));
+    await waitFor(() => expect(onDocumentClosed).toHaveBeenCalledTimes(1));
   });
 
   it('opens the standard editor directly in drawer-only mode and reports closing', async () => {

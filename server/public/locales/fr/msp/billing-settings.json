@@ -202,6 +202,27 @@
         "save": "Échec de l’enregistrement des paramètres",
         "range": "Saisissez un nombre entier de 1 à 365."
       }
+    },
+    "paymentTerms": {
+      "title": "Conditions de paiement par défaut",
+      "description": "Définissez les conditions de paiement utilisées par les nouvelles factures lorsque ni le client ni son profil de facturation n’en définit.",
+      "fields": {
+        "terms": {
+          "label": "Conditions de paiement",
+          "help": "S’applique uniquement aux nouvelles factures. Les factures existantes et les clients ayant leurs propres conditions les conservent."
+        }
+      },
+      "actions": {
+        "save": "Enregistrer"
+      },
+      "toast": {
+        "updated": "Les conditions de paiement par défaut ont été mises à jour."
+      },
+      "errors": {
+        "load": "Échec du chargement des paramètres",
+        "save": "Échec de l’enregistrement des paramètres",
+        "invalid": "Choisissez des conditions de paiement valides."
+      }
     }
   },
   "quoting": {
@@ -215,8 +236,56 @@
     }
   },
   "tax": {
-    "defaultRate": { "title": "Taux d'imposition par défaut", "tooltip": "Choisissez le taux hérité par les nouveaux clients, produits et services.", "description": "Définissez le taux attribué aux nouveaux clients et articles du catalogue. Les enregistrements existants restent inchangés.", "loading": "Chargement du taux par défaut...", "empty": "Créez un taux actif avant de choisir une valeur par défaut.", "invalid": "Le taux configuré n'est plus actif ou valide. Choisissez-en un autre.", "field": { "label": "Taux d'imposition par défaut" }, "options": { "none": "Aucun taux par défaut du locataire" }, "help": "Sans taux par défaut, les nouveaux articles restent non imposables et les clients utilisent le plus ancien taux actif, s'il existe.", "actions": { "save": "Enregistrer le taux", "saving": "Enregistrement..." }, "toast": { "saved": "Taux par défaut enregistré." }, "errors": { "load": "Impossible de charger le taux par défaut.", "save": "Impossible d'enregistrer le taux par défaut." } },
-    "backfill": { "title": "Appliquer le taux par défaut au catalogue existant", "description": "Prévisualisez les produits et services sans taux d'imposition.", "warning": "Cela modifie l'imposition future sans réécrire les factures émises.", "loading": "Chargement de l'aperçu...", "empty": "Aucun produit ou service admissible.", "target": "Taux cible : {{rate}}", "count": "{{count}} articles admissibles", "dialog": { "title": "Appliquer le taux par défaut" }, "actions": { "preview": "Prévisualiser les articles", "apply": "Appliquer la sélection", "applying": "Application..." }, "toast": { "applied": "Taux par défaut appliqué aux articles sélectionnés." }, "errors": { "preview": "Impossible de prévisualiser le catalogue.", "apply": "Impossible d'appliquer le taux par défaut." } },
+    "defaultRate": {
+      "title": "Taux d'imposition par défaut",
+      "tooltip": "Choisissez le taux hérité par les nouveaux clients, produits et services.",
+      "description": "Définissez le taux attribué aux nouveaux clients et articles du catalogue. Les enregistrements existants restent inchangés.",
+      "loading": "Chargement du taux par défaut...",
+      "empty": "Créez un taux actif avant de choisir une valeur par défaut.",
+      "invalid": "Le taux configuré n'est plus actif ou valide. Choisissez-en un autre.",
+      "field": {
+        "label": "Taux d'imposition par défaut"
+      },
+      "options": {
+        "none": "Aucun taux par défaut du locataire"
+      },
+      "help": "Sans taux par défaut, les nouveaux articles restent non imposables et les clients utilisent le plus ancien taux actif, s'il existe.",
+      "actions": {
+        "save": "Enregistrer le taux",
+        "saving": "Enregistrement..."
+      },
+      "toast": {
+        "saved": "Taux par défaut enregistré."
+      },
+      "errors": {
+        "load": "Impossible de charger le taux par défaut.",
+        "save": "Impossible d'enregistrer le taux par défaut."
+      }
+    },
+    "backfill": {
+      "title": "Appliquer le taux par défaut au catalogue existant",
+      "description": "Prévisualisez les produits et services sans taux d'imposition.",
+      "warning": "Cela modifie l'imposition future sans réécrire les factures émises.",
+      "loading": "Chargement de l'aperçu...",
+      "empty": "Aucun produit ou service admissible.",
+      "target": "Taux cible : {{rate}}",
+      "count": "{{count}} articles admissibles",
+      "dialog": {
+        "title": "Appliquer le taux par défaut"
+      },
+      "actions": {
+        "preview": "Prévisualiser les articles",
+        "apply": "Appliquer la sélection",
+        "applying": "Application..."
+      },
+      "toast": {
+        "applied": "Taux par défaut appliqué aux articles sélectionnés."
+      },
+      "errors": {
+        "preview": "Impossible de prévisualiser le catalogue.",
+        "apply": "Impossible d'appliquer le taux par défaut."
+      }
+    },
     "taxRegions": {
       "title": "Régions fiscales",
       "description": "Gérez les régions fiscales et les paramètres associés."
@@ -998,7 +1067,10 @@
       "taxRate": {
         "label": "Taux d'imposition (facultatif)",
         "placeholder": "Sélectionnez le taux de taxe (facultatif)",
-        "loading": "Chargement des taux d'imposition...", "inherit": "Utiliser le taux par défaut", "inheritNamed": "Utiliser le taux par défaut ({{rate}})", "nonTaxable": "Non imposable"
+        "loading": "Chargement des taux d'imposition...",
+        "inherit": "Utiliser le taux par défaut",
+        "inheritNamed": "Utiliser le taux par défaut ({{rate}})",
+        "nonTaxable": "Non imposable"
       },
       "sku": {
         "label": "UGS",
@@ -1094,7 +1166,10 @@
       "taxRate": {
         "label": "Taux d'imposition",
         "placeholder": "Non imposable",
-        "loading": "Chargement...", "inherit": "Utiliser le taux par défaut", "inheritNamed": "Utiliser le taux par défaut ({{rate}})", "nonTaxable": "Non imposable"
+        "loading": "Chargement...",
+        "inherit": "Utiliser le taux par défaut",
+        "inheritNamed": "Utiliser le taux par défaut ({{rate}})",
+        "nonTaxable": "Non imposable"
       },
       "active": {
         "label": "Actif"
@@ -1420,6 +1495,103 @@
     }
   },
   "payment": {
+    "import": {
+      "title": "Importer les clients Stripe existants",
+      "description": "Importez des clients Stripe et des cartes enregistrées depuis un autre système. L'importation n'inscrit jamais un client au paiement automatique ; vous le confirmez ligne par ligne.",
+      "open": "Démarrer l'importation",
+      "preview": "Aperçu",
+      "execute": "Importer",
+      "reset": "Recommencer",
+      "default": "par défaut",
+      "done": "Importation terminée",
+      "attest": "Le client a autorisé les prélèvements récurrents sur cette carte",
+      "alreadyEnrolled": "Déjà inscrit",
+      "scaRisk": "Risque SCA : aucune preuve que la carte a été enregistrée pour une utilisation hors session",
+      "cardsImported": "{{count}} carte(s) importée(s)",
+      "csv": {
+        "label": "Lignes (client, profil de facturation, ID client Stripe)",
+        "upload": "Téléverser un CSV"
+      },
+      "assisted": {
+        "run": "Associer par e-mail, puis par nom",
+        "summary": "{{matched}} proposé(s), {{ambiguous}} ambigu(s) (non proposé(s)){{truncated}}",
+        "truncated": " ; liste tronquée",
+        "ambiguousTitle": "Correspondances ambiguës (non proposées)",
+        "addRow": "Ajouter comme ligne",
+        "matchedBy": "Correspondance par {{by}}",
+        "by": {
+          "email": "e-mail",
+          "name": "nom"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Correspond à plusieurs profils de facturation",
+          "multiple-customers": "Correspond à plusieurs clients Stripe"
+        }
+      },
+      "errors": {
+        "preview": "Échec de l'aperçu",
+        "noRows": "Ajoutez au moins une ligne",
+        "match": "Échec de l'association",
+        "execute": "Échec de l'importation"
+      },
+      "table": {
+        "customer": "Client Stripe",
+        "plan": "Forfait",
+        "cards": "Cartes",
+        "enroll": "Inscrire au paiement automatique",
+        "clientProfile": "Client / profil de facturation",
+        "include": "Inclure"
+      },
+      "actions": {
+        "adopt": "Adopter",
+        "already-imported": "Déjà importé",
+        "conflict": "Conflit",
+        "skip": "Ignorer"
+      },
+      "cardActions": {
+        "import": "Importer",
+        "already-imported": "Déjà importée",
+        "conflict": "Conflit",
+        "skip": "Ignorer"
+      },
+      "cardReasons": {
+        "unsupported-method": "méthode non prise en charge",
+        "expired-card": "carte expirée",
+        "card-claimed-elsewhere": "la carte appartient à un autre client"
+      },
+      "reasons": {
+        "invalid-customer-id": "ID client Stripe non valide",
+        "customer-not-found": "Client introuvable dans Stripe",
+        "customer-deleted": "Le client est supprimé dans Stripe",
+        "profile-not-found": "Client ou profil de facturation introuvable",
+        "profile-inactive": "Le profil de facturation est inactif",
+        "currency-not-configured": "Aucune devise de facturation configurée pour ce client",
+        "currency-unsupported": "La devise de facturation n'est pas prise en charge par le paiement automatique Stripe",
+        "duplicate-customer-in-input": "Le même client Stripe apparaît sur plusieurs lignes",
+        "duplicate-profile-in-input": "Le même profil de facturation apparaît avec plusieurs clients Stripe",
+        "customer-claimed-by-other": "Le client Stripe est déjà associé à un autre client ou profil de facturation",
+        "customer-metadata-owned-by-other": "Les métadonnées du client Stripe mentionnent un autre locataire, client ou profil de facturation",
+        "profile-mapped-to-other-customer": "Ce profil de facturation utilise déjà un autre client Stripe"
+      },
+      "warnings": {
+        "no-cards": "Le client n'a aucun mode de paiement",
+        "customer-currency-mismatch": "La devise du client Stripe diffère de la devise de facturation",
+        "no-importable-card": "Aucune carte ne peut être importée"
+      },
+      "resultStatus": {
+        "imported": "Importé",
+        "unchanged": "Rien à faire",
+        "skipped": "Ignoré",
+        "conflict": "Conflit",
+        "failed": "Échec"
+      },
+      "enrollment": {
+        "enrolled": "inscrit au paiement automatique",
+        "not-eligible": "non éligible à l'inscription",
+        "already-enrolled": "déjà inscrit",
+        "failed": "échec de l'inscription"
+      }
+    },
     "messages": {
       "loadConfigFailed": "Échec du chargement de la configuration de paiement",
       "keysRequired": "Veuillez saisir à la fois la clé secrète et la clé publiable",
@@ -1446,7 +1618,7 @@
       "daysPlural": "{{count}} jours",
       "daysDecimal": "{{count}} jours",
       "hoursUnit": "heures ({{formatted}})",
-      "willExpireAfter": "Les liens de paiement expireront après {{duration}}"
+      "willExpireAfter": "Le lien de paiement envoyé par e-mail fonctionnera pendant {{duration}}"
     },
     "notConnected": {
       "title": "Stripe non connecté",
@@ -1464,7 +1636,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Expiration du lien de paiement",
-        "description": "Durée pendant laquelle les liens de paiement restent valides avant d'expirer"
+        "description": "Durée de validité du lien de paiement des e-mails de facture (de 1 heure à 30 jours). Chaque clic ouvre un nouveau paiement sécurisé tant que la facture reste impayée."
       },
       "actions": {
         "save": "Enregistrer les paramètres",

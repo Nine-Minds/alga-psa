@@ -6,5 +6,8 @@
     "./handler": "./oss/handler.ts",
     "./oss/handler": "./oss/handler.ts",
     "./ee/handler": "./ee/handler.ts"
+  },
+  "dependencies": {
+    "@alga-psa/types": "*"
   }
 }

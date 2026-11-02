@@ -11,11 +11,13 @@
  */
 export class ExpectedInvoiceActionError extends Error {
   readonly i18nKey?: string;
+  readonly messageParams?: Record<string, string | number>;
 
-  constructor(message: string, i18nKey?: string) {
+  constructor(message: string, i18nKey?: string, messageParams?: Record<string, string | number>) {
     super(message);
     this.name = 'ExpectedInvoiceActionError';
     this.i18nKey = i18nKey;
+    this.messageParams = messageParams;
   }
 }
 

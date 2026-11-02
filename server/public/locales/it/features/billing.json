@@ -67,6 +67,7 @@
     "taxBreakdown": "Dettaglio imposte",
     "manualInvoice": "Fattura manuale",
     "credits": "Crediti",
+    "currency": "Valuta",
     "financialArtifactSummary": "Fattura solo finanziaria. I periodi di servizio ricorrenti appaiono solo sulle righe di dettaglio ricorrenti.",
     "servicePeriod": "Periodo di servizio",
     "servicePeriods": "Periodi di servizio",
@@ -289,6 +290,13 @@
       "pending": "Fatture in attesa di approvazione o ulteriore elaborazione",
       "prepayment": "Fatture di acconto o anticipo",
       "partially_applied": "Fatture con pagamenti parziali applicati"
+    },
+    "billingPeriod": {
+      "weekly": "a settimana",
+      "monthly": "al mese",
+      "quarterly": "a trimestre",
+      "semi-annually": "a semestre",
+      "annually": "all'anno"
     }
   },
   "quoteForm": {
@@ -444,7 +452,13 @@
     "expires": "Scade il {{date}}",
     "recentBurn": "Utilizzo recente",
     "timeEntry": "Inserimento ore",
-    "contractLabel": "Contratto: {{contract}}"
+    "contractLabel": "Contratto: {{contract}}",
+    "hoursLeftValue": "{{hours}} h rimaste · {{value}}",
+    "validFrom": "Valido dal {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — blocco prepagato, {{hours}} h",
+    "overPrepaidBlock": "{{name}} (oltre il blocco prepagato)"
   },
   "bucketUsage": {
     "contractLine": "Linea contrattuale per pacchetto ore",
@@ -452,5 +466,20 @@
     "hoursUsed": "{{hours}} ore utilizzate",
     "hoursTotal": "{{hours}} ore totali",
     "rolloverHours": "Include {{hours}} ore riportate"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "A causa della ricevuta",
+      "net14": "netto 14",
+      "net15": "netto 15",
+      "net30": "30 netti",
+      "net7": "netto 7"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Bonifico bancario",
+      "check": "Controllo",
+      "creditCard": "Carta di credito"
+    },
+    "tenantDefault": "Predefinito del tenant ({{value}})"
   }
 }

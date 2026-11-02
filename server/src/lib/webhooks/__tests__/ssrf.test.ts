@@ -11,7 +11,7 @@ vi.mock('node:dns/promises', () => ({
   lookup: (...args: unknown[]) => dnsState.lookupMock(...args),
 }));
 
-import { assertSafeWebhookTarget, UnsafeWebhookTargetError } from '../ssrf';
+import { assertSafeWebhookTarget, isGlobalUnicastAddress, UnsafeWebhookTargetError } from '../ssrf';
 
 const PUBLIC_ADDRESS = '93.184.216.34';
 
@@ -24,9 +24,33 @@ const REJECTED_TARGETS: Array<[string, string]> = [
   ['http://192.168.1.1', 'RFC1918 192.168/16'],
   ['http://169.254.169.254', 'link-local 169.254/16'],
   ['http://100.64.0.1', 'CGNAT 100.64/10'],
+  ['http://0.0.0.0', 'unspecified 0.0.0.0/8'],
+  ['http://[::ffff:127.0.0.1]', 'IPv4-mapped loopback'],
+  ['http://[fd12::1]', 'IPv6 ULA'],
+  ['http://224.0.0.1', 'multicast'],
   ['file:///etc/passwd', 'non-http(s) file scheme'],
   ['ftp://example.com', 'non-http(s) ftp scheme'],
 ];
+
+describe('isGlobalUnicastAddress', () => {
+  it.each([
+    '0.0.0.0', '0.1.2.3', '10.1.1.1', '100.64.0.1', '127.0.0.1', '169.254.169.254', '172.16.0.1',
+    '192.0.0.1', '192.0.2.1', '192.88.99.1', '192.168.0.1', '198.18.0.1', '198.51.100.1',
+    '203.0.113.1', '224.0.0.1', '239.255.255.255', '240.0.0.1', '255.255.255.255',
+    '::', '::1', '::ffff:127.0.0.1', '::ffff:7f00:1', '::ffff:0.0.0.0', '::127.0.0.1',
+    '64:ff9b::7f00:1', '100::1', '2001:db8::1', '2001::1', '2001:1::1', '2002:7f00:1::1',
+    'fc00::1', 'fd12::1', 'fe80::1', 'ff02::1', '[::1]', 'not-an-ip',
+  ])('rejects %s', (address) => {
+    expect(isGlobalUnicastAddress(address)).toBe(false);
+  });
+
+  it.each(['93.184.216.34', '8.8.8.8', '2606:4700::1111', '2001:4860:4860::8888', '::ffff:93.184.216.34'])(
+    'accepts %s',
+    (address) => {
+      expect(isGlobalUnicastAddress(address)).toBe(true);
+    },
+  );
+});
 
 describe('assertSafeWebhookTarget (T024)', () => {
   const originalAllowPrivate = process.env.WEBHOOK_SSRF_ALLOW_PRIVATE;

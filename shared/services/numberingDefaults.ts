@@ -7,7 +7,7 @@
  */
 
 // Define supported entity types
-export type EntityType = 'TICKET' | 'INVOICE' | 'PROJECT' | 'QUOTE' | 'CREDIT_NOTE' | 'SALES_ORDER' | 'PURCHASE_ORDER' | 'OPPORTUNITY';
+export type EntityType = 'TICKET' | 'INVOICE' | 'PROJECT' | 'QUOTE' | 'CREDIT_NOTE' | 'SALES_ORDER' | 'PURCHASE_ORDER' | 'OPPORTUNITY' | 'RMA';
 
 // Tenant-facing defaults for each entity type's number format. Self-init
 // inserts these with onConflict-ignore, so a tenant's own settings (edited
@@ -25,4 +25,6 @@ export const NUMBERING_DEFAULTS: Record<
   // Matches the seed in migration 20260626100200 so existing tenants see no change.
   PURCHASE_ORDER: { prefix: 'PO', padding_length: 5, initial_value: 1 },
   OPPORTUNITY: { prefix: 'OPP-', padding_length: 4, initial_value: 1 },
+  // Warranty/RMA case number (C5). Seeded per tenant by migration 20261029130100.
+  RMA: { prefix: 'RMA-', padding_length: 5, initial_value: 1 },
 };

@@ -44,11 +44,41 @@ export interface MicrosoftSsoEmulatorEndpoints {
     userinfo: string;
 }
 
-/**
- * The simulator mints opaque tokens and no signed id_token, so the sign-in
- * provider runs as plain OAuth2 against these endpoints and reads the account
- * from Graph `/me` rather than from OIDC discovery.
- */
+export function getMicrosoftSsoEmulatorIssuer(authority = 'common'): string {
+    return `${simulatorLoginBaseUrl()}/${encodeURIComponent(authority)}/v2.0`;
+}
+
+/** Used only after isMicrosoftSsoEmulatorEnabled passes its production lock. */
+export function buildMicrosoftSsoEmulatorProvider(config: {
+    clientId: string;
+    clientSecret: string;
+    authority: string;
+    profile: (profile: Record<string, any>) => Promise<any>;
+}) {
+    const issuer = getMicrosoftSsoEmulatorIssuer(config.authority);
+    let keys: ReturnType<typeof import('jose').createRemoteJWKSet> | undefined;
+    return {
+        id: 'azure-ad', name: 'Microsoft', type: 'oidc' as const,
+        issuer,
+        clientId: config.clientId, clientSecret: config.clientSecret,
+        checks: ['pkce', 'state', 'nonce'] as Array<'pkce' | 'state' | 'nonce'>,
+        authorization: { params: { scope: 'openid email profile https://graph.microsoft.com/User.Read' } },
+        token: {
+            async conform(response: Response): Promise<Response> {
+                if (response.ok) {
+                    const tokens = await response.clone().json();
+                    const { createRemoteJWKSet, jwtVerify } = await import('jose');
+                    keys ??= createRemoteJWKSet(new URL(issuer.replace(/\/v2\.0$/, '/discovery/v2.0/keys')));
+                    await jwtVerify(tokens.id_token, keys, { issuer, audience: config.clientId, algorithms: ['RS256'] });
+                }
+                return response;
+            },
+        },
+        profile: config.profile,
+    };
+}
+
+/** Explicit endpoints remain available to non-OIDC integration adapters. */
 export function getMicrosoftSsoEmulatorEndpoints(authority = 'common'): MicrosoftSsoEmulatorEndpoints {
     const login = simulatorLoginBaseUrl();
     return {
