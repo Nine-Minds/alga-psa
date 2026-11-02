@@ -19,9 +19,6 @@ x-provider-environment: &provider-environment
   XERO_REVOCATION_URL: http://algasim:4060/connect/revocation
   XERO_CONNECTIONS_URL: http://algasim:4060/connections
   XERO_API_BASE_URL: http://algasim:4060/api.xro/2.0
-  # The payment stack runs production images; explicitly opt into the guarded
-  # loopback/test-key override so payment journeys use the local Stripe emulator.
-  ALGA_STRIPE_LOCAL_REVIEW: 'true'
   STRIPE_API_BASE_URL: http://algasim:4050
   STRIPE_SECRET_KEY: sk_test_algasim
   # EnvSecretProvider reads app-secret names verbatim. The payment provider
@@ -33,6 +30,22 @@ x-provider-environment: &provider-environment
 x-hocuspocus-jwt-secret: &hocuspocus-jwt-secret regression-hocuspocus-jwt-only-20260909
 
 services:
+  # Share only the application network namespace, exposing a fixed emulator
+  # destination on its loopback interface. Production Stripe guards stay intact.
+  stripe-loopback:
+    image: alga-e2e-test-algasim:latest
+    init: true
+    network_mode: service:server
+    entrypoint: ['node', '/provider-ingress.mjs', '--stripe-loopback']
+    command: []
+    volumes:
+      - ./e2e-tests/harness/provider-ingress.mjs:/provider-ingress.mjs:ro
+      - ./e2e-tests/harness/calendar-callback-proxy.mjs:/calendar-callback-proxy.mjs:ro
+    healthcheck:
+      test: ['CMD', 'node', '--input-type=module', '-e', 'const r = await fetch("http://127.0.0.1:4050/v1/account", { headers: { Authorization: "Bearer sk_test_algasim" }, signal: AbortSignal.timeout(2000) }); if (!r.ok) process.exit(1)']
+      interval: 2s
+      timeout: 3s
+      retries: 30
   hocuspocus:
     environment:
       HOCUSPOCUS_JWT_SECRET: *hocuspocus-jwt-secret
@@ -116,6 +129,8 @@ services:
     ports: !reset []
     environment:
       <<: *provider-environment
+      ALGA_STRIPE_LOCAL_REVIEW: 'true'
+      STRIPE_API_BASE_URL: http://127.0.0.1:4050
       HOCUSPOCUS_JWT_SECRET: *hocuspocus-jwt-secret
       TEMPORAL_ADDRESS: temporal-dev:7233
       TEMPORAL_NAMESPACE: default

@@ -12,6 +12,7 @@ describe('Stripe simulator boundary', () => {
   it.each([
     ['sk_live_secret', 'http://127.0.0.1:9174'],
     ['sk_test_fake', 'https://external.example'],
+    ['sk_test_fake', 'http://algasim:4050'],
     ['sk_test_fake', 'http://user:password@127.0.0.1:9174'],
   ])('refuses unsafe production review settings', (key, base) => {
     expect(() => stripeApiOverride(key, { NODE_ENV: 'production', ALGA_STRIPE_LOCAL_REVIEW: 'true', STRIPE_API_BASE_URL: base })).toThrow();
