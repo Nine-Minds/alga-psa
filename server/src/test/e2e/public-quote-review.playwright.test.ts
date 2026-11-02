@@ -209,7 +209,9 @@ test.describe('public quote review page', () => {
 
       const expectNoSessionCookie = async () => {
         const names = (await context.cookies()).map((c) => c.name.toLowerCase());
-        expect(names.filter((n) => /session|authjs|next-auth/.test(n))).toEqual([]);
+        // The auth wrapper hands every visitor a csrf-token / callback-url cookie; what
+        // must never exist is an actual session.
+        expect(names.filter((n) => /session-token|sessiontoken/.test(n))).toEqual([]);
       };
 
       // ---- 1. valid token, no session -------------------------------------------------
@@ -294,6 +296,23 @@ test.describe('public quote review page', () => {
       expect(pdfUnknown.body).toBe('');
       expect(pdfUnknown.headers['cache-control']).toContain('no-store');
 
+      // ---- 3b. rate limiting: 429 on the PDF route, opaque page ----------------------------
+      // The resolver limits 30 attempts / 5 min per client IP; a private fake IP keeps
+      // the burst away from every other request in this run.
+      const burstIp = `203.0.113.${1 + Math.floor(Math.random() * 250)}`;
+      const burstHeaders = { 'x-forwarded-for': burstIp };
+      let limited: APIResponse | null = null;
+      for (let i = 0; i < 40 && !limited; i += 1) {
+        const res = await request.get(`/api/quote/${newToken()}/pdf`, { headers: burstHeaders });
+        if (res.status() === 429) limited = res;
+        else expect(res.status()).toBe(404);
+      }
+      expect(limited, 'PDF route never answered 429 to a burst from one IP').not.toBeNull();
+      expectHardenedHeaders(limited!.headers());
+      expect((await limited!.body()).length).toBe(0);
+      // a limited valid token is not served either
+      expect((await request.get(`/api/quote/${validToken}/pdf`, { headers: burstHeaders })).status()).toBe(429);
+
       // ---- 4. expired / superseded / decided each have their own page -------------------
       for (const [token, copy] of [
         [expiredToken, 'expired'],
@@ -321,6 +340,10 @@ test.describe('public quote review page', () => {
       expect(revoked.html).not.toContain(INTERNAL_NOTE);
       expect(revoked.html).not.toContain(tenantData.tenant.tenantName);
 
+      // Non-valid outcomes (unknown, revoked, expired, superseded) recorded no view:
+      // the quote they point at still has exactly the one view from the valid token.
+      expect(await viewCount(quoteId)).toBe(1);
+
       // Decided quotes stay viewable, read-only, with a neutral notice (design:
       // card 2 never produces the `decided` resolve status).
       const decidedResponse = await page.goto(`/quote/${decidedToken}`);
@@ -344,6 +367,137 @@ test.describe('public quote review page', () => {
       // ---- 6. nothing left the origin and no cookie was ever needed ------------------------
       expect(foreign).toEqual([]);
       await expectNoSessionCookie();
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        for (const table of ['quote_access_links', 'quote_activities', 'quote_items', 'quotes', 'contacts']) {
+          await tenantDb(db, tenantId).table(table).where({ tenant: tenantId }).del().catch(() => undefined);
+        }
+      }
+      await db.destroy();
+    }
+  });
+  // Calendar dates are days, not instants: the same stored day must render on every
+  // timezone, in the page's language. quote_date = 2026-10-18T00:00Z (the west-of-UTC
+  // trap: 17 Oct in Los Angeles) and valid_until = 2026-12-31T00:00Z (the east trap:
+  // 1 Jan in Kiritimati would be wrong the other way for a naive local formatter).
+  test('dates keep their stored day in every timezone; outcome pages follow the request locale', async ({
+    browser,
+    baseURL,
+  }) => {
+    test.setTimeout(240000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    try {
+      tenantData = await createTestTenant(db, { companyName: `Quote TZ ${uuidv4().slice(0, 6)}` });
+      const tenantId = tenantData.tenant.tenantId;
+      const scoped = tenantDb(db, tenantId);
+
+      const deClientId = uuidv4();
+      const deContactId = uuidv4();
+      await scoped.table('clients').insert({
+        client_id: deClientId,
+        tenant: tenantId,
+        client_name: 'RV36 TZ Kunde GmbH',
+        properties: JSON.stringify({ defaultLocale: 'de' }),
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+      const deEmail = `tz-${uuidv4().slice(0, 6)}@kunde.example`;
+      await scoped.table('contacts').insert({
+        contact_name_id: deContactId,
+        tenant: tenantId,
+        full_name: 'Tina Zeitzone',
+        email: deEmail,
+        client_id: deClientId,
+      });
+
+      const mint = async (clientId: string, contactId: string | null, email: string) => {
+        const quoteId = uuidv4();
+        await scoped.table('quotes').insert({
+          tenant: tenantId,
+          quote_id: quoteId,
+          quote_number: `PQT-${uuidv4().slice(0, 6).toUpperCase()}`,
+          title: 'Timezone e2e quote',
+          status: 'sent',
+          currency_code: 'EUR',
+          client_id: clientId,
+          contact_id: contactId,
+          quote_date: '2026-10-18T00:00:00Z',
+          valid_until: '2026-12-31T00:00:00Z',
+          subtotal: 1000,
+          tax: 0,
+          total_amount: 1000,
+          discount_total: 0,
+          is_template: false,
+          version: 1,
+        });
+        await scoped.table('quote_items').insert({
+          tenant: tenantId,
+          quote_item_id: uuidv4(),
+          quote_id: quoteId,
+          description: 'Zone item',
+          quantity: 1,
+          unit_price: 1000,
+          total_price: 1000,
+          is_optional: false,
+          is_selected: true,
+          is_recurring: false,
+          is_discount: false,
+          display_order: 1,
+        });
+        const token = newToken();
+        await scoped.table('quote_access_links').insert({
+          tenant: tenantId,
+          link_id: uuidv4(),
+          quote_id: quoteId,
+          contact_id: contactId,
+          recipient_email: email,
+          token_hash: hashToken(token),
+          expires_at: new Date(Date.now() + 30 * DAY),
+        });
+        return token;
+      };
+      const enToken = await mint(tenantData.client!.clientId, null, 'tz-en@example.test');
+      const deToken = await mint(deClientId, deContactId, deEmail);
+
+      for (const timezoneId of ['America/Los_Angeles', 'UTC', 'Pacific/Kiritimati']) {
+        const context = await browser.newContext({ baseURL: baseURL!, timezoneId, locale: 'en-US' });
+        try {
+          const page = await context.newPage();
+          await page.goto(`/quote/${enToken}`);
+          await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+          const body = page.locator('body');
+          await expect(body).toContainText('Zone item');
+          await expect(body).toContainText(/October\s+18,\s+2026/);
+          await expect(body).toContainText(/December\s+31,\s+2026/);
+          await expect(body).not.toContainText(/October\s+17|October\s+19|January\s+1,|December\s+30/);
+
+          await page.goto(`/quote/${deToken}`);
+          await expect(page.locator('html')).toHaveAttribute('lang', 'de');
+          await expect(body).toContainText('18. Oktober 2026');
+          await expect(body).toContainText('31. Dezember 2026');
+          await expect(body).not.toContainText(/17\. Oktober|19\. Oktober|1\. Januar|30\. Dezember/);
+        } finally {
+          await context.close();
+        }
+      }
+
+      // Outcome pages know no tenant: <html lang> is the request's locale.
+      const unknownToken = newToken();
+      for (const [acceptLocale, expectedLang] of [
+        ['de-DE', 'de'],
+        ['en-US', 'en'],
+      ] as const) {
+        const context = await browser.newContext({ baseURL: baseURL!, locale: acceptLocale });
+        try {
+          const page = await context.newPage();
+          await page.goto(`/quote/${unknownToken}`);
+          await expect(page.locator('html')).toHaveAttribute('lang', expectedLang);
+        } finally {
+          await context.close();
+        }
+      }
     } finally {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;
