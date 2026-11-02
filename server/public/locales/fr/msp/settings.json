@@ -3955,7 +3955,10 @@
       "header": "{{used}} sur {{limit}} principaux de service",
       "availableOnPro": "Disponible avec Pro",
       "row": "{{used}} sur {{limit}}",
-      "label": "Principaux de service"
+      "label": "Principaux de service",
+      "seatNote": "Les principaux de service ne consomment pas de licences utilisateur.",
+      "settingsLink": "Paramètres des principaux de service",
+      "grandfatheredCount": "{{used}} comptes existants en service"
     },
     "grandfathered": "Les principaux de service nécessitent le forfait Pro. Vos principaux existants sont conservés, mais vous pouvez uniquement les désactiver ou les supprimer.",
     "limitReached": "Vous avez atteint votre limite de {{limit}} principaux de service actifs. Désactivez ou supprimez-en un pour en ajouter un autre.",

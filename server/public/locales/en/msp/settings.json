@@ -3955,7 +3955,10 @@
       "header": "{{used}} of {{limit}} service principals",
       "availableOnPro": "Available on Pro",
       "row": "{{used}} of {{limit}}",
-      "label": "Service principals"
+      "label": "Service principals",
+      "seatNote": "Service principals don't use seats.",
+      "settingsLink": "Service principal settings",
+      "grandfatheredCount": "{{used}} grandfathered in use"
     },
     "grandfathered": "Service principals require the Pro plan. Your existing principals are kept, but you can only deactivate or delete them.",
     "limitReached": "You have reached your limit of {{limit}} active service principals. Deactivate or delete one to add another.",

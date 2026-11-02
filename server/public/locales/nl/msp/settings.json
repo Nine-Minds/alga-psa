@@ -3955,7 +3955,10 @@
       "header": "{{used}} van {{limit}} serviceprincipals",
       "availableOnPro": "Beschikbaar met Pro",
       "row": "{{used}} van {{limit}}",
-      "label": "Serviceprincipals"
+      "label": "Serviceprincipals",
+      "seatNote": "Serviceprincipals gebruiken geen gebruikerslicenties.",
+      "settingsLink": "Instellingen voor serviceprincipals",
+      "grandfatheredCount": "{{used}} bestaande accounts in gebruik"
     },
     "grandfathered": "Serviceprincipals vereisen het Pro-abonnement. Uw bestaande principals blijven behouden, maar u kunt ze alleen deactiveren of verwijderen.",
     "limitReached": "U hebt uw limiet van {{limit}} actieve serviceprincipals bereikt. Deactiveer of verwijder er een om een andere toe te voegen.",

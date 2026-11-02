@@ -203,16 +203,31 @@ describe('T032 / T036 AccountManagement service principal usage row', () => {
     return row;
   }
 
-  it('renders "N of M" on Pro', async () => {
+  it('shows seat-use copy, the settings destination, and usage on Pro', async () => {
     mocks.tier.value = 'pro';
     const row = await openLicenseDetails();
     await waitFor(() => expect(row.textContent).toContain('3 of 10'));
+    expect(row.textContent).toContain("Service principals don't use seats.");
+    expect(screen.getByRole('link', { name: 'Service principal settings' }).getAttribute('href'))
+      .toBe('/msp/security-settings?tab=service-principals');
+    expect(mocks.spUsage).toHaveBeenCalled();
   });
 
-  it('reads "Available on Pro" below Pro', async () => {
+  it('shows Available on Pro and fetched grandfathered usage below Pro', async () => {
     mocks.tier.value = 'essentials';
     const row = await openLicenseDetails();
-    expect(row.textContent).toContain('Available on Pro');
-    expect(mocks.spUsage).not.toHaveBeenCalled();
+    await waitFor(() => expect(row.textContent).toContain('Available on Pro · 3 grandfathered in use'));
+    expect(row.textContent).toContain("Service principals don't use seats.");
+    expect(screen.getByRole('link', { name: 'Service principal settings' }).getAttribute('href'))
+      .toBe('/msp/security-settings?tab=service-principals');
+    expect(mocks.spUsage).toHaveBeenCalled();
+  });
+
+  it('does not invent a zero usage value when the usage request fails', async () => {
+    mocks.spUsage.mockRejectedValue(new Error('usage unavailable'));
+    const row = await openLicenseDetails();
+    await waitFor(() => expect(mocks.spUsage).toHaveBeenCalled());
+    expect(row.textContent).not.toContain('0 of 0');
+    expect(row.textContent).not.toContain('0 grandfathered in use');
   });
 });

@@ -3955,7 +3955,10 @@
       "header": "{{used}} av {{limit}} tjänstehuvudmän",
       "availableOnPro": "Tillgängligt i Pro",
       "row": "{{used}} av {{limit}}",
-      "label": "Tjänstehuvudmän"
+      "label": "Tjänstehuvudmän",
+      "seatNote": "Tjänsteidentiteter förbrukar inga användarlicenser.",
+      "settingsLink": "Inställningar för tjänsteidentiteter",
+      "grandfatheredCount": "{{used}} befintliga konton används"
     },
     "grandfathered": "Tjänstehuvudmän kräver Pro-planen. Dina befintliga huvudmän behålls, men du kan bara inaktivera eller ta bort dem.",
     "limitReached": "Du har nått gränsen på {{limit}} aktiva tjänstehuvudmän. Inaktivera eller ta bort en för att lägga till en ny.",

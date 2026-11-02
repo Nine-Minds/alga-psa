@@ -3955,7 +3955,10 @@
       "header": "{{used}} di {{limit}} principal di servizio",
       "availableOnPro": "Disponibile con Pro",
       "row": "{{used}} di {{limit}}",
-      "label": "Principal di servizio"
+      "label": "Principal di servizio",
+      "seatNote": "I service principal non consumano licenze utente.",
+      "settingsLink": "Impostazioni dei service principal",
+      "grandfatheredCount": "{{used}} account esistenti in uso"
     },
     "grandfathered": "I principal di servizio richiedono il piano Pro. I principal esistenti vengono mantenuti, ma puoi solo disattivarli o eliminarli.",
     "limitReached": "Hai raggiunto il limite di {{limit}} principal di servizio attivi. Disattivane o eliminane uno per aggiungerne un altro.",

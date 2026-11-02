@@ -24,7 +24,7 @@ const m = vi.hoisted(() => ({
 vi.mock('server/src/context/TierContext', () => ({
   useTier: () => ({ hasFeature: m.hasFeature, isLoading: false }),
 }));
-// The real TierGate lives in server/ (classic JSX + '@/' alias); reproduce its contract with the real upgrade notice.
+// Keep the real upgrade notice and CTA while isolating the TierGate boundary from server context setup.
 vi.mock('server/src/components/tier-gating/TierGate', async () => {
   const { FeatureUpgradeNotice } = await import('@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice');
   const ReactModule = await import('react');
@@ -165,18 +165,57 @@ describe('T036 below Pro', () => {
     await waitFor(() => expect(m.setActive).toHaveBeenCalledWith('user-1', false));
   });
 
-  it('MCP agent create is disabled with the Pro explanation', async () => {
+  it('shows the standard upgrade notice and working CTA while existing MCP content stays available', async () => {
+    render(
+      <>
+        <p>Existing agent list</p>
+        <McpAgentCreateGate>
+          {({ disabled }) => <button disabled={disabled}>Add agent</button>}
+        </McpAgentCreateGate>
+      </>,
+    );
+    expect(await screen.findByText('Existing agent list')).toBeTruthy();
+    expect(await screen.findByText('Service principals requires Pro')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'View Plans' }).getAttribute('href')).toBe('/msp/account');
+    expect(screen.queryByRole('button', { name: 'Add agent' })).toBeNull();
+    const sharedUsage = await screen.findByTestId('mcp-shared-limit');
+    expect(sharedUsage.textContent).toContain('2 of 5 in use');
+    expect(m.usage).toHaveBeenCalled();
+  });
+
+});
+
+describe('T032 MCP agent create gate on Pro (shared limit)', () => {
+  it('refreshes shared usage when the caller reports an agent mutation', async () => {
+    m.hasFeature.mockReturnValue(true);
+    const { rerender } = render(
+      <McpAgentCreateGate refreshKey={0}>
+        {({ disabled }) => <button disabled={disabled}>Add agent</button>}
+      </McpAgentCreateGate>,
+    );
+    await screen.findByTestId('mcp-shared-limit');
+    expect(m.usage).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <McpAgentCreateGate refreshKey={1}>
+        {({ disabled }) => <button disabled={disabled}>Add agent</button>}
+      </McpAgentCreateGate>,
+    );
+    await waitFor(() => expect(m.usage).toHaveBeenCalledTimes(2));
+  });
+
+  it('allows creation below capacity', async () => {
+    m.hasFeature.mockReturnValue(true);
+    m.usage.mockResolvedValue({ limit: 3, used: 2, remaining: 1 });
     render(
       <McpAgentCreateGate>
         {({ disabled }) => <button disabled={disabled}>Add agent</button>}
       </McpAgentCreateGate>,
     );
-    expect(await screen.findByTestId('mcp-requires-pro')).toBeTruthy();
-    expect((screen.getByRole('button', { name: 'Add agent' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(await screen.findByTestId('mcp-shared-limit')).toBeTruthy();
+    expect((screen.getByRole('button', { name: 'Add agent' }) as HTMLButtonElement).disabled).toBe(false);
   });
-});
 
-describe('T032 MCP agent create gate on Pro (shared limit)', () => {
   it('shows the shared limit and disables Add agent at the limit', async () => {
     m.hasFeature.mockReturnValue(true);
     m.usage.mockResolvedValue({ limit: 3, used: 3, remaining: 0 });

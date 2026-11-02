@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { TierGate } from 'server/src/components/tier-gating/TierGate';
 import { useTier } from 'server/src/context/TierContext';
 import { getServicePrincipalUsage } from '../../lib/actions/service-principal-actions';
 import type { ServicePrincipalUsage } from '../../lib/service-principals/usage';
@@ -51,11 +52,6 @@ export function McpAgentCreateGate({ refreshKey, children }: McpAgentCreateGateP
           })}
         </p>
       )}
-      {!hasPro && (
-        <p className="text-sm text-[rgb(var(--color-text-600))]" data-testid="mcp-requires-pro">
-          {t('servicePrincipals.mcp.requiresPro', { defaultValue: 'Adding MCP agents requires the Pro plan.' })}
-        </p>
-      )}
       {hasPro && atLimit && (
         <p className="text-sm text-[rgb(var(--color-text-600))]" data-testid="mcp-limit-reached">
           {t('servicePrincipals.mcp.limitReached', {
@@ -64,7 +60,12 @@ export function McpAgentCreateGate({ refreshKey, children }: McpAgentCreateGateP
           })}
         </p>
       )}
-      {children({ disabled: !hasPro || atLimit })}
+      <TierGate
+        feature={TIER_FEATURES.SERVICE_PRINCIPALS}
+        featureName={t('servicePrincipals.featureName', { defaultValue: 'Service principals' })}
+      >
+        {children({ disabled: atLimit })}
+      </TierGate>
     </>
   );
 }

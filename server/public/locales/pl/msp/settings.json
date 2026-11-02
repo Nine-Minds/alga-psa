@@ -3955,7 +3955,10 @@
       "header": "{{used}} z {{limit}} podmiotów usług",
       "availableOnPro": "Dostępne w planie Pro",
       "row": "{{used}} z {{limit}}",
-      "label": "Podmioty usług"
+      "label": "Podmioty usług",
+      "seatNote": "Konta usługowe nie zużywają licencji użytkowników.",
+      "settingsLink": "Ustawienia kont usługowych",
+      "grandfatheredCount": "{{used}} istniejące konta w użyciu"
     },
     "grandfathered": "Podmioty usług wymagają planu Pro. Istniejące podmioty zostaną zachowane, ale możesz je tylko dezaktywować lub usunąć.",
     "limitReached": "Osiągnięto limit {{limit}} aktywnych podmiotów usług. Dezaktywuj lub usuń jeden, aby dodać kolejny.",

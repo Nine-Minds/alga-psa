@@ -3955,7 +3955,10 @@
       "header": "{{used}} de {{limit}} principales de servicio",
       "availableOnPro": "Disponible en Pro",
       "row": "{{used}} de {{limit}}",
-      "label": "Principales de servicio"
+      "label": "Principales de servicio",
+      "seatNote": "Los principales de servicio no consumen licencias de usuario.",
+      "settingsLink": "Configuración de principales de servicio",
+      "grandfatheredCount": "{{used}} cuentas heredadas en uso"
     },
     "grandfathered": "Los principales de servicio requieren el plan Pro. Se conservan sus principales existentes, pero solo puede desactivarlos o eliminarlos.",
     "limitReached": "Ha alcanzado su límite de {{limit}} principales de servicio activos. Desactive o elimine uno para añadir otro.",

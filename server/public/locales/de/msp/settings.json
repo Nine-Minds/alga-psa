@@ -3955,7 +3955,10 @@
       "header": "{{used}} von {{limit}} Dienstprinzipalen",
       "availableOnPro": "Verfügbar mit Pro",
       "row": "{{used}} von {{limit}}",
-      "label": "Dienstprinzipale"
+      "label": "Dienstprinzipale",
+      "seatNote": "Serviceprinzipale belegen keine Benutzerlizenzen.",
+      "settingsLink": "Serviceprincipal-Einstellungen",
+      "grandfatheredCount": "{{used}} bestehende Konten in Verwendung"
     },
     "grandfathered": "Dienstprinzipale erfordern den Pro-Tarif. Ihre vorhandenen Prinzipale bleiben erhalten, Sie können sie jedoch nur deaktivieren oder löschen.",
     "limitReached": "Sie haben Ihr Limit von {{limit}} aktiven Dienstprinzipalen erreicht. Deaktivieren oder löschen Sie einen, um einen weiteren hinzuzufügen.",

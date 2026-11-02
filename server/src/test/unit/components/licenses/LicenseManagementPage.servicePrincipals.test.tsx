@@ -41,19 +41,26 @@ afterEach(() => {
 });
 
 describe("LicenseManagementPage service principal usage row", () => {
-  it('reads "4 of 10" on Pro', async () => {
+  it('shows seat-use copy, the settings destination, and usage on Pro', async () => {
     vi.mocked(getLicenseStatus).mockResolvedValue(status("pro"));
     render(<LicenseManagementPage />);
     const row = await screen.findByTestId("service-principal-usage-row");
     await waitFor(() => expect(row.textContent).toContain("4 of 10"));
+    expect(row.textContent).toContain("Service principals don't use seats.");
+    expect(screen.getByRole('link', { name: 'Service principal settings' }).getAttribute('href'))
+      .toBe('/msp/security-settings?tab=service-principals');
+    expect(spUsage).toHaveBeenCalled();
   });
 
-  it('reads "Available on Pro" below Pro', async () => {
+  it('shows Available on Pro and fetched grandfathered usage below Pro', async () => {
     vi.mocked(getLicenseStatus).mockResolvedValue(status("essentials"));
     spUsage.mockClear();
     render(<LicenseManagementPage />);
     const row = await screen.findByTestId("service-principal-usage-row");
-    expect(row.textContent).toContain("Available on Pro");
-    expect(spUsage).not.toHaveBeenCalled();
+    await waitFor(() => expect(row.textContent).toContain("Available on Pro · 4 grandfathered in use"));
+    expect(row.textContent).toContain("Service principals don't use seats.");
+    expect(screen.getByRole('link', { name: 'Service principal settings' }).getAttribute('href'))
+      .toBe('/msp/security-settings?tab=service-principals');
+    expect(spUsage).toHaveBeenCalled();
   });
 });

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getServicePrincipalUsage } from '../../lib/actions/service-principal-actions';
 import type { ServicePrincipalUsage } from '../../lib/service-principals/usage';
@@ -21,7 +22,6 @@ export function ServicePrincipalUsageRow({ hasPro, className }: ServicePrincipal
   const [usage, setUsage] = useState<ServicePrincipalUsage | null>(null);
 
   useEffect(() => {
-    if (!hasPro) return;
     let cancelled = false;
     getServicePrincipalUsage()
       .then((value) => {
@@ -33,11 +33,18 @@ export function ServicePrincipalUsageRow({ hasPro, className }: ServicePrincipal
     return () => {
       cancelled = true;
     };
-  }, [hasPro]);
+  }, []);
 
   let value: string | null;
   if (!hasPro) {
-    value = t('servicePrincipals.usage.availableOnPro', { defaultValue: 'Available on Pro' });
+    const availability = t('servicePrincipals.usage.availableOnPro', { defaultValue: 'Available on Pro' });
+    const grandfathered = usage
+      ? t('servicePrincipals.usage.grandfatheredCount', {
+          defaultValue: '{{used}} grandfathered in use',
+          used: usage.used,
+        })
+      : null;
+    value = grandfathered ? `${availability} · ${grandfathered}` : availability;
   } else if (usage) {
     value = t('servicePrincipals.usage.row', {
       defaultValue: '{{used}} of {{limit}}',
@@ -53,10 +60,20 @@ export function ServicePrincipalUsageRow({ hasPro, className }: ServicePrincipal
       data-testid="service-principal-usage-row"
       className={className ?? 'flex items-center justify-between text-sm'}
     >
-      <span className="text-muted-foreground">
-        {t('servicePrincipals.usage.label', { defaultValue: 'Service principals' })}
-      </span>
-      <span className="font-medium">{value}</span>
+      <div className="flex flex-col">
+        <span className="text-muted-foreground">
+          {t('servicePrincipals.usage.label', { defaultValue: 'Service principals' })}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          {t('servicePrincipals.usage.seatNote', { defaultValue: "Service principals don't use seats." })}
+        </span>
+      </div>
+      <div className="flex flex-col items-end gap-1">
+        <span className="font-medium">{value}</span>
+        <Link className="text-xs text-primary underline-offset-4 hover:underline" href="/msp/security-settings?tab=service-principals">
+          {t('servicePrincipals.usage.settingsLink', { defaultValue: 'Service principal settings' })}
+        </Link>
+      </div>
     </div>
   );
 }
