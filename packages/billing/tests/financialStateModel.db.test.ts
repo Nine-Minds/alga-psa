@@ -170,6 +170,49 @@ async function sequence(total: number, steps: Step[]) {
 
 const step = (operation: Step['operation'], amount = 5000, actor = 0): Step => ({ operation, amount, actor });
 describe('Independent financial state model', () => {
+  it('rejects cross-client credit against a pre-profile invoice without changing either ledger', async () => {
+    const trx = await connection.transaction();
+    const tenant = randomUUID(), owner = randomUUID(), creditOwner = randomUUID();
+    const invoice = randomUUID(), userId = randomUUID();
+    const user = { tenant, user_id: userId, username: userId, email: `${userId}@example.invalid`, hashed_password: 'synthetic', user_type: 'internal', is_inactive: false } as IUser;
+    try {
+      await trx('tenants').insert({ tenant, client_name: 'Credit ownership', email: `${tenant}@example.invalid` });
+      for (const client of [owner, creditOwner]) {
+        await trx('clients').insert({ tenant, client_id: client, client_name: `Credit ownership client ${client}`, default_currency_code: 'USD' });
+      }
+      await trx('users').insert(user);
+      await trx('invoices').insert({ tenant, invoice_id: invoice, client_id: owner, invoice_number: `OWN-${invoice}`, invoice_date: '2026-09-01', due_date: '2026-10-01', total_amount: 5000, subtotal: 5000, tax: 0, credit_applied: 0, status: 'draft', currency_code: 'USD', tax_source: 'internal', is_manual: true });
+      await trx('invoice_charges').insert({ tenant, invoice_id: invoice, description: 'Eligible service', quantity: 1, unit_price: 5000, total_price: 5000, net_amount: 5000, tax_rate: 0, is_manual: true });
+      const creditTransactionId = randomUUID(), creditId = randomUUID();
+      await trx('transactions').insert({ transaction_id: creditTransactionId, tenant, client_id: creditOwner, amount: 5000, type: 'credit_issuance', status: 'completed', description: 'Legacy client credit', created_at: new Date().toISOString(), balance_after: 5000, currency_code: 'USD' });
+      await trx('credit_tracking').insert({ credit_id: creditId, tenant, client_id: creditOwner, transaction_id: creditTransactionId, amount: 5000, remaining_amount: 5000, created_at: new Date().toISOString(), is_expired: false, updated_at: new Date().toISOString(), currency_code: 'USD' });
+      active = { trx, tenant, user };
+
+      const before = {
+        credit: await trx('credit_tracking').where({ tenant, credit_id: creditId }).first(),
+        transactions: await trx('transactions').where({ tenant }).select('transaction_id', 'type', 'amount'),
+        allocations: await trx('credit_allocations').where({ tenant }).select('allocation_id'),
+        invoice: await trx('invoices').where({ tenant, invoice_id: invoice }).select('credit_applied').first(),
+      };
+
+      await expect(runWithTenant(tenant, () => applyCreditToInvoiceInternal(tenant, user, creditOwner, invoice, 5000)))
+        .rejects.toThrow(/does not own the invoice/i);
+
+      expect(await trx('credit_tracking').where({ tenant, credit_id: creditId }).first()).toMatchObject({ remaining_amount: before.credit.remaining_amount });
+      expect(await trx('transactions').where({ tenant }).select('transaction_id', 'type', 'amount')).toEqual(before.transactions);
+      expect(await trx('credit_allocations').where({ tenant }).select('allocation_id')).toEqual(before.allocations);
+      expect(await trx('invoices').where({ tenant, invoice_id: invoice }).select('credit_applied').first()).toEqual(before.invoice);
+
+      const ownerCredit = await runWithTenant(tenant, () => grantCredit(owner, 1000));
+      expect('credit_id' in ownerCredit).toBe(true);
+      const applied = await runWithTenant(tenant, () => applyCreditToInvoiceInternal(tenant, user, owner, invoice, 1000));
+      expect(applied.appliedAmount).toBe(1000);
+    } finally {
+      active = undefined;
+      await trx.rollback();
+    }
+  });
+
   it('does not apply credit to an amount already paid', async () => {
     await sequence(10000, [step('finalize'), step('pay', 6000), step('credit', 10000)]);
   });
