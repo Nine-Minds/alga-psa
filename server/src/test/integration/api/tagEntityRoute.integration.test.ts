@@ -147,8 +147,6 @@ describe('REST tag entity route against the migrated database schema', () => {
       background_color: expect.any(String),
       text_color: expect.any(String),
       tenant,
-      created_by: userId,
-      board_id: null,
     });
 
     const getResponse = await readTicketTags(routeRequest('GET', ticketId));
@@ -160,8 +158,6 @@ describe('REST tag entity route against the migrated database schema', () => {
       tagged_id: ticketId,
       tagged_type: 'ticket',
       tenant,
-      created_by: userId,
-      board_id: null,
       background_color: postBody.data.tags[0].background_color,
       text_color: postBody.data.tags[0].text_color,
     });
@@ -194,6 +190,83 @@ describe('REST tag entity route against the migrated database schema', () => {
         expect(replaced.map((tag) => tag.tag_text)).toEqual(['contract-replacement']);
       } finally {
         getKnexSpy.mockRestore();
+      }
+    });
+  });
+
+  it('supports the REST tag lifecycle when tag_definitions has no board_id column', async () => {
+    const parentConnection = connection.db;
+    await withRolledBackSchemaContract(trx, async (contractTrx) => {
+      connection.db = contractTrx;
+      await contractTrx.schema.alterTable('tag_definitions', (table) => table.dropColumn('board_id'));
+      const columns = await contractTrx('information_schema.columns')
+        .where({ table_schema: 'public', table_name: 'tag_definitions' }).pluck('column_name');
+      expect(columns).not.toContain('board_id');
+      let baselineError: { code?: string; message?: string } | undefined;
+      await contractTrx.transaction(async (assertionTrx) => {
+        try {
+          await assertionTrx('tag_definitions').select('board_id').first();
+        } catch (error) {
+          baselineError = error as { code?: string; message?: string };
+          throw error;
+        }
+      }).catch(() => undefined);
+      expect(baselineError?.code).toBe('42703');
+      expect(baselineError?.message).toMatch(/column "board_id" does not exist/);
+      const getKnexSpy = vi.spyOn(TagService.prototype as unknown as KnexProvidingService, 'getKnex')
+        .mockResolvedValue({ knex: contractTrx, tenant });
+      try {
+        const posted = await tagTicket(routeRequest('POST', ticketId, {
+          entity_id: ticketId, entity_type: 'ticket', tags: ['compat-post'],
+        }));
+        expect(posted.status).toBe(201);
+        const postedTags = (await posted.json()).data.tags;
+        expect(postedTags[0]).toMatchObject({
+          tag_text: 'compat-post', tagged_id: ticketId, tagged_type: 'ticket', tenant,
+          background_color: expect.any(String), text_color: expect.any(String),
+        });
+        expect(postedTags[0]).not.toHaveProperty('board_id');
+
+        const fetched = await readTicketTags(routeRequest('GET', ticketId));
+        const fetchedTags = (await fetched.json()).data.tags;
+        expect(fetchedTags).toHaveLength(1);
+        expect(fetchedTags[0]).toMatchObject({
+          tag_id: postedTags[0].tag_id, tag_text: 'compat-post', tagged_id: ticketId,
+          tagged_type: 'ticket', tenant, background_color: postedTags[0].background_color,
+          text_color: postedTags[0].text_color,
+        });
+
+        const bulk = await bulkTagEntities(new NextRequest('http://localhost/api/v1/tags/bulk/tag', {
+          method: 'POST', headers: { 'x-api-key': apiKey, 'content-type': 'application/json' },
+          body: JSON.stringify({ entities: [{ entity_id: ticketId, entity_type: 'ticket' }], tags: ['compat-bulk'] }),
+        }));
+        expect(bulk.status).toBe(201);
+        const bulkReadBack = await readTicketTags(routeRequest('GET', ticketId));
+        const bulkTags = (await bulkReadBack.json()).data.tags;
+        expect(bulkTags).toHaveLength(2);
+        expect(bulkTags.find((tag: { tag_text: string }) => tag.tag_text === 'compat-bulk'))
+          .toMatchObject({ tagged_id: ticketId, tenant, background_color: expect.any(String), text_color: expect.any(String) });
+
+        const replaced = await replaceTicketTags(routeRequest('PUT', ticketId, {
+          entity_id: ticketId, entity_type: 'ticket', tags: ['compat-put'],
+        }));
+        expect(replaced.status).toBe(200);
+        const putReadBack = (await readTicketTags(routeRequest('GET', ticketId)).then((response) => response.json())).data.tags;
+        expect(putReadBack).toHaveLength(1);
+        expect(putReadBack[0]).toMatchObject({
+          tag_text: 'compat-put', tagged_id: ticketId, tagged_type: 'ticket', tenant,
+          background_color: expect.any(String), text_color: expect.any(String),
+        });
+
+        const replacedTags = (await replaced.json()).data.tags;
+        const deleted = await untagTicket(routeRequest('DELETE', ticketId, {
+          entity_id: ticketId, entity_type: 'ticket', tag_ids: replacedTags.map((tag: { tag_id: string }) => tag.tag_id),
+        }));
+        expect(deleted.status).toBe(200);
+        expect((await readTicketTags(routeRequest('GET', ticketId)).then((response) => response.json())).data.tags).toEqual([]);
+      } finally {
+        getKnexSpy.mockRestore();
+        connection.db = parentConnection;
       }
     });
   });

@@ -38,26 +38,36 @@ const joinTagDefinitions = (
   tenant: string
 ) => tenantDb(knexOrTrx, tenant).tenantJoin(query, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
 
-/** The canonical tenant-scoped join and projection used to read one mapping with its tag definition. */
-const mappingWithDefinitionByIdQuery = (
-  knexOrTrx: Knex | Knex.Transaction,
-  tenant: string,
-  mappingId: string,
-) => aliasedTagMappingsQuery(knexOrTrx, tenant)
-  .modify((query) => joinTagDefinitions(query, knexOrTrx, tenant))
-  .where('tm.mapping_id', mappingId)
-  .select(
+/** Shared REST projection: assignment identity plus fields required to display the tag. */
+const selectRestMappingWithDefinition = (query: Knex.QueryBuilder) => query.select(
     'tm.mapping_id',
     'td.tag_id',
     'td.tag_text',
     'tm.tagged_id',
     'tm.tagged_type',
-    'td.board_id',
     'td.background_color',
     'td.text_color',
     'tm.created_at',
-    'tm.created_by',
   );
+
+const mappingWithDefinitionByIdQuery = (
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  mappingId: string,
+) => selectRestMappingWithDefinition(aliasedTagMappingsQuery(knexOrTrx, tenant)
+  .modify((query) => joinTagDefinitions(query, knexOrTrx, tenant))
+  .where('tm.mapping_id', mappingId));
+
+/** REST tag assignments expose only the fields needed to identify and display an assignment. */
+const mappingsWithDefinitionsForRestQuery = (
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  taggedId: string,
+  taggedType: TaggedEntityType,
+) => selectRestMappingWithDefinition(aliasedTagMappingsQuery(knexOrTrx, tenant)
+  .modify((query) => joinTagDefinitions(query, knexOrTrx, tenant))
+  .where('tm.tagged_id', taggedId)
+  .where('tm.tagged_type', taggedType));
 
 const TagMapping = {
   getByMappingId: async (
@@ -66,6 +76,15 @@ const TagMapping = {
     mappingId: string,
   ): Promise<ITagWithDefinition | undefined> =>
     await mappingWithDefinitionByIdQuery(knexOrTrx, tenant, mappingId).first() as ITagWithDefinition | undefined,
+
+  getByEntityForRest: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    taggedId: string,
+    taggedType: TaggedEntityType,
+  ): Promise<ITagWithDefinition[]> =>
+    await mappingsWithDefinitionsForRestQuery(knexOrTrx, tenant, taggedId, taggedType)
+      .orderBy('td.tag_text', 'asc') as ITagWithDefinition[],
 
   getByEntity: async (
     knexOrTrx: Knex | Knex.Transaction,

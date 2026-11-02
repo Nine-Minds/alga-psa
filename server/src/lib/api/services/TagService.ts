@@ -157,25 +157,18 @@ export class TagService extends BaseService {
    */
   async getTagById(id: string, context: ServiceContext): Promise<TagResponse | null> {
     const { knex, tenant } = await this.getKnex();
-    
-    // id is actually mapping_id in the new system
-    const tag = await tenantDb(knex, tenant).table('tag_mappings as tm')
-      .modify((query) => joinTagDefinitions(query, knex, tenant))
-      .where('tm.mapping_id', id)
-      .select(
-        'tm.mapping_id as tag_id',
-        'td.board_id',
-        'td.tag_text',
-        'tm.tagged_id',
-        'tm.tagged_type',
-        'td.background_color',
-        'td.text_color',
-        'tm.tenant',
-        'tm.created_by'
-      )
-      .first();
-    
-    return tag as TagResponse | null;
+
+    const mapping = await TagMapping.getByMappingId(knex, tenant, id);
+    return mapping ? {
+      tag_id: mapping.mapping_id,
+      tenant,
+      tag_text: mapping.tag_text,
+      tagged_id: mapping.tagged_id,
+      tagged_type: mapping.tagged_type,
+      background_color: mapping.background_color,
+      text_color: mapping.text_color,
+      created_at: mapping.created_at,
+    } as TagResponse : null;
   }
 
   /**
@@ -349,17 +342,16 @@ export class TagService extends BaseService {
     context: ServiceContext
   ): Promise<TagResponse[]> {
     const { knex, tenant } = await this.getKnex();
-    const tagsWithDefinitions = await TagMapping.getByEntity(knex, tenant, entityId, entityType);
+    const tagsWithDefinitions = await TagMapping.getByEntityForRest(knex, tenant, entityId, entityType);
     return tagsWithDefinitions.map(tag => ({
       tag_id: tag.mapping_id,
       tenant,
-      board_id: tag.board_id,
       tag_text: tag.tag_text,
       tagged_id: tag.tagged_id,
       tagged_type: tag.tagged_type,
       background_color: tag.background_color,
       text_color: tag.text_color,
-      created_by: tag.created_by
+      created_at: tag.created_at
     })) as TagResponse[];
   }
 
@@ -372,17 +364,17 @@ export class TagService extends BaseService {
     context: ServiceContext
   ): Promise<TagResponse[]> {
     const { knex, tenant } = await this.getKnex();
-    const tagsWithDefinitions = await TagMapping.getByEntities(knex, tenant, entityIds, entityType);
-    return tagsWithDefinitions.map(tag => ({
+    const tagsWithDefinitions = await Promise.all(entityIds.map((entityId) =>
+      TagMapping.getByEntityForRest(knex, tenant, entityId, entityType)));
+    return tagsWithDefinitions.flat().map(tag => ({
       tag_id: tag.mapping_id,
       tenant,
-      board_id: tag.board_id,
       tag_text: tag.tag_text,
       tagged_id: tag.tagged_id,
       tagged_type: tag.tagged_type,
       background_color: tag.background_color,
       text_color: tag.text_color,
-      created_by: tag.created_by
+      created_at: tag.created_at
     })) as TagResponse[];
   }
 
@@ -490,13 +482,12 @@ export class TagService extends BaseService {
         const created = mappingWithDefinition && {
           tag_id: mappingWithDefinition.mapping_id,
           tenant,
-          board_id: mappingWithDefinition.board_id,
           tag_text: mappingWithDefinition.tag_text,
           tagged_id: mappingWithDefinition.tagged_id,
           tagged_type: mappingWithDefinition.tagged_type,
           background_color: mappingWithDefinition.background_color,
           text_color: mappingWithDefinition.text_color,
-          created_by: mappingWithDefinition.created_by,
+          created_at: mappingWithDefinition.created_at,
         };
         
         if (created) {
@@ -546,7 +537,7 @@ export class TagService extends BaseService {
 
     return withTransaction(knex, async (trx) => withSavepoint(trx, async (replacementTrx) => {
       // Get existing tags
-      const existingTags = await TagMapping.getByEntity(replacementTrx, tenant, entityId, entityType);
+      const existingTags = await TagMapping.getByEntityForRest(replacementTrx, tenant, entityId, entityType);
       // Remove existing tags
       for (const tag of existingTags) {
         await TagMapping.delete(replacementTrx, tenant, tag.mapping_id); // Use mapping_id instead of tag_id

@@ -66,12 +66,12 @@ const TagDefinition = {
     tenant: string,
     definition: Omit<ITagDefinition, 'tag_id' | 'tenant' | 'created_at'>
   ): Promise<ITagDefinition> => {
-    const normalizedDefinition = {
+    const normalizedDefinition = Object.fromEntries(Object.entries({
       ...definition,
       tag_text: definition.tag_text.trim(),
       tag_id: uuidv4(),
       tenant
-    };
+    }).filter(([, value]) => value !== undefined));
 
     const [inserted] = await tenantDb(knexOrTrx, tenant).table<ITagDefinition>('tag_definitions')
       .insert(normalizedDefinition)

@@ -65,11 +65,9 @@ export const tagResponseSchema = z.object({
   tag_text: z.string(),
   tagged_id: uuidSchema,
   tagged_type: taggedEntityTypeSchema,
-  board_id: uuidSchema.nullable(),
   background_color: z.string().nullable(),
   text_color: z.string().nullable(),
   tenant: uuidSchema,
-  created_by: uuidSchema.optional(),
   created_at: dateSchema.optional(),
   updated_at: dateSchema.optional()
 });
