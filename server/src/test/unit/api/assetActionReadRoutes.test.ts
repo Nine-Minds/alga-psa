@@ -219,3 +219,103 @@ describe('action-backed asset REST reads retain key-scoped projections', () => {
     expect(body.summary.by_category).toBeNull();
   });
 });
+
+describe('asset note source provenance', () => {
+  it('visible control retains document identity, block content and content timestamp', async () => {
+    const response = await call(notes);
+    expect(response.status).toBe(200);
+    const { data } = await response.json();
+    expect(data.document.document_id).toBe('review-document');
+    expect(data.blockData).toEqual([{ type: 'paragraph', text: 'PRIVATE-NOTE-CONTENT' }]);
+    expect(data.lastUpdated).toBe('2026-10-15');
+  });
+
+  it.each(['notes_document_id', 'assets.notes_document_id', 'values.notes_document_id', 'fields.assets.notes_document_id'])(
+    'does not disclose a document identity copied from hidden asset foreign key %s', async (alias) => {
+      state.keyOnly = true;
+      state.redactions = [alias];
+      const response = await call(notes);
+      expect(response.status).toBe(200);
+      const body = JSON.stringify(await response.json());
+      expect(body).not.toContain('review-document');
+      expect(body).not.toContain('PRIVATE-NOTE-CONTENT');
+    },
+  );
+
+  it.each(['document_block_content.block_data', 'fields.document_block_content.block_data', 'values.block_data'])(
+    'does not disclose content copied from hidden source %s', async (alias) => {
+      state.keyOnly = true;
+      state.redactions = [alias];
+      const response = await call(notes);
+      expect(response.status).toBe(200);
+      const { data } = await response.json();
+      expect(JSON.stringify(data)).not.toContain('PRIVATE-NOTE-CONTENT');
+      expect(data.document.document_id).toBe('review-document');
+      expect(data.document.document_name).toBe('PRIVATE-DOCUMENT-NAME');
+    },
+  );
+
+  it.each(['document_block_content', 'document_block_content.content_id', 'document_block_content.document_id'])(
+    'does not serialize suppressed note content from %s', async (alias) => {
+      state.keyOnly = true;
+      state.redactions = [alias];
+      const response = await call(notes);
+      expect(response.status).toBe(200);
+      const { data } = await response.json();
+      expect(JSON.stringify(data)).not.toContain('PRIVATE-NOTE-CONTENT');
+      expect(data.document.document_id).toBe('review-document');
+    },
+  );
+
+  it.each(['document_block_content.updated_at', 'fields.document_block_content.updated_at'])(
+    'does not disclose lastUpdated copied from %s', async (alias) => {
+      state.keyOnly = true;
+      state.redactions = [alias];
+      const response = await call(notes);
+      expect(response.status).toBe(200);
+      const { data } = await response.json();
+      expect(data.lastUpdated ?? null).toBeNull();
+      expect(data.blockData).toEqual([{ type: 'paragraph', text: 'PRIVATE-NOTE-CONTENT' }]);
+    },
+  );
+
+  it.each(['assets.documents.file_size', 'values.documents.file_size', 'fields.assets.documents.file_size'])(
+    'retains the canonical document child scope for %s', async (alias) => {
+      state.redactions = [alias];
+      const response = await call(notes);
+      expect(response.status).toBe(200);
+      const { data } = await response.json();
+      expect(data.document).not.toHaveProperty('file_size');
+      expect(data.document.document_name).toBe('PRIVATE-DOCUMENT-NAME');
+      expect(data.blockData).toEqual([{ type: 'paragraph', text: 'PRIVATE-NOTE-CONTENT' }]);
+    },
+  );
+
+  it.each(['values.documents', 'assets.documents.document_id', 'fields.assets.documents.document_id'])(
+    'retains document suppression under its original parent namespace %s', async (alias) => {
+      state.redactions = [alias];
+      const response = await call(notes);
+      expect(response.status).toBe(200);
+      const { data } = await response.json();
+      expect(data.document).toBeNull();
+      expect(data.blockData).toBeNull();
+      expect(data.lastUpdated).toBeNull();
+    },
+  );
+
+  it('does not mutate action results while applying source redactions', async () => {
+    const { getAssetNoteContent } = await import('@alga-psa/assets/actions/assetNoteActions');
+    const content = {
+      document: { document_id: 'review-document', document_name: 'Private name' },
+      blockData: [{ text: 'Original content' }],
+      lastUpdated: '2026-10-15',
+    };
+    const original = structuredClone(content);
+    vi.mocked(getAssetNoteContent).mockResolvedValueOnce(content as any);
+    state.redactions = ['assets.notes_document_id'];
+
+    const response = await call(notes);
+    expect((await response.json()).data).toEqual({ document: null, blockData: null, lastUpdated: null });
+    expect(content).toEqual(original);
+  });
+});

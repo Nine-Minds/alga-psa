@@ -12,6 +12,7 @@ const state = vi.hoisted(() => ({
   rbacAllowed: true,
   record: null as unknown,
   recordLevelAllowed: true,
+  redactions: { asset: [] as string[], ticket: [] as string[] },
   calls: [] as string[],
 }));
 
@@ -35,7 +36,7 @@ vi.mock('@/lib/api/services/AssetService', () => ({
     }
     async getAssetTickets() {
       state.calls.push('getAssetTickets');
-      return [{ ticket_id: 't1' }];
+      return [{ ticket_id: 't1', title: 'Visible ticket', association_notes: 'Private association note' }];
     }
   },
 }));
@@ -54,13 +55,13 @@ vi.mock('@/lib/auth/rbac', () => ({
 
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 
-vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
-  projectApiResourceRead: vi.fn(async (input: { record: object }) => {
-    state.calls.push('record-level');
-    return state.recordLevelAllowed ? input.record : null;
-  }),
-  projectApiResourceReads: vi.fn(async (input: { records: object[] }) => input.records),
-  reprojectUnderDecision: vi.fn((_gate: object, record: object) => record),
+vi.mock('server/src/lib/authorization/kernel', () => ({
+  getAuthorizationKernel: vi.fn(async () => ({
+    authorizeResource: vi.fn(async ({ resource }: { resource: { type: 'asset' | 'ticket' } }) => {
+      state.calls.push('record-level');
+      return { allowed: state.recordLevelAllowed, redactedFields: state.redactions[resource.type] };
+    }),
+  })),
 }));
 
 const { ApiAssetController } = await import('@/lib/api/controllers/ApiAssetController');
@@ -87,7 +88,25 @@ beforeEach(() => {
   state.rbacAllowed = true;
   state.record = { id: ASSET, clientId: 'c1' };
   state.recordLevelAllowed = true;
+  state.redactions = { asset: [], ticket: [] };
   state.calls = [];
+});
+
+describe('asset ticket reads compose real retained projections', () => {
+  it('keeps redactions from both the asset and ticket decisions', async () => {
+    state.redactions.asset = ['asset_associations.notes'];
+    state.redactions.ticket = ['tickets.title'];
+    const response = await new ApiAssetController().listTickets(request('/tickets'), { id: ASSET });
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual([{ ticket_id: 't1' }]);
+  });
+
+  it.each(['asset', 'ticket'] as const)('suppresses associations hidden by the %s decision', async (owner) => {
+    state.redactions[owner] = ['asset_associations.entity_id'];
+    const response = await new ApiAssetController().listTickets(request('/tickets'), { id: ASSET });
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual([]);
+  });
 });
 
 const endpoints: Array<[string, string, (c: InstanceType<typeof ApiAssetController>, r: NextRequest) => Promise<Response>]> = [

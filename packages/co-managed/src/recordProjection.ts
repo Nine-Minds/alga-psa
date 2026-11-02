@@ -1078,17 +1078,36 @@ export const TICKET_ASSETS_RESPONSE_SOURCE: RedactableRecordSource = {
   derived: { ...ASSET_RECORD_SOURCE.derived, ...ASSET_TICKET_ASSOCIATION_SOURCE.derived },
 };
 
-/** Detached asset notes retain the document child and its ownership of note content and timestamps. */
+/** Stored block content is located by its own identity and the document it belongs to. */
+export const DOCUMENT_BLOCK_CONTENT_SOURCE: RedactableRecordSource = {
+  resource: ['document_block_content'],
+  identifier: ids('content_id', 'document_id'),
+  fields: {},
+  derived: {},
+};
+
+const ASSET_NOTE_DOCUMENT_SOURCE: RedactableRecordSource = {
+  ...ASSET_DOCUMENT_SOURCE,
+  policySource: ASSET_DOCUMENT_SOURCE,
+  // The note document is loaded through this asset reference, so hiding the
+  // reference also suppresses the copied document identity and its contents.
+  identifier: [...ASSET_DOCUMENT_SOURCE.identifier, ...recordFieldAliases(ASSET_RECORD_SOURCE, 'notes_document_id')],
+};
+
+/** Detached notes preserve the provenance of both their document and stored block content. */
 export const ASSET_NOTE_RESPONSE_SOURCE: RedactableRecordSource = {
   policySource: ASSET_RECORD_SOURCE,
   resource: [],
   identifier: [],
   fields: {},
   derived: {
-    blockData: ids('document.document_id'),
-    lastUpdated: ids('document.document_id', 'document.updated_at'),
+    blockData: ['document.document_id', { source: DOCUMENT_BLOCK_CONTENT_SOURCE, field: 'block_data' }],
+    lastUpdated: [
+      'document.document_id', 'document.updated_at',
+      { source: DOCUMENT_BLOCK_CONTENT_SOURCE, field: 'updated_at' },
+    ],
   },
-  children: { document: ASSET_DOCUMENT_SOURCE },
+  children: { document: ASSET_NOTE_DOCUMENT_SOURCE },
 };
 
 /** Installed software rows retain the canonical asset policy and the joined catalog source. */
