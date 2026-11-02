@@ -336,6 +336,29 @@ export const assetQuerySchema = z.object({
   include_extension_data: z.boolean().optional()
 });
 
+/**
+ * Filter subset accepted by the dashboard's by-type count action.
+ *
+ * Deliberately omits `asset_type`, pagination and sort: the breakdown is a
+ * facet — it counts assets of *every* type under the caller's other filters, so
+ * accepting a type (or a page) here would zero out the bubbles beside the
+ * selected one. Mirrors the field definitions of `assetQuerySchema`.
+ */
+export const assetTypeCountSchema = z.object({
+  client_id: z.string().uuid().optional(),
+  location_id: z.string().uuid().optional(),
+  contact_name_id: z.string().uuid().optional(),
+  status: z.string().optional(),
+  ownership: z.enum(['client', 'msp']).optional(),
+  in_custody: z.boolean().optional(),
+  vendor_id: z.string().uuid().optional(),
+  group_id: z.string().uuid().optional(),
+  ungrouped_only: z.boolean().optional(),
+  search: z.string().optional(),
+  agent_status: z.string().optional(),
+  rmm_managed: z.boolean().optional()
+});
+
 export const assetMaintenanceReportSchema = z.object({
   asset_id: z.string().guid(),
   asset_name: z.string(),

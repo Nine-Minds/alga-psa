@@ -37,6 +37,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import type { Asset, AssetGroup, AssetGroupKind, AssetListResponse, AssetQueryParams, AssetStatus, ClientMaintenanceSummary, ColumnDefinition, IClient, IClientLocation, IContact } from '@alga-psa/types';
 import { bulkDeleteAssets, bulkUpdateAssets, getClientMaintenanceSummaries, listAssets } from '../actions/assetActions';
+import type { AssetTypeCountParams } from '../actions/assetStatisticsActions';
 import { assetActionErrorMessage, isAssetActionError, unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
 import { getAllClientsForAssets, getClientContactsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
@@ -573,6 +574,42 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     sortDirection,
     statusFilters,
     typeFilters,
+  ]);
+
+  // The by-type bubbles are a facet: they show how many assets of each type
+  // match everything the user is filtering on EXCEPT the type filter itself, so
+  // clicking a bubble never zeroes out the bubbles beside it. Sort, page and
+  // type are deliberately excluded — they don't narrow the result set the
+  // bubbles describe.
+  const assetTypeCountFilters = useMemo<AssetTypeCountParams>(() => {
+    const rmmManaged =
+      rmmManagedFilter.length === 0
+        ? undefined
+        : rmmManagedFilter.includes('managed') && rmmManagedFilter.includes('unmanaged')
+          ? undefined
+          : rmmManagedFilter.includes('managed');
+
+    return {
+      search: debouncedSearchTerm || undefined,
+      status: statusFilters.length > 0 ? statusFilters[0] : undefined,
+      client_id: clientFilters.length > 0 ? clientFilters[0] : undefined,
+      agent_status: agentStatusFilters.length > 0
+        ? (agentStatusFilters[0] as AssetTypeCountParams['agent_status'])
+        : undefined,
+      rmm_managed: rmmManaged,
+      group_id: groupFilter || undefined,
+      ownership: ownershipFilter || undefined,
+      in_custody: inCustodyFilter === '' ? undefined : inCustodyFilter === 'yes',
+    };
+  }, [
+    agentStatusFilters,
+    clientFilters,
+    debouncedSearchTerm,
+    groupFilter,
+    inCustodyFilter,
+    ownershipFilter,
+    rmmManagedFilter,
+    statusFilters,
   ]);
 
   const preparePrintAssets = useCallback(async () => {
@@ -1853,6 +1890,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               getTypeLabel={getAssetTypeLabel}
               refreshToken={refreshCounter}
               activeTypes={typeFilters}
+              filters={assetTypeCountFilters}
               onSelectType={(slug) => toggleFilterValue(typeFilters, slug, setTypeFilters)}
             />
 

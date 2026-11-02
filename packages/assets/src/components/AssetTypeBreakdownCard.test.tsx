@@ -140,4 +140,91 @@ describe('AssetTypeBreakdownCard (T316)', () => {
     });
     expect(screen.getByText('2')).toBeTruthy();
   });
+
+  it('passes the dashboard filters to the count action', async () => {
+    render(
+      <AssetTypeBreakdownCard
+        getTypeLabel={getTypeLabel}
+        filters={{ search: 'laptop', status: 'active', client_id: 'client-1' }}
+      />
+    );
+
+    await waitFor(() => expect(mockGetAssetCountsByType).toHaveBeenCalledTimes(1));
+    expect(mockGetAssetCountsByType).toHaveBeenCalledWith({
+      search: 'laptop',
+      status: 'active',
+      client_id: 'client-1',
+    });
+  });
+
+  it('refetches when the filter values change, and not on a new object with the same values', async () => {
+    const { rerender } = render(
+      <AssetTypeBreakdownCard getTypeLabel={getTypeLabel} filters={{ search: 'laptop' }} />
+    );
+    await waitFor(() => expect(mockGetAssetCountsByType).toHaveBeenCalledTimes(1));
+
+    // Same values in a fresh object (the dashboard rebuilds its memo on most
+    // renders) must not cause a request storm.
+    rerender(<AssetTypeBreakdownCard getTypeLabel={getTypeLabel} filters={{ search: 'laptop' }} />);
+    await Promise.resolve();
+    expect(mockGetAssetCountsByType).toHaveBeenCalledTimes(1);
+
+    rerender(<AssetTypeBreakdownCard getTypeLabel={getTypeLabel} filters={{ search: 'server' }} />);
+    await waitFor(() => expect(mockGetAssetCountsByType).toHaveBeenCalledTimes(2));
+    expect(mockGetAssetCountsByType).toHaveBeenLastCalledWith({ search: 'server' });
+  });
+
+  it('keeps a selected type visible at zero when the filters exclude all of its assets', async () => {
+    mockGetAssetCountsByType.mockResolvedValue({ workstation: 4 });
+
+    render(
+      <AssetTypeBreakdownCard
+        getTypeLabel={getTypeLabel}
+        activeTypes={['door_access']}
+        filters={{ search: 'nothing matches' }}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Door Access System')).toBeTruthy();
+    });
+    const chip = document.getElementById('asset-type-breakdown-door_access');
+    expect(chip?.textContent).toContain('0');
+    expect(chip?.className).toContain('border-primary-300');
+  });
+
+  it('hides itself when the filtered result set is empty and no type is selected', async () => {
+    mockGetAssetCountsByType.mockResolvedValue({});
+
+    const { container } = render(
+      <AssetTypeBreakdownCard getTypeLabel={getTypeLabel} filters={{ search: 'nothing matches' }} />
+    );
+
+    await waitFor(() => expect(container.innerHTML).toBe(''));
+    expect(mockGetAssetCountsByType).toHaveBeenCalledWith({ search: 'nothing matches' });
+  });
+
+  it('ignores a stale response that lands after a newer filter change', async () => {
+    const pending: Array<(counts: Record<string, number>) => void> = [];
+    mockGetAssetCountsByType.mockImplementation(
+      () => new Promise<Record<string, number>>((resolve) => pending.push(resolve))
+    );
+    const { rerender } = render(
+      <AssetTypeBreakdownCard getTypeLabel={getTypeLabel} filters={{ search: 'slow' }} />
+    );
+    await waitFor(() => expect(mockGetAssetCountsByType).toHaveBeenCalledTimes(1));
+
+    rerender(<AssetTypeBreakdownCard getTypeLabel={getTypeLabel} filters={{ search: 'fast' }} />);
+    await waitFor(() => expect(mockGetAssetCountsByType).toHaveBeenCalledTimes(2));
+
+    // Newest first, then the superseded request.
+    pending[1]({ workstation: 5 });
+    await waitFor(() => expect(screen.getByText('5')).toBeTruthy());
+    pending[0]({ door_access: 99 });
+    await Promise.resolve();
+
+    expect(screen.queryByText('99')).toBeNull();
+    expect(screen.queryByText('Door Access System')).toBeNull();
+    expect(screen.getByText('5')).toBeTruthy();
+  });
 });

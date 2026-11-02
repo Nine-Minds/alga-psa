@@ -99,8 +99,9 @@ describe('asset group surfaces', () => {
 
     expect(text).toMatch(/getAssetGroupSummariesForAssets\(\s*trx,\s*tenant,/);
     expect(text).toContain('group: groupSummaries.get(asset.asset_id) ?? null,');
-    // And the filter the column pairs with.
-    expect(text).toMatch(/if \(validatedParams\.group_id\)/);
+    // And the filter the column pairs with, now in the shared list-filter builder.
+    expect(text).toContain('applyAssetListFilters(query, { trx, tenant, params: validatedParams });');
+    expect(source('packages/assets/src/lib/assetListFilters.ts')).toMatch(/if \(params\.group_id\)/);
   });
 
   it('T114: a shared-workspace member shows the workspace line instead of Assign', () => {
