@@ -231,6 +231,49 @@
       "total": "Totalt",
       "validUntil": "Giltig till"
     },
+    "publicDecision": {
+      "accepted": {
+        "title": "Offert godkänd",
+        "body": "Tack. Ditt godkännande har registrerats och vi har underrättats."
+      },
+      "rejected": {
+        "title": "Offert avvisad",
+        "body": "Ditt svar har registrerats och vi har underrättats."
+      },
+      "already": {
+        "title": "Den här offerten har redan besvarats",
+        "accepted": "Den här offerten godkändes den {{date}}.",
+        "rejected": "Den här offerten avvisades den {{date}}."
+      },
+      "changed": {
+        "title": "Den här offerten har ändrats",
+        "body": "Den här offerten har ändrats sedan du öppnade den. Kontakta oss."
+      },
+      "optionalItems": "Valfria poster",
+      "optionalHint": "Välj de valfria poster du vill ha. Ditt val skickas när du godkänner.",
+      "subtotal": "Delsumma",
+      "tax": "Skatt",
+      "total": "Totalt",
+      "fullName": "Fullständigt namn",
+      "titleOptional": "Titel (valfritt)",
+      "agreementVersion": "Avtalsversion {{version}}",
+      "accept": "Godkänn offert",
+      "reject": "Avvisa offert",
+      "submitting": "Skickar...",
+      "rejectTitle": "Avvisa offert",
+      "rejectHint": "Berätta vad som behöver ändras. Vi kan komma att revidera och skicka om offerten.",
+      "rejectConfirm": "Avvisa",
+      "cancel": "Avbryt",
+      "errors": {
+        "generic": "Något gick fel. Försök igen.",
+        "nameRequired": "Ange ditt fullständiga namn.",
+        "agreementRequired": "Bekräfta avtalet för att godkänna den här offerten.",
+        "agreementOutdated": "Avtalstexten har uppdaterats. Ladda om sidan och försök igen.",
+        "commentRequired": "Lägg till en kort kommentar innan du avvisar den här offerten.",
+        "tooLong": "En av dina uppgifter är för lång.",
+        "reload": "Ladda om den här sidan och försök igen."
+      }
+    },
     "public": {
       "metaTitle": "Granska offert",
       "notice": {

@@ -11,6 +11,7 @@
  * props or slots.
  */
 
+import { UNASSIGNED_KEY } from './quoteLocationGroups';
 import React, { useCallback } from 'react';
 import {
   computeQuoteTotals,
@@ -50,7 +51,7 @@ export type LocationGroup = {
   items: IQuoteItem[];
 };
 
-export const UNASSIGNED_KEY = '__unassigned__';
+export { UNASSIGNED_KEY };
 
 export function groupQuoteItemsByLocation(
   items: IQuoteItem[],
@@ -201,6 +202,19 @@ export const QuoteDocumentView: React.FC<QuoteDocumentViewProps> = ({
       }
     },
     [formatCalendarDate],
+  );
+
+  // quote_date / valid_until are calendar dates stored as UTC midnight. Reduce to the
+  // YYYY-MM-DD calendar day so useFormatters formats them as a date-only value
+  // (UTC) instead of shifting them through the viewer's timezone. Timestamps stay as-is.
+  const formatDateOnly = useCallback(
+    (date: string | { toString(): string } | undefined | null) => {
+      if (!date) return formatDate(date);
+      const str = date instanceof Date ? date.toISOString() : typeof date === 'string' ? date : date.toString();
+      const match = /^(\d{4}-\d{2}-\d{2})T00:00:00(?:\.0+)?(?:Z|\+00:00)?$/.exec(str);
+      return formatDate(match ? match[1] : str);
+    },
+    [formatDate],
   );
 
   const hasOptionalItems = items.some((item) => item.is_optional);
@@ -362,11 +376,11 @@ export const QuoteDocumentView: React.FC<QuoteDocumentViewProps> = ({
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <p className="text-xs font-medium uppercase text-muted-foreground">{t('quotes.detail.quoteDate', { defaultValue: 'Quote Date' })}</p>
-            <p className="mt-1 text-sm">{formatDate(quote.quote_date)}</p>
+            <p className="mt-1 text-sm">{formatDateOnly(quote.quote_date)}</p>
           </div>
           <div>
             <p className="text-xs font-medium uppercase text-muted-foreground">{t('quotes.detail.validUntil', { defaultValue: 'Valid Until' })}</p>
-            <p className="mt-1 text-sm">{formatDate(quote.valid_until)}</p>
+            <p className="mt-1 text-sm">{formatDateOnly(quote.valid_until)}</p>
           </div>
           <div>
             <p className="text-xs font-medium uppercase text-muted-foreground">{t('quotes.detail.poNumber', { defaultValue: 'PO Number' })}</p>

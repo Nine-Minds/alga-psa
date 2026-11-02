@@ -19,6 +19,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DEFAULT_SENDER_SELECTION } from '@alga-psa/email/senderSelection';
 import { listSelectableSenders } from '@alga-psa/email/senderActions';
 import type { IQuoteDocumentTemplate } from '@alga-psa/types';
+import { QuoteDecisionLine, emailLinkDecisionForActivity } from './QuoteDecisionLine';
 import { approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuoteRevision, deleteQuote, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, markQuoteAccepted, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getSalesOrderForQuote, type SalesOrderQuoteLink } from '@alga-psa/inventory/actions/salesOrderLinkActions';
@@ -1214,7 +1215,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           <section className="space-y-2 rounded-lg border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 p-4">
             <h3 className="text-base font-semibold text-emerald-800 dark:text-emerald-300">{t('quoteForm.alerts.accepted', { defaultValue: 'Quote Accepted' })}</h3>
             <div className="text-sm text-emerald-700 dark:text-emerald-400 space-y-1">
-              {quote.accepted_by_name && <p><span className="font-medium">{t('quoteDetail.status.acceptedBy', { defaultValue: 'Accepted by:' })}</span> {quote.accepted_by_name}</p>}
+              {quote.decisions?.[0]?.decision === 'accepted'
+                ? <p data-testid="quote-accepted-by"><QuoteDecisionLine decision={quote.decisions[0]} /></p>
+                : quote.accepted_by_name && <p><span className="font-medium">{t('quoteDetail.status.acceptedBy', { defaultValue: 'Accepted by:' })}</span> {quote.accepted_by_name}</p>}
               {quote.accepted_at && <p><span className="font-medium">{t('quoteDetail.status.acceptedOn', { defaultValue: 'Accepted on:' })}</span> {formatDate(quote.accepted_at)}</p>}
             </div>
           </section>
@@ -1224,6 +1227,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           <section className="space-y-2 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30 p-4">
             <h3 className="text-base font-semibold text-red-800 dark:text-red-300">{t('quoteForm.alerts.rejected', { defaultValue: 'Quote Rejected' })}</h3>
             <div className="text-sm text-red-700 dark:text-red-400 space-y-1">
+              {quote.decisions?.[0]?.decision === 'rejected' && <p data-testid="quote-rejected-by"><QuoteDecisionLine decision={quote.decisions[0]} /></p>}
               {quote.rejected_at && <p><span className="font-medium">{t('quoteDetail.status.rejectedOn', { defaultValue: 'Rejected on:' })}</span> {formatDate(quote.rejected_at)}</p>}
               {quote.rejection_reason && <p><span className="font-medium">{t('quoteDetail.status.reason', { defaultValue: 'Reason:' })}</span> {quote.rejection_reason}</p>}
             </div>
@@ -1346,14 +1350,20 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                 <div key={activity.activity_id} className="rounded-md border border-border p-3">
                   <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                     <div className="font-medium text-foreground">
-                      {activity.activity_type === 'viewed_via_email_link'
-                        ? (viewedViaEmailLinkRecipient(activity.metadata)
-                          ? t('quoteDetail.activity.viewedViaEmailLink.descriptionWithRecipient', {
-                            defaultValue: 'Quote viewed via email link by {{email}}',
-                            email: viewedViaEmailLinkRecipient(activity.metadata),
-                          })
-                          : t('quoteDetail.activity.viewedViaEmailLink.description', { defaultValue: 'Quote viewed via email link' }))
-                        : activity.description}
+                      {(() => {
+                        const linked = emailLinkDecisionForActivity(quote.decisions, activity);
+                        if (linked) return <QuoteDecisionLine decision={linked} />;
+                        if (activity.activity_type === 'viewed_via_email_link') {
+                          const recipient = viewedViaEmailLinkRecipient(activity.metadata);
+                          return recipient
+                            ? t('quoteDetail.activity.viewedViaEmailLink.descriptionWithRecipient', {
+                              defaultValue: 'Quote viewed via email link by {{email}}',
+                              email: recipient,
+                            })
+                            : t('quoteDetail.activity.viewedViaEmailLink.description', { defaultValue: 'Quote viewed via email link' });
+                        }
+                        return activity.description;
+                      })()}
                     </div>
                     <div className="text-xs text-muted-foreground">{activity.created_at ? formatDate(activity.created_at) : '—'}</div>
                   </div>

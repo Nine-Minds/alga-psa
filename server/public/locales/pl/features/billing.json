@@ -231,6 +231,49 @@
       "total": "Razem",
       "validUntil": "Ważne do"
     },
+    "publicDecision": {
+      "accepted": {
+        "title": "Oferta zaakceptowana",
+        "body": "Dziękujemy. Twoja akceptacja została zapisana, a my zostaliśmy powiadomieni."
+      },
+      "rejected": {
+        "title": "Oferta odrzucona",
+        "body": "Twoja odpowiedź została zapisana, a my zostaliśmy powiadomieni."
+      },
+      "already": {
+        "title": "Na tę ofertę już udzielono odpowiedzi",
+        "accepted": "Ta oferta została zaakceptowana dnia {{date}}.",
+        "rejected": "Ta oferta została odrzucona dnia {{date}}."
+      },
+      "changed": {
+        "title": "Ta oferta uległa zmianie",
+        "body": "Ta oferta zmieniła się od momentu jej otwarcia. Skontaktuj się z nami."
+      },
+      "optionalItems": "Pozycje opcjonalne",
+      "optionalHint": "Wybierz pozycje opcjonalne, które chcesz uwzględnić. Twój wybór zostanie wysłany po akceptacji.",
+      "subtotal": "Suma częściowa",
+      "tax": "Podatek",
+      "total": "Razem",
+      "fullName": "Imię i nazwisko",
+      "titleOptional": "Stanowisko (opcjonalnie)",
+      "agreementVersion": "Wersja zgody {{version}}",
+      "accept": "Zaakceptuj ofertę",
+      "reject": "Odrzuć ofertę",
+      "submitting": "Wysyłanie...",
+      "rejectTitle": "Odrzuć ofertę",
+      "rejectHint": "Napisz, co należy zmienić. Możemy poprawić i ponownie wysłać ofertę.",
+      "rejectConfirm": "Odrzuć",
+      "cancel": "Anuluj",
+      "errors": {
+        "generic": "Coś poszło nie tak. Spróbuj ponownie.",
+        "nameRequired": "Wpisz swoje imię i nazwisko.",
+        "agreementRequired": "Potwierdź zgodę, aby zaakceptować tę ofertę.",
+        "agreementOutdated": "Treść zgody została zaktualizowana. Odśwież stronę i spróbuj ponownie.",
+        "commentRequired": "Dodaj krótki komentarz przed odrzuceniem tej oferty.",
+        "tooLong": "Jedno z wpisanych pól jest zbyt długie.",
+        "reload": "Odśwież tę stronę i spróbuj ponownie."
+      }
+    },
     "public": {
       "metaTitle": "Przegląd oferty",
       "notice": {

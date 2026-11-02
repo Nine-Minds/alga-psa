@@ -231,6 +231,49 @@
       "total": "Totale",
       "validUntil": "Valido fino al"
     },
+    "publicDecision": {
+      "accepted": {
+        "title": "Preventivo accettato",
+        "body": "Grazie. La sua accettazione è stata registrata e siamo stati avvisati."
+      },
+      "rejected": {
+        "title": "Preventivo rifiutato",
+        "body": "La sua risposta è stata registrata e siamo stati avvisati."
+      },
+      "already": {
+        "title": "A questo preventivo è già stata data risposta",
+        "accepted": "Questo preventivo è stato accettato il {{date}}.",
+        "rejected": "Questo preventivo è stato rifiutato il {{date}}."
+      },
+      "changed": {
+        "title": "Questo preventivo è cambiato",
+        "body": "Questo preventivo è cambiato da quando lo ha aperto. La preghiamo di contattarci."
+      },
+      "optionalItems": "Voci facoltative",
+      "optionalHint": "Scelga le voci facoltative desiderate. La sua scelta viene inviata all'accettazione.",
+      "subtotal": "Subtotale",
+      "tax": "Imposte",
+      "total": "Totale",
+      "fullName": "Nome completo",
+      "titleOptional": "Qualifica (facoltativa)",
+      "agreementVersion": "Versione dell'accordo {{version}}",
+      "accept": "Accetta preventivo",
+      "reject": "Rifiuta preventivo",
+      "submitting": "Invio in corso...",
+      "rejectTitle": "Rifiuta preventivo",
+      "rejectHint": "Ci indichi cosa deve cambiare. Potremmo rivedere e inviare di nuovo il preventivo.",
+      "rejectConfirm": "Rifiuta",
+      "cancel": "Annulla",
+      "errors": {
+        "generic": "Si è verificato un errore. Riprovi.",
+        "nameRequired": "Inserisca il suo nome completo.",
+        "agreementRequired": "Confermi l'accordo per accettare questo preventivo.",
+        "agreementOutdated": "Il testo dell'accordo è stato aggiornato. Ricarichi la pagina e riprovi.",
+        "commentRequired": "Aggiunga un breve commento prima di rifiutare questo preventivo.",
+        "tooLong": "Uno dei suoi inserimenti è troppo lungo.",
+        "reload": "Ricarichi questa pagina e riprovi."
+      }
+    },
     "public": {
       "metaTitle": "Revisione del preventivo",
       "notice": {

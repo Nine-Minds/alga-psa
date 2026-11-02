@@ -231,6 +231,49 @@
       "total": "Total",
       "validUntil": "Válido hasta"
     },
+    "publicDecision": {
+      "accepted": {
+        "title": "Cotización aceptada",
+        "body": "Gracias. Su aceptación ha sido registrada y hemos sido notificados."
+      },
+      "rejected": {
+        "title": "Cotización rechazada",
+        "body": "Su respuesta ha sido registrada y hemos sido notificados."
+      },
+      "already": {
+        "title": "Esta cotización ya ha sido respondida",
+        "accepted": "Esta cotización fue aceptada el {{date}}.",
+        "rejected": "Esta cotización fue rechazada el {{date}}."
+      },
+      "changed": {
+        "title": "Esta cotización ha cambiado",
+        "body": "Esta cotización ha cambiado desde que la abrió. Póngase en contacto con nosotros."
+      },
+      "optionalItems": "Elementos opcionales",
+      "optionalHint": "Elija los elementos opcionales que desea. Su selección se envía al aceptar.",
+      "subtotal": "Subtotal",
+      "tax": "Impuestos",
+      "total": "Total",
+      "fullName": "Nombre completo",
+      "titleOptional": "Cargo (opcional)",
+      "agreementVersion": "Versión del acuerdo {{version}}",
+      "accept": "Aceptar cotización",
+      "reject": "Rechazar cotización",
+      "submitting": "Enviando...",
+      "rejectTitle": "Rechazar cotización",
+      "rejectHint": "Indíquenos qué debe cambiar. Es posible que revisemos y reenviemos la cotización.",
+      "rejectConfirm": "Rechazar",
+      "cancel": "Cancelar",
+      "errors": {
+        "generic": "Algo salió mal. Inténtelo de nuevo.",
+        "nameRequired": "Escriba su nombre completo.",
+        "agreementRequired": "Confirme el acuerdo para aceptar esta cotización.",
+        "agreementOutdated": "El texto del acuerdo se ha actualizado. Recargue la página e inténtelo de nuevo.",
+        "commentRequired": "Añada un breve comentario antes de rechazar esta cotización.",
+        "tooLong": "Una de sus entradas es demasiado larga.",
+        "reload": "Vuelva a cargar esta página e inténtelo de nuevo."
+      }
+    },
     "public": {
       "metaTitle": "Revisión de cotización",
       "notice": {
