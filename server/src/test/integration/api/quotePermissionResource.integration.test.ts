@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
-import { tenantDb } from '@alga-psa/db';
+import { getTenantContext, runWithoutTenant, tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 
 // The controller resolves its RBAC connection through getConnection(); point that
@@ -175,6 +175,23 @@ describe('quote API permission resource integration', () => {
     await expect(
       (controller as any).checkPermission(requestFor(fixture), 'read'),
     ).rejects.toThrow(/Cannot read quote/);
+  });
+
+  it('authorizes the first read from a clean tenant context and still denies a caller without the grant', async () => {
+    const authorized = await createFixture([{ resource: 'billing', action: 'read' }]);
+    const unauthorized = await createFixture([{ resource: 'ticket', action: 'read' }]);
+    const controller = new ApiQuoteController();
+
+    await runWithoutTenant(async () => {
+      expect(getTenantContext()).toBeUndefined();
+      await expect(
+        (controller as any).checkPermission(requestFor(authorized), 'read'),
+      ).resolves.toBeUndefined();
+      await expect(
+        (controller as any).checkPermission(requestFor(unauthorized), 'read'),
+      ).rejects.toThrow(/Cannot read quote/);
+    });
+    expect(getTenantContext()).toBeUndefined();
   });
 
   it('gates approve on quotes:approve rather than billing', async () => {
