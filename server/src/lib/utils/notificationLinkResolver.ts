@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { getPortalDomain } from '../../models/PortalDomainModel';
+import { resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
 import logger from '@alga-psa/core/logger';
 import { recordUrl } from '@alga-psa/types';
@@ -113,9 +114,7 @@ function normalizeHost(host: string): string {
 /**
  * Resolve MSP portal URL for an entity
  */
-function resolveInternalUrl(input: EntityLinkInput): string {
-  const baseUrl = getBaseUrl();
-
+function resolveInternalUrl(input: EntityLinkInput, baseUrl: string): string {
   switch (input.type) {
     case 'ticket':
       // LEVERAGE: pattern record-links — MSP record URLs come from the shared recordUrl resolver.
@@ -170,16 +169,17 @@ async function resolvePortalUrl(
   let isActiveVanityDomain = false;
 
   try {
-    const portalDomain = await getPortalDomain(knex, tenantId);
-    if (portalDomain) {
-      // Only use custom domain if it's active and ready to serve traffic
-      if (portalDomain.status === 'active' && portalDomain.domain) {
-        portalHost = portalDomain.domain;
-        isActiveVanityDomain = true;
-      } else if (portalDomain.canonicalHost) {
+    // Only use a custom domain if it is active, ready to serve traffic and serves the client portal
+    const resolved = await resolveTenantAppBase(tenantId, 'client_portal', { knex });
+    if (resolved.source === 'vanity') {
+      portalHost = normalizeHost(resolved.baseUrl);
+      isActiveVanityDomain = true;
+    } else {
+      const portalDomain = await getPortalDomain(knex, tenantId);
+      if (portalDomain?.canonicalHost) {
         // Use canonical host if:
         // - No custom domain is configured, OR
-        // - Custom domain exists but is not yet active
+        // - Custom domain exists but is not yet active (or does not serve the portal)
         portalHost = portalDomain.canonicalHost;
         isActiveVanityDomain = false;
       }
@@ -235,7 +235,9 @@ export async function resolveNotificationLinks(
   tenantId: string,
   input: EntityLinkInput
 ): Promise<ResolvedLinks> {
-  const internalUrl = resolveInternalUrl(input);
+  // MSP recipients: a custom domain only replaces the canonical base when it serves the MSP app.
+  const mspBase = await resolveTenantAppBase(tenantId, 'msp', { knex });
+  const internalUrl = resolveInternalUrl(input, mspBase.source === 'vanity' ? mspBase.baseUrl : getBaseUrl());
   const portalUrl = await resolvePortalUrl(knex, tenantId, input);
 
   return { internalUrl, portalUrl };

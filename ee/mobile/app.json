@@ -43,6 +43,16 @@
               "scheme": "https",
               "host": "algapsa.com",
               "pathPrefix": "/msp/tickets/"
+            },
+            {
+              "scheme": "https",
+              "host": "algapsa.com",
+              "pathPrefix": "/msp/assets/"
+            },
+            {
+              "scheme": "https",
+              "host": "algapsa.com",
+              "pathPrefix": "/msp/inventory/units"
             }
           ],
           "category": [

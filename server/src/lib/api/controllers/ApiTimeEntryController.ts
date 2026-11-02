@@ -144,7 +144,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           searchParams = timeEntrySearchSchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid search parameters', error.errors);
+            throw new ValidationError('Invalid search parameters', error.issues);
           }
           throw error;
         }
@@ -301,7 +301,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           exportParams = timeEntryExportQuerySchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid export parameters', error.errors);
+            throw new ValidationError('Invalid export parameters', error.issues);
           }
           throw error;
         }
@@ -389,7 +389,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           trackingData = startTimeTrackingSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid tracking data', error.errors);
+            throw new ValidationError('Invalid tracking data', error.issues);
           }
           throw error;
         }
@@ -472,7 +472,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           stopData = stopTimeTrackingSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid stop data', error.errors);
+            throw new ValidationError('Invalid stop data', error.issues);
           }
           throw error;
         }
@@ -487,6 +487,61 @@ export class ApiTimeEntryController extends ApiBaseController {
         });
 
         return createSuccessResponse(timeEntry, 201);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Cancel (abandon) the caller's own tracking session without writing a time entry.
+   * Requires `time_entry:update`, like stop-tracking.
+   */
+  cancelTracking() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiKey = req.headers.get('x-api-key');
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        assertInternalApiUser(user);
+        await this.assertManualProductAccess(req, keyRecord, user);
+
+        const pathParts = new URL(req.url).pathname.split('/');
+        const sessionId = pathParts[pathParts.indexOf('cancel-tracking') + 1];
+
+        // RBAC: cancelling a timer mutates the caller's time tracking, so it needs time_entry:update.
+        const db = await getConnection(tenantId!);
+        const hasUpdatePermission = await hasPermission(user, 'time_entry', 'update', db);
+        if (!hasUpdatePermission) {
+          throw new ForbiddenError('Permission denied: Cannot update time entries');
+        }
+
+        const result = await runWithTenant(tenantId!, async () => {
+          return await this.timeEntryService.cancelTimeTracking(sessionId, {
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          });
+        });
+
+        return createSuccessResponse(result);
       } catch (error) {
         return handleApiError(error);
       }
@@ -603,7 +658,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           approvalData = approveTimeEntriesSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid approval data', error.errors);
+            throw new ValidationError('Invalid approval data', error.issues);
           }
           throw error;
         }
@@ -681,7 +736,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           changeData = requestTimeEntryChangesSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid change request data', error.errors);
+            throw new ValidationError('Invalid change request data', error.issues);
           }
           throw error;
         }
@@ -812,7 +867,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           bulkData = bulkTimeEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid bulk data', error.errors);
+            throw new ValidationError('Invalid bulk data', error.issues);
           }
           throw error;
         }
@@ -890,7 +945,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           bulkData = bulkUpdateTimeEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid bulk data', error.errors);
+            throw new ValidationError('Invalid bulk data', error.issues);
           }
           throw error;
         }
@@ -968,7 +1023,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           bulkData = bulkDeleteTimeEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid bulk data', error.errors);
+            throw new ValidationError('Invalid bulk data', error.issues);
           }
           throw error;
         }

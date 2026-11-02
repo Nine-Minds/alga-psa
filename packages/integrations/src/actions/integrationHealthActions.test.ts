@@ -1,18 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MAILBOX_SETUP_ENTRY_PATH } from '@alga-psa/types';
 
 const {
   createTenantKnexMock,
   hasPermissionMock,
   isCalendarEnterpriseEditionMock,
   getCalendarProvidersMock,
+  getStoredQboCredentialsMapMock,
+  getStoredXeroConnectionsMock,
+  getTeamsAvailabilityMock,
   emailProviderRows,
+  tableRows,
+  tableCalls,
   sessionUser,
 } = vi.hoisted(() => ({
   createTenantKnexMock: vi.fn(),
   hasPermissionMock: vi.fn(),
   isCalendarEnterpriseEditionMock: vi.fn(),
   getCalendarProvidersMock: vi.fn(),
+  getStoredQboCredentialsMapMock: vi.fn(),
+  getStoredXeroConnectionsMock: vi.fn(),
+  getTeamsAvailabilityMock: vi.fn(),
   emailProviderRows: { current: [] as any[] },
+  tableRows: { current: {} as Record<string, any[]> },
+  tableCalls: { current: [] as Array<{ table: string; method: string; args: unknown[] }> },
   sessionUser: {
     user_id: 'user-1',
     user_type: 'internal' as 'internal' | 'client',
@@ -21,24 +32,34 @@ const {
 }));
 
 /**
- * Chainable stub: the action composes where/andWhere/orWhere/whereNotNull and
- * resolves on .select(), so only that terminal call needs to return rows.
+ * Chainable stub: the sources compose where/andWhere/orWhere/whereNotNull/
+ * orderBy and resolve on .select() or .first(), so only those terminal calls
+ * need to return rows. Rows are per table name because the registry now reads
+ * five tables, and the filter calls are recorded so a test can assert the
+ * narrowing a dumb stub cannot apply (e.g. is_active).
  */
-function queryBuilderStub() {
+function rowsForTable(table: string): any[] {
+  if (table === 'email_providers') return emailProviderRows.current;
+  return tableRows.current[table] ?? [];
+}
+
+function queryBuilderStub(table: string) {
   const builder: any = {};
-  for (const method of ['where', 'andWhere', 'orWhere', 'whereNotNull']) {
-    builder[method] = (arg?: unknown) => {
-      if (typeof arg === 'function') (arg as (b: unknown) => void)(builder);
+  for (const method of ['where', 'andWhere', 'orWhere', 'whereNotNull', 'orderBy']) {
+    builder[method] = (...args: unknown[]) => {
+      tableCalls.current.push({ table, method, args });
+      if (typeof args[0] === 'function') (args[0] as (b: unknown) => void)(builder);
       return builder;
     };
   }
-  builder.select = async () => emailProviderRows.current;
+  builder.select = async () => rowsForTable(table);
+  builder.first = async () => rowsForTable(table)[0];
   return builder;
 }
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
-  tenantDb: () => ({ table: () => queryBuilderStub() }),
+  tenantDb: () => ({ table: (table: string) => queryBuilderStub(table) }),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -53,6 +74,21 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('../lib/calendarAvailability', () => ({
   CALENDAR_PROFILE_TAB: 'calendar',
   isCalendarEnterpriseEdition: isCalendarEnterpriseEditionMock,
+}));
+
+// Stored OAuth state, not a live vendor call: the banner must never validate
+// against QuickBooks or Xero. Mocking the services also keeps their secret
+// provider and HTTP clients out of this suite.
+vi.mock('../lib/qbo/qboClientService', () => ({
+  getStoredQboCredentialsMap: getStoredQboCredentialsMapMock,
+}));
+
+vi.mock('../lib/xero/xeroClientService', () => ({
+  getStoredXeroConnections: getStoredXeroConnectionsMock,
+}));
+
+vi.mock('../lib/teamsAvailability', () => ({
+  getTeamsAvailability: getTeamsAvailabilityMock,
 }));
 
 // The EE 'use server' actions entry point exports only session-wrapped
@@ -86,14 +122,37 @@ async function loadAction() {
   return mod.getIntegrationHealthAlerts;
 }
 
+const RMM_HREF = '/msp/settings/integrations?category=rmm';
+const ACCOUNTING_HREF = '/msp/settings/integrations?category=accounting';
+const COMMUNICATION_HREF = MAILBOX_SETUP_ENTRY_PATH;
+
+function isoFromNow(offsetMs: number): string {
+  return new Date(Date.now() + offsetMs).toISOString();
+}
+
+/** Deny exactly one resource:action pair, allow everything else. */
+function denyPermission(resource: string, action: string) {
+  hasPermissionMock.mockImplementation(async (_user: unknown, res: string, act: string) =>
+    !(res === resource && act === action)
+  );
+}
+
 describe('getIntegrationHealthAlerts', () => {
   beforeEach(() => {
     vi.resetModules();
+    vi.unstubAllEnvs();
     createTenantKnexMock.mockReset().mockResolvedValue({ knex: {} });
     hasPermissionMock.mockReset().mockResolvedValue(true);
     isCalendarEnterpriseEditionMock.mockReset().mockReturnValue(false);
     getCalendarProvidersMock.mockReset().mockResolvedValue([]);
+    getStoredQboCredentialsMapMock.mockReset().mockResolvedValue({});
+    getStoredXeroConnectionsMock.mockReset().mockResolvedValue({});
+    getTeamsAvailabilityMock
+      .mockReset()
+      .mockResolvedValue({ enabled: false, reason: 'ce_unavailable', message: 'EE only' });
     emailProviderRows.current = [];
+    tableRows.current = {};
+    tableCalls.current = [];
     sessionUser.user_type = 'internal';
   });
 
@@ -215,7 +274,233 @@ describe('getIntegrationHealthAlerts', () => {
     });
   });
 
-  it('aggregates both integrations and never lets a failing source break the banner', async () => {
+  it('reports RMM sync errors and reconnect-required token lifecycles', async () => {
+    tableRows.current.rmm_integrations = [
+      {
+        integration_id: 'int-1',
+        provider: 'ninjaone',
+        sync_status: 'error',
+        sync_error: 'NinjaOne returned HTTP 500',
+        settings: { tokenLifecycle: { status: 'healthy' } },
+      },
+      // settings arrives as JSON text from some writers; both shapes must parse.
+      {
+        integration_id: 'int-2',
+        provider: 'tacticalrmm',
+        sync_status: 'success',
+        sync_error: null,
+        settings: JSON.stringify({ tokenLifecycle: { status: 'reconnect_required' } }),
+      },
+      {
+        integration_id: 'int-3',
+        provider: 'huntress',
+        sync_status: 'success',
+        sync_error: null,
+        settings: null,
+      },
+    ];
+
+    const getIntegrationHealthAlerts = await loadAction();
+    const alerts = await getIntegrationHealthAlerts();
+
+    expect(alerts).toEqual([
+      {
+        id: 'rmm-int-1-rmm_sync_error',
+        integration: 'rmm',
+        severity: 'error',
+        reason: 'rmm_sync_error',
+        providerName: 'NinjaOne',
+        detail: 'NinjaOne returned HTTP 500',
+        href: RMM_HREF,
+      },
+      {
+        id: 'rmm-int-2-rmm_reconnect_required',
+        integration: 'rmm',
+        severity: 'error',
+        reason: 'rmm_reconnect_required',
+        providerName: 'Tactical RMM',
+        detail: 'Tactical RMM',
+        href: RMM_HREF,
+      },
+    ]);
+  });
+
+  it('asks only for active RMM integrations', async () => {
+    const getIntegrationHealthAlerts = await loadAction();
+    await getIntegrationHealthAlerts();
+
+    // A deactivated integration is not syncing by choice, so the narrowing has
+    // to be in the query — nothing downstream re-checks it.
+    expect(tableCalls.current).toContainEqual({
+      table: 'rmm_integrations',
+      method: 'where',
+      args: ['is_active', true],
+    });
+  });
+
+  it('returns no RMM alerts for a caller without settings:read', async () => {
+    denyPermission('settings', 'read');
+    tableRows.current.rmm_integrations = [
+      {
+        integration_id: 'int-1',
+        provider: 'ninjaone',
+        sync_status: 'error',
+        sync_error: 'NinjaOne returned HTTP 500',
+        settings: null,
+      },
+    ];
+
+    const getIntegrationHealthAlerts = await loadAction();
+
+    await expect(getIntegrationHealthAlerts()).resolves.toEqual([]);
+  });
+
+  it('yields no accounting alerts on Community Edition', async () => {
+    getStoredXeroConnectionsMock.mockResolvedValue({
+      'xero-realm': { accessTokenExpiresAt: isoFromNow(-60_000) },
+    });
+
+    const getIntegrationHealthAlerts = await loadAction();
+
+    await expect(getIntegrationHealthAlerts()).resolves.toEqual([]);
+    expect(getStoredXeroConnectionsMock).not.toHaveBeenCalled();
+  });
+
+  it('reports a rejected Xero refresh token as reconnect required', async () => {
+    vi.stubEnv('EDITION', 'ee');
+    getStoredXeroConnectionsMock.mockResolvedValue({
+      'xero-realm': {
+        tenantName: 'Contoso Books',
+        accessTokenExpiresAt: isoFromNow(-60_000),
+        refreshTokenExpiresAt: isoFromNow(60 * 60_000),
+      },
+    });
+    tableRows.current.accounting_sync_cycles = [
+      { status: 'failed', error: 'Xero refresh token was rejected' },
+    ];
+
+    const getIntegrationHealthAlerts = await loadAction();
+
+    await expect(getIntegrationHealthAlerts()).resolves.toEqual([
+      {
+        id: 'accounting-xero-xero-realm-accounting_reconnect_required',
+        integration: 'accounting',
+        severity: 'error',
+        reason: 'accounting_reconnect_required',
+        providerName: 'Xero',
+        detail: 'Contoso Books',
+        href: ACCOUNTING_HREF,
+      },
+    ]);
+  });
+
+  it('reports a lapsed QuickBooks refresh token as reconnect required', async () => {
+    vi.stubEnv('EDITION', 'ee');
+    getStoredQboCredentialsMapMock.mockResolvedValue({
+      '4620816': { refreshTokenExpiresAt: isoFromNow(-60_000) },
+    });
+
+    const getIntegrationHealthAlerts = await loadAction();
+
+    await expect(getIntegrationHealthAlerts()).resolves.toEqual([
+      {
+        id: 'accounting-quickbooks_online-4620816-accounting_reconnect_required',
+        integration: 'accounting',
+        severity: 'error',
+        reason: 'accounting_reconnect_required',
+        providerName: 'QuickBooks Online',
+        detail: '4620816',
+        href: ACCOUNTING_HREF,
+      },
+    ]);
+  });
+
+  it('warns when the last accounting cycle failed but the connection is fine', async () => {
+    vi.stubEnv('EDITION', 'ee');
+    getStoredQboCredentialsMapMock.mockResolvedValue({
+      '4620816': { refreshTokenExpiresAt: isoFromNow(30 * 24 * 60 * 60_000) },
+    });
+    tableRows.current.accounting_sync_cycles = [{ status: 'failed', error: 'Invoice 42 rejected' }];
+
+    const getIntegrationHealthAlerts = await loadAction();
+
+    await expect(getIntegrationHealthAlerts()).resolves.toEqual([
+      {
+        id: 'accounting-quickbooks_online-4620816-accounting_sync_error',
+        integration: 'accounting',
+        severity: 'warning',
+        reason: 'accounting_sync_error',
+        providerName: 'QuickBooks Online',
+        detail: '4620816',
+        href: ACCOUNTING_HREF,
+      },
+    ]);
+  });
+
+  it('returns no accounting alerts without accounting_integrations:catalog_read', async () => {
+    vi.stubEnv('EDITION', 'ee');
+    denyPermission('accounting_integrations', 'catalog_read');
+    getStoredQboCredentialsMapMock.mockResolvedValue({
+      '4620816': { refreshTokenExpiresAt: isoFromNow(-60_000) },
+    });
+
+    const getIntegrationHealthAlerts = await loadAction();
+
+    await expect(getIntegrationHealthAlerts()).resolves.toEqual([]);
+    expect(getStoredQboCredentialsMapMock).not.toHaveBeenCalled();
+  });
+
+  it('warns when an active Teams integration has no bot connector credentials', async () => {
+    getTeamsAvailabilityMock.mockResolvedValue({ enabled: true, reason: 'enabled' });
+    tableRows.current.teams_integrations = [{ install_status: 'active' }];
+
+    const getIntegrationHealthAlerts = await loadAction();
+
+    await expect(getIntegrationHealthAlerts()).resolves.toEqual([
+      {
+        id: 'teams_bot-teams_bot_credentials_missing',
+        integration: 'teams_bot',
+        severity: 'warning',
+        reason: 'teams_bot_credentials_missing',
+        providerName: 'Microsoft Teams',
+        detail: '',
+        href: COMMUNICATION_HREF,
+      },
+    ]);
+  });
+
+  it('stays quiet when the Teams bot connector is configured', async () => {
+    getTeamsAvailabilityMock.mockResolvedValue({ enabled: true, reason: 'enabled' });
+    tableRows.current.teams_integrations = [{ install_status: 'active' }];
+    vi.stubEnv('TEAMS_BOT_APP_ID', 'app-id');
+    vi.stubEnv('TEAMS_BOT_APP_TENANT_ID', 'tenant-id');
+    vi.stubEnv('TEAMS_BOT_APP_PASSWORD', 'secret');
+
+    const getIntegrationHealthAlerts = await loadAction();
+
+    await expect(getIntegrationHealthAlerts()).resolves.toEqual([]);
+  });
+
+  it('stays quiet when the Teams integration is not active', async () => {
+    getTeamsAvailabilityMock.mockResolvedValue({ enabled: true, reason: 'enabled' });
+    tableRows.current.teams_integrations = [{ install_status: 'install_pending' }];
+
+    const getIntegrationHealthAlerts = await loadAction();
+
+    await expect(getIntegrationHealthAlerts()).resolves.toEqual([]);
+  });
+
+  it('returns no Teams alert for a caller without system_settings:update', async () => {
+    getTeamsAvailabilityMock.mockResolvedValue({ enabled: true, reason: 'enabled' });
+    denyPermission('system_settings', 'update');
+    tableRows.current.teams_integrations = [{ install_status: 'active' }];
+
+    const getIntegrationHealthAlerts = await loadAction();
+
+    await expect(getIntegrationHealthAlerts()).resolves.toEqual([]);
+  });
+
+  it('aggregates every integration and never lets a failing source break the banner', async () => {
     isCalendarEnterpriseEditionMock.mockReturnValue(true);
     emailProviderRows.current = [
       {
@@ -227,16 +512,25 @@ describe('getIntegrationHealthAlerts', () => {
         status: 'paused',
       },
     ];
+    tableRows.current.rmm_integrations = [
+      {
+        integration_id: 'int-1',
+        provider: 'ninjaone',
+        sync_status: 'error',
+        sync_error: 'NinjaOne returned HTTP 500',
+        settings: null,
+      },
+    ];
     getCalendarProvidersMock.mockRejectedValue(new Error('EE calendar unavailable'));
+    getTeamsAvailabilityMock.mockRejectedValue(new Error('Teams availability unavailable'));
 
     const getIntegrationHealthAlerts = await loadAction();
     const alerts = await getIntegrationHealthAlerts();
 
-    expect(alerts).toHaveLength(1);
-    expect(alerts[0]).toMatchObject({
-      integration: 'inbound_email',
-      reason: 'inbound_email_auth_failure',
-    });
+    expect(alerts.map((alert) => alert.reason)).toEqual([
+      'inbound_email_auth_failure',
+      'rmm_sync_error',
+    ]);
   });
 
   /**

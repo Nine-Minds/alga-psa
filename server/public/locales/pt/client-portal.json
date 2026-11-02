@@ -373,7 +373,8 @@
       "missing_email": "Seu provedor de identidade não retornou um e-mail, portanto nenhuma conta do portal do cliente pôde ser identificada. Faça login com sua senha ou fale com seu prestador de serviços.",
       "inactive_user": "A conta do portal do cliente para {{providerEmail}} está inativa. Fale com seu prestador de serviços para reativá-la.",
       "user_type_mismatch": "{{providerEmail}} não é uma conta do portal do cliente. Fale com seu prestador de serviços.",
-      "tenant_mismatch": "{{providerEmail}} pertence ao portal de outra organização. Faça login com sua senha ou fale com seu prestador de serviços."
+      "tenant_mismatch": "{{providerEmail}} pertence ao portal de outra organização. Faça login com sua senha ou fale com seu prestador de serviços.",
+      "tenant_required": "{{providerEmail}} é usado em mais de uma organização. Entre em contato com seu provedor de serviços."
     },
     "configurationTitle": "Falha no login",
     "configurationMessage": "O login falhou. Tente novamente ou fale com seu prestador de serviços.",
@@ -524,6 +525,15 @@
         "failed": "Não foi possível salvar o seu cartão",
         "savedDescription": "O seu cartão está pronto para pagamentos futuros.",
         "failedDescription": "Não foi possível verificar a configuração. Peça um novo link ao seu fornecedor de faturamento."
+      },
+      "payLink": {
+        "heading": "Este link de pagamento não pode ser usado",
+        "expired": "Este link de pagamento expirou.",
+        "invalid": "Este link de pagamento não é válido.",
+        "notPayable": "Esta fatura já não pode ser paga com este link. Pode já estar paga ou já não aceitar pagamento online.",
+        "unavailable": "Não foi possível abrir a página de pagamento neste momento. Tente novamente dentro de alguns minutos.",
+        "viewInPortal": "Ver a fatura no portal do cliente",
+        "contactProvider": "Contacte o seu fornecedor de faturação para obter um novo link."
       }
     }
   },

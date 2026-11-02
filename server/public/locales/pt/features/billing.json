@@ -54,6 +54,7 @@
     "taxBreakdown": "Repartição de impostos",
     "manualInvoice": "Fatura manual",
     "credits": "Créditos",
+    "currency": "Moeda",
     "financialArtifactSummary": "Fatura apenas financeira. Os períodos de serviço recorrentes aparecem somente nas linhas de detalhe recorrentes.",
     "servicePeriod": "Período de serviço",
     "servicePeriods": "Períodos de serviço",
@@ -408,6 +409,13 @@
       "pending": "Faturas aguardando aprovação ou processamento adicional",
       "prepayment": "Faturas de pagamento antecipado ou depósito",
       "partially_applied": "Faturas com pagamentos parciais aplicados"
+    },
+    "billingPeriod": {
+      "weekly": "por semana",
+      "monthly": "por mês",
+      "quarterly": "por trimestre",
+      "semi-annually": "por semestre",
+      "annually": "por ano"
     }
   },
   "credits": {
@@ -444,7 +452,13 @@
     "expires": "Expira em {{date}}",
     "recentBurn": "Uso recente",
     "timeEntry": "Lançamento de horas",
-    "contractLabel": "Contrato: {{contract}}"
+    "contractLabel": "Contrato: {{contract}}",
+    "hoursLeftValue": "{{hours}} h restantes · {{value}}",
+    "validFrom": "Válido a partir de {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — bloco pré-pago, {{hours}} h",
+    "overPrepaidBlock": "{{name}} (acima do bloco pré-pago)"
   },
   "bucketUsage": {
     "contractLine": "Linha de contrato de banco de horas",
@@ -452,5 +466,20 @@
     "hoursUsed": "{{hours}} horas utilizadas",
     "hoursTotal": "{{hours}} horas no total",
     "rolloverHours": "Inclui {{hours}} horas transferidas"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Vencimento no recebimento",
+      "net14": "Líquido 14",
+      "net15": "Líquido 15",
+      "net30": "Líquido 30",
+      "net7": "Líquido 7"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Transferência Bancária",
+      "check": "Verificar",
+      "creditCard": "Cartão de crédito"
+    },
+    "tenantDefault": "Padrão do inquilino ({{value}})"
   }
 }

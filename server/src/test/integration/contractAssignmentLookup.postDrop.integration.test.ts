@@ -141,6 +141,7 @@ describe('Contract assignment lookup post-drop integration', () => {
       tenant: tenantId,
       template_id: templateId,
       template_name: 'Template Summary Contract',
+      currency_code: 'USD',
       template_description: 'Template-only detail path for F084/T112',
       default_billing_frequency: 'monthly',
       template_status: 'active',

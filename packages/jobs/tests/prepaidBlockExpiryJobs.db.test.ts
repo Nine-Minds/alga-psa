@@ -99,7 +99,7 @@ async function insertContractBlock(w: W, opts: { total: number; remaining: numbe
     block_id: blockId, tenant, client_id: w.clientId, service_id: w.serviceId,
     total_minutes: opts.total, remaining_minutes: opts.remaining, hourly_rate: 10000, purchase_amount: 100000,
     currency_code: 'EUR', status: 'active', purchased_at: opts.purchasedAt, source_type: 'contract',
-    expiration_date: opts.expiration, contract_line_id: w.lineId, client_contract_id: w.clientContractId,
+    expiration_date: opts.expiration, contract_line_id: w.lineId, client_contract_id: w.clientContractId, service_period_record_id: uuidv4(),
   });
   return blockId;
 }

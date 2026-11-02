@@ -86,6 +86,18 @@ export function normalizeRfc822MessageId(raw: string | null | undefined): string
 }
 
 /**
+ * Candidate lookup forms for a raw RFC 5322 Message-ID. The canonical
+ * normalized form matches how the durable pipeline writes `email_metadata`
+ * message ids; the raw trimmed (bracketed) form still matches legacy rows.
+ */
+export function rfcMessageIdLookupForms(value: string | null | undefined): string[] {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return [];
+  const normalized = normalizeRfc822MessageId(raw);
+  return Array.from(new Set([normalized, raw].filter((form): form is string => Boolean(form))));
+}
+
+/**
  * Parse a string that already carries a canonical `scheme:`-prefixed inbound
  * identity (`rfc822:<id>`, `provider:<type>:<opaque>`, or `imap:<mailbox>:
  * <uidvalidity>:<uid>`). Returns null when the value is not an already-canonical

@@ -19,6 +19,28 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/tickets/123')).toBe(false);
   });
 
+  it('lets the session-authenticated label endpoints (pdf, templates, linked-assets) through, and only those', () => {
+    for (const p of ['/api/labels/pdf', '/api/labels/templates', '/api/labels/linked-assets']) {
+      expect(shouldSkipApiKeyAuth(p)).toBe(true);
+    }
+    expect(shouldSkipApiKeyAuth('/api/labels/pdf/extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/labels/other')).toBe(false);
+  });
+
+  it('lets the session-authenticated staging box manifest through, and only that shape', () => {
+    expect(shouldSkipApiKeyAuth('/api/projects/staging/containers/0b57a1e2-7b41-4c1f-a0d3-1d2e3f4a5b6c/manifest')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/projects/staging/containers/x/manifest/extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/projects/staging/containers')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/projects/123')).toBe(false);
+  });
+
+  it('lets the session-authenticated RMA document route through, and only that shape', () => {
+    expect(shouldSkipApiKeyAuth('/api/inventory/rma/0b57a1e2-7b41-4c1f-a0d3-1d2e3f4a5b6c/document')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/inventory/rma/x/document/extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/inventory/rma/x')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/inventory/rma/a/b/document')).toBe(false);
+  });
+
   it('allows the Teams package download route to use session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/download')).toBe(true);
   });
@@ -85,6 +107,11 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/live-token')).toBe(true);
   });
 
+  it('allows the ticket original-email view to use session auth', () => {
+    expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/email-html')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/tickets/ticket-123/comments')).toBe(false);
+  });
+
   it('allows the Level.io webhook route (X-Alga-Webhook-Secret authenticated in-route)', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/')).toBe(true);
@@ -95,6 +122,18 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio-extra')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio.more')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/malicious')).toBe(false);
+  });
+
+  it('allows the Datto RMM webhook route (X-Alga-Webhook-Secret authenticated in-route)', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto/')).toBe(true);
+  });
+
+  it('exempts the Datto RMM route exactly, never a prefixed or deeper sibling', () => {
+    expect(shouldSkipApiKeyAuth('/api/webhooks/dattoevil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto-extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto/x')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/webhooks/datto/malicious')).toBe(false);
   });
 
   it('keeps sibling RMM + payment webhook routes and unrelated APIs gated', () => {

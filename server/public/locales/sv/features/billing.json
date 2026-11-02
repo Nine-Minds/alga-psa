@@ -54,6 +54,7 @@
     "taxBreakdown": "Momsspecifikation",
     "manualInvoice": "Manuell faktura",
     "credits": "Krediteringar",
+    "currency": "Valuta",
     "financialArtifactSummary": "Faktura som endast avser finansiella transaktioner. Återkommande tjänsteperioder visas bara på detaljrader för återkommande tjänster.",
     "servicePeriod": "Tjänsteperiod",
     "servicePeriods": "Tjänsteperioder",
@@ -408,6 +409,13 @@
       "pending": "Fakturor som väntar på godkännande eller ytterligare behandling",
       "prepayment": "Fakturor för förskottsbetalning eller deposition",
       "partially_applied": "Fakturor med avräknade delbetalningar"
+    },
+    "billingPeriod": {
+      "weekly": "per vecka",
+      "monthly": "per månad",
+      "quarterly": "per kvartal",
+      "semi-annually": "per halvår",
+      "annually": "per år"
     }
   },
   "credits": {
@@ -444,7 +452,13 @@
     "expires": "Löper ut {{date}}",
     "recentBurn": "Senaste förbrukning",
     "timeEntry": "Tidpost",
-    "contractLabel": "Avtal: {{contract}}"
+    "contractLabel": "Avtal: {{contract}}",
+    "hoursLeftValue": "{{hours}} h kvar · {{value}}",
+    "validFrom": "Giltig från {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — förbetalt block, {{hours}} tim",
+    "overPrepaidBlock": "{{name}} (utöver förbetalt block)"
   },
   "bucketUsage": {
     "contractLine": "Avtalsrad med timpott",
@@ -452,5 +466,20 @@
     "hoursUsed": "{{hours}} h förbrukade",
     "hoursTotal": "{{hours}} h totalt",
     "rolloverHours": "Inkluderar {{hours}} h överförd tid"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Betalas vid mottagande",
+      "net14": "14 dagar netto",
+      "net15": "15 dagar netto",
+      "net30": "30 dagar netto",
+      "net7": "7 dagar netto"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Banköverföring",
+      "check": "Check",
+      "creditCard": "Kreditkort"
+    },
+    "tenantDefault": "Hyresgästens standard ({{value}})"
   }
 }

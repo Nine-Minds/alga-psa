@@ -1,5 +1,5 @@
 import { PRODUCT_CODES, type ProductCode } from '@alga-psa/types';
-import { getAllowedSettingsTabIds } from './settingsProductTabs';
+import { getAllowedSettingsTabIds, isSettingsRestrictedProduct } from './settingsProductTabs';
 
 export type ProductRouteBehavior = 'allowed' | 'upgrade_boundary' | 'not_found';
 export type ProductApiBehavior = 'allowed' | 'denied';
@@ -19,26 +19,13 @@ export interface ApiRule {
   visibleInMetadataByProduct: Record<ProductCode, boolean>;
 }
 
-export const PRODUCT_CAPABILITIES = {
-  psa: ['*'],
-  algadesk: [
-    'dashboard',
-    'tickets',
-    'clients',
-    'contacts',
-    'knowledge_base',
-    'reports',
-    'settings',
-    'client_portal',
-    'email_to_ticket',
-  ],
-} as const;
+export { PRODUCT_CAPABILITIES } from '@alga-psa/types';
 
 export const MSP_ROUTE_RULES: readonly RouteRule[] = [
   {
     group: 'msp_dashboard',
     staticPrefixes: ['/msp/dashboard'],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
   },
   {
     group: 'msp_settings_excluded',
@@ -49,12 +36,12 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
       '/msp/settings/integrations',
       '/msp/integrations',
     ],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found' },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
   },
   {
     group: 'msp_core_helpdesk',
     staticPrefixes: ['/msp/tickets', '/msp/create-ticket', '/msp/clients', '/msp/contacts', '/msp/interactions', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings', '/msp/account', '/msp/add-ons'],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
   },
   {
     group: 'msp_upgrade_boundary',
@@ -79,12 +66,51 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
       '/msp/create-opportunity',
       '/msp/marketing',
     ],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'upgrade_boundary' },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'upgrade_boundary', co_managed: 'not_found' },
+  },
+  {
+    // The one sponsor-prefix screen a co_managed customer also uses: its own Effective access and delegated
+    // administration. /msp/co-management has no rule of its own, so the rest of that prefix stays closed to
+    // co_managed (unmatched means not_found); the page and its actions still decide, per side, what the caller may see.
+    group: 'msp_co_managed_administration',
+    staticPrefixes: ['/msp/co-management/administration'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
+  },
+  {
+    // Sponsor-only queue of tickets customers shared with the sponsor, and its shared-ticket screen. Only a PSA
+    // sponsor has them; the capability gate in the route layout decides whether a PSA tenant sees them.
+    group: 'msp_co_managed_customer_tickets',
+    staticPrefixes: ['/msp/co-management/customer-tickets'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
+  },
+  {
+    // Sponsor-only Shared Tasks queue and the shared project / task screens for projects customers share with the
+    // sponsor. Only a PSA sponsor has them; the capability gate in each page decides whether a PSA tenant sees them.
+    group: 'msp_co_managed_shared_projects',
+    staticPrefixes: ['/msp/co-management/tasks', '/msp/co-management/projects'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
+  },
+  {
+    // Customer-owned Google / Microsoft provider setup. The page itself is
+    // gated by the co-managed capability ('serves'), so a co_managed workspace
+    // reaches this one capability-scoped page without the wider integrations
+    // surface.
+    group: 'msp_co_management_providers',
+    staticPrefixes: ['/msp/co-management/providers'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
+  },
+  {
+    // One side-aware co-managed root: a PSA sponsor sees the overview, a
+    // co_managed customer sees its own relationship home. The capability gate
+    // in the route layout decides whether a tenant may see either.
+    group: 'msp_co_managed_sponsor',
+    staticPrefixes: ['/msp/co-managed'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
   },
   {
     group: 'msp_internal_not_found',
     staticPrefixes: ['/msp/test'],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found' },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
   },
 ];
 
@@ -92,12 +118,12 @@ export const PORTAL_ROUTE_RULES: readonly RouteRule[] = [
   {
     group: 'portal_helpdesk_root_alias',
     dynamicPatterns: [/^\/client-portal$/],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
   },
   {
     group: 'portal_helpdesk',
     staticPrefixes: ['/client-portal/dashboard', '/client-portal/tickets', '/client-portal/knowledge-base', '/client-portal/profile', '/client-portal/client-settings'],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
   },
   {
     group: 'portal_upgrade_or_not_found',
@@ -110,7 +136,7 @@ export const PORTAL_ROUTE_RULES: readonly RouteRule[] = [
       '/client-portal/request-services',
       '/client-portal/extensions',
     ],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'upgrade_boundary' },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'upgrade_boundary', co_managed: 'not_found' },
   },
 ];
 
@@ -120,8 +146,26 @@ export const API_RULES: readonly ApiRule[] = [
     // search. It is not part of the public v1 metadata surface.
     group: 'api_smart_search',
     staticPrefixes: ['/api/smart-search'],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
-    visibleInMetadataByProduct: { psa: false, algadesk: false },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
+  },
+  {
+    // Session-authenticated capability probes (/api/v1/capabilities/<key>).
+    // Every product may ask about its own tenant; the capability gate inside
+    // the route decides the answer (closed => the NotFound 404). Not part of
+    // the public v1 metadata surface.
+    group: 'api_capability_probes',
+    staticPrefixes: ['/api/v1/capabilities'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
+  },
+  {
+    // Authenticated app-internal endpoint that mints the short-lived realtime
+    // notification-signals token. Not part of the public v1 metadata surface.
+    group: 'api_notification_stream',
+    staticPrefixes: ['/api/notifications'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
   },
   {
     group: 'api_ticket_psa_only_subroutes',
@@ -133,8 +177,8 @@ export const API_RULES: readonly ApiRule[] = [
       /^\/api\/v1\/tickets\/[^/]+\/materials(?:\/.*)?$/,
       /^\/api\/v1\/tickets\/[^/]+\/assets(?:\/.*)?$/,
     ],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
-    visibleInMetadataByProduct: { psa: true, algadesk: false },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'denied' },
+    visibleInMetadataByProduct: { psa: true, algadesk: false, co_managed: false },
   },
   {
     // Notification settings are PSA-only in the UI (/msp/settings/notifications),
@@ -143,8 +187,8 @@ export const API_RULES: readonly ApiRule[] = [
     staticPrefixes: [
       '/api/v1/email/templates',
     ],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
-    visibleInMetadataByProduct: { psa: true, algadesk: false },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'denied' },
+    visibleInMetadataByProduct: { psa: true, algadesk: false, co_managed: false },
   },
   {
     group: 'api_helpdesk_allowed',
@@ -172,8 +216,17 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/interaction-statuses',
       '/api/v1/mobile/me/capabilities',
     ],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
-    visibleInMetadataByProduct: { psa: true, algadesk: true },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: true, algadesk: true, co_managed: false },
+  },
+  {
+    // Exact path only (POST /api/v1/documents attach endpoint, used by MCP attach_file).
+    // Deliberately a dynamic pattern: a static prefix would also open /api/v1/documents/*.
+    // Per-entity availability (PSA-only entities) is enforced by the entity adapters.
+    group: 'api_document_attach',
+    dynamicPatterns: [/^\/api\/v1\/documents$/],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: true, algadesk: true, co_managed: false },
   },
   {
     group: 'api_psa_only',
@@ -184,6 +237,7 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/assets',
       '/api/v1/asset-groups',
       '/api/v1/asset-statuses',
+      '/api/v1/asset-custody',
       '/api/v1/time-entries',
       '/api/v1/stopwatch',
       '/api/v1/workflows',
@@ -205,7 +259,6 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/tenant',
       '/api/v1/feature-flags',
       '/api/v1/workflow',
-      '/api/v1/automation',
       '/api/v1/rmm',
       '/api/v1/scheduling',
       '/api/v1/dispatch',
@@ -216,8 +269,8 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/inventory',
       '/api/v1/opportunities',
     ],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
-    visibleInMetadataByProduct: { psa: true, algadesk: false },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'denied' },
+    visibleInMetadataByProduct: { psa: true, algadesk: false, co_managed: false },
   },
   {
     // Public (unauthenticated) marketing endpoints: capture-form submission,
@@ -227,8 +280,8 @@ export const API_RULES: readonly ApiRule[] = [
     staticPrefixes: [
       '/api/marketing',
     ],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
-    visibleInMetadataByProduct: { psa: false, algadesk: false },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
   },
   {
     // Alga Migration Package (AMP) import workspace: tenant-scoped upload,
@@ -239,8 +292,8 @@ export const API_RULES: readonly ApiRule[] = [
     staticPrefixes: [
       '/api/migrations',
     ],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
-    visibleInMetadataByProduct: { psa: false, algadesk: false },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
   },
   {
     // SCIM 2.0 service provider for directory-driven user lifecycle. Entra
@@ -251,8 +304,8 @@ export const API_RULES: readonly ApiRule[] = [
     staticPrefixes: [
       '/api/scim',
     ],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
-    visibleInMetadataByProduct: { psa: false, algadesk: false },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
   },
   {
     // Telephony provider webhooks (Microsoft Graph callRecords notifications).
@@ -263,8 +316,8 @@ export const API_RULES: readonly ApiRule[] = [
     staticPrefixes: [
       '/api/telephony',
     ],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
-    visibleInMetadataByProduct: { psa: false, algadesk: false },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
   },
   {
     // Label printing (POST /api/labels/pdf): session-authenticated render of
@@ -275,8 +328,8 @@ export const API_RULES: readonly ApiRule[] = [
     staticPrefixes: [
       '/api/labels',
     ],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
-    visibleInMetadataByProduct: { psa: false, algadesk: false },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
   },
 ];
 
@@ -318,7 +371,7 @@ export function resolveProductRouteBehavior(productCode: ProductCode, pathname: 
   // Settings tab routes are gated per-segment against the same allow-list SettingsTab
   // uses, so the split-out /msp/settings/<tab> routes keep the pre-split ?tab= boundary.
   const settingsSegment = mspSettingsSegment(pathname);
-  if (settingsSegment !== null && productCode === 'algadesk') {
+  if (settingsSegment !== null && isSettingsRestrictedProduct(productCode)) {
     return getAllowedSettingsTabIds(productCode).has(settingsSegment) ? 'allowed' : 'not_found';
   }
 
@@ -326,7 +379,7 @@ export function resolveProductRouteBehavior(productCode: ProductCode, pathname: 
     pathname === '/client-portal' || pathname.startsWith('/client-portal/') ? PORTAL_ROUTE_RULES : MSP_ROUTE_RULES;
   const matched = rules.find((rule) => matchesRule(pathname, rule));
   if (!matched) {
-    return productCode === 'algadesk' ? 'not_found' : 'allowed';
+    return productCode === 'psa' ? 'allowed' : 'not_found';
   }
 
   return matched.behaviorByProduct[productCode];
@@ -335,7 +388,7 @@ export function resolveProductRouteBehavior(productCode: ProductCode, pathname: 
 export function resolveProductApiBehavior(productCode: ProductCode, path: string): ProductApiBehavior {
   const matched = API_RULES.find((rule) => matchesRule(path, rule));
   if (!matched) {
-    return productCode === 'algadesk' ? 'denied' : 'allowed';
+    return productCode === 'psa' ? 'allowed' : 'denied';
   }
 
   return matched.behaviorByProduct[productCode];
@@ -359,7 +412,7 @@ type MenuLikeSection<T extends MenuLikeItem> = { items: T[] };
 
 function includeByHref(productCode: ProductCode, href?: string): boolean {
   if (!href || href.startsWith('http')) return true;
-  if (productCode === 'algadesk' && href.startsWith('/msp/settings?tab=')) {
+  if (isSettingsRestrictedProduct(productCode) && href.startsWith('/msp/settings?tab=')) {
     const tab = new URLSearchParams(href.split('?')[1]).get('tab');
     return tab ? getAllowedSettingsTabIds(productCode).has(tab) : false;
   }

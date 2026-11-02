@@ -13,6 +13,7 @@ import { loadInvoiceChargeLineIds } from '../services/invoiceChargeLineage';
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { formatLocationAddress } from '@alga-psa/core';
 import type {
   IInvoice,
   IInvoiceCharge,
@@ -56,20 +57,28 @@ type InvoiceAnnotationRow = IInvoiceAnnotation & {
   tenant: string;
 };
 
-type InvoiceClientDetailsRow = {
+type InvoiceLocationAddressColumns = {
+  address_line1?: string | null;
+  address_line2?: string | null;
+  address_line3?: string | null;
+  city?: string | null;
+  state_province?: string | null;
+  postal_code?: string | null;
+  country_name?: string | null;
+};
+
+type InvoiceClientDetailsRow = InvoiceLocationAddressColumns & {
   client_name?: string | null;
   properties?: unknown;
-  location_address?: string | null;
 };
 
 type InvoiceContactRow = {
   full_name?: string | null;
 };
 
-type InvoiceTenantClientDetailsRow = {
+type InvoiceTenantClientDetailsRow = InvoiceLocationAddressColumns & {
   client_id?: string | null;
   client_name?: string | null;
-  location_address?: string | null;
 };
 
 type RecurringInvoiceSummaryRow = {
@@ -492,14 +501,13 @@ const Invoice = {
         .select(
           'c.client_name',
           'c.properties',
-          knexOrTrx.raw(`CONCAT_WS(', ',
-            NULLIF(cl.address_line1, 'N/A'),
-            cl.address_line2,
-            NULLIF(cl.city, 'N/A'),
-            cl.state_province,
-            cl.postal_code,
-            NULLIF(cl.country_name, 'Unknown')
-          ) as location_address`)
+          'cl.address_line1',
+          'cl.address_line2',
+          'cl.address_line3',
+          'cl.city',
+          'cl.state_province',
+          'cl.postal_code',
+          'cl.country_name'
         )
         .where({
           'c.client_id': invoice.client_id
@@ -515,14 +523,13 @@ const Invoice = {
         .select(
           'tc.client_id',
           'c.client_name',
-          knexOrTrx.raw(`CONCAT_WS(', ',
-            NULLIF(cl.address_line1, 'N/A'),
-            cl.address_line2,
-            NULLIF(cl.city, 'N/A'),
-            cl.state_province,
-            cl.postal_code,
-            NULLIF(cl.country_name, 'Unknown')
-          ) as location_address`)
+          'cl.address_line1',
+          'cl.address_line2',
+          'cl.address_line3',
+          'cl.city',
+          'cl.state_province',
+          'cl.postal_code',
+          'cl.country_name'
         )
         .where({
           'tc.is_default': true
@@ -578,16 +585,15 @@ const Invoice = {
           client_id: invoice.client_id,
         })
         .select(
-          knexOrTrx.raw(`CONCAT_WS(', ',
-            NULLIF(address_line1, 'N/A'),
-            address_line2,
-            NULLIF(city, 'N/A'),
-            state_province,
-            postal_code,
-            NULLIF(country_name, 'Unknown')
-          ) as location_address`),
+          'address_line1',
+          'address_line2',
+          'address_line3',
+          'city',
+          'state_province',
+          'postal_code',
+          'country_name',
         )
-        .first() as { location_address?: string | null } | undefined
+        .first() as InvoiceLocationAddressColumns | undefined
       : undefined;
 
     let clientProperties: { logo?: string } = {};
@@ -620,7 +626,7 @@ const Invoice = {
     if (tenantClientDetails?.client_id) {
       const tenantLogoUrl = await getClientDocumentLogoUrl(tenantClientDetails.client_id, tenant).catch(() => null);
       const tenantClientName = asTrimmedString(tenantClientDetails.client_name);
-      const tenantClientAddress = asTrimmedString(tenantClientDetails.location_address);
+      const tenantClientAddress = formatLocationAddress(tenantClientDetails);
 
       if (tenantClientName.length > 0 || tenantClientAddress.length > 0 || tenantLogoUrl) {
         tenantClient = {
@@ -690,7 +696,7 @@ const Invoice = {
         // client name, which is every unsegmented invoice.
         name: billingProfile?.bill_to_name?.trim() || client.client_name || '',
         logo: logoUrl || clientProperties.logo || '',
-        address: billToLocation?.location_address || client.location_address || ''
+        address: formatLocationAddress(billToLocation) || formatLocationAddress(client)
       },
       billing_profile_id: invoice.billing_profile_id ?? null,
       billing_profile_name: billingProfile?.name ?? null,

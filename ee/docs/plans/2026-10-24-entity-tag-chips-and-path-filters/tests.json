@@ -1,0 +1,342 @@
+[
+  {
+    "id": "T001",
+    "description": "Predicates conformance: the shared conformance table (scalar and set-valued paths, null and missing values, nested groups) passes on the in-memory evaluator",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F012",
+      "F013",
+      "F014",
+      "F015",
+      "F017",
+      "F075",
+      "F076"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Predicates unit: zod schema accepts valid nested groups and rejects unknown operators, list values for single-value operators, and missing values",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Predicates unit: query-schema validation rejects unknown paths and operators not allowed for an attribute",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F024"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Predicates DB integration: the SQL compiler passes the full shared conformance table against a migrated schema (comparisons, in/not_in with NULLs, is_empty, tag relation in/not_in/is_empty)",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F019",
+      "F020",
+      "F021",
+      "F075",
+      "F076"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Predicates DB integration: self-or-any-child modifier matches a parent through a child on a one-relation and a tag relation, and compiled SQL never crosses tenants",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F022"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Workflow: existing conditionModel round-trip and WorkflowConditionBuilder tests pass with types imported from @alga-psa/predicates; temporal-workflows typecheck passes",
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F026",
+      "F011"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Ticket list parity (DB integration): existing suites stay green through the compiler: ticketListBundledClientContactFilter, ticketListAssigneeSort, ticketListActivitySort, api/ticketListLatestActivityApi, ticketClientPortalAbac",
+    "implemented": true,
+    "featureIds": [
+      "F028",
+      "F029",
+      "F030",
+      "F031",
+      "F032",
+      "F033",
+      "F035",
+      "F037"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Ticket list DB integration: table-driven filter matrix on a seeded dataset with nulls, bundles, inactive boards, and internal and client-portal users; one or more cases per legacy filter key (board incl. inactive and no-board, status id/name/open-only, priority, category incl. subcategory and no-category, assignee/team/unassigned, assigned-to-me, due date presets, response state, SLA breached), each asserting explicit expected ids and totals in individual and bundled view",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F028",
+      "F029",
+      "F031",
+      "F032",
+      "F033",
+      "F035",
+      "F037",
+      "F079"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Ticket list DB integration: contact.tags in / not_in and client.tags in / not_in return correct rows and totals across pages; not_in keeps tickets with no client",
+    "implemented": true,
+    "featureIds": [
+      "F034",
+      "F036",
+      "F037"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Ticket list DB integration: bundled view includes a master when a child's requester, client or ticket tag matches; individual view does not; tenant isolation holds",
+    "implemented": true,
+    "featureIds": [
+      "F038",
+      "F034"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Contract: tenantScopedAuth source-string test pins tenant correlation in the compiler and the ticket query schema",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Codec unit: legacy tags text resolves to ticket tag definition ids; every legacy key round-trips into an equivalent predicate group",
+    "implemented": true,
+    "featureIds": [
+      "F035",
+      "F040"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "list-views unit: tickets v1 view migrates to v2 (tags text to ids, VIP keys dropped) and passes the strict v2 schema; board default and tenant default views migrate on read",
+    "implemented": true,
+    "featureIds": [
+      "F043",
+      "F044",
+      "F045",
+      "F041"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Adapter unit: sanitize keeps valid where clauses and drops clauses referencing deleted tag ids with a dropped-reference entry",
+    "implemented": true,
+    "featureIds": [
+      "F046",
+      "F047"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Container contract: a flat where survives URL write and parse in the v1 form, SSR parse, returnFilters prev/next, export and select-all scope; a where-only URL outranks the board default",
+    "implemented": true,
+    "featureIds": [
+      "F048",
+      "F049",
+      "F050"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Display rules DB integration: replace ordered list and read back; deleting the last mapping keeps a referenced definition and findAllTagsByType still lists it; explicitly deleting the tag cascades its rules",
+    "implemented": true,
+    "featureIds": [
+      "F055",
+      "F057",
+      "F058",
+      "F059",
+      "F054"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Display rules DB integration: migration seeds VIP rules for existing contact and client VIP definitions; onboarding creates both definitions and rules",
+    "implemented": true,
+    "featureIds": [
+      "F056",
+      "F062"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Resolver unit: displayed tags follow rule order, exclude unruled tags, and return none for an audience with no rules",
+    "implemented": true,
+    "featureIds": [
+      "F060"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Hydration DB integration: getTicketsForList rows carry contact_tags and client_tags filtered by internal rules; a client-audience load returns none without a client rule",
+    "implemented": true,
+    "featureIds": [
+      "F063",
+      "F064"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Hydration DB integration: expanded bundle children include contact name, avatar, logo, ticket tags and chip tags",
+    "implemented": true,
+    "featureIds": [
+      "F065"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Security DB integration: a client-portal user is denied findTagsByEntityIds / findTagsByEntityId; display-rule writes require settings:update",
+    "implemented": true,
+    "featureIds": [
+      "F074",
+      "F059"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "EntityChip component: renders badges in given order with tag colors, collapses beyond maxBadges into +n with the rest in the tooltip, and fires click-through",
+    "implemented": true,
+    "featureIds": [
+      "F068"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Ticket columns component: Contact and Client cells render EntityChip with row tags; Contact column is visible by default",
+    "implemented": true,
+    "featureIds": [
+      "F069",
+      "F009"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Dashboard component: Requester tags and Client tags filters write contact.tags / client.tags predicates (any-of and none-of), show active-filter chips from the descriptor table, and clear individually",
+    "implemented": true,
+    "featureIds": [
+      "F051",
+      "F052",
+      "F053"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "E2E (Playwright): tag a contact VIP, see the VIP badge on that requester's ticket rows and ticket header, filter Requester tags: any of VIP, and confirm results; save as a named view and reload; fresh load of a malformed / unknown-version `where` URL shows the dropped-filters toast once and strips the param from the URL (AC12)",
+    "implemented": false,
+    "featureIds": [
+      "F052",
+      "F064",
+      "F066",
+      "F069",
+      "F070",
+      "F044"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Removal guard: repo search finds no is_vip, is_primary_contact, requester_vip or client_vip references and the flag migration is gone",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F006",
+      "F007",
+      "F008"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Workflow conformance: every conformance row the conditionModel adapter can represent, serialized through the adapter and evaluated by expressionEngine, matches the expected result; unrepresentable rows are flagged in the table",
+    "implemented": true,
+    "featureIds": [
+      "F076",
+      "F025",
+      "F075"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Predicates unit: completeness check fails when an operator or path kind has no conformance row and passes for the shipped table",
+    "implemented": true,
+    "featureIds": [
+      "F077",
+      "F075"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "URL unit: where v1 encode/decode round-trips clauses with special characters and every operator kind; unknown version and malformed input are dropped with a dropped-reference entry",
+    "implemented": true,
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Ticket filter schema unit: a flat and group of known paths is accepted; a nested group, an or group, unknown paths and disallowed operators are rejected",
+    "implemented": true,
+    "featureIds": [
+      "F078",
+      "F036"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "list-views unit: a stored view whose where uses a renamed path migrates through the alias map, for named views and board / tenant default views",
+    "implemented": true,
+    "featureIds": [
+      "F080"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Ticket query schema unit: each enumerated computed-attribute resolver compiles for every allowed operator, and the schema declares no raw SQL outside them",
+    "implemented": true,
+    "featureIds": [
+      "F079",
+      "F023"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Integration (tagReferences.integration): a referenced unmapped tag survives deleteOrphaned, both tagCleanup modules and the deleteTag orphan branch; the option loader lists it; explicit delete clears references with and without the FK; references are tenant scoped; replace is idempotent; display-rule writes and the migration backfill create tag_references rows",
+    "implemented": true,
+    "featureIds": [
+      "F083"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Unit (packages/tags tagReferences.test): API refuses without a transaction, validates arguments, replaces with a deduplicated tenant-scoped set",
+    "implemented": true,
+    "featureIds": [
+      "F083"
+    ]
+  }
+]

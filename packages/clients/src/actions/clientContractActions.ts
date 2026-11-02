@@ -10,6 +10,7 @@ import type { IClientContract } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate } from '@alga-psa/core';
+import { resolveTemplateAmountsForContract } from '@alga-psa/shared/billingClients/templateAmounts';
 import { cloneTemplateContractLineAsync } from '../lib/billingHelpers';
 import {
   checkAndReactivateExpiredContract,
@@ -852,6 +853,14 @@ export const applyContractToClient = withAuth(async (
         );
       }
 
+      // Resolve once in the contract's currency; no template amount crosses currencies.
+      const templateAmounts = await resolveTemplateAmountsForContract(
+        trx,
+        tenant,
+        templateContractId,
+        clientContract.contract_id
+      );
+
       for (const line of contractLines) {
         // LEVERAGE: pattern template-clone-substrate — legacy clone path; see cloneTemplateLineToContract (alga-2026-0002371).
         // Clone services and configuration from template to this contract line
@@ -861,7 +870,8 @@ export const applyContractToClient = withAuth(async (
           contractLineId: line.contract_line_id,
           templateContractId,
           overrideRate: line.custom_rate ?? null,
-          effectiveDate: clientContract.start_date ?? null
+          effectiveDate: clientContract.start_date ?? null,
+          amounts: templateAmounts
         });
       }
     });

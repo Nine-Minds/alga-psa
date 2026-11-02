@@ -51,7 +51,7 @@ export const getClientHoursByService = withAuth(async (
   // Validate input
   const validationResult = HoursByServiceInputSchema.safeParse(input);
   if (!validationResult.success) {
-    const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+    const errorMessages = validationResult.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
     return clientPortalActionErrorFrom(new Error(`Validation Error: ${errorMessages}`))!;
   }
   const { startDate, endDate, groupByServiceType } = validationResult.data;
@@ -201,7 +201,7 @@ export const getClientUsageMetrics = withAuth(async (
   // Validate input
   const validationResult = UsageMetricsInputSchema.safeParse(input);
   if (!validationResult.success) {
-    const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+    const errorMessages = validationResult.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
     return clientPortalActionErrorFrom(new Error(`Validation Error: ${errorMessages}`))!;
   }
   const { startDate, endDate } = validationResult.data;

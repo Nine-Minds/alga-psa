@@ -4566,7 +4566,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                           setDateOffsetDirection('on');
                                           setTriggerTypeSelection('date');
                                           handleDefinitionChange({
-                                            trigger: buildDateTriggerForSource(dateSource, activeDefinition?.trigger?.type === 'date' ? (activeDefinition.trigger as Record<string, unknown>) : undefined),
+                                            trigger: buildDateTriggerForSource(dateSource, activeDefinition?.trigger?.type === 'date' ? (activeDefinition.trigger as Record<string, unknown>) : undefined) as WorkflowDefinition['trigger'],
                                             payloadSchemaRef: dateSource.payloadSchemaRef,
                                           });
                                           return;
@@ -4737,7 +4737,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     }))}
                                     onValueChange={(value) => {
                                       const nextDefinition = getDateTriggerSourceDefinition(value);
-                                      const nextTrigger = buildDateTriggerForSource(nextDefinition!, dateTrigger as Record<string, unknown>);
+                                      const nextTrigger = buildDateTriggerForSource(nextDefinition!, dateTrigger as Record<string, unknown>) as WorkflowDefinition['trigger'];
                                       if (!nextDefinition?.usesOffset) setDateOffsetDirection('on');
                                       handleDefinitionChange({ trigger: nextTrigger, payloadSchemaRef: DATE_TRIGGER_PAYLOAD_SCHEMA_REFS[value as keyof typeof DATE_TRIGGER_PAYLOAD_SCHEMA_REFS] });
                                     }}
@@ -8451,7 +8451,61 @@ const ExpressionField: React.FC<{
   );
 };
 
-const MappingExprEditor: React.FC<{
+type MappingRow = { id: string; key: string; expr: Expr };
+
+let mappingRowSequence = 0;
+
+const createMappingRowId = (): string => {
+  const webCrypto = typeof globalThis !== 'undefined' ? globalThis.crypto : undefined;
+  if (webCrypto && typeof webCrypto.randomUUID === 'function') {
+    return webCrypto.randomUUID();
+  }
+  mappingRowSequence += 1;
+  return `mapping-row-${mappingRowSequence}`;
+};
+
+// Rows keep their identity while the user renames them; empty names are kept on screen
+// (flagged invalid) but omitted from the emitted record.
+const mappingRowsToRecord = (rows: MappingRow[]): Record<string, Expr> => {
+  const next: Record<string, Expr> = {};
+  rows.forEach((row) => {
+    const key = row.key.trim();
+    if (!key) return;
+    next[key] = row.expr;
+  });
+  return next;
+};
+
+// Re-materializes rows from an externally changed record, reusing the existing row id for
+// each name so nothing remounts when the parent merely echoes our own emit back.
+const syncMappingRows = (previous: MappingRow[], value: Record<string, Expr>): MappingRow[] => {
+  const reusableIds = new Map<string, string[]>();
+  previous.forEach((row) => {
+    const existing = reusableIds.get(row.key);
+    if (existing) {
+      existing.push(row.id);
+    } else {
+      reusableIds.set(row.key, [row.id]);
+    }
+  });
+
+  return Object.entries(value).map(([key, expr]) => {
+    const candidates = reusableIds.get(key);
+    const id = candidates && candidates.length > 0 ? candidates.shift()! : createMappingRowId();
+    return { id, key, expr };
+  });
+};
+
+const nextMappingFieldName = (rows: MappingRow[]): string => {
+  const used = new Set(rows.map((row) => row.key.trim()));
+  let index = 1;
+  while (used.has(`field_${index}`)) {
+    index += 1;
+  }
+  return `field_${index}`;
+};
+
+export const MappingExprEditor: React.FC<{
   idPrefix: string;
   label: string;
   value: Record<string, Expr>;
@@ -8461,30 +8515,37 @@ const MappingExprEditor: React.FC<{
   disabled?: boolean;
 }> = ({ idPrefix, label, value, onChange, fieldOptions, context, disabled = false }) => {
   const { t } = useTranslation('msp/workflows');
-  const entries = Object.entries(value);
+  const [rows, setRows] = useState<MappingRow[]>(() => syncMappingRows([], value));
+  const emittedRef = useRef<string>(JSON.stringify(mappingRowsToRecord(rows)));
 
-  const handleUpdate = (key: string, expr: Expr) => {
-    onChange({ ...value, [key]: expr });
+  useEffect(() => {
+    const incoming = JSON.stringify(value);
+    if (incoming === emittedRef.current) return;
+    emittedRef.current = incoming;
+    setRows((previous) => syncMappingRows(previous, value));
+  }, [value]);
+
+  const commit = useCallback((nextRows: MappingRow[]) => {
+    setRows(nextRows);
+    const record = mappingRowsToRecord(nextRows);
+    emittedRef.current = JSON.stringify(record);
+    onChange(record);
+  }, [onChange]);
+
+  const handleUpdate = (id: string, expr: Expr) => {
+    commit(rows.map((row) => (row.id === id ? { ...row, expr } : row)));
   };
 
-  const handleKeyChange = (oldKey: string, newKey: string) => {
-    if (!newKey.trim()) return;
-    const next = { ...value };
-    const expr = next[oldKey];
-    delete next[oldKey];
-    next[newKey] = expr;
-    onChange(next);
+  const handleKeyChange = (id: string, nextKey: string) => {
+    commit(rows.map((row) => (row.id === id ? { ...row, key: nextKey } : row)));
   };
 
-  const handleRemove = (key: string) => {
-    const next = { ...value };
-    delete next[key];
-    onChange(next);
+  const handleRemove = (id: string) => {
+    commit(rows.filter((row) => row.id !== id));
   };
 
   const handleAdd = () => {
-    const nextKey = `field_${entries.length + 1}`;
-    onChange({ ...value, [nextKey]: { $expr: '' } });
+    commit([...rows, { id: createMappingRowId(), key: nextMappingFieldName(rows), expr: { $expr: '' } }]);
   };
 
   return (
@@ -8495,26 +8556,30 @@ const MappingExprEditor: React.FC<{
           {t('designer.mappingExpr.add', { defaultValue: 'Add' })}
         </Button>
       </div>
-      {entries.length === 0 && (
+      {rows.length === 0 && (
         <div className="text-xs text-gray-400">
           {t('designer.mappingExpr.empty', { defaultValue: 'No mappings yet.' })}
         </div>
       )}
       <div className="space-y-3">
-        {entries.map(([key, expr], index) => (
-          <Card key={key} className="p-3 space-y-2">
+        {rows.map((row, index) => (
+          <Card key={row.id} className="p-3 space-y-2">
             <div className="flex items-center gap-2">
               <Input
                 id={`${idPrefix}-key-${index}`}
-                value={key}
+                value={row.key}
                 disabled={disabled}
-                onChange={(event) => handleKeyChange(key, event.target.value)}
+                containerClassName="flex-1"
+                error={row.key.trim()
+                  ? undefined
+                  : t('designer.mappingExpr.nameRequired', { defaultValue: 'Enter a name for this mapping.' })}
+                onChange={(event) => handleKeyChange(row.id, event.target.value)}
               />
               <Button
                 id={`${idPrefix}-remove-${index}`}
                 variant="ghost"
                 size="sm"
-                onClick={() => handleRemove(key)}
+                onClick={() => handleRemove(row.id)}
                 disabled={disabled}
               >
                 {t('designer.mappingExpr.remove', { defaultValue: 'Remove' })}
@@ -8523,8 +8588,8 @@ const MappingExprEditor: React.FC<{
             <ExpressionField
               idPrefix={`${idPrefix}-expr-${index}`}
               label={t('designer.mappingExpr.expressionLabel', { defaultValue: 'Expression' })}
-              value={expr}
-              onChange={(nextExpr) => handleUpdate(key, nextExpr)}
+              value={row.expr}
+              onChange={(nextExpr) => handleUpdate(row.id, nextExpr)}
               fieldOptions={fieldOptions}
               context={context}
               disabled={disabled}

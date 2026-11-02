@@ -2262,6 +2262,66 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/v1/asset-groups",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/asset-groups/route.ts",
+    "controller": "ApiAssetGroupController",
+    "controller_import": "@/lib/api/controllers/ApiAssetGroupController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetGroupController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/asset-groups/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/asset-groups/[id]/route.ts",
+    "controller": "ApiAssetGroupController",
+    "controller_import": "@/lib/api/controllers/ApiAssetGroupController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetGroupController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/asset-groups/{id}/contacts",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/asset-groups/[id]/contacts/route.ts",
+    "controller": "ApiAssetGroupController",
+    "controller_import": "@/lib/api/controllers/ApiAssetGroupController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetGroupController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/asset-groups/{id}/members",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/asset-groups/[id]/members/route.ts",
+    "controller": "ApiAssetGroupController",
+    "controller_import": "@/lib/api/controllers/ApiAssetGroupController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetGroupController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/asset-statuses",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/asset-statuses/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/v1/assets",
     "methods": [
       "GET",
@@ -2370,6 +2430,17 @@
       "PUT"
     ],
     "route_file": "server/src/app/api/v1/assets/[id]/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets/{id}/assignments",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/assets/[id]/assignments/route.ts",
     "controller": "ApiAssetController",
     "controller_import": "@/lib/api/controllers/ApiAssetController",
     "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
@@ -2544,164 +2615,6 @@
     "controller": "ApiAssetController",
     "controller_import": "@/lib/api/controllers/ApiAssetController",
     "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
-  },
-  {
-    "edition": "CE",
-    "route_path": "/api/v1/automation/executions",
-    "methods": [
-      "GET"
-    ],
-    "route_file": "server/src/app/api/v1/automation/executions/route.ts",
-    "controller": "ApiAutomationController",
-    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
-  },
-  {
-    "edition": "CE",
-    "route_path": "/api/v1/automation/executions/{id}",
-    "methods": [
-      "GET"
-    ],
-    "route_file": "server/src/app/api/v1/automation/executions/[id]/route.ts",
-    "controller": "ApiAutomationController",
-    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
-  },
-  {
-    "edition": "CE",
-    "route_path": "/api/v1/automation/executions/{id}/retry",
-    "methods": [
-      "POST"
-    ],
-    "route_file": "server/src/app/api/v1/automation/executions/[id]/retry/route.ts",
-    "controller": "ApiAutomationController",
-    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
-  },
-  {
-    "edition": "CE",
-    "route_path": "/api/v1/automation/meta",
-    "methods": [
-      "GET"
-    ],
-    "route_file": "server/src/app/api/v1/automation/meta/route.ts",
-    "controller": "ApiAutomationController",
-    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
-  },
-  {
-    "edition": "CE",
-    "route_path": "/api/v1/automation/performance",
-    "methods": [
-      "GET"
-    ],
-    "route_file": "server/src/app/api/v1/automation/performance/route.ts",
-    "controller": "ApiAutomationController",
-    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
-  },
-  {
-    "edition": "CE",
-    "route_path": "/api/v1/automation/rules",
-    "methods": [
-      "GET",
-      "POST"
-    ],
-    "route_file": "server/src/app/api/v1/automation/rules/route.ts",
-    "controller": "ApiAutomationController",
-    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
-  },
-  {
-    "edition": "CE",
-    "route_path": "/api/v1/automation/rules/bulk-execute",
-    "methods": [
-      "POST"
-    ],
-    "route_file": "server/src/app/api/v1/automation/rules/bulk-execute/route.ts",
-    "controller": "ApiAutomationController",
-    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
-  },
-  {
-    "edition": "CE",
-    "route_path": "/api/v1/automation/rules/bulk-status",
-    "methods": [
-      "POST"
-    ],
-    "route_file": "server/src/app/api/v1/automation/rules/bulk-status/route.ts",
-    "controller": "ApiAutomationController",
-    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
-  },
-  {
-    "edition": "CE",
-    "route_path": "/api/v1/automation/rules/{id}",
-    "methods": [
-      "DELETE",
-      "GET",
-      "PUT"
-    ],
-    "route_file": "server/src/app/api/v1/automation/rules/[id]/route.ts",
-    "controller": "ApiAutomationController",
-    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
-  },
-  {
-    "edition": "CE",
-    "route_path": "/api/v1/automation/rules/{id}/execute",
-    "methods": [
-      "POST"
-    ],
-    "route_file": "server/src/app/api/v1/automation/rules/[id]/execute/route.ts",
-    "controller": "ApiAutomationController",
-    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
-  },
-  {
-    "edition": "CE",
-    "route_path": "/api/v1/automation/statistics",
-    "methods": [
-      "GET"
-    ],
-    "route_file": "server/src/app/api/v1/automation/statistics/route.ts",
-    "controller": "ApiAutomationController",
-    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
-  },
-  {
-    "edition": "CE",
-    "route_path": "/api/v1/automation/templates",
-    "methods": [
-      "GET",
-      "POST"
-    ],
-    "route_file": "server/src/app/api/v1/automation/templates/route.ts",
-    "controller": "ApiAutomationController",
-    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
-  },
-  {
-    "edition": "CE",
-    "route_path": "/api/v1/automation/templates/{id}",
-    "methods": [
-      "GET"
-    ],
-    "route_file": "server/src/app/api/v1/automation/templates/[id]/route.ts",
-    "controller": "ApiAutomationController",
-    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
-  },
-  {
-    "edition": "CE",
-    "route_path": "/api/v1/automation/templates/{id}/use",
-    "methods": [
-      "POST"
-    ],
-    "route_file": "server/src/app/api/v1/automation/templates/[id]/use/route.ts",
-    "controller": "ApiAutomationController",
-    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
   },
   {
     "edition": "CE",
@@ -7973,6 +7886,20 @@
       "GET"
     ],
     "route_file": "server/src/app/api/v1/tickets/[id]/time-entries/route.ts",
+    "controller": "ApiTicketController",
+    "controller_import": "server/src/lib/api/controllers/ApiTicketController",
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tickets/{id}/watchers",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PATCH",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/tickets/[id]/watchers/route.ts",
     "controller": "ApiTicketController",
     "controller_import": "server/src/lib/api/controllers/ApiTicketController",
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts"

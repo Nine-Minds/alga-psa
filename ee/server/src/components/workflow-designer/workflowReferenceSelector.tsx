@@ -6,6 +6,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 import type { JsonSchema } from './expression-editor';
 import { resolveLocalJsonSchemaRef } from './jsonSchemaRefs';
+import { isAssignedVarStepId } from './workflowDataContext';
 import type { DataTreeContext } from './mapping/SourceDataTree';
 import {
   TypeCompatibility,
@@ -284,6 +285,13 @@ export const buildReferenceSourceModel = (
       pushUniqueReferenceField(model.error, option)
     );
   });
+  // A variable set to one value ("Set variables": senderEmail = payload.senderEmail) has no fields
+  // of its own: the variable itself is the only thing to pick, and it is not an object.
+  const scalarVarNames = new Set(
+    (referenceBrowseContext?.vars ?? [])
+      .filter((step) => step.fields.length === 0 && isAssignedVarStepId(step.stepId))
+      .map((step) => step.saveAs)
+  );
   referenceBrowseContext?.vars.forEach((step) => {
     const prefix = `vars.${step.saveAs}`;
     model.vars.push({
@@ -335,7 +343,7 @@ export const buildReferenceSourceModel = (
         value: path,
         // The bare `vars.<saveAs>` path is the step's whole result, not a field named after it.
         label: rest.length > 0 ? rest.join('.') : (itemLabels.wholeResult ?? DEFAULT_ITEM_LABELS.wholeResult ?? stepKey),
-        type: rest.length > 0 ? inferredType : 'object',
+        type: rest.length > 0 || scalarVarNames.has(stepKey) ? inferredType : 'object',
       });
       return;
     }

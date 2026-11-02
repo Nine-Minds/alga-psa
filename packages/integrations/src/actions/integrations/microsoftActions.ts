@@ -5,6 +5,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { PROVIDER_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import {
   getMicrosoftEmailSetupReadiness,
   getMicrosoftProfileReadiness,
@@ -25,8 +26,18 @@ import {
   normalizeMicrosoftProfileCapabilities,
   type MicrosoftProfileConsumer,
 } from './microsoftShared';
+import {
+  MICROSOFT_EMAIL_CONSENT_EXPECTED_ERRORS,
+  writeMicrosoftEmailAdminConsent,
+} from '../../lib/microsoftEmailAdminConsent';
 import { invalidateEntraDirectConnectionOnRebind } from '../../lib/entraBindingInvalidation';
 import { computeEntraCallbackUrl } from '@alga-psa/shared/services/entra/entraCallbackUrl';
+import {
+  buildMicrosoftCalendarRedirectUri,
+  buildMicrosoftEmailRedirectUri,
+  buildMicrosoftEmailSetupRedirectUri,
+} from '@alga-psa/shared/services/email/microsoftRedirectUris';
+import { MICROSOFT_CALENDAR_OAUTH_SCOPES } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { resolveMicrosoftBindingCandidateProfile } from '../../lib/microsoftConsumerProfileResolution';
 import {
   backfillMicrosoftEmailProviderIssuerMetadata,
@@ -170,6 +181,7 @@ export interface MicrosoftProfileStatusResponse {
   redirectUris?: {
     sso: string;
     email?: string;
+    emailSetup?: string;
     calendar?: string;
     teamsTab?: string;
     teamsBot?: string;
@@ -801,8 +813,9 @@ function getMicrosoftIntegrationMetadata(baseUrl: string): NonNullable<
 > {
   return {
     redirectUris: {
-      email: `${baseUrl}/api/auth/microsoft/callback`,
-      calendar: `${baseUrl}/api/auth/microsoft/calendar/callback`,
+      email: buildMicrosoftEmailRedirectUri(baseUrl),
+      emailSetup: buildMicrosoftEmailSetupRedirectUri(baseUrl),
+      calendar: buildMicrosoftCalendarRedirectUri(baseUrl),
       sso: `${baseUrl}/api/auth/callback/azure-ad`,
       teamsTab: `${baseUrl}/api/teams/auth/callback/tab`,
       teamsBot: `${baseUrl}/api/teams/auth/callback/bot`,
@@ -819,11 +832,7 @@ function getMicrosoftIntegrationMetadata(baseUrl: string): NonNullable<
         'profile',
         'email',
       ],
-      calendar: [
-        'https://graph.microsoft.com/Calendars.ReadWrite',
-        'https://graph.microsoft.com/Mail.Read',
-        'offline_access',
-      ],
+      calendar: [...MICROSOFT_CALENDAR_OAUTH_SCOPES],
       sso: ['openid', 'profile', 'email'],
       teams: ['openid', 'profile', 'email', 'offline_access'],
       entra: [...ENTRA_DIRECT_DISPLAY_SCOPES],
@@ -843,7 +852,7 @@ function getVisibleMicrosoftIntegrationMetadata(
   return {
     redirectUris: {
       sso: redirectUris.sso,
-      ...(visibleConsumers.has('email') ? { email: redirectUris.email } : {}),
+      ...(visibleConsumers.has('email') ? { email: redirectUris.email, emailSetup: redirectUris.emailSetup } : {}),
       ...(visibleConsumers.has('calendar') ? { calendar: redirectUris.calendar } : {}),
       ...(visibleConsumers.has('teams')
         ? {
@@ -1170,66 +1179,19 @@ export async function confirmMicrosoftEmailAdminConsentInternal(
   if (!(await canManageMicrosoftSettings(user))) return { success: false, error: 'Forbidden' };
 
   try {
-    const { knex } = await createTenantKnex();
-    const now = new Date();
-
-    await knex.transaction(async (trx: any) => {
-      const db = tenantDb(trx, tenant);
-      const profile = await db.table<MicrosoftProfileRow>('microsoft_profiles')
-        .where({ profile_id: input.profileId })
-        .first();
-
-      if (!profile || profile.is_archived) {
-        throw new Error('The pending Microsoft Email profile no longer exists');
-      }
-      if (!profileHasCapability(profile, 'email')) {
-        throw new Error('The pending Microsoft profile is not enabled for Email');
-      }
-      if (normalizeMicrosoftClientId(profile.client_id) !== normalizeMicrosoftClientId(input.clientId)) {
-        throw new Error('Microsoft administrator consent was returned for a different application');
-      }
-
-      await db.table('microsoft_profiles')
-        .where({ profile_id: input.profileId })
-        .update({
-          email_admin_consent_required: true,
-          email_admin_consent_granted_at: now,
-          email_admin_consent_tenant_id: input.microsoftTenantId || null,
-          updated_by: user?.user_id || null,
-          updated_at: now,
-        });
-
-      const existing = await db.table<MicrosoftConsumerBindingRow>('microsoft_profile_consumer_bindings')
-        .where({ consumer_type: 'email' })
-        .first();
-      if (existing) {
-        await db.table('microsoft_profile_consumer_bindings')
-          .where({ consumer_type: 'email' })
-          .update({
-            profile_id: input.profileId,
-            updated_by: user?.user_id || null,
-            updated_at: now,
-          });
-      } else {
-        await db.table('microsoft_profile_consumer_bindings').insert({
-          tenant,
-          consumer_type: 'email',
-          profile_id: input.profileId,
-          created_by: user?.user_id || null,
-          updated_by: user?.user_id || null,
-          created_at: now,
-          updated_at: now,
-        } satisfies MicrosoftConsumerBindingRow);
-      }
+    // LEVERAGE: friction use-server-exports — the unguarded state-based writer could not live in this 'use server' file, so the shared writer sits in lib/microsoftEmailAdminConsent.ts.
+    await writeMicrosoftEmailAdminConsent({
+      algaTenant: tenant,
+      clientId: input.clientId,
+      profileId: input.profileId,
+      microsoftTenantId: input.microsoftTenantId,
+      actorUserId: user?.user_id || null,
     });
 
     return { success: true, profileId: input.profileId };
   } catch (error) {
-    const expectedMessage = error instanceof Error && [
-      'The pending Microsoft Email profile no longer exists',
-      'The pending Microsoft profile is not enabled for Email',
-      'Microsoft administrator consent was returned for a different application',
-    ].includes(error.message)
+    const expectedMessage = error instanceof Error &&
+      (MICROSOFT_EMAIL_CONSENT_EXPECTED_ERRORS as readonly string[]).includes(error.message)
       ? error.message
       : 'Failed to record Microsoft administrator consent';
     return {
@@ -1248,9 +1210,9 @@ export async function getMicrosoftEmailSetupMetadataInternal(): Promise<{
   const baseUrl = await getDeploymentBaseUrl();
   return {
     baseUrl,
-    mailboxRedirectUri: `${baseUrl}/api/auth/microsoft/callback`,
-    setupRedirectUri: `${baseUrl}/api/auth/microsoft/email-setup/callback`,
-    returnTo: `${baseUrl}/msp/settings/integrations?category=providers`,
+    mailboxRedirectUri: buildMicrosoftEmailRedirectUri(baseUrl),
+    setupRedirectUri: buildMicrosoftEmailSetupRedirectUri(baseUrl),
+    returnTo: `${baseUrl}${PROVIDER_SETUP_ENTRY_PATH}`,
   };
 }
 

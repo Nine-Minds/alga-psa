@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@alga-psa/extension-runtime": "*",
-    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/coverage-v8": "^4.1.12",
     "esbuild": "^0.28.1",
     "tsup": "^8.5.1",
     "typescript": "^5.0.0",

@@ -3,6 +3,7 @@ import { getTicketById, getTicketComments, type TicketComment, type TicketDetail
 import { getCachedTicketDetail, setCachedTicketDetail } from "../../../cache/ticketsCache";
 import { usePullToRefresh } from "../../../hooks/usePullToRefresh";
 import type { TicketDetailDeps } from "../types";
+import { isRecordUnavailableError } from "../../../ui/components/RecordUnavailableState";
 
 export function useTicketData(deps: Pick<TicketDetailDeps, "client" | "session" | "ticketId" | "t">) {
   const { client, session, ticketId, t } = deps;
@@ -13,21 +14,22 @@ export function useTicketData(deps: Pick<TicketDetailDeps, "client" | "session" 
   });
   const [initialLoading, setInitialLoading] = useState(ticket === null);
   const [error, setError] = useState<{ title: string; description: string } | null>(null);
+  // 403 and 404 are one state to the user: not found, or no access.
+  const [unavailable, setUnavailable] = useState(false);
   const [comments, setComments] = useState<TicketComment[]>([]);
   const [commentsError, setCommentsError] = useState<string | null>(null);
 
   const fetchTicket = useCallback(async () => {
     if (!client || !session) return;
     setError(null);
+    setUnavailable(false);
     const result = await getTicketById(client, { apiKey: session.accessToken, ticketId });
     if (!result.ok) {
-      if (result.error.kind === "http" && result.status === 404) {
+      if (isRecordUnavailableError(result.error)) {
+        // Drop any cached copy so a record the user can no longer read is not shown.
         setTicket(null);
+        setUnavailable(true);
         setError({ title: t("detail.ticketNotFound"), description: t("detail.ticketNotFoundDescription") });
-        return;
-      }
-      if (result.error.kind === "permission") {
-        setError({ title: t("detail.noAccessTitle"), description: t("detail.noAccessDescription") });
         return;
       }
       setError({ title: t("detail.unableToLoad"), description: t("detail.unableToLoadDescription") });
@@ -74,6 +76,7 @@ export function useTicketData(deps: Pick<TicketDetailDeps, "client" | "session" 
     setTicket,
     initialLoading,
     error,
+    unavailable,
     comments,
     setComments,
     commentsError,

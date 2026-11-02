@@ -29,6 +29,12 @@ vi.mock('@alga-psa/auth', async (importOriginal) => {
     ),
   };
 });
+// Document authorization re-checks asset RBAC for asset-linked documents
+// through the authorization package; grant it like the action-level check.
+vi.mock('@alga-psa/authorization/rbac', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@alga-psa/authorization/rbac')>(),
+  hasPermission: vi.fn().mockResolvedValue(true),
+}));
 vi.mock('@alga-psa/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/db')>();
   return {

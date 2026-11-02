@@ -375,6 +375,12 @@ export interface PublishTicketTransitionsParams {
   after?: TicketTransitionSnapshot;
   actorUserId?: string;
   /**
+   * The publication actor when it is not the user named by actorUserId: a
+   * co-managed collaborator acting on this ticket. actorUserId stays empty then,
+   * so no payload names a local user who did not act.
+   */
+  actor?: WorkflowEventPublishContext['actor'];
+  /**
    * When provided and it is the inbound outbox publisher, the status event is
    * enqueued inside the transaction instead of published after commit.
    */
@@ -445,9 +451,9 @@ export async function publishTicketTransitionsAfterCommit(
   }
 
   const correlationId = params.correlationId;
-  const actor = params.actorUserId
+  const actor: WorkflowEventPublishContext['actor'] = params.actor ?? (params.actorUserId
     ? ({ actorType: 'USER', actorUserId: params.actorUserId } as const)
-    : ({ actorType: 'SYSTEM' } as const);
+    : ({ actorType: 'SYSTEM' } as const));
 
   registerAfterCommit(
     trx,

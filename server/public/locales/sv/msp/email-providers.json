@@ -317,7 +317,7 @@
         "description": "Konfigurera avancerade alternativ för e-postbehandling",
         "folderFiltersLabel": "Mappfilter",
         "folderFiltersPlaceholder": "Inbox, Support, Anpassad mapp",
-        "folderFiltersHelp": "Kommaseparerad lista över mappar att bevaka (standard: Inbox)",
+        "folderFiltersHelp": "Kommaseparerad lista över mappar att bevaka (standard: Inbox). Använd exakt det mappnamn som visas i Outlook och skriv nästlade mappar som Inbox/Undermapp.",
         "maxEmailsPerSync": "Högsta antal e-postmeddelanden per synkronisering"
       }
     },
@@ -424,7 +424,8 @@
         "clientId": "OAuth-klient-ID",
         "clientSecret": "OAuth-klienthemlighet",
         "scopes": "OAuth-behörighetsomfång",
-        "scopesPlaceholder": "Behörighetsomfång separerade med blanksteg"
+        "scopesPlaceholder": "Behörighetsomfång separerade med blanksteg",
+        "clientSecretHelp": "Klienthemligheten lagras säkert och visas inte. Lämna tomt för att behålla den befintliga hemligheten."
       },
       "processing": {
         "title": "Behandlingsinställningar",
@@ -432,6 +433,9 @@
         "folderFilters": "Mappfilter",
         "folderFiltersPlaceholder": "Inbox, Support, Ärenden",
         "active": "Aktiv"
+      },
+      "messages": {
+        "reconnectRequired": "OAuth-inställningarna har ändrats. Anslut postlådan igen för att auktorisera den med de nya inställningarna."
       }
     }
   },
@@ -556,7 +560,8 @@
       "providerNameHelp": "Internt namn som används för att identifiera den här konfigurationen. Visas inte i utgående e-post.",
       "senderDisplayName": "Avsändarens visningsnamn",
       "senderDisplayNamePlaceholder": "T.ex. Acme Support",
-      "senderDisplayNameHelp": "Visningsnamn som visas i From-huvudet i utgående ärendemeddelanden (svar, stängningar). Används endast när den här postlådan matchar organisationens avsändaradress för ärendemeddelanden. Lämna tomt för att använda namnet på ärendets tavla."
+      "senderDisplayNameHelp": "Visningsnamn som visas i From-huvudet i utgående ärendemeddelanden (svar, stängningar). Används endast när den här postlådan matchar organisationens avsändaradress för ärendemeddelanden. Lämna tomt för att använda namnet på ärendets tavla.",
+      "oauthClientSecretHelp": "Klienthemligheten lagras säkert och visas inte. Lämna tomt för att behålla den befintliga hemligheten."
     },
     "authOptions": {
       "password": "Lösenord",
@@ -580,6 +585,9 @@
       "saving": "Sparar…",
       "updateProvider": "Uppdatera anslutning",
       "createProvider": "Skapa anslutning"
+    },
+    "messages": {
+      "reconnectRequired": "OAuth-inställningarna har ändrats. Anslut postlådan igen för att auktorisera den med de nya inställningarna."
     }
   },
   "microsoftForm": {

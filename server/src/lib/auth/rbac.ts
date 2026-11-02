@@ -1,3 +1,4 @@
+import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { IUser, IRole, IPermission, IRoleWithPermissions } from 'server/src/interfaces/auth.interfaces';
 import User from '@alga-psa/db/models/user';
 import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
@@ -82,15 +83,17 @@ export async function hasPermission(
       : await User.getUserRolesWithPermissions(knex, user.user_id);
   }
 
-  const isClientPortal = user.user_type === 'client';
+  const isClientPortal = isClientUserType(user.user_type);
+
+  const isMspPrincipal = isMspPrincipalUserType(user.user_type);
 
   for (const role of rolesWithPermissions) {
     if (isClientPortal && !role.client) continue;
-    if (!isClientPortal && !role.msp) continue;
+    if (!isClientPortal && !(isMspPrincipal && role.msp)) continue;
 
     for (const permission of role.permissions) {
       if (isClientPortal && !permission.client) continue;
-      if (!isClientPortal && !permission.msp) continue;
+      if (!isClientPortal && !(isMspPrincipal && permission.msp)) continue;
 
       if (permission.resource === resource && permission.action === action) {
         return true;
@@ -131,17 +134,19 @@ export async function checkMultiplePermissions(
       : await User.getUserRolesWithPermissions(knex, user.user_id);
   }
 
-  const isClientPortal = user.user_type === 'client';
+  const isClientPortal = isClientUserType(user.user_type);
+
+  const isMspPrincipal = isMspPrincipalUserType(user.user_type);
 
   const userPermissions = new Set<string>();
 
   for (const role of rolesWithPermissions) {
     if (isClientPortal && !role.client) continue;
-    if (!isClientPortal && !role.msp) continue;
+    if (!isClientPortal && !(isMspPrincipal && role.msp)) continue;
 
     for (const permission of role.permissions) {
       if (isClientPortal && !permission.client) continue;
-      if (!isClientPortal && !permission.msp) continue;
+      if (!isClientPortal && !(isMspPrincipal && permission.msp)) continue;
 
       userPermissions.add(`${permission.resource}:${permission.action}`);
     }

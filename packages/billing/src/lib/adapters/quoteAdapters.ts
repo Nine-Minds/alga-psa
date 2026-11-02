@@ -6,7 +6,7 @@ import { tenantDb } from '@alga-psa/db';
 import Quote from '../../models/quote';
 import type { QuoteDiscountAllocationResult, QuoteDiscountItemAllocation } from '../../services/quoteDiscountAllocation';
 import { fetchTenantParty } from './tenantPartyAdapter';
-import { displayAddressField, displayCountry } from '@alga-psa/core';
+import { displayAddressField, displayCountry, formatPostalAddress } from '@alga-psa/core';
 import {
   cadenceDefaultName,
   compareCadenceKeys,
@@ -85,7 +85,7 @@ const buildAddress = (record: Record<string, unknown> | null | undefined): strin
   ]
     .filter((value, index, collection) => value.length > 0 && collection.indexOf(value) === index);
 
-  return parts.length > 0 ? parts.join(', ') : null;
+  return formatPostalAddress(parts) || null;
 };
 
 const mapQuoteItemToViewModel = (

@@ -310,7 +310,9 @@
       "hourlyRate": "Tarifa / h",
       "expirationDate": "Vence",
       "neverExpires": "Nunca",
-      "adhocBlock": "Puntual"
+      "adhocBlock": "Puntual",
+      "remainingValue": "Valor restante",
+      "validFrom": "Válido desde"
     },
     "statusValues": {
       "active": "Activo",
@@ -318,7 +320,8 @@
       "yes": "Sí",
       "no": "No",
       "expired": "Vencido",
-      "voided": "Anulado"
+      "voided": "Anulado",
+      "all": "Todos los estados"
     },
     "profitability": {
       "formats": {

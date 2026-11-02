@@ -4,6 +4,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { tenantDb } from '@alga-psa/db';
 import * as invoiceService from './invoiceService';
 import { TaxService } from './taxService';
+import { prepaidBlockFeeDescription } from '../lib/billing/compute/prepaidBlockDescriptions';
 
 export interface CreatePrepaidBlockFollowOnInvoiceInput {
   trx: Knex.Transaction;
@@ -92,7 +93,7 @@ export async function createPrepaidBlockFollowOnInvoice(
       service_id: config.sold_as_service_id,
       quantity: hours,
       rate,
-      description: `Prepaid block (${config.sold_as_service_name ?? 'Prepaid block'}) — ${hours.toFixed(2)} h`,
+      description: prepaidBlockFeeDescription({ name: config.sold_as_service_name ?? 'Prepaid block', hours }),
       is_discount: false,
     }],
     client,

@@ -881,6 +881,7 @@
       "add": "Adicionar",
       "remove": "Remover",
       "empty": "Ainda não há mapeamentos.",
+      "nameRequired": "Informe um nome para este mapeamento.",
       "expressionLabel": "Expressão"
     },
     "schemaForm": {
@@ -1356,6 +1357,9 @@
         "contains": "contém",
         "starts_with": "começa com",
         "ends_with": "termina com",
+        "not_contains": "não contém",
+        "not_starts_with": "não começa com",
+        "not_ends_with": "não termina com",
         "is_empty": "está vazio",
         "is_not_empty": "não está vazio"
       },

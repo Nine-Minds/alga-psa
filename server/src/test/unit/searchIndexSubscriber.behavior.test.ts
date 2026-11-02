@@ -624,6 +624,97 @@ describe('search index subscriber event handling', () => {
     expect(loadOne).not.toHaveBeenCalled();
   });
 
+  it('C7 TICKET_COMMENT_UPDATED on a soft-deleted comment deletes the index row', async () => {
+    const knex = { client: 'knex' };
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    // The indexer's base query excludes deleted/unpublished rows, so loadOne yields null.
+    vi.spyOn(ticketCommentIndexer, 'loadOne').mockResolvedValue(null);
+
+    await handleSearchIndexEventForTest({
+      id: 'event-c7a',
+      eventType: 'TICKET_COMMENT_UPDATED',
+      timestamp: '2026-10-27T12:00:00.000Z',
+      payload: { tenantId: 'tenant-1', ticketId: 'ticket-1', commentId: 'comment-1', userId: 'user-1' },
+    } as Event);
+
+    expect(ticketCommentIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'comment-1');
+    expect(mocks.deleteSearchDoc).toHaveBeenCalledWith(knex, 'tenant-1', 'ticket_comment', 'comment-1');
+    expect(mocks.upsertSearchDoc).not.toHaveBeenCalled();
+  });
+
+  it('C7 TICKET_COMMENT_ADDED after a scheduled comment publishes upserts it', async () => {
+    const knex = { client: 'knex' };
+    const doc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'ticket_comment',
+      objectId: 'comment-2',
+      parentType: 'ticket',
+      parentId: 'ticket-1',
+      title: 'Ticket',
+      url: '/msp/tickets/ticket-1#comment-comment-2',
+      acl: { requiredPermission: 'ticket:read' },
+      sourceUpdatedAt: new Date('2026-10-27T12:00:00.000Z'),
+    };
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    vi.spyOn(ticketCommentIndexer, 'loadOne').mockResolvedValue(doc);
+
+    await handleSearchIndexEventForTest({
+      id: 'event-c7b',
+      eventType: 'TICKET_COMMENT_ADDED',
+      timestamp: '2026-10-27T12:00:00.000Z',
+      payload: { tenantId: 'tenant-1', ticketId: 'ticket-1', commentId: 'comment-2', userId: 'user-1' },
+    } as Event);
+
+    expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, doc);
+    expect(mocks.deleteSearchDoc).not.toHaveBeenCalled();
+  });
+
+  it('C7 TICKET_UPDATED reindex deletes the row of a comment that is now hidden', async () => {
+    const ticketDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'ticket',
+      objectId: 'ticket-1',
+      title: 'Renamed ticket',
+      url: '/msp/tickets/ticket-1',
+      acl: { requiredPermission: 'ticket:read' },
+      sourceUpdatedAt: new Date('2026-10-27T12:00:00.000Z'),
+    };
+    const liveDoc: SearchDoc = {
+      ...ticketDoc,
+      objectType: 'ticket_comment',
+      objectId: 'comment-live',
+      parentType: 'ticket',
+      parentId: 'ticket-1',
+      url: '/msp/tickets/ticket-1#comment-comment-live',
+    };
+    const rows = [{ comment_id: 'comment-live' }, { comment_id: 'comment-hidden' }];
+    const commentQuery: any = {
+      select: vi.fn(() => commentQuery),
+      where: vi.fn(() => commentQuery),
+      andWhere: vi.fn(() => commentQuery),
+      orderBy: vi.fn(() => commentQuery),
+      then: (resolve: (r: typeof rows) => unknown, reject: (e?: unknown) => unknown) =>
+        Promise.resolve(rows).then(resolve, reject),
+    };
+    const knex = vi.fn(() => commentQuery);
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    vi.spyOn(ticketIndexer, 'loadOne').mockResolvedValue(ticketDoc);
+    vi.spyOn(ticketCommentIndexer, 'loadOne')
+      .mockResolvedValueOnce(liveDoc)
+      .mockResolvedValueOnce(null);
+
+    await handleSearchIndexEventForTest({
+      id: 'event-c7c',
+      eventType: 'TICKET_UPDATED',
+      timestamp: '2026-10-27T12:00:00.000Z',
+      payload: { tenant: 'tenant-1', ticket_id: 'ticket-1' },
+    } as Event);
+
+    expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, liveDoc);
+    expect(mocks.deleteSearchDoc).toHaveBeenCalledTimes(1);
+    expect(mocks.deleteSearchDoc).toHaveBeenCalledWith(knex, 'tenant-1', 'ticket_comment', 'comment-hidden');
+  });
+
   it('T209 deletes a status search document for STATUS_DELETED', async () => {
     const knex = { client: 'knex' };
     const loadOne = vi.spyOn(statusIndexer, 'loadOne');

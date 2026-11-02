@@ -65,6 +65,7 @@ describe('TicketService avatar enrichment', () => {
     const result = await service.getById('123e4567-e89b-12d3-a456-426614174000', {
       tenant: 'tenant-1',
       userId: 'user-1',
+      user: { user_type: 'internal' },
     } as any);
 
     expect(getContactAvatarUrl).toHaveBeenCalledWith('contact-1', 'tenant-1');
@@ -96,6 +97,7 @@ describe('TicketService avatar enrichment', () => {
     const result = await service.getById('123e4567-e89b-12d3-a456-426614174000', {
       tenant: 'tenant-1',
       userId: 'user-1',
+      user: { user_type: 'internal' },
     } as any);
 
     expect(result).toMatchObject({
@@ -123,6 +125,7 @@ describe('TicketService avatar enrichment', () => {
     const result = await service.getById('123e4567-e89b-12d3-a456-426614174000', {
       tenant: 'tenant-1',
       userId: 'user-1',
+      user: { user_type: 'internal' },
     } as any);
 
     expect(getContactAvatarUrl).not.toHaveBeenCalled();

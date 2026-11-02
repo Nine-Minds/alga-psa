@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import type { IDisplayTag } from '@alga-psa/types';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { applyClientListIndexedSearchFilter } from './listSearchSql';
@@ -37,6 +38,18 @@ export interface SearchClientsForPickerParams {
 
 export interface SearchClientsForPickerResult {
   clients: PickerClient[];
+  total: number;
+}
+
+/**
+ * A picker row as the server actions return it: the model row plus the chip tags the viewer's
+ * display rules allow. Attaching tags is the action's job — they are a presentation concern and
+ * the tag loader lives above this model, which stays a pure query.
+ */
+export type PickerClientWithDisplayTags = PickerClient & { displayTags: IDisplayTag[] };
+
+export interface TaggedSearchClientsForPickerResult {
+  clients: PickerClientWithDisplayTags[];
   total: number;
 }
 

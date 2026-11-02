@@ -918,6 +918,28 @@ export class ApiInvoiceController extends ApiBaseController {
   }
 
   /**
+   * Invoice lifecycle audit history (finalize / unfinalize / delete)
+   */
+  history() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, 'read');
+
+          const id = await this.extractIdFromPath(apiRequest);
+
+          const history = await this.invoiceService.getInvoiceHistory(id, apiRequest.context);
+          return createSuccessResponse(history);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Duplicate invoice
    */
   duplicate() {

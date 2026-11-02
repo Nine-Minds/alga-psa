@@ -1,3 +1,5 @@
+import { coManagedWorkspaceDenial } from '@/lib/api/coManagedWorkspaceDenial';
+import { canReadDocument } from '@alga-psa/documents/lib/documentPermissions';
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
 import { StorageService } from '@alga-psa/storage/StorageService';
@@ -5,7 +7,6 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { assertInternalApiUser } from '@/lib/api/middleware/apiMiddleware';
-import { hasPermission } from 'server/src/lib/auth/rbac';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
@@ -63,8 +64,11 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const denial = await coManagedWorkspaceDenial(tenantId);
+    if (denial) return denial;
+
     return await runWithTenant(tenantId, async () => {
-      const canReadDocuments = await hasPermission(currentUser as any, 'document', 'read');
+      const canReadDocuments = await canReadDocument(currentUser as any, documentId);
       if (!canReadDocuments) {
         return NextResponse.json(
           { error: 'Forbidden - Cannot read documents' },

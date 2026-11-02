@@ -14,6 +14,11 @@ export interface OAuthProfileMappingInput {
   tenantHint?: string | null;
   vanityHostHint?: string | null;
   userTypeHint?: string | null;
+  /**
+   * Server-verified tenant an internal sign-in is scoped to (signed cookie or
+   * Teams context). Never derived from IdP claims or request hints.
+   */
+  scopeTenantId?: string | null;
 }
 
 // Expected reasons an OAuth profile never resolves to an AlgaPSA user. Auth.js
@@ -26,6 +31,7 @@ export const OAUTH_MAPPING_FAILURE_CODES = [
   'inactive_user',
   'user_type_mismatch',
   'tenant_mismatch',
+  'tenant_required',
 ] as const;
 
 export type OAuthMappingFailureCode = (typeof OAUTH_MAPPING_FAILURE_CODES)[number];
@@ -63,6 +69,8 @@ const OAUTH_MAPPING_FAILURE_FALLBACKS: Record<
       '{{providerEmail}} is not an internal AlgaPSA account. Use the client portal sign-in page, or contact your administrator.',
     tenant_mismatch:
       '{{providerEmail}} belongs to a different organization. Sign in with your password or contact your administrator.',
+    tenant_required:
+      '{{providerEmail}} is used in more than one organization. Request your sign-in links below to continue.',
   },
   client: {
     no_matching_user:
@@ -75,6 +83,8 @@ const OAUTH_MAPPING_FAILURE_FALLBACKS: Record<
       '{{providerEmail}} is not a client portal account. Contact your service provider.',
     tenant_mismatch:
       "{{providerEmail}} belongs to a different organization's portal. Sign in with your password or contact your service provider.",
+    tenant_required:
+      '{{providerEmail}} is used in more than one organization. Contact your service provider for help signing in.',
   },
 };
 

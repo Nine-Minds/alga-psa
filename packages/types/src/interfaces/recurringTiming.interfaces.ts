@@ -22,7 +22,8 @@ export type RecurringChargeFamily =
   | 'license'
   | 'bucket'
   | 'hourly'
-  | 'usage';
+  | 'usage'
+  | 'prepaid_block';
 export type RecurringTimingMetadataValue = string | number | boolean | null;
 export type RecurringTimingMetadata = Record<string, RecurringTimingMetadataValue>;
 
@@ -365,6 +366,14 @@ export interface IRecurringRunExecutionWindowIdentity {
   contractLineId?: string | null;
   windowStart?: ISO8601String | null;
   windowEnd?: ISO8601String | null;
+  /**
+   * Charge stream when one contract line owns more than one stream in the same
+   * invoice window. Set only for the advance prepaid-block fee of a cadence
+   * Prepaid Block line, whose window is shared with the previous period's
+   * arrears hourly (overage) stream. Absent for every other row, so existing
+   * identity keys are unchanged.
+   */
+  chargeStream?: 'prepaid_block' | null;
 }
 
 export type RecurringDueWorkCadenceSource = 'client_schedule' | 'contract_anniversary';

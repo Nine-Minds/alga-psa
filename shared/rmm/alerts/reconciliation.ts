@@ -11,9 +11,27 @@ import { processRmmAlertEvent } from './processRmmAlertEvent';
  */
 export const RECONCILIATION_INGEST_MARKER = '__alga_ingest_source';
 
+export interface RmmActiveAlertSnapshot {
+  /** Alerts to ingest as triggered events. */
+  events: NormalizedRmmAlertEvent[];
+  /**
+   * Ids of alerts still open in the RMM that the fetcher deliberately left out
+   * of `events` (muted, or from a site the tenant does not manage). They are
+   * not ingested, but they have not cleared either, so the stale pass must not
+   * synthesize a reset for them.
+   */
+  heldExternalAlertIds: string[];
+}
+
 export interface RmmActiveAlertFetcher {
   /** Returns every currently-active alert in the RMM as a triggered event. */
   fetchActiveAlerts(args: { tenantId: string; integrationId: string }): Promise<NormalizedRmmAlertEvent[]>;
+  /**
+   * Optional richer form for fetchers that filter what they ingest. When
+   * present, reconciliation uses it instead of fetchActiveAlerts so filtered
+   * alerts still count as active for stale detection.
+   */
+  fetchActiveAlertSnapshot?(args: { tenantId: string; integrationId: string }): Promise<RmmActiveAlertSnapshot>;
 }
 
 const fetchers = new Map<string, RmmActiveAlertFetcher>();
@@ -43,7 +61,8 @@ export interface ReconciliationResult {
  *    ended re-enter processing via reprocessSuppressed).
  * 2. Poller-ingested local alerts no longer active in the RMM get synthesized
  *    resets — catching missed reset webhooks, the main source of stale
- *    tickets.
+ *    tickets. Alerts the fetcher held back from ingestion still count as
+ *    active here: filtered out is not the same as cleared.
  */
 export async function runRmmAlertReconciliation(
   ctx: RmmAlertProcessingContext,
@@ -55,10 +74,11 @@ export async function runRmmAlertReconciliation(
     return { skipped: true, remoteActive: 0, ingested: 0, resetsSynthesized: 0, warnings };
   }
 
-  const remote = await fetcher.fetchActiveAlerts({
-    tenantId: args.tenantId,
-    integrationId: args.integrationId,
-  });
+  const fetchArgs = { tenantId: args.tenantId, integrationId: args.integrationId };
+  const snapshot: RmmActiveAlertSnapshot = fetcher.fetchActiveAlertSnapshot
+    ? await fetcher.fetchActiveAlertSnapshot(fetchArgs)
+    : { events: await fetcher.fetchActiveAlerts(fetchArgs), heldExternalAlertIds: [] };
+  const remote = snapshot.events;
 
   let ingested = 0;
   for (const event of remote) {
@@ -76,7 +96,10 @@ export async function runRmmAlertReconciliation(
     }
   }
 
-  const remoteIds = new Set(remote.map((event) => event.externalAlertId));
+  const remoteIds = new Set([
+    ...remote.map((event) => event.externalAlertId),
+    ...snapshot.heldExternalAlertIds,
+  ]);
   const db = tenantDb(ctx.knex, args.tenantId);
   const locals = await db.table('rmm_alerts')
     .where({ integration_id: args.integrationId })

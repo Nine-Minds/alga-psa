@@ -19,6 +19,10 @@
  *                 read unitId yet. C3 of alga-2026-0002683 adds the reader.)
  *   rma           /msp/inventory/rma?rmaId={id}          (no detail route; the list page reads
  *                 only ?status= today. C3 adds the reader.)
+ *   staging_container
+ *                 /msp/projects/{projectId}/staging?containerId={id}
+ *                 (a project staging box, C6 of alga-2026-0002683; like project_task it is
+ *                 addressed through its project, and the staging page opens the box)
  *
  * Link content is NOT a secret: no tokens, no tenant secrets. Authorization happens after the link
  * is opened, on the page the link lands on.
@@ -31,12 +35,13 @@ export const RECORD_ENTITY_TYPES = [
   'project_task',
   'stock_unit',
   'rma',
+  'staging_container',
 ] as const;
 
 export type RecordEntityType = (typeof RECORD_ENTITY_TYPES)[number];
 
 export interface RecordLinkOptions {
-  /** Required for `project_task`: tasks are addressed through their project. */
+  /** Required for `project_task` and `staging_container`: both are addressed through their project. */
   projectId?: string;
   /** Optional for `project_task`: opens the board on this phase. */
   phaseId?: string;
@@ -83,6 +88,10 @@ export function recordPath(
       return `/msp/inventory/units?unitId=${safeId}`;
     case 'rma':
       return `/msp/inventory/rma?rmaId=${safeId}`;
+    case 'staging_container': {
+      const projectId = requireId('staging_container projectId', options.projectId);
+      return `/msp/projects/${projectId}/staging?containerId=${safeId}`;
+    }
     default: {
       const exhaustive: never = entityType;
       throw new Error(`recordLinks: unsupported entity type ${String(exhaustive)}`);
@@ -160,6 +169,9 @@ export function matchRecordPath(input: string): MatchedRecordPath | null {
           return matched;
         }
         return { entityType: 'project', id: parts[1] };
+      }
+      if (parts.length === 3 && parts[2] === 'staging') {
+        return query.containerId ? { entityType: 'staging_container', id: query.containerId, projectId: parts[1] } : null;
       }
       // Legacy form, still served by a redirect route.
       if (parts.length === 4 && parts[2] === 'tasks') {

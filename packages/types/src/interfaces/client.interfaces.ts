@@ -1,5 +1,5 @@
 import type { ISO8601String } from '../lib/temporal';
-import type { ITaggable } from './tag.interfaces';
+import type { IDisplayTag, ITaggable } from './tag.interfaces';
 import type { TenantEntity } from '.';
 import type { BillingCycleType, IContractLine } from './billing.interfaces';
 import type { ClientLifecycleStatus } from './opportunity.interfaces';
@@ -11,6 +11,8 @@ export interface IClientSummary extends TenantEntity {
 }
 
 export interface IClient extends TenantEntity, ITaggable {
+  /** Chip tags for the viewer (display rules); set by picker/list loaders, not stored. */
+  displayTags?: IDisplayTag[];
   client_id: string;
   client_name: string;
   client_type?: 'company' | 'individual' | null;

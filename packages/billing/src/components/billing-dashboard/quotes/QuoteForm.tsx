@@ -2340,6 +2340,26 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                     })}
                   </p>
                 )}
+                {conversionPreview.contract_discounts.length > 0 && (
+                  <div className="space-y-2" data-testid="quote-conversion-contract-discounts">
+                    <h4 className="text-sm font-semibold">{t('quoteConversion.sections.carriedDiscounts', { defaultValue: 'Discounts carried onto contract lines' })}</h4>
+                    {conversionPreview.contract_discounts.map((discount) => (
+                      <div key={`${discount.quote_item_id}:${discount.line_quote_item_id}`} className="rounded-md border border-border p-3">
+                        <div className="font-medium text-foreground">{discount.description}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {discount.line_description} {'\u2022'} {discount.discount_type === 'percentage' && discount.percentage !== null
+                            ? `${discount.percentage}%`
+                            : `-${formatCurrency(discount.amount)}`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {conversionPreview.contract_items.length > 0 && (
+                  <div className="text-sm font-medium text-foreground" data-testid="quote-conversion-contract-monthly-total">
+                    {t('quoteConversion.summary.monthlyTotal', { defaultValue: 'Monthly total after discounts' })}: {formatCurrency(conversionPreview.contract_monthly_total)}
+                  </div>
+                )}
               </section>
               <section className="space-y-2 rounded-lg border border-border p-4">
                 <h3 className="text-base font-semibold">{t('quoteConversion.sections.willBecomeInvoiceCharges', { defaultValue: 'Will Become Invoice Charges' })}</h3>

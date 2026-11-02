@@ -1,3 +1,4 @@
+// LEVERAGE: pattern rule-matching — ticket-template defaults remain separate; checklist auto-apply now uses the shared ticket predicate schema (alga-2026-0002836).
 // Pure rules for ticket templates. Deliberately NOT a 'use server' module: nothing here may become a
 // client-callable action. `actions/ticketTemplateActions.ts` and `addTicket` are the entry points.
 //

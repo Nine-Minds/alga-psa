@@ -35,7 +35,7 @@ import {
   isDocumentType,
 } from '../../../lib/document-templates/registry';
 import type { DocumentTemplateListItem } from '../../../lib/document-templates/storage';
-import DocumentTemplateEditor, { type DocumentTemplateDraft } from './DocumentTemplateEditor';
+import DocumentTemplateEditor, { LABEL_CLASS_DEFAULT_LABELS, type DocumentTemplateDraft } from './DocumentTemplateEditor';
 
 interface DocumentTemplatesPageProps {
   documentType: string;
@@ -47,6 +47,12 @@ type ViewState =
 
 const isDocumentTemplateActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
+
+/** Label templates carry their class in metadata so clones/copies keep printing the same class. */
+const withRecordLabelClass = (record: DocumentTemplateListItem) =>
+  record.labelClass
+    ? { ...record.templateAst, metadata: { ...(record.templateAst.metadata ?? {}), labelClass: record.labelClass } }
+    : record.templateAst;
 
 const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentType }) => {
   const { t } = useTranslation('msp/invoicing');
@@ -95,12 +101,15 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
   }, [fetchTemplates]);
 
   const openNewTemplate = useCallback(() => {
-    const startingAst = registryEntry?.getStandardTemplateAstByCode(registryEntry.defaultStandardCode) ?? undefined;
+    const baseAst = registryEntry?.getStandardTemplateAstByCode(registryEntry.defaultStandardCode) ?? undefined;
+    const startingAst = baseAst && documentType === 'work-tag'
+      ? { ...baseAst, metadata: { ...(baseAst.metadata ?? {}), labelClass: 'ticket-work-tag' as const } }
+      : baseAst;
     setView({
       mode: 'editor',
       draft: { name: '', version: 1, templateAst: startingAst, source: 'custom' },
     });
-  }, [registryEntry]);
+  }, [registryEntry, documentType]);
 
   const openEditTemplate = useCallback((record: DocumentTemplateListItem) => {
     if (record.source === 'standard') {
@@ -110,7 +119,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
         draft: {
           name: t('templates.values.copyOfName', { defaultValue: 'Copy of {{name}}', name: record.name }),
           version: 1,
-          templateAst: record.templateAst,
+          templateAst: withRecordLabelClass(record),
           source: 'standard',
           isClone: true,
         },
@@ -123,7 +132,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
         template_id: record.template_id,
         name: record.name,
         version: 1,
-        templateAst: record.templateAst,
+        templateAst: withRecordLabelClass(record),
         source: 'custom',
       },
     });
@@ -134,7 +143,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
       const result = await saveDocumentTemplate(documentType, {
         name: t('documentTemplates.values.copyName', { defaultValue: '{{name}} (Copy)', name: record.name }),
         version: 1,
-        templateAst: record.templateAst,
+        templateAst: withRecordLabelClass(record),
         isClone: true,
       });
       if (isDocumentTemplateActionError(result)) {
@@ -246,6 +255,18 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
           ? t('templates.types.standard', { defaultValue: 'Standard' })
           : (value || t('templates.types.custom', { defaultValue: 'Custom' })),
     },
+    ...(documentType === 'work-tag'
+      ? [{
+          title: t('documentTemplates.columns.labelClass', { defaultValue: 'Class' }),
+          dataIndex: 'labelClass',
+          render: (_: string | null | undefined, record: DocumentTemplateListItem) =>
+            record.labelClass
+              ? t(`documentTemplates.labelClasses.${record.labelClass}`, {
+                  defaultValue: LABEL_CLASS_DEFAULT_LABELS[record.labelClass],
+                })
+              : null,
+        } as ColumnDefinition<DocumentTemplateListItem>]
+      : []),
     {
       title: t('templates.columns.default', { defaultValue: 'Default' }),
       dataIndex: 'is_default',
@@ -304,7 +325,14 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
                 void handleSetDefaultTemplate(record);
               }}
             >
-              {t('templates.actions.setDefault', { defaultValue: 'Set as Default' })}
+              {documentType === 'work-tag' && record.labelClass
+                ? t('documentTemplates.actions.setDefaultForClass', {
+                    defaultValue: 'Set as Default for {{class}}',
+                    class: t(`documentTemplates.labelClasses.${record.labelClass}`, {
+                      defaultValue: LABEL_CLASS_DEFAULT_LABELS[record.labelClass],
+                    }),
+                  })
+                : t('templates.actions.setDefault', { defaultValue: 'Set as Default' })}
             </DropdownMenuItem>
             <DropdownMenuItem
               id="delete-document-template-menu-item"
@@ -321,7 +349,7 @@ const DocumentTemplatesPage: React.FC<DocumentTemplatesPageProps> = ({ documentT
         </DropdownMenu>
       ),
     },
-  ], [handleCloneTemplate, handleSetDefaultTemplate, openEditTemplate, t]);
+  ], [documentType, handleCloneTemplate, handleSetDefaultTemplate, openEditTemplate, t]);
 
   if (view.mode === 'editor') {
     return (

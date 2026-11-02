@@ -704,6 +704,7 @@ export const copyPresetToContractLine = withAuth(async (
                         typeConfig = {
                             pricing_basis: 'unit',
                             base_rate: presetUnitRate,
+                            base_rate_basis: presetUnitRate == null ? undefined : 'per_unit',
                         };
                     }
 
@@ -722,6 +723,7 @@ export const copyPresetToContractLine = withAuth(async (
                         await upsertBucketOverlayInTransaction(
                             trx,
                             tenantId,
+                            user,
                             contractLineId,
                             presetService.service_id,
                             {
@@ -1018,9 +1020,16 @@ export const createCustomContractLine = withAuth(async (
                 }
 
                 if (input.contract_line_type === 'Fixed') {
+                    // Only a per-unit service stores a rate here (its unit price). A bundle
+                    // member's custom_rate can be stale (the dialog keeps the unit-rate field
+                    // when the user switches back to bundle), and a bundle member's stored
+                    // base_rate would be read as a share/per-unit price on the invoice.
+                    const isUnitService = (serviceConfig.pricing_basis ?? 'bundle') === 'unit';
+                    const unitRate = isUnitService ? serviceConfig.custom_rate ?? null : null;
                     typeConfig = {
                         pricing_basis: serviceConfig.pricing_basis ?? 'bundle',
-                        base_rate: serviceConfig.custom_rate ?? null,
+                        base_rate: unitRate,
+                        ...(unitRate === null ? {} : { base_rate_basis: 'per_unit' }),
                     };
                 }
 
@@ -1040,6 +1049,7 @@ export const createCustomContractLine = withAuth(async (
                     await upsertBucketOverlayInTransaction(
                         trx,
                         tenantId,
+                        user,
                         contractLineId,
                         serviceConfig.service_id,
                         {

@@ -204,6 +204,10 @@
     "passwordMismatch": "⟦Ƥȧşşẇȯřḓş ḓȯ ƞȯŧ ḿȧŧƈħ⟧"
   },
   "errors": {
+    "coManaged": {
+      "readOnly": "⟦Ŧħīş ƈȯ-ḿȧƞȧɠḗḓ ẇȯřķşƥȧƈḗ īş řḗȧḓ-ȯƞŀẏ. Şīɠƞ-īƞ, řḗȧḓīƞɠ, ḗẋƥȯřŧ, ȧƞḓ ŀīƈḗƞşḗ řḗƈȯṽḗřẏ řḗḿȧīƞ ȧṽȧīŀȧƀŀḗ.⟧",
+      "acceptancePending": "⟦Ŧħḗ ƈŭşŧȯḿḗř ȧḓḿīƞīşŧřȧŧȯř ḿŭşŧ ȧƈƈḗƥŧ ƈȯ-ḿȧƞȧɠḗḿḗƞŧ ƀḗƒȯřḗ ŧħīş ẇȯřķşƥȧƈḗ ƈȧƞ ƀḗ ŭşḗḓ.⟧"
+    },
     "validation": {
       "required": "⟦{{field}} īş řḗʠŭīřḗḓ.⟧",
       "invalidType": "⟦{{field}} ħȧş ŧħḗ ẇřȯƞɠ ŧẏƥḗ.⟧",
@@ -1580,7 +1584,42 @@
     }
   },
   "labels": {
-    "printColumns": "⟦Ƥřīƞŧ ƈȯŀŭḿƞş⟧"
+    "printColumns": "⟦Ƥřīƞŧ ƈȯŀŭḿƞş⟧",
+    "dialog": {
+      "assetTitle": "⟦Ƥřīƞŧ ȧşşḗŧ ŀȧƀḗŀş⟧",
+      "batch_one": "⟦Ȯƞḗ ŧȧɠ ƒȯř ŧħḗ ħḗŀḓ īŧḗḿ ({{count}})⟧",
+      "batch_other": "⟦Ȯƞḗ ŧȧɠ ƥḗř ħḗŀḓ īŧḗḿ ({{count}})⟧",
+      "count_one": "⟦{{count}} şḗŀḗƈŧḗḓ⟧",
+      "count_other": "⟦{{count}} şḗŀḗƈŧḗḓ⟧",
+      "failed": "⟦Ŧħḗ ŀȧƀḗŀş ƈȯŭŀḓ ƞȯŧ ƀḗ ƥřīƞŧḗḓ.⟧",
+      "item": "⟦Īŧḗḿ⟧",
+      "layout": "⟦Ŀȧẏȯŭŧ⟧",
+      "linkedAsset": "⟦Ŀīƞķḗḓ ȧşşḗŧ⟧",
+      "noAsset": "⟦Ƞȯ ȧşşḗŧ⟧",
+      "notFound": "⟦Ŧħḗşḗ řḗƈȯřḓş ƈȯŭŀḓ ƞȯŧ ƀḗ ȯƥḗƞḗḓ.⟧",
+      "openPdf": "⟦Ȯƥḗƞ ƤḒƑ⟧",
+      "previewBatch_one": "⟦Ƥřīƞŧ {{count}} ŧȧɠ ƒȯř ŧħḗ ħḗŀḓ īŧḗḿ.⟧",
+      "previewBatch_other": "⟦Ƥřīƞŧ {{count}} ŧȧɠş, ȯƞḗ ƥḗř ħḗŀḓ īŧḗḿ.⟧",
+      "previewPicked": "⟦Ŧħḗ ŧȧɠ ẇīŀŀ şħȯẇ ŧħīş īŧḗḿ'ş ŀȯƈȧŧīȯƞ ȧƞḓ ƞḗẋŧ ȧƈŧīȯƞ.⟧",
+      "previewPickedNotHeld": "⟦Ŧħīş īŧḗḿ īş ƞȯŧ ħḗŀḓ, şȯ ŧħḗ ŧȧɠ şħȯẇş ƞȯ ŀȯƈȧŧīȯƞ.⟧",
+      "previewSingle": "⟦Ŧħḗ ŧȧɠ ẇīŀŀ şħȯẇ {{location}}.⟧",
+      "previewSingleNoLocation": "⟦Ŧħḗ ŧȧɠ ẇīŀŀ şħȯẇ ŧħīş īŧḗḿ'ş ƞḗẋŧ ȧƈŧīȯƞ.⟧",
+      "previewSummary_one": "⟦{{count}} īŧḗḿ ħḗŀḓ.⟧",
+      "previewSummary_other": "⟦{{count}} īŧḗḿş ħḗŀḓ.⟧",
+      "printed_one": "⟦Ƥřīƞŧḗḓ {{count}} ŀȧƀḗŀ.⟧",
+      "printed_other": "⟦Ƥřīƞŧḗḓ {{count}} ŀȧƀḗŀş.⟧",
+      "printing": "⟦Ƥřḗƥȧřīƞɠ…⟧",
+      "print": "⟦Ƥřīƞŧ⟧",
+      "reason": "⟦Řḗȧşȯƞ⟧",
+      "skipFailures": "⟦Şķīƥ ŧħḗşḗ ȧƞḓ ƥřīƞŧ ŧħḗ řḗşŧ⟧",
+      "skipped_one": "⟦{{count}} řḗƈȯřḓ ẇȧş şķīƥƥḗḓ ƀḗƈȧŭşḗ īŧ ƈȯŭŀḓ ƞȯŧ ƀḗ ȯƥḗƞḗḓ.⟧",
+      "skipped_other": "⟦{{count}} řḗƈȯřḓş ẇḗřḗ şķīƥƥḗḓ ƀḗƈȧŭşḗ ŧħḗẏ ƈȯŭŀḓ ƞȯŧ ƀḗ ȯƥḗƞḗḓ.⟧",
+      "template": "⟦Ŧḗḿƥŀȧŧḗ⟧",
+      "ticketTitle": "⟦Ƥřīƞŧ ẇȯřķ ŧȧɠş⟧",
+      "tooMany": "⟦Ẏȯŭ ƈȧƞ ƥřīƞŧ ȧŧ ḿȯşŧ {{max}} ŀȧƀḗŀş ȧŧ ȧ ŧīḿḗ.⟧",
+      "unnamedAsset": "⟦Ŭƞƞȧḿḗḓ ȧşşḗŧ⟧",
+      "useTemplate": "⟦Ŭşḗ {{template}}⟧"
+    }
   },
   "deleteEntity": {
     "checkingDependenciesTitle": "⟦Ƈħḗƈķīƞɠ Ḓḗƥḗƞḓḗƞƈīḗş⟧",
@@ -2172,5 +2211,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "⟦Şẇīŧƈħ ṽīḗẇ⟧"
+  },
+  "entityChip": {
+    "moreTags": "⟦{{count}} ḿȯřḗ ŧȧɠş: {{names}}⟧"
   }
 }

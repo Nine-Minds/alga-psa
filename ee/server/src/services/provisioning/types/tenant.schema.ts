@@ -13,7 +13,7 @@ export const CreateTenantSchema = z.object({
 export type CreateTenantInput = z.infer<typeof CreateTenantSchema>;
 
 export const TenantResponseSchema = z.object({
-  tenant: z.string().uuid(),
+  tenant: z.string().guid(),
   client_name: z.string(),
   email: z.string(),
   phone_number: z.string().nullable(),

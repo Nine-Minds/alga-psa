@@ -1,3 +1,4 @@
+// LEVERAGE: friction address-format-sql-twin — duplicates formatPostalAddress in SQL; no TRIM (whitespace-only parts leak through)
 // One-line postal address from a client_locations alias; empty parts are skipped
 // and an all-empty address yields NULL. Used wherever an API response derives a
 // display/map address from a location row.

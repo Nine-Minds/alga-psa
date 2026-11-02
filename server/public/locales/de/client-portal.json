@@ -327,7 +327,8 @@
       "missing_email": "Ihr Identitätsanbieter hat keine E-Mail-Adresse zurückgegeben, daher konnte kein Kundenportal-Konto zugeordnet werden. Melden Sie sich mit Ihrem Passwort an oder wenden Sie sich an Ihren Dienstleister.",
       "inactive_user": "Das Kundenportal-Konto für {{providerEmail}} ist inaktiv. Wenden Sie sich an Ihren Dienstleister, um es zu reaktivieren.",
       "user_type_mismatch": "{{providerEmail}} ist kein Kundenportal-Konto. Wenden Sie sich an Ihren Dienstleister.",
-      "tenant_mismatch": "{{providerEmail}} gehört zum Portal einer anderen Organisation. Melden Sie sich mit Ihrem Passwort an oder wenden Sie sich an Ihren Dienstleister."
+      "tenant_mismatch": "{{providerEmail}} gehört zum Portal einer anderen Organisation. Melden Sie sich mit Ihrem Passwort an oder wenden Sie sich an Ihren Dienstleister.",
+      "tenant_required": "{{providerEmail}} wird in mehr als einer Organisation verwendet. Wenden Sie sich an Ihren Dienstleister."
     },
     "configurationTitle": "Anmeldung fehlgeschlagen",
     "configurationMessage": "Die Anmeldung ist fehlgeschlagen. Bitte versuchen Sie es erneut oder wenden Sie sich an Ihren Dienstleister.",
@@ -478,6 +479,15 @@
         "failed": "Ihre Karte konnte nicht gespeichert werden",
         "savedDescription": "Ihre Karte ist für zukünftige Zahlungen bereit.",
         "failedDescription": "Die Einrichtung konnte nicht bestätigt werden. Bitte fordern Sie bei Ihrem Rechnungssteller einen neuen Link an."
+      },
+      "payLink": {
+        "heading": "Dieser Zahlungslink kann nicht verwendet werden",
+        "expired": "Dieser Zahlungslink ist abgelaufen.",
+        "invalid": "Dieser Zahlungslink ist ungültig.",
+        "notPayable": "Diese Rechnung kann mit diesem Link nicht mehr bezahlt werden. Möglicherweise ist sie bereits bezahlt oder nicht mehr für die Online-Zahlung freigegeben.",
+        "unavailable": "Die Zahlungsseite konnte gerade nicht geöffnet werden. Bitte versuchen Sie es in einigen Minuten erneut.",
+        "viewInPortal": "Rechnung im Kundenportal ansehen",
+        "contactProvider": "Bitte wenden Sie sich an Ihren Rechnungssteller, um einen neuen Link zu erhalten."
       }
     }
   },

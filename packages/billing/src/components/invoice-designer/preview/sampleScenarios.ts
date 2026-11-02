@@ -180,6 +180,7 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
           taxAmount: 5670,
           servicePeriodStart: '2026-01-01',
           servicePeriodEnd: '2026-02-01',
+          servicePeriodLabel: 'Jan 1, 2026 - Feb 1, 2026',
           billingTiming: 'arrears',
           recurringDetailPeriods: [
             {
@@ -198,6 +199,7 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
           taxAmount: 2160,
           servicePeriodStart: '2026-01-01',
           servicePeriodEnd: '2026-03-01',
+          servicePeriodLabel: 'Jan 1, 2026 - Mar 1, 2026',
           billingTiming: 'arrears',
           recurringDetailPeriods: [
             {
@@ -246,6 +248,7 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
           taxAmount: 8700,
           servicePeriodStart: '2026-02-01',
           servicePeriodEnd: '2026-03-01',
+          servicePeriodLabel: 'Feb 1, 2026 - Mar 1, 2026',
           billingTiming: 'advance',
           recurringDetailPeriods: [
             { servicePeriodStart: '2026-02-01', servicePeriodEnd: '2026-03-01', billingTiming: 'advance' },
@@ -260,6 +263,7 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
           taxAmount: 3024,
           servicePeriodStart: '2026-01-01',
           servicePeriodEnd: '2026-02-01',
+          servicePeriodLabel: 'Jan 1, 2026 - Feb 1, 2026',
           billingTiming: 'arrears',
           recurringDetailPeriods: [
             { servicePeriodStart: '2026-01-01', servicePeriodEnd: '2026-02-01', billingTiming: 'arrears' },
@@ -322,6 +326,7 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
           total: 145000,
           servicePeriodStart: '2026-02-01',
           servicePeriodEnd: '2026-03-01',
+          servicePeriodLabel: 'Feb 1, 2026 - Mar 1, 2026',
           billingTiming: 'advance',
           recurringDetailPeriods: [
             { servicePeriodStart: '2026-02-01', servicePeriodEnd: '2026-03-01', billingTiming: 'advance' },
@@ -371,6 +376,7 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
           taxAmount: 5670,
           servicePeriodStart: '2026-01-01',
           servicePeriodEnd: '2026-02-01',
+          servicePeriodLabel: 'Jan 1, 2026 - Feb 1, 2026',
           billingTiming: 'arrears',
           recurringDetailPeriods: [
             { servicePeriodStart: '2026-01-01', servicePeriodEnd: '2026-02-01', billingTiming: 'arrears' },

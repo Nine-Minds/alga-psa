@@ -96,7 +96,7 @@ const webToNativeMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('content-change'),
     payload: z.object({
       html: z.string(),
-      json: z.unknown(),
+      json: z.unknown().optional(),
     }),
   }),
   z.object({
@@ -110,7 +110,7 @@ const webToNativeMessageSchema = z.discriminatedUnion('type', [
     payload: z.object({
       requestId: z.string().min(1),
       request: ticketMobileEditorRequestSchema,
-      value: z.unknown(),
+      value: z.unknown().optional(),
     }),
   }),
   z.object({

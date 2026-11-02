@@ -10,6 +10,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // Resolve to source so tests see user-type predicates without a rebuilt dist.
+      '@alga-psa/types': path.resolve(__dirname, '../types/src'),
       '@alga-psa/client-portal': path.resolve(__dirname, '../client-portal/src'),
       '@alga-psa/documents': path.resolve(__dirname, '../documents/src'),
       '@alga-psa/event-bus': path.resolve(__dirname, '../event-bus/src'),
@@ -22,6 +24,7 @@ export default defineConfig({
         __dirname,
         '../client-portal/src/models/PortalDomainModel.ts'
       ),
+      '@alga-psa/shared': path.resolve(__dirname, '../../shared'),
       '@shared': path.resolve(__dirname, '../../shared'),
       '@ee': path.resolve(__dirname, '../ee/src'),
       '@': path.resolve(__dirname, '../../server/src'),

@@ -1899,7 +1899,7 @@
     {
       "term": "bucket",
       "preferred": "pakiet godzin",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Nieprzetłumaczony anglicyzm dla pakietu godzin przedpłaconych."
     },
     {
@@ -2013,7 +2013,7 @@
     {
       "term": "kubeł",
       "preferred": "pakiet godzin",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Dosłowne tłumaczenie bucketa godzin; termin produktowy to pakiet godzin."
     },
     {
@@ -2161,19 +2161,19 @@
     {
       "term": "wiadro",
       "preferred": "pakiet godzin",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Dosłowne tłumaczenie bucketa godzin."
     },
     {
       "term": "zasobnik",
       "preferred": "pakiet godzin",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Techniczne tłumaczenie bucketa niepasujące do pakietu godzin."
     },
     {
       "term": "łyżka",
       "preferred": "pakiet godzin",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Błędne tłumaczenie bucketa godzin."
     }
   ],
@@ -2216,6 +2216,9 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{field}}: {{from}} → {{to}}",
+      "{{from}} → {{to}}",
+      "RMA {{id}}",
       ",",
       "3CX",
       "Acme IT Solutions",
@@ -2243,6 +2246,7 @@
       "CSV",
       "Ctrl",
       "Datto",
+      "Datto RMM",
       "email@example.com, another@example.com",
       "Entra ID",
       "Excel",
@@ -2256,6 +2260,7 @@
       "GPU",
       "h",
       "HMAC-SHA256",
+      "Host",
       "HTML",
       "Hudu",
       "Huntress",
@@ -2352,7 +2357,8 @@
       "Kilogram",
       "Auto",
       "auto | 50% | 120px",
-      "Code 128"
+      "Code 128",
+      "RMA {{number}} · {{status}}"
     ],
     "caseInsensitive": [
       "api",

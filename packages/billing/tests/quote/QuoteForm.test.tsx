@@ -332,7 +332,7 @@ describe('QuoteForm template instantiation', () => {
     const convertedQuote = { ...acceptedQuote, converted_invoice_id: 'invoice-1' };
     actions.getQuote.mockResolvedValue(acceptedQuote);
     actions.getQuoteConversionPreview.mockResolvedValue({
-      contract_items: [], invoice_items: [template.quote_items[1]], sales_order_items: [], excluded_items: [],
+      contract_items: [], invoice_items: [template.quote_items[1]], sales_order_items: [], excluded_items: [], contract_discounts: [], contract_monthly_before_discounts: 0, contract_monthly_total: 0,
     });
     actions.convertQuoteToInvoice.mockResolvedValue({
       quote: convertedQuote, invoice: { invoice_id: 'invoice-1', invoice_number: 'INV-193' },
@@ -355,7 +355,7 @@ describe('QuoteForm template instantiation', () => {
   it('shows conversion errors while retaining the conversion dialog for retry', async () => {
     actions.getQuote.mockResolvedValue({ ...editQuote, status: 'accepted', quote_items: [template.quote_items[1]] });
     actions.getQuoteConversionPreview.mockResolvedValue({
-      contract_items: [], invoice_items: [template.quote_items[1]], sales_order_items: [], excluded_items: [],
+      contract_items: [], invoice_items: [template.quote_items[1]], sales_order_items: [], excluded_items: [], contract_discounts: [], contract_monthly_before_discounts: 0, contract_monthly_total: 0,
     });
     actions.convertQuoteToInvoice.mockRejectedValue(new Error('Invoice creation failed'));
     renderForm({ quoteId: 'quote-1' });

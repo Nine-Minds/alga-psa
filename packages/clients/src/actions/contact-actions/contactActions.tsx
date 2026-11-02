@@ -1,5 +1,6 @@
 'use server'
 
+import { queueContactCreated, queueContactUpdated } from '../../lib/contactEvents';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 import type {
@@ -15,8 +16,8 @@ import { Knex } from 'knex';
 import { isEnterprise, unparseCSV } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
-import { createTag } from '@alga-psa/tags/actions/tagActions';
-import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
+import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions/tagActions';
+import { isTagTextValidationFailure, validateTagText } from '@alga-psa/tags/lib/tagTextValidation';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import {
   assertMspOrClientPortalOwnClientPermission,
@@ -719,30 +720,29 @@ export const addContact = withAuth(async (
     });
 
     const clientId = (created as any)?.client_id;
-    if (typeof clientId === 'string' && clientId) {
-      const occurredAt = (created as any)?.created_at ?? new Date().toISOString();
-      const actor = maybeUserActor(user);
-      await publishWorkflowEvent({
-        eventType: 'CONTACT_CREATED',
-        payload: buildContactCreatedPayload({
-          contactId: created.contact_name_id,
-          clientId,
-          fullName: created.full_name,
-          email: created.email || undefined,
-          primaryEmailCanonicalType: created.primary_email_canonical_type ?? null,
-          primaryEmailCustomTypeId: created.primary_email_custom_type_id ?? null,
-          primaryEmailType: created.primary_email_type ?? null,
-          additionalEmailAddresses: created.additional_email_addresses ?? [],
-          phoneNumbers: created.phone_numbers,
-          defaultPhoneNumber: created.default_phone_number || undefined,
-          defaultPhoneType: created.default_phone_type || undefined,
-          createdByUserId: user?.user_id,
-          createdAt: occurredAt,
-        }),
-        ctx: { tenantId: tenant, occurredAt, actor },
-        idempotencyKey: `contact_created:${created.contact_name_id}`,
-      });
-    }
+    // Client-less contacts emit too: the webhook layer carries client_id only when present.
+    const occurredAt = (created as any)?.created_at ?? new Date().toISOString();
+    const actor = maybeUserActor(user);
+    await publishWorkflowEvent({
+      eventType: 'CONTACT_CREATED',
+      payload: buildContactCreatedPayload({
+        contactId: created.contact_name_id,
+        clientId,
+        fullName: created.full_name,
+        email: created.email || undefined,
+        primaryEmailCanonicalType: created.primary_email_canonical_type ?? null,
+        primaryEmailCustomTypeId: created.primary_email_custom_type_id ?? null,
+        primaryEmailType: created.primary_email_type ?? null,
+        additionalEmailAddresses: created.additional_email_addresses ?? [],
+        phoneNumbers: created.phone_numbers,
+        defaultPhoneNumber: created.default_phone_number || undefined,
+        defaultPhoneType: created.default_phone_type || undefined,
+        createdByUserId: user?.user_id,
+        createdAt: occurredAt,
+      }),
+      ctx: { tenantId: tenant, occurredAt, actor },
+      idempotencyKey: `contact_created:${created.contact_name_id}`,
+    });
 
     return { success: true, contact: created };
   } catch (err) {
@@ -961,43 +961,42 @@ export const updateContact = withAuth(async (
     const actor = maybeUserActor(user);
     const clientId = (updatedContact as any)?.client_id ?? (updateResult.before as any)?.client_id;
 
-    if (typeof clientId === 'string' && clientId) {
-      const wasInactive = Boolean((updateResult.before as any)?.is_inactive);
-      const isInactive = Boolean((updatedContact as any)?.is_inactive);
-      if (!wasInactive && isInactive) {
-        await publishWorkflowEvent({
-          eventType: 'CONTACT_ARCHIVED',
-          payload: buildContactArchivedPayload({
-            contactId: updatedContact.contact_name_id,
-            clientId,
-            archivedByUserId: user?.user_id,
-            archivedAt: occurredAt,
-          }),
-          ctx: { tenantId: tenant, occurredAt, actor },
-          idempotencyKey: `contact_archived:${updatedContact.contact_name_id}:${occurredAt}`,
-        });
-      }
-
-      const updatedPayload = buildContactUpdatedPayload({
-        contactId: updatedContact.contact_name_id,
-        clientId,
-        before: updateResult.before as any,
-        after: updatedContact as any,
-        updatedFieldKeys: updateResult.updatedFieldKeys ?? [],
-        updatedByUserId: user?.user_id,
-        updatedAt: occurredAt,
+    // Client-less contacts emit too: the webhook layer carries client_id only when present.
+    const wasInactive = Boolean((updateResult.before as any)?.is_inactive);
+    const isInactive = Boolean((updatedContact as any)?.is_inactive);
+    if (!wasInactive && isInactive) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_ARCHIVED',
+        payload: buildContactArchivedPayload({
+          contactId: updatedContact.contact_name_id,
+          clientId,
+          archivedByUserId: user?.user_id,
+          archivedAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `contact_archived:${updatedContact.contact_name_id}:${occurredAt}`,
       });
+    }
 
-      const updatedFields = (updatedPayload as any).updatedFields;
-      const changes = (updatedPayload as any).changes;
-      if ((Array.isArray(updatedFields) && updatedFields.length) || (changes && Object.keys(changes).length)) {
-        await publishWorkflowEvent({
-          eventType: 'CONTACT_UPDATED',
-          payload: updatedPayload,
-          ctx: { tenantId: tenant, occurredAt, actor },
-          idempotencyKey: `contact_updated:${updatedContact.contact_name_id}:${occurredAt}`,
-        });
-      }
+    const updatedPayload = buildContactUpdatedPayload({
+      contactId: updatedContact.contact_name_id,
+      clientId,
+      before: updateResult.before as any,
+      after: updatedContact as any,
+      updatedFieldKeys: updateResult.updatedFieldKeys ?? [],
+      updatedByUserId: user?.user_id,
+      updatedAt: occurredAt,
+    });
+
+    const updatedFields = (updatedPayload as any).updatedFields;
+    const changes = (updatedPayload as any).changes;
+    if ((Array.isArray(updatedFields) && updatedFields.length) || (changes && Object.keys(changes).length)) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_UPDATED',
+        payload: updatedPayload,
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `contact_updated:${updatedContact.contact_name_id}:${occurredAt}`,
+      });
     }
 
     return updatedContact;
@@ -1088,6 +1087,10 @@ export const updateContactsForClient = withAuth(async (
     }, {});
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
+      const beforeRows = await tenantScopedTable(trx, 'contacts', tenant)
+        .where({ client_id: clientId })
+        .select('*');
+
       const updated = await tenantScopedTable(trx, 'contacts', tenant)
         .where({ client_id: clientId })
         .update({
@@ -1097,6 +1100,19 @@ export const updateContactsForClient = withAuth(async (
 
       if (!updated) {
         throw new Error(await contactText('errors.contact.bulkUpdateFailed'));
+      }
+
+      // One contact.updated (and contact.deactivated on an active -> inactive flip) per affected contact.
+      // A client_id change (bulk move) shows up as `client_id` in changed_fields.
+      const afterRows = await tenantScopedTable(trx, 'contacts', tenant)
+        .whereIn('contact_name_id', beforeRows.map((row: any) => row.contact_name_id))
+        .select('*');
+      const afterById = new Map<string, any>(afterRows.map((row: any) => [row.contact_name_id, row]));
+      for (const beforeRow of beforeRows as any[]) {
+        const afterRow = afterById.get(beforeRow.contact_name_id);
+        if (afterRow) {
+          queueContactUpdated(trx, tenant, beforeRow, afterRow, Object.keys(sanitizedData), { actorUserId: user?.user_id });
+        }
       }
     });
   } catch (err) {
@@ -1417,30 +1433,11 @@ export const importContactsFromCSV = withAuth(async (
             }
 
             savedContact = await ContactModel.updateContact(existingContact.contact_name_id, updateData, tenant, trx);
+            queueContactUpdated(trx, tenant, existingContact as any, savedContact as any, Object.keys(updateData), { actorUserId: user?.user_id });
 
-            if (contactData.tags !== undefined) {
-              try {
-                await tenantScopedTable(trx, 'tag_mappings', tenant)
-                  .where({ tagged_id: savedContact.contact_name_id, tagged_type: 'contact' })
-                  .delete();
-
-                if (contactData.tags) {
-                  const tagTexts = contactData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
-                  for (const tagText of tagTexts) {
-                    const tagResult = await createTag({
-                      tag_text: tagText,
-                      tagged_id: savedContact.contact_name_id,
-                      tagged_type: 'contact',
-                      created_by: user.user_id
-                    });
-                    if (isTagActionError(tagResult)) {
-                      console.warn('Failed to create tag during CSV import:', tagResult);
-                    }
-                  }
-                }
-              } catch (tagError) {
-                console.error('Failed to update tags during CSV import:', tagError);
-              }
+            // A blank Tags value is "no opinion": it neither clears nor writes tags.
+            if (hasImportedTags(contactData.tags)) {
+              await writeImportedContactTags(trx, tenant, savedContact.contact_name_id, contactData.tags, true);
             }
 
             results.push({
@@ -1464,24 +1461,10 @@ export const importContactsFromCSV = withAuth(async (
             };
 
             savedContact = await ContactModel.createContact(contactToCreate, tenant, trx);
+            queueContactCreated(trx, tenant, savedContact as any, { actorUserId: user?.user_id });
 
-            if (contactData.tags) {
-              try {
-                const tagTexts = contactData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
-                for (const tagText of tagTexts) {
-                  const tagResult = await createTag({
-                    tag_text: tagText,
-                    tagged_id: savedContact.contact_name_id,
-                    tagged_type: 'contact',
-                    created_by: user.user_id
-                  });
-                  if (isTagActionError(tagResult)) {
-                    console.warn('Failed to create tag during CSV import:', tagResult);
-                  }
-                }
-              } catch (tagError) {
-                console.error('Failed to create tags during CSV import:', tagError);
-              }
+            if (hasImportedTags(contactData.tags)) {
+              await writeImportedContactTags(trx, tenant, savedContact.contact_name_id, contactData.tags, false);
             }
 
             results.push({
@@ -1525,6 +1508,68 @@ export const importContactsFromCSV = withAuth(async (
     throw await contactError('errors.contact.importFailed', 'SYSTEM_ERROR: ');
   }
 });
+
+function hasImportedTags(tagsColumn: string | undefined): tagsColumn is string {
+  return typeof tagsColumn === 'string' && tagsColumn.trim() !== '';
+}
+
+/**
+ * Writes a CSV row's tags in the import transaction; `replace` first clears the
+ * contact's existing tags. Tag texts are trimmed, de-duplicated
+ * case-insensitively and validated through the shared tag rules (invalid ones
+ * are skipped with a warning). The write runs in a savepoint on the import
+ * transaction, so a failed tag write cannot abort the rest of the import and
+ * nothing opens a second connection that would wait on this transaction's rows.
+ * Tag events are queued after-commit on the owning import transaction.
+ *
+ * A tag failure is logged and swallowed: the contact row is still imported
+ * and only its tags are lost, as before.
+ */
+// LEVERAGE: pattern tag-write-primitive — writeImportedContactTags embeds savepoint + dedupe + validation for "tags from a cell"; if a third importer needs it, this belongs beside createTagsForEntityWithTransaction
+async function writeImportedContactTags(
+  importTrx: Knex.Transaction,
+  tenant: string,
+  contactId: string,
+  tagsColumn: string,
+  replace: boolean,
+): Promise<void> {
+  const seen = new Set<string>();
+  const tagTexts: string[] = [];
+  for (const raw of tagsColumn.split(',')) {
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    const validation = validateTagText(trimmed);
+    if (isTagTextValidationFailure(validation)) {
+      console.warn(`Skipping invalid tag during CSV import: ${validation.message}`, { tag: trimmed });
+      continue;
+    }
+    const key = validation.text.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    tagTexts.push(validation.text);
+  }
+
+  try {
+    await importTrx.transaction(async (trx) => {
+      if (replace) {
+        await tenantScopedTable(trx, 'tag_mappings', tenant)
+          .where({ tagged_id: contactId, tagged_type: 'contact' })
+          .delete();
+      }
+      if (tagTexts.length > 0) {
+        await createTagsForEntityWithTransaction(
+          trx,
+          tenant,
+          contactId,
+          'contact',
+          tagTexts.map((tag_text) => ({ tag_text, isNew: false })),
+        );
+      }
+    });
+  } catch (tagError) {
+    console.error('Failed to write tags during CSV import:', tagError);
+  }
+}
 
 export const checkExistingEmails = withAuth(async (
   user,
@@ -1679,7 +1724,7 @@ export const createClientContact = withAuth(async (
     }
 
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return ContactModel.createContact({
+      const created = await ContactModel.createContact({
         full_name: structural.data.full_name,
         email: normalizedEmail,
         primary_email_canonical_type: primaryEmailCanonicalType,
@@ -1689,6 +1734,8 @@ export const createClientContact = withAuth(async (
         client_id: clientId,
         role: jobTitle,
       }, tenant, trx);
+      queueContactCreated(trx, tenant, created as any, { actorUserId: user?.user_id });
+      return created;
     });
 
     return contact;

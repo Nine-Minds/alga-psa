@@ -31,6 +31,7 @@ import { renderLabelBatchHtml, type LabelPrintItem } from './renderLabelBatchHtm
 import {
   STANDARD_LABEL_ASSET_CODE,
   STANDARD_LABEL_ASSET_CODE128_CODE,
+  STANDARD_LABEL_RMA_CODE,
   STANDARD_LABEL_STOCK_UNIT_CODE,
   STANDARD_LABEL_TICKET_WORK_TAG_CODE,
 } from '../label-template-ast/standardTemplates';
@@ -424,6 +425,16 @@ describe('label PDF end to end', () => {
         }),
       ],
       [
+        'ticket work tag with held equipment, longest location/bin and next-action strings (they replace the reason line)',
+        worstCase(STANDARD_LABEL_TICKET_WORK_TAG_CODE, {
+          labelClass: 'ticket-work-tag',
+          entityType: 'ticket',
+          identifier: 'TICKET-2026-0000123456789',
+          custodyLocation: 'Main Office Headquarters Annex / Rack 14 Shelf B3 Upper Left Bin',
+          nextAction: 'Waiting on vendor, Oct 29 and then a very long trailing explanation',
+        }),
+      ],
+      [
         'stock unit label, long unit code',
         worstCase(STANDARD_LABEL_STOCK_UNIT_CODE, { labelClass: 'stock-unit-identity', entityType: 'stock_unit' }),
       ],
@@ -445,6 +456,147 @@ describe('label PDF end to end', () => {
             expect(report.identifierClipped).toEqual([false]);
           }
           const { rasters, geometry } = await printLabels([item], layout, `contain-${layoutName}-${item.templateCode}`);
+          const p = geometry.placements[0];
+          const cell = crop(rasters[0], mmToPx(p.leftMm), mmToPx(p.topMm), mmToPx(p.widthMm), mmToPx(p.heightMm));
+          expect(edgeBandIsWhite(cell)).toBe(true);
+          expect(decodeQr(cell)).toBe(item.viewModel.url);
+          if (item.viewModel.code128Value) expect(decodeCode128(cell)).toBe(item.viewModel.code128Value);
+        }, 120_000);
+      }
+    }
+  });
+
+  describe('RMA work tag (T033, F022.4)', () => {
+    const rmaItem = (n: number, overrides: Partial<LabelViewModel> = {}, withTemplateCode = false): LabelPrintItem => ({
+      ...(withTemplateCode ? { templateCode: STANDARD_LABEL_RMA_CODE } : {}),
+      viewModel: {
+        labelClass: 'rma-work-tag',
+        entityType: 'rma',
+        recordId: uuid(700 + n),
+        url: recordUrl('rma', uuid(700 + n), BASE),
+        identifier: `RMA-${String(n).padStart(5, '0')}`,
+        code128Value: null,
+        title: 'Dell Latitude 7440 Laptop',
+        clientName: 'Emerald City Dental',
+        detail: 'Dell Technologies / 1234-5678-90',
+        secondaryIdentifier: 'AT-000123',
+        serialSuffix: 'SN…ZX81QW77',
+        rma: { statusLabel: 'Sent to vendor', returnBy: '2026-11-15', shipping: 'UPS 1Z999AA10123456784', ticketNumber: 'TIC-1042' },
+        ...overrides,
+      } as LabelViewModel,
+    });
+
+    it('the QR URL is the canonical /msp/inventory/rma?rmaId= record URL', () => {
+      const item = rmaItem(1);
+      expect(item.viewModel.url).toBe(`${BASE}/msp/inventory/rma?rmaId=${uuid(701)}`);
+    });
+
+    it('renders the standard rma-work-tag on a 4x2in cell and its QR decodes to the RMA record URL', async () => {
+      const item = rmaItem(1);
+      const { html, pages, rasters } = await printLabels([item], ONE_PER_PAGE, 'rma-single');
+      expect(html).toContain('RMA-00001');
+      expect(pages).toHaveLength(1);
+      expect(pages[0].width).toBeCloseTo(4 * PT_PER_IN, 0);
+      expect(pages[0].height).toBeCloseTo(2 * PT_PER_IN, 0);
+      expect(decodeQr(rasters[0])).toBe(item.viewModel.url);
+      expect(edgeBandIsWhite(rasters[0])).toBe(true);
+    }, 120_000);
+
+    it('decodes per record when n-up on Letter 2x5', async () => {
+      const items = [rmaItem(1), rmaItem(2, {}, true), rmaItem(3)];
+      const { geometry, rasters } = await printLabels(items, LETTER_2X5, 'rma-nup');
+      geometry.placements.forEach((p, i) => {
+        const cell = crop(rasters[0], mmToPx(p.leftMm), mmToPx(p.topMm), mmToPx(p.widthMm), mmToPx(p.heightMm));
+        expect(decodeQr(cell)).toBe(items[i].viewModel.url);
+      });
+    }, 120_000);
+
+    for (const [layoutName, layout] of [
+      ['4x2in', ONE_PER_PAGE],
+      ['Letter 2x5', LETTER_2X5],
+    ] as const) {
+      it(`all text stays inside the cell and clear of the QR, with worst-case long data (${layoutName})`, async () => {
+        const item = worstCase(STANDARD_LABEL_RMA_CODE, {
+          labelClass: 'rma-work-tag',
+          entityType: 'rma',
+          identifier: 'RMA-2026-000000123456789',
+          detail: `${LONG_CLIENT} / VENDOR-REFERENCE-0000000000000000000001`,
+          rma: {
+            statusLabel: 'Replacement received from vendor',
+            returnBy: '2026-11-15',
+            shipping: 'UPS 1Z999AA10123456784-WITH-A-VERY-LONG-TRAILING-REFERENCE',
+            ticketNumber: 'TICKET-2026-0000123456789',
+          },
+        });
+        const { html } = await renderLabelBatchHtml([item, item], layout, { tenantClient: { name: 'Example MSP', logoUrl: null } });
+        for (const report of await measureContainment(html)) {
+          expect(report.outside).toEqual([]);
+          expect(report.overBarcode).toEqual([]);
+        }
+        const { rasters, geometry } = await printLabels([item], layout, `rma-contain-${layoutName}`);
+        const p = geometry.placements[0];
+        const cell = crop(rasters[0], mmToPx(p.leftMm), mmToPx(p.topMm), mmToPx(p.widthMm), mmToPx(p.heightMm));
+        expect(edgeBandIsWhite(cell)).toBe(true);
+        expect(decodeQr(cell)).toBe(item.viewModel.url);
+      }, 120_000);
+    }
+  });
+
+  describe('a real tenant logo (data URL) on every standard template', () => {
+    // A wide 600x200 logo, the shape that stresses the header most; inlined exactly as labelPdfService does.
+    const logoPng = (() => {
+      const { PNG: Writer } = createRequire(import.meta.url)('pngjs') as {
+        PNG: new (o: { width: number; height: number }) => { data: Buffer };
+      } & { sync: { write(p: unknown): Buffer } };
+      const img = new Writer({ width: 600, height: 200 });
+      for (let i = 0; i < img.data.length; i += 4) {
+        img.data[i] = 20;
+        img.data[i + 1] = 90;
+        img.data[i + 2] = 200;
+        img.data[i + 3] = 255;
+      }
+      return (Writer as unknown as { sync: { write(p: unknown): Buffer } }).sync.write(img);
+    })();
+    const logoUrl = `data:image/png;base64,${logoPng.toString('base64')}`;
+    const withLogo = { tenantClient: { name: 'Example MSP', logoUrl } };
+
+    const cases: Array<[string, LabelPrintItem]> = [
+      ['ticket work tag', worstCase(STANDARD_LABEL_TICKET_WORK_TAG_CODE, { labelClass: 'ticket-work-tag', entityType: 'ticket', identifier: 'TICKET-2026-0000123456789' })],
+      ['QR-only asset label', worstCase(STANDARD_LABEL_ASSET_CODE, { labelClass: 'asset-identity', entityType: 'asset' })],
+      [
+        'Code 128 asset label',
+        worstCase(STANDARD_LABEL_ASSET_CODE128_CODE, {
+          labelClass: 'asset-identity',
+          entityType: 'asset',
+          identifier: CODE128_LIMIT_TAG,
+          code128Value: CODE128_LIMIT_TAG,
+        }),
+      ],
+      ['stock unit label', worstCase(STANDARD_LABEL_STOCK_UNIT_CODE, { labelClass: 'stock-unit-identity', entityType: 'stock_unit' })],
+    ];
+
+    for (const [name, item] of cases) {
+      for (const [layoutName, layout] of [
+        ['4x2in', ONE_PER_PAGE],
+        ['Letter 2x5', LETTER_2X5],
+      ] as const) {
+        it(`${name} with logo (${layoutName})`, async () => {
+          const { html } = await renderLabelBatchHtml([item, item], layout, withLogo);
+          // The logo is really in the page for templates that show it (and never replaces a code).
+          if (item.viewModel.entityType !== 'stock_unit') expect(html).toContain('data:image/png;base64,');
+          for (const report of await measureContainment(html)) {
+            expect(report.outside).toEqual([]);
+            expect(report.overBarcode).toEqual([]);
+            expect(report.identifierText).toEqual([item.viewModel.identifier]);
+            expect(report.identifierClipped).toEqual([false]);
+          }
+          const { html: printedHtml, geometry, pdf } = await (async () => {
+            const r = await renderLabelBatchHtml([item], layout, withLogo);
+            return { ...r, pdf: await renderHtmlToPdf(r.html, r.printOptions) };
+          })();
+          if (item.viewModel.entityType !== 'stock_unit') expect(printedHtml).toContain('<img');
+          const pdfPath = writePdf(pdf, `logo-${layoutName}-${item.templateCode}`);
+          const rasters = rasterize(pdfPath, `logo-${layoutName}-${item.templateCode}`);
           const p = geometry.placements[0];
           const cell = crop(rasters[0], mmToPx(p.leftMm), mmToPx(p.topMm), mmToPx(p.widthMm), mmToPx(p.heightMm));
           expect(edgeBandIsWhite(cell)).toBe(true);

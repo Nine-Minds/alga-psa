@@ -105,7 +105,13 @@
     "passwords": "Senhas",
     "ticketsAll": "Todos os tickets",
     "ticketsRecurring": "Tickets recorrentes",
-    "ticketsTemplates": "Modelos de tickets"
+    "ticketsTemplates": "Modelos de tickets",
+    "assetsCustody": "Equipamento sob custódia",
+    "ticketsCannedResponses": "Respostas prontas",
+    "profile": "Perfil",
+    "signOut": "Sair",
+    "coManaged": "TI cogerida",
+    "coManagedAdministration": "Acesso e administração"
   },
   "sidebar": {
     "backToMain": "Voltar ao principal",
@@ -154,7 +160,8 @@
       "extensions": "Extensões",
       "experimentalFeatures": "Recursos experimentais",
       "profile": "Perfil",
-      "security": "Segurança"
+      "security": "Segurança",
+      "tags": "Etiquetas"
     }
   },
   "dashboard": {
@@ -321,6 +328,17 @@
       "calendar": {
         "error": "A sincronização de calendário de {{providerName}} relatou um erro e não está sincronizando.",
         "disconnected": "A sincronização de calendário de {{providerName}} está desconectada e não está sincronizando."
+      },
+      "rmm": {
+        "syncError": "O {{providerName}} relatou um erro de sincronização, portanto os dados de dispositivos e alertas podem estar desatualizados.",
+        "reconnectRequired": "O {{providerName}} precisa ser reconectado: suas credenciais não podem mais ser renovadas."
+      },
+      "accounting": {
+        "reconnectRequired": "O {{providerName}} precisa ser reconectado antes que a sincronização contábil possa ser executada novamente.",
+        "syncError": "A última sincronização com {{providerName}} não foi concluída, portanto faturas e pagamentos podem estar desatualizados."
+      },
+      "teams": {
+        "botCredentialsMissing": "O bot do {{providerName}} não pode responder: as credenciais do conector do bot não estão configuradas no servidor."
       },
       "review": "Revisar",
       "dismiss": "Ignorar alerta de integração"
@@ -843,5 +861,10 @@
     "errors": {
       "enterpriseOnly": "Os recursos de bate-papo estão disponíveis apenas na Enterprise Edition"
     }
+  },
+  "coManagedWorkspace": {
+    "loading": "Carregando espaço de trabalho…",
+    "navigation": "Espaço de trabalho do cliente",
+    "passwordError": "Não foi possível verificar o status da senha. Recarregue esta página."
   }
 }

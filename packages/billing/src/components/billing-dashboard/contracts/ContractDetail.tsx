@@ -62,7 +62,7 @@ import PricingSchedules from './PricingSchedules';
 import ContractDiscounts from './ContractDiscounts';
 import InvoicePreviewPanel from '../invoicing/InvoicePreviewPanel';
 import { Temporal } from '@js-temporal/polyfill';
-import { toPlainDate, toISODate } from '@alga-psa/core';
+import { toPlainDate, toISODate, toCalendarDisplayDate } from '@alga-psa/core';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
@@ -111,23 +111,45 @@ const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBil
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
 
-const formatDate = (value?: string | Date | null): string => {
-  if (!value) {
-    return '—';
-  }
-
-  try {
-    const plainDate = toPlainDate(value);
-    const displayDate = new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
-    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(displayDate);
-  } catch (error) {
-    console.error('Error formatting date:', error);
-    return '—';
-  }
-};
-
 const normalizeRenewalMode = (value: unknown): 'none' | 'manual' | 'auto' | undefined => {
   return value === 'none' || value === 'manual' || value === 'auto' ? value : undefined;
+};
+
+// Single source of truth for how an assignment is shaped when it enters the editor.
+// Used both to seed edit state and as the baseline the dirty check compares against,
+// so opening the editor without changing anything compares equal.
+const normalizeAssignmentForEdit = (
+  source: IContractAssignmentSummary
+): IContractAssignmentSummary => ({
+  ...source,
+  start_date: source.start_date ? toISODate(toPlainDate(source.start_date)) : null,
+  end_date: source.end_date ? toISODate(toPlainDate(source.end_date)) : null,
+  use_tenant_renewal_defaults:
+    typeof source.use_tenant_renewal_defaults === 'boolean'
+      ? source.use_tenant_renewal_defaults
+      : true,
+  renewal_mode: normalizeRenewalMode(source.renewal_mode) ?? 'manual',
+  notice_period_days:
+    Number.isInteger(source.notice_period_days) && Number(source.notice_period_days) >= 0
+      ? Number(source.notice_period_days)
+      : undefined,
+  renewal_term_months:
+    Number.isInteger(source.renewal_term_months) && Number(source.renewal_term_months) > 0
+      ? Number(source.renewal_term_months)
+      : undefined,
+  renewal_ticket_board_id: source.renewal_ticket_board_id ?? null,
+  renewal_ticket_status_id: source.renewal_ticket_status_id ?? null,
+});
+
+const assignmentsDiffer = (
+  first: IContractAssignmentSummary,
+  second: IContractAssignmentSummary
+): boolean => {
+  const a = first as unknown as Record<string, unknown>;
+  const b = second as unknown as Record<string, unknown>;
+  return Array.from(new Set([...Object.keys(a), ...Object.keys(b)])).some(
+    (key) => (a[key] ?? null) !== (b[key] ?? null)
+  );
 };
 
 function getCurrencyMeta(currencyCode: string): { fractionDigits: number; symbol: string } {
@@ -254,7 +276,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   renderClientDetails
 }) => {
   const { t } = useTranslation('msp/contracts');
-  const { formatCurrency } = useFormatters();
+  const { formatCurrency, formatDate: formatInstant } = useFormatters();
+  // Calendar days (assignment/invoice dates in timestamp columns) are pinned with
+  // toCalendarDisplayDate; created_at/updated_at are true instants and use formatInstant.
+  const formatDate = (value?: string | Date | null): string => {
+    const displayDate = toCalendarDisplayDate(value);
+    return displayDate ? formatInstant(displayDate, { dateStyle: 'medium' }) : '—';
+  };
+  const formatTimestamp = (value?: string | Date | null): string =>
+    value ? formatInstant(value, { dateStyle: 'medium' }) : '—';
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -266,7 +296,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   });
   const contractId = (searchParams?.get('contractId') ?? resolvedContractId ?? null) as string | null;
   const clientContractId = searchParams?.get('clientContractId') ?? resolvedClientContractId ?? null;
-  const focusedContractLineId = searchParams?.get('contractLineId') ?? null;
+  const urlFocusedContractLineId = searchParams?.get('contractLineId') ?? null;
+  // Overview "Edit"/"View details" request: focus a line and (unless read-only) open it in edit mode.
+  // Held in state, not the URL, so the edit intent is one-shot and never survives a reload.
+  const [lineFocusRequest, setLineFocusRequest] = useState<{ lineId: string; edit: boolean; seq: number } | null>(null);
+  const focusedContractLineId = lineFocusRequest?.lineId ?? urlFocusedContractLineId;
   const tenant = useTenant()!;
   const { getDocumentsByContractId, renderDocuments } = useDocumentsCrossFeature();
 
@@ -313,6 +347,17 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
+  // Normalised form values captured at initialisation; the dirty check compares against these.
+  const [formBaseline, setFormBaseline] = useState<{
+    name: string;
+    description: string;
+    status: string;
+    billingFrequency: string;
+  } | null>(null);
+  // Per-assignment baseline overrides (e.g. a stale renewal status cleared on load).
+  const [assignmentBaselineOverrides, setAssignmentBaselineOverrides] = useState<
+    Record<string, IContractAssignmentSummary>
+  >({});
 
   // Assignment editing state
   const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
@@ -561,6 +606,26 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
             },
           };
         });
+
+        // Clearing a stale status is a load-time normalisation, not a user edit:
+        // apply it to the baseline too so it does not register as unsaved.
+        setAssignmentBaselineOverrides((current) => {
+          if (!editingAssignmentId) {
+            return current;
+          }
+          const original = assignments.find((a) => a.client_contract_id === editingAssignmentId);
+          const baseline = current[editingAssignmentId] ?? (original ? normalizeAssignmentForEdit(original) : null);
+          if (
+            !baseline?.renewal_ticket_status_id ||
+            statuses.some((status: IStatus) => status.status_id === baseline.renewal_ticket_status_id)
+          ) {
+            return current;
+          }
+          return {
+            ...current,
+            [editingAssignmentId]: { ...baseline, renewal_ticket_status_id: null },
+          };
+        });
       } catch (loadError) {
         if (!active) {
           return;
@@ -599,18 +664,29 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       return false;
     }
 
-    // Check contract field changes
-    const contractChanged =
-      editContractName !== contract.contract_name ||
-      editDescription !== (contract.contract_description ?? '') ||
-      (!isLiveClientContract && editStatus !== contract.status) ||
-      editBillingFrequency !== contract.billing_frequency;
+    if (!formBaseline) {
+      return false;
+    }
 
-    // Check assignment changes
-    const assignmentsChanged = Object.keys(editAssignments).length > 0;
+    // Check contract field changes against the normalised baseline
+    const contractChanged =
+      editContractName !== formBaseline.name ||
+      editDescription !== formBaseline.description ||
+      (!isLiveClientContract && editStatus !== formBaseline.status) ||
+      editBillingFrequency !== formBaseline.billingFrequency;
+
+    // An assignment is dirty only when it differs from its normalised original
+    const assignmentsChanged = Object.entries(editAssignments).some(([assignmentId, edited]) => {
+      const original = assignments.find((a) => a.client_contract_id === assignmentId);
+      if (!original) {
+        return true;
+      }
+      const baseline = assignmentBaselineOverrides[assignmentId] ?? normalizeAssignmentForEdit(original);
+      return assignmentsDiffer(normalizeAssignmentForEdit(edited), baseline);
+    });
 
     return contractChanged || assignmentsChanged;
-  }, [contract, editContractName, editDescription, editStatus, editBillingFrequency, editAssignments, isFormInitialized, isLiveClientContract]);
+  }, [contract, formBaseline, assignments, assignmentBaselineOverrides, editContractName, editDescription, editStatus, editBillingFrequency, editAssignments, isFormInitialized, isLiveClientContract]);
 
   useEffect(() => {
     if (contractId || clientContractId) {
@@ -634,6 +710,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         setEditDescription(contract.contract_description ?? '');
         setEditStatus(contract.status);
         setEditBillingFrequency(contract.billing_frequency);
+        setFormBaseline({
+          name: contract.contract_name,
+          description: contract.contract_description ?? '',
+          status: contract.status,
+          billingFrequency: contract.billing_frequency,
+        });
         setIsFormInitialized(true);
       });
     }
@@ -643,6 +725,8 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
     setIsLoading(true);
     setError(null);
     setIsFormInitialized(false);
+    setFormBaseline(null);
+    setAssignmentBaselineOverrides({});
     setEditAssignments({});
     setEditingAssignmentId(null);
     setPreEditSnapshot(null);
@@ -873,7 +957,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       setEditDescription(contract.contract_description ?? '');
       setEditStatus(contract.status);
       setEditBillingFrequency(contract.billing_frequency);
+      setFormBaseline({
+        name: contract.contract_name,
+        description: contract.contract_description ?? '',
+        status: contract.status,
+        billingFrequency: contract.billing_frequency,
+      });
     }
+    setAssignmentBaselineOverrides({});
     setEditAssignments({});
     setEditingAssignmentId(null);
     setPreEditSnapshot(null);
@@ -950,8 +1041,12 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
       // Update any edited assignments
       for (const [assignmentId, editedAssignment] of Object.entries(editAssignments)) {
-        const originalAssignment = assignments.find(a => a.client_contract_id === assignmentId);
-        if (!originalAssignment) continue;
+        const rawOriginalAssignment = assignments.find(a => a.client_contract_id === assignmentId);
+        if (!rawOriginalAssignment) continue;
+        // Compare against the normalised original (same baseline as the dirty check)
+        // so a no-op editor session sends nothing.
+        const originalAssignment =
+          assignmentBaselineOverrides[assignmentId] ?? normalizeAssignmentForEdit(rawOriginalAssignment);
 
         // Build update payload with only changed fields
         const updatePayload: any = {
@@ -1040,26 +1135,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
 
     // Use edited data if it exists, otherwise use original assignment data
     const dataToEdit = editAssignments[assignment.client_contract_id] || assignment;
-    const normalizedData: IContractAssignmentSummary = {
-      ...dataToEdit,
-      start_date: dataToEdit.start_date ? toISODate(toPlainDate(dataToEdit.start_date)) : null,
-      end_date: dataToEdit.end_date ? toISODate(toPlainDate(dataToEdit.end_date)) : null,
-      use_tenant_renewal_defaults:
-        typeof dataToEdit.use_tenant_renewal_defaults === 'boolean'
-          ? dataToEdit.use_tenant_renewal_defaults
-          : true,
-      renewal_mode: normalizeRenewalMode(dataToEdit.renewal_mode) ?? 'manual',
-      notice_period_days:
-        Number.isInteger(dataToEdit.notice_period_days) && Number(dataToEdit.notice_period_days) >= 0
-          ? Number(dataToEdit.notice_period_days)
-          : undefined,
-      renewal_term_months:
-        Number.isInteger(dataToEdit.renewal_term_months) && Number(dataToEdit.renewal_term_months) > 0
-          ? Number(dataToEdit.renewal_term_months)
-          : undefined,
-      renewal_ticket_board_id: dataToEdit.renewal_ticket_board_id ?? null,
-      renewal_ticket_status_id: dataToEdit.renewal_ticket_status_id ?? null,
-    };
+    const normalizedData = normalizeAssignmentForEdit(dataToEdit);
 
     // Save a snapshot of the data at the start of this edit session
     setPreEditSnapshot({ ...normalizedData });
@@ -1821,11 +1897,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     </div>
                     <div className="flex items-center justify-between">
                       <span>{t('common.labels.created', { defaultValue: 'Created' })}</span>
-                      <span className="font-medium">{formatDate(contract.created_at)}</span>
+                      <span className="font-medium">{formatTimestamp(contract.created_at)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>{t('common.labels.lastUpdated', { defaultValue: 'Last Updated' })}</span>
-                      <span className="font-medium">{formatDate(contract.updated_at)}</span>
+                      <span className="font-medium">{formatTimestamp(contract.updated_at)}</span>
                     </div>
                     {primaryAssignment && (
                       <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3 space-y-1.5">
@@ -2007,6 +2083,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                 <ContractOverview
                   contractId={contractId}
                   onNavigateToLines={() => handleTabChange('lines')}
+                  onEditLine={(lineId) => {
+                    setLineFocusRequest((prev) => ({ lineId, edit: !isSystemManagedDefault, seq: (prev?.seq ?? 0) + 1 }));
+                    handleTabChange('lines');
+                  }}
+                  isReadOnly={isSystemManagedDefault}
                 />
               ) : null}
 
@@ -2688,7 +2769,10 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           <ContractLines
             contract={contract}
             clientId={primaryAssignment?.client_id ?? contract.owner_client_id ?? null}
+            startDate={primaryAssignment?.start_date ? toISODate(toPlainDate(primaryAssignment.start_date)) : null}
             focusContractLineId={focusedContractLineId}
+            editIntentLineId={lineFocusRequest?.edit ? lineFocusRequest.lineId : null}
+            onEditIntentConsumed={() => setLineFocusRequest((current) => (current ? { ...current, edit: false } : current))}
             onContractLinesChanged={handleContractLinesChanged}
             isReadOnly={isSystemManagedDefault}
           />

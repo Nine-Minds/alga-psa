@@ -110,6 +110,7 @@ describe('Canonical recurring-value valuation (R7 / T011)', () => {
         config_id: configId,
         tenant: context.tenantId,
         base_rate: seat.unitRateCents,
+        base_rate_basis: 'per_unit',
         pricing_basis: 'unit'
       });
       members.push({ serviceId, configId });
@@ -204,6 +205,7 @@ describe('Canonical recurring-value valuation (R7 / T011)', () => {
         config_id: configId,
         tenant: context.tenantId,
         base_rate: 0,
+        base_rate_basis: 'per_unit',
         pricing_basis: 'bundle',
       });
       members.push({ serviceId, configId });
@@ -230,7 +232,7 @@ describe('Canonical recurring-value valuation (R7 / T011)', () => {
       {name: 'Catalog-priced seats', quantity: 2, unitRateCents: 1500},
       {name: 'Legacy bundle allocation', quantity: 4, unitRateCents: 500},
     ]);
-    await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: members[0].configId}).update({base_rate: null});
+    await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: members[0].configId}).update({base_rate: null, base_rate_basis: null});
     await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: members[1].configId}).update({pricing_basis: null});
     await context.db('contract_lines').where({tenant: context.tenantId, contract_line_id: contractLineId}).update({custom_rate: 9000});
     const usageService = await createTestService(context, {service_name: 'Variable storage', billing_method: 'usage', default_rate: 500});
@@ -239,6 +241,57 @@ describe('Canonical recurring-value valuation (R7 / T011)', () => {
     const {clientContractId} = await assignContractLineToClient(context, contractLineId, {startDate: '2023-01-01'});
     const values = await getContractMonthlyValuesByAssignment(context.db, context.tenantId, [clientContractId], '2023-01-15');
     expect(values.get(clientContractId)).toMatchObject({monthlyValueCents: 12000, hasVariableUsage: true});
+  });
+
+  // base_rate_basis (card c150b8de): an inherited bundle line is valued as the
+  // sum of its members' CONTRIBUTIONS - a share as-is, a per-unit rate x quantity.
+  async function createInheritedBundleLine(
+    basis: 'share' | 'per_unit',
+    members: Array<{ quantity: number; baseRate: number }>,
+  ): Promise<string> {
+    const contractLineId = await context.createEntity('contract_lines', {
+      contract_line_name: `Inherited ${basis} bundle`,
+      billing_frequency: 'monthly',
+      is_custom: false,
+      contract_line_type: 'Fixed',
+      custom_rate: null,
+      rate_provenance: 'inherited'
+    }, 'contract_line_id');
+    for (const [index, member] of members.entries()) {
+      const serviceId = await createTestService(context, {
+        service_name: `${basis} member ${index}`,
+        default_rate: 0
+      });
+      const configId = uuidv4();
+      await context.db('contract_line_service_configuration').insert({
+        config_id: configId,
+        contract_line_id: contractLineId,
+        service_id: serviceId,
+        configuration_type: 'Fixed',
+        quantity: member.quantity,
+        tenant: context.tenantId
+      });
+      await context.db('contract_line_service_fixed_config').insert({
+        config_id: configId,
+        tenant: context.tenantId,
+        base_rate: member.baseRate,
+        base_rate_basis: basis,
+        rate_provenance: 'custom',
+        pricing_basis: 'bundle'
+      });
+    }
+    return contractLineId;
+  }
+
+  it.each([
+    ['share', [{ quantity: 1, baseRate: 225 }, { quantity: 3, baseRate: 675 }]],
+    ['per_unit', [{ quantity: 1, baseRate: 225 }, { quantity: 3, baseRate: 225 }]],
+  ] as const)('values an inherited %s bundle line at the sum of its members contributions (900)', async (basis, members) => {
+    const contractLineId = await createInheritedBundleLine(basis, [...members]);
+    const { clientContractId } = await assignContractLineToClient(context, contractLineId, { startDate: '2023-01-01' });
+    const values = await getContractMonthlyValuesByAssignment(context.db, context.tenantId, [clientContractId], '2023-01-15');
+    // A share of 675 on quantity 3 must NOT be tripled (symptom 2: 2,250).
+    expect(values.get(clientContractId)!.monthlyValueCents).toBe(900);
   });
 
   it('values the 10/9/1 recurring-seat example at 189000 minor units with no usage rows', async () => {
@@ -336,12 +389,14 @@ describe('Canonical recurring-value valuation (R7 / T011)', () => {
     await updateCatalogPrice(context, users.serviceId, { rateCents: 11000, currency: 'CAD' });
     await updateCatalogPrice(context, endpoints.serviceId, { rateCents: 6000, currency: 'CAD' });
 
-    // Before any revision applies the line keeps its legacy untouched value
-    // (the wizard's placeholder bundle rate derives to zero).
+    // Before any revision applies: a line custom_rate of 0 on a line with priced
+    // product members is ignored, so the members are valued from the
+    // contract-currency catalog even before any revision applies (alga-2026-0002714).
     const baseline = await getContractMonthlyValuesByAssignment(
       context.db, context.tenantId, [clientContractId], '2023-01-15',
     );
-    expect(baseline.get(clientContractId)!.monthlyValueCents).toBe(0);
+    // 20 × 11000 + 30 × 6000 (CAD catalog)
+    expect(baseline.get(clientContractId)!.monthlyValueCents).toBe(400000);
 
     // Users schedule a catalog-policy increase for February. Once one member of
     // the line is revision-managed, every product member is valued with the

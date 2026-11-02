@@ -73,6 +73,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   }),
 }));
 
+vi.mock('./TemplatePricingSection', () => ({ TemplatePricingSection: () => null }));
 vi.mock('../contract-lines/GenericContractLineServicesList', () => ({ default: () => null }));
 // Delegates to the real dialog so the template rate editor is exercised end to end.
 vi.mock('./ContractLineEditDialog', async () => {
@@ -88,21 +89,18 @@ import ContractTemplateDetail from './ContractTemplateDetail';
 // ──────────────────────────────────────────────────────────────────────────────
 const SERVICE_ID = 'service-seat-1';
 
-// Templates are currency-neutral. The real loader (getContractById ->
-// mapTemplateToContract in contractActions.ts) always returns a template-mapped
-// contract with currency_code 'USD' and is_template true, so that is the only
-// shape this test may feed the component.
-const CURRENCY_MARKERS = /[$€£¥]|USD|EUR|GBP|JPY/;
+// A template carries its own base currency; every amount on the page is shown in it,
+// whatever the tenant default currency is.
+const EUR = (amount: string) => new RegExp(`€\\s*${amount}|${amount}\\s*€`);
 
-function primeTemplate(opts: { unitRate: number | null; lineRate?: number | null }) {
+function primeTemplate(opts: { unitRate: number | null; lineRate?: number | null; currency?: string }) {
   getContractByIdMock.mockResolvedValue({
     tenant: 'tenant-1',
     contract_id: 'template-1',
     contract_name: 'Seat Template',
     contract_description: undefined,
     billing_frequency: 'monthly',
-    // The mapper's invented value; the UI must never surface it.
-    currency_code: 'USD',
+    currency_code: opts.currency ?? 'EUR',
     is_active: true,
     status: 'published',
     is_template: true,
@@ -142,8 +140,8 @@ function primeTemplate(opts: { unitRate: number | null; lineRate?: number | null
   ]);
 }
 
-function renderDetail(currencyCode = 'EUR') {
-  // Tenant default is EUR while the template mapper says USD: neither may leak.
+function renderDetail(currencyCode = 'USD') {
+  // Tenant default is USD while the template is EUR: the template currency wins.
   return render(
     <CurrencyFormatProvider currencyCode={currencyCode}>
       <ContractTemplateDetail />
@@ -151,7 +149,7 @@ function renderDetail(currencyCode = 'EUR') {
   );
 }
 
-describe('ContractTemplateDetail per-seat unit rate (currency-neutral)', () => {
+describe('ContractTemplateDetail per-seat unit rate (template currency)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     route.contractId = 'template-1';
@@ -161,7 +159,7 @@ describe('ContractTemplateDetail per-seat unit rate (currency-neutral)', () => {
     cleanup();
   });
 
-  it('renders the unit rate and quantity × rate = amount as plain numbers with no currency symbol', async () => {
+  it('renders the unit rate and quantity × rate = amount in the template base currency', async () => {
     primeTemplate({ unitRate: 25000 });
 
     renderDetail();
@@ -171,11 +169,12 @@ describe('ContractTemplateDetail per-seat unit rate (currency-neutral)', () => {
     expect(screen.queryByText('Failed to load contract template')).not.toBeInTheDocument();
 
     const unitRateRow = screen.getByText('Unit rate:').parentElement as HTMLElement;
-    expect(unitRateRow).toHaveTextContent("Unit rate: 250.00 in the client's currency");
-    expect(unitRateRow.textContent).not.toMatch(CURRENCY_MARKERS);
+    expect(unitRateRow.textContent).toMatch(EUR('250[.,]00'));
+    expect(unitRateRow.textContent).not.toContain('$');
 
-    expect(amount).toHaveTextContent("Recurring amount: 2 × 250.00 = 500.00 in the client's currency");
-    expect(amount.textContent).not.toMatch(CURRENCY_MARKERS);
+    expect(amount.textContent).toMatch(/2 ×/);
+    expect(amount.textContent).toMatch(EUR('500[.,]00'));
+    expect(amount.textContent).not.toContain('$');
     expect(within(amount).getByText(/2 ×/)).toBeInTheDocument();
   });
 
@@ -186,9 +185,7 @@ describe('ContractTemplateDetail per-seat unit rate (currency-neutral)', () => {
 
     const catalog = await screen.findByText("Catalog price in the client's currency");
     expect(catalog).toBeInTheDocument();
-    expect((screen.getByText('Unit rate:').parentElement as HTMLElement).textContent).not.toMatch(
-      CURRENCY_MARKERS,
-    );
+    expect((screen.getByText('Unit rate:').parentElement as HTMLElement).textContent).not.toMatch(/€|\$/);
     expect(screen.queryByTestId(`template-recurring-amount-${SERVICE_ID}`)).not.toBeInTheDocument();
   });
 
@@ -208,12 +205,10 @@ describe('ContractTemplateDetail per-seat unit rate (currency-neutral)', () => {
     );
 
     expect(getContractByIdMock).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId(`template-recurring-amount-${SERVICE_ID}`)).toHaveTextContent(
-      "Recurring amount: 2 × 250.00 = 500.00 in the client's currency",
-    );
+    expect(screen.getByTestId(`template-recurring-amount-${SERVICE_ID}`).textContent).toMatch(EUR('500[.,]00'));
   });
 
-  it('renders the fixed-fee base rate in the services manager neutrally, and "Not set" when absent', async () => {
+  it('renders the fixed-fee base rate in the services manager in the template currency, and "Not set" when absent', async () => {
     primeTemplate({ unitRate: 25000, lineRate: 10000 });
 
     renderDetail();
@@ -222,8 +217,7 @@ describe('ContractTemplateDetail per-seat unit rate (currency-neutral)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Manage Services' }));
 
     const badge = (await screen.findByText(/Fixed Fee Rate:/)) as HTMLElement;
-    expect(badge).toHaveTextContent("Fixed Fee Rate: 100.00 in the client's currency");
-    expect(badge.textContent).not.toMatch(CURRENCY_MARKERS);
+    expect(badge.textContent).toMatch(EUR('100[.,]00'));
   });
 
   it('shows "Not set" for a fixed-fee base rate that has no value', async () => {
@@ -237,7 +231,7 @@ describe('ContractTemplateDetail per-seat unit rate (currency-neutral)', () => {
     expect(await screen.findByText(/Fixed Fee Rate:/)).toHaveTextContent('Fixed Fee Rate: Not set');
   });
 
-  it('opens the template rate editor with no currency adornment and saves 200.00 as 20000 minor units', async () => {
+  it('opens the template rate editor with the template currency symbol and saves 200.00 as 20000 minor units', async () => {
     primeTemplate({ unitRate: 25000, lineRate: 10000 });
     updateContractLineRateMock.mockResolvedValue({});
 
@@ -251,9 +245,8 @@ describe('ContractTemplateDetail per-seat unit rate (currency-neutral)', () => {
     await vi.waitFor(() => expect(document.getElementById('contract-line-rate'), document.body.textContent ?? '').not.toBeNull());
     const input = document.getElementById('contract-line-rate') as HTMLInputElement;
     expect(input.value).toBe('100.00');
-    const wrapper = input.parentElement as HTMLElement;
-    expect(wrapper.textContent).not.toMatch(CURRENCY_MARKERS);
-    expect(input.className).not.toMatch(/pl-10/);
+    const wrapper = screen.getByText('Rate').parentElement as HTMLElement;
+    expect(wrapper.textContent).toContain('€');
 
     fireEvent.change(input, { target: { value: '200.00' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
@@ -262,16 +255,17 @@ describe('ContractTemplateDetail per-seat unit rate (currency-neutral)', () => {
     expect(updateContractLineRateMock).toHaveBeenCalledWith('template-1', 'line-1', 20000, 'arrears', null);
   });
 
-  it('scales the template rate editor by the same fraction digits as the neutral display (zero-decimal currency)', async () => {
-    primeTemplate({ unitRate: 25000, lineRate: 10000 });
+  it('scales the template rate editor by the template currency own fraction digits (zero-decimal currency)', async () => {
+    primeTemplate({ unitRate: 25000, lineRate: 10000, currency: 'JPY' });
     updateContractLineRateMock.mockResolvedValue({});
 
-    renderDetail('JPY');
+    renderDetail('USD');
 
     await screen.findByTestId(`template-recurring-amount-${SERVICE_ID}`);
     fireEvent.click(screen.getByRole('button', { name: 'Manage Services' }));
     const badge = await screen.findByText(/Fixed Fee Rate:/);
-    expect(badge).toHaveTextContent("Fixed Fee Rate: 10,000 in the client's currency");
+    expect(badge.textContent).toMatch(/10,000/);
+    expect(badge.textContent).toMatch(/¥|JP¥/);
     fireEvent.click(document.getElementById('edit-rate-line-1') as HTMLElement);
 
     await vi.waitFor(() => expect(document.getElementById('contract-line-rate')).not.toBeNull());
@@ -283,15 +277,13 @@ describe('ContractTemplateDetail per-seat unit rate (currency-neutral)', () => {
     expect(updateContractLineRateMock).toHaveBeenCalledWith('template-1', 'line-1', 300, 'arrears', null);
   });
 
-  it('summary row reads currency-neutral and the basics form has no currency picker', async () => {
+  it('summary row shows the template base currency and the basics form has no inline currency input', async () => {
     primeTemplate({ unitRate: 25000 });
 
     renderDetail();
 
     await screen.findByTestId(`template-recurring-amount-${SERVICE_ID}`);
-    const row = screen.getByText('Currency').parentElement as HTMLElement;
-    expect(row).toHaveTextContent("Client's currency");
-    expect(row.textContent).not.toMatch(/USD|EUR/);
+    expect(document.getElementById('template-base-currency-badge')).toHaveTextContent('EUR');
     expect(document.getElementById('template-currency-code-inline')).toBeNull();
   });
 

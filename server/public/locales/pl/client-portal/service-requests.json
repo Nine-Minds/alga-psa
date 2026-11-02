@@ -20,6 +20,7 @@
     "datePlaceholder": "Wybierz datę",
     "optionLabel": "Opcja {{index}}",
     "submit": "Prześlij zgłoszenie",
+    "requiredField": "To pole jest wymagane.",
     "initialValuesTitle": "Wartości początkowe",
     "noInitialValues": "Nie skonfigurowano statycznych wartości domyślnych."
   },

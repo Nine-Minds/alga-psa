@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
+import { isClientUserType, isInteractiveUserType } from '@alga-psa/types';
 import { auth } from './app/api/auth/[...nextauth]/edge-auth';
 import { getSessionCookieName } from './lib/auth/sessionCookies';
 import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './lib/deployment/deploymentProfile';
-import { resolveRequestHost, detectForwardedHostRewrite } from './lib/deployment/requestHost';
+import { resolveRequestHost, resolveRequestOrigin, detectForwardedHostRewrite } from './lib/deployment/requestHost';
 import { MIGRATED_SETTINGS_TAB_IDS } from './components/settings/settingsTabsRegistry';
+import { resolveHostSurface } from './lib/portal-domains/hostSurface';
+import { portalDomainServes, surfaceForPath, type PortalDomainSurface } from '@alga-psa/shared/core/portalDomainSurface';
 
 // Minimal, Edge-safe middleware: API key header presence check for select API routes
 // and auth gate for /msp paths, plus i18n locale resolution. Heavy logic stays in route handlers.
@@ -51,6 +54,13 @@ function corsPreflightResponse(origin: string | null): NextResponse {
 const protectedPrefix = '/msp';
 const clientPortalPrefix = '/client-portal';
 const publicPagePaths = new Set(['/payment-methods/setup-complete']);
+// Durable emailed invoice payment link: /pay/<opaque signed token>. Exactly one
+// base64url segment; the page verifies the token itself (no session exists).
+const PUBLIC_PAY_LINK_PATH = /^\/pay\/[A-Za-z0-9_-]{1,512}$/;
+
+export function isPublicPagePath(pathname: string): boolean {
+  return publicPagePaths.has(pathname) || PUBLIC_PAY_LINK_PATH.test(pathname);
+}
 
 export interface ClientPortalThemeRequestContext {
   isClientPortal: boolean;
@@ -97,6 +107,8 @@ function getCanonicalUrl(): URL | null {
 }
 
 const apiKeySkipPaths = [
+  // Edge middleware asks this (unauthenticated, loopback) which surface a custom host serves.
+  '/api/portal-domain/surface',
   '/api/health',
   '/api/healthz',
   '/api/readyz',
@@ -208,6 +220,22 @@ const exactApiKeySkipPaths = [
   // the ninjaone/tacticalrmm entries, but Level has no sub-routes.
   '/api/webhooks/levelio',
   '/api/webhooks/levelio/',
+  // Datto RMM alert webhook: single POST route that authenticates the tenant +
+  // X-Alga-Webhook-Secret in the route handler (no x-api-key). Exact match only,
+  // so `/api/webhooks/dattoevil` and deeper routes stay behind the API-key gate.
+  '/api/webhooks/datto',
+  '/api/webhooks/datto/',
+  // The co-managed capability probe: a read-only GET that authenticates the
+  // session in-route (tenant from the session, never the request). Exact match
+  // only, so any future route under /api/v1/capabilities/ stays behind the
+  // API-key gate until it is exempted by name.
+  '/api/v1/capabilities/co-managed',
+  '/api/v1/capabilities/co-managed/',
+  // Notification live-stream token: the MSP shell and the client portal both
+  // mint a short-lived Hocuspocus token from their browser session (no
+  // x-api-key). The route re-checks the session itself, and
+  // `/api/notifications` has no other route to exempt.
+  '/api/notifications/live-token',
 ];
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
@@ -217,15 +245,26 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
     /^\/api\/client-portal\/documents\/[^/]+\/(?:file|export)$/.test(pathname) ||
     exactApiKeySkipPaths.includes(pathname) ||
     apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
-    (pathname.startsWith('/api/tickets/') && pathname.endsWith('/live-token')) ||
+    (pathname.startsWith('/api/tickets/') &&
+      (pathname.endsWith('/live-token') ||
+        // Original-email view for MSP and client-portal readers; the route
+        // authenticates the session and reuses the ticket read authorization.
+        pathname.endsWith('/email-html'))) ||
     (pathname.startsWith('/api/documents/') &&
       (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview') ||
         pathname.endsWith('/download') || pathname.endsWith('/content'))) ||
     // Session-authenticated inventory SO document endpoints (auth enforced in-handler via withAuth).
     (pathname.startsWith('/api/inventory/sales-orders/') &&
       (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation'))) ||
-    // Session-authenticated label PDF endpoint (auth + record-level permission enforced in-handler).
-    pathname === '/api/labels/pdf';
+    // Session-authenticated RMA return slip (C5): RMA read + asset record check enforced in-handler.
+    /^\/api\/inventory\/rma\/[^/]+\/document$/.test(pathname) ||
+    // Session-authenticated label endpoints (auth + record-level permission enforced in-handler):
+    // the PDF render and the read-only lookups the print dialog needs.
+    pathname === '/api/labels/pdf' ||
+    pathname === '/api/labels/templates' ||
+    pathname === '/api/labels/linked-assets' ||
+    // Session-authenticated staging box manifest (C6): project read + record-level check in-handler.
+    /^\/api\/projects\/staging\/containers\/[^/]+\/manifest$/.test(pathname);
 }
 
 export function hasContradictoryPortalIdentity(user: {
@@ -247,6 +286,16 @@ export function getVanityClientPortalInternalRedirectTarget(args: {
   requestHostname: string;
   canonicalUrlEnv: URL | null;
   userType?: string | null;
+  /**
+   * Surface served by the request host when it is an active custom domain
+   * (null/undefined = unknown host or failed lookup => legacy client-portal behaviour).
+   * Only `client_portal` hosts evict internal users to the canonical host; `msp`/`both`
+   * hosts serve the MSP app in place, so the internal user is sent to the dashboard on
+   * the SAME host.
+   */
+  hostSurface?: PortalDomainSurface | null;
+  /** Origin of the current request, used to stay on a custom host that serves the MSP app. */
+  requestOrigin?: string;
 }): URL | null {
   const {
     pathname,
@@ -254,6 +303,8 @@ export function getVanityClientPortalInternalRedirectTarget(args: {
     requestHostname,
     canonicalUrlEnv,
     userType,
+    hostSurface,
+    requestOrigin,
   } = args;
 
   if (
@@ -268,10 +319,49 @@ export function getVanityClientPortalInternalRedirectTarget(args: {
     pathname === '/auth/client-portal/signin' ||
     (pathname.startsWith(clientPortalPrefix) && !isAuthPage)
   ) {
-    return new URL('/msp/dashboard', canonicalUrlEnv.origin);
+    const servesMspInPlace = hostSurface != null && portalDomainServes(hostSurface, 'msp') && Boolean(requestOrigin);
+    return new URL('/msp/dashboard', servesMspInPlace ? requestOrigin : canonicalUrlEnv.origin);
   }
 
   return null;
+}
+
+/**
+ * Surface gate for custom domains (alga-2026-0002799, D6): a custom host serves only the
+ * app(s) its portal_domains.surface allows. Returns where to send the request instead of
+ * serving it, or null to leave it alone (canonical host, API/asset/shared-auth paths, or a
+ * path the host serves).
+ *
+ * `hostSurface` null (unknown host / failed lookup) fails closed to the legacy
+ * `client_portal`-only behaviour, so MSP routes are never opened on a host we cannot vouch for.
+ */
+export function getCustomDomainSurfaceGateRedirect(args: {
+  pathname: string;
+  search?: string;
+  requestHostname: string;
+  canonicalUrlEnv: URL | null;
+  hostSurface?: PortalDomainSurface | null;
+  requestOrigin: string;
+}): URL | null {
+  const { pathname, search = '', requestHostname, canonicalUrlEnv, hostSurface, requestOrigin } = args;
+  // No Host at all cannot be a custom domain (nothing to bind a surface to): not gated.
+  if (!canonicalUrlEnv || !requestHostname || requestHostname === canonicalUrlEnv.hostname) {
+    return null;
+  }
+  const pathSurface = surfaceForPath(pathname);
+  if (!pathSurface) {
+    return null;
+  }
+  const effectiveSurface: PortalDomainSurface = hostSurface ?? 'client_portal';
+  if (portalDomainServes(effectiveSurface, pathSurface)) {
+    return null;
+  }
+  if (pathSurface === 'msp') {
+    // Client-portal-only host: MSP routes live on the canonical origin.
+    return new URL(`${pathname}${search}`, canonicalUrlEnv.origin);
+  }
+  // MSP-only host: never serve the portal; send the user to the MSP app on the same host.
+  return new URL(pathname.startsWith('/auth/') ? '/auth/signin' : '/msp/dashboard', requestOrigin);
 }
 
 // Best-effort, per-isolate throttle for the X-Forwarded-Host rewrite tell-tale.
@@ -300,11 +390,31 @@ function maybeWarnForwardedHostRewrite(
   });
 }
 
-const _middleware = auth((request) => {
+const _middleware = auth(async (request) => {
   const pathname = request.nextUrl.pathname;
   const deploymentCaps = resolveDeploymentCapabilities();
   const { hostname: requestHostname, hostHeader: requestHostHeader } = resolveRequestHost(request, deploymentCaps);
   maybeWarnForwardedHostRewrite(request, deploymentCaps);
+  // The origin the browser actually used. next-auth's `auth()` wrapper rewrites
+  // `request.nextUrl` to NEXTAUTH_URL, so on a custom host nextUrl.origin is the canonical
+  // origin and must not be used for "stay on this host" redirects.
+  const requestOrigin = resolveRequestOrigin(request, deploymentCaps, {
+    fallbackProto: request.nextUrl.protocol.replace(/:$/, ''),
+    fallbackHost: request.nextUrl.host,
+  }).origin;
+  // Surface served by a custom host (null on the canonical host / unknown host). Only the
+  // routes that branch on it pay for the lookup (cached per isolate, fails closed to null).
+  const canonicalHostname = getCanonicalUrl()?.hostname ?? null;
+  const needsHostSurface = Boolean(canonicalHostname)
+    && requestHostname !== canonicalHostname
+    && !pathname.startsWith('/api/')
+    && (pathname.startsWith(protectedPrefix)
+      || pathname.startsWith(clientPortalPrefix)
+      || pathname === '/auth/client-portal/signin'
+      || surfaceForPath(pathname) !== null);
+  const hostSurface: PortalDomainSurface | null = needsHostSurface
+    ? await resolveHostSurface(requestHostname)
+    : null;
   const origin = request.headers.get('origin');
   const nextAction = request.headers.get('next-action');
 
@@ -321,6 +431,21 @@ const _middleware = auth((request) => {
       { status: 409 }
     );
     return applyCorsHeaders(errorResponse, origin);
+  }
+
+  // Surface gate: a custom host only serves the app(s) its surface allows (fails closed).
+  const surfaceGateRedirect = getCustomDomainSurfaceGateRedirect({
+    pathname,
+    search: request.nextUrl.search,
+    requestHostname,
+    canonicalUrlEnv: getCanonicalUrl(),
+    hostSurface,
+    requestOrigin,
+  });
+  if (surfaceGateRedirect) {
+    const gateResponse = NextResponse.redirect(surfaceGateRedirect);
+    gateResponse.headers.set('x-pathname', surfaceGateRedirect.pathname);
+    return applyCorsHeaders(gateResponse, origin);
   }
 
   // Clone request headers so we can pass additional metadata downstream
@@ -434,8 +559,9 @@ const _middleware = auth((request) => {
   // Skip auth pages to prevent redirect loops
   const isAuthPage = pathname.startsWith('/auth/');
 
-  // Public Stripe Checkout return page verifies its opaque session context itself.
-  if (publicPagePaths.has(pathname)) {
+  // Public Stripe Checkout return page and the emailed /pay/<token> link verify
+  // their opaque signed context themselves.
+  if (isPublicPagePath(pathname)) {
     return applyCorsHeaders(response, origin);
   }
 
@@ -450,6 +576,8 @@ const _middleware = auth((request) => {
         requestHostname,
         canonicalUrlEnv,
         userType: request.auth?.user?.user_type,
+        hostSurface,
+        requestOrigin,
       });
       if (redirectTarget) {
         const redirectResponse = NextResponse.redirect(redirectTarget);
@@ -519,18 +647,33 @@ const _middleware = auth((request) => {
       }
 
       const loginUrl = request.nextUrl.clone();
+      // Sign in on the host the user is on (custom MSP/both host), not the canonical one.
+      const loginOrigin = new URL(requestOrigin);
+      loginUrl.protocol = loginOrigin.protocol;
+      loginUrl.host = loginOrigin.host;
       loginUrl.pathname = '/auth/signin';
       const callbackUrl = request.nextUrl.pathname + (request.nextUrl.search || '');
       loginUrl.searchParams.set('callbackUrl', callbackUrl);
       const redirectResponse = NextResponse.redirect(loginUrl);
       redirectResponse.headers.set('x-pathname', loginUrl.pathname);
       return redirectResponse;
+    } else if (!isInteractiveUserType(request.auth.user?.user_type)) {
+      // A session whose type cannot hold a UI session goes to sign-in, never to the client portal.
+      const signinUrl = request.nextUrl.clone();
+      signinUrl.pathname = '/auth/msp/signin';
+      signinUrl.search = '';
+      signinUrl.searchParams.set('error', 'AccessDenied');
+      const redirectResponse = NextResponse.redirect(signinUrl);
+      redirectResponse.headers.set('x-pathname', signinUrl.pathname);
+      return redirectResponse;
     } else if (request.auth.user?.user_type !== 'internal') {
       // Redirect authenticated client users to their dashboard instead of trapping them in a login loop
+      // On a custom host that also serves the client portal (`both`) the client user
+      // stays on that host; everywhere else they go to the canonical portal as before.
       const canonicalUrlEnv = getCanonicalUrl();
-      const redirectTarget = canonicalUrlEnv
+      const redirectTarget = canonicalUrlEnv && !(hostSurface === 'both')
         ? new URL('/client-portal/dashboard', canonicalUrlEnv.origin)
-        : new URL('/client-portal/dashboard', request.nextUrl);
+        : new URL('/client-portal/dashboard', requestOrigin);
       const redirectResponse = NextResponse.redirect(redirectTarget);
       redirectResponse.headers.set('x-pathname', redirectTarget.pathname);
       return redirectResponse;
@@ -597,13 +740,24 @@ const _middleware = auth((request) => {
       const redirectResponse = NextResponse.redirect(loginUrl);
       redirectResponse.headers.set('x-pathname', loginUrl.pathname);
       return redirectResponse;
-    } else if (request.auth.user?.user_type !== 'client') {
+    } else if (!isInteractiveUserType(request.auth.user?.user_type)) {
+      // Non-interactive session: back to client-portal sign-in, never into the portal.
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/auth/client-portal/signin';
+      loginUrl.search = '';
+      loginUrl.searchParams.set('error', 'AccessDenied');
+      const redirectResponse = NextResponse.redirect(loginUrl);
+      redirectResponse.headers.set('x-pathname', loginUrl.pathname);
+      return redirectResponse;
+    } else if (!isClientUserType(request.auth.user?.user_type)) {
       const redirectTarget = getVanityClientPortalInternalRedirectTarget({
         pathname,
         isAuthPage,
         requestHostname,
         canonicalUrlEnv: getCanonicalUrl(),
         userType: request.auth.user?.user_type,
+        hostSurface,
+        requestOrigin,
       });
       if (redirectTarget) {
         const redirectResponse = NextResponse.redirect(redirectTarget);

@@ -1,15 +1,26 @@
+import { deactivateClientScopedChecklistTemplates } from '../../../../lib/ticketChecklists/clientDeletion';
 import { z } from 'zod';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { tenantDb } from '@alga-psa/db';
-import { ensureDefaultContractForClientIfBillingConfigured } from '../../../../billingClients/defaultContract';
+import {
+  createClientWithDefaults,
+  type CreateClientWithDefaultsData,
+} from '../../../../models/clientCreation';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '@alga-psa/event-schemas';
 import { ClientModel } from '../../../../models/clientModel';
-import { buildClientArchivedPayload, buildClientCreatedPayload, buildClientUpdatedPayload } from '../../../streams/domainEventBuilders/clientEventBuilders';
+import {
+  buildClientArchivedPayload,
+  buildClientCreatedPayload,
+  buildClientLocationCreatedPayload,
+  buildClientLocationUpdatedPayload,
+  buildClientUpdatedPayload,
+} from '../../../streams/domainEventBuilders/clientEventBuilders';
 import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
+import { buildContactArchivedPayload } from '../../../streams/domainEventBuilders/contactEventBuilders';
 import { buildInteractionLoggedPayload, buildNoteCreatedPayload } from '../../../streams/domainEventBuilders/crmInteractionNoteEventBuilders';
 import { ticketUpdateStamp } from '../../../../lib/tickets/ticketUpdateStamp';
 import {
@@ -80,7 +91,7 @@ const clientSummarySchema = z.object({
   url: z.string().nullable().describe('Website'),
   billing_email: z.string().nullable().optional().describe('Billing email address'),
   is_inactive: z.boolean().describe('Is inactive'),
-  properties: z.record(z.unknown()).nullable().describe('Custom properties'),
+  properties: z.record(z.string(), z.unknown()).nullable().describe('Custom properties'),
   updated_at: isoDateTimeSchema.optional().describe('Last updated at'),
 });
 
@@ -126,7 +137,7 @@ const clientCreateInputSchema = z.object({
   default_currency_code: z.string().optional(),
   notes: z.string().optional(),
   client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').optional(),
-  properties: z.record(z.unknown()).optional(),
+  properties: z.record(z.string(), z.unknown()).optional(),
   parent_client_id: withWorkflowPicker(nullableUuidSchema.optional(), 'Parent client id', 'client'),
   contract_line_id: nullableUuidSchema.optional(),
   is_default: z.boolean().optional(),
@@ -150,7 +161,7 @@ const clientUpdatePatchSchema = z
     default_currency_code: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
     client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').nullable().optional(),
-    properties: z.record(z.unknown()).nullable().optional(),
+    properties: z.record(z.string(), z.unknown()).nullable().optional(),
     parent_client_id: withWorkflowPicker(nullableUuidSchema.optional(), 'Parent client id', 'client'),
     contract_line_id: nullableUuidSchema.optional(),
     is_default: z.boolean().nullable().optional(),
@@ -311,9 +322,29 @@ function pickExistingFields(
 async function deactivateClientUsersForClient(tx: TenantTxContext, clientId: string): Promise<void> {
   const contacts = await tenantScopedTable(tx, 'contacts')
     .where('client_id', clientId)
-    .select('contact_name_id');
+    .select('contact_name_id', 'is_inactive');
 
   await tenantScopedTable(tx, 'contacts').where('client_id', clientId).update({ is_inactive: true });
+
+  // The contacts really change state, so each one that was active reports contact.deactivated
+  // (same best-effort in-transaction contract as the other events in this file).
+  const archivedAt = new Date().toISOString();
+  for (const row of contacts as Array<{ contact_name_id: string; is_inactive?: boolean | null }>) {
+    if (row.is_inactive) continue;
+    await publishWorkflowDomainEvent({
+      eventType: 'CONTACT_ARCHIVED',
+      payload: buildContactArchivedPayload({
+        contactId: row.contact_name_id,
+        clientId,
+        archivedByUserId: tx.actorUserId,
+        archivedAt,
+      }),
+      tenantId: tx.tenantId,
+      occurredAt: archivedAt,
+      actorUserId: tx.actorUserId,
+      idempotencyKey: `contact_archived:${row.contact_name_id}:${archivedAt}`,
+    });
+  }
 
   const contactIds = contacts
     .map((row: { contact_name_id?: string | null }) => row.contact_name_id)
@@ -325,6 +356,56 @@ async function deactivateClientUsersForClient(tx: TenantTxContext, clientId: str
       .whereIn('contact_id', contactIds)
       .update({ is_inactive: true });
   }
+}
+
+// LEVERAGE: pattern client-location-event-publish — shared cannot import @alga-psa/clients, so the
+// workflow business operations re-state the location publish that models/clientLocation.ts owns for
+// the UI/REST/applier paths. Unlike those (after-commit), this runs inside the action transaction,
+// matching publishWorkflowDomainEvent's existing best-effort contract for client events here.
+async function publishLocationCreated(
+  tx: TenantTxContext,
+  location: { location_id: string; client_id: string; is_default?: boolean | null }
+): Promise<void> {
+  const occurredAt = new Date().toISOString();
+  await publishWorkflowDomainEvent({
+    eventType: 'CLIENT_LOCATION_CREATED',
+    payload: buildClientLocationCreatedPayload({
+      locationId: location.location_id,
+      clientId: location.client_id,
+      isDefault: Boolean(location.is_default),
+      createdByUserId: tx.actorUserId,
+      createdAt: occurredAt,
+    }),
+    tenantId: tx.tenantId,
+    occurredAt,
+    actorUserId: tx.actorUserId,
+    idempotencyKey: `client_location_created:${location.location_id}`,
+  });
+}
+
+async function publishLocationUpdated(
+  tx: TenantTxContext,
+  before: Record<string, unknown> & { location_id: string; client_id: string },
+  after: Record<string, unknown>
+): Promise<void> {
+  const occurredAt = new Date().toISOString();
+  const payload = buildClientLocationUpdatedPayload({
+    locationId: before.location_id,
+    clientId: before.client_id,
+    before,
+    after,
+    updatedByUserId: tx.actorUserId,
+    updatedAt: occurredAt,
+  });
+  if (!((payload as { updatedFields?: string[] }).updatedFields ?? []).length) return;
+  await publishWorkflowDomainEvent({
+    eventType: 'CLIENT_LOCATION_UPDATED',
+    payload,
+    tenantId: tx.tenantId,
+    occurredAt,
+    actorUserId: tx.actorUserId,
+    idempotencyKey: `client_location_updated:${before.location_id}:${occurredAt}`,
+  });
 }
 
 async function upsertDefaultClientLocation(
@@ -413,6 +494,11 @@ async function upsertDefaultClientLocation(
 
     if (Object.keys(insertRow).length > 0) {
       await tenantScopedTable(tx, 'client_locations').insert(insertRow);
+      await publishLocationCreated(tx, {
+        location_id: insertRow.location_id as string,
+        client_id: clientId,
+        is_default: true,
+      });
     }
     return;
   }
@@ -421,6 +507,7 @@ async function upsertDefaultClientLocation(
     await tenantScopedTable(tx, 'client_locations')
       .where({ client_id: clientId, location_id: location.location_id })
       .update(locationPatch);
+    await publishLocationUpdated(tx, location as any, { ...location, ...locationPatch });
   }
 }
 
@@ -633,6 +720,7 @@ async function cleanupClientDeleteArtifacts(
   clientId: string
 ): Promise<void> {
   await cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);
+  await deactivateClientScopedChecklistTemplates(trx, tenant, clientId);
   await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_settings', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_billing_cycles', { client_id: clientId });
   await deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });
@@ -772,17 +860,6 @@ async function getDefaultInteractionStatusId(ctx: any, tx: TenantTxContext): Pro
   return status.status_id;
 }
 
-// Resolve the tenant's configured default billing currency (last-resort fallback 'USD').
-// Mirrors the tenant-default read in resolveClientBillingCurrency so new clients adopt the
-// configured org default at creation instead of a literal 'USD'.
-async function getTenantDefaultBillingCurrency(tx: TenantTxContext): Promise<string> {
-  const billingSettings = await tenantScopedTable(tx, 'default_billing_settings')
-    .select('default_currency_code')
-    .first();
-
-  return billingSettings?.default_currency_code || 'USD';
-}
-
 async function appendClientNoteBlock(
   tx: TenantTxContext,
   client: Record<string, any>,
@@ -910,6 +987,32 @@ async function publishWorkflowDomainEvent<T extends WorkflowCatalogEventType>(pa
   try {
     const publishers = await import('@alga-psa/event-bus/publishers');
     await publishers.publishWorkflowEvent({
+      eventType: params.eventType,
+      payload: params.payload,
+      ctx: {
+        tenantId: params.tenantId,
+        occurredAt: params.occurredAt,
+        actor: maybeWorkflowActor(params.actorUserId),
+      },
+      idempotencyKey: params.idempotencyKey,
+    });
+  } catch {
+    // Best-effort publication; action persistence/audit remains source of truth.
+  }
+}
+
+// CLIENT_DELETED has no catalog entry (no payload schema), so it goes through the non-catalog publisher.
+async function publishNonCatalogDomainEvent(params: {
+  eventType: 'CLIENT_DELETED';
+  payload: Record<string, unknown>;
+  tenantId: string;
+  occurredAt: string;
+  actorUserId: string;
+  idempotencyKey: string;
+}): Promise<void> {
+  try {
+    const publishers = await import('@alga-psa/event-bus/publishers');
+    await publishers.publishNonCatalogWorkflowEvent({
       eventType: params.eventType,
       payload: params.payload,
       ctx: {
@@ -1212,14 +1315,8 @@ export function registerClientActions(): void {
 
         const clientColumns = await getTableColumns(tx, 'clients');
         const createdId = uuidv4();
-        const nowIso = new Date().toISOString();
-        // When the caller does not specify a currency, adopt the tenant's configured default
-        // (default_billing_settings.default_currency_code) rather than the literal 'USD'.
-        const defaultCurrencyCode =
-          input.default_currency_code ?? (await getTenantDefaultBillingCurrency(tx));
         const createRow = pickExistingFields(
           {
-            tenant: tx.tenantId,
             client_id: createdId,
             client_name: input.client_name,
             client_type: input.client_type ?? 'company',
@@ -1227,31 +1324,28 @@ export function registerClientActions(): void {
             billing_email: input.email ?? null,
             notes: input.notes ?? null,
             client_since: input.client_since ?? null,
-            properties: input.properties ? JSON.stringify(input.properties) : null,
-            default_currency_code: defaultCurrencyCode,
+            properties: input.properties ?? null,
+            // Left null so the creation seam resolves the tenant's configured
+            // default (default_billing_settings) instead of the column's 'USD'.
+            default_currency_code: input.default_currency_code ?? null,
             parent_client_id: input.parent_client_id ?? null,
             contract_line_id: input.contract_line_id ?? null,
             is_default: input.is_default ?? false,
             is_inactive: false,
-            created_at: nowIso,
-            updated_at: nowIso,
           },
           clientColumns,
-          new Set([...CLIENT_TABLE_ALLOWED_FIELDS, 'tenant', 'client_id', 'created_at', 'updated_at'])
+          new Set([...CLIENT_TABLE_ALLOWED_FIELDS, 'client_id'])
         );
         try {
-          await tenantScopedTable(tx, 'clients').insert(createRow);
+          // The shared seam owns the row plus its prerequisites: default billing
+          // profile, gated default contract, default tax, tenant currency.
+          await createClientWithDefaults(
+            tx.trx,
+            tx.tenantId,
+            createRow as CreateClientWithDefaultsData
+          );
         } catch (error) {
           rethrowAsStandardError(ctx, error);
-        }
-
-        try {
-          await ensureDefaultContractForClientIfBillingConfigured(tx.trx, {
-            tenant: tx.tenantId,
-            clientId: createdId,
-          });
-        } catch {
-          // Best-effort parity with product behavior.
         }
 
         const directPatch = pickExistingFields(
@@ -1617,6 +1711,16 @@ export function registerClientActions(): void {
           details: { action_id: 'clients.delete', action_version: 1, client_id: input.client_id },
         });
 
+        const deletedAt = new Date().toISOString();
+        await publishNonCatalogDomainEvent({
+          eventType: 'CLIENT_DELETED',
+          payload: { clientId: input.client_id, deletedByUserId: tx.actorUserId, deletedAt },
+          tenantId: tx.tenantId,
+          occurredAt: deletedAt,
+          actorUserId: tx.actorUserId,
+          idempotencyKey: `client_deleted:${input.client_id}:${deletedAt}`,
+        });
+
         return { deleted: true, client_id: input.client_id };
       }),
   });
@@ -1661,7 +1765,6 @@ export function registerClientActions(): void {
         const duplicateRow = pickExistingFields(
           {
             client_id: duplicateId,
-            tenant: tx.tenantId,
             client_name: input.client_name,
             client_type: source.client_type ?? null,
             url: source.url ?? null,
@@ -1683,28 +1786,38 @@ export function registerClientActions(): void {
             billing_cycle: source.billing_cycle ?? null,
             timezone: source.timezone ?? null,
             account_manager_id: source.account_manager_id ?? null,
-            created_at: nowIso,
-            updated_at: nowIso,
             notes_document_id: null,
           },
           clientColumns,
-          new Set([...CLIENT_TABLE_ALLOWED_FIELDS, 'client_id', 'tenant', 'created_at', 'updated_at', 'notes_document_id'])
+          new Set([...CLIENT_TABLE_ALLOWED_FIELDS, 'client_id', 'notes_document_id'])
         );
 
         try {
-          await tenantScopedTable(tx, 'clients').insert(duplicateRow);
+          // A duplicate is a new client, so it earns the same prerequisites as
+          // one created from scratch rather than only the source's columns.
+          await createClientWithDefaults(
+            tx.trx,
+            tx.tenantId,
+            duplicateRow as CreateClientWithDefaultsData
+          );
         } catch (error) {
           rethrowAsStandardError(ctx, error);
         }
 
-        try {
-          await ensureDefaultContractForClientIfBillingConfigured(tx.trx, {
-            tenant: tx.tenantId,
+        await publishWorkflowDomainEvent({
+          eventType: 'CLIENT_CREATED',
+          payload: buildClientCreatedPayload({
             clientId: duplicateId,
-          });
-        } catch {
-          // Non-fatal: duplicate creation remains valid.
-        }
+            clientName: input.client_name,
+            createdByUserId: tx.actorUserId,
+            createdAt: nowIso,
+            status: Boolean(duplicateRow.is_inactive) ? 'inactive' : 'active',
+          }),
+          tenantId: tx.tenantId,
+          occurredAt: nowIso,
+          actorUserId: tx.actorUserId,
+          idempotencyKey: `client_created:${duplicateId}`,
+        });
 
         let copiedTags = 0;
         if (input.copy_tags) {
@@ -1755,6 +1868,13 @@ export function registerClientActions(): void {
 
             await tenantScopedTable(tx, 'client_locations').insert(inserts);
             copiedLocations = inserts.length;
+            for (const insert of inserts) {
+              await publishLocationCreated(tx, {
+                location_id: insert.location_id as string,
+                client_id: duplicateId,
+                is_default: Boolean(insert.is_default),
+              });
+            }
           }
         }
 

@@ -121,6 +121,7 @@ async function seedSimulatorContract(
       tenant: tenantId,
       template_id: templateId,
       template_name: `Simulator template ${uuidv4().slice(0, 6)}`,
+      currency_code: 'USD',
       template_description: "Template simulator fixture",
       default_billing_frequency: "monthly",
       template_status: "active",

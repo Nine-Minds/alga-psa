@@ -1,7 +1,7 @@
 import type { ZodTypeAny } from 'zod';
 import { ApiOpenApiRegistry, zOpenApi } from './registry';
 
-export const OpenApiMetaSchema = zOpenApi.record(zOpenApi.unknown());
+export const OpenApiMetaSchema = zOpenApi.record(zOpenApi.string(), zOpenApi.unknown());
 
 export const OpenApiPaginationSchema = zOpenApi.object({
   page: zOpenApi.number().int(),

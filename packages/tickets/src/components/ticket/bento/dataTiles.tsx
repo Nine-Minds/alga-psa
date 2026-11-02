@@ -12,19 +12,17 @@ import {
   BentoRowList,
   BentoTile,
   BentoTileEmpty,
+  BentoTileEmptyScope,
   TileSkeleton,
   useTileData,
 } from '@alga-psa/ui/components/bento';
 import {
-  getTicketScheduleEntries,
-  getTicketInteractions,
-  getTicketBillingRollup,
-  getTicketAppointmentRequests,
   type TicketScheduleEntrySummary,
   type TicketInteractionSummary,
   type TicketBillingRollup,
   type TicketAppointmentRequestSummary,
 } from '../../../actions/ticketBentoActions';
+import { useTicketDataSource, useTicketScreenReadOnly } from '../TicketDataSourceContext';
 
 type FormatDate = (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
 
@@ -70,6 +68,9 @@ export function ScheduledWorkTile({
   onOpenEntry?: (entryId: string) => void;
 }) {
   const { t } = useTranslation('features/tickets');
+  const { getTicketScheduleEntries } = useTicketDataSource().tiles;
+  // A read-only screen lists scheduled work but offers no way to schedule more (not even the dispatch link).
+  const readOnly = useTicketScreenReadOnly();
   const { data, error, loading } = useTileData(
     () => getTicketScheduleEntries(ticketId),
     [ticketId, refreshKey],
@@ -105,7 +106,7 @@ export function ScheduledWorkTile({
       ) : upcoming.length === 0 && past.length === 0 ? (
         <div>
           <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.nothingScheduled', 'Nothing scheduled')}</BentoTileEmpty>
-          {onSchedule ? (
+          {readOnly ? null : onSchedule ? (
             <button
               id={`${id}-schedule-link`}
               type="button"
@@ -256,6 +257,7 @@ export function AppointmentRequestsTile({
   refreshKey?: number;
 }) {
   const { t } = useTranslation('features/tickets');
+  const { getTicketAppointmentRequests } = useTicketDataSource().tiles;
   const { data, error, loading } = useTileData(
     () => getTicketAppointmentRequests(ticketId),
     [ticketId, refreshKey],
@@ -315,6 +317,7 @@ export function CallsEmailsTile({
 }) {
   const { t } = useTranslation('features/tickets');
   const { teamsPhoneConnected } = useCallLinkContext();
+  const { getTicketInteractions } = useTicketDataSource().tiles;
   const { data, error, loading } = useTileData(
     () => getTicketInteractions(ticketId, { limit: 5 }),
     [ticketId, refreshKey],
@@ -439,18 +442,23 @@ function formatMinutes(minutes: number): string {
 }
 
 /** "Billing" tile — hours-only rollup for this ticket (v1: no dollar amounts). */
-export function BillingTile({
+/** Billing rollup body; rendered standalone (BillingTile) or inside the Time & billing tile. */
+export function BillingSummary({
   id,
   ticketId,
   refreshKey = 0,
   initialData,
+  footer,
 }: {
   id: string;
   ticketId: string;
   refreshKey?: number;
   initialData?: Promise<TicketBillingRollup | null>;
+  /** Host-placed billing actions (e.g. Quick invoice), rendered under the rollup. */
+  footer?: React.ReactNode;
 }) {
   const { t } = useTranslation('features/tickets');
+  const { getTicketBillingRollup } = useTicketDataSource().tiles;
   const { data, error, loading } = useTileData(
     () => getTicketBillingRollup(ticketId),
     [ticketId, refreshKey],
@@ -460,12 +468,15 @@ export function BillingTile({
 
   const rollup: TicketBillingRollup | null = data;
 
+  if (error) {
+    return <p id={`${id}-error`} className="text-sm text-red-700">{error}</p>;
+  }
   return (
-    <BentoTile id={id} title={t('bento.tiles.billing', 'Billing')} icon={<CreditCard className="h-4 w-4" />} error={error}>
+    <div id={id}>
       {loading ? (
         <TileSkeleton id={`${id}-loading`} />
       ) : !rollup || rollup.entryCount === 0 ? (
-        <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.nothingBillable', 'Nothing billable yet')}</BentoTileEmpty>
+        <BentoTileEmptyScope><BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.nothingBillable', 'Nothing billable yet')}</BentoTileEmpty></BentoTileEmptyScope>
       ) : (
         <div className="text-sm space-y-1.5">
           <div className="flex justify-between">
@@ -493,6 +504,16 @@ export function BillingTile({
           ) : null}
         </div>
       )}
+      {footer ? <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">{footer}</div> : null}
+    </div>
+  );
+}
+
+export function BillingTile(props: React.ComponentProps<typeof BillingSummary>) {
+  const { t } = useTranslation('features/tickets');
+  return (
+    <BentoTile id={`${props.id}-tile`} title={t('bento.tiles.billing', 'Billing')} icon={<CreditCard className="h-4 w-4" />}>
+      <BillingSummary {...props} />
     </BentoTile>
   );
 }

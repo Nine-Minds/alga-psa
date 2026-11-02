@@ -153,7 +153,7 @@ export abstract class ApiBaseController {
       return schema.parse(body);
     } catch (error) {
       if (error instanceof ZodError) {
-        throw new ValidationError('Validation failed', error.errors);
+        throw new ValidationError('Validation failed', error.issues);
       }
       throw error;
     }
@@ -172,7 +172,7 @@ export abstract class ApiBaseController {
       return schema.parse(query);
     } catch (error) {
       if (error instanceof ZodError) {
-        throw new ValidationError('Query validation failed', error.errors);
+        throw new ValidationError('Query validation failed', error.issues);
       }
       throw error;
     }

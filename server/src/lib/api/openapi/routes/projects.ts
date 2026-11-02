@@ -23,22 +23,22 @@ export function registerProjectRoutes(
   const ProjectIdParams = registry.registerSchema(
     'ProjectIdParams',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Project UUID.'),
+      id: zOpenApi.string().guid().describe('Project UUID.'),
     }),
   );
 
   const ProjectPhaseTaskParams = registry.registerSchema(
     'ProjectPhaseTaskParams',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Project UUID.'),
-      phaseId: zOpenApi.string().uuid().describe('Project phase UUID.'),
+      id: zOpenApi.string().guid().describe('Project UUID.'),
+      phaseId: zOpenApi.string().guid().describe('Project phase UUID.'),
     }),
   );
 
   const ProjectTaskIdParams = registry.registerSchema(
     'ProjectTaskIdParams',
     zOpenApi.object({
-      taskId: zOpenApi.string().uuid().describe('Project task UUID.'),
+      taskId: zOpenApi.string().guid().describe('Project task UUID.'),
     }),
   );
 
@@ -392,8 +392,8 @@ export function registerProjectRoutes(
   const ProjectTaskCommentParams = registry.registerSchema(
     'ProjectTaskCommentParams',
     zOpenApi.object({
-      taskId: zOpenApi.string().uuid().describe('Project task UUID.'),
-      commentId: zOpenApi.string().uuid().describe('Task comment UUID.'),
+      taskId: zOpenApi.string().guid().describe('Project task UUID.'),
+      commentId: zOpenApi.string().guid().describe('Task comment UUID.'),
     }),
   );
   const ProjectTaskCommentResource = registry.registerSchema('ProjectTaskCommentResource', projectTaskCommentResponseSchema);
