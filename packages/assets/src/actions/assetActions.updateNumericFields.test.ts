@@ -43,7 +43,8 @@ const h = vi.hoisted(() => {
     for (const table of [
       'assets', 'asset_type_registry', 'asset_history', 'asset_relationships', 'asset_associations',
       'team_members', 'users', 'user_roles', 'clients', 'workstation_assets', 'network_device_assets',
-      'server_assets', 'mobile_device_assets', 'printer_assets',
+      'server_assets', 'mobile_device_assets', 'printer_assets', 'asset_maintenance_history',
+      'asset_maintenance_schedules', 'asset_maintenance_notifications', 'asset_groups', 'asset_group_members',
     ]) {
       dbState[table] = [];
     }
@@ -266,7 +267,7 @@ vi.mock('@alga-psa/authorization/pagination', () => ({
 }));
 vi.mock('../lib/assetFactsService', () => ({ listAvailableAssetFactsForAsset: vi.fn(async () => []) }));
 
-import { bulkUpdateAssets, createAsset, getAsset, getAssetDetailBundle, listAssets, updateAsset } from './assetActions';
+import { bulkUpdateAssets, createAsset, getAsset, getAssetDetailBundle, getAssetHistory, getAssetMaintenanceReport, listAssets, listEntityAssets, updateAsset } from './assetActions';
 
 function seedAsset(overrides: Row = {}): Row {
   const row: Row = {
@@ -437,6 +438,66 @@ describe('asset read redaction boundaries', () => {
     expect(bundle.history[0].changes).toEqual({});
     h.readDecisions[ASSET_ID] = { allowed: false, redactedFields: [] };
     await expect(getAssetDetailBundle(ASSET_ID)).rejects.toThrow(/Permission denied/);
+  });
+
+  it('applies each allowed entity asset decision after assembling aliases and extensions', async () => {
+    seedAsset({ asset_type: 'workstation', name: 'Hidden list name', serial_number: 'BASE-SECRET' });
+    seedWorkstation({ serial_number: 'EXT-SECRET', os_version: 'visible' });
+    h.dbState.asset_associations.push({ tenant: TENANT, entity_id: 'ticket-1', entity_type: 'ticket', asset_id: ASSET_ID, created_at: new Date(NOW_ISO) });
+    h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: ['name', 'workstation.serial_number'] };
+
+    const result = await listEntityAssets('ticket-1', 'ticket') as any;
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBeUndefined();
+    expect(result[0].workstation.serial_number).toBeUndefined();
+    expect(result[0].workstation.os_version).toBe('visible');
+    expect(result[0].serial_number).toBe('BASE-SECRET');
+
+    h.readDecisions[ASSET_ID] = { allowed: false, redactedFields: [] };
+    expect(await listEntityAssets('ticket-1', 'ticket')).toEqual([]);
+    h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: [] };
+    expect(((await listEntityAssets('ticket-1', 'ticket')) as any)[0].workstation.serial_number).toBe('EXT-SECRET');
+  });
+
+  it('masks standalone maintenance report aliases and standalone historical deltas', async () => {
+    seedAsset({ name: 'Historical private name' });
+    h.dbState.asset_history.push({
+      tenant: TENANT,
+      asset_id: ASSET_ID,
+      history_id: 'history-private',
+      changes: {
+        name: { before: 'Old private name', after: 'Historical private name' },
+        fields: { name: { previous_value: 'Older private name', new_value: 'New private name' } },
+        serial_number: 'Private historical serial',
+      },
+      changed_at: new Date(NOW_ISO),
+    });
+    h.dbState.asset_maintenance_history.push({
+      tenant: TENANT,
+      history_id: 'e0000000-0000-4000-8000-000000000001',
+      asset_id: ASSET_ID,
+      schedule_id: 'e0000000-0000-4000-8000-000000000002',
+      performed_at: new Date(NOW_ISO),
+      performed_by: 'd0000000-0000-4000-8000-00000000000d',
+      description: 'Routine inspection',
+      maintenance_data: { serial_number: 'Maintenance historical secret', visible_note: 'visible' },
+      created_at: new Date(NOW_ISO),
+    });
+    h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: ['name', 'serial_number'] };
+
+    const report = await getAssetMaintenanceReport(ASSET_ID) as any;
+    expect(report.asset_name).toBeUndefined();
+    expect(report.maintenance_history[0].maintenance_data).toEqual({ visible_note: 'visible' });
+    const history = await getAssetHistory(ASSET_ID) as any;
+    expect(history[0].changes).toEqual({ fields: {} });
+
+    h.readDecisions[ASSET_ID] = { allowed: true, redactedFields: [] };
+    expect((await getAssetMaintenanceReport(ASSET_ID) as any).asset_name).toBe('Historical private name');
+    expect((await getAssetHistory(ASSET_ID) as any)[0].changes.name.before).toBe('Old private name');
+
+    h.readDecisions[ASSET_ID] = { allowed: false, redactedFields: [] };
+    expect((await getAssetMaintenanceReport(ASSET_ID) as any).permissionError).toMatch(/Permission denied/);
+    expect((await getAssetHistory(ASSET_ID) as any).permissionError).toMatch(/Permission denied/);
   });
 
   it('uses a distinct decision mask for each list row and honors flat aliases and extensions', async () => {

@@ -624,10 +624,11 @@ async function createAuthorizedAssetReadContextForUser(
     tenant: string,
     user: AssetAuthUser,
     asset_id: string
-): Promise<{ context: AssetReadAuthorizationContext; asset: AssetAuthorizationInput }> {
+): Promise<{ context: AssetReadAuthorizationContext; asset: AssetAuthorizationInput; decision: Awaited<ReturnType<typeof authorizeAssetReadDecision>> }> {
     const context = await createAssetReadAuthorizationContext(trx, tenant, user);
-    const asset = await assertAssetReadAllowedById(trx, tenant, context, asset_id);
-    return { context, asset };
+    const asset = await resolveAssetAuthorizationInputById(trx, tenant, asset_id);
+    const decision = await assertAssetReadAllowed(trx, tenant, context, asset);
+    return { context, asset, decision };
 }
 
 async function createAuthorizedAssetUpdateContextForUser(
@@ -873,7 +874,7 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
         ).maintenanceReport;
         const history = rawHistory.map((entry) => ({
             ...entry,
-            changes: projectAssetReadFields(entry.changes, decision.redactedFields),
+            changes: projectAssetReadFields({ changes: entry.changes }, decision.redactedFields).changes,
         }));
 
         return {
@@ -3068,8 +3069,15 @@ export const getAssetMaintenanceReport = withAuth(async (user, { tenant }, asset
 
     try {
         return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetMaintenanceReport> => {
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
-            return fetchAssetMaintenanceReport(trx, tenant, asset_id);
+            const { decision } = await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+            const report = await fetchAssetMaintenanceReport(trx, tenant, asset_id);
+            const projected = projectAssetReadFields({ maintenanceReport: report }, decision.redactedFields).maintenanceReport;
+            return {
+                ...projected,
+                maintenance_history: projectAssetReadFields(
+                    { changes: projected.maintenance_history }, decision.redactedFields
+                ).changes,
+            };
         });
     } catch (error) {
         console.error('Error getting asset maintenance report:', error);
@@ -3088,9 +3096,12 @@ export const getAssetHistory = withAuth(async (user, { tenant }, asset_id: strin
                 throw new Error('Permission denied: Cannot read asset history');
             }
 
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
-
-            return fetchAssetHistory(trx, tenant, asset_id);
+            const { decision } = await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+            const history = await fetchAssetHistory(trx, tenant, asset_id);
+            return history.map((entry) => ({
+                ...entry,
+                changes: projectAssetReadFields({ changes: entry.changes }, decision.redactedFields).changes,
+            }));
         });
     } catch (error) {
         console.error('Error getting asset history:', error);
@@ -3662,11 +3673,14 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
             );
 
             // Newest association first, so the panel's collapsed rows include a just-received item.
+            const decisionsByAssetId = new Map<string, Awaited<ReturnType<typeof authorizeAssetReadDecision>>>();
+            candidateAssets.forEach((asset, index) => {
+                const decision = decisions[index];
+                if (decision?.allowed) decisionsByAssetId.set(asset.asset_id, decision);
+            });
             const authorizedAssetIds = orderEntityAssetIds(
                 associations as EntityAssociationRow[],
-                candidateAssets
-                    .filter((_, index) => decisions[index]?.allowed)
-                    .map((asset) => asset.asset_id)
+                [...decisionsByAssetId.keys()]
             );
 
             if (authorizedAssetIds.length === 0) {
@@ -3675,7 +3689,10 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
 
             const assets = await Promise.all(
                 authorizedAssetIds.map(async (authorizedAssetId): Promise<Asset> =>
-                    getAssetWithExtensions(trx, tenant, authorizedAssetId)
+                    projectAssetReadFields(
+                        formatAssetForOutput(await getAssetWithExtensions(trx, tenant, authorizedAssetId)),
+                        decisionsByAssetId.get(authorizedAssetId)?.redactedFields
+                    )
                 )
             );
 

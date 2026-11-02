@@ -33,7 +33,17 @@ export function projectAssetReadFields<T>(value: T, redactedFields: readonly str
     const result: Record<string, unknown> = {};
     for (const [key, child] of Object.entries(node as Record<string, unknown>)) {
       const childPath = path ? `${path}.${key}` : key;
-      if (paths.has(childPath)) continue;
+      // History stores asset values below a `changes`/`fields` wrapper. Match
+      // asset paths at any depth there, and also support flattened dotted keys.
+      const isHistoryValue = path === 'changes' || path.startsWith('changes.');
+      const historyFieldMatch = isHistoryValue && [...paths].some((redactedPath) =>
+        key === redactedPath || key.endsWith(`.${redactedPath}`) || redactedPath.endsWith(`.${key}`)
+      );
+      if (paths.has(childPath) || historyFieldMatch) continue;
+      if (isHistoryValue && (key === 'before' || key === 'after' || key === 'previous_value' || key === 'new_value' || key === 'old_value' || key === 'value')) {
+        const field = (node as Record<string, unknown>).field ?? (node as Record<string, unknown>).field_name ?? (node as Record<string, unknown>).path;
+        if (typeof field === 'string' && [...paths].some((redactedPath) => field === redactedPath || field.endsWith(`.${redactedPath}`))) continue;
+      }
       result[key] = project(child, childPath);
     }
     return result;
