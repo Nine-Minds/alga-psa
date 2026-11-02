@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { findSourceBoundaryViolations } from '../../../../scripts/lib/source-boundary';
 
 /**
  * Credentials vault is an EE-only (Pro) feature. Its DB schema lives in
@@ -30,8 +31,7 @@ const ALLOWED_FILES = new Set<string>([
   'server/migrations/20260812110000_expand_credential_associations_entity_types.cjs',
   'server/migrations/20260828120000_add_credential_audit_permission.cjs',
 
-  // Shared metadata / RBAC catalog (data, not logic).
-  'packages/db/src/lib/tenantTableMetadata.ts',
+  // Migration metadata / RBAC catalog (data, not logic).
   'server/migrations/utils/tenantDb.cjs',
   'server/migrations/utils/permissions/catalog.cjs',
 
@@ -52,6 +52,16 @@ const ALLOWED_FILES = new Set<string>([
   'packages/clients/src/lib/clientMergePlan.ts',
   'packages/clients/src/lib/clientMergeEngine.test.ts',
 ]);
+
+// Shared catalogs describe the combined CE + EE schema for tenant lifecycle
+// tooling and write admission. Permit only inert data in these declarations;
+// queries and EE imports anywhere in the same files remain forbidden.
+const METADATA_DECLARATIONS: Record<string, readonly string[]> = {
+  'packages/db/src/lib/tenantTableMetadata.ts': ['tenantTableMetadata'],
+  'packages/db/src/lib/tenantTableManifest.ts': ['TENANT_TABLE_MANIFEST'],
+  'packages/db/src/lib/tenantTableForeignKeys.ts': ['TENANT_TABLE_FOREIGN_KEYS'],
+  'packages/db/src/lib/operationalWriteTables.ts': ['OPERATIONAL_WRITE_TABLES'],
+};
 
 const TABLES = 'credentials|credential_associations|credential_access_grants';
 const KNEX_TABLE_METHODS =
@@ -105,15 +115,16 @@ describe('credentials edition boundary', () => {
       const abs = path.join(repoRoot, file);
       if (!fs.existsSync(abs)) continue; // deleted in working tree but not yet committed
       const source = fs.readFileSync(abs, 'utf8');
-      for (const { name, regex } of VIOLATION_PATTERNS) {
-        if (regex.test(source)) violations.push(`${file}: ${name}`);
+      for (const name of findSourceBoundaryViolations(source, VIOLATION_PATTERNS, METADATA_DECLARATIONS[file])) {
+        violations.push(`${file}: ${name}`);
       }
     }
     expect(violations).toEqual([]);
   });
 
   it('every allowlisted explicit path exists', () => {
-    const missing = [...ALLOWED_FILES].filter((file) => !fs.existsSync(path.join(repoRoot, file)));
+    const missing = [...ALLOWED_FILES, ...Object.keys(METADATA_DECLARATIONS)]
+      .filter((file) => !fs.existsSync(path.join(repoRoot, file)));
     expect(missing).toEqual([]);
   });
 
