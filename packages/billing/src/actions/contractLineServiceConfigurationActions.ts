@@ -39,6 +39,15 @@ function contractLineServiceConfigActionErrorFrom(error: unknown): ContractLineS
     if (error.message === 'System-managed default contracts are attribution-only; contract-line service configuration authoring is disabled.') {
       return actionError(error.message);
     }
+    if (
+      error.message.startsWith('This item has scheduled recurring quantity/price revisions.') ||
+      error.message.startsWith('This item appears on an issued invoice.') ||
+      error.message.startsWith('Configuration type ') ||
+      error.message.includes('is inactive and cannot be attached to contract lines.') ||
+      error.message === 'Products can only be added to fixed-fee contract lines.'
+    ) {
+      return actionError(error.message);
+    }
     if (error.message.includes('not found')) {
       return actionError('The selected service configuration is no longer available. Please refresh and try again.', 'msp/contract-lines:errors.configuration.unavailable');
     }

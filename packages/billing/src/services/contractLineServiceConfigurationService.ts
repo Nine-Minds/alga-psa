@@ -29,6 +29,10 @@ import ContractLineServiceFixedConfig, { resolveFixedMemberRateWrite } from '../
 import ContractLineServiceHourlyConfig from '../models/contractLineServiceHourlyConfig';
 import ContractLineServiceUsageConfig from '../models/contractLineServiceUsageConfig';
 import ContractLineServiceBucketConfig from '../models/contractLineServiceBucketConfig';
+import {
+  assertServiceEligibleForContractLine,
+  resolveContractLineServiceConfigurationType,
+} from '../lib/contractLineServiceConfigPolicy';
 
 export type ConfigurationRebindInput = {
   targetContractLineId: string;
@@ -535,13 +539,15 @@ export class ContractLineServiceConfigurationService {
         }
         return line;
       };
+      const checkedLines = new Map<string, any>();
       for (const lineId of [...new Set([current.contract_line_id, input.targetContractLineId])].sort()) {
-        await authorableLine(lineId);
+        checkedLines.set(lineId, await authorableLine(lineId));
       }
 
       const targetService = await tenantDb(trx, this.tenant).table('service_catalog')
-        .where({ service_id: input.targetServiceId }).first('service_id');
+        .where({ service_id: input.targetServiceId }).first();
       if (!targetService) throw new Error(`Service ${input.targetServiceId} not found`);
+      assertServiceEligibleForContractLine(targetService, checkedLines.get(input.targetContractLineId).contract_line_type);
       const targetConfig = await configModel.getByContractLineIdAndServiceId(input.targetContractLineId, input.targetServiceId);
       if (targetConfig && targetConfig.config_id !== configId) {
         const duplicate = new Error('This service configuration already exists for the selected contract line.') as Error & { code: string };
@@ -549,39 +555,48 @@ export class ContractLineServiceConfigurationService {
         throw duplicate;
       }
 
+      const targetType = input.configurationType ?? current.configuration_type;
+      const compatibleType = resolveContractLineServiceConfigurationType(
+        checkedLines.get(input.targetContractLineId).contract_line_type,
+        targetType,
+      );
       const sourceMembership = { contract_line_id: current.contract_line_id, service_id: current.service_id };
       const targetMembership = { contract_line_id: input.targetContractLineId, service_id: input.targetServiceId };
+      const identityChanges = sourceMembership.contract_line_id !== targetMembership.contract_line_id || sourceMembership.service_id !== targetMembership.service_id;
+      if (identityChanges || compatibleType !== current.configuration_type) {
+        const deletionGuard = await configurationDeletionGuard({ trx, tenant: this.tenant, configId });
+        if (deletionGuard) throw new Error(deletionGuard);
+      }
+
       const membershipTable = () => tenantDb(trx, this.tenant).table('contract_line_services');
-      if (sourceMembership.contract_line_id !== targetMembership.contract_line_id || sourceMembership.service_id !== targetMembership.service_id) {
+      if (identityChanges) {
         const targetMembershipRow = await membershipTable().where(targetMembership).first('service_id');
         if (!targetMembershipRow) await membershipTable().insert({ tenant: this.tenant, ...targetMembership });
         await membershipTable().where(sourceMembership).delete();
       }
 
-      const targetType = input.configurationType ?? current.configuration_type;
-      if (!['Fixed', 'Hourly', 'Usage', 'Bucket'].includes(targetType)) {
-        throw new Error('Invalid configuration type');
-      }
-      if (targetType !== current.configuration_type) {
+      if (compatibleType !== current.configuration_type) {
         const transactionService = new ContractLineServiceConfigurationService(trx, this.tenant);
         await transactionService.deleteConfiguration(configId);
         return transactionService.createConfiguration({
           tenant: this.tenant,
           contract_line_id: input.targetContractLineId,
           service_id: input.targetServiceId,
-          configuration_type: targetType,
+          configuration_type: compatibleType,
           custom_rate: input.mutableValues?.custom_rate !== undefined ? input.mutableValues.custom_rate : current.custom_rate,
           quantity: input.mutableValues?.quantity !== undefined ? input.mutableValues.quantity : current.quantity,
         }, input.typeConfig ?? {}, input.rateTiers as any);
       }
 
-      if (sourceMembership.contract_line_id !== targetMembership.contract_line_id || sourceMembership.service_id !== targetMembership.service_id) {
+      if (identityChanges) {
         await configModel.rebindIdentity(configId, input.targetContractLineId, input.targetServiceId);
       }
-      if (input.mutableValues) await configModel.update(configId, input.mutableValues);
       if (input.typeConfig || input.rateTiers) {
         await new ContractLineServiceConfigurationService(trx, this.tenant)
-          .updateConfiguration(configId, undefined, input.typeConfig, input.rateTiers);
+          .updateConfiguration(configId, input.mutableValues, input.typeConfig, input.rateTiers);
+      } else if (input.mutableValues) {
+        await new ContractLineServiceConfigurationService(trx, this.tenant)
+          .updateConfiguration(configId, input.mutableValues);
       }
       return configId;
     });

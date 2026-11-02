@@ -17,7 +17,7 @@ import type {
 } from '@alga-psa/types';
 import { deleteTemplateServicePrices } from '@alga-psa/shared/billingClients/templateAmounts';
 import { ContractLineServiceConfigurationService } from '../../services/contractLineServiceConfigurationService';
-import { resolveContractLineServiceConfig } from '../contractLineServiceConfigPolicy';
+import { assertServiceEligibleForContractLine, resolveContractLineServiceConfig } from '../contractLineServiceConfigPolicy';
 import { fetchCurrencyCatalogRates } from '../../repositories/contractLineRepository';
 import type {
   ContractLineServiceMembershipChanges,
@@ -73,14 +73,8 @@ async function addServiceToTemplateLine(
   if (!service) {
     throw new Error(`Service ${serviceId} not found`);
   }
-  if (service.is_active === false) {
-    throw new Error(`"${service.service_name}" is inactive and cannot be attached to contract lines.`);
-  }
-
   const lineType: string = templateLine.line_type || 'Fixed';
-  if (service.item_kind === 'product' && lineType !== 'Fixed') {
-    throw new Error('Products can only be added to fixed-fee contract lines.');
-  }
+  assertServiceEligibleForContractLine(service, lineType);
 
   // Same policy resolver the live-line path uses: one place decides the
   // configuration type and the per-type defaults.
@@ -215,14 +209,9 @@ async function addServiceToLiveContractLine(
   }
 
   const contractLine = await assertLiveContractLineIsAuthorable(trx, tenant, contractLineId);
-  if (service.is_active === false) {
-    throw new Error(`"${service.service_name}" is inactive and cannot be attached to contract lines.`);
-  }
+  assertServiceEligibleForContractLine(service, contractLine.contract_line_type);
 
   if (service.item_kind === 'product') {
-    if (contractLine.contract_line_type !== 'Fixed') {
-      throw new Error('Products can only be added to fixed-fee contract lines.');
-    }
 
     const contract = contractLine.contract_id
       ? await tenantScopedTable(trx, tenant, 'contracts')
