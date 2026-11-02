@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
+import { buildDocumentPreviewHeaders } from '@alga-psa/core';
 import type { AuthorizedProjection } from '../controllers/authorizationKernel';
 
 export interface FileResponseMetadata {
@@ -9,22 +10,16 @@ export interface FileResponseMetadata {
   disposition?: 'attachment' | 'inline';
 }
 
-/** Binary bodies are authorized separately; every header and validator comes from projected metadata. */
-export function createProjectedFileResponse(
+/** Build validators and caching from the final headers, all of which came from projected metadata or its policy. */
+function respondWithProjectedFile(
   request: Request,
   body: Uint8Array,
   metadata: AuthorizedProjection<FileResponseMetadata>,
+  headers: Headers,
 ): NextResponse {
-  const mimeType = metadata.mimeType || 'application/octet-stream';
-  const headers = new Headers({ 'Content-Type': mimeType });
-  if (metadata.disposition) {
-    const filename = metadata.fileName ? `; filename="${encodeURIComponent(metadata.fileName)}"` : '';
-    headers.set('Content-Disposition', `${metadata.disposition}${filename}`);
-  }
-
   if (metadata.fileId) {
-    // A policy change that hides a header changes the validator too. Never hash an unprojected value.
-    const representation = [metadata.fileId, mimeType, metadata.fileName ?? null, metadata.disposition ?? null];
+    // Include the final authorized representation headers, never a source file ID or raw service metadata.
+    const representation = [metadata.fileId, Array.from(headers.entries()).sort(([a], [b]) => a.localeCompare(b))];
     const etag = `"${createHash('sha256').update(JSON.stringify(representation)).digest('hex')}"`;
     headers.set('ETag', etag);
     // Revalidate authorization on every request, even when the stored file itself is immutable.
@@ -37,4 +32,28 @@ export function createProjectedFileResponse(
   }
 
   return new NextResponse(new Uint8Array(body), { status: 200, headers });
+}
+
+/** Binary bodies are authorized separately; every header and validator comes from projected metadata. */
+export function createProjectedFileResponse(
+  request: Request,
+  body: Uint8Array,
+  metadata: AuthorizedProjection<FileResponseMetadata>,
+): NextResponse {
+  const headers = new Headers({ 'Content-Type': metadata.mimeType || 'application/octet-stream' });
+  if (metadata.disposition) {
+    const filename = metadata.fileName ? `; filename="${encodeURIComponent(metadata.fileName)}"` : '';
+    headers.set('Content-Disposition', `${metadata.disposition}${filename}`);
+  }
+  return respondWithProjectedFile(request, body, metadata, headers);
+}
+
+/** Preview policy is composed from the authorized MIME/name projection before any response headers or validators are set. */
+export function createProjectedPreviewResponse(
+  request: Request,
+  body: Uint8Array,
+  metadata: AuthorizedProjection<FileResponseMetadata>,
+): NextResponse {
+  const headers = new Headers(buildDocumentPreviewHeaders(metadata.mimeType, metadata.fileName));
+  return respondWithProjectedFile(request, body, metadata, headers);
 }

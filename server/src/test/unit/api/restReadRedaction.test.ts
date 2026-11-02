@@ -1980,4 +1980,49 @@ describe('ticket binary responses preserve document redactions', () => {
     expect((controller as any).ticketService.downloadTicketDocument).not.toHaveBeenCalled();
     expect((controller as any).ticketService.downloadTicketDocumentVariant).not.toHaveBeenCalled();
   });
+
+  it.each(['thumbnail', 'preview'] as const)('%s neutralizes non-raster preview MIME types', async (kind) => {
+    for (const mimeType of ['image/svg+xml', 'text/html']) {
+      const controller = fileFixture();
+      (controller as any).ticketService.downloadTicketDocumentVariant.mockResolvedValue({
+        buffer: Buffer.from('<svg><script>alert(1)</script></svg>'),
+        fileId: 'legacy-original-alias',
+        mimeType,
+      });
+
+      const response = await serveFile(controller, kind);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toBe('application/octet-stream');
+      expect(response.headers.get('content-disposition')).toMatch(/^attachment/);
+      expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+      expect(response.headers.get('content-security-policy')).toContain('sandbox');
+      expect(response.headers.get('etag')).not.toContain('legacy-original-alias');
+      expect(response.headers.get('cache-control')).toBe('private, no-cache');
+    }
+  });
+
+  it.each(['thumbnail', 'preview'] as const)('%s keeps raster policy on 200 and 304 and reauthorizes', async (kind) => {
+    const controller = fileFixture();
+    const first = await serveFile(controller, kind);
+    expect(first.status).toBe(200);
+    expect(first.headers.get('content-type')).toBe('image/png');
+    expect(first.headers.get('content-disposition')).toMatch(/^inline/);
+    expect(first.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(first.headers.get('content-security-policy')).toContain('sandbox');
+    expect(first.headers.get('cache-control')).toBe('private, no-cache');
+    const etag = first.headers.get('etag')!;
+    expect(etag).toMatch(/^"[a-f0-9]{64}"$/);
+    expect(etag).not.toContain('thumbnail-private-file');
+
+    const req = fileRequest(kind);
+    req.headers.set('if-none-match', etag);
+    const cached = await serveFile(controller, kind, req);
+    expect(cached.status).toBe(304);
+    expect(cached.headers.get('etag')).toBe(etag);
+    expect(cached.headers.get('content-disposition')).toMatch(/^inline/);
+    expect(cached.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(cached.headers.get('content-security-policy')).toContain('sandbox');
+    expect(cached.headers.get('cache-control')).toBe('private, no-cache');
+    expect(authorizeResource).toHaveBeenCalledTimes(2);
+  });
 });

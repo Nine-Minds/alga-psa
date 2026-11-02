@@ -39,7 +39,7 @@ import {
   TICKET_RECORD_SOURCE,
   type RedactableRecordSource,
 } from '@alga-psa/co-managed/recordProjection';
-import { createProjectedFileResponse } from '../utils/projectedFileResponse';
+import { createProjectedFileResponse, createProjectedPreviewResponse } from '../utils/projectedFileResponse';
 import { buildTicketRecordContext } from './recordContexts';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
@@ -70,7 +70,6 @@ import {
   updateBundleSettingsSchema
 } from '../schemas/ticketBundle';
 import { ZodError } from 'zod';
-import { buildDocumentPreviewHeaders } from '@alga-psa/core';
 import {
   addChecklistItem,
   getTicketChecklistItems,
@@ -1599,7 +1598,7 @@ export class ApiTicketController extends ApiBaseController {
           }, source);
           if (!metadata) throw new NotFoundError('Document not found');
 
-          return createProjectedFileResponse(req, result.buffer, metadata);
+          return createProjectedPreviewResponse(req, result.buffer, metadata);
         });
       } catch (error) {
         return handleApiError(error);
