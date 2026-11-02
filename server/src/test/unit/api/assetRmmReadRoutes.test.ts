@@ -17,6 +17,7 @@ const h = vi.hoisted(() => {
     remoteControlUrl: vi.fn(async (ref: { deviceId: string }) => `https://remote.example/${ref.deviceId}`),
     rebootProvider: vi.fn(async () => {}),
     scriptProvider: vi.fn(async () => ({ jobId: 'provider-job-1' })),
+    tacticalRequest: vi.fn(async () => {}),
     resolveDeviceActions: vi.fn(async () => ({
       refresh: state.refreshProvider,
       remoteControlUrl: state.remoteControlUrl,
@@ -143,6 +144,7 @@ beforeEach(() => {
   h.state.rebootProvider.mockClear();
   h.state.scriptProvider.mockClear();
   h.state.resolveDeviceActions.mockClear();
+  h.state.tacticalRequest.mockReset().mockResolvedValue(undefined);
   h.state.scriptSupported = true;
 });
 describe('independent RMM REST boundary review', () => {
@@ -216,6 +218,12 @@ describe('independent RMM REST boundary review', () => {
 
 vi.mock('@alga-psa/integrations/lib/rmm/assetDeviceActions', () => ({
   resolveRmmAssetDeviceActions: (...args: any[]) => h.state.resolveDeviceActions(...args),
+}));
+vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/buildClient', () => ({
+  buildTacticalClientForTenant: vi.fn(async () => ({ request: h.state.tacticalRequest })),
+}));
+vi.mock('@alga-psa/integrations/lib/rmm/tacticalrmm/syncSingleAgent', () => ({
+  syncTacticalSingleAgentForTenant: vi.fn(async () => ({ updated: true })),
 }));
 import { POST as refreshRmmRoute } from '../../../app/api/v1/assets/[id]/rmm/refresh/route';
 const refreshRmm = (key = false) => refreshRmmRoute(new Request(`http://localhost/api/v1/assets/${h.state.assetId}/rmm/refresh`, {
@@ -452,7 +460,7 @@ describe('asset RMM command REST boundaries', () => {
 
     const response = await runAssetCommand(scriptRoute);
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ success: true, message: expect.stringContaining('Visible workstation'), jobId: null });
+    expect(await response.json()).toMatchObject({ success: true, message: null, jobId: null });
   });
 
   it.each([
@@ -494,4 +502,65 @@ describe('asset RMM command REST boundaries', () => {
     expect(h.state.rebootProvider).not.toHaveBeenCalled();
     expect(h.state.scriptProvider).not.toHaveBeenCalled();
   });
+});
+
+import { tacticalRmmAssetDeviceActions } from '@alga-psa/integrations/lib/rmm/tacticalrmm/assetDeviceActions';
+import { syncTacticalSingleAgentForTenant } from '@alga-psa/integrations/lib/rmm/tacticalrmm/syncSingleAgent';
+
+describe('asset RMM provider error provenance', () => {
+  it('preserves the visible Tactical reboot error through the real adapter, action, and route', async () => {
+    h.state.resolveDeviceActions.mockResolvedValueOnce(tacticalRmmAssetDeviceActions as any);
+    h.state.tacticalRequest.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: { status: 400, data: `Unable to contact agent ${h.state.asset.rmm_device_id}` },
+    });
+
+    const response = await runAssetCommand(rebootRoute);
+    expect(response.status).toBe(400);
+    expect((await response.json()).message).toBe('Unable to contact agent device-1');
+  });
+
+  for (const key of [false, true]) {
+    it.each(['assets.rmm_device_id', 'values.rmm_device_id', 'fields.assets.rmm_device_id'])(
+      `${key ? 'API-key' : 'session'} reboot error hides device identifier from %s`, async alias => {
+        h.state.redactions.asset = [alias];
+        h.state.keyOnly = key;
+        h.state.resolveDeviceActions.mockResolvedValueOnce(tacticalRmmAssetDeviceActions as any);
+        h.state.tacticalRequest.mockRejectedValueOnce({
+          isAxiosError: true,
+          response: { status: 400, data: `Unable to contact agent ${h.state.asset.rmm_device_id}` },
+        });
+
+        const response = await runAssetCommand(rebootRoute, key);
+        expect(response.status).toBe(400);
+        expect(JSON.stringify(await response.json())).not.toContain('device-1');
+        expect(h.state.subjects.at(-1)?.apiKeyId).toBe(key ? 'summary-key' : undefined);
+      },
+    );
+  }
+
+  it('preserves the visible Tactical mapping error through the real adapter, action, and route', async () => {
+    h.state.resolveDeviceActions.mockResolvedValueOnce(tacticalRmmAssetDeviceActions as any);
+    vi.mocked(syncTacticalSingleAgentForTenant).mockResolvedValueOnce({ updated: false } as any);
+
+    const response = await refreshRmm();
+    expect(response.status).toBe(404);
+    expect(JSON.stringify(await response.json())).toContain('Tactical RMM');
+  });
+
+  for (const key of [false, true]) {
+    it.each(['assets.rmm_provider', 'values.rmm_provider', 'fields.assets.rmm_provider'])(
+      `${key ? 'API-key' : 'session'} refresh mapping error hides provider from %s`, async alias => {
+        h.state.redactions.asset = [alias];
+        h.state.keyOnly = key;
+        h.state.resolveDeviceActions.mockResolvedValueOnce(tacticalRmmAssetDeviceActions as any);
+        vi.mocked(syncTacticalSingleAgentForTenant).mockResolvedValueOnce({ updated: false } as any);
+
+        const response = await refreshRmm(key);
+        expect(response.status).toBe(404);
+        expect(JSON.stringify(await response.json())).not.toContain('Tactical RMM');
+        expect(h.state.subjects.at(-1)?.apiKeyId).toBe(key ? 'summary-key' : undefined);
+      },
+    );
+  }
 });

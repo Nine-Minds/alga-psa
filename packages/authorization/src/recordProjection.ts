@@ -632,8 +632,23 @@ export const ASSET_RMM_COMMAND_RESPONSE_SOURCE: RedactableRecordSource = {
     message: [
       { source: ASSET_RECORD_SOURCE, field: 'name' },
       { source: ASSET_RECORD_SOURCE, field: 'rmm_provider' },
+      { source: ASSET_RECORD_SOURCE, field: 'rmm_device_id' },
     ],
     jobId: [
+      { source: ASSET_RECORD_SOURCE, field: 'rmm_provider' },
+      { source: ASSET_RECORD_SOURCE, field: 'rmm_device_id' },
+    ],
+  },
+};
+
+/** Normalized RMM errors can name the provider or echo its device identifier. */
+export const ASSET_RMM_ERROR_RESPONSE_SOURCE: RedactableRecordSource = {
+  policySource: ASSET_RECORD_SOURCE,
+  resource: ASSET_RECORD_SOURCE.resource,
+  identifier: ASSET_RECORD_SOURCE.identifier,
+  fields: {},
+  derived: {
+    error: [
       { source: ASSET_RECORD_SOURCE, field: 'rmm_provider' },
       { source: ASSET_RECORD_SOURCE, field: 'rmm_device_id' },
     ],

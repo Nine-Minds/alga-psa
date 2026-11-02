@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server';
 import { triggerRmmReboot } from '@/lib/actions/asset-actions/rmmActions';
 import { ASSET_RMM_COMMAND_RESPONSE_SOURCE } from '@alga-psa/authorization/recordProjection';
 import { readAssetGateForRequest, assetNotFoundResponse } from 'server/src/lib/api/controllers/assetReadGuard';
-import { reprojectUnderDecision } from 'server/src/lib/api/controllers/authorizationKernel';
+import { reprojectUnderDecision, type AuthorizedProjection } from 'server/src/lib/api/controllers/authorizationKernel';
 import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 import { rmmErrorResponse, rmmRouteErrorFrom } from '../rmmRouteErrors';
 
@@ -17,6 +17,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let assetProjection: AuthorizedProjection<Record<string, any>> | undefined;
   try {
     const { id } = await params;
     if (!id) {
@@ -25,6 +26,7 @@ export async function POST(
 
     const gate = await readAssetGateForRequest(request, id);
     if (gate.denied) return gate.denied;
+    assetProjection = gate.projection;
 
     const result = await runWithApiKeyOrSession(request, () => triggerRmmReboot(id));
     const expectedError = result.success ? null : rmmRouteErrorFrom(result.message);
@@ -58,7 +60,7 @@ export async function POST(
     console.error('Failed to trigger device reboot:', error);
     const expectedError = rmmRouteErrorFrom(error);
     if (expectedError) {
-      return rmmErrorResponse(expectedError);
+      return rmmErrorResponse(expectedError, assetProjection);
     }
     return NextResponse.json(
       { error: 'Failed to trigger device reboot' },
