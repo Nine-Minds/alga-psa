@@ -716,6 +716,38 @@
       "rejected": "Impossible d'enregistrer cette tâche.",
       "saved": "Enregistré.",
       "save": "Enregistrer"
+    },
+    "conversation": {
+      "title": "Conversation",
+      "reload": "Recharger",
+      "loadError": "Impossible de charger la conversation.",
+      "readOnly": "Vous pouvez lire cette conversation, mais pas y contribuer.",
+      "new": "Nouveau commentaire",
+      "empty": "Aucun commentaire pour l’instant.",
+      "restrictedAuthor": "Auteur masqué",
+      "replyMarker": "Réponse",
+      "deleted": "Ce commentaire a été supprimé.",
+      "reply": "Répondre",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "newer": "Plus récents",
+      "older": "Plus anciens",
+      "audience": "Destinataires",
+      "message": "Message",
+      "deleteHelp": "Le commentaire est remplacé par une mention de suppression. Les réponses restent dans le fil.",
+      "conflict": "Ce commentaire a changé depuis son ouverture. Annulez et rechargez pour continuer.",
+      "unknownOutcome": "Impossible de confirmer l’enregistrement. Réessayez ; il ne sera pas appliqué deux fois.",
+      "invalid": "Impossible d’enregistrer ce commentaire.",
+      "send": "Envoyer",
+      "cancel": "Annuler",
+      "audiences": {
+        "requester": "Demandeur et informatique",
+        "shared_it": "Partagé avec les équipes informatiques",
+        "organization_private": "Notre organisation uniquement"
+      },
+      "audienceHelp": {
+        "requester": "Les messages ici sont visibles par vous et votre prestataire informatique. Les notes internes ne sont jamais affichées."
+      }
     }
   },
   "common": {

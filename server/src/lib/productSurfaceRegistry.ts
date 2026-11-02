@@ -126,10 +126,17 @@ export const PORTAL_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
   },
   {
+    // CM L4c (cross-card touch, owner to confirm): only /client-portal/projects is opened to co_managed, for
+    // the shared-project requester task thread. psa and algadesk are unchanged from portal_upgrade_or_not_found;
+    // the capability gate and permissions inside the route still decide what a co_managed contact sees.
+    group: 'portal_projects',
+    staticPrefixes: ['/client-portal/projects'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'upgrade_boundary', co_managed: 'allowed' },
+  },
+  {
     group: 'portal_upgrade_or_not_found',
     staticPrefixes: [
       '/client-portal/billing',
-      '/client-portal/projects',
       '/client-portal/devices',
       '/client-portal/documents',
       '/client-portal/appointments',

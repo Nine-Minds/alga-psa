@@ -94,7 +94,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
       setComments(fetchedComments);
       onCommentCountChange?.(taskId, fetchedComments.length);
       // Load reactions for fetched comments
-      const commentIds = fetchedComments.map(c => c.taskCommentId).filter(Boolean);
+      const commentIds = fetchedComments.filter(c => c.canReact !== false).map(c => c.taskCommentId).filter(Boolean);
       if (commentIds.length > 0) {
         try {
           const { reactions, userNames } = await getTaskCommentsReactionsBatch(commentIds);
@@ -240,6 +240,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     parentCommentId: string;
     content: any[];
   }) => {
+    if (comments.find(comment => comment.taskCommentId === params.parentCommentId)?.canReply === false) return;
     const result = await createTaskComment({
       taskId,
       note: JSON.stringify(params.content),
@@ -445,6 +446,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
         renderComment={(comment) => renderTaskComment(comment)}
         replyParentCommentId={openPanelComment?.taskCommentId ?? null}
         replyRoomName={(parentCommentId) => `task-${taskId}-reply-${parentCommentId}`}
+        canReply={openPanelComment?.canReply !== false}
         initialInternal={false}
         showInternalToggle={false}
         onSubmitReply={handleDrawerReplySubmit}

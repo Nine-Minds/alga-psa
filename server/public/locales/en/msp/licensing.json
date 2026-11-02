@@ -716,6 +716,38 @@
       "rejected": "This task could not be saved.",
       "saved": "Saved.",
       "save": "Save"
+    },
+    "conversation": {
+      "title": "Conversation",
+      "reload": "Reload",
+      "loadError": "The conversation could not be loaded.",
+      "readOnly": "You can read this conversation but not add to it.",
+      "new": "New comment",
+      "empty": "No comments yet.",
+      "restrictedAuthor": "Author hidden",
+      "replyMarker": "Reply",
+      "deleted": "This comment was deleted.",
+      "reply": "Reply",
+      "edit": "Edit",
+      "delete": "Delete",
+      "newer": "Newer",
+      "older": "Older",
+      "audience": "Audience",
+      "message": "Message",
+      "deleteHelp": "The comment is replaced by a deleted marker. Replies stay in the thread.",
+      "conflict": "This comment changed since you opened it. Cancel and reload to continue.",
+      "unknownOutcome": "We could not confirm the save. Try again; it will not be applied twice.",
+      "invalid": "This comment could not be saved.",
+      "send": "Send",
+      "cancel": "Cancel",
+      "audiences": {
+        "requester": "Requester and IT",
+        "shared_it": "Shared with IT teams",
+        "organization_private": "Our organization only"
+      },
+      "audienceHelp": {
+        "requester": "Messages here are visible to you and your IT provider. Internal notes are never shown."
+      }
     }
   },
   "common": {

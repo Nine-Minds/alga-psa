@@ -153,6 +153,22 @@
     "./refusalAck": {
       "types": "./src/refusalAck.ts",
       "import": "./src/refusalAck.ts"
+    },
+    "./projectTaskConversation": {
+      "types": "./src/projectTaskConversation.ts",
+      "import": "./src/projectTaskConversation.ts"
+    },
+    "./requesterSharedWork": {
+      "types": "./src/requesterSharedWork.ts",
+      "import": "./src/requesterSharedWork.ts"
+    },
+    "./requesterTaskConversation": {
+      "types": "./src/requesterTaskConversation.ts",
+      "import": "./src/requesterTaskConversation.ts"
+    },
+    "./projectTaskAudience": {
+      "types": "./src/projectTaskAudience.ts",
+      "import": "./src/projectTaskAudience.ts"
     }
   },
   "scripts": {

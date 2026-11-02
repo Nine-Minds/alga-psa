@@ -32,6 +32,11 @@ const ALLOWED_FILES = new Set<string>([
 
   // Shared metadata / RBAC catalog (data, not logic).
   'packages/db/src/lib/tenantTableMetadata.ts',
+  // Tenant table registries list every tenant table that can exist (EE tables included) for
+  // deletion ordering, FK topology and operational-write classification; they hold names only.
+  'packages/db/src/lib/tenantTableManifest.ts',
+  'packages/db/src/lib/tenantTableForeignKeys.ts',
+  'packages/db/src/lib/operationalWriteTables.ts',
   'server/migrations/utils/tenantDb.cjs',
   'server/migrations/utils/permissions/catalog.cjs',
 

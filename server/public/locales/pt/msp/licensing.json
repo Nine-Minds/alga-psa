@@ -716,6 +716,38 @@
       "rejected": "Não foi possível salvar esta tarefa.",
       "saved": "Salvo.",
       "save": "Salvar"
+    },
+    "conversation": {
+      "title": "Conversa",
+      "reload": "Recarregar",
+      "loadError": "Não foi possível carregar a conversa.",
+      "readOnly": "Você pode ler esta conversa, mas não adicionar mensagens.",
+      "new": "Novo comentário",
+      "empty": "Ainda não há comentários.",
+      "restrictedAuthor": "Autor oculto",
+      "replyMarker": "Resposta",
+      "deleted": "Este comentário foi excluído.",
+      "reply": "Responder",
+      "edit": "Editar",
+      "delete": "Excluir",
+      "newer": "Mais recentes",
+      "older": "Mais antigos",
+      "audience": "Público",
+      "message": "Mensagem",
+      "deleteHelp": "O comentário é substituído por um marcador de exclusão. As respostas permanecem na conversa.",
+      "conflict": "Este comentário mudou desde que você o abriu. Cancele e recarregue para continuar.",
+      "unknownOutcome": "Não foi possível confirmar o salvamento. Tente novamente; ele não será aplicado duas vezes.",
+      "invalid": "Não foi possível salvar este comentário.",
+      "send": "Enviar",
+      "cancel": "Cancelar",
+      "audiences": {
+        "requester": "Solicitante e TI",
+        "shared_it": "Compartilhado com equipes de TI",
+        "organization_private": "Somente nossa organização"
+      },
+      "audienceHelp": {
+        "requester": "As mensagens aqui são visíveis para você e seu provedor de TI. Notas internas nunca são exibidas."
+      }
     }
   },
   "common": {
