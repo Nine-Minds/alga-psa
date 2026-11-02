@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Step 2 of the client-scoped ticket templates change (20261103120000 adds the column and the
+ * Step 2 of the client-scoped ticket templates change (20261102060000 adds the column and the
  * NOT VALID foreign key). Validating takes SHARE UPDATE EXCLUSIVE and scans only non-NULL
  * client_id values — there are none when this runs — so reads and writes continue. Idempotent, and
  * a no-op when the FK was skipped because the tables are not co-located.

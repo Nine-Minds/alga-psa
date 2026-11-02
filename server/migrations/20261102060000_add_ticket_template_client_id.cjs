@@ -17,7 +17,7 @@
  *
  * Citus: the FK includes the distribution column and is only added when both tables are co-located
  * (same pattern as the checklist migration), otherwise skipped with a warning. It is added NOT VALID
- * and validated by 20261103120100 (every existing row is NULL, so that scan reads nothing).
+ * and validated by 20261102060100 (every existing row is NULL, so that scan reads nothing).
  */
 
 const TABLE = 'ticket_templates';
