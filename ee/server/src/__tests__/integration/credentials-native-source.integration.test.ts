@@ -537,7 +537,7 @@ describe('native credentials store — DB integration', () => {
 
   it('the permission seed migration is idempotent', async () => {
     const migration = require(
-      path.resolve(repoRoot, 'server', 'migrations', '20260811110000_add_credential_permissions.cjs')
+      path.resolve(repoRoot, 'ee', 'server', 'migrations', '20260811110000_add_credential_permissions.cjs')
     );
     await migration.up(db);
     await migration.up(db);
