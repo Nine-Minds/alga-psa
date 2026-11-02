@@ -12,7 +12,7 @@ import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import ProjectQuickAdd from './ProjectQuickAdd';
-import { projectClientPresentation } from '../lib/projectListProjection';
+import { projectClientPresentation } from '../lib/projectClientPresentation';
 import { deleteProject, loadProjectListItemsByIds, searchProjectListIds, type ProjectPickerClient } from '../actions/projectActions';
 import { findUserById } from '@alga-psa/user-composition/actions';
 import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
@@ -1330,7 +1330,7 @@ export default function Projects({ initialProjects, clients, projectClientMetada
           <section className="space-y-3">
             <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">{clientSummary.client_name}</h2>
             {clientSummary.client_type && <p>{clientSummary.client_type}</p>}
-            {clientSummary.is_inactive !== null && <p>{clientSummary.is_inactive ? t('common:inactive') : t('common:active')}</p>}
+            {clientSummary.is_inactive !== null && <p>{clientSummary.is_inactive ? t('common:status.inactive') : t('common:status.active')}</p>}
           </section>
         )}
       </Drawer>

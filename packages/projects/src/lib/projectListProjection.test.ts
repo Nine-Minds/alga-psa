@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { loadProjectRowsByDecision, projectClientListsForPage, projectClientPresentation, projectPickerProjection } from './projectListProjection';
+import { loadProjectRowsByDecision, projectPickerProjection } from './projectListProjection';
+import { projectClientListsForPage, projectClientPresentation } from './projectClientPresentation';
 import type { IProject } from '@alga-psa/types';
 
 const row = (project_id: string, client_name: string | null = 'Acme') => ({ project_id, client_name }) as IProject;

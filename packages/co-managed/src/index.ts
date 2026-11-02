@@ -38,8 +38,6 @@ export { retainCoManagedHistoricalWorkEvidence } from './historicalWorkEvidence'
 export { hasCoManagedLocalPermission } from './localPermission';
 export { loadCoManagedLifecycleFacts, loadCoManagedStaffRoles, loadCoManagedGrantFacts, loadCoManagedHomeFacts } from './sharedWork';
 export { CO_MANAGED_TASK_RESOURCE_ALIASES, isCoManagedTaskResourceHidden } from './sharedWorkProjection';
-export { isCoManagedResourceHidden } from './sharedWorkProjection';
-export { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 export { listCoManagedSharedProjects, listCoManagedSharedProjectTasks } from './projectTaskQueue';
 export type { CoManagedSharedProjectRow, CoManagedSharedProjectPage, CoManagedSharedTaskRow, CoManagedSharedTaskPage } from './projectTaskQueue';
 export { editCoManagedProjectTask, getCoManagedProjectTaskSnapshot, CoManagedTaskEditError, CO_MANAGED_TASK_EDIT_FIELDS } from './projectTaskEditing';

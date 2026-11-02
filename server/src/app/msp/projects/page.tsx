@@ -9,7 +9,7 @@ import type { ProjectListFilters } from '@alga-psa/projects/components/Projects'
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 import CoManagedProjectTaskQueueLink from '@/components/co-managed/CoManagedProjectTaskQueueLink';
 import { getSmartSearchAvailability } from '@enterprise/lib/actions/smartSearchActions';
-import { projectClientListsForPage } from '@alga-psa/projects/lib/projectListProjection';
+import { projectClientListsForPage } from '@alga-psa/projects/lib/projectClientPresentation';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslation(undefined, 'metadata');
