@@ -774,7 +774,16 @@
         "needsHandoff": "Eskalieren Sie dieses Ticket, bevor Sie MSP-Mitarbeiter zuweisen.",
         "unavailable": "Der zugewiesene MSP-Mitarbeiter oder das Team ist nicht mehr verfügbar."
       },
-      "slaSetupRequired": "Ihr MSP muss seine SLA-Richtlinie und Prioritätszuordnung konfigurieren, bevor dieses Ticket eskaliert werden kann."
+      "refusal": {
+        "invalidHandoff": "Geben Sie eine gültige Übergabe mit einer geteilten IT-Notiz an.",
+        "handoffChanged": "Diese Übergabe hat sich geändert, seit Sie sie geöffnet haben. Laden Sie das Ticket neu und versuchen Sie es erneut.",
+        "alreadyResponsible": "Die Verantwortung für dieses Ticket liegt bereits wie gewünscht. Laden Sie neu, um zu sehen, wer jetzt verantwortlich ist.",
+        "alreadyRevoked": "Dieser Ticketzugriff wurde bereits widerrufen.",
+        "destinationUnavailable": "Das genehmigte MSP-Ziel ist nicht verfügbar.",
+        "capabilityUnavailable": "Dies ist für Ihren Arbeitsbereich derzeit nicht verfügbar.",
+        "notAvailable": "Dieses Ticket wird nicht mehr geteilt oder ist für Sie nicht mehr verfügbar.",
+        "readOnly": "Dieses Ticket ist derzeit schreibgeschützt, daher kann diese Änderung nicht vorgenommen werden."
+      }
     },
     "callout": {
       "title": "Kundentickets brauchen Sie",

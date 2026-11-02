@@ -774,7 +774,16 @@
         "needsHandoff": "Escaladez ce ticket avant d’affecter du personnel MSP.",
         "unavailable": "Le collaborateur MSP affecté n’est plus disponible."
       },
-      "slaSetupRequired": "Votre MSP doit configurer sa politique SLA et les correspondances de priorité avant de pouvoir escalader ce ticket."
+      "refusal": {
+        "invalidHandoff": "Fournissez un transfert valide avec une note informatique partagée.",
+        "handoffChanged": "Ce transfert a changé depuis son ouverture. Rechargez le ticket et réessayez.",
+        "alreadyResponsible": "La responsabilité de ce ticket est déjà celle demandée. Rechargez pour voir qui en est responsable.",
+        "alreadyRevoked": "L’accès à ce ticket a déjà été révoqué.",
+        "destinationUnavailable": "La destination MSP approuvée n’est pas disponible.",
+        "capabilityUnavailable": "Cette action n’est pas disponible pour votre espace de travail pour le moment.",
+        "notAvailable": "Ce ticket n’est plus partagé ou n’est plus disponible pour vous.",
+        "readOnly": "Ce ticket est en lecture seule pour le moment ; cette modification est impossible."
+      }
     },
     "callout": {
       "title": "Des tickets clients ont besoin de vous",

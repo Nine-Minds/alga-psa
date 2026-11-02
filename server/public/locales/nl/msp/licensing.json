@@ -774,7 +774,16 @@
         "needsHandoff": "Escaleer dit ticket voordat u MSP-medewerkers toewijst.",
         "unavailable": "De toegewezen MSP-medewerker of het team is niet meer beschikbaar."
       },
-      "slaSetupRequired": "Uw MSP moet het SLA-beleid en de prioriteitskoppeling configureren voordat dit ticket kan worden geëscaleerd."
+      "refusal": {
+        "invalidHandoff": "Geef een geldige overdracht op met een gedeelde IT-notitie.",
+        "handoffChanged": "Deze overdracht is gewijzigd sinds u hem opende. Laad het ticket opnieuw en probeer het nogmaals.",
+        "alreadyResponsible": "De verantwoordelijkheid voor dit ticket is al zoals gevraagd. Laad opnieuw om te zien wie nu verantwoordelijk is.",
+        "alreadyRevoked": "Deze tickettoegang is al ingetrokken.",
+        "destinationUnavailable": "De goedgekeurde MSP-bestemming is niet beschikbaar.",
+        "capabilityUnavailable": "Dit is op dit moment niet beschikbaar voor uw werkruimte.",
+        "notAvailable": "Dit ticket wordt niet meer gedeeld of is niet meer beschikbaar voor u.",
+        "readOnly": "Dit ticket is momenteel alleen-lezen, dus deze wijziging kan niet worden aangebracht."
+      }
     },
     "callout": {
       "title": "Klanttickets hebben u nodig",

@@ -778,7 +778,16 @@
         "needsHandoff": "Eskaluj to zgłoszenie przed przypisaniem pracowników MSP.",
         "unavailable": "Przypisany współpracownik MSP nie jest już dostępny."
       },
-      "slaSetupRequired": "Twój MSP musi skonfigurować zasady SLA i mapowanie priorytetów, zanim będzie można eskalować to zgłoszenie."
+      "refusal": {
+        "invalidHandoff": "Podaj prawidłowe przekazanie ze wspólną notatką IT.",
+        "handoffChanged": "To przekazanie zmieniło się od chwili jego otwarcia. Wczytaj zgłoszenie ponownie i spróbuj jeszcze raz.",
+        "alreadyResponsible": "Odpowiedzialność za to zgłoszenie jest już taka, jak zażądano. Wczytaj ponownie, aby zobaczyć, kto jest teraz odpowiedzialny.",
+        "alreadyRevoked": "Dostęp do tego zgłoszenia został już cofnięty.",
+        "destinationUnavailable": "Zatwierdzone miejsce docelowe MSP jest niedostępne.",
+        "capabilityUnavailable": "Ta operacja jest obecnie niedostępna dla Twojej przestrzeni roboczej.",
+        "notAvailable": "To zgłoszenie nie jest już udostępniane lub nie jest już dla Ciebie dostępne.",
+        "readOnly": "To zgłoszenie jest obecnie tylko do odczytu, więc nie można wprowadzić tej zmiany."
+      }
     },
     "callout": {
       "title": "Zgłoszenia klientów wymagają Twojej uwagi",

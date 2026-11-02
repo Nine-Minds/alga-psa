@@ -774,7 +774,16 @@
         "needsHandoff": "Escalate this ticket before assigning MSP staff.",
         "unavailable": "The assigned MSP collaborator is no longer available."
       },
-      "slaSetupRequired": "Your MSP must configure its SLA policy and priority mapping before this ticket can be escalated."
+      "refusal": {
+        "invalidHandoff": "Provide a valid handoff with a shared IT note.",
+        "handoffChanged": "This handoff changed since you opened it. Reload the ticket and try again.",
+        "alreadyResponsible": "Responsibility for this ticket is already as requested. Reload to see who is responsible now.",
+        "alreadyRevoked": "This ticket access has already been revoked.",
+        "destinationUnavailable": "The approved MSP destination is not available.",
+        "capabilityUnavailable": "This isn’t available for your workspace right now.",
+        "notAvailable": "This ticket is no longer shared or available to you.",
+        "readOnly": "This ticket is read-only right now, so this change can’t be made."
+      }
     },
     "callout": {
       "title": "Customer tickets need you",

@@ -774,7 +774,16 @@
         "needsHandoff": "Eskalera ärendet innan du tilldelar MSP-personal.",
         "unavailable": "Den tilldelade MSP-medarbetaren är inte längre tillgänglig."
       },
-      "slaSetupRequired": "Din MSP måste konfigurera sin SLA-policy och prioritetsmappning innan ärendet kan eskaleras."
+      "refusal": {
+        "invalidHandoff": "Ange en giltig överlämning med en delad IT-anteckning.",
+        "handoffChanged": "Den här överlämningen har ändrats sedan du öppnade den. Ladda om ärendet och försök igen.",
+        "alreadyResponsible": "Ansvaret för det här ärendet är redan som begärt. Ladda om för att se vem som är ansvarig nu.",
+        "alreadyRevoked": "Den här ärendeåtkomsten har redan återkallats.",
+        "destinationUnavailable": "Den godkända MSP-destinationen är inte tillgänglig.",
+        "capabilityUnavailable": "Det här är inte tillgängligt för din arbetsyta just nu.",
+        "notAvailable": "Det här ärendet delas inte längre eller är inte längre tillgängligt för dig.",
+        "readOnly": "Det här ärendet är skrivskyddat just nu, så ändringen kan inte göras."
+      }
     },
     "callout": {
       "title": "Kundärenden behöver dig",

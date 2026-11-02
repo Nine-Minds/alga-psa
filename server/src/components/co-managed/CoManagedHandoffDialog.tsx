@@ -7,8 +7,23 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { escalateSharedTicketAction, handBackSharedTicketAction, revokeSharedTicketGrantAction } from '@/lib/actions/coManagedSharedWorkActions';
+import type { SharedTicketHandoffRefusalCode } from '@/lib/actions/coManagedSharedWorkActions';
 import { newCoManagedOperationId } from './coManagedOperationId';
 import { useCoManagedWorkSignals } from './CoManagedWorkSignalsProvider';
+
+type Translate = (key: string) => string;
+
+// LEVERAGE: pattern co-managed-action-refusal — 2nd UI refusal-code→text map (see refusalText in CoManagedDelegatedAdministration); literal keys keep the locale-key scan honest.
+const refusalText = (t: Translate, code: SharedTicketHandoffRefusalCode) => ({
+  INVALID_HANDOFF: t('coManaged.ticket.refusal.invalidHandoff'),
+  HANDOFF_CHANGED: t('coManaged.ticket.refusal.handoffChanged'),
+  ALREADY_RESPONSIBLE: t('coManaged.ticket.refusal.alreadyResponsible'),
+  ALREADY_REVOKED: t('coManaged.ticket.refusal.alreadyRevoked'),
+  DESTINATION_UNAVAILABLE: t('coManaged.ticket.refusal.destinationUnavailable'),
+  CAPABILITY_UNAVAILABLE: t('coManaged.ticket.refusal.capabilityUnavailable'),
+  NOT_AVAILABLE: t('coManaged.ticket.refusal.notAvailable'),
+  READ_ONLY: t('coManaged.ticket.refusal.readOnly'),
+} satisfies Record<SharedTicketHandoffRefusalCode, string>)[code];
 
 export type HandoffAction = 'escalate' | 'handback' | 'revoke';
 
@@ -27,7 +42,8 @@ export default function CoManagedHandoffDialog({ action, side, resource, revisio
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
-  const [setupRequired, setSetupRequired] = useState(false);
+  // A refusal is held as its code and translated at render, like the delegated-administration screen.
+  const [refusal, setRefusal] = useState<SharedTicketHandoffRefusalCode | null>(null);
   const request = useRef<{ action: HandoffAction; resource: CoManagedSharedResource; input: CoManagedTicketHandoffRequest } | null>(null);
   const mounted = useRef(false);
   const inFlight = useRef(false);
@@ -38,14 +54,16 @@ export default function CoManagedHandoffDialog({ action, side, resource, revisio
   async function submit() {
     if (inFlight.current || (!request.current && !note.trim())) return;
     request.current ??= { action, resource: { ...resource }, input: { operationId: newCoManagedOperationId(), expectedRevision: revision, note: note.trim() } };
-    inFlight.current = true; setBusy(true); setUncertain(false); setSetupRequired(false);
+    inFlight.current = true; setBusy(true); setUncertain(false); setRefusal(null);
     const saved = request.current;
     try {
       const command = saved.action === 'escalate' ? escalateSharedTicketAction : saved.action === 'handback' ? handBackSharedTicketAction : revokeSharedTicketGrantAction;
       const result = await command(saved.resource, saved.input);
-      if ('setupRequired' in result) {
+      if (!result.ok) {
+        // A refusal is a definite outcome: stay open, and let the next submit be a fresh operation.
         inFlight.current = false;
-        if (mounted.current) { setBusy(false); setSetupRequired(true); request.current = null; }
+        request.current = null;
+        if (mounted.current) { setBusy(false); setRefusal(result.code); }
         return;
       }
     } catch {
@@ -73,7 +91,7 @@ export default function CoManagedHandoffDialog({ action, side, resource, revisio
         disabled={busy || uncertain} onChange={event => setNote(event.target.value)} />
       <p className="text-xs text-[rgb(var(--color-text-500))]">{t('coManaged.ticket.noteAudience')}</p>
       {uncertain && <p role="alert" className="text-sm text-destructive">{t('coManaged.ticket.uncertain')}</p>}
-      {setupRequired && <p role="alert" className="text-sm text-destructive">{t('coManaged.ticket.slaSetupRequired')}</p>}
+      {refusal && <p role="alert" className="text-sm text-destructive">{refusalText(t, refusal)}</p>}
     </div></DialogContent>
   </Dialog>;
 }
