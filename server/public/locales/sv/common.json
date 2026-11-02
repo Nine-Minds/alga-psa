@@ -1618,7 +1618,15 @@
       "ticketTitle": "Skriv ut arbetsetiketter",
       "tooMany": "Du kan skriva ut högst {{max}} etiketter åt gången.",
       "unnamedAsset": "Namnlös tillgång",
-      "useTemplate": "Använd {{template}}"
+      "useTemplate": "Använd {{template}}",
+      "templatePaperWarning": "Den här mallen skrivs ut på ett helt ark. Välj \"Mallens papper\" (eller en helsideslayout), annars får innehållet inte plats på etiketten."
+    },
+    "layout": {
+      "template-preferred": "Mallens papper (standard)",
+      "roll-4x2": "En per etikett (rulle 4 × 2 tum)",
+      "letter-2x5": "Letter-ark, 2 × 5 (Avery 5163-stil)",
+      "a4-2x7": "A4-ark, 2 × 7 (99,1 × 38,1 mm-stil)",
+      "letter-full": "Letter-ark, en per sida"
     }
   },
   "deleteEntity": {

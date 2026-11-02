@@ -1630,7 +1630,15 @@
       "ticketTitle": "Drukuj etykiety robocze",
       "tooMany": "Jednorazowo można wydrukować co najwyżej {{max}} etykiet.",
       "unnamedAsset": "Zasób bez nazwy",
-      "useTemplate": "Użyj szablonu {{template}}"
+      "useTemplate": "Użyj szablonu {{template}}",
+      "templatePaperWarning": "Ten szablon drukuje się na całym arkuszu. Wybierz „Papier szablonu” (lub układ pełnoarkuszowy), w przeciwnym razie zawartość nie zmieści się na etykiecie."
+    },
+    "layout": {
+      "template-preferred": "Papier szablonu (domyślnie)",
+      "roll-4x2": "Jedna na etykietę (rolka 4 × 2 cale)",
+      "letter-2x5": "Arkusz Letter, 2 × 5 (styl Avery 5163)",
+      "a4-2x7": "Arkusz A4, 2 × 7 (styl 99,1 × 38,1 mm)",
+      "letter-full": "Arkusz Letter, jedna na stronę"
     }
   },
   "deleteEntity": {

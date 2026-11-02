@@ -1618,7 +1618,15 @@
       "ticketTitle": "Stampa etichette di lavoro",
       "tooMany": "Puoi stampare al massimo {{max}} etichette alla volta.",
       "unnamedAsset": "Asset senza nome",
-      "useTemplate": "Usa {{template}}"
+      "useTemplate": "Usa {{template}}",
+      "templatePaperWarning": "Questo modello viene stampato su un foglio intero. Scegli \"Carta del modello\" (o un layout a foglio intero), altrimenti il contenuto non entrerà nell'etichetta."
+    },
+    "layout": {
+      "template-preferred": "Carta del modello (predefinita)",
+      "roll-4x2": "Una per etichetta (rotolo 4 × 2 in)",
+      "letter-2x5": "Foglio Letter, 2 × 5 (stile Avery 5163)",
+      "a4-2x7": "Foglio A4, 2 × 7 (stile 99,1 × 38,1 mm)",
+      "letter-full": "Foglio Letter, uno per pagina"
     }
   },
   "deleteEntity": {
