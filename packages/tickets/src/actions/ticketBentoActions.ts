@@ -6,6 +6,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { workedMinutes } from '@alga-psa/core';
+import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 
 function tenantScopedTable(
@@ -45,11 +46,6 @@ export interface TicketBillingRollup {
 
 type TicketBillingRollupTotals = Omit<TicketBillingRollup, 'contractName'>;
 
-interface TicketLookupRow {
-  ticket_id: string;
-  client_id: string | null;
-}
-
 interface TicketTimeEntryDurationRow {
   entry_id: string;
   start_time: string | Date | null;
@@ -69,22 +65,26 @@ async function assertCanReadTicket(
   trx: Knex.Transaction,
   tenant: string,
   ticketId: string,
-): Promise<TicketLookupRow> {
+): Promise<TicketRecordRow> {
   if (!(await hasPermission(user, 'ticket', 'read', trx))) {
     throw new Error('Permission denied: cannot read ticket');
   }
 
-  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-    .where({ ticket_id: ticketId })
-    .first(['ticket_id', 'client_id']) as TicketLookupRow | undefined;
-  if (!ticket) {
-    throw new Error('Ticket not found');
+  try {
+    return await authorizeTicketRecordAccess({
+      trx,
+      tenant,
+      user: user as any,
+      ticketId,
+      action: 'read',
+    });
+  } catch (error) {
+    // Bento reads intentionally conceal whether a ticket is absent or excluded.
+    if (error instanceof Error && error.message === 'Ticket not found') {
+      throw new Error('Permission denied: Cannot access ticket');
+    }
+    throw error;
   }
-
-  return {
-    ticket_id: ticket.ticket_id,
-    client_id: ticket.client_id ?? null,
-  };
 }
 
 function normalizeRequiredIso(value: unknown, fieldName: string): string {
