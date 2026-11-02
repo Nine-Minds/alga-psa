@@ -10,7 +10,10 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
     t: (key: string, opts?: string | { defaultValue?: string }) =>
       typeof opts === 'string' ? opts : (opts?.defaultValue ?? key),
   }),
-  useFormatters: () => ({ formatDate: (d: string | Date, o?: any) => formatDateValue(d, 'en', o) }),
+  useFormatters: () => ({
+    formatDate: (d: string | Date, o?: any) => formatDateValue(d, 'en', o),
+    formatCalendarDate: (d: string | Date, o?: any) => formatDateValue(d, 'en', o),
+  }),
   useOptionalI18n: () => null,
 }));
 vi.mock('@alga-psa/ui/hooks/useQuoteEnumOptions', () => ({
@@ -94,9 +97,9 @@ describe('QuoteDocumentView', () => {
           />
         </CurrencyFormatProvider>,
       );
-      expect(container.textContent).toContain('12/31/2026');
-      expect(container.textContent).toContain('12/01/2026');
-      expect(container.textContent).not.toContain('12/30/2026');
+      expect(container.textContent).toContain('December 31, 2026');
+      expect(container.textContent).toContain('December 1, 2026');
+      expect(container.textContent).not.toContain('December 30, 2026');
     } finally {
       if (prev === undefined) delete process.env.TZ; else process.env.TZ = prev;
     }

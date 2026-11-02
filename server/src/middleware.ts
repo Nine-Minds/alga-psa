@@ -5,6 +5,11 @@ import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 import { resolveDeploymentCapabilities, type DeploymentCapabilities } from './lib/deployment/deploymentProfile';
 import { resolveRequestHost, detectForwardedHostRewrite } from './lib/deployment/requestHost';
 import { MIGRATED_SETTINGS_TAB_IDS } from './components/settings/settingsTabsRegistry';
+import {
+  PUBLIC_QUOTE_DECISION_PATTERN,
+  PUBLIC_QUOTE_PAGE_PATTERN,
+  PUBLIC_QUOTE_PDF_PATTERN,
+} from './lib/quote/publicQuotePaths';
 
 // Minimal, Edge-safe middleware: API key header presence check for select API routes
 // and auth gate for /msp paths, plus i18n locale resolution. Heavy logic stays in route handlers.
@@ -53,15 +58,10 @@ const clientPortalPrefix = '/client-portal';
 const publicPagePaths = new Set(['/payment-methods/setup-complete']);
 
 /**
- * Public, session-less quote review (alga-2026-0002820). Public by exact shape,
- * not by prefix: a 43-char base64url token (mirrors QUOTE_ACCESS_TOKEN_LENGTH in
- * @alga-psa/billing; middleware is Edge so it cannot import the Node service)
- * and nothing after it except, for the API, the fixed `/pdf` and `/decision` leaves.
- * Authorization is the token itself, checked in the page / route handler.
+ * Public, session-less quote review (alga-2026-0002820); shapes live in
+ * lib/quote/publicQuotePaths. Authorization is the token itself, checked in the
+ * page / route handler.
  */
-const PUBLIC_QUOTE_PAGE_PATTERN = /^\/quote\/[A-Za-z0-9_-]{43}$/;
-const PUBLIC_QUOTE_PDF_PATTERN = /^\/api\/quote\/[A-Za-z0-9_-]{43}\/pdf$/;
-const PUBLIC_QUOTE_DECISION_PATTERN = /^\/api\/quote\/[A-Za-z0-9_-]{43}\/decision$/;
 
 export function isPublicQuotePagePath(pathname: string): boolean {
   return PUBLIC_QUOTE_PAGE_PATTERN.test(pathname);
@@ -358,6 +358,10 @@ const _middleware = auth((request) => {
 
   // Handle CORS preflight requests early
   if (request.method === 'OPTIONS') {
+    // Token routes are same-origin only: no permissive CORS, not even on preflight.
+    if (isPublicQuoteReviewPath(pathname)) {
+      return applyPublicQuoteReviewHeaders(new NextResponse(null, { status: 204 }));
+    }
     return corsPreflightResponse(origin);
   }
 
@@ -467,7 +471,7 @@ const _middleware = auth((request) => {
     }
 
     if (shouldSkipApiKeyAuth(pathname)) {
-      return applyCorsHeaders(response, origin);
+      return isPublicQuotePdfPath(pathname) ? response : applyCorsHeaders(response, origin);
     }
 
     // For API routes that need authentication, check for API key presence only;
@@ -487,7 +491,11 @@ const _middleware = auth((request) => {
   const isAuthPage = pathname.startsWith('/auth/');
 
   // Public Stripe Checkout return page verifies its opaque session context itself.
-  if (publicPagePaths.has(pathname) || isPublicQuotePagePath(pathname)) {
+  if (isPublicQuotePagePath(pathname)) {
+    // Same-origin only: never the permissive CORS headers on a bearer-token page.
+    return response;
+  }
+  if (publicPagePaths.has(pathname)) {
     return applyCorsHeaders(response, origin);
   }
 

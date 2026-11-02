@@ -40,6 +40,13 @@ describe('resolve status -> outcome', () => {
     expect(outcomeHttpStatus('unknown')).toBe(404);
     expect(outcomeHttpStatus('rate_limited')).toBe(429);
     expect(outcomeHttpStatus('expired')).toBe(410);
+    expect(outcomeHttpStatus('superseded')).toBe(410);
+    expect(outcomeHttpStatus('decided')).toBe(410);
+  });
+
+  it('revoked and unknown share one status (no existence oracle)', () => {
+    expect(outcomeHttpStatus('revoked')).toBe(outcomeHttpStatus('unknown'));
+    expect(outcomeHttpStatus('revoked')).toBe(404);
   });
 
   it('only same-origin logos are allowed', () => {

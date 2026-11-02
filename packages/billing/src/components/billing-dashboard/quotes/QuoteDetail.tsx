@@ -146,9 +146,25 @@ function renderQuoteDetailRow(
   );
 }
 
+
+/** Recipient email from activity metadata; tolerates missing, null, array or JSON-string metadata. */
+function viewedViaEmailLinkRecipient(metadata: unknown): string | null {
+  let value = metadata;
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const email = (value as Record<string, unknown>).recipient_email;
+  return typeof email === 'string' && email.trim() ? email.trim() : null;
+}
+
 const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSelectVersion }) => {
   const { t } = useTranslation('msp/quotes');
-  const { formatCurrency, formatDate } = useFormatters();
+  const { formatCurrency, formatDate, formatCalendarDate } = useFormatters();
   const router = useRouter();
   const [quote, setQuote] = useState<IQuote | null>(null);
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
@@ -1107,11 +1123,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.quoteDate', { defaultValue: 'Quote Date' })}</div>
-            <div className="mt-1 font-medium">{quote.quote_date ? formatDate(quote.quote_date) : '—'}</div>
+            <div className="mt-1 font-medium">{quote.quote_date ? formatCalendarDate(quote.quote_date) : '—'}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.validUntil', { defaultValue: 'Valid Until' })}</div>
-            <div className="mt-1 font-medium">{quote.valid_until ? formatDate(quote.valid_until) : '—'}</div>
+            <div className="mt-1 font-medium">{quote.valid_until ? formatCalendarDate(quote.valid_until) : '—'}</div>
           </div>
           <div>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">{t('common.labels.poNumber', { defaultValue: 'PO Number' })}</div>
@@ -1338,10 +1354,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                         const linked = emailLinkDecisionForActivity(quote.decisions, activity);
                         if (linked) return <QuoteDecisionLine decision={linked} />;
                         if (activity.activity_type === 'viewed_via_email_link') {
-                          return typeof activity.metadata?.recipient_email === 'string'
+                          const recipient = viewedViaEmailLinkRecipient(activity.metadata);
+                          return recipient
                             ? t('quoteDetail.activity.viewedViaEmailLink.descriptionWithRecipient', {
                               defaultValue: 'Quote viewed via email link by {{email}}',
-                              email: activity.metadata.recipient_email,
+                              email: recipient,
                             })
                             : t('quoteDetail.activity.viewedViaEmailLink.description', { defaultValue: 'Quote viewed via email link' });
                         }
