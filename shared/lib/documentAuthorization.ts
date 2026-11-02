@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { isMspPrincipalUserType } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { IDocument, IUser } from '@alga-psa/types';
@@ -470,7 +471,9 @@ export async function canAuthorizeDocumentAssociation(
   entityId: string,
   entityType: string
 ): Promise<boolean> {
-  const documentId = `association-preflight:${entityType}:${entityId}`;
+  // The lifecycle authorizer also checks ticket_comment_attachments.document_id,
+  // which is a UUID column even for an unpersisted association candidate.
+  const documentId = randomUUID();
   const candidate = {
     document_id: documentId,
     tenant,
