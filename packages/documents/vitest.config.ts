@@ -86,6 +86,10 @@ const storageStubAlias = [
 ];
 
 const nodeAliases = [
+  { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
+  { find: /^@alga-psa\/storage(\/.*)?$/, replacement: path.resolve(__dirname, './tests/stubs/storage.ts') },
+  { find: /^@alga-psa\/shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
+  { find: /^@shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
   { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src') },
   { find: /^@alga-psa\/types\/(.*)$/, replacement: `${path.resolve(__dirname, '../types/src')}/$1` },
   { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
@@ -108,6 +112,7 @@ export default defineConfig({
           environment: 'node',
           include: ['tests/**/*.test.ts'],
           testTimeout: 10000,
+          server: { deps: { inline: ['next-auth', '@auth/core', 'next'] } },
         },
         resolve: { alias: nodeAliases },
       },

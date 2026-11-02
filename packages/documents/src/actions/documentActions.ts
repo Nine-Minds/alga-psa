@@ -60,6 +60,7 @@ import {
 import { authorizeAndRedactDocuments as authorizeDocumentRows } from '@shared/lib/documentAuthorization';
 import { admitMeetingDocumentsForBrowser } from '../lib/meetingDocumentAdmission';
 import { getClientLogoUrlsBatch, getContactAvatarUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { authorizeAssetAssociationWrite } from '../lib/assetAssociationAuthorization';
 
 async function loadSharp() {
   try {
@@ -2157,6 +2158,9 @@ export const createDocumentAssociations = withAuth(async (
     if (!await hasPermission(user, 'document', 'update')) {
       return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
     }
+    if (entity_type === 'asset' && !await hasPermission(user, 'asset', 'update')) {
+      return permissionError('Permission denied: Cannot update assets');
+    }
 
     const { knex: db } = await createTenantKnex();
 
@@ -2169,6 +2173,10 @@ export const createDocumentAssociations = withAuth(async (
     }));
 
     const created = await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (entity_type === 'asset') {
+        const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, entity_id);
+        if (assetAuthorization) return assetAuthorization;
+      }
       const authorizationResult = await assertAuthorizedDocumentSetForMutation(
         trx,
         tenant,
@@ -2250,10 +2258,17 @@ export const removeDocumentAssociations = withAuth(async (
     if (!await hasPermission(user, 'document', 'update')) {
       return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');
     }
+    if (entity_type === 'asset' && !await hasPermission(user, 'asset', 'update')) {
+      return permissionError('Permission denied: Cannot update assets');
+    }
 
     const { knex } = await createTenantKnex();
 
     const removed = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (entity_type === 'asset') {
+        const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, entity_id);
+        if (assetAuthorization) return assetAuthorization;
+      }
       let query = tenantScopedTable(trx, 'document_associations', tenant)
         .where('entity_id', entity_id)
         .andWhere('entity_type', entity_type);
@@ -2363,6 +2378,9 @@ export const uploadDocument = withAuth(async (
     // Check permission for document creation/upload
     if (!await canUploadDocument(user, options)) {
       return permissionError('Permission denied: Cannot create documents', 'documents:errors.permissions.create');
+    }
+    if (options.assetId && !await hasPermission(user, 'asset', 'update')) {
+      return permissionError('Permission denied: Cannot update assets');
     }
 
     const { knex } = await createTenantKnex();
@@ -2534,7 +2552,11 @@ export const uploadDocument = withAuth(async (
       };
 
       // Use transaction for document creation and associations
-      const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const result: { success: true; document: IDocument } | ActionPermissionError = await withTransaction(knex, async (trx: Knex.Transaction): Promise<{ success: true; document: IDocument } | ActionPermissionError> => {
+        if (options.assetId) {
+          const assetAuthorization = await authorizeAssetAssociationWrite(trx, tenant, user, options.assetId);
+          if (assetAuthorization) return assetAuthorization;
+        }
         await tenantScopedTable(trx, 'documents', tenant).insert(document);
         if (options.commentAttachmentDraft) {
           await tenantDb(trx, tenant).table('ticket_comment_attachments').insert({
@@ -2555,6 +2577,7 @@ export const uploadDocument = withAuth(async (
         entity_type: 'ticket',
         tenant
       });
+
     }
 
     if (options.clientId) {
@@ -2640,6 +2663,8 @@ export const uploadDocument = withAuth(async (
           document: documentWithId
         };
       });
+
+      if (isActionPermissionErrorResult(result)) return result;
 
       unclaimedStorageFileId = undefined; // The document transaction committed; never remove shared storage.
 
