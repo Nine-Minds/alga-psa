@@ -263,7 +263,7 @@ export const QUOTE_CONVERSION_PREVIEW_SOURCE: RedactableRecordSource = {
   },
 };
 
-export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
+const ASSET_ROW_SOURCE: RedactableRecordSource = {
   resource: ['assets'],
   identifier: ids('asset_id', 'assets.asset_id', 'asset', 'assetId'),
   fields: {},
@@ -273,11 +273,17 @@ export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
     contact_name: ids('contact_name_id', 'contacts', 'contacts.full_name'),
     warranty_status: ids('warranty_end_date'),
   },
+};
+
+export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
+  ...ASSET_ROW_SOURCE,
   children: {
     client: {
       resource: ['clients'],
-      identifier: ids('client_id', 'clients.client_id'),
-      fields: {},
+      // The nested client is loaded through the asset's foreign key and copies its joined label. Compose the
+      // parent aliases so hiding either representation also hides the same data inside the child record.
+      identifier: [...ids('client_id', 'clients.client_id'), ...recordFieldAliases(ASSET_ROW_SOURCE, 'client_id')],
+      fields: { client_name: recordFieldAliases(ASSET_ROW_SOURCE, 'client_name') },
       derived: {},
     },
     maintenance_schedules: {

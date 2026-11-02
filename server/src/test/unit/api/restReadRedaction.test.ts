@@ -561,18 +561,20 @@ describe('asset routes serialize the projection', () => {
     const visible = (await (await get()).json()).data;
     expect(visible.client).toMatchObject({ client_id: 'client-1', client_name: 'Visible Client' });
 
-    for (const alias of ['clients.client_name', 'values.client_name', 'client_name']) {
+    for (const alias of ['clients.client_name', 'values.client_name', 'client_name', 'assets.client_name', 'fields.assets.client_name']) {
       state.decisions.set(assetId, { allowed: true, redactedFields: [alias] });
       const data = (await (await get()).json()).data;
       expect(JSON.stringify(data)).not.toContain('Visible Client');
+      expect(data.client).toMatchObject({ client_id: 'client-1', billing_email: 'billing@example.test' });
     }
 
-    for (const alias of ['clients.client_id', 'values.client_id']) {
+    for (const alias of ['clients.client_id', 'values.client_id', 'client_id', 'assets.client_id', 'fields.assets.client_id']) {
       state.decisions.set(assetId, { allowed: true, redactedFields: [alias] });
       const data = (await (await get()).json()).data;
       expect(data.client).toBeNull();
-      if (alias === 'values.client_id') expect(data).not.toHaveProperty('client_id');
-      else expect(data.client_id).toBe('client-1');
+      if (alias === 'clients.client_id') expect(data.client_id).toBe('client-1');
+      else expect(data).not.toHaveProperty('client_id');
+      expect(data.name).toBe('Laptop');
     }
   });
 
