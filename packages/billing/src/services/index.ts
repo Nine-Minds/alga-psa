@@ -44,6 +44,7 @@ export {
   finalizeLinkAcceptedQuote,
   type FinalizeLinkAcceptedQuoteResult,
 } from './quoteAcceptanceFinalizationService';
+export { loadQuoteAcceptance, type QuoteAcceptanceDetails } from '../lib/quoteAcceptance';
 export {
   buildQuoteConversionPreview,
   convertQuoteToDraftContract,
@@ -201,4 +202,6 @@ export {
   type QuoteLinkDecisionOutcome,
   type QuoteLinkInputProblem,
   type QuoteLinkRequestContext,
+  type CommittedQuoteLinkDecision,
+  type QuoteLinkDecisionHooks,
 } from './quoteLinkDecisionService';

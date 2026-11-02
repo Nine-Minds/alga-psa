@@ -11,6 +11,8 @@ const listActivities = vi.fn();
 const createActivity = vi.fn();
 const renderQuoteEmail = vi.fn();
 const lockRaw = vi.fn();
+const loadAcceptance = vi.fn();
+const DECISION_ID = 'decision-1';
 
 // A trx stand-in whose lock is a real mutex, so concurrent finalizations queue
 // the way pg_advisory_xact_lock makes them queue.
@@ -54,6 +56,9 @@ vi.mock('../../src/lib/adapters/tenantPartyAdapter', () => ({
 }));
 vi.mock('../../src/lib/quoteEmailRendering', () => ({
   renderQuoteEmail: (...a: unknown[]) => renderQuoteEmail(...a),
+}));
+vi.mock('../../src/lib/quoteAcceptance', () => ({
+  loadQuoteAcceptance: (...a: unknown[]) => loadAcceptance(...a),
 }));
 vi.mock('../../src/models/quote', () => ({ default: { getById: (...a: unknown[]) => quoteGetById(...a) } }));
 vi.mock('../../src/models/quoteActivity', () => ({
@@ -102,6 +107,7 @@ describe('finalizeLinkAcceptedQuote', () => {
       original_name: 'Proposal-signed.pdf',
     });
     downloadMock.mockResolvedValue(Buffer.from('%PDF-signed'));
+    loadAcceptance.mockResolvedValue(acceptance);
     listActivities.mockResolvedValue([]);
     createActivity.mockResolvedValue({});
     renderQuoteEmail.mockResolvedValue({ subject: 'Quote Q-1 was accepted', html: '<p>ok</p>', text: 'ok' });
@@ -109,7 +115,7 @@ describe('finalizeLinkAcceptedQuote', () => {
   });
 
   it('files the signed copy in the tenant zone and mails it, attached, to the signer only', async () => {
-    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
 
     expect(result).toEqual({ documentId: 'doc-signed', emailSent: true, errors: [] });
     expect(generateAndStore).toHaveBeenCalledWith(
@@ -134,7 +140,7 @@ describe('finalizeLinkAcceptedQuote', () => {
 
   it('sends no email and does not throw when the PDF cannot be produced', async () => {
     generateAndStore.mockRejectedValue(new Error('chromium crashed'));
-    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
 
     expect(result.emailSent).toBe(false);
     expect(result.documentId).toBeUndefined();
@@ -144,7 +150,7 @@ describe('finalizeLinkAcceptedQuote', () => {
 
   it('sends no email when the PDF was produced but not filed as a document', async () => {
     generateAndStore.mockResolvedValue({ file_id: 'file-1', storage_path: 'x.pdf' });
-    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
 
     expect(result.emailSent).toBe(false);
     expect(result.documentId).toBeUndefined();
@@ -154,7 +160,7 @@ describe('finalizeLinkAcceptedQuote', () => {
 
   it('reports an email failure without throwing, keeping the filed document', async () => {
     sendEmail.mockResolvedValue({ success: false, error: 'smtp down' });
-    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
 
     expect(result.documentId).toBe('doc-signed');
     expect(result.emailSent).toBe(false);
@@ -169,7 +175,7 @@ describe('finalizeLinkAcceptedQuote', () => {
       return { success: true, messageId: 'm-1' };
     });
 
-    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
 
     expect(result.emailSent).toBe(true);
     expect(openDuringSend).toBe(0);
@@ -184,10 +190,10 @@ describe('finalizeLinkAcceptedQuote', () => {
     });
     sendEmail.mockResolvedValueOnce({ success: false, error: 'smtp down' });
 
-    const first = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const first = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
     expect(first.emailSent).toBe(false);
 
-    const second = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const second = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
     expect(second.emailSent).toBe(true);
     expect(sendEmail).toHaveBeenCalledTimes(2);
     expect(activityTypes()).toEqual([
@@ -205,12 +211,12 @@ describe('finalizeLinkAcceptedQuote', () => {
     });
 
     listActivities.mockResolvedValue([claimedAt(60 * 1000)]);
-    const live = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const live = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
     expect(live).toEqual({ documentId: 'doc-signed', emailSent: false, errors: [] });
     expect(sendEmail).not.toHaveBeenCalled();
 
     listActivities.mockResolvedValue([claimedAt(60 * 60 * 1000)]);
-    const stale = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const stale = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
     expect(stale.emailSent).toBe(true);
     expect(sendEmail).toHaveBeenCalledTimes(1);
   });
@@ -222,7 +228,7 @@ describe('finalizeLinkAcceptedQuote', () => {
       { activity_type: 'signer_confirmation_claimed', created_at: at(60 * 1000), metadata: { claim_id: 'new' } },
       { activity_type: 'signer_confirmation_failed', created_at: at(1000), metadata: { claim_id: 'old' } },
     ]);
-    const blocked = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const blocked = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
     expect(blocked.emailSent).toBe(false);
     expect(sendEmail).not.toHaveBeenCalled();
 
@@ -231,14 +237,14 @@ describe('finalizeLinkAcceptedQuote', () => {
       { activity_type: 'signer_confirmation_claimed', created_at: at(60 * 1000), metadata: { claim_id: 'new' } },
       { activity_type: 'signer_confirmation_failed', created_at: at(1000), metadata: { claim_id: 'new' } },
     ]);
-    const released = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const released = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
     expect(released.emailSent).toBe(true);
     expect(sendEmail).toHaveBeenCalledTimes(1);
   });
 
   it('reports a thrown email error without throwing, and releases the claim', async () => {
     sendEmail.mockRejectedValue(new Error('boom'));
-    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
 
     expect(result.emailSent).toBe(false);
     expect(result.errors.join(' ')).toMatch(/boom/);
@@ -246,12 +252,12 @@ describe('finalizeLinkAcceptedQuote', () => {
   });
 
   it('does not email twice: a second run reuses the signed document and skips the send', async () => {
-    const first = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const first = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
     expect(first.emailSent).toBe(true);
     expect(activityTypes()).toEqual(['signer_confirmation_claimed', 'signer_confirmation_sent']);
 
     listActivities.mockResolvedValue([{ activity_type: 'signer_confirmation_sent' }]);
-    const second = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const second = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
     expect(second).toEqual({ documentId: 'doc-signed', emailSent: false, errors: [] });
     expect(sendEmail).toHaveBeenCalledTimes(1);
   });
@@ -270,8 +276,8 @@ describe('finalizeLinkAcceptedQuote', () => {
     });
 
     const [a, b] = await Promise.all([
-      finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance),
-      finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance),
+      finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID),
+      finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID),
     ]);
 
     expect(sendEmail).toHaveBeenCalledTimes(1);
@@ -290,7 +296,7 @@ describe('finalizeLinkAcceptedQuote', () => {
       if (activity.activity_type === 'signer_confirmation_sent') throw new Error('activity insert failed');
       return {};
     });
-    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
 
     expect(result).toEqual({ documentId: 'doc-signed', emailSent: true, errors: [] });
     expect(sendEmail).toHaveBeenCalledTimes(1);
@@ -298,7 +304,7 @@ describe('finalizeLinkAcceptedQuote', () => {
 
   it('does not produce a signed PDF when the quote has no user to attribute it to', async () => {
     quoteGetById.mockResolvedValue({ quote_id: QUOTE_ID, status: 'accepted', contact_id: 'contact-1' });
-    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
 
     expect(result.errors[0]).toMatch(/no user to attribute/);
     expect(generateAndStore).not.toHaveBeenCalled();
@@ -307,7 +313,7 @@ describe('finalizeLinkAcceptedQuote', () => {
 
   it('refuses to run before the decision is committed', async () => {
     quoteGetById.mockResolvedValue({ quote_id: QUOTE_ID, status: 'sent' });
-    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
 
     expect(result.errors[0]).toMatch(/not accepted/);
     expect(generateAndStore).not.toHaveBeenCalled();
@@ -315,7 +321,7 @@ describe('finalizeLinkAcceptedQuote', () => {
   });
 
   it('does not email when the acceptance carries no signer email', async () => {
-    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, { ...acceptance, signerEmail: null });
+    const result = await (loadAcceptance.mockResolvedValue({ ...acceptance, signerEmail: null }), finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID));
 
     expect(result.documentId).toBe('doc-signed');
     expect(result.emailSent).toBe(false);
@@ -324,9 +330,40 @@ describe('finalizeLinkAcceptedQuote', () => {
 
   it('never throws even when loading the quote fails', async () => {
     quoteGetById.mockRejectedValue(new Error('db gone'));
-    await expect(finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance)).resolves.toMatchObject({
+    await expect(finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID)).resolves.toMatchObject({
       emailSent: false,
       errors: [expect.stringMatching(/db gone/)],
     });
+  });
+
+  it('stamps the recorded decision it is named for, not caller-supplied details', async () => {
+    await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
+
+    expect(loadAcceptance).toHaveBeenCalledWith({ scope: 'knex' }, TENANT, QUOTE_ID, { decisionId: DECISION_ID });
+    expect(generateAndStore.mock.calls[0][0].acceptance).toMatchObject({
+      signerName: 'Casey Signer',
+      signerEmail: 'casey@example.com',
+      method: 'email_link',
+      ipAddress: '203.0.113.9',
+    });
+  });
+
+  it('does nothing when the decision is not a recorded acceptance of this quote', async () => {
+    loadAcceptance.mockResolvedValue(null);
+    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
+
+    expect(result.emailSent).toBe(false);
+    expect(result.errors[0]).toMatch(/No accepted decision/);
+    expect(generateAndStore).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it('leaves portal and MSP acceptances alone', async () => {
+    loadAcceptance.mockResolvedValue({ ...acceptance, method: 'portal' });
+    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, DECISION_ID);
+
+    expect(result.errors[0]).toMatch(/not made through an emailed link/);
+    expect(generateAndStore).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 });

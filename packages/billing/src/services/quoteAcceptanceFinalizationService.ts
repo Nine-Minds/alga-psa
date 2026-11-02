@@ -6,7 +6,7 @@ import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailL
 import { StorageProviderFactory } from '@alga-psa/storage';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { QUOTE_ACTIVITY_TYPES } from '../lib/quoteActivityTypes';
-import type { QuoteAcceptanceDetails } from '../lib/quoteAcceptance';
+import { loadQuoteAcceptance, type QuoteAcceptanceDetails } from '../lib/quoteAcceptance';
 import { renderQuoteEmail } from '../lib/quoteEmailRendering';
 import { getQuotePdfFileName } from '../lib/quoteFileNames';
 import type { IQuoteActivity } from '@alga-psa/types';
@@ -30,17 +30,16 @@ const errorMessage = (error: unknown): string => (error instanceof Error ? error
  * is rendered again with the acceptance block, filed as a new client-visible
  * `-signed` document linked to the quote, and mailed to the signer.
  *
- * CALLER CONTRACT (the public accept handler, card 4 of alga-2026-0002820):
- *  1. Commit the decision first, in its own transaction. Call this only after
- *     that commit — never inside it. A PDF or email failure here can neither
- *     roll back nor block an acceptance, and this function never throws.
- *  2. Inside the decision transaction, do exactly what `acceptClientQuote`
- *     (client-portal client-billing.ts) does: `Quote.update` to `accepted`, then
- *     `QuoteActivity.create({ activity_type: 'accepted' })`, then
- *     `onQuoteAccepted(trx, quote)`. That is the whole MSP-facing side of a
- *     portal acceptance — it sends no MSP email and publishes no event — so a
- *     link acceptance gets the identical signal by calling the same three
- *     things. This function deliberately adds no MSP notification of its own.
+ * Runs after the decision has committed — never inside its transaction — so a
+ * PDF or email failure can neither roll back nor block an acceptance. The
+ * public decision route enqueues it as the `finalize-link-accepted-quote` job
+ * once `submitQuoteLinkDecision` reports a committed acceptance. Everything it
+ * stamps (typed name, email, title, time, method, IP) is read from that
+ * decision's `quote_decisions` row, never from the caller. It never throws.
+ *
+ * It adds no MSP notification: `decideQuote` already writes the same
+ * `accepted` activity and runs the same `onQuoteAccepted` hook for a link
+ * acceptance as for a portal one, so the MSP sees the identical signal.
  *
  * Gates and guarantees:
  *  - No half-confirmation: the signer email is sent only once the signed PDF
@@ -57,13 +56,22 @@ const errorMessage = (error: unknown): string => (error instanceof Error ? error
 export async function finalizeLinkAcceptedQuote(
   tenant: string,
   quoteId: string,
-  acceptance: QuoteAcceptanceDetails
+  decisionId: string
 ): Promise<FinalizeLinkAcceptedQuoteResult> {
   const result: FinalizeLinkAcceptedQuoteResult = { emailSent: false, errors: [] };
 
   try {
     await runWithTenant(tenant, async () => {
       const { knex } = await createTenantKnex(tenant);
+      const acceptance = await loadQuoteAcceptance(knex, tenant, quoteId, { decisionId });
+      if (!acceptance) {
+        result.errors.push(`No accepted decision ${decisionId} recorded for quote ${quoteId}`);
+        return;
+      }
+      if (acceptance.method !== 'email_link') {
+        result.errors.push(`Decision ${decisionId} was not made through an emailed link; nothing to finalize`);
+        return;
+      }
       await finalize(knex, tenant, quoteId, acceptance, result);
     });
   } catch (error) {

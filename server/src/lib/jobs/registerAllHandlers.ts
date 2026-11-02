@@ -39,6 +39,11 @@ import {
   ExpiringHourBlocksNotificationJobData,
 } from '@alga-psa/jobs/handlers/expiringHourBlocksNotificationHandler';
 import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
+import {
+  FINALIZE_LINK_ACCEPTED_QUOTE_JOB,
+  finalizeLinkAcceptedQuoteHandler,
+  FinalizeLinkAcceptedQuoteJobData,
+} from './handlers/finalizeLinkAcceptedQuoteHandler';
 import { opportunityDisciplineHandler, OpportunityDisciplineJobData } from './handlers/opportunityDisciplineHandler';
 import { opportunityWeeklyDigestHandler, OpportunityWeeklyDigestJobData } from './handlers/opportunityWeeklyDigestHandler';
 import { opportunityGeneratorsHandler, OpportunityGeneratorsJobData } from './handlers/opportunityGeneratorsHandler';
@@ -392,6 +397,18 @@ export async function registerAllJobHandlers(
         await expireQuotesHandler(data);
       },
       retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<FinalizeLinkAcceptedQuoteJobData & BaseJobData>(
+    {
+      name: FINALIZE_LINK_ACCEPTED_QUOTE_JOB,
+      handler: async (_jobId, data) => {
+        await finalizeLinkAcceptedQuoteHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 300000, // PDF render + SMTP
     },
     registerOpts
   );
@@ -997,6 +1014,7 @@ export function getAvailableJobHandlers(): string[] {
     'generate-invoice',
     'invoice_zip',
     'invoice_email',
+    FINALIZE_LINK_ACCEPTED_QUOTE_JOB,
     PROJECT_DATE_READINESS_JOB,
     // Credits
     'expired-credits',

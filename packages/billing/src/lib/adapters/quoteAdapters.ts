@@ -18,7 +18,7 @@ import {
 import { isPendingOptional, isQuoteItemIncluded, isSelected } from '../quoteItemInclusion';
 import { presentedTaxAmount } from '../quoteItemTax';
 import { allocateIncludedQuoteDiscounts, summarizeQuoteTotals } from '../quoteTotals';
-import { buildQuoteViewModelAcceptance, toAcceptanceIso, type QuoteAcceptanceDetails } from '../quoteAcceptance';
+import { buildQuoteViewModelAcceptance, loadQuoteAcceptance, toAcceptanceIso, type QuoteAcceptanceDetails } from '../quoteAcceptance';
 
 /**
  * Every money figure below follows the shared inclusion rule
@@ -662,13 +662,33 @@ export async function resolveQuoteAcceptedByName(
   return null;
 }
 
+async function loadRecordedAcceptanceForName(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quote: IQuote
+): Promise<QuoteAcceptanceDetails | null> {
+  if (!quote.accepted_at) {
+    return null;
+  }
+  try {
+    return await loadQuoteAcceptance(knexOrTrx, tenant, quote.quote_id);
+  } catch {
+    // Non-blocking: fall back to quotes.accepted_by.
+    return null;
+  }
+}
+
 export async function mapLoadedQuoteToViewModel(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quote: IQuote,
   options: { acceptance?: QuoteAcceptanceDetails | null } = {}
 ): Promise<QuoteViewModel> {
+  // `acceptance` stamps the signed copy; only the signed-copy render passes it.
+  // Every other render still names the signer: the recorded decision is the
+  // only place a contact who accepted through an emailed link appears.
   const acceptance = options.acceptance ?? null;
+  const signer = acceptance ?? (await loadRecordedAcceptanceForName(knexOrTrx, tenant, quote));
   const rawItems = quote.quote_items ?? [];
   const locationIds = Array.from(
     new Set(
@@ -684,8 +704,8 @@ export async function mapLoadedQuoteToViewModel(
     fetchTenantParty(knexOrTrx, tenant),
     resolveQuoteAcceptedByName(knexOrTrx, tenant, {
       acceptedBy: quote.accepted_by,
-      signerName: acceptance?.signerName,
-      signerContactId: acceptance?.signerContactId,
+      signerName: signer?.signerName,
+      signerContactId: signer?.signerContactId,
     }),
     fetchQuoteItemLocations(knexOrTrx, tenant, locationIds),
   ]);

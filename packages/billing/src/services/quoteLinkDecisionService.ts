@@ -64,6 +64,22 @@ export interface QuoteLinkRequestContext {
   userAgent?: string | null;
 }
 
+/** A decision this module committed: what post-commit work needs, never sent to the browser. */
+export interface CommittedQuoteLinkDecision {
+  tenant: string;
+  quoteId: string;
+  decisionId: string;
+  decision: 'accepted' | 'rejected';
+}
+
+export interface QuoteLinkDecisionHooks {
+  /**
+   * Runs once the decision's transaction has committed, never inside it. A throw is
+   * logged and swallowed: the decision stands whatever post-commit work does.
+   */
+  afterCommit?: (committed: CommittedQuoteLinkDecision) => void | Promise<void>;
+}
+
 export type QuoteLinkInputProblem =
   | 'name_required'
   | 'agreement_required'
@@ -192,11 +208,25 @@ async function readCommittedSnapshot(
   };
 }
 
+type TransactionResult = { outcome: QuoteLinkDecisionOutcome; committed?: CommittedQuoteLinkDecision };
+
 async function submitInTransaction(
   trx: Knex.Transaction,
   token: string,
   input: QuoteLinkDecisionInput,
   ctx: QuoteLinkRequestContext,
+): Promise<TransactionResult> {
+  const committed: { value?: CommittedQuoteLinkDecision } = {};
+  const outcome = await decideInTransaction(trx, token, input, ctx, committed);
+  return { outcome, committed: committed.value };
+}
+
+async function decideInTransaction(
+  trx: Knex.Transaction,
+  token: string,
+  input: QuoteLinkDecisionInput,
+  ctx: QuoteLinkRequestContext,
+  committed: { value?: CommittedQuoteLinkDecision },
 ): Promise<QuoteLinkDecisionOutcome> {
   // Re-resolve in this transaction: the submit, not the rendered page, is the authority.
   const resolved = await QuoteAccessLinks.resolve(token, { ip: ctx.ip }, trx);
@@ -277,6 +307,12 @@ async function submitInTransaction(
 
   switch (result.status) {
     case 'decided': {
+      committed.value = {
+        tenant,
+        quoteId: quote.quote_id,
+        decisionId: result.decisionId,
+        decision: accepting ? 'accepted' : 'rejected',
+      };
       const row = await latestDecision(trx, tenant, quote.quote_id);
       return {
         status: 'decided',
@@ -304,8 +340,22 @@ export async function submitQuoteLinkDecision(
   token: string,
   input: QuoteLinkDecisionInput,
   ctx: QuoteLinkRequestContext = {},
+  hooks: QuoteLinkDecisionHooks = {},
 ): Promise<QuoteLinkDecisionOutcome> {
   if (!isWellFormedQuoteAccessToken(token) || !input || typeof input !== 'object') return INVALID_LINK;
   const knex = await getConnection();
-  return withTransaction(knex, (trx: Knex.Transaction) => submitInTransaction(trx, token, input, ctx));
+  const { outcome, committed } = await withTransaction(knex, (trx: Knex.Transaction) =>
+    submitInTransaction(trx, token, input, ctx),
+  );
+  if (committed && hooks.afterCommit) {
+    try {
+      await hooks.afterCommit(committed);
+    } catch (error) {
+      console.error(
+        `Post-commit work failed for quote ${committed.quoteId} decision ${committed.decisionId}:`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+  return outcome;
 }

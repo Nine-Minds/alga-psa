@@ -17,6 +17,7 @@ import { recalculateQuoteFinancials } from '../services/quoteCalculationService'
 import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
 import { decideQuote, listQuoteDecisions } from '../services/quoteDecisionService';
 import { renderQuoteEmail } from '../lib/quoteEmailRendering';
+import { loadQuoteAcceptance } from '../lib/quoteAcceptance';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { mapLoadedQuoteToViewModel, resolveQuoteAcceptedByName } from '../lib/adapters/quoteAdapters';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
@@ -670,9 +671,18 @@ export const getQuote = withAuth(async (
   const quote = await getAuthorizedQuoteForRead(knex, tenant, user as BillingAuthUser, quoteId);
   if (!quote) return null;
 
-  // Resolve accepted_by (a user id) to a display name through the one shared resolver.
-  if (quote.accepted_by) {
-    quote.accepted_by_name = await resolveQuoteAcceptedByName(knex, tenant, { acceptedBy: quote.accepted_by });
+  // The signer's display name through the one shared resolver: the recorded
+  // decision names a contact who signed through an emailed link (no users row,
+  // so accepted_by is null); accepted_by covers portal and MSP acceptances.
+  if (quote.accepted_at || quote.accepted_by) {
+    const recorded = quote.accepted_at
+      ? await loadQuoteAcceptance(knex, tenant, quote.quote_id).catch(() => null)
+      : null;
+    quote.accepted_by_name = await resolveQuoteAcceptedByName(knex, tenant, {
+      acceptedBy: quote.accepted_by,
+      signerName: recorded?.signerName,
+      signerContactId: recorded?.signerContactId,
+    });
   }
 
   // Who signed comes from quote_decisions: an email-link signer has no users row.

@@ -1,16 +1,14 @@
+import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import { formatDateValue } from '@alga-psa/ui/lib/i18n/formatDateValue';
 import type { QuoteViewModelAcceptance } from '@alga-psa/types';
 import type { TemplateLabelTranslator } from './invoice-template-ast/i18nLabels';
 
 /**
- * How a quote acceptance is described to the document renderer.
- *
- * LEVERAGE: friction quote-acceptance-audit — the typed signature, signer
- * contact, IP and method have no columns yet (card 1 of alga-2026-0002820 adds
- * them), so the finalize step is handed these fields by its caller instead of
- * reading them off the quote. Once the audit columns exist the loader should
- * build this from the stored acceptance record and callers stop passing it.
+ * How a quote acceptance is described to the document renderer. Built from the
+ * `quote_decisions` audit row by `loadQuoteAcceptance`; that row, not
+ * `quotes.accepted_by`, records a signer who has no `users` row.
  */
 export interface QuoteAcceptanceDetails {
   /** The name the signer typed. Wins over every looked-up name. */
@@ -24,6 +22,53 @@ export interface QuoteAcceptanceDetails {
   ipAddress?: string | null;
 }
 
+type AcceptedDecisionRow = {
+  decision_id: string;
+  method: string;
+  contact_id: string | null;
+  signer_name: string | null;
+  signer_email: string | null;
+  signer_title: string | null;
+  ip: string | null;
+  decided_at: Date | string;
+};
+
+/**
+ * The acceptance recorded for a quote: the named `quote_decisions` row, or the
+ * newest `accepted` row when no id is given. Null when the quote has no
+ * recorded acceptance (or the named row is not an acceptance of this quote).
+ */
+export async function loadQuoteAcceptance(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  options: { decisionId?: string | null } = {}
+): Promise<QuoteAcceptanceDetails | null> {
+  const query = tenantDb(knexOrTrx, tenant)
+    .table('quote_decisions')
+    .where({ quote_id: quoteId, decision: 'accepted' });
+  if (options.decisionId) {
+    query.andWhere({ decision_id: options.decisionId });
+  }
+  const row = await query
+    .orderBy('decided_at', 'desc')
+    .first<AcceptedDecisionRow | undefined>(
+      'decision_id', 'method', 'contact_id', 'signer_name', 'signer_email', 'signer_title', 'ip', 'decided_at',
+    );
+  if (!row) {
+    return null;
+  }
+  return {
+    signerName: row.signer_name,
+    signerEmail: row.signer_email,
+    signerTitle: row.signer_title,
+    signerContactId: row.contact_id,
+    acceptedAt: row.decided_at,
+    method: row.method,
+    ipAddress: row.ip,
+  };
+}
+
 /** Render-time extras that are about presentation, not about the acceptance. */
 export interface QuoteAcceptanceRenderOptions {
   /** IANA zone the acceptance time is written in (the tenant's). */
@@ -34,7 +79,7 @@ export interface QuoteAcceptanceRenderOptions {
 const METHOD_LABELS: Record<string, { key: string; defaultValue: string }> = {
   email_link: { key: 'labels.quoteAcceptance.methods.emailLink', defaultValue: 'Emailed link' },
   portal: { key: 'labels.quoteAcceptance.methods.portal', defaultValue: 'Client portal' },
-  msp: { key: 'labels.quoteAcceptance.methods.msp', defaultValue: 'Recorded by MSP' },
+  msp_marked: { key: 'labels.quoteAcceptance.methods.msp', defaultValue: 'Recorded by MSP' },
 };
 
 /** The `documents` namespace translator; absent means English defaults. */

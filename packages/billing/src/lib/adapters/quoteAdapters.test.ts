@@ -22,10 +22,13 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
           const filters: Array<[string, unknown]> = [];
           const builder: any = {
             select: () => builder,
-            where: (column: string, value: unknown) => {
-              filters.push([column, value]);
+            orderBy: () => builder,
+            where: (column: string | Record<string, unknown>, value?: unknown) => {
+              if (typeof column === 'object') filters.push(...Object.entries(column));
+              else filters.push([column, value]);
               return builder;
             },
+            andWhere: (column: Record<string, unknown>) => builder.where(column),
             first: async () =>
               (identityRows.tables?.[name] ?? []).find((row) => filters.every(([c, v]) => row[c] === v)),
           };
@@ -1540,6 +1543,58 @@ describe('quoteAdapters one source of truth: PDF view model == editor draft == p
           { acceptance: { signerName: 'Typed Signer', acceptedAt, method: 'email_link' } }
         );
         expect(viewModel.accepted_by_name).toBe('Typed Signer');
+      });
+    });
+
+    describe('contact signers from the recorded decision (email-link acceptance, no users row)', () => {
+      const decision = {
+        tenant: 'tenant-1',
+        decision_id: 'decision-1',
+        quote_id: 'quote-1',
+        decision: 'accepted',
+        method: 'email_link',
+        contact_id: 'contact-1',
+        signer_name: null as string | null,
+        signer_email: 'casey@example.com',
+        signer_title: 'Director',
+        ip: '203.0.113.9',
+        decided_at: acceptedAt,
+      };
+      const linkAccepted = () =>
+        buildQuote({ status: 'accepted', accepted_by: null, accepted_at: acceptedAt, contact_id: 'contact-1' });
+
+      it('binds accepted_by_name to the typed signature on any render, with accepted_by null', async () => {
+        identityRows.tables = {
+          contacts: [{ contact_name_id: 'contact-1', full_name: 'Casey Contact' }],
+          users: [],
+          quote_decisions: [{ ...decision, signer_name: 'Casey C. Typed' }],
+        };
+        const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', linkAccepted());
+        expect(viewModel.accepted_by_name).toBe('Casey C. Typed');
+        // Naming the signer does not stamp the acceptance block: only the signed copy carries it.
+        expect(viewModel.acceptance).toBeNull();
+        expect((await bindName(viewModel)).html).toContain('Casey C. Typed');
+      });
+
+      it("falls back to the signer contact's name when the decision has no typed name", async () => {
+        identityRows.tables = {
+          contacts: [{ contact_name_id: 'contact-1', full_name: 'Casey Contact' }],
+          users: [],
+          quote_decisions: [decision],
+        };
+        const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', linkAccepted());
+        expect(viewModel.accepted_by_name).toBe('Casey Contact');
+        expect((await bindName(viewModel)).html).toContain('Casey Contact');
+      });
+
+      it('ignores rejected decisions', async () => {
+        identityRows.tables = {
+          contacts: [{ contact_name_id: 'contact-1', full_name: 'Casey Contact' }],
+          users: [],
+          quote_decisions: [{ ...decision, decision: 'rejected', signer_name: 'Someone Else' }],
+        };
+        const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', linkAccepted());
+        expect(viewModel.accepted_by_name).toBeNull();
       });
     });
 
