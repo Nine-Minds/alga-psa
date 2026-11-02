@@ -163,3 +163,28 @@ therefore remains unresolved and no schema migration or customer-specific repair
 output or matching stack-up log was available. Review first when supplied: request timestamp and
 trace ID, deployment identity (hosted pod vs appliance), full 42703 SQL error, and the affected
 database's tag schema plus applied migration history.
+
+## Takeover evidence and access dependency
+
+- Read the support notifications in Gmail thread `1a1318023ec21d21`, including the original
+  report, retest, and subsequent support replies. They describe the tag API failure but provide
+  no failed tag-call timestamp, trace/request identifier, or PostgreSQL error. The original
+  report's SLA ticket timestamps are not timestamps for the failed tag request.
+- Searched Loki for `(?i)tag_mappings|tag_definitions` over October 12–13 UTC in
+  `{namespace="stackgres-pgvector"}` and `{namespace="msp"}`. Both returned zero entries.
+  A separate October 22 UTC search with the same expression over
+  `{namespace=~"stackgres-pgvector|postgres|stackgres"}` also returned zero entries.
+  Unfiltered positive-control queries returned database infrastructure logs from both
+  `stackgres-pgvector` and `postgres` on October 22. These controls establish retained logs,
+  not that either database served the customer's failed call.
+- Broader October 1–23 searches for the tag tables and the report's SLA ticket IDs timed out.
+  Those searches establish no presence or absence of the customer error.
+- The access dependency is the affected deployment's failed-request application/PostgreSQL
+  diagnostics, deployment/image identity, and tag-table schema plus applied migration ledger
+  at the time of failure. Neither the support notifications nor the successful current-schema
+  REST tests supply those artifacts. Obtain them from the operator with access to that
+  deployment before choosing a column or migration to repair.
+- Independently reran the three focused test files against disposable database
+  `tag_entity_takeover_test`: 13 tests passed. The existing scoped TypeScript configuration
+  also passed. No production code changed, no new build was run, and the original defect
+  remains unresolved. The app server was not started.
