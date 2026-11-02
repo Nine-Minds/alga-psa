@@ -350,9 +350,14 @@ export const PROJECT_TASK_RECORD_SOURCE: RedactableRecordSource = recordSourceFr
       phase_name: ids('phase_id', 'project_phases', 'project_phases.phase_name'),
       project_name: ids('project_id', 'projects', 'projects.project_name'),
       client_id: ids('project_id', 'projects.client_id'),
-      effective_service_id: ids('service_id', 'phase_id', 'project_id', 'service_catalog'),
-      service_source: ids('service_id', 'phase_id', 'project_id'),
-      service_name: ids('service_id', 'phase_id', 'project_id', 'service_catalog', 'service_catalog.service_name'),
+      effective_service_id: ids(
+        'service_id', 'phase_id', 'project_id', 'projects.service_id', 'project_phases.service_id',
+      ),
+      service_source: ids('service_id', 'phase_id', 'project_id', 'projects.service_id', 'project_phases.service_id'),
+      service_name: ids(
+        'service_id', 'phase_id', 'project_id', 'projects.service_id', 'project_phases.service_id',
+        'service_catalog', 'service_catalog.service_name',
+      ),
     },
     children: { checklist_items: PROJECT_TASK_CHECKLIST_ITEM_SOURCE },
   });
@@ -508,6 +513,7 @@ export const TICKET_TIME_ENTRY_SOURCE: RedactableRecordSource = {
   identifier: ids('entry_id', 'time_entries.entry_id'),
   fields: {},
   derived: {
+    is_own: ids('user_id'),
     user_name: ids('user_id', 'users', 'users.first_name', 'users.last_name'),
     service_name: ids('service_id', 'service_catalog', 'service_catalog.service_name'),
   },
@@ -600,6 +606,15 @@ export const TICKET_RECORD_SOURCE: RedactableRecordSource = {
   },
 };
 
+const TICKET_TIME_ENTRY_COUNT_DEPENDENCIES = ids(
+  'entries.entry_id', 'entries.user_id', 'tickets.time_entries.user_id',
+);
+const TICKET_TIME_ENTRY_MINUTE_DEPENDENCIES = ids(
+  ...TICKET_TIME_ENTRY_COUNT_DEPENDENCIES,
+  'entries.start_time', 'entries.end_time', 'entries.billable_duration',
+  'tickets.time_entries.start_time', 'tickets.time_entries.end_time',
+);
+
 /** Ticket time-entry summaries are calculated from their visible entry set. */
 export const TICKET_TIME_ENTRIES_RESPONSE_SOURCE: RedactableRecordSource = {
   policySource: TICKET_RECORD_SOURCE,
@@ -607,15 +622,15 @@ export const TICKET_TIME_ENTRIES_RESPONSE_SOURCE: RedactableRecordSource = {
   identifier: [],
   fields: {},
   derived: {
-    ownTotalMinutes: ids('entries.entry_id', 'entries.billable_duration'),
-    ownEntryCount: ids('entries.entry_id'),
-    othersTotalMinutes: ids('entries.entry_id', 'entries.billable_duration'),
-    othersEntryCount: ids('entries.entry_id'),
-    othersVisibleMinutes: ids('entries.entry_id', 'entries.billable_duration'),
-    othersVisibleCount: ids('entries.entry_id'),
-    othersHiddenMinutes: ids('entries.entry_id', 'entries.billable_duration'),
-    othersHiddenCount: ids('entries.entry_id'),
-    totalMinutes: ids('entries.entry_id', 'entries.billable_duration'),
+    ownTotalMinutes: TICKET_TIME_ENTRY_MINUTE_DEPENDENCIES,
+    ownEntryCount: TICKET_TIME_ENTRY_COUNT_DEPENDENCIES,
+    othersTotalMinutes: TICKET_TIME_ENTRY_MINUTE_DEPENDENCIES,
+    othersEntryCount: TICKET_TIME_ENTRY_COUNT_DEPENDENCIES,
+    othersVisibleMinutes: TICKET_TIME_ENTRY_MINUTE_DEPENDENCIES,
+    othersVisibleCount: TICKET_TIME_ENTRY_COUNT_DEPENDENCIES,
+    othersHiddenMinutes: TICKET_TIME_ENTRY_MINUTE_DEPENDENCIES,
+    othersHiddenCount: TICKET_TIME_ENTRY_COUNT_DEPENDENCIES,
+    totalMinutes: TICKET_TIME_ENTRY_MINUTE_DEPENDENCIES,
   },
   children: { entries: TICKET_TIME_ENTRY_SOURCE },
 };
@@ -686,14 +701,23 @@ export const QUOTE_CONVERSION_PREVIEW_DISCOUNT_SOURCE: RedactableRecordSource = 
   },
 };
 
-/** Quote audit rows keep the activity table namespace; metadata can repeat the description for comment events. */
+const QUOTE_ACTIVITY_METADATA_SOURCE: RedactableRecordSource = {
+  resource: [],
+  identifier: [],
+  fields: { comment: [] },
+  derived: {},
+};
+
+/** Quote audit rows keep the activity table namespace; approval comments are copied into both metadata and description. */
 export const QUOTE_ACTIVITY_SOURCE: RedactableRecordSource = {
   resource: ['quote_activities'],
   identifier: ids('activity_id', 'quote_activities.activity_id'),
   fields: {},
   derived: {
     metadata: ids('description', 'quote_activities.description'),
+    description: ids('metadata', 'metadata.comment', 'quote_activities.metadata.comment'),
   },
+  children: { metadata: QUOTE_ACTIVITY_METADATA_SOURCE },
 };
 
 /** Quotes are read under the kernel's `billing` resource, so a whole-`billing` redaction hides the quote too. */

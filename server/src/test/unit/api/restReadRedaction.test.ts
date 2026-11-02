@@ -2611,7 +2611,7 @@ describe('detached project, quote, and time-entry responses retain parent projec
       const response = await get();
       expect(response.status).toBe(200);
       const [projected] = (await response.json()).data;
-      expect(projected).not.toHaveProperty('description');
+      expect(projected.description).toBeNull();
       expect(projected.metadata).toBeNull();
     },
   );
@@ -2777,5 +2777,89 @@ describe('ticket copied identifier aliases', () => {
       expect(response.status).toBe(200);
       expect((await response.json()).data.additional_agents).toEqual([]);
     },
+  );
+});
+describe('lead round2 derived source review', () => {
+  beforeEach(() => {
+    vi.spyOn(ApiBaseController.prototype as any, 'assertProductApiAccess').mockResolvedValue(undefined);
+  });
+  const T = '33333333-3333-3333-3333-333333333331';
+  it.each(['time_entries.start_time', 'time_entries.end_time', 'tickets.time_entries.start_time', 'fields.tickets.time_entries.end_time'])(
+    'elapsed totals do not reveal a hidden timestamp %s', async redaction => {
+      const { workedMinutes } = await import('@alga-psa/core');
+      const entry = { entry_id: P2, user_id: 'user-1', is_own: true,
+        start_time: '2026-11-02T09:00:00.000Z', end_time: '2026-11-02T10:30:00.000Z',
+        billable_duration: 0, notes: 'Visible note' };
+      const worked = workedMinutes(entry);
+      expect(worked).toBe(90);
+      state.tickets = [{ ticket_id: T, title: 'Visible ticket' }];
+      state.timeEntriesSummary = { entries: [entry], ownTotalMinutes: worked, ownEntryCount: 1,
+        othersTotalMinutes: 0, othersEntryCount: 0, othersVisibleMinutes: 0, othersVisibleCount: 0,
+        othersHiddenMinutes: 0, othersHiddenCount: 0, totalMinutes: worked };
+      const c = new ApiTicketController();
+      const get = () => c.getTimeEntries()(request(`/api/v1/tickets/${T}/time-entries`, { id: T }));
+      expect((await (await get()).json()).data.totalMinutes).toBe(90);
+      state.decisions.set(T, { allowed: true, redactedFields: [redaction] });
+      const res = await get();
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      expect(data.entries[0].notes).toBe('Visible note');
+      expect(data.ownTotalMinutes).toBeNull();
+      expect(data.totalMinutes).toBeNull();
+    }
+  );
+  it.each(['time_entries.user_id', 'tickets.time_entries.user_id'])(
+    'entry ownership does not disclose hidden user identity %s', async redaction => {
+      state.tickets = [{ ticket_id: T, title: 'Visible ticket' }];
+      state.timeEntriesSummary = { entries: [{ entry_id: P2, user_id: 'user-1', is_own: true }], ownTotalMinutes: 0,
+        ownEntryCount: 1, othersTotalMinutes: 0, othersEntryCount: 0, othersVisibleMinutes: 0,
+        othersVisibleCount: 0, othersHiddenMinutes: 0, othersHiddenCount: 0, totalMinutes: 0 };
+      const c = new ApiTicketController();
+      const get = () => c.getTimeEntries()(request(`/api/v1/tickets/${T}/time-entries`, { id: T }));
+      expect((await (await get()).json()).data.entries[0].is_own).toBe(true);
+      state.decisions.set(T, { allowed: true, redactedFields: [redaction] });
+      const res = await get();
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      expect(data.entries[0]).not.toHaveProperty('user_id');
+      expect(data.entries[0].is_own).toBeNull();
+      expect(data.ownEntryCount).toBeNull();
+    }
+  );
+  const Q = '44444444-4444-4444-4444-444444444441';
+  it.each(['quote_activities.metadata', 'quote_activities.metadata.comment', 'quotes.activities.metadata.comment'])(
+    'real approval text does not repeat hidden metadata %s', async redaction => {
+      const { buildApprovalChangesRequestedActivity } = await import('@alga-psa/billing/lib/quoteActivityTypes');
+      const activity = buildApprovalChangesRequestedActivity('PRIVATE APPROVAL REASON 4938');
+      state.quote = { quote_id: Q, title: 'Visible quote' };
+      state.quoteActivities = [{ activity_id: P2, quote_id: Q, ...activity }];
+      const c = new ApiQuoteController();
+      const get = () => c.listActivities()(request(`/api/v1/quotes/${Q}/activities`, { id: Q }));
+      expect(JSON.stringify((await (await get()).json()).data)).toContain('PRIVATE APPROVAL REASON 4938');
+      state.decisions.set(Q, { allowed: true, redactedFields: [redaction] });
+      const res = await get();
+      expect(res.status).toBe(200);
+      expect(JSON.stringify((await res.json()).data)).not.toContain('PRIVATE APPROVAL REASON 4938');
+    }
+  );
+  it.each(['projects.service_id', 'project_phases.service_id', 'fields.projects.service_id'])(
+    'task detail inherits service redaction from the actual source %s', async redaction => {
+      const source = redaction.includes('project_phases') ? 'phase' : 'project';
+      state.projects[0].service_id = source === 'project' ? P3 : null;
+      state.decisions.set(P1, { allowed: true, redactedFields: [redaction] });
+      const c = new ApiProjectController();
+      vi.spyOn(c as any, 'resolveProjectIdForTask').mockResolvedValue(P1);
+      (c as any).projectService.getTaskById = vi.fn(async () => ({
+        task_id: P2, phase_id: 'phase-1', project_id: P1, task_name: 'Visible task',
+        service_id: null, effective_service_id: P3, service_source: source, service_name: 'PRIVATE INHERITED SERVICE',
+      }));
+      const res = await c.getTask()(request(`/api/v1/projects/tasks/${P2}`, { id: P2 }));
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      expect(data.task_name).toBe('Visible task');
+      expect(data.effective_service_id).toBeNull();
+      expect(data.service_source).toBeNull();
+      expect(data.service_name).toBeNull();
+    }
   );
 });
