@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const findUserByEmailAndTypeMock = vi.fn();
 const findUsersByEmailAndTypeMock = vi.fn();
 const verifyPasswordMock = vi.fn();
 const loadTenantAuthPolicyMock = vi.fn();
@@ -10,7 +9,6 @@ const listBreakGlassCandidatesMock = vi.fn();
 vi.mock('@alga-psa/db/models/user', () => ({
   default: {
     findUserByEmailTenantAndType: vi.fn(),
-    findUserByEmailAndType: (...args: unknown[]) => findUserByEmailAndTypeMock(...args),
     findUsersByEmailAndType: (...args: unknown[]) => findUsersByEmailAndTypeMock(...args),
     findUserByEmail: vi.fn(),
   },
@@ -68,14 +66,14 @@ describe('authenticateUser login policy gate', () => {
 
   it('with default settings behaves exactly as before (returns the user, audits nothing)', async () => {
     loadTenantAuthPolicyMock.mockResolvedValue(OFF);
-    findUserByEmailAndTypeMock.mockResolvedValue(user('internal'));
+    findUsersByEmailAndTypeMock.mockResolvedValue([user('internal')]);
     await expect(authenticateUser('pat@example.com', 'pw', 'internal')).resolves.toMatchObject({ user_id: 'u1' });
     expect(recordLoginRefusalMock).not.toHaveBeenCalled();
   });
 
   it('refuses an internal password login when SSO is required, with an audit record', async () => {
     loadTenantAuthPolicyMock.mockResolvedValue({ ...OFF, requireSsoForInternalUsers: true, passwordBreakGlassUserIds: ['bg'] });
-    findUserByEmailAndTypeMock.mockResolvedValue(user('internal'));
+    findUsersByEmailAndTypeMock.mockResolvedValue([user('internal')]);
     await expect(authenticateUser('pat@example.com', 'pw', 'internal')).rejects.toMatchObject({ code: 'SSO_REQUIRED' });
     expect(recordLoginRefusalMock).toHaveBeenCalledWith(
       expect.objectContaining({ tenant: TENANT, userId: 'u1', reason: 'sso_required', surface: 'msp_login' }),
@@ -84,7 +82,7 @@ describe('authenticateUser login policy gate', () => {
 
   it('does not reveal the SSO requirement when the password is wrong', async () => {
     loadTenantAuthPolicyMock.mockResolvedValue({ ...OFF, requireSsoForInternalUsers: true });
-    findUserByEmailAndTypeMock.mockResolvedValue(user('internal'));
+    findUsersByEmailAndTypeMock.mockResolvedValue([user('internal')]);
     verifyPasswordMock.mockResolvedValue(false);
     await expect(authenticateUser('pat@example.com', 'bad', 'internal')).resolves.toBeNull();
     expect(recordLoginRefusalMock).not.toHaveBeenCalled();
@@ -92,7 +90,7 @@ describe('authenticateUser login policy gate', () => {
 
   it('lets a break-glass user past the SSO denial', async () => {
     loadTenantAuthPolicyMock.mockResolvedValue({ ...OFF, requireSsoForInternalUsers: true, passwordBreakGlassUserIds: ['u1'] });
-    findUserByEmailAndTypeMock.mockResolvedValue(user('internal', { two_factor_enabled: true }));
+    findUsersByEmailAndTypeMock.mockResolvedValue([user('internal', { two_factor_enabled: true })]);
     listBreakGlassCandidatesMock.mockResolvedValue([
       { userId: 'u1', userType: 'internal', isInactive: false, isAdmin: true, twoFactorEnabled: true },
     ]);
@@ -101,7 +99,7 @@ describe('authenticateUser login policy gate', () => {
 
   it('refuses a listed user who lost eligibility (2FA reset, demoted) instead of enrolling', async () => {
     loadTenantAuthPolicyMock.mockResolvedValue({ ...OFF, requireSsoForInternalUsers: true, passwordBreakGlassUserIds: ['u1'] });
-    findUserByEmailAndTypeMock.mockResolvedValue(user('internal', { two_factor_enabled: false }));
+    findUsersByEmailAndTypeMock.mockResolvedValue([user('internal', { two_factor_enabled: false })]);
     listBreakGlassCandidatesMock.mockResolvedValue([
       { userId: 'u1', userType: 'internal', isInactive: false, isAdmin: true, twoFactorEnabled: false },
     ]);
@@ -111,7 +109,7 @@ describe('authenticateUser login policy gate', () => {
 
   it('fails closed when the break-glass eligibility lookup throws', async () => {
     loadTenantAuthPolicyMock.mockResolvedValue({ ...OFF, requireSsoForInternalUsers: true, passwordBreakGlassUserIds: ['u1'] });
-    findUserByEmailAndTypeMock.mockResolvedValue(user('internal', { two_factor_enabled: true }));
+    findUsersByEmailAndTypeMock.mockResolvedValue([user('internal', { two_factor_enabled: true })]);
     listBreakGlassCandidatesMock.mockRejectedValue(new Error('db down'));
     await expect(authenticateUser('pat@example.com', 'pw', 'internal')).rejects.toBeDefined();
   });
@@ -135,7 +133,7 @@ describe('authenticateUser login policy gate', () => {
 
   it('skips the policy for the reauthenticate purpose (no session is minted)', async () => {
     loadTenantAuthPolicyMock.mockResolvedValue({ ...OFF, requireSsoForInternalUsers: true });
-    findUserByEmailAndTypeMock.mockResolvedValue(user('internal'));
+    findUsersByEmailAndTypeMock.mockResolvedValue([user('internal')]);
     await expect(
       authenticateUser('pat@example.com', 'pw', 'internal', { purpose: 'reauthenticate' }),
     ).resolves.toMatchObject({ user_id: 'u1' });
@@ -144,7 +142,24 @@ describe('authenticateUser login policy gate', () => {
 
   it('fails closed when the policy cannot be read', async () => {
     loadTenantAuthPolicyMock.mockRejectedValue(new Error('db down'));
-    findUserByEmailAndTypeMock.mockResolvedValue(user('internal'));
+    findUsersByEmailAndTypeMock.mockResolvedValue([user('internal')]);
     await expect(authenticateUser('pat@example.com', 'pw', 'internal')).rejects.toThrow();
+  });
+
+  it('applies the policy of the tenant whose account the password unlocks when an internal email spans tenants', async () => {
+    const OTHER = '22222222-2222-2222-2222-222222222222';
+    loadTenantAuthPolicyMock.mockImplementation(async (tenant: string) =>
+      tenant === OTHER ? { ...OFF, requireSsoForInternalUsers: true } : OFF,
+    );
+    findUsersByEmailAndTypeMock.mockResolvedValue([
+      user('internal', { user_id: 'u-a', hashed_password: 'hash-a' }),
+      user('internal', { user_id: 'u-b', hashed_password: 'hash-b', tenant: OTHER }),
+    ]);
+    verifyPasswordMock.mockImplementation(async (_pw: string, hash: string) => hash === 'hash-b');
+    await expect(authenticateUser('pat@example.com', 'pw', 'internal')).rejects.toMatchObject({ code: 'SSO_REQUIRED' });
+    expect(loadTenantAuthPolicyMock).toHaveBeenCalledWith(OTHER);
+    expect(recordLoginRefusalMock).toHaveBeenCalledWith(
+      expect.objectContaining({ tenant: OTHER, userId: 'u-b', reason: 'sso_required' }),
+    );
   });
 });
