@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   hasPermission: vi.fn(),
   resolveDateFormatCountry: vi.fn(),
   getTenantThemeByTenantId: vi.fn(),
+  readDontNotifyCustomerDefault: vi.fn(async () => false),
 }));
 
 vi.mock('@/lib/productAccess', () => ({
@@ -21,6 +22,10 @@ vi.mock('@alga-psa/tenancy/lib/tenantDefaultCountry', () => ({
 
 vi.mock('@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions', () => ({
   getTenantThemeByTenantId: mocks.getTenantThemeByTenantId,
+}));
+
+vi.mock('@alga-psa/notifications/notifications/notificationPolicy', () => ({
+  readDontNotifyCustomerDefault: mocks.readDontNotifyCustomerDefault,
 }));
 
 import { countryDateFormat, SYSTEM_DATE_FORMAT } from '@alga-psa/core/i18n/countryDateFormat';
@@ -143,12 +148,19 @@ describe('MobileCapabilitiesService', () => {
     expect(result.features.assetAudit).toBe(false);
   });
 
-  it('surfaces the tenant dont-notify-customer default as a feature flag', async () => {
-    const service = new MobileCapabilitiesService();
-    vi.spyOn(service as any, 'getDontNotifyCustomerDefault').mockResolvedValue(true);
+  it('reads the dont-notify-customer default from the tenant notification settings', async () => {
+    mocks.readDontNotifyCustomerDefault.mockResolvedValueOnce(true);
 
-    const result = await service.getMyCapabilities(context);
+    const result = await new MobileCapabilitiesService().getMyCapabilities(context);
     expect(result.features.dontNotifyCustomerDefault).toBe(true);
+    expect(mocks.readDontNotifyCustomerDefault).toHaveBeenCalledWith(db, 'tenant-1');
+  });
+
+  it('falls back to unticked when the notification settings read fails', async () => {
+    mocks.readDontNotifyCustomerDefault.mockRejectedValueOnce(new Error('db down'));
+
+    const result = await new MobileCapabilitiesService().getMyCapabilities(context);
+    expect(result.features.dontNotifyCustomerDefault).toBe(false);
   });
 
   it('reports client and contact write permissions for every product', async () => {

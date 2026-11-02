@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
 import {
   BaseService,
-  tenantDb,
   type ServiceContext,
 } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -24,6 +23,7 @@ import {
   getThemePairMeta,
   type ThemePairId,
 } from '@alga-psa/tenancy/lib/themePairs';
+import { readDontNotifyCustomerDefault } from '@alga-psa/notifications/notifications/notificationPolicy';
 
 /** The 15 seed tokens the mobile app derives its whole palette from. */
 export type MobileThemeSeedTokens = CustomThemeTokens;
@@ -56,7 +56,8 @@ export interface MobileFeatureCapabilities {
     contactsUpdate: boolean;
     /**
      * Tenant setting: every "Don't notify the customer" checkbox starts ticked.
-     * Mirrors `defaultDontNotifyCustomer` in the web ticketing display settings.
+     * Mirrors `notification_settings.default_dont_notify_customer` (Settings ->
+     * Notifications -> Email -> Settings on the web).
      */
     dontNotifyCustomerDefault: boolean;
   };
@@ -124,22 +125,17 @@ export class MobileCapabilitiesService extends BaseService<never> {
     }
   }
 
-  private async getDontNotifyCustomerDefault(knex: Parameters<typeof tenantDb>[0], tenant: string): Promise<boolean> {
+  private async getDontNotifyCustomerDefault(
+    knex: Parameters<typeof readDontNotifyCustomerDefault>[0],
+    tenant: string,
+  ): Promise<boolean> {
     try {
-      const row = await tenantDb(knex, tenant)
-        .table('tenant_settings')
-        .select('ticket_display_settings', 'settings')
-        .first();
-      const fromColumn = (row?.ticket_display_settings as { defaultDontNotifyCustomer?: unknown } | null) ?? {};
-      const nested = ((row?.settings as { ticketing?: { display?: { defaultDontNotifyCustomer?: unknown } } } | null)?.ticketing?.display) ?? {};
-      const source = Object.keys(fromColumn).length ? fromColumn : nested;
-      return source.defaultDontNotifyCustomer === true;
+      return await readDontNotifyCustomerDefault(knex, tenant);
     } catch {
       // Fail open: the historical behavior is unticked checkboxes.
       return false;
     }
   }
-
   async getMyCapabilities(context: ServiceContext): Promise<MobileFeatureCapabilities> {
     const formatting = await this.getFormatting(context);
     const theme = await this.resolveTheme(context.tenant);

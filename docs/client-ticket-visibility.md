@@ -77,17 +77,20 @@ their parent comment's visibility, and client portal replies are unchanged.
 
 ## Default for "Don't notify the customer"
 
-Under **Settings > Ticketing > Display**, enable **Start actions with customer
-notifications off** to start every "Don't notify the customer" checkbox ticked
+Under **Settings > Notifications > Email > Settings**, next to **Enable
+Notifications**, turn on **Start tickets with "Don't notify the customer"
+ticked** to start every such checkbox ticked
 for every team member. This tenant-wide setting is off by default, preserving
 the existing behavior where each action notifies the customer unless the agent
 ticks the box.
 
-This adds only the `defaultDontNotifyCustomer` JSON property to the existing
-`tenant_settings.ticket_display_settings` column, alongside `defaultReplyInternal`.
-It uses the existing display-settings action, including its compatibility copy
-in `tenant_settings.settings.ticketing.display`. No new table, column, or
-database migration is required.
+It is a notification policy, so it is stored as the
+`notification_settings.default_dont_notify_customer` boolean column (added by
+migration `20261102190256_add_default_dont_notify_customer_to_notification_settings`,
+default `false`) beside the tenant-wide `is_enabled` switch. The settings form
+requires `settings:read` to view and `settings:update` to change it. The MSP
+layout reads it once on the server and hands it to every ticket surface, so
+dialogs open with the right value without a client-side fetch.
 
 The setting covers every place the checkbox appears: comments, status changes
 (including bulk status changes), contact changes, ticket closure and resolution,

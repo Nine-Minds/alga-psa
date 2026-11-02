@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getUserTimeZone } from '@alga-psa/core';
 import { deriveWorkReason } from '../../lib/deriveWorkReason';
-import { defaultNotificationSuppression, primeDontNotifyCustomerDefault } from '../../lib/notificationSuppressionDefaults';
+import { useDefaultNotificationSuppression } from '../../lib/notificationSuppressionDefaults';
 import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import { DeleteEntityDialog } from "@alga-psa/ui/components/DeleteEntityDialog";
@@ -476,6 +476,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Flagging an existing comment as the resolution while editing it offers the
     // close the composer's resolution toggle would have done inline. Declining
     // leaves the comment flagged and the status untouched.
+    const defaultNotificationSuppression = useDefaultNotificationSuppression();
     const [resolutionClosePrompt, setResolutionClosePrompt] = useState<{
         isOpen: boolean;
         statusId: string | null;
@@ -759,9 +760,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [showWeekday, setShowWeekday] = useState<boolean>(bootstrap?.displaySettings?.showWeekday ?? false);
     const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(bootstrap?.displaySettings?.responseStateTrackingEnabled ?? true);
     const [defaultReplyInternal, setDefaultReplyInternal] = useState(bootstrap?.displaySettings?.defaultReplyInternal ?? false);
-    // Server-rendered bootstrap primes the shared dont-notify cache so dialogs
-    // opened on this screen start from the tenant default without a round trip.
-    primeDontNotifyCustomerDefault(bootstrap?.displaySettings?.defaultDontNotifyCustomer ?? false);
     const [createdRelativeTime, setCreatedRelativeTime] = useState<string>('');
     const [updatedRelativeTime, setUpdatedRelativeTime] = useState<string>('');
     const [addChildTicketNumber, setAddChildTicketNumber] = useState<string>('');
@@ -1619,7 +1617,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 setShowWeekday(settings?.showWeekday ?? false);
                 setResponseStateTrackingEnabled(settings?.responseStateTrackingEnabled ?? true);
                 setDefaultReplyInternal(settings?.defaultReplyInternal ?? false);
-                primeDontNotifyCustomerDefault(settings?.defaultDontNotifyCustomer ?? false);
             } catch (error) {
                 console.error('Failed to load ticketing display settings:', error);
             }

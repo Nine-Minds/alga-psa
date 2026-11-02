@@ -4,7 +4,7 @@ import { useDefaultTicketNotificationSuppression } from "./TicketUpdateFooter";
 
 /**
  * Suppression checkbox state seeded from the tenant's
- * `defaultDontNotifyCustomer` capability.
+ * `dontNotifyCustomerDefault` capability.
  *
  * The capability arrives after first mount (the app fetches it during startup),
  * so a plain `useState` would freeze the pre-load `false`. The state is

@@ -1352,10 +1352,7 @@
       },
       "requiredSuffix": "(erforderlich)",
       "tagsUnderTitle": "Unter dem Titel anzeigen",
-      "tagsSeparateColumn": "In separater Spalte anzeigen",
-      "defaultDontNotifyCustomerTitle": "Kunden nicht benachrichtigen",
-      "defaultDontNotifyCustomerDescription": "Für alle Teammitglieder das Kontrollkästchen „Kunde nicht benachrichtigen“ standardmäßig aktivieren – Statusänderungen, Kontaktänderungen, Abschluss und Kommentare. Benutzer können das Kästchen weiterhin deaktivieren, um die Benachrichtigung für eine einzelne Aktion zu senden.",
-      "defaultDontNotifyCustomerLabel": "Aktionen ohne Kundenbenachrichtigung beginnen"
+      "tagsSeparateColumn": "In separater Spalte anzeigen"
     }
   },
   "export": {

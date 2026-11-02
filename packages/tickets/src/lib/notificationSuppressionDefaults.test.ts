@@ -1,32 +1,21 @@
 // @vitest-environment jsdom
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { createElement, type ReactNode } from 'react';
+import { renderHook } from '@testing-library/react';
 import {
   computeNotificationSuppressionDefault,
-  defaultNotificationSuppression,
-  loadDontNotifyCustomerDefault,
-  primeDontNotifyCustomerDefault,
-  readDontNotifyCustomerDefault,
-  resetDontNotifyCustomerDefaultCache,
-  subscribeDontNotifyCustomerDefault,
+  TicketNotificationDefaultsProvider,
+  useDefaultNotificationSuppression,
+  useDontNotifyCustomerDefault,
 } from './notificationSuppressionDefaults';
 
-const getTicketingDisplaySettings = vi.fn();
-
-vi.mock('../actions/ticketDisplaySettings', () => ({
-  getTicketingDisplaySettings: () => getTicketingDisplaySettings(),
-}));
+function withProvider(dontNotifyCustomer: boolean) {
+  return ({ children }: { children: ReactNode }) =>
+    createElement(TicketNotificationDefaultsProvider, { dontNotifyCustomer, children });
+}
 
 describe('notificationSuppressionDefaults', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    resetDontNotifyCustomerDefaultCache();
-  });
-
-  afterEach(() => {
-    resetDontNotifyCustomerDefaultCache();
-  });
-
   describe('computeNotificationSuppressionDefault', () => {
     it('ticks only the customer box when the tenant default is on', () => {
       expect(computeNotificationSuppressionDefault(true)).toEqual({
@@ -42,75 +31,39 @@ describe('notificationSuppressionDefaults', () => {
       });
       expect(computeNotificationSuppressionDefault()).toEqual(computeNotificationSuppressionDefault(false));
     });
+
+    it('returns a fresh object each call so callers cannot share state', () => {
+      expect(computeNotificationSuppressionDefault(false)).not.toBe(computeNotificationSuppressionDefault(false));
+    });
   });
 
-  describe('cache', () => {
-    it('reads false before anything is loaded', () => {
-      expect(readDontNotifyCustomerDefault()).toBe(false);
-      expect(defaultNotificationSuppression().suppressContactNotifications).toBe(false);
+  describe('provider', () => {
+    it('defaults to unticked without a provider (client portal)', () => {
+      const { result } = renderHook(() => useDefaultNotificationSuppression());
+      expect(result.current()).toEqual({
+        suppressContactNotifications: false,
+        suppressInternalNotifications: false,
+      });
     });
 
-    it('primes synchronously and notifies subscribers', () => {
-      const listener = vi.fn();
-      const unsubscribe = subscribeDontNotifyCustomerDefault(listener);
-
-      primeDontNotifyCustomerDefault(true);
-      expect(readDontNotifyCustomerDefault()).toBe(true);
-      expect(defaultNotificationSuppression()).toEqual({
+    it('ticks only the customer box when the provider is on', () => {
+      const { result } = renderHook(() => useDefaultNotificationSuppression(), { wrapper: withProvider(true) });
+      expect(result.current()).toEqual({
         suppressContactNotifications: true,
         suppressInternalNotifications: false,
       });
-      expect(listener).toHaveBeenCalledTimes(1);
-
-      // Priming with the same value is a no-op.
-      primeDontNotifyCustomerDefault(true);
-      expect(listener).toHaveBeenCalledTimes(1);
-
-      unsubscribe();
-      primeDontNotifyCustomerDefault(false);
-      expect(listener).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  describe('loadDontNotifyCustomerDefault', () => {
-    it('loads the flag once and caches it', async () => {
-      getTicketingDisplaySettings.mockResolvedValue({ defaultDontNotifyCustomer: true });
-
-      await expect(loadDontNotifyCustomerDefault()).resolves.toBe(true);
-      await expect(loadDontNotifyCustomerDefault()).resolves.toBe(true);
-      expect(getTicketingDisplaySettings).toHaveBeenCalledTimes(1);
-      expect(defaultNotificationSuppression().suppressContactNotifications).toBe(true);
     });
 
-    it('shares one in-flight request between concurrent callers', async () => {
-      let resolveSettings: (value: { defaultDontNotifyCustomer: boolean }) => void = () => {};
-      getTicketingDisplaySettings.mockReturnValue(
-        new Promise((resolve) => {
-          resolveSettings = resolve;
-        }),
-      );
-
-      const first = loadDontNotifyCustomerDefault();
-      const second = loadDontNotifyCustomerDefault();
-      resolveSettings({ defaultDontNotifyCustomer: true });
-
-      await expect(first).resolves.toBe(true);
-      await expect(second).resolves.toBe(true);
-      expect(getTicketingDisplaySettings).toHaveBeenCalledTimes(1);
+    it('exposes the raw flag', () => {
+      expect(renderHook(() => useDontNotifyCustomerDefault(), { wrapper: withProvider(true) }).result.current).toBe(true);
+      expect(renderHook(() => useDontNotifyCustomerDefault(), { wrapper: withProvider(false) }).result.current).toBe(false);
     });
 
-    it('fails open when the settings read throws', async () => {
-      getTicketingDisplaySettings.mockRejectedValue(new Error('nope'));
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      await expect(loadDontNotifyCustomerDefault()).resolves.toBe(false);
-      expect(readDontNotifyCustomerDefault()).toBe(false);
-      consoleError.mockRestore();
-    });
-
-    it('treats a null settings payload as off', async () => {
-      getTicketingDisplaySettings.mockResolvedValue(null);
-      await expect(loadDontNotifyCustomerDefault()).resolves.toBe(false);
+    it('keeps the factory stable across renders while the value is unchanged', () => {
+      const { result, rerender } = renderHook(() => useDefaultNotificationSuppression(), { wrapper: withProvider(true) });
+      const first = result.current;
+      rerender();
+      expect(result.current).toBe(first);
     });
   });
 });

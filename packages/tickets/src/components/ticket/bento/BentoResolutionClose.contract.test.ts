@@ -99,6 +99,7 @@ describe('resolution comment close contract', () => {
     expect(defaults).toContain('suppressInternalNotifications: false');
 
     for (const source of sources) {
+      expect(source).toContain('const defaultNotificationSuppression = useDefaultNotificationSuppression();');
       expect(source).toContain('defaultNotificationSuppression()');
     }
 

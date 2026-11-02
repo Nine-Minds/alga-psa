@@ -68,8 +68,7 @@ import type { IAggregatedReaction } from '@alga-psa/types';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from './TicketNotificationSuppressionControl';
-import { defaultNotificationSuppression } from '../../lib/notificationSuppressionDefaults';
-import { useReseedNotificationSuppression } from '../../lib/useTicketNotificationSuppressionDefault';
+import { useDefaultNotificationSuppression } from '../../lib/notificationSuppressionDefaults';
 import {
   CommentEmailRecipientsControl,
   commentEmailRecipientsPayload,
@@ -246,10 +245,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   }, [isScheduleToggle, scheduledPublishAt]);
   const scheduleIsValid = !isScheduleToggle || Boolean(scheduledInstant && scheduledInstant.getTime() > Date.now());
   const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
+  const defaultNotificationSuppression = useDefaultNotificationSuppression();
   const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(
     defaultNotificationSuppression
   );
-  useReseedNotificationSuppression(notificationSuppression, setNotificationSuppression);
   const [contactAvatarUrls, setContactAvatarUrls] = useState<Record<string, string | null>>({});
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});

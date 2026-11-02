@@ -62,8 +62,7 @@ import {
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from './TicketNotificationSuppressionControl';
-import { defaultNotificationSuppression } from '../../lib/notificationSuppressionDefaults';
-import { useReseedNotificationSuppression } from '../../lib/useTicketNotificationSuppressionDefault';
+import { useDefaultNotificationSuppression } from '../../lib/notificationSuppressionDefaults';
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -209,8 +208,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const defaultNotificationSuppression = useDefaultNotificationSuppression();
   const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(defaultNotificationSuppression);
-  useReseedNotificationSuppression(notificationSuppression, setNotificationSuppression);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const activityCrossFeature = useOptionalActivityCrossFeature();
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});

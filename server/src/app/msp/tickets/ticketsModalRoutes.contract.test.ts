@@ -233,7 +233,7 @@ describe('tickets modal route infrastructure', () => {
 
       expect(dialog).toContain('TicketNotificationSuppressionControl');
       expect(dialog).toContain('useState<TicketNotificationSuppressionValue>(defaultNotificationSuppression)');
-      expect(dialog).toContain('useReseedNotificationSuppression(notificationSuppression, setNotificationSuppression)');
+      expect(dialog).toContain('const defaultNotificationSuppression = useDefaultNotificationSuppression();');
       expect(dialog).toContain('setNotificationSuppression(defaultNotificationSuppression())');
     }
 

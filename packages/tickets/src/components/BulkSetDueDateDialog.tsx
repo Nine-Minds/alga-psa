@@ -9,8 +9,7 @@ import { useTranslation } from 'react-i18next';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from './ticket/TicketNotificationSuppressionControl';
-import { defaultNotificationSuppression } from '../lib/notificationSuppressionDefaults';
-import { useReseedNotificationSuppression } from '../lib/useTicketNotificationSuppressionDefault';
+import { useDefaultNotificationSuppression } from '../lib/notificationSuppressionDefaults';
 
 interface BulkSetDueDateDialogProps {
   isOpen: boolean;
@@ -34,8 +33,8 @@ export default function BulkSetDueDateDialog({
   const { t } = useTranslation(['features/tickets', 'common']);
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [mode, setMode] = useState<'set' | 'clear'>('set');
+  const defaultNotificationSuppression = useDefaultNotificationSuppression();
   const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(defaultNotificationSuppression);
-  useReseedNotificationSuppression(notificationSuppression, setNotificationSuppression);
 
   useEffect(() => {
     if (isOpen) {
@@ -43,7 +42,7 @@ export default function BulkSetDueDateDialog({
       setMode('set');
       setNotificationSuppression(defaultNotificationSuppression());
     }
-  }, [isOpen]);
+  }, [isOpen, defaultNotificationSuppression]);
 
   const canConfirm = mode === 'clear' || (mode === 'set' && !!date);
 

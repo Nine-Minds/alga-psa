@@ -1,8 +1,7 @@
 'use client'
 
 import { encodeTicketWhere } from '../lib/ticketWhereUrl';
-import { defaultNotificationSuppression } from '../lib/notificationSuppressionDefaults';
-import { useReseedNotificationSuppression } from '../lib/useTicketNotificationSuppressionDefault';
+import { useDefaultNotificationSuppression } from '../lib/notificationSuppressionDefaults';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -407,9 +406,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [selectedDestinationStatusId, setSelectedDestinationStatusId] = useState<string>('');
   const [isLoadingDestinationStatuses, setIsLoadingDestinationStatuses] = useState(false);
   const [destinationStatusError, setDestinationStatusError] = useState<string>('');
+  const defaultNotificationSuppression = useDefaultNotificationSuppression();
   const [bulkMoveNotificationSuppression, setBulkMoveNotificationSuppression] =
     useState<TicketNotificationSuppressionValue>(() => defaultNotificationSuppression());
-  useReseedNotificationSuppression(bulkMoveNotificationSuppression, setBulkMoveNotificationSuppression);
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>(initialAgentAvatarUrls);
   const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>(initialTeamAvatarUrls);
   const [printTickets, setPrintTickets] = useState<ITicketListItem[] | null>(null);

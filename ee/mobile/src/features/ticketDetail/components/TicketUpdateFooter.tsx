@@ -13,8 +13,8 @@ export const DEFAULT_TICKET_NOTIFICATION_SUPPRESSION: TicketNotificationSuppress
 
 /**
  * The starting value for a "Don't notify the customer" checkbox, honoring the
- * tenant's `defaultDontNotifyCustomer` setting (the web product's ticketing
- * display setting, surfaced through the capabilities endpoint). Only the
+ * tenant's `notification_settings.default_dont_notify_customer` policy (Settings ->
+ * Notifications on the web, surfaced through the capabilities endpoint). Only the
  * customer box is pre-ticked; "also don't notify agents" stays off — silencing
  * the internal team is a much larger footgun than a routine customer request.
  */

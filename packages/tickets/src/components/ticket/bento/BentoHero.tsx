@@ -36,8 +36,7 @@ import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../.
 import { useTicketRichTextUploadSession } from '../useTicketRichTextUploadSession';
 import type { BoardCategoryData } from '../../../actions/ticketCategoryActions';
 import { useRegisterUnsavedChanges, useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
-import { defaultNotificationSuppression } from '../../../lib/notificationSuppressionDefaults';
-import { useReseedNotificationSuppression } from '../../../lib/useTicketNotificationSuppressionDefault';
+import { useDefaultNotificationSuppression } from '../../../lib/notificationSuppressionDefaults';
 import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
 import { buildTicketAssignmentKey } from '../../../lib/ticketAssignmentKey';
 import { unresolvedAssigneeLabel } from '../../../lib/assigneeDisplay';
@@ -233,9 +232,9 @@ export function BentoHero({
   const [isSaving, setIsSaving] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const defaultNotificationSuppression = useDefaultNotificationSuppression();
   const [notificationSuppression, setNotificationSuppression] =
     useState<TicketNotificationSuppressionValue>(() => defaultNotificationSuppression());
-  useReseedNotificationSuppression(notificationSuppression, setNotificationSuppression);
   const saveSuccessTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // "Keep yours" on a live conflict re-saves the last value THIS user set for a
