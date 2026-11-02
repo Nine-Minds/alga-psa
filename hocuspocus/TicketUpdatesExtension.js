@@ -30,10 +30,12 @@ export class TicketUpdatesExtension {
     this.redisPassword = config.redisPassword
     this.redisPrefix = config.redisPrefix || ''
     this.pattern = `${this.redisPrefix}ticket-updates:*`
+    this.listPattern = `${this.redisPrefix}ticket-list-changes:*`
     this.subscriber = null
     this.instance = null
     this.hasPatternSubscription = false
     this.handlePatternMessage = this.handlePatternMessage.bind(this)
+    this.handleListMessage = this.handleListMessage.bind(this)
   }
 
   async onConfigure({ instance }) {
@@ -73,8 +75,22 @@ export class TicketUpdatesExtension {
     }
 
     await this.subscriber.pSubscribe(this.pattern, this.handlePatternMessage)
+    await this.subscriber.pSubscribe(this.listPattern, this.handleListMessage)
     this.hasPatternSubscription = true
     console.log(`[TicketUpdatesExtension] Pattern subscribed to ${this.pattern}`)
+  }
+
+  async handleListMessage(message, channel) {
+    try {
+      const prefix = `${this.redisPrefix}ticket-list-changes:`
+      if (!channel.startsWith(prefix)) return
+      const tenantId = channel.slice(prefix.length)
+      if (!tenantId || tenantId.includes(':')) return
+      const document = this.instance?.documents?.get(`tenant:${tenantId}:ticket-changes`)
+      if (document) document.broadcastStateless(message)
+    } catch (error) {
+      console.error('[TicketUpdatesExtension] Error handling ticket list change:', error)
+    }
   }
 
   async handlePatternMessage(message, channel) {

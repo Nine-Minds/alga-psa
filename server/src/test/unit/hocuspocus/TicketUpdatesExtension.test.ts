@@ -92,7 +92,7 @@ describe('TicketUpdatesExtension', () => {
     const extension = new TicketUpdatesExtension({ redisPrefix: 'alga-psa:' });
     await extension.onConfigure({ instance });
 
-    expect(pSubscribeMock).toHaveBeenCalledTimes(1);
+    expect(pSubscribeMock).toHaveBeenCalledTimes(2);
 
     const endHandler = handlers.get('end');
     const readyHandler = handlers.get('ready');
@@ -102,6 +102,6 @@ describe('TicketUpdatesExtension', () => {
     endHandler?.();
     await readyHandler?.();
 
-    expect(pSubscribeMock).toHaveBeenCalledTimes(2);
+    expect(pSubscribeMock).toHaveBeenCalledTimes(4);
   });
 });

@@ -143,6 +143,7 @@ interface CreateTicketColumnsOptions {
   boards: IBoard[];
   displaySettings?: TicketingDisplaySettings;
   onTicketClick: (ticketId: string) => void;
+  isTicketChanged?: (ticketId: string) => boolean;
   ticketTagsRef?: React.MutableRefObject<Record<string, ITag[]>>;
   onTagsChange?: (ticketId: string, tags: ITag[]) => void;
   tagSize?: TagSize;
@@ -184,6 +185,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     boards: _boards,
     displaySettings,
     onTicketClick,
+    isTicketChanged,
     ticketTagsRef,
     onTagsChange,
     tagSize = 'md',
@@ -261,6 +263,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
               </button>
             )}
             <div className="flex flex-col gap-0.5 overflow-hidden">
+              <div className="flex min-w-0 items-center gap-2">
               <Link
                 href={`/msp/tickets/${record.ticket_id}`}
                 prefetch={false}
@@ -274,6 +277,8 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
               >
                 {value}
               </Link>
+              {record.ticket_id && isTicketChanged?.(record.ticket_id) && <span className="shrink-0 rounded-full bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-800">{t('live.updatedBadge', 'Updated')}</span>}
+              </div>
               {(showTicketNumberSubtitle || showCategorySubtitle) && (
                 <div className="flex items-center gap-1.5 overflow-hidden text-[11px] leading-tight text-[rgb(var(--color-text-500))]">
                   {showTicketNumberSubtitle && (

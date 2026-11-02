@@ -111,6 +111,9 @@ import {
 } from '../actions/ticketDisplaySettings';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { ChangedSinceLoad } from '../lib/changedSinceLoad';
+import { useTicketListChanges } from '../hooks/useTicketListChanges';
+import type { TicketListChange } from '../lib/listChangeFilters';
 
 import QuickAddCategory from './QuickAddCategory';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
@@ -168,6 +171,9 @@ const defaultNotificationSuppression = (): TicketNotificationSuppressionValue =>
 interface TicketingDashboardProps {
   id?: string;
   initialTickets: ITicketListItem[];
+  loadedAt: number;
+  loadedFilters: Partial<ITicketListFilters>;
+  onRefreshListForChanges: () => Promise<boolean>;
   initialBoards: IBoard[];
   initialStatuses: TicketStatusFilterOption[];
   initialPriorities: SelectOption[];
@@ -321,6 +327,9 @@ function formatTicketPrintValue(value: unknown, formatDate: FormatDate): string 
 const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   id = 'ticketing-dashboard',
   initialTickets,
+  loadedAt,
+  loadedFilters,
+  onRefreshListForChanges,
   initialBoards,
   initialStatuses,
   initialPriorities,
@@ -367,6 +376,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
   const { t } = useTranslation('features/tickets');
+  const changeStateRef = useRef(new ChangedSinceLoad());
+  const [, setChangeRevision] = useState(0);
+  useEffect(() => {
+    changeStateRef.current.load(initialTickets.flatMap(ticket => ticket.ticket_id ? [ticket.ticket_id] : []), loadedFilters, user?.user_id ?? '', loadedAt);
+    setChangeRevision(value => value + 1);
+  }, [initialTickets, loadedAt, loadedFilters, user?.user_id]);
+  const receiveTicketChange = useCallback((event: TicketListChange) => {
+    if (changeStateRef.current.record(event)) setChangeRevision(value => value + 1);
+  }, []);
+  useTicketListChanges(user?.tenant, receiveTicketChange);
+  const changeCounts = changeStateRef.current.getCounts();
+  const changedBoardIds = changeStateRef.current.boards();
+  const refreshChangedTickets = useCallback(async () => {
+    await onRefreshListForChanges();
+  }, [onRefreshListForChanges]);
   // These followed the browser locale, so a German UI printed American dates.
   const { locale, dateFormat, formatDate } = useFormatters();
   // Pre-fetch tag permissions to prevent individual API calls
@@ -1597,6 +1621,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         : displaySettings || undefined,
       columnOrder: viewPresentation?.columnOrder,
       onTicketClick: handleTicketClick,
+      isTicketChanged: (ticketId) => changeStateRef.current.has(ticketId),
       ticketTagsRef,
       onTagsChange: handleTagsChange,
       tagsReadOnly: !canUpdateTickets,
@@ -2407,9 +2432,26 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         tabs={boardTabs}
         value={activeBoardTabId}
         onChange={handleBoardTabSelect}
+        changedBoardIds={changedBoardIds}
       />
       {listCallout}
       <ListCard>
+        {(changeCounts.newCount > 0 || changeCounts.updatedCount > 0) && (
+          <button type="button" onClick={() => void refreshChangedTickets()} disabled={isLoadingMore}
+            className="mb-3 w-full rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-left text-sm font-medium text-sky-900 hover:bg-sky-100 disabled:opacity-60"
+            aria-live="polite">
+            {changeCounts.newCount > 0 && changeCounts.updatedCount > 0
+              ? t(`live.both.${changeCounts.newCount === 1 ? 'oneNew' : 'manyNew'}.${changeCounts.updatedCount === 1 ? 'oneUpdated' : 'manyUpdated'}`,
+                  changeCounts.newCount === 1
+                    ? changeCounts.updatedCount === 1 ? '1 new ticket and 1 updated ticket' : '1 new ticket and {{updatedCount}} updated tickets'
+                    : changeCounts.updatedCount === 1 ? '{{newCount}} new tickets and 1 updated ticket' : '{{newCount}} new tickets and {{updatedCount}} updated tickets', changeCounts)
+              : changeCounts.newCount > 0
+                ? t(changeCounts.newCount === 1 ? 'live.newOne' : 'live.newMany',
+                    changeCounts.newCount === 1 ? '1 new ticket' : '{{count}} new tickets', { count: changeCounts.newCount })
+                : t(changeCounts.updatedCount === 1 ? 'live.updatedOne' : 'live.updatedMany',
+                    changeCounts.updatedCount === 1 ? '1 ticket updated' : '{{count}} tickets updated', { count: changeCounts.updatedCount })}
+          </button>
+        )}
         {/* Gated on resolveActiveBoardId via selectedBoard rather than on a
             second board-selection derivation: the highlighted tab, the
             board-scoped status options and this header must agree by

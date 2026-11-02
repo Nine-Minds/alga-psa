@@ -10,6 +10,7 @@ export interface PublishTicketUpdateParams {
 }
 
 const TICKET_UPDATE_CHANNEL_PREFIX = 'ticket-updates:';
+const TICKET_LIST_CHANGE_CHANNEL_PREFIX = 'ticket-list-changes:';
 
 interface RedisPublisherClient {
   publish(channel: string, message: string): Promise<unknown>;
@@ -136,6 +137,13 @@ export async function publishTicketUpdate(params: PublishTicketUpdateParams): Pr
         updatedBy,
         updatedAt: params.updatedAt,
       })
+    );
+    // Compact list event; details are not sent and normal list reads remain
+    // behind the session-authorized action.
+    await client.publish(
+      `${getRedisPrefix()}${TICKET_LIST_CHANGE_CHANNEL_PREFIX}${params.tenantId}`,
+      JSON.stringify({ ticketId: params.ticketId, changeKind: 'updated', boardId: null, changedFields: params.updatedFields,
+        actorUserId: updatedBy.userId, updatedAt: params.updatedAt })
     );
   } catch (error) {
     console.warn('[publishTicketUpdate] Failed to publish live ticket update:', error);

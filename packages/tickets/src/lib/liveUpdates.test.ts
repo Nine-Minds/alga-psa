@@ -113,7 +113,7 @@ describe('live ticket update helpers', () => {
     });
 
     expect(getRedisClientMock).toHaveBeenCalledTimes(1);
-    expect(publishMock).toHaveBeenCalledTimes(2);
+    expect(publishMock).toHaveBeenCalledTimes(4);
     expect(disconnectMock).not.toHaveBeenCalled();
   });
 
@@ -168,7 +168,7 @@ describe('live ticket update helpers', () => {
       updatedAt: '2026-05-07T12:00:00.000Z',
     });
 
-    const [, payloadJson] = publishMock.mock.calls.at(-1) ?? [];
+    const [, payloadJson] = publishMock.mock.calls[0] ?? [];
     const payload = JSON.parse(payloadJson);
 
     expect(payload).toEqual({
@@ -183,6 +183,15 @@ describe('live ticket update helpers', () => {
     expect(payload).not.toHaveProperty('title');
     expect(JSON.stringify(payload)).not.toContain('Original');
     expect(JSON.stringify(payload)).not.toContain('Resolved');
+  });
+
+  it('publishes a compact ticket list change without ticket content', async () => {
+    await publishTicketUpdate({ tenantId: 'tenant-1', ticketId: 'ticket-9', updatedFields: ['status_id'],
+      updatedBy: { userId: 'user-1', displayName: 'Pat Agent' }, updatedAt: '2026-05-07T12:00:00.000Z' });
+    const listPublish = publishMock.mock.calls.find(([channel]) => channel.endsWith('ticket-list-changes:tenant-1'));
+    expect(listPublish).toBeDefined();
+    expect(JSON.parse(listPublish![1])).toEqual({ ticketId: 'ticket-9', changeKind: 'updated', boardId: null,
+      changedFields: ['status_id'], actorUserId: 'user-1', updatedAt: '2026-05-07T12:00:00.000Z' });
   });
   it('publishes a qualified MSP actor with a null local user and rejects mixed/cross-owner identities', async () => {
     const tenantId = '00000000-0000-4000-8000-000000000001';

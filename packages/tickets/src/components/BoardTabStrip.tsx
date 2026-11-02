@@ -10,6 +10,7 @@ interface BoardTabStripProps {
   /** Active tab id (see boardTabId()). */
   value: string;
   onChange: (tabId: string) => void;
+  changedBoardIds?: ReadonlySet<string>;
 }
 
 /**
@@ -25,6 +26,7 @@ export const BoardTabStrip: React.FC<BoardTabStripProps> = ({
   tabs,
   value,
   onChange,
+  changedBoardIds = new Set(),
 }) => {
   const customTabs = React.useMemo<TabContent[]>(
     () =>
@@ -38,11 +40,12 @@ export const BoardTabStrip: React.FC<BoardTabStripProps> = ({
                 {tab.openTicketCount}
               </span>
             )}
+            {tab.boardId && changedBoardIds.has(tab.boardId) && <span className="h-2 w-2 rounded-full bg-sky-500" aria-hidden="true" />}
           </span>
         ),
         content: null,
       })),
-    [tabs]
+    [tabs, changedBoardIds]
   );
 
   return (
