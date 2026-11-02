@@ -1840,3 +1840,144 @@ describe('standalone child responses retain the parent policy', () => {
     },
   );
 });
+
+const fileDocument = () => ({
+  document_id: P2,
+  document_name: 'PRIVATE-plan.pdf',
+  mime_type: 'application/x-private-plan',
+  file_id: 'original-private-file',
+  thumbnail_file_id: 'thumbnail-private-file',
+  preview_file_id: 'preview-private-file',
+});
+
+const fileFixture = (document = fileDocument()) => {
+  state.tickets = [{ ticket_id: P1, title: 'Visible ticket', documents: [document] }];
+  const controller = new ApiTicketController();
+  const service = (controller as any).ticketService;
+  service.getTicketDocuments = vi.fn(async () => [document]);
+  service.downloadTicketDocument = vi.fn(async () => ({
+    buffer: Buffer.from('FILE'),
+    fileName: document.document_name || 'PRIVATE-storage-fallback.pdf',
+    mimeType: document.mime_type || 'application/x-storage-private',
+  }));
+  service.downloadTicketDocumentVariant = vi.fn(async (_ticket: string, _doc: string, kind: 'thumbnail' | 'preview') => ({
+    buffer: Buffer.from('IMAGE'), fileId: document[`${kind}_file_id`], mimeType: 'image/png',
+  }));
+  return controller;
+};
+
+const fileRequest = (kind: 'download' | 'thumbnail' | 'preview') =>
+  request(`/api/v1/tickets/${P1}/documents/${P2}/${kind}`, { id: P1 });
+
+const serveFile = (controller: ApiTicketController, kind: 'download' | 'thumbnail' | 'preview', req = fileRequest(kind)) =>
+  kind === 'download' ? controller.downloadDocument()(req) : controller.downloadDocumentVariant(kind)(req);
+
+describe('ticket binary responses preserve document redactions', () => {
+  it.each([
+    'documents.document_name', 'values.documents.document_name', 'tickets.documents.document_name',
+    'fields.tickets.documents.document_name',
+  ])('download filename honors %s', async (field) => {
+    const controller = fileFixture();
+    const visible = await serveFile(controller, 'download');
+    expect(visible.status).toBe(200);
+    expect(visible.headers.get('content-disposition')).toContain('PRIVATE-plan.pdf');
+    state.decisions.set(P1, { allowed: true, redactedFields: [field] });
+    const list = await controller.getDocuments()(request(`/api/v1/tickets/${P1}/documents`, { id: P1 }));
+    expect((await list.json()).data[0]).not.toHaveProperty('document_name');
+    const response = await serveFile(controller, 'download');
+    expect(authorizeResource).toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-disposition')).toBe('attachment');
+    expect(await response.text()).toBe('FILE');
+  });
+
+  it.each(['documents.mime_type', 'values.documents.mime_type'])('download content type honors %s', async (field) => {
+    const controller = fileFixture();
+    state.decisions.set(P1, { allowed: true, redactedFields: [field] });
+    const list = await controller.getDocuments()(request(`/api/v1/tickets/${P1}/documents`, { id: P1 }));
+    expect((await list.json()).data[0]).not.toHaveProperty('mime_type');
+    const response = await serveFile(controller, 'download');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('application/octet-stream');
+    expect(response.headers.get('content-disposition')).toContain('PRIVATE-plan.pdf');
+    expect(await response.text()).toBe('FILE');
+  });
+
+  it.each(['external_files.original_name', 'external_files.mime_type'])('projects storage fallback metadata from %s', async (field) => {
+    const controller = fileFixture({ ...fileDocument(), document_name: '', mime_type: '' });
+    const visible = await serveFile(controller, 'download');
+    expect(visible.headers.get('content-disposition')).toContain('PRIVATE-storage-fallback.pdf');
+    expect(visible.headers.get('content-type')).toBe('application/x-storage-private');
+    state.decisions.set(P1, { allowed: true, redactedFields: [field] });
+    const response = await serveFile(controller, 'download');
+    expect(response.status).toBe(200);
+    if (field === 'external_files.original_name') {
+      expect(response.headers.get('content-disposition')).toBe('attachment');
+      expect(response.headers.get('content-type')).toBe('application/x-storage-private');
+    } else {
+      expect(response.headers.get('content-type')).toBe('application/octet-stream');
+      expect(response.headers.get('content-disposition')).toContain('PRIVATE-storage-fallback.pdf');
+    }
+  });
+
+  it.each(['thumbnail', 'preview'] as const)('%s hides its file ID in headers and conditional requests', async (kind) => {
+    const controller = fileFixture();
+    const visible = await serveFile(controller, kind);
+    const visibleEtag = visible.headers.get('etag');
+    expect(visibleEtag).toBeTruthy();
+    for (const field of [
+      `documents.${kind}_file_id`, `values.documents.${kind}_file_id`,
+      `fields.tickets.documents.${kind}_file_id`,
+    ]) {
+      state.decisions.set(P1, { allowed: true, redactedFields: [field] });
+      const list = await controller.getDocuments()(request(`/api/v1/tickets/${P1}/documents`, { id: P1 }));
+      expect((await list.json()).data[0]).not.toHaveProperty(`${kind}_file_id`);
+      for (const probe of [visibleEtag!, `"${kind}-private-file"`]) {
+        const req = fileRequest(kind);
+        req.headers.set('if-none-match', probe);
+        const response = await serveFile(controller, kind, req);
+        expect(response.status).toBe(200);
+        expect(response.headers.get('etag')).toBeNull();
+        expect(response.headers.get('cache-control')).toBe('private, no-store');
+        expect(await response.text()).toBe('IMAGE');
+      }
+    }
+  });
+
+  it.each(['thumbnail', 'preview'] as const)('%s validators change when the projected metadata changes', async (kind) => {
+    const controller = fileFixture();
+    const visible = await serveFile(controller, kind);
+    expect(visible.headers.get('content-type')).toBe('image/png');
+    expect(visible.headers.get('cache-control')).toBe('private, no-cache');
+    const req = fileRequest(kind);
+    req.headers.set('if-none-match', visible.headers.get('etag')!);
+    expect((await serveFile(controller, kind, req)).status).toBe(304);
+
+    state.decisions.set(P1, { allowed: true, redactedFields: ['documents.mime_type'] });
+    const redacted = await serveFile(controller, kind, req);
+    expect(redacted.status).toBe(200);
+    expect(redacted.headers.get('content-type')).toBe('application/octet-stream');
+    expect(redacted.headers.get('etag')).not.toBe(visible.headers.get('etag'));
+    req.headers.set('if-none-match', redacted.headers.get('etag')!);
+    expect((await serveFile(controller, kind, req)).status).toBe(304);
+  });
+
+  it.each(['thumbnail', 'preview'] as const)('%s keeps the other variant visible when its identifier is hidden', async (kind) => {
+    const controller = fileFixture();
+    const other = kind === 'thumbnail' ? 'preview' : 'thumbnail';
+    state.decisions.set(P1, { allowed: true, redactedFields: [`documents.${kind}_file_id`] });
+    const response = await serveFile(controller, other);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('etag')).toBeTruthy();
+    expect(response.headers.get('content-type')).toBe('image/png');
+  });
+
+  it.each(['download', 'thumbnail', 'preview'] as const)('%s does not load storage when the file resource is hidden', async (kind) => {
+    const controller = fileFixture();
+    state.decisions.set(P1, { allowed: true, redactedFields: ['external_files'] });
+    const response = await serveFile(controller, kind);
+    expect(response.status).toBe(404);
+    expect((controller as any).ticketService.downloadTicketDocument).not.toHaveBeenCalled();
+    expect((controller as any).ticketService.downloadTicketDocumentVariant).not.toHaveBeenCalled();
+  });
+});

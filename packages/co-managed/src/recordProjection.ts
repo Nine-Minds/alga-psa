@@ -360,6 +360,33 @@ export const TICKET_DOCUMENT_SOURCE: RedactableRecordSource = {
   },
 };
 
+/** Storage metadata is another representation of the document, including the storage fallback fields. */
+export const TICKET_DOCUMENT_DOWNLOAD_SOURCE: RedactableRecordSource = {
+  policySource: TICKET_DOCUMENT_SOURCE,
+  resource: [...TICKET_DOCUMENT_SOURCE.resource, 'external_files'],
+  identifier: TICKET_DOCUMENT_SOURCE.identifier,
+  fields: {
+    fileName: ids('document_name', 'file_id', 'external_files.file_id', 'external_files.original_name'),
+    mimeType: ids('mime_type', 'file_id', 'external_files.file_id', 'external_files.mime_type'),
+  },
+  derived: {},
+};
+
+function ticketDocumentVariantSource(fileIdField: string): RedactableRecordSource {
+  return {
+    ...TICKET_DOCUMENT_DOWNLOAD_SOURCE,
+    fields: {
+      fileId: ids(fileIdField, 'file_id', 'external_files.file_id'),
+      mimeType: ids('mime_type', 'fileId', 'external_files.mime_type'),
+    },
+  };
+}
+
+export const TICKET_DOCUMENT_VARIANT_SOURCES = {
+  thumbnail: ticketDocumentVariantSource('thumbnail_file_id'),
+  preview: ticketDocumentVariantSource('preview_file_id'),
+} as const;
+
 export const TICKET_RECORD_SOURCE: RedactableRecordSource = {
   resource: ['tickets'],
   identifier: ids('ticket_id', 'tickets.ticket_id', 'ticket', 'ticketId'),

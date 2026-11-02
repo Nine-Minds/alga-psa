@@ -31,7 +31,14 @@ import {
   reprojectUnderDecision,
   type AuthorizedProjection,
 } from './authorizationKernel';
-import { TICKET_DOCUMENT_SOURCE, TICKET_RECORD_SOURCE } from '@alga-psa/co-managed/recordProjection';
+import {
+  TICKET_DOCUMENT_DOWNLOAD_SOURCE,
+  TICKET_DOCUMENT_SOURCE,
+  TICKET_DOCUMENT_VARIANT_SOURCES,
+  TICKET_RECORD_SOURCE,
+  type RedactableRecordSource,
+} from '@alga-psa/co-managed/recordProjection';
+import { createProjectedFileResponse } from '../utils/projectedFileResponse';
 import { buildTicketRecordContext } from './recordContexts';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
@@ -197,11 +204,12 @@ export class ApiTicketController extends ApiBaseController {
     ticketId: string,
     documentId: string,
     context: AuthenticatedApiRequest['context'],
+    source: RedactableRecordSource,
   ): Promise<AuthorizedProjection<Record<string, any>>> {
     const documents = await this.ticketService.getTicketDocuments(ticketId, context);
     const document = documents.find((item) => item.document_id === documentId);
     const projection = document
-      ? reprojectUnderDecision(ticketGate, document as Record<string, any>, TICKET_DOCUMENT_SOURCE)
+      ? reprojectUnderDecision(ticketGate, document as Record<string, any>, source)
       : null;
 
     if (!projection) {
@@ -1489,15 +1497,18 @@ export class ApiTicketController extends ApiBaseController {
             ]);
           }
 
-          await this.assertTicketDocumentReadAllowed(ticketGate, ticketId, documentId, apiRequest.context!);
+          const documentGate = await this.assertTicketDocumentReadAllowed(
+            ticketGate, ticketId, documentId, apiRequest.context!, TICKET_DOCUMENT_DOWNLOAD_SOURCE,
+          );
           const result = await this.ticketService.downloadTicketDocument(ticketId, documentId, apiRequest.context!);
+          const metadata = reprojectUnderDecision(documentGate, {
+            fileName: result.fileName,
+            mimeType: result.mimeType,
+            disposition: 'attachment' as const,
+          }, TICKET_DOCUMENT_DOWNLOAD_SOURCE);
+          if (!metadata) throw new NotFoundError('Document not found');
 
-          const headers = new Headers();
-          headers.set('Content-Type', result.mimeType);
-          headers.set('Content-Disposition', `attachment; filename="${encodeURIComponent(result.fileName)}"`);
-          headers.set('Cache-Control', 'no-store');
-
-          return new NextResponse(new Uint8Array(result.buffer), { status: 200, headers });
+          return createProjectedFileResponse(req, result.buffer, metadata);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1531,22 +1542,18 @@ export class ApiTicketController extends ApiBaseController {
             ]);
           }
 
-          await this.assertTicketDocumentReadAllowed(ticketGate, ticketId, documentId, apiRequest.context!);
+          const source = TICKET_DOCUMENT_VARIANT_SOURCES[variant];
+          const documentGate = await this.assertTicketDocumentReadAllowed(
+            ticketGate, ticketId, documentId, apiRequest.context!, source,
+          );
           const result = await this.ticketService.downloadTicketDocumentVariant(ticketId, documentId, variant, apiRequest.context!);
+          const metadata = reprojectUnderDecision(documentGate, {
+            fileId: result.fileId,
+            mimeType: result.mimeType,
+          }, source);
+          if (!metadata) throw new NotFoundError('Document not found');
 
-          const etag = `"${result.fileId}"`;
-          const headers = new Headers();
-          headers.set('Content-Type', result.mimeType);
-          headers.set('ETag', etag);
-          // Variants are immutable per file id: a regenerated preview gets a new id.
-          headers.set('Cache-Control', 'private, max-age=31536000, immutable');
-
-          if (req.headers.get('if-none-match') === etag) {
-            return new NextResponse(null, { status: 304, headers });
-          }
-
-          headers.set('Content-Length', String(result.buffer.length));
-          return new NextResponse(new Uint8Array(result.buffer), { status: 200, headers });
+          return createProjectedFileResponse(req, result.buffer, metadata);
         });
       } catch (error) {
         return handleApiError(error);
