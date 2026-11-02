@@ -436,7 +436,8 @@
       "workspace": "Werkruimte",
       "capacity": "{{allocated}} van {{count}} co-managed plekken toegewezen.",
       "openClient": "Co-managed IT instellen voor deze klant",
-      "readOnly": "Co-managed IT is alleen-lezen voor deze werkruimte. Bestaande relaties worden getoond; nieuwe configuratie is niet beschikbaar."
+      "readOnly": "Co-managed IT is alleen-lezen voor deze werkruimte. Bestaande relaties worden getoond; nieuwe configuratie is niet beschikbaar.",
+      "slaPriorities": "SLA-prioriteitstoewijzingen"
     },
     "provisioning": {
       "administrator": "Beheerder",

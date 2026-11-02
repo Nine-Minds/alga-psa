@@ -436,7 +436,8 @@
       "workspace": "Espace de travail",
       "capacity": "{{allocated}} sur {{count}} postes cogérés alloués.",
       "openClient": "Configurer l’informatique cogérée pour ce client",
-      "readOnly": "La cogestion informatique est en lecture seule pour cet espace de travail. Les relations existantes sont affichées ; une nouvelle configuration n'est pas disponible."
+      "readOnly": "La cogestion informatique est en lecture seule pour cet espace de travail. Les relations existantes sont affichées ; une nouvelle configuration n'est pas disponible.",
+      "slaPriorities": "Correspondances de priorité SLA"
     },
     "provisioning": {
       "administrator": "Administrateur",

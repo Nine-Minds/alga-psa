@@ -436,7 +436,8 @@
       "workspace": "Espacio de trabajo",
       "capacity": "{{allocated}} de {{count}} puestos cogestionados asignados.",
       "openClient": "Configurar TI cogestionada para este cliente",
-      "readOnly": "La TI cogestionada es de solo lectura para este espacio de trabajo. Se muestran las relaciones existentes; la configuración nueva no está disponible."
+      "readOnly": "La TI cogestionada es de solo lectura para este espacio de trabajo. Se muestran las relaciones existentes; la configuración nueva no está disponible.",
+      "slaPriorities": "Asignaciones de prioridad de SLA"
     },
     "provisioning": {
       "administrator": "Administrador",

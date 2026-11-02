@@ -72,6 +72,7 @@ export async function replaceCoManagedSlaPriorityMappings(db: Knex, actor: CoMan
       throw new CoManagedPolicyError('RESOURCE_NOT_FOUND');
     }
     const scope = { customer_tenant: target.customerTenant, relationship_id: target.relationshipId };
+    // write-admission: exempt — co-managed SLA mapping state; admitted above by assertCoManagedOperationalWrite in this same transaction (delete + insert below)
     await owner.table('co_managed_sla_priority_mappings').where(scope).delete();
     if (desired.size) await owner.table('co_managed_sla_priority_mappings').insert([...desired].map(([customer_priority_id, msp_priority_id]) =>
       ({ tenant: actor.tenant, ...scope, customer_priority_id, msp_priority_id })));

@@ -436,7 +436,8 @@
       "workspace": "Obszar roboczy",
       "capacity": "Przydzielono {{allocated}} z {{count}} stanowisk współzarządzania.",
       "openClient": "Skonfiguruj współzarządzane IT dla tego klienta",
-      "readOnly": "Współzarządzane IT jest w tym obszarze roboczym tylko do odczytu. Wyświetlane są istniejące relacje; nowa konfiguracja jest niedostępna."
+      "readOnly": "Współzarządzane IT jest w tym obszarze roboczym tylko do odczytu. Wyświetlane są istniejące relacje; nowa konfiguracja jest niedostępna.",
+      "slaPriorities": "Mapowanie priorytetów SLA"
     },
     "provisioning": {
       "administrator": "Administrator",

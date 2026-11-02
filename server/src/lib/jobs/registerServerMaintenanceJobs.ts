@@ -13,7 +13,7 @@ import { reconcileScheduledCommentPublications } from './handlers/publishSchedul
 import { createClientContractLineCyclesForAllTenants, createNextTimePeriodForTenant } from './tenantPeriodMaintenance';
 import { generateRecurringTicketsHandler, tenantsWithActiveRecurringTickets } from './handlers/generateRecurringTicketsHandler';
 import { wireJobCapabilityFilter } from './capabilityJobFilter';
-import { defineCoManagedSlaObservationJob } from './handlers/coManagedSlaObservationHandler';
+import { defineCoManagedSlaObservationJob } from './handlers/coManagedSlaObservationJob';
 import { initializeJobRunner } from './initializeJobRunner';
 import { SERVER_MAINTENANCE_JOBS } from './serverMaintenanceJobNames';
 

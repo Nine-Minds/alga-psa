@@ -436,7 +436,8 @@
       "workspace": "Arbetsyta",
       "capacity": "{{allocated}} av {{count}} samhanterade platser tilldelade.",
       "openClient": "Konfigurera samhanterad IT för den här kunden",
-      "readOnly": "Samhanterad IT är skrivskyddad för den här arbetsytan. Befintliga relationer visas; ny konfiguration är inte tillgänglig."
+      "readOnly": "Samhanterad IT är skrivskyddad för den här arbetsytan. Befintliga relationer visas; ny konfiguration är inte tillgänglig.",
+      "slaPriorities": "SLA-prioritetsmappningar"
     },
     "provisioning": {
       "administrator": "Administratör",

@@ -436,7 +436,8 @@
       "workspace": "Arbeitsbereich",
       "capacity": "{{allocated}} von {{count}} Co-Managed-Plätzen zugewiesen.",
       "openClient": "Co-Managed IT für diesen Kunden einrichten",
-      "readOnly": "Co-Managed IT ist für diesen Arbeitsbereich schreibgeschützt. Bestehende Beziehungen werden angezeigt; eine neue Einrichtung ist nicht verfügbar."
+      "readOnly": "Co-Managed IT ist für diesen Arbeitsbereich schreibgeschützt. Bestehende Beziehungen werden angezeigt; eine neue Einrichtung ist nicht verfügbar.",
+      "slaPriorities": "SLA-Prioritätszuordnungen"
     },
     "provisioning": {
       "administrator": "Administrator",

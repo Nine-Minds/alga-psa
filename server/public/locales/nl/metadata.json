@@ -541,6 +541,9 @@
         "title": "Gedeelde taken",
         "taskTitle": "Gedeelde taak",
         "projectTitle": "Gedeeld project"
+      },
+      "sla": {
+        "title": "Co-managed SLA-prioriteiten"
       }
     }
   },

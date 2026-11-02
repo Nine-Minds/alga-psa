@@ -229,15 +229,6 @@ export async function registerAllJobHandlers(
 
   logger.info('Registering all job handlers', { includeEnterprise, force });
 
-  // CM L6b: declare the co-managed SLA observation job as data. It is capability-gated in the fan-out,
-  // so a plain PSA tenant is filtered out before any tenant SQL. Best-effort: absent, nothing is scheduled.
-  try {
-    (await import('./capabilityJobFilter')).wireJobCapabilityFilter();
-    (await import('./handlers/coManagedSlaObservationHandler')).defineCoManagedSlaObservationJob();
-  } catch (error) {
-    logger.error('Failed to define the co-managed SLA observation job', { error });
-  }
-
   // Create services if not provided
   const resolvedJobService = jobService ?? (await JobService.create());
   const resolvedStorageService = storageService ?? new StorageService();
@@ -987,6 +978,16 @@ export async function registerAllJobHandlers(
     },
     registerOpts
   );
+
+  // CM L6b: declare the co-managed SLA observation job as data. It is capability-gated in the fan-out,
+  // so a plain PSA tenant is filtered out before any tenant SQL. Best-effort: absent, nothing is scheduled.
+  // Runs after every worker registration: its import graph is large and must not delay them.
+  try {
+    (await import('./capabilityJobFilter')).wireJobCapabilityFilter();
+    (await import('./handlers/coManagedSlaObservationJob')).defineCoManagedSlaObservationJob();
+  } catch (error) {
+    logger.error('Failed to define the co-managed SLA observation job', { error });
+  }
 
   // Mark registry as initialized
   JobHandlerRegistry.markInitialized();

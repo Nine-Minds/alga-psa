@@ -20,6 +20,8 @@ export interface CoManagedSlaNotification {
   targetMinutes: number;
   ticketNumber?: string;
   ticketTitle?: string;
+  policyName?: string;
+  clientName?: string;
 }
 export type CoManagedSlaNotificationChannel = 'in_app' | 'email';
 
@@ -114,12 +116,19 @@ export async function withCoManagedSlaNotification<T>(db: Knex, input: CoManaged
     }
     const ticket = await tenantDb(context.trx, resource.tenant).table('tickets').where('ticket_id', resource.id).first('ticket_number', 'title');
     if (!ticket) return null;
+    // Policy and client are the sponsor's own records (its policy, its client record for the customer workspace).
+    const home = tenantDb(context.trx, actor.tenant);
+    const policy = hidden(['policy_name']) ? undefined : await home.table('sla_policies').where('sla_policy_id', current.sla_policy_id).first('policy_name');
+    const relationship = hidden(['client_name']) ? undefined
+      : await tenantDb(context.trx, resource.tenant).table('co_management_relationships').where({ relationship_id: resource.relationshipId, sponsor_tenant: actor.tenant }).first('sponsor_client_id');
+    const client = relationship?.sponsor_client_id ? await home.table('clients').where('client_id', relationship.sponsor_client_id).first('client_name') : undefined;
     if (actor.kind === 'session') await assertCoManagedSessionUnexpired(context.trx, actor);
     return consume(context, { resource, eventId, obligationId: current.obligation_id, slaType: current.sla_type,
       notificationType: current.notification_type, thresholdPercent: current.threshold_percent,
       dueAt, occurredAt: new Date(current.occurred_at).toISOString(),
       elapsedMilliseconds, targetMinutes,
-      ...(!hidden(['ticket_number']) ? { ticketNumber: ticket.ticket_number } : {}), ...(!hidden(['title']) ? { ticketTitle: ticket.title } : {}) });
+      ...(!hidden(['ticket_number']) ? { ticketNumber: ticket.ticket_number } : {}), ...(!hidden(['title']) ? { ticketTitle: ticket.title } : {}),
+      ...(policy?.policy_name ? { policyName: policy.policy_name } : {}), ...(client?.client_name ? { clientName: client.client_name } : {}) });
   };
   try {
     return actor.kind === 'session' ? await withCoManagedSharedWork(db, actor, resource, 'read', read)

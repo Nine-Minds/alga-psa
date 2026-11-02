@@ -436,7 +436,8 @@
       "workspace": "Workspace",
       "capacity": "{{allocated}} of {{count}} co-managed seats allocated.",
       "openClient": "Set up co-managed IT for this client",
-      "readOnly": "Co-managed IT is read-only for this workspace. Existing relationships are shown; new setup is not available."
+      "readOnly": "Co-managed IT is read-only for this workspace. Existing relationships are shown; new setup is not available.",
+      "slaPriorities": "SLA priority mappings"
     },
     "provisioning": {
       "administrator": "Administrator",
