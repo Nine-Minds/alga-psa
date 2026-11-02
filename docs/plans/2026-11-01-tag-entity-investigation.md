@@ -126,6 +126,22 @@ git log --all --format='%h %ad %s' --date=short -- \
 
 ## Verification results
 
+- Re-ran the focused command above for this work order. All 3 files and 13 tests passed against the
+  isolated migration-built test database. The REST POST→GET, bulk/tag, PUT replacement, rollback of
+  failed replacement, schema-contract, and middleware cases passed on the repository schema. This
+  does not establish which column is absent on YourColo's v1.6.9 database, and no regression test
+  against that affected schema could be run without its schema or migration ledger.
+- Scoped ESLint completed with 0 errors and 88 warnings, matching the existing controller/service
+  warnings. A scoped `tsc` check for the changed production modules completed with no diagnostics.
+- The root `npm run build:source` completed successfully, generated all 74 static pages, and skipped
+  type validation. It emitted existing broad dynamic-filesystem tracing warnings. The server-only
+  `npm run build:source` command is undefined; the build script exists at the repository root. The
+  full server typecheck was not rerun because its previous attempt exhausted Node's 4 GB heap; the
+  scoped check above is separate and does not replace it.
+- Read-only cluster metadata shows the generic `sebastian` deployment scaled to zero and the
+  `alga-psa-vs` routes using blue/green services. This does not identify whether the failed v1.6.9
+  request came through hosted production or a customer appliance.
+
 - The focused command above passed: 3 test files, 13 tests.
 - `npx eslint packages/tags/src/models/tagMapping.ts server/src/lib/api/controllers/ApiTagController.ts server/src/lib/api/services/TagService.ts server/src/test/integration/api/tagEntityRoute.integration.test.ts server/src/test/integration/api/helpers/withRolledBackSchemaContract.ts server/src/test/unit/api/apiMiddleware.productAccess.test.ts` completed with 0 errors and 88 warnings. The warnings are unused imports/parameters, `any`, and non-null assertions in the existing controller/service files; the added helper/model/test lines emitted no warning.
 - `npm run typecheck` from `server/` was attempted and failed when Node reached its 4 GB heap limit (`FATAL ERROR: Reached heap limit`).
