@@ -541,4 +541,47 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
     });
     expect(new Date(decisions[0].decided_at).getTime()).toBeGreaterThan(0);
   });
+
+  it('9. afterCommit runs once, after the commit, with the recorded decision (6/6 finalization hook)', async () => {
+    const { submitQuoteLinkDecision, loadQuoteAcceptance } = await import('@alga-psa/billing/services');
+    const s = await setup();
+    const seen: any[] = [];
+    const afterCommit = vi.fn(async (committed: any) => {
+      // Read on a separate query: the decision must already be committed and visible.
+      const q = await quoteRow(committed.tenant, committed.quoteId);
+      seen.push({ committed, status: q.status, recorded: await loadQuoteAcceptance(db, committed.tenant, committed.quoteId, { decisionId: committed.decisionId }) });
+    });
+    const input = { ...(await acceptInput()), quoteFingerprint: await fingerprintOf(s) };
+    const out: any = await submitQuoteLinkDecision(s.token, input, CTX, { afterCommit });
+
+    expect(out.status).toBe('decided');
+    expect(JSON.stringify(out)).not.toContain('decisionId');
+    expect(afterCommit).toHaveBeenCalledTimes(1);
+    const [row] = await decisionRows(s.tenantId, s.quoteId);
+    expect(seen[0].committed).toEqual({ tenant: s.tenantId, quoteId: s.quoteId, decisionId: row.decision_id, decision: 'accepted' });
+    expect(seen[0].status).toBe('accepted');
+    expect(seen[0].recorded).toMatchObject({
+      signerName: 'Jane Doe', signerEmail: s.email, signerTitle: 'CFO', signerContactId: s.contactId,
+      method: 'email_link', ipAddress: CTX.ip,
+    });
+
+    // A repeat submit commits nothing, so nothing is handed on.
+    await submitQuoteLinkDecision(s.token, input, CTX, { afterCommit });
+    expect(afterCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it('10. a failing afterCommit never changes a committed decision or its outcome', async () => {
+    const { submitQuoteLinkDecision } = await import('@alga-psa/billing/services');
+    const s = await setup();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const input = { ...(await acceptInput()), quoteFingerprint: await fingerprintOf(s) };
+    const out: any = await submitQuoteLinkDecision(s.token, input, CTX, {
+      afterCommit: async () => { throw new Error('queue down'); },
+    });
+    errorSpy.mockRestore();
+
+    expect(out.status).toBe('decided');
+    expect((await quoteRow(s.tenantId, s.quoteId)).status).toBe('accepted');
+    expect(await decisionRows(s.tenantId, s.quoteId)).toHaveLength(1);
+  });
 });

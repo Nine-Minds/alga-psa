@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { submitQuoteLinkDecision } from '@alga-psa/billing/services';
+import { enqueueLinkAcceptanceFinalization } from '@/lib/jobs/handlers/finalizeLinkAcceptedQuoteHandler';
 
 /**
  * POST /api/quote/[token]/decision
@@ -8,6 +9,9 @@ import { submitQuoteLinkDecision } from '@alga-psa/billing/services';
  * (alga-2026-0002820). All authority lives in submitQuoteLinkDecision, which re-resolves
  * the token in the decision's own transaction. Every link problem (malformed, unknown,
  * expired, revoked, superseded, rate limited) returns the same generic 404 body.
+ *
+ * A committed acceptance queues the signed copy + signer confirmation (card 6/6) after the
+ * decision's transaction commits; a queueing failure never changes the response.
  */
 const INVALID = { status: 'invalid_link' } as const;
 
@@ -44,7 +48,8 @@ export async function POST(
         selectedOptionalQuoteItemIds: body?.selectedOptionalQuoteItemIds,
         comment: body?.comment,
       },
-      { ip: clientIp(request), userAgent: request.headers.get('user-agent') }
+      { ip: clientIp(request), userAgent: request.headers.get('user-agent') },
+      { afterCommit: enqueueLinkAcceptanceFinalization }
     );
 
     if (outcome.status === 'invalid_link') {

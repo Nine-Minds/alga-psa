@@ -56,6 +56,20 @@
     "product": "Producto",
     "projectPhase": "Fase del proyecto",
     "qty": "Cant.",
+    "quoteAcceptance": {
+      "title": "Presupuesto aceptado",
+      "signedBy": "Firmado por",
+      "email": "Correo electrónico",
+      "jobTitle": "Cargo",
+      "acceptedOn": "Aceptado el",
+      "method": "Método",
+      "ipAddress": "Dirección IP",
+      "methods": {
+        "emailLink": "Enlace por correo",
+        "portal": "Portal del cliente",
+        "msp": "Registrado por el MSP"
+      }
+    },
     "quoteNumber": "Cotización n.º",
     "quoteTitle": "COTIZACIÓN",
     "rate": "Tarifa",

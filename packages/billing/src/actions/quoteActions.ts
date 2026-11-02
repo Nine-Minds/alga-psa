@@ -1,7 +1,6 @@
 'use server';
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Quote lifecycle spans opportunities/documents in server action context */
 
-import Handlebars from 'handlebars';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
@@ -17,9 +16,10 @@ import QuoteItem from '../models/quoteItem';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
 import { decideQuote, listQuoteDecisions } from '../services/quoteDecisionService';
-import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate, formatQuoteDate } from '../lib/quote-email-templates';
+import { renderQuoteEmail } from '../lib/quoteEmailRendering';
+import { loadQuoteAcceptance } from '../lib/quoteAcceptance';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
-import { mapLoadedQuoteToViewModel } from '../lib/adapters/quoteAdapters';
+import { mapLoadedQuoteToViewModel, resolveQuoteAcceptedByName } from '../lib/adapters/quoteAdapters';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, type QuoteApprovalWorkflowSettings } from '../lib/quoteApprovalSettings';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
@@ -37,7 +37,6 @@ import {
 import { SELF_APPROVAL_AUDIT_METADATA, allowSelfQuoteApproval, resolveAllowSelfApprovalFlag } from '@alga-psa/authorization/quoteSelfApproval';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
-import { formatCurrency } from '@alga-psa/core/lib/formatters';
 import { getQuotePdfFileName } from '../lib/quoteFileNames';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
@@ -478,45 +477,6 @@ const storeQuotePdf = async (
   return fileRecord.file_id;
 };
 
-type QuoteTemplateName = 'quote-email' | 'quote-reminder-email';
-
-interface QuoteEmailTemplate {
-  subject: string;
-  html_content: string;
-  text_content: string;
-}
-
-// Resolves the quote email template with the same precedence as invoices:
-// tenant override (locale, then English) before the system template, so
-// customisations made in Notification Settings > Email Templates are honoured.
-const getQuoteEmailTemplate = async (
-  knex: Knex | Knex.Transaction,
-  tenant: string,
-  name: QuoteTemplateName,
-  locale: string = 'en'
-): Promise<QuoteEmailTemplate | null> => {
-  const db = tenantDb(knex, tenant);
-  const languages = locale === 'en' ? ['en'] : [locale, 'en'];
-
-  for (const table of ['tenant_email_templates', 'system_email_templates']) {
-    for (const language_code of languages) {
-      const template = await db.table(table)
-        .where({ name, language_code })
-        .first<QuoteEmailTemplate | undefined>();
-
-      if (template) {
-        return {
-          subject: template.subject,
-          html_content: template.html_content,
-          text_content: template.text_content,
-        };
-      }
-    }
-  }
-
-  return null;
-};
-
 // Resolves the locale of the quote's primary recipient so the template lookup
 // matches the invoice send path; contacts are client-portal users, so the
 // client's default locale applies when the contact has no preference.
@@ -539,57 +499,6 @@ const resolveQuoteRecipientLocale = async (
     // A locale lookup must never block sending the quote itself.
     return 'en';
   }
-};
-
-const renderQuoteEmail = async ({
-  knex,
-  tenant,
-  templateName,
-  quote,
-  companyName,
-  portalLink,
-  customMessage,
-  locale,
-}: {
-  knex: Knex;
-  tenant: string;
-  templateName: QuoteTemplateName;
-  quote: IQuote;
-  companyName: string;
-  portalLink?: string;
-  customMessage?: string;
-  locale?: string;
-}): Promise<{ subject: string; html: string; text: string }> => {
-  const template = await getQuoteEmailTemplate(knex, tenant, templateName, locale ?? 'en');
-
-  if (!template) {
-    const buildFallback = templateName === 'quote-reminder-email'
-      ? buildQuoteReminderEmailTemplate
-      : buildQuoteSentEmailTemplate;
-    return buildFallback({ quote, companyName, portalLink, customMessage, locale });
-  }
-
-  const templateContext = {
-    quote: {
-      number: quote.quote_number ?? quote.quote_id,
-      // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
-      amount: formatCurrency((quote.total_amount ?? 0) / 100, locale ?? 'en', quote.currency_code || 'USD'),
-      validUntil: formatQuoteDate(quote.valid_until ?? null, locale),
-    },
-    company: {
-      name: companyName,
-    },
-    portalLink: portalLink?.trim() || '',
-    customMessage: customMessage?.trim() || '',
-  };
-
-  // Subject and plain-text are not HTML — disable Handlebars' HTML escape so
-  // characters like `"` in quote titles don't render as `&quot;`.
-  return {
-    subject: Handlebars.compile(template.subject, { noEscape: true })(templateContext),
-    html: Handlebars.compile(template.html_content)(templateContext),
-    text: Handlebars.compile(template.text_content, { noEscape: true })(templateContext),
-  };
 };
 
 const sendQuoteEmailWithAttachment = async ({
@@ -762,27 +671,18 @@ export const getQuote = withAuth(async (
   const quote = await getAuthorizedQuoteForRead(knex, tenant, user as BillingAuthUser, quoteId);
   if (!quote) return null;
 
-  // Resolve accepted_by UUID to a display name
-  if (quote.accepted_by) {
-    try {
-      const contact = await tenantDb(knex, tenant).table('contacts')
-        .select('full_name')
-        .where({ contact_name_id: quote.accepted_by })
-        .first<{ full_name?: string }>();
-      if (contact?.full_name) {
-        quote.accepted_by_name = contact.full_name;
-      } else {
-        const user = await tenantDb(knex, tenant).table('users')
-          .select('first_name', 'last_name')
-          .where({ user_id: quote.accepted_by })
-          .first<{ first_name?: string; last_name?: string }>();
-        if (user) {
-          quote.accepted_by_name = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || null;
-        }
-      }
-    } catch {
-      // Non-blocking
-    }
+  // The signer's display name through the one shared resolver: the recorded
+  // decision names a contact who signed through an emailed link (no users row,
+  // so accepted_by is null); accepted_by covers portal and MSP acceptances.
+  if (quote.accepted_at || quote.accepted_by) {
+    const recorded = quote.accepted_at
+      ? await loadQuoteAcceptance(knex, tenant, quote.quote_id).catch(() => null)
+      : null;
+    quote.accepted_by_name = await resolveQuoteAcceptedByName(knex, tenant, {
+      acceptedBy: quote.accepted_by,
+      signerName: recorded?.signerName,
+      signerContactId: recorded?.signerContactId,
+    });
   }
 
   // Who signed comes from quote_decisions: an email-link signer has no users row.

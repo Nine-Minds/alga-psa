@@ -31,8 +31,14 @@ import { mapDbSalesOrderToViewModel } from '../lib/adapters/salesOrderAdapters';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
-import { localizeTemplateAstForLocale, DOCUMENT_LABEL_NAMESPACE } from '../lib/invoice-template-ast/i18nLabels';
+import { localizeTemplateAstForLocale, loadDocumentLabelTranslator, DOCUMENT_LABEL_NAMESPACE } from '../lib/invoice-template-ast/i18nLabels';
 import { cadenceI18nKey } from '../lib/quoteItemCadence';
+import {
+  appendAcceptanceBlockToHtmlDocument,
+  renderQuoteAcceptanceBlockHtml,
+  type QuoteAcceptanceDetails,
+  type QuoteAcceptanceRenderOptions,
+} from '../lib/quoteAcceptance';
 import { resolvePdfPrintOptionsFromAst } from '../lib/invoice-template-ast/printSettings';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/server-render';
@@ -163,7 +169,20 @@ interface PDFGenerationOptions {
   userId: string;
   /** Force a fresh render even when a stored document already exists. */
   regenerate?: boolean;
+  /**
+   * Which copy of a quote is being filed. `sent` (default) is the copy that goes
+   * out with the quote; `signed` is the copy stamped with the acceptance block,
+   * filed beside it as its own `-signed` document and never in place of it.
+   */
+  quoteVariant?: QuoteVariant;
+  /** Required for the `signed` variant: who accepted, and how. */
+  acceptance?: QuoteRenderAcceptance;
 }
+
+export type QuoteVariant = 'sent' | 'signed';
+
+/** Acceptance details plus how to write them (tenant time zone). */
+export type QuoteRenderAcceptance = QuoteAcceptanceDetails & QuoteAcceptanceRenderOptions;
 
 /** The stored file, plus the `documents` row it was filed as (absent for the export branch). */
 export type StoredPdfResult = FileStore & {
@@ -206,6 +225,9 @@ interface RenderedPdf {
   renderedLocale: string;
 }
 
+/** Appended to the sent copy's file name to name the signed copy. */
+export const SIGNED_QUOTE_FILE_SUFFIX = '-signed';
+
 const SALES_ORDER_DOCUMENT_PREFIX: Record<SalesOrderDocumentKind, string> = {
   'sales-order': 'SalesOrder',
   'packing-slip': 'PackingSlip',
@@ -216,6 +238,8 @@ export interface QuotePDFOptions {
   quoteId: string;
   templateCode?: string;
   templateAst?: TemplateAst;
+  /** When present the render carries the acceptance block (signed copy). */
+  acceptance?: QuoteRenderAcceptance;
 }
 
 export interface SalesOrderPDFOptions {
@@ -250,11 +274,11 @@ export class PDFGenerationService {
 
   // ---- Generic entry points ------------------------------------------------
 
-  async generatePDF(options: { invoiceId?: string; quoteId?: string; salesOrderId?: string; salesOrderDocumentType?: SalesOrderDocumentKind; documentId?: string; userId: string; templateAst?: TemplateAst; templateId?: string }): Promise<Buffer> {
+  async generatePDF(options: { invoiceId?: string; quoteId?: string; salesOrderId?: string; salesOrderDocumentType?: SalesOrderDocumentKind; documentId?: string; userId: string; templateAst?: TemplateAst; templateId?: string; acceptance?: QuoteRenderAcceptance }): Promise<Buffer> {
     return (await this.renderPdf(options)).buffer;
   }
 
-  private async renderPdf(options: { invoiceId?: string; quoteId?: string; salesOrderId?: string; salesOrderDocumentType?: SalesOrderDocumentKind; documentId?: string; userId: string; templateAst?: TemplateAst; templateId?: string }): Promise<RenderedPdf> {
+  private async renderPdf(options: { invoiceId?: string; quoteId?: string; salesOrderId?: string; salesOrderDocumentType?: SalesOrderDocumentKind; documentId?: string; userId: string; templateAst?: TemplateAst; templateId?: string; acceptance?: QuoteRenderAcceptance }): Promise<RenderedPdf> {
     let htmlContent: string;
     let templateAst: TemplateAst | null = null;
     let templateId: string | null = null;
@@ -274,7 +298,7 @@ export class PDFGenerationService {
       templateId = result.templateId;
       templateVersion = result.templateVersion;
     } else if (options.quoteId) {
-      const result = await this.getQuoteHtml({ quoteId: options.quoteId, templateAst: options.templateAst }, renderedLocale, renderedDateFormat);
+      const result = await this.getQuoteHtml({ quoteId: options.quoteId, templateAst: options.templateAst, acceptance: options.acceptance }, renderedLocale, renderedDateFormat);
       htmlContent = result.htmlContent;
       templateAst = result.templateAst;
       templateId = result.templateId;
@@ -308,6 +332,10 @@ export class PDFGenerationService {
    * Pass `regenerate` to render again anyway.
    */
   async generateAndStore(options: PDFGenerationOptions): Promise<StoredPdfResult> {
+    if (options.quoteVariant === 'signed' && !options.acceptance) {
+      throw new Error('A signed quote copy needs the acceptance details to stamp on it');
+    }
+
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
       const target = await this.resolveFilingTarget(knex, options);
@@ -345,6 +373,7 @@ export class PDFGenerationService {
         documentId: options.documentId,
         templateId: options.templateId,
         userId: options.userId,
+        acceptance: options.quoteVariant === 'signed' ? options.acceptance : undefined,
       });
 
       const fileId = uuidv4();
@@ -473,7 +502,28 @@ export class PDFGenerationService {
         .where({ quote_id: options.quoteId })
         .first<{ title?: string | null; quote_number?: string | null } | undefined>('title', 'quote_number');
       const quoteNumber = options.quoteNumber || quote?.quote_number || options.quoteId;
-      const fileName = buildDocumentFileName(quote?.title, `Quote_${quoteNumber}`);
+      const sentFileName = buildDocumentFileName(quote?.title, `Quote_${quoteNumber}`);
+
+      if (options.quoteVariant === 'signed') {
+        // The signed copy is its own client-visible document beside the sent one
+        // (different name, so neither lookup nor filing can touch the sent copy).
+        // `refresh` is what makes it idempotent: once a signed copy has been
+        // issued to the client it is frozen and handed back, and the filing
+        // transaction serializes concurrent finalizations on the same name.
+        const signedBase = `${sentFileName.replace(/\.pdf$/i, '')}${SIGNED_QUOTE_FILE_SUFFIX}`;
+        return {
+          sourceType: 'quote',
+          entityId: options.quoteId,
+          clientId: null,
+          folderPath: '/Quotes/Generated',
+          isClientVisible: true,
+          documentName: `${signedBase}.pdf`,
+          fileBaseName: signedBase,
+          mode: 'refresh',
+        };
+      }
+
+      const fileName = sentFileName;
       return {
         sourceType: 'quote',
         entityId: options.quoteId,
@@ -1090,7 +1140,9 @@ export class PDFGenerationService {
   ): Promise<{ htmlContent: string; templateAst: TemplateAst | null; templateId: string | null; templateVersion: number | null }> {
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
-      const quoteViewModel = await mapDbQuoteToViewModel(knex, this.tenant, options.quoteId);
+      const quoteViewModel = await mapDbQuoteToViewModel(knex, this.tenant, options.quoteId, {
+        acceptance: options.acceptance,
+      });
 
       if (!quoteViewModel) {
         throw new Error(`Quote ${options.quoteId} not found`);
@@ -1119,12 +1171,28 @@ export class PDFGenerationService {
         quoteViewModel as unknown as Record<string, unknown>
       );
 
-      const htmlContent = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
+      const renderedHtml = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
         title: `Quote ${quoteViewModel.quote_number ?? ''}`.trim(),
         knex,
         locale,
         dateFormat,
       });
+
+      // One stamp for every template: the acceptance block is appended to the
+      // finished document rather than authored into each template, so a signed
+      // copy shows who accepted whichever layout the quote uses. The view model
+      // carries the same fields for templates that want to bind them.
+      const htmlContent = quoteViewModel.acceptance
+        ? appendAcceptanceBlockToHtmlDocument(
+            renderedHtml,
+            renderQuoteAcceptanceBlockHtml(quoteViewModel.acceptance, {
+              locale,
+              dateFormat,
+              timeZone: options.acceptance?.timeZone,
+              t: await loadDocumentLabelTranslator(locale),
+            })
+          )
+        : renderedHtml;
 
       return { htmlContent, templateAst, templateId, templateVersion: null };
     });

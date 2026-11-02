@@ -87,6 +87,7 @@ export default defineConfig({
       // bindings, and render parity — listed for the same reason as above.
       'src/lib/adapters/invoiceAdapters.test.ts',
       'src/lib/adapters/salesOrderAdapters.test.ts',
+      'src/lib/adapters/quoteAdapters.test.ts',
       'src/lib/sales-order-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.byTicket.test.ts',

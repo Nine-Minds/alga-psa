@@ -56,6 +56,20 @@
     "product": "Produkt",
     "projectPhase": "Faza projektu",
     "qty": "Ilość",
+    "quoteAcceptance": {
+      "title": "Oferta zaakceptowana",
+      "signedBy": "Podpisano przez",
+      "email": "E-mail",
+      "jobTitle": "Stanowisko",
+      "acceptedOn": "Zaakceptowano dnia",
+      "method": "Metoda",
+      "ipAddress": "Adres IP",
+      "methods": {
+        "emailLink": "Link w wiadomości e-mail",
+        "portal": "Portal klienta",
+        "msp": "Zarejestrowane przez MSP"
+      }
+    },
     "quoteNumber": "Oferta nr",
     "quoteTitle": "OFERTA",
     "rate": "Stawka",
