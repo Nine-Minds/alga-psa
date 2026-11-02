@@ -125,7 +125,16 @@ describe('TimeSheetService time periods (API)', () => {
     it('updates dates and ignores is_current (with and without it)', async () => {
       const period = await create({ start_date: '2026-11-01', end_date: '2026-11-08' });
 
-      const withFlag = await update(period.period_id, { end_date: '2026-11-09', is_current: true });
+      // The updated period intentionally ends after the frozen date. Fake only
+      // Date so database timers and pool operations continue to use real timers.
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-10-31T12:00:00Z'));
+      let withFlag: Awaited<ReturnType<typeof update>>;
+      try {
+        withFlag = await update(period.period_id, { end_date: '2026-11-09', is_current: true });
+      } finally {
+        vi.useRealTimers();
+      }
       expect(withFlag.end_date).toBe('2026-11-09');
       expect(withFlag.is_current).toBe(false);
 
