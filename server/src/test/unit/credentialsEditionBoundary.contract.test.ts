@@ -7,9 +7,10 @@ import ts from 'typescript';
 /**
  * Credentials vault is an EE-only (Pro) feature. Its DB schema lives in
  * ee/server/migrations and its runtime code in ee/ + packages/ee. This guard
- * fails if other tracked source accesses the credentials vault tables or
- * imports EE credential modules. Shared catalogs may declare literal metadata
- * for both editions; executable code in those files is still checked.
+ * fails if any other tracked source file touches the credentials vault tables
+ * or imports EE credential modules, so the feature cannot leak back into CE.
+ * Shared lifecycle and write-policy catalogs may declare table metadata, but
+ * cannot execute vault queries or import vault implementations.
  *
  * It targets table-name usage and module paths, not the bare word "credentials"
  * (which is common in OAuth/auth/integration code).
@@ -34,6 +35,12 @@ const ALLOWED_FILES = new Set<string>([
 
   // Shared metadata / RBAC catalog (data, not logic).
   'packages/db/src/lib/tenantTableMetadata.ts',
+  // Tenant lifecycle catalogs: declarative per-table entries (EE tenant deletion
+  // ordering, FK snapshot, co-managed write admission) that must cover every
+  // tenant table in either edition.
+  'packages/db/src/lib/tenantTableManifest.ts',
+  'packages/db/src/lib/tenantTableForeignKeys.ts',
+  'packages/db/src/lib/operationalWriteTables.ts',
   'server/migrations/utils/tenantDb.cjs',
   'server/migrations/utils/permissions/catalog.cjs',
 
@@ -85,6 +92,52 @@ const VIOLATION_PATTERNS: Array<{ name: string; regex: RegExp }> = [
 
 const SCANNED_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.cjs', '.mjs', '.sql']);
 
+// Only these declarations may contain vault metadata. The rest of each file
+// remains subject to every boundary rule, including imports and DB calls.
+const METADATA_DECLARATIONS: Readonly<Record<string, string>> = {
+  'packages/db/src/lib/operationalWriteTables.ts': 'OPERATIONAL_WRITE_TABLES',
+  'packages/db/src/lib/tenantTableForeignKeys.ts': 'TENANT_TABLE_FOREIGN_KEYS',
+  'packages/db/src/lib/tenantTableManifest.ts': 'TENANT_TABLE_MANIFEST',
+};
+
+function isLiteralData(node: ts.Node): boolean {
+  if (ts.isStringLiteral(node) || ts.isNumericLiteral(node)
+    || node.kind === ts.SyntaxKind.TrueKeyword || node.kind === ts.SyntaxKind.FalseKeyword
+    || node.kind === ts.SyntaxKind.NullKeyword) return true;
+  if (ts.isArrayLiteralExpression(node)) return node.elements.every(isLiteralData);
+  if (ts.isObjectLiteralExpression(node)) {
+    return node.properties.every((property) => ts.isPropertyAssignment(property)
+      && (ts.isIdentifier(property.name) || ts.isStringLiteral(property.name) || ts.isNumericLiteral(property.name))
+      && isLiteralData(property.initializer));
+  }
+  if (ts.isAsExpression(node) || ts.isSatisfiesExpression(node) || ts.isParenthesizedExpression(node)) {
+    return isLiteralData(node.expression);
+  }
+  return false;
+}
+
+function boundaryViolations(file: string, source: string): string[] {
+  const declaration = METADATA_DECLARATIONS[file];
+  if (declaration) {
+    const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+    for (const statement of parsed.statements) {
+      if (!ts.isVariableStatement(statement)
+        || !(statement.declarationList.flags & ts.NodeFlags.Const)
+        || !statement.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword)) continue;
+      for (const variable of statement.declarationList.declarations) {
+        if (ts.isIdentifier(variable.name) && variable.name.text === declaration
+          && variable.initializer && isLiteralData(variable.initializer)) {
+          // Preserve offsets if a statement declares more than one variable.
+          const start = variable.initializer.getStart(parsed);
+          const end = variable.initializer.end;
+          source = source.slice(0, start) + ' '.repeat(end - start) + source.slice(end);
+        }
+      }
+    }
+  }
+  return VIOLATION_PATTERNS.filter(({ regex }) => regex.test(source)).map(({ name }) => `${file}: ${name}`);
+}
+
 function trackedFiles(): string[] {
   const out = execFileSync('git', ['ls-files', '-z'], { cwd: repoRoot, maxBuffer: 256 * 1024 * 1024 });
   return out
@@ -98,58 +151,6 @@ function isAllowed(file: string): boolean {
   return ALLOWED_FILES.has(file) || ALLOWED_PREFIXES.some((prefix) => file.startsWith(prefix));
 }
 
-const SHARED_METADATA_DECLARATIONS: Readonly<Record<string, string>> = {
-  'packages/db/src/lib/operationalWriteTables.ts': 'OPERATIONAL_WRITE_TABLES',
-  'packages/db/src/lib/tenantTableForeignKeys.ts': 'TENANT_TABLE_FOREIGN_KEYS',
-  'packages/db/src/lib/tenantTableManifest.ts': 'TENANT_TABLE_MANIFEST',
-};
-
-function isLiteralMetadata(node: ts.Expression): boolean {
-  if (ts.isAsExpression(node) || ts.isSatisfiesExpression(node) || ts.isParenthesizedExpression(node)) {
-    return isLiteralMetadata(node.expression);
-  }
-  if (ts.isArrayLiteralExpression(node)) {
-    return node.elements.every(isLiteralMetadata);
-  }
-  if (ts.isObjectLiteralExpression(node)) {
-    return node.properties.every((property) =>
-      ts.isPropertyAssignment(property)
-      && !ts.isComputedPropertyName(property.name)
-      && isLiteralMetadata(property.initializer));
-  }
-  return ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)
-    || ts.isNumericLiteral(node) || node.kind === ts.SyntaxKind.TrueKeyword
-    || node.kind === ts.SyntaxKind.FalseKeyword || node.kind === ts.SyntaxKind.NullKeyword;
-}
-
-function executableSource(file: string, source: string): string {
-  const declarationName = SHARED_METADATA_DECLARATIONS[file];
-  if (!declarationName) return source;
-
-  const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-  let executable = source;
-  for (const statement of parsed.statements) {
-    if (!ts.isVariableStatement(statement)
-      || !(statement.declarationList.flags & ts.NodeFlags.Const)) continue;
-    for (const declaration of statement.declarationList.declarations) {
-      if (!ts.isIdentifier(declaration.name) || declaration.name.text !== declarationName
-        || !declaration.initializer || !isLiteralMetadata(declaration.initializer)) continue;
-      // Mask only the proven data expression, never the rest of its file.
-      const start = declaration.initializer.getStart(parsed);
-      const end = declaration.initializer.getEnd();
-      executable = executable.slice(0, start) + ' '.repeat(end - start) + executable.slice(end);
-    }
-  }
-  return executable;
-}
-
-function findViolations(file: string, source: string): string[] {
-  const executable = executableSource(file, source);
-  return VIOLATION_PATTERNS
-    .filter(({ regex }) => regex.test(executable))
-    .map(({ name }) => `${file}: ${name}`);
-}
-
 describe('credentials boundary validation', () => {
   const manifestFile = 'packages/db/src/lib/tenantTableManifest.ts';
 
@@ -158,7 +159,7 @@ describe('credentials boundary validation', () => {
     ['packages/db/src/lib/tenantTableForeignKeys.ts', "export const TENANT_TABLE_FOREIGN_KEYS = [{ child: 'credential_access_grants', parent: 'credentials', deleteRule: 'CASCADE' }];"],
     ['packages/db/src/lib/operationalWriteTables.ts', "export const OPERATIONAL_WRITE_TABLES = { credential_associations: { reason: 'credential associations' } } satisfies Record<string, { reason: string }>;"],
   ])('accepts declarative shared metadata in %s', (file, source) => {
-    expect(findViolations(file, source)).toEqual([]);
+    expect(boundaryViolations(file, source)).toEqual([]);
   });
 
   it('rejects executable vault access alongside a metadata declaration', () => {
@@ -166,7 +167,7 @@ describe('credentials boundary validation', () => {
       export const TENANT_TABLE_MANIFEST = [{ table: 'credentials' }];
       export function readVault(db) { return db('credentials').select('*'); }
     `;
-    expect(findViolations(manifestFile, source)).toEqual([
+    expect(boundaryViolations(manifestFile, source)).toEqual([
       `${manifestFile}: knex builder call on credentials`,
     ]);
   });
@@ -179,33 +180,33 @@ describe('credentials boundary validation', () => {
     "[{ table: `credential_associations${db('credentials')}` }]",
     "loadMetadata('credential_associations')",
   ])('rejects executable metadata initializers: %s', (initializer) => {
-    expect(findViolations(manifestFile, `export const TENANT_TABLE_MANIFEST = ${initializer};`))
+    expect(boundaryViolations(manifestFile, `export const TENANT_TABLE_MANIFEST = ${initializer};`))
       .not.toEqual([]);
   });
 
   it('rejects an unrelated declaration in a shared metadata file', () => {
-    expect(findViolations(manifestFile, "export const OTHER_TABLES = [{ table: 'credentials' }];"))
+    expect(boundaryViolations(manifestFile, "export const OTHER_TABLES = [{ table: 'credentials' }];"))
       .not.toEqual([]);
   });
 
   it('checks other variables declared alongside metadata', () => {
     const source = "export const TENANT_TABLE_MANIFEST = [{ table: 'credentials' }], rows = db('credentials').select('*');";
-    expect(findViolations(manifestFile, source))
+    expect(boundaryViolations(manifestFile, source))
       .toEqual([`${manifestFile}: knex builder call on credentials`]);
   });
 
   it('does not exempt mutable metadata declarations', () => {
-    expect(findViolations(manifestFile, "export let TENANT_TABLE_MANIFEST = [{ table: 'credentials' }];"))
+    expect(boundaryViolations(manifestFile, "export let TENANT_TABLE_MANIFEST = [{ table: 'credentials' }];"))
       .not.toEqual([]);
   });
 
   it('rejects metadata-shaped vault access outside the shared catalogs', () => {
-    expect(findViolations('packages/clients/src/vault.ts', "export const TENANT_TABLE_MANIFEST = [{ table: 'credentials' }];"))
+    expect(boundaryViolations('packages/clients/src/vault.ts', "export const TENANT_TABLE_MANIFEST = [{ table: 'credentials' }];"))
       .not.toEqual([]);
   });
 
   it('rejects EE credential module imports in shared metadata files', () => {
-    expect(findViolations(manifestFile, "import { readVault } from '@enterprise/lib/credentials/actions';"))
+    expect(boundaryViolations(manifestFile, "import { readVault } from '@enterprise/lib/credentials/actions';"))
       .toEqual([`${manifestFile}: EE credential module import`]);
   });
 });
@@ -219,13 +220,14 @@ describe('credentials edition boundary', () => {
       const abs = path.join(repoRoot, file);
       if (!fs.existsSync(abs)) continue; // deleted in working tree but not yet committed
       const source = fs.readFileSync(abs, 'utf8');
-      violations.push(...findViolations(file, source));
+      violations.push(...boundaryViolations(file, source));
     }
     expect(violations).toEqual([]);
   });
 
   it('every allowlisted explicit path exists', () => {
-    const missing = [...ALLOWED_FILES].filter((file) => !fs.existsSync(path.join(repoRoot, file)));
+    const missing = [...ALLOWED_FILES, ...Object.keys(METADATA_DECLARATIONS)]
+      .filter((file) => !fs.existsSync(path.join(repoRoot, file)));
     expect(missing).toEqual([]);
   });
 
@@ -243,5 +245,50 @@ describe('credentials edition boundary', () => {
       expect(ce).not.toMatch(/createTable|knex\./);
       expect(fs.existsSync(path.join(repoRoot, 'ee/server/migrations', name))).toBe(true);
     }
+  });
+});
+
+describe('credentials boundary scanner metadata handling', () => {
+  const catalogs = Object.entries(METADATA_DECLARATIONS);
+
+  it.each(catalogs)('accepts literal catalog data in %s', (file, declaration) => {
+    const source = `export const ${declaration} = [
+      { table: 'credentials', deletion: 'ordered', clientKeyed: true },
+      { child: 'credential_associations', parent: 'credentials' },
+      { credential_access_grants: { reason: 'write policy' } },
+    ] as const;`;
+    expect(boundaryViolations(file, source)).toEqual([]);
+    expect(boundaryViolations('packages/example/src/feature.ts', source)).not.toEqual([]);
+  });
+
+  const runtimeSources = [
+    `knex('credentials').select('*')`,
+    `db.table('credential_associations').delete()`,
+    `knex.schema.createTable('credentials', () => {})`,
+    `knex.raw('select * from credentials;')`,
+    `import('@enterprise/lib/credentials/actions')`,
+  ];
+
+  it.each(catalogs)('rejects runtime vault access alongside metadata in %s', (file, declaration) => {
+    for (const runtime of runtimeSources) {
+      const source = `export const ${declaration} = [{ table: 'credentials' }]; ${runtime};`;
+      expect(boundaryViolations(file, source), runtime).not.toEqual([]);
+    }
+  });
+
+  it.each(catalogs)('rejects executable catalog initializers in %s', (file, declaration) => {
+    for (const initializer of [
+      ...runtimeSources,
+      `[{ table: 'credentials', rows: knex('credentials').select() }]`,
+      `[{ table: 'credentials', ...loadMetadata() }]`,
+      `[{ ['credential_associations']: loadMetadata() }]`,
+      `[{ table: 'credentials', get rows() { return knex('credentials'); } }]`,
+    ]) {
+      expect(boundaryViolations(file, `export const ${declaration} = ${initializer};`), initializer).not.toEqual([]);
+    }
+  });
+
+  it.each(catalogs)('rejects vault metadata in other declarations in %s', (file) => {
+    expect(boundaryViolations(file, `export const OTHER_TABLES = [{ table: 'credentials' }];`)).not.toEqual([]);
   });
 });

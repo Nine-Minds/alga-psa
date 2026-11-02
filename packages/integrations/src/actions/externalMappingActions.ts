@@ -1,6 +1,7 @@
 'use server';
 
 import logger from '@alga-psa/core/logger';
+import { BILLING_PROFILE_ENTITY_TYPE } from '@alga-psa/shared/billingClients/billingProfileExternalMapping';
 import { PAYMENT_TERMS } from '@alga-psa/shared/billingClients/paymentPreferences';
 import {
   auditLog,
@@ -166,10 +167,16 @@ const CATALOG_ENTITY_TYPES = new Set([
 /**
  * Entity types accepted by the mutation actions. Invoice mappings are also
  * written by onboarding/reconciliation callers through this shared action, so
- * they remain supported here under the invoice-row lock. The catalog UI does
- * not expose them, and payment/credit mappings remain rejected.
+ * they remain supported here under the invoice-row lock; billing-profile
+ * (QuickBooks sub-customer) mappings are written by the reconciliation wizard
+ * through the same retarget path as client mappings. The catalog UI does not
+ * expose either, and payment/credit mappings remain rejected.
  */
-const MUTABLE_MAPPING_ENTITY_TYPES = new Set([...CATALOG_ENTITY_TYPES, 'invoice']);
+const MUTABLE_MAPPING_ENTITY_TYPES = new Set([
+  ...CATALOG_ENTITY_TYPES,
+  'invoice',
+  BILLING_PROFILE_ENTITY_TYPE,
+]);
 
 /** Realms are meaningful for these providers and must name a connected realm. */
 const REALM_BASED_INTEGRATION_TYPES = new Set(['quickbooks_online', 'xero']);
@@ -304,6 +311,18 @@ async function assertLocalEntityOwnership(
       }
       return;
     }
+    case BILLING_PROFILE_ENTITY_TYPE: {
+      const row = await db
+        .table('client_billing_profiles')
+        .where({ billing_profile_id: entityId })
+        .first('billing_profile_id');
+      if (!row) {
+        throw new ExpectedExternalMappingError(
+          `Cannot map billing profile ${entityId}: it does not exist for this tenant.`
+        );
+      }
+      return;
+    }
     case 'invoice': {
       const row = await db.table('invoices').where({ invoice_id: entityId }).first('invoice_id');
       if (!row) {
@@ -407,6 +426,9 @@ const QBO_REMOTE_ENTITY_TYPE: Record<string, string> = {
   tax_code: 'TaxCode',
   payment_term: 'Term',
   client: 'Customer',
+  // A separately-billing profile is a QuickBooks sub-customer: still a Customer
+  // record, so existence is proven by the same read-by-id.
+  [BILLING_PROFILE_ENTITY_TYPE]: 'Customer',
   invoice: 'Invoice',
   [DISCOUNT_MAPPING_ENTITY_TYPE]: 'Item',
 };
