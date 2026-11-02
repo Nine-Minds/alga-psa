@@ -5,6 +5,7 @@ import {
   defineQuery,
   defineSignal,
   log,
+  patched,
   proxyActivities,
   setHandler,
   sleep,
@@ -51,6 +52,10 @@ export interface SlaTicketWorkflowState {
     response: number[];
     resolution: number[];
   };
+  evaluatedEscalationThresholds?: {
+    response: number[];
+    resolution: number[];
+  };
   responseDeadline?: string | null;
   resolutionDeadline?: string | null;
   nextWakeTime?: string | null;
@@ -86,6 +91,7 @@ const activities = proxyActivities<{
     ticketId: string;
     phase: 'response' | 'resolution';
     thresholdPercent: number;
+    escalationLevel?: 1 | 2 | 3;
   }): Promise<void>;
   updateSlaStatus(input: {
     tenantId: string;
@@ -175,6 +181,10 @@ export async function slaTicketWorkflow(
           response: [...input.carried.state.notifiedThresholds.response],
           resolution: [...input.carried.state.notifiedThresholds.resolution],
         },
+        evaluatedEscalationThresholds: {
+          response: [...(input.carried.state.evaluatedEscalationThresholds?.response ?? [])],
+          resolution: [...(input.carried.state.evaluatedEscalationThresholds?.resolution ?? [])],
+        },
       }
     : {
         currentPhase: 'response',
@@ -186,6 +196,10 @@ export async function slaTicketWorkflow(
           reason: null,
         },
         notifiedThresholds: {
+          response: [],
+          resolution: [],
+        },
+        evaluatedEscalationThresholds: {
           response: [],
           resolution: [],
         },
@@ -396,21 +410,68 @@ export async function slaTicketWorkflow(
 
     state.currentPhase = phase.phase;
 
-    // Use configured thresholds, always ensuring 100% is included for breach detection
+    // Use configured thresholds, always ensuring 100% is included for breach detection.
     const configuredThresholds = notificationThresholds && notificationThresholds.length > 0
       ? notificationThresholds
       : [50, 75, 90];
-    const thresholds = [...new Set([...configuredThresholds, 100])].sort((a, b) => a - b);
+    const notificationWakePoints = [...new Set([...configuredThresholds, 100])].sort((a, b) => a - b);
+    // Histories started before this patch used only notification points and
+    // evaluated escalation at each one. Keep that command path intact on replay.
+    const configuredEscalationThresholds = [
+      target.escalation_1_percent,
+      target.escalation_2_percent,
+      target.escalation_3_percent,
+    ].filter((value): value is number => Number.isFinite(value) && value > 0);
+    const useConfiguredEscalationWakePoints = patched('sla-escalation-configured-wakepoints-v1');
+    const escalationWakePoints = [...new Set(configuredEscalationThresholds)].sort((a, b) => a - b);
+    const thresholds = useConfiguredEscalationWakePoints
+      ? [...new Set([...notificationWakePoints, ...escalationWakePoints])].sort((a, b) => a - b)
+      : notificationWakePoints;
+    const phaseThresholds = useConfiguredEscalationWakePoints &&
+      phase.phase === 'response' && target.resolution_time_minutes && target.resolution_time_minutes > 0
+      ? thresholds.filter((threshold) => threshold <= 100)
+      : thresholds;
+    const wakeEvents = phaseThresholds.map((threshold) => ({ phase: phase.phase, threshold }));
+    // Response escalation deadlines remain live while resolution is tracked.
+    // Keep the response clock origin and percentage when carrying them forward.
+    if (
+      useConfiguredEscalationWakePoints &&
+      phase.phase === 'resolution' &&
+      (responseCompleted || state.notifiedThresholds.response.includes(100)) &&
+      target.response_time_minutes && target.response_time_minutes > 0
+    ) {
+      for (const threshold of escalationWakePoints) {
+        if (!(state.evaluatedEscalationThresholds?.response.includes(threshold) ?? false)) {
+          wakeEvents.push({ phase: 'response', threshold });
+        }
+      }
+      wakeEvents.sort((left, right) => {
+        const leftTarget = left.phase === 'response' ? target.response_time_minutes! : phase.targetMinutes!;
+        const rightTarget = right.phase === 'response' ? target.response_time_minutes! : phase.targetMinutes!;
+        return leftTarget * left.threshold - rightTarget * right.threshold;
+      });
+    }
     // Index loop so a pause that interrupts a wait re-enters the same threshold.
     let thresholdIndex = 0;
-    while (thresholdIndex < thresholds.length) {
-      const threshold = thresholds[thresholdIndex];
+    while (thresholdIndex < wakeEvents.length) {
+      const wakeEvent = wakeEvents[thresholdIndex];
+      const actionPhase = wakeEvent.phase;
+      const threshold = wakeEvent.threshold;
       if (isDone(phase.phase)) {
         break;
       }
 
-      // Already handled by an earlier run.
-      if (state.notifiedThresholds[phase.phase].includes(threshold)) {
+      // Legacy runs treated notification state as the whole wake-point state.
+      // New runs track escalation evaluations separately across continue-as-new.
+      const isEventNotification = actionPhase === phase.phase && notificationWakePoints.includes(threshold);
+      const notificationAlreadyHandled = !isEventNotification ||
+        state.notifiedThresholds[actionPhase].includes(threshold);
+      const escalationAlreadyHandledAtWake = !escalationWakePoints.includes(threshold) ||
+        (state.evaluatedEscalationThresholds?.[actionPhase].includes(threshold) ?? false);
+      if (
+        (!useConfiguredEscalationWakePoints && state.notifiedThresholds[phase.phase].includes(threshold)) ||
+        (useConfiguredEscalationWakePoints && notificationAlreadyHandled && escalationAlreadyHandledAtWake)
+      ) {
         thresholdIndex += 1;
         continue;
       }
@@ -440,12 +501,18 @@ export async function slaTicketWorkflow(
         break;
       }
 
-      if (shouldRollOver()) {
+      // Preserve the old pre-wake rollover point for replay. New runs roll at
+      // the end of each fully evaluated wake point so a low history threshold
+      // cannot repeatedly continue-as-new before making progress.
+      if (!useConfiguredEscalationWakePoints && shouldRollOver()) {
         await rollOver();
       }
 
+      const eventTargetMinutes = actionPhase === 'response'
+        ? target.response_time_minutes!
+        : phase.targetMinutes;
       const thresholdMinutes = Math.ceil(
-        (phase.targetMinutes * threshold) / 100
+        (eventTargetMinutes * threshold) / 100
       );
 
       const wakeTimeIso = await activities.calculateNextWakeTime({
@@ -458,7 +525,7 @@ export async function slaTicketWorkflow(
       state.nextWakeTime = wakeTimeIso;
 
       if (threshold === 100) {
-        state[phase.deadlineKey] = wakeTimeIso;
+        state[actionPhase === 'response' ? 'responseDeadline' : phase.deadlineKey] = wakeTimeIso;
       }
 
       const sleepMs = new Date(wakeTimeIso).getTime() - Date.now();
@@ -481,13 +548,17 @@ export async function slaTicketWorkflow(
         break;
       }
 
-      if (!state.notifiedThresholds[phase.phase].includes(threshold)) {
-        state.notifiedThresholds[phase.phase].push(threshold);
+      const isNotificationThreshold = actionPhase === phase.phase && notificationWakePoints.includes(threshold);
+      const isEscalationThreshold = escalationWakePoints.includes(threshold);
+      const escalationAlreadyEvaluated = state.evaluatedEscalationThresholds?.[actionPhase].includes(threshold) ?? false;
+
+      if (isNotificationThreshold && !state.notifiedThresholds[actionPhase].includes(threshold)) {
+        state.notifiedThresholds[actionPhase].push(threshold);
 
         await activities.sendSlaNotification({
           tenantId,
           ticketId,
-          phase: phase.phase,
+          phase: actionPhase,
           thresholdPercent: threshold,
         });
 
@@ -495,25 +566,46 @@ export async function slaTicketWorkflow(
           await activities.updateSlaStatus({
             tenantId,
             ticketId,
-            phase: phase.phase,
+            phase: actionPhase,
             breached: true,
           });
         }
 
+      }
+
+      // The legacy branch deliberately keeps checking at notification points so
+      // pre-patch histories replay the same activity sequence. New runs check
+      // only at policy-configured escalation points, including values over 100%.
+      if (
+        (!useConfiguredEscalationWakePoints || isEscalationThreshold) &&
+        (!useConfiguredEscalationWakePoints || !escalationAlreadyEvaluated)
+      ) {
         // Escalation failures (after the activity's retries are exhausted) must
-        // never stop SLA tracking: log and carry on with the next threshold.
+        // never stop SLA tracking: log and carry on with the next wake point.
         try {
-          await activities.checkAndEscalate({
-            tenantId,
-            ticketId,
-            phase: phase.phase,
-            thresholdPercent: threshold,
-          });
+          const dueLevels = useConfiguredEscalationWakePoints
+            ? ([1, 2, 3] as const).filter((level) =>
+                target[`escalation_${level}_percent`] === threshold
+              )
+          : [undefined];
+          for (const escalationLevel of dueLevels) {
+            await activities.checkAndEscalate({
+              tenantId,
+              ticketId,
+              phase: actionPhase,
+              thresholdPercent: threshold,
+              escalationLevel,
+            });
+          }
+          if (useConfiguredEscalationWakePoints) {
+            state.evaluatedEscalationThresholds ??= { response: [], resolution: [] };
+            state.evaluatedEscalationThresholds[actionPhase].push(threshold);
+          }
         } catch (error) {
           log.warn('SLA escalation failed; continuing SLA tracking', {
             ticketId,
             tenantId,
-            phase: phase.phase,
+            phase: actionPhase,
             thresholdPercent: threshold,
             error: error instanceof Error ? error.message : String(error),
           });
@@ -521,6 +613,9 @@ export async function slaTicketWorkflow(
       }
 
       thresholdIndex += 1;
+      if (useConfiguredEscalationWakePoints && shouldRollOver()) {
+        await rollOver();
+      }
     }
   }
 }
