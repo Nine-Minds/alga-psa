@@ -24,7 +24,6 @@ describe('asset authorization kernel contracts', () => {
     expect(source).toContain('builtinProvider: new BuiltinAuthorizationKernelProvider(),');
     expect(source).toContain('bundleProvider: new BundleAuthorizationKernelProvider({');
     expect(source).toContain('return await resolveBundleNarrowingRulesForEvaluation(trx, input);');
-    expect(source).toContain('record: assetRecords.get(asset.asset_id),');
   });
 
   it('T016: applies asset-level read authorization to relationship, maintenance, history, linked-ticket, entity-list, and summary-metric surfaces', () => {
@@ -58,10 +57,7 @@ describe('asset authorization kernel contracts', () => {
     expect(source).toContain('export const updateMaintenanceSchedule = withAuth(async (');
     expect(source).toContain('export const deleteMaintenanceSchedule = withAuth(async (user, { tenant }, schedule_id: string)');
     expect(source).toContain('export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: CreateMaintenanceHistoryRequest)');
-    expect(source).toContain('await assertAssetReadAllowedById(trx, tenant, context, validated.parent_asset_id);');
-    expect(source).toContain('await assertAssetReadAllowedById(trx, tenant, context, validated.child_asset_id);');
     expect(source).toContain('if (!await hasPermission(user, \'asset\', \'delete\')) {');
-    expect(source).toContain('await createAuthorizedAssetReadContextForUser(trx as Knex.Transaction, tenantId, user as AssetAuthUser, asset_id);');
     expect(source).toContain('if (schedule.asset_id !== validatedData.asset_id) {');
   });
 

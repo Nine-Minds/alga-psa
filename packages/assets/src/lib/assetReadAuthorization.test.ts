@@ -103,6 +103,7 @@ describe('isAssetActionAllowed', () => {
   const rules = [
     { id: 'r1', resource: 'asset', action: 'read', templateKey: 'selected_clients' as const, selectedClientIds: ['client-a'] },
     { id: 'r2', resource: 'asset', action: 'update', templateKey: 'same_team' as const },
+    { id: 'r3', resource: 'asset', action: 'delete', templateKey: 'same_team' as const },
   ];
   const context = () => ({
     subject: {
@@ -124,6 +125,7 @@ describe('isAssetActionAllowed', () => {
 
     expect(await isAssetActionAllowed({} as any, 'tenant-a', ctx, asset, 'read')).toBe(true);
     expect(await isAssetActionAllowed({} as any, 'tenant-a', ctx, asset, 'update')).toBe(false);
+    expect(await isAssetActionAllowed({} as any, 'tenant-a', ctx, asset, 'delete')).toBe(false);
     expect(await isAssetReadAllowed({} as any, 'tenant-a', ctx, asset)).toBe(true);
   });
 
@@ -132,10 +134,11 @@ describe('isAssetActionAllowed', () => {
     const asset = { asset_id: 'asset-2', client_id: 'client-a' };
 
     expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), asset, 'update')).toBe(true);
+    expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), asset, 'delete')).toBe(true);
   });
 
-  it('does not narrow an action the bundle has no rule for', async () => {
-    h.dbState.asset_associations = [];
+  it('applies the explicit delete scope to restricted asset operators', async () => {
+    h.dbState.asset_associations = [{ asset_id: 'asset-3', entity_type: 'team', entity_id: 'team-ops' }];
     expect(await isAssetActionAllowed({} as any, 'tenant-a', context(), { asset_id: 'asset-3', client_id: 'client-z' }, 'delete')).toBe(true);
   });
 });
