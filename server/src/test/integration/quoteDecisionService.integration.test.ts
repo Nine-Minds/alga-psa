@@ -431,7 +431,7 @@ describe('decideQuote (alga-2026-0002820 1/6)', () => {
     expect(onQuoteAcceptedSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('concurrent accepts: exactly one wins, the other gets already_decided, hook fires once', async () => {
+  it('concurrent accepts: exactly one wins, the others are refused without writing, hook fires once', async () => {
     const tenantId = await createTenantFixture();
     const clientId = await addClient(tenantId);
     const { quoteId, optional } = await addQuote(tenantId, clientId);
@@ -444,7 +444,12 @@ describe('decideQuote (alga-2026-0002820 1/6)', () => {
     const results: any[] = await Promise.all([attempt([]), attempt([optional]), attempt([]), attempt([optional])]);
 
     expect(results.filter((r) => r.status === 'decided')).toHaveLength(1);
-    expect(results.filter((r) => r.status === 'already_decided')).toHaveLength(3);
+    // Losers queue on the row lock and then see the decided quote.
+    const losers = results.filter((r) => r.status !== 'decided');
+    expect(losers).toHaveLength(3);
+    for (const loser of losers) {
+      expect(loser.status === 'already_decided' || (loser.status === 'not_pending' && loser.currentStatus === 'accepted')).toBe(true);
+    }
     expect(await decisions(tenantId, quoteId)).toHaveLength(1);
     expect(await activities(tenantId, quoteId, 'accepted')).toHaveLength(1);
     expect(onQuoteAcceptedSpy).toHaveBeenCalledTimes(1);

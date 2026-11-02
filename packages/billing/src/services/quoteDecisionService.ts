@@ -64,9 +64,9 @@ export interface DecideQuoteInput {
 
 export type QuoteDecisionResult =
   | { status: 'decided'; quote: IQuote; decisionId: string }
-  /** The quote left `sent` between the check and the UPDATE (or was decided again). Nothing was written. */
+  /** The guarded transition found the quote no longer `sent`. Nothing was written. */
   | { status: 'already_decided' }
-  /** The quote is not in `sent`. Nothing was written. */
+  /** The quote is not in `sent` (including a concurrent decider that lost the row lock). Nothing was written. */
   | { status: 'not_pending'; currentStatus: string | null }
   /** Missing, other tenant/client, draft, or a template. */
   | { status: 'not_found' }
