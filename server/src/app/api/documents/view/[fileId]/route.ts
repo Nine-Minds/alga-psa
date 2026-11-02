@@ -10,8 +10,9 @@ import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { assertInternalApiUser } from '@/lib/api/middleware/apiMiddleware';
 import { runWithTenant } from 'server/src/lib/db';
 import { getAuthorizedDocumentByFileId } from '@alga-psa/documents/actions/documentActions';
-import { isPreviewableDocumentMimeType } from '@alga-psa/core';
+import { resolveDocumentServingPolicy, buildContentDisposition } from '@alga-psa/core';
 
+// LEVERAGE: pattern document-byte-serving — serving policy now lives in @alga-psa/core resolveDocumentServingPolicy; byte fetching is still per-route
 const TENANT_LOGO_DISCOVERY_TENANT = 'tenant-logo-file-discovery';
 const TENANT_LOGO_DISCOVERY_REASON = 'public tenant logo file lookup before tenant is known';
 
@@ -154,9 +155,11 @@ export async function GET(
       }
     }
 
-    // Only inline-previewable types (images, videos, PDFs) are served here; the
-    // same predicate drives which documents link to /view vs /download.
-    if (!isPreviewableDocumentMimeType(fileRecord.mime_type)) {
+    // Only servable types (images, videos, PDFs) are streamed here. Whether the
+    // browser may render them inline is a separate question answered by the
+    // policy: SVG is servable but always sent as an attachment.
+    const policy = resolveDocumentServingPolicy(fileRecord.mime_type);
+    if (!policy.servable) {
         return new NextResponse('File type not supported for viewing', { status: 400 });
     }
 
@@ -165,7 +168,11 @@ export async function GET(
 
     // Handle HTTP Range requests for video files (needed for video seeking and previews)
     const range = request.headers.get('range');
-    const isVideoFile = fileRecord.mime_type?.startsWith('video/');
+    const isVideoFile = policy.mimeType.startsWith('video/');
+    const applyPolicyHeaders = (headers: Headers) => {
+      for (const [name, value] of Object.entries(policy.headers)) headers.set(name, value);
+      headers.set('Content-Disposition', buildContentDisposition(policy.disposition, fileRecord.original_name?.split(/[\\/]/).pop()?.trim()));
+    };
 
     if (range && isVideoFile) {
       // Parse range header (e.g., "bytes=0-1023" or "bytes=1024-")
@@ -197,6 +204,7 @@ export async function GET(
       headers.set('Content-Range', `bytes ${start}-${end}/${fileSize}`);
       headers.set('Content-Length', contentLength.toString());
       headers.set('Cache-Control', 'private, no-store');
+      applyPolicyHeaders(headers);
 
       // Return partial content (206)
       return new NextResponse(stream as any, {
@@ -219,6 +227,7 @@ export async function GET(
       
       // Cache for 1 hour (adjust as needed)
       headers.set('Cache-Control', 'private, no-store');
+      applyPolicyHeaders(headers);
 
       // Return the full stream response
       return new NextResponse(stream as any, {

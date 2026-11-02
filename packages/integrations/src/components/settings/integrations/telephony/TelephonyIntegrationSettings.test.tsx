@@ -222,12 +222,25 @@ describe('TelephonyIntegrationSettings', () => {
     await configure();
     await waitFor(() => expect(container.querySelector('#telephony-auto-ticket-toggle-teams-phone')).toBeTruthy());
 
+    // Hold the post-save reload open so the in-flight window is deterministic:
+    // the controls stay locked until the overview refresh settles.
+    let finishReload: () => void = () => {};
+    mocks.getOverview.mockImplementationOnce(
+      () => new Promise((resolve) => { finishReload = () => resolve(overview()); }),
+    );
+
     fireEvent.click(container.querySelector('#telephony-auto-ticket-toggle-teams-phone')!);
     await waitFor(() =>
       expect(mocks.setAutoTicketPolicy).toHaveBeenCalledWith({ provider: 'teams-phone', autoCreateTickets: true }),
     );
+    await waitFor(() => expect(mocks.getOverview).toHaveBeenCalledTimes(2));
+    const disableButton = () => screen.getByRole('button', { name: 'Disable' }) as HTMLButtonElement;
+    expect(disableButton().disabled).toBe(true);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Disable' }));
+    finishReload();
+    await waitFor(() => expect(disableButton().disabled).toBe(false));
+
+    fireEvent.click(disableButton());
     await waitFor(() =>
       expect(mocks.setProviderEnabled).toHaveBeenCalledWith({ provider: 'teams-phone', enabled: false }),
     );

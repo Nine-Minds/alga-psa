@@ -26,6 +26,7 @@ const schema: QuerySchema = {
     s: { kind: 'column', column: 's', type: 'string' },
     n: { kind: 'column', column: 'n', type: 'number' },
     b: { kind: 'column', column: 'b', type: 'boolean' },
+    details: { kind: 'column', column: 'details', type: 'string' },
     tags: { kind: 'set', table: 'conf_tag', local: 'row_id', foreign: 'row_id', valueColumn: 'tag', valueType: 'string' },
     // An id column, as `tickets.location_id` is: emptiness is "no value", never the empty string.
     location_id: { kind: 'column', column: 'location_id', type: 'uuid' },
@@ -47,6 +48,13 @@ const schema: QuerySchema = {
           valueType: 'uuid',
         },
       },
+    },
+    lines: {
+      kind: 'many',
+      table: 'conf_line',
+      local: 'row_id',
+      foreign: 'row_id',
+      attributes: { label: { kind: 'column', column: 'label', type: 'string' } },
     },
     owner: {
       kind: 'one',
@@ -80,7 +88,8 @@ describeDb('predicates SQL compiler', () => {
       pool: { min: 1, max: 1 },
     });
     trx = await db.transaction();
-    await trx.raw(`CREATE TEMP TABLE conf_item (tenant uuid, row_id text, s text, n numeric, b boolean, owner_id text, parent_id text, location_id uuid, contact_id text)`);
+    await trx.raw(`CREATE TEMP TABLE conf_item (tenant uuid, row_id text, s text, n numeric, b boolean, details text, owner_id text, parent_id text, location_id uuid, contact_id text)`);
+    await trx.raw(`CREATE TEMP TABLE conf_line (tenant uuid, row_id text, label text)`);
     await trx.raw(`CREATE TEMP TABLE conf_tag (tenant uuid, row_id text, tag text)`);
     await trx.raw(`CREATE TEMP TABLE conf_contact (tenant uuid, contact_id text)`);
     await trx.raw(`CREATE TEMP TABLE conf_contact_location (tenant uuid, contact_id text, location_id uuid)`);
@@ -105,15 +114,17 @@ describeDb('predicates SQL compiler', () => {
   for (const testCase of conformance.cases) {
     if (testCase.skip?.sql) continue;
     it(`conformance: ${testCase.id}`, async () => {
-      await trx.raw('TRUNCATE conf_item, conf_tag, conf_contact, conf_contact_location');
+      await trx.raw('TRUNCATE conf_item, conf_tag, conf_contact, conf_contact_location, conf_line');
       for (const row of testCase.rows) {
         const record = row.record as {
-          s?: string;
+          s?: unknown;
           n?: number;
           b?: boolean;
+          details?: string;
           tags?: string[];
           location_id?: string;
           contact?: { locations?: string[] };
+          lines?: Array<{ label?: string }>;
         };
         // A row that declares a `contact` gets one of its own, so "no requester" stays a missing hop.
         const contactId = record.contact ? `${row.id}-contact` : null;
@@ -123,10 +134,15 @@ describeDb('predicates SQL compiler', () => {
           s: record.s ?? null,
           n: record.n ?? null,
           b: record.b ?? null,
+          details: record.details ?? null,
           location_id: record.location_id ?? null,
           contact_id: contactId,
         });
-                const tags = record.tags ?? [];
+        // Related rows of a many-relation hop. Another tenant's row with the same id always holds a line that
+        // matches every text needle used in the table ('hello'); it must never be seen.
+        const lines = (record.lines ?? []).map((line) => ({ tenant: TENANT, row_id: row.id, label: line.label ?? null }));
+        await trx('conf_line').insert([...lines, { tenant: OTHER_TENANT, row_id: row.id, label: 'hello' }]);
+        const tags = record.tags ?? [];
         if (tags.length > 0) {
           await trx('conf_tag').insert(tags.map((tag) => ({ tenant: TENANT, row_id: row.id, tag })));
           // Same tags under another tenant's row id must never be seen.

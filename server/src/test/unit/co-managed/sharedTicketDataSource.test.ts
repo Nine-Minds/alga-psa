@@ -27,7 +27,7 @@ describe('co-managed shared ticket data source write path', () => {
     const save = vi.fn(async () => results.shift() ?? { ok: true as const });
     let n = 0;
     const edit = { editableFields: ['title', 'status_id'] as const, baselines: { title: 'Printer', status_id: 's1' }, save, newOperationId: () => `op-${++n}` };
-    return { save, edit, source: createCoManagedSharedTicketDataSource(summary, '/back', edit as never) };
+    return { save, edit, source: createCoManagedSharedTicketDataSource(summary, '/back', { edit: edit as never }) };
   };
 
   it('is writable only for the allowlisted fields and still has no optional sections', () => {
