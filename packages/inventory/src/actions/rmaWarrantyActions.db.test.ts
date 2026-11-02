@@ -159,6 +159,30 @@ describe('warranty claims (C5)', () => {
     expect(await counts()).toEqual(before);
   });
 
+  it('refuses warranty transitions for a case without an authorizable asset before mutation or publication', async () => {
+    const rmaId = randomUUID();
+    await knex('rma_cases').insert({
+      tenant: holder.tenant,
+      rma_id: rmaId,
+      rma_number: `RMA-${rmaId.slice(0, 8)}`,
+      status: 'warranty_review',
+      asset_id: null,
+      returned_unit_id: null,
+    });
+    holder.grants = new Set(['inventory:update', 'asset:update']);
+
+    const caseBefore = await rmaRow(rmaId);
+    const historyBefore = await events(rmaId);
+    const publishedBefore = [...published.events];
+    const result = await denyWarrantyClaim(rmaId, { denial_reason: 'not authorizable' });
+
+    expect(result).toHaveProperty('actionError');
+    expect(await rmaRow(rmaId)).toEqual(caseBefore);
+    expect(await events(rmaId)).toEqual(historyBefore);
+    expect(historyBefore).toHaveLength(0);
+    expect(published.events).toEqual(publishedBefore);
+  });
+
   it('credit disposes the custody episode; repair comes back through the office', async () => {
     const a1 = await newAsset();
     const { custody } = await inCustody(a1);

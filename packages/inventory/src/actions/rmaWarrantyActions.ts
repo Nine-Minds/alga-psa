@@ -49,10 +49,14 @@ function transition<S extends z.ZodTypeAny>(
         const row = await trx('rma_cases')
           .where({ tenant, rma_id: rmaId })
           .forUpdate()
-          .select('asset_id', 'client_id')
+          .select('asset_id', 'client_id', 'returned_unit_id')
           .first();
         if (!row) throw new WarrantyError('not_found', 'RMA case not found');
-        if (row.asset_id) await authorizeAsset(row.asset_id, row.client_id ?? null);
+        if (!row.asset_id) {
+          if (row.returned_unit_id) throw new WarrantyError('unit_tracked', 'This RMA is for a stock unit');
+          throw new WarrantyError('not_found', 'RMA case not found');
+        }
+        await authorizeAsset(row.asset_id, row.client_id ?? null);
         return core(trx, tenant, user.user_id, rmaId, input, { authorizeAsset });
       });
       return reload(tenant, rmaId, result.rma);
