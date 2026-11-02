@@ -44,12 +44,14 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 import { retainCoManagedWorkflowTicketAuthority } from '../workflowTicketAuthority';
+import { matchesCoManagedScopeConstraints } from '../sharedWorkIdentity';
 
 const trx: any = { raw: (s: string) => s };
+const managerId = '66666666-6666-4666-8666-666666666666';
 const input = (fields: string[], readFields: string[] = []) => ({ tenant: 't', ticketId: ids.ticket, workflowRunId: ids.run, actorUserId: ids.actor, fields, readFields });
 
 describe('workflow ticket authority: scope / redaction denial', () => {
-  beforeEach(() => { authorize.mockReset(); written.length = 0; locks.length = 0; });
+  beforeEach(() => { authorize.mockReset(); written.length = 0; locks.length = 0; rows.teams = { manager_id: ids.actor }; });
 
   it('allows an in-scope ticket with nothing redacted, and writes nothing itself', async () => {
     authorize.mockResolvedValue({ redactedFields: [] });
@@ -96,6 +98,13 @@ describe('workflow ticket authority: scope / redaction denial', () => {
     expect(grant.redactedFields).toEqual(['tickets.title', 'comments.note']);
     expect(authorize).toHaveBeenCalledTimes(1);
     expect(authorize).toHaveBeenCalledWith(trx, expect.anything(), expect.anything(), 'ticket', 'read', expect.objectContaining({ clientId: 'c', boardId: 'b' }));
+  });
+
+  it.each(['response_state', 'attributes.external_ref'])('read rejects a masked selector predicate: %s', async field => {
+    authorize.mockResolvedValue({ redactedFields: [`tickets.${field}`] });
+    await expect(retainCoManagedWorkflowTicketAuthority(trx, {
+      ...input([]), operation: 'read', predicateFields: [field],
+    })).rejects.toMatchObject({ code: 'WORKFLOW_TICKET_PREDICATE_FORBIDDEN' });
   });
 
   it.each(['client', 'board'])('create rejects prospective %s scope excluded by the publisher bundle', async excluded => {
@@ -176,18 +185,36 @@ describe('workflow ticket authority: scope / redaction denial', () => {
     expect(written).toEqual([]);
   });
 
-  it('projects a team assignment using the same manager identity that the handler persists', async () => {
-    authorize.mockResolvedValue({ redactedFields: [] });
-    await retainCoManagedWorkflowTicketAuthority(trx, {
-      ...input(['assignment']), operation: 'create', ticketId: undefined,
-      prospective: { clientId: ids.actor, boardId: ids.ticket, assignedUserIds: [], teamIds: [ids.run] }
+  it('denies a team assignment when only an additional user matches assigned_to scope', async () => {
+    rows.teams = { manager_id: managerId };
+    authorize.mockImplementation(async (_trx, _actor, _subject, _resource, _action, record) => {
+      if (!matchesCoManagedScopeConstraints([{ field: 'assigned_to', operator: 'eq', value: ids.actor } as any], record)) throw new Error('assigned_to scope denied');
+      return { redactedFields: [] };
     });
+    await expect(retainCoManagedWorkflowTicketAuthority(trx, {
+      ...input(['assignment']), operation: 'create', ticketId: undefined,
+      prospective: { clientId: ids.actor, boardId: ids.ticket, assignedUserIds: [ids.actor], teamIds: [ids.run] }
+    })).rejects.toThrow('assigned_to scope denied');
     expect(authorize).toHaveBeenCalledWith(trx, expect.anything(), expect.anything(), 'ticket', 'create',
-      expect.objectContaining({ assignedUserIds: [ids.actor], teamIds: [ids.run] }));
+      expect.objectContaining({ assignedUserIds: [managerId, ids.actor], teamIds: [ids.run] }));
+  });
+
+  it('allows a team assignment when the actual primary manager matches assigned_to scope', async () => {
+    rows.teams = { manager_id: managerId };
+    authorize.mockImplementation(async (_trx, _actor, _subject, _resource, _action, record) => {
+      if (!matchesCoManagedScopeConstraints([{ field: 'assigned_to', operator: 'eq', value: managerId } as any], record)) throw new Error('assigned_to scope denied');
+      return { redactedFields: [] };
+    });
+    await expect(retainCoManagedWorkflowTicketAuthority(trx, {
+      ...input(['assignment']), operation: 'create', ticketId: undefined,
+      prospective: { clientId: ids.actor, boardId: ids.ticket, assignedUserIds: [ids.actor], teamIds: [ids.run] }
+    })).resolves.toBeDefined();
+    expect(authorize).toHaveBeenCalledWith(trx, expect.anything(), expect.anything(), 'ticket', 'create',
+      expect.objectContaining({ assignedUserIds: [managerId, ids.actor], teamIds: [ids.run] }));
     expect(locks).toContain('teams.forShare');
   });
 
-  it('denies the prospective team scope before loading the team manager identity', async () => {
+  it('denies the prospective team scope after projecting the persisted team assignee', async () => {
     authorize.mockImplementation(async (_trx, _actor, _subject, _resource, action, record) => {
       if (action === 'create' && record.teamIds.includes(ids.run)) throw new Error('team scope denied');
       return { redactedFields: [] };
@@ -196,7 +223,7 @@ describe('workflow ticket authority: scope / redaction denial', () => {
       ...input(['assignment']), operation: 'create', ticketId: undefined,
       prospective: { clientId: ids.actor, boardId: ids.ticket, assignedUserIds: [], teamIds: [ids.run] }
     })).rejects.toThrow('team scope denied');
-    expect(locks).not.toContain('teams.forShare');
+    expect(locks).toContain('teams.forShare');
   });
 
   it('checks stored attribute aliases for fields returned by a mutation', async () => {

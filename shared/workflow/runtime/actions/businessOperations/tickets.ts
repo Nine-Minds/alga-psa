@@ -454,7 +454,8 @@ export function registerTicketActions(): void {
         ...(input.initial_comment ? ['comments'] : []),
         ...(input.attachments?.length ? ['attachments'] : []),
       ],
-      readFields: () => ['status_id', 'priority_id'],
+      // ticket_number and entered_at are returned as ticket_number and created_at.
+      readFields: () => ['status_id', 'priority_id', 'ticket_number', 'entered_at'],
       target: input => ({ prospective: {
         clientId: input.client_id, boardId: input.board_id,
         ...workflowTicketAssignmentScope(input.assignment ?? {})

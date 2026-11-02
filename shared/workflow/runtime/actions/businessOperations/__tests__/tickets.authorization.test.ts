@@ -8,7 +8,8 @@ const clientId = '33333333-3333-4333-8333-333333333333';
 const clientBId = '55555555-5555-4555-8555-555555555555';
 const boardId = '44444444-4444-4444-8444-444444444444';
 const ticket = { ticket_id: ticketId, ticket_number: 'T-1', title: 'Secret', client_id: clientId, board_id: boardId,
-  priority_id: boardId, contact_name_id: boardId, attributes: { custom_fields: { secret: 'private' } } };
+  priority_id: boardId, contact_name_id: boardId, response_state: 'awaiting_client',
+  attributes: { external_ref: 'vendor-1', custom_fields: { secret: 'private' } } };
 const tx = { tenantId: tenant, actorUserId: clientId, trx: { marker: 'same-transaction' } } as any;
 vi.mock('../../../registries/actionRegistry', () => ({ getActionRegistryV2: () => ({ register: (a: any) => state.actions.push(a) }) }));
 vi.mock('../shared', async original => ({
@@ -23,7 +24,7 @@ vi.mock('../../../../../lib/ticketChecklists', () => ({
 vi.mock('@alga-psa/db', () => ({ tenantDb: () => ({ tenantJoin: (query: any) => query, table: (name: string) => {
   state.queries.push(name);
   const query: any = new Proxy({}, { get: (_target, key) => {
-    if (key === 'then') return (resolve: any) => resolve([]);
+    if (key === 'then') return (resolve: any) => resolve(name === 'tickets' ? [{ ticket_id: ticket.ticket_id }] : []);
     if (key === 'first') return async () => name === 'tickets' ? { ...ticket, client_id: state.ticketClientId || ticket.client_id } : name === 'comments' ? {
       comment_id: ticketId, note: 'private comment', created_at: '2026-01-01T00:00:00.000Z'
     } : { name: 'High', priority_name: 'High', client_name: 'Private client', board_name: 'Private board' };
@@ -41,6 +42,8 @@ const authorize = vi.fn(async (_trx: any, input: any) => {
   // under client A, while its tenant-wide event may carry client B's ticket.
   if (input.operation !== 'create' && state.ticketClientId && state.ticketClientId !== clientId) throw denied;
   if (input.operation === 'create' && input.readFields?.some((field: string) => state.readHidden.includes(`tickets.${field}`))) throw denied;
+  if (input.operation === 'read' && input.predicateFields?.some((field: string) => state.readHidden.some((hidden: string) =>
+    hidden === `tickets.${field}` || (field === 'attributes.external_ref' && hidden === 'tickets.external_ref')))) throw denied;
   if (['create', 'update'].includes(input.operation) && state.hidden.includes('tickets.custom_fields')
     && input.fields.some((field: string) => ['custom_fields', 'attributes.custom_fields'].includes(field))) throw denied;
   return { redactedFields: state.hidden };
@@ -64,7 +67,7 @@ describe('registered ticket action authorization boundary', () => {
   it.each([{ ticket_id: ticketId }, { ticket_number: 'T-1' }, { external_ref: 'vendor-1' }])('denies out-of-scope reads through %j before related data is loaded', async selector => {
     state.ticketClientId = clientBId;
     await expect(action('find').handler(selector, ctx)).rejects.toBe(denied);
-    expect(state.queries).toEqual(['tickets']);
+    expect(state.queries.filter(name => name !== 'tickets')).toEqual([]);
     expect(state.writes).toEqual([]);
   });
 
@@ -117,10 +120,18 @@ describe('registered ticket action authorization boundary', () => {
     const input = action('create').inputSchema.parse({ client_id: clientId, board_id: boardId, priority_id: boardId, title: 'x' });
     await expect(action('create').handler(input, ctx)).rejects.toBe(denied);
     expect(authorize).toHaveBeenCalledWith(tx.trx, expect.objectContaining({
-      operation: 'create', fields: expect.arrayContaining(['status_id']), readFields: ['status_id', 'priority_id'],
+      operation: 'create', fields: expect.arrayContaining(['status_id']), readFields: expect.arrayContaining(['status_id', 'priority_id', 'ticket_number', 'entered_at']),
     }));
     expect(state.queries).toEqual([]);
     expect(state.writes).toEqual([]);
+  });
+
+  it.each(['tickets.ticket_number', 'tickets.entered_at'])('denies create when returned value %s is unreadable before insertion', async hiddenField => {
+    state.readHidden = [hiddenField];
+    const input = action('create').inputSchema.parse({ client_id: clientId, board_id: boardId, priority_id: boardId, title: 'x' });
+    await expect(action('create').handler(input, ctx)).rejects.toBe(denied);
+    expect(state.writes).toEqual([]);
+    expect(authorize).toHaveBeenCalledWith(tx.trx, expect.objectContaining({ readFields: expect.arrayContaining(['ticket_number', 'entered_at']) }));
   });
 
   it('returns an authorized ticket using read permission without update authority', async () => {
@@ -172,6 +183,28 @@ describe('registered ticket action authorization boundary', () => {
     expect(result.ticket.contact_name_id).toBeNull();
     expect(result.ticket.contact_name).toBeNull();
     expect(state.queries).not.toContain('contacts');
+  });
+
+  it.each([
+    ['response_state', 'awaiting_client'], ['response_state', 'awaiting_internal'],
+    ['attributes.external_ref', 'vendor-1'], ['attributes.external_ref', 'different-ref'],
+  ])('rejects masked %s predicate whether it matches (%s) or not', async (field, value) => {
+    state.readHidden = [`tickets.${field}`];
+    const selector = field === 'response_state'
+      ? { ticket_id: ticketId, response_state: value }
+      : { external_ref: value };
+    await expect(action('find').handler(selector, ctx)).rejects.toBe(denied);
+    expect(authorize).toHaveBeenCalledWith(tx.trx, expect.objectContaining({
+      operation: 'read', predicateFields: [field === 'attributes.external_ref' ? 'attributes.external_ref' : 'response_state'],
+    }));
+    expect(state.queries).not.toContain('comments');
+  });
+
+  it('evaluates authorized selector values after authorizing the candidate record', async () => {
+    const match = await action('find').handler({ external_ref: 'vendor-1', response_state: 'awaiting_client' }, ctx);
+    expect(match.ticket.ticket_id).toBe(ticketId);
+    const noMatch = await action('find').handler({ external_ref: 'different-ref' }, ctx);
+    expect(noMatch.ticket).toBeNull();
   });
 
   it('runs an authorized checklist mutation in the retained transaction', async () => {

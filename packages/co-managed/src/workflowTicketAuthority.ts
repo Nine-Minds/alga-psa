@@ -9,7 +9,7 @@ export interface CoManagedWorkflowTicketMutationInput {
   operation?: 'read' | 'create' | 'update';
   assignment?: { assignedUserIds: string[]; teamIds: string[] };
   prospective?: { clientId: string; boardId: string; assignedUserIds: string[]; teamIds: string[] };
-  tenant: string; ticketId?: string; workflowRunId: string; actorUserId: string; fields: string[]; readFields: string[];
+  tenant: string; ticketId?: string; workflowRunId: string; actorUserId: string; fields: string[]; readFields: string[]; predicateFields?: string[];
 }
 
 /** Committed email intents retain version/author authority after execution ends;
@@ -44,6 +44,7 @@ export async function retainCoManagedWorkflowTicketAuthority(trx: Knex.Transacti
     : field === 'assignment' ? ['assignment', 'assigned_to', 'assigned_team_id', 'ticket_resources']
     : field === 'status_id' ? ['status_id', 'status', 'statuses', 'is_closed', 'closed_at', 'closed_by', 'response_state']
     : field === 'contact_id' || field === 'contact_name_id' ? ['contact_id', 'contact_name_id', 'contact_name', 'requester', 'contact', 'contacts', 'contacts.contact_name_id']
+    : field === 'entered_at' || field === 'created_at' ? ['entered_at', 'created_at']
     : field === 'description' ? ['description', 'attributes.description']
     : field === 'comments' ? ['comments', 'conversation', 'note', 'markdown_content']
     : field === 'attachments' ? ['attachments', 'documents', 'document_associations', 'file_id', 'storage_ref']
@@ -66,19 +67,29 @@ export async function retainCoManagedWorkflowTicketAuthority(trx: Knex.Transacti
         ? [...(operation === 'create' ? [] : fields), ...input.readFields.flatMap(fieldSources)]
         : fields;
       if (operation !== 'read' && isCoManagedReadFieldHidden(decision.redactedFields, sources.flatMap(field => [field, `tickets.${field}`]))) throw new CoManagedSharedWorkError();
+      if (operation === 'read' && input.predicateFields?.length
+        && isCoManagedReadFieldHidden(decision.redactedFields, input.predicateFields.flatMap(field => [...fieldSources(field), `tickets.${field}`, ...fieldSources(field).map(source => `tickets.${source}`)]))) {
+        const error = new CoManagedSharedWorkError();
+        (error as Error & { code: string }).code = 'WORKFLOW_TICKET_PREDICATE_FORBIDDEN';
+        throw error;
+      }
     }
   };
-  await authorize(before);
+  // For team-backed creation, assignedUserIds currently contains only
+  // additional users. Wait until the team manager is resolved so the first
+  // identity passed to the scope evaluator is the persisted primary assignee.
+  if (!(operation === 'create' && assignment?.teamIds.length)) await authorize(before);
   if (assignment?.teamIds.length) {
-    // Confirm the publisher can act on the record and target teams before
-    // loading team identity data used to project persisted assignment state.
-    await authorize(before, { assignedUserIds: explicitAssignedUserIds, teamIds: assignment.teamIds });
-    const assignedUserIds = [...explicitAssignedUserIds];
+    // Team membership supplies the persisted primary assignee. Load it only
+    // after the existing ticket has been authorized, then authorize the exact
+    // persisted assignment projection (primary manager first, additional users after).
+    const teamManagerIds: string[] = [];
     for (const teamId of assignment.teamIds) {
       const team = await owner.table('teams').where('team_id', teamId).forShare().first('manager_id');
       if (!team?.manager_id) throw new CoManagedSharedWorkError();
-      assignedUserIds.push(team.manager_id);
+      teamManagerIds.push(team.manager_id);
     }
+    const assignedUserIds = [...teamManagerIds, ...explicitAssignedUserIds];
     await authorize(before, { assignedUserIds, teamIds: assignment.teamIds });
   } else if (operation === 'update' && input.assignment) {
     await authorize(before, { assignedUserIds: explicitAssignedUserIds, teamIds: [] });

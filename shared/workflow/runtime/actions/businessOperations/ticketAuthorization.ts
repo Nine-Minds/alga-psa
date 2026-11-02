@@ -1,6 +1,6 @@
 import type { ActionContext, ActionDef, ActionRegistry } from '../../registries/actionRegistry';
 import { tenantDb } from '@alga-psa/db';
-import { authorizeWorkflowTicket, requirePermission, withTenantTransaction, type TenantTxContext } from './shared';
+import { authorizeWorkflowTicket, requirePermission, withTenantTransaction, workflowTicketAuthorityActive, type TenantTxContext } from './shared';
 
 type TicketAuthority<I> = {
   operation: 'read' | 'create' | 'update';
@@ -61,21 +61,72 @@ export function registerAuthorizedTicketAction<I, O>(
     let target = authority.target(input);
     if (authority.operation === 'read') {
       const lookup = input as { ticket_id?: string; ticket_number?: string; external_ref?: string; response_state?: string };
-      const query = tenantDb(tx.trx, tx.tenantId).table('tickets');
-      if (lookup.ticket_id) query.where('ticket_id', lookup.ticket_id);
-      else if (lookup.ticket_number) query.where('ticket_number', lookup.ticket_number);
-      else if (lookup.external_ref) query.andWhereRaw("(attributes->>'external_ref') = ?", [lookup.external_ref]);
-      else throw new Error('Ticket lookup requires a selector');
-      if (lookup.response_state) query.where('response_state', lookup.response_state);
-      // Prevent scope drift between selecting the record and retaining its authority.
-      ticket = await query.select('ticket_id').forShare().first();
-      if (!ticket) return handler(input, ctx, tx, { ticket: null, redactedFields: [] });
-      target = { ticketId: ticket.ticket_id };
+      if (!lookup.ticket_id && !lookup.ticket_number && !lookup.external_ref) throw new Error('Ticket lookup requires a selector');
+      const predicateFields = [
+        ...(lookup.ticket_number ? ['ticket_number'] : []),
+        ...(lookup.external_ref ? ['attributes.external_ref'] : []),
+        ...(lookup.response_state ? ['response_state'] : []),
+      ];
+      if (!await workflowTicketAuthorityActive(tx)) {
+        const query = tenantDb(tx.trx, tx.tenantId).table('tickets');
+        if (lookup.ticket_id) query.where('ticket_id', lookup.ticket_id);
+        else if (lookup.ticket_number) query.where('ticket_number', lookup.ticket_number);
+        else if (lookup.external_ref) query.andWhereRaw("(attributes->>'external_ref') = ?", [lookup.external_ref]);
+        if (lookup.response_state) query.where('response_state', lookup.response_state);
+        const found = await query.select('ticket_id').first();
+        if (!found) return handler(input, ctx, tx, { ticket: null, redactedFields: [] });
+        target = { ticketId: found.ticket_id };
+        const grant = await authorizeWorkflowTicket(ctx, tx, { ...target, operation: authority.operation, fields: authority.fields(input), readFields: authority.readFields?.(input) ?? [] });
+        ticket = await tenantDb(tx.trx, tx.tenantId).table('tickets').where('ticket_id', target.ticketId).first();
+        return handler(input, ctx, tx, { ticket, redactedFields: grant.redactedFields });
+      }
+      // Resolve candidate identities without evaluating protected predicates.
+      // Each candidate's record scope and predicate-field permissions are
+      // retained before the full row is loaded or any predicate is compared.
+      const candidates = lookup.ticket_id
+        ? [{ ticket_id: lookup.ticket_id }]
+        : await tenantDb(tx.trx, tx.tenantId).table('tickets').select('ticket_id');
+      for (const candidate of candidates) {
+        const candidateTarget = { ticketId: candidate.ticket_id };
+        let grant: { redactedFields: string[] };
+        try {
+          grant = await authorizeWorkflowTicket(ctx, tx, {
+            ...candidateTarget,
+            operation: authority.operation,
+            fields: authority.fields(input),
+            readFields: authority.readFields?.(input) ?? [],
+            predicateFields,
+          });
+        } catch (error) {
+          const code = (error as { code?: unknown } | null)?.code;
+          // Unreadable candidates are invisible to this selector. A predicate
+          // permission refusal is different: fail closed even if the value
+          // would not have matched, preventing a match/no-match oracle.
+          if (code === 'CO_MANAGED_SHARED_WORK_FORBIDDEN') continue;
+          throw error;
+        }
+        const row = await tenantDb(tx.trx, tx.tenantId).table('tickets').where('ticket_id', candidate.ticket_id).first();
+        if (!row) continue;
+        const attrs = typeof row.attributes === 'string' ? safeParseAttributes(row.attributes) : row.attributes;
+        if (lookup.ticket_number && row.ticket_number !== lookup.ticket_number) continue;
+        if (lookup.external_ref && attrs?.external_ref !== lookup.external_ref) continue;
+        if (lookup.response_state && row.response_state !== lookup.response_state) continue;
+        target = candidateTarget;
+        ticket = row;
+        return handler(input, ctx, tx, { ticket, redactedFields: grant.redactedFields });
+      }
+      return handler(input, ctx, tx, { ticket: null, redactedFields: [] });
     }
     const grant = await authorizeWorkflowTicket(ctx, tx, { ...target, operation: authority.operation, fields: authority.fields(input), readFields: authority.readFields?.(input) ?? [] });
-    if (authority.operation === 'read') {
-      ticket = await tenantDb(tx.trx, tx.tenantId).table('tickets').where('ticket_id', target.ticketId).first();
-    }
     return handler(input, ctx, tx, { ticket, redactedFields: grant.redactedFields });
   }) });
+}
+
+function safeParseAttributes(value: string): Record<string, unknown> | null {
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
 }

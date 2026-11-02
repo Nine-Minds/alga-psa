@@ -597,6 +597,10 @@ async function resolveWorkflowTicketAuthority(tx: TenantTxContext) {
   return authority;
 }
 
+export async function workflowTicketAuthorityActive(tx: TenantTxContext): Promise<boolean> {
+  return Boolean(await resolveWorkflowTicketAuthority(tx));
+}
+
 export async function retainWorkflowTicketAuthority(ctx: ActionContext, tx: TenantTxContext, ticketId: string, fields: string[], readFields: string[] = []): Promise<void> {
   const authority = await resolveWorkflowTicketAuthority(tx);
   if (!authority) return;

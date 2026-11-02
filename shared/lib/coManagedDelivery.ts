@@ -195,6 +195,8 @@ export interface WorkflowTicketAuthorizationInput {
   prospective?: { clientId: string; boardId: string; assignedUserIds: string[]; teamIds: string[] };
   fields: string[];
   readFields?: string[];
+  /** Selector fields must be authorized before their values affect result matching. */
+  predicateFields?: string[];
   assignment?: { assignedUserIds: string[]; teamIds: string[] };
 }
 
