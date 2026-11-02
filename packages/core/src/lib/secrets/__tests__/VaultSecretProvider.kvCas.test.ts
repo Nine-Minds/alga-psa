@@ -101,13 +101,15 @@ describe('VaultSecretProvider KV v2 compare-and-set mutations', () => {
     const address = server.address();
     if (!address || typeof address === 'string') throw new Error('Vault test server did not bind a TCP port');
     vaultAddress = `http://127.0.0.1:${address.port}`;
+  });
+
+  beforeEach(() => {
+    // The shared server test setup restores stubbed environment variables after
+    // each test, so establish the simulator configuration for every case.
     vi.stubEnv('VAULT_ADDR', vaultAddress);
     vi.stubEnv('VAULT_TOKEN', 'test-token');
     vi.stubEnv('VAULT_APP_SECRET_PATH', 'kv/data/app/secrets');
     vi.stubEnv('VAULT_TENANT_SECRET_PATH_TEMPLATE', 'kv/data/tenants/{tenantId}/secrets');
-  });
-
-  beforeEach(() => {
     documents = new Map();
     nextReadPair = null;
     casConflicts = 0;
