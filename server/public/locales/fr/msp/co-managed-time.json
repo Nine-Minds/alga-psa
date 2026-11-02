@@ -1,0 +1,25 @@
+{
+  "loading": "Chargement…",
+  "reload": "Recharger",
+  "effort": {
+    "title": "Charge de travail",
+    "description": "Temps saisi par l'équipe du client, votre équipe et les deux combinés. Chaque saisie n'est comptée qu'une fois.",
+    "error": "Impossible de charger l'effort.",
+    "unavailable": "Masqué",
+    "hours": "{{value}} h",
+    "customerMinutes": "Équipe du client",
+    "mspMinutes": "Votre équipe",
+    "combinedMinutes": "Combiné",
+    "customerView": {
+      "customerMinutes": "Votre équipe",
+      "mspMinutes": "MSP"
+    }
+  },
+  "time": {
+    "log": "Saisir du temps",
+    "unavailable": "La saisie de temps n'est pas disponible pour ce travail."
+  },
+  "ticket": {
+    "restricted": "Élément de travail restreint"
+  }
+}

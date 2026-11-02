@@ -249,7 +249,10 @@ export const ticketSmartSearch: SmartSearchEntityDefinition<TicketSmartSearchSco
   noun: 'tickets',
   scopeSchema: ticketListFiltersSchema,
   normalizeScope: (scope) => ({ ...scope, searchQuery: '' }),
-  enumerate: (scope) => getAllMatchingTicketIds(scope),
+  enumerate: async (scope) => {
+    const ids = await getAllMatchingTicketIds(scope);
+    return Array.isArray(ids) ? ids.map((id) => ({ id })) : ids;
+  },
   loadCandidates: loadTicketCandidates,
   hydrateRows: async (scope, ids) => {
     const result = await loadTicketListItemsByIds(scope, ids);

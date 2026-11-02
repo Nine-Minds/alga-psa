@@ -93,6 +93,14 @@ export class TimeEntryService extends BaseService<any> {
     return knex.raw("to_char(??, 'YYYY-MM-DD') as ??", [`${this.tableName}.work_date`, 'work_date']);
   }
 
+  /** A contributed work item type (not in the native set) is rejected exactly as the schema rejected it before it became a contributed type. */
+  private assertNativeWorkItemType(workItemType: string | undefined): void {
+    if (workItemType === 'co_managed') {
+      throw new ValidationError('Validation failed', [{ code: 'invalid_enum_value', path: ['work_item_type'],
+        message: "Invalid enum value. Expected 'ticket' | 'project_task' | 'non_billable_category' | 'ad_hoc' | 'interaction'" }]);
+    }
+  }
+
   private assertServiceIdPresent(serviceId: string | null | undefined): void {
     if (!serviceId) {
       throw new ValidationError('Validation failed', [
@@ -278,6 +286,7 @@ export class TimeEntryService extends BaseService<any> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId, workItemType: data.work_item_type, workItemId: data.work_item_id }, 'entries', 'create', [data, context]);
     if (delegated.handled) return delegated.value;
+    this.assertNativeWorkItemType(data.work_item_type);
     const { knex } = await this.getKnex();
 
     this.assertServiceIdPresent(data.service_id);
@@ -416,6 +425,7 @@ export class TimeEntryService extends BaseService<any> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'entries', 'update', [id, data, context]);
     if (delegated.handled) return delegated.value;
+    this.assertNativeWorkItemType((data as { work_item_type?: string }).work_item_type);
     const { knex } = await this.getKnex();
     const existing = await this.getById(id, context);
     if (!existing) {
@@ -673,6 +683,7 @@ export class TimeEntryService extends BaseService<any> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId, workItemType: data.work_item_type, workItemId: data.work_item_id }, 'entries', 'startTimeTracking', [data, context]);
     if (delegated.handled) return delegated.value;
+    this.assertNativeWorkItemType(data.work_item_type);
     const { knex } = await this.getKnex();
 
     this.assertServiceIdPresent(data.service_id);

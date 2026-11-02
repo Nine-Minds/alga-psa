@@ -57,7 +57,7 @@ export const openWarrantyClaim = withAuth(async (user, { tenant }, rawInput: unk
     const input = parsed.data;
     const { knex: db } = await createTenantKnex();
     const result = await withTransaction(db, async (trx: Knex.Transaction) =>
-      openWarrantyClaimCore(trx, tenant, user.user_id, input, { authorizeAsset: await assetGate(trx, tenant, user as any) })
+      openWarrantyClaimCore(trx, tenant, user.user_id, input, { authorizeAsset: await assetGate(trx, tenant, user as any, 'update') })
     );
     await publishWarrantyClaimOpened(tenant, result.rma, result.serialNumber);
     await publishRmaUpdated(tenant, result.rma, null, ['status'], user.user_id);

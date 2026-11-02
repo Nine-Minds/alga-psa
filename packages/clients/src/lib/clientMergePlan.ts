@@ -523,6 +523,14 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
       + '(SOURCE_HAS_CO_MANAGEMENT); what remains afterwards is retained history pinned to the original client.',
   },
   {
+    table: 'co_managed_time_work_references',
+    reason:
+      'Billing provenance of one MSP time entry booked against shared customer work. Its client_id is '
+      + "the relationship's sponsor_client_id captured at booking, and co-managed effort totals match it "
+      + 'against that relationship; the merge does not re-point relationships, so moving the row would drop '
+      + 'the entry from the shared-work totals it describes.',
+  },
+  {
     table: 'co_managed_ticket_references',
     reason:
       'MSP-side routing row for a customer\'s shared ticket. Its client_id mirrors the co-management '

@@ -47,12 +47,14 @@ vi.mock('@alga-psa/assets/lib/assetReadAuthorization', async (orig) => {
     ...actual,
     isAssetReadAllowed: async (...args: Parameters<typeof actual.isAssetReadAllowed>) =>
       denied.assetIds.has(args[3].asset_id) ? false : actual.isAssetReadAllowed(...args),
+    isAssetActionAllowed: async (...args: Parameters<typeof actual.isAssetActionAllowed>) =>
+      denied.assetIds.has(args[3].asset_id) ? false : actual.isAssetActionAllowed(...args),
     filterReadableAssets: async (...args: Parameters<typeof actual.filterReadableAssets>) =>
       (await actual.filterReadableAssets(...args)).filter((a) => !denied.assetIds.has(a.asset_id)),
   };
 });
 
-import { approveWarrantyClaim, denyWarrantyClaim, openWarrantyClaim } from './rmaWarrantyActions';
+import { approveWarrantyClaim, denyWarrantyClaim, markDeviceReceived, openWarrantyClaim, receiveVendorReplacement, shipToVendor } from './rmaWarrantyActions';
 import { getRmaCase, listRmaCases } from './rmaActions';
 import { openCustody } from '@alga-psa/assets/lib/custody/openCustody';
 import { loadPermissionUtils, loadServerMigration } from '../test-utils/serverMigrations';
@@ -270,5 +272,68 @@ describe('T021 record-level asset visibility on RMA reads', () => {
     denied.assetIds.clear();
     expect(await getRmaCase(claim.rma_id)).toMatchObject({ rma_id: claim.rma_id });
     expect(((await listRmaCases()) as any[]).map((r) => r.rma_id)).toEqual(expect.arrayContaining([claim.rma_id, unitRma]));
+  });
+});
+
+describe('alga-2026-0002942 warranty mutations authorize the asset for update, not read', () => {
+  it('a Restricted Asset Operator (read: selected clients, update: same team) cannot open, approve or replace on an out-of-team asset', async () => {
+    const technician = await roleId('Technician');
+    const setupUser = await addUser(technician);
+    const restricted = await addUser(technician);
+
+    // Real bundle rules, as shipped: asset:read = selected_clients, asset:update = same_team.
+    const bundleId = randomUUID();
+    const revisionId = randomUUID();
+    await knex('authorization_bundles').insert({ tenant: holder.tenant, bundle_id: bundleId, bundle_key: `rao-${bundleId.slice(0, 8)}`, name: 'Restricted Asset Operator', is_system: false, status: 'active' });
+    await knex('authorization_bundle_revisions').insert({ tenant: holder.tenant, revision_id: revisionId, bundle_id: bundleId, revision_number: 1, lifecycle_state: 'published' });
+    await knex('authorization_bundles').where({ tenant: holder.tenant, bundle_id: bundleId }).update({ published_revision_id: revisionId });
+    await knex('authorization_bundle_rules').insert([
+      { tenant: holder.tenant, bundle_id: bundleId, revision_id: revisionId, resource_type: 'asset', action: 'read', template_key: 'selected_clients', effect: 'narrow', config: JSON.stringify({ selectedClientIds: [CLIENT] }), position: 0 },
+      { tenant: holder.tenant, bundle_id: bundleId, revision_id: revisionId, resource_type: 'asset', action: 'update', template_key: 'same_team', effect: 'narrow', config: '{}', position: 1 },
+    ]);
+    await knex('authorization_bundle_assignments').insert({ tenant: holder.tenant, bundle_id: bundleId, target_type: 'user', target_id: restricted, status: 'active' });
+
+    // An unrestricted technician drives a claim to "sent to vendor" on the asset.
+    holder.grants = null;
+    holder.userId = setupUser;
+    const assetId = await newAsset();
+    await inCustody(assetId);
+    const opened = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'Dock drops displays' }));
+    ok(await approveWarrantyClaim(opened.rma_id, { track: 'standard', vendor_id: VENDOR }));
+    ok(await markDeviceReceived(opened.rma_id, {}));
+    ok(await shipToVendor(opened.rma_id, { carrier: 'UPS', tracking_number: '1Z1', return_by: '2026-12-01' }));
+    // A second claim left in review, to try approving.
+    const reviewAsset = await newAsset();
+    await inCustody(reviewAsset);
+    const inReview = ok(await openWarrantyClaim({ asset_id: reviewAsset, reason: 'x' }));
+    const openTarget = await newAsset();
+    await inCustody(openTarget);
+
+    const assetRow = (id: string) => knex('assets').where({ tenant: holder.tenant, asset_id: id }).first();
+    const rmaStatus = async (id: string) => (await knex('rma_cases').where({ tenant: holder.tenant, rma_id: id }).first()).status;
+    const assetBefore = await assetRow(assetId);
+    const casesBefore = await caseCount();
+
+    holder.userId = restricted;
+    const notFound = (r: any) => expect(r).toMatchObject({ actionError: expect.stringMatching(/RMA case not found/) });
+    // Precondition: the subject can read the asset's claim (read rule passes) but update is refused.
+    notFound(await receiveVendorReplacement(opened.rma_id, { replacement_serial_number: 'HIJACKED', model: 'EVIL', manufacturer: 'EVIL', warranty_end_date: '2099-01-01', location_id: LOCATION }));
+    notFound(await approveWarrantyClaim(inReview.rma_id, { track: 'standard', vendor_id: VENDOR }));
+    notFound(await openWarrantyClaim({ asset_id: openTarget, reason: 'nope' }));
+
+    const assetAfter = await assetRow(assetId);
+    for (const col of ['serial_number', 'model', 'manufacturer', 'warranty_end_date']) expect(assetAfter[col], col).toEqual(assetBefore[col]);
+    expect(assetAfter.serial_number).toBe('SER-1234');
+    expect(await rmaStatus(opened.rma_id)).toBe('sent_to_vendor');
+    expect(await rmaStatus(inReview.rma_id)).toBe('warranty_review');
+    expect(await caseCount()).toBe(casesBefore);
+
+    // Control: the same subject WAS read-allowed, and a team member would pass update.
+    denied.assetIds.clear();
+    const { isAssetActionAllowed, createAssetReadContext } = await import('@alga-psa/assets/lib/assetReadAuthorization');
+    const ctx = await createAssetReadContext(knex, holder.tenant, { user_id: restricted, user_type: 'internal' });
+    const input = { asset_id: assetId, client_id: CLIENT };
+    expect(await isAssetActionAllowed(knex, holder.tenant, ctx, input, 'read')).toBe(true);
+    expect(await isAssetActionAllowed(knex, holder.tenant, ctx, input, 'update')).toBe(false);
   });
 });

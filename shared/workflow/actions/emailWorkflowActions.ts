@@ -13,6 +13,7 @@ import { inboundEmailReplyReceivedEventPayloadSchema } from '@alga-psa/event-sch
 import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBuilders/inboundEmailReplyEventBuilders';
 import { normalizeRfc822MessageId } from '../../services/email/inboundEmailIdentity';
 import { normalizeEmailAddress } from '../../lib/email/addressUtils';
+import { contactEmailMatch } from '../../lib/email/contactEmailMatch';
 import { ContactModel } from '../../models/contactModel';
 import { createClientWithDefaults } from '../../models/clientCreation';
 import { buildContactCreatedPayload } from '../streams/domainEventBuilders/contactEventBuilders';
@@ -302,16 +303,7 @@ export async function findContactByEmail(
       });
 
       const candidates = await candidatesQuery
-        .andWhere(function contactEmailMatch(this: Knex.QueryBuilder) {
-          this
-            .where('contacts.email', normalizedEmail)
-            .orWhereExists(
-              db.subquery('contact_additional_email_addresses as caea')
-                .select(trx.raw('1'))
-                .whereRaw('caea.contact_name_id = contacts.contact_name_id')
-                .andWhere('caea.normalized_email_address', normalizedEmail)
-            );
-        })
+        .andWhere(contactEmailMatch(db, trx, normalizedEmail))
         .orderBy('contacts.created_at', 'asc')
         .orderBy('contacts.contact_name_id', 'asc');
 
@@ -1886,7 +1878,7 @@ export async function parseEmailReplyBody(
 export async function findTicketByReplyToken(
   token: string,
   tenant: string
-): Promise<{ ticketId?: string; commentId?: string; projectId?: string } | null> {
+): Promise<{ ticketId?: string; commentId?: string; projectId?: string; metadata?: unknown } | null> {
   if (!token) {
     return null;
   }
@@ -1906,6 +1898,7 @@ export async function findTicketByReplyToken(
       ticketId: record.ticket_id || undefined,
       commentId: record.comment_id || undefined,
       projectId: record.project_id || undefined,
+      metadata: record.metadata ?? undefined,
     };
   });
 }
