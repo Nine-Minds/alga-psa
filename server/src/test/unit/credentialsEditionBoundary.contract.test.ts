@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import ts from 'typescript';
 
 /**
  * Credentials vault is an EE-only (Pro) feature. Its DB schema lives in
@@ -31,7 +32,6 @@ const ALLOWED_FILES = new Set<string>([
   'server/migrations/20260828120000_add_credential_audit_permission.cjs',
 
   // Shared metadata / RBAC catalog (data, not logic).
-  'packages/db/src/lib/tenantTableMetadata.ts',
   'server/migrations/utils/tenantDb.cjs',
   'server/migrations/utils/permissions/catalog.cjs',
 
@@ -53,13 +53,52 @@ const ALLOWED_FILES = new Set<string>([
   'packages/clients/src/lib/clientMergeEngine.test.ts',
 ]);
 
+// Shared lifecycle/admission catalogs describe the combined CE + EE schema.
+// Exempt only their literal data declarations, never executable code in the file.
+const METADATA_DECLARATIONS = new Map([
+  ['packages/db/src/lib/tenantTableMetadata.ts', 'tenantTableMetadata'],
+  ['packages/db/src/lib/tenantTableManifest.ts', 'TENANT_TABLE_MANIFEST'],
+  ['packages/db/src/lib/tenantTableForeignKeys.ts', 'TENANT_TABLE_FOREIGN_KEYS'],
+  ['packages/db/src/lib/operationalWriteTables.ts', 'OPERATIONAL_WRITE_TABLES'],
+]);
+
+function isLiteralData(node: ts.Node): boolean {
+  if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression(node)) {
+    return isLiteralData(node.expression);
+  }
+  if (ts.isArrayLiteralExpression(node)) return node.elements.every(isLiteralData);
+  if (ts.isObjectLiteralExpression(node)) {
+    return node.properties.every(property => ts.isPropertyAssignment(property)
+      && !ts.isComputedPropertyName(property.name) && isLiteralData(property.initializer));
+  }
+  return ts.isStringLiteral(node) || ts.isNumericLiteral(node)
+    || node.kind === ts.SyntaxKind.TrueKeyword || node.kind === ts.SyntaxKind.FalseKeyword
+    || node.kind === ts.SyntaxKind.NullKeyword;
+}
+
+function withoutMetadata(file: string, source: string): string {
+  const declaration = METADATA_DECLARATIONS.get(file);
+  if (!declaration) return source;
+  const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+  for (const statement of ast.statements) {
+    if (!ts.isVariableStatement(statement) || !(statement.declarationList.flags & ts.NodeFlags.Const)) continue;
+    for (const node of statement.declarationList.declarations) {
+      if (ts.isIdentifier(node.name) && node.name.text === declaration
+        && node.initializer && isLiteralData(node.initializer)) {
+        return source.slice(0, node.initializer.getStart(ast)) + '[]' + source.slice(node.initializer.end);
+      }
+    }
+  }
+  return source;
+}
+
 const TABLES = 'credentials|credential_associations|credential_access_grants';
 const KNEX_TABLE_METHODS =
   'createTable|createTableIfNotExists|dropTable|dropTableIfExists|alterTable|hasTable|hasColumn|table|from|into|join|leftJoin|rightJoin|innerJoin|scoped|unscoped|withSchema';
 
-const VIOLATION_PATTERNS: Array<{ name: string; regex: RegExp }> = [
-  // Names unique to the vault: any mention in code is a violation.
-  { name: 'vault association/grant table', regex: /\b(?:credential_associations|credential_access_grants)\b/ },
+const VIOLATION_PATTERNS: Array<{ name: string; regex: RegExp; allowsMetadata?: boolean }> = [
+  // Names unique to the vault are forbidden outside approved metadata declarations.
+  { name: 'vault association/grant table', regex: /\b(?:credential_associations|credential_access_grants)\b/, allowsMetadata: true },
   // `credentials` is a common word: only match it in table-position contexts.
   {
     name: 'knex table method on credentials',
@@ -69,7 +108,7 @@ const VIOLATION_PATTERNS: Array<{ name: string; regex: RegExp }> = [
     name: 'knex builder call on credentials',
     regex: /\b(?:db|knex|trx|tx|conn|connection|knexOrTrx|scopedDb)\(\s*['"`]credentials['"`]\s*\)/,
   },
-  { name: 'table: credentials', regex: /\btable:\s*['"`]credentials['"`]/ },
+  { name: 'table: credentials', regex: /\btable:\s*['"`]credentials['"`]/, allowsMetadata: true },
   {
     name: 'raw SQL on credentials',
     regex: /\b(?:from|join|into|update|table|exists)\s+(?:public\.)?"?credentials"?\s*(?:\w+\s+)?(?:where|on|set|values|cascade|\(|;|$)/m,
@@ -96,6 +135,56 @@ function isAllowed(file: string): boolean {
   return ALLOWED_FILES.has(file) || ALLOWED_PREFIXES.some((prefix) => file.startsWith(prefix));
 }
 
+function findViolations(file: string, source: string): string[] {
+  if (isAllowed(file)) return [];
+  const outsideMetadata = withoutMetadata(file, source);
+  return VIOLATION_PATTERNS
+    .filter(({ regex, allowsMetadata }) => regex.test(allowsMetadata ? outsideMetadata : source))
+    .map(({ name }) => `${file}: ${name}`);
+}
+
+describe('credentials boundary validation', () => {
+  const manifest = 'packages/db/src/lib/tenantTableManifest.ts';
+  const data = "[{ table: 'credentials', deletion: 'ordered' }, { table: 'credential_associations', deletion: 'ordered' }]";
+
+  it.each([...METADATA_DECLARATIONS])('accepts literal schema metadata in %s', (file, name) => {
+    expect(findViolations(file, `export const ${name} = ${data} as const;`)).toEqual([]);
+  });
+
+  it('rejects the same data outside its designated declaration or file', () => {
+    expect(findViolations(manifest, `const OTHER = ${data};`)).not.toEqual([]);
+    expect(findViolations('packages/db/src/lib/other.ts', `const TENANT_TABLE_MANIFEST = ${data};`)).not.toEqual([]);
+    expect(findViolations(manifest, `let TENANT_TABLE_MANIFEST = ${data};`)).not.toEqual([]);
+  });
+
+  it.each([
+    "db('credentials').select('*');",
+    "db.from('credential_associations').delete();",
+    "db.raw('delete from credentials where tenant = ?');",
+    "import vault from '@enterprise/lib/credentials/service';",
+  ])('rejects runtime vault access alongside metadata: %s', operation => {
+    expect(findViolations(manifest, `const TENANT_TABLE_MANIFEST = ${data};\n${operation}`)).not.toEqual([]);
+  });
+
+  it.each([
+    "[{ table: 'credentials', value: db('credentials') }]",
+    "[{ table: 'credentials', get value() { return db('credentials'); } }]",
+    "[{ table: 'credentials', ...extra }]",
+    "[{ table: 'credentials', value: importedData }]",
+    "[{ table: 'credentials', [computeKey()]: true }]",
+  ])('rejects executable or indirect metadata: %s', initializer => {
+    expect(findViolations(manifest, `const TENANT_TABLE_MANIFEST = ${initializer};`)).not.toEqual([]);
+  });
+
+  it('still detects raw SQL embedded in literal metadata', () => {
+    expect(findViolations(manifest, `const TENANT_TABLE_MANIFEST = [{ note: 'delete from credentials where tenant = ?' }];`)).not.toEqual([]);
+  });
+
+  it('permits unrelated authentication credentials and EE vault code', () => {
+    expect(findViolations('packages/auth/src/oauth.ts', 'const credentials = provider.credentials;')).toEqual([]);
+    expect(findViolations('ee/server/src/lib/credentials/service.ts', "db('credentials').select('*');")).toEqual([]);
+  });
+});
 
 describe('credentials edition boundary', () => {
   it('keeps vault tables and EE credential modules out of CE source', () => {
@@ -105,15 +194,13 @@ describe('credentials edition boundary', () => {
       const abs = path.join(repoRoot, file);
       if (!fs.existsSync(abs)) continue; // deleted in working tree but not yet committed
       const source = fs.readFileSync(abs, 'utf8');
-      for (const { name, regex } of VIOLATION_PATTERNS) {
-        if (regex.test(source)) violations.push(`${file}: ${name}`);
-      }
+      violations.push(...findViolations(file, source));
     }
     expect(violations).toEqual([]);
   });
 
   it('every allowlisted explicit path exists', () => {
-    const missing = [...ALLOWED_FILES].filter((file) => !fs.existsSync(path.join(repoRoot, file)));
+    const missing = [...ALLOWED_FILES, ...METADATA_DECLARATIONS.keys()].filter((file) => !fs.existsSync(path.join(repoRoot, file)));
     expect(missing).toEqual([]);
   });
 
