@@ -34,6 +34,7 @@ import { getOpenCustodyForAssets, listCustodyEpisodes, listCustodyQueue } from '
 import { publishCustodyChanged } from './publishCustodyChanged';
 import { assertWarrantyTransition, RmaTransitionError } from '@alga-psa/shared/lib/rma/warrantyStateMachine';
 import { recordRmaEvent } from '@alga-psa/shared/lib/rma/recordRmaEvent';
+import { requireWarrantyPermission } from '../warrantyAuthorization';
 export { resolveCustodyToday } from './today';
 import { loadCustody, locationNames, userNames } from './shared';
 
@@ -209,23 +210,37 @@ export async function recordCustodyEventInTransaction(
 ) {
   await authorizeCustodyEpisode(trx, tenant, user, custodyId);
   await assertCustodyDocumentsReadable(trx, tenant, user, input.document_ids);
-  // Lock any linked advance-track RMA before recordCustodyEvent locks the episode. The warranty
-  // charge path uses the same RMA -> custody order, making shipment and charging mutually exclusive.
-  const episode = await loadCustody(trx, tenant, custodyId);
-  const linkedRma = input.event_type === 'shipped'
+  // Only exact custody links identify an obligation. Lock every linked asset-tracked advance RMA
+  // in stable order before the episode; charge uses the same RMA -> custody order.
+  const linkedRmas = input.event_type === 'shipped'
     ? await tenantDb(trx, tenant).table('rma_cases')
-        .where({ rma_type: 'advance_replacement' })
-        .andWhere((q) => q.where({ custody_id: custodyId }).orWhere((nested) => nested.whereNull('custody_id').andWhere({ asset_id: episode.asset_id })))
-        .orderByRaw('CASE WHEN custody_id = ? THEN 0 ELSE 1 END', [custodyId])
-        .orderBy('updated_at', 'desc')
+        .where({ rma_type: 'advance_replacement', custody_id: custodyId })
+        .whereNull('returned_unit_id')
+        .orderBy('rma_id', 'asc')
         .forUpdate()
-        .first()
-    : null;
-  let reconcileRmaShipment = false;
-  if (linkedRma && ['replaced', 'repaired'].includes(linkedRma.status)) {
-    if (!await hasPermission({ ...user, tenant } as IUser, 'warranty', 'update', trx)) {
-      throw new CustodyError('permission_denied', 'Permission denied: warranty update is required to ship an advance replacement return.');
+        .select('rma_id', 'rma_type', 'status', 'custody_id')
+    : [];
+  const chargedRmaIds = linkedRmas.filter((rma: any) => rma.status === 'closed').map((rma: any) => rma.rma_id);
+  if (chargedRmaIds.length) {
+    const closeEvents = await tenantDb(trx, tenant).table('rma_events')
+      .whereIn('rma_id', chargedRmaIds)
+      .where({ event_type: 'closed' })
+      .select('rma_id', 'payload');
+    const chargeRecorded = closeEvents.some((event: any) => {
+      const payload = typeof event.payload === 'string' ? JSON.parse(event.payload) : event.payload;
+      return payload?.resolution === 'vendor_non_return_charge';
+    });
+    if (chargeRecorded) {
+      throw new CustodyError('invalid_transition', 'The linked vendor return obligation was resolved by a non-return charge.');
     }
+  }
+  const eligibleRmas = linkedRmas.filter((rma: any) => ['replaced', 'repaired'].includes(rma.status));
+  if (eligibleRmas.length > 1) {
+    throw new CustodyError('invalid_transition', 'Multiple advance warranty returns are linked to this custody episode. Resolve the duplicate cases before shipping.');
+  }
+  const linkedRma = eligibleRmas[0] ?? null;
+  let reconcileRmaShipment = false;
+  if (linkedRma) {
     try {
       assertWarrantyTransition(linkedRma.status, 'ship_dead_unit_to_vendor', linkedRma.rma_type);
       reconcileRmaShipment = true;
@@ -234,14 +249,11 @@ export async function recordCustodyEventInTransaction(
       throw error;
     }
   }
-  if (linkedRma?.status === 'closed') {
-    const charged = await tenantDb(trx, tenant).table('rma_events')
-      .where({ rma_id: linkedRma.rma_id, event_type: 'closed' })
-      .orderBy('recorded_at', 'desc')
-      .first('payload');
-    const payload = typeof charged?.payload === 'string' ? JSON.parse(charged.payload) : charged?.payload;
-    if (payload?.resolution === 'vendor_non_return_charge') {
-      throw new CustodyError('invalid_transition', 'The linked vendor return obligation was resolved by a non-return charge.');
+  if (linkedRma) {
+    try {
+      await requireWarrantyPermission({ ...user, tenant }, 'update', trx);
+    } catch (error) {
+      throw new CustodyError('permission_denied', error instanceof Error ? error.message : 'Warranty update permission is required.');
     }
   }
   const result = await recordCustodyEvent(trx, tenant, user.user_id, custodyId, input);

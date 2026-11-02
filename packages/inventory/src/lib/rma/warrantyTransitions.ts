@@ -474,15 +474,12 @@ export async function recordVendorNonReturnChargeCore(
   }
   // Custody is authoritative when older callers or historical data left the RMA status behind.
   // Shipment and charge both lock the RMA first, then custody, so only one can commit.
-  const custodyRows = await trx('asset_custody')
-    .where({ tenant })
-    .andWhere((q) => {
-      if (rma.custody_id) q.where({ custody_id: rma.custody_id });
-      else q.where({ asset_id: rma.asset_id });
-    })
-    .orderBy('opened_at', 'desc')
-    .forUpdate()
-    .select('custody_id', 'state', 'close_reason');
+  const custodyRows = rma.custody_id
+    ? await trx('asset_custody')
+        .where({ tenant, custody_id: rma.custody_id })
+        .forUpdate()
+        .select('custody_id', 'state', 'close_reason')
+    : [];
   const custodyIds = custodyRows.map((row: any) => row.custody_id);
   const physicalMovement = custodyIds.length > 0
     ? await trx('asset_custody_events')

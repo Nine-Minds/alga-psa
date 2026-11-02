@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import type { ZodError } from 'zod';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
-import { hasPermission } from '@alga-psa/auth/rbac';
+import { requireWarrantyPermission } from '@alga-psa/assets/lib/warrantyAuthorization';
 import { actionError, permissionError, type ActionMessageError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { createAssetReadContext, isAssetReadAllowed } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { publishCustodyChanged } from '@alga-psa/assets/lib/custody/publishCustodyChanged';
@@ -24,11 +24,7 @@ export type WarrantyActionError = ActionMessageError | ActionPermissionError;
  * can run RMAs keep working), and every write additionally needs `asset:update` because it touches a client asset.
  */
 export async function requireWarrantyPerm(user: any, action: 'create' | 'read' | 'update'): Promise<void> {
-  const ok = (await hasPermission(user, 'warranty', action)) || (await hasPermission(user, 'inventory', action));
-  if (!ok) throw new Error(`Permission denied: warranty ${action} required`);
-  if (action !== 'read' && !(await hasPermission(user, 'asset', 'update'))) {
-    throw new Error('Permission denied: asset update required');
-  }
+  return requireWarrantyPermission(user, action);
 }
 
 const CODE_MESSAGES: Record<string, [string, string]> = {

@@ -157,6 +157,8 @@
         "ghost": "ghost-verbruik",
         "rmaAging": "rma-veroudering",
         "rmaClient": "vervanging",
+        "rmaVendorReturnOverdue": "retour naar leverancier te laat",
+        "rmaVendorReturnApproaching": "retour naar leverancier binnenkort verschuldigd",
         "priceCreep": "prijsstijging",
         "billCreep": "factuurstijging",
         "billsOverdue": "achterstallige facturen",
@@ -165,7 +167,8 @@
         "stockOut": "geen voorraad",
         "poPartial": "gedeeltelijke PO",
         "warranty": "garantie",
-        "deadStock": "dode voorraad"
+        "deadStock": "dode voorraad",
+        "rmaVendorReturn": "Te late retourzending naar leverancier"
       },
       "fact": {
         "unbilledSo": "verzonden, nog niet gefactureerd",
@@ -177,6 +180,8 @@
         "ghostTech": "{{count}} hardwaretickets gesloten, geen onderdelen gefactureerd",
         "rmaVendor": "verschuldigde creditering — geen reactie {{days}} dagen",
         "rmaClient": "vervangende eenheid nog verschuldigd",
+        "rmaVendorReturnOverdue": "retour naar leverancier vervalt op {{date}} — {{days}} dagen te laat",
+        "rmaVendorReturnApproaching": "retour naar leverancier op {{date}} — nog {{days}} dagen",
         "priceCreepSo": "nog geprijsd tegen oude kostprijs",
         "priceCreepQuotes": "{{count}} open offerte(s) nu onder huidige kostprijs",
         "priceCreepBill": "factuur overschrijdt bijbehorende PO",
@@ -186,7 +191,8 @@
         "stockLow": "{{service}} onder bestelpunt",
         "poPartial": "gedeeltelijk ontvangen PO nog open",
         "warranty": "{{count}} eenheden met garantie die <30d verloopt",
-        "deadStock": "geen beweging in 90 dagen"
+        "deadStock": "geen beweging in 90 dagen",
+        "rmaVendorReturn": "Retourzending naar leverancier verschuldigd op {{date}} — {{days}} dagen te laat"
       },
       "meta": {
         "unbilledSo": "{{so}} · {{lines}} regels · verzonden {{days}}d geleden",
@@ -207,7 +213,8 @@
         "stockLevel": "beschikbaar {{available}} · bestelpunt {{reorder}}",
         "poPartial": "{{po}} · {{received}} van {{ordered}} ontvangen · {{vendor}}",
         "warranty": "{{count}} klanten",
-        "deadStock": "{{locations}} locatie(s) leggen werkkapitaal vast"
+        "deadStock": "{{locations}} locatie(s) leggen werkkapitaal vast",
+        "rmaVendorReturn": "{{ref}} · uiterste retourdatum bij leverancier"
       },
       "metric": {
         "ageDays": "{{days}}d",
@@ -1378,6 +1385,7 @@
       "confirmShipDeadUnit": "Stuur de defecte unit terug naar de leverancier. Het apparaat in bewaring wordt vastgelegd als bij de leverancier.",
       "confirmVendorReceipt": "Bevestig dat de leverancier de defecte unit heeft ontvangen. De zaak wordt gesloten als opgelost en de bewaring als teruggegeven aan de leverancier.",
       "deadUnitNotShipped": "Defecte unit nog niet verzonden, uiterlijk {{date}}",
+      "deadUnitApproaching": "Retour van defecte eenheid binnenkort verschuldigd: {{date}}",
       "deadUnitShippedLate": "Defecte unit te laat verzonden, uiterlijk {{date}}",
       "returnByHint": "De datum waarop de leverancier de defecte unit verzonden wil hebben, geteld vanaf levering van deze vervanging. Laat het ongewijzigd om de datum van de goedkeuring te behouden.",
       "actions": {
@@ -1393,7 +1401,8 @@
         "returnToClient": "Terug naar klant",
         "shipDeadUnitToVendor": "Defecte unit naar leverancier verzenden",
         "confirmVendorReceipt": "Leverancier heeft defecte unit ontvangen",
-        "close": "RMA sluiten"
+        "close": "RMA sluiten",
+        "chargeVendorNonReturn": "Kosten voor niet-geretourneerd artikel registreren"
       },
       "events": {
         "opened": "Claim geopend",
@@ -1409,7 +1418,8 @@
         "deadUnitShipped": "Defecte unit naar leverancier verzonden",
         "vendorReceiptConfirmed": "Leverancier heeft defecte unit ontvangen",
         "closed": "Gesloten",
-        "note": "Notitie"
+        "note": "Notitie",
+        "vendorNonReturnCharge": "Kosten voor niet-geretourneerd artikel geregistreerd"
       },
       "outcome": {
         "covered": "Gedekt",
@@ -1444,7 +1454,10 @@
         "inboundTracking": "Inkomend trackingnummer",
         "counterparty": "Teruggestuurd naar",
         "closeReason": "Reden van sluiting",
-        "note": "Notitie"
+        "note": "Notitie",
+        "vendorChargeAmount": "Kostenbedrag",
+        "vendorChargeCurrency": "Valuta",
+        "selectCurrency": "Valuta selecteren"
       },
       "claim": {
         "title": "Nieuwe garantieclaim",
@@ -1460,7 +1473,8 @@
         "track": "Volgen",
         "stockHint": "Apparaten die uit voorraad zijn verkocht kunnen hier niet worden geclaimd. Gebruik in plaats daarvan RMA openen vanaf de voorraadeenheid.",
         "submit": "Claim openen"
-      }
+      },
+      "vendorChargeHint": "Met deze kosten wordt de te late retourverplichting aan de leverancier afgesloten. De verzending of ontvangst wordt hiermee niet geregistreerd."
     }
   },
   "salesOrders": {
