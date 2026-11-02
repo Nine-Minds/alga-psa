@@ -742,8 +742,10 @@ This indicates a problem with the OAuth token saving process.`;
         })),
         senderAuthentication: {
           provider: 'google',
-          // Gmail returns the original ordered header list. Keep every copy so
-          // ambiguous or attacker-prepended assertions fail closed downstream.
+          // This OAuth integration requests gmail.readonly, and Gmail's SMTP
+          // receiving path removes inbound Authentication-Results claiming
+          // mx.google.com before prepending its own result (RFC 8601 §1.6).
+          // Keep the API's ordered list: downstream trusts only the first item.
           authenticationResults: orderedAuthenticationResults(headers),
         },
         headers: headers.reduce((acc: any, header: any) => {

@@ -119,29 +119,52 @@ export function allowsInternalSenderAttribution(results: SenderAuthResults | nul
   return Boolean(results?.aligned.dmarc || (results?.aligned.spf && results?.aligned.dkim));
 }
 
+export function isInternalAttributionTrusted(
+  evidence: { provider: 'google' | 'microsoft'; authenticationResults: string[]; receivingAuthservId?: string; receivingAuthservIds?: string[] } | null | undefined,
+  fromEmail: string | null | undefined
+): boolean {
+  return allowsInternalSenderAttribution(verifyProviderSenderAuthentication(evidence, fromEmail));
+}
+
 /**
  * Consume authentication results only when provider ingestion supplies them and
  * the unique assertion is stamped by that provider's receiving service. Raw
  * `headers` are intentionally not accepted here: they are message content.
  */
 export function verifyProviderSenderAuthentication(
-  evidence: { provider: 'google' | 'microsoft'; authenticationResults: string[]; receivingAuthservId?: string } | null | undefined,
+  evidence: { provider: 'google' | 'microsoft'; authenticationResults: string[]; receivingAuthservId?: string; receivingAuthservIds?: string[] } | null | undefined,
   fromEmail: string | null | undefined
 ): SenderAuthResults | null {
-  if (!evidence || !Array.isArray(evidence.authenticationResults) || evidence.authenticationResults.length !== 1) return null;
-  const [assertion] = evidence.authenticationResults;
-  if (typeof assertion !== 'string') return null;
+  if (!evidence || !Array.isArray(evidence.authenticationResults) || evidence.authenticationResults.length === 0) return null;
+  // RFC 8601 requires receivers to remove incoming fields claiming their own
+  // authserv-id, then prepend the receiver's result. Trust only that first
+  // ordered Authentication-Results field; never search transit results below.
+  const assertion = evidence.authenticationResults[0];
+  if (typeof assertion !== 'string' || !assertion.trim()) return null;
   const firstSegment = assertion.split(';', 1)[0]?.trim().toLowerCase() ?? '';
   const authservId = /^(?:spf|dkim|dmarc|arc|compauth)\s*=/.test(firstSegment) ? '' : firstSegment.split(/\s+/, 1)[0];
   const trusted = evidence.provider === 'google'
     ? authservId === 'mx.google.com'
     : evidence.provider === 'microsoft'
-      // Exchange Online's Authentication-Results value has no authserv-id;
-      // its provider-stamped AuthSource supplies that receiving-service identity.
-      ? !authservId && /^[a-z0-9-]+\.eop-[a-z0-9-]+\.prod\.protection\.outlook\.com$/.test(evidence.receivingAuthservId?.trim().toLowerCase() || '')
+      // Exchange Online Authentication-Results commonly has no authserv-id.
+      // Header Firewall strips inbound X-MS-Exchange-Organization-* fields;
+      // AuthSource therefore identifies the Exchange server that stamped it.
+      // Cover documented EOP and mailbox-server FQDN families.
+      ? !authservId
+        && (!evidence.receivingAuthservIds || evidence.receivingAuthservIds.length === 1)
+        && isMicrosoftReceivingAuthSource(evidence.receivingAuthservIds?.[0] ?? evidence.receivingAuthservId)
       : false;
   if (!trusted) return null;
   return verifySenderAuthentication(assertion, fromEmail);
+}
+
+function isMicrosoftReceivingAuthSource(value: string | undefined): boolean {
+  if (!value) return false;
+  const hostname = value.trim().toLowerCase().replace(/\.$/, '');
+  if (!/^[a-z0-9.-]+$/.test(hostname) || hostname.includes('..')) return false;
+  return hostname.endsWith('.mail.protection.outlook.com')
+    || hostname.endsWith('.prod.protection.outlook.com')
+    || hostname.endsWith('.prod.outlook.com');
 }
 
 export function allowsContactSenderAttribution(results: SenderAuthResults | null): boolean {

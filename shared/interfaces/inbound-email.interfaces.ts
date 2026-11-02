@@ -160,6 +160,7 @@ export interface EmailMessageDetails extends EmailMessage {
     provider: 'google' | 'microsoft';
     authenticationResults: string[];
     receivingAuthservId?: string;
+    receivingAuthservIds?: string[];
   };
   messageSize?: number;
   importance?: 'low' | 'normal' | 'high';

@@ -117,6 +117,29 @@ describe('verifyProviderSenderAuthentication', () => {
     }, 'agent@msp.test'))).toBe(true);
   });
 
+  it('uses the topmost trusted fail and never falls through to a forged transit pass', () => {
+    const result = verifyProviderSenderAuthentication({ provider: 'google', authenticationResults: [
+      'mx.google.com; dmarc=fail header.from=msp.test',
+      'attacker.test; dmarc=pass header.from=msp.test',
+    ] }, 'agent@msp.test');
+    expect(allowsInternalSenderAttribution(result)).toBe(false);
+  });
+
+  it('uses the topmost trusted pass while retaining older transit results', () => {
+    const result = verifyProviderSenderAuthentication({ provider: 'google', authenticationResults: [
+      'mx.google.com; dmarc=pass header.from=msp.test',
+      'relay.example; dmarc=fail header.from=msp.test',
+    ] }, 'agent@msp.test');
+    expect(allowsInternalSenderAttribution(result)).toBe(true);
+  });
+
+  it('does not search past an untrusted topmost identifier for a lower provider result', () => {
+    expect(verifyProviderSenderAuthentication({ provider: 'google', authenticationResults: [
+      'attacker.test; dmarc=pass header.from=msp.test',
+      'mx.google.com; dmarc=pass header.from=msp.test',
+    ] }, 'agent@msp.test')).toBeNull();
+  });
+
   it('accepts Microsoft results only with its provider stamped EOP AuthSource', () => {
     const trusted = verifyProviderSenderAuthentication({
       provider: 'microsoft',
@@ -130,9 +153,37 @@ describe('verifyProviderSenderAuthentication', () => {
   });
 
   it.each([
+    'VI1EUR05FT022.eop-eur05.prod.protection.outlook.com',
+    'SN6PR16MB2510.namprd16.prod.outlook.com',
+    'mail.example.mail.protection.outlook.com',
+  ])('accepts supported Microsoft receiver host format %s', (receivingAuthservId) => {
+    expect(allowsInternalSenderAttribution(verifyProviderSenderAuthentication({
+      provider: 'microsoft',
+      authenticationResults: ['dmarc=pass header.from=msp.test'],
+      receivingAuthservId,
+    }, 'agent@msp.test'))).toBe(true);
+  });
+
+  it.each(['attacker.test', 'protection.outlook.com.evil.test', 'mail.protection.outlook.com'])
+    ('rejects untrusted or malformed Microsoft receiver host %s', (receivingAuthservId) => {
+      expect(verifyProviderSenderAuthentication({
+        provider: 'microsoft',
+        authenticationResults: ['dmarc=pass header.from=msp.test'],
+        receivingAuthservId,
+      }, 'agent@msp.test')).toBeNull();
+    });
+
+  it('rejects a forged explicit Microsoft authserv-id even when AuthSource is trusted', () => {
+    expect(verifyProviderSenderAuthentication({
+      provider: 'microsoft',
+      authenticationResults: ['attacker.test; dmarc=pass header.from=msp.test'],
+      receivingAuthservId: 'VI1EUR05FT022.eop-eur05.prod.protection.outlook.com',
+    }, 'agent@msp.test')).toBeNull();
+  });
+
+  it.each([
     ['untrusted authserv', ['attacker.test; dmarc=pass header.from=msp.test']],
     ['mismatched authserv', ['mx.google.com.evil.test; dmarc=pass header.from=msp.test']],
-    ['duplicate assertions', ['mx.google.com; dmarc=pass header.from=msp.test', 'mx.google.com; dmarc=pass header.from=msp.test']],
     ['malformed assertion', ['mx.google.com; dmarc=pass header.from=']],
   ])('fails closed for %s', (_name, authenticationResults) => {
     expect(allowsInternalSenderAttribution(verifyProviderSenderAuthentication({ provider: 'google', authenticationResults }, 'agent@msp.test'))).toBe(false);

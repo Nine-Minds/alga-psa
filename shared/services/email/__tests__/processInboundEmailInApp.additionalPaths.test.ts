@@ -75,6 +75,10 @@ function buildEmailData(
     headers: {
       'authentication-results': 'mx.example; spf=pass smtp.mailfrom=example.com',
     },
+    senderAuthentication: {
+      provider: 'google',
+      authenticationResults: ['mx.google.com; spf=pass smtp.mailfrom=example.com; dkim=pass header.d=example.com; dmarc=pass header.from=example.com'],
+    },
     ...overrides,
   };
 }
@@ -304,6 +308,7 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       emailData: buildEmailData({
         id: 'email-reply-internal-1',
         from: { email: 'ROBERT@NINEMINDS.COM', name: 'Robert Isaacs' },
+        senderAuthentication: { provider: 'google', authenticationResults: ['mx.google.com; dmarc=pass header.from=nineminds.com'] },
         headers: { 'authentication-results': 'mx.nineminds.com; dmarc=pass header.from=nineminds.com' },
       }),
     });
@@ -467,6 +472,7 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       providerId: 'provider-1',
       emailData: buildEmailData({
         from: { email: 'munjal@joymode.io', name: 'Munjal Thakkar' },
+        senderAuthentication: { provider: 'google', authenticationResults: ['mx.google.com; spf=pass smtp.mailfrom=munjal@joymode.io'] },
         headers: {
           'authentication-results': `mx.google.com;
        dkim=pass header.i=@techff.onmicrosoft.com header.s=selector1-techff-onmicrosoft-com header.b="cmLi/gLS";

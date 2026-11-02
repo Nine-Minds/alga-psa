@@ -326,7 +326,7 @@ export async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob
   return { provider, googleConfig, config };
 }
 
-function mapParsedMimeToEmailMessageDetails(params: {
+export function mapParsedMimeToEmailMessageDetails(params: {
   provider: 'microsoft' | 'imap';
   providerId: string;
   tenant: string;
@@ -357,6 +357,23 @@ function mapParsedMimeToEmailMessageDetails(params: {
   const fromName = listRewrite ? (listRewrite.sender.name || from?.name || undefined) : (from?.name || undefined);
   const resolvedHeaders: Record<string, string> = {};
   const authenticationResults: string[] = [];
+  const receivingAuthservIds: string[] = [];
+  // Graph MIME is fetched from the configured Exchange mailbox. Exchange's
+  // header firewall removes external X-MS-Exchange-Organization-* fields;
+  // only this provider path carries AuthSource into the typed evidence below.
+  const headerLines: Array<{ key?: unknown; line?: unknown }> | undefined = params.parsed.headerLines;
+  if (Array.isArray(headerLines)) {
+    for (const entry of headerLines) {
+      if (typeof entry?.key !== 'string' || entry.key.toLowerCase() !== 'authentication-results' || typeof entry.line !== 'string') continue;
+      const colon = entry.line.indexOf(':');
+      if (colon >= 0) authenticationResults.push(entry.line.slice(colon + 1).replace(/\r?\n[ \t]+/g, ' ').trim());
+    }
+    for (const entry of headerLines) {
+      if (typeof entry?.key !== 'string' || entry.key.toLowerCase() !== 'x-ms-exchange-organization-authsource' || typeof entry.line !== 'string') continue;
+      const colon = entry.line.indexOf(':');
+      if (colon >= 0) receivingAuthservIds.push(entry.line.slice(colon + 1).trim());
+    }
+  }
   // Preserve Authentication-Results from raw MIME for the sender-auth gate.
   // mailparser normalizes header names in its Map, while Gmail already supplies
   // a record via GmailAdapter.
@@ -371,12 +388,12 @@ function mapParsedMimeToEmailMessageDetails(params: {
       }
       if (typeof value === 'string') {
         resolvedHeaders[headerName] = value;
-        if (headerName === 'authentication-results') authenticationResults.push(value);
+        if (headerName === 'authentication-results' && !Array.isArray(headerLines)) authenticationResults.push(value);
       } else if (Array.isArray(value)) {
         // Header order is wire order: the first Authentication-Results block is
         // our receiving MTA's topmost result. Preserve each block for the gate.
         resolvedHeaders[headerName] = value.filter((item): item is string => typeof item === 'string').join('\n');
-        if (headerName === 'authentication-results') authenticationResults.push(...value.filter((item): item is string => typeof item === 'string'));
+        if (headerName === 'authentication-results' && !Array.isArray(headerLines)) authenticationResults.push(...value.filter((item): item is string => typeof item === 'string'));
       }
     });
   }
@@ -445,9 +462,11 @@ function mapParsedMimeToEmailMessageDetails(params: {
       ? {
           provider: 'microsoft',
           authenticationResults,
-          receivingAuthservId: typeof resolvedHeaders['x-ms-exchange-organization-authsource'] === 'string'
-            ? resolvedHeaders['x-ms-exchange-organization-authsource']
-            : undefined,
+          receivingAuthservIds: Array.isArray(headerLines)
+            ? receivingAuthservIds
+            : typeof resolvedHeaders['x-ms-exchange-organization-authsource'] === 'string'
+              ? [resolvedHeaders['x-ms-exchange-organization-authsource']]
+              : [],
         }
       : undefined,
   };

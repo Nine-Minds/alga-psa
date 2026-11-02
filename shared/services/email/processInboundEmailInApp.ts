@@ -47,7 +47,7 @@ import {
 import {
   allowsContactSenderAttribution,
   isMicrosoftIntraOrgSender,
-  allowsInternalSenderAttribution,
+  isInternalAttributionTrusted,
   verifyProviderSenderAuthentication,
 } from '../../lib/email/senderAuthVerification';
 
@@ -1057,7 +1057,7 @@ export async function processInboundEmailInApp(
     if (!matched) return null;
 
     if (matched.user_type === 'internal') {
-      if (allowsInternalSenderAttribution(senderAuthResults)) return matched;
+      if (isInternalAttributionTrusted(emailData.senderAuthentication, senderEmail)) return matched;
       // A list rewrite may be trusted for contact matching, but never grants an
       // internal identity: only authentication aligned to the original From can.
       console.warn('SECURITY_EVENT inbound_email_internal_sender_auth_failed', {
@@ -1741,7 +1741,7 @@ export async function processInboundEmailInApp(
         const admission = provider
           ? await provider.admitReplyToken(tenantId, String(token), match.metadata, {
               email: senderEmail ?? null,
-              internalAttributionTrusted: allowsInternalSenderAttribution(senderAuthResults),
+              internalAttributionTrusted: isInternalAttributionTrusted(emailData.senderAuthentication, senderEmail),
             })
           : null;
         // Only "not served" (or no provider) leaves the token inert: thread headers decide. Every other
