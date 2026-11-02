@@ -1,6 +1,9 @@
 /** @vitest-environment jsdom */
 import { cleanup, renderHook, waitFor } from '@testing-library/react';
 import jwt from 'jsonwebtoken';
+import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { dirname, resolve } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as editor from '@alga-psa/ui/editor';
 import { useTicketListChanges } from './useTicketListChanges';
@@ -29,8 +32,14 @@ afterEach(() => {
 describe('ticket list hook with installed Hocuspocus transport', () => {
   it('retries rejected auth exponentially, reuses one provider after socket loss, bounds recovery queries, and delivers authorized stateless changes', async () => {
     process.env.HOCUSPOCUS_JWT_SECRET = secret;
-    const installedServerModule = '../../../../hocuspocus/node_modules/@hocuspocus/server/dist/hocuspocus-server.esm.js';
-    const { Hocuspocus } = await import(installedServerModule);
+    let repositoryRoot = process.cwd();
+    while (!existsSync(resolve(repositoryRoot, 'hocuspocus/node_modules/@hocuspocus/server/package.json'))) {
+      const parent = dirname(repositoryRoot);
+      if (parent === repositoryRoot) throw new Error('Could not locate installed Hocuspocus server package');
+      repositoryRoot = parent;
+    }
+    const requireFromRepository = createRequire(resolve(repositoryRoot, 'package.json'));
+    const { Hocuspocus } = requireFromRepository(resolve(repositoryRoot, 'hocuspocus/node_modules/@hocuspocus/server/dist/hocuspocus-server.cjs'));
     const { resolveDocumentAuthenticationContext, resolveDocumentConnectionContext } = await import('../../../../hocuspocus/ticketChangeConnectionContext.js');
     const { TicketUpdatesExtension } = await import('../../../../hocuspocus/TicketUpdatesExtension.js');
     const extension = new TicketUpdatesExtension({ listChangeAuthorizationUrl: 'http://internal/api/internal/tickets/live-change', listChangeApiKey: 'key' });

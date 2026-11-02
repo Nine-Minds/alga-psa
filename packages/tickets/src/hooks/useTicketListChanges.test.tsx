@@ -2,7 +2,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const providers: Array<{ handlers: Map<string, (value?: any) => void>; provider: any; token: () => Promise<string> }> = [];
+const providers: Array<{ handlers: Map<string, (value?: any) => void>; provider: any; token: () => Promise<string>; websocketProvider: any; ydoc: any }> = [];
 const createYjsProvider = vi.fn((_room: string, options: any) => {
   const handlers = new Map<string, (value?: any) => void>();
   const websocketHandlers = new Map<string, Set<(value?: any) => void>>();
@@ -17,6 +17,7 @@ const createYjsProvider = vi.fn((_room: string, options: any) => {
     off: vi.fn((name: string, handler: (value?: any) => void) => websocketHandlers.get(name)?.delete(handler)),
     disconnect: vi.fn(() => { websocketProvider.status = 'disconnected'; emitWebsocket('status', { status: 'disconnected' }); }),
     connect: vi.fn(() => { websocketProvider.status = 'connected'; handlers.get('open')?.(); }),
+    destroy: vi.fn(),
   };
   const provider = {
     isAuthenticated: false,
@@ -25,8 +26,9 @@ const createYjsProvider = vi.fn((_room: string, options: any) => {
     on: vi.fn((name: string, handler: (value?: any) => void) => { handlers.set(name, handler); return provider; }),
     removeAllListeners: vi.fn(), destroy: vi.fn(),
   };
-  providers.push({ handlers, provider, token: options.token });
-  return { provider, ydoc: { destroy: vi.fn() } };
+  const ydoc = { destroy: vi.fn() };
+  providers.push({ handlers, provider, token: options.token, websocketProvider, ydoc });
+  return { provider, ydoc };
 });
 vi.mock('@alga-psa/ui/editor', () => ({ createYjsProvider }));
 
@@ -57,7 +59,7 @@ describe('useTicketListChanges', () => {
     expect(global.fetch).toHaveBeenCalledWith('/api/tickets/live-token', { credentials: 'include', cache: 'no-store' });
   });
 
-  it('uses one websocket owner for exponential rejected-auth retries and bounds outage recovery calls', async () => {
+  it('uses one websocket owner for exponential rejected-auth retries and polls on a 60-second cadence', async () => {
     vi.useFakeTimers();
     const { useTicketListChanges } = await import('./useTicketListChanges');
     const unavailable = vi.fn();
@@ -83,6 +85,35 @@ describe('useTicketListChanges', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(16_000); });
     expect(current.provider.connect).toHaveBeenCalledTimes(4);
     current.handlers.get('authenticationFailed')?.();
+    expect(unavailable).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(29_999); });
+    expect(unavailable).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(unavailable).toHaveBeenCalledTimes(1);
+
+    current.provider.isAuthenticated = true;
+    current.handlers.get('authenticated')?.();
+    expect(recovered).toHaveBeenCalledTimes(1);
+    expect(createYjsProvider).toHaveBeenCalledTimes(1);
+    expect(unavailable).toHaveBeenCalledTimes(1);
+  });
+
+  it('polls after socket loss and prolonged connection refusal, then stops after authorized recovery', async () => {
+    vi.useFakeTimers();
+    const { useTicketListChanges } = await import('./useTicketListChanges');
+    const unavailable = vi.fn();
+    const recovered = vi.fn();
+    renderHook(() => useTicketListChanges('tenant-a', vi.fn(), { onUnavailable: unavailable, onRecovered: recovered }));
+    await flush();
+    const current = providers[0];
+
+    current.provider.isAuthenticated = true;
+    current.handlers.get('authenticated')?.();
+    current.handlers.get('close')?.();
+    // Refused reconnect attempts do not emit authenticationFailed.
+    await act(async () => { await vi.advanceTimersByTimeAsync(59_999); });
+    expect(unavailable).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(unavailable).toHaveBeenCalledTimes(1);
     await act(async () => { await vi.advanceTimersByTimeAsync(59_999); });
     expect(unavailable).toHaveBeenCalledTimes(1);
@@ -91,9 +122,32 @@ describe('useTicketListChanges', () => {
 
     current.provider.isAuthenticated = true;
     current.handlers.get('authenticated')?.();
-    expect(recovered).toHaveBeenCalledTimes(1);
-    expect(createYjsProvider).toHaveBeenCalledTimes(1);
+    expect(recovered).toHaveBeenCalledTimes(2);
+    await act(async () => { await vi.advanceTimersByTimeAsync(120_000); });
     expect(unavailable).toHaveBeenCalledTimes(2);
+  });
+
+  it('starts counts-only recovery polling when the initial server is unavailable without auth events', async () => {
+    vi.useFakeTimers();
+    const { useTicketListChanges } = await import('./useTicketListChanges');
+    const unavailable = vi.fn();
+    const recovered = vi.fn();
+    renderHook(() => useTicketListChanges('tenant-a', vi.fn(), { onUnavailable: unavailable, onRecovered: recovered }));
+    await flush();
+
+    // No open, close, or authenticationFailed event: the server refuses the initial connection.
+    await act(async () => { await vi.advanceTimersByTimeAsync(59_999); });
+    expect(unavailable).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(unavailable).toHaveBeenCalledTimes(1);
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(unavailable).toHaveBeenCalledTimes(2);
+
+    providers[0].provider.isAuthenticated = true;
+    providers[0].handlers.get('authenticated')?.();
+    await act(async () => { await vi.advanceTimersByTimeAsync(120_000); });
+    expect(unavailable).toHaveBeenCalledTimes(2);
+    expect(recovered).toHaveBeenCalledTimes(1);
   });
 
   it('cancels a pending retry when automatic transport reconnection is authorized', async () => {
@@ -125,6 +179,8 @@ describe('useTicketListChanges', () => {
     unmount();
     expect(providers[0].provider.removeAllListeners).toHaveBeenCalled();
     expect(providers[0].provider.destroy).toHaveBeenCalled();
+    expect(providers[0].websocketProvider.destroy).toHaveBeenCalled();
+    expect(providers[0].ydoc.destroy).toHaveBeenCalled();
     await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
     expect(providers[0].provider.connect).not.toHaveBeenCalled();
     expect(createYjsProvider).toHaveBeenCalledTimes(1);

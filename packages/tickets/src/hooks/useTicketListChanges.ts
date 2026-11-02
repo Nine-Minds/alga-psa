@@ -33,8 +33,9 @@ export function useTicketListChanges(tenantId: string | undefined, onChange: (ev
     let authorized = false;
     let authRetryTimer: ReturnType<typeof setTimeout> | undefined;
     let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
+    let document: ReturnType<typeof createYjsProvider>['ydoc'] | null = null;
+    let websocket: HocuspocusProvider['configuration']['websocketProvider'] | null = null;
     let outageStartedAt: number | null = Date.now();
-    let unavailableReported = false;
 
     const clearAuthRetry = () => {
       if (authRetryTimer) clearTimeout(authRetryTimer);
@@ -42,8 +43,7 @@ export function useTicketListChanges(tenantId: string | undefined, onChange: (ev
     };
 
     const reportUnavailable = () => {
-      if (disposed || unavailableReported || outageStartedAt === null) return;
-      unavailableReported = true;
+      if (disposed || outageStartedAt === null) return;
       unavailable.current?.(outageStartedAt);
       fallbackTimer = setTimeout(function poll() {
         if (disposed || outageStartedAt === null) return;
@@ -52,11 +52,21 @@ export function useTicketListChanges(tenantId: string | undefined, onChange: (ev
       }, 60_000);
     };
 
+    const startOutagePolling = () => {
+      if (disposed || fallbackTimer || outageStartedAt === null) return;
+      // Polling follows the outage clock, independently of whether the server
+      // managed to complete a websocket handshake or emit authenticationFailed.
+      fallbackTimer = setTimeout(() => {
+        fallbackTimer = undefined;
+        reportUnavailable();
+      }, 60_000);
+    };
+
     const scheduleAuthenticationRetry = () => {
       if (disposed || authorized || authRetryTimer) return;
       failures += 1;
       if (outageStartedAt === null) outageStartedAt = Date.now();
-      if (failures >= 5) reportUnavailable();
+      startOutagePolling();
       authRetryTimer = setTimeout(() => {
         authRetryTimer = undefined;
         if (disposed || authorized || provider?.isAuthenticated) return;
@@ -95,7 +105,10 @@ export function useTicketListChanges(tenantId: string | undefined, onChange: (ev
           jitter: true,
         },
       });
+      document = connection.ydoc;
       provider = connection.provider;
+      websocket = provider.configuration.websocketProvider;
+      startOutagePolling();
       provider.on('stateless', ({ payload }: { payload: string }) => {
         try {
           const message = JSON.parse(payload) as Partial<TicketListChange>;
@@ -114,7 +127,6 @@ export function useTicketListChanges(tenantId: string | undefined, onChange: (ev
         if (everAuthorized || recoveredOutage !== null) recovered.current?.(recoveredOutage ?? Date.now());
         everAuthorized = true;
         outageStartedAt = null;
-        unavailableReported = false;
         if (fallbackTimer) clearTimeout(fallbackTimer);
         fallbackTimer = undefined;
       });
@@ -123,11 +135,13 @@ export function useTicketListChanges(tenantId: string | undefined, onChange: (ev
         if (!authorized) return;
         authorized = false;
         outageStartedAt ??= Date.now();
+        startOutagePolling();
       });
       provider.on('disconnect', () => {
         if (!authorized) return;
         authorized = false;
         outageStartedAt ??= Date.now();
+        startOutagePolling();
       });
     };
 
@@ -138,6 +152,8 @@ export function useTicketListChanges(tenantId: string | undefined, onChange: (ev
       if (fallbackTimer) clearTimeout(fallbackTimer);
       provider?.removeAllListeners();
       provider?.destroy();
+      websocket?.destroy();
+      document?.destroy();
     };
   }, [tenantId]);
 }
