@@ -168,12 +168,19 @@ export function ServicePrincipalDialog({
               ))}
             </div>
           </div>
-          <Switch
-            id="service-principal-allow-act-as"
-            label={t('servicePrincipals.dialog.allowActAs', { defaultValue: 'Allow acting on behalf of a user' })}
-            checked={allowActAs}
-            onCheckedChange={setAllowActAs}
-          />
+          <div className="space-y-1">
+            <Switch
+              id="service-principal-allow-act-as"
+              label={t('servicePrincipals.dialog.allowActAs', { defaultValue: 'Allow acting on behalf of a user' })}
+              checked={allowActAs}
+              onCheckedChange={setAllowActAs}
+            />
+            <p className="pl-14 text-xs text-gray-500">
+              {t('servicePrincipals.dialog.allowActAsHelp', {
+                defaultValue: 'When enabled, requests can act as an active internal user. Each action must be allowed for both the principal and that user.',
+              })}
+            </p>
+          </div>
           <div className="space-y-2">
             <Label>{t('servicePrincipals.dialog.rateLimit', { defaultValue: 'Rate limit override (optional)' })}</Label>
             <div className="grid gap-2 sm:grid-cols-2">

@@ -3888,7 +3888,8 @@
       "allowActAs": "Tillåt att agera på uppdrag av en användare",
       "rateLimit": "Åsidosättning av hastighetsgräns (valfritt)",
       "rateLimitBurst": "Burst-storlek (max {{max}})",
-      "rateLimitRefill": "Förfrågningar per minut (max {{max}})"
+      "rateLimitRefill": "Förfrågningar per minut (max {{max}})",
+      "allowActAsHelp": "När detta är aktiverat kan förfrågningar agera som en aktiv intern användare. Varje åtgärd måste tillåtas för både tjänsteidentiteten och användaren."
     },
     "keys": {
       "loadFailed": "Det gick inte att läsa in nycklar",
@@ -3924,7 +3925,8 @@
       "keys": "Aktiva nycklar",
       "lastUsed": "Senast använd",
       "createdBy": "Skapad av",
-      "kind": "Typ"
+      "kind": "Typ",
+      "allowActAs": "Agera som"
     },
     "loadFailed": "Det gick inte att läsa in tjänstehuvudmän",
     "toggleFailed": "Det gick inte att uppdatera tjänstehuvudmannen",
@@ -3965,6 +3967,7 @@
     "kind": {
       "api": "API",
       "mcpAgent": "MCP-agent"
-    }
+    },
+    "seatNote": "Tjänsteidentiteter förbrukar inga användarlicenser."
   }
 }

@@ -3888,7 +3888,8 @@
       "allowActAs": "Consenti di agire per conto di un utente",
       "rateLimit": "Override del limite di frequenza (facoltativo)",
       "rateLimitBurst": "Dimensione del burst (max {{max}})",
-      "rateLimitRefill": "Richieste al minuto (max {{max}})"
+      "rateLimitRefill": "Richieste al minuto (max {{max}})",
+      "allowActAsHelp": "Quando è attiva, le richieste possono agire come un utente interno attivo. Ogni azione deve essere consentita sia al service principal sia a quell’utente."
     },
     "keys": {
       "loadFailed": "Impossibile caricare le chiavi",
@@ -3924,7 +3925,8 @@
       "keys": "Chiavi attive",
       "lastUsed": "Ultimo utilizzo",
       "createdBy": "Creato da",
-      "kind": "Tipo"
+      "kind": "Tipo",
+      "allowActAs": "Agisci come"
     },
     "loadFailed": "Impossibile caricare i principal di servizio",
     "toggleFailed": "Impossibile aggiornare il principal di servizio",
@@ -3965,6 +3967,7 @@
     "kind": {
       "api": "API",
       "mcpAgent": "Agente MCP"
-    }
+    },
+    "seatNote": "I service principal non consumano licenze utente."
   }
 }

@@ -3888,7 +3888,8 @@
       "allowActAs": "Allow acting on behalf of a user",
       "rateLimit": "Rate limit override (optional)",
       "rateLimitBurst": "Burst size (max {{max}})",
-      "rateLimitRefill": "Requests per minute (max {{max}})"
+      "rateLimitRefill": "Requests per minute (max {{max}})",
+      "allowActAsHelp": "When enabled, requests can act as an active internal user. Each action must be allowed for both the principal and that user."
     },
     "keys": {
       "loadFailed": "Failed to load keys",
@@ -3924,7 +3925,8 @@
       "keys": "Active keys",
       "lastUsed": "Last used",
       "createdBy": "Created by",
-      "kind": "Type"
+      "kind": "Type",
+      "allowActAs": "Act-as"
     },
     "loadFailed": "Failed to load service principals",
     "toggleFailed": "Failed to update service principal",
@@ -3965,6 +3967,7 @@
     "kind": {
       "api": "API",
       "mcpAgent": "MCP agent"
-    }
+    },
+    "seatNote": "Service principals do not consume seats."
   }
 }

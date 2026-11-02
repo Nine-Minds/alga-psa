@@ -3888,7 +3888,8 @@
       "allowActAs": "Handeln im Namen eines Benutzers zulassen",
       "rateLimit": "Ratenlimit überschreiben (optional)",
       "rateLimitBurst": "Burst-Größe (max. {{max}})",
-      "rateLimitRefill": "Anfragen pro Minute (max. {{max}})"
+      "rateLimitRefill": "Anfragen pro Minute (max. {{max}})",
+      "allowActAsHelp": "Wenn diese Option aktiviert ist, können Anfragen im Namen eines aktiven internen Benutzers ausgeführt werden. Jede Aktion muss sowohl für den Serviceprinzipal als auch für diesen Benutzer erlaubt sein."
     },
     "keys": {
       "loadFailed": "Schlüssel konnten nicht geladen werden",
@@ -3924,7 +3925,8 @@
       "keys": "Aktive Schlüssel",
       "lastUsed": "Zuletzt verwendet",
       "createdBy": "Erstellt von",
-      "kind": "Typ"
+      "kind": "Typ",
+      "allowActAs": "Im Namen handeln"
     },
     "loadFailed": "Dienstprinzipale konnten nicht geladen werden",
     "toggleFailed": "Dienstprinzipal konnte nicht aktualisiert werden",
@@ -3965,6 +3967,7 @@
     "kind": {
       "api": "API",
       "mcpAgent": "MCP-Agent"
-    }
+    },
+    "seatNote": "Serviceprinzipale belegen keine Benutzerlizenzen."
   }
 }

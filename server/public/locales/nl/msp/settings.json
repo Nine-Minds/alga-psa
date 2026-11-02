@@ -3888,7 +3888,8 @@
       "allowActAs": "Handelen namens een gebruiker toestaan",
       "rateLimit": "Overschrijving van snelheidslimiet (optioneel)",
       "rateLimitBurst": "Burstgrootte (max. {{max}})",
-      "rateLimitRefill": "Verzoeken per minuut (max. {{max}})"
+      "rateLimitRefill": "Verzoeken per minuut (max. {{max}})",
+      "allowActAsHelp": "Als dit is ingeschakeld, kunnen aanvragen handelen als een actieve interne gebruiker. Elke actie moet zijn toegestaan voor zowel de principal als die gebruiker."
     },
     "keys": {
       "loadFailed": "Sleutels laden mislukt",
@@ -3924,7 +3925,8 @@
       "keys": "Actieve sleutels",
       "lastUsed": "Laatst gebruikt",
       "createdBy": "Gemaakt door",
-      "kind": "Type"
+      "kind": "Type",
+      "allowActAs": "Handelen als"
     },
     "loadFailed": "Serviceprincipals laden mislukt",
     "toggleFailed": "Serviceprincipal bijwerken mislukt",
@@ -3965,6 +3967,7 @@
     "kind": {
       "api": "API",
       "mcpAgent": "MCP-agent"
-    }
+    },
+    "seatNote": "Serviceprincipals gebruiken geen gebruikerslicenties."
   }
 }

@@ -3888,7 +3888,8 @@
       "allowActAs": "Permitir actuar en nombre de un usuario",
       "rateLimit": "Anulación del límite de tasa (opcional)",
       "rateLimitBurst": "Tamaño de ráfaga (máx. {{max}})",
-      "rateLimitRefill": "Solicitudes por minuto (máx. {{max}})"
+      "rateLimitRefill": "Solicitudes por minuto (máx. {{max}})",
+      "allowActAsHelp": "Al activarse, las solicitudes pueden actuar como un usuario interno activo. Tanto el principal como ese usuario deben tener permiso para cada acción."
     },
     "keys": {
       "loadFailed": "Error al cargar las claves",
@@ -3924,7 +3925,8 @@
       "keys": "Claves activas",
       "lastUsed": "Último uso",
       "createdBy": "Creado por",
-      "kind": "Tipo"
+      "kind": "Tipo",
+      "allowActAs": "Actuar como"
     },
     "loadFailed": "Error al cargar los principales de servicio",
     "toggleFailed": "Error al actualizar el principal de servicio",
@@ -3965,6 +3967,7 @@
     "kind": {
       "api": "API",
       "mcpAgent": "Agente MCP"
-    }
+    },
+    "seatNote": "Los principales de servicio no consumen licencias de usuario."
   }
 }

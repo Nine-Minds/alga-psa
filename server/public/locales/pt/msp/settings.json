@@ -3888,7 +3888,8 @@
       "allowActAs": "Permitir agir em nome de um usuário",
       "rateLimit": "Substituição do limite de taxa (opcional)",
       "rateLimitBurst": "Tamanho do burst (máx. {{max}})",
-      "rateLimitRefill": "Requisições por minuto (máx. {{max}})"
+      "rateLimitRefill": "Requisições por minuto (máx. {{max}})",
+      "allowActAsHelp": "Quando ativado, os pedidos podem atuar como um utilizador interno ativo. Cada ação tem de ser permitida tanto para a conta de serviço como para esse utilizador."
     },
     "keys": {
       "loadFailed": "Falha ao carregar as chaves",
@@ -3924,7 +3925,8 @@
       "keys": "Chaves ativas",
       "lastUsed": "Último uso",
       "createdBy": "Criado por",
-      "kind": "Tipo"
+      "kind": "Tipo",
+      "allowActAs": "Atuar como"
     },
     "loadFailed": "Falha ao carregar os principais de serviço",
     "toggleFailed": "Falha ao atualizar o principal de serviço",
@@ -3965,6 +3967,7 @@
     "kind": {
       "api": "API",
       "mcpAgent": "Agente MCP"
-    }
+    },
+    "seatNote": "As contas de serviço não consomem licenças de utilizador."
   }
 }

@@ -42,7 +42,7 @@ const EMPTY_OPTIONS: ServicePrincipalFormOptions = {
  * upgrade notice.
  */
 export function ServicePrincipalsSettingsTab() {
-  const { t } = useTranslation('msp/settings');
+  const { t } = useTranslation(['msp/settings', 'common']);
   const { formatDate } = useFormatters();
   const { hasFeature } = useTier();
   const hasPro = hasFeature(TIER_FEATURES.SERVICE_PRINCIPALS);
@@ -134,6 +134,14 @@ export function ServicePrincipalsSettingsTab() {
               : t('servicePrincipals.kind.api', { defaultValue: 'API' })}
           </Badge>
         ),
+      },
+      {
+        title: t('servicePrincipals.columns.allowActAs', { defaultValue: 'Act-as' }),
+        dataIndex: 'allow_act_as',
+        render: (value: boolean) =>
+          value
+            ? t('common:yes', { defaultValue: 'Yes' })
+            : t('common:no', { defaultValue: 'No' }),
       },
       {
         title: t('servicePrincipals.columns.status', { defaultValue: 'Status' }),
@@ -252,6 +260,9 @@ export function ServicePrincipalsSettingsTab() {
             {t('servicePrincipals.description', {
               defaultValue: 'Non-human identities with their own roles and API keys for integrations and agents.',
             })}
+          </p>
+          <p className="text-sm text-gray-500">
+            {t('servicePrincipals.seatNote', { defaultValue: 'Service principals do not consume seats.' })}
           </p>
         </div>
         <div className="flex items-center gap-3">

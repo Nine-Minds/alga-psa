@@ -3888,7 +3888,8 @@
       "allowActAs": "Autoriser l'action au nom d'un utilisateur",
       "rateLimit": "Remplacement de la limite de débit (facultatif)",
       "rateLimitBurst": "Taille de rafale (max. {{max}})",
-      "rateLimitRefill": "Requêtes par minute (max. {{max}})"
+      "rateLimitRefill": "Requêtes par minute (max. {{max}})",
+      "allowActAsHelp": "Lorsqu’elle est activée, cette option permet aux requêtes d’agir comme un utilisateur interne actif. Chaque action doit être autorisée à la fois pour le principal et pour cet utilisateur."
     },
     "keys": {
       "loadFailed": "Échec du chargement des clés",
@@ -3924,7 +3925,8 @@
       "keys": "Clés actives",
       "lastUsed": "Dernière utilisation",
       "createdBy": "Créé par",
-      "kind": "Type"
+      "kind": "Type",
+      "allowActAs": "Agir au nom de"
     },
     "loadFailed": "Échec du chargement des principaux de service",
     "toggleFailed": "Échec de la mise à jour du principal de service",
@@ -3965,6 +3967,7 @@
     "kind": {
       "api": "API",
       "mcpAgent": "Agent MCP"
-    }
+    },
+    "seatNote": "Les principaux de service ne consomment pas de licences utilisateur."
   }
 }

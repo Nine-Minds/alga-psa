@@ -3888,7 +3888,8 @@
       "allowActAs": "Zezwalaj na działanie w imieniu użytkownika",
       "rateLimit": "Nadpisanie limitu żądań (opcjonalnie)",
       "rateLimitBurst": "Rozmiar serii (maks. {{max}})",
-      "rateLimitRefill": "Żądania na minutę (maks. {{max}})"
+      "rateLimitRefill": "Żądania na minutę (maks. {{max}})",
+      "allowActAsHelp": "Po włączeniu żądania mogą działać jako aktywny użytkownik wewnętrzny. Każda czynność musi być dozwolona zarówno dla konta usługowego, jak i tego użytkownika."
     },
     "keys": {
       "loadFailed": "Nie udało się załadować kluczy",
@@ -3924,7 +3925,8 @@
       "keys": "Aktywne klucze",
       "lastUsed": "Ostatnio użyty",
       "createdBy": "Utworzony przez",
-      "kind": "Typ"
+      "kind": "Typ",
+      "allowActAs": "Działaj jako"
     },
     "loadFailed": "Nie udało się załadować podmiotów usług",
     "toggleFailed": "Nie udało się zaktualizować podmiotu usługi",
@@ -3965,6 +3967,7 @@
     "kind": {
       "api": "API",
       "mcpAgent": "Agent MCP"
-    }
+    },
+    "seatNote": "Konta usługowe nie zużywają licencji użytkowników."
   }
 }

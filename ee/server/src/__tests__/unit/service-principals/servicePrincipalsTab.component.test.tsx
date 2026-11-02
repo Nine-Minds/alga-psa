@@ -35,8 +35,10 @@ vi.mock('server/src/components/tier-gating/TierGate', async () => {
         : ReactModule.createElement(FeatureUpgradeNotice, { featureName, description, requiredTier: 'pro' }),
   };
 });
-const stableT = vi.hoisted(() => ({ t: (key: string, options?: { defaultValue?: string } & Record<string, unknown>) =>
-  String(options?.defaultValue ?? key).replace(/\{\{(\w+)\}\}/g, (_m, n) => String(options?.[n] ?? '')) }));
+const stableT = vi.hoisted(() => ({ t: (key: string, options?: { defaultValue?: string } & Record<string, unknown>) => {
+  const shared = key === 'common:yes' ? 'Yes' : key === 'common:no' ? 'No' : key;
+  return String(options?.defaultValue ?? shared).replace(/\{\{(\w+)\}\}/g, (_m, n) => String(options?.[n] ?? ''));
+} }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => stableT,
   useFormatters: () => ({ formatDate: (d: Date) => d.toISOString().slice(0, 10) }),
@@ -93,6 +95,23 @@ describe('T030 service principals tab', () => {
     expect(document.body.textContent).not.toContain('user-1');
     expect(document.body.textContent).not.toContain('creator-1');
     expect((screen.getByRole('button', { name: 'New service principal' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('renders the Act-as column for both values and explains seat use and act-as behavior', async () => {
+    m.list.mockResolvedValue([
+      makeRow({ allow_act_as: false }),
+      makeRow({ user_id: 'user-2', name: 'Support agent', kind: 'mcp_agent', allow_act_as: true }),
+    ]);
+    render(<ServicePrincipalsSettingsTab />);
+
+    expect(await screen.findByText('Support agent')).toBeTruthy();
+    expect(screen.getByText('Act-as')).toBeTruthy();
+    expect(screen.getByText('Yes')).toBeTruthy();
+    expect(screen.getByText('No')).toBeTruthy();
+    expect(screen.getByText('Service principals do not consume seats.')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'New service principal' }));
+    expect(await screen.findByText(/When enabled, requests can act as an active internal user/)).toBeTruthy();
   });
 
   it('disables New at the limit and says why', async () => {
