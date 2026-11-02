@@ -141,18 +141,15 @@ function requestFor(fixture: Fixture): any {
 type ColdRoute = 'projects/export' | 'tickets' | 'assets/[id]';
 type ColdProbeResult = {
   initialTenant: string | null;
-  authorizedStatus: number;
-  authorizedErrorCode: string | null;
-  unauthorizedStatus: number;
-  unauthorizedErrorCode: string | null;
+  status: number;
+  errorCode: string | null;
   finalTenant: string | null;
 };
 
 function runColdApiRequest(
   route: ColdRoute,
   url: string,
-  authorizedKey: string,
-  unauthorizedKey: string,
+  apiKey: string,
   expectedStatus: number,
   assetId?: string,
 ): ColdProbeResult {
@@ -179,9 +176,8 @@ function runColdApiRequest(
         DB_PASSWORD_SERVER: String(connection.password),
         COLD_RBAC_ROUTE_MODULE: `@/app/api/v1/${route}/route`,
         COLD_RBAC_URL: url,
-        COLD_RBAC_AUTHORIZED_KEY: authorizedKey,
-        COLD_RBAC_UNAUTHORIZED_KEY: unauthorizedKey,
-        COLD_RBAC_AUTHORIZED_STATUS: String(expectedStatus),
+        COLD_RBAC_API_KEY: apiKey,
+        COLD_RBAC_EXPECTED_STATUS: String(expectedStatus),
         COLD_RBAC_ASSET_ID: assetId ?? '',
         COLD_RBAC_RESULT_FILE: resultPath,
       },
@@ -315,19 +311,27 @@ describe('quote API permission resource integration', () => {
     expect(roles[0].permissions.filter(({ action }) => action === 'read').every(({ client }) => !client)).toBe(true);
 
     for (const routeCase of routeCases) {
-      const result = runColdApiRequest(
+      const authorizedResult = runColdApiRequest(
         routeCase.route,
         routeCase.url,
         authorizedKey.api_key,
-        unauthorizedKey.api_key,
         routeCase.authorizedStatus,
         routeCase.assetId,
       );
-      expect(result.initialTenant).toBeNull();
-      expect(result.authorizedStatus).toBe(routeCase.authorizedStatus);
-      expect(result.unauthorizedStatus).toBe(403);
-      expect(result.unauthorizedErrorCode).toBe('FORBIDDEN');
-      expect(result.finalTenant).toBeNull();
+      const unauthorizedResult = runColdApiRequest(
+        routeCase.route,
+        routeCase.url,
+        unauthorizedKey.api_key,
+        403,
+        routeCase.assetId,
+      );
+      expect(authorizedResult.initialTenant).toBeNull();
+      expect(authorizedResult.status).toBe(routeCase.authorizedStatus);
+      expect(authorizedResult.finalTenant).toBeNull();
+      expect(unauthorizedResult.initialTenant).toBeNull();
+      expect(unauthorizedResult.status).toBe(403);
+      expect(unauthorizedResult.errorCode).toBe('FORBIDDEN');
+      expect(unauthorizedResult.finalTenant).toBeNull();
     }
   }, 180_000);
 

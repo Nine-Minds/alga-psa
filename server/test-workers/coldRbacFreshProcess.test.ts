@@ -5,18 +5,15 @@ import { getTenantContext, resetTenantConnectionPool } from '@alga-psa/db';
 
 const routeModule = process.env.COLD_RBAC_ROUTE_MODULE;
 const requestUrl = process.env.COLD_RBAC_URL;
-const authorizedKey = process.env.COLD_RBAC_AUTHORIZED_KEY;
-const unauthorizedKey = process.env.COLD_RBAC_UNAUTHORIZED_KEY;
+const apiKey = process.env.COLD_RBAC_API_KEY;
 const assetId = process.env.COLD_RBAC_ASSET_ID;
 const resultPath = process.env.COLD_RBAC_RESULT_FILE;
-const expectedAuthorizedStatus = Number(process.env.COLD_RBAC_AUTHORIZED_STATUS);
+const expectedStatus = Number(process.env.COLD_RBAC_EXPECTED_STATUS);
 
 type ProbeResult = {
   initialTenant: string | null;
-  authorizedStatus: number;
-  authorizedErrorCode: string | null;
-  unauthorizedStatus: number;
-  unauthorizedErrorCode: string | null;
+  status: number;
+  errorCode: string | null;
   finalTenant: string | null;
 };
 
@@ -34,31 +31,25 @@ describe('fresh-process API-key RBAC probe', () => {
     await resetTenantConnectionPool();
   });
 
-  it('authorizes the first valid request and denies a valid caller without the MSP grant', async () => {
+  it('evaluates the first API-key request in a cold process', async () => {
     expect(routeModule).toBeTruthy();
     expect(requestUrl).toBeTruthy();
-    expect(authorizedKey).toBeTruthy();
-    expect(unauthorizedKey).toBeTruthy();
+    expect(apiKey).toBeTruthy();
     expect(resultPath).toBeTruthy();
 
     const initialTenant = getTenantContext() ?? null;
     const route = await import(routeModule!);
-    const authorized = await invoke(route, authorizedKey!);
-    const unauthorized = await invoke(route, unauthorizedKey!);
+    const response = await invoke(route, apiKey!);
     const result: ProbeResult = {
       initialTenant,
-      authorizedStatus: authorized.status,
-      authorizedErrorCode: authorized.errorCode,
-      unauthorizedStatus: unauthorized.status,
-      unauthorizedErrorCode: unauthorized.errorCode,
+      status: response.status,
+      errorCode: response.errorCode,
       finalTenant: getTenantContext() ?? null,
     };
 
     await writeFile(resultPath!, JSON.stringify(result));
     expect(initialTenant).toBeNull();
-    expect(authorized.status).toBe(expectedAuthorizedStatus);
-    expect(unauthorized.status).toBe(403);
-    expect(unauthorized.errorCode).toBe('FORBIDDEN');
+    expect(response.status).toBe(expectedStatus);
     expect(result.finalTenant).toBeNull();
   });
 });
