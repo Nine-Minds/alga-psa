@@ -127,12 +127,15 @@ describe('invoiceService tenant-scoped query contract', () => {
     expect(taxWriteSection).toContain("tenantDb(tx, tenant).table('invoice_charge_fixed_details as iifd')");
     expect(recomputeTotalsSection).toContain("tenantScopedTable(tx, tenant, 'invoice_charges')");
     expect(recomputeTotalsSection).toContain("tenantScopedTable(tx, tenant, 'invoices')");
-    expect(totalUpdateSection).toContain("tenantScopedTable(tx, tenant, 'transactions')");
 
     expect(taxWriteSection).not.toMatch(/\.where\(\{[^}]*['"]?tenant['"]?\s*:/s);
     expect(taxWriteSection).not.toMatch(/\.(?:where|andWhere)\(['"][^'"]*tenant['"]/);
     expect(recomputeTotalsSection).not.toMatch(/\.where\(\{[^}]*['"]?tenant['"]?\s*:/s);
     expect(recomputeTotalsSection).not.toMatch(/\.(?:where|andWhere)\(['"][^'"]*tenant['"]/);
+  });
+
+  it('uses structural tenant scoping for transaction recording', () => {
+    expect(totalUpdateSection).toContain("tenantScopedTable(tx, tenant, 'transactions')");
     expect(totalUpdateSection).not.toMatch(/\.where\(\{[^}]*['"]?tenant['"]?\s*:/s);
     expect(totalUpdateSection).not.toMatch(/\.(?:where|andWhere)\(['"][^'"]*tenant['"]/);
   });

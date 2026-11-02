@@ -84,6 +84,7 @@ describe('REST manual invoice creation takes terms from the effective billing id
     const created = await serviceUnderTest().generateManualInvoice(request, {
       tenant: context.tenantId,
       userId: context.userId,
+      user,
     } as any);
     return context.db('invoices')
       .where({ tenant: context.tenantId, invoice_id: (created as any).invoice_id })
