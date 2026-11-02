@@ -15,10 +15,7 @@ import type {
 import {
   createAssetReadContext,
   filterReadableAssets,
-  isAssetActionAllowed,
-  type AssetAuthorizationAction,
   type AssetAuthUser,
-  type AssetReadAuthorizationContext,
 } from '../assetReadAuthorization';
 import type {
   CustodyEventInput,
@@ -30,12 +27,13 @@ import { CustodyError } from './errors';
 import { openCustody } from './openCustody';
 import { receiveEquipmentForTicket, type ReceiveEquipmentResult } from './receiveEquipment';
 import { recordCustodyEvent } from './recordCustodyEvent';
-import { closeCustodyEpisode, type ClosableCustodyReason } from './closeCustodyEpisode';
+import { assertAssetAuthorized, authorizeCustodyEpisode, closeCustodyEpisodeWithAuthorization } from './writeAuthorization';
 import { updateCustodyDetails } from './updateCustodyDetails';
 import { getOpenCustodyForAssets, listCustodyEpisodes, listCustodyQueue } from './queries';
 import { publishCustodyChanged } from './publishCustodyChanged';
 export { resolveCustodyToday } from './today';
-import { loadCustody, locationNames, userNames } from './shared';
+import { locationNames, userNames } from './shared';
+export { authorizeCustodyEpisode } from './writeAuthorization';
 
 async function readableCustodyDocuments(
   trx: Knex.Transaction, tenant: string, user: AssetAuthUser, ids: string[]
@@ -68,45 +66,6 @@ async function associateCustodyDocuments(trx: Knex.Transaction, tenant: string, 
  * here enforces the record-level asset action and answers "not found" when it is not allowed, so
  * existence is never revealed.
  */
-
-async function assertAssetAuthorized(
-  knex: Knex | Knex.Transaction,
-  tenant: string,
-  ctx: AssetReadAuthorizationContext,
-  assetId: string,
-  action: AssetAuthorizationAction = 'read'
-): Promise<{ asset_id: string; client_id: string }> {
-  const asset = await tenantDb(knex, tenant)
-    .table('assets')
-    .where({ asset_id: assetId })
-    .select('asset_id', 'client_id')
-    .first();
-  if (!asset || !(await isAssetActionAllowed(knex, tenant, ctx, asset, action))) {
-    throw new CustodyError('not_found', 'Asset not found.');
-  }
-  return asset;
-}
-
-/** Resolve the episode's asset and apply the record-level check, as one "not found" for either miss. */
-export async function authorizeCustodyEpisode(
-  knex: Knex | Knex.Transaction,
-  tenant: string,
-  user: AssetAuthUser,
-  custodyId: string,
-  action: AssetAuthorizationAction = 'read'
-) {
-  const ctx = await createAssetReadContext(knex, tenant, user);
-  let custody;
-  try {
-    custody = await loadCustody(knex, tenant, custodyId);
-  } catch {
-    throw new CustodyError('not_found', 'Custody record not found.');
-  }
-  await assertAssetAuthorized(knex, tenant, ctx, custody.asset_id, action).catch(() => {
-    throw new CustodyError('not_found', 'Custody record not found.');
-  });
-  return custody;
-}
 
 async function publishAssetStatusChange(
   tenant: string,
@@ -223,11 +182,10 @@ export async function closeCustodyEpisodeInTransaction(
   tenant: string,
   user: AssetAuthUser,
   custodyId: string,
-  reason: ClosableCustodyReason,
+  reason: Parameters<typeof closeCustodyEpisodeWithAuthorization>[4],
   options: { note?: string | null; rmaId?: string | null; rmaNumber?: string | null } = {}
 ) {
-  await authorizeCustodyEpisode(trx, tenant, user, custodyId, 'update');
-  return closeCustodyEpisode(trx, tenant, user.user_id, custodyId, reason, options);
+  return closeCustodyEpisodeWithAuthorization(trx, tenant, user, custodyId, reason, options);
 }
 
 export async function publishRecordedCustodyEvent(

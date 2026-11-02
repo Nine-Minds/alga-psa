@@ -8,9 +8,9 @@ import { getAssetTypeBySlug } from '../assetTypeRegistry';
 import { openCustody } from './openCustody';
 
 /**
- * Ticket intake core (design D4). Runs inside the caller's transaction and owns no permission checks:
- * the wrapper (msp-composition `receiveEquipment`) has already checked asset:create/update, the ticket
- * record check and the asset record check.
+ * Ticket intake core (design D4). Runs inside the caller's transaction. The wrapper (msp-composition
+ * `receiveEquipment`) checks asset:create/update and ticket access; the required callback checks record-level
+ * asset:update after resolving the existing or newly-created asset and before custody rows are written.
  *
  * NEVER writes stock, money or time. It writes assets (new item only), asset_associations,
  * asset_custody, asset_custody_events, asset_history and document associations. It deliberately does not

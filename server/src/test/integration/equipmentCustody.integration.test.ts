@@ -14,16 +14,23 @@ import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 
 const published = vi.hoisted(() => ({ events: [] as Array<{ eventType: string; payload: any }>, verifyFiles: false, committedFiles: [] as boolean[] }));
-/** Assets the record-level asset read check refuses (per test). Empty = the real kernel decision (allow). */
-const denied = vi.hoisted(() => ({ assetIds: new Set<string>() }));
+/** Assets/actions the record-level asset check refuses (per test). Empty = the real kernel decision (allow). */
+const denied = vi.hoisted(() => ({ assetIds: new Set<string>(), updateAssetIds: new Set<string>(), denyNextUpdate: false }));
 vi.mock('@alga-psa/assets/lib/assetReadAuthorization', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/assets/lib/assetReadAuthorization')>();
   return {
     ...actual,
     isAssetReadAllowed: async (...args: Parameters<typeof actual.isAssetReadAllowed>) =>
       denied.assetIds.has(args[3].asset_id) ? false : actual.isAssetReadAllowed(...args),
-    isAssetActionAllowed: async (...args: Parameters<typeof actual.isAssetActionAllowed>) =>
-      denied.assetIds.has(args[3].asset_id) ? false : actual.isAssetActionAllowed(...args),
+    isAssetActionAllowed: async (...args: Parameters<typeof actual.isAssetActionAllowed>) => {
+      const [, , , asset, action] = args;
+      if (action === 'update' && denied.denyNextUpdate) {
+        denied.denyNextUpdate = false;
+        return false;
+      }
+      if (denied.assetIds.has(asset.asset_id) || (action === 'update' && denied.updateAssetIds.has(asset.asset_id))) return false;
+      return actual.isAssetActionAllowed(...args);
+    },
     filterReadableAssets: async (...args: Parameters<typeof actual.filterReadableAssets>) =>
       (await actual.filterReadableAssets(...args)).filter((a) => !denied.assetIds.has(a.asset_id)),
   };
@@ -208,6 +215,14 @@ async function counts(tenant: string): Promise<Record<string, number>> {
   return out;
 }
 
+async function custodyMutationSnapshot(tenant: string): Promise<Record<string, number>> {
+  const names = ['assets', 'asset_custody', 'asset_custody_events', 'asset_history', 'asset_associations', 'document_associations'];
+  return Object.fromEntries(await Promise.all(names.map(async name => {
+    const row = await table(tenant, name).count('* as count').first() as any;
+    return [name, Number(row.count)];
+  })));
+}
+
 async function newAsset(fx: Fx, over: Record<string, unknown> = {}) {
   const assetId = randomUUID();
   await table(fx.tenantId, 'assets').insert({
@@ -237,6 +252,13 @@ const intake = (fx: Fx, over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+async function receiveInTransaction(trx: Knex.Transaction, fx: Fx, input: any) {
+  const { receiveEquipmentInTransaction } = await import('@alga-psa/assets/lib/custody/service');
+  return receiveEquipmentInTransaction(trx, fx.tenantId, {
+    user_id: fx.userId, user_type: 'internal', roles: [],
+  }, { ...input, document_ids: input.document_ids ?? [] });
+}
+
 async function cleanupTenant(tenant: string) {
   const del = async (name: string) => table(tenant, name).del().catch(() => undefined);
   if (!isCitus) {
@@ -255,6 +277,7 @@ describe('equipment custody (integration)', () => {
     storage.files.clear(); storage.failOriginal = 0; storage.originalCount = 0; storage.failDelete = false; storage.failDerived = false;
     actionAuth.userType = 'internal'; actionAuth.clientId = undefined;
     published.verifyFiles = false; published.committedFiles = [];
+    denied.assetIds.clear(); denied.updateAssetIds.clear(); denied.denyNextUpdate = false;
   });
   beforeAll(async () => {
     const sharp = (await import('sharp')).default;
@@ -450,6 +473,34 @@ describe('equipment custody (integration)', () => {
     expect(await table(fx.tenantId, 'file_upload_sessions')).toHaveLength(0);
   });
 
+  it('denies existing-asset intake when read is allowed but record-level update is denied', async () => {
+    const fx = await seedFixture();
+    const assetId = await newAsset(fx);
+    denied.updateAssetIds.add(assetId);
+    const principal = { user_id: fx.userId, user_type: 'internal', roles: [] } as any;
+    const { createAssetReadContext, isAssetActionAllowed } = await import('@alga-psa/assets/lib/assetReadAuthorization');
+    const authContext = await createAssetReadContext(db, fx.tenantId, principal);
+    const asset = await table(fx.tenantId, 'assets').where({ asset_id: assetId }).select('asset_id', 'client_id').first();
+    expect(await isAssetActionAllowed(db, fx.tenantId, authContext, asset, 'read')).toBe(true);
+    expect(await isAssetActionAllowed(db, fx.tenantId, authContext, asset, 'update')).toBe(false);
+
+    const before = await custodyMutationSnapshot(fx.tenantId);
+    await expect(db.transaction(trx => receiveInTransaction(trx, fx, intake(fx, { new_asset: undefined, asset_id: assetId }) as any)))
+      .rejects.toMatchObject({ code: 'not_found' });
+    expect(await custodyMutationSnapshot(fx.tenantId)).toEqual(before);
+    expect(await table(fx.tenantId, 'assets').where({ asset_id: assetId }).first()).toMatchObject({ status: 'active' });
+  });
+
+  it('rolls back a new asset when record-level update authorization denies its custody intake', async () => {
+    const fx = await seedFixture();
+    const before = await custodyMutationSnapshot(fx.tenantId);
+    denied.denyNextUpdate = true;
+    await expect(db.transaction(trx => receiveInTransaction(trx, fx, intake(fx) as any)))
+      .rejects.toMatchObject({ code: 'not_found' });
+    expect(denied.denyNextUpdate).toBe(false);
+    expect(await custodyMutationSnapshot(fx.tenantId)).toEqual(before);
+  });
+
   it('associates both intake photos atomically and preserves ticket links', async () => {
     const fx = await seedFixture();
     const ids = [randomUUID(), randomUUID()];
@@ -457,15 +508,14 @@ describe('equipment custody (integration)', () => {
       await table(fx.tenantId, 'documents').insert({ tenant: fx.tenantId, document_id: id, document_name: 'photo', user_id: fx.userId, created_by: fx.userId, is_client_visible: false });
       await table(fx.tenantId, 'document_associations').insert({ tenant: fx.tenantId, document_id: id, entity_type: 'ticket', entity_id: fx.ticketId });
     }
-    const { receiveEquipmentForTicket } = await import('@alga-psa/assets/lib/custody/receiveEquipment');
     const input = intake(fx, { document_ids: ids }) as any;
     await expect(db.transaction(async trx => {
-      await receiveEquipmentForTicket(trx, fx.tenantId, fx.userId, input);
+      await receiveInTransaction(trx, fx, input);
       throw new Error('rollback');
     })).rejects.toThrow('rollback');
     expect(await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset' })).toHaveLength(0);
     expect(await table(fx.tenantId, 'asset_custody_events')).toHaveLength(0);
-    const result = await db.transaction(trx => receiveEquipmentForTicket(trx, fx.tenantId, fx.userId, input));
+    const result = await db.transaction(trx => receiveInTransaction(trx, fx, input));
     expect(result.event.document_ids).toEqual(ids);
     const links = await table(fx.tenantId, 'document_associations').whereIn('document_id', ids);
     expect(links.filter((row: any) => row.entity_type === 'ticket')).toHaveLength(2);
@@ -473,9 +523,7 @@ describe('equipment custody (integration)', () => {
     expect((await table(fx.tenantId, 'documents').whereIn('document_id', ids)).every((row: any) => !row.is_client_visible)).toBe(true);
 
     const existingId = await newAsset(fx);
-    const existing = await db.transaction(trx => receiveEquipmentForTicket(trx, fx.tenantId, fx.userId, {
-      ...input, new_asset: undefined, asset_id: existingId,
-    }));
+    const existing = await db.transaction(trx => receiveInTransaction(trx, fx, { ...input, new_asset: undefined, asset_id: existingId }));
     expect(existing.event.document_ids).toEqual(ids);
     expect(await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset', entity_id: existingId })).toHaveLength(2);
 
@@ -498,8 +546,7 @@ describe('equipment custody (integration)', () => {
     const fx = await seedFixture();
     const id = randomUUID();
     await table(fx.tenantId, 'documents').insert({ tenant: fx.tenantId, document_id: id, document_name: 'condition.jpg', user_id: fx.userId, created_by: fx.userId, is_client_visible: false });
-    const { receiveEquipmentForTicket } = await import('@alga-psa/assets/lib/custody/receiveEquipment');
-    const received = await db.transaction(trx => receiveEquipmentForTicket(trx, fx.tenantId, fx.userId, intake(fx, { document_ids: [id] }) as any));
+    const received = await db.transaction(trx => receiveInTransaction(trx, fx, intake(fx, { document_ids: [id] }) as any));
     const { listCustodyEventsService, recordCustodyEventService } = await import('@alga-psa/assets/lib/custody/service');
     const { getAssetDocuments } = await import('@alga-psa/assets/actions/assetDocumentActions');
     const { hasPermission } = await import('@alga-psa/auth');
@@ -793,12 +840,11 @@ describe('equipment custody (integration)', () => {
 
   it('generates distinct tags for concurrent receives on one ticket, with no stock rows', async () => {
     const fx = await seedFixture();
-    const { receiveEquipmentForTicket } = await import('@alga-psa/assets/lib/custody/receiveEquipment');
     const before = await counts(fx.tenantId);
     const ticket = await table(fx.tenantId, 'tickets').where({ ticket_id: fx.ticketId }).first();
     const run = (name: string) =>
       db.transaction(async (trx) => {
-        const result = await receiveEquipmentForTicket(trx, fx.tenantId, fx.userId, intake(fx, { new_asset: { name, asset_type: 'unknown' } }) as any);
+        const result = await receiveInTransaction(trx, fx, intake(fx, { new_asset: { name, asset_type: 'unknown' } }) as any);
         // Hold the transaction open briefly so the two overlap and the ticket row lock is what serialises them.
         await new Promise((resolve) => setTimeout(resolve, 150));
         return result;
