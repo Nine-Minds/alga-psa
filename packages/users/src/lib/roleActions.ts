@@ -3,7 +3,7 @@
 // TODO: Consolidate with @alga-psa/auth/actions/policyActions after circular dependency is resolved
 // This is a temporary duplication to break the auth <-> users cycle
 
-import { IRole, IUserRole } from '@alga-psa/types';
+import { IRole, IUserRole, getRoleAssignmentViolation } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -103,11 +103,13 @@ export const assignRoleToUser = withAuth(async (
                 return actionError('Role not found. Refresh the role list and try again.', 'msp/settings:errors.roles.roleNotFound');
             }
 
-            if (user.user_type === 'internal' && !role.msp) {
+            // LEVERAGE: pattern role-assignment-user-type — same decision in policyActions.assignRoleToUser and users roleActions.assignRoleToUser
+            const roleViolation = getRoleAssignmentViolation(user.user_type, role);
+            if (roleViolation === 'portal_role_on_msp_user') {
                 return actionError('Cannot assign a client portal role to an MSP user.', 'msp/settings:errors.roles.portalRoleOnMspUser');
             }
 
-            if (user.user_type === 'client' && !role.client) {
+            if (roleViolation === 'msp_role_on_portal_user') {
                 return actionError('Cannot assign an MSP role to a client portal user.', 'msp/settings:errors.roles.mspRoleOnPortalUser');
             }
 

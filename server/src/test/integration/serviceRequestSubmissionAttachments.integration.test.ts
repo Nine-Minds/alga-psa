@@ -325,7 +325,7 @@ describe('service request submission attachments', () => {
         contactId,
         payload: {},
       })
-    ).rejects.toThrow('Required field missing: "access_target"');
+    ).rejects.toThrow('Required field missing: "Access Target"');
 
     const submissions = await tenantTable(tenant, 'service_request_submissions').where({ tenant, definition_id: definitionId });
     expect(submissions).toHaveLength(0);

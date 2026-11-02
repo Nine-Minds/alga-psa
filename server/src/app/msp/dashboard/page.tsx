@@ -10,6 +10,7 @@ import { DashboardOnboardingSkeleton, DashboardOnboardingSlot } from '@alga-psa/
 import { isEnterprise } from '@/lib/features';
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { redirect } from 'next/navigation';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslation(undefined, 'metadata');
@@ -23,6 +24,8 @@ export const dynamic = 'force-dynamic';
 
 async function DashboardPage() {
   const productCode = await getCurrentTenantProduct();
+
+  if (productCode === 'co_managed') redirect('/msp/tickets');
 
   if (productCode === 'algadesk') {
     const summary = await getAlgaDeskDashboardSummary();

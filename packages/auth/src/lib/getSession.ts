@@ -13,6 +13,7 @@ export async function logSessionRejection(reason: string): Promise<void> {
   } catch { /* Some auth callers run outside a Next request context. */ }
   logger.warn('[auth] session_rejected', { reason, requestId });
 }
+import { isInteractiveUserType } from '@alga-psa/types';
 import { UserSession } from '@alga-psa/db/models/UserSession';
 import { auth as edgeAuth } from '../nextauth/edge-auth';
 import { auth as fullAuth } from '../nextauth/auth';
@@ -55,7 +56,8 @@ async function requireLiveSession(session: Session | null): Promise<Session | nu
     || tenant.length === 0
     || typeof userId !== 'string'
     || userId.length === 0
-    || (userType !== 'internal' && userType !== 'client')
+    || typeof userType !== 'string'
+    || !isInteractiveUserType(userType)
     || typeof sessionId !== 'string'
     || sessionId.length === 0
   ) {

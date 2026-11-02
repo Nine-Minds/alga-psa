@@ -376,5 +376,8 @@
     "altVideoThumbnail": "Miniatuur van {{name}}",
     "pageCount_one": "{{count}} pagina",
     "pageCount_other": "{{count}} pagina's"
+  },
+  "skeleton": {
+    "cardLabel": "Laadplaceholder voor documentkaart"
   }
 }

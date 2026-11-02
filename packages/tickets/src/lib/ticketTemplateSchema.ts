@@ -2,15 +2,33 @@
 // import this, so it must never reach @alga-psa/db, knex or pg. Guarded by components/templates/__tests__/clientBundleGuard.test.ts.
 
 import { z } from 'zod';
+import { findUnknownTitleTokens, TICKET_TITLE_TOKENS } from './ticketTitleTokens';
 
-const uuid = z.string().uuid();
+const uuid = z.string().guid();
 
-// LEVERAGE: pattern ticket-template-fields — title/description/board/category/priority/tags/checklist group is carried by both ticket templates and recurring_ticket_definitions (lib/recurring/definitionInput.ts); recurring should reference a ticket template instead
+/** Template title with `{{token}}` placeholders; an unknown token is a save error (R8). */
+export const ticketTitleSchema = z
+  .string()
+  .trim()
+  .min(1, 'Title is required')
+  .max(500)
+  .superRefine((title, ctx) => {
+    const unknown = findUnknownTitleTokens(title);
+    if (unknown.length === 0) return;
+    const available = TICKET_TITLE_TOKENS.map((token) => `{{${token}}}`).join(', ');
+    const tokens = unknown.map((token) => `{{${token}}}`).join(', ');
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `Unknown title token${unknown.length > 1 ? 's' : ''} ${tokens}. Available tokens: ${available}`,
+      params: { messageKey: 'features/tickets:templates.errors.unknownTitleTokens', messageParams: { tokens, available } },
+    });
+  });
+
 export const ticketTemplateInputSchema = z
   .object({
     name: z.string().trim().min(1, 'Name is required').max(200),
     notes: z.string().max(2000).nullable().default(null),
-    title: z.string().trim().min(1, 'Title is required').max(500),
+    title: ticketTitleSchema,
     /** Same format as `tickets.attributes.description` (serialized BlockNote JSON or plain text). */
     description: z.string().nullable().default(null),
     board_id: uuid.nullable().default(null),
@@ -24,6 +42,11 @@ export const ticketTemplateInputSchema = z
       .record(z.string(), z.unknown())
       .refine((fields) => Object.keys(fields).length <= 100, 'At most 100 custom fields')
       .default({}),
+    /**
+     * Whether the template is offered in the new-ticket picker (R5). Omitted on update = unchanged;
+     * omitted on create = offered.
+     */
+    offer_for_manual_use: z.boolean().optional(),
     checklist: z
       .array(
         z

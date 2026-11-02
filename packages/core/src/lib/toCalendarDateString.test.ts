@@ -26,9 +26,14 @@ function pickerLocalMidnightFor(isoDateOnly: string): Date {
   return new Date(y, m - 1, d, 0, 0, 0, 0);
 }
 
-function assertTz(zone: string, expectedOffsetMinutes: number) {
+// Probe the offset at a fixed summer instant (the scenarios below are Aug/Sep 2026), not "now":
+// Europe/Berlin and America/New_York change offset at DST transitions, so a wall-clock probe
+// fails whenever the suite runs outside summer time.
+const TZ_PROBE_INSTANT = new Date('2026-08-31T12:00:00.000Z');
+
+function assertTz(zone: string, expectedOffsetMinutes: number, probe: Date = TZ_PROBE_INSTANT) {
   process.env.TZ = zone;
-  expect(new Date().getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  expect(probe.getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
 describe('toCalendarDateString — DatePicker Date → YYYY-MM-DD', () => {
@@ -86,5 +91,23 @@ describe('toCalendarDateString — string / PlainDate / null normalization', () 
   it('resolves full ISO instants via their UTC calendar date (legacy input shape)', () => {
     expect(toCalendarDateString('2026-08-31T12:00:00.000Z')).toBe('2026-08-31');
     expect(toCalendarDateString('2026-08-31T00:00:00.000Z')).toBe('2026-08-31');
+  });
+});
+
+describe('toCalendarDateString — why the contract read boundary does not use it (alga0002302)', () => {
+  // This helper reads LOCAL components (right for DatePicker output), so a UTC-midnight Date gives the
+  // previous day west of UTC. (normalizeClientContract also reads local components, because pg builds
+  // DATE columns as server-local-midnight Dates; see clientContractDateColumn.timeZones.test.ts.)
+  it('reads a UTC-midnight Date as the prior local day in America/Los_Angeles', () => {
+    assertTz('America/Los_Angeles', 420);
+    expect(toCalendarDateString(new Date('2026-04-01T00:00:00Z'))).toBe('2026-03-31');
+  });
+
+  it('passes the YYYY-MM-DD string the boundary emits through unchanged in every zone', () => {
+    // Auckland is UTC+13 only in its southern summer (the Dec 31 scenario), not at the Aug probe instant.
+    assertTz('Pacific/Auckland', -780, new Date('2026-12-31T00:00:00.000Z'));
+    expect(toCalendarDateString('2026-12-31')).toBe('2026-12-31');
+    assertTz('America/Los_Angeles', 420);
+    expect(toCalendarDateString('2026-04-01')).toBe('2026-04-01');
   });
 });

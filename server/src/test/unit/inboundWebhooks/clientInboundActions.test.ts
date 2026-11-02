@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   updateContact: vi.fn(),
   publishWorkflowEvent: vi.fn().mockResolvedValue(undefined),
   ensureDefaultContractForClientIfBillingConfigured: vi.fn().mockResolvedValue(undefined),
-  createDefaultTaxSettingsAsync: vi.fn().mockResolvedValue(undefined),
+  initializeClientDefaultTax: vi.fn().mockResolvedValue({}),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -42,6 +42,10 @@ vi.mock('@alga-psa/db', () => ({
   }),
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
+  // The mock transaction never commits, so run after-commit hooks (domain events) immediately.
+  registerAfterCommit: (_trx: unknown, fn: () => unknown) => {
+    void fn();
+  },
 }));
 
 vi.mock('@alga-psa/shared/inboundWebhooks/externalEntityMappings', () => ({
@@ -53,6 +57,8 @@ vi.mock('@alga-psa/shared/models/contactModel', () => ({
   ContactModel: {
     createContact: mocks.createContact,
     updateContact: mocks.updateContact,
+    // trackContactUpdates reads before/after rows through the model.
+    getContactById: vi.fn(async (id: string) => ({ contact_name_id: id, client_id: 'client-1', is_inactive: false })),
   },
 }));
 
@@ -79,8 +85,9 @@ vi.mock('@alga-psa/shared/billingClients/defaultContract', () => ({
   ensureDefaultContractForClientIfBillingConfigured: mocks.ensureDefaultContractForClientIfBillingConfigured,
 }));
 
-vi.mock('@alga-psa/clients/lib/billingHelpers', () => ({
-  createDefaultTaxSettingsAsync: mocks.createDefaultTaxSettingsAsync,
+// Tax initialization is now transactional, inside the shared creation seam.
+vi.mock('@alga-psa/shared/billingClients/defaultTaxRate', () => ({
+  initializeClientDefaultTax: mocks.initializeClientDefaultTax,
 }));
 
 async function loadClientInboundActions() {
@@ -102,6 +109,12 @@ describe('client inbound webhook actions', () => {
     where: ReturnType<typeof vi.fn>;
     select: ReturnType<typeof vi.fn>;
     first: ReturnType<typeof vi.fn>;
+  };
+  let locationsQuery: {
+    where: ReturnType<typeof vi.fn>;
+    first: ReturnType<typeof vi.fn>;
+    insert: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
@@ -126,12 +139,38 @@ describe('client inbound webhook actions', () => {
       select: vi.fn().mockReturnThis(),
       first: vi.fn().mockResolvedValue({ billing_profile_id: 'billing-profile-1' }),
     };
+    // Mapped contact/address fields belong to the default location, not to
+    // `clients` — those columns were dropped in 20250707120000.
+    locationsQuery = {
+      where: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue(null),
+      insert: vi.fn().mockResolvedValue(undefined),
+      update: vi.fn().mockResolvedValue(undefined),
+    };
     trx = vi.fn((table: string) => {
       if (table === 'clients') {
         return clientsQuery;
       }
       if (table === 'client_billing_profiles') {
         return billingProfilesQuery;
+      }
+      if (table === 'client_locations') {
+        return locationsQuery;
+      }
+      // The creation seam resolves the tenant default currency and the product
+      // code (which decides whether tax initialization runs).
+      if (table === 'default_billing_settings') {
+        return {
+          where: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
+          first: vi.fn().mockResolvedValue({ default_currency_code: 'EUR' }),
+        };
+      }
+      if (table === 'tenants') {
+        return {
+          where: vi.fn().mockReturnThis(),
+          first: vi.fn().mockResolvedValue({ product_code: 'psa' }),
+        };
       }
       throw new Error(`Unexpected table ${table}`);
     });
@@ -197,20 +236,35 @@ describe('client inbound webhook actions', () => {
         tenant: 'tenant-a',
         client_name: 'Acme Corp',
         client_type: 'company',
-        email: 'ops@example.com',
-        phone_no: '+15551234567',
+        // `email` is not a clients column; `billing_email` is.
+        billing_email: 'ops@example.com',
         is_inactive: false,
+        // The seam adopts the tenant's configured default currency.
+        default_currency_code: 'EUR',
         properties: {
           source_system: 'rmm',
           inbound_webhook_external_id: 'company-42',
         },
       }),
     );
+    const insertedClient = clientsQuery.insert.mock.calls[0][0];
+    expect(insertedClient).not.toHaveProperty('email');
+    expect(insertedClient).not.toHaveProperty('phone_no');
+    // The phone lands on the client's default location instead.
+    expect(locationsQuery.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        client_id: 'client-1',
+        phone: '+15551234567',
+        email: 'ops@example.com',
+        is_default: true,
+      }),
+    );
     expect(mocks.ensureDefaultContractForClientIfBillingConfigured).toHaveBeenCalledWith(
       trx,
       expect.objectContaining({ tenant: 'tenant-a', clientId: 'client-1' }),
     );
-    expect(mocks.createDefaultTaxSettingsAsync).toHaveBeenCalledWith('client-1');
+    expect(mocks.initializeClientDefaultTax).toHaveBeenCalledWith(trx, 'tenant-a', 'client-1');
     expect(mocks.publishWorkflowEvent).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: 'CLIENT_CREATED' }),
     );
@@ -284,7 +338,7 @@ describe('client inbound webhook actions', () => {
     expect(clientsQuery.update).toHaveBeenCalledWith(
       expect.objectContaining({
         client_name: 'Acme Corp',
-        email: 'new-ops@example.com',
+        billing_email: 'new-ops@example.com',
         properties: {
           existing: true,
           source_system: 'rmm',
@@ -292,10 +346,14 @@ describe('client inbound webhook actions', () => {
         },
       }),
     );
+    expect(clientsQuery.update.mock.calls[0][0]).not.toHaveProperty('email');
+    // An update refreshes an existing default location but does not invent
+    // one; this client has none, so nothing is written.
+    expect(locationsQuery.insert).not.toHaveBeenCalled();
     expect(clientsQuery.insert).not.toHaveBeenCalled();
     expect(mocks.writeEntityMapping).not.toHaveBeenCalled();
     expect(mocks.ensureDefaultContractForClientIfBillingConfigured).not.toHaveBeenCalled();
-    expect(mocks.createDefaultTaxSettingsAsync).not.toHaveBeenCalled();
+    expect(mocks.initializeClientDefaultTax).not.toHaveBeenCalled();
   });
 
   it('T1022: setClientActiveByExternalId toggles active state through is_inactive', async () => {

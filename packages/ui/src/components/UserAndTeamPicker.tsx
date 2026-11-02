@@ -2,7 +2,8 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { IUser, ITeam } from '@alga-psa/types';
+import { FocusScope } from '@radix-ui/react-focus-scope';
+import { IUser, ITeam, isInteractiveUserType } from '@alga-psa/types';
 import { ChevronDown, Search } from 'lucide-react';
 import UserAvatar from './UserAvatar';
 import TeamAvatar from './TeamAvatar';
@@ -14,6 +15,7 @@ import { useRegisterUIComponent } from '../ui-reflection/useRegisterUIComponent'
 import { CommonActions } from '../ui-reflection/actionBuilders';
 import type { GetUserAvatarUrlsBatch } from './UserPicker';
 import { useTranslation } from '../lib/i18n/client';
+import { truncateTeamDescription } from '../lib/utils';
 
 export type GetTeamAvatarUrlsBatch = (teamIds: string[], tenant: string) => Promise<Map<string, string | null>>;
 
@@ -129,7 +131,7 @@ const UserAndTeamPicker = ({
     teamAvatarUrls[teamId] ?? initialTeamAvatarUrls?.[teamId] ?? null;
 
   const applyUserTypeFilter = (user: IUser) => {
-    if (userTypeFilter === null) return true;
+    if (userTypeFilter === null) return isInteractiveUserType(user.user_type); // all interactive types only
     if (Array.isArray(userTypeFilter)) return userTypeFilter.includes(user.user_type);
     return user.user_type === userTypeFilter;
   };
@@ -154,8 +156,11 @@ const UserAndTeamPicker = ({
   const filteredTeams = teamEntries
     .filter(team => {
       if (!searchQuery) return true;
+      const needle = searchQuery.toLowerCase();
       const leadName = getTeamLeadName(team).toLowerCase();
-      return `${team.team_name || ''}`.toLowerCase().includes(searchQuery.toLowerCase()) || leadName.includes(searchQuery.toLowerCase());
+      return `${team.team_name || ''}`.toLowerCase().includes(needle)
+        || leadName.includes(needle)
+        || (team.description || '').toLowerCase().includes(needle);
     })
     .sort((a, b) => (a.team_name || '').localeCompare(b.team_name || ''));
 
@@ -322,6 +327,26 @@ const UserAndTeamPicker = ({
     }
   }, [isOpen]);
 
+  // Escape belongs to the top-most layer: while this dropdown is open it must
+  // dismiss the list only. Radix dismissable layers (Dialog, Drawer) listen for
+  // Escape on `document` in the capture phase, so a React handler on the search
+  // box cannot stop them and the surrounding dialog closed too - taking any
+  // unsaved edits with it. A window-capture listener runs first.
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      setIsOpen(false);
+    };
+
+    window.addEventListener('keydown', handleEscape, true);
+    return () => window.removeEventListener('keydown', handleEscape, true);
+  }, [isOpen]);
+
   const updateDropdownPosition = useCallback(() => {
     if (!buttonRef.current) return;
 
@@ -399,6 +424,24 @@ const UserAndTeamPicker = ({
   };
 
   const dropdownContent = (
+    // The dropdown is portaled to document.body, so inside a modal dialog it sits
+    // outside that dialog's focus scope: without a scope of its own the dialog's
+    // trap yanks focus out of the search box on the first keystroke. A nested
+    // trapped scope pauses the dialog's, same as ClientPicker does.
+    <FocusScope
+      asChild
+      loop
+      trapped
+      onMountAutoFocus={(event) => event.preventDefault()}
+      onUnmountAutoFocus={(event) => {
+        event.preventDefault();
+        // Only reclaim focus when closing left it nowhere (option picked); a click
+        // that landed on another field keeps it.
+        if (!document.activeElement || document.activeElement === document.body) {
+          buttonRef.current?.focus();
+        }
+      }}
+    >
     <div
       ref={dropdownRef}
       className="fixed z-[10000] pointer-events-auto"
@@ -494,16 +537,21 @@ const UserAndTeamPicker = ({
                 className="relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)] text-gray-900"
                 parentId={pickerId}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full min-w-0">
                   <TeamAvatar
                     teamId={team.team_id}
                     teamName={team.team_name || t('pickers.unnamedTeam', 'Unnamed Team')}
                     avatarUrl={resolveTeamAvatar(team.team_id)}
                     size="sm"
                   />
-                  <div className="flex flex-col">
+                  <div className="flex flex-col flex-1 min-w-0">
                     <span>{team.team_name || t('pickers.unnamedTeam', 'Unnamed Team')}</span>
                     <span className="text-xs text-gray-500">{memberCount} members · Lead: {leadName}</span>
+                    {team.description && (
+                      <span className="text-xs text-gray-500 truncate" title={team.description}>
+                        {truncateTeamDescription(team.description)}
+                      </span>
+                    )}
                   </div>
                 </div>
               </OptionButton>
@@ -516,6 +564,7 @@ const UserAndTeamPicker = ({
         </div>
       </div>
     </div>
+    </FocusScope>
   );
 
   return (
@@ -543,7 +592,10 @@ const UserAndTeamPicker = ({
         className={`inline-flex items-center justify-between rounded-lg font-medium ${
           size === 'xs'
             ? 'p-1 h-7 text-xs min-w-0 gap-1'
-            : 'p-2 h-10 text-sm'
+            : size === 'sm'
+              // Matches CustomSelect's trigger so a row of mixed pickers reads as one control family.
+              ? 'p-2 h-9 text-sm !font-normal !border-border'
+              : 'p-2 h-10 text-sm'
         } ${
           buttonWidth === 'full' ? 'w-full' : size === 'xs' ? 'w-fit' : 'w-fit min-w-[min(150px,100%)] max-w-full'
         }`}

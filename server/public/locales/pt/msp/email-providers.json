@@ -297,7 +297,7 @@
         "description": "Configurar opções avançadas de processamento de e-mail",
         "folderFiltersLabel": "Filtros de pasta",
         "folderFiltersPlaceholder": "Caixa de entrada, suporte, pasta personalizada",
-        "folderFiltersHelp": "Lista separada por vírgulas de pastas a serem monitoradas (padrão: Caixa de entrada)",
+        "folderFiltersHelp": "Lista separada por vírgulas de pastas a serem monitoradas (padrão: Caixa de entrada). Use o nome exato da pasta como aparece no Outlook e escreva as pastas aninhadas como Caixa de entrada/Subpasta.",
         "maxEmailsPerSync": "Máximo de e-mails por sincronização"
       },
       "readiness": {
@@ -424,7 +424,8 @@
         "clientId": "ID do cliente OAuth",
         "clientSecret": "Segredo do cliente OAuth",
         "scopes": "Escopos OAuth",
-        "scopesPlaceholder": "escopos delimitados por espaço"
+        "scopesPlaceholder": "escopos delimitados por espaço",
+        "clientSecretHelp": "O segredo do cliente é armazenado com segurança e não será exibido. Deixe em branco para manter o segredo existente."
       },
       "processing": {
         "title": "Configurações de processamento",
@@ -432,6 +433,9 @@
         "folderFilters": "Filtros de pasta",
         "folderFiltersPlaceholder": "Caixa de entrada, suporte, tickets",
         "active": "Ativo"
+      },
+      "messages": {
+        "reconnectRequired": "As configurações de OAuth foram alteradas. Reconecte a caixa de correio para autorizá-la com as novas configurações."
       }
     }
   },
@@ -556,7 +560,8 @@
       "providerNameHelp": "Nome interno usado para identificar esta configuração. Não mostrado em e-mails enviados.",
       "senderDisplayName": "Nome de exibição do remetente",
       "senderDisplayNamePlaceholder": "por exemplo, Suporte Acme",
-      "senderDisplayNameHelp": "Nome de exibição mostrado no cabeçalho De em e-mails de ticket de saída (respostas, encerramentos). Aplicado somente quando esta caixa de correio corresponde ao endereço emissor de emissão de tickets do locatário. Deixe em branco para retornar ao nome do quadro do ticket."
+      "senderDisplayNameHelp": "Nome de exibição mostrado no cabeçalho De em e-mails de ticket de saída (respostas, encerramentos). Aplicado somente quando esta caixa de correio corresponde ao endereço emissor de emissão de tickets do locatário. Deixe em branco para retornar ao nome do quadro do ticket.",
+      "oauthClientSecretHelp": "O segredo do cliente é armazenado com segurança e não será exibido. Deixe em branco para manter o segredo existente."
     },
     "authOptions": {
       "password": "Senha",
@@ -580,6 +585,9 @@
       "saving": "Salvando...",
       "updateProvider": "Provedor de atualização",
       "createProvider": "Criar provedor"
+    },
+    "messages": {
+      "reconnectRequired": "As configurações de OAuth foram alteradas. Reconecte a caixa de correio para autorizá-la com as novas configurações."
     }
   },
   "microsoftForm": {
@@ -727,6 +735,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Recurso Pro",
+      "domainsDescription": "Domínios gerenciados exigem o Pro.",
+      "settingsDescription": "As configurações de email gerenciado exigem o Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Falha ao carregar domínios gerenciados",
       "loadOutboundSettingsFailed": "Falha ao carregar as configurações de e-mail de saída",
@@ -930,6 +943,12 @@
       "copyHostAriaLabel": "Copiar host",
       "copyFqdnAriaLabel": "Copiar nome completo",
       "hostHint": "Dica: no seu provedor de DNS, insira apenas o Host mostrado acima. A maioria dos provedores (Namecheap, GoDaddy, Cloudflare, entre outros) adiciona “{{domain}}” automaticamente. Se você colar o nome completo, o domínio é repetido (…{{domain}}.{{domain}}) e o registro nunca será verificado."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Recurso Pro",
+        "description": "As instruções de registros DNS exigem o Pro."
+      }
     }
   },
   "inboundRules": {

@@ -1,6 +1,7 @@
 'use server';
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Quote lifecycle spans opportunities/documents in server action context */
 
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import Handlebars from 'handlebars';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
@@ -16,9 +17,11 @@ import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
+import { decideQuote } from '../services/quoteDecisionService';
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate, formatQuoteDate } from '../lib/quote-email-templates';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { mapLoadedQuoteToViewModel } from '../lib/adapters/quoteAdapters';
+import { buildTenantPortalUrl } from '@alga-psa/tenancy/server';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, type QuoteApprovalWorkflowSettings } from '../lib/quoteApprovalSettings';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
@@ -39,7 +42,7 @@ import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination'
 import { formatCurrency } from '@alga-psa/core/lib/formatters';
 import { getQuotePdfFileName } from '../lib/quoteFileNames';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
-import { onQuoteAccepted, onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
+import { onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 import { QUOTE_ACTIVITY_TYPES, buildApprovalChangesRequestedActivity } from '../lib/quoteActivityTypes';
 
 type CreateQuoteInput = Omit<
@@ -540,6 +543,18 @@ const resolveQuoteRecipientLocale = async (
   }
 };
 
+// Deep link to the quote in the client portal, on the tenant's portal origin
+// (active custom domain, else the configured public base URL). Undefined when
+// no public origin exists, so the email goes out without a link.
+const buildQuotePortalLink = async (tenant: string, quoteId: string): Promise<string | undefined> => {
+  try {
+    return (await buildTenantPortalUrl(tenant, `/client-portal/billing/quotes/${encodeURIComponent(quoteId)}`)) ?? undefined;
+  } catch {
+    // A link lookup must never block sending the quote itself.
+    return undefined;
+  }
+};
+
 const renderQuoteEmail = async ({
   knex,
   tenant,
@@ -709,16 +724,35 @@ export const updateQuote = withAuth(async (
 
   if (parsedInput.status === 'sent' || parsedInput.status === 'accepted') {
     const updatedQuote = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (parsedInput.status === 'accepted') {
+        // Acceptance always goes through the decision service (sent -> accepted only; see
+        // QUOTE_ALLOWED_STATUS_TRANSITIONS): one conditional UPDATE, one quote_decisions row,
+        // the hook exactly once. The service stamps accepted_at/accepted_by itself.
+        const { status: _status, accepted_at: _acceptedAt, accepted_by: _acceptedBy, ...rest } = parsedInput;
+        const result = await decideQuote({
+          tenantId: tenant,
+          quoteId,
+          action: 'accept',
+          actor: { kind: 'msp_user', userId: getActorUserId(user) },
+        }, trx);
+        if (result.status === 'not_found') {
+          throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+        }
+        if (result.status !== 'decided') {
+          const current = result.status === 'not_pending' ? result.currentStatus : 'accepted';
+          throw new Error(`Invalid quote status transition from ${current} to accepted`);
+        }
+        const hasOtherFields = Object.keys(rest).some((key) => key !== 'updated_by' && (rest as Record<string, unknown>)[key] !== undefined);
+        return hasOtherFields
+          ? await Quote.update(trx, tenant, quoteId, rest as Partial<IQuote>)
+          : result.quote;
+      }
       const lifecyclePatch = {
         ...parsedInput,
-        ...(parsedInput.status === 'sent' && !parsedInput.sent_at ? { sent_at: new Date().toISOString() } : {}),
-        ...(parsedInput.status === 'accepted' && !parsedInput.accepted_at ? { accepted_at: new Date().toISOString() } : {}),
+        ...(!parsedInput.sent_at ? { sent_at: new Date().toISOString() } : {}),
       } as Partial<IQuote>;
       const updated = await Quote.update(trx, tenant, quoteId, lifecyclePatch);
       if (updated.status === 'sent') await onQuoteSent(trx, updated);
-      if (updated.status === 'accepted') {
-        await onQuoteAccepted(trx, updated);
-      }
       return updated;
     });
     return await Quote.getById(knex, tenant, updatedQuote.quote_id) as IQuote;
@@ -1105,7 +1139,7 @@ export const createQuoteFromTemplate = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     const template = await assertQuoteReadAllowedForMutation(
       trx,
       tenant,
@@ -1193,7 +1227,7 @@ export const duplicateQuote = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     const sourceQuote = await assertQuoteReadAllowedForMutation(
       trx,
       tenant,
@@ -1268,7 +1302,7 @@ export const saveQuoteAsTemplate = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     const sourceQuote = await assertQuoteReadAllowedForMutation(
       trx,
       tenant,
@@ -1346,7 +1380,7 @@ export const createQuoteRevision = withAuth(async (
     quoteId,
     'Permission denied: Cannot update quote'
   );
-  return await knex.transaction((trx) => Quote.createRevision(trx, tenant, quoteId, getActorUserId(user)));
+  return await withTransaction(knex, (trx) => Quote.createRevision(trx, tenant, quoteId, getActorUserId(user)));
   });
 });
 
@@ -1432,7 +1466,7 @@ export const getQuoteApprovalSettings = withAuth(async (
 
   const currentUserIsSoleApprover =
     settings.approvalRequired &&
-    (user as any).user_type !== 'client' &&
+    isMspPrincipalUserType((user as any).user_type) &&
     await hasPermission(user as any, 'quotes', 'approve') &&
     await allowSelfQuoteApproval(knex, tenant, (user as any).user_id);
 
@@ -1620,41 +1654,23 @@ export const markQuoteAccepted = withAuth(async (
     throw new Error('Only sent quotes can be marked as accepted');
   }
 
-  const trimmedNote = note?.trim() || null;
   const actorUserId = getActorUserId(user);
-  const acceptedAt = new Date().toISOString();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await Quote.update(trx, tenant, quoteId, {
-      status: 'accepted',
-      accepted_at: acceptedAt,
-      accepted_by: actorUserId,
-      updated_by: actorUserId,
-    });
+    const result = await decideQuote({
+      tenantId: tenant,
+      quoteId,
+      action: 'accept',
+      actor: { kind: 'msp_user', userId: actorUserId },
+      comment: note,
+    }, trx);
 
-    await QuoteActivity.create(trx, tenant, {
-      quote_id: quoteId,
-      activity_type: QUOTE_ACTIVITY_TYPES.accepted,
-      description: trimmedNote
-        ? `Quote marked as accepted by MSP on behalf of the client: ${trimmedNote}`
-        : 'Quote marked as accepted by MSP on behalf of the client',
-      performed_by: actorUserId,
-      metadata: {
-        accepted_via: 'msp',
-        accepted_by: actorUserId,
-        accepted_at: acceptedAt,
-        note: trimmedNote,
-      },
-    });
-
-    const acceptedQuote = await Quote.getById(trx, tenant, quoteId);
-    if (!acceptedQuote) {
-      throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+    if (result.status !== 'decided') {
+      // Somebody decided the quote between the status check above and the transition.
+      throw new Error('Only sent quotes can be marked as accepted');
     }
 
-    await onQuoteAccepted(trx, acceptedQuote);
-
-    return acceptedQuote;
+    return result.quote;
   });
   });
 });
@@ -1729,8 +1745,7 @@ export const sendQuote = withAuth(async (
     if (recipients.length > 0) {
       emailRecipients = recipients;
       const companyName = tenantParty?.name || 'Your Company';
-      const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
+      const portalLink = await buildQuotePortalLink(tenant, quote.quote_id);
       const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
       const renderedEmail = await renderQuoteEmail({
         knex,
@@ -1830,8 +1845,7 @@ export const resendQuote = withAuth(async (
     if (recipients.length > 0) {
       emailRecipients = recipients;
       const companyName = tenantParty?.name || 'Your Company';
-      const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
+      const portalLink = await buildQuotePortalLink(tenant, quote.quote_id);
       const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
       const renderedEmail = await renderQuoteEmail({
         knex,
@@ -1927,8 +1941,7 @@ export const sendQuoteReminder = withAuth(async (
     if (recipients.length > 0) {
       emailRecipients = recipients;
       const companyName = tenantParty?.name || 'Your Company';
-      const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
+      const portalLink = await buildQuotePortalLink(tenant, quote.quote_id);
       const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
       const renderedEmail = await renderQuoteEmail({
         knex,
@@ -2047,7 +2060,7 @@ export const convertQuoteToContract = withAuth(async (
     'Permission denied: Cannot convert quote'
   );
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     return convertQuoteToDraftContract(trx, tenant, quoteId, getActorUserId(user));
   });
   });
@@ -2088,7 +2101,7 @@ export const convertQuoteToSalesOrder = withAuth(async (
     'Permission denied: Cannot convert quote'
   );
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     const result = await convertQuoteToDraftSalesOrder(trx, tenant, quoteId, getActorUserId(user));
     return {
       quote: result.quote,
@@ -2128,7 +2141,7 @@ export const convertQuoteToInvoice = withAuth(async (
     'Permission denied: Cannot convert quote'
   );
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     return convertQuoteToDraftInvoice(trx, tenant, quoteId, getActorUserId(user));
   });
   });
@@ -2163,7 +2176,7 @@ export const convertQuoteToBoth = withAuth(async (
     'Permission denied: Cannot convert quote'
   );
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     const result = await convertQuoteToDraftContractAndInvoice(trx, tenant, quoteId, getActorUserId(user));
     return {
       quote: result.quote,

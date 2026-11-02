@@ -5,6 +5,7 @@ vi.mock('@alga-psa/core/logger', () => ({
 }));
 
 vi.mock('../meetingConfig', () => ({
+  resolveTeamsMeetingGraphConfig: vi.fn(async () => ({ microsoftTenantId: 'ms-tenant', clientId: 'client-id', clientSecret: 'client-secret' })),
   resolveTeamsMeetingConfigState: vi.fn(async () => ({
     status: 'ready',
     config: {
@@ -31,6 +32,7 @@ vi.mock('../createTeamsMeeting', () => ({
 }));
 
 import { deleteTeamsMeeting, deleteTeamsMeetingWithResult } from '../deleteTeamsMeeting';
+import { updateTeamsMeetingWithResult } from '../updateTeamsMeeting';
 
 const fetchMock = vi.fn();
 
@@ -49,6 +51,33 @@ describe('deleteTeamsMeetingWithResult', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('compensates a creation in its original directory without a currently configured organizer', async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    expect(await deleteTeamsMeetingWithResult({ ...INPUT, organizerUserId: 'original-organizer', microsoftTenantId: 'ms-tenant' })).toEqual({ status: 'deleted', alreadyDeleted: false });
+    expect(fetchMock.mock.lastCall?.[0]).toBe('https://graph.example.com/v1.0/users/original-organizer/events/graph-event-1');
+  });
+
+  it('rejects a different directory or incomplete creation receipt before any delete request', async () => {
+    expect(await deleteTeamsMeetingWithResult({ ...INPUT, organizerUserId: 'original-organizer', microsoftTenantId: 'other-directory' })).toMatchObject({ status: 'failed', errorCode: 'creation_target_changed' });
+    expect(await deleteTeamsMeetingWithResult({ ...INPUT, microsoftTenantId: 'ms-tenant' })).toMatchObject({ status: 'failed', errorCode: 'creation_target_changed' });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('reconciles deletion against the persisted organizer after the configured organizer changes', async () => {
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    expect(await deleteTeamsMeetingWithResult({ ...INPUT, organizerUserId: 'original/organizer' })).toEqual({ status: 'deleted', alreadyDeleted: false });
+    expect(fetchMock.mock.lastCall?.[0]).toBe('https://graph.example.com/v1.0/users/original%2Forganizer/events/graph-event-1');
+    expect(fetchMock.mock.lastCall?.[1].signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('reconciles clock changes against the original organizer without adding undisclosed content or attendees', async () => {
+    fetchMock.mockResolvedValue(new Response('{}', { status: 200 }));
+    expect(await updateTeamsMeetingWithResult({ ...INPUT, organizerUserId: 'original-organizer', startDateTime: '2026-09-15T09:30:00Z', endDateTime: '2026-09-15T11:00:00Z' })).toEqual({ status: 'updated' });
+    expect(fetchMock.mock.lastCall?.[0]).toBe('https://graph.example.com/v1.0/users/original-organizer/events/graph-event-1');
+    expect(JSON.parse(fetchMock.mock.lastCall?.[1].body)).toEqual({ start: { dateTime: '2026-09-15T09:30:00Z', timeZone: 'UTC' }, end: { dateTime: '2026-09-15T11:00:00Z', timeZone: 'UTC' } });
+    expect(fetchMock.mock.lastCall?.[1].signal).toBeInstanceOf(AbortSignal);
   });
 
   it('treats an already-deleted meeting (Graph 404) as success', async () => {

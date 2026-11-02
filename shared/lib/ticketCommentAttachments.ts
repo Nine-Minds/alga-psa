@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb, getConnection, registerAfterCommit } from '@alga-psa/db';
 import { randomUUID } from 'node:crypto';
 import { resolveTicketEventActor, scrubLegacyTicketIdActor, ticketEventActorFields } from '@alga-psa/event-schemas';
+import { isClientUserType } from '@alga-psa/types';
 
 type Connection = Knex | Knex.Transaction;
 
@@ -68,16 +69,22 @@ export async function dispatchCommentPublication(conn: Connection, tenant: strin
   // Intents persisted before ticket events stopped using the ticket id as the actor
   // carry userId/actorUserId === ticketId. Heal them (a narrow data fix, not a schema rule).
   const payload = scrubLegacyTicketIdActor(comment.comment_publication_payload);
-  const { userId: persistedUserId, actorType: _t, actorUserId: _u, actorContactId: _c, ...persisted } = payload;
+  const { userId: persistedUserId, actorType: persistedActorType, actorUserId: _u, actorContactId: _c, actorReference: persistedReference, ...persisted } = payload;
   // Intents persisted before the producer-side fix can be missing the author
   // identity the event schema requires. Heal them here from the comment row so
   // they publish instead of failing validation on every reconcile pass.
   const author = payload.comment?.author ?? await resolveCommentAuthorDisplay(conn, tenant, comment);
   // Identity comes from the persisted real user, else the comment row. No ticket-id fallback.
-  const actor = resolveTicketEventActor({ userId: persistedUserId ?? comment.user_id, contactId: comment.contact_id });
+  // A qualified (foreign) author has no local user row; keep its persisted collaborator reference.
+  const actor = persistedActorType === 'COLLABORATOR' && persistedReference
+    ? { actorType: 'COLLABORATOR' as const, actorReference: persistedReference }
+    : resolveTicketEventActor({ userId: persistedUserId ?? comment.user_id, contactId: comment.contact_id });
   await publish({ eventType: 'TICKET_COMMENT_ADDED', payload: { ...persisted,
     ...ticketEventActorFields(actor),
-    comment: { ...payload.comment, content: comment.note, isInternal: comment.is_internal, author },
+    // The persisted audience (set only on shared-work threads) survives into the published
+    // event; a non-requester audience can never be republished as public.
+    comment: { ...payload.comment, content: comment.note,
+      isInternal: payload.comment?.audience && payload.comment.audience !== 'requester' ? true : comment.is_internal, author },
   } }, { eventId: comment.scheduled_publish_event_id, strict: true });
   await db.table('comments').where({ comment_id: commentId, scheduled_publish_event_id: comment.scheduled_publish_event_id })
     .whereNull('scheduled_publish_dispatched_at').update({ scheduled_publish_dispatched_at: conn.fn.now() });
@@ -119,7 +126,7 @@ export async function canAccessAttachmentTicket(conn: Connection, tenant: string
   const ticket = await db.table('tickets').where({ ticket_id: ticketId }).first();
   if (!user || !ticket) return false;
   if (user.user_type === 'internal') return true;
-  if (user.user_type !== 'client' || !user.contact_id) return false;
+  if (!isClientUserType(user.user_type) || !user.contact_id) return false;
   const contact = await db.table('contacts').where({ contact_name_id: user.contact_id }).first();
   if (!contact?.client_id || contact.client_id !== ticket.client_id) return false;
   if (!contact.portal_visibility_group_id) return true;

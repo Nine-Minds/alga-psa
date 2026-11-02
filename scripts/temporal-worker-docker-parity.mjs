@@ -131,6 +131,9 @@ async function main() {
       'packages/types',
       'packages/event-bus',
       'packages/formatting',
+      // email/dist imports @alga-psa/storage, and the Dockerfile ships
+      // packages/storage/dist from the context too.
+      'packages/storage',
       'packages/email',
       'packages/marketing',
     ]) {

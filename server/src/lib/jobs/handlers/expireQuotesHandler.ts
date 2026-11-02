@@ -1,9 +1,11 @@
+import { recordQuoteLifecycleTransition } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
+import type { IQuote, IQuoteActivity } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { runWithTenant } from 'server/src/lib/db';
 import { getConnection } from 'server/src/lib/db/db';
 import logger from '@alga-psa/core/logger';
 import { TenantEmailService } from '@alga-psa/email';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { resolveTenantDefaultCountry } from '@alga-psa/tenancy/lib/tenantDefaultCountry';
 import { countryDateFormat, SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
@@ -111,13 +113,13 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
       .then((country) => countryDateFormat(country?.code ?? null))
       .catch(() => SYSTEM_DATE_FORMAT);
 
-    await knex.transaction(async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
       await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', tenantId]);
       await trx.raw('select set_config(?, ?, true)', ['app.current_user', 'system']);
 
       const db = tenantDb(trx, tenantId);
       const expirableQuotesQuery = db.table('quotes as q')
-        .select({ quote_id: 'q.quote_id', quote_number: 'q.quote_number', title: 'q.title', valid_until: 'q.valid_until', created_by: 'q.created_by', creator_email: 'u.email' })
+        .select('q.*').select({ quote_id: 'q.quote_id', quote_number: 'q.quote_number', title: 'q.title', valid_until: 'q.valid_until', created_by: 'q.created_by', creator_email: 'u.email' })
         .where('q.is_template', false)
         .where('q.status', 'sent')
         .whereNotNull('q.valid_until')
@@ -126,15 +128,22 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
       const expirableQuotes = await expirableQuotesQuery;
 
       for (const quote of expirableQuotes) {
-        await db.table('quotes')
-          .where({ quote_id: quote.quote_id })
+        const [changed] = await db.table('quotes')
+          .where({ quote_id: quote.quote_id, status: 'sent' }).where('valid_until', '<', todayStartIso)
           .update({
             status: 'expired',
             expired_at: trx.fn.now(),
             updated_at: trx.fn.now(),
-          });
+          }).returning('*');
+        if (!changed) continue;
 
-        await db.table('quote_activities').insert({
+        // Same transaction as the status change: an expired quote must not stay reachable by link.
+        await db.table('quote_access_links')
+          .where({ quote_id: quote.quote_id })
+          .whereNull('revoked_at')
+          .update({ revoked_at: trx.fn.now(), revoked_reason: 'cancelled' });
+
+        const [activity] = await db.table('quote_activities').insert({
           tenant: tenantId,
           quote_id: quote.quote_id,
           activity_type: 'expired',
@@ -144,7 +153,9 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
             previous_status: 'sent',
             triggered_by: 'scheduler',
           },
-        });
+        }).returning('*');
+
+        await recordQuoteLifecycleTransition(trx, tenantId, quote as IQuote, changed as IQuote, activity as IQuoteActivity, { actor: { actorType: 'SYSTEM' } });
 
         notifications.push({
           quoteId: quote.quote_id,
@@ -158,7 +169,7 @@ export async function expireQuotesHandler(data: ExpireQuotesJobData): Promise<vo
 
       logger.info('[expireQuotesHandler] Processed expired quotes', {
         tenantId,
-        expiredCount: expirableQuotes.length,
+        expiredCount: notifications.length,
       });
     });
 

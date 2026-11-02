@@ -881,6 +881,7 @@
       "add": "Aggiungi",
       "remove": "Rimuovi",
       "empty": "Nessuna mappatura.",
+      "nameRequired": "Inserisci un nome per questa mappatura.",
       "expressionLabel": "Espressione"
     },
     "schemaForm": {
@@ -1478,6 +1479,9 @@
         "contains": "contiene",
         "starts_with": "inizia con",
         "ends_with": "termina con",
+        "not_contains": "non contiene",
+        "not_starts_with": "non inizia con",
+        "not_ends_with": "non termina con",
         "is_empty": "è vuoto",
         "is_not_empty": "non è vuoto"
       },
@@ -1519,7 +1523,9 @@
         "summary_one": "{{count}} evento saltato negli ultimi {{days}} giorni — {{reasons}}",
         "summary_other": "{{count}} eventi saltati negli ultimi {{days}} giorni — {{reasons}}",
         "lastSkipped": "Ultimo saltato {{when}}",
-        "view": "Visualizza eventi saltati"
+        "view": "Visualizza eventi saltati",
+        "summary_few": "{{count}} eventi saltati negli ultimi {{days}} giorni — {{reasons}}",
+        "summary_many": "{{count}} eventi saltati negli ultimi {{days}} giorni — {{reasons}}"
       },
       "drawer": {
         "title": "Eventi saltati",
@@ -1862,7 +1868,9 @@
     "insertionPointLabel": "I nuovi passaggi vanno qui",
     "emptyBranchPrompt": "Aggiungi un passaggio a questo ramo",
     "emptyActivePrompt": "I nuovi passaggi vanno qui. Scegline uno dalla palette.",
-    "stepCount": "({{count}} passaggi)"
+    "stepCount": "({{count}} passaggi)",
+    "stepCount_few": "({{count}} passaggi)",
+    "stepCount_many": "({{count}} passaggi)"
   },
   "expressionEditor": {
     "ariaLabel": "Editor di espressioni",
@@ -2375,7 +2383,12 @@
       "currentRun": "Esecuzione {{id}}",
       "backToWorkflow": "Torna al workflow"
     },
-    "title": "Studio di esecuzione del workflow"
+    "title": "Studio di esecuzione del workflow",
+    "communityEdition": {
+      "title": "Funzionalità Pro",
+      "description": "Lo studio di esecuzione dei workflow è disponibile solo in Pro.",
+      "runId": "ID esecuzione: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3148,6 +3161,10 @@
         "selectBoard": "Seleziona o inserisci una bacheca",
         "selectPriority": "Seleziona o inserisci una priorità"
       }
+    },
+    "proFeature": {
+      "title": "Funzionalità Pro",
+      "description": "Il sistema di workflow è disponibile solo in Pro. Esegui l’upgrade della tua installazione per accedere a questa funzionalità."
     }
   },
   "toggle": {

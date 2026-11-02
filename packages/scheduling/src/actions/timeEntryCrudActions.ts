@@ -1,17 +1,11 @@
 'use server'
 
+import { delegateToTimeSource } from '../lib/timeSource';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 // Bucket usage MUST go through the shared canonical service. This package used
 // to carry a local fork (src/services/bucketUsageService.ts) that kept querying
 // the dropped `client_contract_lines` table and caused a prod outage on
 // time-entry save. Don't recreate a local copy.
-import { adjustTimeSpanDraw } from '@alga-psa/shared/billingClients/drawAdjustments';
-import { isBucketUsageError } from '@alga-psa/shared/billingClients/bucketUsageErrors';
-// Hour-block burn MUST go through the shared canonical service too — same
-// rationale as bucketUsageService (both scheduling and billing import it).
-import {
-  reverseTimeEntryAllocations,
-} from '@alga-psa/shared/billingClients/hourBlockService';
 import {
   ITimeEntry,
   ITimeEntryWithWorkItem,
@@ -28,13 +22,12 @@ import {
   updateTimeEntryApprovalStatusParamsSchema,
   UpdateTimeEntryApprovalStatusParams,
 } from './timeEntrySchemas'; // Import schemas
-import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
 import { assertCanActOnBehalf, assertCanApproveSubject } from './timeEntryDelegationAuth';
 import {
   createTimeEntryChangeRequestRecord,
   fetchTimeEntryChangeRequestsForEntryIdsFromDb,
 } from './timeEntryChangeRequestActions';
-import { persistTimeEntry, publishPersistedTimeEntryEvents } from '../lib/timeEntryWriteCore';
+import { deleteTimeEntryCore, persistTimeEntry, publishPersistedTimeEntryEvents } from '../lib/timeEntryWriteCore';
 import { logSession } from '../lib/stopwatch/stopwatchCore';
 import { attachTimeEntryChangeRequests } from '../lib/timeEntryChangeRequests';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -47,7 +40,6 @@ import {
   timeSheetActionErrorFrom,
   type TimeSheetActionError,
 } from './timeSheetActionErrors';
-import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -131,6 +123,9 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   { tenant },
   timeSheetId: string
 ): Promise<ITimeEntryWithWorkItem[] | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.entries.list(ctx, timeSheetId));
+  if (delegated.handled) return delegated.value;
   try {
     const {knex: db} = await createTenantKnex();
     const tenantScopedDb = tenantDb(db, tenant) as any;
@@ -331,6 +326,9 @@ export const saveTimeEntry = withAuth(async (
   { tenant },
   timeEntry: Omit<ITimeEntry, 'tenant'> & { stopwatch_session_id?: string | null }
 ): Promise<ITimeEntryWithWorkItem | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id, workItemType: timeEntry.work_item_type, workItemId: timeEntry.work_item_id }, (source, ctx) => source.entries.admit(ctx, timeEntry));
+  if (delegated.handled) return delegated.value;
   const {knex: db} = await createTenantKnex();
   const tenantScopedDb = tenantDb(db, tenant) as any;
 
@@ -538,6 +536,9 @@ export const updateTimeEntryApprovalStatus = withAuth(async (
     changeRequestComment?: string;
   }
 ): Promise<void | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.entries.review(ctx, params));
+  if (delegated.handled) return delegated.value;
   const { knex: db } = await createTenantKnex();
   const tenantScopedDb = tenantDb(db, tenant) as any;
 
@@ -650,6 +651,9 @@ export const deleteTimeEntry = withAuth(async (
   { tenant },
   entryId: string
 ): Promise<void | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.entries.remove(ctx, entryId));
+  if (delegated.handled) return delegated.value;
   const {knex: db} = await createTenantKnex();
 
   try {
@@ -659,79 +663,15 @@ export const deleteTimeEntry = withAuth(async (
   }
 
     const deletedTimeEntry = await db.transaction(async (trx) => {
-      const trxTenantDb = tenantDb(trx, tenant) as any;
-      // Get the time entry to be deleted
-      const timeEntry = await trxTenantDb.table('time_entries')
-        .where({
-          entry_id: entryId
-        })
-        .first();
+      const { timeEntry, deleteCount } = await deleteTimeEntryCore(trx, tenant, entryId, {
+        guard: async (entry) => {
+          await assertCanActOnBehalf(user, tenant, entry.user_id, trx);
 
-      if (!timeEntry) {
-        throw new Error('Time entry not found');
-      }
-
-      await assertCanActOnBehalf(user, tenant, timeEntry.user_id, trx);
-
-      if (timeEntry.invoiced) {
-        throw new Error('This time entry has already been invoiced and cannot be deleted.');
-      }
-
-      // --- Bucket Usage Update Logic (Before Delete) ---
-      if (timeEntry.service_id && (timeEntry.billable_duration || 0) > 0) {
-        let clientId: string | null = null;
-        if (timeEntry.work_item_id && timeEntry.work_item_type) {
-            clientId = await getClientIdForWorkItem(trx, tenant, timeEntry.work_item_id as string, timeEntry.work_item_type as string);
-        }
-
-        if (clientId && timeEntry.service_id) {
-          // Scope-resolution gate + weighted burn, resolved under the deleted
-          // entry's OWN client and line (negative on delete).
-          try {
-            const reversedDelta = await adjustTimeSpanDraw(
-              trx,
-              tenant,
-              clientId,
-              {
-                service_id: timeEntry.service_id,
-                start_time: timeEntry.start_time,
-                end_time: timeEntry.end_time,
-                billable_duration: timeEntry.billable_duration,
-                contract_line_id: timeEntry.contract_line_id ?? null,
-              },
-              -1,
-            );
-            if (reversedDelta !== 0) {
-              console.log(`Successfully decremented bucket usage for deleted entry ${entryId} (weighted delta ${reversedDelta})`);
-            }
-          } catch (bucketError) {
-            console.error(`Error updating bucket usage for deleted time entry ${entryId}:`, bucketError);
-            // Re-throwing ensures data consistency; preserve the typed code.
-            if (isBucketUsageError(bucketError)) {
-              throw bucketError;
-            }
-            throw new Error(`Bucket usage update failed while deleting time entry ${entryId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+          if (entry.invoiced) {
+            throw new Error('This time entry has already been invoiced and cannot be deleted.');
           }
-        }
-      }
-      // --- End Bucket Usage Update Logic ---
-
-      // --- Hour-block burn reversal ---
-      // Restore the minutes the deleted entry drew from any hour blocks. Best-
-      // effort like the save path: failures are logged and the nightly
-      // reconcile converges. Runs unconditionally (an entry may carry block
-      // allocations without being contract-covered).
-      try {
-        await reverseTimeEntryAllocations(trx, tenant, entryId);
-      } catch (blockReverseError) {
-        console.error(`Error reversing hour-block burn for deleted time entry ${entryId}:`, blockReverseError);
-      }
-      // --- End Hour-block burn reversal ---
-
-      // 2. Delete the time entry
-      const deleteCount = await trxTenantDb.table('time_entries')
-        .where({ entry_id: entryId })
-        .delete();
+        },
+      });
 
       if (deleteCount === 0) {
          // This shouldn't happen if the initial fetch succeeded, but handle defensively
@@ -750,8 +690,6 @@ export const deleteTimeEntry = withAuth(async (
              Math.round((Date.now() - new Date(timeEntry.created_at).getTime()) / 1000 / 60 / 60 / 24) : 0,
          }, user.user_id);
       }
-
-      await recalculateProjectTaskActualHoursForEntryChange(trx, tenant, timeEntry, null);
 
       return timeEntry as ITimeEntry;
     });
@@ -785,6 +723,9 @@ export const getTimeEntryById = withAuth(async (
   { tenant },
   entryId: string
 ): Promise<ITimeEntryWithWorkItem | null | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.entries.read(ctx, entryId));
+  if (delegated.handled) return delegated.value;
   const { knex: db } = await createTenantKnex();
   const tenantScopedDb = tenantDb(db, tenant) as any;
 

@@ -33,6 +33,7 @@ const documentInsertMock = vi.fn();
 const documentAssociationCreateMock = vi.fn();
 const fetchTenantPartyMock = vi.fn();
 const resolveEmailLocaleMock = vi.fn();
+const buildTenantPortalUrlMock = vi.fn();
 // Rows returned by the quote email template lookup, keyed by table so tests
 // can exercise the tenant-override-before-system-template precedence.
 const emailTemplateRows: Record<string, any> = {};
@@ -100,6 +101,10 @@ vi.mock('../../src/lib/adapters/tenantPartyAdapter', () => ({
   fetchTenantParty: (...args: any[]) => fetchTenantPartyMock(...args),
 }));
 
+vi.mock('@alga-psa/tenancy/server', () => ({
+  buildTenantPortalUrl: (...args: any[]) => buildTenantPortalUrlMock(...args),
+}));
+
 vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({
   resolveEmailLocale: (...args: any[]) => resolveEmailLocaleMock(...args),
 }));
@@ -114,6 +119,11 @@ vi.mock('../../src/lib/quoteApprovalSettings', async (importOriginal) => {
 
 vi.mock('../../src/services/quoteCalculationService', () => ({
   recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
+}));
+
+const decideQuoteMock = vi.fn();
+vi.mock('../../src/services/quoteDecisionService', () => ({
+  decideQuote: (...args: any[]) => decideQuoteMock(...args),
 }));
 
 vi.mock('../../src/services', () => ({
@@ -267,6 +277,7 @@ describe('quoteActions', () => {
     delete emailTemplateRows.system_email_templates;
     emailTemplateLookups.length = 0;
     resolveEmailLocaleMock.mockResolvedValue('en');
+    buildTenantPortalUrlMock.mockImplementation(async (_tenant: string, path: string) => `https://helpdesk.digitalchk.com${path}`);
     fetchTenantPartyMock.mockResolvedValue({
       name: 'Acme MSP',
       address: null,
@@ -390,7 +401,7 @@ describe('quoteActions', () => {
   });
 
   it('T044: updateQuote enforces status transition rules', async () => {
-    vi.spyOn(Quote, 'update').mockRejectedValue(new Error('Invalid quote status transition from draft to accepted'));
+    decideQuoteMock.mockResolvedValue({ status: 'not_pending', currentStatus: 'draft' });
 
     const { updateQuote } = await import('../../src/actions/quoteActions');
 
@@ -1660,5 +1671,52 @@ describe('quoteActions', () => {
       messageKey: 'msp/quotes:errors.permissions.update',
     });
     expect(generateAndStoreMock).not.toHaveBeenCalled();
+  });
+
+  describe('quote email portal links (alga-2026-0002724)', () => {
+    const portalQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2099-03-20',
+      status: 'sent',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    const deepLink = `https://helpdesk.digitalchk.com/client-portal/billing/quotes/${QUOTE_ID}`;
+    const emailBody = () => JSON.stringify(sendEmailMock.mock.calls[0][0]);
+
+    it.each([
+      ['sendQuote', 'draft'],
+      ['resendQuote', 'sent'],
+      ['sendQuoteReminder', 'sent'],
+    ])('%s links to the quote on the tenant portal origin', async (action, status) => {
+      vi.spyOn(Quote, 'getById').mockResolvedValue({ ...portalQuote, status } as any);
+
+      const actions = await import('../../src/actions/quoteActions');
+      await (actions as any)[action](QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+      expect(buildTenantPortalUrlMock).toHaveBeenCalledWith(TENANT_ID, `/client-portal/billing/quotes/${QUOTE_ID}`);
+      expect(sendEmailMock).toHaveBeenCalledTimes(1);
+      expect(emailBody()).toContain(deepLink);
+      expect(emailBody()).not.toContain('localhost');
+    });
+
+    it.each(['sendQuote', 'resendQuote', 'sendQuoteReminder'])(
+      '%s sends without a link when no public origin exists',
+      async (action) => {
+        buildTenantPortalUrlMock.mockResolvedValue(null);
+        vi.spyOn(Quote, 'getById').mockResolvedValue({ ...portalQuote, status: action === 'sendQuote' ? 'draft' : 'sent' } as any);
+
+        const actions = await import('../../src/actions/quoteActions');
+        await (actions as any)[action](QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+        expect(sendEmailMock).toHaveBeenCalledTimes(1);
+        expect(emailBody()).not.toMatch(/client-portal|localhost|href=/);
+      },
+    );
   });
 });

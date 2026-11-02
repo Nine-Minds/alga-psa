@@ -66,7 +66,8 @@
       "createTicket": "Ticket aanmaken",
       "requestAppointment": "Afspraak aanvragen",
       "viewLatestInvoice": "Laatste factuur bekijken",
-      "newServiceRequest": "Nieuw serviceverzoek"
+      "newServiceRequest": "Nieuw serviceverzoek",
+      "createSupportTicket": "Supportticket aanmaken"
     },
     "appointments": {
       "title": "Komende afspraken",
@@ -326,10 +327,29 @@
       "missing_email": "Uw identiteitsprovider heeft geen e-mailadres geretourneerd, waardoor er geen account van het klantenportaal kon worden gevonden. Meld u aan met uw wachtwoord of neem contact op met uw dienstverlener.",
       "inactive_user": "Het account van het klantenportaal voor {{providerEmail}} is inactief. Neem contact op met uw dienstverlener om het te heractiveren.",
       "user_type_mismatch": "{{providerEmail}} is geen account van het klantenportaal. Neem contact op met uw dienstverlener.",
-      "tenant_mismatch": "{{providerEmail}} hoort bij het portaal van een andere organisatie. Meld u aan met uw wachtwoord of neem contact op met uw dienstverlener."
+      "tenant_mismatch": "{{providerEmail}} hoort bij het portaal van een andere organisatie. Meld u aan met uw wachtwoord of neem contact op met uw dienstverlener.",
+      "tenant_required": "{{providerEmail}} wordt in meer dan één organisatie gebruikt. Neem contact op met uw serviceprovider."
     },
     "configurationTitle": "Aanmelden mislukt",
-    "configurationMessage": "Aanmelden is mislukt. Probeer het opnieuw of neem contact op met uw dienstverlener."
+    "configurationMessage": "Aanmelden is mislukt. Probeer het opnieuw of neem contact op met uw dienstverlener.",
+    "registration": {
+      "messages": {
+        "verified": "Gebruiker geverifieerd en geregistreerd"
+      },
+      "errors": {
+        "verifyFailed": "Gebruiker kon niet worden geverifieerd en geregistreerd",
+        "invalidToken": "Ongeldig token",
+        "tokenExpired": "Token verlopen",
+        "tokenNotActive": "Token is nog niet actief",
+        "unknown": "Onbekende fout"
+      },
+      "user": "Gebruiker",
+      "clientPortalUser": "Klantenportaalgebruiker",
+      "mspUser": "MSP-gebruiker",
+      "resetExpiration": "1 uur",
+      "verificationExpiration": "24 uur",
+      "superadminRole": "Superbeheerdersrol"
+    }
   },
   "account": {
     "title": "Account",
@@ -459,6 +479,15 @@
         "failed": "We konden uw kaart niet opslaan",
         "savedDescription": "Uw kaart is klaar voor toekomstige betalingen.",
         "failedDescription": "De instelling kon niet worden geverifieerd. Vraag uw factuurverstrekker om een nieuwe link."
+      },
+      "payLink": {
+        "heading": "Deze betaallink kan niet worden gebruikt",
+        "expired": "Deze betaallink is verlopen.",
+        "invalid": "Deze betaallink is ongeldig.",
+        "notPayable": "Deze factuur kan niet meer met deze link worden betaald. Mogelijk is ze al betaald of staat online betalen niet meer open.",
+        "unavailable": "We konden de betaalpagina nu niet openen. Probeer het over enkele minuten opnieuw.",
+        "viewInPortal": "Factuur bekijken in het klantenportaal",
+        "contactProvider": "Neem contact op met uw facturatiepartij voor een nieuwe link."
       }
     }
   },
@@ -555,7 +584,9 @@
       "invoices": "Factuurmeldingen",
       "announcements": "Systeemmeldingen",
       "emailPreferences": "E-mail",
-      "internalPreferences": "Intern"
+      "internalPreferences": "Intern",
+      "unreadCount_few": "{{count}} ongelezen meldingen",
+      "unreadCount_many": "{{count}} ongelezen meldingen"
     },
     "actions": {
       "save": "Wijzigingen opslaan",
@@ -833,7 +864,9 @@
     "card": {
       "unread": "Ongelezen",
       "noMessage": "Geen bericht"
-    }
+    },
+    "unreadCount_few": "{{count}} ongelezen notificaties",
+    "unreadCount_many": "{{count}} ongelezen notificaties"
   },
   "sidebar": {
     "goToDashboard": "Naar dashboard",

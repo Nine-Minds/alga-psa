@@ -14,6 +14,20 @@ export { ensureInvoiceEmailLinks } from './ensureInvoiceEmailLinks';
 export { BillingEngine } from '../lib/billing/billingEngine';
 export { recalculateQuoteFinancials, resolveQuoteItemTaxesIfIncluded } from './quoteCalculationService';
 export {
+  decideQuote,
+  authorizePortalUserForQuote,
+  type DecideQuoteInput,
+  type QuoteDecisionAction,
+  type QuoteDecisionActor,
+  type QuoteDecisionContext,
+  type QuoteDecisionForbiddenReason,
+  type QuoteDecisionMethod,
+  type QuoteDecisionResult,
+  type QuoteDecisionSelections,
+  type QuoteDecisionSigner,
+  type PortalQuoteAccessResult,
+} from './quoteDecisionService';
+export {
   PDFGenerationService,
   createPDFGenerationService,
   publishGeneratedDocumentsToClient,
@@ -138,3 +152,26 @@ export {
   type AccountingSyncOperation
 } from './accountingSync/accountingSync.types';
 export { verifyAndCompletePublicSetup, type SetupInspection } from './publicSetupConfirmation';
+export {
+  QuoteAccessLinks,
+  computeQuoteAccessExpiry,
+  hashQuoteAccessToken,
+  type IQuoteAccessLink,
+  type QuoteAccessLinkRevokeReason,
+  type QuoteAccessResolveResult,
+} from './quoteAccessLinks';
+
+// Label batch rendering (work tags, asset / stock-unit labels): one PDF from N authorized view models.
+export {
+  renderLabelBatchPdf,
+  renderHtmlToPdf,
+  resolveLabelTemplateForTenant,
+  listLabelTemplatesForTenant,
+} from './labelPdfService';
+export type { ResolvedLabelTemplate } from '../lib/label-batch/resolveLabelTemplate';
+// Registered document types rendered on demand from a caller-built view model (C6 packing manifest).
+export { renderRegisteredDocumentPdf } from './registeredDocumentPdfService';
+export { LabelRenderError } from '../lib/label-batch/renderLabelBatchHtml';
+export type { LabelPrintItem } from '../lib/label-batch/renderLabelBatchHtml';
+export { LabelLayoutError } from '../lib/label-batch/layout';
+export type { LabelBatchLayout, OnePerPageLayout, GridLayout } from '../lib/label-batch/layout';

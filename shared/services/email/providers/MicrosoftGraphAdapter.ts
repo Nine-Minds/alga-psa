@@ -51,6 +51,19 @@ const MICROSOFT_WELL_KNOWN_FOLDERS: Record<string, string> = {
   localfailures: 'localfailures', serverfailures: 'serverfailures', syncissues: 'syncissues',
 };
 
+/** Label returned when folder resolution gives up and watches Inbox instead. */
+const MICROSOFT_INBOX_FALLBACK_LABEL = 'Inbox (well-known)';
+
+/** Outlook rules write nested folders as `Inbox\Sub`; the UI suggests `Inbox/Sub`. */
+const MICROSOFT_FOLDER_PATH_SEPARATOR = /[\\/]+/;
+
+function splitFolderPathSegments(folder: string): string[] {
+  return folder
+    .split(MICROSOFT_FOLDER_PATH_SEPARATOR)
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0);
+}
+
 export class MicrosoftFolderRootAccessError extends Error {
   constructor(folder: string) {
     super(`Custom folder '${folder}' cannot be resolved without root mailbox access. Choose Inbox or grant Full Access.`);
@@ -225,7 +238,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     const mailboxBase = this.getMailboxBasePath();
     const fallbackResult = {
       resource: `${mailboxBase}/mailFolders/inbox/messages`,
-      resolvedFolder: 'Inbox (well-known)',
+      resolvedFolder: MICROSOFT_INBOX_FALLBACK_LABEL,
     };
 
     const requested = (desiredFolder || 'Inbox').trim();
@@ -244,34 +257,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     }
 
     try {
-      // Resolve exact ids or path names before attempting enumeration, which
-      // requires broader mailbox rights than reading the delegated folder.
-      try {
-        const direct = await this.httpClient.get(`${mailboxBase}/mailFolders/${encodeURIComponent(requested)}`, {
-          params: { $select: 'id,displayName' },
-        });
-        if (direct.data?.id) return {
-          resource: `${mailboxBase}/mailFolders/${encodeURIComponent(String(direct.data.id))}/messages`,
-          resolvedFolder: direct.data.displayName || requested,
-        };
-      } catch { /* Fall through to root enumeration for display names. */ }
-      let list;
-      try {
-        list = await this.httpClient.get(`${mailboxBase}/mailFolders`, { params: { $select: 'id,displayName' } });
-      } catch (error: any) {
-        const failure = this.classifyGraphFailure(error);
-        if (failure.status === 403 || failure.status === 404) {
-          throw new MicrosoftFolderRootAccessError(requested);
-        }
-        throw error;
-      }
-      const match = (list.data?.value || []).find(
-        (f: any) => (f.displayName || '').toLowerCase() === requested.toLowerCase()
-      );
-      if (match?.id) {
+      const resolved = await this.resolveFolderPath(requested);
+      if (resolved) {
         return {
-          resource: `${mailboxBase}/mailFolders/${encodeURIComponent(String(match.id))}/messages`,
-          resolvedFolder: match.displayName || requested,
+          resource: `${mailboxBase}/mailFolders/${encodeURIComponent(resolved.id)}/messages`,
+          resolvedFolder: resolved.resolvedFolder,
         };
       }
       this.log('warn', `Folder '${requested}' not found; defaulting subscription to Inbox`);
@@ -281,6 +271,133 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     }
 
     return fallbackResult;
+  }
+
+  /**
+   * Resolve a folder filter — a single folder or a nested path such as
+   * `Inbox\AlgaInbox` (how Outlook rules write it) or `Inbox/AlgaInbox` — to a
+   * concrete Graph folder id.
+   *
+   * Graph treats an encoded separator as a URL segment break, so a nested
+   * filter can never be fetched as one `/mailFolders/{name}` lookup: the first
+   * segment resolves as a well-known name, an id, or a top-level display name,
+   * and every later segment is matched by display name under `/childFolders`.
+   * Returns null (with a warn) when a segment has no match.
+   */
+  private async resolveFolderPath(folder: string): Promise<{ id: string; resolvedFolder: string } | null> {
+    const mailboxBase = this.getMailboxBasePath();
+    const segments = splitFolderPathSegments(folder);
+    if (!segments.length) return null;
+
+    const [first, ...children] = segments;
+    const resolvedNames: string[] = [];
+    let parentId: string;
+
+    const wellKnown = MICROSOFT_WELL_KNOWN_FOLDERS[first.toLowerCase().replace(/\s+/g, '')];
+    if (wellKnown) {
+      // Well-known names are valid id segments in Graph, so children can be
+      // walked without the root enumeration a display-name lookup requires.
+      parentId = wellKnown;
+      resolvedNames.push(first);
+    } else {
+      const root = await this.resolveTopLevelFolder(mailboxBase, first);
+      if (!root) {
+        this.log('warn', `Folder '${first}' not found in the mailbox root while resolving '${folder}'`);
+        return null;
+      }
+      parentId = root.id;
+      resolvedNames.push(root.displayName);
+    }
+
+    for (const segment of children) {
+      const child = await this.findChildFolder(mailboxBase, parentId, segment);
+      if (!child) {
+        this.log('warn', `Nested folder '${segment}' not found under '${resolvedNames.join('/')}' while resolving '${folder}'`);
+        return null;
+      }
+      parentId = child.id;
+      resolvedNames.push(child.displayName);
+    }
+
+    return { id: parentId, resolvedFolder: resolvedNames.join('/') };
+  }
+
+  /** Resolve a top-level folder by id or display name. */
+  private async resolveTopLevelFolder(
+    mailboxBase: string,
+    requested: string,
+  ): Promise<{ id: string; displayName: string } | null> {
+    // Resolve exact ids or path names before attempting enumeration, which
+    // requires broader mailbox rights than reading the delegated folder.
+    try {
+      const direct = await this.httpClient.get(`${mailboxBase}/mailFolders/${encodeURIComponent(requested)}`, {
+        params: { $select: 'id,displayName' },
+      });
+      if (direct.data?.id) {
+        return { id: String(direct.data.id), displayName: direct.data.displayName || requested };
+      }
+    } catch (error: any) {
+      // Fall through to root enumeration for display names.
+      if (!this.isFolderIdProbeMiss(error)) throw error;
+    }
+
+    let list;
+    try {
+      list = await this.httpClient.get(`${mailboxBase}/mailFolders`, { params: { $select: 'id,displayName' } });
+    } catch (error: any) {
+      const failure = this.classifyGraphFailure(error);
+      if (failure.status === 403 || failure.status === 404) {
+        throw new MicrosoftFolderRootAccessError(requested);
+      }
+      throw error;
+    }
+    const match = (list.data?.value || []).find(
+      (f: any) =>
+        String(f.id) === requested || String(f.displayName || '').toLowerCase() === requested.toLowerCase(),
+    );
+    return match?.id ? { id: String(match.id), displayName: match.displayName || requested } : null;
+  }
+
+  /**
+   * Decide whether a failed direct `/mailFolders/{name}` GET was just a missed
+   * id probe. Graph parses that segment as an id, so every user-typed display
+   * name fails: 400 `ErrorInvalidIdMalformed` for a bare name like
+   * `AlgaInbox`, 400 "Resource not found for the segment" when a separator
+   * survives encoding, 404 for an id-shaped miss. Those are misses to resolve
+   * past. 401/429/5xx are real failures resolution cannot fix, so they surface;
+   * 403 still falls through so root enumeration can raise the curated
+   * MicrosoftFolderRootAccessError.
+   */
+  private isFolderIdProbeMiss(error: any): boolean {
+    const status = this.classifyGraphFailure(error).status;
+    if (typeof status !== 'number') return true;
+    return status !== 401 && status !== 429 && status < 500;
+  }
+
+  /** Find a child folder of `parentId` by display name (or id), paging Graph. */
+  private async findChildFolder(
+    mailboxBase: string,
+    parentId: string,
+    segment: string,
+  ): Promise<{ id: string; displayName: string } | null> {
+    let url: string | null = `${mailboxBase}/mailFolders/${encodeURIComponent(parentId)}/childFolders`;
+    let params: Record<string, string | number> | undefined = { $select: 'id,displayName', $top: 100 };
+
+    while (url) {
+      const response: AxiosResponse<{
+        value?: Array<{ id?: string; displayName?: string }>;
+        '@odata.nextLink'?: string;
+      }> = await this.httpClient.get(url, { params });
+      params = undefined;
+      const match = (response.data?.value || []).find(
+        (folder) =>
+          String(folder.id) === segment ||
+          String(folder.displayName || '').toLowerCase() === segment.toLowerCase(),
+      );
+      if (match?.id) return { id: String(match.id), displayName: match.displayName || segment };
+      url = response.data?.['@odata.nextLink'] || null;
+    }
+    return null;
   }
 
   /**
@@ -982,6 +1099,13 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     const mailboxBase = this.getMailboxBasePath();
     const resolved = new Set<string>();
     for (const filter of requested) {
+      if (MICROSOFT_FOLDER_PATH_SEPARATOR.test(filter)) {
+        // Nested filters (`Inbox\AlgaInbox`) resolve through the folder chain;
+        // a single encoded lookup would make Graph split on the separator.
+        const resolvedPath = await this.resolveFolderPath(filter);
+        if (resolvedPath) resolved.add(resolvedPath.id);
+        continue;
+      }
       const normalized = filter.toLowerCase().replace(/\s+/g, '');
       const wellKnown = normalized === 'inbox' ? 'inbox' : undefined;
       if (wellKnown) {
@@ -994,7 +1118,10 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       try {
         const direct = await this.httpClient.get(`${mailboxBase}/mailFolders/${encodeURIComponent(filter)}`, { params: { $select: 'id' } });
         if (direct.data?.id) { resolved.add(String(direct.data.id)); continue; }
-      } catch { /* Display names require root enumeration as a last resort. */ }
+      } catch (error: any) {
+        // Display names require root enumeration as a last resort.
+        if (!this.isFolderIdProbeMiss(error)) throw error;
+      }
       let folders;
       try {
         folders = await this.httpClient.get(`${mailboxBase}/mailFolders`, { params: { $select: 'id,displayName' } });
@@ -1025,7 +1152,29 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       // include, so it returns 403 even when mail access is fully authorized.
       const configuredFolder = (this.config.folder_to_monitor || 'Inbox').trim() || 'Inbox';
       const key = configuredFolder.toLowerCase().replace(/\s+/g, '');
-      let folderPath = MICROSOFT_WELL_KNOWN_FOLDERS[key]
+      const resolveAndProbe = async (): Promise<AdapterConnectionTestResult> => {
+        const resolved = await this.buildFolderResourcePath(configuredFolder);
+        if (!MICROSOFT_WELL_KNOWN_FOLDERS[key] && resolved.resolvedFolder === MICROSOFT_INBOX_FALLBACK_LABEL) {
+          // Resolution gave up and fell back to Inbox: reporting success here is
+          // what kept a provider card green while every message for the
+          // configured folder was rejected downstream.
+          return {
+            success: false,
+            error: `Folder '${configuredFolder}' was not found in this mailbox. Use the exact folder name as it appears in Outlook, and write nested folders as Inbox/Subfolder.`,
+          };
+        }
+        await this.httpClient.get(resolved.resource.replace(/\/messages$/, ''), { params: { $top: 1, $select: 'id' } });
+        return { success: true };
+      };
+
+      // Graph splits an encoded separator into URL segments, so the direct GET
+      // for a nested filter always fails with 400 "Resource not found for the
+      // segment" — resolve the folder chain instead of probing it.
+      if (splitFolderPathSegments(configuredFolder).length > 1) {
+        return await resolveAndProbe();
+      }
+
+      const folderPath = MICROSOFT_WELL_KNOWN_FOLDERS[key]
         ? `${mailboxBase}/mailFolders/${MICROSOFT_WELL_KNOWN_FOLDERS[key]}`
         : `${mailboxBase}/mailFolders/${encodeURIComponent(configuredFolder)}`;
       try {
@@ -1033,10 +1182,14 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       } catch (error: any) {
         if (MICROSOFT_WELL_KNOWN_FOLDERS[key]) throw error;
         const directFailure = this.classifyGraphFailure(error);
-        if (directFailure.status !== 404) throw error;
-        const resolved = await this.buildFolderResourcePath(configuredFolder);
-        folderPath = resolved.resource.replace(/\/messages$/, '');
-        await this.httpClient.get(folderPath, { params: { $top: 1, $select: 'id' } });
+        // Graph reads the segment after /mailFolders/ as an id, so any
+        // user-typed name can only fail: 400 ErrorInvalidIdMalformed for a bare
+        // name like `AlgaInbox`, 400 "Resource not found for the segment" when
+        // a separator survives encoding, 404 for an id-shaped miss. All three
+        // mean "not an id" — resolve by display name instead. Auth, throttle
+        // and server failures (401/403/429/5xx) still surface as before.
+        if (directFailure.status !== 404 && directFailure.status !== 400) throw error;
+        return await resolveAndProbe();
       }
       return { success: true };
     } catch (error: any) {

@@ -11,6 +11,7 @@ import { tenantDb } from '@alga-psa/db';
 import { TicketModel } from '../../models/ticketModel';
 import { SharedNumberingService } from '../../services/numberingService';
 import { applyBoardDefaultWatchers } from '../../lib/tickets/boardDefaultWatchers';
+import { TicketWatcherService } from '../../services/tickets/ticketWatcherService';
 import type {
   NormalizedRmmAlertEvent,
   NormalizedRmmAlertSeverity,
@@ -137,6 +138,8 @@ export async function createTicketForAlert(
       updated_at: now,
     })
     .returning(['ticket_id', 'ticket_number']);
+
+  await TicketWatcherService.seedFromAttributes(trx, tenantId, ticket.ticket_id);
 
   if (params.assetId) {
     await associateAssetWithTicket(trx, tenantId, params.assetId, ticket.ticket_id, now);
@@ -286,6 +289,7 @@ function initialNote(event: NormalizedRmmAlertEvent): string {
 const PROVIDER_LABELS: Record<string, string> = {
   ninjaone: 'NinjaOne',
   tacticalrmm: 'Tactical RMM',
+  datto: 'Datto RMM',
   levelio: 'Level',
   huntress: 'Huntress',
   tanium: 'Tanium',

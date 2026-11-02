@@ -135,7 +135,6 @@
         "overtime": {
           "enableLabel": "Activer les taux d'heures supplémentaires",
           "rateHelp": "Taux appliqué après seuil.",
-          "rateLabel": "Taux d'heures supplémentaires ($/h)",
           "thresholdHelp": "Heures avant l’application de l’OT.",
           "thresholdLabel": "Seuil d'heures supplémentaires (heures/période)",
           "thresholdPlaceholder": "40",
@@ -375,7 +374,6 @@
     },
     "hourlyConfig": {
       "labels": {
-        "hourlyRate": "Taux horaire ($)",
         "minimumBillableTime": "Temps minimum facturable (minutes)",
         "roundUpToNearest": "Arrondir au plus proche (minutes)"
       },
@@ -398,7 +396,6 @@
           "technician": "Technicien"
         },
         "perHourSuffix": "/heure",
-        "rateSrLabel": "Tarif ($/h)",
         "selectTypePlaceholder": "Sélectionnez le type",
         "tooltip": "Définissez différents taux horaires pour des types d'utilisateurs spécifiques travaillant sur ce service. Ceux-ci remplacent le taux horaire par défaut du service.",
         "userTypeSrLabel": "Type d'utilisateur",
@@ -822,7 +819,8 @@
       "notAllowed": "L’une des valeurs de la ligne de contrat n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
       "missingField": "Un champ obligatoire de la ligne de contrat est manquant.",
       "missingFieldNamed": "Un champ obligatoire de la ligne de contrat est manquant : {{field}}.",
-      "advanceTimingNotAllowed": "La facturation à l’avance n’est disponible que pour les lignes de contrat fixes. Les lignes horaires et d’utilisation sont toujours facturées à terme échu, une fois le travail effectué."
+      "advanceTimingNotAllowed": "La facturation à l’avance n’est disponible que pour les lignes de contrat fixes. Les lignes horaires et d’utilisation sont toujours facturées à terme échu, une fois le travail effectué.",
+      "versionConflict": "Cette ligne de contrat a été modifiée par quelqu'un d'autre depuis le début de votre modification. Rechargez-la et appliquez à nouveau votre modification."
     },
     "templateLine": {
       "unavailable": "La ligne de modèle sélectionnée n’est plus disponible. Veuillez actualiser la page et réessayer."

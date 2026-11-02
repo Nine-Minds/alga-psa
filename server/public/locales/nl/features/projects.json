@@ -85,7 +85,9 @@
     "noService": "Geen service",
     "servicePlaceholder": "Standaardservice selecteren",
     "serviceHelp": "Wordt gebruikt voor tijdinvoer op taken in deze fase wanneer de taak zelf geen service instelt.",
-    "serviceDisplayLabel": "Service"
+    "serviceDisplayLabel": "Service",
+    "taskCount_few": "{{count}} taken",
+    "taskCount_many": "{{count}} taken"
   },
   "projectList": {
     "addProject": "Project toevoegen",
@@ -314,7 +316,9 @@
     "bulkTagsFailure": "Labels konden niet aan de geselecteerde taken worden toegevoegd",
     "taskTypeFallback": "Taak",
     "timeline": "Tijdlijn",
-    "loadingTimeline": "Tijdlijn laden..."
+    "loadingTimeline": "Tijdlijn laden...",
+    "bulkTagsSuccess_few": "Labels toegevoegd aan {{count}} taken",
+    "bulkTagsSuccess_many": "Labels toegevoegd aan {{count}} taken"
   },
   "taskForm": {
     "addTitle": "Nieuwe taak toevoegen",
@@ -433,7 +437,15 @@
     "serviceInheritedFromProject": "Neemt {{service}} over van het project.",
     "startDateLabel": "Startdatum",
     "taskStartDateLabel": "Startdatum van taak",
-    "startDatePlaceholder": "Selecteer startdatum"
+    "startDatePlaceholder": "Selecteer startdatum",
+    "createdTicketsIntro_few": "U heeft in deze sessie {{count}} tickets aangemaakt:",
+    "createdTicketsIntro_many": "U heeft in deze sessie {{count}} tickets aangemaakt:",
+    "documentCleanupFailure_few": "{{count}} documenten konden niet worden verwijderd en blijven in Documenten staan",
+    "documentCleanupFailure_many": "{{count}} documenten konden niet worden verwijderd en blijven in Documenten staan",
+    "documentsCleanupIntro_few": "U heeft {{count}} documenten die {{cleanupType}} zijn:",
+    "documentsCleanupIntro_many": "U heeft {{count}} documenten die {{cleanupType}} zijn:",
+    "ticketCleanupFailure_few": "{{count}} tickets konden niet worden verwijderd",
+    "ticketCleanupFailure_many": "{{count}} tickets konden niet worden verwijderd"
   },
   "taskDependencies": {
     "title": "Afhankelijkheden",
@@ -605,7 +617,16 @@
     "invoiceLinksHelp": "Conceptfacturen zijn gemaakt. Open elke valutagroep om deze te controleren.",
     "currencyDraftLink": "Conceptfactuur in {{currency}}",
     "productCount": "{{count}} producten",
-    "productsMovedToHoldOnClose": "{{count}} gekoppelde producten verplaatst naar Aangehouden omdat de facturatiegebeurtenis is geannuleerd."
+    "productsMovedToHoldOnClose": "{{count}} gekoppelde producten verplaatst naar Aangehouden omdat de facturatiegebeurtenis is geannuleerd.",
+    "availableBadge": "Beschikbaar: {{available}}",
+    "availableByLocation": "Vrije voorraad per locatie",
+    "freeOfOnHand": "{{free}} vrij van {{onHand}}",
+    "stockHeld": "Slechts {{free}} beschikbaar. {{held}} op voorraad is vastgezet voor verkooporders of projecten en kan hier niet worden gebruikt.",
+    "stockInsufficient": "Slechts {{onHand}} op voorraad, {{requested}} gevraagd.",
+    "reservedStockTitle": "Voorraad is gereserveerd voor een verkooporder of project",
+    "reservedStockMessage": "Slechts {{free}} van dit product is vrij. {{reserved}} op voorraad is gereserveerd voor verkooporders of projecten en u vroeg er {{requested}}. Als u het toch toevoegt, neemt u voorraad af waar een verkooporder of project op rekent en kan die tekortkomen.",
+    "reservedStockConfirm": "Toch toevoegen",
+    "fromStaging": "Vanuit klaarzetten"
   },
   "export": {
     "title": "Projecttaken exporteren",
@@ -644,7 +665,13 @@
     },
     "exportSelected": "{{count}} geselecteerde exporteren",
     "selectedTasksNotice_one": "{{count}} geselecteerde taak wordt geëxporteerd.",
-    "selectedTasksNotice_other": "{{count}} geselecteerde taken worden geëxporteerd."
+    "selectedTasksNotice_other": "{{count}} geselecteerde taken worden geëxporteerd.",
+    "phasesSelected_few": "{{selected}} van {{total}} fasen geselecteerd",
+    "phasesSelected_many": "{{selected}} van {{total}} fasen geselecteerd",
+    "selectedTasksNotice_few": "{{count}} geselecteerde taken worden geëxporteerd.",
+    "selectedTasksNotice_many": "{{count}} geselecteerde taken worden geëxporteerd.",
+    "success_few": "{{count}} taken naar CSV geëxporteerd.",
+    "success_many": "{{count}} taken naar CSV geëxporteerd."
   },
   "import": {
     "title": "Fasen en taken importeren",
@@ -765,7 +792,9 @@
     "statusUnmatchedTooltip": "Status komt niet overeen met een bestaande status voor deze fase. Los op in de mappingstappen voor de import.",
     "statusFallbackSuffix": "Standaard",
     "statusFallbackTooltip": "De standaard fallback-status voor deze fase wordt gebruikt.",
-    "inPhaseBadge": "binnen {{phase}}"
+    "inPhaseBadge": "binnen {{phase}}",
+    "taskCountLabel_few": "({{count}} taken)",
+    "taskCountLabel_many": "({{count}} taken)"
   },
   "dialogs": {
     "moveTask": {
@@ -839,7 +868,9 @@
       "badgeCount_other": "{{count}} Taken",
       "badgeCount_one": "{{count}} Taak",
       "billsToProject": "Tijd wordt als projecttijd gefactureerd",
-      "billsToClient": "Tijd wordt op klantniveau gefactureerd"
+      "billsToClient": "Tijd wordt op klantniveau gefactureerd",
+      "badgeCount_few": "{{count}} Taken",
+      "badgeCount_many": "{{count}} Taken"
     },
     "bulkMoveTask": {
       "title": "Taken verplaatsen",
@@ -1215,7 +1246,9 @@
       "taskCount_other": "{{count}} taken",
       "unknownUser": "Onbekend",
       "unknownTask": "Onbekende taak",
-      "checklistCountTitle": "{{count}} checklist-item"
+      "checklistCountTitle": "{{count}} checklist-item",
+      "taskCount_few": "{{count}} taken",
+      "taskCount_many": "{{count}} taken"
     },
     "taskForm": {
       "addTitle": "Taak toevoegen",
@@ -1464,7 +1497,8 @@
     "notAvailable": "N.v.t.",
     "saveAsTemplate": "Opslaan als sjabloon",
     "materials": "Materialen",
-    "shareTooltip": "Afdrukken, importeren en exporteren"
+    "shareTooltip": "Afdrukken, importeren en exporteren",
+    "staging": "Klaarzetten"
   },
   "projectPhases": {
     "addTask": "Taak toevoegen",
@@ -1502,7 +1536,9 @@
     "addFailed": "Kan opmerking niet toevoegen",
     "submitting": "Verzenden...",
     "loading": "Laden...",
-    "empty": "Nog geen opmerkingen. Wees de eerste om te reageren!"
+    "empty": "Nog geen opmerkingen. Wees de eerste om te reageren!",
+    "loadError": "Opmerkingen konden niet worden geladen.",
+    "retry": "Opnieuw proberen"
   },
   "clientPortal": {
     "clientsWillSee": "Klanten zullen zien:",
@@ -1625,7 +1661,9 @@
       "submitting": "Labels toevoegen...",
       "confirm_one": "Labels toevoegen aan {{count}} taak",
       "confirm_other": "Labels toevoegen aan {{count}} taken",
-      "failedHeading": "Labels konden niet aan de volgende taken worden toegevoegd:"
+      "failedHeading": "Labels konden niet aan de volgende taken worden toegevoegd:",
+      "confirm_few": "Labels toevoegen aan {{count}} taken",
+      "confirm_many": "Labels toevoegen aan {{count}} taken"
     }
   },
   "common:actions": {
@@ -1688,7 +1726,9 @@
       "lockedSummary_other": "{{count}} items met een totaal van {{amount}} zijn vergrendeld en veranderen niet.",
       "edit": "Voorwaarden bewerken",
       "saved": "Factureringsvoorwaarden bijgewerkt",
-      "dialogTitle": "Factureringsvoorwaarden bewerken"
+      "dialogTitle": "Factureringsvoorwaarden bewerken",
+      "lockedSummary_few": "{{count}} items met een totaal van {{amount}} zijn vergrendeld en veranderen niet.",
+      "lockedSummary_many": "{{count}} items met een totaal van {{amount}} zijn vergrendeld en veranderen niet."
     },
     "setup": {
       "title": "Dit project factureren",
@@ -2037,5 +2077,202 @@
     "question": "Afhankelijkheden worden niet afgedwongen, dus u kunt doorgaan. Wilt u dat?",
     "proceed": "Toch doorgaan",
     "cancel": "Annuleren"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Compact"
+    },
+    "spacious": {
+      "label": "Ruim"
+    },
+    "decrease": {
+      "title": "Kolombreedte verkleinen"
+    },
+    "increase": {
+      "title": "Kolombreedte vergroten"
+    },
+    "reset": {
+      "title": "Standaardwaarde herstellen"
+    }
+  },
+  "staging": {
+    "status": {
+      "reserved": "Gereserveerd",
+      "staged": "Klaargezet",
+      "installed": "Geïnstalleerd",
+      "released": "Vrijgegeven",
+      "received": "Ontvangen"
+    },
+    "kind": {
+      "stock": "Voorraad",
+      "untracked": "Niet voorraadbeheerd",
+      "client": "Door klant geleverd"
+    },
+    "actionFailed": "Dat is niet gelukt. Probeer het opnieuw.",
+    "installed": "{{count}} item(s) geïnstalleerd. Ze zijn nu projectmateriaal.",
+    "installFailed": "Installeren mislukt.",
+    "backToProject": "← Terug naar project",
+    "title": "Klaarzetten",
+    "heading": "Klaarzetten",
+    "intro": "Reserveer en zet apparatuur klaar vóór de installatie, verpak het in geëtiketteerde dozen en installeer het daarna. Voorraad wordt pas gebruikt, en factureerbaar, zodra een item is geïnstalleerd.",
+    "reserveStock": "Voorraad reserveren",
+    "addClientItem": "Klantitem toevoegen",
+    "newBox": "Nieuwe doos",
+    "printLabels": "Etiketten afdrukken",
+    "summary": {
+      "reserved": "{{count}} gereserveerd",
+      "staged": "{{count}} klaargezet",
+      "client": "{{count}} door klant geleverd",
+      "installed": "{{count}} geïnstalleerd",
+      "boxes": "{{count}} doos/dozen"
+    },
+    "loading": "Klaarzetten laden...",
+    "linesHeading": "Artikelen",
+    "showReleased": "Vrijgegeven items tonen",
+    "selected": "{{count}} geselecteerd",
+    "stagedToast": "Klaargezet. De voorraad wordt nu vastgehouden voor dit project.",
+    "stage": "Klaarzetten",
+    "install": "Installeren",
+    "release": "Vrijgeven",
+    "packInto": "Inpakken in {{identifier}}",
+    "packIntoPlaceholder": "In doos inpakken...",
+    "empty": "Er is nog niets klaargezet voor dit project. Reserveer voorraad of voeg een door de klant geleverd item toe om te beginnen.",
+    "col": {
+      "item": "Artikel",
+      "qty": "Aantal",
+      "packed": "Ingepakt",
+      "where": "Van / taak",
+      "status": "Status"
+    },
+    "selectLine": "{{item}} selecteren",
+    "shortfall": "{{count}} tekort: de aanspraken op deze locatie zijn hoger dan de werkelijke voorraad (voorraad is onttrokken via een override).",
+    "changeQuantity": "Aantal wijzigen",
+    "undoneToast": "Installatie ongedaan gemaakt. Het item is weer klaargezet.",
+    "undoInstall": "Installatie ongedaan maken",
+    "boxesHeading": "Dozen",
+    "noBoxes": "Nog geen dozen. Maak een doos, pak er items in en druk daarna het etiket en de paklijst af.",
+    "boxPosition": "Doos {{n}} van {{total}}",
+    "boxSealed": "Verzegeld",
+    "boxOpen": "Open",
+    "boxEmpty": "Leeg",
+    "unpack": "Uitpakken",
+    "boxLabel": "Etiket",
+    "boxAllLabels": "Alle etiketten",
+    "manifest": "Paklijst",
+    "reopen": "Opnieuw openen",
+    "seal": "Verzegelen",
+    "editBox": "Doos bewerken",
+    "boxDeleted": "Doos verwijderd.",
+    "deleteBox": "Doos verwijderen",
+    "reprintHint": "\"Doos n van m\" op een afgedrukt etiket wordt vastgelegd op het moment van afdrukken. Druk de etiketten opnieuw af na het toevoegen of verwijderen van dozen.",
+    "reservedToast": "Gereserveerd. De voorraad wordt vastgehouden voor dit project; er is nog niets gebruikt.",
+    "releasedToast": "Vrijgegeven. De voorraad is weer vrij.",
+    "releaseTitle": "Items vrijgeven?",
+    "releaseMessage": "Vrijgegeven items geven hun voorraad terug en verlaten hun dozen. Dit kan niet ongedaan worden gemaakt; reserveer ze opnieuw als u ze nog nodig heeft.",
+    "overrideTitle": "Voorraad gebruiken die voor anderen is gereserveerd?",
+    "overrideMessage": "{{message}} Toch installeren gebruikt voorraad die zacht gereserveerd is voor een verkooporder of een ander project.",
+    "installAnyway": "Toch installeren",
+    "changeQuantityHint": "Meer reserveren voegt voorraad toe (indien beschikbaar); minder geeft het verschil terug. Het kan niet lager zijn dan wat al is ingepakt.",
+    "reserve": {
+      "anyLocation": "Elke locatie (oudste eenheden eerst)",
+      "locationOption": "{{name}}: {{free}} vrij",
+      "selectProduct": "Kies een product.",
+      "quantityMin": "Het aantal moet minimaal 1 zijn.",
+      "failed": "De voorraad kon niet worden gereserveerd.",
+      "conflictOnHand": "Slechts {{onHand}} op voorraad, {{requested}} aangevraagd. Er is niets gereserveerd.",
+      "conflictFree": "Slechts {{free}} vrij: {{reserved}} gereserveerd en {{held}} hard vastgehouden voor verkooporders of projecten. U vroeg om {{requested}}. Er is niets gereserveerd.",
+      "title": "Voorraad reserveren",
+      "intro": "Reserveren houdt voorraad vast voor dit project zonder deze te verbruiken. Voorraad wordt pas gebruikt, en gefactureerd, zodra u die installeert.",
+      "product": "Product",
+      "productPlaceholder": "Selecteer een product...",
+      "productSearch": "Producten zoeken...",
+      "noProducts": "Geen producten gevonden",
+      "untracked": "Dit product wordt niet voorraadbeheerd. Het wordt toegevoegd als planningsregel en claimt geen voorraad.",
+      "location": "Reserveren vanuit",
+      "locationPlaceholder": "Kies een locatie",
+      "locationDetail": "{{onHand}} op voorraad, {{reserved}} gereserveerd, {{held}} hard vastgehouden.",
+      "units": "Eenheden (optioneel: laat leeg om de oudste te nemen)",
+      "noUnitPicker": "U kunt geen voorraadeenheden zien, dus worden de oudste eenheden genomen.",
+      "quantity": "Aantal",
+      "task": "Taak",
+      "noTask": "Geen taak",
+      "currency": "Valuta",
+      "currencyPlaceholder": "Standaard van de tenant",
+      "rate": "Gepland tarief (per eenheid)",
+      "submit": "Reserveren"
+    },
+    "clientItems": {
+      "chooseAsset": "Kies een asset.",
+      "describeItem": "Beschrijf het item.",
+      "failed": "Het item kon niet worden toegevoegd.",
+      "title": "Door klant geleverd item toevoegen",
+      "intro": "Houd apparatuur die de klant levert bij via klaarzetten en dozen. Het wordt nooit voorraad en wordt nooit gefactureerd.",
+      "kind": "Wat is het?",
+      "kindAsset": "Een van de assets van de klant",
+      "kindItem": "Een ander item (beschrijf het)",
+      "asset": "Asset",
+      "assetPlaceholder": "Selecteer een asset...",
+      "assetSearch": "Zoeken op naam, tag of serienummer...",
+      "noAssets": "Geen assets van deze klant beschikbaar",
+      "description": "Beschrijving",
+      "quantity": "Aantal",
+      "task": "Taak",
+      "noTask": "Geen taak",
+      "submit": "Toevoegen"
+    },
+    "boxForm": {
+      "failed": "De doos kon niet worden opgeslagen.",
+      "editTitle": "Doos {{identifier}} bewerken",
+      "createTitle": "Nieuwe doos",
+      "numbering": "Dozen worden op dit project op volgorde genummerd; een nummer wordt nooit opnieuw gebruikt.",
+      "name": "Naam (optioneel)",
+      "task": "Taak",
+      "noTask": "Geen taak",
+      "location": "Waar de doos staat",
+      "noLocation": "Niet ingesteld",
+      "locationNote": "Schap / vak",
+      "notes": "Notities (afgedrukt op de paklijst)",
+      "create": "Doos aanmaken"
+    },
+    "pack": {
+      "nothingChosen": "Kies iets om in te pakken.",
+      "failed": "De doos kon niet worden ingepakt.",
+      "title": "Doos {{identifier}} inpakken",
+      "intro": "Gereserveerde items die u inpakt, worden klaargezet: de voorraad wordt vastgehouden voor dit project en kan voor niets anders meer worden gebruikt.",
+      "nothingToPack": "Alles in klaarzetten is al ingepakt of geïnstalleerd.",
+      "quantityFor": "Aantal van {{item}}",
+      "submit": "Inpakken"
+    },
+    "print": {
+      "failed": "De etiketten konden niet worden afgedrukt.",
+      "skipped": "{{count}} etiket(ten) die u niet kunt bekijken, zijn weggelaten.",
+      "popupBlocked": "Uw browser heeft het PDF-venster geblokkeerd; sta pop-ups toe en probeer het opnieuw.",
+      "title": "Klaarzet-etiketten afdrukken",
+      "boxes": "Dozen",
+      "noBoxes": "Nog geen dozen.",
+      "boxOption": "{{identifier}} (doos {{n}} van {{total}}){{name}}",
+      "includeUnboxed": "Ook klaargezette items afdrukken die niet in een doos zitten",
+      "layout": "Indeling",
+      "count": "{{count}} etiket(ten) in één PDF.",
+      "noInventory": "{{count}} voorraadeenheid-etiket(ten) zijn niet opgenomen omdat u de voorraad niet kunt bekijken.",
+      "overCap": "Eén afdruk bevat maximaal {{max}} etiketten. Kies minder dozen en druk de rest apart af.",
+      "submit": "Afdrukken"
+    },
+    "closeWarning": "{{count}} gereserveerde of klaargezette item(s) houden nog voorraad vast voor dit project.",
+    "releasedAll": "{{count}} item(s) vrijgegeven. De voorraad is weer vrij.",
+    "releaseAll": "Alle gereserveerde en klaargezette items vrijgeven",
+    "keepClaims": "Behouden",
+    "packAction": "Inpakken",
+    "errors": {
+      "notFound": "Project niet gevonden",
+      "permission": {
+        "read": "U heeft geen toestemming om projecten te bekijken.",
+        "update": "U heeft geen toestemming om projecten te wijzigen.",
+        "inventory": "U heeft toegang tot de voorraad nodig om voorraadeenheden te kiezen.",
+        "billing": "U heeft toegang tot facturatie nodig om items in een project te installeren.",
+        "asset": "U heeft toegang tot assets nodig om klantassets te koppelen.",
+        "inventoryStock": "U heeft toegang tot de voorraad nodig om voorraadniveaus te zien."
+      }
+    }
   }
 }

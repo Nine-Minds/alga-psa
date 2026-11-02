@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Agregar entrada de tiempo"
+    }
+  },
   "common": {
     "actions": {
       "view": "Ver",
@@ -127,12 +132,15 @@
       "billable": "facturable",
       "notes": "Notas",
       "deleteTimeEntry": "Eliminar entrada de tiempo",
-      "unsavedChanges": "Cambios no guardados"
+      "unsavedChanges": "Cambios no guardados",
+      "contractLine": "Línea de contrato"
     },
     "placeholders": {
       "selectService": "Seleccione un servicio",
+      "searchServices": "Buscar servicios...",
       "selectDate": "Seleccionar fecha",
-      "addNotes": "Agregar notas"
+      "addNotes": "Agregar notas",
+      "selectContractLine": "Seleccionar una línea de contrato"
     },
     "validation": {
       "startBeforeEnd": "La hora de inicio debe ser anterior a la hora de finalización.",
@@ -150,6 +158,10 @@
       "task": "Predeterminado de la tarea",
       "phase": "Predeterminado de la fase",
       "project": "Predeterminado del proyecto"
+    },
+    "options": {
+      "resolveContractLineLater": "Sin línea - resolver más tarde",
+      "noServicesFound": "No se encontraron servicios"
     }
   },
   "workItemPicker": {
@@ -396,7 +408,7 @@
     "noContract": "No se encontró ninguna línea de contrato para este servicio. El tiempo se asignará al contrato predeterminado gestionado por el sistema.",
     "contract": "Contrato: {{name}}",
     "defaultContract": "Contrato predeterminado gestionado por el sistema",
-    "multipleLines": "Múltiples líneas de contrato disponibles: usando la selección predeterminada"
+    "multipleEligible": "Varias líneas de contrato son elegibles para esta fecha. Seleccione una línea de contrato para guardar la asignación."
   },
   "billableLegend": {
     "title": "Leyenda facturable",
@@ -513,7 +525,8 @@
     "entryMissingPeriod": "La hoja de tiempo de esta entrada no tiene período y no se puede abrir.",
     "noPeriods": "Aún no hay períodos de tiempo configurados, por lo que no se puede registrar tiempo. Pide a un administrador que cree períodos de tiempo en Configuración → Entrada de tiempo.",
     "noEditablePeriods": "Todas las hojas de tiempo están enviadas o aprobadas, así que no hay ningún día al que añadir tiempo. Pide a un aprobador que reabra una hoja o a un administrador que añada un período.",
-    "prepareFailed": "Se produjo un error al preparar la entrada de tiempo. Inténtalo de nuevo."
+    "prepareFailed": "Se produjo un error al preparar la entrada de tiempo. Inténtalo de nuevo.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Sugerencias",
@@ -538,7 +551,9 @@
       "checklistChanged": "lista de verificación cambiada",
       "linksChanged": "enlaces cambiados",
       "updated": "actualizado"
-    }
+    },
+    "activitySummary_few": "primera actividad {{first}} · última {{last}} · {{count}} acciones ({{kinds}})",
+    "activitySummary_many": "primera actividad {{first}} · última {{last}} · {{count}} acciones ({{kinds}})"
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} registrado en {{count}} segmento (en pausa {{paused}})",
@@ -557,6 +572,8 @@
       "confirm": "Continuar",
       "cancel": "Cancelar"
     },
-    "ticketFallbackName": "Ticket {{number}}"
+    "ticketFallbackName": "Ticket {{number}}",
+    "pausedNotice_few": "{{active}} registrados en {{count}} segmentos (en pausa {{paused}})",
+    "pausedNotice_many": "{{active}} registrados en {{count}} segmentos (en pausa {{paused}})"
   }
 }

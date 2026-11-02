@@ -158,7 +158,10 @@ export default function RemoteAccessLinksManager() {
               <Input id="remote-access-link-template" value={urlTemplate} onChange={(event) => setUrlTemplate(event.target.value)} />
             </label>
             <p className="text-xs text-[rgb(var(--color-text-500))]">{t('remoteAccess.links.tokens', {
-              defaultValue: 'Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name}, and {field.<key>} with custom field keys defined in Settings → Assets → Asset types.',
+              defaultValue: 'Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name}, and {field.<key>} with custom field keys defined in Settings → Assets → Asset types.',
+            })}</p>
+            <p className="text-xs text-[rgb(var(--color-text-500))]">{t('remoteAccess.links.ninjaExample', {
+              defaultValue: 'NinjaOne device dashboard example: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Replace the host with your NinjaOne region: app, eu, ca, oc or us2 .ninjarmm.com.',
             })}</p>
           </div>
         </DialogContent>

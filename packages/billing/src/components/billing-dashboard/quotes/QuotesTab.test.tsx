@@ -318,6 +318,58 @@ describe('QuotesTab sent quote actions', () => {
   });
 });
 
+describe('QuotesTab delete', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    navigationMocks.searchParams = 'subtab=active';
+    actionMocks.listQuotes.mockResolvedValue({ data: [draftQuote] });
+    getQuoteDocumentTemplatesMock.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  const confirmDelete = async () => {
+    render(<QuotesTab />);
+    fireEvent.click(await screen.findByText('Delete'));
+    const confirm = await waitFor(() => {
+      const button = document.getElementById('delete-quote-confirmation-confirm');
+      expect(button).not.toBeNull();
+      return button as HTMLElement;
+    });
+    fireEvent.click(confirm);
+    await waitFor(() => expect(actionMocks.deleteQuote).toHaveBeenCalledWith(draftQuote.quote_id));
+  };
+
+  it('surfaces a validation refusal instead of silently closing the dialog', async () => {
+    // deleteQuote returns a DeletionValidationResult (not an error) when the
+    // entity is blocked; the list used to drop it and reload as if it worked.
+    actionMocks.deleteQuote.mockResolvedValue({
+      canDelete: false,
+      code: 'DEPENDENCIES_EXIST',
+      message: 'This quote has associated records that must be removed or reassigned first: sent email.',
+      dependencies: [],
+      alternatives: [],
+    });
+
+    await confirmDelete();
+
+    expect(await screen.findByText(/associated records that must be removed/)).toBeTruthy();
+    expect(actionMocks.listQuotes).toHaveBeenCalledTimes(1);
+  });
+
+  it('reloads the list after a successful delete', async () => {
+    actionMocks.deleteQuote.mockResolvedValue({ canDelete: true, deleted: true, dependencies: [], alternatives: [] });
+
+    await confirmDelete();
+
+    await waitFor(() => expect(actionMocks.listQuotes).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText(/could not be deleted/)).toBeNull();
+  });
+});
+
 describe('QuotesTab send dialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();

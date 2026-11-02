@@ -89,17 +89,18 @@ describe('ticket presentation from actual calculation', () => {
   });
   it.each([
     { name: 'entry override', entry: { custom_rate: 17000 }, minutes: 60, amount: 17000, rate: 17000 },
-    { name: 'catalog currency price', entry: { custom_rate: null, currency_rate: 13000 }, minutes: 60, amount: 13000, rate: 13000 },
+    { name: 'catalog currency price', entry: { custom_rate: null, currency_rate: 13000 }, minutes: 60, amount: 13000, rate: 13000, contractRate: null },
+    { name: 'contract rate over catalog price', entry: { custom_rate: null, currency_rate: 13000 }, minutes: 60, amount: 15000, rate: 15000 },
     { name: 'user type price', entry: { custom_rate: null, user_type: 'engineer', currency_rate: 13000 }, minutes: 60, amount: 16000, rate: 16000 },
     { name: 'minimum duration', entry: { billable_duration: 10 }, minutes: 30, amount: 7500, rate: 15000 },
     { name: 'rounded duration', entry: { billable_duration: 31 }, minutes: 45, amount: 11250, rate: 15000 },
     { name: 'proven free time', entry: { custom_rate: 0 }, minutes: 60, amount: 0, rate: 0 },
     { name: 'phase override', entry: { project_id: 'project', project_phase_id: 'phase' }, minutes: 60, amount: 20000, rate: 20000 },
-  ])('renders honest rate evidence for $name from actual calculation', async ({ entry, minutes, amount, rate }) => {
+  ] as Array<{ name: string; entry: Record<string, unknown>; minutes: number; amount: number; rate: number; contractRate?: number | null }>)('renders honest rate evidence for $name from actual calculation', async ({ entry, minutes, amount, rate, contractRate }) => {
     const { vm, charges, generated, inputs, taxContext } = fixture(22500, [{ billable_duration: 60, ...entry }], (inputs) => {
       inputs.timeEntries = [inputs.timeEntries[0]];
       inputs.plan.enable_overtime = false;
-      inputs.serviceConfigMap.set('service-0', { config: { config_id: 'hourly', hourly_rate: 15000, minimum_billable_time: 30, round_up_to_nearest: 15 }, userTypeRates: new Map([['engineer', 16000]]) });
+      inputs.serviceConfigMap.set('service-0', { config: { config_id: 'hourly', hourly_rate: contractRate === undefined ? 15000 : contractRate, minimum_billable_time: 30, round_up_to_nearest: 15 }, userTypeRates: new Map([['engineer', 16000]]) });
       inputs.resolvePhaseRateOverride = (phaseId) => phaseId === 'phase' ? { rate: 20000, override_service_name: 'Phase service' } : null;
     });
     expect(generated[0].workItemSnapshot).toMatchObject({ billedMinutes: minutes, netAmount: amount, rateKind: 'uniform', uniformRate: rate });

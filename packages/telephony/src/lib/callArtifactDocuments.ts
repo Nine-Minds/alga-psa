@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { tenantDb, withTransaction } from '@alga-psa/db';
+import { type TenantDb, tenantDb, withTransaction } from '@alga-psa/db';
 import type { CallArtifactPayload } from '../types';
 
 export interface CreateCallTranscriptDocumentInput {
@@ -101,7 +101,7 @@ export const CALL_SUMMARY_NOTES_PREFIX = 'Summary: ';
  * a summary already present in the notes is not appended again.
  */
 export async function appendCallSummaryToInteraction(input: {
-  db: any;
+  db: TenantDb;
   interactionId: string | null | undefined;
   summary: string | null | undefined;
   now?: Date | string;

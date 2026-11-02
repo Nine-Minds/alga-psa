@@ -1,0 +1,24 @@
+# The development runtime for the browser lane's development-mode checks: the
+# Teams development server and the Microsoft callback both compile the
+# application with `next dev`, which needs every workspace package and its
+# dependencies. The production image carries production dependencies only, so
+# those checks cannot run inside the candidate; they run here instead, from the
+# checkout, with the node_modules the runner installed from the lockfile.
+#
+# Layer this after the candidate stack's compose files; the chain's own override
+# supplies the entrypoint, environment and any extra writable directories. The
+# container runs as root on purpose: the checkout is owned by the runner user
+# and the stack's secrets by UID 1000, and `next dev` writes next-env.d.ts, the
+# dist directory and logs/ into the checkout, all of which are ignored by Git.
+# The wrapper still proves the source clean before and after.
+services:
+  server:
+    image: node:22-bookworm-slim
+    user: '0:0'
+    working_dir: /app/server
+    environment:
+      HOME: /root
+    volumes:
+      - type: bind
+        source: ${E2E_DEVELOPMENT_WORKSPACE:?Set E2E_DEVELOPMENT_WORKSPACE to the checkout the development runtime compiles}
+        target: /app

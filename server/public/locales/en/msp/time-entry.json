@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Add Entry"
+    }
+  },
   "common": {
     "actions": {
       "view": "View",
@@ -127,12 +132,15 @@
       "billable": "Billable",
       "notes": "Notes",
       "deleteTimeEntry": "Delete Time Entry",
-      "unsavedChanges": "Unsaved changes"
+      "unsavedChanges": "Unsaved changes",
+      "contractLine": "Contract line"
     },
     "placeholders": {
       "selectService": "Select a service",
+      "searchServices": "Search services...",
       "selectDate": "Select date",
-      "addNotes": "Add notes"
+      "addNotes": "Add notes",
+      "selectContractLine": "Select a contract line"
     },
     "validation": {
       "startBeforeEnd": "Start time must be earlier than end time",
@@ -150,6 +158,10 @@
       "task": "Default from task",
       "phase": "Default from phase",
       "project": "Default from project"
+    },
+    "options": {
+      "resolveContractLineLater": "No line - resolve later",
+      "noServicesFound": "No services found"
     }
   },
   "workItemPicker": {
@@ -396,7 +408,7 @@
     "noContract": "No contract line found for this service. Time will be routed to the system-managed default contract.",
     "contract": "Contract: {{name}}",
     "defaultContract": "System-managed default contract",
-    "multipleLines": "Multiple contract lines available - using default selection"
+    "multipleEligible": "Multiple contract lines are eligible for this date. Select a contract line to persist assignment."
   },
   "billableLegend": {
     "title": "Billable Legend",
@@ -513,7 +525,8 @@
     "entryMissingPeriod": "The time sheet for this entry is missing its period and can’t be opened.",
     "noPeriods": "No time periods are set up yet, so time can’t be entered. Ask an administrator to create time periods under Settings → Time Entry.",
     "noEditablePeriods": "Every time sheet is submitted or approved, so there is no day to add time to. Ask an approver to reopen a sheet, or an administrator to add a time period.",
-    "prepareFailed": "An error occurred while preparing the time entry. Please try again."
+    "prepareFailed": "An error occurred while preparing the time entry. Please try again.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Suggestions",
@@ -538,7 +551,9 @@
       "checklistChanged": "checklist changed",
       "linksChanged": "links changed",
       "updated": "updated"
-    }
+    },
+    "activitySummary_few": "first activity {{first}} · last {{last}} · {{count}} actions ({{kinds}})",
+    "activitySummary_many": "first activity {{first}} · last {{last}} · {{count}} actions ({{kinds}})"
   },
   "stopwatch": {
     "pausedNotice_one": "Tracked {{active}} in {{count}} segment (paused {{paused}})",
@@ -557,6 +572,8 @@
       "confirm": "Continue",
       "cancel": "Cancel"
     },
-    "ticketFallbackName": "Ticket {{number}}"
+    "ticketFallbackName": "Ticket {{number}}",
+    "pausedNotice_few": "Tracked {{active}} across {{count}} segments (paused {{paused}})",
+    "pausedNotice_many": "Tracked {{active}} across {{count}} segments (paused {{paused}})"
   }
 }

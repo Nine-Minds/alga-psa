@@ -135,7 +135,6 @@
         "overtime": {
           "enableLabel": "Überstundensätze aktivieren",
           "rateHelp": "Rate, die nach dem Schwellenwert angewendet wird.",
-          "rateLabel": "Überstundensatz ($/Std.)",
           "thresholdHelp": "Stunden bevor OT gilt.",
           "thresholdLabel": "Überstundenschwelle (Stunden/Zeitraum)",
           "thresholdPlaceholder": "40",
@@ -375,7 +374,6 @@
     },
     "hourlyConfig": {
       "labels": {
-        "hourlyRate": "Stundensatz ($)",
         "minimumBillableTime": "Mindestabrechenbare Zeit (Minuten)",
         "roundUpToNearest": "Auf den nächsten Wert aufrunden (Minuten)"
       },
@@ -398,7 +396,6 @@
           "technician": "Techniker"
         },
         "perHourSuffix": "/Std",
-        "rateSrLabel": "Preis ($/Std.)",
         "selectTypePlaceholder": "Typ auswählen",
         "tooltip": "Definieren Sie unterschiedliche Stundensätze für bestimmte Benutzertypen, die an diesem Dienst arbeiten. Diese setzen den Standardstundensatz des Dienstes außer Kraft.",
         "userTypeSrLabel": "Benutzertyp",
@@ -822,7 +819,8 @@
       "notAllowed": "Einer der Werte der Vertragslinie ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
       "missingField": "Erforderliches Feld der Vertragslinie fehlt.",
       "missingFieldNamed": "Erforderliches Feld der Vertragslinie fehlt: {{field}}.",
-      "advanceTimingNotAllowed": "Abrechnung im Voraus ist nur für Festpreispositionen verfügbar. Stunden- und Nutzungspositionen werden immer nachträglich abgerechnet, nachdem die Arbeit erbracht wurde."
+      "advanceTimingNotAllowed": "Abrechnung im Voraus ist nur für Festpreispositionen verfügbar. Stunden- und Nutzungspositionen werden immer nachträglich abgerechnet, nachdem die Arbeit erbracht wurde.",
+      "versionConflict": "Diese Vertragsposition wurde von jemand anderem geändert, seit Sie mit der Bearbeitung begonnen haben. Laden Sie sie neu und wenden Sie Ihre Änderung erneut an."
     },
     "templateLine": {
       "unavailable": "Die ausgewählte Vorlagenzeile ist nicht mehr verfügbar. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."

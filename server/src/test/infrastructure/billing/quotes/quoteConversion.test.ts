@@ -39,6 +39,12 @@ import {
   convertQuoteToDraftSalesOrder,
 } from '../../../../../../packages/billing/src/services/quoteConversionService';
 import { recalculatePercentageDiscountInvoiceCharges } from '../../../../../../packages/billing/src/services/invoiceService';
+import { ensureDefaultBillingProfile } from '../../../../../test-utils/billingProfileTestHelpers';
+import {
+  convertQuoteToDraftContract as runtimeConvertQuoteToDraftContract,
+  convertQuoteToDraftContractAndInvoice as runtimeConvertQuoteToDraftContractAndInvoice,
+  buildQuoteConversionPreview as runtimeBuildQuoteConversionPreview,
+} from '../../../../../../shared/workflow/runtime/actions/businessOperations/crmWorkerDal';
 import { registerTenantUnit } from '../../../../../../shared/billingClients/tenantUnitsOfMeasure';
 
 const {
@@ -194,6 +200,111 @@ describe('Quote conversion infrastructure', () => {
       items: createdItems,
     };
   }
+
+  describe('invoice header terms from the effective billing identity', () => {
+    const oneTimeItem = [{
+      description: 'Project onboarding',
+      quantity: 1,
+      unit_price: 12000,
+      is_recurring: false,
+      billing_method: 'fixed' as const,
+    }];
+
+    async function setTerms(
+      table: 'clients' | 'client_billing_profiles',
+      where: Record<string, unknown>,
+      terms: { payment_terms?: string | null; preferred_payment_method?: string | null },
+    ) {
+      await context.db(table).where({ tenant: context.tenantId, ...where }).update(terms);
+    }
+
+    async function loadHeader(invoiceId: string) {
+      return context.db('invoices')
+        .where({ tenant: context.tenantId, invoice_id: invoiceId })
+        .first();
+    }
+
+    function dateOnly(value: Date | string): string {
+      return (value instanceof Date ? value.toISOString() : value).slice(0, 10);
+    }
+
+    it('(a) client Net 15 + credit_card with no profile overrides sets due_date, method and default profile', async () => {
+      await setTerms('clients', { client_id: context.clientId }, {
+        payment_terms: 'net_15',
+        preferred_payment_method: 'credit_card',
+      });
+      const defaultProfileId = await ensureDefaultBillingProfile(context, context.clientId);
+      const { quote } = await createAcceptedQuote(oneTimeItem);
+
+      const result = await context.db.transaction((trx) =>
+        convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId)
+      );
+
+      const header = await loadHeader(result.invoice.invoice_id);
+      // accepted_at 2026-03-14T12:00Z + 15 days
+      expect(dateOnly(header.invoice_date)).toBe('2026-03-14');
+      expect(dateOnly(header.due_date)).toBe('2026-03-29');
+      expect(header.payment_method).toBe('credit_card');
+      expect(header.billing_profile_id).toBe(defaultProfileId);
+
+      const charges = await context.db('invoice_charges')
+        .where({ tenant: context.tenantId, invoice_id: result.invoice.invoice_id });
+      expect(charges.length).toBeGreaterThan(0);
+      for (const charge of charges) {
+        expect(charge.billing_profile_id).toBe(header.billing_profile_id);
+      }
+    });
+
+    it('(b) default profile terms and method override the client', async () => {
+      await setTerms('clients', { client_id: context.clientId }, {
+        payment_terms: 'net_15',
+        preferred_payment_method: 'credit_card',
+      });
+      const defaultProfileId = await ensureDefaultBillingProfile(context, context.clientId);
+      await setTerms('client_billing_profiles', { billing_profile_id: defaultProfileId }, {
+        payment_terms: 'net_30',
+        preferred_payment_method: 'bank_transfer',
+      });
+      const { quote } = await createAcceptedQuote(oneTimeItem);
+
+      const result = await context.db.transaction((trx) =>
+        convertQuoteToDraftInvoice(trx, context.tenantId, quote.quote_id, context.userId)
+      );
+
+      const header = await loadHeader(result.invoice.invoice_id);
+      expect(dateOnly(header.due_date)).toBe('2026-04-13');
+      expect(header.payment_method).toBe('bank_transfer');
+      expect(header.billing_profile_id).toBe(defaultProfileId);
+    });
+
+    it('(c) convert-to-both produces the same header terms', async () => {
+      await setTerms('clients', { client_id: context.clientId }, {
+        payment_terms: 'net_15',
+        preferred_payment_method: 'credit_card',
+      });
+      const defaultProfileId = await ensureDefaultBillingProfile(context, context.clientId);
+      const { quote } = await createAcceptedQuote([
+        {
+          description: 'Recurring maintenance',
+          quantity: 1,
+          unit_price: 4000,
+          is_recurring: true,
+          billing_frequency: 'monthly',
+          billing_method: 'fixed',
+        },
+        ...oneTimeItem,
+      ]);
+
+      const result = await context.db.transaction((trx) =>
+        convertQuoteToDraftContractAndInvoice(trx, context.tenantId, quote.quote_id, context.userId)
+      );
+
+      const header = await loadHeader(result.invoice.invoice_id);
+      expect(dateOnly(header.due_date)).toBe('2026-03-29');
+      expect(header.payment_method).toBe('credit_card');
+      expect(header.billing_profile_id).toBe(defaultProfileId);
+    });
+  });
 
   it('T104: Quote→Contract creates a draft contract with the quote title and accepted date', async () => {
     const { quote } = await createAcceptedQuote([
@@ -803,6 +914,10 @@ describe('Quote conversion infrastructure', () => {
     expect(preview.invoice_items.map((item) => item.description)).toEqual(['One-time installation', 'Recurring discount']);
     const recurringDiscountRow = preview.invoice_items.find((item) => item.description === 'Recurring discount');
     expect(recurringDiscountRow?.total_price).toBe(-286);
+    expect(preview.contract_discounts).toEqual([
+      expect.objectContaining({ description: 'Recurring discount', line_description: 'Recurring support plan', discount_type: 'fixed', amount: 214 }),
+    ]);
+    expect(preview.contract_monthly_total).toBe(4500 - 214);
     expect(preview.excluded_items.map((item) => item.description)).toEqual(['Optional training day']);
   });
 
@@ -1448,5 +1563,320 @@ describe('Quote conversion infrastructure', () => {
       const recurringTax = recurringBands.reduce((sum, band) => sum + band.tax, 0);
       expect(convertedRecurring + Number(invoice.total_amount) + recurringTax).toBe(expectedTotal);
     }, 60000);
+  });
+
+  describe('recurring discounts carried onto the converted contract (alga-2026-0002724)', () => {
+    async function addDiscount(quoteId: string, spec: {
+      description: string;
+      discount_type: 'fixed' | 'percentage';
+      amount?: number;
+      percentage?: number;
+      applies_to_item_id?: string | null;
+      applies_to_service_id?: string | null;
+    }) {
+      return QuoteItem.create(context.db, context.tenantId, {
+        quote_id: quoteId,
+        description: spec.description,
+        quantity: 1,
+        unit_price: spec.amount ?? 0,
+        is_optional: false,
+        is_selected: true,
+        is_recurring: false,
+        is_discount: true,
+        discount_type: spec.discount_type,
+        discount_percentage: spec.percentage ?? null,
+        applies_to_item_id: spec.applies_to_item_id ?? null,
+        applies_to_service_id: spec.applies_to_service_id ?? null,
+        is_taxable: false,
+        created_by: context.userId,
+      } as any);
+    }
+
+    const recurring = (description: string, unit_price: number, billing_frequency = 'monthly'): QuoteItemSpec => ({
+      description, unit_price, is_recurring: true, billing_frequency, billing_method: 'fixed',
+    });
+
+    const reloadQuote = (quoteId: string) => Quote.getById(context.db, context.tenantId, quoteId) as Promise<any>;
+
+    /** Contract-side amount per line: rate, discount rows, and the net the line bills per period. */
+    async function readContractSide(contractId: string) {
+      const lines = await context.db('contract_lines')
+        .where({ tenant: context.tenantId, contract_id: contractId })
+        .orderBy('display_order');
+      const discountRows = await context.db('contract_line_discounts as ld')
+        .join('discounts as d', function () {
+          this.on('d.discount_id', 'ld.discount_id').andOn('d.tenant', 'ld.tenant');
+        })
+        .join('contract_lines as l', function () {
+          this.on('l.contract_line_id', 'ld.contract_line_id').andOn('l.tenant', 'ld.tenant');
+        })
+        .where({ 'l.tenant': context.tenantId, 'l.contract_id': contractId })
+        .select('d.*', 'ld.contract_line_id', 'ld.client_contract_id');
+      const configs = await context.db('contract_line_service_configuration')
+        .where({ tenant: context.tenantId })
+        .whereIn('contract_line_id', lines.map((line: any) => line.contract_line_id));
+      const fixedConfigs = await context.db('contract_line_service_fixed_config')
+        .where({ tenant: context.tenantId })
+        .whereIn('config_id', configs.map((c: any) => c.config_id));
+      const perLine = lines.map((line: any) => {
+        // Bundle rows carry the total on the line; unit-priced rows carry rate x quantity on the config.
+        const config = configs.find((c: any) => c.contract_line_id === line.contract_line_id);
+        const fixed = fixedConfigs.find((f: any) => f.config_id === config?.config_id);
+        const gross = line.custom_rate !== null && line.custom_rate !== undefined
+          ? Number(line.custom_rate)
+          : Math.round(Number(fixed?.base_rate ?? 0) * Number(config?.quantity ?? 1));
+        const rows = discountRows.filter((row: any) => row.contract_line_id === line.contract_line_id);
+        const discountCents = rows.reduce((sum: number, row: any) => (
+          sum + (row.discount_type === 'percentage'
+            ? Math.round(gross * Number(row.value))
+            : Math.round(Number(row.value) * 100))
+        ), 0);
+        return { line, gross, rows, discountCents, net: gross - discountCents };
+      });
+      return { lines, discountRows, perLine };
+    }
+
+    const totalDiscountCents = (side: Awaited<ReturnType<typeof readContractSide>>) =>
+      side.perLine.reduce((sum, entry) => sum + entry.discountCents, 0);
+
+    async function convert(quoteId: string) {
+      return context.db.transaction((trx) =>
+        convertQuoteToDraftContract(trx, context.tenantId, quoteId, context.userId));
+    }
+
+    it('fixed item-targeted discount becomes a visible line discount; the line rate is not lowered', async () => {
+      const { quote, items } = await createAcceptedQuote([recurring('Managed endpoints', 100000)]);
+      await addDiscount(quote.quote_id, { description: 'Loyalty credit', discount_type: 'fixed', amount: 25000, applies_to_item_id: items[0].quote_item_id });
+
+      const result = await convert(quote.quote_id);
+      const side = await readContractSide(result.contract.contract_id);
+
+      expect(side.discountRows).toHaveLength(1);
+      const row = side.discountRows[0];
+      expect(row.discount_name).toBe('Loyalty credit');
+      expect(row.discount_type).toBe('fixed');
+      expect(Number(row.value)).toBe(250);
+      expect(row.scope).toBe('line');
+      expect(row.is_active).toBe(true);
+      expect(row.client_contract_id).toBe(result.clientContractId);
+      expect(row.contract_line_id).toBe(side.lines[0].contract_line_id);
+      expect(side.perLine[0].gross).toBe(100000);
+      expect(side.perLine[0].net).toBe(75000);
+    });
+
+    it('percentage item-targeted discount stays a percentage on its line', async () => {
+      const { quote, items } = await createAcceptedQuote([recurring('Managed endpoints', 50000)]);
+      await addDiscount(quote.quote_id, { description: 'Ten percent off', discount_type: 'percentage', percentage: 10, applies_to_item_id: items[0].quote_item_id });
+
+      const result = await convert(quote.quote_id);
+      const side = await readContractSide(result.contract.contract_id);
+
+      expect(side.discountRows).toHaveLength(1);
+      expect(side.discountRows[0].discount_type).toBe('percentage');
+      expect(Number(side.discountRows[0].value)).toBeCloseTo(0.1, 4);
+      expect(side.perLine[0].net).toBe(45000);
+    });
+
+    it('service-targeted discount is split across the lines carrying that service in exact cents', async () => {
+      const { quote, items } = await createAcceptedQuote([recurring('Seat licences A', 100000)]);
+      // A second recurring row on the SAME catalog service.
+      await QuoteItem.create(context.db, context.tenantId, {
+        quote_id: quote.quote_id, service_id: items[0].service_id, description: 'Seat licences B',
+        quantity: 1, unit_price: 20000, is_recurring: true, billing_frequency: 'monthly',
+        billing_method: 'fixed', is_taxable: false, created_by: context.userId,
+      } as any);
+      await addDiscount(quote.quote_id, { description: 'Seat promo', discount_type: 'fixed', amount: 10001, applies_to_service_id: items[0].service_id });
+
+      const result = await convert(quote.quote_id);
+      const side = await readContractSide(result.contract.contract_id);
+
+      expect(side.discountRows).toHaveLength(2);
+      expect(side.perLine.map((entry) => entry.discountCents)).toEqual([8334, 1667]);
+      expect(totalDiscountCents(side)).toBe(10001);
+      expect(side.perLine.reduce((sum, entry) => sum + entry.net, 0)).toBe(120000 - 10001);
+    });
+
+    it('whole-quote fixed discount across several recurring lines sums exactly (rounding)', async () => {
+      const { quote } = await createAcceptedQuote([
+        recurring('Line one', 10000), recurring('Line two', 10000), recurring('Line three', 10000),
+      ]);
+      await addDiscount(quote.quote_id, { description: 'Bundle credit', discount_type: 'fixed', amount: 10000 });
+
+      const result = await convert(quote.quote_id);
+      const side = await readContractSide(result.contract.contract_id);
+
+      expect(side.discountRows).toHaveLength(3);
+      expect(side.perLine.map((entry) => entry.discountCents)).toEqual([3334, 3333, 3333]);
+      expect(totalDiscountCents(side)).toBe(10000);
+      expect(side.perLine.reduce((sum, entry) => sum + entry.net, 0)).toBe(20000);
+    });
+
+    it('whole-quote percentage whose per-line rounding would drift falls back to exact fixed cents', async () => {
+      const { quote } = await createAcceptedQuote([
+        recurring('Line one', 1010), recurring('Line two', 1010), recurring('Line three', 1010),
+      ]);
+      // 5% of 3030 = 152 (quote allocation); 5% of each 1010 line rounds to 51 -> 153. Must stay 152.
+      await addDiscount(quote.quote_id, { description: 'Five percent', discount_type: 'percentage', percentage: 5 });
+
+      const result = await convert(quote.quote_id);
+      const side = await readContractSide(result.contract.contract_id);
+
+      expect(totalDiscountCents(side)).toBe(152);
+      // Allocation is 51 / 51 / 50: lines where 5% reproduces the allocation keep the
+      // percentage; the 50-cent line, where it would not, carries an exact fixed amount.
+      expect(side.perLine.map((entry) => entry.discountCents)).toEqual([51, 51, 50]);
+      expect(side.perLine[2].rows.map((row: any) => row.discount_type)).toEqual(['fixed']);
+    });
+
+    it('mixed billing frequencies: each line discount is in that line\'s own period', async () => {
+      const { quote } = await createAcceptedQuote([
+        recurring('Monthly support', 10000, 'monthly'),
+        recurring('Annual licence', 120000, 'annually'),
+      ]);
+      await addDiscount(quote.quote_id, { description: 'Mixed credit', discount_type: 'fixed', amount: 11000 });
+
+      const result = await convert(quote.quote_id);
+      const side = await readContractSide(result.contract.contract_id);
+
+      // The quote does not frequency-normalize: allocation is per row, in the row's own units.
+      expect(side.perLine.map((entry) => entry.discountCents)).toEqual([846, 10154]);
+      expect(side.perLine.map((entry) => entry.net)).toEqual([9154, 109846]);
+      expect(side.lines.map((line: any) => line.billing_frequency)).toEqual(['monthly', 'annually']);
+
+      const preview = await buildQuoteConversionPreview(await reloadQuote(quote.quote_id), context.db, context.tenantId);
+      // 10000 + 120000/12 = 20000 per month before; 846 + round(10154/12) = 1692 of discount.
+      expect(preview.contract_monthly_before_discounts).toBe(20000);
+      expect(preview.contract_monthly_total).toBe(18308);
+    });
+
+    it('convert-to-both applies each share exactly once: contract gets the recurring share, invoice the one-time share', async () => {
+      const { quote } = await createAcceptedQuote([
+        recurring('Managed endpoints', 100000),
+        { description: 'Onboarding', unit_price: 50000, billing_method: 'fixed' },
+      ]);
+      await addDiscount(quote.quote_id, { description: 'Launch credit', discount_type: 'fixed', amount: 15000 });
+
+      const result = await context.db.transaction((trx) =>
+        convertQuoteToDraftContractAndInvoice(trx, context.tenantId, quote.quote_id, context.userId));
+      const side = await readContractSide(result.contract.contract_id);
+      const charges = await context.db('invoice_charges')
+        .where({ tenant: context.tenantId, invoice_id: result.invoice.invoice_id });
+      const invoice = await context.db('invoices').where({ tenant: context.tenantId, invoice_id: result.invoice.invoice_id }).first();
+
+      // 15000 over 100000 recurring + 50000 one-time -> 10000 / 5000.
+      expect(totalDiscountCents(side)).toBe(10000);
+      expect(side.perLine[0].net).toBe(90000);
+      const invoiceDiscount = charges.filter((charge: any) => charge.is_discount === true);
+      expect(invoiceDiscount.map((charge: any) => Number(charge.net_amount))).toEqual([-5000]);
+      expect(Number(invoice.subtotal)).toBe(45000);
+      // Nothing counted twice: contract net + invoice subtotal = quote total after the discount.
+      expect(side.perLine[0].net + Number(invoice.subtotal)).toBe(150000 - 15000);
+    });
+
+    it('preview lists carried discounts on the contract side, never in excluded_items, with the monthly total after discounts', async () => {
+      const { quote, items } = await createAcceptedQuote([
+        recurring('Managed endpoints', 100000),
+        recurring('Backup', 20000),
+        { description: 'Optional extra', unit_price: 3000, is_optional: true, is_selected: false, billing_method: 'fixed' },
+      ]);
+      const fixed = await addDiscount(quote.quote_id, { description: 'Loyalty credit', discount_type: 'fixed', amount: 25000, applies_to_item_id: items[0].quote_item_id });
+      const pct = await addDiscount(quote.quote_id, { description: 'Backup promo', discount_type: 'percentage', percentage: 10, applies_to_item_id: items[1].quote_item_id });
+
+      const preview = await buildQuoteConversionPreview(await reloadQuote(quote.quote_id), context.db, context.tenantId);
+
+      expect(preview.contract_discounts).toEqual([
+        expect.objectContaining({ quote_item_id: fixed.quote_item_id, line_quote_item_id: items[0].quote_item_id, discount_type: 'fixed', percentage: null, amount: 25000, line_description: 'Managed endpoints' }),
+        expect.objectContaining({ quote_item_id: pct.quote_item_id, line_quote_item_id: items[1].quote_item_id, discount_type: 'percentage', percentage: 10, amount: 2000, line_description: 'Backup' }),
+      ]);
+      expect(preview.contract_monthly_before_discounts).toBe(120000);
+      expect(preview.contract_monthly_total).toBe(120000 - 25000 - 2000);
+      const excluded = preview.excluded_items.map((item) => item.description);
+      expect(excluded).toEqual(['Optional extra']);
+      expect(excluded).not.toContain('Loyalty credit');
+      expect(excluded).not.toContain('Backup promo');
+      expect(preview.invoice_items).toEqual([]);
+    });
+
+    it('QUO-0001 shape: fixed applies_to_item_id discounts bring the contract to the accepted recurring total', async () => {
+      const { quote, items } = await createAcceptedQuote([
+        recurring('Managed IT', 80000), recurring('Security stack', 30000),
+        recurring('Backup', 13900),
+      ]);
+      // Recurring list total 123900 -> accepted 52500.
+      await addDiscount(quote.quote_id, { description: 'Managed IT concession', discount_type: 'fixed', amount: 60000, applies_to_item_id: items[0].quote_item_id });
+      await addDiscount(quote.quote_id, { description: 'Security concession', discount_type: 'fixed', amount: 11400, applies_to_item_id: items[1].quote_item_id });
+
+      const accepted = await reloadQuote(quote.quote_id);
+      const result = await convert(quote.quote_id);
+      const side = await readContractSide(result.contract.contract_id);
+      const net = side.perLine.reduce((sum, entry) => sum + entry.net, 0);
+      expect(net).toBe(52500);
+      expect(Number(accepted.recurring_total ?? 52500)).toBe(52500);
+      const preview = await buildQuoteConversionPreview(accepted, context.db, context.tenantId);
+      expect(preview.contract_monthly_total).toBe(52500);
+    });
+
+    describe('workflow runtime path (shared implementation)', () => {
+      const shape = (side: Awaited<ReturnType<typeof readContractSide>>) => side.perLine.map((entry) => ({
+        gross: entry.gross,
+        net: entry.net,
+        rows: entry.rows.map((row: any) => ({
+          name: row.discount_name, type: row.discount_type, value: Number(row.value), scope: row.scope,
+          hasClientContract: Boolean(row.client_contract_id),
+        })).sort((a: any, b: any) => a.name.localeCompare(b.name)),
+      }));
+
+      async function buildMixedQuote(title: string) {
+        const { quote, items } = await createAcceptedQuote([
+          recurring('Managed endpoints', 100000),
+          recurring('Backup', 20000, 'annually'),
+          { description: 'Onboarding', unit_price: 50000, billing_method: 'fixed' },
+        ], { title });
+        await addDiscount(quote.quote_id, { description: 'Endpoint credit', discount_type: 'fixed', amount: 7001, applies_to_item_id: items[0].quote_item_id });
+        await addDiscount(quote.quote_id, { description: 'Whole-quote 10 percent', discount_type: 'percentage', percentage: 10 });
+        return quote;
+      }
+
+      it('contract conversion, combined conversion and preview match the service', async () => {
+        const serviceQuote = await buildMixedQuote('Service path');
+        const runtimeQuote = await buildMixedQuote('Runtime path');
+
+        const serviceContract = await convert(serviceQuote.quote_id);
+        const runtimeContract = await context.db.transaction((trx) =>
+          runtimeConvertQuoteToDraftContract(trx, context.tenantId, runtimeQuote.quote_id, context.userId));
+        expect(shape(await readContractSide(runtimeContract.contract.contract_id)))
+          .toEqual(shape(await readContractSide(serviceContract.contract.contract_id)));
+
+        const servicePreview = await buildQuoteConversionPreview(await reloadQuote(serviceQuote.quote_id), context.db, context.tenantId);
+        const runtimePreview = await runtimeBuildQuoteConversionPreview(await reloadQuote(runtimeQuote.quote_id), context.db, context.tenantId);
+        const previewShape = (preview: any) => ({
+          discounts: preview.contract_discounts.map((d: any) => [d.description, d.line_description, d.discount_type, d.percentage, d.amount]),
+          before: preview.contract_monthly_before_discounts,
+          total: preview.contract_monthly_total,
+          excluded: preview.excluded_items.map((item: any) => item.description),
+          invoice: preview.invoice_items.map((item: any) => [item.description, item.total_price]),
+        });
+        expect(previewShape(runtimePreview)).toEqual(previewShape(servicePreview));
+      });
+
+      it('combined runtime conversion bills each share once, like the service', async () => {
+        const serviceQuote = await buildMixedQuote('Service both');
+        const runtimeQuote = await buildMixedQuote('Runtime both');
+        const serviceResult = await context.db.transaction((trx) =>
+          convertQuoteToDraftContractAndInvoice(trx, context.tenantId, serviceQuote.quote_id, context.userId));
+        const runtimeResult = await context.db.transaction((trx) =>
+          runtimeConvertQuoteToDraftContractAndInvoice(trx, context.tenantId, runtimeQuote.quote_id, context.userId));
+
+        expect(shape(await readContractSide(runtimeResult.contract.contract_id)))
+          .toEqual(shape(await readContractSide(serviceResult.contract.contract_id)));
+        const invoiceLines = async (invoiceId: string) => (await context.db('invoice_charges')
+          .where({ tenant: context.tenantId, invoice_id: invoiceId }))
+          .map((charge: any) => [charge.description, Number(charge.net_amount)])
+          .sort((a: any, b: any) => String(a[0]).localeCompare(String(b[0])));
+        expect(await invoiceLines(runtimeResult.invoice.invoice_id)).toEqual(await invoiceLines(serviceResult.invoice.invoice_id));
+        const subtotal = async (invoiceId: string) => Number((await context.db('invoices').where({ tenant: context.tenantId, invoice_id: invoiceId }).first()).subtotal);
+        expect(await subtotal(runtimeResult.invoice.invoice_id)).toBe(await subtotal(serviceResult.invoice.invoice_id));
+      });
+    });
   });
 });

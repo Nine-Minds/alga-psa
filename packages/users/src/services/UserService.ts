@@ -8,7 +8,12 @@
 
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
-import { IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam } from '@alga-psa/types';
+import {
+  IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam,
+  INTERACTIVE_USER_TYPES,
+  isInteractiveUserType,
+  isLicensedUserType,
+} from '@alga-psa/types';
 import { ListOptions } from '../controllers/types';
 import { 
   CreateUserData, 
@@ -35,6 +40,8 @@ import User from '@alga-psa/db/models/user';
 import Team from '@alga-psa/teams/models/team';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { logger } from '@alga-psa/core';
+import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected } from '../lib/internalUserLicenseGuard';
+import type { InternalUserLicenseLimitResult } from '../lib/internalUserLicenseGuard';
 import { sanitizeUserForResponse, USER_RESPONSE_COLUMNS, USER_RESPONSE_FIELD_NAMES } from './userResponseSanitizer';
 
 // Stubs for missing imports that are still in server
@@ -50,6 +57,15 @@ class ForbiddenError extends Error {
   readonly name = 'ForbiddenError';
   readonly statusCode = 403;
   readonly code = 'FORBIDDEN';
+}
+// Seat-limit rejection from user creation. Surfaced as 403 with the same
+// code addUser reports (LICENSE_LIMIT_REACHED | SOLO_PLAN_LIMIT).
+class LicenseLimitError extends Error {
+  readonly name = 'LicenseLimitError';
+  readonly statusCode = 403;
+  constructor(message: string, readonly code: string) {
+    super(message);
+  }
 }
 class ValidationError extends Error {
   readonly name = 'ValidationError';
@@ -143,10 +159,13 @@ export class UserService extends BaseService<IUser> {
       sort,
       order
     } = options;
+    const includeNonInteractive = (options as { includeNonInteractive?: boolean }).includeNonInteractive === true;
 
     // Build base query with user type filtering
     let dataQuery = this.buildEnhancedUserQuery(knex, context);
     let countQuery = this.buildBaseQuery(knex, context);
+    dataQuery = this.restrictToInteractiveUsers(dataQuery, includeNonInteractive);
+    countQuery = this.restrictToInteractiveUsers(countQuery, includeNonInteractive);
 
     // Apply filters
     dataQuery = this.applyUserFilters(knex, dataQuery, filters, context);
@@ -201,7 +220,8 @@ export class UserService extends BaseService<IUser> {
       .select(USER_RESPONSE_COLUMNS)
       .first();
 
-    if (!user) {
+    // Non-interactive principals are not exposed through user management.
+    if (!user || !isInteractiveUserType(user.user_type)) {
       return null;
     }
 
@@ -230,9 +250,55 @@ export class UserService extends BaseService<IUser> {
     
     const { knex } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    return withTransaction(knex, async trx => (await this.createUsingTransaction(data, context, trx)).user);
+  }
+
+  /**
+   * Invitation signup: admission, account, roles and (for co-managed tenants)
+   * token consumption share `trx`, so the seat lock is held through all of them.
+   * `coManaged` tells the caller whether the token was consumed here or still
+   * needs marking used.
+   */
+  async createFromInvitation(data: any, context: ServiceContext, trx: Knex.Transaction, token: string): Promise<{ user: IUser; coManaged: boolean }> {
+    await this.ensurePermission(context, 'user', 'create');
+    const { user, admission } = await this.createUsingTransaction(data, context, trx, { invitationToken: token });
+    if (admission?.coManaged) {
+      if (!admission.invitation || admission.invitation.role_id !== data.role_ids?.[0]) {
+        throw new Error('Invalid or changed invitation');
+      }
+      const updated = await tenantDb(trx, context.tenant).table('user_invitations')
+        .where({ invitation_id: admission.invitation.invitation_id, token, used_at: null }).update({ used_at: trx.fn.now() });
+      if (updated !== 1) throw new Error('Invitation already consumed');
+    }
+    return { user, coManaged: admission?.coManaged === true };
+  }
+
+  private async createUsingTransaction(
+    data: any,
+    context: ServiceContext,
+    trx: Knex.Transaction,
+    admissionOptions: { invitationToken?: string } = {}
+  ): Promise<{ user: IUser; admission: InternalUserLicenseLimitResult | null }> {
+      const knex = trx;
+      // Only interactive person types can be created here; 'internal' is the
+      // default when no type is supplied. Anything else (including 'service')
+      // is rejected rather than mapped to a person type.
+      const requestedUserType: unknown = data.user_type ?? 'internal';
+      if (requestedUserType !== 'internal' && requestedUserType !== 'client') {
+        throw new ValidationError('user_type must be "internal" or "client"');
+      }
+      const targetUserType: 'internal' | 'client' = requestedUserType;
+
+      // Seat admission for licensed (internal) users, in the same transaction as the insert.
+      let admission: InternalUserLicenseLimitResult | null = null;
+      if (isLicensedUserType(targetUserType)) {
+        admission = await admitInternalUserSeat(trx, context.tenant, { email: data.email, kind: 'user', ...admissionOptions });
+        if (isInternalUserLicenseLimitRejected(admission)) {
+          throw new LicenseLimitError(admission.error, admission.code);
+        }
+      }
+
       // Validate email uniqueness per tenant + user_type (allow same email across different types)
-      const targetUserType = data.user_type || 'internal';
       const existingUserByEmail = await this.buildTenantScopedQuery(trx, context)
         .andWhere('email', data.email.toLowerCase())
         .andWhere('user_type', targetUserType)
@@ -275,7 +341,7 @@ export class UserService extends BaseService<IUser> {
         hashed_password: await hashPassword(data.password),
         phone: data.phone || null,
         timezone: data.timezone || null,
-        user_type: data.user_type || 'internal',
+        user_type: targetUserType,
         contact_id: data.contact_id || null,
         two_factor_enabled: data.two_factor_enabled || false,
         is_google_user: data.is_google_user || false,
@@ -289,6 +355,11 @@ export class UserService extends BaseService<IUser> {
       const [createdUser] = await tenantDb(trx, context.tenant).table('users')
         .insert(userData)
         .returning(USER_RESPONSE_FIELD_NAMES);
+
+      // Tripwire: roll back if the insert left the tenant over its seat limits.
+      if (isLicensedUserType(targetUserType) && !userData.is_inactive) {
+        await assertInternalUserSeatsWithinLimit(trx, context.tenant);
+      }
 
       // Assign roles
       if (data.role_ids && data.role_ids.length > 0) {
@@ -318,8 +389,7 @@ export class UserService extends BaseService<IUser> {
         includeHateoas: true
       }, trx);
 
-      return enhancedUser as unknown as IUser;
-    });
+      return { user: enhancedUser as unknown as IUser, admission };
   }
 
   /**
@@ -334,16 +404,27 @@ export class UserService extends BaseService<IUser> {
       // Verify user exists and belongs to tenant
       const existingUser = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
-        .select('user_id', 'email', 'user_type')
+        .select('user_id', 'email', 'user_type', 'is_inactive')
         .first();
 
-      if (!existingUser) {
-        throw new Error('User not found or permission denied');
+      // Non-interactive principals are not managed through user management;
+      // fail closed as if the user does not exist.
+      if (!existingUser || !isInteractiveUserType(existingUser.user_type)) {
+        throw new NotFoundError('User not found');
+      }
+
+      // user_type is immutable here except the existing internal <-> client
+      // change; 'service' can never be assigned to or removed from a user, and
+      // a no-op write of the same value is fine.
+      if (data.user_type !== undefined && data.user_type !== existingUser.user_type) {
+        if (!isInteractiveUserType(data.user_type)) {
+          throw new ValidationError('user_type can only be changed between "internal" and "client"');
+        }
       }
 
       // Validate email uniqueness per user_type if changing email
       if (data.email && data.email.toLowerCase() !== existingUser.email) {
-        const userTypeToCheck = (data.user_type || existingUser.user_type || 'internal');
+        const userTypeToCheck = data.user_type ?? existingUser.user_type;
         const emailExists = await this.buildTenantScopedQuery(trx, context)
           .where('email', data.email.toLowerCase())
           .andWhere('user_type', userTypeToCheck)
@@ -371,11 +452,30 @@ export class UserService extends BaseService<IUser> {
         }
       });
 
+      // A change that newly occupies an internal seat (reactivation, or
+      // client -> internal) is admitted like a new user: the guard takes the
+      // per-tenant seat lock and it is held through the write below.
+      const occupiesSeatNow = existingUser.user_type === 'internal' && existingUser.is_inactive === false;
+      const occupiesSeatAfter =
+        (data.user_type ?? existingUser.user_type) === 'internal'
+        && ((data as { is_inactive?: boolean }).is_inactive ?? existingUser.is_inactive) === false;
+      const takesNewSeat = occupiesSeatAfter && !occupiesSeatNow;
+      if (takesNewSeat) {
+        const licenseCheck = await admitInternalUserSeat(trx, context.tenant, { email: existingUser.email, kind: 'user', existingUserId: id });
+        if (isInternalUserLicenseLimitRejected(licenseCheck)) {
+          throw new LicenseLimitError(licenseCheck.error, licenseCheck.code);
+        }
+      }
+
       // Update user
       const [updatedUser] = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
         .update(updateData)
         .returning(USER_RESPONSE_FIELD_NAMES);
+
+      if (takesNewSeat) {
+        await assertInternalUserSeatsWithinLimit(trx, context.tenant);
+      }
 
       // Log user update activity
       await this.logUserActivity({
@@ -411,10 +511,10 @@ export class UserService extends BaseService<IUser> {
       // Verify user exists and belongs to tenant
       const existingUser = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
-        .select('user_id')
+        .select('user_id', 'user_type')
         .first();
 
-      if (!existingUser) {
+      if (!existingUser || !isInteractiveUserType(existingUser.user_type)) {
         throw new NotFoundError('User not found');
       }
 
@@ -498,10 +598,11 @@ export class UserService extends BaseService<IUser> {
       // Get user
       const user = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: targetUserId })
-        .select('user_id', 'hashed_password')
+        .select('user_id', 'user_type', 'hashed_password')
         .first();
 
-      if (!user) {
+      // Password writes never target a non-interactive principal; fail closed.
+      if (!user || !isInteractiveUserType(user.user_type)) {
         throw new NotFoundError('User not found');
       }
 
@@ -885,13 +986,15 @@ export class UserService extends BaseService<IUser> {
    */
   async searchUsers(
     searchData: UserSearchData, 
-    context: ServiceContext
+    context: ServiceContext,
+    options: { includeNonInteractive?: boolean } = {}
   ): Promise<UserWithFullDetails[]> {
     await this.ensurePermission(context, 'user', 'read');
     
     const { knex } = await this.getKnex();
 
     let query = this.buildEnhancedUserQuery(knex, context);
+    query = this.restrictToInteractiveUsers(query, options.includeNonInteractive === true);
     const db = tenantDb(knex, context.tenant);
 
     // Apply search across specified fields
@@ -1032,7 +1135,28 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const result = await this.buildTenantScopedQuery(trx, context)
+      // Reactivating internal users occupies seats: admit them one at a time
+      // under the seat lock (each check sees the previous activation);
+      // an over-limit request fails the whole operation (the transaction rolls back).
+      if (!deactivate) {
+        const candidates = await this.restrictToInteractiveUsers(this.buildTenantScopedQuery(trx, context), false)
+          .whereIn('user_id', userIds)
+          .where({ user_type: 'internal', is_inactive: true })
+          .select('user_id');
+        for (const candidate of candidates) {
+          const licenseCheck = await admitInternalUserSeat(trx, context.tenant, { kind: 'user', existingUserId: candidate.user_id });
+          if (isInternalUserLicenseLimitRejected(licenseCheck)) {
+            throw new LicenseLimitError(licenseCheck.error, licenseCheck.code);
+          }
+          await this.buildTenantScopedQuery(trx, context)
+            .where({ user_id: candidate.user_id })
+            .update({ is_inactive: false, updated_at: knex.raw('now()') });
+          await assertInternalUserSeatsWithinLimit(trx, context.tenant);
+        }
+      }
+
+      // Only interactive users are managed here; non-interactive ids are skipped.
+      const result = await this.restrictToInteractiveUsers(this.buildTenantScopedQuery(trx, context), false)
         .whereIn('user_id', userIds)
         .update({ 
           is_inactive: deactivate,
@@ -1070,13 +1194,17 @@ export class UserService extends BaseService<IUser> {
   /**
    * Get user statistics
    */
-  async getUserStats(context: ServiceContext): Promise<UserStatsResponse> {
+  async getUserStats(
+    context: ServiceContext,
+    options: { includeNonInteractive?: boolean } = {}
+  ): Promise<UserStatsResponse> {
     await this.ensurePermission(context, 'user', 'read');
     
     const { knex } = await this.getKnex();
 
+    const includeNonInteractive = options.includeNonInteractive === true;
     const db = tenantDb(knex, context.tenant);
-    const usersByRoleQuery = db.table('users as u');
+    const usersByRoleQuery = this.restrictToInteractiveUsers(db.table('users as u'), includeNonInteractive, 'u.user_type');
     db.tenantJoin(usersByRoleQuery, 'user_roles as ur', 'u.user_id', 'ur.user_id');
     db.tenantJoin(usersByRoleQuery, 'roles as r', 'ur.role_id', 'r.role_id');
 
@@ -1088,7 +1216,7 @@ export class UserService extends BaseService<IUser> {
       activityStats
     ] = await Promise.all([
       // Total and active/inactive counts
-      this.buildTenantScopedQuery(knex, context)
+      this.restrictToInteractiveUsers(this.buildTenantScopedQuery(knex, context), includeNonInteractive)
         .select(
           knex.raw('COUNT(*) as total_users'),
           knex.raw('COUNT(CASE WHEN is_inactive = false THEN 1 END) as active_users'),
@@ -1097,7 +1225,7 @@ export class UserService extends BaseService<IUser> {
         .first(),
 
       // Users by type
-      this.buildTenantScopedQuery(knex, context)
+      this.restrictToInteractiveUsers(this.buildTenantScopedQuery(knex, context), includeNonInteractive)
         .groupBy('user_type')
         .select('user_type', knex.raw('COUNT(*) as count')),
 
@@ -1107,7 +1235,7 @@ export class UserService extends BaseService<IUser> {
         .select('r.role_name', knex.raw('COUNT(DISTINCT u.user_id) as count')),
 
       // Security stats
-      this.buildTenantScopedQuery(knex, context)
+      this.restrictToInteractiveUsers(this.buildTenantScopedQuery(knex, context), includeNonInteractive)
         .select(
           knex.raw('COUNT(CASE WHEN two_factor_enabled = true THEN 1 END) as users_with_2fa'),
           knex.raw('COUNT(*) as users_without_avatar') // Stub for now since image column might not exist
@@ -1267,6 +1395,20 @@ export class UserService extends BaseService<IUser> {
    */
 
   /**
+   * Non-interactive principals (e.g. service) are excluded from every user
+   * listing, search and statistic unless the caller opts in with
+   * includeNonInteractive. An explicit user_type filter is AND-ed with this, so
+   * a 'service' filter only matches when includeNonInteractive is set.
+   */
+  private restrictToInteractiveUsers(
+    query: Knex.QueryBuilder,
+    includeNonInteractive: boolean,
+    column: string = 'user_type'
+  ): Knex.QueryBuilder {
+    return includeNonInteractive ? query : query.whereIn(column, [...INTERACTIVE_USER_TYPES]);
+  }
+
+  /**
    * Enhanced user query with joins for roles and other data
    */
   private buildEnhancedUserQuery(knex: Knex, context: ServiceContext): Knex.QueryBuilder {
@@ -1392,8 +1534,7 @@ export class UserService extends BaseService<IUser> {
     } = {},
     trx?: Knex.Transaction
   ): Promise<UserWithFullDetails[]> {
-    const { knex } = await this.getKnex();
-    const db = trx || knex;
+    const db = trx ?? (await this.getKnex()).knex;
 
     const enhancedUsers: UserWithFullDetails[] = [];
 

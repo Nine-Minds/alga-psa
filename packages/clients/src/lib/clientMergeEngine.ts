@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { countLiveCoManagedWorkspacesForClient } from '@alga-psa/core/config/deletion';
+import { tenantDb, admitOperationalWrite } from '@alga-psa/db';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 import {
   CLIENT_OWNED_MOVE_TABLES,
@@ -15,6 +16,8 @@ import {
   type MergeableContract,
   type SourceBillingProfile,
 } from './clientMergePlan';
+import { queueContactUpdated } from './contactEvents';
+import { queueClientLocationUpdated } from './clientLocationEvents';
 
 /**
  * Merging a client into a parent as a billing profile.
@@ -214,6 +217,7 @@ async function readClientFacts(
     clientName: row.client_name as string,
     mergedIntoClientId: (row.merged_into_client_id as string | null) ?? null,
     isTenantDefault: Boolean(tenantDefault),
+    hasLiveCoManagement: await countLiveCoManagedWorkspacesForClient(trx, { tenant, entityId: clientId }) > 0,
   };
 }
 
@@ -456,7 +460,9 @@ export async function previewClientMerge(
       : await countRows(trx, tenant, entry.table, { client_id: source.clientId });
   }
   for (const entry of PROFILE_HISTORY_TABLES) {
-    counts[entry.label] = await countRows(trx, tenant, entry.table, { client_id: source.clientId });
+    counts[entry.label] = entry.editionOptional && !(await tableInstalled(trx, entry.table))
+      ? 0
+      : await countRows(trx, tenant, entry.table, { client_id: source.clientId });
   }
   counts['billing profile'] = sourceProfiles.length;
   counts['owned contract'] = await countRows(trx, tenant, 'contracts', {
@@ -677,6 +683,10 @@ export async function executeClientMerge(
 
   // --- 2. Billing history that carries a redundant client_id -------------
   for (const entry of PROFILE_HISTORY_TABLES) {
+    if (entry.editionOptional && !(await tableInstalled(trx, entry.table))) {
+      counts[entry.label] = 0;
+      continue;
+    }
     // A null profile is legitimate on three of these tables and is still
     // written today (a sales-order invoice and its transaction, a transferred
     // credit). Stamp those onto the moved default first — otherwise they match
@@ -812,6 +822,11 @@ export async function executeClientMerge(
 
   // --- 5. Work items and the plain client-keyed tables -------------------
 
+  // Snapshot the children before they move: each re-parented contact and location is reported
+  // to webhook consumers as an *.updated with the new client_id (queued after commit below).
+  const contactsBeforeMove = await scoped(trx, tenant, 'contacts').where({ client_id: source.clientId });
+  const locationsBeforeMove = await scoped(trx, tenant, 'client_locations').where({ client_id: source.clientId });
+
   // `ux_client_locations_default_per_client` allows one default location per
   // client, so a source default arriving at a target that already has one
   // would abort the whole merge on a unique violation. The target's default is
@@ -835,6 +850,17 @@ export async function executeClientMerge(
       movedDefaultProfileId,
       billingStrategy,
     );
+  }
+
+  const eventOptions = actorUserId ? { actorUserId } : {};
+  for (const before of contactsBeforeMove as any[]) {
+    const after = await scoped(trx, tenant, 'contacts').where({ contact_name_id: before.contact_name_id }).first();
+    if (after) queueContactUpdated(trx, tenant, before, after, ['client_id'], eventOptions);
+  }
+  for (const before of locationsBeforeMove as any[]) {
+    const after = await scoped(trx, tenant, 'client_locations').where({ location_id: before.location_id }).first();
+    // A source default arriving beside the target's default is demoted; that shows up here as is_default.
+    if (after) queueClientLocationUpdated(trx, tenant, before, after, eventOptions);
   }
 
   // --- 6. Polymorphic associations ---------------------------------------
@@ -917,6 +943,7 @@ export async function executeClientMerge(
 
   // Other clients recorded as children of the source now hang off the target,
   // so the soft hierarchy does not point at a tombstone.
+  await admitOperationalWrite(trx, tenant, 'clients', 'raw:client-merge-hierarchy');
   await trx.raw(
     `UPDATE clients
         SET properties = jsonb_set(

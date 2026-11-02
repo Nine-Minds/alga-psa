@@ -10,8 +10,16 @@ import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Switch } from "@alga-psa/ui/components/Switch";
 import RichTextEditorSkeleton from "@alga-psa/ui/components/skeletons/RichTextEditorSkeleton";
+import { hasEditorContent } from "@alga-psa/ui/editor/hasEditorContent";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
-import { searchUsersForMentions } from "@alga-psa/user-composition/actions";
+import { useTicketDataSource } from "./TicketDataSourceContext";
+import {
+  CommentAudienceSelect,
+  audienceIsInternal,
+  nativeComposerAudiences,
+  useComposerAudiences,
+  type NativeComposerAudience,
+} from "./CommentAudienceControl";
 import { createTicketRichTextParagraph } from "../../lib/ticketRichText";
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
@@ -61,6 +69,8 @@ interface TicketResolutionDialogProps {
     suppression: TicketNotificationSuppressionValue,
     isInternal: boolean,
     emailRecipients?: CommentEmailRecipientsPayload,
+    /** Set only when the data source offers audiences; the Internal switch is replaced by this choice. */
+    audienceId?: NativeComposerAudience | null,
   ) => Promise<boolean>;
   onClipboardImageUploaded?: () => Promise<void> | void;
   uploadTicketAttachmentAction?: (
@@ -97,12 +107,20 @@ export default function TicketResolutionDialog({
   resolveTicketAttachmentViewUrl,
 }: TicketResolutionDialogProps) {
   const { t } = useTranslation("features/tickets");
+  const { searchUsersForMentions } = useTicketDataSource().viewer;
   const [statusId, setStatusId] = useState<string | null>(null);
   const [content, setContent] = useState<PartialBlock[]>(
     DEFAULT_RESOLUTION_BLOCK,
   );
   const [editorKey, setEditorKey] = useState(0);
-  const [isInternal, setIsInternal] = useState(false);
+  const [isInternalToggle, setIsInternal] = useState(false);
+  // A resolution is written through the native path, so `shared_it` is never offered. With an audience
+  // config the author must choose (no default) and the Internal switch is not shown.
+  const configuredAudiences = useComposerAudiences();
+  const audiences = configuredAudiences ? nativeComposerAudiences(configuredAudiences) : [];
+  const useAudiences = audiences.length > 0;
+  const [audience, setAudience] = useState<NativeComposerAudience | null>(null);
+  const isInternal = useAudiences ? audienceIsInternal(audience) : isInternalToggle;
   const [notificationSuppression, setNotificationSuppression] =
     useState<TicketNotificationSuppressionValue>(
       defaultNotificationSuppression,
@@ -141,25 +159,33 @@ export default function TicketResolutionDialog({
       setContent(DEFAULT_RESOLUTION_BLOCK);
       setEditorKey((currentKey) => currentKey + 1);
       setIsInternal(false);
+      setAudience(null);
       setNotificationSuppression(defaultNotificationSuppression());
       resetEmailRecipients();
       resetDraftTracking();
     }
   }, [isOpen, resetDraftTracking, resetEmailRecipients, statusOptions]);
 
-  const hasContent =
-    JSON.stringify(content) !== JSON.stringify(DEFAULT_RESOLUTION_BLOCK);
+  // A resolution is optional: an empty editor closes the ticket with no comment.
+  const hasContent = hasEditorContent(content);
+  // Never sent with an internal resolution, even though the draft is kept.
+  const outgoingEmailRecipients =
+    showEmailRecipients && !isInternal ? emailRecipients.payload : undefined;
+  // Cc/Bcc ride into the close email on the resolution comment's metadata, so
+  // with no comment to carry them they would be silently dropped.
+  const emailRecipientsNeedContent = Boolean(outgoingEmailRecipients) && !hasContent;
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!statusId || !hasContent || isSubmitting || uploadSession.isUploading) return;
-    if (emailRecipientsBlockSubmit) return;
+    if (!statusId || isSubmitting || uploadSession.isUploading) return;
+    if (useAudiences && !audience) return;
+    if (emailRecipientsBlockSubmit || emailRecipientsNeedContent) return;
     const resolutionSaved = await onConfirm(
       statusId,
       content,
       notificationSuppression,
       isInternal,
-      // Never sent with an internal resolution, even though the draft is kept.
-      showEmailRecipients && !isInternal ? emailRecipients.payload : undefined,
+      outgoingEmailRecipients,
+      ...(useAudiences ? [audience] as const : []),
     );
     if (resolutionSaved) {
       emailRecipients.reset();
@@ -183,10 +209,11 @@ export default function TicketResolutionDialog({
         type="button"
         disabled={
           !statusId
-          || !hasContent
+          || (useAudiences && !audience)
           || isSubmitting
           || uploadSession.isUploading
           || emailRecipientsBlockSubmit
+          || emailRecipientsNeedContent
         }
         onClick={() =>
           (
@@ -216,7 +243,7 @@ export default function TicketResolutionDialog({
             <p className="mb-4 text-sm text-[rgb(var(--color-text-600))]">
               {t(
                 "info.closeTicketResolutionPrompt",
-                "Choose a close status and add a resolution for this ticket.",
+                "Choose a close status. Add a resolution, or leave it blank to close without one.",
               )}
             </p>
             {/* Two columns: the status picker and the Internal switch each need
@@ -233,25 +260,35 @@ export default function TicketResolutionDialog({
                 required
                 disabled={isSubmitting}
               />
-              <div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id={`${id}-internal-toggle`}
-                    checked={isInternal}
-                    onCheckedChange={setIsInternal}
-                    disabled={isSubmitting}
-                  />
-                  <Label htmlFor={`${id}-internal-toggle`}>
-                    {t("info.markResolutionInternal", "Mark as Internal")}
-                  </Label>
+              {useAudiences ? (
+                <CommentAudienceSelect
+                  id={`${id}-audience-select`}
+                  audiences={audiences}
+                  value={audience}
+                  onChange={(next) => setAudience(next as NativeComposerAudience)}
+                  disabled={isSubmitting}
+                />
+              ) : (
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id={`${id}-internal-toggle`}
+                      checked={isInternal}
+                      onCheckedChange={setIsInternal}
+                      disabled={isSubmitting}
+                    />
+                    <Label htmlFor={`${id}-internal-toggle`}>
+                      {t("info.markResolutionInternal", "Mark as Internal")}
+                    </Label>
+                  </div>
+                  <p className="mt-1 text-xs text-[rgb(var(--color-text-600))]">
+                    {t(
+                      "info.markResolutionInternalHelper",
+                      "An internal resolution stays out of the client portal and is left out of the close email.",
+                    )}
+                  </p>
                 </div>
-                <p className="mt-1 text-xs text-[rgb(var(--color-text-600))]">
-                  {t(
-                    "info.markResolutionInternalHelper",
-                    "An internal resolution stays out of the client portal and is left out of the close email.",
-                  )}
-                </p>
-              </div>
+              )}
             </div>
             {showEmailRecipients && (
               <CommentEmailRecipientsControl

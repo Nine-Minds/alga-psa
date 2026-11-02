@@ -22,6 +22,7 @@ import { ITeam, ITeamMember, IUserWithRoles, ColumnDefinition } from '@alga-psa/
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -62,6 +63,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
   const { t } = useTranslation('msp/settings');
   const [team, setTeam] = useState<ITeam | null>(null);
   const [teamName, setTeamName] = useState('');
+  const [teamDescription, setTeamDescription] = useState('');
   const [allUsers, setAllUsers] = useState<IUserWithRoles[]>([]);
   const [selectedManagerId, setSelectedManagerId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
@@ -69,6 +71,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
   const [userAvatars, setUserAvatars] = useState<Record<string, string | null>>({});
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
 
   // Pending changes state
   const [pendingAdditions, setPendingAdditions] = useState<string[]>([]);
@@ -126,6 +129,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
 
       setTeam(fetchedTeam);
       setTeamName(fetchedTeam.team_name);
+      setTeamDescription(fetchedTeam.description || '');
       setSelectedManagerId(fetchedTeam.manager_id || undefined);
       setError(null);
       onUpdate(fetchedTeam);
@@ -179,6 +183,41 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
     } else if (e.key === 'Enter') {
       e.preventDefault();
       void handleNameSubmit();
+    }
+  };
+
+  const handleDescriptionSubmit = useCallback(async () => {
+    // Empty clears the description; null keeps the column semantics ("no description").
+    const next = teamDescription.trim() === '' ? null : teamDescription.trim();
+    if (team && next !== (team.description ?? null)) {
+      try {
+        const updatedTeam = await updateTeam(team.team_id, { description: next });
+        if (isReturnedActionError(updatedTeam)) {
+          setError(getErrorMessage(updatedTeam));
+          return;
+        }
+        setTeam(updatedTeam);
+        setTeamDescription(updatedTeam.description || '');
+        onUpdate(updatedTeam);
+        setError(null);
+      } catch (err) {
+        console.error('Error updating team description:', err);
+        setError(t('teams.messages.error.updateDescription'));
+        return;
+      }
+    }
+    setIsEditingDescription(false);
+  }, [team, teamDescription, onUpdate]);
+
+  const handleDescriptionCancel = useCallback(() => {
+    setTeamDescription(team?.description || '');
+    setIsEditingDescription(false);
+  }, [team?.description]);
+
+  // Enter inserts a newline here; Escape abandons the edit.
+  const handleDescriptionKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      handleDescriptionCancel();
     }
   };
 
@@ -433,6 +472,62 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): React.JS
             {t('teams.details.memberCount', { count: displayMembers.length })}
             {managerName && <> &middot; {t('teams.details.leadName', { name: managerName })}</>}
           </p>
+          <div className="flex items-start gap-2 mt-1 min-w-0">
+            {isEditingDescription ? (
+              <>
+                <TextArea
+                  id="team-description-input"
+                  aria-label={t('teams.details.fields.description')}
+                  value={teamDescription}
+                  onChange={(e) => setTeamDescription(e.target.value)}
+                  onKeyDown={handleDescriptionKeyDown}
+                  autoFocus
+                  rows={2}
+                  maxLength={1000}
+                  size="sm"
+                  placeholder={t('teams.details.placeholders.description')}
+                  wrapperClassName="mb-0 px-0 flex-1 min-w-0"
+                />
+                <Button
+                  id="save-team-description-btn"
+                  variant="default"
+                  size="sm"
+                  onClick={() => void handleDescriptionSubmit()}
+                  className="flex-shrink-0"
+                  title={t('teams.details.actions.saveDescription')}
+                >
+                  <Check className="w-4 h-4" />
+                </Button>
+                <Button
+                  id="cancel-team-description-btn"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDescriptionCancel}
+                  className="flex-shrink-0"
+                  title={t('teams.details.actions.cancel')}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <p
+                  className={`text-sm flex-1 min-w-0 whitespace-pre-wrap break-words ${
+                    team.description ? 'text-muted-foreground' : 'text-gray-400 italic'
+                  }`}
+                >
+                  {team.description || t('teams.details.noDescription')}
+                </p>
+                <button
+                  onClick={() => setIsEditingDescription(true)}
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200 flex-shrink-0"
+                  title={t('teams.details.actions.editDescription')}
+                >
+                  <Pencil className="w-4 h-4 text-gray-500" />
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

@@ -173,7 +173,8 @@
       "createTicket": "Criar ticket",
       "requestAppointment": "Solicitar agendamento",
       "viewLatestInvoice": "Ver última fatura",
-      "newServiceRequest": "Nova solicitação de serviço"
+      "newServiceRequest": "Nova solicitação de serviço",
+      "createSupportTicket": "Criar ticket de suporte"
     },
     "appointments": {
       "title": "Próximos compromissos",
@@ -372,10 +373,29 @@
       "missing_email": "Seu provedor de identidade não retornou um e-mail, portanto nenhuma conta do portal do cliente pôde ser identificada. Faça login com sua senha ou fale com seu prestador de serviços.",
       "inactive_user": "A conta do portal do cliente para {{providerEmail}} está inativa. Fale com seu prestador de serviços para reativá-la.",
       "user_type_mismatch": "{{providerEmail}} não é uma conta do portal do cliente. Fale com seu prestador de serviços.",
-      "tenant_mismatch": "{{providerEmail}} pertence ao portal de outra organização. Faça login com sua senha ou fale com seu prestador de serviços."
+      "tenant_mismatch": "{{providerEmail}} pertence ao portal de outra organização. Faça login com sua senha ou fale com seu prestador de serviços.",
+      "tenant_required": "{{providerEmail}} é usado em mais de uma organização. Entre em contato com seu provedor de serviços."
     },
     "configurationTitle": "Falha no login",
-    "configurationMessage": "O login falhou. Tente novamente ou fale com seu prestador de serviços."
+    "configurationMessage": "O login falhou. Tente novamente ou fale com seu prestador de serviços.",
+    "registration": {
+      "messages": {
+        "verified": "Usuário verificado e registrado com sucesso"
+      },
+      "errors": {
+        "verifyFailed": "Falha ao verificar e registrar o usuário",
+        "invalidToken": "Token inválido",
+        "tokenExpired": "Token expirado",
+        "tokenNotActive": "O token ainda não está ativo",
+        "unknown": "Erro desconhecido"
+      },
+      "user": "Usuário",
+      "clientPortalUser": "Usuário do portal do cliente",
+      "mspUser": "Usuário MSP",
+      "resetExpiration": "1 hora",
+      "verificationExpiration": "24 horas",
+      "superadminRole": "Função de superadministrador"
+    }
   },
   "account": {
     "title": "Conta",
@@ -505,6 +525,15 @@
         "failed": "Não foi possível salvar o seu cartão",
         "savedDescription": "O seu cartão está pronto para pagamentos futuros.",
         "failedDescription": "Não foi possível verificar a configuração. Peça um novo link ao seu fornecedor de faturamento."
+      },
+      "payLink": {
+        "heading": "Este link de pagamento não pode ser usado",
+        "expired": "Este link de pagamento expirou.",
+        "invalid": "Este link de pagamento não é válido.",
+        "notPayable": "Esta fatura já não pode ser paga com este link. Pode já estar paga ou já não aceitar pagamento online.",
+        "unavailable": "Não foi possível abrir a página de pagamento neste momento. Tente novamente dentro de alguns minutos.",
+        "viewInPortal": "Ver a fatura no portal do cliente",
+        "contactProvider": "Contacte o seu fornecedor de faturação para obter um novo link."
       }
     }
   },
@@ -601,7 +630,9 @@
       "invoices": "Notificações de fatura",
       "announcements": "Anúncios do sistema",
       "emailPreferences": "E-mail",
-      "internalPreferences": "Interno"
+      "internalPreferences": "Interno",
+      "unreadCount_few": "Notificações não lidas {{count}}",
+      "unreadCount_many": "Notificações não lidas {{count}}"
     },
     "actions": {
       "save": "Salvar alterações",
@@ -879,7 +910,9 @@
     "card": {
       "unread": "Não lida",
       "noMessage": "Nenhuma mensagem"
-    }
+    },
+    "unreadCount_few": "{{count}} notificações não lidas",
+    "unreadCount_many": "{{count}} notificações não lidas"
   },
   "billing": {
     "columns": {
