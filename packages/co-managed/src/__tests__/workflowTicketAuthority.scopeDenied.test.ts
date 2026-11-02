@@ -100,8 +100,11 @@ describe('workflow ticket authority: scope / redaction denial', () => {
     expect(authorize).toHaveBeenCalledWith(trx, expect.anything(), expect.anything(), 'ticket', 'read', expect.objectContaining({ clientId: 'c', boardId: 'b' }));
   });
 
-  it.each(['response_state', 'attributes.external_ref'])('read rejects a masked selector predicate: %s', async field => {
-    authorize.mockResolvedValue({ redactedFields: [`tickets.${field}`] });
+  it.each([
+    ['response_state', 'tickets.response_state'], ['response_state', 'tickets.status_id'],
+    ['attributes.external_ref', 'tickets.attributes.external_ref'], ['attributes.external_ref', 'tickets.external_ref'],
+  ])('read rejects a masked selector predicate: %s through %s', async (field, mask) => {
+    authorize.mockResolvedValue({ redactedFields: [mask] });
     await expect(retainCoManagedWorkflowTicketAuthority(trx, {
       ...input([]), operation: 'read', predicateFields: [field],
     })).rejects.toMatchObject({ code: 'WORKFLOW_TICKET_PREDICATE_FORBIDDEN' });

@@ -1,9 +1,10 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { coManagedWorkflowTicketSeam } from '../../../../../lib/coManagedDelivery';
 
-const state = vi.hoisted(() => ({ actions: [] as any[], queries: [] as string[], writes: [] as string[], hidden: [] as string[], readHidden: [] as string[], deny: false, ticketClientId: '', addItems: vi.fn() }));
+const state = vi.hoisted(() => ({ actions: [] as any[], queries: [] as string[], writes: [] as string[], hidden: [] as string[], readHidden: [] as string[], deny: false, candidateRows: [] as any[], addItems: vi.fn() }));
 const tenant = '11111111-1111-4111-8111-111111111111';
 const ticketId = '22222222-2222-4222-8222-222222222222';
+const ticketBId = '77777777-7777-4777-8777-777777777777';
 const clientId = '33333333-3333-4333-8333-333333333333';
 const clientBId = '55555555-5555-4555-8555-555555555555';
 const boardId = '44444444-4444-4444-8444-444444444444';
@@ -23,30 +24,50 @@ vi.mock('../../../../../lib/ticketChecklists', () => ({
 }));
 vi.mock('@alga-psa/db', () => ({ tenantDb: () => ({ tenantJoin: (query: any) => query, table: (name: string) => {
   state.queries.push(name);
+  const filters: Record<string, unknown> = {};
   const query: any = new Proxy({}, { get: (_target, key) => {
     if (key === 'then') return (resolve: any) => resolve(name === 'tickets' ? [{ ticket_id: ticket.ticket_id }] : []);
-    if (key === 'first') return async () => name === 'tickets' ? { ...ticket, client_id: state.ticketClientId || ticket.client_id } : name === 'comments' ? {
+    if (key === 'first') return async () => name === 'tickets' ? state.candidateRows.find(row => row.ticket_id === (filters.ticket_id ?? filters['tickets.ticket_id'])) ?? state.candidateRows[0] : name === 'comments' ? {
       comment_id: ticketId, note: 'private comment', created_at: '2026-01-01T00:00:00.000Z'
     } : { name: 'High', priority_name: 'High', client_name: 'Private client', board_name: 'Private board' };
     if (['insert', 'update', 'delete'].includes(String(key))) return async () => { state.writes.push(name); return []; };
+    if (key === 'where') return (column: string, value: unknown) => { filters[column] = value; return query; };
     return () => query;
   } });
   return query;
 } }) }));
 import { registerTicketActions } from '../tickets';
 
-const denied = new Error('bundle scope denied');
+const denied = Object.assign(new Error('bundle scope denied'), { code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
 const authorize = vi.fn(async (_trx: any, input: any) => {
   if (state.deny || (input.operation === 'create' && input.prospective.clientId !== clientId)) throw denied;
   // Model the provider's effective bundle scope: this workflow is published
   // under client A, while its tenant-wide event may carry client B's ticket.
-  if (input.operation !== 'create' && state.ticketClientId && state.ticketClientId !== clientId) throw denied;
+  if (input.operation !== 'create' && state.candidateRows.find((row: any) => row.ticket_id === input.ticketId)?.client_id !== clientId) throw denied;
   if (input.operation === 'create' && input.readFields?.some((field: string) => state.readHidden.includes(`tickets.${field}`))) throw denied;
   if (input.operation === 'read' && input.predicateFields?.some((field: string) => state.readHidden.some((hidden: string) =>
-    hidden === `tickets.${field}` || (field === 'attributes.external_ref' && hidden === 'tickets.external_ref')))) throw denied;
+    hidden === `tickets.${field}` || (field === 'attributes.external_ref' && hidden === 'tickets.external_ref')
+      || (field === 'response_state' && hidden === 'tickets.status_id')))) {
+    throw Object.assign(new Error('predicate denied'), { code: 'WORKFLOW_TICKET_PREDICATE_FORBIDDEN' });
+  }
   if (['create', 'update'].includes(input.operation) && state.hidden.includes('tickets.custom_fields')
     && input.fields.some((field: string) => ['custom_fields', 'attributes.custom_fields'].includes(field))) throw denied;
   return { redactedFields: state.hidden };
+});
+const findCandidates = vi.fn(async (_trx: any, input: any) => {
+  if (input.predicateFields.some((field: string) => state.readHidden.some((hidden: string) =>
+    hidden === `tickets.${field}` || (field === 'attributes.external_ref' && hidden === 'tickets.external_ref')
+      || (field === 'response_state' && hidden === 'tickets.status_id')))) {
+    throw Object.assign(new Error('predicate denied'), { code: 'WORKFLOW_TICKET_PREDICATE_FORBIDDEN' });
+  }
+  // Model an indexed query that applies publisher scope and selector values
+  // before returning IDs, without materializing unrelated tenant records.
+  const selector = input.selector;
+  return state.candidateRows.filter((row: any) => row.client_id === clientId
+    && (!selector.ticketId || row.ticket_id === selector.ticketId)
+    && (!selector.ticketNumber || row.ticket_number === selector.ticketNumber)
+    && (!selector.externalRef || row.attributes?.external_ref === selector.externalRef)
+    && (!selector.responseState || row.response_state === selector.responseState)).map((row: any) => row.ticket_id);
 });
 const ctx = { tenantId: tenant, runId: tenant, nowIso: () => '2026-01-01T00:00:00.000Z' } as any;
 const action = (id: string) => state.actions.find(a => a.id === `tickets.${id}`);
@@ -55,25 +76,33 @@ describe('registered ticket action authorization boundary', () => {
   const originalCapabilities = process.env.FORCE_CAPABILITIES;
   beforeEach(() => {
     state.actions.length = state.queries.length = state.writes.length = 0;
-    state.hidden = []; state.readHidden = []; state.deny = false; state.ticketClientId = clientId; authorize.mockClear(); state.addItems.mockReset();
+    state.hidden = []; state.readHidden = []; state.deny = false;
+    state.candidateRows = [ticket, { ...ticket, ticket_id: ticketBId, ticket_number: 'T-2', client_id: clientBId, attributes: { ...ticket.attributes, external_ref: 'vendor-2' } }];
+    authorize.mockClear(); findCandidates.mockClear(); state.addItems.mockReset();
     state.addItems.mockResolvedValue([{ checklist_item_id: ticketId, item_name: 'Review' }]);
     process.env.FORCE_CAPABILITIES = 'co-managed:on';
     coManagedWorkflowTicketSeam.reset();
-    coManagedWorkflowTicketSeam.register(() => ({ authorize, retain: async () => {} }));
+    coManagedWorkflowTicketSeam.register(() => ({ authorize, findCandidates, retain: async () => {} }));
     registerTicketActions();
   });
   afterEach(() => { coManagedWorkflowTicketSeam.reset(); process.env.FORCE_CAPABILITIES = originalCapabilities ?? ''; });
 
-  it.each([{ ticket_id: ticketId }, { ticket_number: 'T-1' }, { external_ref: 'vendor-1' }])('denies out-of-scope reads through %j before related data is loaded', async selector => {
-    state.ticketClientId = clientBId;
-    await expect(action('find').handler(selector, ctx)).rejects.toBe(denied);
+  it('denies an out-of-scope event-supplied ticket ID with the provider denial code', async () => {
+    await expect(action('find').handler({ ticket_id: ticketBId }, ctx)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(state.queries).toEqual([]);
+    expect(state.queries).not.toContain('comments');
+  });
+
+  it.each([{ ticket_number: 'T-2' }, { external_ref: 'vendor-2' }])('keeps out-of-scope selector candidates invisible: %j', async selector => {
+    const result = await action('find').handler(selector, ctx);
+    expect(result.ticket).toBeNull();
     expect(state.queries.filter(name => name !== 'tickets')).toEqual([]);
+    expect(authorize).not.toHaveBeenCalled();
     expect(state.writes).toEqual([]);
   });
 
   it.each(['add_comment', 'update_fields', 'assign', 'close', 'link_entities', 'add_attachment', 'apply_checklist', 'add_checklist_items'])('denies %s when a client A publisher receives client B ticket context, before data reads or writes', async name => {
-    state.ticketClientId = clientBId;
-    const input = action(name).inputSchema.parse({ ticket_id: ticketId,
+    const input = action(name).inputSchema.parse({ ticket_id: ticketBId,
       patch: { title: 'changed' }, body: 'Review', assignment: { primary: { type: 'user', id: clientId } },
       resolution: { code: 'done' }, entity_type: 'asset', entity_id: boardId, link_type: 'related',
       source: { document_id: boardId }, template_id: boardId, items: [{ item_name: 'Review' }]
@@ -81,7 +110,7 @@ describe('registered ticket action authorization boundary', () => {
     await expect(action(name).handler(input, ctx)).rejects.toBe(denied);
     expect(state.queries).toEqual([]);
     expect(state.writes).toEqual([]);
-    expect(authorize).toHaveBeenCalledWith(tx.trx, expect.objectContaining({ operation: 'update', ticketId }));
+    expect(authorize).toHaveBeenCalledWith(tx.trx, expect.objectContaining({ operation: 'update', ticketId: ticketBId }));
   });
 
   it('rejects unsupported patch columns before accessing the ticket', async () => {
@@ -186,16 +215,23 @@ describe('registered ticket action authorization boundary', () => {
   });
 
   it.each([
-    ['response_state', 'awaiting_client'], ['response_state', 'awaiting_internal'],
-    ['attributes.external_ref', 'vendor-1'], ['attributes.external_ref', 'different-ref'],
-  ])('rejects masked %s predicate whether it matches (%s) or not', async (field, value) => {
-    state.readHidden = [`tickets.${field}`];
+    ['response_state', 'awaiting_client', 'tickets.response_state'],
+    ['response_state', 'awaiting_internal', 'tickets.response_state'],
+    ['response_state', 'awaiting_client', 'tickets.status_id'],
+    ['response_state', 'awaiting_internal', 'tickets.status_id'],
+    ['attributes.external_ref', 'vendor-1', 'tickets.attributes.external_ref'],
+    ['attributes.external_ref', 'different-ref', 'tickets.attributes.external_ref'],
+    ['attributes.external_ref', 'vendor-1', 'tickets.external_ref'],
+    ['attributes.external_ref', 'different-ref', 'tickets.external_ref'],
+  ])('rejects masked %s predicate whether it matches (%s) or not (mask %s)', async (field, value, mask) => {
+    state.readHidden = [mask];
     const selector = field === 'response_state'
       ? { ticket_id: ticketId, response_state: value }
       : { external_ref: value };
-    await expect(action('find').handler(selector, ctx)).rejects.toBe(denied);
-    expect(authorize).toHaveBeenCalledWith(tx.trx, expect.objectContaining({
-      operation: 'read', predicateFields: [field === 'attributes.external_ref' ? 'attributes.external_ref' : 'response_state'],
+    await expect(action('find').handler(selector, ctx)).rejects.toMatchObject({ code: 'WORKFLOW_TICKET_PREDICATE_FORBIDDEN' });
+    const boundary = selector.ticket_id ? authorize : findCandidates;
+    expect(boundary).toHaveBeenCalledWith(tx.trx, expect.objectContaining({
+      predicateFields: [field === 'attributes.external_ref' ? 'attributes.external_ref' : 'response_state'],
     }));
     expect(state.queries).not.toContain('comments');
   });
@@ -205,6 +241,14 @@ describe('registered ticket action authorization boundary', () => {
     expect(match.ticket.ticket_id).toBe(ticketId);
     const noMatch = await action('find').handler({ external_ref: 'different-ref' }, ctx);
     expect(noMatch.ticket).toBeNull();
+  });
+
+  it('returns a missing indexed selector without touching unrelated ticket records', async () => {
+    const result = await action('find').handler({ external_ref: 'no-such-reference' }, ctx);
+    expect(result.ticket).toBeNull();
+    expect(findCandidates).toHaveBeenCalledTimes(1);
+    expect(authorize).not.toHaveBeenCalled();
+    expect(state.queries).toEqual([]);
   });
 
   it('runs an authorized checklist mutation in the retained transaction', async () => {

@@ -1,7 +1,13 @@
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
+import {
+  BuiltinAuthorizationKernelProvider, BundleAuthorizationKernelProvider, compileResourceReadAuthorizationSql,
+  createAuthorizationKernel, resolveBundleNarrowingRulesForEvaluation, resolveDefaultBuiltinRelationshipRules,
+} from '@alga-psa/authorization';
+import { workflowTicketFieldSources, type WorkflowTicketSelectorInput } from '@alga-psa/shared/lib/coManagedDelivery';
 import { authorizeCoManagedWorkRecord, CoManagedSharedWorkError, isCoManagedUuid, lockCoManagedRecipientIdentity } from './sharedWorkIdentity';
+import { hasCoManagedLocalPermission } from './localPermission';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 
 /** Structural subset of the workflow runtime's ticket-mutation input (a package must not import `shared/`). */
@@ -68,7 +74,8 @@ export async function retainCoManagedWorkflowTicketAuthority(trx: Knex.Transacti
         : fields;
       if (operation !== 'read' && isCoManagedReadFieldHidden(decision.redactedFields, sources.flatMap(field => [field, `tickets.${field}`]))) throw new CoManagedSharedWorkError();
       if (operation === 'read' && input.predicateFields?.length
-        && isCoManagedReadFieldHidden(decision.redactedFields, input.predicateFields.flatMap(field => [...fieldSources(field), `tickets.${field}`, ...fieldSources(field).map(source => `tickets.${source}`)]))) {
+        && isCoManagedReadFieldHidden(decision.redactedFields, input.predicateFields.flatMap(field =>
+          [...new Set([...workflowTicketFieldSources(field), ...fieldSources(field)])].flatMap(source => [source, `tickets.${source}`])))) {
         const error = new CoManagedSharedWorkError();
         (error as Error & { code: string }).code = 'WORKFLOW_TICKET_PREDICATE_FORBIDDEN';
         throw error;
@@ -95,4 +102,74 @@ export async function retainCoManagedWorkflowTicketAuthority(trx: Knex.Transacti
     await authorize(before, { assignedUserIds: explicitAssignedUserIds, teamIds: [] });
   }
   return { owner, before, actor, run, authorize, activeRun, redactedFields };
+}
+
+/** Resolve an indexed selector only after policy-level field authorization and
+ * apply the same record scope in SQL before returning candidate identifiers. */
+export async function findCoManagedWorkflowTicketCandidates(trx: Knex.Transaction, input: WorkflowTicketSelectorInput): Promise<string[]> {
+  if (![input.workflowRunId, input.actorUserId].every(isCoManagedUuid)) throw new CoManagedSharedWorkError();
+  const owner = tenantDb(trx, input.tenant);
+  const run = await owner.table('workflow_runs').where('run_id', input.workflowRunId)
+    .whereRaw("upper(status) = 'RUNNING'")
+    .where(q => q.whereNull('lease_expires_at').orWhere('lease_expires_at', '>', trx.raw('clock_timestamp()')))
+    .forShare().first();
+  if (!run) throw new CoManagedSharedWorkError();
+  const definition = await owner.table('workflow_definitions').where('workflow_id', run.workflow_id).forShare().first('created_by');
+  const version = await owner.table('workflow_definition_versions').where({ workflow_id: run.workflow_id, version: run.workflow_version }).forShare().first('published_by');
+  const actor = { tenant: input.tenant, userId: version?.published_by ?? definition?.created_by };
+  if (!definition || !version || actor.userId !== input.actorUserId) throw new CoManagedSharedWorkError();
+  const subject = await lockCoManagedRecipientIdentity(trx, actor);
+  const evaluation = { knex: trx, subject, resource: { type: 'ticket', action: 'read' } } as const;
+  const rules = await resolveBundleNarrowingRulesForEvaluation(trx, evaluation, { lock: true });
+  const kernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider(),
+    bundleProvider: new BundleAuthorizationKernelProvider({ resolveRules: async () => rules }),
+    rbacEvaluator: () => hasCoManagedLocalPermission(trx, actor, 'ticket', 'read', true),
+  });
+  const decision = await kernel.authorizeResource(evaluation);
+  if (!decision.allowed) throw new CoManagedSharedWorkError();
+
+  const predicateSources = input.predicateFields.flatMap(workflowTicketFieldSources);
+  if (isCoManagedReadFieldHidden(decision.redactedFields, predicateSources.flatMap(field => [field, `tickets.${field}`]))) {
+    const error = new CoManagedSharedWorkError();
+    (error as Error & { code: string }).code = 'WORKFLOW_TICKET_PREDICATE_FORBIDDEN';
+    throw error;
+  }
+
+  const query = owner.table('tickets');
+  if (input.selector.ticketId) query.where('tickets.ticket_id', input.selector.ticketId);
+  else if (input.selector.ticketNumber) query.where('tickets.ticket_number', input.selector.ticketNumber);
+  else if (input.selector.externalRef) query.whereRaw("(tickets.attributes->>'external_ref') = ?", [input.selector.externalRef]);
+  else throw new CoManagedSharedWorkError();
+  if (input.selector.responseState) query.where('tickets.response_state', input.selector.responseState);
+
+  const compiled = compileResourceReadAuthorizationSql(query, {
+    resourceType: 'ticket', action: 'read',
+    builtinRules: resolveDefaultBuiltinRelationshipRules(evaluation), bundleRules: rules,
+    ctx: {
+      subject,
+      adapter: {
+        ownerColumn: 'tickets.entered_by', clientColumn: 'tickets.client_id', boardColumn: 'tickets.board_id',
+        contactColumn: 'tickets.contact_name_id', teamColumn: 'tickets.assigned_team_id',
+        applyAssignedUsers: (builder, userIds) => builder.whereIn('tickets.assigned_to', userIds),
+      },
+  }});
+  if (!compiled.supported) query.whereRaw('1 = 0');
+
+  const columnByScopeField: Record<string, string> = {
+    client_id: 'tickets.client_id', board_id: 'tickets.board_id', owner_user_id: 'tickets.entered_by',
+    assigned_to: 'tickets.assigned_to', contact_name_id: 'tickets.contact_name_id',
+  };
+  for (const constraint of decision.scope.constraints) {
+    const column = columnByScopeField[constraint.field];
+    if (!column) {
+      query.whereRaw('1 = 0');
+      continue;
+    }
+    if (constraint.operator === 'eq') query.where(column, constraint.value as string);
+    else if (constraint.operator === 'in' && Array.isArray(constraint.value)) query.whereIn(column, constraint.value as string[]);
+    else query.whereRaw('1 = 0');
+  }
+  const rows = await query.select('tickets.ticket_id');
+  return rows.map((row: { ticket_id: string }) => row.ticket_id);
 }

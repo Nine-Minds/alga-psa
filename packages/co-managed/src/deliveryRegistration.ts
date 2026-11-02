@@ -6,7 +6,7 @@
 // otherwise serves('co-managed') answers resolver-unregistered and the seam resolves null.
 import './capability';
 import { coManagedDeliverySeam, coManagedWorkflowTicketSeam } from '@alga-psa/shared/lib/coManagedDelivery';
-import { retainCoManagedWorkflowTicketAuthority } from './workflowTicketAuthority';
+import { findCoManagedWorkflowTicketCandidates, retainCoManagedWorkflowTicketAuthority } from './workflowTicketAuthority';
 import { createCoManagedDeliveryProvider } from './deliveryProvider';
 import { registerCoManagedInboundCommentWriter } from './inboundCommentWriter';
 
@@ -14,7 +14,7 @@ if (!coManagedDeliverySeam.hasProvider()) coManagedDeliverySeam.register(() => c
 
 // Workflow ticket-mutation authority (L4a). Same best-effort boot import as the delivery provider.
 if (!coManagedWorkflowTicketSeam.hasProvider()) {
-  coManagedWorkflowTicketSeam.register(() => ({ authorize: async (trx, input) => {
+  coManagedWorkflowTicketSeam.register(() => ({ findCandidates: async (trx, input) => findCoManagedWorkflowTicketCandidates(trx as never, input), authorize: async (trx, input) => {
     const authority = await retainCoManagedWorkflowTicketAuthority(trx as never, { ...input, readFields: input.readFields ?? [] });
     return { redactedFields: authority.redactedFields };
   }, retain: async (trx, input) => { await retainCoManagedWorkflowTicketAuthority(trx as never, input); } }));

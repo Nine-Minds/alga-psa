@@ -597,8 +597,32 @@ async function resolveWorkflowTicketAuthority(tx: TenantTxContext) {
   return authority;
 }
 
-export async function workflowTicketAuthorityActive(tx: TenantTxContext): Promise<boolean> {
-  return Boolean(await resolveWorkflowTicketAuthority(tx));
+export async function findWorkflowTicketCandidates(
+  ctx: ActionContext,
+  tx: TenantTxContext,
+  input: {
+    ticketId?: string;
+    ticketNumber?: string;
+    externalRef?: string;
+    responseState?: string;
+    predicateFields: string[];
+  }
+): Promise<string[] | null> {
+  const authority = await resolveWorkflowTicketAuthority(tx);
+  if (!authority) return null;
+  if (!authority.findCandidates) throw new WorkflowTicketAuthorityUnavailableError('selector-authorizer-missing', true);
+  return authority.findCandidates(tx.trx, {
+    tenant: tx.tenantId,
+    workflowRunId: ctx.runId,
+    actorUserId: tx.actorUserId,
+    selector: {
+      ...(input.ticketId ? { ticketId: input.ticketId } : {}),
+      ...(input.ticketNumber ? { ticketNumber: input.ticketNumber } : {}),
+      ...(input.externalRef ? { externalRef: input.externalRef } : {}),
+      ...(input.responseState ? { responseState: input.responseState } : {}),
+    },
+    predicateFields: input.predicateFields,
+  });
 }
 
 export async function retainWorkflowTicketAuthority(ctx: ActionContext, tx: TenantTxContext, ticketId: string, fields: string[], readFields: string[] = []): Promise<void> {
