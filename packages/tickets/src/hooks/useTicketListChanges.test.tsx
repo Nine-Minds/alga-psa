@@ -71,6 +71,10 @@ describe('useTicketListChanges', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(2_100); });
     expect(createYjsProvider).toHaveBeenCalledTimes(2);
     expect(global.fetch).toHaveBeenCalledTimes(2);
+    await act(async () => { providers[1].handlers.get('connect')?.(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(272_100); });
+    expect(createYjsProvider).toHaveBeenCalledTimes(3);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
   });
 
   it('recovers the initial subscription gap when the first successful connection follows token failures', async () => {
@@ -82,7 +86,7 @@ describe('useTicketListChanges', () => {
       .mockRejectedValueOnce(new Error('offline')).mockRejectedValueOnce(new Error('offline')).mockRejectedValueOnce(new Error('offline'));
     renderHook(() => useTicketListChanges('tenant-a', vi.fn(), { onUnavailable: unavailable, onRecovered: recovered }));
     await act(async () => { await vi.advanceTimersByTimeAsync(100_000); });
-    expect(unavailable).toHaveBeenCalled();
+    expect(unavailable.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(createYjsProvider).toHaveBeenCalledTimes(1);
     await act(async () => { providers[0].handlers.get('connect')?.(); });
     expect(recovered).toHaveBeenCalledTimes(1);

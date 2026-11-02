@@ -8,16 +8,13 @@ import type { TicketListChange } from '../lib/listChangeFilters';
 export function useTicketListChanges(tenantId: string | undefined, onChange: (event: TicketListChange) => void, options: {
   onUnavailable?: (since: number) => void;
   onRecovered?: (since: number) => void;
-  shouldPollFallback?: () => boolean;
 } = {}) {
   const callback = useRef(onChange);
   const unavailable = useRef(options.onUnavailable);
   const recovered = useRef(options.onRecovered);
-  const shouldPollFallback = useRef(options.shouldPollFallback);
   callback.current = onChange;
   unavailable.current = options.onUnavailable;
   recovered.current = options.onRecovered;
-  shouldPollFallback.current = options.shouldPollFallback;
 
   useEffect(() => {
     if (!tenantId) return;
@@ -42,14 +39,6 @@ export function useTicketListChanges(tenantId: string | undefined, onChange: (ev
         fallbackTimer = setTimeout(poll, 60_000);
       };
       fallbackTimer = setTimeout(poll, 60_000);
-    };
-    const pollRecoveredFallback = () => {
-      if (disposed) return;
-      fallbackTimer = setTimeout(() => {
-        if (disposed || !shouldPollFallback.current?.()) { fallbackTimer = undefined; return; }
-        recovered.current?.(Date.now());
-        pollRecoveredFallback();
-      }, 60_000);
     };
     const connect = async () => {
       if (provider) {
@@ -97,7 +86,6 @@ export function useTicketListChanges(tenantId: string | undefined, onChange: (ev
           unavailableReported = false;
           if (fallbackTimer) clearTimeout(fallbackTimer);
           fallbackTimer = undefined;
-          if (recoveredOutage !== null) pollRecoveredFallback();
         };
         provider.on('close', () => { if (!disposed) { reportedConnection = false; reconnecting = everConnected; scheduleReconnect(); } });
         provider.on('disconnect', () => { if (!disposed) { reportedConnection = false; reconnecting = everConnected; scheduleReconnect(); } });

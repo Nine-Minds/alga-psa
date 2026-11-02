@@ -4,6 +4,7 @@ export interface AuthorizedTicketChangeCandidate {
   updated_by?: string | null;
   updated_by_user_id?: string | null;
   activityActors?: Array<string | null>;
+  listActivityActors?: Array<string | null>;
   latestActivityAt?: string | null;
 }
 
@@ -13,6 +14,7 @@ export function countAuthorizedTicketChanges<T extends AuthorizedTicketChangeCan
   matchingTicketIds: ReadonlySet<string>;
   loadedTicketIds: ReadonlySet<string>;
   currentUserId: string;
+  since?: number;
 }): { newCount: number; updatedCount: number; boards: Record<string, number>; boardLatestAt: Record<string, string> } {
   const seen = new Set<string>();
   let newCount = 0;
@@ -25,8 +27,11 @@ export function countAuthorizedTicketChanges<T extends AuthorizedTicketChangeCan
       : ticket.updated_by === input.currentUserId || ticket.updated_by_user_id === input.currentUserId;
     if (!ticket.ticket_id || seen.has(ticket.ticket_id) || onlyOwnActivity) continue;
     seen.add(ticket.ticket_id);
-    if (input.loadedTicketIds.has(ticket.ticket_id)) updatedCount += 1;
-    else if (input.matchingTicketIds.has(ticket.ticket_id)) newCount += 1;
+    const inListWindow = input.since === undefined || Boolean(ticket.latestActivityAt && Date.parse(ticket.latestActivityAt) > input.since);
+    const listActors = ticket.listActivityActors ?? ticket.activityActors;
+    const hasOtherListActivity = !listActors || listActors.some(actor => actor !== input.currentUserId);
+    if (inListWindow && hasOtherListActivity && input.loadedTicketIds.has(ticket.ticket_id)) updatedCount += 1;
+    else if (inListWindow && hasOtherListActivity && input.matchingTicketIds.has(ticket.ticket_id)) newCount += 1;
     if (ticket.board_id) {
       boards[ticket.board_id] = (boards[ticket.board_id] ?? 0) + 1;
       if (ticket.latestActivityAt && (!boardLatestAt[ticket.board_id] || ticket.latestActivityAt > boardLatestAt[ticket.board_id])) {

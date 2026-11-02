@@ -30,4 +30,17 @@ describe('authorized ticket change recovery counts', () => {
     });
     expect(result).toEqual({ newCount: 1, updatedCount: 0, boards: { 'board-mail': 1 }, boardLatestAt: { 'board-mail': '2026-11-02T12:00:00Z' } });
   });
+  it('keeps other-board history across refreshes without counting it in the new list window', () => {
+    const result = countAuthorizedTicketChanges({
+      candidates: [
+        { ticket_id: 'earlier-board-y', board_id: 'board-y', activityActors: ['other'], latestActivityAt: '2026-11-02T12:00:00Z' },
+        { ticket_id: 'current-board-x', board_id: 'board-x', activityActors: ['other'], latestActivityAt: '2026-11-02T12:02:00Z' },
+      ],
+      matchingTicketIds: new Set(['earlier-board-y', 'current-board-x']), loadedTicketIds: new Set(),
+      currentUserId: 'me', since: Date.parse('2026-11-02T12:01:00Z'),
+    });
+    expect(result.newCount).toBe(1);
+    expect(result.boards).toEqual({ 'board-x': 1, 'board-y': 1 });
+  });
+
 });

@@ -112,10 +112,18 @@ export class TicketUpdatesExtension {
           if (!response.ok) continue
           const result = await response.json()
           if (!result?.change) continue
-          document.broadcastStateless(JSON.stringify(result.change), connection => {
+          // Each instance consumes the trusted activity feed independently.
+          // Document.broadcastStateless invokes extension-redis before applying
+          // its local filter, which would leak this recipient's payload to all
+          // room connections on other instances. Send only on authorized local
+          // connections; never put enriched payloads on the room broadcast bus.
+          const payload = JSON.stringify(result.change)
+          for (const connection of roomConnections) {
             const recipient = connection.context?.ticketChangesAccess
-            return recipient?.tenantId === tenantId && recipient.userId === access.userId && recipient.expiresAt > Date.now()
-          })
+            if (recipient?.tenantId === tenantId && recipient.userId === access.userId && recipient.expiresAt > Date.now()) {
+              connection.sendStateless(payload)
+            }
+          }
         } catch (error) {
           console.error(`[TicketUpdatesExtension] Unable to authorize ticket change for ${access.userId}:`, error)
         }
@@ -138,13 +146,17 @@ export class TicketUpdatesExtension {
 
   async onDisconnect(data) {
     if (!data.documentName?.startsWith('tenant:') || !data.documentName.endsWith(':ticket-changes')) return
-    const connection = data.connectionInstance
-    const timer = connection && this.connectionExpiryTimers.get(connection)
-    if (timer) clearTimeout(timer)
     const connections = this.listConnections.get(data.documentName)
-    if (connections && connection) connections.delete(connection)
-    if (connections?.size === 0) this.listConnections.delete(data.documentName)
-    if (connection) this.connectionExpiryTimers.delete(connection)
+    if (!connections) return
+    // Hocuspocus's disconnect hook supplies socketId, not connectionInstance.
+    for (const connection of connections) {
+      if (connection !== data.connectionInstance && (!data.socketId || connection.socketId !== data.socketId)) continue
+      const timer = this.connectionExpiryTimers.get(connection)
+      if (timer) clearTimeout(timer)
+      this.connectionExpiryTimers.delete(connection)
+      connections.delete(connection)
+    }
+    if (connections.size === 0) this.listConnections.delete(data.documentName)
   }
 
   async handlePatternMessage(message, channel) {

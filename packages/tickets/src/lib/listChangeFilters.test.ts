@@ -18,8 +18,8 @@ describe('ticket list live change classification', () => {
   });
 
   it('applies board, status, assignee and search predicates, and fails closed on missing metadata', () => {
-    expect(matchesTicketListChange(base, { boardIds: ['b-1'], statusId: '00000000-0000-4000-8000-000000000001', assignedToIds: ['u-2'], searchQuery: 'printer' })).toBe(true);
-    expect(matchesTicketListChange(base, { searchQuery: 'network' })).toBe(false);
+    expect(matchesTicketListChange(base, { boardIds: ['b-1'], statusId: '00000000-0000-4000-8000-000000000001', assignedToIds: ['u-2'] })).toBe(true);
+    expect(matchesTicketListChange(base, { searchQuery: 'network' })).toBe(null);
     expect(matchesTicketListChange({ ...base, statusId: null }, {})).toBe(null);
   });
 
@@ -35,7 +35,7 @@ describe('ticket list live change classification', () => {
     expect(matchesTicketListChange(enriched, { dueDateFilter: 'upcoming' })).toBe(true);
     expect(matchesTicketListChange({ ...enriched, dueDate: new Date(now - 60_000).toISOString() }, { dueDateFilter: 'upcoming' })).toBe(false);
     expect(matchesTicketListChange(enriched, { assignedToIds: ['u-2'], includeUnassigned: true })).toBe(true);
-    expect(matchesTicketListChange({ ...enriched, primaryAssigneeId: 'u-9' }, { assignedToIds: ['u-2'], includeUnassigned: true })).toBe(false);
+    expect(matchesTicketListChange({ ...enriched, primaryAssigneeId: 'u-9', assigneeIds: ['u-9'] }, { assignedToIds: ['u-2'], includeUnassigned: true })).toBe(false);
     expect(matchesTicketListChange(enriched, { where: { join: 'and', clauses: [{ path: 'priority_id', operator: 'equals', value: 'p-1' }] } })).toBe(true);
     expect(matchesTicketListChange(enriched, { where: { join: 'and', clauses: [{ path: 'priority_id', operator: 'equals', value: 'p-2' }] } })).toBe(false);
   });
@@ -45,20 +45,9 @@ describe('ticket list live change classification', () => {
     expect(matchesTicketListChange(base, { boardId: 'no-board' })).toBe(false);
     expect(matchesTicketListChange({ ...base, categoryIds: [] }, { categoryId: 'all' })).toBe(true);
     expect(matchesTicketListChange({ ...base, categoryIds: [] }, { categoryIds: ['no-category', 'category-a'] })).toBe(true);
-    expect(matchesTicketListChange({ ...base, categoryIds: ['category-a'] }, { excludeCategoryIds: ['no-category'] })).toBe(false);
+    expect(matchesTicketListChange({ ...base, categoryIds: ['category-a'] }, { excludeCategoryIds: ['no-category'] })).toBe(true);
   });
 
-  it('evaluates due-date, assignee OR/unassigned, and advanced predicate filters', () => {
-    const now = Date.now();
-    const enriched = { ...base, dueDate: new Date(now + 60_000).toISOString(), primaryAssigneeId: null,
-      assigneeIds: [], filterRecord: { priority_id: 'p-1', status_id: 's-open' } };
-    expect(matchesTicketListChange(enriched, { dueDateFilter: 'upcoming' })).toBe(true);
-    expect(matchesTicketListChange({ ...enriched, dueDate: new Date(now - 60_000).toISOString() }, { dueDateFilter: 'upcoming' })).toBe(false);
-    expect(matchesTicketListChange(enriched, { assignedToIds: ['u-2'], includeUnassigned: true })).toBe(true);
-    expect(matchesTicketListChange({ ...enriched, primaryAssigneeId: 'u-9' }, { assignedToIds: ['u-2'], includeUnassigned: true })).toBe(false);
-    expect(matchesTicketListChange(enriched, { where: { join: 'and', clauses: [{ path: 'priority_id', operator: 'equals', value: 'p-1' }] } })).toBe(true);
-    expect(matchesTicketListChange(enriched, { where: { join: 'and', clauses: [{ path: 'priority_id', operator: 'equals', value: 'p-2' }] } })).toBe(false);
-  });
 
   it('deduplicates ticket events and preserves a new ticket classification across later edits', () => {
     const first = recordTicketListChange(new Map(), 't-1', 'new', { kind: 'new', timestamp: 1 });
@@ -66,4 +55,13 @@ describe('ticket list live change classification', () => {
     expect(second.size).toBe(1);
     expect(second.get('t-1')).toEqual({ kind: 'new', timestamp: 1 });
   });
+  it('uses list-query precedence and sentinel rules instead of intersecting legacy filters', () => {
+    expect(matchesTicketListChange(base, { boardId: 'old-board', boardIds: ['b-1'] })).toBe(true);
+    expect(matchesTicketListChange({ ...base, categoryIds: [] }, { excludeCategoryIds: ['no-category'] })).toBe(false);
+    expect(matchesTicketListChange(base, { statusId: 'closed', showOpenOnly: false })).toBe(true);
+    expect(matchesTicketListChange(base, { dueDateFilter: 'all', dueDateFrom: '2099-01-01' })).toBe(true);
+    expect(matchesTicketListChange({ ...base, tags: ['urgent'], ticketTagIdsByText: { urgent: 'tag-id' },
+      filterRecord: { tags: ['tag-id'] } }, { tags: ['urgent'] })).toBe(true);
+  });
+
 });

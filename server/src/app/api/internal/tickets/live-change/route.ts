@@ -108,6 +108,7 @@ export async function POST(request: NextRequest) {
         priorityId: ticket.priority_id ?? null,
         categoryIds: [ticket.category_id, ticket.subcategory_id].filter((id): id is string => typeof id === 'string'),
         clientId: ticket.client_id ?? null, contactId: ticket.contact_name_id ?? null,
+        ticketTagIdsByText: Object.fromEntries(tagRows.map((tag: { tag_text: string; tag_id: string }) => [tag.tag_text, tag.tag_id])),
         tags, teamIds, dueDate: ticket.due_date ?? null,
         responseState: ticket.response_state ?? 'none',
         slaStatus,

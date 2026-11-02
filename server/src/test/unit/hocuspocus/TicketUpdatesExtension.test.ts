@@ -108,14 +108,13 @@ describe('TicketUpdatesExtension', () => {
 
   it('authorizes each connected principal before delivering an enriched tenant-room event', async () => {
     const { pSubscribeMock } = createSubscriberHarness();
-    const messages: Array<{ payload: string; filter: (connection: any) => boolean }> = [];
-    const document = { broadcastStateless: vi.fn((payload: string, filter: (connection: any) => boolean) => messages.push({ payload, filter })) };
+    const document = { broadcastStateless: vi.fn() };
     const instance = { documents: new Map([['tenant:tenant-1:ticket-changes', document]]) };
     const { TicketUpdatesExtension } = await import('../../../../../hocuspocus/TicketUpdatesExtension.js');
     const extension = new TicketUpdatesExtension({ redisPrefix: 'alga-psa:', listChangeApiKey: 'internal-key' });
     await extension.onConfigure({ instance });
-    const allowed = { context: { ticketChangesAccess: { tenantId: 'tenant-1', userId: 'allowed', expiresAt: Date.now() + 60_000 } } };
-    const denied = { context: { ticketChangesAccess: { tenantId: 'tenant-1', userId: 'denied', expiresAt: Date.now() + 60_000 } } };
+    const allowed = { sendStateless: vi.fn(), context: { ticketChangesAccess: { tenantId: 'tenant-1', userId: 'allowed', expiresAt: Date.now() + 60_000 } } };
+    const denied = { sendStateless: vi.fn(), context: { ticketChangesAccess: { tenantId: 'tenant-1', userId: 'denied', expiresAt: Date.now() + 60_000 } } };
     await extension.connected({ documentName: 'tenant:tenant-1:ticket-changes', context: allowed.context, connectionInstance: allowed });
     await extension.connected({ documentName: 'tenant:tenant-1:ticket-changes', context: denied.context, connectionInstance: denied });
     const oldFetch = globalThis.fetch;
@@ -131,10 +130,10 @@ describe('TicketUpdatesExtension', () => {
     }
     expect(pSubscribeMock).toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(messages).toHaveLength(1);
-    expect(messages[0].filter(allowed)).toBe(true);
-    expect(messages[0].filter(denied)).toBe(false);
-    expect(JSON.parse(messages[0].payload).boardId).toBe('board-a');
+    expect(allowed.sendStateless).toHaveBeenCalledTimes(1);
+    expect(denied.sendStateless).not.toHaveBeenCalled();
+    expect(document.broadcastStateless).not.toHaveBeenCalled();
+    expect(JSON.parse(allowed.sendStateless.mock.calls[0][0]).boardId).toBe('board-a');
     await extension.onDisconnect({ documentName: 'tenant:tenant-1:ticket-changes', connectionInstance: allowed });
     await extension.onDisconnect({ documentName: 'tenant:tenant-1:ticket-changes', connectionInstance: denied });
     await extension.onDestroy();
@@ -163,14 +162,13 @@ describe('TicketUpdatesExtension', () => {
     expect(context?.ticketChangesAccess).toMatchObject({ tenantId, userId });
 
     const { pSubscribeMock } = createSubscriberHarness();
-    const message: Array<{ payload: string; filter: (connection: any) => boolean }> = [];
-    const document = { broadcastStateless: vi.fn((payload: string, filter: (connection: any) => boolean) => message.push({ payload, filter })) };
+    const document = { broadcastStateless: vi.fn() };
     const instance = { documents: new Map([[roomName, document]]) };
     const { TicketUpdatesExtension } = await import('../../../../../hocuspocus/TicketUpdatesExtension.js');
     const extension = new TicketUpdatesExtension({ redisPrefix: 'alga-psa:', listChangeApiKey: 'internal-key' });
     await extension.onConfigure({ instance });
     hocuspocus.configuration.extensions.push(extension);
-    const connection = { context, close: vi.fn() };
+    const connection = { context, socketId: 'socket-1', close: vi.fn(), sendStateless: vi.fn() };
     await hocuspocus.hooks('connected', { documentName: roomName, context, connectionInstance: connection });
     const oldFetch = globalThis.fetch;
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, json: async () => ({ change: { ticketId: 'ticket-a', boardId: 'board-a', statusId: 'status-a', assigneeIds: [], actorUserId: 'other', updatedAt: new Date().toISOString() } }) })) as any);
@@ -179,11 +177,59 @@ describe('TicketUpdatesExtension', () => {
       await listSubscription?.(JSON.stringify({ ticketId: 'ticket-a', updatedAt: new Date().toISOString() }), `alga-psa:ticket-list-changes:${tenantId}`);
     } finally {
       vi.stubGlobal('fetch', oldFetch);
-      await hocuspocus.hooks('onDisconnect', { documentName: roomName, connectionInstance: connection });
+      await hocuspocus.hooks('onDisconnect', { documentName: roomName, socketId: connection.socketId });
+      expect(extension.listConnections.size).toBe(0);
+      expect(extension.connectionExpiryTimers.size).toBe(0);
       await hocuspocus.destroy();
     }
     expect(pSubscribeMock).toHaveBeenCalled();
-    expect(message).toHaveLength(1);
-    expect(message[0].filter(connection)).toBe(true);
+    expect(connection.sendStateless).toHaveBeenCalledTimes(1);
+    expect(document.broadcastStateless).not.toHaveBeenCalled();
   });
+  it('keeps recipient-only payloads off the cross-instance Redis broadcast bus', async () => {
+    const { Document, OutgoingMessage, IncomingMessage, MessageReceiver } = await import('../../../../../hocuspocus/node_modules/@hocuspocus/server/dist/hocuspocus-server.esm.js');
+    const { TicketUpdatesExtension } = await import('../../../../../hocuspocus/TicketUpdatesExtension.js');
+    const room = 'tenant:tenant-a:ticket-changes';
+    const local = new Document(room);
+    const remote = new Document(room);
+    const principal = (userId: string) => ({
+      webSocket: {}, send: vi.fn(), sendStateless: vi.fn(), close: vi.fn(),
+      context: { ticketChangesAccess: { tenantId: 'tenant-a', userId, expiresAt: Date.now() + 60_000 } },
+    });
+    const allowed = principal('allowed');
+    const localDenied = principal('denied');
+    const remoteDenied = principal('remote-denied');
+    local.addConnection(allowed as any).addConnection(localDenied as any);
+    remote.addConnection(remoteDenied as any);
+    // Match extension-redis's actual encoding and receiving path. A filtered
+    // Document.broadcastStateless still invokes this hook without its filter.
+    const forwarded = vi.fn((_document: unknown, payload: string) => {
+      const wire = new OutgoingMessage(room).writeBroadcastStateless(payload).toUint8Array();
+      const incoming = new IncomingMessage(wire);
+      incoming.writeVarString(incoming.readVarString());
+      new MessageReceiver(incoming).apply(remote);
+    });
+    local.beforeBroadcastStateless(forwarded);
+    const extension = new TicketUpdatesExtension({ listChangeApiKey: 'internal-key' });
+    extension.instance = { documents: new Map([[room, local]]) };
+    await extension.connected({ documentName: room, context: allowed.context, connectionInstance: allowed });
+    await extension.connected({ documentName: room, context: localDenied.context, connectionInstance: localDenied });
+    const change = { ticketId: 'restricted-ticket', updatedAt: new Date().toISOString(), searchText: 'restricted title' };
+    vi.stubGlobal('fetch', vi.fn(async (_url, init) => ({
+      ok: true, json: async () => ({ change: JSON.parse(init.body as string).userId === 'allowed' ? change : null }),
+    })));
+    try {
+      await extension.handleListMessage(JSON.stringify(change), 'ticket-list-changes:tenant-a');
+      expect(allowed.sendStateless).toHaveBeenCalledWith(JSON.stringify(change));
+      expect(localDenied.sendStateless).not.toHaveBeenCalled();
+      expect(remoteDenied.sendStateless).not.toHaveBeenCalled();
+      expect(forwarded).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+      await extension.onDestroy();
+      local.destroy();
+      remote.destroy();
+    }
+  });
+
 });

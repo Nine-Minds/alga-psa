@@ -21,7 +21,7 @@ describe('ChangedSinceLoad', () => {
 
   it('classifies only matching absent creations and keeps one ticket in one category', () => {
     const state = new ChangedSinceLoad();
-    state.load([], { boardId: 'board-a', searchQuery: 'printer', boardFilterState: 'all' }, 'me', Date.parse('2026-01-01T00:00:00Z'));
+    state.load([], { boardId: 'board-a', boardFilterState: 'all' }, 'me', Date.parse('2026-01-01T00:00:00Z'));
     expect(state.record(event('new', '2026-01-01T00:01:00Z', 'created'))).toBe(true);
     expect(state.record(event('new', '2026-01-01T00:02:00Z'))).toBe(true);
     expect(state.record({ ...event('wrong', '2026-01-01T00:03:00Z', 'created'), boardId: 'board-b' })).toBe(true);
@@ -82,9 +82,8 @@ describe('ChangedSinceLoad', () => {
     expect(state.getCounts()).toEqual({ newCount: 1, updatedCount: 0 });
     expect(state.boards()).toEqual(new Set(['board-y', 'board-z']));
     state.load([], { boardId: 'board-y' }, 'me', Date.parse('2026-01-01T00:03:00Z'));
-    // Old aggregate counts stay visible until the refreshed snapshot has its
-    // own counts-only reconciliation; loading the list cannot acknowledge them.
-    expect(state.getCounts()).toEqual({ newCount: 1, updatedCount: 0 });
+    // This snapshot covers the entire recovered window and acknowledges it.
+    expect(state.getCounts()).toEqual({ newCount: 0, updatedCount: 0 });
     expect(state.boards()).toEqual(new Set(['board-z']));
     state.setFallbackSnapshot({ since: Date.parse('2026-01-01T00:03:00Z'), asOf: Date.parse('2026-01-01T00:04:00Z'), newCount: 0, updatedCount: 0, boards: { 'board-z': 1 } });
     expect(state.getCounts()).toEqual({ newCount: 0, updatedCount: 0 });
@@ -120,4 +119,15 @@ describe('ChangedSinceLoad', () => {
     expect(state.has('same-ticket')).toBe(true);
     expect(state.getCounts()).toEqual({ newCount: 1, updatedCount: 0 });
   });
+  it('restores badges from recovery and clears them after a covering refresh', () => {
+    const state = new ChangedSinceLoad();
+    state.load(['loaded'], {}, 'me', 1000);
+    state.setFallbackSnapshot({ since: 1000, asOf: 2000, newCount: 0, updatedCount: 1,
+      boards: {}, updatedTicketIds: ['loaded'] });
+    expect(state.has('loaded')).toBe(true);
+    state.load(['loaded'], {}, 'me', 3000);
+    expect(state.has('loaded')).toBe(false);
+    expect(state.getCounts()).toEqual({ newCount: 0, updatedCount: 0 });
+  });
+
 });

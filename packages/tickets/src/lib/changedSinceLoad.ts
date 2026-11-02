@@ -15,7 +15,7 @@ export class ChangedSinceLoad {
   private generation = 0;
   private filters: Partial<ITicketListFilters> = {};
   private currentUserId = '';
-  private fallback: { since: number; asOf: number; newCount: number; updatedCount: number; boards: Record<string, number>; boardLatestAt?: Record<string, string> } | null = null;
+  private fallback: { since: number; asOf: number; newCount: number; updatedCount: number; boards: Record<string, number>; boardLatestAt?: Record<string, string>; updatedTicketIds?: string[] } | null = null;
 
   load(ticketIds: Iterable<string>, filters: Partial<ITicketListFilters>, currentUserId: string, loadedAt = Date.now()): ChangeSnapshot {
     const pending = this.entries;
@@ -30,7 +30,8 @@ export class ChangedSinceLoad {
     // aggregate acknowledgment boundary; zeroing here loses changes newer
     // than the refreshed server snapshot.
     this.fallback = pendingFallback
-      ? { ...pendingFallback, boards: { ...pendingFallback.boards }, boardLatestAt: { ...pendingFallback.boardLatestAt } }
+      ? { ...pendingFallback, boards: { ...pendingFallback.boards }, boardLatestAt: { ...pendingFallback.boardLatestAt },
+          ...(pendingFallback.asOf <= loadedAt ? { newCount: 0, updatedCount: 0, updatedTicketIds: [] } : {}) }
       : null;
     // A query acknowledges events through its server-side completion time.
     // Later events survive, but are reclassified against the new page snapshot
@@ -84,7 +85,7 @@ export class ChangedSinceLoad {
   }
 
   clear(): void { this.entries.clear(); this.fallback = null; }
-  setFallbackSnapshot(value: { since: number; asOf: number; newCount: number; updatedCount: number; boards: Record<string, number>; boardLatestAt?: Record<string, string> }, generation = this.snapshot.generation): boolean {
+  setFallbackSnapshot(value: { since: number; asOf: number; newCount: number; updatedCount: number; boards: Record<string, number>; boardLatestAt?: Record<string, string>; updatedTicketIds?: string[] }, generation = this.snapshot.generation): boolean {
     if (generation !== this.snapshot.generation) return false;
     if (this.fallback && value.asOf < this.fallback.asOf) return false;
     const selectedBoards = this.filters.boardIds?.filter(id => id !== 'no-board') ?? (this.filters.boardId ? [this.filters.boardId] : []);
@@ -115,7 +116,7 @@ export class ChangedSinceLoad {
     return { newCount, updatedCount };
   }
   hasFallback(): boolean { return this.fallback !== null; }
-  has(ticketId: string): boolean { return this.entries.has(ticketId); }
+  has(ticketId: string): boolean { return this.entries.has(ticketId) || Boolean(this.fallback?.updatedTicketIds?.includes(ticketId)); }
   boards(): ReadonlySet<string> { return new Set([...this.boardActivity.keys(), ...Object.keys(this.fallback?.boards ?? {})]); }
   getSnapshot(): ChangeSnapshot { return this.snapshot; }
 }

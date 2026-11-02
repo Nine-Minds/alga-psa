@@ -377,6 +377,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const router = useRouter();
   const { t } = useTranslation('features/tickets');
   const changeStateRef = useRef(new ChangedSinceLoad());
+  const boardTrackingSinceRef = useRef(loadedAt);
+  const recoveryRunningRef = useRef(false);
+  const recoveryRequestedRef = useRef(false);
   const recoverChangesRef = useRef<(() => void) | null>(null);
   const [, setChangeRevision] = useState(0);
   useLayoutEffect(() => {
@@ -389,33 +392,45 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       // Counts-only recovery is an absolute snapshot. Reconcile promptly when
       // live delivery resumes so repeated edits to one recovered ticket remain
       // one distinct ticket in the banner.
-      if (changeStateRef.current.hasFallback()) recoverChangesRef.current?.();
+      if (changeStateRef.current.hasFallback() || loadedFilters.searchQuery?.trim()) recoverChangesRef.current?.();
     }
-  }, []);
+  }, [loadedFilters.searchQuery]);
   const recoverTicketChanges = useCallback(async (_outageStartedAt: number) => {
+    if (recoveryRunningRef.current) {
+      recoveryRequestedRef.current = true;
+      return;
+    }
+    recoveryRunningRef.current = true;
     const requestedSnapshot = changeStateRef.current.getSnapshot();
     try {
       const result = await getTicketChangeCounts(
         loadedFilters as ITicketListFilters,
         initialTickets.flatMap(ticket => ticket.ticket_id ? [ticket.ticket_id] : []),
         loadedAt,
+        boardTrackingSinceRef.current,
       );
       if (isActionMessageError(result) || isActionPermissionError(result)) return;
       changeStateRef.current.setFallbackSnapshot({
         since: loadedAt, asOf: result.asOf,
         newCount: result.newCount, updatedCount: result.updatedCount, boards: result.boards,
         boardLatestAt: result.boardLatestAt,
+        updatedTicketIds: initialTickets.flatMap((ticket, index) => result.loadedChanged[index] && ticket.ticket_id ? [ticket.ticket_id] : []),
       }, requestedSnapshot.generation);
       setChangeRevision(value => value + 1);
     } catch (error) {
       console.warn('Ticket change counts recovery failed:', error);
+    } finally {
+      recoveryRunningRef.current = false;
+      if (recoveryRequestedRef.current) {
+        recoveryRequestedRef.current = false;
+        recoverChangesRef.current?.();
+      }
     }
   }, [loadedAt, loadedFilters, initialTickets]);
   recoverChangesRef.current = () => { void recoverTicketChanges(loadedAt); };
   useTicketListChanges(user?.tenant, receiveTicketChange, {
     onUnavailable: recoverTicketChanges,
     onRecovered: recoverTicketChanges,
-    shouldPollFallback: () => changeStateRef.current.hasFallback(),
   });
   useEffect(() => {
     if (changeStateRef.current.hasFallback()) void recoverTicketChanges(loadedAt);
@@ -2476,7 +2491,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       {listCallout}
       <ListCard>
         {(changeCounts.newCount > 0 || changeCounts.updatedCount > 0) && (
-          <button type="button" onClick={() => void refreshChangedTickets()} disabled={isLoadingMore}
+          <button id="refresh-ticket-list-changes" type="button" onClick={() => void refreshChangedTickets()} disabled={isLoadingMore}
             className="mb-3 w-full rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-left text-sm font-medium text-sky-900 hover:bg-sky-100 disabled:opacity-60"
             aria-live="polite">
             {changeCounts.newCount > 0 && changeCounts.updatedCount > 0

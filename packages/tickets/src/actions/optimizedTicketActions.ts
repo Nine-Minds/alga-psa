@@ -2300,11 +2300,14 @@ export const getTicketChangeCounts = withAuth(async (
   filters: ITicketListFilters,
   loadedTicketIds: string[],
   since: number,
-): Promise<{ asOf: number; newCount: number; updatedCount: number; boards: Record<string, number>; boardLatestAt: Record<string, string> } | TicketActionError> => {
+  boardSince: number = since,
+): Promise<{ asOf: number; newCount: number; updatedCount: number; boards: Record<string, number>; boardLatestAt: Record<string, string>; loadedChanged: boolean[] } | TicketActionError> => {
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async trx => {
     try {
       if (!await hasPermission(user, 'ticket', 'read', trx)) throw new Error('Permission denied: Cannot view tickets');
+      if (!Number.isFinite(since) || !Number.isFinite(boardSince)) throw new Error('Invalid ticket change cutoff');
+      const recoverySince = Math.min(since, boardSince);
       const validated = cleanFilterValues(validateData(ticketListFiltersSchema, filters) as ITicketListFilters);
       const { builder: baseQuery, scopedQuery } = await buildTicketListBaseQuery(trx, tenant, user, validated);
       const context = await createTicketAuthorizationContext(trx, tenant, user as IUserWithRoles);
@@ -2318,11 +2321,12 @@ export const getTicketChangeCounts = withAuth(async (
       const loaded = new Set(loadedTicketIds.filter((id: string) => typeof id === 'string'));
       const asOf = Date.now();
       const commentRows = await tenantDb(trx, tenant).table('comments')
-        .where(builder => builder.where(query => query.where('created_at', '>', new Date(since)).andWhere('created_at', '<=', new Date(asOf)))
-          .orWhere(query => query.where('updated_at', '>', new Date(since)).andWhere('updated_at', '<=', new Date(asOf))))
+        .where(builder => builder.where(query => query.where('created_at', '>', new Date(recoverySince)).andWhere('created_at', '<=', new Date(asOf)))
+          .orWhere(query => query.where('updated_at', '>', new Date(recoverySince)).andWhere('updated_at', '<=', new Date(asOf))))
         .select('ticket_id', 'user_id', 'created_at', 'updated_at');
       const commentActors = new Map<string, Array<string | null>>();
       const commentTimes = new Map<string, string>();
+      const commentListActors = new Map<string, Array<string | null>>();
       for (const comment of commentRows as Array<{ ticket_id: string; user_id?: string | null; created_at?: Date | string | null; updated_at?: Date | string | null }>) {
         if (comment.user_id === user.user_id) continue;
         const actors = commentActors.get(comment.ticket_id) ?? [];
@@ -2331,34 +2335,50 @@ export const getTicketChangeCounts = withAuth(async (
         for (const value of [comment.created_at, comment.updated_at]) {
           if (!value) continue;
           const iso = new Date(value).toISOString();
+          if (Date.parse(iso) > since) {
+            const listActors = commentListActors.get(comment.ticket_id) ?? [];
+            listActors.push(comment.user_id ?? null);
+            commentListActors.set(comment.ticket_id, listActors);
+          }
           if (!commentTimes.has(comment.ticket_id) || iso > commentTimes.get(comment.ticket_id)!) commentTimes.set(comment.ticket_id, iso);
         }
       }
       const changedCommentTicketIds = Array.from(commentActors.keys());
       const candidates = await tenantDb(trx, tenant).table('tickets')
-        .where(builder => builder.where(query => query.where('updated_at', '>', new Date(since)).andWhere('updated_at', '<=', new Date(asOf)))
+        .where(builder => builder.where(query => query.where('updated_at', '>', new Date(recoverySince)).andWhere('updated_at', '<=', new Date(asOf)))
           .orWhereIn('ticket_id', changedCommentTicketIds))
         .select('*');
       const readable = await filterAuthorizedTickets(trx, context, candidates);
       const activityCandidates = readable.map((ticket: { ticket_id: string; updated_at?: Date | string | null; updated_by?: string | null; updated_by_user_id?: string | null; board_id?: string | null }) => {
         const id = ticket.ticket_id;
         const activityActors = [...(commentActors.get(id) ?? [])];
+        const listActivityActors = [...(commentListActors.get(id) ?? [])];
         let latestActivityAt = commentTimes.get(id) ?? null;
         const ticketUpdatedAt = ticket.updated_at ? new Date(ticket.updated_at).getTime() : NaN;
-        if (ticketUpdatedAt > since && ticketUpdatedAt <= asOf) {
-          activityActors.push(ticket.updated_by ?? ticket.updated_by_user_id ?? null);
+        if (ticketUpdatedAt > recoverySince && ticketUpdatedAt <= asOf) {
+          const actor = ticket.updated_by ?? ticket.updated_by_user_id ?? null;
+          activityActors.push(actor);
+          if (ticketUpdatedAt > since) listActivityActors.push(actor);
           const iso = new Date(ticketUpdatedAt).toISOString();
           if (!latestActivityAt || iso > latestActivityAt) latestActivityAt = iso;
         }
-        return { ...ticket, activityActors, latestActivityAt };
+        return { ...ticket, activityActors, listActivityActors, latestActivityAt };
       });
+      // Flags refer only to ids supplied in the loaded page. Recovery never
+      // returns new ticket rows or identifiers, but can restore their badges.
+      const changedLoaded = new Set(activityCandidates.filter(ticket =>
+        ticket.latestActivityAt && Date.parse(ticket.latestActivityAt) > since &&
+        ticket.listActivityActors.some(actor => actor !== user.user_id)
+      ).map(ticket => ticket.ticket_id));
       return {
         asOf,
+        loadedChanged: loadedTicketIds.map(id => changedLoaded.has(id)),
         ...countAuthorizedTicketChanges({
           candidates: activityCandidates,
           matchingTicketIds: matching,
           loadedTicketIds: loaded,
           currentUserId: user.user_id,
+          since,
         }),
       };
     } catch (error) {
