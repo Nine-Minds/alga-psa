@@ -11,7 +11,7 @@ const harness = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/projects/lib/projectUtils', () => ({
-  calculateProjectCompletion: (...args: any[]) => harness.calculate(...args),
+  calculateProjectCompletion: (projectId: string) => harness.calculate(projectId),
 }));
 vi.mock('@alga-psa/ui', () => ({ useDrawer: () => ({ openDrawer: harness.openDrawer, closeDrawer: harness.closeDrawer }) }));
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({ isActionMessageError: () => false, isActionPermissionError: () => false }));
