@@ -279,4 +279,65 @@ describe('GET /api/v1/tickets/{id}/project-links', () => {
     expect((await res.json()).data).toEqual([]);
     expect(getTicketProjectLinksMock).toHaveBeenCalledOnce();
   });
+  it.each([
+    ['project_ticket_links.task_id', 'task'],
+    ['values.task_id', 'task'],
+    ['task_id', 'task'],
+    ['project_ticket_links.phase_id', 'phase'],
+    ['values.phase_id', 'phase'],
+    ['phase_id', 'phase'],
+    ['project_ticket_links.project_id', 'project'],
+    ['values.project_id', 'project'],
+    ['project_id', 'project'],
+  ])('joined source foreign key alias %s suppresses its entity representation', async (alias, entity) => {
+    state.links = [linkRow(PROJECT_A, 'private task')];
+    state.hidden = new Set([alias]);
+    const res = await GET(request());
+    expect(res.status).toBe(200);
+    const rows = (await res.json()).data;
+    if (entity === 'project' && alias !== 'project_ticket_links.project_id') {
+      // These aliases suppress the project identifier itself, so the project
+      // gate drops its links before the flattened row is built.
+      expect(rows).toEqual([]);
+      return;
+    }
+    expect(rows).toHaveLength(1);
+    const row = rows[0];
+    if (entity === 'task') {
+      expect(row).toMatchObject({
+        task_id: null,
+        task_name: null,
+        project_status_mapping_id: null,
+        status_name: null,
+        is_closed: null,
+        task_updated_at: null,
+        phase_id: 'phase-1',
+        phase_name: 'Backlog',
+        project_id: PROJECT_A,
+        project_name: 'Project private task',
+        bill_under_project: false,
+      });
+    } else if (entity === 'phase') {
+      expect(row).toMatchObject({
+        phase_id: null,
+        phase_name: null,
+        task_id: 'task-private task',
+        task_name: 'private task',
+        project_id: PROJECT_A,
+        project_name: 'Project private task',
+        bill_under_project: false,
+      });
+    } else {
+      expect(row).toMatchObject({
+        project_id: null,
+        project_name: null,
+        project_number: null,
+        phase_id: 'phase-1',
+        phase_name: 'Backlog',
+        task_id: 'task-private task',
+        task_name: 'private task',
+        bill_under_project: false,
+      });
+    }
+  });
 });

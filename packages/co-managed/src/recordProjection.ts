@@ -480,25 +480,28 @@ export const TICKET_PROJECT_LINK_SOURCE: RedactableRecordSource = {
   fields: {},
   derived: {
     project_id: [{ source: PROJECT_RECORD_SOURCE, field: 'project_id' }],
-    project_name: [{ source: PROJECT_RECORD_SOURCE, field: 'project_name' }],
-    project_number: [{ source: PROJECT_RECORD_SOURCE, field: 'project_number' }],
+    project_name: ['project_id', { source: PROJECT_RECORD_SOURCE, field: 'project_name' }],
+    project_number: ['project_id', { source: PROJECT_RECORD_SOURCE, field: 'project_number' }],
     phase_id: [{ source: PROJECT_PHASE_RECORD_SOURCE, field: 'phase_id' }],
-    phase_name: [{ source: PROJECT_PHASE_RECORD_SOURCE, field: 'phase_name' }],
+    phase_name: ['phase_id', { source: PROJECT_PHASE_RECORD_SOURCE, field: 'phase_name' }],
     task_id: [{ source: PROJECT_TASK_RECORD_SOURCE, field: 'task_id' }],
-    task_name: [{ source: PROJECT_TASK_RECORD_SOURCE, field: 'task_name' }],
+    task_name: ['task_id', { source: PROJECT_TASK_RECORD_SOURCE, field: 'task_name' }],
     project_status_mapping_id: [
+      'task_id',
       { source: PROJECT_TASK_RECORD_SOURCE, field: 'project_status_mapping_id' },
       { source: PROJECT_STATUS_MAPPING_SOURCE, field: 'project_status_mapping_id' },
     ],
     status_name: [
+      'task_id',
       { source: PROJECT_TASK_RECORD_SOURCE, field: 'project_status_mapping_id' },
       { source: PROJECT_STATUS_MAPPING_SOURCE, field: 'status_name' },
     ],
     is_closed: [
+      'task_id',
       { source: PROJECT_TASK_RECORD_SOURCE, field: 'project_status_mapping_id' },
       { source: PROJECT_STATUS_MAPPING_SOURCE, field: 'is_closed' },
     ],
-    task_updated_at: [{ source: PROJECT_TASK_RECORD_SOURCE, field: 'updated_at' }],
+    task_updated_at: ['task_id', { source: PROJECT_TASK_RECORD_SOURCE, field: 'updated_at' }],
   },
 };
 
