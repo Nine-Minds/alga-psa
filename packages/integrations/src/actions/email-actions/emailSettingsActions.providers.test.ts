@@ -170,7 +170,7 @@ describe('email settings provider invariants', () => {
         providerId: 'resend-provider',
         providerType: 'resend',
         isEnabled: true,
-        config: { apiKey: 'stored-api-key', from: 'support@acme.test', __secretFingerprint: connectionFingerprint({ providerId: 'resend-provider' }, 'resend') },
+        config: { apiKey: 'stored-api-key', from: 'support@acme.test', __secretFingerprint: connectionFingerprint({ providerId: 'resend-provider' }, 'resend', 'resend-provider') },
       },
     ]);
     const updateMock = vi.fn(async (_value: Record<string, unknown>) => 1);
@@ -226,7 +226,7 @@ describe('email settings provider invariants', () => {
         isEnabled: false,
         config: expect.objectContaining({
           apiKey: 'stored-api-key',
-          __secretFingerprint: connectionFingerprint(existingSettings.providerConfigs[1].config, 'resend'),
+          __secretFingerprint: connectionFingerprint(existingSettings.providerConfigs[1].config, 'resend', 'resend-provider'),
         }),
       }),
     ]);
@@ -249,6 +249,101 @@ describe('email settings provider invariants', () => {
       expect.objectContaining({ providerType: 'smtp', config: expect.objectContaining({ password: '***' }) }),
       expect.objectContaining({ providerType: 'resend', config: expect.objectContaining({ apiKey: '***' }) }),
     ]) });
+  });
+
+  it('returns legacy Resend api_key masked through the authenticated settings action', async () => {
+    const config = { api_key: 'synthetic-resend-secret', from: 'support@example.test' };
+    const settings = buildSettings('resend', [{ providerId: 'resend-legacy', providerType: 'resend', isEnabled: true, config }]);
+    getTenantEmailSettingsMock.mockResolvedValue(settings);
+
+    const { getEmailSettings } = await import('./emailSettingsActions');
+    const result = await getEmailSettings();
+    const serialized = JSON.stringify(result);
+    expect(result).toMatchObject({ providerConfigs: expect.arrayContaining([
+      expect.objectContaining({ providerType: 'resend', config: expect.objectContaining({ apiKey: '***', from: 'support@example.test' }) }),
+    ]) });
+    expect(serialized).not.toContain('synthetic-resend-secret');
+    expect(serialized).not.toContain('api_key');
+    expect(serialized).not.toContain('__secretFingerprint');
+  });
+
+  it('preserves alias-backed Resend credentials across unchanged-scope masked edits and canonicalizes them', async () => {
+    const original: Record<string, any> = { api_key: 'synthetic-resend-secret', from: 'support@example.test' };
+    original.__secretFingerprint = connectionFingerprint(original, 'resend', 'resend-main');
+    const existing = buildSettings('resend', [{ providerId: 'resend-main', providerType: 'resend', isEnabled: true, config: original }]);
+    const updateMock = vi.fn(async (_value: Record<string, any>) => 1);
+    const query = { where: vi.fn(() => query), whereNotNull: vi.fn(() => query), first: vi.fn(async () => ({ tenant: 'tenant-123' })), select: vi.fn(async () => []), update: updateMock } as any;
+    const knexMock: any = vi.fn(() => query);
+    knexMock.transaction = async (callback: (trx: any) => Promise<unknown>) => callback(knexMock);
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+    getTenantEmailSettingsMock.mockResolvedValue(existing);
+
+    const { updateEmailSettings } = await import('./emailSettingsActions');
+    await updateEmailSettings({ maxDailyEmails: 123, providerConfigs: [{ ...existing.providerConfigs[0], config: { api_key: '***', from: 'support@example.test' } }] });
+    const saved = JSON.parse(String(updateMock.mock.calls[0]?.[0]?.provider_configs))[0].config;
+    expect(saved).toMatchObject({ apiKey: 'synthetic-resend-secret', __secretFingerprint: connectionFingerprint(original, 'resend', 'resend-main') });
+    expect(saved).not.toHaveProperty('api_key');
+  });
+
+  it('accepts alias-backed replacement secrets and writes a canonical fingerprint', async () => {
+    const oldConfig = { api_key: 'old-synthetic-secret', from: 'support@example.test' };
+    const oldStored = { ...oldConfig, __secretFingerprint: connectionFingerprint(oldConfig, 'resend', 'resend-main') };
+    const existing = buildSettings('resend', [{ providerId: 'resend-main', providerType: 'resend', isEnabled: true, config: oldStored }]);
+    const updateMock = vi.fn(async (_value: Record<string, any>) => 1);
+    const query: any = { where: vi.fn(() => query), whereNotNull: vi.fn(() => query), first: vi.fn(async () => ({ tenant: 'tenant-123' })), select: vi.fn(async () => []), update: updateMock };
+    const knexMock: any = vi.fn(() => query);
+    knexMock.transaction = async (callback: (trx: any) => Promise<unknown>) => callback(knexMock);
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+    getTenantEmailSettingsMock.mockResolvedValue(existing);
+    const { updateEmailSettings } = await import('./emailSettingsActions');
+    await updateEmailSettings({ providerConfigs: [{ ...existing.providerConfigs[0], config: { api_key: 'replacement-synthetic-secret', from: 'support@example.test' } }] });
+    const saved = JSON.parse(String(updateMock.mock.calls[0]?.[0]?.provider_configs))[0].config;
+    expect(saved.apiKey).toBe('replacement-synthetic-secret');
+    expect(saved.api_key).toBeUndefined();
+    expect(saved.__secretFingerprint).toBe(connectionFingerprint(saved, 'resend', 'resend-main'));
+  });
+
+  it('requires a real stored Resend secret before honoring an alias mask', async () => {
+    const existing = buildSettings('resend', [{ providerId: 'resend-main', providerType: 'resend', isEnabled: true, config: { from: 'support@example.test' } }]);
+    getTenantEmailSettingsMock.mockResolvedValue(existing);
+    const transactionMock = vi.fn();
+    const knexMock: any = vi.fn();
+    knexMock.transaction = transactionMock;
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+    const { updateEmailSettings } = await import('./emailSettingsActions');
+    const result = await updateEmailSettings({ providerConfigs: [{ ...existing.providerConfigs[0], config: { api_key: '***', from: 'support@example.test' } }] });
+    expect(JSON.stringify(result)).toContain('secretRequiredAfterConnectionChange');
+    expect(transactionMock).not.toHaveBeenCalled();
+    expect(JSON.stringify(existing.providerConfigs)).not.toContain('api_key');
+  });
+
+  it('rejects an alias when a provider-type change would make it unsupported', async () => {
+    const existing = buildSettings('resend', [{ providerId: 'shared-id', providerType: 'resend', isEnabled: true, config: { api_key: 'stored-synthetic-secret' } }]);
+    getTenantEmailSettingsMock.mockResolvedValue(existing);
+    const transactionMock = vi.fn();
+    const knexMock: any = vi.fn();
+    knexMock.transaction = transactionMock;
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+    const { updateEmailSettings } = await import('./emailSettingsActions');
+    const result = await updateEmailSettings({ providerConfigs: [{ providerId: 'shared-id', providerType: 'smtp', isEnabled: true, config: { host: 'smtp.example.test', port: 587, api_key: 'synthetic-resend-secret' } }] });
+    expect(JSON.stringify(result)).toContain('secretRequiredAfterConnectionChange');
+    expect(JSON.stringify(result)).not.toContain('synthetic-resend-secret');
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects conflicting Resend secret spellings without persisting or returning either secret', async () => {
+    const existing = buildSettings('resend', [{ providerId: 'resend-main', providerType: 'resend', isEnabled: true, config: { apiKey: 'stored-synthetic-secret', __secretFingerprint: connectionFingerprint({}, 'resend') } }]);
+    getTenantEmailSettingsMock.mockResolvedValue(existing);
+    const transactionMock = vi.fn();
+    const knexMock: any = vi.fn();
+    knexMock.transaction = transactionMock;
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+    const { updateEmailSettings } = await import('./emailSettingsActions');
+    const result = await updateEmailSettings({ providerConfigs: [{ ...existing.providerConfigs[0], config: { apiKey: 'canonical-synthetic-secret', api_key: 'alias-synthetic-secret' } }] });
+    expect(transactionMock).not.toHaveBeenCalled();
+    expect(JSON.stringify(result)).not.toContain('canonical-synthetic-secret');
+    expect(JSON.stringify(result)).not.toContain('alias-synthetic-secret');
+    expect(JSON.stringify(result)).toContain('secretRequiredAfterConnectionChange');
   });
 
   it('rejects a transport change that would invalidate a saved sender identity', async () => {

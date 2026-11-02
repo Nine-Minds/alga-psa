@@ -19,7 +19,7 @@ import type {
   OutboundEmailDiagnosticsReport,
 } from '@alga-psa/email';
 import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
-import { connectionFingerprint } from '@alga-psa/core/providerConnectionIdentity';
+import { connectionFingerprint, normalizeProviderSecretAliases } from '@alga-psa/core/providerConnectionIdentity';
 import {
   actionError,
   isActionMessageError,
@@ -75,21 +75,28 @@ function mergeProviderSecrets(
   const configs: EmailProviderConfig[] = [];
   for (const config of incoming) {
     const prior = existingById.get(`${config.providerType}:${config.providerId}`);
-    const nextConfig: Record<string, any> = { ...(config.config ?? {}) };
-    const sameIdentity = Boolean(prior && connectionFingerprint(nextConfig, config.providerType) === connectionFingerprint(prior.config ?? {}, prior.providerType));
+    let nextConfig: Record<string, any>;
+    let priorConfig: Record<string, unknown> = {};
+    try {
+      nextConfig = normalizeProviderSecretAliases(config.config ?? {}, config.providerType);
+      priorConfig = normalizeProviderSecretAliases(prior?.config ?? {}, prior?.providerType ?? config.providerType);
+    } catch {
+      return { error: { providerName: config.providerType } };
+    }
+    const sameIdentity = Boolean(prior && connectionFingerprint(nextConfig, config.providerType, config.providerId) === connectionFingerprint(priorConfig, prior.providerType, prior.providerId));
 
     for (const field of SECRET_FIELDS) {
       if (nextConfig[field] !== SECRET_MASK) continue;
-      const priorValue = prior?.config?.[field];
-      const priorFingerprint = prior?.config?.__secretFingerprint;
-      if (!priorValue || !sameIdentity || priorFingerprint !== connectionFingerprint(prior?.config ?? {}, prior?.providerType)) {
+      const priorValue = priorConfig[field];
+      const priorFingerprint = priorConfig[SECRET_FINGERPRINT];
+      if (!priorValue || !sameIdentity || priorFingerprint !== connectionFingerprint(priorConfig, prior?.providerType, prior?.providerId)) {
         return { error: { providerName: config.providerType } };
       }
       nextConfig[field] = priorValue;
     }
 
     const hasSecret = SECRET_FIELDS.some(field => Boolean(nextConfig[field]));
-    if (hasSecret) nextConfig[SECRET_FINGERPRINT] = connectionFingerprint(nextConfig, config.providerType);
+    if (hasSecret) nextConfig[SECRET_FINGERPRINT] = connectionFingerprint(nextConfig, config.providerType, config.providerId);
     else delete nextConfig[SECRET_FINGERPRINT];
     configs.push({ ...config, config: nextConfig });
   }
@@ -97,7 +104,7 @@ function mergeProviderSecrets(
 }
 
 function sanitizeProviderConfig(config: EmailProviderConfig): EmailProviderConfig {
-  const safeConfig = { ...config.config };
+  const safeConfig = normalizeProviderSecretAliases(config.config ?? {}, config.providerType);
   delete safeConfig[SECRET_FINGERPRINT];
   safeConfig.password = safeConfig.password ? SECRET_MASK : '';
   safeConfig.apiKey = safeConfig.apiKey ? SECRET_MASK : '';

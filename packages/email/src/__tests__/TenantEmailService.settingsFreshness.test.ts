@@ -394,7 +394,7 @@ describe('TenantEmailService settings freshness', () => {
     runtime.settingsRow = buildSettingsRow({ password: 'key', from: 'support@removed.example', fromName: 'Support' });
     runtime.settingsRow.email_provider = 'resend';
     runtime.settingsRow.provider_configs[0].providerType = 'resend';
-    runtime.settingsRow.provider_configs[0].config.__secretFingerprint = connectionFingerprint(runtime.settingsRow.provider_configs[0].config, 'resend');
+    runtime.settingsRow.provider_configs[0].config.__secretFingerprint = connectionFingerprint(runtime.settingsRow.provider_configs[0].config, 'resend', runtime.settingsRow.provider_configs[0].providerId);
 
     const service = TenantEmailService.getInstance('tenant-settings-freshness');
     await expect(service.sendEmail({
@@ -439,6 +439,31 @@ describe('TenantEmailService settings freshness', () => {
     expect(runtime.fallbackCreated).toBe(0);
     expect(runtime.fallbackSent).toBe(0);
     expect(runtime.smtpTransports).toBe(0);
+  });
+
+  it.each(['send', 'testConnection'] as const)('rejects a database-mutated alias-backed Resend provider id before %s initializes a transport', async (operation) => {
+    runtime.enterprise = true;
+    runtime.settingsRow = buildSettingsRow({ password: 'temporary', from: 'alerts@example.test', fromName: 'Alerts' });
+    runtime.settingsRow.email_provider = 'resend';
+    const provider = runtime.settingsRow.provider_configs[0];
+    provider.providerType = 'resend';
+    delete provider.config.password;
+    provider.config.api_key = 'synthetic-resend-secret';
+    provider.config.__secretFingerprint = connectionFingerprint(provider.config, 'resend', provider.providerId);
+    provider.providerId = 'reused-resend-provider-id';
+
+    const result = operation === 'send'
+      ? await TenantEmailService.getInstance('tenant-settings-freshness').sendEmail({
+          mailClass: 'general', tenantId: 'tenant-settings-freshness', to: 'client@example.test',
+          subject: 'Status update', html: '<p>Status update</p>',
+        })
+      : await TenantEmailService.testConnection('tenant-settings-freshness');
+
+    expect(result).toMatchObject({ success: false, error: expect.stringContaining('Credentials no longer match this server') });
+    expect(runtime.smtpTransports).toBe(0);
+    expect(runtime.fallbackCreated).toBe(0);
+    expect(runtime.fallbackSent).toBe(0);
+    expect(runtime.sent).toHaveLength(0);
   });
 
   it('does not fall back after an already initialized service observes a persisted host mutation', async () => {
