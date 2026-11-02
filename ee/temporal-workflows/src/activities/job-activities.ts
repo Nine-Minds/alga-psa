@@ -34,6 +34,7 @@ const HUDU_AUTO_SYNC_JOB = 'hudu-auto-sync';
 const MIGRATION_APPLY_JOB = 'migration_apply';
 const PUBLISH_SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
 const RECOVER_COMMENT_PUBLICATIONS_JOB = 'recover-comment-publications';
+const FINALIZE_LINK_ACCEPTED_QUOTE_JOB = 'finalize-link-accepted-quote';
 const SYSTEM_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 // Configure logger
@@ -211,6 +212,13 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
     RECOVER_COMMENT_PUBLICATIONS_JOB,
     forwardJobToServer(RECOVER_COMMENT_PUBLICATIONS_JOB, { strict: true }),
   );
+  // Quote acceptance finalization uses server-only billing and storage services.
+  // Keep the acceptance decision committed independently, then let the server
+  // generate the signed PDF and send its confirmation through this retryable job.
+  registerJobHandlerForActivities(
+    FINALIZE_LINK_ACCEPTED_QUOTE_JOB,
+    forwardJobToServer(FINALIZE_LINK_ACCEPTED_QUOTE_JOB, { strict: true }),
+  );
 
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these
   // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /
@@ -334,6 +342,12 @@ export async function executeJobHandler(input: {
       error: errorMessage,
       stack: error instanceof Error ? error.stack : undefined,
     });
+    // Quote finalization must use Temporal's activity retry policy when the
+    // server-side execution handoff fails. Returning success:false would fail
+    // the workflow without retrying this activity.
+    if (jobName === FINALIZE_LINK_ACCEPTED_QUOTE_JOB) {
+      throw error;
+    }
     return { success: false, error: errorMessage };
   }
 }
