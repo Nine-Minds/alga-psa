@@ -2,6 +2,18 @@
 
 Notable, externally visible changes to the Alga PSA REST API, newest first.
 
+## 2026-11-02 — Tag assignment response fields corrected
+
+**Affected endpoints:** `GET /api/v1/tags/{id}`, `GET /api/v1/tags/entity/{entityType}/{entityId}`, `POST /api/v1/tags/entity/{entityType}/{entityId}`, and `PUT /api/v1/tags/entity/{entityType}/{entityId}`
+
+Tag assignment responses no longer include `board_id` or `created_by`. Those values are not required to identify or display an assignment. This removes both fields from the public assignment response and removes their use in REST assignment read-back; the reduced-schema test specifically verifies behavior when `tag_definitions.board_id` is absent. `created_by` remains used by the mapping write and UI authorization paths. Assignment responses continue to include `tag_id`, `tag_text`, `tagged_id`, `tagged_type`, `background_color`, `text_color`, `tenant`, and `created_at` when available.
+
+**Compatibility and versioning decision:** This removes response fields and is a breaking change for clients that consume either field. The endpoint path remains under `/api/v1`; this correction ships with the `1.7.0` server release (version bump from `1.6.17`). Integrations must stop depending on `board_id` and `created_by` in assignment responses. The OpenAPI contract now describes the narrowed assignment shape.
+
+The implementation also uses the same schema-safe assignment projection for entity GET, GET-by-ID, POST read-back, and PUT replacement. PUT replacement remains atomic on insertion or read-back failure.
+
+This verifies tolerance of the exercised reduced schema. It does not identify the original undefined column reported by YourColo or establish that the customer incident is resolved; deployment evidence is still required.
+
 ## 2026-10-27 — Asset maintenance schedule request contract corrected
 
 **Affected endpoints:** `POST /api/v1/assets/{id}/maintenance`, `PUT /api/v1/assets/maintenance/{scheduleId}`

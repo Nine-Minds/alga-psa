@@ -53,6 +53,7 @@ import {
   PUT as replaceTicketTags,
 } from '../../../app/api/v1/tags/entity/[entityType]/[entityId]/route';
 import { POST as bulkTagEntities } from '../../../app/api/v1/tags/bulk/tag/route';
+import { GET as readTagById } from '../../../app/api/v1/tags/[id]/route';
 import { TagService } from '@/lib/api/services/TagService';
 
 let db: Knex;
@@ -120,6 +121,13 @@ function routeRequest(method: string, ticketId: string, body?: unknown): NextReq
     method,
     headers: { 'x-api-key': apiKey, 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+function tagIdRequest(method: string, tagId: string): NextRequest {
+  return new NextRequest(`http://localhost/api/v1/tags/${tagId}`, {
+    method,
+    headers: { 'x-api-key': apiKey },
   });
 }
 
@@ -227,6 +235,21 @@ describe('REST tag entity route against the migrated database schema', () => {
         });
         expect(postedTags[0]).not.toHaveProperty('board_id');
 
+        const tagById = await readTagById(tagIdRequest('GET', postedTags[0].tag_id));
+        expect(tagById.status).toBe(200);
+        const tagByIdBody = await tagById.json();
+        expect(tagByIdBody.data).toMatchObject({
+          tag_id: postedTags[0].tag_id,
+          tag_text: 'compat-post',
+          tagged_id: ticketId,
+          tagged_type: 'ticket',
+          tenant,
+          background_color: postedTags[0].background_color,
+          text_color: postedTags[0].text_color,
+        });
+        expect(tagByIdBody.data).not.toHaveProperty('created_by');
+        expect(tagByIdBody.data).not.toHaveProperty('board_id');
+
         const fetched = await readTicketTags(routeRequest('GET', ticketId));
         const fetchedTags = (await fetched.json()).data.tags;
         expect(fetchedTags).toHaveLength(1);
@@ -267,6 +290,43 @@ describe('REST tag entity route against the migrated database schema', () => {
       } finally {
         getKnexSpy.mockRestore();
         connection.db = parentConnection;
+      }
+    });
+  });
+
+  it('batch reads REST assignments once per distinct entity under the reduced schema', async () => {
+    const tagService = service();
+    const context: ServiceContext = { tenant, userId };
+    const secondClientId = await createClient(trx, tenant, `Tag batch client ${userId}`);
+    const status = await trx('statuses').where({ tenant }).first<{ status_id: string }>('status_id');
+    if (!status) throw new Error('The migrated tag route test database requires a status fixture');
+    const secondTicket = await createTestTicket(trx, tenant, {
+      client_id: secondClientId,
+      status_id: status.status_id,
+      board_id: ticketBoardId,
+      entered_by: userId,
+      assigned_to: userId,
+    });
+
+    await withRolledBackSchemaContract(trx, async (contractTrx) => {
+      const getKnexSpy = vi.spyOn(tagService as unknown as KnexProvidingService, 'getKnex')
+        .mockResolvedValue({ knex: contractTrx, tenant });
+      try {
+        await contractTrx.schema.alterTable('tag_definitions', (table) => table.dropColumn('board_id'));
+        await tagService.tagEntity(ticketId, 'ticket', ['batch-first'], {}, context);
+        await tagService.tagEntity(secondTicket.ticket_id, 'ticket', ['batch-second'], {}, context);
+
+        const assignments = await tagService.getTagsByEntities(
+          [ticketId, secondTicket.ticket_id, ticketId], 'ticket', context,
+        );
+        expect(assignments).toHaveLength(2);
+        expect(assignments.map((tag) => tag.tagged_id).sort()).toEqual([ticketId, secondTicket.ticket_id].sort());
+        expect(assignments.map((tag) => tag.tag_text).sort()).toEqual(['batch-first', 'batch-second']);
+        expect(assignments.every((tag) => tag.tenant === tenant && tag.background_color && tag.text_color)).toBe(true);
+
+        await expect(tagService.getTagsByEntities([], 'ticket', context)).resolves.toEqual([]);
+      } finally {
+        getKnexSpy.mockRestore();
       }
     });
   });

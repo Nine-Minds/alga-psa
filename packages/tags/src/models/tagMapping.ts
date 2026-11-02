@@ -69,6 +69,16 @@ const mappingsWithDefinitionsForRestQuery = (
   .where('tm.tagged_id', taggedId)
   .where('tm.tagged_type', taggedType));
 
+const mappingsWithDefinitionsForRestBatchQuery = (
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  taggedIds: string[],
+  taggedType: TaggedEntityType,
+) => selectRestMappingWithDefinition(aliasedTagMappingsQuery(knexOrTrx, tenant)
+  .modify((query) => joinTagDefinitions(query, knexOrTrx, tenant))
+  .whereIn('tm.tagged_id', taggedIds)
+  .where('tm.tagged_type', taggedType));
+
 const TagMapping = {
   getByMappingId: async (
     knexOrTrx: Knex | Knex.Transaction,
@@ -85,6 +95,17 @@ const TagMapping = {
   ): Promise<ITagWithDefinition[]> =>
     await mappingsWithDefinitionsForRestQuery(knexOrTrx, tenant, taggedId, taggedType)
       .orderBy('td.tag_text', 'asc') as ITagWithDefinition[],
+
+  getByEntitiesForRest: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    taggedIds: string[],
+    taggedType: TaggedEntityType,
+  ): Promise<ITagWithDefinition[]> => {
+    if (taggedIds.length === 0) return [];
+    return await mappingsWithDefinitionsForRestBatchQuery(knexOrTrx, tenant, taggedIds, taggedType)
+      .orderBy('td.tag_text', 'asc') as ITagWithDefinition[];
+  },
 
   getByEntity: async (
     knexOrTrx: Knex | Knex.Transaction,

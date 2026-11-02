@@ -286,6 +286,58 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const TagAssignment = registry.registerSchema(
+    'WorkV1TagAssignment',
+    zOpenApi.object({
+      tag_id: zOpenApi.string().guid(),
+      tag_text: zOpenApi.string(),
+      tagged_id: zOpenApi.string().guid(),
+      tagged_type: zOpenApi.enum(['contact', 'client', 'ticket', 'project', 'project_task', 'workflow_form', 'opportunity']),
+      background_color: zOpenApi.string().nullable(),
+      text_color: zOpenApi.string().nullable(),
+      tenant: zOpenApi.string().guid(),
+      created_at: zOpenApi.string().datetime().optional(),
+      updated_at: zOpenApi.string().datetime().optional(),
+    }).describe('REST tag assignment fields. board_id and created_by are not part of this response contract.'),
+  );
+  const TagByIdResponse = registry.registerSchema(
+    'WorkV1TagByIdResponse',
+    zOpenApi.object({ data: TagAssignment }),
+  );
+  const EntityTagsResponse = registry.registerSchema(
+    'WorkV1EntityTagsResponse',
+    zOpenApi.object({
+      data: zOpenApi.object({
+        entity_id: zOpenApi.string().guid(),
+        entity_type: zOpenApi.enum(['contact', 'client', 'ticket', 'project', 'project_task', 'workflow_form', 'opportunity']),
+        tags: zOpenApi.array(TagAssignment),
+        total_tags: zOpenApi.number().int(),
+      }),
+    }),
+  );
+  const EntityTagsCreatedResponse = registry.registerSchema(
+    'WorkV1EntityTagsCreatedResponse',
+    zOpenApi.object({
+      data: zOpenApi.object({
+        entity_id: zOpenApi.string().guid(),
+        entity_type: zOpenApi.enum(['contact', 'client', 'ticket', 'project', 'project_task', 'workflow_form', 'opportunity']),
+        tags: zOpenApi.array(TagAssignment),
+        created_count: zOpenApi.number().int(),
+      }),
+    }),
+  );
+  const EntityTagsReplacedResponse = registry.registerSchema(
+    'WorkV1EntityTagsReplacedResponse',
+    zOpenApi.object({
+      data: zOpenApi.object({
+        entity_id: zOpenApi.string().guid(),
+        entity_type: zOpenApi.enum(['contact', 'client', 'ticket', 'project', 'project_task', 'workflow_form', 'opportunity']),
+        tags: zOpenApi.array(TagAssignment),
+        replaced_count: zOpenApi.number().int(),
+      }),
+    }),
+  );
+
   // Registered from the real validator schemas so the docs cannot drift from them.
   const CreateTimeEntryBody = registry.registerSchema('WorkV1CreateTimeEntryBody', createTimeEntrySchema);
   const UpdateTimeEntryBody = registry.registerSchema('WorkV1UpdateTimeEntryBody', updateTimeEntrySchema);
@@ -698,6 +750,18 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
         description: 'Conflict: the period overlaps an existing period, is closed (reopen it first), or has time sheets that block the change.',
         schema: ApiError,
       };
+    }
+
+    if (def.method === 'get' && def.path === '/api/v1/tags/{id}') {
+      responses[200] = { description: 'Tag assignment. The response omits board_id and created_by.', schema: TagByIdResponse };
+    } else if (def.path === '/api/v1/tags/entity/{entityType}/{entityId}') {
+      if (def.method === 'get') {
+        responses[200] = { description: 'Tag assignments for the entity; assignment objects omit board_id and created_by.', schema: EntityTagsResponse };
+      } else if (def.method === 'post') {
+        responses[201] = { description: 'Created tag assignments; assignment objects omit board_id and created_by.', schema: EntityTagsCreatedResponse };
+      } else if (def.method === 'put') {
+        responses[200] = { description: 'Replacement tag assignments; assignment objects omit board_id and created_by.', schema: EntityTagsReplacedResponse };
+      }
     }
 
     if (def.path.includes('/{id}') || def.path.includes('/{taskId}') || def.path.includes('/{sessionId}') || def.path.includes('/{entityId}')) {

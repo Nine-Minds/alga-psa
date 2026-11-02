@@ -17226,6 +17226,157 @@ components:
           type: string
       required:
         - tag_text
+    WorkV1TagAssignment:
+      type: object
+      properties:
+        tag_id:
+          type: string
+          format: uuid
+        tag_text:
+          type: string
+        tagged_id:
+          type: string
+          format: uuid
+        tagged_type:
+          type: string
+          enum:
+            - contact
+            - client
+            - ticket
+            - project
+            - project_task
+            - workflow_form
+            - opportunity
+        background_color:
+          type:
+            - string
+            - "null"
+        text_color:
+          type:
+            - string
+            - "null"
+        tenant:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - tag_id
+        - tag_text
+        - tagged_id
+        - tagged_type
+        - background_color
+        - text_color
+        - tenant
+      description: REST tag assignment fields. board_id and created_by are not part of
+        this response contract.
+    WorkV1TagByIdResponse:
+      type: object
+      properties:
+        data:
+          $ref: "#/components/schemas/WorkV1TagAssignment"
+      required:
+        - data
+    WorkV1EntityTagsResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            entity_id:
+              type: string
+              format: uuid
+            entity_type:
+              type: string
+              enum:
+                - contact
+                - client
+                - ticket
+                - project
+                - project_task
+                - workflow_form
+                - opportunity
+            tags:
+              type: array
+              items:
+                $ref: "#/components/schemas/WorkV1TagAssignment"
+            total_tags:
+              type: integer
+          required:
+            - entity_id
+            - entity_type
+            - tags
+            - total_tags
+      required:
+        - data
+    WorkV1EntityTagsCreatedResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            entity_id:
+              type: string
+              format: uuid
+            entity_type:
+              type: string
+              enum:
+                - contact
+                - client
+                - ticket
+                - project
+                - project_task
+                - workflow_form
+                - opportunity
+            tags:
+              type: array
+              items:
+                $ref: "#/components/schemas/WorkV1TagAssignment"
+            created_count:
+              type: integer
+          required:
+            - entity_id
+            - entity_type
+            - tags
+            - created_count
+      required:
+        - data
+    WorkV1EntityTagsReplacedResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            entity_id:
+              type: string
+              format: uuid
+            entity_type:
+              type: string
+              enum:
+                - contact
+                - client
+                - ticket
+                - project
+                - project_task
+                - workflow_form
+                - opportunity
+            tags:
+              type: array
+              items:
+                $ref: "#/components/schemas/WorkV1TagAssignment"
+            replaced_count:
+              type: integer
+          required:
+            - entity_id
+            - entity_type
+            - tags
+            - replaced_count
+      required:
+        - data
     WorkV1CreateTimeEntryBody:
       type: object
       properties:
@@ -64992,11 +65143,12 @@ paths:
           in: path
       responses:
         "200":
-          description: Operation succeeded.
+          description: Tag assignments for the entity; assignment objects omit board_id
+            and created_by.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkV1ApiSuccess"
+                $ref: "#/components/schemas/WorkV1EntityTagsResponse"
         "400":
           description: Validation or request parsing failure.
           content:
@@ -65072,11 +65224,87 @@ paths:
               schema:
                 $ref: "#/components/schemas/WorkV1ApiSuccess"
         "201":
-          description: Create-like operation succeeded.
+          description: Created tag assignments; assignment objects omit board_id and
+            created_by.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkV1ApiSuccess"
+                $ref: "#/components/schemas/WorkV1EntityTagsCreatedResponse"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid or associated user missing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for tag resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Target resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    put:
+      summary: Replace entity tags
+      description: Replaces the tag set attached to an entity.
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-auth-mechanism: x-api-key validated in ApiBaseController.authenticate() or
+          controller-specific equivalent
+        x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
+        x-rbac-resource: tag
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            description: Tagged entity type from route segment.
+          required: true
+          description: Tagged entity type from route segment.
+          name: entityType
+          in: path
+        - schema:
+            type: string
+            description: Tagged entity id from route segment.
+          required: true
+          description: Tagged entity id from route segment.
+          name: entityId
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1GenericBody"
+      responses:
+        "200":
+          description: Replacement tag assignments; assignment objects omit board_id and
+            created_by.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1EntityTagsReplacedResponse"
         "400":
           description: Validation or request parsing failure.
           content:
@@ -65293,11 +65521,11 @@ paths:
           in: path
       responses:
         "200":
-          description: Operation succeeded.
+          description: Tag assignment. The response omits board_id and created_by.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkV1ApiSuccess"
+                $ref: "#/components/schemas/WorkV1TagByIdResponse"
         "400":
           description: Validation or request parsing failure.
           content:

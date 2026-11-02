@@ -155,7 +155,7 @@ export class TagService extends BaseService {
   /**
    * Get tag by ID
    */
-  async getTagById(id: string, context: ServiceContext): Promise<TagResponse | null> {
+  override async getById(id: string, context: ServiceContext): Promise<TagResponse | null> {
     const { knex, tenant } = await this.getKnex();
 
     const mapping = await TagMapping.getByMappingId(knex, tenant, id);
@@ -364,9 +364,8 @@ export class TagService extends BaseService {
     context: ServiceContext
   ): Promise<TagResponse[]> {
     const { knex, tenant } = await this.getKnex();
-    const tagsWithDefinitions = await Promise.all(entityIds.map((entityId) =>
-      TagMapping.getByEntityForRest(knex, tenant, entityId, entityType)));
-    return tagsWithDefinitions.flat().map(tag => ({
+    const tagsWithDefinitions = await TagMapping.getByEntitiesForRest(knex, tenant, entityIds, entityType);
+    return tagsWithDefinitions.map(tag => ({
       tag_id: tag.mapping_id,
       tenant,
       tag_text: tag.tag_text,
