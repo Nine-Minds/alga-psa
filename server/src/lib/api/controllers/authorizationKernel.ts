@@ -5,6 +5,7 @@ import {
   PROJECT_RECORD_SOURCE,
   QUOTE_RECORD_SOURCE,
   TICKET_RECORD_SOURCE,
+  composeRecordProjectionPolicies,
   createRecordProjectionPolicy,
   type RecordProjectionPolicy,
   type RedactableRecordSource,
@@ -193,8 +194,37 @@ export function reprojectUnderDecision<R extends Record<string, any>>(
   record: R | readonly R[],
   source: RedactableRecordSource,
 ): AuthorizedProjection<R> | AuthorizedProjection<R>[] | null {
-  const policy: RecordProjectionPolicy | undefined = (projection as any)[projectionPolicy];
-  if (!policy) throw new Error('reprojectUnderDecision requires an authorized projection with its original policy');
+  if (Array.isArray(record)) {
+    return reprojectUnderDecisions([projection], record as R[], source);
+  }
+  return reprojectUnderDecisions([projection], record as R, source);
+}
+
+/** Reproject copied data under every retained authorization decision that governs it. */
+export function reprojectUnderDecisions<R extends Record<string, any>>(
+  projections: readonly AuthorizedProjection<any>[],
+  records: readonly R[],
+  source: RedactableRecordSource,
+): AuthorizedProjection<R>[];
+export function reprojectUnderDecisions<R extends Record<string, any>>(
+  projections: readonly AuthorizedProjection<any>[],
+  record: R,
+  source: RedactableRecordSource,
+): AuthorizedProjection<R> | null;
+export function reprojectUnderDecisions<R extends Record<string, any>>(
+  projections: readonly AuthorizedProjection<any>[],
+  record: R | readonly R[],
+  source: RedactableRecordSource,
+): AuthorizedProjection<R> | AuthorizedProjection<R>[] | null {
+  if (projections.length === 0) {
+    throw new Error('reprojectUnderDecisions requires at least one authorized projection');
+  }
+  const policies = projections.map((projection) => {
+    const policy: RecordProjectionPolicy | undefined = (projection as any)[projectionPolicy];
+    if (!policy) throw new Error('reprojection requires an authorized projection with its original policy for each input');
+    return policy;
+  });
+  const policy = composeRecordProjectionPolicies(policies);
   const project = (row: R): AuthorizedProjection<R> | null => {
     const projected = policy.project(row, source);
     return projected === null ? null : markProjection<R>(projected, policy);

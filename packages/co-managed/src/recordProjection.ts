@@ -239,6 +239,27 @@ export interface RecordProjectionPolicy {
   readable(field: string, source: RedactableRecordSource): boolean;
 }
 
+/** Compose retained source-aware decisions so every policy must allow each serialized field. */
+export function composeRecordProjectionPolicies(
+  policies: readonly RecordProjectionPolicy[],
+): RecordProjectionPolicy {
+  if (policies.length === 0) {
+    throw new Error('composeRecordProjectionPolicies requires at least one policy');
+  }
+
+  return {
+    project<T extends Record<string, any>>(record: T, source: RedactableRecordSource): Partial<T> | null {
+      let projected: Partial<T> | null = record;
+      for (const policy of policies) {
+        if (projected === null) return null;
+        projected = policy.project(projected as T, source);
+      }
+      return projected;
+    },
+    readable: (field, source) => policies.every(policy => policy.readable(field, source)),
+  };
+}
+
 function collectSourceRedactions(redactions: readonly string[], origin: RedactableRecordSource) {
   // Keep child suppression attached to its descriptor. Relationships and their parent both use `assets`,
   // so flattening a whole-child redaction into a table-wide rule would also suppress the parent.

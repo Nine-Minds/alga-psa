@@ -32,7 +32,7 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
-import { projectApiResourceRead, projectApiResourceReads, reprojectUnderDecision, type AuthorizedProjection } from './authorizationKernel';
+import { projectApiResourceRead, projectApiResourceReads, reprojectUnderDecision, reprojectUnderDecisions, type AuthorizedProjection } from './authorizationKernel';
 import {
   PROJECT_PHASE_RECORD_SOURCE,
   PROJECT_RECORD_SOURCE,
@@ -897,7 +897,7 @@ export class ApiProjectController extends ApiBaseController {
 
             // This row flattens link, project, phase, task and status fields.
             // Pick the response contract explicitly, then apply the retained
-            // project decision through each source descriptor before serialization.
+            // ticket and project decisions through each source descriptor before serialization.
             const response = {
               link_id: link.link_id,
               project_id: link.project_id,
@@ -914,7 +914,7 @@ export class ApiProjectController extends ApiBaseController {
               bill_under_project: link.bill_under_project,
               created_at: link.created_at,
             };
-            const projection = reprojectUnderDecision(project, response, TICKET_PROJECT_LINK_SOURCE);
+            const projection = reprojectUnderDecisions([ticketProjection, project], response, TICKET_PROJECT_LINK_SOURCE);
             return projection ? [projection] : [];
           });
           return createSuccessResponse(data, 200, undefined, apiRequest);
