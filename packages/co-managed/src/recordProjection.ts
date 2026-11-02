@@ -280,7 +280,7 @@ export const ASSET_RELATIONSHIP_SOURCE: RedactableRecordSource = {
   resource: ['assets'],
   identifier: ids('related_asset_id', 'asset_id', 'assets.asset_id'),
   fields: {
-    related_asset_name: ids('name', 'assets.name'),
+    related_asset_name: recordFieldAliases(ASSET_ROW_SOURCE, 'name'),
   },
   derived: {},
 };

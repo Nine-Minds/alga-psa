@@ -36,6 +36,7 @@ import { buildTicketRecordContext } from './recordContexts';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import { compileTenantScopedResourceReadAuthorizationSql, resolveDefaultBuiltinRelationshipRules } from '@alga-psa/authorization/kernel';
+import { resolveAssetAuthorizationRecords } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createTicketRelationshipSqlAdapter } from '@alga-psa/tickets/lib/ticketAuthorizationSql';
 import { type TenantScopedQuery, tenantDb } from '@alga-psa/db';
@@ -1013,8 +1014,18 @@ export class ApiTicketController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read asset');
           }
           const assets = await this.ticketService.getTicketAssets(ticketId, apiRequest.context!);
+          const recordContexts = await resolveAssetAuthorizationRecords(knex, apiRequest.context!.tenant, assets as any);
+          const projections = await projectApiResourceReads({
+            knex,
+            tenant: apiRequest.context!.tenant,
+            user: apiRequest.context!.user,
+            apiKeyId: apiRequest.context!.apiKeyId,
+            kind: 'asset',
+            records: assets,
+            recordContextForRecord: (asset) => recordContexts.get(asset.asset_id),
+          });
 
-          return createSuccessResponse(assets, 200, undefined, apiRequest);
+          return createSuccessResponse(projections, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1896,7 +1907,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const gate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
@@ -1907,7 +1918,11 @@ export class ApiTicketController extends ApiBaseController {
             throw new NotFoundError('Ticket not found');
           }
 
-          return createSuccessResponse(updated);
+          const projection = reprojectUnderDecision(gate, updated, TICKET_RECORD_SOURCE);
+          if (!projection) {
+            throw new NotFoundError('Ticket not found');
+          }
+          return createSuccessResponse(projection);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1983,7 +1998,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const gate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
@@ -1994,7 +2009,11 @@ export class ApiTicketController extends ApiBaseController {
             throw new NotFoundError('Ticket not found');
           }
 
-          return createSuccessResponse(updated);
+          const projection = reprojectUnderDecision(gate, updated, TICKET_RECORD_SOURCE);
+          if (!projection) {
+            throw new NotFoundError('Ticket not found');
+          }
+          return createSuccessResponse(projection);
         });
       } catch (error) {
         return handleApiError(error);

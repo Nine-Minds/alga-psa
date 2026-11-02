@@ -229,10 +229,17 @@ export async function projectApiResourceRead<T extends Record<string, any>>(
 
 /** Batch form for list paths: projects every row, dropping denied/suppressed ones (order preserved). */
 export async function projectApiResourceReads<T extends Record<string, any>>(
-  input: Omit<ApiResourceReadInput<T>, 'record' | 'recordContext'> & { records: T[] }
+  input: Omit<ApiResourceReadInput<T>, 'record' | 'recordContext'> & {
+    records: T[];
+    recordContextForRecord?: (record: T) => AuthorizationRecord | null | undefined;
+  }
 ): Promise<AuthorizedProjection<T>[]> {
-  const { records, ...rest } = input;
-  const projected = await Promise.all(records.map((record) => projectApiResourceRead<T>({ ...rest, record })));
+  const { records, recordContextForRecord, ...rest } = input;
+  const projected = await Promise.all(records.map((record) => {
+    const recordContext = recordContextForRecord?.(record);
+    if (recordContextForRecord && !recordContext) return null;
+    return projectApiResourceRead<T>({ ...rest, record, ...(recordContext ? { recordContext } : {}) });
+  }));
   const rows: AuthorizedProjection<T>[] = [];
   for (const row of projected) {
     if (row !== null) rows.push(row);
