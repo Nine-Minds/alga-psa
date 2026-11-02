@@ -16,7 +16,8 @@ import { tenantDb } from '@alga-psa/db';
 import { createStripeClient } from '../payments/stripeClient';
 import { STRIPE_WEBHOOK_EVENTS, reconcileStripeWebhookEvents } from '../payments/stripeWebhookEvents';
 import * as fs from 'fs';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
+import { mergeStripeConfiguration, stripeTenantSecretName } from '../payments/stripeTenantConfig';
 import {
   IPaymentProviderConfig,
   PaymentSettings,
@@ -337,6 +338,7 @@ export const connectStripeAction = withAuth(async (
     }
 
     // Create or update provider config
+    const credentialSecretName = `stripe_payment_secret_key_${randomUUID()}`;
     const configData = {
       is_enabled: true,
       is_default: true,
@@ -345,8 +347,9 @@ export const connectStripeAction = withAuth(async (
         webhook_endpoint_id: webhookEndpointId,
         stripe_account_id: verifiedAccountId,
         stripe_credential_fingerprint: createHash('sha256').update(credentials.secretKey).digest('hex'),
+        stripe_secret_key_name: credentialSecretName,
       },
-      credentials_vault_path: `tenant/${tenant}/stripe_payment_secret_key`,
+      credentials_vault_path: `tenant/${tenant}/${credentialSecretName}`,
       webhook_secret_vault_path: webhookSecret
         ? `tenant/${tenant}/stripe_payment_webhook_secret`
         : (existingConfig?.webhook_secret_vault_path || null),
@@ -355,30 +358,35 @@ export const connectStripeAction = withAuth(async (
       updated_at: knex.fn.now(),
     };
 
-    await knex.transaction(async (trx) => {
-      const db = tenantDb(trx, tenant);
-      const current = await db.table<IPaymentProviderConfig>('payment_provider_configs')
-        .where({ tenant, provider_type: 'stripe' }).forUpdate().first();
-      const currentAccountId = current?.configuration?.stripe_account_id as string | undefined;
-      if (currentAccountId && currentAccountId !== verifiedAccountId) {
-        throw new Error('Stripe credentials belong to a different account than the tenant’s existing binding');
-      }
-      if (current) {
-        await db.table('payment_provider_configs').where({ config_id: current.config_id }).update({
-          ...configData,
-          settings: mergePaymentSettings(current.settings),
-          configuration: { ...current.configuration, ...configData.configuration },
-          webhook_secret_vault_path: webhookSecret
-            ? `tenant/${tenant}/stripe_payment_webhook_secret`
-            : (current.webhook_secret_vault_path || null),
-        });
-      } else {
-        await db.table('payment_provider_configs').insert({ tenant, provider_type: 'stripe', ...configData });
-      }
-    });
-    // Publish the new secret only after its fingerprint and verified account are
-    // durably committed. Providers fail closed during the brief transition.
-    await secretProvider.setTenantSecret(tenant, 'stripe_payment_secret_key', credentials.secretKey);
+    // Stage an unreferenced version first, preserving the currently published
+    // credential if the vault write fails.
+    await secretProvider.setTenantSecret(tenant, credentialSecretName, credentials.secretKey);
+    try {
+      await knex.transaction(async (trx) => {
+        const db = tenantDb(trx, tenant);
+        const current = await db.table<IPaymentProviderConfig>('payment_provider_configs')
+          .where({ tenant, provider_type: 'stripe' }).forUpdate().first();
+        const currentAccountId = current?.configuration?.stripe_account_id as string | undefined;
+        if (currentAccountId && currentAccountId !== verifiedAccountId) {
+          throw new Error('Stripe credentials belong to a different account than the tenant’s existing binding');
+        }
+        if (current) {
+          await db.table('payment_provider_configs').where({ tenant, config_id: current.config_id }).update({
+            ...configData,
+            settings: mergePaymentSettings(current.settings),
+            configuration: { ...current.configuration, ...configData.configuration },
+            webhook_secret_vault_path: webhookSecret
+              ? `tenant/${tenant}/stripe_payment_webhook_secret`
+              : (current.webhook_secret_vault_path || null),
+          });
+        } else {
+          await db.table('payment_provider_configs').insert({ tenant, provider_type: 'stripe', ...configData });
+        }
+      });
+    } catch (error) {
+      await secretProvider.deleteTenantSecret(tenant, credentialSecretName).catch(() => undefined);
+      throw error;
+    }
 
     logger.info('[PaymentActions] Stripe connected successfully', {
       tenantId: tenant,
@@ -420,10 +428,7 @@ export const disconnectStripeAction = withAuth(async (user, { tenant }): Promise
 
       if (webhookEndpointId) {
         try {
-          const secretKey = await secretProvider.getTenantSecret(
-            tenant,
-            'stripe_payment_secret_key'
-          );
+          const secretKey = await secretProvider.getTenantSecret(tenant, stripeTenantSecretName(configuration));
 
           if (secretKey) {
             const stripe = createStripeClient(secretKey);
@@ -538,8 +543,13 @@ export const updatePaymentSettingsAction = withAuth(async (
  */
 export const testStripeConnectionAction = withAuth(async (user, { tenant }): Promise<PaymentActionResult<{ status: string }>> => {
   try {
+    const { knex } = await createTenantKnex();
+    const config = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
+      .where({ provider_type: 'stripe', is_enabled: true }).first();
     const secretProvider = await getSecretProviderInstance();
-    const secretKey = await secretProvider.getTenantSecret(tenant, 'stripe_payment_secret_key');
+    const secretKey = config?.credentials_vault_path
+      ? await secretProvider.getTenantSecret(tenant, stripeTenantSecretName(config.configuration))
+      : undefined;
 
     if (!secretKey) {
       return { success: false, error: 'Stripe not configured' };
@@ -662,7 +672,7 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
     }
 
     // Get the secret key from vault
-    const secretKey = await secretProvider.getTenantSecret(tenant, 'stripe_payment_secret_key');
+    const secretKey = await secretProvider.getTenantSecret(tenant, stripeTenantSecretName(config.configuration));
     if (!secretKey) {
       return { success: false, error: 'Stripe credentials not found. Please reconnect Stripe.' };
     }
@@ -721,18 +731,10 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
       webhookSecret
     );
 
-    // Update the config with webhook info
-    const configuration = config.configuration as any;
+    await mergeStripeConfiguration(knex, tenant, config.config_id, { webhook_endpoint_id: webhookEndpointId });
     await tenantDb(knex, tenant).table('payment_provider_configs')
-      .where({ config_id: config.config_id })
-      .update({
-        configuration: {
-          ...configuration,
-          webhook_endpoint_id: webhookEndpointId,
-        },
-        webhook_secret_vault_path: `tenant/${tenant}/stripe_payment_webhook_secret`,
-        updated_at: knex.fn.now(),
-      });
+      .where({ tenant, config_id: config.config_id })
+      .update({ webhook_secret_vault_path: `tenant/${tenant}/stripe_payment_webhook_secret`, updated_at: knex.fn.now() });
 
     await reconcileStripeWebhookEvents(tenant);
 

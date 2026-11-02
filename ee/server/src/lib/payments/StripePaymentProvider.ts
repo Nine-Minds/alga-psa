@@ -14,6 +14,7 @@
 import Stripe from 'stripe';
 import { createHash } from 'crypto';
 import { createStripeClient } from './stripeClient';
+import { stripeTenantSecretName } from './stripeTenantConfig';
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '@alga-psa/db';
@@ -81,7 +82,7 @@ async function getStripePaymentConfig(tenantId: string): Promise<StripePaymentCo
 
   if (config?.credentials_vault_path) {
     // Use tenant-specific credentials from vault
-    const secretKey = await secretProvider.getTenantSecret(tenantId, 'stripe_payment_secret_key');
+    const secretKey = await secretProvider.getTenantSecret(tenantId, stripeTenantSecretName(config.configuration));
     const publishableKey = config.configuration?.publishable_key as string;
 
     const accountId = config.configuration?.stripe_account_id as string | undefined;

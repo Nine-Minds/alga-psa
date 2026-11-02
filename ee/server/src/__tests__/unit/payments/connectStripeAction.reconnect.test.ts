@@ -4,8 +4,16 @@
  * (no DB needed) and drives the real connect/disconnect actions.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createHash } from 'node:crypto';
 
 const store: { row: Record<string, any> | null; accountId: string; stripeOptions: any[] } = { row: null, accountId: 'acct_1', stripeOptions: [] };
+const vault = vi.hoisted(() => ({
+  values: new Map<string, string>(),
+  failValue: null as string | null,
+  holdValue: null as string | null,
+  onHold: null as (() => void) | null,
+  gate: null as Promise<void> | null,
+}));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'user-1' }, { tenant: 'tenant-1' }, ...args),
@@ -15,9 +23,13 @@ vi.mock('@alga-psa/core/logger', () => ({
 }));
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: vi.fn(async () => ({
-    setTenantSecret: vi.fn(),
-    getTenantSecret: vi.fn(async () => 'sk_test_stored'),
-    deleteTenantSecret: vi.fn(),
+    setTenantSecret: vi.fn(async (_tenant: string, name: string, value: string) => {
+      if (vault.failValue === value) throw new Error('injected vault write failure');
+      if (vault.holdValue === value && vault.gate) { vault.onHold?.(); await vault.gate; }
+      vault.values.set(name, value);
+    }),
+    getTenantSecret: vi.fn(async (_tenant: string, name: string) => vault.values.get(name) ?? 'sk_test_stored'),
+    deleteTenantSecret: vi.fn(async (_tenant: string, name: string) => { vault.values.delete(name); }),
   })),
 }));
 vi.mock('../../../lib/payments/stripeWebhookEvents', () => ({
@@ -100,6 +112,12 @@ describe('connectStripeAction settings preservation', () => {
       webhook_secret_vault_path: null,
       settings: { ...customised },
     };
+    vault.values.clear();
+    vault.values.set('stripe_payment_secret_key', 'sk_test_stored');
+    vault.failValue = null;
+    vault.holdValue = null;
+    vault.onHold = null;
+    vault.gate = null;
   });
   afterEach(() => {
     if (originalApiBaseUrl === undefined) delete process.env.STRIPE_API_BASE_URL;
@@ -167,5 +185,42 @@ describe('connectStripeAction settings preservation', () => {
     expect(store.row).toBeNull();
     const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
     expect((await getSecretProviderInstance() as any).setTenantSecret).not.toHaveBeenCalled();
+  });
+
+  it('preserves the published configuration when staging a credential fails in the vault', async () => {
+    store.row!.configuration = {
+      publishable_key: 'pk_old', stripe_account_id: 'acct_1',
+      stripe_secret_key_name: 'stripe_payment_secret_key',
+      stripe_credential_fingerprint: createHash('sha256').update('sk_test_stored').digest('hex'),
+    };
+    vault.failValue = 'sk_test_x';
+    const result = await (connectStripeAction as any)(credentials);
+    expect(result.success).toBe(false);
+    expect(store.row!.configuration.stripe_secret_key_name).toBe('stripe_payment_secret_key');
+    expect(store.row!.configuration.stripe_credential_fingerprint).toBe(createHash('sha256').update('sk_test_stored').digest('hex'));
+    expect(vault.values.get('stripe_payment_secret_key')).toBe('sk_test_stored');
+  });
+
+  it('keeps interleaved saves paired with their own versioned key and fingerprint', async () => {
+    let releaseA!: () => void;
+    let didStageA!: () => void;
+    const stagedA = new Promise<void>((resolve) => { didStageA = resolve; });
+    vault.holdValue = 'sk_test_A';
+    vault.onHold = () => didStageA();
+    vault.gate = new Promise<void>((resolve) => { releaseA = resolve; });
+
+    const saveA = (connectStripeAction as any)({ secretKey: 'sk_test_A', publishableKey: 'pk_test_A' });
+    await stagedA;
+    const saveB = await (connectStripeAction as any)({ secretKey: 'sk_test_B', publishableKey: 'pk_test_B' });
+    expect(saveB.success).toBe(true);
+    releaseA();
+    expect((await saveA).success).toBe(true);
+
+    const publishedName = store.row!.configuration.stripe_secret_key_name;
+    const publishedKey = vault.values.get(publishedName);
+    expect(['sk_test_A', 'sk_test_B']).toContain(publishedKey);
+    expect(store.row!.configuration.stripe_credential_fingerprint).toBe(
+      createHash('sha256').update(publishedKey).digest('hex'),
+    );
   });
 });
