@@ -33,7 +33,7 @@ vi.mock('../src/services/accountingSync/invoiceTerminalStatusHandlers', () => ({
 
 import { runWithTenant } from '@alga-psa/db';
 import { finalizeInvoiceWithKnex } from '../src/actions/invoiceModification';
-import { grantCredit, applyCreditToInvoiceInternal } from '../src/actions/creditActions';
+import { grantCredit, applyCreditToInvoice, applyCreditToInvoiceInternal } from '../src/actions/creditActions';
 import { voidInvoice } from '../src/actions/voidInvoiceActions';
 import { applyExternalPaymentChange } from '../src/services/accountingSync/paymentApplier';
 import { recordExternalPayment } from '../src/services/accountingSync/recordExternalPayment';
@@ -197,6 +197,8 @@ describe('Independent financial state model', () => {
 
       await expect(runWithTenant(tenant, () => applyCreditToInvoiceInternal(tenant, user, creditOwner, invoice, 5000)))
         .rejects.toThrow(/does not own the invoice/i);
+      await expect(applyCreditToInvoice(creditOwner, invoice, 5000))
+        .rejects.toThrow(/does not own the invoice/i);
 
       expect(await trx('credit_tracking').where({ tenant, credit_id: creditId }).first()).toMatchObject({ remaining_amount: before.credit.remaining_amount });
       expect(await trx('transactions').where({ tenant }).select('transaction_id', 'type', 'amount')).toEqual(before.transactions);
@@ -205,8 +207,7 @@ describe('Independent financial state model', () => {
 
       const ownerCredit = await runWithTenant(tenant, () => grantCredit(owner, 1000));
       expect('credit_id' in ownerCredit).toBe(true);
-      const applied = await runWithTenant(tenant, () => applyCreditToInvoiceInternal(tenant, user, owner, invoice, 1000));
-      expect(applied.appliedAmount).toBe(1000);
+      await expect(applyCreditToInvoice(owner, invoice, 1000)).resolves.toBeUndefined();
     } finally {
       active = undefined;
       await trx.rollback();

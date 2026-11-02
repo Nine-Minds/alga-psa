@@ -1446,7 +1446,21 @@ export const applyCreditToInvoice = withAuth(async (
         throw new Error('Permission denied: Cannot apply credits to invoices');
     }
 
-    const { appliedAmount } = await applyCreditToInvoiceInternal(tenant, user, clientId, invoiceId, requestedAmount);
+    const { knex } = await createTenantKnex();
+    const invoice = await tenantDb(knex, tenant).table('invoices')
+        .where({ invoice_id: invoiceId })
+        .select('client_id')
+        .first();
+    if (!invoice) {
+        throw new Error(`Invoice ${invoiceId} not found`);
+    }
+
+    const invoiceClientId = String(invoice.client_id);
+    if (invoiceClientId.toLowerCase() !== String(clientId).toLowerCase()) {
+        throw new Error('Credit client does not own the invoice');
+    }
+
+    const { appliedAmount } = await applyCreditToInvoiceInternal(tenant, user, invoiceClientId, invoiceId, requestedAmount);
 
     // Reconcile any still-active Checkout links now that the balance changed:
     // a customer must not be able to pay the pre-credit amount through an old
