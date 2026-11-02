@@ -608,6 +608,17 @@ export function assetRmmRecordSource(assetType: string): RedactableRecordSource 
   };
 }
 
+/** Remote control URLs can embed the provider device id, so they inherit that source field's redactions. */
+export const ASSET_RMM_REMOTE_CONTROL_SOURCE: RedactableRecordSource = {
+  policySource: ASSET_RECORD_SOURCE,
+  resource: ASSET_RECORD_SOURCE.resource,
+  identifier: ASSET_RECORD_SOURCE.identifier,
+  fields: {},
+  derived: {
+    url: [{ source: ASSET_RECORD_SOURCE, field: 'rmm_device_id' }],
+  },
+};
+
 /** Custody episodes retain the asset policy and the ownership of joined holder labels. */
 export const ASSET_CUSTODY_SOURCE: RedactableRecordSource = {
   policySource: ASSET_RECORD_SOURCE,

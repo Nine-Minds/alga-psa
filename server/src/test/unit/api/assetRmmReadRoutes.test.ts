@@ -11,9 +11,10 @@ const h = vi.hoisted(() => {
     tickets: [] as Record<string, any>[],
     redactions: { asset: [] as string[], ticket: [] as string[] },
     deniedIds: new Set<string>(),
-    assetPermission: true, assetUpdatePermission: true, ticketPermission: true, keyOnly: false,
+    assetPermission: true, assetUpdatePermission: true, rmmExecutePermission: true, ticketPermission: true, keyOnly: false,
     subjects: [] as any[], loaded: [] as string[],
     refreshProvider: vi.fn(async () => {}),
+    remoteControlUrl: vi.fn(async (ref: { deviceId: string }) => `https://remote.example/${ref.deviceId}`),
   };
   const decide = async (input: any) => {
     state.subjects.push(input.subject);
@@ -56,12 +57,14 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn(h.state.user, { tenant: h.state.tenant }, ...args),
   hasPermission: vi.fn(async (_user: any, resource: string, action: string) => resource === 'ticket'
-    ? h.state.ticketPermission : action === 'update' ? h.state.assetUpdatePermission : h.state.assetPermission),
+    ? h.state.ticketPermission : resource === 'rmm' && action === 'execute_command'
+      ? h.state.rmmExecutePermission : action === 'update' ? h.state.assetUpdatePermission : h.state.assetPermission),
   getCurrentUser: vi.fn(async () => h.state.user),
   runWithApiKeyUser: vi.fn(async (_user: any, fn: any) => fn()),
 }));
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: vi.fn(async (_user: any, resource: string, action: string) => resource === 'ticket'
-  ? h.state.ticketPermission : action === 'update' ? h.state.assetUpdatePermission : h.state.assetPermission) }));
+  ? h.state.ticketPermission : resource === 'rmm' && action === 'execute_command'
+    ? h.state.rmmExecutePermission : action === 'update' ? h.state.assetUpdatePermission : h.state.assetPermission) }));
 vi.mock('@/lib/api/middleware/apiAuthMiddleware', () => ({
   authenticateApiKeyRequest: vi.fn(async (request: any) => {
     request.context = { tenant: h.state.tenant, user: h.state.user, userId: h.state.user.user_id, apiKeyId: 'summary-key' };
@@ -115,6 +118,7 @@ beforeEach(() => {
   h.state.subjects = []; h.state.loaded = [];
   h.state.assetPermission = true; h.state.ticketPermission = true; h.state.keyOnly = false;
   h.state.assetUpdatePermission = true;
+  h.state.rmmExecutePermission = true;
 });
 
 
@@ -126,6 +130,7 @@ beforeEach(() => {
   Object.assign(h.state.asset, { rmm_provider: 'tacticalrmm', rmm_device_id: 'device-1', last_rmm_sync_at: '2026-11-01T12:00:00Z' });
   Object.assign(h.state.extension, { current_user: 'Secret user', lan_ip: '192.168.9.9', wan_ip: '203.0.113.9', memory_usage_percent: 75, ram_gb: 32, cpu_utilization_percent: 55, disk_usage: [{ name: 'Secret volume', free_gb: 5 }] });
   h.state.refreshProvider.mockClear();
+  h.state.remoteControlUrl.mockClear();
 });
 describe('independent RMM REST boundary review', () => {
   it('visible control uses the actual action and route', async () => {
@@ -197,7 +202,10 @@ describe('independent RMM REST boundary review', () => {
 });
 
 vi.mock('@alga-psa/integrations/lib/rmm/assetDeviceActions', () => ({
-  resolveRmmAssetDeviceActions: vi.fn(async () => ({ refresh: h.state.refreshProvider })),
+  resolveRmmAssetDeviceActions: vi.fn(async () => ({
+    refresh: h.state.refreshProvider,
+    remoteControlUrl: h.state.remoteControlUrl,
+  })),
 }));
 import { POST as refreshRmmRoute } from '../../../app/api/v1/assets/[id]/rmm/refresh/route';
 const refreshRmm = (key = false) => refreshRmmRoute(new Request(`http://localhost/api/v1/assets/${h.state.assetId}/rmm/refresh`, {
@@ -251,5 +259,78 @@ describe('independent refresh response boundary review', () => {
     const apiKeyResponse = await refreshRmm(true);
     expect((await apiKeyResponse.json()).data.lan_ip).toBeNull();
     expect(h.state.subjects.at(-1)?.apiKeyId).toBe('summary-key');
+  });
+});
+
+import { GET as remoteControlRoute } from '../../../app/api/v1/assets/[id]/rmm/remote-control/route';
+
+const readRemoteControl = (key = false) => remoteControlRoute(new Request(
+  `http://localhost/api/v1/assets/${h.state.assetId}/rmm/remote-control`,
+  { headers: key ? { 'x-api-key': 'summary-secret' } : {} },
+), { params: Promise.resolve({ id: h.state.assetId }) });
+
+describe('asset RMM remote-control REST boundary', () => {
+  it('returns a visible URL through the session route and action', async () => {
+    const response = await readRemoteControl();
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual({ url: 'https://remote.example/device-1', type: 'splashtop' });
+    expect(h.state.remoteControlUrl).toHaveBeenCalledOnce();
+  });
+
+  it.each(['assets', 'assets.asset_id', 'values.asset_id'])('suppresses %s before provider work', async alias => {
+    h.state.redactions.asset = [alias];
+    const response = await readRemoteControl();
+    expect(response.status).toBe(404);
+    expect(h.state.remoteControlUrl).not.toHaveBeenCalled();
+  });
+
+  it('denied assets cannot invoke remote control', async () => {
+    h.state.deniedIds.add(h.state.assetId);
+    const response = await readRemoteControl();
+    expect(response.status).toBe(404);
+    expect(h.state.remoteControlUrl).not.toHaveBeenCalled();
+  });
+
+  it('applies API-key suppression before provider work', async () => {
+    h.state.redactions.asset = ['values.asset_id'];
+    h.state.keyOnly = true;
+    const response = await readRemoteControl(true);
+    expect(response.status).toBe(404);
+    expect(h.state.remoteControlUrl).not.toHaveBeenCalled();
+    expect(h.state.subjects.at(-1)?.apiKeyId).toBe('summary-key');
+  });
+
+  it.each(['assets.rmm_device_id', 'values.rmm_device_id', 'fields.assets.rmm_device_id'])(
+    'redacts the returned URL when %s is hidden', async alias => {
+      h.state.redactions.asset = [alias];
+      const response = await readRemoteControl();
+      expect(response.status).toBe(200);
+      expect((await response.json()).data).toEqual({ url: null, type: 'splashtop' });
+      expect(h.state.remoteControlUrl).toHaveBeenCalledOnce();
+    },
+  );
+
+  it('retains API-key redactions on the URL projection', async () => {
+    h.state.redactions.asset = ['assets.rmm_device_id'];
+    h.state.keyOnly = true;
+    expect((await (await readRemoteControl()).json()).data.url).toBe('https://remote.example/device-1');
+    const apiKeyResponse = await readRemoteControl(true);
+    expect((await apiKeyResponse.json()).data.url).toBeNull();
+    expect(h.state.subjects.at(-1)?.apiKeyId).toBe('summary-key');
+  });
+
+  it('preserves asset update authorization', async () => {
+    h.state.assetUpdatePermission = false;
+    const response = await readRemoteControl();
+    expect(response.status).toBe(403);
+    expect(h.state.remoteControlUrl).not.toHaveBeenCalled();
+  });
+
+  it('preserves Datto execute-command authorization', async () => {
+    h.state.asset.rmm_provider = 'datto';
+    h.state.rmmExecutePermission = false;
+    const response = await readRemoteControl();
+    expect(response.status).toBe(403);
+    expect(h.state.remoteControlUrl).not.toHaveBeenCalled();
   });
 });
