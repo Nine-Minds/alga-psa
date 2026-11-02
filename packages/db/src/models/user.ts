@@ -111,7 +111,7 @@ const User = {
     try {
       const user = await tenantDb(db, USER_MODEL_DISCOVERY_TENANT)
         .unscoped<IUser>('users', USER_DISCOVERY_BY_EMAIL_REASON)
-        .select(...USER_RESPONSE_FIELD_NAMES)
+        .select('*')
         .where({ email: email.toLowerCase() })
         .first();
       return user;
