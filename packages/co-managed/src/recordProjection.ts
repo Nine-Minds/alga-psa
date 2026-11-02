@@ -338,10 +338,26 @@ export const PROJECT_RECORD_SOURCE: RedactableRecordSource = recordSourceFromCoM
   });
 
 export const TICKET_DOCUMENT_SOURCE: RedactableRecordSource = {
-  resource: ['documents'],
-  identifier: ids('document_id', 'documents.document_id'),
+  resource: ['documents', 'document_associations'],
+  identifier: ids(
+    'document_id', 'documents.document_id',
+    'document_associations.document_id', 'association_id', 'document_associations.association_id',
+  ),
   fields: {},
-  derived: {},
+  derived: {
+    created_by_full_name: ids('created_by', 'users', 'users.first_name', 'users.last_name'),
+    association_created_at: ids('document_associations.created_at'),
+    type_name: ids(
+      'type_id', 'documents.type_id', 'document_types', 'document_types.type_id', 'document_types.type_name',
+      'shared_type_id', 'documents.shared_type_id', 'shared_document_types', 'shared_document_types.type_id',
+      'shared_document_types.type_name',
+    ),
+    type_icon: ids(
+      'type_id', 'documents.type_id', 'document_types', 'document_types.type_id', 'document_types.icon',
+      'shared_type_id', 'documents.shared_type_id', 'shared_document_types', 'shared_document_types.type_id',
+      'shared_document_types.icon',
+    ),
+  },
 };
 
 export const TICKET_RECORD_SOURCE: RedactableRecordSource = {

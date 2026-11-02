@@ -192,6 +192,25 @@ export class ApiTicketController extends ApiBaseController {
     return projection;
   }
 
+  private async assertTicketDocumentReadAllowed(
+    ticketGate: AuthorizedProjection<Record<string, any>>,
+    ticketId: string,
+    documentId: string,
+    context: AuthenticatedApiRequest['context'],
+  ): Promise<AuthorizedProjection<Record<string, any>>> {
+    const documents = await this.ticketService.getTicketDocuments(ticketId, context);
+    const document = documents.find((item) => item.document_id === documentId);
+    const projection = document
+      ? reprojectUnderDecision(ticketGate, document as Record<string, any>, TICKET_DOCUMENT_SOURCE)
+      : null;
+
+    if (!projection) {
+      throw new NotFoundError('Document not found');
+    }
+
+    return projection;
+  }
+
   private async filterAuthorizedTickets(
     apiRequest: AuthenticatedApiRequest,
     tickets: Record<string, any>[],
@@ -1456,7 +1475,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           // Extract documentId from the URL path segment after "documents/"
           const url = new URL(apiRequest.url || req.url);
@@ -1470,6 +1489,7 @@ export class ApiTicketController extends ApiBaseController {
             ]);
           }
 
+          await this.assertTicketDocumentReadAllowed(ticketGate, ticketId, documentId, apiRequest.context!);
           const result = await this.ticketService.downloadTicketDocument(ticketId, documentId, apiRequest.context!);
 
           const headers = new Headers();
@@ -1498,7 +1518,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           const url = new URL(apiRequest.url || req.url);
           const segments = url.pathname.split('/');
@@ -1511,6 +1531,7 @@ export class ApiTicketController extends ApiBaseController {
             ]);
           }
 
+          await this.assertTicketDocumentReadAllowed(ticketGate, ticketId, documentId, apiRequest.context!);
           const result = await this.ticketService.downloadTicketDocumentVariant(ticketId, documentId, variant, apiRequest.context!);
 
           const etag = `"${result.fileId}"`;

@@ -491,6 +491,122 @@ describe('tickets: REST reads serialize the projection', () => {
     expect(response.status).toBe(404);
     expect(readDocuments).not.toHaveBeenCalled();
   });
+
+  const joinedTicketDocument = () => ({
+    document_id: P2,
+    document_name: 'visible-plan.pdf',
+    file_size: 92831,
+    association_id: 'association-1',
+    association_created_at: '2026-11-02T09:12:00Z',
+    created_by: 'creator-1',
+    created_by_full_name: 'Visible Creator',
+    type_id: 'type-1',
+    shared_type_id: 'shared-type-1',
+    type_name: 'Visible Type',
+    type_icon: 'visible-icon',
+  });
+
+  it.each(['detail', 'documents'])('%s projects joined ticket document source dependencies', async (endpoint) => {
+    const document = joinedTicketDocument();
+    state.tickets = [{ ticket_id: TICKET, title: 'Printer', documents: [document] }];
+    const controller = new ApiTicketController();
+    (controller as any).ticketService.getTicketDocuments = vi.fn(async () => [document]);
+    const read = async () => {
+      const response = endpoint === 'detail'
+        ? await controller.getById()(request(`/api/v1/tickets/${TICKET}`, { id: TICKET }))
+        : await controller.getDocuments()(request(`/api/v1/tickets/${TICKET}/documents`, { id: TICKET }));
+      expect(response.status).toBe(200);
+      const body = (await response.json()).data;
+      return endpoint === 'detail' ? body.documents : body;
+    };
+
+    const visible = await read();
+    expect(visible[0]).toMatchObject({
+      document_id: P2,
+      created_by_full_name: 'Visible Creator',
+      association_created_at: '2026-11-02T09:12:00Z',
+      type_name: 'Visible Type',
+      type_icon: 'visible-icon',
+    });
+
+    for (const [alias, derivedFields] of [
+      ['documents.created_by', ['created_by_full_name']],
+      ['users.first_name', ['created_by_full_name']],
+      ['users.last_name', ['created_by_full_name']],
+      ['document_associations.created_at', ['association_created_at']],
+      ['document_types.type_name', ['type_name']],
+      ['shared_document_types.type_name', ['type_name']],
+      ['document_types.icon', ['type_icon']],
+      ['shared_document_types.icon', ['type_icon']],
+      ['document_types', ['type_name', 'type_icon']],
+      ['shared_document_types', ['type_name', 'type_icon']],
+      ['document_types.type_id', ['type_name', 'type_icon']],
+      ['shared_document_types.type_id', ['type_name', 'type_icon']],
+      ['documents.type_id', ['type_name', 'type_icon']],
+      ['documents.shared_type_id', ['type_name', 'type_icon']],
+    ]) {
+      state.decisions.set(TICKET, { allowed: true, redactedFields: [alias] });
+      const redacted = await read();
+      expect(redacted[0].document_id).toBe(P2);
+      for (const derivedField of derivedFields) expect(redacted[0][derivedField] ?? null).toBeNull();
+      state.decisions.delete(TICKET);
+    }
+  });
+
+  it.each(['detail', 'documents'])('%s suppresses ticket documents when the association is hidden', async (endpoint) => {
+    const document = joinedTicketDocument();
+    state.tickets = [{ ticket_id: TICKET, title: 'Printer', documents: [document] }];
+    const controller = new ApiTicketController();
+    (controller as any).ticketService.getTicketDocuments = vi.fn(async () => [document]);
+    const read = async () => endpoint === 'detail'
+      ? controller.getById()(request(`/api/v1/tickets/${TICKET}`, { id: TICKET }))
+      : controller.getDocuments()(request(`/api/v1/tickets/${TICKET}/documents`, { id: TICKET }));
+
+    for (const alias of [
+      'document_associations',
+      'document_associations.association_id',
+      'document_associations.document_id',
+      'association_id',
+    ]) {
+      state.decisions.set(TICKET, { allowed: true, redactedFields: [alias] });
+      const response = await read();
+      expect(response.status).toBe(200);
+      const body = (await response.json()).data;
+      expect(endpoint === 'detail' ? body.documents : body).toEqual([]);
+      state.decisions.delete(TICKET);
+    }
+  });
+
+  it.each(['download', 'thumbnail', 'preview'] as const)(
+    '%s serves a visible document but performs no storage operation when its identifier is hidden', async (kind) => {
+      const document = joinedTicketDocument();
+      state.tickets = [{ ticket_id: TICKET, title: 'Printer' }];
+      const controller = new ApiTicketController();
+      (controller as any).ticketService.getTicketDocuments = vi.fn(async () => [document]);
+      const download = vi.fn(async () => ({ buffer: Buffer.from('file bytes'), fileName: 'file.pdf', mimeType: 'application/pdf' }));
+      const variant = vi.fn(async () => ({ buffer: Buffer.from('preview bytes'), fileId: 'preview-1', mimeType: 'image/png' }));
+      (controller as any).ticketService.downloadTicketDocument = download;
+      (controller as any).ticketService.downloadTicketDocumentVariant = variant;
+      const req = () => request(`/api/v1/tickets/${TICKET}/documents/${P2}/${kind}`, { id: TICKET });
+      const serve = () => kind === 'download'
+        ? controller.downloadDocument()(req())
+        : controller.downloadDocumentVariant(kind)(req());
+
+      expect((await serve()).status).toBe(200);
+      expect(kind === 'download' ? download : variant).toHaveBeenCalledTimes(1);
+      download.mockClear();
+      variant.mockClear();
+
+      for (const alias of ['documents', 'documents.document_id']) {
+        state.decisions.set(TICKET, { allowed: true, redactedFields: [alias] });
+        const response = await serve();
+        expect(response.status).toBe(404);
+        expect(download).not.toHaveBeenCalled();
+        expect(variant).not.toHaveBeenCalled();
+        state.decisions.delete(TICKET);
+      }
+    },
+  );
 });
 
 describe('quotes: REST reads serialize the projection', () => {
