@@ -164,7 +164,8 @@ async function insertBlock(
 // before asserting on dates.
 function assertTz(zone: string, expectedOffsetMinutes: number) {
   process.env.TZ = zone;
-  expect(new Date().getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  // Check the summer fixture's offset, independent of the date this suite runs.
+  expect(new Date('2026-08-31T12:00:00Z').getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
 describe.runIf(enabled)('hourBlockService DB integration', () => {

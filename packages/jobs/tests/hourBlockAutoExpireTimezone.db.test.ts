@@ -57,7 +57,8 @@ vi.mock('@alga-psa/db', async () => {
 
 function assertWorkerTz(zone: string, expectedOffsetMinutes: number) {
   process.env.TZ = zone;
-  expect(new Date().getTimezoneOffset(), `worker TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  // Check the summer fixture's offset, independent of the date this suite runs.
+  expect(new Date('2026-08-31T12:00:00Z').getTimezoneOffset(), `worker TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
 async function seedBase(timezone: string | null) {
