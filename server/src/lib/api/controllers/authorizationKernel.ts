@@ -95,12 +95,19 @@ export function buildAuthorizationPrincipalSubject(
   return subject;
 }
 
-export async function authorizeApiResourceRead(input: {
+/**
+ * Action-aware authorization. Bundle rules are matched on resource + action, so
+ * mutations MUST be authorized with their own action ('update' / 'delete'), not 'read'.
+ * Note: kernel.authorizeMutation's built-in guards only cover `approve` mutations, so
+ * ticket update/delete need only the resource-scope evaluation done here.
+ */
+export async function authorizeApiResource(input: {
   knex: Knex;
   tenant: string;
   user: any;
   apiKeyId?: string;
   resource: string;
+  action: string;
   recordContext: AuthorizationRecord;
 }): Promise<boolean> {
   const kernel = await getAuthorizationKernel();
@@ -110,9 +117,22 @@ export async function authorizeApiResourceRead(input: {
   const decision = await kernel.authorizeResource({
     knex: input.knex as any,
     subject,
-    resource: { type: input.resource, action: 'read' },
+    resource: { type: input.resource, action: input.action },
     record: input.recordContext,
   });
 
   return decision.allowed;
+}
+
+// LEVERAGE: pattern read-authz-for-writes — ApiProjectController, ApiQuoteController, ApiInventoryController and assetReadGuard
+// likely authorize writes via this read wrapper too; migrate them to authorizeApiResource({ action }).
+export async function authorizeApiResourceRead(input: {
+  knex: Knex;
+  tenant: string;
+  user: any;
+  apiKeyId?: string;
+  resource: string;
+  recordContext: AuthorizationRecord;
+}): Promise<boolean> {
+  return authorizeApiResource({ ...input, action: 'read' });
 }

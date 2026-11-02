@@ -23,6 +23,7 @@ describe('Ticket controller authorization parity contract', () => {
     expect(source).toContain('const updated = await this.ticketService.update(');
     expect(source).toContain('update() {');
     expect(source).toContain('delete() {');
-    expect(source).toContain('await this.assertTicketReadAllowed(apiRequest, id, knex);');
+    expect(source).toContain("await this.assertTicketMutationAllowed(apiRequest, id, 'update', knex);");
+    expect(source).toContain("await this.assertTicketMutationAllowed(apiRequest, id, 'delete', knex);");
   });
 });
