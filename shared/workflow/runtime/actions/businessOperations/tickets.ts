@@ -437,17 +437,24 @@ export function registerTicketActions(): void {
         'title', 'description', 'client_id', 'board_id',
         ...(input.contact_id ? ['contact_id'] : []),
         ...(input.location_id ? ['location_id'] : []),
-        ...(input.status_id ? ['status_id'] : []),
+        // createTicketWithSideEffects supplies the board's default when omitted.
+        // The default is still persisted and later returned, so it is always a write.
+        'status_id',
         ...(input.priority_id ? ['priority_id'] : []),
         ...(input.assignment ? ['assignment'] : []),
         ...(input.category_id ? ['category_id'] : []),
         ...(input.subcategory_id ? ['subcategory_id'] : []),
         ...(input.tags?.length ? ['tags'] : []),
         ...(input.custom_fields ? ['custom_fields'] : []),
-        ...(input.attributes ? ['attributes'] : []),
+        ...(input.attributes
+          ? Object.keys(input.attributes).length
+            ? Object.keys(input.attributes).map(field => `attributes.${field}`)
+            : ['attributes']
+          : []),
         ...(input.initial_comment ? ['comments'] : []),
         ...(input.attachments?.length ? ['attachments'] : []),
       ],
+      readFields: () => ['status_id', 'priority_id'],
       target: input => ({ prospective: {
         clientId: input.client_id, boardId: input.board_id,
         ...workflowTicketAssignmentScope(input.assignment ?? {})
@@ -781,7 +788,11 @@ export function registerTicketActions(): void {
     id: 'tickets.update_fields',
     authority: {
       operation: 'update',
-      fields: input => Object.keys(input.patch),
+      fields: input => Object.keys(input.patch).flatMap(field => {
+        if (field !== 'attributes') return [field];
+        const attributeKeys = Object.keys(input.patch.attributes ?? {});
+        return attributeKeys.length ? attributeKeys.map(attribute => `attributes.${attribute}`) : ['attributes'];
+      }),
       readFields: () => ['status_id', 'priority_id', 'tags'],
       target: input => ({ ticketId: input.ticket_id,
         ...(input.patch.assignment ? { assignment: workflowTicketAssignmentScope(input.patch.assignment) } : {}) })

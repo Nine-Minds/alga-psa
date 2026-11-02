@@ -117,8 +117,8 @@ describe('workflow ticket authority: scope / redaction denial', () => {
       prospective: { clientId: ids.actor, boardId: ids.ticket, assignedUserIds: [], teamIds: [] }
     });
     expect(grant.before).toMatchObject({ client_id: ids.actor, board_id: ids.ticket });
-    expect(authorize).toHaveBeenCalledTimes(1);
     expect(authorize).toHaveBeenCalledWith(trx, expect.anything(), expect.anything(), 'ticket', 'create', expect.objectContaining({ clientId: ids.actor, boardId: ids.ticket }));
+    expect(authorize).toHaveBeenCalledWith(trx, expect.anything(), expect.anything(), 'ticket', 'read', expect.objectContaining({ clientId: ids.actor, boardId: ids.ticket }));
   });
 
   it('create rejects redacted writable fields', async () => {
@@ -127,6 +127,42 @@ describe('workflow ticket authority: scope / redaction denial', () => {
       ...input(['title']), operation: 'create', ticketId: undefined,
       prospective: { clientId: ids.actor, boardId: ids.ticket, assignedUserIds: [], teamIds: [] }
     })).rejects.toMatchObject({ name: 'CoManagedSharedWorkError' });
+  });
+
+  it.each([
+    ['create', 'tickets.custom_fields'], ['create', 'tickets.attributes.custom_fields'],
+    ['update', 'tickets.custom_fields'], ['update', 'tickets.attributes.custom_fields'],
+  ])('%s denies generic attributes.custom_fields writes through %s', async (operation, mask) => {
+    authorize.mockResolvedValue({ redactedFields: [mask] });
+    const request = operation === 'create'
+      ? { ...input(['attributes.custom_fields']), operation: 'create' as const, ticketId: undefined,
+          prospective: { clientId: ids.actor, boardId: ids.ticket, assignedUserIds: [], teamIds: [] } }
+      : { ...input(['attributes.custom_fields']), operation: 'update' as const };
+    await expect(retainCoManagedWorkflowTicketAuthority(trx, request)).rejects.toMatchObject({ name: 'CoManagedSharedWorkError' });
+    expect(written).toEqual([]);
+  });
+
+  it.each(['create', 'update'])('%s allows generic attributes.custom_fields when no alias is masked', async operation => {
+    authorize.mockResolvedValue({ redactedFields: [] });
+    const request = operation === 'create'
+      ? { ...input(['attributes.custom_fields']), operation: 'create' as const, ticketId: undefined,
+          prospective: { clientId: ids.actor, boardId: ids.ticket, assignedUserIds: [], teamIds: [] } }
+      : { ...input(['attributes.custom_fields']), operation: 'update' as const };
+    await expect(retainCoManagedWorkflowTicketAuthority(trx, request)).resolves.toBeDefined();
+  });
+
+  it('create requires read permission for a defaulted status returned by tickets.create', async () => {
+    authorize.mockImplementation(async (_trx, _actor, _subject, _resource, action) => ({
+      redactedFields: action === 'read' ? ['tickets.status_id'] : [],
+    }));
+    await expect(retainCoManagedWorkflowTicketAuthority(trx, {
+      ...input(['status_id']), operation: 'create', ticketId: undefined,
+      readFields: ['status_id'],
+      prospective: { clientId: ids.actor, boardId: ids.ticket, assignedUserIds: [], teamIds: [] }
+    })).rejects.toMatchObject({ name: 'CoManagedSharedWorkError' });
+    expect(authorize).toHaveBeenCalledWith(trx, expect.anything(), expect.anything(), 'ticket', 'create', expect.anything());
+    expect(authorize).toHaveBeenCalledWith(trx, expect.anything(), expect.anything(), 'ticket', 'read', expect.anything());
+    expect(written).toEqual([]);
   });
 
   it('rejects assignment changes that move a ticket outside the author scope', async () => {

@@ -38,9 +38,12 @@ export async function retainCoManagedWorkflowTicketAuthority(trx: Knex.Transacti
     ? { client_id: input.prospective!.clientId, board_id: input.prospective!.boardId, entered_by: input.actorUserId }
     : await (operation === 'read' ? ticketQuery().forShare() : ticketQuery().forUpdate()).first();
   if (!before) throw new CoManagedSharedWorkError();
-  const fieldSources = (field: string): string[] => field === 'assignment' ? ['assignment', 'assigned_to', 'assigned_team_id', 'ticket_resources']
+  const fieldSources = (field: string): string[] => field.startsWith('attributes.')
+    ? [field, field.slice('attributes.'.length)]
+    : field === 'attributes' ? ['attributes', 'attributes.description', 'description', 'attributes.custom_fields', 'custom_fields', 'attributes.tags', 'tags', 'attributes.due_date', 'due_date', 'attributes.resolution_code', 'resolution_code', 'attributes.resolution_text', 'resolution_text']
+    : field === 'assignment' ? ['assignment', 'assigned_to', 'assigned_team_id', 'ticket_resources']
     : field === 'status_id' ? ['status_id', 'status', 'statuses', 'is_closed', 'closed_at', 'closed_by', 'response_state']
-    : field === 'contact_id' ? ['contact_id', 'contact_name_id']
+    : field === 'contact_id' || field === 'contact_name_id' ? ['contact_id', 'contact_name_id', 'contact_name', 'requester', 'contact', 'contacts', 'contacts.contact_name_id']
     : field === 'description' ? ['description', 'attributes.description']
     : field === 'comments' ? ['comments', 'conversation', 'note', 'markdown_content']
     : field === 'attachments' ? ['attachments', 'documents', 'document_associations', 'file_id', 'storage_ref']
@@ -55,10 +58,13 @@ export async function retainCoManagedWorkflowTicketAuthority(trx: Knex.Transacti
     const record = { id: ticket.ticket_id, clientId: ticket.client_id, boardId: ticket.board_id, ownerUserId: ticket.entered_by,
       assignedUserIds: projectedAssignment?.assignedUserIds ?? (operation === 'create' ? explicitAssignedUserIds : ticket.assigned_to ? [ticket.assigned_to] : []),
       teamIds: projectedAssignment?.teamIds ?? (operation === 'create' ? input.prospective!.teamIds : ticket.assigned_team_id ? [ticket.assigned_team_id] : []) };
-    for (const action of (operation === 'update' ? ['read', 'update'] : [operation]) as Array<'read' | 'update' | 'create'>) {
+    const actions = operation === 'update' ? ['read', 'update'] : operation === 'create' ? ['create', 'read'] : ['read'];
+    for (const action of actions as Array<'read' | 'update' | 'create'>) {
       const decision = await authorizeCoManagedWorkRecord(trx, actor, subject, 'ticket', action, record);
       redactedFields = [...new Set([...redactedFields, ...decision.redactedFields])];
-      const sources = action === 'read' ? [...fields, ...input.readFields.flatMap(fieldSources)] : fields;
+      const sources = action === 'read'
+        ? [...(operation === 'create' ? [] : fields), ...input.readFields.flatMap(fieldSources)]
+        : fields;
       if (operation !== 'read' && isCoManagedReadFieldHidden(decision.redactedFields, sources.flatMap(field => [field, `tickets.${field}`]))) throw new CoManagedSharedWorkError();
     }
   };

@@ -1,14 +1,14 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { coManagedWorkflowTicketSeam } from '../../../../../lib/coManagedDelivery';
 
-const state = vi.hoisted(() => ({ actions: [] as any[], queries: [] as string[], writes: [] as string[], hidden: [] as string[], deny: false, ticketClientId: '', addItems: vi.fn() }));
+const state = vi.hoisted(() => ({ actions: [] as any[], queries: [] as string[], writes: [] as string[], hidden: [] as string[], readHidden: [] as string[], deny: false, ticketClientId: '', addItems: vi.fn() }));
 const tenant = '11111111-1111-4111-8111-111111111111';
 const ticketId = '22222222-2222-4222-8222-222222222222';
 const clientId = '33333333-3333-4333-8333-333333333333';
 const clientBId = '55555555-5555-4555-8555-555555555555';
 const boardId = '44444444-4444-4444-8444-444444444444';
 const ticket = { ticket_id: ticketId, ticket_number: 'T-1', title: 'Secret', client_id: clientId, board_id: boardId,
-  priority_id: boardId, attributes: { custom_fields: { secret: 'private' } } };
+  priority_id: boardId, contact_name_id: boardId, attributes: { custom_fields: { secret: 'private' } } };
 const tx = { tenantId: tenant, actorUserId: clientId, trx: { marker: 'same-transaction' } } as any;
 vi.mock('../../../registries/actionRegistry', () => ({ getActionRegistryV2: () => ({ register: (a: any) => state.actions.push(a) }) }));
 vi.mock('../shared', async original => ({
@@ -40,6 +40,9 @@ const authorize = vi.fn(async (_trx: any, input: any) => {
   // Model the provider's effective bundle scope: this workflow is published
   // under client A, while its tenant-wide event may carry client B's ticket.
   if (input.operation !== 'create' && state.ticketClientId && state.ticketClientId !== clientId) throw denied;
+  if (input.operation === 'create' && input.readFields?.some((field: string) => state.readHidden.includes(`tickets.${field}`))) throw denied;
+  if (['create', 'update'].includes(input.operation) && state.hidden.includes('tickets.custom_fields')
+    && input.fields.some((field: string) => ['custom_fields', 'attributes.custom_fields'].includes(field))) throw denied;
   return { redactedFields: state.hidden };
 });
 const ctx = { tenantId: tenant, runId: tenant, nowIso: () => '2026-01-01T00:00:00.000Z' } as any;
@@ -49,7 +52,7 @@ describe('registered ticket action authorization boundary', () => {
   const originalCapabilities = process.env.FORCE_CAPABILITIES;
   beforeEach(() => {
     state.actions.length = state.queries.length = state.writes.length = 0;
-    state.hidden = []; state.deny = false; state.ticketClientId = clientId; authorize.mockClear(); state.addItems.mockReset();
+    state.hidden = []; state.readHidden = []; state.deny = false; state.ticketClientId = clientId; authorize.mockClear(); state.addItems.mockReset();
     state.addItems.mockResolvedValue([{ checklist_item_id: ticketId, item_name: 'Review' }]);
     process.env.FORCE_CAPABILITIES = 'co-managed:on';
     coManagedWorkflowTicketSeam.reset();
@@ -95,6 +98,31 @@ describe('registered ticket action authorization boundary', () => {
     }));
   });
 
+  it.each(['create', 'update'])('denies %s attributes.custom_fields masks before side effects', async operation => {
+    state.hidden = ['tickets.custom_fields'];
+    if (operation === 'create') {
+      const input = action('create').inputSchema.parse({ client_id: clientId, board_id: boardId, priority_id: boardId, title: 'x', attributes: { custom_fields: { secret: 'x' } } });
+      await expect(action('create').handler(input, ctx)).rejects.toBe(denied);
+    } else {
+      const input = action('update_fields').inputSchema.parse({ ticket_id: ticketId, patch: { attributes: { custom_fields: { secret: 'x' } } } });
+      await expect(action('update_fields').handler(input, ctx)).rejects.toBe(denied);
+    }
+    expect(state.queries).toEqual([]);
+    expect(state.writes).toEqual([]);
+    expect(authorize).toHaveBeenCalledWith(tx.trx, expect.objectContaining({ fields: expect.arrayContaining(['attributes.custom_fields']) }));
+  });
+
+  it('checks read permission for the defaulted create status before insertion', async () => {
+    state.readHidden = ['tickets.status_id'];
+    const input = action('create').inputSchema.parse({ client_id: clientId, board_id: boardId, priority_id: boardId, title: 'x' });
+    await expect(action('create').handler(input, ctx)).rejects.toBe(denied);
+    expect(authorize).toHaveBeenCalledWith(tx.trx, expect.objectContaining({
+      operation: 'create', fields: expect.arrayContaining(['status_id']), readFields: ['status_id', 'priority_id'],
+    }));
+    expect(state.queries).toEqual([]);
+    expect(state.writes).toEqual([]);
+  });
+
   it('returns an authorized ticket using read permission without update authority', async () => {
     const result = await action('find').handler({ ticket_id: ticketId }, ctx);
     expect(result.ticket.title).toBe('Secret');
@@ -136,6 +164,14 @@ describe('registered ticket action authorization boundary', () => {
     expect(state.queries).not.toContain('document_associations as da');
     if (redactions.includes('priorities.priority_name')) expect(state.queries).not.toContain('priorities');
     if (redactions.includes('clients.client_name')) expect(state.queries).not.toContain('clients');
+  });
+
+  it('suppresses requester identity and skips its lookup when contact_id is masked', async () => {
+    state.hidden = ['tickets.contact_id'];
+    const result = await action('find').handler({ ticket_id: ticketId }, ctx);
+    expect(result.ticket.contact_name_id).toBeNull();
+    expect(result.ticket.contact_name).toBeNull();
+    expect(state.queries).not.toContain('contacts');
   });
 
   it('runs an authorized checklist mutation in the retained transaction', async () => {
