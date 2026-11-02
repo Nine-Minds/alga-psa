@@ -84,14 +84,6 @@ function toHtml(content: RenderContent): string {
     <div style="margin-top: 15px; font-size: 12px; color: #999;">Preview not available. Download to view.</div>
   </div>`;
 }
-function decodeAttr(s: string): string {
-  return s.replace(/&amp;/gi, '&').replace(/&quot;/gi, '"').replace(/&#39;|&#x27;/gi, "'");
-}
-function getAttr(tag: string, name: string): string | undefined {
-  const m = new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, 'i').exec(tag);
-  return m ? decodeAttr(m[1] ?? m[2] ?? '') : undefined;
-}
-
 type AssetResolver = (url: string) => Promise<string | null>;
 
 function makeResolver(opts: RenderHtmlToPngOptions): AssetResolver {
@@ -127,11 +119,89 @@ async function replaceAsync(
   return out + input.slice(last);
 }
 
+async function resolveCssUrls(value: string, resolve: AssetResolver, mode: 'inline' | 'block'): Promise<string> {
+  return replaceAsync(value, /url\(\s*(["']?)\s*(https?:\/\/[^)"']*)\1\s*\)/gi, async (match) => {
+    const url = match[2].trim();
+    const dataUri = mode === 'inline' ? await resolve(url) : null;
+    return `url("${dataUri ?? TRANSPARENT_PIXEL}")`;
+  });
+}
+
+async function rewriteCssDeclaration(style: CSSStyleDeclaration, resolve: AssetResolver, mode: 'inline' | 'block'): Promise<void> {
+  const declarations = Array.from({ length: style.length }, (_, index) => style[index]);
+  for (const property of declarations) {
+    const value = style.getPropertyValue(property);
+    const rewritten = await resolveCssUrls(value, resolve, mode);
+    if (rewritten !== value) {
+      style.setProperty(property, rewritten, style.getPropertyPriority(property));
+    }
+  }
+}
+
+async function rewriteCssRules(rules: CSSRuleList, resolve: AssetResolver, mode: 'inline' | 'block'): Promise<void> {
+  for (const rule of Array.from(rules)) {
+    const cssRule = rule as CSSRule & { style?: CSSStyleDeclaration; cssRules?: CSSRuleList };
+    if (cssRule.style) {
+      await rewriteCssDeclaration(cssRule.style, resolve, mode);
+    } else if (cssRule.cssRules) {
+      await rewriteCssRules(cssRule.cssRules, resolve, mode);
+    }
+  }
+}
+
+function isSandboxUnavailable(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /no usable sandbox|failed to move to new namespace|namespace.*operation not permitted/i.test(message);
+}
+
+async function launchBrowser() {
+  const args = [
+    '--disable-dev-shm-usage',
+    '--disable-gpu',
+    '--disable-features=IsolateOrigins',
+    '--disable-site-isolation-trials',
+    // Defense in depth below interception. A dead proxy prevents Chromium preconnects.
+    '--proxy-server=socks5://127.0.0.1:1',
+    '--proxy-bypass-list=<-loopback>',
+  ];
+  const launchOptions: any = {
+    headless: true,
+    args,
+    timeout: 10000,
+  };
+
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+
+  // Chromium cannot sandbox as root. Otherwise try Chromium's sandbox first, then use
+  // no-sandbox only for its explicit "no usable sandbox" failure (common in restricted
+  // containers without user namespaces). Request denial remains the security boundary.
+  if (typeof process.getuid === 'function' && process.getuid() === 0) {
+    return puppeteer.launch({
+      ...launchOptions,
+      args: [...args, '--no-sandbox', '--disable-setuid-sandbox'],
+    });
+  }
+
+  try {
+    return await puppeteer.launch(launchOptions);
+  } catch (error) {
+    if (!isSandboxUnavailable(error)) throw error;
+    console.warn('[renderHtmlToPng] Chromium sandbox is unavailable in this runtime; retrying with network isolation only.');
+    return puppeteer.launch({
+      ...launchOptions,
+      args: [...args, '--no-sandbox', '--disable-setuid-sandbox'],
+    });
+  }
+}
+
 /**
- * Rewrites remote http(s) image references in `html`: `<img src>` and CSS `url(...)`.
+ * Rewrites remote http(s) image references from `<img src>` and parsed CSS declarations.
+ * Text nodes and ordinary metadata attributes are never interpreted as CSS or resource URLs.
  * With 'inline' they become data: URIs (fetched via safeFetch); anything refused, failed or
  * non-image becomes a neutral placeholder. With 'block' all remote references are replaced.
- * Other remote-loading constructs (iframe/script/link/@import) are dropped by request
+ * Other remote-loading constructs (iframe/script/link/@import) are denied by request
  * interception in the browser; this function only decides what survives as an image.
  */
 export async function resolveRemoteAssets(
@@ -140,30 +210,43 @@ export async function resolveRemoteAssets(
 ): Promise<string> {
   const mode = opts.remoteAssets ?? 'inline';
   const resolve: AssetResolver = mode === 'inline' ? makeResolver(opts) : async () => null;
+  const dom = new JSDOM(`<body>${html}</body>`);
+  const document = dom.window.document;
 
-  // <img ... src="http...">
-  let out = await replaceAsync(html, /<img\b[^>]*>/gi, async (m) => {
-    const tag = m[0];
-    const src = getAttr(tag, 'src');
-    if (src === undefined || !REMOTE_URL.test(src)) return tag;
-    const dataUri = await resolve(src.trim());
+  for (const image of Array.from(document.querySelectorAll('img[src]'))) {
+    const src = image.getAttribute('src') ?? '';
+    if (!REMOTE_URL.test(src)) continue;
+    const dataUri = mode === 'inline' ? await resolve(src.trim()) : null;
     if (dataUri) {
-      return tag.replace(/(\ssrc\s*=\s*)(?:"[^"]*"|'[^']*')/i, (_m, pre: string) => pre + '"' + dataUri + '"');
+      image.setAttribute('src', dataUri);
+    } else {
+      const placeholder = document.createElement('span');
+      placeholder.setAttribute('style', PLACEHOLDER_STYLE);
+      placeholder.setAttribute('role', 'img');
+      const alt = image.getAttribute('alt') ?? '';
+      placeholder.setAttribute('aria-label', alt);
+      placeholder.textContent = alt;
+      image.replaceWith(placeholder);
     }
-    const alt = getAttr(tag, 'alt') ?? '';
-    return `<span style="${PLACEHOLDER_STYLE}" role="img" aria-label="${escapeHtml(alt)}">${escapeHtml(alt)}</span>`;
-  });
+  }
 
-  // srcset can also load remote images; drop it when it references remote URLs.
-  out = out.replace(/(<img\b[^>]*?)\s(?:srcset)\s*=\s*(?:"[^"]*"|'[^']*')/gi, '$1');
+  for (const image of Array.from(document.querySelectorAll('img[srcset]'))) {
+    if (/https?:\/\//i.test(image.getAttribute('srcset') ?? '')) image.removeAttribute('srcset');
+  }
 
-  // CSS url(http...)
-  out = await replaceAsync(out, /url\(\s*(["']?)\s*(https?:\/\/[^)"']*)\1\s*\)/gi, async (m) => {
-    const dataUri = await resolve(decodeAttr(m[2]).trim());
-    return `url("${dataUri ?? TRANSPARENT_PIXEL}")`;
-  });
+  for (const element of Array.from(document.querySelectorAll('[style]'))) {
+    await rewriteCssDeclaration((element as HTMLElement).style, resolve, mode);
+  }
 
-  return out;
+  for (const styleElement of Array.from(document.querySelectorAll('style'))) {
+    const sheet = styleElement.sheet;
+    if (sheet) {
+      await rewriteCssRules(sheet.cssRules, resolve, mode);
+      styleElement.textContent = Array.from(sheet.cssRules, (rule) => rule.cssText).join('\n');
+    }
+  }
+
+  return document.body.innerHTML;
 }
 
 /**
@@ -180,32 +263,7 @@ export async function renderHtmlToPng(content: RenderContent, opts: RenderHtmlTo
     // Escape structured values and sanitize all supported rich HTML before resolving image URLs.
     const sanitizedHtml = toHtml(content);
     const safeHtml = await withTimeout(resolveRemoteAssets(sanitizedHtml, opts), 6000, 'Asset resolution');
-    const puppeteerOptions: any = {
-      headless: true,
-      args: [
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--disable-features=IsolateOrigins',
-        '--disable-site-isolation-trials',
-        // Defense in depth below interception. A dead proxy prevents Chromium preconnects.
-        '--proxy-server=socks5://127.0.0.1:1',
-        '--proxy-bypass-list=<-loopback>',
-      ],
-    };
-
-    // Chromium sandboxing is active whenever the process is not root. Root containers cannot
-    // use Chromium's sandbox; the request-deny policy below remains the security boundary.
-    if (typeof process.getuid === 'function' && process.getuid() === 0) {
-      puppeteerOptions.args.push('--no-sandbox', '--disable-setuid-sandbox');
-    }
-
-    // Use system chromium if available (Docker environment)
-    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-      puppeteerOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-    }
-
-    puppeteerOptions.timeout = 10000;
-    browser = await puppeteer.launch(puppeteerOptions);
+    browser = await launchBrowser();
     const page = await browser.newPage();
     await page.setViewport({ width, height });
 
