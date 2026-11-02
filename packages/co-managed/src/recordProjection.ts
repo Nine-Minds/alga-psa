@@ -337,6 +337,13 @@ export const PROJECT_RECORD_SOURCE: RedactableRecordSource = recordSourceFromCoM
     },
   });
 
+export const TICKET_DOCUMENT_SOURCE: RedactableRecordSource = {
+  resource: ['documents'],
+  identifier: ids('document_id', 'documents.document_id'),
+  fields: {},
+  derived: {},
+};
+
 export const TICKET_RECORD_SOURCE: RedactableRecordSource = {
   resource: ['tickets'],
   identifier: ids('ticket_id', 'tickets.ticket_id', 'ticket', 'ticketId'),
@@ -362,6 +369,9 @@ export const TICKET_RECORD_SOURCE: RedactableRecordSource = {
     bundle_master_ticket_number: ids('master_ticket_id'),
     contact_avatar_url: ids('contact_name_id'),
     client_logo_url: ids('client_id'),
+  },
+  children: {
+    documents: TICKET_DOCUMENT_SOURCE,
   },
 };
 

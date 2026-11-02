@@ -400,6 +400,97 @@ describe('tickets: REST reads serialize the projection', () => {
     const visible = await controller.update()(request(`/api/v1/tickets/${TICKET}`, { id: TICKET }));
     expect((await visible.json()).data).toMatchObject({ title: 'Updated title', description: 'Sensitive details', priority: 'high' });
   });
+
+  const teamMutationRequest = (method: 'PUT' | 'DELETE') => {
+    const req = new NextRequest(`http://localhost/api/v1/tickets/${TICKET}/team`, {
+      method,
+      headers: { 'x-api-key': 'k', 'Content-Type': 'application/json' },
+      body: JSON.stringify(method === 'PUT' ? { team_id: P2 } : {}),
+    }) as any;
+    req.context = context;
+    req.params = Promise.resolve({ id: TICKET });
+    return req;
+  };
+
+  it.each([
+    ['assignTeam', 'PUT'],
+    ['removeTeam', 'DELETE'],
+  ] as const)('%s response uses the ticket projection and preserves visible fields', async (method, httpMethod) => {
+    const ticket = { ...state.tickets[0], description: 'Sensitive team ticket details', priority: 'high' };
+    const controller = new ApiTicketController();
+    (controller as any).ticketService[method] = vi.fn(async () => ticket);
+
+    const visible = await (controller as any)[method]()(teamMutationRequest(httpMethod));
+    expect((await visible.json()).data.description).toBe('Sensitive team ticket details');
+    state.decisions.set(TICKET, { allowed: true, redactedFields: ['tickets.description'] });
+    const response = await (controller as any)[method]()(teamMutationRequest(httpMethod));
+    expect(response.status).toBe(200);
+    const data = (await response.json()).data;
+    expect(data).toMatchObject({ ticket_id: TICKET, title: 'Printer', priority: 'high' });
+    expect(data).not.toHaveProperty('description');
+    expect(authorizeResource).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ['assignTeam', 'PUT'],
+    ['removeTeam', 'DELETE'],
+  ] as const)('%s does not write when ticket read authorization denies the row', async (method, httpMethod) => {
+    state.decisions.set(TICKET, { allowed: false, redactedFields: [] });
+    const controller = new ApiTicketController();
+    const write = vi.fn(async () => ({ ...state.tickets[0] }));
+    (controller as any).ticketService[method] = write;
+
+    const response = await (controller as any)[method]()(teamMutationRequest(httpMethod));
+    expect(response.status).toBe(404);
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'documents.file_size',
+    'values.documents.file_size',
+    'fields.documents.file_size',
+  ])('ticket documents omit file_size when %s is hidden while retaining visible metadata', async (alias) => {
+    const controller = new ApiTicketController();
+    (controller as any).ticketService.getTicketDocuments = vi.fn(async () => [
+      { document_id: 'document-1', document_name: 'Visible document', file_size: 92831 },
+    ]);
+
+    const get = () => controller.getDocuments()(request(`/api/v1/tickets/${TICKET}/documents`, { id: TICKET }));
+    const visible = await get();
+    expect((await visible.json()).data[0].file_size).toBe(92831);
+    state.decisions.set(TICKET, { allowed: true, redactedFields: [alias] });
+    const response = await get();
+    expect(response.status).toBe(200);
+    const data = (await response.json()).data;
+    expect(data).toHaveLength(1);
+    expect(data[0]).toMatchObject({ document_id: 'document-1', document_name: 'Visible document' });
+    expect(data[0]).not.toHaveProperty('file_size');
+  });
+
+  it.each(['documents', 'documents.document_id', 'values.documents.document_id'])(
+    'ticket documents are suppressed when %s is hidden', async (alias) => {
+      state.decisions.set(TICKET, { allowed: true, redactedFields: [alias] });
+      const controller = new ApiTicketController();
+      (controller as any).ticketService.getTicketDocuments = vi.fn(async () => [
+        { document_id: 'document-1', document_name: 'Secret document', file_size: 92831 },
+      ]);
+
+      const response = await controller.getDocuments()(request(`/api/v1/tickets/${TICKET}/documents`, { id: TICKET }));
+      expect(response.status).toBe(200);
+      expect((await response.json()).data).toEqual([]);
+    },
+  );
+
+  it('ticket documents are not fetched when ticket read authorization denies the row', async () => {
+    state.decisions.set(TICKET, { allowed: false, redactedFields: [] });
+    const controller = new ApiTicketController();
+    const readDocuments = vi.fn(async () => [{ document_id: 'document-1', document_name: 'Secret document' }]);
+    (controller as any).ticketService.getTicketDocuments = readDocuments;
+
+    const response = await controller.getDocuments()(request(`/api/v1/tickets/${TICKET}/documents`, { id: TICKET }));
+    expect(response.status).toBe(404);
+    expect(readDocuments).not.toHaveBeenCalled();
+  });
 });
 
 describe('quotes: REST reads serialize the projection', () => {

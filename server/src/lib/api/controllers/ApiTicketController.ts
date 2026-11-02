@@ -31,7 +31,7 @@ import {
   reprojectUnderDecision,
   type AuthorizedProjection,
 } from './authorizationKernel';
-import { TICKET_RECORD_SOURCE } from '@alga-psa/co-managed/recordProjection';
+import { TICKET_DOCUMENT_SOURCE, TICKET_RECORD_SOURCE } from '@alga-psa/co-managed/recordProjection';
 import { buildTicketRecordContext } from './recordContexts';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
@@ -984,10 +984,13 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           const documents = await this.ticketService.getTicketDocuments(ticketId, apiRequest.context!);
+          const projectedDocuments = documents
+            .map((document) => reprojectUnderDecision(ticketGate, document as Record<string, any>, TICKET_DOCUMENT_SOURCE))
+            .filter((document): document is AuthorizedProjection<Record<string, any>> => document !== null);
 
-          return createSuccessResponse(documents, 200, undefined, apiRequest);
+          return createSuccessResponse(projectedDocuments, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1344,7 +1347,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           const body = await req.json();
           const validation = assignTicketTeamSchema.safeParse(body);
@@ -1353,8 +1356,9 @@ export class ApiTicketController extends ApiBaseController {
           }
 
           const ticket = await this.ticketService.assignTeam(ticketId, validation.data, apiRequest.context!);
+          const projection = reprojectUnderDecision(ticketGate, ticket as Record<string, any>, TICKET_RECORD_SOURCE);
 
-          return createSuccessResponse(ticket, 200, undefined, apiRequest);
+          return createSuccessResponse(projection, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1375,7 +1379,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
 
           // DELETE bodies are optional; no body means remove_all.
           let body: unknown = {};
@@ -1396,8 +1400,9 @@ export class ApiTicketController extends ApiBaseController {
           }
 
           const ticket = await this.ticketService.removeTeam(ticketId, validation.data, apiRequest.context!);
+          const projection = reprojectUnderDecision(ticketGate, ticket as Record<string, any>, TICKET_RECORD_SOURCE);
 
-          return createSuccessResponse(ticket, 200, undefined, apiRequest);
+          return createSuccessResponse(projection, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);
