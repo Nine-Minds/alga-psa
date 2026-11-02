@@ -163,14 +163,23 @@ export async function isAssetActionAllowed(
   action: AssetAuthorizationAction
 ): Promise<boolean> {
   const records = await resolveAssetAuthorizationRecords(trx, tenant, [asset]);
-  const decision = await context.authorizationKernel.authorizeResource({
+  const request = {
     subject: context.subject,
-    resource: { type: 'asset', action, id: asset.asset_id },
+    resource: { type: 'asset', action: 'read' as const, id: asset.asset_id },
     record: records.get(asset.asset_id),
     requestCache: context.requestCache,
     knex: trx as Knex,
+  };
+  const readDecision = await context.authorizationKernel.authorizeResource(request);
+  if (!readDecision.allowed || action === 'read') return readDecision.allowed;
+
+  // Record mutations require visibility as well as the requested operation. Keep the
+  // mutation action on its own kernel request so exact bundle rules still apply.
+  const actionDecision = await context.authorizationKernel.authorizeResource({
+    ...request,
+    resource: { ...request.resource, action },
   });
-  return decision.allowed;
+  return actionDecision.allowed;
 }
 
 /** True when the caller's per-record kernel decision allows reading the asset. */

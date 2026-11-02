@@ -17,11 +17,11 @@ function contextWith(authorizeResource: ReturnType<typeof vi.fn<(req: any) => Pr
 }
 
 describe('isAssetActionAllowed', () => {
-  it.each(['read', 'update', 'delete'] as const)('sends action %s to the kernel', async (action) => {
+  it.each(['read', 'update', 'delete'] as const)('requires read and sends the requested action %s to the kernel', async (action) => {
     const authorizeResource = vi.fn(async (_req: any) => ({ allowed: true }));
     const allowed = await isAssetActionAllowed({} as any, 't', contextWith(authorizeResource), { asset_id: 'a1', client_id: 'c1' }, action);
     expect(allowed).toBe(true);
-    expect(authorizeResource.mock.calls[0][0].resource).toEqual({ type: 'asset', action, id: 'a1' });
+    expect(authorizeResource.mock.calls.map(([req]) => req.resource.action)).toEqual(action === 'read' ? ['read'] : ['read', action]);
   });
 
   it('returns the kernel denial for the requested action', async () => {
@@ -30,6 +30,12 @@ describe('isAssetActionAllowed', () => {
     const asset = { asset_id: 'a1', client_id: 'c1' };
     expect(await isAssetReadAllowed({} as any, 't', ctx, asset)).toBe(true);
     expect(await isAssetActionAllowed({} as any, 't', ctx, asset, 'update')).toBe(false);
+  });
+
+  it('denies a mutation when read is denied even if its action is allowed', async () => {
+    const authorizeResource = vi.fn(async (req: any) => ({ allowed: req.resource.action !== 'read' }));
+    expect(await isAssetActionAllowed({} as any, 't', contextWith(authorizeResource), { asset_id: 'a1' }, 'update')).toBe(false);
+    expect(authorizeResource.mock.calls.map(([req]) => req.resource.action)).toEqual(['read']);
   });
 
   it('isAssetReadAllowed keeps sending action read', async () => {

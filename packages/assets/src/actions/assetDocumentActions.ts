@@ -24,6 +24,9 @@ async function assertAssetUpdateAllowed(trx: Knex.Transaction, tenant: string, u
         throw new Error('Asset not found');
     }
     const context = await createAssetReadContext(trx, tenant, user as any);
+    if (!await isAssetReadAllowed(trx, tenant, context, asset)) {
+        throw new Error('Asset not found');
+    }
     if (!await isAssetActionAllowed(trx, tenant, context, asset, 'update')) {
         throw new Error('Permission denied: Cannot update assets');
     }
@@ -76,8 +79,8 @@ export const removeDocumentFromAsset = withAuth(async (
 ): Promise<void | AssetActionError> => {
     const { knex } = await createTenantKnex();
 
-    // Check permission for asset deletion
-    if (!await hasPermission(user, 'asset', 'delete')) {
+    // Removing a document association edits the asset's related data.
+    if (!await hasPermission(user, 'asset', 'update')) {
         return permissionError('Permission denied: Cannot remove documents from assets', 'msp/assets:errors.permissions.removeDocuments');
     }
 

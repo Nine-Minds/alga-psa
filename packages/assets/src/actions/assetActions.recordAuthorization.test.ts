@@ -280,17 +280,35 @@ describe('asset mutations are authorized with their own action (alga-2026-000294
     expect(h.kernel.requests.map((r) => r.action)).toContain('update');
   });
 
-  it('updateAsset succeeds for a subject allowed to update, deciding with action update', async () => {
+  it('updateAsset succeeds for a subject allowed to read and update', async () => {
     seedAsset();
 
     const result = (await updateAsset(ASSET_ID, { name: 'Renamed' })) as any;
 
     expect(result.actionError).toBeUndefined();
     expect(h.dbState.assets[0].name).toBe('Renamed');
-    expect(h.kernel.requests).toEqual([{ type: 'asset', action: 'update', id: ASSET_ID }]);
+    expect(h.kernel.requests.map((r) => r.action)).toEqual(['read', 'read', 'update']);
   });
 
-  it('deleteAsset decides with action delete, not read', async () => {
+  it('updateAsset conceals an unreadable asset even when update is otherwise allowed', async () => {
+    seedAsset();
+    h.kernel.denied.add('asset:read');
+    const result = (await updateAsset(ASSET_ID, { name: 'Hijacked' })) as any;
+    expect(result.actionError).toContain('Asset not found');
+    expect(h.dbState.assets[0].name).toBe('Desk PC');
+    expect(h.kernel.requests.map((r) => r.action)).toEqual(['read']);
+  });
+
+  it('deleteAsset requires read even when delete is allowed and there is no delete bundle rule', async () => {
+    seedAsset();
+    h.kernel.denied.add('asset:read');
+    const result = (await deleteAsset(ASSET_ID)) as any;
+    expect(JSON.stringify(result)).toContain('Asset not found');
+    expect(h.dbState.assets).toHaveLength(1);
+    expect(h.kernel.requests.map((r) => r.action)).toEqual(['read']);
+  });
+
+  it('deleteAsset denies delete for a readable asset when delete is denied', async () => {
     seedAsset();
     h.kernel.denied.add('asset:delete');
 
@@ -298,6 +316,14 @@ describe('asset mutations are authorized with their own action (alga-2026-000294
 
     expect(result.permissionError ?? result.message ?? result.error ?? JSON.stringify(result)).toContain('Permission denied: Cannot delete assets');
     expect(h.dbState.assets).toHaveLength(1);
-    expect(h.kernel.requests.map((r) => r.action)).toEqual(['delete']);
+    expect(h.kernel.requests.map((r) => r.action)).toEqual(['read', 'read', 'delete']);
+  });
+
+  it('deleteAsset succeeds when read and delete are both allowed', async () => {
+    seedAsset();
+    const result = (await deleteAsset(ASSET_ID)) as any;
+    expect(result.success).toBe(true);
+    expect(h.dbState.assets).toHaveLength(0);
+    expect(h.kernel.requests.map((r) => r.action)).toEqual(['read', 'read', 'delete']);
   });
 });

@@ -100,6 +100,8 @@ import { validateAssetStatusSlug } from '../lib/assetStatusRegistry';
 import {
     resolveAuthorizationSubjectForUser as resolveSharedAuthorizationSubject,
     resolveAssetAuthorizationRecords as resolveSharedAssetAuthorizationRecords,
+    isAssetReadAllowed as isSharedAssetReadAllowed,
+    isAssetActionAllowed as isSharedAssetActionAllowed,
     type AssetAuthUser as SharedAssetAuthUser,
     type AssetAuthorizationAction,
 } from '../lib/assetReadAuthorization';
@@ -589,8 +591,12 @@ async function assertAssetActionAllowed(
     asset: AssetAuthorizationInput,
     action: AssetAction
 ): Promise<void> {
-    const decision = await authorizeAssetDecision(trx, tenant, context, asset, action);
-    if (!decision.allowed) {
+    if (action !== 'read' && !await isSharedAssetReadAllowed(trx, tenant, context, asset)) {
+        // Keep unreadable records indistinguishable from missing records.
+        throw new Error('Asset not found');
+    }
+    const allowed = await isSharedAssetActionAllowed(trx, tenant, context, asset, action);
+    if (!allowed) {
         throw new Error(`Permission denied: Cannot ${action} assets`);
     }
 }
