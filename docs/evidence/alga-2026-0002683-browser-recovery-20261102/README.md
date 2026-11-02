@@ -1,12 +1,39 @@
 # C5 follow-up 2 browser recovery and smoke attempt
 
-Run time: 2026-11-02 17:23–17:36 UTC
+Current follow-up run: 2026-11-02 17:39–17:46 UTC
 Branch: `feature/alga-2026-0002683-c5-follow-up-2-advance-track-v`
-Tested commit: `4f74616f97fae2a34a4387a9018acf35aec80a6c`
+Tested commit: `83fdeb1ee11443303c7fdcda537b07de312cf546`
 Required origin: `http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536`
-Result: **BLOCKED before sign-in: the required origin has no listener. Local diagnostic documents now verify painting, input, and nonblank screenshots in an existing and a freshly created own-card pane. Successful app loading and all six feature flows remain unverified.**
+Result: **Browser operation verified in existing and fresh card-owned panes. The required origin has no listener, so sign-in and all six feature flows are NOT RUN. No product defect was established.**
 
-## Takeover verification (17:34–17:36 UTC)
+No committed implementation plan exists in `main..HEAD`; `git log main..HEAD --name-only -- docs/plans/` returned no paths. The flow definitions and expected outcomes below were copied from the earlier smoke evidence README; this run records each as NOT RUN.
+
+## Current follow-up observations (17:39–17:46 UTC)
+
+Before using remembered IDs, the card space `77c0c59a-5083-4842-b1cc-f20158ff6c11` and project `3a1d00ee-04c2-4bad-8dfe-4d0458245c41` were confirmed in the current layout. Existing pane `c8403826-ff91-488f-aa28-8447b4f96c06` and `0bc994e8-aab7-4f56-a707-f94f6742349b` still belong to their card-owned browser tab group. The user active space and active tab were unchanged before and after the checks.
+
+The existing pane and a fresh pane `8a6c720f-69bb-4b23-a299-12030b892f74` each navigated to the labeled local diagnostic [`diagnostic.html`](takeover/diagnostic.html). DOM inspection reported visible elements; screenshot capture succeeded and produced nonblank images; real typing and clicking updated the diagnostic result to the pane-specific entered value. The fresh pane remained owned by the card project. All browser commands returned success without a pane-host mismatch. This verifies browser operation only and makes no product assertion. See [current-validation.json](takeover/current-validation.json), the `current-existing-*` and `current-fresh-*` command results, the two [existing-pane screenshots](takeover/current-existing-after.png) and [fresh-pane screenshot](takeover/current-fresh-after.png), and [current-pane-ownership.json](takeover/current-pane-ownership.json).
+
+The required origin was probed separately at `2026-11-02T17:45:56Z`. Curl resolved the hostname to `::1` and `127.0.0.1`, both connections were refused (exit 7), and `ss` showed no listener on port 3536. This is an unavailable application service, distinct from browser screenshot failure or resource exhaustion. No app server was started. See [current-service-probe.json](takeover/current-service-probe.json).
+
+### Six required flows
+
+All six are **NOT RUN** in this follow-up. The exact-origin service was unavailable before sign-in; no login was submitted and no product state was mutated. The expected results are the scenarios documented by the evidence README:
+
+| Flow | Expected outcome | This run |
+| --- | --- | --- |
+| 1. Inventory Needs attention | Overdue fixture appears; due-today and seven-days-ahead fixtures appear as approaching; eight-days-ahead is absent; the attention link opens the matching warranty detail. | **NOT RUN** — no attention screen or fixture assertion observed. |
+| 2. Effective timezone boundary | With browser, server, and user on different calendar dates, detail and dashboard agree for one `return_by`; stale charge dialog rejects due today and allows yesterday; restore temporary user timezone. | **NOT RUN** — no timezone change or date/charge assertion performed. |
+| 3. Vendor non-return charge | On an overdue unshipped advance claim, reject invalid amount/currency; record valid amount, currency, and note; verify one immutable closed event with actor and amount; stale repeat does not duplicate; no invoice/stock change. | **NOT RUN** — no charge submitted or database state changed. |
+| 4. Claim before intake | Open/approve advance claim before custody; receive through UI before replacement and verify `custody_id`; repeat intake after replacement; ship with custody control and verify `dead_unit_owed`, outbound time, and custody-event source; stale non-return charge is rejected without mutation. | **NOT RUN** — no claim, intake, shipment, or charge action performed. |
+| 5. Legacy association guard | Seed historical unlinked case with pre-claim closed episode and current episode; shipping current episode must not link the older one; with multiple eligible episodes/claims, action refuses atomically. | **NOT RUN** — no historical fixture seeded and no transition attempted. |
+| 6. Adjacent regression | Canonical warranty dead-unit shipment and vendor receipt close custody as returned-to-vendor and resolve RMA while preserving replacement serial; standard/stock cases do not gain advance-only vendor-charge actions. | **NOT RUN** — no warranty, stock, or standard-case assertion performed. |
+
+The four package checks all passed on the tested commit: `npm run typecheck` and `npm run build` for `@alga-psa/assets` and `@alga-psa/inventory`. Their current-run logs and outcomes are listed in [current-validation.json](takeover/current-validation.json). No full server build was run. The pre-existing `package-lock.json` modification remains untouched.
+
+The earlier takeover and smoke attempts below are historical evidence from prior commits; they are not newly live-verified in this run. The original `ERR_INSUFFICIENT_RESOURCES` root cause remains unresolved. Full live smoke verification remains blocked until the board-managed service is available at the exact required origin.
+
+## Previous takeover verification (17:34–17:36 UTC)
 
 The existing visible pane `c8403826-ff91-488f-aa28-8447b4f96c06` rendered a labeled local `data:` document with a heading, colored background, input, and button. Alga Dev typing and clicking commands updated the result to `Click received: card-owned-input-verified`. DOM inspection and the nonblank screenshots [before input](takeover/diagnostic-before.png) and [after input](takeover/diagnostic-after.png) agree. The document is [diagnostic.html](takeover/diagnostic.html). It uses no application server or application data and does not simulate any warranty flow.
 
