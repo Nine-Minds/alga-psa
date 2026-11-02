@@ -20,10 +20,19 @@
         "durationMs": 1,
         "errorText": "net::ERR_CONNECTION_REFUSED",
         "ok": false
+      },
+      {
+        "timestamp": 1793640384348,
+        "url": "http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536/auth/msp/signin",
+        "method": "GET",
+        "id": 3,
+        "durationMs": 1,
+        "errorText": "net::ERR_CONNECTION_REFUSED",
+        "ok": false
       }
     ],
-    "total": 2,
-    "returned": 2,
-    "nextSince": 2
+    "total": 3,
+    "returned": 3,
+    "nextSince": 3
   }
 }

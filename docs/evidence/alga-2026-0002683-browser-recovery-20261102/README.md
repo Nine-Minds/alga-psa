@@ -1,29 +1,29 @@
 # C5 follow-up 2 browser recovery and smoke attempt
 
-Run time: 2026-11-02 17:23–17:29 UTC
+Run time: 2026-11-02 17:23–17:30 UTC
 Branch: `feature/alga-2026-0002683-c5-follow-up-2-advance-track-v`
 Tested commit: `4f74616f97fae2a34a4387a9018acf35aec80a6c`
 Required origin: `http://feature-alga-2026-0002683-c5-follow-up-2-advance-track-v.localhost:3536`
-Result: **BLOCKED before sign-in. Browser pane control and screenshot capture recovered; the exact origin's app service was not listening, so none of the six feature flows ran.**
+Result: **BLOCKED before sign-in. Browser command handling and pane ownership were observed, but rendering recovery is unverified. The required origin had no listener, so none of the six feature flows ran.**
 
 ## Browser recovery observations
 
 Used `node ~/.alga-xo/bin/cli.mjs` throughout. The Alga Dev host window was `window-1-1793580971518`; board space `77c0c59a-5083-4842-b1cc-f20158ff6c11` belongs to project `3a1d00ee-04c2-4bad-8dfe-4d0458245c41` and is mapped to host `ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series`.
 
-Created fresh browser pane `376c175b-b142-46db-b907-5be706188acf` using `space-new-tab --projectId=3a1d00ee-04c2-4bad-8dfe-4d0458245c41 --type=browser`. `list-pane-tabs` returned that pane as the active browser tab in the project space, scoped to the expected host. Three navigation attempts used only the required origin and sign-in path. The CLI returned successfully and `browser-get-url` consistently reported the requested URL; DOM inspection showed `chrome-error://chromewebdata/`. Screenshots succeeded on all three attempts. A real Tab key input returned successfully, and the URL/ownership remained associated with the same pane after the interaction.
+Created fresh browser pane `376c175b-b142-46db-b907-5be706188acf` using `space-new-tab --projectId=3a1d00ee-04c2-4bad-8dfe-4d0458245c41 --type=browser`. `list-pane-tabs` returned that pane as the active browser tab in the project space, scoped to the expected host. Three navigation attempts used only the required origin and sign-in path. The CLI returned successfully and `browser-get-url` consistently reported the requested URL; DOM inspection showed `chrome-error://chromewebdata/`. Screenshot commands returned file paths, but visual inspection found each of the four committed PNGs is entirely white (one color, RGB 255/255/255; identical SHA-256 `1d569a5b0b2ec3824db0fdcb1e639514834c58adf955f523974ac9d89b2f2fa1`). They do not show Chromium's error UI and do not establish usable screenshot or rendering recovery. A real Tab key input returned successfully, and URL/ownership remained associated with the same pane after the interaction.
 
-Repeated navigation, DOM, and screenshot operations on prior failing pane `c8b5a26d-b238-4df9-87f0-4d0b95e3b67d` also returned successfully and remained associated with the same card space. Current browser network records report `net::ERR_CONNECTION_REFUSED` for the exact origin. Thus, this run establishes pane creation, ownership, navigation command handling, interaction, and screenshot capture. It does **not** establish successful page load or prove the earlier `ERR_INSUFFICIENT_RESOURCES` cause was fixed: the app endpoint was unavailable before the browser could load it.
+Repeated navigation and DOM commands on prior failing pane `c8b5a26d-b238-4df9-87f0-4d0b95e3b67d` returned successfully and remained associated with the same card space. Attribute `net::ERR_CONNECTION_REFUSED` to the browser network events in `network.json` and the direct HTTP refusal in `host-state.txt`; the PNGs do not depict that error. A read-only layout dump (`own-space-layout.json`) shows the card space was inactive and the panes had `visible: false`. `pane-activate-tab` had refused the root pane with `Pane is not inside a tab container`. This may explain the blank captures, but rendering was not retested in a visible pane and remains unverified. No shared window or unrelated session was activated or changed. Successful page load and the earlier `ERR_INSUFFICIENT_RESOURCES` root cause remain unverified.
 
-The project dossier's service history records the board stopping the card service process at 17:22 UTC after the preceding smoke run. A fresh HTTP request to the exact origin at 17:26 UTC returned `ECONNREFUSED`; `ss` showed no listener on port 3536. The current pane error is therefore an unavailable destination, not evidence of a vendor-return product defect. No service or application was started. The broad browser inventory call timed out. Host snapshot at inspection: 73 Chromium headless processes; two older renderers had about 2,900 open descriptors each; memory showed about 21 GiB available and swap fully used. These observations do not establish the original resource error's root cause. No shared browser process was restarted or killed, to preserve other cards' sessions.
+The project dossier's service history records the board stopping the card service process at 17:22 UTC after the preceding smoke run. A fresh HTTP request to the exact origin at 17:26 UTC returned `ECONNREFUSED`; `ss` showed no listener on port 3536. The current pane error is therefore an unavailable destination, not evidence of a vendor-return product defect. No service or application was started. The broad browser inventory call timed out. The matching `host-state.txt` snapshot at 17:27:54 UTC recorded 51 Chromium headless process matches, 56 GiB available memory, and one sampled renderer (PID 148258) with 2,898 open descriptors; swap had about 7.8 GiB of 8 GiB used. These observations do not establish the original resource error's root cause. No shared browser process was restarted or killed, to preserve other cards' sessions.
 
 Evidence files:
 
-- `origin-error-1.png`, `origin-error-2.png`, `origin-error-3.png`: screenshots from the new pane; each displays Chromium's connection error.
-- `previous-pane-error.png`: screenshot from a previously failing card pane.
-- `browser-recovery-preflight.webm`, `.vtt`, `.json`: 2.19-second, three-frame recording of the repeated browser preflight, with chapters.
+- The three `origin-error-*.png` files and `previous-pane-error.png` are retained as raw CLI screenshot outputs. All four are entirely white and are not visual evidence of Chromium's error page or usable rendering.
+- `browser-recovery-preflight.webm`, `.vtt`, `.json`: raw 2.19-second preflight recording with burned chapter captions; inspected video frames show a white canvas under the captions, so the recording does not establish browser-page rendering.
 - `navigation-*.json`, `pane-url-*.json`, `pane-dom-*.json`, `interaction-1.json`, `network.json`, `screenshot-*.json`: raw CLI outcomes.
 - `previous-failed-pane-*.json`: ownership and repeat operation checks on the earlier pane.
 - `host-state.txt`: captured window/space ownership, host process and resource snapshot, port listener check, and exact-origin HTTP check.
+- `own-space-layout.json`: read-only layout state showing the card panes were hidden in an inactive space at capture time.
 - `http-headers.txt`: empty because curl could not connect. No response body was produced.
 
 ## Six-flow results
