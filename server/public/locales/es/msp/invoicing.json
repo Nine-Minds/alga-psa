@@ -78,7 +78,8 @@
       "poScopeDiffers": "El alcance de la orden de compra difiere",
       "currencyDiffers": "La moneda difiere",
       "taxTreatmentDiffers": "El tratamiento fiscal difiere",
-      "exportShapeDiffers": "La forma de exportación difiere"
+      "exportShapeDiffers": "La forma de exportación difiere",
+      "billingProfileDiffers": "El perfil de facturación difiere"
     },
     "executionRows": {
       "labels": {

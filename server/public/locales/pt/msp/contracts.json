@@ -150,7 +150,11 @@
       "title": "Atribuição do cliente",
       "useTenantRenewalDefaults": "Use padrões de renovação de locatário",
       "usingCustomSettings": "Usando configurações de atribuição personalizadas",
-      "usingTenantDefaults": "Usando padrões de locatário"
+      "usingTenantDefaults": "Usando padrões de locatário",
+      "billingProfileUseDefault": "Usar {{name}} (predefinição do cliente)",
+      "billingProfileAssigned": "Perfil de faturação atribuído",
+      "billingProfileUnavailable": "Sem perfil — atribuição pendente",
+      "billingProfileLoading": "A carregar perfil de faturação…"
     },
     "clientOwnership": {
       "assignmentStatus": "Status da Atribuição",
@@ -375,6 +379,82 @@
         "failed": "Não foi possível alterar a forma como este serviço é medido."
       },
       "effectiveFrom": "Alteração de medição em vigor a partir de"
+    },
+    "billing": {
+      "title": "Perfil de faturação e condições de pagamento",
+      "asOf": "a {{date}}",
+      "profileLabel": "Perfil de faturação",
+      "inactive": "Inativo",
+      "lineCountOne": "{{count}} linha",
+      "lineCountOther": "{{count}} linhas",
+      "termsLabel": "Condições de pagamento",
+      "terms": {
+        "net_30": "Líquido 30",
+        "net_15": "Líquido 15",
+        "net_14": "Líquido 14",
+        "net_7": "Líquido 7",
+        "due_on_receipt": "Devido no recebimento"
+      },
+      "termsSource": {
+        "profile": "do perfil de faturação",
+        "client": "do cliente",
+        "tenant": "do padrão do inquilino",
+        "default": "predefinição: sem condições definidas"
+      },
+      "profileSource": {
+        "client_default": "predefinição do cliente",
+        "contract": "atribuído ao contrato",
+        "contract_line": "definido na linha",
+        "work_item": "definido no ticket ou projeto"
+      },
+      "valueSource": {
+        "profile": "Perfil",
+        "client": "Cliente",
+        "contract": "Contrato",
+        "default": "Predefinição"
+      },
+      "dueSentence": "Uma fatura de {{invoiceDate}} vence em {{dueDate}} — {{terms}} {{source}}",
+      "detailsToggle": "Outros detalhes de faturação",
+      "fieldNone": "Nenhum",
+      "taxRegionChain": "Região do serviço, depois localização da linha de contrato, depois predefinição do cliente",
+      "taxExempt": "Isento de impostos",
+      "taxable": "Tributável",
+      "templateCustom": "Modelo personalizado",
+      "templateDefault": "Modelo predefinido",
+      "paymentMethod": {
+        "credit_card": "Cartão de crédito",
+        "bank_transfer": "Transferência bancária",
+        "check": "Cheque"
+      },
+      "fieldLabel": {
+        "bill_to": "Faturar a",
+        "payment_method": "Método de pagamento",
+        "tax_exemption": "Isenção de impostos",
+        "tax_region": "Região fiscal",
+        "delivery": "Entrega de faturas",
+        "template": "Modelo de fatura",
+        "po_number": "Número do pedido de compra",
+        "currency": "Moeda",
+        "cadence": "Periodicidade de faturação",
+        "profile_billing_cycle": "Ciclo de faturação do perfil",
+        "profile_billing_cycle_unapplied": "Ciclo de faturação do perfil (ainda não aplicado)"
+      },
+      "warnings": {
+        "inactiveProfile": "{{name}} está inativo. Os encargos continuam atribuídos a ele, mas são faturados no perfil predefinido, com as respetivas condições de pagamento.",
+        "mixedProfiles": "Este contrato fatura por {{count}} perfis diferentes, portanto nenhum perfil único o cobre. Cada fatura usa as condições de pagamento do perfil em que é emitida.",
+        "lineOverride": "A linha \"{{line}}\" fatura em {{name}} em vez do perfil do contrato.",
+        "workItemOverride": "O tempo registrado em um ticket ou projeto é faturado pelo perfil desse item de trabalho, se ele tiver um. Sem perfil, vale o perfil padrão do cliente.",
+        "workItemOverrideWithProfiles": "O tempo registrado em um ticket ou projeto é faturado pelo perfil desse item de trabalho, se ele tiver um ({{names}}). Sem perfil, vale o perfil padrão do cliente.",
+        "mixedProfilesSameInvoice": "As cobranças deste contrato são atribuídas a {{count}} perfis diferentes, mas todas aparecem na fatura de {{invoice}}, portanto aplica-se um único conjunto de condições de pagamento.",
+        "bucketCoverageNote": "Em linhas com pacote pré-pago ou bloco de horas, o tempo coberto pelo pacote ou bloco não acompanha o item de trabalho; apenas o tempo por hora restante o acompanha."
+      },
+      "simulationNote": "Os preços simulados usam a isenção de impostos ao nível do cliente. A isenção própria de um perfil não é aplicada nesta simulação.",
+      "dueSentenceWorkItem": "Uma fatura de {{invoiceDate}} vence em {{dueDate}} — {{terms}} {{source}}, a menos que o ticket ou projeto seja faturado por outro perfil",
+      "workItemProfileLine": "Se o ticket ou projeto for faturado por {{name}}:",
+      "invoiceLanding": {
+        "notBilledSeparately": "Atribuído a {{attributed}}; faturado em {{invoice}} ({{attributed}} não fatura separadamente) — {{terms}}, vencimento {{dueDate}}",
+        "inactiveProfile": "Atribuído a {{attributed}}; faturado em {{invoice}} ({{attributed}} está inativo, por isso não tem fatura própria) — {{terms}}, vence a {{dueDate}}"
+      }
     }
   },
   "contractDialog": {

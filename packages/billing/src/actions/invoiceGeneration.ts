@@ -12,7 +12,10 @@ import { BillingEngine, UnresolvedCatalogPricingError } from '../lib/billing/bil
 import { reconcileWindowAttribution } from '../lib/billing/contractLineAttributionWriter';
 import { listUnmaterializedClientCadenceWindowLineIds } from '../lib/billing/clientCadenceWindowMaterialization';
 import {
+  chargeBelongsToScope,
   getCycleBillingProfileId,
+  type InvoiceProfileScope,
+  resolveInvoiceProfileForAttribution,
   resolveInvoiceProfileScope,
   scopeChargesToProfile,
 } from '../lib/billing/billingProfileInvoiceScope';
@@ -2491,6 +2494,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     client_id,
     selectedProfileId,
   );
+  assertSelectionChargesFitProfileScope(billingResult.charges, previewProfileScope);
   const previewCharges = scopeChargesToProfile(billingResult.charges, previewProfileScope);
   if (billingResult.charges.length > 0 && previewCharges.length === 0) {
     throw withRecurringWindowErrorContext(
@@ -2746,7 +2750,7 @@ async function resolveRecurringSelectionBillingProfileId(
   knex: Knex | Knex.Transaction,
   tenant: string,
   selectorInputs: IRecurringDueSelectionInput[],
-  options: { fallbackBillingProfileId?: string | null; userId?: string } = {},
+  options: { fallbackBillingProfileId?: string | null } = {},
 ): Promise<string | null> {
   const clientId = assertSameRecurringSelectionWindow(selectorInputs).clientId;
   const defaultProfileId = await getClientDefaultBillingProfileId(knex, tenant, clientId);
@@ -2843,20 +2847,31 @@ async function resolveRecurringSelectionBillingProfileId(
     tenant,
     clientId,
     null,
-    { userId: options.userId },
   );
   if (!defaultScope.isScoped) {
     return options.fallbackBillingProfileId ?? defaultScope.billingProfileId;
   }
 
-  const separatelyBilledSelections = [...resolvedProfileIds].filter((billingProfileId) =>
-    defaultScope.separatelyBillingProfileIds.has(billingProfileId),
+  // The shared landing rule (also read by the contract billing trace): an
+  // attribution that does not land on the default profile's invoice keeps its own.
+  // A selection must land on exactly one invoice profile. Scoping the charges to
+  // one profile would silently drop every other profile's charges, so a mixed
+  // selection is an error, never "pick one" (the Generate UI splits such groups
+  // into one selection per landing profile before it ever gets here).
+  const landingProfileIds = new Set(
+    [...resolvedProfileIds].map((billingProfileId) =>
+      resolveInvoiceProfileForAttribution(billingProfileId, defaultScope),
+    ),
   );
-  if (separatelyBilledSelections.length > 1) {
-    throw new Error('A recurring invoice selection cannot combine multiple separately billed profiles.');
+  if (landingProfileIds.size > 1) {
+    throw new Error(
+      'A recurring invoice selection cannot combine lines that land on different invoice profiles '
+      + `(${[...landingProfileIds].join(', ')}). Select each invoice profile's lines separately.`,
+    );
   }
-  if (separatelyBilledSelections.length === 1) {
-    return separatelyBilledSelections[0];
+  const [landingProfileId] = [...landingProfileIds];
+  if (landingProfileId && landingProfileId !== defaultScope.billingProfileId) {
+    return landingProfileId;
   }
   if (
     options.fallbackBillingProfileId
@@ -2867,6 +2882,28 @@ async function resolveRecurringSelectionBillingProfileId(
 
   // Attributed profiles without separate invoicing remain reporting dimensions.
   return defaultScope.billingProfileId;
+}
+
+/**
+ * Charge-level backstop for recurring SELECTION paths. The engine only returns
+ * charges for the selected periods / source records, so any of them the invoice
+ * profile scope would filter out is a selected charge that would silently go
+ * unbilled (e.g. a time entry whose work item lands on another profile than the
+ * selected contract line). Refuse instead. Not for the billing-cycle path, where
+ * per-scope filtering of the whole client window is intended.
+ */
+function assertSelectionChargesFitProfileScope(
+  charges: IBillingCharge[],
+  scope: InvoiceProfileScope,
+): void {
+  const dropped = charges.filter((charge) => !chargeBelongsToScope(charge, scope));
+  if (dropped.length === 0) return;
+  const droppedProfiles = Array.from(new Set(dropped.map((charge) => charge.billing_profile_id ?? 'unattributed')));
+  throw new Error(
+    `The selection contains ${dropped.length} charge(s) attributed to invoice profile(s) ${droppedProfiles.join(', ')} `
+    + `that do not belong on the ${scope.billingProfileId} invoice and would be left out. `
+    + 'Select each invoice profile\'s lines separately.',
+  );
 }
 
 async function buildPreviewInvoiceForSelectionInput(params: {
@@ -3591,7 +3628,7 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
     knex,
     tenant,
     params.normalizedSelectorInputs,
-    { fallbackBillingProfileId: cycleBillingProfileId, userId: user.user_id },
+    { fallbackBillingProfileId: cycleBillingProfileId },
   );
   if (intendedBillingProfileId) {
     const intendedScope = await resolveInvoiceProfileScope(
@@ -3599,8 +3636,8 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
       tenant,
       client_id,
       intendedBillingProfileId,
-      { userId: user.user_id },
     );
+    assertSelectionChargesFitProfileScope(billingResult.charges, intendedScope);
     const scopedCharges = scopeChargesToProfile(billingResult.charges, intendedScope);
     if (billingResult.charges.length > 0 && scopedCharges.length === 0) {
       throw withRecurringWindowErrorContext(
@@ -4035,7 +4072,6 @@ export async function createInvoiceFromBillingResultImpl(
     tenant,
     clientId,
     options.billingProfileId ?? cycleBillingProfileId,
-    { userId },
   );
   // F095 — bill-to, PO, delivery, and tax identity come from the profile,
   // falling back to the client field by field.

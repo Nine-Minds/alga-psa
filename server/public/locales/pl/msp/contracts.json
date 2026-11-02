@@ -150,7 +150,11 @@
       "title": "Przypisanie klienta",
       "useTenantRenewalDefaults": "Użyj domyślnych ustawień odnowień tenanta",
       "usingCustomSettings": "Używanie niestandardowych ustawień przypisania",
-      "usingTenantDefaults": "Używanie domyślnych ustawień tenanta"
+      "usingTenantDefaults": "Używanie domyślnych ustawień tenanta",
+      "billingProfileUseDefault": "Użyj {{name}} (domyślny klienta)",
+      "billingProfileAssigned": "Przypisany profil rozliczeniowy",
+      "billingProfileUnavailable": "Brak profilu — przypisanie oczekuje",
+      "billingProfileLoading": "Ładowanie profilu rozliczeniowego…"
     },
     "clientOwnership": {
       "assignmentStatus": "Status przypisania",
@@ -375,6 +379,82 @@
         "failed": "Nie udało się zmienić sposobu pomiaru tej usługi."
       },
       "effectiveFrom": "Zmiana sposobu pomiaru obowiązuje od"
+    },
+    "billing": {
+      "title": "Profil rozliczeniowy i warunki płatności",
+      "asOf": "stan na {{date}}",
+      "profileLabel": "Profil rozliczeniowy",
+      "inactive": "Nieaktywny",
+      "lineCountOne": "{{count}} pozycja",
+      "lineCountOther": "{{count}} pozycji",
+      "termsLabel": "Warunki płatności",
+      "terms": {
+        "net_30": "Netto 30",
+        "net_15": "Netto 15",
+        "net_14": "Netto 14",
+        "net_7": "Netto 7",
+        "due_on_receipt": "Płatne po otrzymaniu"
+      },
+      "termsSource": {
+        "profile": "z profilu rozliczeniowego",
+        "client": "od klienta",
+        "tenant": "z ustawień domyślnych organizacji",
+        "default": "domyślne — nie ustawiono warunków"
+      },
+      "profileSource": {
+        "client_default": "domyślny klienta",
+        "contract": "przypisany do umowy",
+        "contract_line": "ustawiony w pozycji",
+        "work_item": "ustawiony w zgłoszeniu lub projekcie"
+      },
+      "valueSource": {
+        "profile": "Profil",
+        "client": "Klient",
+        "contract": "Umowa",
+        "default": "Domyślne"
+      },
+      "dueSentence": "Faktura z dnia {{invoiceDate}} jest płatna do {{dueDate}} — {{terms}} {{source}}",
+      "detailsToggle": "Pozostałe szczegóły rozliczeń",
+      "fieldNone": "Brak",
+      "taxRegionChain": "Region usługi, następnie lokalizacja pozycji umowy, następnie domyślny region klienta",
+      "taxExempt": "Zwolniony z podatku",
+      "taxable": "Podlega opodatkowaniu",
+      "templateCustom": "Szablon niestandardowy",
+      "templateDefault": "Szablon domyślny",
+      "paymentMethod": {
+        "credit_card": "Karta kredytowa",
+        "bank_transfer": "Przelew bankowy",
+        "check": "Czek"
+      },
+      "fieldLabel": {
+        "bill_to": "Nabywca",
+        "payment_method": "Metoda płatności",
+        "tax_exemption": "Zwolnienie z podatku",
+        "tax_region": "Region podatkowy",
+        "delivery": "Dostarczanie faktur",
+        "template": "Szablon faktury",
+        "po_number": "Numer zamówienia",
+        "currency": "Waluta",
+        "cadence": "Cykl rozliczeń",
+        "profile_billing_cycle": "Cykl rozliczeniowy profilu",
+        "profile_billing_cycle_unapplied": "Cykl rozliczeniowy profilu (jeszcze niezastosowany)"
+      },
+      "warnings": {
+        "inactiveProfile": "Profil {{name}} jest nieaktywny. Opłaty pozostają do niego przypisane, ale są fakturowane na profilu domyślnym z jego warunkami płatności.",
+        "mixedProfiles": "Ta umowa jest rozliczana przez {{count}} różne profile, więc żaden pojedynczy profil jej nie obejmuje. Każda faktura stosuje warunki płatności profilu, na którym jest wystawiona.",
+        "lineOverride": "Pozycja „{{line}}\" jest rozliczana przez {{name}} zamiast profilu umowy.",
+        "workItemOverride": "Czas zapisany w zgłoszeniu lub projekcie jest rozliczany przez profil tego elementu pracy, jeśli go ma. W przeciwnym razie obowiązuje domyślny profil klienta.",
+        "workItemOverrideWithProfiles": "Czas zapisany w zgłoszeniu lub projekcie jest rozliczany przez profil tego elementu pracy, jeśli go ma ({{names}}). W przeciwnym razie obowiązuje domyślny profil klienta.",
+        "mixedProfilesSameInvoice": "Opłaty z tej umowy są przypisane do {{count}} różnych profili, ale wszystkie trafiają na fakturę profilu {{invoice}}, więc obowiązuje jeden zestaw warunków płatności.",
+        "bucketCoverageNote": "Na pozycjach z przedpłaconą pulą lub blokiem godzin czas pokryty przez pulę lub blok nie podąża za elementem pracy; podąża za nim tylko pozostały czas godzinowy."
+      },
+      "simulationNote": "Symulowana wycena używa zwolnienia z podatku na poziomie klienta. Własne zwolnienie profilu nie jest stosowane w tej symulacji.",
+      "dueSentenceWorkItem": "Faktura z dnia {{invoiceDate}} jest płatna do {{dueDate}} — {{terms}} {{source}}, chyba że zgłoszenie lub projekt jest rozliczane przez inny profil",
+      "workItemProfileLine": "Jeśli zgłoszenie lub projekt jest rozliczane przez {{name}}:",
+      "invoiceLanding": {
+        "notBilledSeparately": "Przypisano do {{attributed}}; zafakturowano na {{invoice}} ({{attributed}} nie rozlicza osobno) — {{terms}}, termin {{dueDate}}",
+        "inactiveProfile": "Przypisano do {{attributed}}; zafakturowano na {{invoice}} ({{attributed}} jest nieaktywny, więc nie ma własnej faktury) — {{terms}}, termin {{dueDate}}"
+      }
     }
   },
   "contractDialog": {

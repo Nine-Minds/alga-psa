@@ -90,7 +90,8 @@
       "poScopeDiffers": "Zakres PO jest inny",
       "currencyDiffers": "Waluta jest inna",
       "taxTreatmentDiffers": "Traktowanie podatkowe jest różne",
-      "exportShapeDiffers": "Kształt eksportu jest inny"
+      "exportShapeDiffers": "Kształt eksportu jest inny",
+      "billingProfileDiffers": "Profil fakturowania jest inny"
     },
     "executionRows": {
       "labels": {

@@ -78,7 +78,8 @@
       "poScopeDiffers": "O escopo do pedido de compra difere",
       "currencyDiffers": "A moeda é diferente",
       "taxTreatmentDiffers": "O tratamento fiscal difere",
-      "exportShapeDiffers": "A forma de exportação é diferente"
+      "exportShapeDiffers": "A forma de exportação é diferente",
+      "billingProfileDiffers": "O perfil de faturamento é diferente"
     },
     "executionRows": {
       "labels": {

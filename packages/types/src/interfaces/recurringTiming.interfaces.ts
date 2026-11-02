@@ -567,6 +567,13 @@ export interface IRecurringDueWorkRow {
   currencyCode?: string | null;
   taxSource?: string | null;
   exportShapeKey?: string | null;
+  /**
+   * The invoice profile this obligation lands on (line profile, then contract
+   * profile, then client default, through the client's separately-billing
+   * scope). Rows of one client that land on different profiles can never share
+   * one invoice. Null for unresolved non-contract work, which the engine attributes per charge.
+   */
+  invoiceBillingProfileId?: string | null;
   attribution?: IRecurringDueWorkAttribution;
 }
 

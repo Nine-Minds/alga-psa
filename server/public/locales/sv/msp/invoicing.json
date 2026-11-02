@@ -78,7 +78,8 @@
       "poScopeDiffers": "Inköpsorderns omfattning skiljer sig åt",
       "currencyDiffers": "Valutorna skiljer sig åt",
       "taxTreatmentDiffers": "Skattehanteringen skiljer sig åt",
-      "exportShapeDiffers": "Exportstrukturen skiljer sig åt"
+      "exportShapeDiffers": "Exportstrukturen skiljer sig åt",
+      "billingProfileDiffers": "Faktureringsprofilen skiljer sig åt"
     },
     "executionRows": {
       "labels": {

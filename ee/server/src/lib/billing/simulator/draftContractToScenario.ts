@@ -426,6 +426,8 @@ export async function draftContractToScenario(
       client_id: client.client_id,
       client_name: client.client_name,
     },
+    // A draft has no assignment or lines yet, so no profile is resolved.
+    billing_identity: null,
     invoice_schedule: invoiceSchedule,
     billing_frequency: draft.billing_frequency,
     contract_start_date: draft.start_date ? midnight(draft.start_date) : null,

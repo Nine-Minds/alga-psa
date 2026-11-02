@@ -206,3 +206,134 @@ export interface IContractPricingSchedule extends TenantEntity {
   created_by?: string;
   updated_by?: string;
 }
+
+/**
+ * Billing traceability for a live contract: which billing profile(s) bill it,
+ * what payment terms apply, and which level of the engine's own chains
+ * produced each value. Resolved live at read time — never stored on the
+ * contract — through `resolveChargeProfile`, `resolveEffectiveBillingIdentity`
+ * and `paymentTermDays`, so it cannot disagree with invoice generation.
+ */
+export type ContractBillingTraceProfileSource = 'contract_line' | 'contract' | 'work_item' | 'client_default';
+
+/** Where a value inside the winning profile's identity came from. */
+export type ContractBillingTraceValueSource = 'profile' | 'client' | 'default' | 'contract';
+
+/**
+ * Where the applied payment terms came from, in the engine's inheritance order:
+ * the billing profile, the client, the tenant default, then `default` (the
+ * system Net 30 fallback when no tier holds a known key).
+ */
+export type ContractBillingTraceTermsSource = 'profile' | 'client' | 'tenant' | 'default';
+
+export interface ContractBillingTraceTerms {
+  /**
+   * Known terms key that applies (`net_30` when nothing is configured). Mirrors
+   * `PAYMENT_TERMS` in `shared/billingClients/paymentPreferences`; a compile-time
+   * check there keeps the two in step.
+   */
+  value: 'net_30' | 'net_15' | 'net_14' | 'net_7' | 'due_on_receipt';
+  source: ContractBillingTraceTermsSource;
+  days: number;
+  /** Worked example: an invoice dated `asOf` is due on `dueDate`. */
+  dueDateExample: { invoiceDate: ISO8601String; dueDate: ISO8601String };
+}
+
+export interface ContractBillingTraceField {
+  key:
+    | 'bill_to'
+    | 'payment_method'
+    | 'tax_exemption'
+    | 'tax_region'
+    | 'delivery'
+    | 'template'
+    | 'po_number'
+    | 'currency'
+    | 'cadence'
+    | 'profile_billing_cycle';
+  /** Authored English label; UI surfaces translate by `key`. */
+  label: string;
+  /** Null when the field has no value of its own (e.g. tax region is a chain, not a value). */
+  value: string | null;
+  source: ContractBillingTraceValueSource;
+  /** False for values the engine does not read (the profile billing cycle). */
+  applied?: boolean;
+}
+
+/**
+ * Why the profile a charge is attributed to differs from the profile whose
+ * invoice carries it (decided by `resolveInvoiceProfileForAttribution`).
+ */
+export type ContractBillingTraceInvoiceReason =
+  /** Same profile: attributed to the one whose invoice carries the charge. */
+  | 'same_profile'
+  /** The attributed profile bills separately: it keeps its own invoice. */
+  | 'own_invoice'
+  /** The attributed profile does not bill separately (or is inactive): charges roll up to the default. */
+  | 'not_billed_separately';
+
+/** The profile whose invoice carries the charges; its terms stamp the due date. */
+export interface ContractBillingTraceInvoiceProfile {
+  billingProfileId: string;
+  name: string;
+  isActive: boolean;
+  isDefault: boolean;
+}
+
+export interface ContractBillingTraceProfile {
+  /** The profile the charges are attributed to (`resolveChargeProfile`). */
+  billingProfileId: string;
+  name: string;
+  /** The highest-priority chain step that routes at least one line here. */
+  source: ContractBillingTraceProfileSource;
+  lineCount: number;
+  isActive: boolean;
+  isDefault: boolean;
+  /** The profile whose invoice these charges land on. Equals the attributed profile only when `invoiceReason` is `same_profile` or `own_invoice`. */
+  invoiceProfile: ContractBillingTraceInvoiceProfile;
+  invoiceReason: ContractBillingTraceInvoiceReason;
+  /** Terms and due date of the INVOICE profile, not the attributed profile. */
+  terms: ContractBillingTraceTerms;
+  /** Identity fields of the invoice profile (the invoice reads bill-to, PO, delivery from it). */
+  fields: ContractBillingTraceField[];
+}
+
+export type ContractBillingTraceWarning =
+  | { code: 'inactive_profile'; billingProfileId: string; profileName: string }
+  /**
+   * `profileCount` = distinct attributed profiles; `invoiceProfileCount` = distinct
+   * invoice profiles among them. Terms differ per profile only when the latter is > 1.
+   */
+  | { code: 'mixed_profiles'; profileCount: number; invoiceProfileCount: number; invoiceProfileName: string | null }
+  | { code: 'line_override'; contractLineId: string; contractLineName: string | null; billingProfileId: string; profileName: string }
+  /**
+   * Hourly lines with no line or contract profile follow the work item's profile
+   * (ticket/project) when one is set, else the client default. `candidateProfiles`
+   * are the profiles the client's work items carry today (may be empty).
+   * `bucketCoverage`: a reachable line has bucket-pool or prepaid-block coverage. Time
+   * drawn from a bucket pool bills through the line's own assignments; prepaid-block
+   * minutes are already paid for. Only the remaining hourly time follows the work item.
+   */
+  | {
+      code: 'work_item_override_possible';
+      contractLineIds: string[];
+      candidateProfiles: Array<{ billingProfileId: string; name: string }>;
+      bucketCoverage: boolean;
+    };
+
+export interface ContractBillingTrace {
+  asOf: ISO8601String;
+  /** Every profile that actually bills a line of this contract, primary first. */
+  profiles: ContractBillingTraceProfile[];
+  /** Terms of the primary (first) profile's INVOICE profile. With `mixed_profiles`, read `profiles[].terms`. */
+  terms: ContractBillingTraceTerms;
+  /** Fields of the primary (first) profile. With `mixed_profiles`, read `profiles[].fields`. */
+  fields: ContractBillingTraceField[];
+  warnings: ContractBillingTraceWarning[];
+  /**
+   * Conditional outcomes (source `work_item`): profiles the client's tickets or
+   * projects carry, billing only the lines named by `work_item_override_possible`.
+   * Never part of `profiles[]`; absent when there are none.
+   */
+  workItemProfiles?: ContractBillingTraceProfile[];
+}

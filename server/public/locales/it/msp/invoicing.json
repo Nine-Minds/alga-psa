@@ -78,7 +78,8 @@
       "poScopeDiffers": "L'ambito del PO è diverso",
       "currencyDiffers": "La valuta è diversa",
       "taxTreatmentDiffers": "Il trattamento fiscale è diverso",
-      "exportShapeDiffers": "La forma di esportazione è diversa"
+      "exportShapeDiffers": "La forma di esportazione è diversa",
+      "billingProfileDiffers": "Il profilo di fatturazione è diverso"
     },
     "executionRows": {
       "labels": {
