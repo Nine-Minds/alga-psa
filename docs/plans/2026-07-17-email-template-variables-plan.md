@@ -209,3 +209,37 @@ from milestone 2 onward).
 | Render path (Handlebars) | `packages/notifications/src/notifications/email.ts` |
 | Server actions | `packages/notifications/src/actions/notification-actions/notificationActions.ts` |
 | Coding standards | `docs/AI_coding_standards.md` |
+
+## Addendum: selectable ticket asset fields (2026-10-30)
+
+For `ticket-closed`, `ticket.assets` is an array available to HTML and plain-text
+templates. Each asset exposes `assetTag`, `name`, `assetType`, `manufacturer`,
+`model`, `serialNumber`, `status`, `location`, and `relationship`. Missing values
+are empty strings; an unlinked ticket has an empty list. `assetType` uses the
+tenant's registry display name, or the stored slug when no matching type exists.
+
+Choose any subset of fields in the template. For example, this omits asset tags:
+
+```handlebars
+<table>
+  <thead><tr><th>Name</th><th>Type</th><th>Manufacturer / Model</th><th>Serial #</th></tr></thead>
+  <tbody>
+    {{#each ticket.assets}}
+    <tr><td>{{name}}</td><td>{{assetType}}</td><td>{{manufacturer}} {{model}}</td><td>{{serialNumber}}</td></tr>
+    {{/each}}
+  </tbody>
+</table>
+```
+
+Add a tag header and corresponding `{{assetTag}}` cell inside the row loop to
+show tags. Remove both the header and cell to omit any column; keep empty cells
+for missing values so columns remain aligned.
+Use ordinary double braces for asset values so Handlebars escapes
+HTML. Plain-text templates can use the same loop without the HTML tags.
+The variables panel inserts the loop example for `ticket.assets` and
+`{{this.fieldName}}` for individual fields (insert those inside the loop).
+The existing `ticket.assetsHtml` remains the fixed five-column alternative;
+its preview now shows all five columns rather than only the asset tag.
+
+See the [HTML editing guide](../email/editing-ticket-email-html.md) for styled
+table examples and rendered screenshots of all fields and selected columns.

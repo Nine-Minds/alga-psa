@@ -11,6 +11,7 @@ import {
   TicketCommentAddedEvent
 } from '@alga-psa/event-schemas';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
+import { buildTicketEmailDetailBlocks } from '../../notifications/ticketEmailDetailBlocks';
 import { resolveCoManagedCommentStep, audienceRecipients, coManagedSendFields } from '../../notifications/coManagedCommentDelivery';
 import { EventEmailRetryQueue } from '../../notifications/EventEmailRetryQueue';
 import logger from '@alga-psa/core/logger';
@@ -3520,15 +3521,28 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       resolution: externalResolutionHtml
     };
 
+    // Ticket-detail blocks (assets / materials / time / remaining prepaid
+    // hours) for the closed email. Remaining hours are read live at send time.
+    const detailBlocks = await buildTicketEmailDetailBlocks(
+      db,
+      tenantId,
+      ticket.ticket_id,
+      ticket.client_id,
+      emailTimeZone,
+      emailLocale
+    );
+
     const externalContext = {
       ticket: {
         ...baseTicketContext,
+        ...detailBlocks,
         url: portalUrl
       }
     };
     const internalContext = {
       ticket: {
         ...baseTicketContext,
+        ...detailBlocks,
         resolution: internalResolutionHtml,
         url: internalUrl
       }
