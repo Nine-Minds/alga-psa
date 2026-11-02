@@ -1042,6 +1042,80 @@ export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
   },
 };
 
+/** Custody episodes retain the asset policy and the ownership of joined holder labels. */
+export const ASSET_CUSTODY_SOURCE: RedactableRecordSource = {
+  policySource: ASSET_RECORD_SOURCE,
+  resource: ['asset_custody'],
+  identifier: [
+    ...ids('custody_id', 'asset_custody.custody_id', 'asset_id', 'asset_custody.asset_id'),
+    ...recordFieldAliases(ASSET_RECORD_SOURCE, 'asset_id'),
+  ],
+  fields: {},
+  derived: {
+    location_name: ['location_id'],
+    holder_name: ['holder_user_id', 'asset_custody.holder_user_id'],
+    ticket_number: ['ticket_id'],
+  },
+};
+
+/** Custody events are independently suppressible and notes remain event-owned fields. */
+export const ASSET_CUSTODY_EVENT_SOURCE: RedactableRecordSource = {
+  policySource: ASSET_RECORD_SOURCE,
+  resource: ['asset_custody_events'],
+  identifier: [
+    ...ids('event_id', 'asset_custody_events.event_id', 'custody_id', 'asset_custody_events.custody_id', 'asset_id', 'asset_custody_events.asset_id'),
+    ...recordFieldAliases(ASSET_RECORD_SOURCE, 'asset_id'),
+  ],
+  fields: {},
+  derived: {
+    actor_name: ['actor_user_id'],
+    from_holder_name: ['from_holder_user_id'],
+    to_holder_name: ['to_holder_user_id'],
+    from_location_name: ['from_location_id'],
+    to_location_name: ['to_location_id'],
+  },
+};
+
+/** Detached custody responses preserve the original asset, episode, and event decisions. */
+export const ASSET_CUSTODY_RESPONSE_SOURCE: RedactableRecordSource = {
+  policySource: ASSET_RECORD_SOURCE,
+  resource: [],
+  identifier: [],
+  fields: {},
+  derived: {},
+  children: {
+    open: ASSET_CUSTODY_SOURCE,
+    episodes: ASSET_CUSTODY_SOURCE,
+    events: ASSET_CUSTODY_EVENT_SOURCE,
+  },
+};
+
+/** Custody writes copy the episode and event into a detached response envelope. */
+export const ASSET_CUSTODY_MUTATION_RESPONSE_SOURCE: RedactableRecordSource = {
+  ...ASSET_CUSTODY_RESPONSE_SOURCE,
+  children: {
+    custody: ASSET_CUSTODY_SOURCE,
+    event: ASSET_CUSTODY_EVENT_SOURCE,
+  },
+};
+
+/** Queue rows combine an episode with asset-owned and joined display values. */
+export const ASSET_CUSTODY_QUEUE_SOURCE: RedactableRecordSource = {
+  ...ASSET_CUSTODY_SOURCE,
+  resource: [...ASSET_CUSTODY_SOURCE.resource, ...ASSET_RECORD_SOURCE.resource],
+  fields: {
+    ...ASSET_CUSTODY_SOURCE.fields,
+    client_id: ids('client_id', 'asset_custody.client_id'),
+  },
+  derived: {
+    ...ASSET_CUSTODY_SOURCE.derived,
+    days_held: ['opened_at', 'asset_custody.opened_at'],
+    asset_name: [{ source: ASSET_RECORD_SOURCE, field: 'name' }],
+    asset_tag: [{ source: ASSET_RECORD_SOURCE, field: 'asset_tag' }],
+    client_name: [{ source: ASSET_RECORD_SOURCE, field: 'client_name' }],
+  },
+};
+
 /** The shared asset-ticket edge owns the copied association metadata and both foreign identifiers. */
 export const ASSET_TICKET_ASSOCIATION_SOURCE: RedactableRecordSource = {
   resource: ['asset_associations'],
@@ -1108,6 +1182,20 @@ export const ASSET_NOTE_RESPONSE_SOURCE: RedactableRecordSource = {
     ],
   },
   children: { document: ASSET_NOTE_DOCUMENT_SOURCE },
+};
+
+/** Save-note responses copy the linked document identifier into a detached scalar. */
+export const ASSET_NOTE_MUTATION_RESPONSE_SOURCE: RedactableRecordSource = {
+  policySource: ASSET_RECORD_SOURCE,
+  resource: ['documents'],
+  identifier: [],
+  fields: {
+    document_id: [
+      ...ids('document_id', 'documents.document_id'),
+      ...recordFieldAliases(ASSET_RECORD_SOURCE, 'notes_document_id'),
+    ],
+  },
+  derived: {},
 };
 
 /** Installed software rows retain the canonical asset policy and the joined catalog source. */

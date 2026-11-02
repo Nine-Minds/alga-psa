@@ -319,3 +319,37 @@ describe('asset note source provenance', () => {
     expect(content).toEqual(original);
   });
 });
+
+describe('asset note mutation response projection', () => {
+  const put = async (redactions: string[]) => {
+    state.keyOnly = true;
+    state.redactions = redactions;
+    const { saveAssetNote } = await import('@alga-psa/assets/actions/assetNoteActions');
+    vi.mocked(saveAssetNote).mockClear();
+    vi.mocked(saveAssetNote).mockResolvedValueOnce({ document_id: 'PRIVATE-LINKED-DOCUMENT' } as any);
+    return notes.PUT(new Request('http://localhost/api/v1/assets/review-asset/notes', {
+      method: 'PUT',
+      headers: { 'x-api-key': 'key-secret', 'content-type': 'application/json' },
+      body: JSON.stringify({ blockData: [] }),
+    }), { params: Promise.resolve({ id: 'review-asset' }) });
+  };
+
+  it('returns readable mutation metadata for a visible control', async () => {
+    const response = await put([]);
+    expect(response.status).toBe(200);
+    expect((await response.json()).data.document_id).toBe('PRIVATE-LINKED-DOCUMENT');
+    const { saveAssetNote } = await import('@alga-psa/assets/actions/assetNoteActions');
+    expect(saveAssetNote).toHaveBeenCalled();
+  });
+
+  it.each(['assets.notes_document_id', 'values.notes_document_id', 'documents.document_id'])(
+    'does not disclose a linked document hidden by %s while retaining write execution', async (alias) => {
+      const response = await put([alias]);
+      expect(response.status).toBe(200);
+      expect(JSON.stringify(await response.json())).not.toContain('PRIVATE-LINKED-DOCUMENT');
+      const { saveAssetNote } = await import('@alga-psa/assets/actions/assetNoteActions');
+      expect(saveAssetNote).toHaveBeenCalled();
+      expect(state.subjects.at(-1)?.apiKeyId).toBe('assigned-review-key');
+    },
+  );
+});
