@@ -89,6 +89,33 @@ export interface BucketDetailRow {
   movement: MovementColumns;
 }
 
+/**
+ * One prepaid hour block's contribution to the selected month. Blocks are
+ * minute-denominated prepaid allowances (ad-hoc sales/grants and Prepaid
+ * Block contract-line issuances), distinct from bucket periods.
+ */
+export interface HourBlockDetailRow {
+  blockId: string;
+  clientId: string;
+  serviceName: string;
+  /** Owning contract's name for contract-issued blocks; null for ad-hoc. */
+  contractName: string | null;
+  currencyCode: string;
+  totalMinutes: number;
+  minutesBurned: number;
+  remainingMinutes: number;
+  /** Cents per hour. */
+  hourlyRate: number;
+  valueRemaining: number;
+  status: string;
+  purchasedAt: string | null;
+  expirationDate: string | null;
+  /** Cash billed for the block, minor units — also the valuation basis. */
+  purchaseAmount: number;
+  /** This block's contribution to the selected month. */
+  movement: MovementColumns;
+}
+
 export interface ClientRollforward {
   clientId: string;
   clientName: string;
@@ -98,6 +125,7 @@ export interface ClientRollforward {
   total: MovementColumns;
   creditDetails: CreditDetailRow[];
   bucketDetails: BucketDetailRow[];
+  hourBlockDetails: HourBlockDetailRow[];
 }
 
 export interface CurrencySection {
