@@ -207,20 +207,35 @@ describe('REST tag entity route against the migrated database schema', () => {
     await withRolledBackSchemaContract(trx, async (contractTrx) => {
       connection.db = contractTrx;
       await contractTrx.schema.alterTable('tag_definitions', (table) => table.dropColumn('board_id'));
+      await contractTrx.schema.alterTable('tag_mappings', (table) => table.dropColumn('created_by'));
       const columns = await contractTrx('information_schema.columns')
-        .where({ table_schema: 'public', table_name: 'tag_definitions' }).pluck('column_name');
-      expect(columns).not.toContain('board_id');
+        .where({ table_schema: 'public' }).andWhere((query) => query
+          .where({ table_name: 'tag_definitions' }).orWhere({ table_name: 'tag_mappings' }))
+        .select('table_name', 'column_name');
+      expect(columns.filter((column: { table_name: string }) => column.table_name === 'tag_definitions')
+        .map((column: { column_name: string }) => column.column_name)).not.toContain('board_id');
+      expect(columns.filter((column: { table_name: string }) => column.table_name === 'tag_mappings')
+        .map((column: { column_name: string }) => column.column_name)).not.toContain('created_by');
       let baselineError: { code?: string; message?: string } | undefined;
       await contractTrx.transaction(async (assertionTrx) => {
         try {
-          await assertionTrx('tag_definitions').select('board_id').first();
+          await assertionTrx('tag_mappings').insert({
+            tenant,
+            mapping_id: randomUUID(),
+            tag_id: randomUUID(),
+            tagged_id: ticketId,
+            tagged_type: 'ticket',
+            created_by: userId,
+          });
         } catch (error) {
           baselineError = error as { code?: string; message?: string };
           throw error;
         }
       }).catch(() => undefined);
+      // This reproduces PostgreSQL's diagnostic for the historical insert dependency. The
+      // nested transaction rolls back the failed statement so the contract transaction stays usable.
       expect(baselineError?.code).toBe('42703');
-      expect(baselineError?.message).toMatch(/column "board_id" does not exist/);
+      expect(baselineError?.message).toMatch(/column "created_by" of relation "tag_mappings" does not exist/);
       const getKnexSpy = vi.spyOn(TagService.prototype as unknown as KnexProvidingService, 'getKnex')
         .mockResolvedValue({ knex: contractTrx, tenant });
       try {
@@ -381,9 +396,9 @@ describe('REST tag entity route against the migrated database schema', () => {
     const initial = await tagTicket(routeRequest('POST', ticketId, {
       entity_id: ticketId,
       entity_type: 'ticket',
-      tags: ['preserve-on-failure'],
+      tags: ['preserve-on-failure', 'preserve-second-on-failure'],
     }));
-    const originalMapping = (await initial.json()).data.tags[0];
+    const originalMappingIds = (await initial.json()).data.tags.map((tag: { tag_id: string }) => tag.tag_id).sort();
     const insert = vi.spyOn(TagMapping, 'insert').mockRejectedValueOnce(new Error('Injected mapping insertion failure'));
 
     let response: NextResponse;
@@ -399,10 +414,10 @@ describe('REST tag entity route against the migrated database schema', () => {
 
     expect(response.status).toBe(500);
     const persisted = await trx('tag_mappings').where({ tenant, tagged_id: ticketId, tagged_type: 'ticket' });
-    expect(persisted).toHaveLength(1);
-    expect(persisted[0].mapping_id).toBe(originalMapping.tag_id);
+    expect(persisted.map((mapping: { mapping_id: string }) => mapping.mapping_id).sort()).toEqual(originalMappingIds);
     const readBack = await readTicketTags(routeRequest('GET', ticketId));
-    expect((await readBack.json()).data.tags.map((tag: { tag_text: string }) => tag.tag_text)).toEqual(['preserve-on-failure']);
+    expect((await readBack.json()).data.tags.map((tag: { tag_text: string }) => tag.tag_text).sort())
+      .toEqual(['preserve-on-failure', 'preserve-second-on-failure']);
   });
 
   it('preserves existing mappings when PUT replacement read-back raises PostgreSQL 42703', async () => {

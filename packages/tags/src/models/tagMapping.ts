@@ -170,11 +170,12 @@ const TagMapping = {
     mapping: Omit<ITagMapping, 'mapping_id' | 'tenant' | 'created_at'>,
     userId?: string
   ): Promise<ITagMapping> => {
+    const supportsCreatedBy = await knexOrTrx.schema.hasColumn('tag_mappings', 'created_by');
     const fullMapping = {
       ...mapping,
       mapping_id: uuidv4(),
       tenant,
-      created_by: userId || mapping.created_by || null
+      ...(supportsCreatedBy ? { created_by: userId || mapping.created_by || null } : {})
     };
 
     const [inserted] = await tenantDb(knexOrTrx, tenant).table<ITagMapping>('tag_mappings')
