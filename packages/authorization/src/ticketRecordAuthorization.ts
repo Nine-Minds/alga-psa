@@ -268,19 +268,34 @@ export async function authorizeTicketRecordAccess(input: {
 }
 
 /**
- * Same policy as {@link authorizeTicketRecordAccess}, but a client principal gets the
- * identical `Permission denied` error whether the ticket is missing or not visible, so
- * a ticket UUID cannot be probed. Internal users keep `Ticket not found` (mapped to 404).
+ * Same policy as {@link authorizeTicketRecordAccess}, but conceals whether a ticket exists so a
+ * ticket UUID cannot be probed.
+ *
+ * - `conceal: 'client'` (default): a client principal gets the identical `Permission denied`
+ *   error whether the ticket is missing or not visible (not-found -> denied). Internal users keep
+ *   the distinct `Ticket not found` / `Permission denied` errors.
+ * - `conceal: 'all'`: additionally, for non-client (internal) users a kernel denial is reported as
+ *   `Ticket not found` (denied -> not-found), so a missing ticket and a policy-hidden ticket are
+ *   indistinguishable (both map to 404). Only the exact kernel-denial message is remapped; every
+ *   other error passes through unchanged. Client principals behave as in `'client'`.
+ *
  * Kept separate so existing callers of authorizeTicketRecordAccess are unaffected.
  */
 export async function authorizeTicketRecordAccessConcealed(
-  input: Parameters<typeof authorizeTicketRecordAccess>[0],
+  input: Parameters<typeof authorizeTicketRecordAccess>[0] & { conceal?: 'client' | 'all' },
 ): Promise<TicketRecordRow> {
+  const { conceal = 'client', ...accessInput } = input;
   try {
-    return await authorizeTicketRecordAccess(input);
+    return await authorizeTicketRecordAccess(accessInput);
   } catch (error) {
-    if (isClientUserType(input.user.user_type) && error instanceof Error && error.message === 'Ticket not found') {
-      throw new Error('Permission denied: Cannot access ticket');
+    if (error instanceof Error) {
+      if (isClientUserType(input.user.user_type)) {
+        if (error.message === 'Ticket not found') {
+          throw new Error('Permission denied: Cannot access ticket');
+        }
+      } else if (conceal === 'all' && error.message === 'Permission denied: Cannot access ticket') {
+        throw new Error('Ticket not found');
+      }
     }
     throw error;
   }
