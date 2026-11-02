@@ -116,13 +116,7 @@ export async function createProjectReadDecider(
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
     bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(conn, input);
-        } catch {
-          return [];
-        }
-      },
+      resolveRules: (input) => resolveBundleNarrowingRulesForEvaluation(conn, input),
     }),
     rbacEvaluator: async () => true,
   });
