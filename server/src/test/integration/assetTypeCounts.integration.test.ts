@@ -194,7 +194,7 @@ async function seedAsset(tenantId: string, seed: AssetSeed): Promise<string> {
 async function assignAssetReadBundle(
   tenant: string,
   userId: string,
-  templateKey: 'selected_clients' | 'assigned',
+  templateKey: 'selected_clients' | 'assigned' | 'own' | 'own_or_assigned' | 'own_or_managed',
   config: Record<string, unknown>,
 ): Promise<void> {
   const bundleId = randomUUID();
@@ -468,16 +468,26 @@ describe('listAssets filtered type counts', () => {
 
     await table(fixture.tenantId, 'asset_associations').insert([
       { tenant: fixture.tenantId, asset_id: laptopId, entity_type: 'user', entity_id: assignedUserId, created_by: fixture.userId },
+      { tenant: fixture.tenantId, asset_id: laptopId, entity_type: 'user', entity_id: fixture.userId, created_by: fixture.userId },
       { tenant: fixture.tenantId, asset_id: serverId, entity_type: 'user', entity_id: assignedUserId, created_by: fixture.userId },
       { tenant: fixture.tenantId, asset_id: otherId, entity_type: 'user', entity_id: fixture.userId, created_by: fixture.userId },
     ]);
 
     actionAuth.userId = assignedUserId;
     try {
-      const result = await list({ asset_type: 'workstation' });
+      const queries: string[] = [];
+      const recordQuery = (query: { sql: string }) => queries.push(query.sql);
+      db.on('query', recordQuery);
+      let result: AssetListResponse;
+      try {
+        result = await list({ asset_type: 'workstation' });
+      } finally {
+        db.off('query', recordQuery);
+      }
       expect(result.assets.map((asset) => asset.asset_id)).toEqual([laptopId]);
       expect(result.total).toBe(1);
       expect(result.asset_type_counts).toEqual({ workstation: 1, server: 1 });
+      expect(queries.filter((sql) => /\bfrom "asset_associations"/i.test(sql))).toHaveLength(1);
       expect(await getCounts({ search: 'Globex' })).toEqual({});
 
       const { createAssetReadContext, isAssetReadAllowed } = await import('@alga-psa/authorization/assetReadAuthorization');
@@ -496,6 +506,59 @@ describe('listAssets filtered type counts', () => {
       expect(batched.assets.map((asset) => asset.asset_id)).toEqual(individuallyReadable);
     } finally {
       actionAuth.userId = fixture.userId;
+      await table(fixture.tenantId, 'asset_associations')
+        .whereIn('asset_id', [laptopId, serverId, otherId])
+        .where({ entity_type: 'user' })
+        .whereIn('entity_id', [assignedUserId, fixture.userId])
+        .del();
+    }
+  });
+
+  it.each([
+    'own', 'own_or_assigned', 'own_or_managed',
+  ] as const)('preserves individual %s decisions for assets with multiple user associations', async (templateKey) => {
+    const ownerId = await seedUser(fixture.tenantId);
+    const otherUserId = await seedUser(fixture.tenantId);
+    await assignAssetReadBundle(fixture.tenantId, ownerId, templateKey, {});
+    const candidates = [
+      { asset_id: await seedAsset(fixture.tenantId, { name: 'Owner parity A', asset_type: 'workstation', client_id: fixture.clientA }), client_id: fixture.clientA, asset_type: 'workstation' },
+      { asset_id: await seedAsset(fixture.tenantId, { name: 'Owner parity B', asset_type: 'server', client_id: fixture.clientA }), client_id: fixture.clientA, asset_type: 'server' },
+      { asset_id: await seedAsset(fixture.tenantId, { name: 'Owner parity C', asset_type: 'network_device', client_id: fixture.clientA }), client_id: fixture.clientA, asset_type: 'network_device' },
+    ];
+    await table(fixture.tenantId, 'asset_associations').insert([
+      { tenant: fixture.tenantId, asset_id: candidates[0].asset_id, entity_type: 'user', entity_id: ownerId, created_by: fixture.userId },
+      { tenant: fixture.tenantId, asset_id: candidates[0].asset_id, entity_type: 'user', entity_id: otherUserId, created_by: fixture.userId },
+      { tenant: fixture.tenantId, asset_id: candidates[1].asset_id, entity_type: 'user', entity_id: ownerId, created_by: fixture.userId },
+      { tenant: fixture.tenantId, asset_id: candidates[2].asset_id, entity_type: 'user', entity_id: otherUserId, created_by: fixture.userId },
+    ]);
+
+    actionAuth.userId = ownerId;
+    try {
+      const { createAssetReadContext, isAssetReadAllowed } = await import('@alga-psa/authorization/assetReadAuthorization');
+      const context = await createAssetReadContext(db, fixture.tenantId, {
+        user_id: ownerId,
+        user_type: 'internal',
+      });
+      const decisions = await Promise.all(
+        candidates.map((asset) => isAssetReadAllowed(db, fixture.tenantId, context, asset)),
+      );
+      const readable = candidates.filter((_, index) => decisions[index]);
+      const queries: string[] = [];
+      const recordQuery = (query: { sql: string }) => queries.push(query.sql);
+      db.on('query', recordQuery);
+      let result: AssetListResponse;
+      try {
+        result = await list({ search: 'Owner parity', sort_by: 'name', sort_direction: 'asc', limit: 100 });
+      } finally {
+        db.off('query', recordQuery);
+      }
+      expect(result.assets.map((asset) => asset.asset_id)).toEqual(readable.map((asset) => asset.asset_id));
+      expect(result.total).toBe(readable.length);
+      expect(result.asset_type_counts).toEqual(Object.fromEntries(readable.map((asset) => [asset.asset_type, 1])));
+      expect(queries.filter((sql) => /\bfrom "asset_associations"/i.test(sql))).toHaveLength(2);
+    } finally {
+      actionAuth.userId = fixture.userId;
+      await table(fixture.tenantId, 'assets').whereIn('asset_id', candidates.map((asset) => asset.asset_id)).del();
     }
   });
 

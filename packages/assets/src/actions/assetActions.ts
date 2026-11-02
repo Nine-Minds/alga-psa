@@ -2315,6 +2315,10 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
             };
             const requiresRecordAuthorization = context.subject.userType === 'client'
                 || assetReadRules.some((rule) => rule.resource === 'asset' && rule.action === 'read');
+            const requiresIndividualOwnerResolution = assetReadRules.some((rule) =>
+                rule.resource === 'asset' && rule.action === 'read'
+                && (rule.templateKey === 'own' || rule.templateKey === 'own_or_assigned' || rule.templateKey === 'own_or_managed')
+            );
             // Restricted users must authorize every matching type before counting.
             const listQuery = requiresRecordAuthorization
                 ? facetQuery.clone()
@@ -2350,7 +2354,9 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     .modify(applySort)
                     .limit(sourceLimit)
                     .offset(offset);
-                const readableAssets = await filterReadableAssets(trx, tenant, context, rows);
+                const readableAssets = await filterReadableAssets(trx, tenant, context, rows, {
+                    resolveMultiUserOwnersIndividually: requiresIndividualOwnerResolution,
+                });
                 const readableAssetIds = new Set(readableAssets.map((asset) => asset.asset_id));
 
                 return {
