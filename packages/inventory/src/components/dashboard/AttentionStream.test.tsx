@@ -26,6 +26,14 @@ const overdueVendorReturn: AttentionItem = {
   age_days: 2,
   action: { key: 'view', href: '/msp/inventory/rma?rmaId=55058b3a-cbff-4b8d-9f12-f1b9ebb17c35' },
 };
+const approachingVendorReturn: AttentionItem = {
+  ...overdueVendorReturn,
+  id: 'approaching-vendor-return',
+  band: 'amber',
+  name: 'RMA-SMOKE2683-APPROACHING',
+  params: { return_by: '2026-11-08', days_until_due: 6 },
+  age_days: null,
+};
 
 describe('AttentionStream calendar dates', () => {
   it('renders the vendor return deadline as October 31 in UTC and America/New_York', () => {
@@ -48,5 +56,11 @@ describe('AttentionStream calendar dates', () => {
       if (originalTimezone === undefined) delete process.env.TZ;
       else process.env.TZ = originalTimezone;
     }
+  });
+
+  it('renders approaching attention separately from overdue', () => {
+    const { container } = render(<AttentionStream items={[approachingVendorReturn]} urgentCount={0} />);
+    const row = container.querySelector('#inventory-dashboard-attention-row-approaching-vendor-return');
+    expect(row?.textContent).toContain('RMA-SMOKE2683-APPROACHING — vendor return due Nov 8 — 6d remaining');
   });
 });

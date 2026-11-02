@@ -13,6 +13,7 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useLabelPrint } from '@alga-psa/ui/components/labels/useLabelPrint';
+import { toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { recordPath, type IRmaCase, type IStockLocation, type IVendor, type LabelClass } from '@alga-psa/types';
 import {
@@ -45,7 +46,7 @@ export const toYmd = (d?: Date): string =>
  */
 export const calendarYmd = (v?: string | Date | null): string => {
   if (!v) return '';
-  if (v instanceof Date) return Number.isNaN(v.getTime()) ? '' : toYmd(v);
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? '' : v.toISOString().slice(0, 10);
   return /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : '';
 };
 export const fromYmd = (s?: string | null): Date | undefined => {
@@ -55,13 +56,19 @@ export const fromYmd = (s?: string | null): Date | undefined => {
 };
 
 /** A timestamp (`outbound_shipped_at`) as the viewer's calendar day. Never compare raw instants against a DATE. */
-const timestampYmd = (v?: string | Date | null): string => {
+const timestampYmd = (v?: string | Date | null, timeZone = 'UTC'): string => {
   if (!v) return '';
   const d = v instanceof Date ? v : new Date(v);
-  return Number.isNaN(d.getTime()) ? '' : toYmd(d);
+  return Number.isNaN(d.getTime()) ? '' : toCalendarDateStringInTimeZone(d, timeZone);
 };
 
-export type DeadUnitDeadlineBadge = { kind: 'not_shipped' | 'shipped_late'; dueYmd: string };
+export type DeadUnitDeadlineBadge = { kind: 'approaching' | 'not_shipped' | 'shipped_late'; dueYmd: string };
+export const VENDOR_RETURN_ATTENTION_DAYS = 7;
+const shiftCalendarDate = (ymd: string, days: number): string => {
+  const [year, month, day] = ymd.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+};
 
 /**
  * `return_by` is the vendor's SHIP-BY date for the dead unit, so the risk is a dead unit still on the shelf (PRD §2.4).
@@ -72,16 +79,21 @@ export type DeadUnitDeadlineBadge = { kind: 'not_shipped' | 'shipped_late'; dueY
  */
 export function deadUnitDeadlineBadge(
   rma: Pick<IRmaCase, 'rma_type' | 'status' | 'return_by' | 'outbound_shipped_at'>,
-  today: Date = new Date()
+  today: Date | string = new Date(),
+  timeZone = 'UTC'
 ): DeadUnitDeadlineBadge | null {
   if (rma.rma_type !== 'advance_replacement') return null;
   const dueYmd = calendarYmd(rma.return_by as string | Date | null);
   if (!dueYmd) return null;
+  const todayYmd = typeof today === 'string' ? today : toYmd(today);
   if (rma.status === 'replaced' || rma.status === 'repaired') {
-    return dueYmd < toYmd(today) ? { kind: 'not_shipped', dueYmd } : null;
+    if (rma.outbound_shipped_at) return null;
+    if (dueYmd < todayYmd) return { kind: 'not_shipped', dueYmd };
+    if (dueYmd <= shiftCalendarDate(todayYmd, VENDOR_RETURN_ATTENTION_DAYS)) return { kind: 'approaching', dueYmd };
+    return null;
   }
   if (rma.status === 'dead_unit_owed') {
-    const shippedYmd = timestampYmd(rma.outbound_shipped_at as string | Date | null);
+    const shippedYmd = timestampYmd(rma.outbound_shipped_at as string | Date | null, timeZone);
     return shippedYmd && shippedYmd > dueYmd ? { kind: 'shipped_late', dueYmd } : null;
   }
   return null;
@@ -130,7 +142,7 @@ const emptyForm = (rma: IRmaCase, locations: IStockLocation[]): ActionForm => ({
 });
 
 export interface RmaWarrantyPanelProps {
-  rma: IRmaCase;
+  rma: IRmaCase & { calendar_today?: string; calendar_time_zone?: string };
   vendors: IVendor[];
   locations: IStockLocation[];
   /** Called with the reloaded case after any transition. */
@@ -153,6 +165,14 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
   const [busy, setBusy] = useState(false);
   const [mirroring, setMirroring] = useState(false);
   const [systemKey, setSystemKey] = useState<string>(selectedVendorCaseSystem ?? '');
+  const [, refreshCalendarDate] = useState(0);
+
+  // Re-evaluate at the minute boundary using the server-selected effective zone, so a panel left
+  // open across midnight does not keep yesterday's charge eligibility.
+  useEffect(() => {
+    const interval = setInterval(() => refreshCalendarDate(Date.now()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   // `selectedVendorCaseSystem` arrives asynchronously (the composition root looks up the ticket's
   // existing link after this panel mounts), so the initial useState value above is rarely enough:
@@ -228,10 +248,13 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
 
   const allowed = useMemo(() => allowedWarrantyActions(rma.status, rma.rma_type), [rma.status, rma.rma_type]);
   const returnBy = calendarYmd(rma.return_by as string | Date | null);
-  const visibleActions = returnBy && returnBy < toYmd(new Date())
-    ? allowed
-    : allowed.filter((candidate) => candidate !== 'charge_vendor_non_return');
-  const deadlineBadge = deadUnitDeadlineBadge(rma);
+  const calendarTimeZone = rma.calendar_time_zone;
+  const calendarToday = calendarTimeZone
+    ? toCalendarDateStringInTimeZone(new Date(), calendarTimeZone)
+    : rma.calendar_today;
+  const chargeEligibleByDate = Boolean(returnBy && calendarToday && returnBy < calendarToday && !rma.outbound_shipped_at);
+  const visibleActions = allowed.filter((candidate) => candidate !== 'charge_vendor_non_return' || chargeEligibleByDate);
+  const deadlineBadge = calendarToday ? deadUnitDeadlineBadge(rma, calendarToday, calendarTimeZone ?? 'UTC') : null;
   const fmtDate = (v?: string | Date | null): string => {
     if (!v) return dash;
     if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return fromYmd(v)!.toLocaleDateString();
@@ -560,11 +583,13 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
       </div>
 
       {deadlineBadge && (
-        <div id={deadlineBadge.kind === 'not_shipped' ? 'rma-warranty-dead-unit-not-shipped' : 'rma-warranty-dead-unit-shipped-late'}>
+        <div id={`rma-warranty-dead-unit-${deadlineBadge.kind}`}>
           <Badge variant="warning" size="sm">
-            {deadlineBadge.kind === 'not_shipped'
-              ? t('rma.warranty.deadUnitNotShipped', 'Dead unit not yet shipped, was due {{date}}', { date: fmtCalendarDate(deadlineBadge.dueYmd) })
-              : t('rma.warranty.deadUnitShippedLate', 'Dead unit shipped late, was due {{date}}', { date: fmtCalendarDate(deadlineBadge.dueYmd) })}
+            {deadlineBadge.kind === 'approaching'
+              ? t('rma.warranty.deadUnitApproaching', 'Dead unit return due soon: {{date}}', { date: fmtCalendarDate(deadlineBadge.dueYmd) })
+              : deadlineBadge.kind === 'not_shipped'
+                ? t('rma.warranty.deadUnitNotShipped', 'Dead unit not yet shipped, was due {{date}}', { date: fmtCalendarDate(deadlineBadge.dueYmd) })
+                : t('rma.warranty.deadUnitShippedLate', 'Dead unit shipped late, was due {{date}}', { date: fmtCalendarDate(deadlineBadge.dueYmd) })}
           </Badge>
         </div>
       )}

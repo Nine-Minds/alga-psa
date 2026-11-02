@@ -65,6 +65,8 @@
     "./extensions/installs.js": "./dist/extensions/installs.js",
     "./extensions/types.js": "./dist/extensions/types.js",
     "./lib/quotes/quoteStatusTransitions": "./dist/lib/quotes/quoteStatusTransitions.js",
+    "./lib/rma/warrantyStateMachine": "./dist/lib/rma/warrantyStateMachine.js",
+    "./lib/rma/recordRmaEvent": "./dist/lib/rma/recordRmaEvent.js",
     "./lib/quotes/quoteLifecycleEvents": "./dist/lib/quotes/quoteLifecycleEvents.js",
     "./lib/quoteTerms": "./dist/lib/quoteTerms.js",
     "./lib/quoteTerms.js": "./dist/lib/quoteTerms.js",

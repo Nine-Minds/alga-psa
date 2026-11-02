@@ -1,5 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { resolveEffectiveTimeZone } from '@alga-psa/db';
+import { toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import type { IAssetCustody, IRmaCase, IRmaEvent } from '@alga-psa/types';
 import { recordCustodyEvent } from '@alga-psa/assets/lib/custody/recordCustodyEvent';
@@ -461,15 +463,36 @@ export async function recordVendorNonReturnChargeCore(
 ): Promise<WarrantyTransitionResult> {
   const rma = await lockWarrantyRma(trx, tenant, rmaId, options);
   guard(rma, 'charge_vendor_non_return');
-  // LEVERAGE: pattern local-calendar-date — dashboard and RMA transition compare DATE values using the app's local calendar day.
-  const today = new Date();
-  const todayYmd = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const timeZone = await resolveEffectiveTimeZone(trx, tenant, actor);
+  const todayYmd = toCalendarDateStringInTimeZone(new Date(), timeZone);
   const overdue = await trx('rma_cases')
     .where({ tenant, rma_id: rmaId })
     .where('return_by', '<', todayYmd)
     .first('rma_id');
   if (!rma.return_by || !overdue) {
     throw new WarrantyError('invalid_transition', 'A vendor non-return charge can only be recorded after the return deadline.');
+  }
+  // Custody is authoritative when older callers or historical data left the RMA status behind.
+  // Shipment and charge both lock the RMA first, then custody, so only one can commit.
+  const custodyRows = await trx('asset_custody')
+    .where({ tenant })
+    .andWhere((q) => {
+      if (rma.custody_id) q.where({ custody_id: rma.custody_id });
+      else q.where({ asset_id: rma.asset_id });
+    })
+    .orderBy('opened_at', 'desc')
+    .forUpdate()
+    .select('custody_id', 'state', 'close_reason');
+  const custodyIds = custodyRows.map((row: any) => row.custody_id);
+  const physicalMovement = custodyIds.length > 0
+    ? await trx('asset_custody_events')
+        .where({ tenant })
+        .whereIn('custody_id', custodyIds)
+        .whereIn('event_type', ['shipped', 'returned'])
+        .first('event_id')
+    : null;
+  if (physicalMovement || custodyRows.some((row: any) => row.state === 'with_vendor' || row.close_reason === 'returned_to_vendor' || row.close_reason === 'returned_to_client')) {
+    throw new WarrantyError('invalid_transition', 'A non-return charge cannot be recorded after the unit was shipped or returned.');
   }
   const digits = new Intl.NumberFormat('en', { style: 'currency', currency: input.currency_code }).resolvedOptions().maximumFractionDigits ?? 2;
   const amount = Number(input.amount).toFixed(digits);

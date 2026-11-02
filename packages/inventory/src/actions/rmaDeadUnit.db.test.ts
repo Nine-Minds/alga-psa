@@ -14,6 +14,7 @@ const holder: { knex: Knex; tenant: string; userId: string; grants: Set<string> 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: (...a: any[]) => unknown) => (...args: unknown[]) =>
     fn({ user_id: holder.userId, tenant: holder.tenant }, { tenant: holder.tenant }, ...args),
+  hasPermission: async (_user: unknown, resource: string, action: string) => holder.grants === null || holder.grants.has(`${resource}:${action}`),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: async (_u: unknown, resource: string, action: string) => holder.grants === null || holder.grants.has(`${resource}:${action}`),
@@ -51,6 +52,7 @@ import {
   chargeForUnreturned, closeRma, deadUnitsOwedReport, markDeadUnitOwed, openRma, recordDeadUnitReturned, receiveReturn,
 } from './rmaActions';
 import { openCustody } from '@alga-psa/assets/lib/custody/openCustody';
+import { recordCustodyEventInTransaction } from '@alga-psa/assets/lib/custody/service';
 import { queryOverdueAdvanceVendorReturns } from '../lib/dashboardQueries';
 import { filterReadableRmaCases, resolveRmaReadScope } from '../lib/rma/rmaReadAccess';
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
@@ -122,6 +124,54 @@ async function replacedAdvanceCase() {
   ok(await receiveVendorReplacement(opened.rma_id, { replacement_serial_number: 'NEW-SERIAL', location_id: LOCATION }));
   return { assetId, custody, rmaId: opened.rma_id as string };
 }
+
+it('authorized sibling custody shipment reconciles the linked RMA and a stale charge cannot bypass it', async () => {
+  const c = await replacedAdvanceCase();
+  const past = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+  await knex('rma_cases').where({ tenant: holder.tenant, rma_id: c.rmaId }).update({ return_by: past });
+
+  holder.grants = new Set(['asset:update']);
+  await expect(knex.transaction((trx) => recordCustodyEventInTransaction(trx, holder.tenant, {
+    user_id: holder.userId, user_type: 'internal',
+  } as any, c.custody.custody_id, {
+    event_type: 'shipped', counterparty: 'Dell', note: 'Unprivileged shipment', document_ids: [],
+  } as any))).rejects.toMatchObject({ code: 'permission_denied' });
+  expect((await rmaRow(c.rmaId)).status).toBe('replaced');
+  expect((await custodyRow(c.custody.custody_id)).state).toBe('in_office');
+  holder.grants = null;
+
+  await knex.transaction((trx) => recordCustodyEventInTransaction(trx, holder.tenant, {
+    user_id: holder.userId, user_type: 'internal',
+  } as any, c.custody.custody_id, {
+    event_type: 'shipped', counterparty: 'Dell', note: 'Sibling custody shipment', document_ids: [],
+  } as any));
+
+  expect(await rmaRow(c.rmaId)).toMatchObject({ status: 'dead_unit_owed', outbound_shipped_at: expect.anything() });
+  expect(await events(c.rmaId)).toMatchObject([expect.objectContaining({ event_type: 'opened' }), expect.anything(), expect.anything(), expect.objectContaining({ event_type: 'dead_unit_shipped', payload: expect.objectContaining({ shipment_source: 'custody' }) })]);
+
+  // Simulate historical stale lifecycle state; authoritative custody still blocks a charge.
+  await knex('rma_cases').where({ tenant: holder.tenant, rma_id: c.rmaId }).update({ status: 'replaced' });
+  expect(await recordVendorNonReturnCharge(c.rmaId, { amount: '10', currency_code: 'USD' })).toHaveProperty('actionError');
+  expect((await rmaRow(c.rmaId)).status).toBe('replaced');
+});
+
+it('custody shipment and late charge serialize so they cannot both resolve one vendor return', async () => {
+  const c = await replacedAdvanceCase();
+  const past = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+  await knex('rma_cases').where({ tenant: holder.tenant, rma_id: c.rmaId }).update({ return_by: past });
+  const shipment = knex.transaction((trx) => recordCustodyEventInTransaction(trx, holder.tenant, {
+    user_id: holder.userId, user_type: 'internal',
+  } as any, c.custody.custody_id, {
+    event_type: 'shipped', counterparty: 'Dell', note: 'Concurrent custody shipment', document_ids: [],
+  } as any));
+  const charge = recordVendorNonReturnCharge(c.rmaId, { amount: '50', currency_code: 'USD' });
+  const results = await Promise.allSettled([shipment, charge]);
+  expect(results.filter((result) => result.status === 'fulfilled' && !(result.value as any)?.actionError)).toHaveLength(1);
+  const status = (await rmaRow(c.rmaId)).status;
+  expect(['dead_unit_owed', 'closed']).toContain(status);
+  if (status === 'closed') expect((await custodyRow(c.custody.custody_id)).state).not.toBe('with_vendor');
+  if (status === 'dead_unit_owed') expect((await custodyRow(c.custody.custody_id)).state).toBe('with_vendor');
+});
 
 async function stockCaseInDeadUnitOwed() {
   const [u] = await knex('stock_units')
@@ -332,24 +382,35 @@ describe('shared dead_unit_owed status: stock track vs warranty track', () => {
   it('dashboard query returns only overdue, unshipped advance returns and applies the existing asset read gate', async () => {
     const overdue = await replacedAdvanceCase();
     const dueToday = await replacedAdvanceCase();
+    const approaching = await replacedAdvanceCase();
+    const outsideWindow = await replacedAdvanceCase();
     const onTime = await replacedAdvanceCase();
     const resolved = await replacedAdvanceCase();
     const localToday = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
     const yesterday = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
     const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    const inSevenDays = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    const inEightDays = (() => { const d = new Date(); d.setDate(d.getDate() + 8); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
     await knex('rma_cases').where({ tenant: holder.tenant, rma_id: overdue.rmaId }).update({ return_by: yesterday });
     await knex('rma_cases').where({ tenant: holder.tenant, rma_id: dueToday.rmaId }).update({ return_by: localToday });
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: approaching.rmaId }).update({ return_by: inSevenDays });
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: outsideWindow.rmaId }).update({ return_by: inEightDays });
     await knex('rma_cases').where({ tenant: holder.tenant, rma_id: onTime.rmaId }).update({ return_by: tomorrow });
     await knex('rma_cases').where({ tenant: holder.tenant, rma_id: resolved.rmaId }).update({ return_by: yesterday, status: 'closed', closed_at: knex.fn.now() });
 
     const rows = await queryOverdueAdvanceVendorReturns(knex, holder.tenant, localToday);
-    expect(rows.map((row) => row.rma_id)).toEqual([overdue.rmaId]);
-    expect(rows[0]).toMatchObject({ rma_number: expect.stringMatching(/^RMA-/), return_by: yesterday, overdue_days: 1 });
+    const byId = new Map(rows.map((row) => [row.rma_id, row]));
+    expect(byId.get(overdue.rmaId)).toMatchObject({ rma_number: expect.stringMatching(/^RMA-/), return_by: yesterday, overdue_days: 1 });
+    expect(byId.get(dueToday.rmaId)).toMatchObject({ return_by: localToday, overdue_days: 0, days_until_due: 0 });
+    expect(byId.get(approaching.rmaId)).toMatchObject({ return_by: inSevenDays, overdue_days: -7, days_until_due: 7 });
+    expect(byId.has(outsideWindow.rmaId)).toBe(false);
     const otherTenant = await createInventoryTestTenant(knex);
     expect(await queryOverdueAdvanceVendorReturns(knex, otherTenant, localToday)).toEqual([]);
-    denied.assetIds.add(overdue.assetId);
+    denied.assetIds.add(approaching.assetId);
     const scope = await resolveRmaReadScope({ user_id: holder.userId });
-    expect(await filterReadableRmaCases(knex as any, holder.tenant, { user_id: holder.userId }, rows, scope)).toEqual([]);
+    const visible = new Set((await filterReadableRmaCases(knex as any, holder.tenant, { user_id: holder.userId }, rows, scope)).map((row) => row.rma_id));
+    expect(visible.has(approaching.rmaId)).toBe(false);
+    expect(visible.has(overdue.rmaId)).toBe(true);
   });
 
   it('vendor non-return charge persists amount, currency, actor history and resolves the deadline once', async () => {
@@ -381,13 +442,16 @@ describe('shared dead_unit_owed status: stock track vs warranty track', () => {
 
   it('refuses charges for non-overdue, wrong-track, unit-tracked and assetless cases', async () => {
     const future = await replacedAdvanceCase();
+    const approaching = await replacedAdvanceCase();
     const standard = await replacedAdvanceCase();
     const stock = await stockCaseInDeadUnitOwed();
     const past = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
     const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    const inSevenDays = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
     await knex('rma_cases').where({ tenant: holder.tenant, rma_id: future.rmaId }).update({ return_by: tomorrow });
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: approaching.rmaId }).update({ return_by: inSevenDays });
     await knex('rma_cases').where({ tenant: holder.tenant, rma_id: standard.rmaId }).update({ return_by: past, rma_type: 'standard' });
-    for (const rmaId of [future.rmaId, standard.rmaId, stock.rmaId]) {
+    for (const rmaId of [future.rmaId, approaching.rmaId, standard.rmaId, stock.rmaId]) {
       expect(await recordVendorNonReturnCharge(rmaId, { amount: '10', currency_code: 'USD' })).toHaveProperty('actionError');
     }
     const assetlessId = randomUUID();

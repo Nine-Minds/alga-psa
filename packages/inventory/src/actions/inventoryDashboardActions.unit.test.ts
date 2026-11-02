@@ -11,6 +11,7 @@ describe('overdue vendor return attention', () => {
       client_id: '57ca1d77-e4b7-48c4-852c-2f44fd86c001',
       return_by: '2026-10-31',
       overdue_days: 2,
+      days_until_due: -2,
     }]);
 
     expect(item).toMatchObject({
@@ -23,5 +24,14 @@ describe('overdue vendor return attention', () => {
       params: { rma_reference: 'DELL-2683', return_by: '2026-10-31', overdue_days: 2 },
       action: { key: 'view', href: '/msp/inventory/rma?rmaId=55058b3a-cbff-4b8d-9f12-f1b9ebb17c35' },
     });
+  });
+
+  it('classifies an approaching due date as amber attention without an overdue age', () => {
+    const [item] = overdueVendorReturnAttention([{
+      rma_id: 'rma-near', rma_number: 'RMA-NEAR', rma_reference: null,
+      asset_id: 'asset', client_id: null, return_by: '2026-11-08', overdue_days: 0, days_until_due: 6,
+    }]);
+    expect(item).toMatchObject({ band: 'amber', age_days: null, params: { days_until_due: 6 } });
+    expect(item.params).not.toHaveProperty('overdue_days');
   });
 });

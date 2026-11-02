@@ -3,6 +3,8 @@
 import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { resolveEffectiveTimeZone } from '@alga-psa/db';
+import { toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   permissionError,
@@ -226,11 +228,6 @@ function sameLocalDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-// LEVERAGE: pattern local-calendar-date — dashboard and RMA transition compare DATE values using the app's local calendar day.
-function localCalendarDate(date = new Date()): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
 export const getInventoryDashboardData = withAuth(async (user, { tenant }): Promise<InventoryDashboardData | InventoryDashboardActionError> => {
   if (!(await hasPermission(user, 'inventory', 'read'))) {
     return permissionError('Permission denied: inventory read required', 'features/inventory:errors.permissions.inventoryRead');
@@ -385,8 +382,10 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
     const priceCreep = await queryPriceCreep(trx, tenant);
     const rma_receivables = await queryRmaReceivables(trx, tenant);
     const rmaReadScope = await resolveRmaReadScope(user);
+    const effectiveTimeZone = await resolveEffectiveTimeZone(trx, tenant, user.user_id);
+    const today = toCalendarDateStringInTimeZone(new Date(), effectiveTimeZone);
     const overdueVendorReturnRows = rmaReadScope.allowed
-      ? await queryOverdueAdvanceVendorReturns(trx, tenant, localCalendarDate())
+      ? await queryOverdueAdvanceVendorReturns(trx, tenant, today)
       : [];
     const readableOverdueVendorReturns = await filterReadableRmaCases(trx, tenant, user, overdueVendorReturnRows, rmaReadScope);
     const deployments = await queryDeployments(trx, tenant);

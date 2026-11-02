@@ -90,7 +90,9 @@ function kindLabel(item: AttentionItem, t: ReturnType<typeof useTranslation>['t'
     ghost_tech: t('dashboard.attention.kind.ghost', 'ghost usage'),
     rma_vendor: t('dashboard.attention.kind.rmaAging', 'rma aging'),
     rma_client: t('dashboard.attention.kind.rmaClient', 'replacement'),
-    rma_vendor_return: t('dashboard.attention.kind.rmaVendorReturn', 'overdue vendor return'),
+    rma_vendor_return: paramNumber(item, 'overdue_days') > 0
+      ? t('dashboard.attention.kind.rmaVendorReturnOverdue', 'overdue vendor return')
+      : t('dashboard.attention.kind.rmaVendorReturnApproaching', 'vendor return due soon'),
     price_creep_so: t('dashboard.attention.kind.priceCreep', 'price creep'),
     price_creep_quotes: t('dashboard.attention.kind.priceCreep', 'price creep'),
     price_creep_bill: t('dashboard.attention.kind.billCreep', 'bill creep'),
@@ -146,10 +148,15 @@ function rowFact(item: AttentionItem, t: ReturnType<typeof useTranslation>['t'])
     case 'rma_client':
       return t('dashboard.attention.fact.rmaClient', 'replacement unit still owed');
     case 'rma_vendor_return':
-      return t('dashboard.attention.fact.rmaVendorReturn', 'vendor return due {{date}} — {{days}}d overdue', {
-        date: shortCalendarDate(param(item, 'return_by')),
-        days: paramNumber(item, 'overdue_days'),
-      });
+      return paramNumber(item, 'overdue_days') > 0
+        ? t('dashboard.attention.fact.rmaVendorReturnOverdue', 'vendor return due {{date}} — {{days}}d overdue', {
+            date: shortCalendarDate(param(item, 'return_by')),
+            days: paramNumber(item, 'overdue_days'),
+          })
+        : t('dashboard.attention.fact.rmaVendorReturnApproaching', 'vendor return due {{date}} — {{days}}d remaining', {
+            date: shortCalendarDate(param(item, 'return_by')),
+            days: paramNumber(item, 'days_until_due'),
+          });
     case 'price_creep_so':
       return t('dashboard.attention.fact.priceCreepSo', 'still priced at old cost');
     case 'price_creep_quotes':
