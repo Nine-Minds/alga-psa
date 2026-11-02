@@ -105,3 +105,47 @@ boundary `export *` errors. Logs remain at `/tmp/alga-{merged,main}-typecheck.lo
 `/tmp/alga-merged-build-14g.log` and `/tmp/alga-main-build-ee-14g.log`.
 Startup also logs an absent credential encryption key; the verified REST and UI
 flows succeeded, but credential-vault behavior was not tested.
+
+## Implementation follow-up, 22:14 UTC
+
+The six REST writes already use the real lifecycle fields: `submitted_at`,
+`approved_at`, `approved_by`, and `approval_status`. Submission, approval,
+request-changes and reversal text remains in tenant-scoped `time_sheet_notes`
+history. Each record retains its author, kind and timestamp, so subsequent
+transitions do not overwrite earlier feedback.
+
+The legacy-note migration now supports rollback. It restores legacy values to
+`time_sheets.notes` while keeping history. Retrying rollback preserves populated
+values. Reapplying the migration archives edits made after rollback without
+duplicating already-retained values. PostgreSQL regression coverage verifies
+two tenants, null notes, provenance, workflow-history preservation and repeated
+application. The expanded test failed on the previous rollback exception.
+
+Details responses now compose the existing `timeSheetEntryRowSchema`, matching
+the rows returned by `getTimeSheetEntries`. Full details validation includes
+entries and summary; the earlier nested-entry schema limitation above is fixed.
+The strengthened test reproduced that mismatch before the schema change.
+
+Focused verification passed 85 tests across six files against the dedicated
+`time_sheet_writes_7ea8e6c6` PostgreSQL database:
+
+| Suite | Passed |
+| --- | ---: |
+| timeSheetsApiWrite | 23 |
+| timeSheetsApiExport | 14 |
+| timeSheetListApiService | 8 |
+| timeSheetReadRoutes | 20 |
+| timeSheetService.search.integration | 6 |
+| timeSheetService.createUpdate.integration | 14 |
+
+The six-file run passed 84 tests and identified an outdated update fixture.
+After supplying its submission prerequisites and wiring both RBAC imports to
+the same permission fixture, its entire 14-test suite passed. Search's response
+expectation now excludes the retired free-form notes column.
+
+Logs: `/tmp/time-sheet-focused-final.log` and
+`/tmp/time-sheet-create-update-final.log`. Before-fix failures:
+`/tmp/time-sheet-rollback-before.log` and `/tmp/time-sheet-schema-before.log`.
+Event publishers and write-suite authorization are mocked; export authorization
+and all schema reads/writes use PostgreSQL. Citus execution, live browser smoke,
+full builds and typechecks were not repeated in this follow-up.

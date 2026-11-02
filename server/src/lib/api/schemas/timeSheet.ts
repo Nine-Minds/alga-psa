@@ -16,7 +16,7 @@ import {
   isoDateSchema,
   paginationQuerySchema
 } from './common';
-import { approvalStatusSchema, timeEntryResponseSchema, workItemTypeSchema } from './timeEntry';
+import { approvalStatusSchema, workItemTypeSchema } from './timeEntry';
 
 // Time period frequency schema
 // Time periods are half-open [start_date, end_date).
@@ -129,6 +129,44 @@ export const timeSheetNoteResponseSchema = z.object({
 });
 
 
+// One row of GET /time-sheets/{id}/entries (and search include_entries): exactly the
+// time_entries columns as TimeSheetService.getTimeSheetEntries serializes them to JSON.
+// pg returns timestamptz as Date (ISO datetime) and integer as number; work_date (a DATE
+// column) is formatted to YYYY-MM-DD by the service. There is no numeric column here.
+export const timeSheetEntryRowSchema = z.object({
+  tenant: uuidSchema,
+  entry_id: uuidSchema,
+  user_id: uuidSchema,
+  start_time: z.string().datetime().nullable(),
+  end_time: z.string().datetime(),
+  notes: z.string().nullable(),
+  work_item_id: uuidSchema.nullable(),
+  billable_duration: z.number().int().nullable(),
+  work_item_type: workItemTypeSchema.nullable(),
+  // time_entries.approval_status is a DB enum that also allows REJECTED
+  approval_status: z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'CHANGES_REQUESTED']).nullable(),
+  time_sheet_id: uuidSchema.nullable(),
+  created_at: z.string().datetime().nullable(),
+  updated_at: z.string().datetime().nullable(),
+  service_id: uuidSchema.nullable(),
+  tax_region: z.string().nullable(),
+  invoiced: z.boolean().nullable(),
+  tax_rate_id: uuidSchema.nullable(),
+  contract_line_id: uuidSchema.nullable(),
+  work_date: isoDateSchema,
+  work_timezone: z.string(),
+  created_by: uuidSchema.nullable(),
+  updated_by: uuidSchema.nullable(),
+  contract_line_source: z
+    .enum(['explicit', 'auto_unique_service', 'auto_bucket_overlay', 'unresolved', 'reconciled_at_generation', 'auto_billing_profile'])
+    .nullable(),
+  contract_line_unresolved_reason: z.enum(['ambiguous', 'no_match', 'error']).nullable(),
+  catalog_pricing_acknowledged_at: z.string().datetime().nullable(),
+  catalog_pricing_acknowledged_by: uuidSchema.nullable(),
+  // NOT NULL DEFAULT 'commercial' (20261028135000); CHECK limits it to these values.
+  billing_mode: z.enum(['commercial', 'operational']),
+});
+
 // Time sheet with details response schema
 export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend({
   user: z.object({
@@ -154,7 +192,7 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
     is_closed: z.boolean()
   }).optional(),
   
-  time_entries: z.array(timeEntryResponseSchema).optional(),
+  time_entries: z.array(timeSheetEntryRowSchema).optional(),
   
   comments: z.array(z.object({
     comment_id: uuidSchema,
@@ -318,44 +356,6 @@ export const timeSheetStatsResponseSchema = z.object({
 // Query strings carry arrays as repeated params (?a=1&a=2) or comma-separated
 // values (?a=1,2). The controller flattens searchParams to strings, so accept
 // both a string and an array and normalise to string[] before validating.
-
-// One row of GET /time-sheets/{id}/entries (and search include_entries): exactly the
-// time_entries columns as TimeSheetService.getTimeSheetEntries serializes them to JSON.
-// pg returns timestamptz as Date (ISO datetime) and integer as number; work_date (a DATE
-// column) is formatted to YYYY-MM-DD by the service. There is no numeric column here.
-export const timeSheetEntryRowSchema = z.object({
-  tenant: uuidSchema,
-  entry_id: uuidSchema,
-  user_id: uuidSchema,
-  start_time: z.string().datetime().nullable(),
-  end_time: z.string().datetime(),
-  notes: z.string().nullable(),
-  work_item_id: uuidSchema.nullable(),
-  billable_duration: z.number().int().nullable(),
-  work_item_type: workItemTypeSchema.nullable(),
-  // time_entries.approval_status is a DB enum that also allows REJECTED
-  approval_status: z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'CHANGES_REQUESTED']).nullable(),
-  time_sheet_id: uuidSchema.nullable(),
-  created_at: z.string().datetime().nullable(),
-  updated_at: z.string().datetime().nullable(),
-  service_id: uuidSchema.nullable(),
-  tax_region: z.string().nullable(),
-  invoiced: z.boolean().nullable(),
-  tax_rate_id: uuidSchema.nullable(),
-  contract_line_id: uuidSchema.nullable(),
-  work_date: isoDateSchema,
-  work_timezone: z.string(),
-  created_by: uuidSchema.nullable(),
-  updated_by: uuidSchema.nullable(),
-  contract_line_source: z
-    .enum(['explicit', 'auto_unique_service', 'auto_bucket_overlay', 'unresolved', 'reconciled_at_generation', 'auto_billing_profile'])
-    .nullable(),
-  contract_line_unresolved_reason: z.enum(['ambiguous', 'no_match', 'error']).nullable(),
-  catalog_pricing_acknowledged_at: z.string().datetime().nullable(),
-  catalog_pricing_acknowledged_by: uuidSchema.nullable(),
-  // NOT NULL DEFAULT 'commercial' (20261028135000); CHECK limits it to these values.
-  billing_mode: z.enum(['commercial', 'operational']),
-});
 
 // One row of GET /time-sheets/search: actual time_sheets columns plus the owner join.
 export const timeSheetSearchRowSchema = z.object({

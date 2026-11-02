@@ -38,10 +38,6 @@ vi.mock('@alga-psa/core/capability', () => ({ serves: async () => ({ served: tru
 /** What the HTTP client sees: Date objects become ISO strings, undefined keys disappear. */
 const wire = (value: unknown) => JSON.parse(JSON.stringify(value));
 
-// time_entries carries fields the time-entry response schema does not yet describe; that is a
-// separate card. The time-sheet schemas are what this card asserts on.
-const detailsSchema = timeSheetWithDetailsResponseSchema.omit({ time_entries: true, summary: true });
-
 describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
   const context = new TestContext({
     cleanupTables: ['time_sheet_notes', 'time_sheet_comments', 'time_entries', 'time_sheets', 'time_periods'],
@@ -369,7 +365,7 @@ describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
       await service.requestChanges(sheet.id, requestChangesTimeSheetSchema.parse({ change_reason: 'fix it' }), ctx);
 
       const details = await service.getWithDetails(sheet.id, ctx);
-      const parsed = detailsSchema.parse(wire(details));
+      const parsed = timeSheetWithDetailsResponseSchema.parse(wire(details));
 
       expect(parsed.notes?.map((n) => [n.kind, n.note])).toEqual(expect.arrayContaining([
         ['request_changes', 'fix it'],
@@ -447,8 +443,8 @@ describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
     });
   });
 
-  describe('legacy notes forward migration', () => {
-    it('preserves populated notes per tenant, skips nulls, records uncertain provenance and removes the source column', async () => {
+  describe('legacy notes migration', () => {
+    it('preserves notes across tenants, rollback, edits and reapplication without inventing provenance', async () => {
       const migration = await import('../../../../migrations/20261101130000_move_time_sheet_notes_to_history.cjs');
       await context.db.schema.alterTable('time_sheets', (table) => table.text('notes').nullable());
 
@@ -487,6 +483,34 @@ describe('TimeSheetService write paths (REST API, alga-2026-0002763)', () => {
       expect(await tenantDb(context.db, otherTenant).table('time_sheet_notes').where({ time_sheet_id: otherSheet }).first())
         .toMatchObject({ tenant: otherTenant, kind: 'legacy', note: 'Second tenant note', created_by: null });
       expect(await table('time_sheet_notes').where({ time_sheet_id: otherSheet })).toHaveLength(0);
+      expect(await context.db.schema.hasColumn('time_sheets', 'notes')).toBe(false);
+
+      await table('time_sheet_notes').insert({
+        tenant: context.tenantId, time_sheet_id: nullSheet.id, kind: 'approval',
+        note: 'Workflow history must survive rollback', created_by: context.userId,
+      });
+
+      // Rollback restores the legacy interface without discarding workflow history.
+      await migration.down(context.db);
+      expect((await sheetRow(legacySheet.id)).notes).toBe('Imported legacy note — preserve exactly');
+      expect((await sheetRow(nullSheet.id)).notes).toBeNull();
+      expect(await tenantDb(context.db, otherTenant).table('time_sheets').where({ id: otherSheet }).first())
+        .toMatchObject({ notes: 'Second tenant note' });
+      expect(await notesFor(legacySheet.id)).toEqual(legacyRows);
+      expect(await notesFor(nullSheet.id)).toMatchObject([{ kind: 'approval', note: 'Workflow history must survive rollback' }]);
+
+      // A repeated rollback must preserve edits made by the restored application.
+      await table('time_sheets').where({ id: legacySheet.id }).update({ notes: 'Edited after rollback' });
+      await migration.down(context.db);
+      expect((await sheetRow(legacySheet.id)).notes).toBe('Edited after rollback');
+
+      // Reapplication must preserve both legacy versions rather than dropping the edit.
+      await migration.up(context.db);
+      expect((await notesFor(legacySheet.id)).map((row: any) => row.note).sort()).toEqual([
+        'Edited after rollback', 'Imported legacy note — preserve exactly',
+      ]);
+      await migration.up(context.db);
+      expect(await notesFor(legacySheet.id)).toHaveLength(2);
       expect(await context.db.schema.hasColumn('time_sheets', 'notes')).toBe(false);
     });
   });
