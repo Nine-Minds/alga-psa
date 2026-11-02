@@ -34,13 +34,27 @@ function hashToken(token: string): string {
 
 const DAY = 24 * 60 * 60 * 1000;
 
+/**
+ * The resolver rate-limits attempts per client IP (30 / 5 min) and the app trusts
+ * X-Forwarded-For. Each test presents its own private client IP so runs neither
+ * exhaust each other's budget nor depend on how recently the host was probed.
+ */
+function privateClientIp(): string {
+  return `198.51.100.${1 + Math.floor(Math.random() * 250)}`;
+}
+
 test.describe('public quote review page', () => {
   test('renders by token without a session, keeps every failure outcome opaque, serves the PDF', async ({
-    page,
-    request,
-    context,
+    browser,
+    baseURL,
   }) => {
     test.setTimeout(240000);
+    const context = await browser.newContext({
+      baseURL: baseURL!,
+      extraHTTPHeaders: { 'x-forwarded-for': privateClientIp() },
+    });
+    const page = await context.newPage();
+    const request = context.request;
     const db = createTestDbConnection();
     let tenantData: TenantTestData | null = null;
 
@@ -190,12 +204,19 @@ test.describe('public quote review page', () => {
       };
 
       // No request may leave the app's own origin.
-      const appHost = new URL(test.info().project.use.baseURL ?? getBaseUrl()).host;
+      // First party = the app's own origin, or its loopback alias on the same port: the
+      // outcome pages' sign-in <Link> is prefetched and middleware redirects that to the
+      // app's configured canonical host (<worktree>.localhost:<port> in a review build).
+      // Anything else (a CDN, font host, analytics) is a third party and must not appear.
+      const appUrl = new URL(test.info().project.use.baseURL ?? getBaseUrl());
+      const isLoopback = (h: string) => h === 'localhost' || h.endsWith('.localhost') || h === '127.0.0.1' || h === '[::1]';
       const foreign: string[] = [];
       page.on('request', (req) => {
         const u = new URL(req.url());
         if (!['http:', 'https:'].includes(u.protocol)) return;
-        if (u.host !== appHost) foreign.push(req.url());
+        const sameOrigin = u.host === appUrl.host;
+        const loopbackAlias = u.port === appUrl.port && isLoopback(u.hostname) && isLoopback(appUrl.hostname);
+        if (!sameOrigin && !loopbackAlias) foreign.push(req.url());
       });
 
       const expectHardenedHeaders = (headers: Record<string, string>) => {
@@ -287,6 +308,9 @@ test.describe('public quote review page', () => {
         const h = { ...res.headers() };
         delete h['date'];
         delete h['x-request-id'];
+        // x-pathname echoes the caller's own request path (differs per token by
+        // construction); the header must be present on both, only its value is exempt.
+        if (h['x-pathname'] !== undefined) h['x-pathname'] = '<request path>';
         return { status: res.status(), headers: h, body: (await res.body()).toString() };
       };
       const pdfUnknown = await shape(await request.get(`/api/quote/${unknownToken}/pdf`));
@@ -462,7 +486,7 @@ test.describe('public quote review page', () => {
       const deToken = await mint(deClientId, deContactId, deEmail);
 
       for (const timezoneId of ['America/Los_Angeles', 'UTC', 'Pacific/Kiritimati']) {
-        const context = await browser.newContext({ baseURL: baseURL!, timezoneId, locale: 'en-US' });
+        const context = await browser.newContext({ baseURL: baseURL!, timezoneId, locale: 'en-US', extraHTTPHeaders: { 'x-forwarded-for': privateClientIp() } });
         try {
           const page = await context.newPage();
           await page.goto(`/quote/${enToken}`);
@@ -489,7 +513,7 @@ test.describe('public quote review page', () => {
         ['de-DE', 'de'],
         ['en-US', 'en'],
       ] as const) {
-        const context = await browser.newContext({ baseURL: baseURL!, locale: acceptLocale });
+        const context = await browser.newContext({ baseURL: baseURL!, locale: acceptLocale, extraHTTPHeaders: { 'x-forwarded-for': privateClientIp() } });
         try {
           const page = await context.newPage();
           await page.goto(`/quote/${unknownToken}`);
