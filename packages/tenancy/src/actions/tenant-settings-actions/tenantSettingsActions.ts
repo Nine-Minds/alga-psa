@@ -324,10 +324,14 @@ const upsertTenantSettingsJson = async (tenant: string, updatedSettings: Record<
 };
 
 const updateTenantSettingsInternal = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   settings: Record<string, any>
 ): Promise<void> => {
+  if (!(await hasTenantSettingsUpdate(user, tenant))) {
+    throw new Error('Permission denied: Cannot update settings');
+  }
+
   try {
     const currentSettings = await getCurrentTenantSettingsJson(tenant);
     const updatedSettings = {

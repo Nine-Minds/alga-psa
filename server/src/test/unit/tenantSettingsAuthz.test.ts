@@ -57,6 +57,13 @@ async function loadActions() {
     ['default locale', () => localeActions.updateTenantDefaultLocaleAction('en' as any)],
     ['client portal locale', () => portalLocaleActions.updateTenantClientPortalLocaleAction('en' as any)],
     ['timezone', () => settingsActions.setTenantTimezone('America/New_York')],
+    ['generic settings update', () => settingsActions.updateTenantSettings({
+      branding: { clientName: 'Updated tenant' },
+      theme: { pairId: 'alga' },
+      defaultLocale: 'en',
+      clientPortalLocale: 'en',
+      timezone: 'America/New_York',
+    })],
   ] as const;
 }
 
@@ -74,7 +81,7 @@ beforeEach(() => {
 });
 
 describe('tenant settings authorization at action boundaries', () => {
-  it.each(['branding', 'theme', 'default locale', 'client portal locale', 'timezone'])(
+  it.each(['branding', 'theme', 'default locale', 'client portal locale', 'timezone', 'generic settings update'])(
     'denies an internal technician without settings:update before protected reads or writes (%s)', async (name) => {
       const actions = await loadActions();
       const invoke = actions.find(([actionName]) => actionName === name)![1];
@@ -94,7 +101,7 @@ describe('tenant settings authorization at action boundaries', () => {
     },
   );
 
-  it.each(['branding', 'theme', 'default locale', 'client portal locale', 'timezone'])(
+  it.each(['branding', 'theme', 'default locale', 'client portal locale', 'timezone', 'generic settings update'])(
     'allows an authorized settings administrator to perform the valid update (%s)', async (name) => {
       mocks.hasPermission.mockResolvedValue(true);
       const actions = await loadActions();
@@ -106,6 +113,26 @@ describe('tenant settings authorization at action boundaries', () => {
       expect(mocks.update.mock.calls.length + mocks.insert.mock.calls.length).toBeGreaterThan(0);
     },
   );
+
+  it('persists authorized generic settings updates while preserving existing settings', async () => {
+    mocks.hasPermission.mockResolvedValue(true);
+    mocks.first.mockResolvedValue({ settings: { existingSetting: 'preserved' } });
+    const actions = await loadActions();
+    const invoke = actions.find(([name]) => name === 'generic settings update')![1];
+
+    await expect(invoke()).resolves.toBeUndefined();
+
+    const insertedSettings = JSON.parse(mocks.insert.mock.calls[0][0].settings);
+    expect(insertedSettings).toEqual({
+      existingSetting: 'preserved',
+      branding: { clientName: 'Updated tenant' },
+      theme: { pairId: 'alga' },
+      defaultLocale: 'en',
+      clientPortalLocale: 'en',
+      timezone: 'America/New_York',
+    });
+    expect(mocks.merge).toHaveBeenCalledWith(expect.objectContaining({ settings: expect.any(String) }));
+  });
 
   it('fails closed when authorization throws and when authentication is absent', async () => {
     mocks.hasPermission.mockRejectedValue(new Error('permission store unavailable'));
@@ -159,7 +186,7 @@ describe('tenant settings authorization at action boundaries', () => {
     mocks.hasPermission.mockResolvedValue(true);
     mocks.user = { user_id: 'client-1', user_type: 'client', tenant: 'tenant-authenticated' };
     const actions = await loadActions();
-    for (const [name, invoke] of actions.filter(([actionName]) => actionName !== 'timezone')) {
+    for (const [name, invoke] of actions.filter(([actionName]) => actionName !== 'timezone' && actionName !== 'generic settings update')) {
       await expect(invoke()).rejects.toThrow();
       expect(mocks.first, `${name} read settings`).not.toHaveBeenCalled();
       expect(mocks.update, `${name} updated settings`).not.toHaveBeenCalled();
