@@ -6,6 +6,8 @@ import { nativeInteractionMeetingView } from './nativeMeetingRead';
 import { lockCoManagedLocalAuthentication, snapshotCoManagedAuthenticatedActor, type CoManagedAuthenticatedActor } from './localAuthentication';
 import { authorizeCoManagedLocalRecord, CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { AUTHORIZED_ROW_MAX_PAGE, pageAuthorizedRows } from './pageAuthorizedRows';
+import { nativeInteractionCandidates } from './nativeInteractionCandidates';
 
 export interface NativeInteractionFilters {
   search?: string; userId?: string; contactId?: string; clientId?: string; statusId?: string; typeId?: string;
@@ -20,7 +22,8 @@ export async function readCoManagedNativeInteractions(db: Knex, tenant: string, 
   const page = filters.page ?? 1, pageSize = filters.pageSize ?? 10;
   return withTransaction(db, async trx => {
     if (!await retainCoManagedWorkspace(trx, tenant)) return { handled: false as const };
-    if (!Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100 ||
+    if (!Number.isSafeInteger(page) || page < 1 || page > AUTHORIZED_ROW_MAX_PAGE ||
+    !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 100 ||
     [filters.dateFrom, filters.dateTo].some(date => date !== undefined && !Number.isFinite(new Date(date).getTime()))) throw new CoManagedSharedWorkError();
     if (options.id && !isCoManagedUuid(options.id)) throw new CoManagedSharedWorkError();
     const actor = snapshotCoManagedAuthenticatedActor(await identify()); if (actor.tenant !== tenant) throw new CoManagedSharedWorkError();
@@ -35,14 +38,17 @@ export async function readCoManagedNativeInteractions(db: Knex, tenant: string, 
         await authorizeCoManagedLocalRecord(trx, actor, credential.subject, entity.type, 'read', { id: entity.id, clientId: parent.client_id });
       }
     }
-    const query = owner.table('interactions').orderBy('interaction_id');
-    if (options.id) query.where('interaction_id', options.id);
-    const ids = await query.select('interaction_id'), rows: any[] = [];
-    for (const { interaction_id: id } of ids) {
+    const search = filters.search?.trim().toLowerCase();
+    const fetchCandidates = async (after: any, limit: number) => nativeInteractionCandidates(owner, filters, after, { id: options.id, entity }, limit);
+    const sourceById = new Map<string, Awaited<ReturnType<typeof retainScheduleSource>>>();
+    const authorize = async (row: any) => {
+      const id = row.interaction_id;
       try {
         const source = await retainScheduleSource(trx, actor, credential.subject, { work_item_type: 'interaction', work_item_id: id });
-        const row = await owner.table('interactions').where('interaction_id', id).forShare().first();
-        if (!row) throw new CoManagedSharedWorkError();
+        sourceById.set(id, source);
+        const locked = await owner.table('interactions').where('interaction_id', id).forShare().first();
+        if (!locked) throw new CoManagedSharedWorkError();
+        Object.assign(row, locked);
         const hidden = (...keys: string[]) => isCoManagedReadFieldHidden(source.fields, keys.flatMap(key => [key, `interactions.${key}`, `values.${key}`]));
         if (hidden('tenant', 'interaction_id')) throw new CoManagedSharedWorkError();
         const view: any = { tenant, interaction_id: id };
@@ -71,18 +77,34 @@ export async function readCoManagedNativeInteractions(db: Knex, tenant: string, 
           if (!hidden('status_name')) view.status_name = status?.name ?? null;
           if (!hidden('is_status_closed')) view.is_status_closed = status?.is_closed ?? null;
         }
-        if (entity && view[entity.type === 'contact' ? 'contact_name_id' : `${entity.type}_id`] !== entity.id) continue;
-        if (Object.entries({ userId: 'user_id', contactId: 'contact_name_id', clientId: 'client_id', statusId: 'status_id', typeId: 'type_id' }).some(([filter, key]) => filters[filter as keyof NativeInteractionFilters] != null && view[key] !== filters[filter as keyof NativeInteractionFilters])) continue;
-        const time = view.interaction_date ? new Date(view.interaction_date).getTime() : NaN;
-        if (filters.dateFrom && (!Number.isFinite(time) || time < new Date(filters.dateFrom).getTime()) || filters.dateTo && (!Number.isFinite(time) || time > new Date(filters.dateTo).getTime())) continue;
-        const search = filters.search?.trim().toLowerCase();
-        if (search && !['title', 'notes', 'contact_name', 'client_name', 'user_name'].some(key => String(view[key] ?? '').toLowerCase().includes(search))) continue;
-        view.online_meeting = source.fields.length ? null : await nativeInteractionMeetingView(trx, actor, credential.subject, id);
-        rows.push(view);
+        view.online_meeting = null;
+        return view;
       } catch (error) { if (!(error instanceof CoManagedSharedWorkError) || options.id) throw error; }
+      return null;
+    };
+    // Split the four-window request budget evenly: one pass assembles the page,
+    // the other computes a bounded authorized total. Search remains in authorize,
+    // after redaction and label authorization.
+    const matches = (view: any) => {
+      const fields: Record<string, string> = { userId: 'user_id', contactId: 'contact_name_id', clientId: 'client_id', statusId: 'status_id', typeId: 'type_id' };
+      if (options.id && view.interaction_id !== options.id) return false;
+      if (entity && view[entity.type === 'contact' ? 'contact_name_id' : `${entity.type}_id`] !== entity.id) return false;
+      if (Object.entries(fields).some(([filter, field]) => filters[filter as keyof NativeInteractionFilters] != null &&
+          view[field] !== filters[filter as keyof NativeInteractionFilters])) return false;
+      const time = view.interaction_date == null ? NaN : new Date(view.interaction_date).getTime();
+      return !(filters.dateFrom && (!Number.isFinite(time) || time < new Date(filters.dateFrom).getTime()) ||
+        filters.dateTo && (!Number.isFinite(time) || time > new Date(filters.dateTo).getTime()));
+    };
+    const result = await pageAuthorizedRows({ page: options.paginated ? page : 1, pageSize: options.paginated ? pageSize : 100,
+      maxWindows: 2, fetchCandidates, authorize, matches,
+      searchMatches: view => !search || ['title', 'notes', 'contact_name', 'client_name', 'user_name'].some(key => String(view[key] ?? '').toLowerCase().includes(search)) });
+    const count = await pageAuthorizedRows({ page: 1, pageSize: 1, maxWindows: 2, fetchCandidates, authorize, matches,
+      searchMatches: view => !search || ['title', 'notes', 'contact_name', 'client_name', 'user_name'].some(key => String(view[key] ?? '').toLowerCase().includes(search)) });
+    for (const view of result.rows) {
+      const source = sourceById.get(view.interaction_id)!;
+      view.online_meeting = source.fields.length ? null : await nativeInteractionMeetingView(trx, actor, credential.subject, view.interaction_id);
     }
-    rows.sort((a, b) => (new Date(b.interaction_date ?? 0).getTime() - new Date(a.interaction_date ?? 0).getTime()) || a.interaction_id.localeCompare(b.interaction_id));
     await credential.assertCurrent();
-    return { handled: true as const, interactions: options.paginated ? rows.slice((page - 1) * pageSize, page * pageSize) : rows, total: rows.length, page, pageSize };
+    return { handled: true as const, interactions: result.rows, total: count.total, totalExact: count.totalExact, page, pageSize };
   });
 }

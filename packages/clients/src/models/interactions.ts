@@ -21,6 +21,7 @@ export interface InteractionPageFilters {
 export interface InteractionPageResult {
   interactions: IInteraction[];
   total: number;
+  totalExact: boolean;
   page: number;
   pageSize: number;
 }
@@ -339,6 +340,7 @@ class InteractionModel {
         type_name: row.type_name?.toLowerCase() ?? null,
       })) as IInteraction[],
       total: Number(countRow?.count ?? 0),
+      totalExact: true,
       page,
       pageSize,
     };

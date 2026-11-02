@@ -290,7 +290,7 @@ export const getInteractionsPage = withAuth(async (
 
     const { knex } = await createTenantKnex();
     const admitted = await interactionSeam.delegate(tenant, p => p.readInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters, paginated: true }));
-    if (admitted.handled) return { interactions: admitted.interactions, total: admitted.total, page: admitted.page, pageSize: admitted.pageSize };
+    if (admitted.handled) return { interactions: admitted.interactions, total: admitted.total, totalExact: admitted.totalExact, page: admitted.page, pageSize: admitted.pageSize };
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       return InteractionModel.getInteractionsPage(filters, tenant, trx);
     });

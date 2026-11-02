@@ -21,7 +21,7 @@ export interface SharedWorkInteractionProvider {
   readInteractions(db: Knex, tenant: string, identify: InteractionIdentify, options: {
     id?: string; filters?: Record<string, any>;
     entity?: { id: string; type: 'client' | 'contact' | 'ticket' }; paginated?: boolean;
-  }): Promise<Hit<{ interactions: any[]; total: number; page: number; pageSize: number }>>;
+  }): Promise<Hit<{ interactions: any[]; total: number; totalExact: boolean; page: number; pageSize: number }>>;
   readInteractionMeeting(db: Knex, tenant: string, interactionId: string, identify: InteractionIdentify
   ): Promise<Hit<{ meeting: IOnlineMeetingView | null }>>;
   createInteraction(db: Knex, tenant: string, data: Record<string, any>, identify: InteractionIdentify,

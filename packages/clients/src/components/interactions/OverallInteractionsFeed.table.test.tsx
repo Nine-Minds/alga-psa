@@ -146,6 +146,7 @@ describe('OverallInteractionsFeed table', () => {
     mocks.getInteractionsPage.mockReset().mockResolvedValue({
       interactions: [interaction],
       total: 42,
+      totalExact: true,
       page: 1,
       pageSize: 10,
     });
@@ -188,6 +189,21 @@ describe('OverallInteractionsFeed table', () => {
     await waitFor(() => expect(mocks.getInteractionsPage).toHaveBeenCalledWith(
       expect.objectContaining({ search: 'urgent', page: 1, pageSize: 10 }),
     ));
+  });
+
+  it('marks a bounded total as inexact for DataTable pagination', async () => {
+    mocks.getInteractionsPage.mockResolvedValue({
+      interactions: [interaction],
+      total: 100,
+      totalExact: false,
+      page: 1,
+      pageSize: 10,
+    });
+
+    render(<OverallInteractionsFeed users={[]} contacts={[]} clients={[]} />);
+    await screen.findByTestId('interaction-data-table');
+
+    expect(mocks.tableProps).toMatchObject({ totalItems: 100, totalItemsExact: false });
   });
 
   it('keeps advanced filters collapsed until the standard Filters control is opened', async () => {

@@ -139,6 +139,7 @@ export default function OverallInteractionsFeed({
   const latestRequestRef = useRef(0);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [total, setTotal] = useState(0);
+  const [totalExact, setTotalExact] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
@@ -210,17 +211,20 @@ export default function OverallInteractionsFeed({
         if (isReturnedActionError(result)) {
           setInteractions([]);
           setTotal(0);
+          setTotalExact(false);
           setLoadError(getErrorMessage(result));
           return;
         }
         setInteractions(result.interactions);
         setTotal(result.total);
+        setTotalExact(result.totalExact);
       })
       .catch((error) => {
         if (requestId !== latestRequestRef.current) return;
         console.error('Error fetching interactions:', error);
         setInteractions([]);
         setTotal(0);
+        setTotalExact(false);
         setLoadError(t('interactions.feed.loadFailed', {
           defaultValue: 'Interactions could not be loaded. Please try again.',
         }));
@@ -598,6 +602,7 @@ export default function OverallInteractionsFeed({
           onPageChange={setCurrentPage}
           pageSize={pageSize}
           totalItems={total}
+          totalItemsExact={totalExact}
           onItemsPerPageChange={(nextPageSize) => {
             setPageSize(nextPageSize);
             setCurrentPage(1);
