@@ -101,6 +101,16 @@
   },
   {
     "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/file_size/type",
+    "reason": "The existing document schema and runtime permit file_size to be null for documents without stored file-size metadata."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/mime_type/type",
+    "reason": "The existing document schema and runtime permit mime_type to be null for documents without stored MIME metadata."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
     "pointer": "/components/schemas/AssetRelationshipParams/properties/relationshipId/format",
     "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
   },
@@ -113,6 +123,16 @@
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
     "pointer": "/paths/~1api~1v1~1assets~1relationships~1{relationshipId}/delete/parameters/path:relationshipId/schema/format",
     "reason": "The existing asset API uses a composite parent_asset_id:child_asset_id relationship identity, so this path value is not a UUID."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/file_size/type",
+    "reason": "The existing document schema and runtime permit file_size to be null for documents without stored file-size metadata."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetDocumentAssociationRow/properties/mime_type/type",
+    "reason": "The existing document schema and runtime permit mime_type to be null for documents without stored MIME metadata."
   },
   {
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
