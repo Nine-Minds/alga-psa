@@ -134,6 +134,15 @@ export default class ContractLineServiceConfiguration {
     return result > 0;
   }
 
+  /** Dedicated identity mutation for the authorized rebind service operation. */
+  async rebindIdentity(configId: string, contractLineId: string, serviceId: string): Promise<boolean> {
+    await this.initKnex();
+    const result = await this.table('contract_line_service_configuration')
+      .where({ config_id: configId })
+      .update({ contract_line_id: contractLineId, service_id: serviceId, updated_at: new Date() });
+    return result > 0;
+  }
+
   /**
    * Delete a contract line service configuration
    */

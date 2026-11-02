@@ -11,6 +11,7 @@ let tenantId: string;
 let allowedPermissions = new Set<string>(['update']);
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
 let updateConfiguration: typeof import('@alga-psa/billing/actions/contractLineServiceConfigurationActions').updateConfiguration;
+let rebindConfiguration: typeof import('@alga-psa/billing/actions/contractLineServiceConfigurationActions').rebindConfiguration;
 let ConfigurationModel: typeof import('@alga-psa/billing/models/contractLineServiceConfiguration').default;
 
 vi.mock('server/src/lib/db', async () => {
@@ -96,6 +97,7 @@ describe('contract line service configuration identity is immutable on update', 
     setupCommonMocks({ tenantId, userId: 'configuration-identity-test-user', permissionCheck: (_user, _resource, action) => allowedPermissions.has(action ?? '') });
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
     ({ updateConfiguration } = await import('@alga-psa/billing/actions/contractLineServiceConfigurationActions'));
+    ({ rebindConfiguration } = await import('@alga-psa/billing/actions/contractLineServiceConfigurationActions'));
     ConfigurationModel = (await import('@alga-psa/billing/models/contractLineServiceConfiguration')).default;
   }, HOOK_TIMEOUT);
 
@@ -200,5 +202,124 @@ describe('contract line service configuration identity is immutable on update', 
     const after: any = await tenantTable(db, tenantId, 'contract_line_service_configuration')
       .where({ tenant: tenantId, config_id: fixture.configId }).first();
     expect(after).toEqual(before);
+  }, HOOK_TIMEOUT);
+
+  it('allows a create+delete caller to rebind configuration and membership through the action', async () => {
+    const source = await createConfigurationFixture();
+    const target = await createConfigurationFixture();
+    allowedPermissions = new Set(['create', 'delete']);
+
+    const result: any = await rebindConfiguration(source.configId, {
+      targetContractLineId: target.lineId,
+      targetServiceId: source.serviceId,
+    });
+    expect(result).toBe(source.configId);
+
+    const moved: any = await tenantTable(db, tenantId, 'contract_line_service_configuration')
+      .where({ tenant: tenantId, config_id: source.configId }).first();
+    expect(moved).toMatchObject({ contract_line_id: target.lineId, service_id: source.serviceId, configuration_type: 'Fixed' });
+    await expect(tenantTable(db, tenantId, 'contract_line_services').where({ tenant: tenantId, contract_line_id: source.lineId, service_id: source.serviceId }).first())
+      .resolves.toBeUndefined();
+    await expect(tenantTable(db, tenantId, 'contract_line_services').where({ tenant: tenantId, contract_line_id: target.lineId, service_id: source.serviceId }).first())
+      .resolves.toMatchObject({ contract_line_id: target.lineId, service_id: source.serviceId });
+  }, HOOK_TIMEOUT);
+
+  it('converts the configuration type only through an authorized delete+create rebind', async () => {
+    const source = await createConfigurationFixture();
+    const target = await createConfigurationFixture();
+    allowedPermissions = new Set(['create', 'delete']);
+
+    const result: any = await rebindConfiguration(source.configId, {
+      targetContractLineId: target.lineId,
+      targetServiceId: source.serviceId,
+      configurationType: 'Hourly',
+      typeConfig: { hourly_rate: 1250 },
+    });
+    expect(typeof result).toBe('string');
+    expect(result).not.toBe(source.configId);
+    const converted: any = await tenantTable(db, tenantId, 'contract_line_service_configuration')
+      .where({ tenant: tenantId, config_id: result }).first();
+    expect(converted).toMatchObject({ contract_line_id: target.lineId, service_id: source.serviceId, configuration_type: 'Hourly' });
+    expect(await tenantTable(db, tenantId, 'contract_line_service_fixed_config').where({ config_id: source.configId }).first())
+      .toBeUndefined();
+    const hourly: any = await tenantTable(db, tenantId, 'contract_line_service_hourly_configs').where({ config_id: result }).first();
+    expect(hourly).toMatchObject({ config_id: result });
+    expect(Number(hourly.hourly_rate)).toBe(1250);
+  }, HOOK_TIMEOUT);
+
+  it.each([
+    { permissions: ['create'], denied: 'source delete permission' },
+    { permissions: ['delete'], denied: 'target create permission' },
+  ])('denies rebind without $denied and leaves membership unchanged', async ({ permissions }) => {
+    const source = await createConfigurationFixture();
+    const target = await createConfigurationFixture();
+    allowedPermissions = new Set(permissions);
+
+    const result: any = await rebindConfiguration(source.configId, {
+      targetContractLineId: target.lineId,
+      targetServiceId: source.serviceId,
+    });
+    expect(result).toHaveProperty('permissionError');
+    const config: any = await tenantTable(db, tenantId, 'contract_line_service_configuration')
+      .where({ tenant: tenantId, config_id: source.configId }).first();
+    expect(config).toMatchObject({ contract_line_id: source.lineId, service_id: source.serviceId });
+    await expect(tenantTable(db, tenantId, 'contract_line_services').where({ tenant: tenantId, contract_line_id: source.lineId, service_id: source.serviceId }).first())
+      .resolves.toMatchObject({ contract_line_id: source.lineId, service_id: source.serviceId });
+    await expect(tenantTable(db, tenantId, 'contract_line_services').where({ tenant: tenantId, contract_line_id: target.lineId, service_id: source.serviceId }).first())
+      .resolves.toBeUndefined();
+  }, HOOK_TIMEOUT);
+
+  it.each(['source', 'target'] as const)('rejects a non-authorable %s line before rebinding', async (lineRole) => {
+    const source = await createConfigurationFixture();
+    const target = await createConfigurationFixture();
+    const blocked = lineRole === 'source' ? source : target;
+    const line: any = await tenantTable(db, tenantId, 'contract_lines')
+      .where({ tenant: tenantId, contract_line_id: blocked.lineId }).first();
+    await tenantTable(db, tenantId, 'contracts')
+      .where({ tenant: tenantId, contract_id: line.contract_id }).update({ is_system_managed_default: true });
+    allowedPermissions = new Set(['create', 'delete']);
+
+    const result: any = await rebindConfiguration(source.configId, {
+      targetContractLineId: target.lineId,
+      targetServiceId: source.serviceId,
+    });
+    expect(result).toHaveProperty('actionError');
+    const unchanged: any = await tenantTable(db, tenantId, 'contract_line_service_configuration')
+      .where({ tenant: tenantId, config_id: source.configId }).first();
+    expect(unchanged).toMatchObject({ contract_line_id: source.lineId, service_id: source.serviceId, configuration_type: 'Fixed' });
+  }, HOOK_TIMEOUT);
+
+  it('rolls back the old configuration and membership when an authorized type conversion fails', async () => {
+    const source = await createConfigurationFixture();
+    const target = await createConfigurationFixture();
+    const before: any = await tenantTable(db, tenantId, 'contract_line_service_configuration')
+      .where({ tenant: tenantId, config_id: source.configId }).first();
+    const fixedBefore: any = await tenantTable(db, tenantId, 'contract_line_service_fixed_config')
+      .where({ tenant: tenantId, config_id: source.configId }).first();
+    allowedPermissions = new Set(['create', 'delete']);
+
+    const result: any = await rebindConfiguration(source.configId, {
+      targetContractLineId: target.lineId,
+      targetServiceId: source.serviceId,
+      configurationType: 'Hourly',
+      typeConfig: { hourly_rate: null } as any,
+    });
+    expect(result).toHaveProperty('actionError');
+    const after: any = await tenantTable(db, tenantId, 'contract_line_service_configuration')
+      .where({ tenant: tenantId, config_id: source.configId }).first();
+    expect(after).toMatchObject({
+      contract_line_id: source.lineId,
+      service_id: source.serviceId,
+      configuration_type: 'Fixed',
+      quantity: before.quantity,
+    });
+    expect(await tenantTable(db, tenantId, 'contract_line_service_fixed_config').where({ config_id: source.configId }).first())
+      .toMatchObject({ config_id: fixedBefore.config_id });
+    await expect(tenantTable(db, tenantId, 'contract_line_service_hourly_configs').where({ config_id: source.configId }).first())
+      .resolves.toBeUndefined();
+    await expect(tenantTable(db, tenantId, 'contract_line_services').where({ tenant: tenantId, contract_line_id: source.lineId, service_id: source.serviceId }).first())
+      .resolves.toMatchObject({ contract_line_id: source.lineId, service_id: source.serviceId });
+    await expect(tenantTable(db, tenantId, 'contract_line_services').where({ tenant: tenantId, contract_line_id: target.lineId, service_id: source.serviceId }).first())
+      .resolves.toBeUndefined();
   }, HOOK_TIMEOUT);
 });

@@ -13,6 +13,7 @@ import type {
   IContractLineServiceBucketConfig,
   IService,
   IUser,
+  IUserWithRoles,
 } from '@alga-psa/types';
 import { deleteTemplateServicePrices } from '@alga-psa/shared/billingClients/templateAmounts';
 import { ContractLineServiceConfigurationService } from '../../services/contractLineServiceConfigurationService';
@@ -192,6 +193,7 @@ async function addServiceToTemplateLine(
 async function addServiceToLiveContractLine(
   trx: Knex.Transaction,
   tenant: string,
+  user: IUser,
   contractLineId: string,
   serviceId: string,
   quantity?: number,
@@ -276,9 +278,17 @@ async function addServiceToLiveContractLine(
   const existingConfig = await configurationService.getConfigurationForService(contractLineId, serviceId);
   if (existingConfig) {
     if (existingConfig.configuration_type !== configurationType) {
-      throw new Error(
-        `Configuration ${existingConfig.config_id} is ${existingConfig.configuration_type}; its type cannot be changed to ${configurationType}.`,
-      );
+      return configurationService.rebindConfiguration(user as IUserWithRoles, existingConfig.config_id, {
+        targetContractLineId: contractLineId,
+        targetServiceId: serviceId,
+        configurationType,
+        mutableValues: {
+          custom_rate: customRate,
+          quantity: configurationType === 'Usage' ? undefined : quantity ?? 1,
+        },
+        typeConfig: resolvedTypeConfig,
+        rateTiers,
+      });
     }
     await configurationService.updateConfiguration(
       existingConfig.config_id,
@@ -492,6 +502,7 @@ export async function addServiceToContractLineInTransaction(
   return addServiceToLiveContractLine(
     trx,
     tenant,
+    user,
     contractLineId,
     serviceId,
     quantity,

@@ -4,7 +4,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { withTransaction } from '@alga-psa/db';
 import { upsertBucketOverlayInTransaction } from './bucketOverlayActions';
-import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
+import { ContractLineServiceConfigurationService, type ConfigurationRebindInput } from '../services/contractLineServiceConfigurationService';
 import {
   IContractLineServiceConfiguration,
   IContractLineServiceHourlyConfig,
@@ -13,7 +13,8 @@ import {
   IContractLineServiceRateTierInput,
   IUserTypeRate,
   ContractLineServiceConfigurationMutableValues,
-  UsageMeasurementMode
+  UsageMeasurementMode,
+  IUserWithRoles
 } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -260,6 +261,25 @@ export const updateConfiguration = withAuth(async (
   }
 });
 
+export const rebindConfiguration = withAuth(async (
+  user,
+  { tenant },
+  configId: string,
+  input: ConfigurationRebindInput,
+) => {
+  try {
+    const { knex } = await createTenantKnex();
+    if (!tenant) throw new Error('tenant context not found');
+    const service = new ContractLineServiceConfigurationService(knex, tenant);
+    return await service.rebindConfiguration(user as IUserWithRoles, configId, input);
+  } catch (error) {
+    console.error(`Error rebinding service configuration ${configId}:`, error);
+    const expected = contractLineServiceConfigActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
 export const deleteConfiguration = withAuth(async (
   user,
   { tenant },
@@ -303,7 +323,7 @@ export const upsertPlanServiceHourlyConfiguration = withAuth(async (
     }
     await assertContractLineIsAuthorableByLineId(knex, tenant, contractLineId);
     const service = new ContractLineServiceConfigurationService(knex, tenant);
-    return service.upsertPlanServiceHourlyConfiguration(contractLineId, serviceId, hourlyConfigData);
+    return service.upsertPlanServiceHourlyConfiguration(contractLineId, serviceId, hourlyConfigData, user as IUserWithRoles);
   } catch (error) {
     console.error(`Error upserting hourly configuration for contract line ${contractLineId} and service ${serviceId}:`, error);
     const expected = contractLineServiceConfigActionErrorFrom(error);
@@ -348,7 +368,7 @@ export const upsertPlanServiceBucketConfigurationAction = withAuth(async (
         overage_rate: overageRate,
         allow_rollover: bucketConfigData.allow_rollover ?? false,
         billing_period: bucketConfigData.billing_period ?? 'monthly',
-      });
+      }, user as IUserWithRoles);
       return { configId };
     }
     let configId = '';
@@ -434,7 +454,7 @@ export const upsertPlanServiceConfiguration = withAuth(async (
         unit_of_measure: payload.unit_of_measure,
         enable_tiered_pricing: payload.enable_tiered_pricing,
         minimum_usage: payload.minimum_usage,
-      });
+      }, user as IUserWithRoles);
     }
 
     const usageConfig: Partial<IContractLineServiceUsageConfig> = {
