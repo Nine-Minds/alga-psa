@@ -622,6 +622,24 @@ export const ASSET_RMM_REMOTE_CONTROL_SOURCE: RedactableRecordSource = {
   },
 };
 
+/** RMM command metadata copies the asset name/provider, and provider job ids may embed device identifiers. */
+export const ASSET_RMM_COMMAND_RESPONSE_SOURCE: RedactableRecordSource = {
+  policySource: ASSET_RECORD_SOURCE,
+  resource: ASSET_RECORD_SOURCE.resource,
+  identifier: ASSET_RECORD_SOURCE.identifier,
+  fields: {},
+  derived: {
+    message: [
+      { source: ASSET_RECORD_SOURCE, field: 'name' },
+      { source: ASSET_RECORD_SOURCE, field: 'rmm_provider' },
+    ],
+    jobId: [
+      { source: ASSET_RECORD_SOURCE, field: 'rmm_provider' },
+      { source: ASSET_RECORD_SOURCE, field: 'rmm_device_id' },
+    ],
+  },
+};
+
 /** Custody episodes retain the asset policy and the ownership of joined holder labels. */
 export const ASSET_CUSTODY_SOURCE: RedactableRecordSource = {
   policySource: ASSET_RECORD_SOURCE,

@@ -15,6 +15,15 @@ const h = vi.hoisted(() => {
     subjects: [] as any[], loaded: [] as string[],
     refreshProvider: vi.fn(async () => {}),
     remoteControlUrl: vi.fn(async (ref: { deviceId: string }) => `https://remote.example/${ref.deviceId}`),
+    rebootProvider: vi.fn(async () => {}),
+    scriptProvider: vi.fn(async () => ({ jobId: 'provider-job-1' })),
+    resolveDeviceActions: vi.fn(async () => ({
+      refresh: state.refreshProvider,
+      remoteControlUrl: state.remoteControlUrl,
+      reboot: state.rebootProvider,
+      runScript: state.scriptSupported ? state.scriptProvider : undefined,
+    })),
+    scriptSupported: true,
   };
   const decide = async (input: any) => {
     state.subjects.push(input.subject);
@@ -127,10 +136,14 @@ const readRmm = (key = false) => readRmmRoute(new Request(`http://localhost/api/
   headers: key ? { 'x-api-key': 'summary-secret' } : {},
 }), { params: Promise.resolve({ id: h.state.assetId }) });
 beforeEach(() => {
-  Object.assign(h.state.asset, { rmm_provider: 'tacticalrmm', rmm_device_id: 'device-1', last_rmm_sync_at: '2026-11-01T12:00:00Z' });
+  Object.assign(h.state.asset, { name: 'Visible workstation', rmm_provider: 'tacticalrmm', rmm_device_id: 'device-1', last_rmm_sync_at: '2026-11-01T12:00:00Z' });
   Object.assign(h.state.extension, { current_user: 'Secret user', lan_ip: '192.168.9.9', wan_ip: '203.0.113.9', memory_usage_percent: 75, ram_gb: 32, cpu_utilization_percent: 55, disk_usage: [{ name: 'Secret volume', free_gb: 5 }] });
   h.state.refreshProvider.mockClear();
   h.state.remoteControlUrl.mockClear();
+  h.state.rebootProvider.mockClear();
+  h.state.scriptProvider.mockClear();
+  h.state.resolveDeviceActions.mockClear();
+  h.state.scriptSupported = true;
 });
 describe('independent RMM REST boundary review', () => {
   it('visible control uses the actual action and route', async () => {
@@ -202,10 +215,7 @@ describe('independent RMM REST boundary review', () => {
 });
 
 vi.mock('@alga-psa/integrations/lib/rmm/assetDeviceActions', () => ({
-  resolveRmmAssetDeviceActions: vi.fn(async () => ({
-    refresh: h.state.refreshProvider,
-    remoteControlUrl: h.state.remoteControlUrl,
-  })),
+  resolveRmmAssetDeviceActions: (...args: any[]) => h.state.resolveDeviceActions(...args),
 }));
 import { POST as refreshRmmRoute } from '../../../app/api/v1/assets/[id]/rmm/refresh/route';
 const refreshRmm = (key = false) => refreshRmmRoute(new Request(`http://localhost/api/v1/assets/${h.state.assetId}/rmm/refresh`, {
@@ -372,5 +382,116 @@ describe('asset RMM remote-control REST boundary', () => {
     const response = await readRemoteControl();
     expect(response.status).toBe(403);
     expect(h.state.remoteControlUrl).not.toHaveBeenCalled();
+  });
+});
+
+import { POST as rebootRoute } from '../../../app/api/v1/assets/[id]/rmm/reboot/route';
+import { POST as scriptRoute } from '../../../app/api/v1/assets/[id]/rmm/script/route';
+
+const runAssetCommand = (route: typeof rebootRoute | typeof scriptRoute, key = false) => {
+  const request = new Request(`http://localhost/api/v1/assets/${h.state.assetId}/rmm/command`, {
+    method: 'POST',
+    headers: {
+      ...(key ? { 'x-api-key': 'summary-secret' } : {}),
+      ...(route === scriptRoute ? { 'content-type': 'application/json' } : {}),
+    },
+    ...(route === scriptRoute ? { body: JSON.stringify({ scriptId: 'script-1' }) } : {}),
+  });
+  return route(request, { params: Promise.resolve({ id: h.state.assetId }) } as any);
+};
+
+describe('asset RMM command REST boundaries', () => {
+  it.each([
+    ['reboot', rebootRoute],
+    ['script', scriptRoute],
+  ] as const)('returns visible %s action metadata for session and API-key callers', async (_name, route) => {
+    const sessionResponse = await runAssetCommand(route);
+    expect(sessionResponse.status).toBe(200);
+    expect(await sessionResponse.json()).toMatchObject({ success: true, message: expect.stringContaining('Visible workstation') });
+
+    const apiKeyResponse = await runAssetCommand(route, true);
+    expect(apiKeyResponse.status).toBe(200);
+    expect(await apiKeyResponse.json()).toMatchObject({ success: true, message: expect.stringContaining('Visible workstation') });
+    expect(h.state.subjects.at(-1)?.apiKeyId).toBe('summary-key');
+  });
+
+  it.each([
+    ['assets.name', 'session'], ['values.name', 'session'], ['fields.assets.name', 'session'],
+    ['assets.name', 'API-key'], ['values.name', 'API-key'], ['fields.assets.name', 'API-key'],
+  ])('redacts asset-name-derived command messages under %s for %s callers', async (alias, caller) => {
+    h.state.redactions.asset = [alias];
+    h.state.keyOnly = caller === 'API-key';
+
+    for (const route of [rebootRoute, scriptRoute]) {
+      const response = await runAssetCommand(route, caller === 'API-key');
+      expect(response.status).toBe(200);
+      expect((await response.json()).message).toBeNull();
+    }
+  });
+
+  it.each(['rmm_provider', 'assets.rmm_provider', 'values.rmm_provider', 'fields.assets.rmm_provider'])(
+    'redacts unsupported-script provider metadata under %s only for the API-key policy', async alias => {
+      h.state.redactions.asset = [alias];
+      h.state.keyOnly = true;
+      h.state.scriptSupported = false;
+
+      const sessionResponse = await runAssetCommand(scriptRoute);
+      expect(sessionResponse.status).toBe(400);
+      expect((await sessionResponse.json()).message).toContain('Tactical RMM');
+
+      const apiKeyResponse = await runAssetCommand(scriptRoute, true);
+      expect(apiKeyResponse.status).toBe(400);
+      expect(await apiKeyResponse.json()).toEqual({ success: false, message: null });
+      expect(h.state.resolveDeviceActions).toHaveBeenCalledTimes(2);
+      expect(h.state.subjects.at(-1)?.apiKeyId).toBe('summary-key');
+    },
+  );
+
+  it('redacts provider-derived script job ids when the device identifier is hidden', async () => {
+    h.state.redactions.asset = ['fields.assets.rmm_device_id'];
+
+    const response = await runAssetCommand(scriptRoute);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, message: expect.stringContaining('Visible workstation'), jobId: null });
+  });
+
+  it.each([
+    ['denied decision', 'session', () => h.state.deniedIds.add(h.state.assetId)],
+    ['resource suppression', 'API-key', () => { h.state.redactions.asset = ['assets']; }],
+    ['identifier suppression', 'session', () => { h.state.redactions.asset = ['values.asset_id']; }],
+  ])('refuses %s before provider resolution for %s callers', async (_reason, caller, configure) => {
+    configure();
+    const key = caller === 'API-key';
+    for (const route of [rebootRoute, scriptRoute]) {
+      const response = await runAssetCommand(route, key);
+      expect(response.status).toBe(404);
+      expect(h.state.resolveDeviceActions).not.toHaveBeenCalled();
+      expect(h.state.rebootProvider).not.toHaveBeenCalled();
+      expect(h.state.scriptProvider).not.toHaveBeenCalled();
+    }
+    if (key) expect(h.state.subjects.at(-1)?.apiKeyId).toBe('summary-key');
+  });
+
+  it.each([
+    ['reboot', rebootRoute], ['script', scriptRoute],
+  ] as const)('preserves asset:update authorization for %s', async (_name, route) => {
+    h.state.assetUpdatePermission = false;
+    const response = await runAssetCommand(route);
+    expect(response.status).toBe(403);
+    expect(h.state.resolveDeviceActions).not.toHaveBeenCalled();
+    expect(h.state.rebootProvider).not.toHaveBeenCalled();
+    expect(h.state.scriptProvider).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['reboot', rebootRoute], ['script', scriptRoute],
+  ] as const)('preserves Datto execute-command authorization for %s', async (_name, route) => {
+    h.state.asset.rmm_provider = 'datto';
+    h.state.rmmExecutePermission = false;
+    const response = await runAssetCommand(route);
+    expect(response.status).toBe(403);
+    expect((await response.json()).message).toBe('Permission denied: Cannot execute RMM commands');
+    expect(h.state.rebootProvider).not.toHaveBeenCalled();
+    expect(h.state.scriptProvider).not.toHaveBeenCalled();
   });
 });

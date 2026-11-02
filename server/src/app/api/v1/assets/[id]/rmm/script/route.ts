@@ -10,6 +10,10 @@
 
 import { NextResponse } from 'next/server';
 import { triggerRmmScript } from '@/lib/actions/asset-actions/rmmActions';
+import { ASSET_RMM_COMMAND_RESPONSE_SOURCE } from '@alga-psa/authorization/recordProjection';
+import { readAssetGateForRequest, assetNotFoundResponse } from 'server/src/lib/api/controllers/assetReadGuard';
+import { reprojectUnderDecision } from 'server/src/lib/api/controllers/authorizationKernel';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 import { rmmErrorResponse, rmmRouteErrorFrom } from '../rmmRouteErrors';
 
 export async function POST(
@@ -38,14 +42,23 @@ export async function POST(
       );
     }
 
-    const result = await triggerRmmScript(id, scriptId);
+    const gate = await readAssetGateForRequest(request, id);
+    if (gate.denied) return gate.denied;
 
-    if (!result.success) {
-      const expectedError = rmmRouteErrorFrom(result.message);
+    const result = await runWithApiKeyOrSession(request, () => triggerRmmScript(id, scriptId));
+    const expectedError = result.success ? null : rmmRouteErrorFrom(result.message);
+    const data = reprojectUnderDecision(
+      gate.projection,
+      result,
+      ASSET_RMM_COMMAND_RESPONSE_SOURCE,
+    );
+    if (data === null) return assetNotFoundResponse();
+
+    if (!data.success) {
       return NextResponse.json(
         {
           success: false,
-          message: result.message,
+          message: data.message,
         },
         { status: expectedError?.status ?? 400 }
       );
@@ -53,8 +66,8 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      jobId: result.jobId,
-      message: result.message,
+      jobId: data.jobId,
+      message: data.message,
       _links: {
         self: { href: `/api/v1/assets/${id}/rmm/script`, method: 'POST' },
         asset: { href: `/api/v1/assets/${id}` },
