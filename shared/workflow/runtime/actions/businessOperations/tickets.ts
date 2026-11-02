@@ -1805,7 +1805,8 @@ export function registerTicketActions(): void {
       }
 
       const include: Partial<NonNullable<typeof input.include>> = input.include ?? {};
-      const includeAttributes = Boolean(include.attributes || include.custom_fields) && !hidden('attributes');
+      const includeAttributes = Boolean(include.attributes || include.custom_fields)
+        && !hidden('attributes') && ticket.attributes !== undefined;
       const attrs = includeAttributes ? parseJsonMaybe(ticket.attributes) : undefined;
 
       const displayNames = await loadTicketDisplayNames(tx, ticket, grant.redactedFields);

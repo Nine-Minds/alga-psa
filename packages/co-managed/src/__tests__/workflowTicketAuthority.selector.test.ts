@@ -18,8 +18,11 @@ vi.mock('@alga-psa/db', () => ({
       const query: any = new Proxy({}, { get: (_target, key) => {
         if (key === 'where') return (column: string, value: unknown) => { predicates.push(row => row[column.replace(/^tickets\./, '')] === value); return query; };
         if (key === 'whereIn') return (column: string, values: unknown[]) => { predicates.push(row => values.includes(row[column.replace(/^tickets\./, '')])); return query; };
-        if (key === 'whereRaw') return (_sql: string, bindings: unknown[]) => { predicates.push(row => row.attributes?.external_ref === bindings[0]); return query; };
-        if (key === 'andWhere') return (callback: (builder: any) => void) => { callback(query); return query; };
+        if (key === 'whereRaw') return (sql: string, bindings: unknown[] = []) => {
+          predicates.push(row => sql === '1 = 0' ? false : row.attributes?.external_ref === bindings[0]);
+          return query;
+        };
+        if (key === 'andWhere') return (callback: (builder: any) => void) => { callback.call(query, query); return query; };
         if (key === 'orWhere') return (_callback: unknown) => query;
         if (key === 'select') return () => query;
         if (key === 'forShare' || key === 'forUpdate') return () => { if (name === 'tickets') state.ticketLocks++; return query; };
@@ -79,11 +82,24 @@ describe('co-managed workflow ticket selector policy and indexed candidate scope
     expect(state.ticketLocks).toBe(0);
   });
 
+  it('preserves selected-client scope when a policy only redacts other fields', async () => {
+    state.policyRules = [{ id: 'client-a-redaction', resource: 'ticket', action: 'read',
+      templateKey: 'selected_clients', selectedClientIds: [clientA],
+      constraintKey: 'hide_sensitive_fields', redactedFields: ['tickets.description'],
+    }];
+    await expect(findCoManagedWorkflowTicketCandidates(trx, request('ref-a'))).resolves.toEqual(['ticket-a']);
+    await expect(findCoManagedWorkflowTicketCandidates(trx, request('missing'))).resolves.toEqual([]);
+    expect(state.ticketLocks).toBe(0);
+  });
+
   it.each([
     ['response_state', 'tickets.response_state'], ['response_state', 'tickets.status_id'],
     ['attributes.external_ref', 'tickets.attributes.external_ref'], ['attributes.external_ref', 'tickets.external_ref'],
   ])('rejects %s when source %s is masked before selector lookup', async (field, mask) => {
-    state.policyRules = [{ id: 'mask', resource: 'ticket', action: 'read', redactedFields: [mask] }];
+    state.policyRules = [{ id: 'mask', resource: 'ticket', action: 'read',
+      templateKey: 'selected_clients', selectedClientIds: [clientA],
+      constraintKey: 'hide_sensitive_fields', redactedFields: [mask],
+    }];
     await expect(findCoManagedWorkflowTicketCandidates(trx, {
       ...request('ref-a'), predicateFields: [field],
     })).rejects.toMatchObject({ code: 'WORKFLOW_TICKET_PREDICATE_FORBIDDEN' });

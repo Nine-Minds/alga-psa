@@ -206,6 +206,31 @@ describe('registered ticket action authorization boundary', () => {
     if (redactions.includes('clients.client_name')) expect(state.queries).not.toContain('clients');
   });
 
+  it.each([
+    'tickets.external_ref', 'fields.tickets.external_ref', 'tickets.attributes.external_ref',
+    'tickets.private_payload.token', 'private_payload.token',
+  ])('omits attributes when a stored field alias is masked: %s', async mask => {
+    state.hidden = [mask];
+    state.candidateRows[0] = { ...ticket, attributes: {
+      ...ticket.attributes, private_payload: { token: 'secret-token' },
+    } };
+    const result = await action('find').handler({ ticket_id: ticketId, include: { attributes: true } }, ctx);
+    expect(result.ticket).not.toHaveProperty('attributes');
+    expect(result.ticket.title).toBe('Secret');
+  });
+
+  it('omits serialized attributes when a stored field alias is masked', async () => {
+    state.hidden = ['tickets.external_ref'];
+    state.candidateRows[0] = { ...ticket, attributes: JSON.stringify(ticket.attributes) };
+    const result = await action('find').handler({ ticket_id: ticketId, include: { custom_fields: true } }, ctx);
+    expect(result.ticket).not.toHaveProperty('attributes');
+  });
+
+  it('returns unmasked attributes', async () => {
+    const result = await action('find').handler({ ticket_id: ticketId, include: { attributes: true } }, ctx);
+    expect(result.ticket.attributes).toEqual(ticket.attributes);
+  });
+
   it('suppresses requester identity and skips its lookup when contact_id is masked', async () => {
     state.hidden = ['tickets.contact_id'];
     const result = await action('find').handler({ ticket_id: ticketId }, ctx);

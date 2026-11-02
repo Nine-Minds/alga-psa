@@ -293,8 +293,9 @@ function compileBundleRuleSql(
     return { supported: true };
   }
 
-  // `not_self_approver` only constrains mutations; it never denies a read.
-  if (rule.constraintKey && rule.constraintKey !== 'not_self_approver') {
+  // Mutation guards and field masks do not add row predicates to a read.
+  // Their accompanying relationship template still narrows the query below.
+  if (rule.constraintKey && rule.constraintKey !== 'not_self_approver' && rule.constraintKey !== 'hide_sensitive_fields') {
     return { supported: false, reason: `unsupported bundle constraint ${rule.constraintKey}` };
   }
 

@@ -22,7 +22,16 @@ export function workflowTicketFieldHidden(redactions: string[], ...names: string
 
 export function redactWorkflowTicket(ticket: Record<string, any>, redactions: string[]): Record<string, any> {
   return Object.fromEntries(Object.entries(ticket).flatMap(([key, value]) => {
-    if (!workflowTicketFieldHidden(redactions, key, ...(WORKFLOW_TICKET_DERIVED_SOURCES[key] ?? []))) return [[key, value]];
+    const sources = [key, ...(WORKFLOW_TICKET_DERIVED_SOURCES[key] ?? [])];
+    if (key === 'attributes') {
+      const attributes = typeof value === 'string' ? safeParseAttributes(value) : value;
+      // Attribute keys are extensible. Include their actual paths so a mask
+      // on either `attributes.key` or its `key` alias hides the whole value.
+      if (attributes && typeof attributes === 'object' && !Array.isArray(attributes)) {
+        sources.push(...Object.keys(attributes).map(field => `attributes.${field}`));
+      }
+    }
+    if (!workflowTicketFieldHidden(redactions, ...sources)) return [[key, value]];
     // Attributes are optional; scalar summary fields are nullable.
     return key === 'attributes' ? [] : [[key, null]];
   }));
