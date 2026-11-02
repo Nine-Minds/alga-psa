@@ -682,6 +682,8 @@
     "ariaLabel": "Pagination",
     "totalItems": "{{count}} {{itemLabel}} total",
     "totalRecordsInline": "({{count}} total records)",
+    "pageNumber": "Page {{current}}",
+    "totalCountIncomplete": "Total count incomplete",
     "pageOf": "Page {{current}} of {{total}}",
     "itemsLabel_few": "items",
     "itemsLabel_many": "items"

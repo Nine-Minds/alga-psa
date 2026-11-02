@@ -4,23 +4,26 @@ export const AUTHORIZED_ROW_WINDOW_SIZE = 50;
 export const AUTHORIZED_ROW_MAX_WINDOWS = 4;
 export const AUTHORIZED_ROW_MAX_PAGE = 10_000;
 
-export interface AuthorizedPageResult<T> {
+export interface AuthorizedPageResult<C, T> {
   rows: T[];
   total: number;
   totalExact: boolean;
   exhausted: boolean;
+  nextAfter: C | null;
 }
 
 export async function pageAuthorizedRows<C, T>(options: {
-  page: number;
+  page?: number;
+  after?: C | null;
   pageSize: number;
   maxWindows?: number;
   fetchCandidates: (after: C | null, limit: number) => Promise<C[]>;
   authorize: (candidate: C) => Promise<T | null>;
   matches: (row: T) => boolean;
   searchMatches?: (row: T) => boolean;
-}): Promise<AuthorizedPageResult<T>> {
-  if (!Number.isSafeInteger(options.page) || options.page < 1 || options.page > AUTHORIZED_ROW_MAX_PAGE ||
+}): Promise<AuthorizedPageResult<C, T>> {
+  const page = options.page ?? 1;
+  if (!Number.isSafeInteger(page) || page < 1 || page > AUTHORIZED_ROW_MAX_PAGE ||
       !Number.isSafeInteger(options.pageSize) || options.pageSize < 1 || options.pageSize > 100) {
     throw new RangeError('Authorized row pages require page >= 1 and pageSize between 1 and 100');
   }
@@ -31,9 +34,9 @@ export async function pageAuthorizedRows<C, T>(options: {
   // Callers may reserve less work for a phase, but can never raise the
   // request-wide ceiling by passing a larger value.
   const maxWindows = Math.min(requestedWindows, AUTHORIZED_ROW_MAX_WINDOWS);
-  const target = (options.page - 1) * options.pageSize;
+  const target = (page - 1) * options.pageSize;
   if (!Number.isSafeInteger(target)) throw new RangeError('Authorized row page offset is too large');
-  let after: C | null = null, windows = 0, exhausted = false, matched = 0;
+  let after: C | null = options.after ?? null, pageAfter: C | null = null, windows = 0, exhausted = false, matched = 0;
   const rows: T[] = [];
   while (windows < maxWindows) {
     const candidates = await options.fetchCandidates(after, AUTHORIZED_ROW_WINDOW_SIZE);
@@ -45,9 +48,14 @@ export async function pageAuthorizedRows<C, T>(options: {
       if (!row || !options.matches(row)) continue;
       if (options.searchMatches && !options.searchMatches(row)) continue;
       matched++;
-      if (matched > target && rows.length < options.pageSize) rows.push(row);
+      if (matched > target && rows.length < options.pageSize) {
+        rows.push(row);
+        pageAfter = candidate;
+      }
     }
     if (candidates.length < AUTHORIZED_ROW_WINDOW_SIZE) { exhausted = true; break; }
   }
-  return { rows, total: matched, totalExact: exhausted, exhausted };
+  const hasMoreRows = matched > target + options.pageSize;
+  return { rows, total: matched, totalExact: exhausted, exhausted,
+    nextAfter: hasMoreRows ? pageAfter : exhausted ? null : pageAfter ?? after };
 }

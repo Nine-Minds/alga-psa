@@ -198,12 +198,14 @@ describe('OverallInteractionsFeed table', () => {
       totalExact: false,
       page: 1,
       pageSize: 10,
+      nextCursor: { interaction_date: '2026-01-01T00:00:00.000Z', interaction_id: 'interaction-1' },
+      hasMore: true,
     });
 
     render(<OverallInteractionsFeed users={[]} contacts={[]} clients={[]} />);
     await screen.findByTestId('interaction-data-table');
 
-    expect(mocks.tableProps).toMatchObject({ totalItems: 100, totalItemsExact: false });
+    expect(mocks.tableProps).toMatchObject({ totalItems: 100, totalItemsExact: false, hasMorePages: true });
   });
 
   it('keeps advanced filters collapsed until the standard Filters control is opened', async () => {

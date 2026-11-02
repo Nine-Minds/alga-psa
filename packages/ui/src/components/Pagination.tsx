@@ -11,6 +11,7 @@ interface PaginationProps {
     id: string;
     totalItems: number;
     totalItemsExact?: boolean;
+    hasMorePages?: boolean;
     itemsPerPage: number;
     currentPage?: number;
     onPageChange: (page: number) => void;
@@ -35,6 +36,7 @@ const Pagination = ({
     id,
     totalItems,
     totalItemsExact = true,
+    hasMorePages,
     itemsPerPage,
     currentPage: externalCurrentPage,
     onPageChange,
@@ -89,10 +91,10 @@ const Pagination = ({
     const visibleTotalPages = totalItemsExact ? totalPages : currentPage + 1;
     const pageLabel = totalItemsExact
         ? t('pagination.pageOf', { current: currentPage, total: totalPages, defaultValue: `Page ${currentPage} of ${totalPages}` })
-        : `Page ${currentPage}`;
+        : t('pagination.pageNumber', { current: currentPage, defaultValue: `Page ${currentPage}` });
     const countLabel = totalItemsExact
         ? t('pagination.totalRecordsInline', { count: totalItems, defaultValue: `(${totalItems} total records)` })
-        : 'Total count incomplete';
+        : t('pagination.totalCountIncomplete', { defaultValue: 'Total count incomplete' });
 
     // Handle page change and call the provided callback
     const handleChange = (page: number) => {
@@ -229,7 +231,7 @@ const Pagination = ({
                             total: totalItems,
                             itemLabel: resolvedItemLabel,
                             defaultValue: `${firstItemIndex} - ${lastItemIndex} of ${totalItems} ${resolvedItemLabel}`
-                        }) : 'Total count incomplete'}
+                        }) : t('pagination.totalCountIncomplete', { defaultValue: 'Total count incomplete' })}
                     </p>
 
                     <div
@@ -248,7 +250,7 @@ const Pagination = ({
                         <button
                             id={`${id}-next-btn`}
                             onClick={() => handleChange(currentPage + 1)} 
-                            disabled={totalItemsExact && currentPage === totalPages}
+                            disabled={totalItemsExact && currentPage === totalPages || hasMorePages === false}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-600))] transition-colors hover:border-[rgb(var(--color-border-300))] hover:bg-[rgb(var(--color-border-50))] disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             <ChevronRight size={16} />
@@ -292,7 +294,7 @@ const Pagination = ({
                         <button 
                             id={`${id}-next-btn`}
                             onClick={() => handleChange(currentPage + 1)} 
-                            disabled={totalItemsExact && currentPage === totalPages}
+                            disabled={totalItemsExact && currentPage === totalPages || hasMorePages === false}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-600))] transition-colors hover:border-[rgb(var(--color-border-300))] hover:bg-[rgb(var(--color-border-50))] disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             <ChevronRight size={16} />
@@ -327,7 +329,7 @@ const Pagination = ({
                             <button
                                 id={`${id}-next-btn`}
                                 onClick={() => handleChange(currentPage + 1)}
-                            disabled={totalItemsExact && currentPage === totalPages}
+                            disabled={totalItemsExact && currentPage === totalPages || hasMorePages === false}
                                 className="flex h-8 w-8 items-center justify-center rounded-lg border border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-600))] transition-colors hover:border-[rgb(var(--color-border-300))] hover:bg-[rgb(var(--color-border-50))] disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 <ChevronRight size={16} />
@@ -350,7 +352,7 @@ const Pagination = ({
                             <button
                                 id={`${id}-next-btn`}
                                 onClick={() => handleChange(currentPage + 1)}
-                                disabled={totalItemsExact && currentPage === totalPages}
+                                disabled={totalItemsExact && currentPage === totalPages || hasMorePages === false}
                                 className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-1.5 text-[13px] font-medium text-[rgb(var(--color-text-600))] transition-colors hover:border-[rgb(var(--color-border-300))] hover:bg-[rgb(var(--color-border-50))] hover:text-[rgb(var(--color-text-800))] disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 {t('pagination.next', 'Next')}

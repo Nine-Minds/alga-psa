@@ -140,6 +140,8 @@ export default function OverallInteractionsFeed({
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [total, setTotal] = useState(0);
   const [totalExact, setTotalExact] = useState(true);
+  const cursorsByPageRef = useRef<Record<number, { interaction_date: string | null; interaction_id: string } | null>>({});
+  const [hasMore, setHasMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
@@ -172,6 +174,7 @@ export default function OverallInteractionsFeed({
     const timeout = setTimeout(() => {
       setDebouncedSearch(searchTerm.trim());
       setCurrentPage(1);
+      cursorsByPageRef.current = {};
     }, 300);
     return () => clearTimeout(timeout);
   }, [searchTerm]);
@@ -205,6 +208,7 @@ export default function OverallInteractionsFeed({
       dateTo: endTime,
       page: currentPage,
       pageSize,
+      cursor: cursorsByPageRef.current[currentPage] ?? undefined,
     })
       .then((result) => {
         if (requestId !== latestRequestRef.current) return;
@@ -218,6 +222,8 @@ export default function OverallInteractionsFeed({
         setInteractions(result.interactions);
         setTotal(result.total);
         setTotalExact(result.totalExact);
+        cursorsByPageRef.current[currentPage + 1] = result.nextCursor ?? null;
+        setHasMore(result.hasMore ?? false);
       })
       .catch((error) => {
         if (requestId !== latestRequestRef.current) return;
@@ -255,6 +261,7 @@ export default function OverallInteractionsFeed({
   const changeFilter = useCallback((update: () => void) => {
     update();
     setCurrentPage(1);
+    cursorsByPageRef.current = {};
   }, []);
 
   const filteredContacts = useMemo(
@@ -286,6 +293,7 @@ export default function OverallInteractionsFeed({
     setStartTime(undefined);
     setEndTime(undefined);
     setCurrentPage(1);
+    cursorsByPageRef.current = {};
   };
 
   const refreshInteractions = useCallback(() => {
@@ -603,9 +611,11 @@ export default function OverallInteractionsFeed({
           pageSize={pageSize}
           totalItems={total}
           totalItemsExact={totalExact}
+          hasMorePages={hasMore}
           onItemsPerPageChange={(nextPageSize) => {
             setPageSize(nextPageSize);
             setCurrentPage(1);
+            cursorsByPageRef.current = {};
           }}
           rowClassName={() => 'cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus-within:outline-none hover:!bg-table-hover'}
           onRowClick={handleInteractionClick}

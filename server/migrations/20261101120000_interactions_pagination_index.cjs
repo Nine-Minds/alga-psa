@@ -11,13 +11,5 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down(knex) {
-  if (!(await knex.schema.hasTable('interactions'))) return;
-  const citusCatalog = await knex.raw("SELECT to_regclass('pg_dist_partition') AS catalog");
-  const distributed = citusCatalog.rows[0]?.catalog
-    ? await knex.raw("SELECT 1 FROM pg_dist_partition WHERE logicalrelid = 'interactions'::regclass LIMIT 1")
-    : { rows: [] };
-  // Keep rollback valid for Citus installations whose distributed DROP INDEX
-  // path does not accept PostgreSQL's CONCURRENTLY modifier.
-  const concurrently = distributed.rows.length === 0 ? 'CONCURRENTLY ' : '';
-  await knex.raw(`DROP INDEX ${concurrently}IF EXISTS interactions_tenant_date_id_page_idx`);
+  await knex.raw('DROP INDEX CONCURRENTLY IF EXISTS interactions_tenant_date_id_page_idx');
 };

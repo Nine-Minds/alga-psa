@@ -534,6 +534,8 @@
     "ariaLabel": "Seitennavigation",
     "totalItems": "{{count}} {{itemLabel}} insgesamt",
     "totalRecordsInline": "({{count}} Gesamteinträge)",
+    "pageNumber": "Seite {{current}}",
+    "totalCountIncomplete": "Gesamtzahl unvollständig",
     "pageOf": "Seite {{current}} von {{total}}",
     "itemsLabel_one": "Eintrag",
     "itemsLabel_other": "Einträge",

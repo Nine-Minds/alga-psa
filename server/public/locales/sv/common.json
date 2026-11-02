@@ -682,6 +682,8 @@
     "ariaLabel": "Sidnavigering",
     "totalItems": "Totalt {{count}} {{itemLabel}}",
     "totalRecordsInline": "(totalt {{count}} poster)",
+    "pageNumber": "Sida {{current}}",
+    "totalCountIncomplete": "Ofullständigt totalt antal",
     "pageOf": "Sida {{current}} av {{total}}",
     "itemsLabel_few": "poster",
     "itemsLabel_many": "poster"

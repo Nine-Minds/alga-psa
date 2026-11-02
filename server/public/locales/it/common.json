@@ -636,6 +636,8 @@
     "ariaLabel": "Paginazione",
     "totalItems": "{{count}} {{itemLabel}} totali",
     "totalRecordsInline": "({{count}} record totali)",
+    "pageNumber": "Pagina {{current}}",
+    "totalCountIncomplete": "Conteggio totale incompleto",
     "pageOf": "Pagina {{current}} di {{total}}",
     "itemsLabel_one": "elemento",
     "itemsLabel_other": "elementi",

@@ -6,7 +6,7 @@ import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
 import { IInteraction, IInteractionType } from '@alga-psa/types';
 import { QuickAddInteraction } from './QuickAddInteraction';
 import { getInteractionById } from '@alga-psa/clients/actions';
-import { getInteractionsForEntity } from '@alga-psa/clients/actions';
+import { getInteractionsForEntityPage } from '@alga-psa/clients/actions';
 import { getAllInteractionTypes } from '@alga-psa/clients/actions';
 import { useDrawer } from '@alga-psa/ui';
 import InteractionDetails from './InteractionDetails';
@@ -62,6 +62,8 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [interactionsLoadErrorMessage, setInteractionsLoadErrorMessage] = useState<string | null>(null);
+  const [interactionCursor, setInteractionCursor] = useState<{ interaction_date: string | null; interaction_id: string } | null>(null);
+  const [hasMoreInteractions, setHasMoreInteractions] = useState(false);
   const [typesLoadErrorMessage, setTypesLoadErrorMessage] = useState<string | null>(null);
   const openQuickAddInteraction = useCallback(() => setIsQuickAddOpen(true), []);
   usePageCreateShortcut(openQuickAddInteraction);
@@ -126,15 +128,33 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
 
   const fetchInteractions = async () => {
     try {
-      const fetchedInteractions = await getInteractionsForEntity(entityId, entityType);
+      const fetchedInteractions = await getInteractionsForEntityPage(entityId, entityType);
       if (isReturnedActionError(fetchedInteractions)) {
         setInteractionsLoadErrorMessage(getErrorMessage(fetchedInteractions));
         return;
       }
       setInteractionsLoadErrorMessage(null);
-      setInteractions(fetchedInteractions);
+      setInteractions(fetchedInteractions.interactions);
+      setInteractionCursor(fetchedInteractions.nextCursor ?? null);
+      setHasMoreInteractions(fetchedInteractions.hasMore ?? false);
     } catch (error) {
       console.error('Error fetching interactions:', error);
+      setInteractionsLoadErrorMessage(t('interactions.feed.loadFailed', { defaultValue: 'Interactions could not be loaded. Please try again.' }));
+    }
+  };
+
+  const loadMoreInteractions = async () => {
+    if (!interactionCursor || !hasMoreInteractions) return;
+    try {
+      const next = await getInteractionsForEntityPage(entityId, entityType, interactionCursor);
+      if (isReturnedActionError(next)) {
+        setInteractionsLoadErrorMessage(getErrorMessage(next));
+        return;
+      }
+      setInteractions(previous => [...previous, ...next.interactions]);
+      setInteractionCursor(next.nextCursor ?? null);
+      setHasMoreInteractions(next.hasMore ?? false);
+    } catch (error) {
       setInteractionsLoadErrorMessage(t('interactions.feed.loadFailed', { defaultValue: 'Interactions could not be loaded. Please try again.' }));
     }
   };
@@ -326,6 +346,9 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
                 </div>
               </li>
             ))}
+            {hasMoreInteractions ? <Button id="load-more-interactions-button" variant="outline" onClick={() => void loadMoreInteractions()}>
+              {t('interactions.feed.loadMore', { defaultValue: 'Load more interactions' })}
+            </Button> : null}
           </ul>
           </ShortcutActiveRegion>
         </CardContent>

@@ -16,6 +16,7 @@ export interface InteractionPageFilters {
   typeId?: string;
   page?: number;
   pageSize?: number;
+  cursor?: { interaction_date: string | null; interaction_id: string } | null;
 }
 
 export interface InteractionPageResult {
@@ -24,6 +25,8 @@ export interface InteractionPageResult {
   totalExact: boolean;
   page: number;
   pageSize: number;
+  nextCursor?: { interaction_date: string | null; interaction_id: string } | null;
+  hasMore?: boolean;
 }
 
 async function resolveDb(tenantId: string, trx?: DbOrTransaction): Promise<{ db: DbOrTransaction; tenant: string }> {

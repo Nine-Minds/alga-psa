@@ -534,6 +534,8 @@
     "ariaLabel": "Paginering",
     "totalItems": "{{count}} {{itemLabel}} in totaal",
     "totalRecordsInline": "({{count}} records in totaal)",
+    "pageNumber": "Pagina {{current}}",
+    "totalCountIncomplete": "Totaal aantal onvolledig",
     "pageOf": "Pagina {{current}} van {{total}}",
     "itemsLabel_one": "element",
     "itemsLabel_other": "elementen",

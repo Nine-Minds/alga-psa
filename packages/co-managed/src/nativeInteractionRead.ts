@@ -11,7 +11,12 @@ import { nativeInteractionCandidates } from './nativeInteractionCandidates';
 
 export interface NativeInteractionFilters {
   search?: string; userId?: string; contactId?: string; clientId?: string; statusId?: string; typeId?: string;
-  dateFrom?: Date; dateTo?: Date; page?: number; pageSize?: number;
+  dateFrom?: Date; dateTo?: Date; page?: number; pageSize?: number; cursor?: NativeInteractionCursor | null;
+}
+
+export interface NativeInteractionCursor {
+  interaction_date: string | null;
+  interaction_id: string;
 }
 
 /** Lists and their totals are built from admitted current projections. Hidden
@@ -39,7 +44,8 @@ export async function readCoManagedNativeInteractions(db: Knex, tenant: string, 
       }
     }
     const search = filters.search?.trim().toLowerCase();
-    const fetchCandidates = async (after: any, limit: number) => nativeInteractionCandidates(owner, filters, after, { id: options.id, entity }, limit);
+    const fetchCandidates = async (after: NativeInteractionCursor | null, limit: number) => nativeInteractionCandidates(owner, filters,
+      after ? { ...after, interaction_date: after.interaction_date ? new Date(after.interaction_date) : null } : null, { id: options.id, entity }, limit);
     const sourceById = new Map<string, Awaited<ReturnType<typeof retainScheduleSource>>>();
     const authorize = async (row: any) => {
       const id = row.interaction_id;
@@ -82,9 +88,8 @@ export async function readCoManagedNativeInteractions(db: Knex, tenant: string, 
       } catch (error) { if (!(error instanceof CoManagedSharedWorkError) || options.id) throw error; }
       return null;
     };
-    // Split the four-window request budget evenly: one pass assembles the page,
-    // the other computes a bounded authorized total. Search remains in authorize,
-    // after redaction and label authorization.
+    // Three candidate windows continue the result cursor; one independently
+    // bounded window estimates the authorized total. Search stays post-authorization.
     const matches = (view: any) => {
       const fields: Record<string, string> = { userId: 'user_id', contactId: 'contact_name_id', clientId: 'client_id', statusId: 'status_id', typeId: 'type_id' };
       if (options.id && view.interaction_id !== options.id) return false;
@@ -95,16 +100,21 @@ export async function readCoManagedNativeInteractions(db: Knex, tenant: string, 
       return !(filters.dateFrom && (!Number.isFinite(time) || time < new Date(filters.dateFrom).getTime()) ||
         filters.dateTo && (!Number.isFinite(time) || time > new Date(filters.dateTo).getTime()));
     };
-    const result = await pageAuthorizedRows({ page: options.paginated ? page : 1, pageSize: options.paginated ? pageSize : 100,
-      maxWindows: 2, fetchCandidates, authorize, matches,
+    const result = await pageAuthorizedRows({ page: filters.cursor ? 1 : options.paginated ? page : 1, pageSize: options.paginated ? pageSize : 100,
+      after: filters.cursor ?? null, maxWindows: 3, fetchCandidates, authorize, matches,
       searchMatches: view => !search || ['title', 'notes', 'contact_name', 'client_name', 'user_name'].some(key => String(view[key] ?? '').toLowerCase().includes(search)) });
-    const count = await pageAuthorizedRows({ page: 1, pageSize: 1, maxWindows: 2, fetchCandidates, authorize, matches,
+    const count = await pageAuthorizedRows({ page: 1, pageSize: 100, maxWindows: 1, fetchCandidates, authorize, matches,
       searchMatches: view => !search || ['title', 'notes', 'contact_name', 'client_name', 'user_name'].some(key => String(view[key] ?? '').toLowerCase().includes(search)) });
     for (const view of result.rows) {
       const source = sourceById.get(view.interaction_id)!;
       view.online_meeting = source.fields.length ? null : await nativeInteractionMeetingView(trx, actor, credential.subject, view.interaction_id);
     }
     await credential.assertCurrent();
-    return { handled: true as const, interactions: result.rows, total: count.total, totalExact: count.totalExact, page, pageSize };
+    const nextCursor = result.nextAfter ? {
+      interaction_id: result.nextAfter.interaction_id,
+      interaction_date: result.nextAfter.interaction_date == null ? null : new Date(result.nextAfter.interaction_date).toISOString(),
+    } : null;
+    return { handled: true as const, interactions: result.rows, total: count.total, totalExact: count.totalExact,
+      nextCursor, hasMore: nextCursor !== null, page, pageSize };
   });
 }

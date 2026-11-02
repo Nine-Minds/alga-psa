@@ -287,6 +287,8 @@ export interface ExtendedDataTableProps<T extends object> extends DataTableProps
   id?: string;
   /** False when totalItems is only a bounded lower bound. */
   totalItemsExact?: boolean;
+  /** Whether the server has a continuation for the current page. */
+  hasMorePages?: boolean;
   /** Set false for tables whose id is not a stable table identity. */
   persistPageSize?: boolean;
 }
@@ -303,6 +305,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     pageSize = 10,
     totalItems,
     totalItemsExact = true,
+    hasMorePages,
     editableConfig,
     manualSorting = false,
     sortBy,
@@ -1031,13 +1034,14 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             </tbody>
           </table>
         </div>
-        {pagination && safeData.length > 0 && (totalPages > 1 || onItemsPerPageChange || pageSizePreference.enabled) && (
+        {pagination && safeData.length > 0 && (hasMorePages || totalPages > 1 || onItemsPerPageChange || pageSizePreference.enabled) && (
           <div className="border-t border-[rgb(var(--color-border-200)/0.7)]">
             <Pagination
               id={`${id || generatedTableId}-pagination`}
               currentPage={pageIndex + 1}
               totalItems={total}
               totalItemsExact={totalItemsExact}
+              hasMorePages={hasMorePages}
               itemsPerPage={currentPageSize}
               onPageChange={(page) => {
                 // Update internal state immediately for responsive UI
