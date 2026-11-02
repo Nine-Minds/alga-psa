@@ -47,6 +47,15 @@ async function updateThroughController() {
     kind: 'ticket',
     record: ticket,
   });
+  // update() authorizes through the mutation guard (resource + 'update' scope).
+  controller.assertTicketMutationAllowed = async () => projectApiResourceRead({
+    knex: fake.knex,
+    tenant: CO_MANAGED_TENANT,
+    user: context.user,
+    apiKeyId: context.apiKeyId,
+    kind: 'ticket',
+    record: ticket,
+  });
   controller.service.getKnex = async () => ({ knex: fake.knex, tenant: CO_MANAGED_TENANT });
   return controller.update()(new NextRequest(`http://localhost/api/v1/tickets/${ID}`, {
     method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: 'Renamed' }),

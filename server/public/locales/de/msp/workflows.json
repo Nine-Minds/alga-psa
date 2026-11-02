@@ -1479,6 +1479,9 @@
         "contains": "enthält",
         "starts_with": "beginnt mit",
         "ends_with": "endet mit",
+        "not_contains": "enthält nicht",
+        "not_starts_with": "beginnt nicht mit",
+        "not_ends_with": "endet nicht mit",
         "is_empty": "ist leer",
         "is_not_empty": "ist nicht leer"
       },

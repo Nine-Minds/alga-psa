@@ -34,7 +34,7 @@ import type {
   TriggerReactivationPasswordResetInput,
   RecordReactivationPaymentAlertInput,
 } from '../types/tenant-deletion-types.js';
-import { insertStripeSubscriptionForTenant } from '../db/tenant-operations.js';
+import { insertStripeSubscriptionForTenant, bindStripeCustomerToTenant } from '../db/tenant-operations.js';
 import { updateSubscriptionMetadata } from '../services/stripe-service.js';
 
 export {
@@ -177,6 +177,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'time_entry_suggestion_dismissals',
   'time_sheet_comments',
   'time_entry_change_requests',
+  // Provenance rows of MSP time on shared work restrict the entries they describe.
+  'co_managed_time_work_references',
   'time_entries',
   'time_sheets',
   'user_cost_rates',
@@ -343,6 +345,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'stripe_subscriptions',
   'stripe_prices',
   'stripe_products',
+  'stripe_customer_bindings',
   'stripe_customers',
   'stripe_accounts',
   'payment_webhook_events',
@@ -2327,6 +2330,7 @@ export async function linkSubscriptionToExistingTenant(
         throw new Error('MASTER_BILLING_TENANT_ID not configured');
       }
 
+      await bindStripeCustomerToTenant(trx, input.tenantId, input.stripeCustomerId);
       [stripeCustomer] = await tenantScopedTrx.table('stripe_customers')
         .insert({
           tenant: input.tenantId,

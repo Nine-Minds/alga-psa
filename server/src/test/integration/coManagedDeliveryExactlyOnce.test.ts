@@ -32,7 +32,7 @@ vi.mock('@alga-psa/notifications/actions/internal-notification-actions/internalN
 }));
 
 import { recoverRoutingForTenant, coManagedRoutingTenants } from '../../lib/co-managed/routingRecovery';
-import { deliverRouting } from '../../lib/notifications/coManagedRoutingDelivery';
+import { deliverRouting, deliverRoutingRow } from '../../lib/notifications/coManagedRoutingDelivery';
 
 describe('co-managed delivery: exactly once, query cost, kill switch (migrated PostgreSQL)', () => {
   let conn: Knex;
@@ -139,6 +139,40 @@ describe('co-managed delivery: exactly once, query cost, kill switch (migrated P
     const t = randomUUID(), ticket = randomUUID();
     expect(coManagedInboundOperationId(t, ticket, '<m1@x>')).toBe(coManagedInboundOperationId(t, ticket, '<m1@x>'));
     expect(coManagedInboundOperationId(t, ticket, '<m1@x>')).not.toBe(coManagedInboundOperationId(t, ticket, '<m2@x>'));
+  });
+
+  describe('customer recipient re-authorization at delivery (alga-2026-0003007) — ledger key vs current email', () => {
+    const customerRow = (source: string, kind: 'routing_in_app' | 'routing_email', over: Partial<RoutingDelivery>): RoutingDelivery => ({
+      tenant, deliveryKind: kind, sourceId: source, event: 'escalation_returned',
+      recipient: { kind: 'customer_user', principalId: 'cu1', email: kind === 'routing_email' ? 'new@example.test' : undefined },
+      ledgerRecipient: kind === 'routing_email' ? 'old@example.test' : 'cu1',
+      recipientTenant: tenant, ticketId: randomUUID(), ticketNumber: 'T-9', ticketTitle: 'Secret', actorName: 'Ann', actorOrganization: 'MSP', allowed: true, ...over,
+    });
+    const seedStored = async (source: string) => {
+      for (const [delivery_kind, recipient] of [['routing_in_app', 'cu1'], ['routing_email', 'old@example.test']])
+        await conn('co_management_deliveries').insert({ tenant, delivery_kind, source_id: source, recipient, recipient_kind: 'customer_user', state: 'pending', attempts: 0 });
+    };
+
+    it('email goes to the CURRENT address and the ORIGINAL ledger row ends sent (not orphaned, not redelivered)', async () => {
+      const source = randomUUID(); await seedStored(source);
+      expect(await deliverRoutingRow(customerRow(source, 'routing_email', {}))).toBe('sent');
+      expect(await deliverRoutingRow(customerRow(source, 'routing_email', {}))).toBe('sent'); // replay: claim loses, no second send
+      expect(h.sent).toEqual(['email:new@example.test']);
+      const rows = await rowsOf(source);
+      expect(rows.map(r => r.recipient)).toEqual(['cu1', 'old@example.test']);
+      expect(rows.find(r => r.delivery_kind === 'routing_email')).toMatchObject({ state: 'sent', attempts: 1 });
+    });
+
+    it('disallowed rows finish as sent/recipient_not_permitted against the stored key; nothing is sent; in-app and email are independent', async () => {
+      const source = randomUUID(); await seedStored(source);
+      expect(await deliverRoutingRow(customerRow(source, 'routing_email', { allowed: false }))).toBe('skipped');
+      expect(h.sent).toEqual([]);
+      const byKind = Object.fromEntries((await rowsOf(source)).map(r => [r.delivery_kind, r]));
+      expect(byKind.routing_email).toMatchObject({ state: 'sent', error_code: 'recipient_not_permitted' });
+      expect(byKind.routing_in_app.state).toBe('pending'); // the other row's outcome is untouched
+      expect(await deliverRoutingRow(customerRow(source, 'routing_in_app', {}))).toBe('sent');
+      expect(h.sent).toEqual(['in_app:cu1']);
+    });
   });
 
   describe('kill switch: FORCE_CAPABILITIES=co-managed:off', () => {

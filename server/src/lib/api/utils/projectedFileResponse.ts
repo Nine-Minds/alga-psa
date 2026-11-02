@@ -4,7 +4,7 @@ import type { AuthorizedProjection } from '../controllers/authorizationKernel';
 
 export interface FileResponseMetadata {
   fileName?: string;
-  mimeType?: string;
+  mimeType?: string | null;
   fileId?: string;
   disposition?: 'attachment' | 'inline';
 }

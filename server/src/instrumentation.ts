@@ -37,6 +37,17 @@ export async function register() {
       console.error('Failed to register the co-managed scheduling providers:', error);
     }
 
+    // Co-managed time source (L6a2): registers into the scheduling time-source registry. Best-effort:
+    // without it every time call resolves to native and behaves exactly as before.
+    try {
+      const { registerCoManagedTimeSource } = await import('./lib/co-managed/timeSource');
+      registerCoManagedTimeSource();
+      const { registerCoManagedTimeEntryWorkContributor } = await import('./lib/co-managed/timeWorkContext');
+      registerCoManagedTimeEntryWorkContributor();
+    } catch (error) {
+      console.error('Failed to register the co-managed time source:', error);
+    }
+
     // Delivery seam provider + inbound reply writer (CM L5; one entry point, shared with email-service). Best-effort: without it subscribers and the inbound path stay native.
     try {
       await import('@alga-psa/co-managed/deliveryRegistration');

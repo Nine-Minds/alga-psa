@@ -105,6 +105,40 @@ export function buildAuthorizationPrincipalSubject(
   return subject;
 }
 
+/** Authorize a resource action with the shared kernel for mutation admission. */
+export async function authorizeApiResource(input: {
+  knex: Knex;
+  tenant: string;
+  user: any;
+  apiKeyId?: string;
+  resource: string;
+  action: string;
+  recordContext: AuthorizationRecord;
+}): Promise<boolean> {
+  const kernel = await getAuthorizationKernel();
+  const subject = buildAuthorizationPrincipalSubject(input.user, input.apiKeyId);
+  subject.tenant = input.tenant;
+
+  const decision = await kernel.authorizeResource({
+    knex: input.knex as any,
+    subject,
+    resource: { type: input.resource, action: input.action },
+    record: input.recordContext,
+  });
+  return decision.allowed;
+}
+
+export async function authorizeApiResourceRead(input: {
+  knex: Knex;
+  tenant: string;
+  user: any;
+  apiKeyId?: string;
+  resource: string;
+  recordContext: AuthorizationRecord;
+}): Promise<boolean> {
+  return authorizeApiResource({ ...input, action: 'read' });
+}
+
 /**
  * Who is reading? One rule, applied in order, shared by every read-authorization path:
  *  1. `user` with a non-empty `user_id`, or a non-empty `apiKeyId`: the request principal, built exactly as before.

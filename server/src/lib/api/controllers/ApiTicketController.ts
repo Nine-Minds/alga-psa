@@ -25,6 +25,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import {
+  authorizeApiResource,
   buildAuthorizationPrincipalSubject,
   projectApiResourceRead,
   projectApiResourceReads,
@@ -69,6 +70,7 @@ import {
   updateBundleSettingsSchema
 } from '../schemas/ticketBundle';
 import { ZodError } from 'zod';
+import { buildDocumentPreviewHeaders } from '@alga-psa/core';
 import {
   addChecklistItem,
   getTicketChecklistItems,
@@ -214,6 +216,50 @@ export class ApiTicketController extends ApiBaseController {
 
     if (!projection) {
       throw new NotFoundError('Document not found');
+    }
+
+    return projection;
+  }
+
+  private async assertTicketMutationAllowed(
+    apiRequest: AuthenticatedApiRequest,
+    ticketId: string,
+    action: 'update' | 'delete',
+    knex?: Awaited<ReturnType<typeof getConnection>>
+  ): Promise<AuthorizedProjection<Record<string, any>>> {
+    const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
+    const ticket = await this.ticketService.getById(ticketId, apiRequest.context);
+    if (!ticket) {
+      throw new NotFoundError('ticket not found');
+    }
+
+    // Must still be readable, then authorized against the mutation action's scope.
+    const ticketRow = ticket as Record<string, any>;
+    const recordContext = buildTicketRecordContext(ticketRow);
+    const projection = await projectApiResourceRead({
+      knex: resolvedKnex,
+      tenant: apiRequest.context.tenant,
+      user: apiRequest.context.user,
+      apiKeyId: apiRequest.context.apiKeyId,
+      kind: 'ticket',
+      record: ticketRow,
+      recordContext,
+    });
+    if (!projection) {
+      throw new NotFoundError('ticket not found');
+    }
+
+    const allowed = await authorizeApiResource({
+      knex: resolvedKnex,
+      tenant: apiRequest.context.tenant,
+      user: apiRequest.context.user,
+      apiKeyId: apiRequest.context.apiKeyId,
+      resource: 'ticket',
+      action,
+      recordContext,
+    });
+    if (!allowed) {
+      throw new ForbiddenError(`Permission denied: Cannot ${action} ticket`);
     }
 
     return projection;
@@ -774,7 +820,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const data = await this.validateData(apiRequest, createTicketChecklistItemSchema);
 
           const result = await addChecklistItem(ticketId, data);
@@ -811,7 +857,7 @@ export class ApiTicketController extends ApiBaseController {
           const ticketId = await this.extractIdFromPath(apiRequest);
           const itemId = this.extractChecklistItemId(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const data = await this.validateData(apiRequest, updateTicketChecklistCompletionSchema);
 
           // Bind the item to the authorized ticket before calling the existing
@@ -880,7 +926,7 @@ export class ApiTicketController extends ApiBaseController {
           await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const data = await this.validateData(apiRequest, createExternalLinkSchema);
 
           const result = await addExternalLink({ ticket_id: ticketId, ...data });
@@ -908,7 +954,7 @@ export class ApiTicketController extends ApiBaseController {
           const ticketId = await this.extractIdFromPath(apiRequest);
           const linkId = this.extractExternalLinkId(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const data = await this.validateData(apiRequest, updateExternalLinkSchema);
 
           const before = await getTicketExternalLinks(ticketId);
@@ -941,7 +987,7 @@ export class ApiTicketController extends ApiBaseController {
           const ticketId = await this.extractIdFromPath(apiRequest);
           const linkId = this.extractExternalLinkId(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const before = await getTicketExternalLinks(ticketId);
           if (isServerActionErrorResult(before) || !before.some((link) => link.link_id === linkId)) {
@@ -1078,7 +1124,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           if (!(await hasPermission(apiRequest.context!.user!, 'asset', 'read', knex))) {
             throw new ForbiddenError('Permission denied: Cannot read asset');
           }
@@ -1115,7 +1161,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           if (!(await hasPermission(apiRequest.context!.user!, 'asset', 'read', knex))) {
             throw new ForbiddenError('Permission denied: Cannot read asset');
           }
@@ -1180,7 +1226,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const body = await req.json();
           const validation = addTicketAgentSchema.safeParse(body);
@@ -1211,7 +1257,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           // userId is the path segment after "agents".
           const url = new URL(apiRequest.url || req.url);
@@ -1273,7 +1319,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const body = await req.json();
           const validation = addTicketWatcherSchema.safeParse(body);
@@ -1305,7 +1351,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const body = await req.json();
           const validation = updateTicketWatcherSchema.safeParse(body);
@@ -1336,7 +1382,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const url = new URL(apiRequest.url || req.url);
           const validation = removeTicketWatcherQuerySchema.safeParse(
@@ -1374,7 +1420,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const body = await req.json();
           const validation = assignTicketTeamSchema.safeParse(body);
@@ -1406,7 +1452,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           // DELETE bodies are optional; no body means remove_all.
           let body: unknown = {};
@@ -1450,7 +1496,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const formData = await req.formData();
           const file = formData.get('file');
 
@@ -1574,7 +1620,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const url = new URL(apiRequest.url || req.url);
           const segments = url.pathname.split('/');
@@ -1668,7 +1714,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const material = await this.ticketService.addTicketMaterial(ticketId, validatedData, apiRequest.context!);
 
           return createSuccessResponse(material, 201, undefined, apiRequest);
@@ -1747,7 +1793,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const comment = await this.ticketService.addComment(
             ticketId,
             validatedData,
@@ -1775,7 +1821,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
 
           const url = new URL(apiRequest.url || req.url);
           const segments = url.pathname.split('/');
@@ -1851,7 +1897,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           // Extract commentId from URL: /api/v1/tickets/{id}/comments/{commentId}
           const url = new URL(req.url);
           const segments = url.pathname.split('/').filter(Boolean);
@@ -1940,7 +1986,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          const gate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const gate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
@@ -2031,7 +2077,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          const gate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const gate = await this.assertTicketMutationAllowed(apiRequest, ticketId, 'update', knex);
           const updated = await this.ticketService.update(
             ticketId,
             validatedData,
@@ -2064,7 +2110,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          const gate = await this.assertTicketReadAllowed(apiRequest, id, knex);
+          const gate = await this.assertTicketMutationAllowed(apiRequest, id, 'update', knex);
 
           const data = this.options.updateSchema
             ? await this.validateData(apiRequest, this.options.updateSchema)
@@ -2097,7 +2143,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, id, knex);
+          await this.assertTicketMutationAllowed(apiRequest, id, 'delete', knex);
 
           const resource = await this.service.getById(id, apiRequest.context);
           if (!resource) {

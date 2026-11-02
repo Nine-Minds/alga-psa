@@ -70,6 +70,7 @@ import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
 import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
+import { useProjectEffortIntegration } from '../context/ProjectEffortIntegrationContext';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
 import { useSchedulingCallbacks, useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
@@ -151,6 +152,7 @@ export default function TaskForm({
   // Read 'en-US' outright, so it stayed American in every locale.
   const { formatDate } = useFormatters();
   const billingIntegration = useProjectBillingIntegration();
+  const effortIntegration = useProjectEffortIntegration();
   const { createDocumentAssociations, deleteDocument, removeDocumentAssociations } = useDocumentsCrossFeature();
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
   const ticketLinksRef = useRef<TaskTicketLinksRef>(null);
@@ -2329,6 +2331,9 @@ export default function TaskForm({
               pendingMode
             />
           )}
+
+          {/* Effort split (customer / MSP / combined); the slot is null unless the workspace serves co-managed. */}
+          {mode === 'edit' && task?.task_id && effortIntegration && <effortIntegration.TaskEffort taskId={task.task_id} />}
 
           {/* Full width Associated Tickets section */}
           <TaskTicketLinks

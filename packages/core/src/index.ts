@@ -71,5 +71,5 @@ export * from './constants/currency';
 export * from './types/index';
 
 export { isInlineTextDocumentMimeType, isPreviewableDocumentMimeType } from './lib/documentMimeType';
-export { resolveDocumentServingPolicy, buildContentDisposition } from './lib/documentServingPolicy';
+export { resolveDocumentServingPolicy, buildContentDisposition, buildDocumentPreviewHeaders, isRasterImageMime, RASTER_IMAGE_MIME_TYPES } from './lib/documentServingPolicy';
 export type { DocumentServingPolicy, DocumentDisposition } from './lib/documentServingPolicy';

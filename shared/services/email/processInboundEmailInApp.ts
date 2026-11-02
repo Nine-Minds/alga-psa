@@ -207,7 +207,7 @@ type ProcessInboundEmailInAppBaseResult =
     }
   | {
       outcome: 'quarantined';
-      reason: 'unauthorized_thread_header_sender' | 'co_managed_token_refused' | 'co_managed_token_unserved';
+      reason: 'unauthorized_thread_header_sender' | 'co_managed_token_refused' | 'co_managed_token_unserved' | 'co_managed_sender_unauthenticated';
       ticketId: string;
       matchedBy: 'thread_headers' | 'reply_token';
     };
@@ -1742,13 +1742,17 @@ export async function processInboundEmailInApp(
         }
         // Not served, requester-thread token: the token is inert and thread headers decide (native writer).
         const admission = provider
-          ? await provider.admitReplyToken(tenantId, String(token), match.metadata, senderEmail ?? null)
+          ? await provider.admitReplyToken(tenantId, String(token), match.metadata, {
+              email: senderEmail ?? null,
+              internalAttributionTrusted: allowsInternalSenderAttribution(senderAuthResults),
+            })
           : null;
-        // Not served, or a malformed cm2 token: the token carries no authority; thread headers decide.
-        tokenInert = !admission || (admission.admitted === false && !admission.acknowledge);
-        if (admission && admission.admitted === false && admission.acknowledge) {
+        // Only "not served" (or no provider) leaves the token inert: thread headers decide. Every other
+        // refusal is terminal and quarantined; `acknowledge` only decides whether the sender is mailed.
+        tokenInert = !admission || (admission.admitted === false && admission.reason === 'not_served');
+        if (admission && admission.admitted === false && !tokenInert) {
           const responder = await coManagedInboundCommentSeam.resolve(tenantId);
-          if (responder && senderEmail && !detectAutomatedInboundMessage(emailData).isAutomated) {
+          if (admission.acknowledge && responder && senderEmail && !detectAutomatedInboundMessage(emailData).isAutomated) {
             try {
               await responder.acknowledgeRefusal({ tenant: tenantId, token: String(token), to: senderEmail, ticketId: match.ticketId, reason: admission.reason });
             } catch (ackError) {
@@ -1760,7 +1764,7 @@ export async function processInboundEmailInApp(
           if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
           return withDiagnostics({
             outcome: 'quarantined',
-            reason: 'co_managed_token_refused',
+            reason: admission.reason === 'sender_unauthenticated' ? 'co_managed_sender_unauthenticated' : 'co_managed_token_refused',
             ticketId: match.ticketId,
             matchedBy: 'reply_token',
           }, diagnostics);

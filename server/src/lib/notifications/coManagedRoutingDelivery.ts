@@ -17,7 +17,8 @@ const HEADLINE: Record<RoutingDelivery['event'], (d: RoutingDelivery) => string>
 };
 
 const baseUrl = () => (process.env.NEXTAUTH_URL || 'http://localhost:3000').replace(/\/$/, '');
-const ledgerKey = (d: RoutingDelivery) => ({ delivery_kind: d.deliveryKind, source_id: d.sourceId, recipient: (d.recipient.email ?? d.recipient.principalId) });
+// Keyed on the stored row (`ledgerRecipient`), not the current send address, so claim/finish match the pending row.
+const ledgerKey = (d: RoutingDelivery) => ({ delivery_kind: d.deliveryKind, source_id: d.sourceId, recipient: (d.ledgerRecipient ?? d.recipient.email ?? d.recipient.principalId) });
 
 /**
  * Deliver ONE owed routing row. Safe to call any number of times, concurrently or after a crash:
@@ -29,7 +30,8 @@ export async function deliverRoutingRow(d: RoutingDelivery): Promise<'sent' | 's
   const key = ledgerKey(d);
   if (!d.allowed) {
     // The recipient's current policy no longer admits them: a completed (skipped) delivery, not a retry.
-    if (await claimDelivery(await getConnection(d.tenant), CO_MANAGED_LEDGER, d.tenant, key)) {
+    if (await claimDelivery(await getConnection(d.tenant), CO_MANAGED_LEDGER, d.tenant, key, { recipient_kind: d.recipient.kind })) {
+      // (recipient_kind is NOT NULL: the claim INSERT is evaluated before the conflict on the stored pending row.)
       await finishDelivery(await getConnection(d.tenant), CO_MANAGED_LEDGER, d.tenant, key, 'sent', { errorCode: 'recipient_not_permitted' });
     }
     return 'skipped';

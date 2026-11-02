@@ -428,7 +428,7 @@ describe('tickets: REST reads serialize the projection', () => {
     const data = (await response.json()).data;
     expect(data).toMatchObject({ ticket_id: TICKET, title: 'Printer', priority: 'high' });
     expect(data).not.toHaveProperty('description');
-    expect(authorizeResource).toHaveBeenCalledTimes(2);
+    expect(authorizeResource).toHaveBeenCalledTimes(4);
   });
 
   it.each([
