@@ -3,7 +3,7 @@ import axios from 'axios';
 import { liveSendResultFromEmailSendResult, runOutboundEmailDiagnosticsWithSettings } from '../outboundDiagnostics';
 import type { ResolvedOutboundProvider, OutboundLiveSend } from '../outboundTypes';
 import { SMTPEmailProvider } from '../../providers/SMTPEmailProvider';
-import { connectionFingerprint } from '../../../../integrations/src/lib/providerConnectionIdentity';
+import { connectionFingerprint } from '@alga-psa/core/providerConnectionIdentity';
 
 const smtpCreateTransport = vi.hoisted(() => vi.fn());
 vi.mock('nodemailer', () => ({

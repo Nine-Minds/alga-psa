@@ -19,7 +19,7 @@ import type {
   OutboundEmailDiagnosticsReport,
 } from '@alga-psa/email';
 import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
-import { connectionFingerprint } from '../../lib/providerConnectionIdentity';
+import { connectionFingerprint } from '@alga-psa/core/providerConnectionIdentity';
 import {
   actionError,
   isActionMessageError,

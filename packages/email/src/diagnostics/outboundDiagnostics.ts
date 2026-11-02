@@ -33,7 +33,7 @@ import type { EmailProviderConfig as InboundEmailProviderConfig } from '@alga-ps
 import { TenantEmailService } from '../TenantEmailService';
 import { resolveDefaultFromAddress, resolveTenantCompanyName } from '../senderIdentity';
 import { EmailProviderManager } from '../providers/EmailProviderManager';
-import { verifyProviderSecretFingerprint } from '../../../integrations/src/lib/providerConnectionIdentity';
+import { verifyProviderSecretFingerprint } from '@alga-psa/core/providerConnectionIdentity';
 import { buildMicrosoftOutboundSteps, microsoftOutboundRecommendations } from './microsoftOutboundSteps';
 import { buildSmtpOutboundSteps } from './smtpOutboundSteps';
 import { buildResendOutboundSteps } from './resendOutboundSteps';

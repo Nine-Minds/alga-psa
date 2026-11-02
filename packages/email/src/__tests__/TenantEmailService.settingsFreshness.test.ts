@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmailProviderError } from '@alga-psa/types';
-import { connectionFingerprint, verifyProviderSecretFingerprint } from '../../../integrations/src/lib/providerConnectionIdentity';
+import { connectionFingerprint, verifyProviderSecretFingerprint } from '@alga-psa/core/providerConnectionIdentity';
 
 const runtime = vi.hoisted(() => ({
   companyName: 'Example MSP',

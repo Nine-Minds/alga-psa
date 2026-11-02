@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EmailProviderConfig, TenantEmailSettings } from '@alga-psa/types';
-import { connectionFingerprint } from '../../lib/providerConnectionIdentity';
+import { connectionFingerprint } from '@alga-psa/core/providerConnectionIdentity';
 
 const { createTenantKnexMock, getTenantEmailSettingsMock, invalidateTenantSettingsMock } = vi.hoisted(() => ({
   createTenantKnexMock: vi.fn(),
@@ -300,7 +300,7 @@ describe('email settings provider invariants', () => {
   });
 
   it.each([
-    ['port', 2525], ['secure', true], ['username', 'different-user'], ['requireTLS', false], ['rejectUnauthorized', false],
+    ['port', 2525], ['secure', true], ['username', 'different-user'], ['ignoreTLS', true], ['requireTLS', false], ['rejectUnauthorized', false],
   ])('rejects masked-secret reuse when SMTP %s changes', async (field, value) => {
     const config: Record<string, any> = { host: 'smtp.example.test', port: 587, username: 'mailer', password: 'credential-value', secure: false, requireTLS: true, rejectUnauthorized: true, from: 'support@example.test' };
     config.__secretFingerprint = connectionFingerprint(config, 'smtp');

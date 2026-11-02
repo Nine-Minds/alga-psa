@@ -4,10 +4,10 @@
 
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { findProviderSecretMismatch, SECRET_IDENTITY_MISMATCH_MESSAGE } from '@alga-psa/core/providerConnectionIdentity';
 import { getConnection, tenantDb } from '@alga-psa/db';
 import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
 import { SystemEmailProviderFactory } from '../system/SystemEmailProviderFactory';
-import { findProviderSecretMismatch, SECRET_IDENTITY_MISMATCH_MESSAGE } from '../../../integrations/src/lib/providerConnectionIdentity';
 import {
   IEmailProvider,
   IEmailProviderManager,

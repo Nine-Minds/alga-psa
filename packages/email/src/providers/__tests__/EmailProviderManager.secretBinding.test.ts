@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { connectionFingerprint } from '../../../../integrations/src/lib/providerConnectionIdentity';
+import { connectionFingerprint } from '@alga-psa/core/providerConnectionIdentity';
 
 const { createTransportMock } = vi.hoisted(() => ({ createTransportMock: vi.fn() }));
 vi.mock('nodemailer', () => ({ default: { createTransport: createTransportMock } }));
