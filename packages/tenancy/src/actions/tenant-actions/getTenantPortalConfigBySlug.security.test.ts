@@ -20,7 +20,7 @@ const storedSettings = vi.hoisted(() => ({
 }));
 
 vi.mock('next/cache', () => ({ unstable_cache: (fn: any) => fn }));
-vi.mock('@alga-psa/core/features', () => ({ isEnterprise: false }));
+vi.mock('@alga-psa/core/features', () => ({ isEnterprise: true }));
 vi.mock('../../server/tenantSettingsStore', () => ({
   readTenantPortalSettings: async () => ({
     branding: storedSettings.row.settings.branding,
@@ -40,6 +40,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 import { getTenantPortalConfigBySlug } from './getTenantBrandingByDomain';
+import { DEFAULT_CUSTOM_THEME } from '../../lib/customTheme';
 
 describe('public tenant portal configuration', () => {
   beforeEach(() => {
@@ -105,5 +106,30 @@ describe('public tenant portal configuration', () => {
     expect(config.branding).toMatchObject({ primaryColor: '#123456', clientName: 'Partial Brand' });
     expect(config.branding).not.toHaveProperty('secondaryColor');
     expect(config.branding).not.toHaveProperty('privateCredential');
+  });
+
+  it('projects valid Enterprise custom theme tokens and drops unexpected nested fields', async () => {
+    storedSettings.row.settings.theme = {
+      pairId: 'custom',
+      customTheme: {
+        light: { ...DEFAULT_CUSTOM_THEME.light, credential: 'nested-secret' },
+        dark: { ...DEFAULT_CUSTOM_THEME.dark, privateKey: 'nested-secret' },
+        computedStyles: '<style>private()</style>',
+        credential: 'nested-secret',
+      },
+      privateKey: 'secret',
+    };
+
+    const config = await getTenantPortalConfigBySlug('tenant-a');
+
+    expect(config.theme.pairId).toBe('custom');
+    expect(config.theme.customTheme?.light).toMatchObject(DEFAULT_CUSTOM_THEME.light);
+    expect(config.theme.customTheme?.dark).toMatchObject(DEFAULT_CUSTOM_THEME.dark);
+    expect(config.theme.customTheme?.light).not.toHaveProperty('credential');
+    expect(config.theme.customTheme?.dark).not.toHaveProperty('privateKey');
+    expect(config.theme.customTheme).not.toHaveProperty('credential');
+    expect(config.theme).not.toHaveProperty('privateKey');
+    expect(config.theme.customTheme?.computedStyles).not.toContain('private()');
+    expect(config.theme.customTheme?.computedStyles).toContain('html.dark[data-theme-pair="custom"]');
   });
 });
