@@ -35,6 +35,7 @@ import { publishCustodyChanged } from './publishCustodyChanged';
 import { assertWarrantyTransition, RmaTransitionError } from '@alga-psa/shared/lib/rma/warrantyStateMachine';
 import { recordRmaEvent } from '@alga-psa/shared/lib/rma/recordRmaEvent';
 import { requireWarrantyPermission } from '../warrantyAuthorization';
+import { associateAdvanceReturnWithCustody, lockAdvanceReturnsForEpisode } from './advanceWarrantyAssociation';
 export { resolveCustodyToday } from './today';
 import { loadCustody, locationNames, userNames } from './shared';
 
@@ -208,17 +209,12 @@ export async function recordCustodyEventService(
 export async function recordCustodyEventInTransaction(
   trx: Knex.Transaction, tenant: string, user: AssetAuthUser, custodyId: string, input: CustodyEventInput
 ) {
-  await authorizeCustodyEpisode(trx, tenant, user, custodyId);
+  const episode = await authorizeCustodyEpisode(trx, tenant, user, custodyId);
   await assertCustodyDocumentsReadable(trx, tenant, user, input.document_ids);
-  // Only exact custody links identify an obligation. Lock every linked asset-tracked advance RMA
-  // in stable order before the episode; charge uses the same RMA -> custody order.
+  // Exact links are authoritative. For legacy rows, an eligible unlinked claim may bind to this active
+  // episode; closed episodes only match claims that predate them. Keep RMA-first locks.
   const linkedRmas = input.event_type === 'shipped'
-    ? await tenantDb(trx, tenant).table('rma_cases')
-        .where({ rma_type: 'advance_replacement', custody_id: custodyId })
-        .whereNull('returned_unit_id')
-        .orderBy('rma_id', 'asc')
-        .forUpdate()
-        .select('rma_id', 'rma_type', 'status', 'custody_id')
+    ? await lockAdvanceReturnsForEpisode(trx, tenant, episode)
     : [];
   const chargedRmaIds = linkedRmas.filter((rma: any) => rma.status === 'closed').map((rma: any) => rma.rma_id);
   if (chargedRmaIds.length) {
@@ -241,6 +237,10 @@ export async function recordCustodyEventInTransaction(
   const linkedRma = eligibleRmas[0] ?? null;
   let reconcileRmaShipment = false;
   if (linkedRma) {
+    if (!linkedRma.custody_id) {
+      const associated = await associateAdvanceReturnWithCustody(trx, tenant, linkedRma.rma_id, custodyId);
+      if (!associated) throw new CustodyError('invalid_transition', 'The advance warranty claim changed while the unit was being shipped.');
+    }
     try {
       assertWarrantyTransition(linkedRma.status, 'ship_dead_unit_to_vendor', linkedRma.rma_type);
       reconcileRmaShipment = true;

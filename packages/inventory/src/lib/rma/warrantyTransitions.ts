@@ -7,6 +7,10 @@ import type { IAssetCustody, IRmaCase, IRmaEvent } from '@alga-psa/types';
 import { recordCustodyEvent } from '@alga-psa/assets/lib/custody/recordCustodyEvent';
 import { closeCustodyEpisode } from '@alga-psa/assets/lib/custody/closeCustodyEpisode';
 import { loadCustody } from '@alga-psa/assets/lib/custody/shared';
+import {
+  associateAdvanceReturnWithCustody,
+  lockEpisodesForUnlinkedAdvanceReturn,
+} from '@alga-psa/assets/lib/custody/advanceWarrantyAssociation';
 import { applyWarrantyReplacement } from '@alga-psa/assets/lib/warranty/applyWarrantyReplacement';
 import { assertWarrantyTransition, isAssetTracked, RmaTransitionError, type WarrantyAction } from './stateMachine';
 import { mapRmaEventRow, recordRmaEvent } from './recordRmaEvent';
@@ -474,12 +478,33 @@ export async function recordVendorNonReturnChargeCore(
   }
   // Custody is authoritative when older callers or historical data left the RMA status behind.
   // Shipment and charge both lock the RMA first, then custody, so only one can commit.
-  const custodyRows = rma.custody_id
-    ? await trx('asset_custody')
-        .where({ tenant, custody_id: rma.custody_id })
-        .forUpdate()
-        .select('custody_id', 'state', 'close_reason')
-    : [];
+  let custodyRows: { custody_id: string; state: string; close_reason: string | null }[];
+  if (rma.custody_id) {
+    custodyRows = await trx('asset_custody')
+      .where({ tenant, custody_id: rma.custody_id, asset_id: rma.asset_id })
+      .forUpdate()
+      .select('custody_id', 'state', 'close_reason');
+    if (!custodyRows.length) {
+      throw new WarrantyError('invalid_transition', 'The linked custody episode is missing or does not belong to this asset.');
+    }
+  } else if (rma.asset_id) {
+    // Recovery may use the current active episode or episodes created during this claim's lifetime.
+    // A closed episode from before the claim cannot block a client-held return; multiple matches are ambiguous.
+    if (!rma.created_at) throw new WarrantyError('invalid_transition', 'The unlinked advance claim has no creation date for custody resolution.');
+    custodyRows = await lockEpisodesForUnlinkedAdvanceReturn(trx, tenant, {
+      asset_id: rma.asset_id,
+      created_at: rma.created_at,
+    });
+    if (custodyRows.length > 1) {
+      throw new WarrantyError('invalid_transition', 'Multiple custody episodes match this unlinked advance return. Resolve the association before charging.');
+    }
+    if (custodyRows[0]) {
+      const associated = await associateAdvanceReturnWithCustody(trx, tenant, rma.rma_id, custodyRows[0].custody_id);
+      if (!associated) throw new WarrantyError('invalid_transition', 'The advance warranty claim changed while its custody episode was being resolved.');
+    }
+  } else {
+    custodyRows = [];
+  }
   const custodyIds = custodyRows.map((row: any) => row.custody_id);
   const physicalMovement = custodyIds.length > 0
     ? await trx('asset_custody_events')
