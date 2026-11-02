@@ -27,7 +27,6 @@ Evidence files:
 - `own-space-layout.json`, `visibility-before.json`, `visibility-after.json`, `visibility-after-navigation.json`: read-only card-space layout before and after the supported activation path. The focused space and pane remain unchanged; the card browser is pinned and marked visible.
 - `activate-root-failure.json`, `pane-new-tab.json`, `activate-browser-tab.json`: raw outcomes for the failed root activation and successful per-pane container/child activation.
 - `visible-pane-navigation.json`, `visible-pane-url.json`, `visible-pane-dom.json`, `visible-pane-network.json`, `visible-pane-screenshot.json`: latest exact-origin attempt from the activated visible child tab.
-- `http-probe.json`: timestamped curl stderr and exit status for the required origin.
 - `http-headers.txt`: empty because curl could not connect. No response body was produced.
 
 ## Six-flow results
