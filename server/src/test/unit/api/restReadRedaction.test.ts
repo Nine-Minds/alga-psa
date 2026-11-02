@@ -1103,16 +1103,40 @@ describe('remaining REST projection consumers', () => {
 });
 
 describe('assets / inventory lookup and document adapters', () => {
-  it('inventory lookup authorizer returns redacted asset projections and drops suppressed assets', async () => {
-    const Controller = ApiInventoryController;
-    state.decisions.set('a-1', { allowed: true, redactedFields: ['vendor_id'] });
+  it('inventory lookup projects final summaries using separate raw authorization records', async () => {
+    state.decisions.set('a-1', {
+      allowed: true,
+      redactedFields: ['assets.warranty_status', 'assets.serial_number', 'assets.client_id'],
+    });
     state.decisions.set('a-2', { allowed: true, redactedFields: ['assets'] });
-    const authorizer = (new Controller() as any).buildAssetLookupAuthorizer({ context });
-    const readable = await authorizer({}, [
-      { asset_id: 'a-1', vendor_id: 'v', vendor_name: 'Dell', name: 'PC' },
-      { asset_id: 'a-2', name: 'Hidden' },
-    ]);
-    expect(readable).toEqual([{ asset_id: 'a-1', vendor_name: null, name: 'PC' }]);
+    const authorizer = (new ApiInventoryController() as any).buildAssetLookupAuthorizer({ context });
+    const records = [
+      {
+        asset_id: 'a-1',
+        client_id: 'c-1',
+        name: 'PC',
+        serial_number: 'PRIVATE-4938',
+        warranty_end_date: '2099-11-02',
+      },
+      { asset_id: 'a-2', client_id: 'c-2', name: 'Hidden' },
+    ];
+    const summaries = [
+      { ...records[0], warranty_status: 'active', client_name: 'Private client' },
+      { ...records[1], warranty_status: 'unknown', client_name: 'Hidden client' },
+    ];
+    const before = JSON.parse(JSON.stringify({ records, summaries }));
+    const readable = await authorizer({}, records, summaries);
+
+    expect(readable).toEqual([{
+      asset_id: 'a-1',
+      name: 'PC',
+      warranty_end_date: '2099-11-02',
+      warranty_status: null,
+      client_name: null,
+    }]);
+    const { resolveAssetAuthorizationRecords } = await import('@alga-psa/assets/lib/assetReadAuthorization');
+    expect(resolveAssetAuthorizationRecords).toHaveBeenCalledWith({}, TENANT, records);
+    expect({ records, summaries }).toEqual(before);
   });
 
   it('project_task attach adapter answers 404 for a suppressed or denied parent project (gate only)', async () => {
