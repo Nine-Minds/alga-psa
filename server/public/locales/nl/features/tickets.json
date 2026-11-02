@@ -2612,12 +2612,15 @@
       "columns": {
         "name": "Naam",
         "title": "Tickettitel",
+        "client": "Klant",
         "board": "Bord",
         "checklist": "Checklistitems",
         "status": "Status",
         "schedules": "Schema's"
       },
-      "deleteBlocked": "In gebruik door {{count}} terugkerend(e) schema('s). Wijs ze eerst naar een andere sjabloon of archiveer ze."
+      "deleteBlocked": "In gebruik door {{count}} terugkerend(e) schema('s). Wijs ze eerst naar een andere sjabloon of archiveer ze.",
+      "allClients": "Alle klanten",
+      "clientFilter": "Alle klanten"
     },
     "status": {
       "active": "Actief",
@@ -2645,6 +2648,9 @@
       "title": "Tickettitel",
       "description": "Beschrijving",
       "descriptionPlaceholder": "Beschrijving",
+      "client": "Klant",
+      "clientPlaceholder": "Alle klanten",
+      "clientHelp": "Laat leeg om het sjabloon voor alle klanten aan te bieden. Kies er één om het alleen op de tickets van die klant aan te bieden.",
       "offerForManualUse": "Aanbieden in de kiezer voor nieuwe tickets",
       "offerForManualUseHelp": "Uitschakelen voor sjablonen die alleen door terugkerende schema's worden gebruikt.",
       "titleTokens": "U kunt {{tokens}} in de titel gebruiken; ze worden per ticket ingevuld."

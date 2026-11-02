@@ -2612,12 +2612,15 @@
       "columns": {
         "name": "Nombre",
         "title": "Título del ticket",
+        "client": "Cliente",
         "board": "Tablero",
         "checklist": "Elementos de la lista",
         "status": "Estado",
         "schedules": "Programaciones"
       },
-      "deleteBlocked": "Usada por {{count}} programación(es) recurrente(s). Asígneles otra plantilla o archívelas primero."
+      "deleteBlocked": "Usada por {{count}} programación(es) recurrente(s). Asígneles otra plantilla o archívelas primero.",
+      "allClients": "Todos los clientes",
+      "clientFilter": "Todos los clientes"
     },
     "status": {
       "active": "Activa",
@@ -2645,6 +2648,9 @@
       "title": "Título del ticket",
       "description": "Descripción",
       "descriptionPlaceholder": "Descripción",
+      "client": "Cliente",
+      "clientPlaceholder": "Todos los clientes",
+      "clientHelp": "Déjelo vacío para ofrecer la plantilla a todos los clientes. Elija uno para ofrecerla solo en los tickets de ese cliente.",
       "offerForManualUse": "Ofrecer en el selector de nuevo ticket",
       "offerForManualUseHelp": "Desactívelo para plantillas que solo usan las programaciones recurrentes.",
       "titleTokens": "Puede usar {{tokens}} en el título; se rellenan en cada ticket."
