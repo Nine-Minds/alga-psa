@@ -68,6 +68,7 @@ import {
     skipMaintenanceOccurrence,
     setMaintenanceSchedulePaused,
 } from '@alga-psa/shared/services/assets/maintenanceLifecycle';
+import { projectAssetReadFields } from '../lib/projectAssetReadFields';
 import { advanceMaintenanceDate, parseCustomRecurrence } from '../lib/maintenanceRecurrence';
 import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAssetOrder';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
@@ -582,11 +583,12 @@ async function assertAssetReadAllowed(
     tenant: string,
     context: AssetReadAuthorizationContext,
     asset: AssetAuthorizationInput
-): Promise<void> {
+): Promise<Awaited<ReturnType<typeof authorizeAssetReadDecision>>> {
     const decision = await authorizeAssetReadDecision(trx, tenant, context, asset);
     if (!decision.allowed) {
         throw new Error('Permission denied: Cannot read assets');
     }
+    return decision;
 }
 
 async function resolveAssetAuthorizationInputById(
@@ -622,10 +624,11 @@ async function createAuthorizedAssetReadContextForUser(
     tenant: string,
     user: AssetAuthUser,
     asset_id: string
-): Promise<{ context: AssetReadAuthorizationContext; asset: AssetAuthorizationInput }> {
+): Promise<{ context: AssetReadAuthorizationContext; asset: AssetAuthorizationInput; decision: Awaited<ReturnType<typeof authorizeAssetReadDecision>> }> {
     const context = await createAssetReadAuthorizationContext(trx, tenant, user);
-    const asset = await assertAssetReadAllowedById(trx, tenant, context, asset_id);
-    return { context, asset };
+    const asset = await resolveAssetAuthorizationInputById(trx, tenant, asset_id);
+    const decision = await assertAssetReadAllowed(trx, tenant, context, asset);
+    return { context, asset, decision };
 }
 
 async function createAuthorizedAssetUpdateContextForUser(
@@ -797,16 +800,17 @@ export const getAsset = withAuth(async (user, { tenant }, asset_id: string): Pro
     }
 
     const asset = await getAssetWithExtensions(knex, tenant, asset_id);
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const decision = await withTransaction(knex, async (trx: Knex.Transaction) => {
         const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
-        await assertAssetReadAllowed(trx, tenant, context, { asset_id: asset.asset_id, client_id: asset.client_id });
+        const readDecision = await assertAssetReadAllowed(trx, tenant, context, { asset_id: asset.asset_id, client_id: asset.client_id });
+        return readDecision;
     });
 
     // Same normalisation every other read path applies (getAssetDetailBundle,
     // create, update): pg returns NUMERIC columns as strings and timestamps as
     // Date, neither of which matches the declared Asset contract or what the
     // edit form can round-trip back through updateAssetSchema (alga0002283).
-    return formatAssetForOutput(asset);
+    return projectAssetReadFields(formatAssetForOutput(asset), decision.redactedFields);
     } catch (error) {
         const expected = expectedAssetActionError(error);
         if (expected) return expected;
@@ -848,23 +852,28 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
         ]);
 
         const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
-        await assertAssetReadAllowed(
+        const decision = await assertAssetReadAllowed(
             trx,
             tenant,
             context,
             { asset_id: assetRecord.asset_id, client_id: assetRecord.client_id }
         );
 
-        const formattedAsset = formatAssetForOutput(assetRecord);
+        const formattedAsset = projectAssetReadFields(formatAssetForOutput(assetRecord), decision.redactedFields);
 
         // Structural child data inherits parent-asset authorization. Linked ticket/document data
         // additionally intersects with their own resource-family authorization.
-        const [maintenanceReport, history, tickets, documents] = await Promise.all([
+        const [rawMaintenanceReport, rawHistory, tickets, documents] = await Promise.all([
             fetchAssetMaintenanceReport(trx, tenant, asset_id),
             fetchAssetHistory(trx, tenant, asset_id),
             canReadTickets ? fetchAssetLinkedTickets(trx, tenant, asset_id, context) : Promise.resolve([]),
             canReadDocuments ? fetchAssetDocuments(trx, tenant, asset_id, assetRecord.client_id ?? null, 15, context) : Promise.resolve([])
         ]);
+        const maintenanceReport = projectAssetMaintenanceReport(rawMaintenanceReport, decision.redactedFields);
+        const history = rawHistory.map((entry) => ({
+            ...entry,
+            changes: projectAssetReadFields({ changes: entry.changes }, decision.redactedFields).changes,
+        }));
 
         return {
             asset: formattedAsset,
@@ -2395,6 +2404,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
             const page = validatedParams.page || 1;
             const limit = validatedParams.limit || 10;
             const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+            const decisionsByAssetId = new Map<string, string[]>();
             const authorizedPage = await buildAuthorizationAwarePage<any>({
                 page,
                 limit,
@@ -2406,6 +2416,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                         context,
                         { asset_id: asset.asset_id, client_id: asset.client_id }
                     );
+                    if (decision.allowed) decisionsByAssetId.set(asset.asset_id, decision.redactedFields);
                     return decision.allowed;
                 },
                 scanLimit: Math.max(limit, 100),
@@ -2426,7 +2437,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     ? await getExtensionData(trx, tenant, asset.asset_id, asset.asset_type)
                     : null;
 
-                return {
+                return projectAssetReadFields({
                     ...asset,
                     client: {
                         client_id: asset.client_id,
@@ -2437,7 +2448,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     ...(extensionData ? {
                         [asset.asset_type]: extensionData
                     } : {})
-                };
+                }, decisionsByAssetId.get(asset.asset_id) ?? []);
             })
         );
 
@@ -3056,8 +3067,9 @@ export const getAssetMaintenanceReport = withAuth(async (user, { tenant }, asset
 
     try {
         return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetMaintenanceReport> => {
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
-            return fetchAssetMaintenanceReport(trx, tenant, asset_id);
+            const { decision } = await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+            const report = await fetchAssetMaintenanceReport(trx, tenant, asset_id);
+            return projectAssetMaintenanceReport(report, decision.redactedFields);
         });
     } catch (error) {
         console.error('Error getting asset maintenance report:', error);
@@ -3076,9 +3088,12 @@ export const getAssetHistory = withAuth(async (user, { tenant }, asset_id: strin
                 throw new Error('Permission denied: Cannot read asset history');
             }
 
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
-
-            return fetchAssetHistory(trx, tenant, asset_id);
+            const { decision } = await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
+            const history = await fetchAssetHistory(trx, tenant, asset_id);
+            return history.map((entry) => ({
+                ...entry,
+                changes: projectAssetReadFields({ changes: entry.changes }, decision.redactedFields).changes,
+            }));
         });
     } catch (error) {
         console.error('Error getting asset history:', error);
@@ -3159,6 +3174,19 @@ export const getClientMaintenanceSummary = withAuth(async (user, { tenant }, cli
         throw error;
     }
 });
+
+function projectAssetMaintenanceReport(
+    report: AssetMaintenanceReport,
+    redactedFields: readonly string[]
+): AssetMaintenanceReport {
+    const projected = projectAssetReadFields({ maintenanceReport: report }, redactedFields).maintenanceReport;
+    return {
+        ...projected,
+        maintenance_history: projectAssetReadFields(
+            { changes: projected.maintenance_history }, redactedFields
+        ).changes,
+    };
+}
 
 async function fetchAssetMaintenanceReport(
     db: Knex | Knex.Transaction,
@@ -3650,11 +3678,14 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
             );
 
             // Newest association first, so the panel's collapsed rows include a just-received item.
+            const decisionsByAssetId = new Map<string, Awaited<ReturnType<typeof authorizeAssetReadDecision>>>();
+            candidateAssets.forEach((asset, index) => {
+                const decision = decisions[index];
+                if (decision?.allowed) decisionsByAssetId.set(asset.asset_id, decision);
+            });
             const authorizedAssetIds = orderEntityAssetIds(
                 associations as EntityAssociationRow[],
-                candidateAssets
-                    .filter((_, index) => decisions[index]?.allowed)
-                    .map((asset) => asset.asset_id)
+                [...decisionsByAssetId.keys()]
             );
 
             if (authorizedAssetIds.length === 0) {
@@ -3663,7 +3694,10 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
 
             const assets = await Promise.all(
                 authorizedAssetIds.map(async (authorizedAssetId): Promise<Asset> =>
-                    getAssetWithExtensions(trx, tenant, authorizedAssetId)
+                    projectAssetReadFields(
+                        formatAssetForOutput(await getAssetWithExtensions(trx, tenant, authorizedAssetId)),
+                        decisionsByAssetId.get(authorizedAssetId)?.redactedFields
+                    )
                 )
             );
 
