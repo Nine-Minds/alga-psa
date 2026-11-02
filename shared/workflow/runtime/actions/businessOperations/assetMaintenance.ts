@@ -74,9 +74,10 @@ async function audit(ctx: ActionContext, tx: TenantTxContext, actionId: string, 
 }
 
 // Per-record asset authorization, delegated to the canonical rule the asset UI uses. Mutating actions must
-// ask for 'update': a bundle's asset:update rule can be narrower than its asset:read rule, and the workflow
-// must deny exactly where the UI denies. Internal actors carry no client on the users row, so clientId is
-// null by construction here; do not widen the canonical module for it.
+// clear both gates, exactly like createAuthorizedAssetUpdateContextForUser in packages/assets: record-level
+// 'read' first, then 'update' — a bundle's asset:update rule can be narrower *or* wider than its asset:read
+// rule, and the workflow must deny wherever the UI denies. Internal actors carry no client on the users row,
+// so clientId is null by construction here; do not widen the canonical module for it.
 async function requireAssetAction(ctx: ActionContext, tx: TenantTxContext, assetId: string, action: AssetAuthorizationAction): Promise<void> {
   const db = tenantDb(tx.trx, tx.tenantId);
   const actor = await db.table('users').where({ user_id: tx.actorUserId }).first<{ user_type: string }>();
@@ -84,8 +85,15 @@ async function requireAssetAction(ctx: ActionContext, tx: TenantTxContext, asset
   const asset = await db.table('assets').where({ asset_id: assetId }).first<{ client_id: string | null }>();
   if (!asset) throw new Error('Maintenance asset not found');
   const context = await createAssetReadContext(tx.trx, tx.tenantId, { user_id: tx.actorUserId, user_type: 'internal', clientId: null });
-  const allowed = await isAssetActionAllowed(tx.trx, tx.tenantId, context, { asset_id: assetId, client_id: asset.client_id }, action);
-  if (!allowed) throwActionError(ctx, { category: 'ActionError', code: 'PERMISSION_DENIED', message: 'Permission denied: Cannot read this maintenance asset' });
+  const assetInput = { asset_id: assetId, client_id: asset.client_id };
+  // The message is shared by both gates; `denied_action` is what tells a run log which rule refused.
+  const deny = (deniedAction: AssetAuthorizationAction) => throwActionError(ctx, {
+    category: 'ActionError', code: 'PERMISSION_DENIED',
+    message: 'Permission denied: Cannot read this maintenance asset',
+    details: { asset_id: assetId, denied_action: deniedAction },
+  });
+  if (action !== 'read' && !await isAssetActionAllowed(tx.trx, tx.tenantId, context, assetInput, 'read')) deny('read');
+  if (!await isAssetActionAllowed(tx.trx, tx.tenantId, context, assetInput, action)) deny(action);
 }
 
 export function registerAssetMaintenanceActions(): void {
