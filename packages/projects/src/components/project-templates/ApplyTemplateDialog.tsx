@@ -18,7 +18,7 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { QuickAddStatus } from '@alga-psa/ui/components/QuickAddStatus';
 import { getTemplates, applyTemplate } from '../../actions/projectTemplateActions';
-import { getAllClientsForProjects, getProjectStatuses } from '../../actions/projectActions';
+import { getAllClientsForProjects, getProjectStatuses, type ProjectPickerClient } from '../../actions/projectActions';
 import { createStatus as createStatusAction } from '@alga-psa/reference-data/actions';
 import {
   getErrorMessage,
@@ -47,7 +47,7 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
   const { toast } = useToast();
   const { renderQuickAddClient } = useQuickAddClient();
   const [templates, setTemplates] = useState<IProjectTemplate[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
+  const [clients, setClients] = useState<ProjectPickerClient[]>([]);
   const [statuses, setStatuses] = useState<IStatus[]>([]);
   const [loading, setLoading] = useState(false);
   const [showQuickAddStatus, setShowQuickAddStatus] = useState(false);
@@ -317,7 +317,7 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
             </label>
             <ClientPicker
               id="apply-template-client"
-              clients={clients}
+              clients={clients as IClient[]}
               selectedClientId={formData.client_id || null}
               onSelect={(clientId) => setFormData({ ...formData, client_id: clientId || '' })}
               filterState={clientFilterState}
@@ -462,9 +462,16 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
           const existingIndex = currentClients.findIndex(
             (client) => client.client_id === newClient.client_id,
           );
-          if (existingIndex === -1) return [...currentClients, newClient];
+          const pickerClient: ProjectPickerClient = {
+            client_id: newClient.client_id,
+            client_name: newClient.client_name,
+            client_type: newClient.client_type ?? null,
+            is_inactive: Boolean(newClient.is_inactive),
+            logoUrl: newClient.logoUrl ?? null,
+          };
+          if (existingIndex === -1) return [...currentClients, pickerClient];
           const nextClients = [...currentClients];
-          nextClients[existingIndex] = newClient;
+          nextClients[existingIndex] = pickerClient;
           return nextClients;
         });
         setFormData((current) => ({ ...current, client_id: newClient.client_id }));

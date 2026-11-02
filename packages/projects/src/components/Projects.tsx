@@ -12,6 +12,7 @@ import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import ProjectQuickAdd from './ProjectQuickAdd';
+import { projectClientPresentation } from '../lib/projectListProjection';
 import { deleteProject, loadProjectListItemsByIds, searchProjectListIds } from '../actions/projectActions';
 import { findUserById } from '@alga-psa/user-composition/actions';
 import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
@@ -164,7 +165,7 @@ function parseFiltersFromSearch(search: string): ProjectListFilters {
 
 interface ProjectsProps {
   initialProjects: IProject[];
-  clients: IClient[];
+  clients: Array<Pick<IClient, 'client_id' | 'client_type'> & { is_inactive: boolean | null; client_name: string | null; logoUrl?: string | null }>;
   initialFilters?: Partial<ProjectListFilters>;
   initialProjectTags?: Record<string, ITag[]>;
   initialAllUniqueTags?: ITag[];
@@ -712,7 +713,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
     openDrawer(
       <ProjectDetailsEdit
         initialProject={project}
-        clients={clients}
+        clients={clients as IClient[]}
         onSave={(updatedProject) => {
           setProjects(prevProjects =>
             prevProjects.map((p): IProject =>
@@ -800,7 +801,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
     }
     const client = clients.find(c => c.client_id === clientId);
     if (client) {
-      setQuickViewClient(client);
+      setQuickViewClient(client as IClient);
       setIsQuickViewOpen(true);
     }
   };
@@ -857,11 +858,14 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
       dataIndex: 'client_id',
       width: '12%',
       render: (value, record) => {
-        const client = clients.find(c => c.client_id === value);
-        if (!client) return <ClientNameCell clientName={null} />;
+        const presentation = projectClientPresentation(record, clients);
+        const client = presentation.quickViewClientId ? clients.find(c => c.client_id === presentation.quickViewClientId) : undefined;
+        const clientName = presentation.clientName;
+        if (!clientName) return <ClientNameCell clientName={null} />;
+        if (!client) return <ClientNameCell clientName={clientName}>{clientName}</ClientNameCell>;
 
-        return (
-          <ClientNameCell clientId={client.client_id} clientName={client.client_name} logoUrl={client.logoUrl ?? null}>
+        return client.client_name ? (
+          <ClientNameCell clientId={client.client_id} clientName={clientName} logoUrl={presentation.logoUrl}>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -869,10 +873,10 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
               }}
               className="text-blue-500 hover:underline text-left whitespace-normal break-words"
             >
-              {client.client_name}
+              {clientName}
             </button>
           </ClientNameCell>
-        );
+        ) : <ClientNameCell clientName={clientName}>{clientName}</ClientNameCell>;
       }
     },
     {
@@ -1137,7 +1141,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
           {/* Client filter */}
           <ClientPicker
             id="project-client-filter"
-            clients={clients}
+            clients={clients as IClient[]}
             onSelect={(clientId) => handleFilterChange({ clientId: clientId || undefined })}
             selectedClientId={activeFilters.clientId || null}
             filterState={clientFilterState}
@@ -1175,7 +1179,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
               handleFilterChange({ contactId: newContact.contact_name_id });
               setIsQuickAddContactOpen(false);
             },
-            clients,
+            clients: clients as IClient[],
             selectedClientId: activeFilters.clientId || undefined,
           })}
 
@@ -1301,7 +1305,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
         <ProjectQuickAdd
           onClose={() => setShowQuickAdd(false)}
           onProjectAdded={handleProjectAdded}
-          clients={clients}
+          clients={clients as IClient[]}
         />
       )}
 

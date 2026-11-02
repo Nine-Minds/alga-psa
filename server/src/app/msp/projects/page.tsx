@@ -1,7 +1,7 @@
 import Projects from '@alga-psa/projects/components/Projects';
 import { getAllClientsForProjects, getProjects } from '@alga-psa/projects/actions/projectActions';
 import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
-import type { IClient, IProject, ITag } from '@alga-psa/types';
+import type { IProject, ITag } from '@alga-psa/types';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
@@ -30,7 +30,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
   const [projectsResult, clientsData, params, smartSearchAvailable] = await Promise.all([
     getProjects(),
-    getAllClientsForProjects() as Promise<IClient[]>,
+    getAllClientsForProjects(),
     searchParams,
     // Decided on the server so the Smart search affordance is right on first
     // paint. The CE stub answers false; any failure hides it.
@@ -40,6 +40,11 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   ]);
 
   const projectsData: IProject[] = isActionPermissionError(projectsResult) ? [] : projectsResult;
+  const visibleProjectClientIds = new Set(projectsData
+    .filter((project) => Boolean(project.client_name))
+    .map((project) => project.client_id)
+    .filter((id): id is string => typeof id === 'string'));
+  const visibleClientsData = clientsData.filter((client) => visibleProjectClientIds.has(client.client_id) && Boolean(client.client_name));
 
   // Fetch tags alongside projects so URL-based tag filters work on the first render.
   // Without this, `findTagsByEntityIds` runs in a client `useEffect` and the filter
@@ -132,7 +137,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     <CoManagedProjectTaskQueueLink />
     <Projects
       initialProjects={projectsData}
-      clients={clientsData}
+      clients={visibleClientsData}
       initialFilters={initialFilters}
       initialProjectTags={initialProjectTags}
       initialAllUniqueTags={allProjectTags}

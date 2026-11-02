@@ -55,8 +55,8 @@ import TagMapping from '@alga-psa/tags/models/tagMapping';
 import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
-import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
-import { createProjectReadDecider } from '../lib/projectReadAuthorization';
+import { createClientReadDecider, createProjectReadAuthorizer, createProjectReadDecider } from '../lib/projectReadAuthorization';
+import { loadProjectRowsByDecision, projectPickerProjection } from '../lib/projectListProjection';
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
@@ -384,11 +384,28 @@ async function resolveProjectIdsForStatus(
   return Array.from(new Set(rows.map((row) => row.project_id)));
 }
 
-export const getAllClientsForProjects = withAuth(async (_user, { tenant }): Promise<IClient[]> => {
+export type ProjectPickerClient = Pick<IClient, 'client_id'> & { client_name: string | null; client_type: IClient['client_type']; is_inactive: boolean | null; logoUrl: string | null };
+
+async function getAuthorizedProjectPickerClients(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+): Promise<Array<Omit<ProjectPickerClient, 'logoUrl'>>> {
+  if (!await hasPermission(user, 'client', 'read', trx)) return [];
+  const rows = await tenantScopedTable(trx, 'clients', tenant)
+    .select('client_id', 'client_name', 'client_type', 'is_inactive').orderBy('client_name', 'asc');
+  const decide = await createClientReadDecider(trx, tenant, user);
+  const clients = rows as Array<{ client_id: string; client_name: string; client_type: IClient['client_type']; is_inactive: boolean }>;
+  const decisions = await Promise.all(clients.map((client) => decide(client)));
+  return projectPickerProjection(clients, decisions) as Array<Omit<ProjectPickerClient, 'logoUrl'>>;
+}
+
+export const getAllClientsForProjects = withAuth(async (user, { tenant }): Promise<ProjectPickerClient[]> => {
   const { knex: db } = await createTenantKnex();
+  if (!await hasPermission(user, 'client', 'read', db)) return [];
 
   const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
-    return tenantScopedTable(trx, 'clients', tenant).select('*').orderBy('client_name', 'asc');
+    return getAuthorizedProjectPickerClients(trx, tenant, user as IUserWithRoles);
   });
 
   if (clients.length === 0) {
@@ -396,12 +413,12 @@ export const getAllClientsForProjects = withAuth(async (_user, { tenant }): Prom
   }
 
   // Batch-resolve logo URLs once (no N+1) so the projects table can show real logos.
-  const logoUrlsMap = await getClientLogoUrlsBatch(clients.map((c: any) => c.client_id), tenant);
+  const logoUrlsMap = await getClientLogoUrlsBatch(clients.filter((c) => c.client_name).map((c: any) => c.client_id), tenant);
 
   return clients.map((c: any) => ({
     ...c,
-    logoUrl: logoUrlsMap.get(c.client_id) ?? null,
-  })) as IClient[];
+    logoUrl: c.client_name ? logoUrlsMap.get(c.client_id) ?? null : null,
+  }));
 });
 
 export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[] | ActionPermissionError> => {
@@ -412,8 +429,10 @@ export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]
         if (denied) return denied;
 
         const projects = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            const rows = await ProjectModel.getAll(trx, tenant, true);
-            return await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);
+            const rows = await tenantScopedTable(trx, 'projects', tenant)
+                .select<IProject[]>('project_id', 'assigned_to', 'client_id')
+                .orderBy('created_at', 'desc').orderBy('project_number', 'desc');
+            return loadDecisionAwareProjectRows(trx, tenant, user as IUserWithRoles, rows);
         });
 
         return withAssignedUsers(projects);
@@ -446,6 +465,24 @@ function withAssignedUsers(projects: IProject[]): IProject[] {
 
 function uniqueProjectIds(projectIds: string[]): string[] {
     return Array.from(new Set(projectIds.filter((id) => typeof id === 'string' && id.length > 0)));
+}
+
+/** Read rows only after deciding access from identity columns; each projection is fetched under its own redaction set. */
+async function loadDecisionAwareProjectRows(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: IUserWithRoles,
+    identityRows: IProject[],
+    callerRedactions?: Record<string, string[]>
+): Promise<IProject[]> {
+    const allowed = await decideAuthorizedProjects(trx, tenant, user, identityRows);
+    return loadProjectRowsByDecision({
+        identities: identityRows,
+        decisions: allowed.map(({ project, redactedFields }) => ({ project, redactedFields, allowed: true })),
+        callerRedactions,
+        loadUnmasked: (ids) => ProjectModel.getByIds(trx, tenant, ids),
+        loadMasked: (ids, fields) => ProjectModel.getMaskedByIds(trx, tenant, ids, fields),
+    });
 }
 
 /**
@@ -540,29 +577,13 @@ export const loadProjectListItemsByIds = withAuth(async (
         const identityRows = await tenantScopedTable(trx, 'projects', tenant)
             .whereIn('project_id', requestedIds)
             .select<IProject[]>('project_id', 'assigned_to', 'client_id');
-        const authorizedIdentities = await decideAuthorizedProjects(trx, tenant, user as IUserWithRoles, identityRows);
-        const groups = new Map<string, { redactedFields: string[]; ids: string[] }>();
-        for (const { project, redactedFields } of authorizedIdentities) {
-            const fields = Array.from(new Set([...redactedFields, ...(callerRedactions?.[project.project_id] ?? [])])).sort();
-            const key = JSON.stringify(fields);
-            const group = groups.get(key) ?? { redactedFields: fields, ids: [] };
-            group.ids.push(project.project_id);
-            groups.set(key, group);
-        }
-        const authorized: IProject[] = [];
-        for (const group of groups.values()) {
-            authorized.push(...(group.redactedFields.length === 0
-                ? await ProjectModel.getByIds(trx, tenant, group.ids)
-                : await ProjectModel.getMaskedByIds(trx, tenant, group.ids, group.redactedFields)));
-        }
-        const byId = new Map(authorized.map((project) => [project.project_id, project] as const));
-        const ordered = requestedIds
-            .map((projectId) => byId.get(projectId))
-            .filter((project): project is IProject => Boolean(project));
+        const identitiesById = new Map(identityRows.map((row) => [row.project_id, row] as const));
+        const orderedIdentities = requestedIds.flatMap((id) => identitiesById.has(id) ? [identitiesById.get(id)!] : []);
+        const filteredOrder = await loadDecisionAwareProjectRows(trx, tenant, user as IUserWithRoles, orderedIdentities, callerRedactions);
 
         const projectTags: Record<string, ITag[]> = {};
-        if (ordered.length > 0) {
-            const tagRows = await TagMapping.getByEntities(trx, tenant, ordered.map((project) => project.project_id), 'project');
+        if (filteredOrder.length > 0) {
+            const tagRows = await TagMapping.getByEntities(trx, tenant, filteredOrder.map((project) => project.project_id), 'project');
             for (const tag of tagRows) {
                 const list = projectTags[tag.tagged_id] ?? (projectTags[tag.tagged_id] = []);
                 list.push({
@@ -578,7 +599,7 @@ export const loadProjectListItemsByIds = withAuth(async (
             }
         }
 
-        return { projects: withAssignedUsers(ordered), metadata: { projectTags } };
+        return { projects: withAssignedUsers(filteredOrder), metadata: { projectTags } };
     });
 });
 
@@ -1972,7 +1993,7 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
         const [statuses, users, clients] = await Promise.all([
             getProjectTaskStatusesInternal2(tenant, projectId, user),
             getAllUsers(),
-            getAllClientsForProjectsInternal(tenant)
+            getAllClientsForProjectsInternal(tenant, user as IUserWithRoles)
         ]);
 
         // Fetch project-specific data within a transaction
@@ -2029,11 +2050,9 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
 });
 
 // Internal helper for getAllClientsForProjects
-async function getAllClientsForProjectsInternal(tenant: string): Promise<IClient[]> {
+async function getAllClientsForProjectsInternal(tenant: string, user: IUserWithRoles): Promise<IClient[]> {
     const { knex: db } = await createTenantKnex();
-    const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return tenantScopedTable(trx, 'clients', tenant).select('*').orderBy('client_name', 'asc');
-    });
+    const clients = await withTransaction(db, (trx: Knex.Transaction) => getAuthorizedProjectPickerClients(trx, tenant, user));
     return clients as IClient[];
 }
 
@@ -2193,7 +2212,7 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
         const [statuses, users, clients] = await Promise.all([
             getProjectTaskStatusesInternal2(tenant, projectId, user),
             getAllUsers(),
-            getAllClientsForProjectsInternal(tenant)
+            getAllClientsForProjectsInternal(tenant, user as IUserWithRoles)
         ]);
 
         // Fetch project-specific data within a transaction
