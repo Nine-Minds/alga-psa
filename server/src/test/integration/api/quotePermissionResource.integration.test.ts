@@ -17,6 +17,9 @@ vi.mock('@/lib/db/db', async (importOriginal) => {
 });
 
 const { ApiQuoteController } = await import('@/lib/api/controllers/ApiQuoteController');
+const { ApiProjectController } = await import('@/lib/api/controllers/ApiProjectController');
+const { ApiTicketController } = await import('@/lib/api/controllers/ApiTicketController');
+const { ApiAssetController } = await import('@/lib/api/controllers/ApiAssetController');
 const { hasPermission } = await import('@/lib/auth/rbac');
 
 type ColumnInfoMap = Record<string, unknown>;
@@ -177,19 +180,40 @@ describe('quote API permission resource integration', () => {
     ).rejects.toThrow(/Cannot read quote/);
   });
 
-  it('authorizes the first read from a clean tenant context and still denies a caller without the grant', async () => {
-    const authorized = await createFixture([{ resource: 'billing', action: 'read' }]);
-    const unauthorized = await createFixture([{ resource: 'ticket', action: 'read' }]);
-    const controller = new ApiQuoteController();
+  it('authorizes first project, ticket, and asset reads from a clean tenant context and preserves denials', async () => {
+    const authorized = await createFixture([
+      { resource: 'project', action: 'read' },
+      { resource: 'ticket', action: 'read' },
+      { resource: 'asset', action: 'read' },
+    ]);
+    const unauthorized = await createFixture([{ resource: 'ticket', action: 'create' }]);
+    const projectController = new ApiProjectController();
+    const ticketController = new ApiTicketController();
+    const assetController = new ApiAssetController();
 
     await runWithoutTenant(async () => {
       expect(getTenantContext()).toBeUndefined();
       await expect(
-        (controller as any).checkPermission(requestFor(authorized), 'read'),
+        (projectController as any).checkPermission(requestFor(authorized), 'read'),
       ).resolves.toBeUndefined();
       await expect(
-        (controller as any).checkPermission(requestFor(unauthorized), 'read'),
-      ).rejects.toThrow(/Cannot read quote/);
+        (ticketController as any).checkPermission(requestFor(authorized), 'read'),
+      ).resolves.toBeUndefined();
+      await expect(
+        (assetController as any).requireReadPermissions(requestFor(authorized).context, ['asset']),
+      ).resolves.toBeNull();
+      await expect(
+        (projectController as any).checkPermission(requestFor(unauthorized), 'read'),
+      ).rejects.toThrow(/Cannot read project/);
+      await expect(
+        (ticketController as any).checkPermission(requestFor(unauthorized), 'read'),
+      ).rejects.toThrow(/Cannot read ticket/);
+      const deniedAssetResponse = await (assetController as any).requireReadPermissions(
+        requestFor(unauthorized).context,
+        ['asset'],
+      );
+      expect(deniedAssetResponse?.status).toBe(403);
+      expect(getTenantContext()).toBeUndefined();
     });
     expect(getTenantContext()).toBeUndefined();
   });
