@@ -28,6 +28,17 @@ JOIN priorities p ON p.tenant = d.tenant
 WHERE (COALESCE(b.priority_type, 'custom') = 'itil') IS DISTINCT FROM COALESCE(p.is_from_itil_standard, false)
 GROUP BY d.tenant ORDER BY d.tenant;
 
+-- 1a. Legacy definitions not yet linked to a template (possible during or after an incomplete migration).
+SELECT 'recurring_ticket_definitions (legacy content)' AS source, d.tenant,
+       count(*) AS mismatched,
+       count(*) FILTER (WHERE d.is_active AND d.archived_at IS NULL) AS mismatched_active
+FROM recurring_ticket_definitions d
+JOIN boards b     ON b.tenant = d.tenant AND b.board_id = d.board_id
+JOIN priorities p ON p.tenant = d.tenant AND p.priority_id = d.priority_id AND p.item_type = 'ticket'
+WHERE d.ticket_template_id IS NULL
+  AND (COALESCE(b.priority_type, 'custom') = 'itil') IS DISTINCT FROM COALESCE(p.is_from_itil_standard, false)
+GROUP BY d.tenant ORDER BY d.tenant;
+
 -- 1b. per-client effective pair (template -> definition overrides -> client overrides): the unit that generates tickets
 SELECT 'recurring_ticket_definition_clients (effective)' AS source, c.tenant,
        count(*) AS mismatched,
