@@ -200,6 +200,57 @@ describe('client portal ticket visibility enforcement', () => {
     getDefaultStatusIdMock.mockResolvedValue('status-1');
   });
 
+  it('projects standalone ticket documents after readable attachment filtering', async () => {
+    const rawDocument = {
+      document_id: 'document-1',
+      document_name: 'Client handoff.pdf',
+      type_id: 'type-1',
+      ticket_id: TICKET_1,
+      order_number: 4,
+      file_id: 'file-1',
+      mime_type: 'application/pdf',
+      file_size: 128,
+      is_client_visible: true,
+      user_id: 'private-user-id',
+      contact_name_id: 'private-contact-id',
+      created_by: 'private-creator-id',
+      storage_path: 'private/storage/key',
+      unexpected_internal_field: 'must not escape',
+    };
+    const ticketBuilder = makeChainable();
+    ticketBuilder.first = vi.fn().mockResolvedValue({ ticket_id: TICKET_1, client_id: 'client-1' });
+    const documentBuilder = makeChainable([rawDocument]);
+    const trx = Object.assign((table: string) => {
+      if (table === 'users') {
+        const userBuilder = makeChainable();
+        userBuilder.first = vi.fn().mockResolvedValue({ contact_id: 'contact-1' });
+        return userBuilder;
+      }
+      if (table === 'tickets') return ticketBuilder;
+      if (table === 'documents as d') return documentBuilder;
+      throw new Error(`Unexpected table: ${table}`);
+    }, { raw: vi.fn() });
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(trx));
+    getVisibilityContextMock.mockResolvedValue({
+      ticketScope: 'client', effectiveTicketScope: 'client', isClientAdmin: false,
+      contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: 'group-1', visibleBoardIds: ['board-visible'],
+    });
+
+    const { getClientTicketDocuments } = await import('./client-tickets');
+    const result = await getClientTicketDocuments(TICKET_1);
+
+    expect(documentBuilder.select).toHaveBeenCalledWith(
+      'd.document_id', 'd.document_name', 'd.type_id', 'da.entity_id as ticket_id',
+      'd.order_number', 'd.entered_at', 'd.updated_at', 'd.file_id', 'd.mime_type',
+      'd.file_size', 'd.folder_path', 'd.is_client_visible',
+    );
+    expect(result).toEqual([{
+      document_id: 'document-1', document_name: 'Client handoff.pdf', type_id: 'type-1',
+      client_id: 'client-1', ticket_id: TICKET_1, order_number: 4, file_id: 'file-1',
+      mime_type: 'application/pdf', file_size: 128, is_client_visible: true,
+    }]);
+  });
+
   it('T008: client portal ticket list applies the assigned visibility group boards', async () => {
     const ticketsBuilder = makeListBuilder([
       {

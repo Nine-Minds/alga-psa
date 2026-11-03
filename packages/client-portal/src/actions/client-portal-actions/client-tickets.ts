@@ -17,7 +17,6 @@ import { redactCommentForClient, tombstoneCommentForClient } from '@alga-psa/tic
 import { isUuidShaped, validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, TICKET_ORIGINS } from '@alga-psa/types';
 import { isClientUserType, isInteractiveUserType } from '@alga-psa/types';
-import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { z } from 'zod';
 import { Knex } from 'knex';
@@ -59,7 +58,7 @@ import { resolveAssetBillingProfileId } from '@shared/models/assetBillingProfile
 import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { coManagedRefusalMessageKey, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
-import { projectClientTicketDetail, projectClientTicketDocument, projectClientTicketList, type ClientTicketDetailResponse, type ClientTicketListResponse } from './clientTicketProjection';
+import { projectClientTicketDetail, projectClientTicketDocument, projectClientTicketList, type ClientTicketDetailResponse, type ClientTicketDocument, type ClientTicketListResponse } from './clientTicketProjection';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),
@@ -1348,7 +1347,7 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
   }
 });
 
-export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticketId: string): Promise<ClientTicketActionResult<IDocument[]>> => {
+export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticketId: string): Promise<ClientTicketActionResult<ClientTicketDocument[]>> => {
   try {
     const userId = clientPortalUserIdOrError(user);
     if (typeof userId !== 'string') {
@@ -1398,7 +1397,11 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
 
       // Get client-visible documents for the ticket
       const scopedDb = tenantDb(trx, tenant);
-      const documentsQuery = scopedDb.table('documents as d').select('d.*');
+      const documentsQuery = scopedDb.table('documents as d').select(
+        'd.document_id', 'd.document_name', 'd.type_id', 'da.entity_id as ticket_id',
+        'd.order_number', 'd.entered_at', 'd.updated_at', 'd.file_id', 'd.mime_type',
+        'd.file_size', 'd.folder_path', 'd.is_client_visible',
+      );
       scopedDb.tenantJoin(documentsQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
 
       const rows = await documentsQuery
@@ -1407,7 +1410,11 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
           'da.entity_type': 'ticket',
           'd.is_client_visible': true,
         });
-      return filterReadableCommentAttachments(trx, tenant, userId, rows) as Promise<IDocument[]>;
+      const readableRows = await filterReadableCommentAttachments(trx, tenant, userId, rows);
+      return readableRows.map((document) => projectClientTicketDocument({
+        ...document,
+        client_id: ticket.client_id,
+      }));
     });
 
     return documents;
