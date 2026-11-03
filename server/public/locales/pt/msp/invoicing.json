@@ -2296,7 +2296,7 @@
         "description": "Endereço da sua empresa."
       },
       "label_recordUrl": {
-        "label": "Ligação ao registo",
+        "label": "Link do registro",
         "description": "Caminho dos dados: {{path}}"
       },
       "label_identifier": {
@@ -2356,7 +2356,7 @@
         "description": "Caminho dos dados: {{path}}"
       },
       "linkedAsset_osLine": {
-        "label": "Sistema operativo do ativo",
+        "label": "Sistema operacional do ativo",
         "description": "Caminho dos dados: {{path}}"
       },
       "linkedAsset_cpuLine": {
@@ -2372,7 +2372,7 @@
         "description": "Caminho dos dados: {{path}}"
       },
       "tenant_brandText": {
-        "label": "Nome da empresa sem logótipo",
+        "label": "Nome da empresa sem logotipo",
         "description": "Caminho dos dados: {{path}}"
       }
     },
@@ -2929,7 +2929,7 @@
     "labelClasses": {
       "ticket-work-tag": "Etiqueta de ticket",
       "asset-identity": "Etiqueta de ativo",
-      "stock-unit-identity": "Etiqueta de unidade de stock",
+      "stock-unit-identity": "Etiqueta de unidade de estoque",
       "staging-container": "Etiqueta de caixa de preparação",
       "rma-work-tag": "Etiqueta RMA"
     },
@@ -2943,7 +2943,7 @@
       "ticketDescription": "Descrição do ticket",
       "custodyLocation": "Local de custódia",
       "nextAction": "Próxima ação",
-      "tenantLogo": "Logótipo da empresa",
+      "tenantLogo": "Logotipo da empresa",
       "tenantName": "Nome da empresa"
     },
     "standardNames": {
