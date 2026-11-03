@@ -77,7 +77,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import {
-  assertInternalApiUser,
+  assertApiPrincipal,
   ApiRequest,
   UnauthorizedError,
   ForbiddenError,
@@ -135,7 +135,7 @@ export class ApiQuickBooksController {
     // Get user within tenant context
     const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-    assertInternalApiUser(user);
+    assertApiPrincipal(user);
 
     // Create extended request with context
     const apiRequest = req as ApiRequest;
@@ -180,7 +180,7 @@ export class ApiQuickBooksController {
       return schema.parse(body);
     } catch (error) {
       if (error instanceof ZodError) {
-        throw new ValidationError('Validation failed', error.errors);
+        throw new ValidationError('Validation failed', error.issues);
       }
       throw error;
     }
@@ -199,7 +199,7 @@ export class ApiQuickBooksController {
       return schema.parse(query);
     } catch (error) {
       if (error instanceof ZodError) {
-        throw new ValidationError('Query validation failed', error.errors);
+        throw new ValidationError('Query validation failed', error.issues);
       }
       throw error;
     }

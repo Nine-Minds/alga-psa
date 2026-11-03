@@ -38,7 +38,7 @@ import { useTicketTags } from "../features/ticketDetail/hooks/useTicketTags";
 import { useTicketChecklist } from "../features/ticketDetail/hooks/useTicketChecklist";
 import { useTicketQa } from "../features/ticketDetail/hooks/useTicketQa";
 import { useTicketBundle } from "../features/ticketDetail/hooks/useTicketBundle";
-import { isBundleChild } from "./ticketsBundle";
+import { isBundleWorkflowLocked } from "./ticketsBundle";
 
 // Components
 import { ActionChip } from "../features/ticketDetail/components/ActionChip";
@@ -257,7 +257,7 @@ export function TicketDetailBody({
   }, [timerLastStoppedAt]);
   const assignmentHook = useTicketAssignment({ ...deps, fetchTicket });
   const bundleHook = useTicketBundle({ client, session, ticketId, ticket });
-  const bundleLocked = isBundleChild(ticket);
+  const bundleLocked = isBundleWorkflowLocked(ticket, bundleHook.bundle);
   const notifyBundleLocked = useCallback(() => {
     showToast({ message: t("detail.bundle.locked"), tone: "info" });
   }, [showToast, t]);

@@ -333,7 +333,7 @@ describe('Contracts integration i18n coverage', () => {
     }
 
     expect(contractDetailSource).toContain('useFormatters');
-    expect(contractDetailSource).toContain('const { formatCurrency } = useFormatters();');
+    expect(contractDetailSource).toContain('const { formatCurrency, formatDate: formatInstant } = useFormatters();');
     expect(contractDetailSource).toContain('const formatMinorCurrency = useCallback(');
     expect(contractDetailSource).toContain('return formatCurrency(majorUnits, currencyCode);');
 

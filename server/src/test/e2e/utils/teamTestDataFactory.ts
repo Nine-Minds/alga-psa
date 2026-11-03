@@ -20,6 +20,7 @@ export async function createTestTeam(
   tenantId: string,
   overrides: Partial<{
     team_name: string;
+    description: string | null;
     manager_id: string;
   }> = {}
 ) {
@@ -27,6 +28,7 @@ export async function createTestTeam(
     team_id: uuidv4(),
     tenant: tenantId,
     team_name: overrides.team_name || faker.commerce.department() + ' Team',
+    description: overrides.description ?? null,
     manager_id: overrides.manager_id || uuidv4(), // This should be a valid user_id in real tests
     created_at: new Date(),
     updated_at: new Date()
@@ -58,10 +60,12 @@ export async function createTestTeams(
  */
 export function createTeamTestData(overrides: Partial<{
   team_name: string;
+  description: string | null;
   manager_id: string;
 }> = {}) {
   return {
     team_name: overrides.team_name || `${faker.commerce.department()} Team ${Date.now()}`,
+    ...(overrides.description !== undefined ? { description: overrides.description } : {}),
     manager_id: overrides.manager_id || uuidv4()
   };
 }

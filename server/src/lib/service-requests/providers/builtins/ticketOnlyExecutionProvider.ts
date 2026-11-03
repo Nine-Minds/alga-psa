@@ -232,9 +232,7 @@ export const ticketOnlyExecutionProvider: ServiceRequestExecutionProvider = {
           undefined,
           context.requesterUserId,
           1,
-          // The submission row does not link to this ticket yet, so checklist
-          // auto-apply rules cannot discover the service request on their own.
-          { serviceRequest: { definitionId: context.definitionId } }
+          { serviceRequestSubmissionId: context.submissionId }
         );
 
         await new WorkflowEventPublisher({ transaction: outerTrx! }).publishTicketCreated({

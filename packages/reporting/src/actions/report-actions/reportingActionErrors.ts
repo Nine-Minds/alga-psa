@@ -21,7 +21,7 @@ export function reportingActionErrorFrom(error: unknown): ReportingActionError |
   }
 
   if (error instanceof z.ZodError) {
-    const first = error.errors[0];
+    const first = error.issues[0];
     const field = first?.path.join('.');
     const message = first ? `${field ? `${field}: ` : ''}${first.message}` : 'Invalid report parameters.';
     return actionError(message);

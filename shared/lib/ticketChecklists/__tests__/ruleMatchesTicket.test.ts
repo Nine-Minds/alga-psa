@@ -1,14 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-vi.mock('@alga-psa/db', () => ({ tenantDb: () => ({}) }));
 
 import {
   ruleMatchesTicket,
-  ticketDescriptionFromAttributes,
-  ticketDescriptionToPlainText,
   type ChecklistApplyRuleMatchers,
   type ChecklistRuleTicketInput,
-} from '../applyTemplates';
+} from './fixtures/legacyRuleMatcher';
+import { ticketDescriptionFromAttributes, ticketDescriptionToPlainText } from './fixtures/legacyRuleMatcher';
 
 const ACME = '11111111-1111-4111-8111-111111111111';
 const OTHER = '22222222-2222-4222-8222-222222222222';

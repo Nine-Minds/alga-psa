@@ -4,7 +4,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import UserAvatar from './UserAvatar';
-import { IUser } from '@alga-psa/types';
+import { IUser, isInteractiveUserType } from '@alga-psa/types';
 import { ChevronDown, Search } from 'lucide-react';
 import { AutomationProps, ButtonComponent, ContainerComponent } from '../ui-reflection/types';
 import { Input } from './Input';
@@ -109,7 +109,7 @@ const UserPicker = ({
   // Apply user type filter
   const applyUserTypeFilter = (user: IUser) => {
     if (userTypeFilter === null) {
-      return true; // No filtering
+      return isInteractiveUserType(user.user_type); // No type filter: all interactive types (never non-interactive principals)
     }
     if (Array.isArray(userTypeFilter)) {
       return userTypeFilter.includes(user.user_type);

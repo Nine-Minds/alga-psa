@@ -24,6 +24,8 @@ import {
   timeSheetExportQuerySchema,
   createScheduleEntrySchema,
   updateScheduleEntrySchema,
+  scheduleEntryListQuerySchema,
+  scheduleEntrySearchQuerySchema,
   calendarListQuerySchema
 } from '../schemas/timeSheet';
 import { 
@@ -40,7 +42,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import {
-  assertInternalApiUser,
+  assertApiPrincipal,
   AuthenticatedApiRequest,
   UnauthorizedError,
   ForbiddenError,
@@ -139,7 +141,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -181,6 +183,95 @@ export class ApiTimeSheetController extends ApiBaseController {
   }
 
   /**
+   * Get the time entries of one time sheet (GET /time-sheets/{id}/entries)
+   */
+  // LEVERAGE: pattern api-controller-auth-preamble — same auth/tenant/permission sequence as getWithDetails()
+  getEntries() {
+    return this.perSheetRead((id, ctx) => this.timeSheetService.getTimeSheetEntries(id, ctx));
+  }
+
+  /**
+   * Get the summary of one time sheet (GET /time-sheets/{id}/summary)
+   */
+  // LEVERAGE: pattern api-controller-auth-preamble — same auth/tenant/permission sequence as getWithDetails()
+  getSummary() {
+    return this.perSheetRead((id, ctx) => this.timeSheetService.getTimeSheetSummary(id, ctx));
+  }
+
+  /**
+   * Shared read for /time-sheets/{id}/<sub-resource>: authenticates, checks
+   * time_sheet:read, takes the id from route params (never the last URL
+   * segment, which is the sub-resource name), 404s unknown or other-tenant
+   * sheets via getById(), then runs the reader.
+   */
+  private perSheetRead(
+    reader: (id: string, ctx: { userId: string; user: any; tenant: string }) => Promise<unknown>
+  ) {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        assertApiPrincipal(user);
+
+        await this.assertManualProductAccess(req, keyRecord, user);
+
+        const db = await getConnection(tenantId!);
+        const hasReadPermission = await hasPermission(user, 'time_sheet', 'read', db);
+
+        if (!hasReadPermission) {
+          throw new ForbiddenError('Permission denied: Cannot read time sheets');
+        }
+
+        const params = await (req as any).params;
+        const parsedId = uuidSchema.safeParse(params?.id);
+        if (!parsedId.success) {
+          throw new ValidationError('Invalid time sheet id', parsedId.error.issues);
+        }
+        const id = parsedId.data;
+
+        const ctx = { userId: user.user_id, user, tenant: tenantId! };
+        const result = await runWithTenant(tenantId!, async () => {
+          const timeSheet = await this.timeSheetService.getById(id, ctx);
+          if (!timeSheet) {
+            return null;
+          }
+          return { data: await reader(id, ctx) };
+        });
+
+        if (!result) {
+          throw new NotFoundError('Time sheet not found');
+        }
+
+        return createSuccessResponse(result.data);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Submit time sheet for approval
    */
   submit() {
@@ -213,7 +304,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -242,7 +333,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           submitData = submitTimeSheetSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid submit data', error.errors);
+            throw new ValidationError('Invalid submit data', error.issues);
           }
           throw error;
         }
@@ -296,7 +387,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -325,7 +416,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           approveData = approveTimeSheetSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid approve data', error.errors);
+            throw new ValidationError('Invalid approve data', error.issues);
           }
           throw error;
         }
@@ -379,7 +470,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -408,7 +499,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           requestChangesData = requestChangesTimeSheetSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid request changes data', error.errors);
+            throw new ValidationError('Invalid request changes data', error.issues);
           }
           throw error;
         }
@@ -462,7 +553,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -491,7 +582,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           reverseData = reverseApprovalSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid reverse approval data', error.errors);
+            throw new ValidationError('Invalid reverse approval data', error.issues);
           }
           throw error;
         }
@@ -545,7 +636,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -569,7 +660,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           bulkApproveData = bulkApproveTimeSheetSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid bulk approve data', error.errors);
+            throw new ValidationError('Invalid bulk approve data', error.issues);
           }
           throw error;
         }
@@ -626,7 +717,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -697,7 +788,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -726,7 +817,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           commentData = createTimeSheetCommentSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid comment data', error.errors);
+            throw new ValidationError('Invalid comment data', error.issues);
           }
           throw error;
         }
@@ -780,7 +871,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -799,14 +890,21 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Validate query parameters
         const url = new URL(req.url);
-        const queryParams = Object.fromEntries(url.searchParams);
-        
+        // Repeated array params (?user_ids=a&user_ids=b) collapse under
+        // Object.fromEntries, so collect them explicitly; the schema also
+        // splits comma-separated values.
+        const queryParams: Record<string, string | string[]> = {};
+        for (const key of new Set(url.searchParams.keys())) {
+          const values = url.searchParams.getAll(key);
+          queryParams[key] = values.length > 1 ? values : values[0];
+        }
+
         let searchParams;
         try {
           searchParams = timeSheetSearchSchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid search parameters', error.errors);
+            throw new ValidationError('Invalid search parameters', error.issues);
           }
           throw error;
         }
@@ -860,7 +958,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -886,7 +984,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           exportParams = timeSheetExportQuerySchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid export parameters', error.errors);
+            throw new ValidationError('Invalid export parameters', error.issues);
           }
           throw error;
         }
@@ -952,7 +1050,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1020,7 +1118,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1086,7 +1184,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1160,7 +1258,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1238,7 +1336,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1262,7 +1360,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           periodData = createTimePeriodSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid time period data', error.errors);
+            throw new ValidationError('Invalid time period data', error.issues);
           }
           throw error;
         }
@@ -1316,7 +1414,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1344,7 +1442,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           periodData = updateTimePeriodSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid time period data', error.errors);
+            throw new ValidationError('Invalid time period data', error.issues);
           }
           throw error;
         }
@@ -1400,7 +1498,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1421,7 +1519,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         const { id: rawId } = await (req as any).params;
         const idResult = uuidSchema.safeParse(rawId);
         if (!idResult.success) {
-          throw new ValidationError('Invalid time period id', idResult.error.errors);
+          throw new ValidationError('Invalid time period id', idResult.error.issues);
         }
         const id = idResult.data;
 
@@ -1474,7 +1572,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1495,7 +1593,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         const { id: rawId } = await (req as any).params;
         const idResult = uuidSchema.safeParse(rawId);
         if (!idResult.success) {
-          throw new ValidationError('Invalid time period id', idResult.error.errors);
+          throw new ValidationError('Invalid time period id', idResult.error.issues);
         }
         const id = idResult.data;
 
@@ -1548,7 +1646,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1618,7 +1716,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1684,7 +1782,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1708,7 +1806,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           settingsData = createTimePeriodSettingsSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid settings data', error.errors);
+            throw new ValidationError('Invalid settings data', error.issues);
           }
           throw error;
         }
@@ -1762,7 +1860,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1790,7 +1888,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           settingsData = updateTimePeriodSettingsSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid settings data', error.errors);
+            throw new ValidationError('Invalid settings data', error.issues);
           }
           throw error;
         }
@@ -1814,9 +1912,18 @@ export class ApiTimeSheetController extends ApiBaseController {
   // Schedule Management
 
   /**
-   * List schedule entries
+   * Search schedule entries (GET /api/v1/schedules/search): same auth,
+   * permission and visibility path as listScheduleEntries(), but paginated.
    */
-  listScheduleEntries() {
+  searchScheduleEntries() {
+    return this.listScheduleEntries({ paginate: true });
+  }
+
+  /**
+   * List schedule entries (GET /api/v1/schedules). Unpaginated unless
+   * `paginate` is set: shipped mobile clients read the whole result set.
+   */
+  listScheduleEntries(options: { paginate?: boolean } = {}) {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
         // Authenticate
@@ -1846,7 +1953,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -1868,22 +1975,37 @@ export class ApiTimeSheetController extends ApiBaseController {
         // enforced by the service through the shared-calendar resolver, so
         // any user_id may be requested; unshared calendars simply return none.
         const url = new URL(req.url);
-        const filters = {
-          start_date: url.searchParams.get('start_date') || undefined,
-          end_date: url.searchParams.get('end_date') || undefined,
-          user_id: url.searchParams.get('user_id') || undefined
+        const rawQuery = Object.fromEntries(url.searchParams.entries());
+        const parseQuery = <T>(schema: { parse(v: unknown): T }): T => {
+          try {
+            return schema.parse(rawQuery);
+          } catch (error) {
+            if (error instanceof ZodError) {
+              throw new ValidationError('Invalid schedule query parameters', error.issues);
+            }
+            throw error;
+          }
         };
+        const serviceContext = { userId: user.user_id, user, tenant: tenantId! };
 
-        // Get schedule entries within tenant context
-        const entries = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getScheduleEntries({
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          }, filters);
+        if (!options.paginate) {
+          const { filters } = parseQuery(scheduleEntryListQuerySchema);
+          const entries = await runWithTenant(tenantId!, async () => {
+            return await this.timeSheetService.getScheduleEntries(serviceContext, filters);
+          });
+          return createSuccessResponse(entries);
+        }
+
+        const { page, limit, filters } = parseQuery(scheduleEntrySearchQuerySchema);
+
+        // Paginated after visibility is resolved, so total excludes hidden entries.
+        // LEVERAGE: pattern paginated-list-outside-base — ApiBaseController.list() paginates via service.list(); schedule entries need a bespoke paged service method.
+        const result = await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.getScheduleEntriesPage(
+            serviceContext, filters, { page, limit });
         });
 
-        return createSuccessResponse(entries);
+        return createPaginatedResponse(result.data, result.total, page, limit, undefined, req);
       } catch (error) {
         return handleApiError(error);
       }
@@ -1917,7 +2039,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
         await this.assertManualProductAccess(req, keyRecord, user);
 
         const db = await getConnection(tenantId!);
@@ -1935,7 +2057,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           });
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid query parameters', error.errors);
+            throw new ValidationError('Invalid query parameters', error.issues);
           }
           throw error;
         }
@@ -1988,7 +2110,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -2063,7 +2185,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -2087,7 +2209,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           scheduleData = createScheduleEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid schedule data', error.errors);
+            throw new ValidationError('Invalid schedule data', error.issues);
           }
           throw error;
         }
@@ -2151,7 +2273,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 
@@ -2173,7 +2295,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           scheduleData = updateScheduleEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid schedule data', error.errors);
+            throw new ValidationError('Invalid schedule data', error.issues);
           }
           throw error;
         }
@@ -2265,7 +2387,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         await this.assertManualProductAccess(req, keyRecord, user);
 

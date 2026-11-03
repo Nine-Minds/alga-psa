@@ -106,7 +106,7 @@ describe.runIf(enabled)('processRenewalQueueHandler Prepaid Block renewal issuan
       block_id: blockId, tenant, client_id: w.clientId, service_id: w.serviceId, total_minutes: 600, remaining_minutes: 90,
       hourly_rate: 10000, purchase_amount: 100000, currency_code: 'EUR', status: 'active', purchased_at: '2026-01-01T00:00:00Z',
       source_type: 'contract', expiration_date: utcDay(0, 200), contract_line_id: w.lineId,
-      client_contract_id: w.clientContractId,
+      client_contract_id: w.clientContractId, service_period_record_id: uuidv4(),
     });
     await db('contract_line_block_issuances').insert({
       tenant, issuance_id: uuidv4(), contract_line_id: w.lineId, client_contract_id: w.clientContractId, client_id: w.clientId,

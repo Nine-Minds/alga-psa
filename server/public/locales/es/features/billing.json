@@ -213,6 +213,7 @@
       "optionalLockedHint": "La selección de artículos opcionales se bloquea cuando la cotización ya no espera su respuesta.",
       "optionalToggleHint": "Active o desactive los artículos opcionales para ver su total preferido antes de responder.",
       "poNumber": "Orden de compra n.º",
+      "previewUnavailable": "No hay una vista previa en vivo para esta cotización, por lo que los totales mostrados son los totales guardados actualmente. Su selección se enviará igualmente al aceptar.",
       "quoteDate": "Fecha de la cotización",
       "readyToRespond": "¿Listo para responder?",
       "reject": "Rechazar",
@@ -222,7 +223,6 @@
       "rejectQuote": "Rechazar cotización",
       "rejectedBanner": "Cotización rechazada.",
       "rejectedBannerWithReason": "Cotización rechazada: {{reason}}",
-      "savingSelections": "Guardando la selección de artículos opcionales...",
       "scopeOfWork": "Alcance del trabajo",
       "submitting": "Enviando...",
       "subtotal": "Subtotal",
@@ -290,6 +290,13 @@
       "pending": "Facturas en espera de aprobación o procesamiento adicional",
       "prepayment": "Facturas de anticipo o depósito",
       "partially_applied": "Facturas con pagos parciales aplicados"
+    },
+    "billingPeriod": {
+      "weekly": "por semana",
+      "monthly": "por mes",
+      "quarterly": "por trimestre",
+      "semi-annually": "por semestre",
+      "annually": "por año"
     }
   },
   "quoteForm": {
@@ -445,7 +452,13 @@
     "expires": "Vence el {{date}}",
     "recentBurn": "Consumo reciente",
     "timeEntry": "Entrada de tiempo",
-    "contractLabel": "Contrato: {{contract}}"
+    "contractLabel": "Contrato: {{contract}}",
+    "hoursLeftValue": "{{hours}} h restantes · {{value}}",
+    "validFrom": "Válido desde {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — bloque prepago, {{hours}} h",
+    "overPrepaidBlock": "{{name}} (por encima del bloque prepago)"
   },
   "bucketUsage": {
     "contractLine": "Línea de contrato de bolsa de horas",
@@ -453,5 +466,20 @@
     "hoursUsed": "{{hours}} horas utilizadas",
     "hoursTotal": "{{hours}} horas en total",
     "rolloverHours": "Incluye {{hours}} horas transferidas"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Vencimiento al recibir",
+      "net14": "neto 14",
+      "net15": "neto 15",
+      "net30": "neto 30",
+      "net7": "neto 7"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Transferencia bancaria",
+      "check": "Cheque",
+      "creditCard": "Tarjeta de crédito"
+    },
+    "tenantDefault": "Predeterminado del inquilino ({{value}})"
   }
 }

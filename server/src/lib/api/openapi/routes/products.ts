@@ -11,7 +11,7 @@ export function registerProductRoutes(
   const ProductIdParams = registry.registerSchema(
     'ProductIdParams',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Product UUID.'),
+      id: zOpenApi.string().guid().describe('Product UUID.'),
     }),
   );
 
@@ -30,16 +30,16 @@ export function registerProductRoutes(
   const ProductResource = registry.registerSchema(
     'ProductCatalogEntry',
     zOpenApi.object({
-      service_id: zOpenApi.string().uuid(),
-      tenant: zOpenApi.string().uuid(),
+      service_id: zOpenApi.string().guid(),
+      tenant: zOpenApi.string().guid(),
       service_name: zOpenApi.string(),
-      custom_service_type_id: zOpenApi.string().uuid(),
+      custom_service_type_id: zOpenApi.string().guid(),
       billing_method: zOpenApi.enum(['usage']),
       default_rate: zOpenApi.number(),
       unit_of_measure: zOpenApi.string(),
       unit_code: zOpenApi.string().nullable().optional(),
-      category_id: zOpenApi.string().uuid().nullable().optional(),
-      tax_rate_id: zOpenApi.string().uuid().nullable().optional(),
+      category_id: zOpenApi.string().guid().nullable().optional(),
+      tax_rate_id: zOpenApi.string().guid().nullable().optional(),
       description: zOpenApi.string().nullable().optional(),
       item_kind: zOpenApi.enum(['product']),
       is_active: zOpenApi.boolean().optional(),
@@ -65,7 +65,7 @@ export function registerProductRoutes(
     'ProductEnvelope',
     zOpenApi.object({
       data: ProductResource,
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -81,7 +81,7 @@ export function registerProductRoutes(
         hasNext: zOpenApi.boolean(),
         hasPrev: zOpenApi.boolean(),
       }),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 

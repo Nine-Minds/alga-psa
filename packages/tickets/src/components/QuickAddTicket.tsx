@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Paperclip, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Link2, Copy, LayoutTemplate } from 'lucide-react';
@@ -33,6 +33,7 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
+import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextEditor } from '@alga-psa/ui/editor';
@@ -76,6 +77,15 @@ import { useQuickAddRichTextUploadSession } from './useQuickAddRichTextUploadSes
 import { getTicketStatuses } from '@alga-psa/reference-data/actions/status-actions/statusActions';
 import { useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { toCalendarDisplayDate } from '@alga-psa/core';
+
+export interface QuickAddAssetPickerProps {
+  id: string;
+  clientId: string;
+  value: string[];
+  onChange: (assetIds: string[]) => void;
+  label: string;
+  disabled?: boolean;
+}
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
 function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
@@ -209,6 +219,12 @@ interface QuickAddTicketProps {
    * Ignored when `duplicateFromTicketId` is set; a request names a duplicate source or a template, never both.
    */
   templateId?: string;
+  /**
+   * Multi-select of the chosen client's assets. The assets package owns the picker and the tickets package
+   * cannot import it, so the composition layer injects it; without it the Assets section is not shown
+   * beyond the asset the form was opened from.
+   */
+  renderAssetPicker?: (props: QuickAddAssetPickerProps) => React.ReactNode;
 }
 
 export function QuickAddTicket({
@@ -231,6 +247,7 @@ export function QuickAddTicket({
   isAlgaDeskMode = false,
   duplicateFromTicketId,
   templateId,
+  renderAssetPicker,
 }: QuickAddTicketProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -327,6 +344,11 @@ export function QuickAddTicket({
   const lastRenderedTitleRef = useRef<string | null>(null);
   const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
   const effectiveAssetId = isAlgaDeskMode ? undefined : assetId;
+  // Create extras (all optional; assets and watchers go in the same addTicket call, attachments after).
+  const [extraAssetIds, setExtraAssetIds] = useState<string[]>([]);
+  const [watcherIds, setWatcherIds] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   // Calculate ITIL priority when impact and urgency are set
@@ -689,6 +711,8 @@ export function QuickAddTicket({
     }
 
     setClientId(newClientId || '');
+    // Assets are picked from the client's own list, so the previous client's selection no longer applies.
+    setExtraAssetIds([]);
     setContactId(null);
     // The location belongs to the client that was selected before.
     setLocationId(null);
@@ -960,6 +984,9 @@ export function QuickAddTicket({
     setTemplateLoadError(null);
     setCopyTemplateChecklist(true);
     setPendingTemplateId(null);
+    setExtraAssetIds([]);
+    setWatcherIds([]);
+    setAttachments([]);
     setIsQuickAddContactOpen(false);
     if (prefilledDueDate) {
       setDueDate(toPrefilledDueDate(prefilledDueDate));
@@ -1015,6 +1042,14 @@ export function QuickAddTicket({
       extractTicketRichTextPlainText(descriptionContent).trim() !==
         extractTicketRichTextPlainText(draftBaselineDescription || '').trim());
 
+
+  // Chosen-but-unsent extras count as unsaved work for the leave guard, with the same saved/in-flight exemptions.
+  const hasUnsavedExtras =
+    open &&
+    !isSubmitting &&
+    !isNavigatingToTicket &&
+    !ticketCreated &&
+    (attachments.length > 0 || watcherIds.length > 0 || extraAssetIds.length > 0);
 
   const validateForm = () => {
     const validationErrors: string[] = [];
@@ -1100,6 +1135,35 @@ export function QuickAddTicket({
     return serializedDescription;
   };
 
+  // Returns the names of files that failed to upload. Never throws.
+  const uploadAttachmentsForTicket = async (ticketId: string): Promise<string[]> => {
+    const failed: string[] = [];
+    let effectiveUserId: string | undefined;
+    try {
+      effectiveUserId = session?.user?.id || (await getCurrentUser())?.user_id;
+    } catch (userError) {
+      console.error('Failed to resolve user for attachment upload:', userError);
+    }
+    if (!effectiveUserId) {
+      return attachments.map((file) => file.name);
+    }
+    const { uploadDocument } = await import('@alga-psa/documents/actions/documentActions');
+    for (const file of attachments) {
+      try {
+        const fileFormData = new FormData();
+        fileFormData.append('file', file);
+        const uploadResult = await uploadDocument(fileFormData, { userId: effectiveUserId, ticketId });
+        if (isActionPermissionError(uploadResult) || !uploadResult.success) {
+          failed.push(file.name);
+        }
+      } catch (uploadError) {
+        console.error(`Failed to upload attachment ${file.name}:`, uploadError);
+        failed.push(file.name);
+      }
+    }
+    return failed;
+  };
+
   const handleCreateTicket = async ({ openAfterCreate = false }: { openAfterCreate?: boolean } = {}) => {
     // Refs, not button state: two quick triggers (click + Cmd+Enter) must not both reach addTicket.
     if (createInFlightRef.current || ticketCreatedRef.current) {
@@ -1162,6 +1226,15 @@ export function QuickAddTicket({
       if (effectiveAssetId) {
         formData.append('asset_id', effectiveAssetId);
       }
+      // Extra linked assets and watchers travel in the same addTicket call, so the server
+      // writes them in the ticket's transaction. Omitted when empty so the legacy payload is unchanged.
+      const additionalAssetIds = extraAssetIds.filter((assetIdValue) => assetIdValue !== effectiveAssetId);
+      if (additionalAssetIds.length > 0) {
+        formData.append('asset_ids', JSON.stringify(additionalAssetIds));
+      }
+      if (watcherIds.length > 0) {
+        formData.append('watcher_ids', JSON.stringify(watcherIds));
+      }
 
       // Add ITIL Impact and Urgency for calculation (if provided)
       if (itilImpact) {
@@ -1210,6 +1283,18 @@ export function QuickAddTicket({
       } catch (descriptionFinalizeError) {
         console.error('Failed to finalize quick add description:', descriptionFinalizeError);
         toast.error(t('quickAdd.clipboardUploadPartialFailure', 'Ticket created, but pasted images could not be attached to the description.'));
+      }
+
+      // Attachments are uploaded after the ticket exists, outside its transaction, one file at a time.
+      // A failed file never affects the ticket or the other files; the user is told which ones failed.
+      if (attachments.length > 0 && newTicket.ticket_id) {
+        const failedFiles = await uploadAttachmentsForTicket(newTicket.ticket_id);
+        if (failedFiles.length > 0) {
+          toast.error(t('quickAdd.attachmentsPartialFailure', {
+            defaultValue: 'Ticket created, but these files could not be attached: {{files}}. Add them from the ticket.',
+            files: failedFiles.join(', '),
+          }), { duration: 10000 });
+        }
       }
 
       // Assign team if selected
@@ -1409,7 +1494,7 @@ export function QuickAddTicket({
         id={`${id}-dialog`}
         isOpen={open}
         onClose={handleClose}
-        hasUnsavedChanges={hasUnsavedDraftText}
+        hasUnsavedChanges={hasUnsavedDraftText || hasUnsavedExtras}
         className="w-full max-w-2xl max-h-[90vh]"
         title={duplicateSource
           ? t('quickAdd.duplicateDialogTitle', {
@@ -2037,6 +2122,92 @@ export function QuickAddTicket({
                       })}
                     </p>
                   )}
+
+                  <div className="space-y-4" data-testid="quick-add-ticket-extras">
+                    {!isAlgaDeskMode && (
+                      <div id={`${id}-assets-section`} className="space-y-2" data-testid="quick-add-ticket-assets">
+                        <div className="text-sm font-medium text-gray-700">{t('quickAdd.assets.heading', 'Assets')}</div>
+                        {renderAssetPicker && clientId ? (
+                          renderAssetPicker({
+                            id: `${id}-assets`,
+                            clientId,
+                            value: extraAssetIds,
+                            onChange: setExtraAssetIds,
+                            label: '',
+                            disabled: isSubmitting,
+                          })
+                        ) : (
+                          <p className="text-xs text-gray-500">
+                            {renderAssetPicker
+                              ? t('quickAdd.assets.selectClientFirst', 'Select a client to link assets.')
+                              : t('quickAdd.assets.unavailable', 'Assets can be linked from the ticket after it is created.')}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <div id={`${id}-attachments-section`} className="space-y-2" data-testid="quick-add-ticket-attachments">
+                      <div className="text-sm font-medium text-gray-700">{t('quickAdd.attachments.heading', 'Attachments')}</div>
+                      <input
+                        ref={attachmentInputRef}
+                        id={`${id}-attachments-input`}
+                        type="file"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          const picked = Array.from(e.target.files ?? []);
+                          if (picked.length > 0) setAttachments((current) => [...current, ...picked]);
+                          e.target.value = '';
+                        }}
+                      />
+                      <Button
+                        id={`${id}-attachments-add`}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => attachmentInputRef.current?.click()}
+                        disabled={isSubmitting}
+                      >
+                        <Paperclip className="h-4 w-4 mr-1" />
+                        {t('quickAdd.attachments.add', 'Add files')}
+                      </Button>
+                      {attachments.length > 0 && (
+                        <ul className="space-y-1" id={`${id}-attachments-list`}>
+                          {attachments.map((file, index) => (
+                            <li key={`${index}-${file.name}-${file.size}`} className="flex items-center gap-2 text-sm text-gray-700">
+                              <span className="truncate">{file.name}</span>
+                              <Button
+                                id={`${id}-attachment-remove-${index}`}
+                                type="button"
+                                variant="icon"
+                                size="icon"
+                                aria-label={t('quickAdd.attachments.remove', { defaultValue: 'Remove {{name}}', name: file.name })}
+                                onClick={() => setAttachments((current) => current.filter((_, candidate) => candidate !== index))}
+                                disabled={isSubmitting}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    {(
+                      <div id={`${id}-watchers-section`} className="space-y-2" data-testid="quick-add-ticket-watchers">
+                        <div className="text-sm font-medium text-gray-700">{t('quickAdd.watchers.heading', 'Watchers')}</div>
+                        <MultiUserPicker
+                          id={`${id}-watchers`}
+                          values={watcherIds}
+                          onValuesChange={setWatcherIds}
+                          users={users}
+                          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                          disabled={isSubmitting}
+                          placeholder={t('quickAdd.watchers.placeholder', 'Add watchers...')}
+                        />
+                      </div>
+                    )}
+                  </div>
 
                   <QuickAddTagPicker
                     id="quick-add-ticket-tags"

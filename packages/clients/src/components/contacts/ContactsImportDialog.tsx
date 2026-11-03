@@ -11,7 +11,6 @@ import { ColumnDefinition } from '@alga-psa/types';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import {
-  ContactEmailAddressInput,
   ICSVColumnMapping,
   ICSVPreviewData,
   ICSVValidationResult,
@@ -28,8 +27,8 @@ import {
   formatContactCsvAdditionalEmailAddresses,
   isValidContactCsvEmailValue,
   parseContactCsvAdditionalEmailAddresses,
-  parseContactCsvEmailType,
 } from '../../lib/contactCsvEmailFields';
+import { buildContactCsvImportRows, type ContactCsvRecord } from '../../lib/contactCsvImportPayload';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -47,13 +46,6 @@ interface ImportOptionsProps {
   importOptions: ICSVImportOptions;
   onOptionsChange: (options: ICSVImportOptions) => void;
 }
-
-type ContactCsvRecord = Partial<Record<MappableField, string>>;
-type ContactCsvImportData = Omit<Partial<IContact>, 'additional_email_addresses' | 'primary_email_type'> & {
-  additional_email_addresses?: ContactEmailAddressInput[];
-  primary_email_custom_type?: string | null;
-  tags?: string;
-};
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -85,6 +77,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
     currentItem?: string;
   }>({ current: 0, total: 0 });
   const [failedRecords, setFailedRecords] = useState<ImportContactResult[]>([]);
+  const [clientNameById, setClientNameById] = useState<Map<string, string>>(() => new Map());
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -128,6 +121,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
       setExistingContactsCount(0);
       setProcessingDetails({ current: 0, total: 0 });
       setFailedRecords([]);
+      setClientNameById(new Map());
       setCurrentPage(1);
       setPageSize(10);
     }
@@ -313,7 +307,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
     }
   };
 
-  const transformDataForImport = async (data: ContactCsvRecord[]): Promise<ContactCsvImportData[]> => {
+  const transformDataForImport = async (data: ContactCsvRecord[]) => {
     // Resolve client names with one targeted lookup instead of loading every client.
     const distinctNames = Array.from(
       new Set(data.map((record) => record.client).filter((name): name is string => Boolean(name)))
@@ -324,39 +318,14 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
     }
     const clientIdByName = new Map(matched.map((c) => [c.client_name, c.client_id]));
 
-    return data.map((record): ContactCsvImportData => {
-      // Find client ID from client name (exact, case-sensitive)
-      const client = record.client ? { client_id: clientIdByName.get(record.client) } : undefined;
-      const parsedPrimaryEmailType = record.primary_email_type
-        ? parseContactCsvEmailType(record.primary_email_type)
-        : {};
-      const parsedAdditionalEmailRows = Object.prototype.hasOwnProperty.call(record, 'additional_email_addresses')
-        ? parseContactCsvAdditionalEmailAddresses(record.additional_email_addresses, record.email).rows
-        : undefined;
-      
-      const contactData: ContactCsvImportData = {
-        full_name: record.full_name,
-        email: record.email,
-        phone_number: record.phone_number,
-        client_id: client?.client_id || null,
-        role: record.role,
-        notes: record.notes,
-        is_inactive: false,
-        primary_email_canonical_type: parsedPrimaryEmailType.canonicalType,
-        additional_email_addresses: parsedAdditionalEmailRows,
-      };
-
-      if (parsedPrimaryEmailType.customType !== undefined) {
-        contactData.primary_email_custom_type = parsedPrimaryEmailType.customType;
-      }
-      
-      // Add tags as a separate property (not part of IContact)
-      if (record.tags) {
-        (contactData as any).tags = record.tags;
-      }
-      
-      return contactData;
-    });
+    const resolvedClients = distinctNames
+      .filter((name) => clientIdByName.has(name))
+      .map((client_name) => ({ client_name, client_id: clientIdByName.get(client_name)! }));
+    setClientNameById((previous) => new Map([
+      ...previous,
+      ...resolvedClients.map(({ client_id, client_name }) => [client_id, client_name] as const),
+    ]));
+    return buildContactCsvImportRows(data, columnMappings, resolvedClients);
   };
 
   const processImport = async (data: ContactCsvRecord[]) => {
@@ -411,6 +380,9 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   };
 
   const handleDownloadFailedRecords = () => {
+    // Only write a Tags column when the import carried one: re-importing this
+    // file must not turn an unmapped Tags column into an explicit blank.
+    const includeTags = failedRecords.some((record) => record.originalData.tags !== undefined);
     const fields = [
       'full_name',
       'email',
@@ -418,7 +390,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
       'additional_email_addresses',
       'phone_number',
       'client',
-      'tags',
+      ...(includeTags ? ['tags'] : []),
       'role',
       'notes',
     ];
@@ -437,7 +409,9 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
             ? record.originalData.additional_email_addresses
             : formatContactCsvAdditionalEmailAddresses(record.originalData.additional_email_addresses)),
         phone_number: record.originalData.phone_number || '',
-        client: record.originalData.client || '',
+        // The import payload carries the resolved client_id, not the CSV text;
+        // map it back so the failure file re-imports against the same client.
+        client: (record.originalData.client_id && clientNameById.get(record.originalData.client_id)) || '',
         tags: record.originalData.tags || '',
         role: record.originalData.role || '',
         notes: record.originalData.notes || '',

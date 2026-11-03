@@ -10,6 +10,7 @@
  */
 
 import { Knex } from 'knex';
+import { mergePaymentSettings } from '@alga-psa/types';
 import { getConnection, tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import {
@@ -149,12 +150,7 @@ export class PaymentService {
       return DEFAULT_PAYMENT_SETTINGS;
     }
 
-    const settings = config.settings as Partial<PaymentSettings> | undefined;
-    return {
-      ...DEFAULT_PAYMENT_SETTINGS,
-      ...settings,
-      defaultProvider: config.provider_type,
-    };
+    return mergePaymentSettings(config.settings, { defaultProvider: config.provider_type });
   }
 
   /**

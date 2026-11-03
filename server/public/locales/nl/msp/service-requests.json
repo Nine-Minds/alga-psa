@@ -174,7 +174,50 @@
       "visibility": {
         "title": "Zichtbaarheidsconfiguratie",
         "config": "Zichtbaarheidsconfiguratie (JSON-object)",
-        "save": "Zichtbaarheidsconfiguratie opslaan"
+        "save": "Zichtbaarheidsconfiguratie opslaan",
+        "audience": {
+          "removedReferences": "Niet-beschikbare doelgroepselecties zijn verwijderd. Controleer en sla de doelgroep op.",
+          "reference_client_id": "Klant",
+          "reference_client_tags": "Klanttag",
+          "reference_contact_id": "Contact",
+          "reference_contact_tags": "Contacttag",
+          "reference_contact_group_id": "Klantgroep",
+          "chooseTags": "Tags kiezen",
+          "loadError": "Doelgroepopties konden niet worden geladen.",
+          "saveError": "Doelgroep kon niet worden opgeslagen.",
+          "saved": "Doelgroep opgeslagen",
+          "convertedReadOnly": "Deze gemigreerde doelgroep is alleen-lezen.",
+          "replace": "Vervangen door een nieuwe doelgroep",
+          "clientTags": "Klanttags",
+          "contactTags": "Contacttags",
+          "allUsers": "Alle gebruikers van deze klant",
+          "missingClient": "Klant niet beschikbaar",
+          "missingContact": "Contact niet beschikbaar",
+          "narrowTags": "Alleen contacten met tag",
+          "remove": "Verwijderen",
+          "allPortalUsers": "Alle gebruikers van het klantenportaal",
+          "reach": "Zichtbaar voor {{count}} contacten bij {{clients}} klanten",
+          "reachUnavailable": "Bereik niet beschikbaar",
+          "title": "Wie dit formulier kan zien",
+          "everyone": "Iedereen",
+          "everyoneHelp": "Alle geauthenticeerde klantgebruikers kunnen dit formulier zien en indienen.",
+          "scoped": "Geselecteerde klanten en contactpersonen",
+          "scopedHelp": "Alleen gebruikers van de geselecteerde klanten, of leden van de geselecteerde groepen, kunnen dit formulier zien en indienen.",
+          "addClient": "Klant toevoegen",
+          "clientPlaceholder": "Klanten zoeken...",
+          "noClients": "Nog geen klanten geselecteerd.",
+          "selectedClients": "Geselecteerde klanten",
+          "removeClient": "{{name}} verwijderen",
+          "groupsOf": "Klantgebruikersgroepen van {{name}}",
+          "groupLabel": "{{group}} ({{client}})",
+          "loadingGroups": "Groepen laden...",
+          "noGroups": "Deze klant heeft geen klantgebruikersgroepen.",
+          "groupsHelp": "Elke klant geldt voor al zijn gebruikers of alleen voor de leden van geselecteerde groepen. Een groep geeft alleen toegang aan leden van de eigen klant. Een klant kan niet op alle gebruikers staan en tegelijk geselecteerde groepen hebben.",
+          "emptyWarning": "Niemand kan dit formulier zien totdat u een doelgroep toevoegt.",
+          "save": "Doelgroep opslaan",
+          "allUsersOf": "Alle gebruikers van {{name}}",
+          "onlyGroups": "Alleen leden van geselecteerde groepen"
+        }
       },
       "fields": {
         "executionProvider": "Uitvoeringsprovider",
@@ -417,7 +460,8 @@
       "ticketRoutingUpdated": "Configuratie ticketrouting bijgewerkt",
       "workflowConfigurationUpdated": "Workflowconfiguratie bijgewerkt",
       "formBehaviorConfigUpdated": "Configuratie formuliergedrag bijgewerkt",
-      "visibilityConfigUpdated": "Zichtbaarheidsconfiguratie bijgewerkt"
+      "visibilityConfigUpdated": "Zichtbaarheidsconfiguratie bijgewerkt",
+      "audienceUpdated": "Doelgroep bijgewerkt"
     },
     "error": {
       "loadFailed": "Serviceaanvragen konden niet worden geladen",
@@ -440,7 +484,8 @@
       "formBehaviorInvalid": "Ongeldige JSON voor formuliergedrag",
       "visibilityNotObject": "Zichtbaarheidsconfiguratie moet een JSON-object zijn",
       "visibilityInvalid": "Ongeldige JSON voor zichtbaarheid",
-      "saveAllPartial": "Sommige secties konden niet worden opgeslagen: {{sections}}"
+      "saveAllPartial": "Sommige secties konden niet worden opgeslagen: {{sections}}",
+      "audienceSaveFailed": "Doelgroep bijwerken mislukt"
     }
   }
 }

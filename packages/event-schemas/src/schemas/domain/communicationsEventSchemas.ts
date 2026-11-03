@@ -111,7 +111,7 @@ export type EmailUnsubscribedEventPayload = z.infer<typeof emailUnsubscribedEven
 const notificationChannelSchema = z.enum(['email', 'sms', 'in_app', 'push', 'teams']).describe('Notification channel');
 
 export const notificationSentEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  notificationId: z.string().uuid(),
+  notificationId: z.string().guid(),
   channel: notificationChannelSchema,
   recipientId: z.string().min(1),
   sentAt: z.string().datetime().optional(),
@@ -123,7 +123,7 @@ export const notificationSentEventPayloadSchema = BaseDomainEventPayloadSchema.e
 export type NotificationSentEventPayload = z.infer<typeof notificationSentEventPayloadSchema>;
 
 export const notificationDeliveredEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  notificationId: z.string().uuid(),
+  notificationId: z.string().guid(),
   channel: notificationChannelSchema,
   recipientId: z.string().min(1),
   deliveredAt: z.string().datetime().optional(),
@@ -133,7 +133,7 @@ export const notificationDeliveredEventPayloadSchema = BaseDomainEventPayloadSch
 export type NotificationDeliveredEventPayload = z.infer<typeof notificationDeliveredEventPayloadSchema>;
 
 export const notificationFailedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  notificationId: z.string().uuid(),
+  notificationId: z.string().guid(),
   channel: notificationChannelSchema,
   recipientId: z.string().min(1),
   failedAt: z.string().datetime().optional(),
@@ -145,7 +145,7 @@ export const notificationFailedEventPayloadSchema = BaseDomainEventPayloadSchema
 export type NotificationFailedEventPayload = z.infer<typeof notificationFailedEventPayloadSchema>;
 
 export const notificationReadEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  notificationId: z.string().uuid(),
+  notificationId: z.string().guid(),
   channel: notificationChannelSchema,
   recipientId: z.string().min(1),
   readAt: z.string().datetime().optional(),
@@ -157,7 +157,7 @@ export type NotificationReadEventPayload = z.infer<typeof notificationReadEventP
 const surveyTypeSchema = z.enum(['csat', 'nps', 'custom']).describe('Survey type');
 
 export const surveySentEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  surveyId: z.string().uuid(),
+  surveyId: z.string().guid(),
   surveyType: surveyTypeSchema,
   recipientId: z.string().min(1),
   ticketId: ticketIdSchema.optional(),
@@ -170,8 +170,8 @@ export const surveySentEventPayloadSchema = BaseDomainEventPayloadSchema.extend(
 export type SurveySentEventPayload = z.infer<typeof surveySentEventPayloadSchema>;
 
 export const surveyResponseReceivedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  surveyId: z.string().uuid(),
-  responseId: z.string().uuid(),
+  surveyId: z.string().guid(),
+  responseId: z.string().guid(),
   recipientId: z.string().min(1),
   ticketId: ticketIdSchema.optional(),
   projectId: entityIdSchema('Project ID', 'project').optional(),
@@ -183,7 +183,7 @@ export const surveyResponseReceivedEventPayloadSchema = BaseDomainEventPayloadSc
 export type SurveyResponseReceivedEventPayload = z.infer<typeof surveyResponseReceivedEventPayloadSchema>;
 
 export const surveyReminderSentEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  surveyId: z.string().uuid(),
+  surveyId: z.string().guid(),
   recipientId: z.string().min(1),
   ticketId: ticketIdSchema.optional(),
   projectId: entityIdSchema('Project ID', 'project').optional(),
@@ -195,7 +195,7 @@ export const surveyReminderSentEventPayloadSchema = BaseDomainEventPayloadSchema
 export type SurveyReminderSentEventPayload = z.infer<typeof surveyReminderSentEventPayloadSchema>;
 
 export const surveyExpiredEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  surveyId: z.string().uuid(),
+  surveyId: z.string().guid(),
   recipientId: z.string().min(1),
   ticketId: ticketIdSchema.optional(),
   projectId: entityIdSchema('Project ID', 'project').optional(),

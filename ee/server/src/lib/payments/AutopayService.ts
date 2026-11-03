@@ -5,7 +5,7 @@ import { getConnection } from '@alga-psa/db';
 import { computeBalanceDue } from '@alga-psa/billing/services/accountingSync/recordExternalPayment';
 import { PaymentService } from './PaymentService';
 import { createStripePaymentProvider } from './StripePaymentProvider';
-import { classifyAutopayFailure, isAutopayEnrollmentValid, resolveConsentTextVersion, retryAt, shouldScheduleAutopay } from './autopayPolicy';
+import { classifyAutopayFailure, isAutopayEnrollmentValid, resolveConsentTextVersion, retryAt, shouldParkPaymentMethod, shouldScheduleAutopay } from './autopayPolicy';
 import { PAYMENT_LINK_EXPIRATION_MAX_HOURS, type PaymentWebhookEvent } from '@alga-psa/types';
 import { buildPaymentFailedPayload } from 'server/src/lib/api/services/paymentWorkflowEvents';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -359,7 +359,7 @@ export class AutopayService {
         failure_code: failure.failureCode ?? null, failure_message: failure.message ?? null, decline_code: failure.declineCode ?? null,
         processed_at: this.knex.fn.now(), updated_at: this.knex.fn.now() });
     if (updated !== 1) return { status: 'failed', retryAt: null, hard: false };
-    if (hard) await this.table('payment_methods').where({ payment_method_id: attempt.payment_method_id }).update({ status: 'requires_update', updated_at: this.knex.fn.now() });
+    if (shouldParkPaymentMethod(failure.failureCode, failure.declineCode, hard, failure.status === 'requires_action')) await this.table('payment_methods').where({ payment_method_id: attempt.payment_method_id }).update({ status: 'requires_update', updated_at: this.knex.fn.now() });
     const invoice = await this.table('invoices').where({ invoice_id: attempt.invoice_id }).first();
     const failureAt = new Date().toISOString();
     await publishWorkflowEvent({ eventType: 'PAYMENT_FAILED', payload: buildPaymentFailedPayload({ invoiceId: attempt.invoice_id, clientId: invoice?.client_id,

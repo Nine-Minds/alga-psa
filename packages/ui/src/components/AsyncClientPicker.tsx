@@ -2,12 +2,13 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
-import type { ITag } from '@alga-psa/types';
+import type { IDisplayTag, ITag } from '@alga-psa/types';
 
 import { AsyncSearchableSelect, type SelectOption } from './AsyncSearchableSelect';
 import CustomSelect from './CustomSelect';
 import { Button } from './Button';
 import ClientAvatar from './ClientAvatar';
+import { EntityTagBadges } from './EntityChip';
 import { TagFilter } from './tags/TagFilter';
 import { useClientTags } from '../context/ClientTagsContext';
 import { useClientPickerSearch } from '../context/ClientPickerSearchContext';
@@ -24,6 +25,8 @@ export interface PickerClientOption {
   client_type?: string | null;
   is_inactive?: boolean;
   logoUrl?: string | null;
+  /** Chip tags for the viewer, already filtered by the display rules. */
+  displayTags?: IDisplayTag[];
 }
 
 export interface ClientPickerSearchParams {
@@ -270,6 +273,7 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
           disabled: isDisabled,
           title: isDisabled ? disabledTooltip : undefined,
           badge: isDisabled ? { text: disabledTooltip, variant: 'secondary' } : undefined,
+          trailing: <EntityTagBadges tags={client.displayTags} maxBadges={2} />,
           icon: (
             <ClientAvatar
               clientId={client.client_id}
@@ -312,6 +316,7 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
       debounceMs={debounceMs}
       placeholder={placeholder}
       selectedLabel={selected?.client_name}
+      selectedTrailing={<EntityTagBadges tags={selected?.displayTags} maxBadges={2} />}
       selectedIcon={
         selected ? (
           <ClientAvatar

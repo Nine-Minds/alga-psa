@@ -196,7 +196,7 @@ describe.runIf(enabled)('Prepaid Block line config actions', () => {
     await db('hour_blocks').insert({
       tenant, client_id: clientId, service_id: svcA, total_minutes: 2400, remaining_minutes: 600, hourly_rate: 11000,
       purchase_amount: 440000, currency_code: 'EUR', status: 'active', source_type: 'contract',
-      contract_line_id: busy, client_contract_id: clientContractId,
+      contract_line_id: busy, client_contract_id: clientContractId, service_period_record_id: uuidv4(),
     });
     expect(messageOf(await actions.removeContractLinePrepaidBlock(busy))).toContain('Cannot remove prepaid block configuration');
     expect(await db('contract_line_prepaid_blocks').where({ tenant, contract_line_id: busy }).first()).toBeDefined();
@@ -221,6 +221,7 @@ describe.runIf(enabled)('Prepaid Block line config actions', () => {
     const base = {
       tenant, client_id: clientId, service_id: svcA, total_minutes: 2400, hourly_rate: 11000,
       purchase_amount: 440000, currency_code: 'EUR', source_type: 'contract', contract_line_id: lineId, client_contract_id: clientContractId,
+      service_period_record_id: uuidv4(),
     };
     await db('hour_blocks').insert({
       ...base, block_id: blockId, remaining_minutes: 2400, status: 'pending',

@@ -7,6 +7,7 @@ import {
   RegistryMetadata,
 } from './types';
 import { getApiMetadataProducts } from '../../productSurfaceRegistry';
+import { includeNullInNullableEnums } from './nullableEnums';
 
 type OpenApiBodyContent = Record<string, { schema: ZodTypeAny; description?: string }>;
 
@@ -108,7 +109,7 @@ export class ApiOpenApiRegistry {
 
     const tags = options.tags ?? this.collectTags();
 
-    return generator.generateDocument({
+    const document = generator.generateDocument({
       openapi: '3.1.0',
       info: {
         title: options.title,
@@ -118,6 +119,8 @@ export class ApiOpenApiRegistry {
       servers: options.servers,
       tags,
     });
+
+    return includeNullInNullableEnums(document);
   }
 
   getRegisteredRoutes(): ApiRouteSpec[] {

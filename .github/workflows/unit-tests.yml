@@ -178,9 +178,14 @@ jobs:
     # spends ~14 silent minutes on coverage after the last test module), so 30
     # left no headroom: shard 4 was killed at exactly 30m0s with all 776 of its
     # files already green, and the null evidence it uploaded then failed the
-    # server-unit-complete, inventory and readiness gates. Same 45 the
-    # nx-affected job above uses.
-    timeout-minutes: 45
+    # server-unit-complete, inventory and readiness gates. The suite has since
+    # grown: on main (run 41180673350) shards took 33-44.6 minutes, ~25 of
+    # setup, collection and tests, then ~19 silent minutes of v8 coverage
+    # remapping. 45 left under a minute of headroom, and shard 1 of PR 4015 was
+    # cancelled at 45m27s twice in a row, again with every one of its 1036
+    # files green. scripts/tests/server-unit-shard-timeout.test.mjs keeps this
+    # ceiling above the measured peak.
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -222,8 +227,8 @@ jobs:
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=8192'
-      - name: Verify per-file worker isolation
-        run: node --test scripts/tests/vitest-worker-isolation.test.mjs
+      - name: Verify per-file worker isolation and late console-log teardown
+        run: node --test scripts/tests/vitest-worker-isolation.test.mjs scripts/tests/vitest-late-console-log.test.mjs
       # Timezone-sensitive files run once; they are independent of the partition.
       - name: Exercise calendar boundaries in non-UTC timezones
         if: matrix.shard == 1
@@ -245,10 +250,8 @@ jobs:
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
           SKIP_DB_TESTS: '1'
-          # A fresh fork per file. Passing --poolOptions.forks.singleFork=false
-          # on the CLI stopped working when the config grew projects (vitest
-          # forwards only a whitelist of CLI options into them); the config
-          # reads this instead.
+          # Lifts server/vitest.config.ts's one-worker cap so --maxWorkers=2
+          # reaches the jsdom/node projects.
           VITEST_RECYCLE_FORKS: '1'
           DB_USER_ADMIN: ''
           DB_PASSWORD_ADMIN: ''

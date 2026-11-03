@@ -1267,7 +1267,7 @@ export async function runEntraConnectionDiagnostics(
         : {
             code: 'cipp_auth_rejected',
             severity: 'fail',
-            text: 'CIPP rejected the API credential. Rotate it from the Connection tab. This is the CIPP API key from Settings > CIPP > API access in CIPP itself, not an Azure client secret.',
+            text: 'CIPP rejected the legacy API key. Reconnect with a CIPP API client from the Connection tab (create one in CIPP > Integrations > CIPP-API).',
             messageKey: 'cippAuthRejected',
           };
       collect([rec]);

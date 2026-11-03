@@ -9,7 +9,7 @@ const source = fs.readFileSync(
 
 describe('createClientTicket asset linking contract', () => {
   it('schema accepts an optional asset_id (UUID)', () => {
-    expect(source).toMatch(/asset_id:\s*z\.string\(\)\.uuid\(\)\.optional\(\)/);
+    expect(source).toMatch(/asset_id:\s*z\.string\(\)\.guid\(\)\.optional\(\)/);
   });
 
   it('reads asset_id from FormData when validating', () => {

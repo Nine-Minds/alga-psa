@@ -21,10 +21,11 @@ describe('recordLinks', () => {
     );
     expect(recordPath('stock_unit', ID)).toBe(`/msp/inventory/units?unitId=${ID}`);
     expect(recordPath('rma', ID)).toBe(`/msp/inventory/rma?rmaId=${ID}`);
+    expect(recordPath('staging_container', ID, { projectId: PROJECT })).toBe(`/msp/projects/${PROJECT}/staging?containerId=${ID}`);
   });
 
   it.each(RECORD_ENTITY_TYPES.map((type) => [type]))('round-trips %s through path and absolute url', (type) => {
-    const options = type === 'project_task' ? { projectId: PROJECT } : {};
+    const options = type === 'project_task' || type === 'staging_container' ? { projectId: PROJECT } : {};
     const expected = { entityType: type, id: ID, ...options };
     expect(matchRecordPath(recordPath(type, ID, options))).toEqual(expected);
     expect(matchRecordPath(recordUrl(type, ID, 'https://psa.example.com/', options))).toEqual(expected);
@@ -55,6 +56,7 @@ describe('recordLinks', () => {
   it('fails fast on bad input', () => {
     expect(() => recordPath('ticket', '')).toThrow(/non-empty/);
     expect(() => recordPath('project_task', ID)).toThrow(/projectId/);
+    expect(() => recordPath('staging_container', ID)).toThrow(/projectId/);
     expect(() => recordUrl('ticket', ID, 'psa.example.com')).toThrow(/absolute http/);
   });
 
@@ -67,6 +69,8 @@ describe('recordLinks', () => {
       `/msp/tickets/${ID}/extra`,
       '/msp/inventory/units',
       '/msp/inventory/rma?status=open',
+      `/msp/projects/${PROJECT}/staging`,
+      `/msp/projects/${PROJECT}/staging/extra?containerId=${ID}`,
       '/msp/clients/abc',
       '/client-portal/tickets/abc',
       `/msp/tickets/%E0%A4%A`,

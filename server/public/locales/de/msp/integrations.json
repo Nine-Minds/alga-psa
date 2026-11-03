@@ -36,6 +36,15 @@
         "suggested": "Vorgeschlagen",
         "toSave": "{{total}} zu speichern"
       },
+      "customerMapping": {
+        "unlink": "Zuordnung aufheben",
+        "unlinkConfirm": {
+          "title": "Zuordnung von {{client}} zu QuickBooks aufheben?",
+          "body": "{{client}} wird nicht mehr zum QuickBooks-Kunden {{customer}} exportiert. In QuickBooks ändert sich nichts, und Sie können den Kunden jederzeit erneut über diese Liste zuordnen.",
+          "confirm": "Zuordnung aufheben",
+          "cancel": "Zuordnung behalten"
+        }
+      },
       "dialog": {
         "cancel": "Abbrechen",
         "enterPlaceholder": "{{field}} eingeben...",
@@ -425,26 +434,75 @@
           "test": "Verbindung testen",
           "testing": "Wird getestet…"
         },
-        "description": "Geben Sie Ihre CIPP-Instanz-URL und ein API-Token ein, damit Alga Entra-Daten erkennen und synchronisieren kann.",
-        "encryptionNote": "Der API-Schlüssel wird verschlüsselt gespeichert und nach dem Speichern nie wieder angezeigt.",
+        "description": "Geben Sie die Daten eines CIPP-API-Clients ein, damit Alga Entra-Daten erkennen und synchronisieren kann.",
+        "encryptionNote": "Der geheime Clientschlüssel wird verschlüsselt gespeichert und nach dem Speichern nie wieder angezeigt.",
         "errors": {
           "missingFields": "Sowohl Basis-URL als auch API-Token sind erforderlich.",
           "testFirst": "Testen Sie die Verbindung vor dem Speichern.",
-          "unknown": "Ein unbekannter Fehler ist aufgetreten."
+          "unknown": "Ein unbekannter Fehler ist aufgetreten.",
+          "missingApiClientFields": "API-URL, Anwendungs-ID (Client), geheimer Clientschlüssel und Mandanten-ID sind alle erforderlich."
         },
         "fields": {
           "apiToken": "API-Token",
-          "apiTokenHelp": "In CIPP: Einstellungen → CIPP → API-Zugriff. Kopieren Sie den API-Schlüssel, nicht ein Azure-Client-Geheimnis.",
+          "apiTokenHelp": "Der statische API-Schlüssel aus einer älteren CIPP-Version. CIPP stellt diese nicht mehr aus; bevorzugen Sie einen API-Client.",
           "apiTokenPlaceholder": "Token eingeben...",
-          "baseUrl": "CIPP-Basis-URL",
-          "baseUrlHelp": "Dies ist der CIPP-API-Function-App-Host (z. B. my-cipp-api.azurewebsites.net), nicht das CIPP-Frontend, bei dem Sie sich anmelden.",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+          "baseUrl": "CIPP-API-URL",
+          "baseUrlHelp": "Die CIPP-API-URL, mit oder ohne abschließendes /api.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com",
+          "apiUrl": "API-URL",
+          "apiUrlPlaceholder": "https://your-cipp-api.azurewebsites.net/api",
+          "apiUrlHelp": "Fügen Sie die in CIPP angezeigte API-URL ein. Sie endet auf /api; sie funktioniert mit oder ohne dieses Suffix.",
+          "clientId": "Anwendungs-ID (Client)",
+          "clientIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "clientSecret": "Geheimer Clientschlüssel",
+          "clientSecretPlaceholder": "Geheimen Clientschlüssel eingeben...",
+          "clientSecretHelp": "CIPP zeigt das Geheimnis nur einmal an, nämlich wenn Sie den Client mit Save to Azure speichern. Falls Sie es nicht mehr haben, erstellen Sie ein neues Geheimnis und geben Sie es hier ein.",
+          "tenantId": "Mandanten-ID",
+          "tenantIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "tenantIdHelp": "Die Mandanten-ID, die auf der Seite CIPP-API neben dem Client angezeigt wird."
         },
         "test": {
           "passed": "CIPP hat geantwortet. {{count}} Mandanten sichtbar.",
           "required": "Testen Sie die Verbindung vor dem Speichern."
         },
-        "title": "CIPP verbinden"
+        "title": "CIPP verbinden",
+        "reconnectTitle": "CIPP erneut verbinden",
+        "legacyDescription": "Geben Sie Ihre CIPP-API-URL und einen älteren statischen API-Schlüssel ein. CIPP stellt diese Schlüssel nicht mehr aus, verwenden Sie daher nach Möglichkeit einen API-Client.",
+        "reconnectNote": "API-URL, Anwendungs-ID (Client) und Mandanten-ID werden aus der aktuellen Verbindung übernommen. Geben Sie den geheimen Clientschlüssel erneut ein. Die aktuelle Verbindung funktioniert weiter, bis die neuen Daten einen Test bestehen und Sie speichern.",
+        "reconnectNoteLegacy": "Die API-URL wird aus der aktuellen Verbindung übernommen. Geben Sie Anwendungs-ID (Client), geheimen Clientschlüssel und Mandanten-ID aus CIPP > Integrations > CIPP-API ein. Die aktuelle Verbindung funktioniert weiter, bis die neuen Daten einen Test bestehen und Sie speichern.",
+        "legacyNote": "Ältere API-Schlüssel sind nur für Verbindungen gedacht, die erstellt wurden, bevor CIPP API-Clients eingeführt hat. Bestehende Verbindungen funktionieren weiterhin.",
+        "legacyEncryptionNote": "Der API-Schlüssel wird verschlüsselt gespeichert und nach dem Speichern nie wieder angezeigt.",
+        "help": {
+          "title": "Wo Sie diese Angaben in CIPP finden",
+          "steps": {
+            "openIntegration": "Gehen Sie in CIPP zu Integrations > CIPP-API.",
+            "createClient": "Wählen Sie Create New Client.",
+            "enable": "Aktivieren Sie den Client.",
+            "saveToAzure": "Wählen Sie Save to Azure.",
+            "copySecret": "Kopieren Sie den geheimen Clientschlüssel. CIPP zeigt ihn nur einmal an.",
+            "copyDetails": "Kopieren Sie von derselben Seite die Mandanten-ID und die API-URL sowie die Anwendungs-ID (Client)."
+          },
+          "tenantIdDelay": "Die Mandanten-ID kann nach dem ersten Speichern 5 bis 15 Minuten brauchen, bis sie erscheint. Falls sie noch fehlt, warten Sie und aktualisieren Sie die CIPP-Seite.",
+          "restrictions": "Wenn der Client Allowed IP Ranges verwendet, tragen Sie dort die Egress-IPs von Alga ein. Wenn er eine Custom Role verwendet, muss die Rolle listtenants, listusers, listgroups, listusergroups und ListMailboxes zulassen."
+        },
+        "shape": {
+          "useLegacy": "Stattdessen einen älteren API-Schlüssel verwenden",
+          "useApiClient": "Stattdessen einen CIPP-API-Client verwenden (empfohlen)"
+        },
+        "failure": {
+          "unreachable": "CIPP ist unter dieser URL nicht erreichbar",
+          "tokenRejected": "Microsoft hat die Anmeldung des API-Clients abgelehnt",
+          "apiRefused": "CIPP hat das Zugriffstoken abgelehnt",
+          "legacyRejected": "CIPP hat den API-Schlüssel abgelehnt",
+          "roleBlocked": "Die benutzerdefinierte CIPP-Rolle blockiert eine für die Synchronisierung nötige Berechtigung",
+          "transport": {
+            "dns": "{{host}} ist nicht erreichbar: Der Hostname lässt sich nicht auflösen. Prüfen Sie die API-URL auf Tippfehler; kopieren Sie sie aus CIPP > Integrations > CIPP-API.",
+            "refused": "{{host}} ist nicht erreichbar: Die Verbindung wurde abgelehnt. Der Host existiert, nimmt aber keine Verbindungen an. Prüfen Sie die API-URL und ob die CIPP-API-Function-App läuft.",
+            "timeout": "{{host}} ist nicht erreichbar: Zeitüberschreitung der Anfrage. Der Host ist eventuell nicht verfügbar, oder eine Firewall verwirft unseren Datenverkehr. Prüfen Sie die API-URL und versuchen Sie es erneut.",
+            "tls": "{{host}} ist nicht erreichbar: Das TLS-Zertifikat wurde nicht akzeptiert. Verwenden Sie die https-API-URL aus CIPP > Integrations > CIPP-API.",
+            "network": "{{host}} ist nicht erreichbar: Die Netzwerkanfrage ist fehlgeschlagen, bevor CIPP geantwortet hat. Prüfen Sie die API-URL und versuchen Sie es erneut."
+          }
+        }
       },
       "console": {
         "actions": {
@@ -795,9 +853,14 @@
             "expired": "Der Verbindungsversuch ist abgelaufen, bevor er abgeschlossen war. Es wurde nichts gespeichert – starten Sie die Verbindung erneut.",
             "generic": "Microsoft Entra wurde nicht verbunden, und es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
             "validationFailed": "Microsoft hat Sie angemeldet, aber die verwaltete Mandantenliste konnte nicht gelesen werden; es wurde nichts gespeichert. Ihre Berechtigungen wurden akzeptiert — meist ist der Partner-Mandant nicht in Microsoft 365 Lighthouse eingebunden oder es bestehen keine aktiven GDAP-Beziehungen.",
-            "tokenRejected": "Microsoft hat das Zugriffstoken der Verbindung abgelehnt; es wurde nichts gespeichert. Starten Sie die Verbindung erneut."
+            "tokenRejected": "Microsoft hat das Zugriffstoken der Verbindung abgelehnt; es wurde nichts gespeichert. Starten Sie die Verbindung erneut.",
+            "singleTenantApp": "Microsoft hat die Anmeldung abgelehnt, weil diese App-Registrierung nur für einen Mandanten gilt. Entra benötigt eine mandantenfähige App: Öffnen Sie die App-Registrierung, wechseln Sie zu Authentifizierung, setzen Sie die unterstützten Kontotypen auf „Konten in einem beliebigen Organisationsverzeichnis“ und verbinden Sie erneut. Es wurde nichts gespeichert.",
+            "appNotInDirectory": "Microsoft konnte diese App im Verzeichnis, das durch die Mandanten-ID im Microsoft-Profil angegeben ist, nicht finden. Prüfen Sie, ob die Mandanten-ID die Verzeichnis-ID (Mandanten-ID) ist, in der die App registriert ist. Es wurde nichts gespeichert.",
+            "wrongDirectory": "Das Konto, mit dem Sie sich angemeldet haben, stammt aus einem anderen Verzeichnis als diese App für einen einzelnen Mandanten. Machen Sie die App mandantenfähig (Konten in einem beliebigen Organisationsverzeichnis) und verbinden Sie erneut. Es wurde nichts gespeichert.",
+            "redirectUriMismatch": "Microsoft hat den Umleitungs-URI abgelehnt, weil er in der App nicht registriert ist. Fügen Sie genau diesen URI unter Authentifizierung > Web-Umleitungs-URIs hinzu und verbinden Sie erneut: {{redirectUri}}",
+            "invalidClientSecret": "Microsoft hat das Clientgeheimnis im Microsoft-Profil abgelehnt. Stellen Sie sicher, dass Sie den Wert des Geheimnisses gespeichert haben, nicht seine Geheimnis-ID.",
+            "expiredClientSecret": "Das Clientgeheimnis im Microsoft-Profil ist abgelaufen. Erstellen Sie in Azure ein neues Geheimnis und aktualisieren Sie das Profil."
           },
-          "cippServerLabel": "CIPP-Server",
           "connectingSuffix": " (Verbindung wird hergestellt...)",
           "details": "Verbindungsdetails",
           "directCredentialSourceLabel": "Anmeldedatenquelle:",
@@ -810,7 +873,17 @@
           "types": {
             "cipp": "CIPP",
             "direct": "Microsoft Entra Direkt"
-          }
+          },
+          "authTypeLabel": "Authentifizierung",
+          "authTypes": {
+            "api_client": "API-Client",
+            "legacy_api_token": "Älterer API-Schlüssel"
+          },
+          "apiUrlLabel": "API-URL",
+          "clientIdLabel": "Anwendungs-ID (Client)",
+          "cippTenantIdLabel": "Mandanten-ID",
+          "legacyNotice": "Diese Verbindung verwendet einen älteren CIPP-API-Schlüssel. Sie wird unverändert weiter synchronisiert. Verbinden Sie erneut, um zu einem CIPP-API-Client zu wechseln.",
+          "reconnectCipp": "Erneut verbinden"
         },
         "currentStep": {
           "connect": {
@@ -1009,8 +1082,8 @@
             "description": "Alga liest Mandanten über die von Ihnen betriebene CIPP-Instanz.",
             "label": "CIPP (CyberDrain Improved Partner Portal)",
             "prerequisites": {
-              "apiHost": "Den CIPP-API-Function-App-Host, nicht das CIPP-Frontend.",
-              "apiKey": "Einen CIPP-API-Schlüssel mit Zugriff auf die Mandantenliste.",
+              "apiHost": "Die API-URL, Anwendungs-ID (Client) und Mandanten-ID aus CIPP > Integrations > CIPP-API.",
+              "apiKey": "Das Geheimnis des API-Clients, das CIPP nur einmal anzeigt.",
               "instance": "Eine laufende CIPP-Instanz."
             }
           },
@@ -1861,8 +1934,12 @@
           "calendarRedirect": "Redirect-URI für Kalendersynchronisation",
           "calendarTitle": "Kalender-Anleitung",
           "clientId": "Client ID",
+          "copied": "Kopiert",
+          "copy": "Kopieren",
+          "copyFailed": "Kopieren nicht möglich",
           "currentProfileTitle": "Aktuelle Profilwerte",
           "emailRedirect": "Redirect-URI für eingehende E-Mails",
+          "emailSetupRedirect": "Weiterleitungs-URI für die E-Mail-Einrichtung",
           "emailTitle": "E-Mail-Anleitung",
           "entraConsent": "Anforderung",
           "entraConsentValue": "Registrieren Sie diese App als mandantenfähig und erteilen Sie die Administratoreinwilligung in Ihrer Partnerorganisation.",
@@ -2016,11 +2093,18 @@
         "environment": "Intuit-Umgebung",
         "environmentProduction": "Produktion",
         "environmentSandbox": "Sandbox",
+        "environmentHint": "Produktion verbindet sich mit echten QuickBooks-Unternehmen. Sandbox verbindet sich mit einem Intuit-Testunternehmen, sodass Sie Exporte ausprobieren können, ohne echte Buchhaltung zu verändern.",
+        "environmentLockedHint": "Trennen Sie QuickBooks, bevor Sie die Umgebung wechseln. Das verbundene Unternehmen und seine Token existieren nur in der Umgebung, in der sie autorisiert wurden.",
+        "environmentSandboxKeysTitle": "Sandbox benötigt Ihre eigene Intuit-App",
+        "environmentSandboxKeysDescription": "Intuit-Sandbox-Unternehmen akzeptieren nur die Development-Schlüssel einer Intuit-App, die Sie selbst verwalten. Die gemeinsame App dieser Installation verwendet Production-Schlüssel. Registrieren Sie daher Ihre eigene App und speichern Sie unten deren Development-Schlüssel, bevor Sie eine Verbindung herstellen.",
+        "environmentSavedSandbox": "QuickBooks verbindet sich jetzt mit einem Intuit-Sandbox-Unternehmen. Stellen Sie die Verbindung mit den Development-Schlüsseln Ihrer eigenen Intuit-App her.",
+        "environmentSavedProduction": "QuickBooks verbindet sich jetzt mit echten QuickBooks-Unternehmen.",
         "errors": {
           "automatedSalesTax": "Der Automated-Sales-Tax-Modus konnte nicht aktualisiert werden.",
           "disconnect": "QuickBooks konnte nicht getrennt werden.",
           "load": "QuickBooks-Einstellungen konnten nicht geladen werden.",
-          "saveCredentials": "QuickBooks-Anmeldedaten konnten nicht gespeichert werden."
+          "saveCredentials": "QuickBooks-Anmeldedaten konnten nicht gespeichert werden.",
+          "environment": "Die Intuit-Umgebung konnte nicht geändert werden."
         },
         "howItWorksDescription": "Verbinden Sie Ihr QuickBooks-Unternehmen, indem Sie sich bei Intuit anmelden. AlgaPSA verwendet es dann als Standard-Live-Kontext für Exporte und Zuordnungen. Die Karte „Intuit-App“ unten zeigt, ob Ihre Installation die App für diese Anmeldung bereits bereitstellt oder ob Sie zuerst eine registrieren müssen.",
         "howItWorksTitle": "So funktioniert Live-QuickBooks in dieser Version",
@@ -2052,6 +2136,7 @@
         "credentialSource": {
           "app": "Diese Installation stellt eine gemeinsame Intuit-App bereit, sodass Sie QuickBooks verbinden können, ohne selbst eine zu registrieren. Überspringen Sie diese Karte und klicken Sie unten auf „QuickBooks verbinden“.",
           "none": "Es ist noch keine Intuit-App verfügbar. Registrieren Sie eine bei Intuit, bevor Sie verbinden können.",
+          "noneSandbox": "Die Sandbox benötigt eine eigene Intuit-App. Registrieren Sie eine und speichern Sie deren Development-Schlüssel, bevor Sie verbinden können.",
           "tenant": "Dieser Mandant verbindet sich über seine eigene Intuit-App mit den unten gespeicherten Zugangsdaten. Zum Rotieren eines Schlüssels den neuen Wert einfügen und speichern.",
           "appTitle": "Keine Zugangsdaten erforderlich"
         },

@@ -12,11 +12,15 @@ export const STANDARD_LABEL_TICKET_WORK_TAG_CODE = 'standard-ticket-work-tag';
 export const STANDARD_LABEL_ASSET_CODE = 'standard-asset-label';
 export const STANDARD_LABEL_ASSET_CODE128_CODE = 'standard-asset-label-code128';
 export const STANDARD_LABEL_STOCK_UNIT_CODE = 'standard-stock-unit-label';
+export const STANDARD_LABEL_STAGING_CONTAINER_CODE = 'standard-staging-container-label';
+export const STANDARD_LABEL_RMA_CODE = 'standard-rma-label';
 
 export const LABEL_STANDARD_CODE_BY_CLASS: Record<LabelClass, string> = {
   'ticket-work-tag': STANDARD_LABEL_TICKET_WORK_TAG_CODE,
   'asset-identity': STANDARD_LABEL_ASSET_CODE,
   'stock-unit-identity': STANDARD_LABEL_STOCK_UNIT_CODE,
+  'staging-container': STANDARD_LABEL_STAGING_CONTAINER_CODE,
+  'rma-work-tag': STANDARD_LABEL_RMA_CODE,
 };
 
 /** The label class a standard code prints (used to validate a requested code against a class). */
@@ -25,6 +29,8 @@ export const LABEL_CLASS_BY_STANDARD_CODE: Record<string, LabelClass> = {
   [STANDARD_LABEL_ASSET_CODE]: 'asset-identity',
   [STANDARD_LABEL_ASSET_CODE128_CODE]: 'asset-identity',
   [STANDARD_LABEL_STOCK_UNIT_CODE]: 'stock-unit-identity',
+  [STANDARD_LABEL_STAGING_CONTAINER_CODE]: 'staging-container',
+  [STANDARD_LABEL_RMA_CODE]: 'rma-work-tag',
 };
 
 /**
@@ -75,8 +81,29 @@ const code128 = (id: string): Node => ({
   style: { inline: { width: '95mm', height: '9mm', flexShrink: '0' } },
 });
 
+/**
+ * The issuer logo (inlined as a `data:` URL by the PDF service). It renders nothing when the tenant has no
+ * logo or the logo could not be read, and it collapses the text brand line (`tenantBrandText`).
+ */
+const logo = (id: string, heightMm: number, extra: Record<string, unknown> = {}): Node => ({
+  id,
+  type: 'image',
+  src: { type: 'binding', bindingId: 'tenantLogo' },
+  alt: { type: 'binding', bindingId: 'tenantName' },
+  style: {
+    inline: {
+      height: `${heightMm}mm`,
+      maxWidth: '100%',
+      objectFit: 'contain',
+      objectPosition: 'left',
+      flexShrink: '0',
+      ...extra,
+    },
+  },
+});
+
 const brandLine = (): Node =>
-  text('brand', 'tenantName', { fontSize: '8px', lineHeight: 1.2, maxHeight: '9.6px', color: '#4b5563' });
+  text('brand', 'tenantBrandText', { fontSize: '8px', lineHeight: 1.2, maxHeight: '9.6px', color: '#4b5563' });
 
 /**
  * Printable area of the 4 x 2 in cell is 95.6 x 44.8 mm (marginMm 3). Without a footer the content is
@@ -145,10 +172,14 @@ const buildTicketWorkTag = (): TemplateAst =>
       text('item', 'title', lines(2, 11, 1.2)),
       identifier('ticket-number', 20),
       text('reason', 'detail', { ...lines(1, 10, 1.2), color: '#374151' }),
-      text('asset', 'secondaryIdentifier', { fontSize: '10px', lineHeight: 1.2, fontFamily: 'monospace' }),
-      text('serial', 'serialSuffix', { ...lines(1, 9, 1.2), color: '#4b5563', fontFamily: 'monospace' }),
+      // Held client equipment (custody): one line each, collapsing when empty so a tag with no equipment is unchanged.
+      text('custody-location', 'custodyLocation', { ...lines(1, 10, 1.2), fontWeight: 700 }),
+      text('next-action', 'nextAction', { ...lines(1, 9, 1.2), color: '#374151' }),
+      text('asset', 'assetLine', { fontSize: '10px', lineHeight: 1.2, fontFamily: 'monospace' }),
+      text('serial', 'serialLine', { ...lines(1, 9, 1.2), color: '#4b5563', fontFamily: 'monospace' }),
     ],
-    [qr('qr', '34mm')],
+    // Logo above the QR (like the asset label) so the worst-case text column keeps its full height.
+    [logo('logo', 6, { objectPosition: 'center' }), qr('qr', '34mm')],
     [],
     '0.5mm',
   );
@@ -163,7 +194,9 @@ const buildAssetLabel = (name: string, withCode128: boolean): TemplateAst =>
       text('asset-name', 'title', { ...lines(withCode128 ? 1 : 2, 12, 1.2), fontWeight: 600 }),
       text('client', 'clientName', lines(withCode128 ? 1 : 2, 11, 1.2)),
     ],
-    [qr('qr', withCode128 ? '26mm' : '34mm')],
+    // The logo sits above the QR so the text column keeps its full height; the Code 128 variant has a
+    // 28 mm row, so its QR shrinks to leave room for a 4 mm logo.
+    [logo('logo', withCode128 ? 4 : 8, { objectPosition: 'center' }), qr('qr', withCode128 ? '23mm' : '34mm')],
     withCode128 ? [code128('code128')] : [],
   );
 
@@ -180,11 +213,58 @@ const buildStockUnitLabel = (): TemplateAst =>
     [qr('qr', '34mm')],
   );
 
+/**
+ * A project staging box (C6): who and what it is for, a large "Box n of m", the box identifier and its
+ * Code 128, and the QR of the box's record URL.
+ */
+const buildStagingContainerLabel = (): TemplateAst =>
+  label(
+    'Standard Staging Box Label',
+    [
+      brandLine(),
+      text('client', 'clientName', { ...lines(1, 12, 1.15), fontWeight: 700 }),
+      text('project', 'title', lines(1, 11, 1.2)),
+      text('task', 'detail', { ...lines(1, 10, 1.2), color: '#374151' }),
+      text('box-position', 'sequenceLine', { fontSize: '20px', fontWeight: 800, lineHeight: 1.1 }),
+      identifier('box-identifier', 13),
+    ],
+    [logo('logo', 4, { objectPosition: 'center' }), qr('qr', '23mm')],
+    [code128('code128')],
+    '0.5mm',
+  );
+
+/**
+ * An RMA bench tag (C5): RMA number large, who and what is going back, vendor and reference, status with the
+ * return-by date, the latest carrier and tracking, and the originating ticket. QR = the RMA record URL.
+ * Line budget on the 44 mm cell (no text brand line, the logo sits above the QR): ~154 px worst case.
+ */
+const buildRmaLabel = (): TemplateAst =>
+  label(
+    'Standard RMA Label',
+    [
+      text('client', 'clientName', { ...lines(1, 12, 1.15), fontWeight: 700 }),
+      identifier('rma-number', 20),
+      text('item', 'title', { ...lines(1, 11, 1.2), fontWeight: 600 }),
+      text('vendor', 'detail', { ...lines(1, 10, 1.2), color: '#374151' }),
+      text('status', 'rmaStatus', { ...lines(1, 10, 1.2), fontWeight: 700 }),
+      text('return-by', 'rmaReturnBy', { ...lines(1, 9, 1.2), color: '#374151' }),
+      text('shipping', 'rmaShipping', { ...lines(1, 9, 1.2), fontFamily: 'monospace' }),
+      text('asset', 'assetLine', { ...lines(1, 9, 1.2), fontFamily: 'monospace' }),
+      text('serial', 'serialLine', { ...lines(1, 9, 1.2), color: '#4b5563', fontFamily: 'monospace' }),
+      text('ticket', 'rmaTicket', { ...lines(1, 9, 1.2), color: '#4b5563' }),
+    ],
+    [logo('logo', 6, { objectPosition: 'center' }), qr('qr', '34mm')],
+    [],
+    '0.4mm',
+  );
+
 export const STANDARD_LABEL_TEMPLATE_ASTS: Record<string, TemplateAst> = {
   [STANDARD_LABEL_TICKET_WORK_TAG_CODE]: buildTicketWorkTag(),
   [STANDARD_LABEL_ASSET_CODE]: buildAssetLabel('Standard Asset Label', false),
   [STANDARD_LABEL_ASSET_CODE128_CODE]: buildAssetLabel('Standard Asset Label with Code 128', true),
   [STANDARD_LABEL_STOCK_UNIT_CODE]: buildStockUnitLabel(),
+  [STANDARD_LABEL_STAGING_CONTAINER_CODE]: buildStagingContainerLabel(),
+  [STANDARD_LABEL_RMA_CODE]: buildRmaLabel(),
 };
 
 export const getStandardLabelTemplateAstByCode = (code: string): TemplateAst | null => {

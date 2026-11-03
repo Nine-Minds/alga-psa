@@ -38,6 +38,64 @@ export type {
   ResolvedTicketViewSettings,
   TicketViewSettings,
 } from './ticketViewSettings';
+export {
+  CUSTOMER_TICKETS_PATHNAME,
+  DEFAULT_TICKET_LIST_PRESENTATION,
+  NATIVE_TICKET_LIST_SCOPE,
+  TICKET_LIST_CLIENT_PARAM,
+  TICKET_LIST_DEFAULT_PAGE,
+  TICKET_LIST_DEFAULT_PAGE_SIZE,
+  TICKET_LIST_DIRECTION_PARAM,
+  TICKET_LIST_MAX_PAGE_SIZE,
+  TICKET_LIST_MAX_SEARCH_LENGTH,
+  TICKET_LIST_MIN_PAGE_SIZE,
+  TICKET_LIST_PAGE_PARAM,
+  TICKET_LIST_PAGE_SIZE_PARAM,
+  TICKET_LIST_QUEUE_VIEW_PARAM,
+  TICKET_LIST_SEARCH_PARAM,
+  TICKET_LIST_SIGNAL_PARAM,
+  TICKET_LIST_SORT_PARAM,
+  TICKET_LIST_STATE_PARAM,
+  TICKET_LIST_WORKSPACE_PARAM,
+  buildTicketListHref,
+  hasExplicitQualifiedScope,
+  isQualifiedTicketListScope,
+  isTicketQueueDirection,
+  isTicketQueueSignal,
+  isTicketQueueSort,
+  isTicketQueueState,
+  normalizeTicketListPage,
+  normalizeTicketListPageSize,
+  parseTicketListPresentation,
+  parseTicketListScope,
+  resetQualifiedTicketListPresentation,
+  serializeTicketListQuery,
+  switchTicketListView,
+  ticketListScopesEqual,
+  ticketListWorkspaceToken,
+} from './ticketListScope';
+export type {
+  NativeTicketListScope,
+  QualifiedTicketListScope,
+  TicketListPresentation,
+  TicketListScope,
+  TicketListWorkspace,
+  TicketQueueDirection,
+  TicketQueueSignal,
+  TicketQueueSort,
+  TicketQueueState,
+  TicketQueueView,
+} from './ticketListScope';
+export {
+  isQualifiedHandbackEligible,
+  isSharedTicketListIdentity,
+  nativeTicketListIdentity,
+  sharedTicketListIdentity,
+  ticketListDetailHref,
+  ticketListIdentityFromQueueItem,
+  ticketListIdentityKey,
+} from './ticketListIdentity';
+export type { TicketListIdentity, TicketListIdentitySource } from './ticketListIdentity';
 export { calculateItilPriority, ItilLabels } from './itilUtils';
 export { getCommentResponseSource, getLatestCustomerResponseSource } from './responseSource';
 export { resolveCommentAuthor } from './commentAuthorResolution';
@@ -150,3 +208,48 @@ export type {
   PropagateBundleMasterStatusOptions,
   PropagateBundleMasterStatusResult,
 } from './ticketBundlePropagation';
+export {
+  BUNDLE_CHILD_LOCKED_FIELDS,
+  effectiveBundleMode,
+  isChildWorkflowLocked,
+} from './bundleWorkflowLock';
+export type {
+  BundleChildLockedField,
+  BundleSettingsLike,
+  BundleWorkflowMode,
+} from './bundleWorkflowLock';
+
+// Substrate registries (L0b): client-safe, default no-op.
+export {
+  registerTicketLifecycleHandler,
+  dispatchTicketLifecycle,
+  resetTicketLifecycleHandlers,
+} from './ticketLifecycleHooks';
+export type {
+  TicketLifecycleEvent,
+  TicketLifecycleKind,
+  TicketLifecycleHandler,
+  TicketLifecycleHandlerOptions,
+} from './ticketLifecycleHooks';
+export {
+  registerCommentEventContributor,
+  publishCommentEvent,
+  resetCommentEventContributors,
+} from './commentEventRegistry';
+export type {
+  CommentEvent,
+  CommentEventContributor,
+  CommentEventEnvelope,
+  CommentEventSource,
+  CommentEventType,
+  CommentEventTypesBySource,
+  CommentEventsBySource,
+  ProjectTaskCommentEvent,
+  TicketCommentEvent,
+} from './commentEventRegistry';
+export {
+  registerScheduledCommentAdmission,
+  admitScheduledComment,
+  resetScheduledCommentAdmission,
+} from './scheduledCommentAdmission';
+export type { ScheduledCommentAdmissionChecker, ScheduledCommentAdmissionContext } from './scheduledCommentAdmission';

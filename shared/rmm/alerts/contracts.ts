@@ -132,10 +132,10 @@ export type RmmAlertRuleConditions = z.infer<typeof rmmAlertRuleConditionsSchema
 export const rmmAlertRuleActionsSchema = z
   .object({
     createTicket: z.boolean().default(true),
-    boardId: z.string().uuid().optional(),
+    boardId: z.string().guid().optional(),
     /** priority_id override; severity mapping applies when absent. */
-    priorityOverride: z.string().uuid().optional(),
-    assignToUserId: z.string().uuid().optional(),
+    priorityOverride: z.string().guid().optional(),
+    assignToUserId: z.string().guid().optional(),
     ticketTemplate: z
       .object({
         titleTemplate: z.string().min(1).optional(),
@@ -146,10 +146,10 @@ export const rmmAlertRuleActionsSchema = z
     /** Close the linked ticket (if untouched) when the alert resets. */
     autoResolveTicket: z.boolean().default(false),
     /** Status to close into; tenant's first is_closed status when absent. */
-    autoResolveStatusId: z.string().uuid().optional(),
+    autoResolveStatusId: z.string().guid().optional(),
     /** Reset the alert in the RMM when the linked ticket is closed. */
     resetAlertOnTicketClose: z.boolean().default(true),
-    notifyUserIds: z.array(z.string().uuid()).optional(),
+    notifyUserIds: z.array(z.string().guid()).optional(),
   })
   .strict();
 

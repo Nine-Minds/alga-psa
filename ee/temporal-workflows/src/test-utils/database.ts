@@ -134,9 +134,14 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
           await db.table('tenant_companies').del();
         }
         
-        // Remove clients
+        // Remove clients. The creation seam gives every client a default
+        // billing profile and a tax settings row, both of which carry a
+        // foreign key to clients, so they go first.
         for (const tenantId of createdTenants) {
           const db = tenantDb(trx, tenantId);
+          await db.table('client_tax_rates').del();
+          await db.table('client_tax_settings').del();
+          await db.table('client_billing_profiles').del();
           await db.table('clients').del();
         }
         

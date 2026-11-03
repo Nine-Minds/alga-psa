@@ -58,6 +58,7 @@ export default defineConfig({
       // coverage run that globs ../packages/**.
       'src/components/settings/billing/ServiceCatalogManager.rollout.contract.test.tsx',
       'src/components/settings/billing/DefaultTimeEntryServiceSettings.test.tsx',
+      'src/components/settings/billing/DefaultPaymentTermsSettings.test.tsx',
       'src/components/settings/billing/PriceChangeRolloutDialog.contract.test.tsx',
       // Multi-select bulk actions on the catalog and product lists — listed for
       // the same reason as the suites above.
@@ -78,6 +79,11 @@ export default defineConfig({
       // Behavioral coverage for realm-exact QBO mapping resolution — listed
       // explicitly for the same reason as the suites above.
       'src/services/accountingSync/realmScopedOperations.test.ts',
+      // Provider/organisation scoping of sync status and health, and the
+      // resolved target's realm + Intuit environment that the invoice deep
+      // link reads — listed for the same reason as the suites above.
+      'src/actions/accountingSyncActions.org.test.ts',
+      'src/actions/resolveSyncTarget.test.ts',
       // Project billing-currency drift notices and cap re-pinning — listed for
       // the same reason as the suites above.
       'src/components/project-billing/projectBillingCurrency.test.tsx',
@@ -118,6 +124,9 @@ export default defineConfig({
       'src/components/billing-dashboard/contracts/BucketPoolEditor.currency.test.tsx',
       // Wizard quantity input draft/commit behavior.
       'src/components/billing-dashboard/contracts/QuantityInput.test.tsx',
+      'src/components/billing-dashboard/contracts/BillingTimingField.test.tsx',
+      'src/components/billing-dashboard/contracts/wizard-steps/BillingTimingInheritance.test.tsx',
+      'src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep.billingTiming.test.tsx',
       'src/components/billing-dashboard/contracts/wizard-steps/templateLineAmounts.test.ts',
       'src/components/billing-dashboard/contracts/wizard-steps/templatePickerOption.test.ts',
       'src/components/billing-dashboard/contracts/wizard-steps/TemplateLinesStep.fallback.test.tsx',
@@ -129,6 +138,7 @@ export default defineConfig({
       // Shared pure balance formula used by REST invoice reads and the client portal.
       'src/lib/balanceDue.test.ts',
       'src/lib/creditBalance.test.ts',
+      'src/actions/contractSimulationActions.refusals.test.ts',
     ],
     // Above vitest.setup.ts's 20s asyncUtilTimeout, so a stalled waitFor fails
     // as itself rather than as a test timeout.
@@ -191,6 +201,17 @@ export default defineConfig({
         find: /^@alga-psa\/core\/logger$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/logger.ts')}`,
       },
+      // Same shape as the logger rule: `./capability` is exported from
+      // src/lib, while its server/testing subpaths live under src/capability.
+      // Reached through @alga-psa/ui's hooks barrel (useCapability).
+      {
+        find: /^@alga-psa\/core\/capability$/,
+        replacement: path.resolve(__dirname, '../core/src/lib/capability.ts'),
+      },
+      {
+        find: /^@alga-psa\/core\/capability\/(server|testing)$/,
+        replacement: `${path.resolve(__dirname, '../core/src/capability')}/$1.ts`,
+      },
       // Same shape as the logger rule: core's i18n exports sit under src/lib, so
       // the generic @alga-psa/<pkg>/<path> rule below misses them. Reached here
       // through @alga-psa/ui's date formatter.
@@ -199,7 +220,7 @@ export default defineConfig({
         replacement: `${path.resolve(__dirname, '../core/src/lib/i18n')}/$1`,
       },
       {
-        find: /^@alga-psa\/db\/(admin|connection|tenant|workDate)$/,
+        find: /^@alga-psa\/db\/(admin|connection|tenant|tenantDb|workDate|commentEventRegistry)$/,
         replacement: `${path.resolve(__dirname, '../db/src/lib')}/$1.ts`,
       },
       {

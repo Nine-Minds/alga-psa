@@ -7,6 +7,7 @@ import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import {
   applyTicketVisibilityFilter,
 } from '@alga-psa/tickets/lib';
@@ -181,7 +182,7 @@ export const getDashboardMetrics = withAuth(async (
   { tenant }: AuthContext
 ): Promise<DashboardMetrics | ClientPortalActionError> => {
   try {
-    if (user.user_type !== 'client') {
+    if (!isClientUserType(user.user_type)) {
       throw new Error('Unauthorized: Invalid user type for client portal');
     }
 
@@ -306,7 +307,7 @@ export const getRecentActivity = withAuth(async (
   { tenant }: AuthContext
 ): Promise<RecentActivity[] | ClientPortalActionError> => {
   try {
-    if (user.user_type !== 'client') {
+    if (!isClientUserType(user.user_type)) {
       throw new Error('Unauthorized: Invalid user type for client portal');
     }
 

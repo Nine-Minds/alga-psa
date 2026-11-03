@@ -346,6 +346,7 @@ describe('Client timeline infrastructure', () => {
       tenant: context.tenantId,
       rma_id: rmaId,
       rma_type: 'standard',
+      rma_number: `RMA-T${rmaId.slice(0, 8)}`,
       service_id: serviceId,
       client_id: context.clientId,
       rma_reference: input.rmaReference,

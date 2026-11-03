@@ -33,9 +33,16 @@ import type {
 import {
   FEATURE_MINIMUM_TIER,
   TIER_FEATURES,
+  blockingDiagnostics,
+  isContractSimulationRefusal,
   isContractSimulationUnavailable,
+  isSimulationBlocked,
 } from "@alga-psa/types";
 import { FeatureUpgradeNotice } from "@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice";
+import {
+  SimulationBlockedCallout,
+  useBlockingDiagnosticMessage,
+} from "./SimulationBlockedCallout";
 import { useTierFeature } from "server/src/context/TierContext";
 import {
   getContractScenarioSnapshot,
@@ -94,6 +101,12 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
   const [isLoadingSnapshot, setIsLoadingSnapshot] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const describeBlocking = useBlockingDiagnosticMessage();
+  // The message hook returns a fresh closure per render; effects and callbacks
+  // read it through a ref so a refusal is described in the current language
+  // without re-running the load.
+  const describeBlockingRef = useRef(describeBlocking);
+  describeBlockingRef.current = describeBlocking;
 
   const [horizonCount, setHorizonCount] = useState(6);
   const [compareEnabled, setCompareEnabled] = useState(false);
@@ -184,6 +197,10 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
         if (cancelled) return;
         if (isContractSimulationUnavailable(snapshot)) {
           setUnavailable(true);
+          return;
+        }
+        if (isContractSimulationRefusal(snapshot)) {
+          setLoadError(describeBlockingRef.current(snapshot.diagnostic));
           return;
         }
         setPristine(snapshot);
@@ -402,6 +419,10 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
         setUnavailable(true);
         return;
       }
+      if (isContractSimulationRefusal(outcome)) {
+        setPrefillError(describeBlockingRef.current(outcome.diagnostic));
+        return;
+      }
       applyPrefill(outcome, "recent_average");
     } catch (error) {
       setPrefillError(error instanceof Error ? error.message : String(error));
@@ -423,6 +444,10 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
         );
         if (isContractSimulationUnavailable(outcome)) {
           setUnavailable(true);
+          return;
+        }
+        if (isContractSimulationRefusal(outcome)) {
+          setPrefillError(describeBlockingRef.current(outcome.diagnostic));
           return;
         }
         applyPrefill(outcome, "replay");
@@ -468,10 +493,15 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
       setBaselineResult(resolvedBaseline);
       setLastRunAt(new Date());
       setIsStale(scenarioRevisionRef.current !== revisionAtStart);
-      const firstChangedPeriod = resolvedBaseline
+      // A blocked side has no periods to compare against or to select.
+      const comparable =
+        resolvedBaseline && !isSimulationBlocked(resolvedBaseline)
+          ? resolvedBaseline
+          : null;
+      const firstChangedPeriod = comparable
         ? scenarioOutcome.periods.findIndex(
             (period, index) =>
-              period.total !== resolvedBaseline.periods[index]?.total,
+              period.total !== comparable.periods[index]?.total,
           )
         : scenarioOutcome.periods.findIndex(
             (period, index, periods) =>
@@ -555,6 +585,13 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
     selectedPeriodIndex !== null
       ? (result?.periods[selectedPeriodIndex] ?? null)
       : null;
+  // A blocked result has a blocking diagnostic and no periods, so it never
+  // shows totals; a blocked baseline is never compared against (compareSimulations
+  // returns null) and never handed to the timeline as a baseline.
+  const resultBlocked = result ? isSimulationBlocked(result) : false;
+  const baselineBlocked = baselineResult
+    ? isSimulationBlocked(baselineResult)
+    : false;
   const comparison = useMemo(
     () =>
       compareEnabled && result && baselineResult
@@ -732,6 +769,13 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                     defaultValue: "Changes not simulated",
                   })}
                 </>
+              ) : resultBlocked ? (
+                <>
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                  {t("contractSimulator.runBar.blocked", {
+                    defaultValue: "Simulation can't run",
+                  })}
+                </>
               ) : lastRunAt ? (
                 <>
                   <CheckCircle2 className="h-3.5 w-3.5" />
@@ -755,7 +799,25 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
             </Alert>
           )}
 
-          {result ? (
+          {result && resultBlocked ? (
+            <>
+              {projectionStale && (
+                <Alert variant="warning">
+                  <Pencil className="h-4 w-4" />
+                  <AlertDescription>
+                    {t("contractSimulator.runBar.staleBlockedBanner", {
+                      defaultValue:
+                        "This message is from the previous simulation. Update the simulation to include your latest changes.",
+                    })}
+                  </AlertDescription>
+                </Alert>
+              )}
+              <SimulationBlockedCallout
+                diagnostics={blockingDiagnostics(result)}
+                onFocusLine={setFocusedLineKey}
+              />
+            </>
+          ) : result ? (
             <>
               {projectionStale && (
                 <Alert variant="warning">
@@ -767,6 +829,15 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                     })}
                   </AlertDescription>
                 </Alert>
+              )}
+              {compareEnabled && baselineResult && baselineBlocked && (
+                <SimulationBlockedCallout
+                  title={t("contractSimulator.errors.baselineTitle", {
+                    defaultValue:
+                      "The current contract can't be simulated, so there is nothing to compare with",
+                  })}
+                  diagnostics={blockingDiagnostics(baselineResult)}
+                />
               )}
               {comparison && (
                 <div className="flex items-center justify-between rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-4 py-3">
@@ -798,7 +869,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                   </div>
                 </div>
               )}
-              {result.diagnostics.length > 0 && (
+              {result.diagnostics.some((d) => d.severity !== "error") && (
                 <ul
                   aria-live="polite"
                   aria-label={t("contractSimulator.diagnostics.title", {
@@ -811,7 +882,9 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                       defaultValue: "Simulation notes",
                     })}
                   </li>
-                  {result.diagnostics.map((diagnostic, index) => (
+                  {result.diagnostics
+                    .filter((d) => d.severity !== "error")
+                    .map((diagnostic, index) => (
                     <li
                       key={`${diagnostic.message}-${index}`}
                       className="flex items-start gap-2 text-xs text-[rgb(var(--color-text-600))]"
@@ -848,7 +921,9 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                 <SimulationTimeline
                   periods={result.periods}
                   baselinePeriods={
-                    compareEnabled ? (baselineResult?.periods ?? null) : null
+                    compareEnabled && !baselineBlocked
+                      ? (baselineResult?.periods ?? null)
+                      : null
                   }
                   currencyCode={result.currency_code}
                   selectedIndex={selectedPeriodIndex}

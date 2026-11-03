@@ -160,6 +160,10 @@
     "passwordMismatch": "Le password non coincidono"
   },
   "errors": {
+    "coManaged": {
+      "readOnly": "Questo spazio di lavoro cogestito è di sola lettura. Accesso, lettura, esportazione e recupero della licenza restano disponibili.",
+      "acceptancePending": "L’amministratore del cliente deve accettare la cogestione prima di poter usare questo spazio di lavoro."
+    },
     "validation": {
       "required": "{{field}} è obbligatorio.",
       "invalidType": "{{field}} è del tipo errato.",
@@ -1580,7 +1584,42 @@
     }
   },
   "labels": {
-    "printColumns": "Colonne di stampa"
+    "printColumns": "Colonne di stampa",
+    "dialog": {
+      "assetTitle": "Stampa etichette degli asset",
+      "batch_one": "Un'etichetta per l'elemento trattenuto ({{count}})",
+      "batch_other": "Un'etichetta per ogni elemento trattenuto ({{count}})",
+      "count_one": "{{count}} selezionato",
+      "count_other": "{{count}} selezionati",
+      "failed": "Non è stato possibile stampare le etichette.",
+      "item": "Elemento",
+      "layout": "Disposizione",
+      "linkedAsset": "Asset collegato",
+      "noAsset": "Nessun asset",
+      "notFound": "Impossibile aprire questi record.",
+      "openPdf": "Apri PDF",
+      "previewBatch_one": "Stampa {{count}} etichetta per l'elemento trattenuto.",
+      "previewBatch_other": "Stampa {{count}} etichette, una per ogni elemento trattenuto.",
+      "previewPicked": "L'etichetta mostrerà la posizione e l'azione successiva di questo elemento.",
+      "previewPickedNotHeld": "Questo elemento non è trattenuto, quindi l'etichetta non mostra alcuna posizione.",
+      "previewSingle": "L'etichetta mostrerà {{location}}.",
+      "previewSingleNoLocation": "L'etichetta mostrerà l'azione successiva di questo elemento.",
+      "previewSummary_one": "{{count}} elemento trattenuto.",
+      "previewSummary_other": "{{count}} elementi trattenuti.",
+      "printed_one": "Stampata {{count}} etichetta.",
+      "printed_other": "Stampate {{count}} etichette.",
+      "printing": "Preparazione…",
+      "print": "Stampa",
+      "reason": "Motivo",
+      "skipFailures": "Salta questi e stampa il resto",
+      "skipped_one": "{{count}} record è stato saltato perché non è stato possibile aprirlo.",
+      "skipped_other": "{{count}} record sono stati saltati perché non è stato possibile aprirli.",
+      "template": "Modello",
+      "ticketTitle": "Stampa etichette di lavoro",
+      "tooMany": "Puoi stampare al massimo {{max}} etichette alla volta.",
+      "unnamedAsset": "Asset senza nome",
+      "useTemplate": "Usa {{template}}"
+    }
   },
   "deleteEntity": {
     "checkingDependenciesTitle": "Verifica delle dipendenze",
@@ -2172,5 +2211,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Cambia vista"
+  },
+  "entityChip": {
+    "moreTags": "altri {{count}} tag: {{names}}"
   }
 }

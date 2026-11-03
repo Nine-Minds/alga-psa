@@ -59,7 +59,7 @@ const Severity = z.enum(LEVEL_SEVERITIES);
  * Header rows as `[{key, value}]` (the Level UI's shape) or a plain object.
  */
 const Headers = z
-  .union([z.array(z.object({ key: z.string(), value: z.string() })), z.record(z.string())])
+  .union([z.array(z.object({ key: z.string(), value: z.string() })), z.record(z.string(), z.string())])
   .transform((headers) => (Array.isArray(headers) ? headers : Object.entries(headers).map(([key, value]) => ({ key, value }))));
 
 const DevicePatch = z
@@ -237,7 +237,7 @@ export function register(reg: ControlRegistry, core: LevelEmulatorCore): void {
       payload: z.string().nullable().optional(),
       severity: Severity.optional(),
       id: z.string().optional(),
-      webhookDataExtra: z.record(z.unknown()).optional(),
+      webhookDataExtra: z.record(z.string(), z.unknown()).optional(),
     }),
     run: (input: FireAlertInput) => control(async () => onAlertActive(core, core.raiseAlert(input))),
   });
@@ -338,7 +338,7 @@ export function register(reg: ControlRegistry, core: LevelEmulatorCore): void {
       contentType: z.enum(HTTP_CONTENT_TYPES).optional(),
       headers: Headers.optional(),
       body: z.string().optional(),
-      variables: z.record(z.string()).optional(),
+      variables: z.record(z.string(), z.string()).optional(),
       retries: z.number().int().min(0).max(5).optional(),
     }),
     run: ({ url, method, contentType, headers, body, ...rest }: AutomationSeedInput) =>

@@ -1,0 +1,245 @@
+name: CI safety gates
+
+# Four product-neutral gates (CM L0g, alga-2026-0002848). None reads a feature flag
+# and none changes runtime behaviour: they stop an unsafe migration, a stale
+# generated artifact, a schema the released code cannot use, and a hot-path query
+# regression before merge.
+#
+# No `paths:` filters: a path filter on a safety gate is a way to not run it.
+# Citus distribution coverage stays in citus-migration-smoke.yml; the upgrade-order
+# job is about ordering and N-1 compatibility on plain Postgres (pgvector image).
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-safety-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # Inputs to scripts/ci/resolve-base.mjs, which sets BASE_SHA for every gate: the base
+  # branch tip the PR merge ref was built on (pull_request.base.sha goes stale when main
+  # moves without a PR push), or the previous tip on push.
+  EVENT_NAME: ${{ github.event_name }}
+  PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+  PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+  PUSH_BEFORE_SHA: ${{ github.event.before }}
+
+jobs:
+  images:
+    name: Pinned images
+    uses: ./.github/workflows/pinned-images.yml
+
+  migration-lint:
+    name: migration-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The lint derives "existing table" from migrations at the base ref.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm install -g npm@11
+
+      - run: npm ci --ignore-scripts
+
+      - name: Lint rules self-tests (fixtures, meta-test, newest-30 audit)
+        run: npm run test:migration-lint
+
+      - name: Resolve baseline
+        run: |
+          base="$(node scripts/ci/resolve-base.mjs)"
+          echo "BASE_SHA=$base" >> "$GITHUB_ENV"
+
+      - name: Lint migrations added in this change
+        run: |
+          set -o pipefail
+          node scripts/ci/migration-lint.mjs --base "${BASE_SHA:-origin/main}" | tee migration-lint.out
+
+      - name: Attribute failing paths to a card
+        if: failure()
+        run: node scripts/ci/attribute-card.mjs --stdin < migration-lint.out || true
+
+  artifact-drift:
+    name: artifact-drift
+    needs: migration-lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm install -g npm@11
+
+      - run: npm ci --ignore-scripts
+
+      # generate:openapi imports server/src/lib/api/openapi, which needs the workspace packages built.
+      - name: Build shared libraries
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
+      - name: Drift tool self-tests
+        run: node --test scripts/tests/artifact-drift.test.mjs scripts/tests/attribute-card.test.mjs
+
+      - name: Resolve baseline
+        run: |
+          base="$(node scripts/ci/resolve-base.mjs)"
+          echo "BASE_SHA=$base" >> "$GITHUB_ENV"
+
+      - name: Regenerate artifacts, fail on drift or non-additive OpenAPI change
+        run: |
+          set -o pipefail
+          node scripts/ci/artifact-drift.mjs --base "${BASE_SHA:-HEAD}" | tee artifact-drift.out
+
+      - name: Attribute drifted files to a card
+        if: failure()
+        run: node scripts/ci/attribute-card.mjs --stdin < artifact-drift.out || true
+
+  upgrade-order:
+    name: upgrade-order
+    needs: [images, artifact-drift]
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: ${{ needs.images.outputs.pgvector }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_USER_ADMIN: postgres
+      DB_PASSWORD_ADMIN: test_password
+      DB_USER_SERVER: app_user
+      DB_PASSWORD_SERVER: test_password
+      APP_ENV: test
+      NODE_ENV: test
+      REQUIRE_DB: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm install -g npm@11
+
+      - run: npm ci
+
+      - name: Structural N-1 assertion self-tests
+        run: node --test scripts/tests/n1-schema.test.mjs scripts/tests/smoke-failure.test.mjs
+
+      - name: Install poppler-utils (pdftotext, used by smoke suites)
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      - name: Resolve baseline
+        run: |
+          base="$(node scripts/ci/resolve-base.mjs)"
+          echo "BASE_SHA=$base" >> "$GITHUB_ENV"
+
+      - name: Baseline schema + seed, apply PR migrations, N-1 assertions, release-tree smoke
+        run: |
+          if [ -n "$BASE_SHA" ]; then
+            node scripts/ci/upgrade-order.mjs --base "$BASE_SHA" --main-ref origin/main
+          else
+            node scripts/ci/upgrade-order.mjs --main-ref origin/main
+          fi
+
+  hot-path-budget:
+    name: hot-path-budget
+    needs: [images, upgrade-order]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: ${{ needs.images.outputs.pgvector }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_USER_ADMIN: postgres
+      DB_PASSWORD_ADMIN: test_password
+      DB_USER_SERVER: app_user
+      DB_PASSWORD_SERVER: test_password
+      TEST_DB_NAME: hot_path_budget
+      APP_ENV: test
+      NODE_ENV: test
+      REQUIRE_DB: '1'
+      ALGA_USAGE_STATS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: nx-cache-${{ runner.os }}-${{ hashFiles('package-lock.json', 'nx.json', 'tsconfig.base.json', '**/project.json') }}
+          restore-keys: |
+            nx-cache-${{ runner.os }}-
+
+      - run: npm install -g npm@11
+
+      - run: npm ci
+
+      - name: Build shared libraries
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
+      - name: Some tests read credentials from secrets/ files directly
+        run: |
+          mkdir -p secrets
+          echo -n "test_password" > secrets/postgres_password
+          echo -n "test_password" > secrets/db_password_server
+          chmod 600 secrets/*
+
+      - name: Canonical psa-tenant scenario vs committed query budget
+        run: npm run budget:hot-path

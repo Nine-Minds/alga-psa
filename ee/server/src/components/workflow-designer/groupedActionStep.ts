@@ -80,15 +80,18 @@ export const getGroupedActionCatalogRecordForStep = (
   if (step.type !== 'action.call') return undefined;
 
   const config = asRecord(step.config);
+  const actionId = typeof config?.actionId === 'string' ? config.actionId : undefined;
   const storedAppKey = typeof config?.designerAppKey === 'string' ? config.designerAppKey : undefined;
   const storedGroupKey = typeof config?.designerGroupKey === 'string' ? config.designerGroupKey : undefined;
   const storedCatalogKey = storedAppKey ?? storedGroupKey;
 
   if (storedCatalogKey) {
     const storedRecord = catalog.find((record) => record.groupKey === storedCatalogKey);
-    if (storedRecord) return storedRecord;
+    if (storedRecord) {
+      if (!actionId || storedRecord.allowedActionIds.includes(actionId)) return storedRecord;
+      return getWorkflowDesignerCatalogRecordForAction(catalog, actionId) ?? storedRecord;
+    }
   }
 
-  const actionId = typeof config?.actionId === 'string' ? config.actionId : undefined;
   return getWorkflowDesignerCatalogRecordForAction(catalog, actionId);
 };

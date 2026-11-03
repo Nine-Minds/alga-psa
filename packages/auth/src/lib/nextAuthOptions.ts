@@ -17,6 +17,8 @@ import {
     withDevPortSuffix,
     type PortalSessionTokenPayload,
 } from "./session";
+import { isClientUserType, isInteractiveUserType, resolveProductCode, type ProductCode } from "@alga-psa/types";
+import { assertInteractiveUser } from "./assertInteractiveUser";
 import { issuePortalDomainOtt } from "./PortalDomainSessionToken";
 import { buildTenantPortalSlug, isValidTenantSlug } from "@alga-psa/validation";
 import { isEnterprise } from "@alga-psa/core/features";
@@ -32,7 +34,7 @@ import type {
 import { isOAuthMappingFailure, OAuthAccountLinkConflictError } from "./sso/types";
 import { SSO_LINK_STATE_COOKIE, SSO_PROFILE_TAB_URL } from "./sso/linkStateCookie";
 import {
-    getMicrosoftSsoEmulatorEndpoints,
+    buildMicrosoftSsoEmulatorProvider,
     isMicrosoftSsoEmulatorEnabled,
 } from "./sso/microsoftSsoEmulator";
 import { mapCeOAuthProfileToExtendedUser } from "./sso/ceOAuthProfileMapper";
@@ -64,6 +66,7 @@ import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";
 import { getLocationFromIp } from "./geolocation";
 import { getConnection, tenantDb } from "@alga-psa/db";
 import { getPortalDomain, getPortalDomainByHostname } from "./PortalDomainModel";
+import { portalDomainServes } from "@alga-psa/shared/core/portalDomainSurface";
 import { resolveMicrosoftConsumerProfileConfig } from "./microsoftConsumerProfileResolution";
 
 /**
@@ -174,7 +177,8 @@ async function checkTrackedSession(
         || sessionId.length === 0
         || typeof userId !== 'string'
         || userId.length === 0
-        || (userType !== 'internal' && userType !== 'client')
+        || typeof userType !== 'string'
+        || !isInteractiveUserType(userType)
     ) {
         await logTrackedSessionRejection('missing_identity_claims');
         return 'revoked';
@@ -202,7 +206,7 @@ async function checkTrackedSession(
  */
 interface TenantSubscriptionInfo {
     plan?: string;
-    product_code?: 'psa' | 'algadesk';
+    product_code?: ProductCode;
     addons?: string[];
     trial_end?: string | null;
     subscription_status?: string | null;
@@ -276,7 +280,9 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
 
     return {
         plan: tenantRecord?.plan ?? undefined,
-        product_code: tenantRecord?.product_code === 'algadesk' ? 'algadesk' : 'psa',
+        // Unknown or unrecognised values resolve to psa (the same rule as every
+        // other product-code read), so the session can only ever carry a known product.
+        product_code: resolveProductCode(tenantRecord?.product_code).productCode,
         addons: addOns,
         trial_end: trialEnd,
         subscription_status: subscriptionStatus,
@@ -288,33 +294,60 @@ const NEXTAUTH_SECURE_COOKIES = isSecureCookieEnvironment();
 const NEXTAUTH_COOKIE_PREFIX = NEXTAUTH_SECURE_COOKIES ? '__Secure-' : '';
 const PLAYWRIGHT_FAKE_GOOGLE_OAUTH_ENABLED = process.env.PLAYWRIGHT_FAKE_GOOGLE_OAUTH === 'true';
 
-async function getClientPortalSsoProfileHints(
+export interface SsoProfileHints {
+    userType: 'client' | 'internal';
+    /** Client-portal vanity/discovery tenant. Never consulted for internal users. */
+    tenantHint?: string;
+    /** Server-verified tenant an internal sign-in is scoped to. */
+    scopeTenantId?: string;
+}
+
+/**
+ * What the server already knows about this OAuth callback. The Teams context
+ * comes first: buildAuthOptions(context) is assembled explicitly by the server
+ * for the Teams surface, so it is the most trusted scope and no cookie (which
+ * may be a leftover from an earlier MSP SSO attempt) can override it. Otherwise,
+ * from signed state the server issued itself: the client-portal resolution
+ * cookie, then the MSP resolution cookie (whose `scopeTenantId`, or tenant-owned
+ * credential source, scopes the user). IdP profile claims are not consulted here
+ * and must never select an internal user's tenant.
+ */
+export async function getSsoProfileHints(
     provider: MspSsoProviderId,
-): Promise<{ tenantHint?: string; userTypeHint?: 'client' } | null> {
+    context?: { teamsTenantId?: string },
+): Promise<SsoProfileHints | null> {
+    if (context?.teamsTenantId) {
+        return { userType: 'internal', scopeTenantId: context.teamsTenantId };
+    }
+
     try {
         const signingSecret = await getMspSsoSigningSecret();
-        if (!signingSecret) {
-            return null;
+        if (signingSecret) {
+            const cookieStore = await cookies();
+            const clientResolution = parseAndVerifyClientPortalSsoResolutionCookie({
+                value: cookieStore.get(CLIENT_PORTAL_SSO_RESOLUTION_COOKIE)?.value,
+                secret: signingSecret,
+            });
+            if (clientResolution && clientResolution.provider === provider) {
+                return { userType: 'client', tenantHint: clientResolution.tenantId };
+            }
+
+            const mspResolution = parseAndVerifyMspSsoResolutionCookie({
+                value: cookieStore.get(MSP_SSO_RESOLUTION_COOKIE)?.value,
+                secret: signingSecret,
+            });
+            if (mspResolution && mspResolution.provider === provider) {
+                const scopeTenantId =
+                    mspResolution.scopeTenantId ??
+                    (mspResolution.source === 'tenant' ? mspResolution.tenantId : undefined);
+                return { userType: 'internal', scopeTenantId };
+            }
         }
-
-        const cookieStore = await cookies();
-        const resolution = parseAndVerifyClientPortalSsoResolutionCookie({
-            value: cookieStore.get(CLIENT_PORTAL_SSO_RESOLUTION_COOKIE)?.value,
-            secret: signingSecret,
-        });
-
-        if (!resolution || resolution.provider !== provider) {
-            return null;
-        }
-
-        return {
-            tenantHint: resolution.tenantId,
-            userTypeHint: 'client',
-        };
     } catch (error) {
-        console.warn('[client-portal-sso] failed to read OAuth profile hints', error);
-        return null;
+        console.warn('[sso] failed to read OAuth profile hints', error);
     }
+
+    return null;
 }
 
 const NEXTAUTH_COOKIES = {
@@ -368,14 +401,17 @@ const NEXTAUTH_COOKIES = {
     },
 } as const;
 
-async function mapGoogleProfile(profile: Record<string, any>): Promise<ExtendedUser> {
+async function mapGoogleProfile(
+    profile: Record<string, any>,
+    context?: { teamsTenantId?: string },
+): Promise<ExtendedUser> {
     const googleProfile = profile as Record<string, unknown>;
-    const clientPortalHints = await getClientPortalSsoProfileHints('google');
+    const clientPortalHints = await getSsoProfileHints('google', context);
     const tenantHint =
         clientPortalHints?.tenantHint ??
         (typeof googleProfile.hd === 'string' ? googleProfile.hd : undefined);
     const userTypeHint =
-        clientPortalHints?.userTypeHint ??
+        clientPortalHints?.userType ??
         (typeof googleProfile.user_type === 'string'
             ? googleProfile.user_type
             : undefined);
@@ -391,6 +427,7 @@ async function mapGoogleProfile(profile: Record<string, any>): Promise<ExtendedU
         tenantHint,
         vanityHostHint,
         userTypeHint,
+        scopeTenantId: clientPortalHints?.scopeTenantId,
     }) as Promise<ExtendedUser>;
 }
 
@@ -398,7 +435,7 @@ function getLocalGoogleOauthBaseUrl(): string {
     return new URL('/api/auth/e2e/google/', process.env.NEXTAUTH_URL || 'http://localhost:3000').toString();
 }
 
-function buildGoogleProvider(clientId: string, clientSecret: string) {
+function buildGoogleProvider(clientId: string, clientSecret: string, context?: { teamsTenantId?: string }) {
     if (PLAYWRIGHT_FAKE_GOOGLE_OAUTH_ENABLED) {
         const localBaseUrl = getLocalGoogleOauthBaseUrl();
         return {
@@ -420,60 +457,38 @@ function buildGoogleProvider(clientId: string, clientSecret: string) {
             userinfo: {
                 url: new URL('userinfo', localBaseUrl).toString(),
             },
-            profile: mapGoogleProfile,
+            profile: (profile: Record<string, any>) => mapGoogleProfile(profile, context),
         };
     }
 
     return GoogleProvider({
         clientId,
         clientSecret,
-        profile: mapGoogleProfile,
+        profile: (profile: Record<string, any>) => mapGoogleProfile(profile, context),
     });
 }
 
 /**
  * Microsoft sign-in, against Entra or — when the simulator gate is on — against
- * the algasim Microsoft simulator. The simulator issues no signed id_token, so
- * that branch runs as plain OAuth2 and resolves the account from Graph `/me`,
- * which carries the same `mail`/`userPrincipalName` pair `profile()` reads.
+ * the algasim Microsoft simulator. That branch uses discovery and signed OIDC
+ * tokens with the same state, PKCE and nonce checks as the production provider.
  */
 function buildAzureADProvider(config: {
     clientId: string;
     clientSecret: string;
     authority: string;
-    checks?: Array<'pkce' | 'state'>;
+    checks: Array<'pkce' | 'state' | 'nonce'>;
     profile: (profile: Record<string, any>) => Promise<ExtendedUser>;
 }) {
     if (isMicrosoftSsoEmulatorEnabled()) {
-        const endpoints = getMicrosoftSsoEmulatorEndpoints(config.authority);
-        return {
-            id: 'azure-ad',
-            name: 'Microsoft',
-            type: 'oauth' as const,
-            clientId: config.clientId,
-            clientSecret: config.clientSecret,
-            checks: (config.checks ?? ['pkce', 'state']) as Array<'pkce' | 'state'>,
-            authorization: {
-                url: endpoints.authorization,
-                params: {
-                    scope: 'openid email profile https://graph.microsoft.com/User.Read',
-                },
-            },
-            token: {
-                url: endpoints.token,
-            },
-            userinfo: {
-                url: endpoints.userinfo,
-            },
-            profile: config.profile,
-        };
+        return buildMicrosoftSsoEmulatorProvider(config);
     }
 
     return AzureADProvider({
         clientId: config.clientId,
         clientSecret: config.clientSecret,
         issuer: `https://login.microsoftonline.com/${config.authority}/v2.0`,
-        ...(config.checks ? { checks: config.checks } : {}),
+        checks: config.checks,
         profile: config.profile,
     });
 }
@@ -508,6 +523,15 @@ async function ensureEnterpriseSsoRegistryInitialized(): Promise<void> {
     }
 }
 
+/**
+ * A custom domain a signed-in client user may be handed off to: active AND serving the client
+ * portal. An MSP-only domain would land the user on the middleware surface gate, which sends
+ * portal paths on that host to /auth/signin (alga-2026-0002799).
+ */
+export function isClientPortalHandoffDomain(portalDomain: { status: string; surface?: unknown }): boolean {
+    return portalDomain.status === 'active' && portalDomainServes(portalDomain.surface, 'client_portal');
+}
+
 async function computeVanityRedirect({
     url,
     baseUrl,
@@ -521,10 +545,10 @@ async function computeVanityRedirect({
         return null;
     }
 
-    const userType = token.user_type;
+    const userType = typeof token.user_type === 'string' ? token.user_type : undefined;
     const tenantId = token.tenant;
 
-    if (userType !== 'client' || typeof tenantId !== 'string' || tenantId.length === 0) {
+    if (!isClientUserType(userType) || typeof tenantId !== 'string' || tenantId.length === 0) {
         console.log('[computeVanityRedirect] token not eligible', { userType, tenantId });
         return null;
     }
@@ -552,7 +576,13 @@ async function computeVanityRedirect({
 
         const fetchPortalDomainForTenant = async () => {
             const portalDomain = await getPortalDomain(knex, tenantId);
-            if (!portalDomain || portalDomain.status !== 'active') {
+            if (!portalDomain || !isClientPortalHandoffDomain(portalDomain)) {
+                return null;
+            }
+            // Already on the tenant's own custom domain (an MSP/both domain authenticates in
+            // place, see nextauth/customHostAuth.ts): the session cookie is host-only on this
+            // host, so a handoff to ourselves would be a pointless redirect loop.
+            if (portalDomain.domain.toLowerCase() === base.host.toLowerCase()) {
                 return null;
             }
             return portalDomain;
@@ -566,7 +596,7 @@ async function computeVanityRedirect({
 
             for (const candidate of candidates) {
                 const portalDomain = await getPortalDomainByHostname(knex, candidate);
-                if (!portalDomain || portalDomain.status !== 'active') {
+                if (!portalDomain || !isClientPortalHandoffDomain(portalDomain)) {
                     continue;
                 }
                 if (portalDomain.tenant !== tenantId) {
@@ -699,7 +729,7 @@ interface ExtendedUser {
     contactId?: string;
     authFailure?: OAuthMappingFailure;
     plan?: string;
-    product_code?: 'psa' | 'algadesk';
+    product_code?: ProductCode;
     deviceInfo?: {
         ip: string;
         userAgent: string;
@@ -709,6 +739,15 @@ interface ExtendedUser {
         locationData: any;
     };
     loginMethod?: string;
+}
+
+// SSO mappers only ever resolve internal | client users; a non-interactive type reaching
+// here is a bug, so refuse it instead of coercing it to 'internal'.
+function toOAuthMappingUserType(userType: string): 'internal' | 'client' {
+    if (userType === 'client' || userType === 'internal') {
+        return userType;
+    }
+    throw new Error('Non-interactive user type cannot be mapped to an OAuth sign-in');
 }
 
 function toOAuthProfileMappingResult(user: ExtendedUser): OAuthProfileMappingResult {
@@ -721,7 +760,7 @@ function toOAuthProfileMappingResult(user: ExtendedUser): OAuthProfileMappingRes
         proToken: user.proToken,
         tenant: user.tenant,
         tenantSlug: user.tenantSlug,
-        user_type: user.user_type === 'client' ? 'client' : 'internal',
+        user_type: toOAuthMappingUserType(user.user_type),
         clientId: user.clientId,
         contactId: user.contactId,
     };
@@ -747,13 +786,16 @@ const OAUTH_PROVIDER_ALIASES: Record<string, OAuthLinkProvider> = {
 // Keycloak (or any OIDC realm fronted by it) resolves the AlgaPSA user by email,
 // exactly like Google and Microsoft. Standard realms emit no tenant/user_type
 // claims, so anything beyond email is a hint, never the source of truth.
-async function mapKeycloakProfile(profile: Record<string, any>): Promise<ExtendedUser> {
-    const clientPortalHints = await getClientPortalSsoProfileHints('keycloak');
+async function mapKeycloakProfile(
+    profile: Record<string, any>,
+    context?: { teamsTenantId?: string },
+): Promise<ExtendedUser> {
+    const clientPortalHints = await getSsoProfileHints('keycloak', context);
     const tenantHint =
         clientPortalHints?.tenantHint ??
         (typeof profile.tenant === 'string' ? profile.tenant : undefined);
     const userTypeHint =
-        clientPortalHints?.userTypeHint ??
+        clientPortalHints?.userType ??
         (typeof profile.user_type === 'string' ? profile.user_type : undefined);
     return mapOAuthProfileToExtendedUser({
         provider: 'keycloak',
@@ -762,6 +804,7 @@ async function mapKeycloakProfile(profile: Record<string, any>): Promise<Extende
         profile,
         tenantHint,
         userTypeHint,
+        scopeTenantId: clientPortalHints?.scopeTenantId,
     });
 }
 
@@ -770,12 +813,12 @@ function buildKeycloakProvider(config: {
     clientSecret: string;
     url: string;
     realm: string;
-}) {
+}, context?: { teamsTenantId?: string }) {
     return KeycloakProvider({
         clientId: config.clientId,
         clientSecret: config.clientSecret,
         issuer: buildKeycloakIssuer(config.url, config.realm),
-        profile: mapKeycloakProfile,
+        profile: (profile: Record<string, any>) => mapKeycloakProfile(profile, context),
     });
 }
 
@@ -1549,7 +1592,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
     providers: [
         ...(secrets.googleClientId && secrets.googleClientSecret
             ? [
-                buildGoogleProvider(secrets.googleClientId, secrets.googleClientSecret),
+                buildGoogleProvider(secrets.googleClientId, secrets.googleClientSecret, context),
             ]
             : []),
         ...(secrets.microsoftClientId && secrets.microsoftClientSecret
@@ -1558,9 +1601,15 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     clientId: secrets.microsoftClientId,
                     clientSecret: secrets.microsoftClientSecret,
                     authority: secrets.microsoftTenantId || 'common',
-                    checks: ['pkce', 'state'],
+                    // `nonce` is load-bearing, not belt-and-braces. `state` binds the
+                    // callback to the browser that started it; `pkce` binds the code to
+                    // the client that requested it; only `nonce` binds the *ID token*
+                    // to this authorization request, which is what stops a token minted
+                    // for another request being replayed into this session. Auth.js only
+                    // sends and verifies a nonce when it is listed here.
+                    checks: ['pkce', 'state', 'nonce'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
-                        const clientPortalHints = await getClientPortalSsoProfileHints('azure-ad');
+                        const clientPortalHints = await getSsoProfileHints('azure-ad', context);
                         const emailCandidate =
                             profile.email ??
                             profile.mail ??
@@ -1580,7 +1629,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         const vanityHostHint =
                             typeof profile.vanity_host === 'string' ? profile.vanity_host : undefined;
                         const userTypeHint =
-                            clientPortalHints?.userTypeHint ??
+                            clientPortalHints?.userType ??
                             (typeof profile.user_type === 'string' ? profile.user_type : undefined);
                         return mapOAuthProfileToExtendedUser({
                             provider: 'microsoft',
@@ -1590,6 +1639,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                             tenantHint,
                             vanityHostHint,
                             userTypeHint,
+                            scopeTenantId: clientPortalHints?.scopeTenantId,
                         }) as Promise<ExtendedUser>;
                     },
                 }),
@@ -1788,6 +1838,14 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         }
                     }
 
+                    // Defence in depth behind authenticateUser: re-read the stored type and
+                    // active flag before recording success or touching any session state.
+                    if (!user.tenant || !(await assertInteractiveUser(user.user_id.toString(), user.tenant))) {
+                        console.log('Authentication failed: user is not an active interactive user');
+                        await recordLoginFailure(attemptContext);
+                        return null;
+                    }
+
                     await recordLoginSuccess(attemptContext);
                     logger.info("User sign in successful with email", credentials.email);
                     const tenantSlugForUser = user.tenant ? buildTenantPortalSlug(user.tenant) : undefined;
@@ -1869,7 +1927,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     clientSecret: secrets.keycloakClientSecret,
                     url: secrets.keycloakUrl,
                     realm: secrets.keycloakRealm,
-                }),
+                }, context),
             ]
             : []),
     ],
@@ -1918,6 +1976,20 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     });
                 }
 
+            }
+
+            // Provider-agnostic gate (credentials, Google, Azure AD, Keycloak/OIDC, ...):
+            // re-read the stored user type and active flag before any side effect (account
+            // link, last-login stamp, session row). Fails closed on lookup error.
+            if (extendedUser?.id && extendedUser?.tenant) {
+                if (!(await assertInteractiveUser(extendedUser.id, extendedUser.tenant))) {
+                    console.warn('[signIn] rejected non-interactive or inactive user', { providerId });
+                    return false;
+                }
+            }
+
+            if (extendedUser && providerId && providerId !== 'credentials') {
+                const accountRecord = account as unknown as Record<string, unknown> | null;
                 const accountLinkAllowed = await ensureOAuthAccountLink(extendedUser, accountRecord, providerId);
                 if (!accountLinkAllowed) {
                     return false;
@@ -2353,7 +2425,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
                 user.plan = token.plan as string | undefined;
-                user.product_code = (token.product_code as 'psa' | 'algadesk' | undefined) ?? 'psa';
+                user.product_code = (token.product_code as ProductCode | undefined) ?? 'psa';
                 (user as any).addons = (token.addons as string[] | undefined) ?? [];
                 (user as any).trial_end = token.trial_end ?? null;
                 (user as any).subscription_status = token.subscription_status ?? null;
@@ -2395,851 +2467,4 @@ export async function buildTeamsAuthOptions(tenantId: string): Promise<NextAuthC
         teamsTenantId: tenantId,
         teamsMicrosoftOnly: true,
     });
-}
-
-// Synchronous fallback that uses environment variables
-export const options: NextAuthConfig = {
-    // Avoid throwing at module-evaluation time (e.g. during `next build`) when NEXTAUTH_SECRET is not set.
-    // NextAuth will still require a secret at runtime for JWT/session operations; keep that enforcement in runtime paths.
-    secret: process.env.NEXTAUTH_SECRET,
-    providers: [
-        ...(process.env.GOOGLE_OAUTH_CLIENT_ID &&
-        process.env.GOOGLE_OAUTH_CLIENT_SECRET
-            ? [
-                buildGoogleProvider(
-                    process.env.GOOGLE_OAUTH_CLIENT_ID as string,
-                    process.env.GOOGLE_OAUTH_CLIENT_SECRET as string,
-                ),
-            ]
-            : []),
-        ...(process.env.MICROSOFT_OAUTH_CLIENT_ID &&
-        process.env.MICROSOFT_OAUTH_CLIENT_SECRET
-            ? [
-                buildAzureADProvider({
-                    clientId: process.env.MICROSOFT_OAUTH_CLIENT_ID as string,
-                    clientSecret: process.env.MICROSOFT_OAUTH_CLIENT_SECRET as string,
-                    authority: process.env.MICROSOFT_OAUTH_TENANT_ID || 'common',
-                    profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
-                        const emailCandidate =
-                            profile.email ??
-                            profile.mail ??
-                            profile.preferred_username ??
-                            profile.userPrincipalName;
-                        const tenantHint =
-                            typeof profile.tenant === 'string'
-                                ? profile.tenant
-                                : typeof profile.tenantId === 'string'
-                                ? profile.tenantId
-                                : typeof profile.tid === 'string'
-                                ? profile.tid
-                                : typeof profile.domain === 'string'
-                                ? profile.domain
-                                : undefined;
-                        const vanityHostHint =
-                            typeof profile.vanity_host === 'string' ? profile.vanity_host : undefined;
-                        const userTypeHint =
-                            typeof profile.user_type === 'string' ? profile.user_type : undefined;
-                        return mapOAuthProfileToExtendedUser({
-                            provider: 'microsoft',
-                            email: typeof emailCandidate === 'string' ? emailCandidate : undefined,
-                            image: profile.picture ?? profile.photo ?? undefined,
-                            profile,
-                            tenantHint,
-                            vanityHostHint,
-                            userTypeHint,
-                        }) as Promise<ExtendedUser>;
-                    },
-                }),
-            ]
-            : []),
-        CredentialsProvider({
-            name: "Credentials",
-            credentials: {
-                email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" },
-                twoFactorCode: { label: "2FA Code", type: "text" },
-                userType: { label: "User Type", type: "text" },
-                tenant: { label: "Tenant", type: "text" },
-                portalDomain: { label: "Portal Domain", type: "text" },
-                captchaToken: { label: "Captcha Token", type: "text" },
-            },
-            async authorize(credentials, request): Promise<ExtendedUser | null> {
-                const { getAdminConnection } = await import("@alga-psa/db/admin");
-                const { authenticateUser } = await import('../actions/auth');
-                const {
-                    enforceLoginProtection,
-                    normalizeLoginEmail,
-                    recordLoginFailure,
-                    recordLoginSuccess,
-                } = await import('./security/loginProtection');
-                const logger = { info: (..._a:any[])=>{}, warn: (..._a:any[])=>{}, debug: (..._a:any[])=>{}, trace: (..._a:any[])=>{}, error: (..._a:any[])=>{} };
-                console.log('==== Starting Credentials OAuth Authorization ====');
-                console.log('Received credentials:', {
-                    email: credentials?.email,
-                    hasPassword: !!credentials?.password,
-                    hasTwoFactorCode: !!credentials?.twoFactorCode
-                });
-                logger.info("Starting Credentials OAuth")
-                try {
-                    const tenantSlug = typeof credentials?.tenant === 'string'
-                        ? credentials.tenant.trim().toLowerCase()
-                        : undefined;
-                    // Vanity sign-in that round-tripped through the query string has
-                    // the portal host but no slug; authenticateUser resolves the
-                    // tenant from it so the lookup is never unscoped.
-                    const portalDomainHint = typeof credentials?.portalDomain === 'string'
-                        ? credentials.portalDomain.trim().toLowerCase() || undefined
-                        : undefined;
-
-                    if (tenantSlug && !isValidTenantSlug(tenantSlug)) {
-                        logger.warn("Invalid tenant slug provided", {
-                            email: credentials?.email,
-                            tenantSlug,
-                        });
-                        return null;
-                    }
-
-                    logger.debug("Authorizing email", credentials?.email);
-                    if (!credentials?.email || !credentials.password) {
-                        console.log('Authentication failed: Missing credentials');
-                        logger.warn("Missing credentials");
-                        return null;
-                    }
-
-                    // Brute-force gate: refuse rate-limited attempts and demand a captcha
-                    // after repeated failures, before any credential checking happens.
-                    let attemptIp = 'unknown';
-                    try {
-                        attemptIp = (request ? getClientIp(request as any) : 'unknown') || 'unknown';
-                    } catch {
-                        attemptIp = 'unknown';
-                    }
-                    const attemptContext = {
-                        email: normalizeLoginEmail(credentials.email),
-                        ip: attemptIp,
-                    };
-                    await enforceLoginProtection({
-                        ...attemptContext,
-                        captchaToken: typeof credentials.captchaToken === 'string' ? credentials.captchaToken : undefined,
-                    });
-
-                    console.log('Attempting to authenticate user:', credentials.email);
-                    const user = await authenticateUser(
-                        credentials.email as string,
-                        credentials.password as string,
-                        credentials.userType as string,
-                        {
-                            tenantSlug,
-                            portalDomain: portalDomainHint,
-                            requireTenantMatch: Boolean(tenantSlug),
-                        }
-                    );
-                    if (!user) {
-                        console.log('Authentication failed: No user returned');
-                        await recordLoginFailure(attemptContext);
-                        return null;
-                    }
-                    if (credentials.userType && user.user_type !== credentials.userType) {
-                        console.log('Authentication failed: User type mismatch', { expected: credentials.userType, actual: user.user_type });
-                        return null;
-                    }
-                    console.log('User authenticated successfully:', {
-                        userId: user.user_id,
-                        userType: user.user_type,
-                        hasTwoFactor: user.two_factor_enabled
-                    });
-
-                    // If it's a client user, get the contact and client information
-                    let clientId: string | undefined = undefined;
-                    if (user.user_type === 'client' && user.contact_id) {
-                        console.log('Processing client user with contact_id:', user.contact_id);
-                      const connection = await getAdminConnection();
-                        console.log('Database connection established');
-
-                        const contact = await tenantDb(connection, user.tenant).table('contacts')
-                            .where({
-                                contact_name_id: user.contact_id
-                        })
-                        .first();
-
-                        console.log('Contact lookup result:', {
-                            found: !!contact,
-                            contactId: user.contact_id,
-                            tenant: user.tenant
-                        });
-                        if (contact) {
-                            clientId = contact.client_id || undefined;
-                            console.log('Client information found:', { clientId });
-                            logger.info(`Found client ${clientId} for contact ${user.contact_id}`);
-                        } else {
-                            console.log('No client information found for contact');
-                            logger.warn(`No contact found for user ${user.email} with contact_id ${user.contact_id}`);
-                    }
-                    }
-
-                    // 2FA Verification with device recognition
-                    if (user.two_factor_enabled) {
-                        console.log('2FA is enabled for user, checking device recognition');
-
-                        let shouldRequire2FA = true;
-
-                        // Check if device-based 2FA skip is enabled
-                        if ((user as any).two_factor_required_new_device && request) {
-                            try {
-                                // Generate device fingerprint from request
-                                const userAgent = (request as any).headers?.get?.('user-agent') || 'unknown';
-                                const deviceFingerprint = generateDeviceFingerprint(userAgent);
-
-                                // Check if this device is known
-                                const isKnown = await UserSession.isKnownDevice(
-                                    user.tenant,
-                                    user.user_id.toString(),
-                                    deviceFingerprint
-                                );
-
-                                console.log('Device recognition check:', {
-                                    deviceFingerprint,
-                                    isKnownDevice: isKnown
-                                });
-
-                                // Skip 2FA for known devices
-                                if (isKnown) {
-                                    shouldRequire2FA = false;
-                                    console.log('Device recognized, skipping 2FA verification');
-                                }
-                            } catch (error) {
-                                console.error('Device recognition check failed, falling back to 2FA:', error);
-                                // On error, require 2FA for security
-                                shouldRequire2FA = true;
-                            }
-                        }
-
-                        if (shouldRequire2FA) {
-                            console.log('2FA verification required, starting verification');
-                            if (!credentials.twoFactorCode) {
-                                console.log('2FA verification failed: No code provided');
-                                logger.warn("2FA code required for email", credentials.email);
-                                return null;
-                            }
-                            if (!user.two_factor_secret) {
-                                console.log('2FA verification failed: No secret found');
-                                logger.warn("2FA secret not found for email", credentials.email);
-                                return null;
-                            }
-                            console.log('Verifying 2FA code');
-                            const { verifyAuthenticator } = await import('./authenticator/authenticator');
-                            const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode as string, user.two_factor_secret);
-                            console.log('2FA verification result:', { isValid: isValid2FA });
-                            if (!isValid2FA) {
-                                console.log('2FA verification failed: Invalid code');
-                                logger.warn("Invalid 2FA code for email", credentials.email);
-                                // A wrong TOTP code is guessable evidence just like a wrong
-                                // password, so it shares the same failure budget.
-                                await recordLoginFailure(attemptContext);
-                                return null;
-                            }
-                            console.log('2FA verification successful');
-                        }
-                    }
-
-                    await recordLoginSuccess(attemptContext);
-                    logger.info("User sign in successful with email", credentials.email);
-                    const tenantSlugForUser = user.tenant ? buildTenantPortalSlug(user.tenant) : undefined;
-                    const userResponse: ExtendedUser = {
-                        id: user.user_id.toString(),
-                        email: user.email,
-                        username: user.username,
-                        image: user.icon || '/image/avatar-purple-big.png',
-                        name: `${user.first_name} ${user.last_name}`,
-                        proToken: '',
-                        tenant: user.tenant,
-                        user_type: user.user_type,
-                        clientId: clientId,
-                        contactId: user.contact_id,
-                        tenantSlug: tenantSlugForUser,
-                    };
-
-                    // NEW: Capture device information for session tracking
-                    if (request) {
-                        try {
-                            const ip = getClientIp(request as any);
-                            const userAgent = (request as any).headers?.get?.('user-agent') || 'unknown';
-                            const deviceFingerprint = generateDeviceFingerprint(userAgent);
-                            const deviceInfo = getDeviceInfo(userAgent);
-
-                            // Enforce platform-level max sessions (hardcoded for security)
-                            const MAX_SESSIONS = 5; // Platform security policy
-                            await UserSession.enforceMaxSessions(userResponse.tenant!, userResponse.id, MAX_SESSIONS);
-
-                            userResponse.deviceInfo = {
-                                ip,
-                                userAgent,
-                                deviceFingerprint,
-                                deviceName: deviceInfo.name,
-                                deviceType: deviceInfo.type,
-                                locationData: null,
-                            };
-
-                            // Set login method for credentials provider
-                            userResponse.loginMethod = 'credentials';
-
-                            console.log('[auth] Device info captured in Credentials provider (Client Portal):', {
-                                ip,
-                                deviceName: deviceInfo.name,
-                                deviceType: deviceInfo.type
-                            });
-                        } catch (error) {
-                            console.error('[auth] Failed to capture device info:', error);
-                        }
-                    }
-
-                    console.log('Authorization successful. Returning user data:', {
-                        id: userResponse.id,
-                        email: userResponse.email,
-                        username: userResponse.username,
-                        userType: userResponse.user_type,
-                        tenant: userResponse.tenant,
-                        hasDeviceInfo: !!userResponse.deviceInfo
-                    });
-                    console.log('==== Credentials OAuth Authorization Complete ====');
-                    return userResponse;
-                } catch (error) {
-                    console.log('==== Authorization Error ====');
-                    console.error('Error details:', {
-                        email: credentials?.email
-                    });
-                    logger.warn("Error authorizing email", { email: credentials?.email, error });
-                    throw error;
-                }
-            }
-        }),
-        ...(process.env.KEYCLOAK_CLIENT_ID &&
-        process.env.KEYCLOAK_CLIENT_SECRET &&
-        process.env.KEYCLOAK_URL &&
-        process.env.KEYCLOAK_REALM
-            ? [
-                buildKeycloakProvider({
-                    clientId: process.env.KEYCLOAK_CLIENT_ID,
-                    clientSecret: process.env.KEYCLOAK_CLIENT_SECRET,
-                    url: process.env.KEYCLOAK_URL,
-                    realm: process.env.KEYCLOAK_REALM,
-                }),
-            ]
-            : []),
-    ],
-    pages: {
-        signIn: '/auth/signin', // This will redirect to the appropriate page
-        signOut: '/auth/signin', // After sign out, go to the redirect page
-        // Keep residual non-client-safe failures (error=Configuration) on an
-        // app-styled page instead of the raw Auth.js error page.
-        error: '/auth/signin',
-    },
-    session: {
-        strategy: "jwt",
-        maxAge: SESSION_MAX_AGE,
-    },
-    cookies: NEXTAUTH_COOKIES,
-    callbacks: {
-        async signIn({ user, account, credentials }: any) {
-            // Track successful login
-            // const extendedUser = user as ExtendedUser;
-            // analytics.capture(AnalyticsEvents.USER_LOGGED_IN, {
-            //     provider: account?.provider || 'credentials',
-            //     user_type: extendedUser.user_type,
-            //     has_two_factor: false, // We'd need to check this from the user object
-            //     login_method: account?.provider || 'email',
-            // }, extendedUser.id);
-            const providerId = account?.provider;
-            const extendedUser = user as ExtendedUser | undefined;
-
-            const failureRedirect = await resolveOAuthFailureRedirect(extendedUser, providerId);
-            if (failureRedirect) {
-                return failureRedirect;
-            }
-
-            if (extendedUser && providerId && providerId !== 'credentials') {
-                if (account?.providerAccountId) {
-                    extendedUser.id = account.providerAccountId;
-                }
-
-                const accountRecord = account as unknown as Record<string, unknown> | null;
-                try {
-                    const enrichedUser = await getSSORegistry().applyOAuthAccountHints(
-                        toOAuthProfileMappingResult(extendedUser),
-                        accountRecord,
-                    );
-                    Object.assign(extendedUser, enrichedUser);
-                } catch (error) {
-                    console.warn('[signIn] failed to apply OAuth tenant hints', {
-                        providerId,
-                        error,
-                    });
-                }
-
-                const accountLinkAllowed = await ensureOAuthAccountLink(extendedUser, accountRecord, providerId);
-                if (!accountLinkAllowed) {
-                    return false;
-                }
-            }
-
-            // Track last login
-            if (extendedUser?.id && extendedUser?.tenant && providerId) {
-                try {
-                    const User = (await import('@alga-psa/db/models/user')).default;
-                    await User.updateLastLogin(
-                        extendedUser.id,
-                        extendedUser.tenant,
-                        providerId
-                    );
-                } catch (error) {
-                    console.warn('[signIn] failed to update last login', error);
-                }
-            }
-
-            if (providerId && providerId !== 'credentials') {
-                await finalizePendingRememberedEmailCookie();
-                await clearClientPortalSsoStateCookies();
-            }
-
-            if (providerId && providerId !== 'credentials' && extendedUser?.user_type === 'client') {
-                const accountRecord = account as unknown as Record<string, unknown> | null;
-                const metadata = extractOAuthAccountMetadata(accountRecord);
-                // Auth.js does not copy the OAuth state onto the account, so the
-                // state-smuggled callback_url is normally absent; computeVanityRedirect
-                // resolves the tenant's portal domain from a same-origin path alone.
-                const callbackUrl = metadata.callbackUrl ?? '/client-portal/dashboard';
-                const canonicalBaseUrl = process.env.NEXTAUTH_URL;
-
-                if (!canonicalBaseUrl) {
-                    console.warn('[signIn] NEXTAUTH_URL unset; cannot compute client portal vanity redirect');
-                }
-
-                if (callbackUrl && canonicalBaseUrl) {
-                    try {
-                        const vanityRedirect = await computeVanityRedirect({
-                            url: callbackUrl,
-                            baseUrl: canonicalBaseUrl,
-                            token: {
-                                id: extendedUser.id,
-                                email: extendedUser.email,
-                                name: extendedUser.name,
-                                tenant: extendedUser.tenant,
-                                tenantSlug: extendedUser.tenantSlug,
-                                user_type: extendedUser.user_type,
-                                clientId: extendedUser.clientId,
-                                contactId: extendedUser.contactId,
-                                login_method: providerId,
-                            },
-                        });
-
-                        if (vanityRedirect) {
-                            return vanityRedirect;
-                        }
-                    } catch (error) {
-                        console.warn('[signIn] failed to compute OAuth client portal redirect', {
-                            email: extendedUser?.email,
-                            tenant: extendedUser?.tenant,
-                            callbackUrl,
-                            error,
-                        });
-                    }
-                }
-            }
-
-            if (extendedUser && providerId) {
-                extendedUser.loginMethod = providerId;
-            }
-
-            if (providerId === 'credentials') {
-                const callbackUrl = typeof credentials?.callbackUrl === 'string' ? credentials.callbackUrl : undefined;
-                const canonicalBaseUrl = process.env.NEXTAUTH_URL;
-
-                if (extendedUser?.user_type === 'client' && callbackUrl && canonicalBaseUrl) {
-                    try {
-                        const vanityRedirect = await computeVanityRedirect({
-                            url: callbackUrl,
-                            baseUrl: canonicalBaseUrl,
-                            token: {
-                                id: extendedUser.id,
-                                email: extendedUser.email,
-                                name: extendedUser.name,
-                                tenant: extendedUser.tenant,
-                                tenantSlug: extendedUser.tenantSlug,
-                                user_type: extendedUser.user_type,
-                                clientId: extendedUser.clientId,
-                                contactId: extendedUser.contactId,
-                                login_method: 'credentials',
-                            },
-                        });
-
-                        if (vanityRedirect) {
-                            return vanityRedirect;
-                        }
-                    } catch (error) {
-                        console.warn('[signIn] failed to compute client portal redirect', {
-                            email: extendedUser?.email,
-                            tenant: extendedUser?.tenant,
-                            callbackUrl,
-                            error,
-                        });
-                    }
-                }
-            }
-
-            return true; // Allow sign in
-        },
-        async jwt({ token, user, trigger }: any) {
-            console.log('JWT callback - initial token:', {
-                id: token.id,
-                email: token.email,
-                clientId: token.clientId,
-                hasUser: !!user
-            });
-
-            if (isUnresolvedOAuthUser(user as ExtendedUser | undefined)) {
-                console.warn('[auth] refusing to mint a token for an unresolved OAuth profile', {
-                    email: (user as ExtendedUser)?.email,
-                    code: (user as ExtendedUser)?.authFailure?.code,
-                });
-                return token;
-            }
-
-	            if (user) {
-	                const extendedUser = user as ExtendedUser;
-	                console.log('JWT callback - new user login:', {
-	                    id: extendedUser.id,
-	                    email: extendedUser.email,
-	                    tenant: extendedUser.tenant,
-	                    clientId: extendedUser.clientId
-	                });
-                if (!extendedUser.tenantSlug && extendedUser.tenant) {
-                    extendedUser.tenantSlug = buildTenantPortalSlug(extendedUser.tenant);
-                }
-	                token.id = extendedUser.id;
-	                // Keep `sub` aligned with `id` for middleware/legacy consumers that read `token.sub`.
-	                token.sub = extendedUser.id;
-	                token.email = extendedUser.email;
-	                token.name = extendedUser.name;
-	                token.username = extendedUser.username;
-	                token.image = extendedUser.image;
-	                token.proToken = extendedUser.proToken;
-                token.tenant = extendedUser.tenant;
-                token.tenantSlug = extendedUser.tenantSlug;
-	                token.user_type = extendedUser.user_type;
-	                token.clientId = extendedUser.clientId;
-	                token.contactId = extendedUser.contactId;
-
-                // Fetch tenant plan + subscription info on initial sign-in
-                if (extendedUser.tenant) {
-                    try {
-                        const subInfo = await fetchTenantSubscriptionInfo(extendedUser.tenant);
-                        token.plan = subInfo.plan;
-                        token.product_code = subInfo.product_code;
-                        token.addons = subInfo.addons;
-                        token.trial_end = subInfo.trial_end;
-                        token.subscription_status = subInfo.subscription_status;
-                        token.solo_pro_trial_end = subInfo.solo_pro_trial_end;
-                        token.effectiveTier = await resolveSelfHostEffectiveTier();
-                        token.last_plan_check = Date.now();
-                    } catch (error) {
-                        console.error('[auth] Failed to fetch tenant subscription info:', error);
-                    }
-                }
-	              }
-
-	            // NEW: Create session record on initial sign-in
-	            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
-	            if (user && !token.session_id) {
-	                try {
-                    const extendedUser = user as any; // ExtendedUser with deviceInfo and loginMethod added in signIn callback
-                    const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);
-                    const deviceInfo = extendedUser.deviceInfo ?? {
-                        ip: 'unknown',
-                        userAgent: 'unknown',
-                        deviceFingerprint: 'unknown',
-                        deviceName: 'Unknown device',
-                        deviceType: 'unknown',
-                        locationData: null,
-                    };
-
-                    // Determine login method - use captured provider from signIn, or default to credentials
-                    const loginMethod = extendedUser.loginMethod || (token.login_method as string | undefined) || 'credentials';
-
-                    // sessions.tenant / user_id are NOT NULL FKs: an OAuth profile that never
-                    // resolved to an AlgaPSA user fails here, and the fail-closed check below
-                    // then reports only "missing identity claims". Name the real gap first.
-                    if (typeof token.tenant !== 'string' || typeof token.id !== 'string') {
-                        console.error('[auth] Cannot create session record: OAuth profile did not resolve to an AlgaPSA user', {
-                            loginMethod,
-                            email: token.email,
-                            hasTenant: typeof token.tenant === 'string',
-                            hasUserId: typeof token.id === 'string',
-                            userType: token.user_type,
-                        });
-                    }
-
-                    const sessionId = await UserSession.create({
-                        tenant: token.tenant as string,
-                        user_id: token.id as string,
-                        ip_address: deviceInfo.ip,
-                        user_agent: deviceInfo.userAgent,
-                        device_fingerprint: deviceInfo.deviceFingerprint,
-                        device_name: deviceInfo.deviceName,
-                        device_type: deviceInfo.deviceType,
-                        location_data: deviceInfo.locationData,
-                        expires_at: expiresAt,
-                        login_method: loginMethod,
-                    });
-
-                    token.session_id = sessionId;
-                    token.login_method = loginMethod;
-
-                    // Fire-and-forget: Update location data asynchronously
-                    const ipForLocation = deviceInfo.ip;
-                    const tenantForLocation = token.tenant as string;
-                    getLocationFromIp(ipForLocation)
-                        .then((locationData) => {
-                            if (locationData) {
-                                return UserSession.updateLocation(tenantForLocation, sessionId, locationData);
-                            }
-                        })
-                        .catch((error) => {
-                            console.warn('[auth] Failed to update session location:', error);
-                        });
-
-                    // Clean up device info (don't store in token)
-                    if (extendedUser.deviceInfo) {
-                        delete extendedUser.deviceInfo;
-                    }
-                } catch (error) {
-                    console.error('[auth] Failed to create session record:', {
-                        loginMethod: token.login_method,
-                        email: token.email,
-                        tenant: token.tenant,
-                        userId: token.id,
-                        error,
-                    });
-                }
-            }
-
-            // Check durable revocation and canonical identity state on every
-            // authenticated request. Missing, untracked, or mismatched sessions
-            // fail closed. A lookup that could not be completed leaves the
-            // cookie alone and skips the writes below; the request itself is
-            // still denied downstream, where the same check is repeated.
-            const trackedSession = await checkTrackedSession(
-                token.tenant,
-                token.session_id,
-                token.id || token.sub,
-                token.user_type,
-            );
-            if (trackedSession === 'revoked') {
-                return null;
-            }
-            if (trackedSession === 'unverified') {
-                return token;
-            }
-
-            // Slide the DB session expiry to track the rolling JWT so an active session
-            // never lapses (throttled to ~one write per half-lifetime to limit DB load).
-            if (token.session_id) {
-                const lastExtend = (token.last_session_extend as number) || 0;
-                const nowMs = Date.now();
-                if (nowMs - lastExtend > (SESSION_MAX_AGE * 1000) / 2) {
-                    try {
-                        await UserSession.extendExpiry(
-                            token.tenant as string,
-                            token.session_id as string,
-                            new Date(nowMs + SESSION_MAX_AGE * 1000),
-                        );
-                        token.last_session_extend = nowMs;
-                    } catch (error) {
-                        console.error('[auth] Failed to extend session expiry:', error);
-                    }
-                }
-            }
-
-            // PERFORMANCE FIX: Removed validateUser() which was causing connection pool exhaustion
-            // - validateUser() called getAdminConnection() on EVERY request (250+ times in logs)
-            // - With max 20 connections, pool exhausted instantly with multiple users
-            // - Result: "remaining connection slots reserved for superuser" errors
-            //
-            // Security is maintained by:
-            // 1. NextAuth JWT signature validation (cryptographically secure)
-            // 2. Session revocation check above (handles compromised sessions)
-            // 3. User validation at login time (sufficient for most use cases)
-            //
-            // If user is deleted/deactivated between requests, they'll be caught at next login
-
-            // Plan refresh: immediate on explicit update(), throttled otherwise (every 5 minutes)
-            if (token.tenant) {
-                const lastPlanCheck = token.last_plan_check as number || 0;
-                const now = Date.now();
-                const PLAN_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
-                const forceRefresh = trigger === 'update';
-                const shouldRefreshPlan = forceRefresh || now - lastPlanCheck > PLAN_CHECK_INTERVAL;
-
-                if (shouldRefreshPlan) {
-                    try {
-                        const subInfo = await fetchTenantSubscriptionInfo(token.tenant as string);
-                        token.plan = subInfo.plan;
-                        token.product_code = subInfo.product_code;
-                        token.addons = subInfo.addons;
-                        token.trial_end = subInfo.trial_end;
-                        token.subscription_status = subInfo.subscription_status;
-                        token.solo_pro_trial_end = subInfo.solo_pro_trial_end;
-                        token.effectiveTier = await resolveSelfHostEffectiveTier();
-                        token.last_plan_check = now;
-                    } catch (error) {
-                        console.error('[auth] Failed to refresh tenant subscription info:', error);
-                        // Don't block on plan refresh errors
-                    }
-                }
-            }
-
-            const result = {
-                ...token
-                // Token already contains all necessary user data from initial sign-in
-                // No need to fetch from DB on every request
-            };
-
-            console.log('JWT callback - final token:', {
-                id: result.id,
-                email: result.email,
-                tenant: result.tenant,
-                clientId: result.clientId
-            });
-
-            return result;
-        },
-        async session({ session, token }: any) {
-            if (token.error === "TokenValidationError") {
-                // If there was an error during token validation, return a special session
-                return { expires: "0" };
-            }
-
-            // A token with no AlgaPSA user id never belonged to a resolved user
-            // (e.g. an OAuth profile that matched nobody); present it as signed out
-            // instead of a session whose user.id is an empty string.
-            const tokenUserId = typeof token.id === 'string' && token.id.length > 0
-                ? token.id
-                : typeof token.sub === 'string' && token.sub.length > 0
-                    ? token.sub
-                    : '';
-            if (!tokenUserId) {
-                console.warn('[auth] session requested for a token without a user id; treating as unauthenticated');
-                return { expires: "0" };
-            }
-
-            const logger = (await import('@alga-psa/core/logger')).default;
-            logger.debug("Session Token:", token);
-            console.log('Session callback - token:', {
-                id: token.id,
-                email: token.email,
-                tenant: token.tenant,
-                tenantSlug: token.tenantSlug,
-                user_type: token.user_type,
-                clientId: token.clientId,
-                contactId: token.contactId
-            });
-
-            if (token && session.user) {
-                const user = session.user as ExtendedUser;
-                // CRITICAL: Ensure id is always set
-                if (!token.id) {
-                    logger.error('Token missing id field!', { token });
-                    console.error('CRITICAL: Token missing id field!', token);
-                }
-                user.id = token.id as string || token.sub as string || ''; // Fallback to sub if id is missing
-                user.email = token.email || '';
-                user.name = token.name || '';
-                user.username = token.username as string;
-                user.image = token.image as string;
-                user.proToken = token.proToken as string;
-                user.tenant = token.tenant as string;
-                user.tenantSlug = token.tenantSlug as string | undefined;
-                user.user_type = token.user_type as string;
-                user.clientId = token.clientId as string;
-                user.contactId = token.contactId as string;
-                user.plan = token.plan as string | undefined;
-                user.product_code = (token.product_code as 'psa' | 'algadesk' | undefined) ?? 'psa';
-                (user as any).addons = (token.addons as string[] | undefined) ?? [];
-                (user as any).trial_end = token.trial_end ?? null;
-                (user as any).subscription_status = token.subscription_status ?? null;
-                (user as any).solo_pro_trial_end = token.solo_pro_trial_end ?? null;
-                (user as any).effectiveTier = token.effectiveTier ?? undefined;
-            }
-            logger.trace("Session Object:", session);
-            console.log('Session callback - final session.user:', {
-                id: session.user?.id,
-                email: session.user?.email,
-                tenant: session.user?.tenant,
-                clientId: session.user?.clientId
-            });
-
-            // NEW: Add session_id to session object
-            if (token.session_id) {
-                (session as any).session_id = token.session_id as string;
-            }
-            if (token.login_method) {
-                (session as any).login_method = token.login_method as string;
-            }
-
-            return session;
-        },
-        async redirect({ url, baseUrl }: any) {
-            return resolveSafeAuthRedirect({ url, baseUrl });
-        },
-    },
-};
-
-async function validateUser(token: any) {
-    try {
-        // Fetch the user from the database using email and user_type (lowercase for consistency)
-        const User = (await import('@alga-psa/db/models/user')).default;
-        const logger = (await import('@alga-psa/core/logger')).default;
-        const user = await User.findUserByEmailAndType(
-          token.email.toLowerCase(),
-          (token.user_type === 'client' || token.user_type === 'internal') ? token.user_type : 'internal'
-        );
-
-        // Check if the user exists and matches
-        if (!user) {
-            logger.warn(`User not found for email: ${token.email}`);
-            return null;
-        }
-
-        // Log validation details for debugging
-        if (user.user_id !== token.id || user.username !== token.username) {
-            logger.warn(`User validation mismatch for email: ${token.email}`, {
-                db_user_id: user.user_id,
-                token_user_id: token.id,
-                db_username: user.username,
-                token_username: token.username,
-                email: token.email
-            });
-            // Don't fail validation for ID/username mismatch - user might have been updated
-            // The email and user_type are the primary identifiers
-        }
-
-        // Check if user is inactive
-        if (user.is_inactive) {
-            logger.warn(`User is inactive: ${token.email}`);
-            return null;
-        }
-
-        // Verify tenant matches
-        if (user.tenant !== token.tenant) {
-            logger.warn(`Tenant mismatch for email: ${token.email}`);
-            return null;
-        }
-
-        // user_type already matched via lookup
-
-        return user;
-    } catch (error) {
-        const logger = (await import('@alga-psa/core/logger')).default;
-        logger.error("Error validating user:", error);
-        return null;
-    }
 }

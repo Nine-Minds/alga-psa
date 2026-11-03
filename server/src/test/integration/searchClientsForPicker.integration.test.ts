@@ -109,7 +109,8 @@ it('returns slim rows with logos for the returned page only', async () => {
   context.logoCalls.length = 0;
   const r = await searchClientsForPicker({ pageSize: 5 });
   expect(r.clients).toHaveLength(5);
-  expect(Object.keys(r.clients[0]).sort()).toEqual(['client_id', 'client_name', 'client_type', 'is_inactive', 'logoUrl']);
+  expect(Object.keys(r.clients[0]).sort()).toEqual(['client_id', 'client_name', 'client_type', 'displayTags', 'is_inactive', 'logoUrl']);
+  expect(Array.isArray(r.clients[0].displayTags)).toBe(true);
   expect(r.clients[0].logoUrl).toBe(`/logo/${r.clients[0].client_id}`);
   expect(context.logoCalls).toHaveLength(1);
   expect(context.logoCalls[0]).toHaveLength(5);

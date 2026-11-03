@@ -345,6 +345,61 @@ export const getServiceCatalogRatesForCurrency = withAuth(async (
   });
 });
 
+export interface ProductCatalogCostInfo {
+  /** Legacy currency-untagged catalog default rate (minor units). */
+  default_rate: number | null;
+  /** Catalog cost (minor units). Always null unless the caller may see cost. */
+  cost: number | null;
+  /** ISO 4217 currency of `cost`. Always null unless the caller may see cost. */
+  cost_currency: string | null;
+}
+
+export interface ProductCatalogCostInfoResult {
+  /** Cost is internal data: only callers who may edit the catalog ('service','update') see it. */
+  canViewCost: boolean;
+  items: Record<string, ProductCatalogCostInfo>;
+}
+
+/**
+ * Legacy default rate plus (permission gated) cost for catalog items. Companion
+ * to getServiceCatalogRatesForCurrency; both are read by useProductCatalogRates.
+ * Cost is withheld server-side so it never reaches a caller who may not see it.
+ */
+export const getServiceCatalogCostInfo = withAuth(async (
+  user,
+  { tenant },
+  serviceIds: string[]
+): Promise<ProductCatalogCostInfoResult> => {
+  const uniqueServiceIds = Array.from(new Set(serviceIds.filter(Boolean)));
+  const canViewCost = await hasPermission(user, 'service', 'update');
+  if (uniqueServiceIds.length === 0) {
+    return { canViewCost, items: {} };
+  }
+
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const rows = await tenantDb(trx, tenant)
+      .table('service_catalog')
+      .whereIn('service_id', uniqueServiceIds)
+      .select(
+        'service_id',
+        trx.raw('CAST(default_rate AS FLOAT) as default_rate'),
+        trx.raw('CAST(cost AS FLOAT) as cost'),
+        'cost_currency'
+      ) as Array<{ service_id: string; default_rate: number | null; cost: number | null; cost_currency: string | null }>;
+
+    const items: Record<string, ProductCatalogCostInfo> = {};
+    for (const row of rows) {
+      items[row.service_id] = {
+        default_rate: row.default_rate != null ? Math.round(row.default_rate) : null,
+        cost: canViewCost && row.cost != null ? Math.round(row.cost) : null,
+        cost_currency: canViewCost ? row.cost_currency ?? null : null,
+      };
+    }
+    return { canViewCost, items };
+  });
+});
+
 export const getServices = withAuth(async (
   user,
   { tenant },

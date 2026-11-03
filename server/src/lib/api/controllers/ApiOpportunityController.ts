@@ -25,7 +25,7 @@ import {
   handleApiError,
 } from '../middleware/apiMiddleware';
 
-const uuidSchema = z.string().uuid();
+const uuidSchema = z.string().guid();
 
 export class ApiOpportunityController extends ApiBaseController {
   private opportunityService: OpportunityService;

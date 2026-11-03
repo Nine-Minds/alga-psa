@@ -27,10 +27,12 @@ function inList(values) {
 
 async function replaceCheck(knex, table, name, expression) {
   await knex.raw('ALTER TABLE ?? DROP CONSTRAINT IF EXISTS ??', [table, name]);
+  // migration-lint: allow 2 - retroactive: CHECK/FK re-added on prepaid-block tables introduced in this same release train, merged before the lint existed; not re-reviewed for production row counts
   await knex.raw('ALTER TABLE ?? ADD CONSTRAINT ?? CHECK (' + expression + ')', [table, name]);
 }
 
 async function addFk(knex, table, name, columns, refTable, refColumns, onDelete) {
+  // migration-lint: allow 2 - retroactive: CHECK/FK re-added on prepaid-block tables introduced in this same release train, merged before the lint existed; not re-reviewed for production row counts
   await knex.raw(`
     DO $$ BEGIN
       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = '${name}') THEN
@@ -59,9 +61,11 @@ exports.up = async function up(knex) {
   await addFk(knex, 'hour_blocks', 'hour_blocks_issuance_fkey',
     'tenant, issuance_id', 'contract_line_block_issuances', 'tenant, issuance_id',
     hourBlocksDistributed ? undefined : 'SET NULL (issuance_id)');
+  // migration-lint: allow 1 - retroactive: hour_blocks index built inside the transaction; hour_blocks is a prepaid-block table new in this release train, merged before the lint existed
   await knex.raw(
     'CREATE INDEX IF NOT EXISTS hour_blocks_contract_line_status_idx ON hour_blocks (tenant, contract_line_id, status)',
   );
+  // migration-lint: allow 1 - retroactive: hour_blocks index built inside the transaction; hour_blocks is a prepaid-block table new in this release train, merged before the lint existed
   await knex.raw(
     'CREATE INDEX IF NOT EXISTS hour_blocks_issuance_idx ON hour_blocks (tenant, issuance_id)',
   );

@@ -45,6 +45,45 @@ export function cippApiClientRejectedMessage(): string {
   return 'CIPP rejected a freshly issued access token for this API client. In CIPP > Integrations > CIPP-API, confirm the client is enabled and its Role allows API access, then reconnect from the Connection tab.';
 }
 
+/**
+ * Why a request never got an HTTP answer. Read from the Node/axios error code
+ * so the operator learns whether to fix the host name, the port/firewall, or
+ * the network path, instead of a bare "request failed".
+ */
+export type CippTransportCause = 'dns' | 'refused' | 'timeout' | 'tls' | 'network';
+
+export function classifyCippTransportError(code: unknown): CippTransportCause {
+  const value = typeof code === 'string' ? code.toUpperCase() : '';
+  if (value === 'ENOTFOUND' || value === 'EAI_AGAIN' || value === 'EAI_NONAME') return 'dns';
+  if (value === 'ECONNREFUSED') return 'refused';
+  if (value === 'ECONNABORTED' || value === 'ETIMEDOUT' || value === 'ESOCKETTIMEDOUT') return 'timeout';
+  if (
+    value.startsWith('CERT_')
+    || value.startsWith('ERR_TLS')
+    || value.includes('SELF_SIGNED')
+    || value === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE'
+    || value === 'UNABLE_TO_GET_ISSUER_CERT_LOCALLY'
+  ) {
+    return 'tls';
+  }
+  return 'network';
+}
+
+export function cippUnreachableMessage(host: string, cause: CippTransportCause): string {
+  switch (cause) {
+    case 'dns':
+      return `Could not reach CIPP at ${host}: the host name does not resolve (DNS). Check the API URL for typos; copy it from CIPP > Integrations > CIPP-API.`;
+    case 'refused':
+      return `Could not reach CIPP at ${host}: the connection was refused. The host exists but nothing is accepting connections on that port. Check the API URL and that the CIPP-API function app is running.`;
+    case 'timeout':
+      return `Could not reach CIPP at ${host}: the request timed out. The host may be down, or a firewall may be dropping our traffic. Check the API URL and try again.`;
+    case 'tls':
+      return `Could not reach CIPP at ${host}: the TLS certificate was not accepted. Use the https CIPP-API URL shown in CIPP > Integrations > CIPP-API.`;
+    default:
+      return `Could not reach CIPP at ${host}: the network request failed before CIPP answered. Check the API URL and try again.`;
+  }
+}
+
 /** Whether an HTTP body is HTML (a web UI or proxy page), not API JSON. */
 export function looksLikeHtml(contentType: unknown, body: unknown): boolean {
   if (typeof contentType === 'string' && /text\/html/i.test(contentType)) {

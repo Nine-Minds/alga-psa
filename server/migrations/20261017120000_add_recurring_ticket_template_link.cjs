@@ -52,6 +52,7 @@ exports.up = async function up(knex) {
     await knex.raw(`ALTER TABLE ${DEFINITIONS} ALTER COLUMN ${column} DROP NOT NULL`);
   }
 
+  // migration-lint: allow 1 - retroactive: index on recurring_ticket_definitions built inside the migration transaction; merged before the lint existed
   await knex.raw(`
     CREATE INDEX IF NOT EXISTS idx_${DEFINITIONS}_ticket_template
     ON ${DEFINITIONS} (tenant, ticket_template_id)
@@ -63,6 +64,7 @@ exports.up = async function up(knex) {
     const [definitions, templates] = await Promise.all([colocationOf(knex, DEFINITIONS), colocationOf(knex, TEMPLATES)]);
     const bothColocated = !definitions.citus || (definitions.colocationId !== null && definitions.colocationId === templates.colocationId);
     if (bothColocated) {
+      // migration-lint: allow 2 - retroactive: FK added only when both tables are colocated and guarded by a constraint-exists probe; merged before the lint existed
       await knex.raw(
         `ALTER TABLE ${DEFINITIONS} ADD CONSTRAINT ${FK_NAME}
          FOREIGN KEY (tenant, ticket_template_id) REFERENCES ${TEMPLATES} (tenant, template_id) ON DELETE RESTRICT`

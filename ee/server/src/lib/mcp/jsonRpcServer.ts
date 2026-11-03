@@ -6,6 +6,11 @@ import {
   SEARCH_API_REGISTRY_TOOL,
   SEARCH_BUSINESS_DATA_TOOL,
   CALL_API_ENDPOINT_TOOL,
+  ATTACH_FILE_TOOL,
+  MCP_SERVER_INSTRUCTIONS,
+  buildAttachFileRequest,
+  AttachFileInputError,
+  redactToolArguments,
   type ChatApiRegistryEntry,
   type CallEndpointArgs,
 } from '@alga-psa/agent-tooling';
@@ -133,6 +138,25 @@ async function dispatchTool(name: string, args: Record<string, unknown>, ctx: Di
     return { content: textContent({ status: r.status, ok: r.ok, data: r.data }), isError: !r.ok, statusCode: r.status };
   }
 
+  // LEVERAGE: pattern mcp-tool-dispatch — the same attach_file dispatch lives in alga-mcp-connector tools.ts
+  if (name === ATTACH_FILE_TOOL) {
+    let built;
+    try {
+      built = buildAttachFileRequest(args);
+    } catch (err) {
+      // AttachFileInputError messages are written to never echo the signed URL.
+      if (err instanceof AttachFileInputError) return toolErr(err.message);
+      throw err;
+    }
+    const r = await selfFetch(
+      ctx.baseUrl,
+      built.path,
+      { method: built.method, headers: { 'content-type': 'application/json' }, body: built.body },
+      ctx.apiKey,
+    );
+    return { content: textContent({ status: r.status, ok: r.ok, data: r.data }), isError: !r.ok, statusCode: r.status };
+  }
+
   return toolErr(`Unknown tool: ${name}`);
 }
 
@@ -144,6 +168,7 @@ async function handleOne(m: JsonRpcMessage, ctx: DispatchCtx): Promise<object | 
         protocolVersion: (m.params?.protocolVersion as string) ?? PROTOCOL_VERSION,
         capabilities: { tools: {} },
         serverInfo: { name: 'alga-psa', version: '0.1.0' },
+        instructions: MCP_SERVER_INSTRUCTIONS,
       });
     case 'notifications/initialized':
     case 'notifications/cancelled':
@@ -177,7 +202,7 @@ async function handleOne(m: JsonRpcMessage, ctx: DispatchCtx): Promise<object | 
             tenant: ctx.tenant,
             agentId: ctx.agentId,
             tool: name,
-            arguments: args,
+            arguments: redactToolArguments(name, args),
             ok: !out.isError,
             statusCode: out.statusCode ?? null,
             decision,

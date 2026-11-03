@@ -252,6 +252,10 @@ export type EntraStatusResponse = {
   lastValidationError: Record<string, unknown> | null;
   connectionDetails?: {
     cippBaseUrl: string | null;
+    /** Non-secret CIPP identity fields. The client secret and API key are never exposed. */
+    cippAuthType?: 'api_client' | 'legacy_api_token' | null;
+    cippClientId?: string | null;
+    cippDirectoryId?: string | null;
     directTenantId: string | null;
     directCredentialSource: 'profile' | null;
     directProfileId: string | null;
@@ -704,6 +708,10 @@ export const testEntraCippCredentials = withAuth(async (
     return {
       success: false,
       error: probe.error || 'Unable to validate the CIPP connection.',
+      // The classification (no secret) lets the dialog title the failure.
+      code: probe.code,
+      // For an unreachable host: DNS, refused, timeout, TLS or network.
+      cause: probe.cause,
     } as const;
   }
 
@@ -755,6 +763,10 @@ export const connectEntraCipp = withAuth(async (
     return {
       success: false,
       error: probe.error || 'Unable to validate the CIPP connection.',
+      // The classification (no secret) lets the dialog title the failure.
+      code: probe.code,
+      // For an unreachable host: DNS, refused, timeout, TLS or network.
+      cause: probe.cause,
     } as const;
   }
 

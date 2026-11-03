@@ -12,7 +12,7 @@ import { reportingActionErrorFrom, type ReportingActionError } from './reporting
 // Removed safe-action import as it's not the standard pattern here
 // Define the schema for the input parameters
 const InputSchema = z.object({
-  clientId: z.string().uuid(),
+  clientId: z.string().guid(),
   limit: z.number().int().positive().optional().default(10),
 });
 

@@ -1,6 +1,7 @@
 import type { Knex } from "knex";
 import type {
   ContractDraftBucketOverlayInput,
+  ContractDraftBucketPoolInput,
   ContractDraftDiscount,
   ContractDraftSimulationInput,
   ContractScenario,
@@ -8,14 +9,16 @@ import type {
   ScenarioDiscount,
   ScenarioLine,
   ScenarioLineService,
+  ScenarioPool,
   ScenarioServiceConfig,
 } from "@alga-psa/types";
 import { tenantDb } from "@alga-psa/db";
 import { toISODate, toPlainDate } from "@alga-psa/core";
-import { getClientBillingCycleAnchor } from "@alga-psa/shared/billingClients/billingSchedule";
+import { loadClientInvoiceSchedule } from "./clientInvoiceSchedule";
 import { resolveUnitOfMeasure } from "@alga-psa/core/unitOfMeasure";
 import { resolveEffectiveBillingTiming } from "@alga-psa/shared/billingClients/contractLineTimingRule";
 import { assumptionKey } from "./syntheticActivity";
+import { simulationRefusal } from "./simulationRefusal";
 
 const midnight = (value: string): string =>
   `${toISODate(toPlainDate(value))}T00:00:00Z`;
@@ -60,18 +63,65 @@ export function draftDiscountsToScenario(
     });
 }
 
+/**
+ * Wizard pool drafts as the scenario pool model snapshotContractToScenario
+ * builds from `contract_line_buckets` (ScenarioPool: allowance, members with
+ * burn multipliers, after-hours rule), so ScenarioChargeSource.pools() has one
+ * pool path. Drafts whose line is not simulated are skipped, as the wizard
+ * submission skips them.
+ */
+export function draftPoolsToScenario(
+  pools: ContractDraftBucketPoolInput[] | undefined,
+  lineKey: "hourly" | "usage",
+  services: ScenarioLineService[],
+): ScenarioPool[] {
+  const lineServiceIds = new Set(services.map((service) => service.service_id));
+  return (pools ?? [])
+    .filter((pool) => (pool.line_key ?? "hourly") === lineKey)
+    .map((pool, index) => ({
+      pool_id: `draft-pool-${lineKey}-${index + 1}`,
+      pool_name: pool.bucket_name ?? null,
+      covers_all_services: Boolean(pool.covers_all_services),
+      total_minutes: Math.max(0, Math.round(Number(pool.total_minutes ?? 0))),
+      billing_period: "monthly",
+      overage_rate: Math.max(0, Math.round(Number(pool.overage_rate ?? 0))),
+      allow_rollover: Boolean(pool.allow_rollover),
+      after_hours_multiplier:
+        pool.after_hours_multiplier != null
+          ? Number(pool.after_hours_multiplier)
+          : null,
+      business_hours_schedule_id: pool.business_hours_schedule_id ?? null,
+      members: (pool.members ?? [])
+        .filter((member) => lineServiceIds.has(member.service_id))
+        .map((member) => ({
+          service_id: member.service_id,
+          burn_multiplier: Number(member.burn_multiplier ?? 1),
+        })),
+    }));
+}
+
 export async function draftContractToScenario(
   knex: Knex,
   tenant: string,
   draft: ContractDraftSimulationInput,
 ): Promise<ContractScenario> {
-  if (!draft.client_id) throw new Error("Select a client before simulating");
+  if (!draft.client_id) {
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_CLIENT_REQUIRED",
+      "Select a client before simulating.",
+    );
+  }
   const db = tenantDb(knex, tenant);
   const client = await db
     .table("clients")
     .where({ client_id: draft.client_id })
     .first("client_id", "client_name");
-  if (!client) throw new Error("Draft simulation client is not available");
+  if (!client) {
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_CLIENT_NOT_AVAILABLE",
+      "The client this simulation uses is not available. It may have been deleted; choose another client.",
+    );
+  }
 
   const currencyCode = draft.currency_code || "USD";
   const catalogQuery = db.table("service_catalog as sc");
@@ -123,7 +173,10 @@ export async function draftContractToScenario(
   ): ScenarioLineService => {
     const catalog = catalogById.get(serviceId);
     if (!catalog)
-      throw new Error("Draft contains an invalid service reference");
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_SCENARIO_REFERENCE_INVALID",
+        "This draft refers to a service that is no longer available. Remove it from the contract, then simulate again.",
+      );
     return {
       configuration_id: `draft-config-${serviceId}-${configuration.configuration_type}`,
       service_id: catalog.service_id,
@@ -191,6 +244,10 @@ export async function draftContractToScenario(
   });
 
   const lines: ScenarioLine[] = [];
+  const withDraftPools = (scenarioLine: ScenarioLine, lineKey: "hourly" | "usage") => {
+    const pools = draftPoolsToScenario(draft.bucket_pools, lineKey, scenarioLine.services);
+    if (pools.length > 0) scenarioLine.pools = pools;
+  };
   // One scenario line per wizard fixed line. A line with no service cannot be
   // billed (the engine rejects a rate with no members), so it is not simulated.
   const simulatedFixedLines = draft.fixed_lines.filter((fixedLine) => fixedLine.services.length > 0);
@@ -240,6 +297,8 @@ export async function draftContractToScenario(
             base_rate: null,
           }),
         ),
+        null,
+        { billing_timing: draft.product_billing_timing },
       ),
     );
   }
@@ -265,6 +324,7 @@ export async function draftContractToScenario(
         services,
       ),
     );
+    withDraftPools(lines[lines.length - 1], "hourly");
   }
   if ((draft.usage_services ?? []).length > 0) {
     const services = (draft.usage_services ?? []).flatMap((item) => {
@@ -289,6 +349,7 @@ export async function draftContractToScenario(
         services,
       ),
     );
+    withDraftPools(lines[lines.length - 1], "usage");
   }
 
   // Prepaid Block lines: each is its own Hourly line carrying the block config, exactly the shape the
@@ -328,11 +389,13 @@ export async function draftContractToScenario(
         trigger_on_expiry: expiryMonths === null ? false : Boolean(block.trigger_on_expiry),
         trigger_on_renewal: Boolean(block.trigger_on_renewal),
         replenishment_tier: block.replenishment_tier === "auto_issue" ? "auto_issue" : "draft",
+        issue_mode: block.issue_mode === "cadence" ? "cadence" : "consumption",
+        rollover_periods: block.rollover_periods ?? 0,
       },
     });
   });
 
-  const schedule = await getClientBillingCycleAnchor(
+  const invoiceSchedule = await loadClientInvoiceSchedule(
     knex,
     tenant,
     client.client_id,
@@ -363,15 +426,7 @@ export async function draftContractToScenario(
       client_id: client.client_id,
       client_name: client.client_name,
     },
-    invoice_schedule: {
-      billing_cycle: schedule.billingCycle,
-      anchor: {
-        day_of_month: schedule.anchor.dayOfMonth,
-        month_of_year: schedule.anchor.monthOfYear,
-        day_of_week: schedule.anchor.dayOfWeek,
-        reference_date: schedule.anchor.referenceDate,
-      },
-    },
+    invoice_schedule: invoiceSchedule,
     billing_frequency: draft.billing_frequency,
     contract_start_date: draft.start_date ? midnight(draft.start_date) : null,
     contract_end_date: draft.end_date ? midnight(draft.end_date) : null,

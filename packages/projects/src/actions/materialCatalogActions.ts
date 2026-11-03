@@ -21,7 +21,8 @@ import {
   queryServicePrices,
   updateProjectMaterialBilling,
 } from '@alga-psa/inventory/lib';
-import { InsufficientStockError } from '@alga-psa/inventory/lib/consume';
+import { InsufficientStockError, stockConflictResultFrom } from '@alga-psa/inventory/lib/consume';
+import type { StockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
 import {
   actionError,
   permissionError,
@@ -174,10 +175,12 @@ export const addProjectMaterial = withAuth(async (
     currency_code: string;
     description?: string | null;
     unit_id?: string | null; // serialized: the picked stock unit to deliver
+    /** Set only after the user confirmed a stockConflict result with overrideable=true. */
+    allow_reserved_override?: boolean;
     billing_destination?: ProjectMaterialBillingDestination;
     billing_schedule_entry_id?: string | null;
   }
-): Promise<IProjectMaterial | ProjectMaterialActionError> => {
+): Promise<IProjectMaterial | ProjectMaterialActionError | StockConflictResult> => {
   try {
     if (!await hasPermission(user, 'project', 'update')) {
       return permissionError('Permission denied: project update required', 'projects:errors.permissions.materialUpdate');
@@ -190,6 +193,11 @@ export const addProjectMaterial = withAuth(async (
       (user as any)?.user_id ?? null,
     )) as IProjectMaterial;
   } catch (error) {
+    // Stock-level refusals travel as a structured, serializable result so the dialog can
+    // show the refusal or the override prompt (thrown messages do not cross the boundary).
+    // LEVERAGE: pattern stock-conflict-action-mapping — the stockConflictResultFrom -> actionErrorFrom sequence repeats in tickets, projects and billing add actions.
+    const conflict = stockConflictResultFrom(error);
+    if (conflict) return conflict;
     const expected = projectMaterialActionErrorFrom(error);
     if (expected) {
       return expected;

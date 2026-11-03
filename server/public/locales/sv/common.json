@@ -204,6 +204,10 @@
     "passwordMismatch": "Lösenorden matchar inte"
   },
   "errors": {
+    "coManaged": {
+      "readOnly": "Den här gemensamt hanterade arbetsytan är skrivskyddad. Inloggning, läsning, export och licensåterställning är fortfarande tillgängliga.",
+      "acceptancePending": "Kundens administratör måste godkänna gemensam hantering innan arbetsytan kan användas."
+    },
     "validation": {
       "required": "{{field}} krävs.",
       "invalidType": "{{field}} har fel typ.",
@@ -1580,7 +1584,42 @@
     }
   },
   "labels": {
-    "printColumns": "Kolumner att skriva ut"
+    "printColumns": "Kolumner att skriva ut",
+    "dialog": {
+      "assetTitle": "Skriv ut tillgångsetiketter",
+      "batch_one": "En etikett för det kvarhållna objektet ({{count}})",
+      "batch_other": "En etikett per kvarhållet objekt ({{count}})",
+      "count_one": "{{count}} markerad",
+      "count_other": "{{count}} markerade",
+      "failed": "Etiketterna kunde inte skrivas ut.",
+      "item": "Objekt",
+      "layout": "Layout",
+      "linkedAsset": "Länkad tillgång",
+      "noAsset": "Ingen tillgång",
+      "notFound": "De här posterna kunde inte öppnas.",
+      "openPdf": "Öppna PDF",
+      "previewBatch_one": "Skriv ut {{count}} etikett för det kvarhållna objektet.",
+      "previewBatch_other": "Skriv ut {{count}} etiketter, en per kvarhållet objekt.",
+      "previewPicked": "Etiketten visar det här objektets plats och nästa åtgärd.",
+      "previewPickedNotHeld": "Det här objektet är inte kvarhållet, så etiketten visar ingen plats.",
+      "previewSingle": "Etiketten visar {{location}}.",
+      "previewSingleNoLocation": "Etiketten visar det här objektets nästa åtgärd.",
+      "previewSummary_one": "{{count}} objekt kvarhållet.",
+      "previewSummary_other": "{{count}} objekt kvarhållna.",
+      "printed_one": "{{count}} etikett utskriven.",
+      "printed_other": "{{count}} etiketter utskrivna.",
+      "printing": "Förbereder…",
+      "print": "Skriv ut",
+      "reason": "Orsak",
+      "skipFailures": "Hoppa över dessa och skriv ut resten",
+      "skipped_one": "{{count}} post hoppades över eftersom den inte kunde öppnas.",
+      "skipped_other": "{{count}} poster hoppades över eftersom de inte kunde öppnas.",
+      "template": "Mall",
+      "ticketTitle": "Skriv ut arbetsetiketter",
+      "tooMany": "Du kan skriva ut högst {{max}} etiketter åt gången.",
+      "unnamedAsset": "Namnlös tillgång",
+      "useTemplate": "Använd {{template}}"
+    }
   },
   "deleteEntity": {
     "checkingDependenciesTitle": "Kontrollerar beroenden",
@@ -2172,5 +2211,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Byt vy"
+  },
+  "entityChip": {
+    "moreTags": "{{count}} taggar till: {{names}}"
   }
 }

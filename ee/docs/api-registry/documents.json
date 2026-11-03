@@ -1,0 +1,47 @@
+{
+  "entries": [
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/documents"
+      },
+      "metadata": {
+        "displayName": "Attach File to Record",
+        "summary": "Attach one file to a ticket, project task, client, contact or asset",
+        "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). The URL host must be on the workspace's allowed download hosts (a tenant admin manages the list under Settings > MCP Server > Allowed download hosts; the ChatGPT file host is built in). If the call fails with 400 FETCH_HOST_NOT_ALLOWED, nothing was downloaded: tell the user an admin can add that host, and do not retry with other URLs. Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file, unfetchable URL or a host that is not allowed (FETCH_HOST_NOT_ALLOWED), 403 without permission, 404 for a missing record.",
+        "rbacResource": "document",
+        "approvalRequired": true,
+        "examples": [
+          {
+            "name": "Attach a file to a ticket by URL",
+            "request": {
+              "body": {
+                "entity_type": "ticket",
+                "entity_id": "00000000-0000-4000-8000-000000000001",
+                "source": {
+                  "type": "url",
+                  "url": "https://acme-uploads.s3.us-east-1.amazonaws.com/screenshot.png?X-Amz-Signature=example"
+                }
+              }
+            }
+          },
+          {
+            "name": "Attach small authored text to a contact by base64",
+            "request": {
+              "body": {
+                "entity_type": "contact",
+                "entity_id": "00000000-0000-4000-8000-000000000002",
+                "source": {
+                  "type": "base64",
+                  "content": "UGhvbmUgbm90ZXM="
+                },
+                "file_name": "notes.txt",
+                "mime_type": "text/plain"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

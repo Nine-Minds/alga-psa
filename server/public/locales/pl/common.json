@@ -160,6 +160,10 @@
     "passwordMismatch": "Hasła nie są zgodne"
   },
   "errors": {
+    "coManaged": {
+      "readOnly": "Ten współzarządzany obszar roboczy jest tylko do odczytu. Logowanie, odczyt, eksport i odzyskiwanie licencji pozostają dostępne.",
+      "acceptancePending": "Administrator klienta musi zaakceptować współzarządzanie, zanim będzie można korzystać z tego obszaru roboczego."
+    },
     "validation": {
       "required": "Pole {{field}} jest wymagane.",
       "invalidType": "Pole {{field}} ma nieprawidłowy typ.",
@@ -1580,7 +1584,54 @@
     }
   },
   "labels": {
-    "printColumns": "Kolumny wydruku"
+    "printColumns": "Kolumny wydruku",
+    "dialog": {
+      "assetTitle": "Drukuj etykiety zasobów",
+      "batch_one": "Jedna etykieta dla przechowywanego elementu ({{count}})",
+      "batch_few": "Jedna etykieta na każdy przechowywany element ({{count}})",
+      "batch_many": "Jedna etykieta na każdy przechowywany element ({{count}})",
+      "batch_other": "Jedna etykieta na każdy przechowywany element ({{count}})",
+      "count_one": "Zaznaczono {{count}}",
+      "count_few": "Zaznaczono {{count}}",
+      "count_many": "Zaznaczono {{count}}",
+      "count_other": "Zaznaczono {{count}}",
+      "failed": "Nie udało się wydrukować etykiet.",
+      "item": "Element",
+      "layout": "Układ",
+      "linkedAsset": "Powiązany zasób",
+      "noAsset": "Brak zasobu",
+      "notFound": "Nie udało się otworzyć tych rekordów.",
+      "openPdf": "Otwórz PDF",
+      "previewBatch_one": "Drukuj {{count}} etykietę dla przechowywanego elementu.",
+      "previewBatch_few": "Drukuj {{count}} etykiety, po jednej na każdy przechowywany element.",
+      "previewBatch_many": "Drukuj {{count}} etykiet, po jednej na każdy przechowywany element.",
+      "previewBatch_other": "Drukuj {{count}} etykiety, po jednej na każdy przechowywany element.",
+      "previewPicked": "Etykieta pokaże lokalizację i następną czynność dla tego elementu.",
+      "previewPickedNotHeld": "Ten element nie jest przechowywany, więc etykieta nie pokazuje lokalizacji.",
+      "previewSingle": "Etykieta pokaże {{location}}.",
+      "previewSingleNoLocation": "Etykieta pokaże następną czynność dla tego elementu.",
+      "previewSummary_one": "Przechowywany element: {{count}}.",
+      "previewSummary_few": "Przechowywane elementy: {{count}}.",
+      "previewSummary_many": "Przechowywane elementy: {{count}}.",
+      "previewSummary_other": "Przechowywane elementy: {{count}}.",
+      "printed_one": "Wydrukowano {{count}} etykietę.",
+      "printed_few": "Wydrukowano {{count}} etykiety.",
+      "printed_many": "Wydrukowano {{count}} etykiet.",
+      "printed_other": "Wydrukowano {{count}} etykiety.",
+      "printing": "Przygotowywanie…",
+      "print": "Drukuj",
+      "reason": "Powód",
+      "skipFailures": "Pomiń te i wydrukuj resztę",
+      "skipped_one": "Pominięto {{count}} rekord, ponieważ nie udało się go otworzyć.",
+      "skipped_few": "Pominięto {{count}} rekordy, ponieważ nie udało się ich otworzyć.",
+      "skipped_many": "Pominięto {{count}} rekordów, ponieważ nie udało się ich otworzyć.",
+      "skipped_other": "Pominięto {{count}} rekordu, ponieważ nie udało się go otworzyć.",
+      "template": "Szablon",
+      "ticketTitle": "Drukuj etykiety robocze",
+      "tooMany": "Jednorazowo można wydrukować co najwyżej {{max}} etykiet.",
+      "unnamedAsset": "Zasób bez nazwy",
+      "useTemplate": "Użyj szablonu {{template}}"
+    }
   },
   "deleteEntity": {
     "checkingDependenciesTitle": "Sprawdzanie zależności",
@@ -2172,5 +2223,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Przełącz widok"
+  },
+  "entityChip": {
+    "moreTags": "Kolejne tagi ({{count}}): {{names}}"
   }
 }
