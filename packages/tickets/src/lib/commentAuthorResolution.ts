@@ -59,24 +59,38 @@ export function resolveCommentAuthor(
     contactMap?: Record<string, CommentContactAuthor>;
   }
 ): ResolvedCommentAuthor {
-  if (comment.portal_author) {
+  // Collaboration attribution is an author category in its own right. In
+  // portal DTOs the foreign reference is removed, while the safe display name
+  // remains available on portal_author.
+  if (comment.portal_author?.role === 'collaborator') {
     return {
-      source: comment.portal_author.role === 'system' ? 'system' : 'user',
+      source: 'collaborator',
       displayName: comment.portal_author.name,
-      authorKind: comment.portal_author.role === 'staff' ? 'internal' : 'client',
-      userType: comment.portal_author.role === 'staff' ? 'internal' : 'client',
-      avatarKind: comment.portal_author.role === 'staff' ? 'user' : 'contact',
+      avatarName: comment.portal_author.name.split(' (')[0],
+      avatarKind: 'user',
       avatarUrl: comment.portal_author.avatarUrl ?? null,
     };
   }
   if (hasCommentCollaborationAttribution(comment)) {
-    // Never resolve an attributed foreign author through an owner-local user or
-    // contact map, even if a malformed/partial DTO also contains those IDs.
+    // Never resolve foreign authors through local user/contact maps.
     if (comment.user_id || comment.contact_id || typeof comment.actor_reference_id !== 'string' || !comment.actor_reference_id.trim() ||
         typeof comment.actor_display_name !== 'string' || !comment.actor_display_name.trim() ||
         typeof comment.actor_organization_name !== 'string' || !comment.actor_organization_name.trim()) return { ...UNKNOWN_AUTHOR, source: 'collaborator' };
     return { source: 'collaborator', displayName: `${comment.actor_display_name} (${comment.actor_organization_name})`,
       avatarName: comment.actor_display_name, avatarKind: 'user', avatarUrl: null };
+  }
+  if (comment.portal_author) {
+    const role = comment.portal_author.role;
+    return {
+      source: role === 'system' ? 'system' : role === 'contact' ? 'contact' : 'user',
+      displayName: comment.portal_author.name,
+      ...(role === 'staff' ? { authorKind: 'internal' as const, userType: 'internal' } :
+        role === 'client' ? { authorKind: 'client' as const, userType: 'client' } :
+        role === 'service' ? { authorKind: 'service' as const } :
+        role === 'contact' ? { authorKind: 'client' as const } : {}),
+      avatarKind: role === 'staff' ? 'user' : role === 'system' ? 'system' : role === 'service' ? 'service' : 'contact',
+      avatarUrl: comment.portal_author.avatarUrl ?? null,
+    };
   }
   if (comment.user_id) {
     const user = options.userMap[comment.user_id];

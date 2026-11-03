@@ -314,8 +314,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
     if (resolvedAuthor.source === 'collaborator') return false;
     // No handler means the host is showing the thread read-only.
     if (!onEdit || !onDelete) return false;
+    // Portal projections deliberately remove user UUIDs. Their server-derived
+    // capability preserves ownership controls without exposing that identity.
+    if (conversation.portal_can_edit !== undefined) return conversation.portal_can_edit;
     return Boolean(currentUserId) && currentUserId === conversation.user_id;
-  }, [conversation.user_id, resolvedAuthor.source, currentUserId, isDeleted, onEdit, onDelete]);
+  }, [conversation.user_id, conversation.portal_can_edit, resolvedAuthor.source, currentUserId, isDeleted, onEdit, onDelete]);
 
   const plainTextForCopy = useMemo(
     () => extractTicketRichTextPlainText(conversation.note),

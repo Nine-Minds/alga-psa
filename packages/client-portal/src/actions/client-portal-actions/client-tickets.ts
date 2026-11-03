@@ -16,7 +16,7 @@ import { reconcileCommentAttachments, filterReadableCommentAttachments, withdraw
 import { redactCommentForClient, tombstoneCommentForClient } from '@alga-psa/tickets/lib/commentVisibility';
 import { isUuidShaped, validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, TICKET_ORIGINS } from '@alga-psa/types';
-import { isClientUserType } from '@alga-psa/types';
+import { isClientUserType, isInteractiveUserType } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { z } from 'zod';
@@ -650,9 +650,9 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       const authorUser = commentRow.user_id ? userMap[commentRow.user_id] : undefined;
       const authorContact = commentRow.contact_id ? contactMap[commentRow.contact_id] : undefined;
       const safeAuthor = projected.actor_display_name && projected.actor_organization_name
-        ? { name: `${projected.actor_display_name} (${projected.actor_organization_name})`, role: 'staff' as const, avatarUrl: null }
+        ? { name: `${projected.actor_display_name} (${projected.actor_organization_name})`, role: 'collaborator' as const, avatarUrl: null }
         : authorUser
-        ? { name: `${authorUser.first_name} ${authorUser.last_name}`.trim(), role: authorUser.user_type === 'internal' ? 'staff' as const : 'client' as const, avatarUrl: authorUser.avatarUrl }
+        ? { name: `${authorUser.first_name} ${authorUser.last_name}`.trim(), role: authorUser.user_type === 'internal' ? 'staff' as const : isInteractiveUserType(authorUser.user_type) ? 'client' as const : 'service' as const, avatarUrl: authorUser.avatarUrl }
         : authorContact
           ? { name: authorContact.full_name, role: 'contact' as const, avatarUrl: authorContact.avatarUrl }
           : projected.is_system_generated ? { name: 'System', role: 'system' as const, avatarUrl: null } : null;
@@ -663,10 +663,11 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       return {
         ...commentWithoutPrivateIdentity,
         ...(safeAuthor ? { portal_author: safeAuthor } : {}),
+        ...(!projected.deleted_at ? { portal_can_edit: Boolean(result.canInteract && !projected.is_system_generated && !projected.actor_display_name && commentRow.user_id === user.user_id) } : {}),
         bundle_mirror_source: bundle_mirror_source_comment_id
           ? { source_comment_id: bundle_mirror_source_comment_id }
           : null,
-      } as IComment & { portal_author?: { name: string; role: 'staff' | 'client' | 'contact' | 'system'; avatarUrl?: string | null }; bundle_mirror_source: { source_comment_id: string } | null };
+      } as IComment & { portal_author?: { name: string; role: 'staff' | 'client' | 'contact' | 'service' | 'collaborator' | 'system'; avatarUrl?: string | null }; portal_can_edit?: boolean; bundle_mirror_source: { source_comment_id: string } | null };
     });
 
     return {

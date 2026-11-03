@@ -1024,12 +1024,19 @@ describe('client portal ticket response projection', () => {
       publish_state: 'published', created_at: '2026-01-01T00:00:00.000Z', updated_at: null, deleted_at: null,
       metadata: { email: { fromAddress: 'comment-secret@example.test' } },
     };
+    const ownComment = { ...comment, comment_id: 'comment-own', user_id: 'portal-user', note: 'My response' };
     const contactComment = { ...comment, comment_id: 'comment-2', user_id: null, contact_id: 'contact-1', author_type: 'contact', note: 'Customer reply' };
-    const involved = makeChainable([{ user_id: secretUserId, first_name: 'Avery', last_name: 'Agent', email: 'staff-secret@example.test', user_type: 'internal', avatar_file_id: null }]);
+    const collaboratorComment = { ...comment, comment_id: 'comment-collaborator', user_id: null, actor_reference_id: 'foreign-uuid', actor_display_name: 'Taylor Tech', actor_organization_name: 'Partner Co', note: 'Partner response' };
+    const systemComment = { ...comment, comment_id: 'comment-system', user_id: null, is_system_generated: true, author_type: 'system', note: 'System update' };
+    const deletedComment = { ...ownComment, comment_id: 'comment-deleted', deleted_at: '2026-01-02T00:00:00.000Z', note: '' };
+    const involved = makeChainable([
+      { user_id: secretUserId, first_name: 'Avery', last_name: 'Agent', email: 'staff-secret@example.test', user_type: 'internal', avatar_file_id: null },
+      { user_id: 'portal-user', first_name: 'Portal', last_name: 'User', email: 'portal-secret@example.test', user_type: 'client', avatar_file_id: null },
+    ]);
     withTransactionMock.mockImplementation(async (_db: any, callback: any) => callback(Object.assign((table: string) => {
       if (table === 'users') return makeUserQuery();
       if (table === 'tickets as t') return makeDetailBuilder(detailRow);
-      if (table === 'comments') return makeChainable([comment, contactComment]);
+      if (table === 'comments') return makeChainable([comment, ownComment, contactComment, collaboratorComment, systemComment, deletedComment]);
       if (table === 'users as u') return involved;
       if (table === 'ticket_comment_attachments') return { where: vi.fn().mockReturnThis(), first: vi.fn().mockResolvedValue(undefined) };
       if (table === 'documents as d') return makeChainable([{
@@ -1042,7 +1049,7 @@ describe('client portal ticket response projection', () => {
     }, { raw: vi.fn() })));
     const detail = await getClientTicketDetails(TICKET_1) as any;
     const serializedDetail = JSON.stringify(detail);
-    for (const secret of [secretUserId, 'watcher-secret@example.test', 'sender-secret@example.test', 'message-secret', 'staff-secret@example.test', 'contact-secret@example.test', 'comment-secret@example.test', 'unknown-secret', 'email_metadata', 'watch_list']) {
+    for (const secret of [secretUserId, 'portal-user', 'foreign-uuid', 'watcher-secret@example.test', 'sender-secret@example.test', 'message-secret', 'staff-secret@example.test', 'portal-secret@example.test', 'contact-secret@example.test', 'comment-secret@example.test', 'unknown-secret', 'email_metadata', 'watch_list']) {
       expect(serializedDetail).not.toContain(secret);
     }
     expect(detail.attributes).toEqual({ description: 'Customer facing description' });
@@ -1053,7 +1060,15 @@ describe('client portal ticket response projection', () => {
     expect(detail.additional_agents).toEqual([{ name: 'Avery Agent', role: 'staff', avatar_url: null }]);
     expect(detail.conversations[0].note).toBe('Visible response');
     expect(detail.conversations[0].portal_author).toMatchObject({ name: 'Avery Agent', role: 'staff' });
-    expect(detail.conversations[1].portal_author).toMatchObject({ name: 'Morgan Contact', role: 'contact' });
+    expect(detail.conversations[1].portal_author).toMatchObject({ name: 'Portal User', role: 'client' });
+    expect(detail.conversations[2].portal_author).toMatchObject({ name: 'Morgan Contact', role: 'contact' });
+    expect(detail.conversations[3].portal_author).toMatchObject({ name: 'Taylor Tech (Partner Co)', role: 'collaborator' });
+    expect(detail.conversations[0].portal_can_edit).toBe(false);
+    expect(detail.conversations[1].portal_can_edit).toBe(true);
+    expect(detail.conversations[2].portal_can_edit).toBe(false);
+    expect(detail.conversations[3].portal_can_edit).toBe(false);
+    expect(detail.conversations[4].portal_can_edit).toBe(false);
+    expect(detail.conversations[5]).not.toHaveProperty('portal_can_edit');
     expect(detail.documents).toEqual([expect.objectContaining({ document_id: 'document-1', document_name: 'portal.pdf' })]);
     expect(detail.documents[0]).not.toHaveProperty('user_id');
     expect(detail.documents[0]).not.toHaveProperty('created_by');
@@ -1061,6 +1076,11 @@ describe('client portal ticket response projection', () => {
     expect(detail.can_interact).toBe(true);
     expect(detail).not.toHaveProperty('userMap');
     expect(detail).not.toHaveProperty('contactMap');
+
+    getVisibilityContextMock.mockResolvedValue({ ticketScope: 'contact', effectiveTicketScope: 'contact', isClientAdmin: false, contactId: 'different-contact', clientId: 'client-1', visibilityGroupId: null, visibleBoardIds: null, grantedProfileIds: [], includesUnattributed: false, watchGrant: false });
+    const sharedWorkspaceDetail = await getClientTicketDetails(TICKET_1) as any;
+    expect(sharedWorkspaceDetail.can_interact).toBe(false);
+    expect(sharedWorkspaceDetail.conversations.find((c: any) => c.comment_id === 'comment-own').portal_can_edit).toBe(false);
   });
 });
 
