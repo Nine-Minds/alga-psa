@@ -356,6 +356,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
     if (!canRead) {
       return permissionError('Insufficient permissions to view ticket details', 'common:errors.permissions.tickets.readDetails');
     }
+    const canUpdateComments = await hasPermission(userForPermission, 'ticket', 'update', db);
 
     // A malformed id gets the same response as a hidden ticket, and never reaches the database.
     if (!isUuidShaped(ticketId)) {
@@ -674,11 +675,14 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       return {
         ...commentWithoutPrivateIdentity,
         ...(safeAuthor ? { portal_author: safeAuthor } : {}),
-        ...(!projected.deleted_at ? { portal_can_edit: Boolean(result.canInteract && !projected.is_system_generated && !projected.actor_display_name && commentRow.user_id === user.user_id) } : {}),
+        ...(!projected.deleted_at ? {
+          portal_can_edit: Boolean(canUpdateComments && result.canInteract && !projected.is_system_generated && !projected.actor_display_name && commentRow.user_id === userId),
+          portal_can_delete: Boolean(canUpdateComments && result.canInteract && !projected.is_system_generated && !projected.actor_display_name && commentRow.user_id === userId),
+        } : {}),
         bundle_mirror_source: bundle_mirror_source_comment_id
           ? { source_comment_id: bundle_mirror_source_comment_id }
           : null,
-      } as IComment & { portal_author?: { name: string; role: 'staff' | 'client' | 'contact' | 'service' | 'collaborator' | 'system'; avatarUrl?: string | null }; portal_can_edit?: boolean; bundle_mirror_source: { source_comment_id: string } | null };
+      } as IComment & { portal_author?: { name: string; role: 'staff' | 'client' | 'contact' | 'service' | 'collaborator' | 'system'; avatarUrl?: string | null }; portal_can_edit?: boolean; portal_can_delete?: boolean; bundle_mirror_source: { source_comment_id: string } | null };
     });
 
     return {
@@ -879,8 +883,12 @@ export const updateClientTicketComment = withAuth(async (
       const comment = await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId,
-          user_id: userId
+          user_id: userId,
+          is_internal: false,
+          is_system_generated: false,
         })
+        .whereNull('deleted_at')
+        .whereNull('actor_display_name')
         .first();
 
       if (!comment) {
@@ -1283,9 +1291,9 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
       is_inactive: false,
       tenant
     } as IUser;
-    const canDelete = await hasPermission(userForPermission, 'ticket', 'delete', db);
-    if (!canDelete) {
-      return permissionError('Insufficient permissions to delete comments', 'common:errors.permissions.tickets.deleteComments');
+    const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
+    if (!canUpdate) {
+      return permissionError('Insufficient permissions to delete comments', 'common:errors.permissions.tickets.updateComments');
     }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1303,8 +1311,12 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
       const comment = await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId,
-          user_id: userId
+          user_id: userId,
+          is_internal: false,
+          is_system_generated: false,
         })
+        .whereNull('deleted_at')
+        .whereNull('actor_display_name')
         .first();
 
       if (!comment) {

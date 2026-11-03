@@ -59,7 +59,7 @@ import { TicketDetails } from './TicketDetails';
 
 const own = {
   comment_id: 'own-comment', note: 'own', is_system_generated: false,
-  portal_can_edit: true, portal_author: { name: 'Dorothy', role: 'client' },
+  portal_can_edit: true, portal_can_delete: true, portal_author: { name: 'Dorothy', role: 'client' },
 } as unknown as IComment;
 
 function ticket(comment: IComment, canInteract = true): ClientTicketDetailResponse {
@@ -94,7 +94,8 @@ describe('TicketDetails projected comment deletion', () => {
   });
 
   it.each([
-    ['non-owner capability', { ...own, portal_can_edit: false }, true],
+    ['non-owner capability', { ...own, portal_can_edit: false, portal_can_delete: false }, true],
+    ['delete capability denied', { ...own, portal_can_delete: false }, true],
     ['collaborator attribution despite capability', { ...own, portal_author: { name: 'Partner', role: 'collaborator' } }, true],
     ['read-only ticket', own, false],
   ])('denies deletion for %s', async (_case, comment, canInteract) => {

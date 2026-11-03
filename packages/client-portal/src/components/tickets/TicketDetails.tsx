@@ -540,11 +540,12 @@ export function TicketDetails({
       // restrictions enforced by the conversation controls.
       const projected = comment as IComment & {
         portal_can_edit?: boolean;
+        portal_can_delete?: boolean;
         portal_author?: { role?: string } | null;
       };
       if (
         !canInteract ||
-        projected.portal_can_edit !== true ||
+        projected.portal_can_delete !== true ||
         projected.portal_author?.role === 'collaborator' ||
         comment.is_system_generated ||
         comment.deleted_at

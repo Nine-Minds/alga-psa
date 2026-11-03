@@ -57,7 +57,7 @@ export interface ClientTicketDetailResponse extends ClientTicketListResponse {
   ticket_origin?: string;
   has_original_email?: boolean;
   can_interact?: boolean;
-  conversations?: Array<Omit<IComment, 'user_id' | 'contact_id' | 'actor_reference_id'> & { portal_author?: { name: string; role: 'staff' | 'client' | 'contact' | 'service' | 'collaborator' | 'system'; avatarUrl?: string | null } | null; portal_can_edit?: boolean; bundle_mirror_source?: { source_comment_id: string } | null }>;
+  conversations?: Array<Omit<IComment, 'user_id' | 'contact_id' | 'actor_reference_id'> & { portal_author?: { name: string; role: 'staff' | 'client' | 'contact' | 'service' | 'collaborator' | 'system'; avatarUrl?: string | null } | null; portal_can_edit?: boolean; portal_can_delete?: boolean; bundle_mirror_source?: { source_comment_id: string } | null }>;
   documents?: ClientTicketDocument[];
   linkedAssets?: Array<{ asset_id: string; name: string; asset_tag: string | null; asset_type: string | null; relationship_type: string | null }>;
   portalExternalLinks?: PortalTicketExternalLink[];

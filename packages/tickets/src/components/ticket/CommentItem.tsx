@@ -313,12 +313,18 @@ const CommentItem: React.FC<CommentItemProps> = ({
     // A co-managed collaborator's comment is owned by the sender's workspace; no local user may edit it.
     if (resolvedAuthor.source === 'collaborator') return false;
     // No handler means the host is showing the thread read-only.
-    if (!onEdit || !onDelete) return false;
+    if (!onEdit) return false;
     // Portal projections deliberately remove user UUIDs. Their server-derived
     // capability preserves ownership controls without exposing that identity.
     if (conversation.portal_can_edit !== undefined) return conversation.portal_can_edit;
     return Boolean(currentUserId) && currentUserId === conversation.user_id;
   }, [conversation.user_id, conversation.portal_can_edit, resolvedAuthor.source, currentUserId, isDeleted, onEdit, onDelete]);
+
+  const canDelete = useMemo(() => {
+    if (isDeleted || conversation.is_system_generated || resolvedAuthor.source === 'collaborator' || !onDelete) return false;
+    if (conversation.portal_can_delete !== undefined) return conversation.portal_can_delete;
+    return Boolean(currentUserId) && currentUserId === conversation.user_id;
+  }, [conversation.user_id, conversation.portal_can_delete, resolvedAuthor.source, currentUserId, isDeleted, onDelete]);
 
   const plainTextForCopy = useMemo(
     () => extractTicketRichTextPlainText(conversation.note),
@@ -757,7 +763,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 </div>
               )}
             </div>
-            {(canCopy || (onReply && !isDeleted) || canEdit || (isCompact && onToggleReaction)) && (
+            {(canCopy || (onReply && !isDeleted) || canEdit || canDelete || (isCompact && onToggleReaction)) && (
               <div className="c-actions space-x-2">
                 {/* Compact: with no reactions yet, React lives in the hover toolbar. */}
                 {isCompact && onToggleReaction && conversation.comment_id && (reactions?.length ?? 0) === 0 ? (
@@ -803,7 +809,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     <CornerUpLeft className="w-4 h-4" />
                   </Button>
                 )}
-                {canEdit && (
+                {(canEdit || canDelete) && (
                   <>
                     {conversation.publish_state === 'scheduled' && (
                       <>
@@ -815,7 +821,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                         </Button>
                       </>
                     )}
-                    <Button
+                    {canEdit && <Button
                       id={`edit-comment-${conversation.comment_id}-button`}
                       variant="ghost"
                       size="sm"
@@ -823,8 +829,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       aria-label={t('conversation.editCommentAriaLabel')}
                     >
                       <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button
+                    </Button>}
+                    {canDelete && <Button
                       id={`delete-comment-${conversation.comment_id}-button`}
                       variant="ghost"
                       size="sm"
@@ -832,7 +838,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       aria-label={t('conversation.deleteCommentAriaLabel')}
                     >
                       <Trash className="w-4 h-4" />
-                    </Button>
+                    </Button>}
                   </>
                 )}
               </div>

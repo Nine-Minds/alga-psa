@@ -24,7 +24,7 @@ function portalComment(overrides: Partial<IComment>): IComment {
     created_at: new Date().toISOString(), is_system_generated: false,
     // This fixture is the UUID-redacted action response shape.
     user_id: undefined, contact_id: undefined, actor_reference_id: undefined,
-    portal_author: { name: 'Portal User', role: 'client' }, portal_can_edit: false,
+    portal_author: { name: 'Portal User', role: 'client' }, portal_can_edit: false, portal_can_delete: false,
     ...overrides,
   } as IComment;
 }
@@ -58,7 +58,7 @@ function expectControls(commentId: string, enabled: boolean) {
 
 describe('client portal projected comment ownership', () => {
   it('renders edit and delete only for a caller-owned projected comment', () => {
-    renderProjected(portalComment({ comment_id: 'own', portal_can_edit: true }));
+    renderProjected(portalComment({ comment_id: 'own', portal_can_edit: true, portal_can_delete: true }));
     expectControls('own', true);
   });
 

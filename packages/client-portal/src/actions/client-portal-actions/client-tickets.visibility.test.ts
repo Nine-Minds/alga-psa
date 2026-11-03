@@ -5,6 +5,10 @@ const TICKET_HIDDEN = '00000000-0000-4000-8000-000000000002';
 const SIBLING_TICKET = '00000000-0000-4000-8000-000000000003';
 
 vi.mock('../../lib/portalTicketExternalLinks', () => ({ loadPortalTicketExternalLinks: vi.fn(async () => []) }));
+vi.mock('@shared/lib/ticketCommentAttachments', () => ({
+  reconcileCommentAttachments: vi.fn(), filterReadableCommentAttachments: vi.fn(async (_trx, _tenant, _userId, rows) => rows),
+  withdrawCommentAttachments: vi.fn(),
+}));
 
 let currentUser: any;
 
@@ -157,7 +161,7 @@ function makeListBuilder(rows: any[]) {
 function makeChainable(result: any = []) {
   const builder: any = {};
   for (const method of [
-    'select', 'distinct', 'where', 'whereRaw', 'whereNotNull', 'whereIn',
+    'select', 'distinct', 'where', 'whereRaw', 'whereNotNull', 'whereNull', 'whereIn',
     'orWhereIn', 'join', 'leftJoin', 'innerJoin', 'orderBy', 'as', 'first',
   ]) {
     builder[method] = vi.fn(() => builder);
@@ -966,6 +970,63 @@ describe('client portal ticket visibility enforcement', () => {
   });
 });
 
+describe('client portal own-comment deletion authorization', () => {
+  const ownComment = { comment_id: 'own-comment', ticket_id: TICKET_1, user_id: 'portal-user', is_internal: false, is_system_generated: false, deleted_at: null, actor_display_name: null };
+  let persistedComments: any[];
+  let deleted: boolean;
+
+  function query(row: any, onDelete?: () => void) {
+    const q: any = {};
+    for (const method of ['select', 'where', 'whereNull', 'whereNotNull', 'modify']) q[method] = vi.fn(() => q);
+    q.modify = vi.fn((callback: any) => { callback?.(q); return q; });
+    q.first = vi.fn(async () => row);
+    q.del = vi.fn(async () => { onDelete?.(); return 1; });
+    q.then = (resolve: any, reject?: any) => Promise.resolve(row ? [row] : []).then(resolve, reject);
+    return q;
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentUser = { user_id: 'portal-user', user_type: 'client', email: 'portal@example.test', tenant: 'tenant-1' };
+    getConnectionMock.mockResolvedValue({ raw: vi.fn() });
+    hasPermissionMock.mockImplementation(async (_user: any, resource: string, action: string) => resource === 'ticket' && ['read', 'create', 'update'].includes(action));
+    getVisibilityContextMock.mockResolvedValue({ ticketScope: 'client', effectiveTicketScope: 'client', isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: null, visibleBoardIds: null });
+    deleted = false;
+    persistedComments = [ownComment];
+    withTransactionMock.mockImplementation(async (_db: any, callback: any) => callback(Object.assign((table: string) => {
+      if (table === 'users') return query({ user_id: 'portal-user', contact_id: 'contact-1', first_name: 'Dorothy', last_name: 'User' });
+      if (table === 'comments') {
+        const row = persistedComments.find((comment) => comment.user_id === currentUser.user_id && !comment.is_internal && !comment.is_system_generated && !comment.deleted_at && !comment.actor_display_name);
+        return query(row, () => { persistedComments = []; deleted = true; });
+      }
+      if (table === 'tickets as t') return query({ ticket_id: TICKET_1, client_id: 'client-1', contact_name_id: 'contact-1', board_id: 'board-1' });
+      return query(undefined);
+    }, { raw: vi.fn() })));
+  });
+
+  it('deletes and persists an own comment with read/create/update and no ticket:delete', async () => {
+    const { deleteClientTicketComment } = await import('./client-tickets');
+    const result = await deleteClientTicketComment('own-comment');
+    expect(result).toBeUndefined();
+    expect(hasPermissionMock).toHaveBeenCalledWith(expect.anything(), 'ticket', 'update', expect.anything());
+    expect(hasPermissionMock).not.toHaveBeenCalledWith(expect.anything(), 'ticket', 'delete', expect.anything());
+    expect(deleted).toBe(true);
+    expect(persistedComments).toEqual([]);
+  });
+
+  it('denies another author and read-only callers without deleting persisted data', async () => {
+    const { deleteClientTicketComment } = await import('./client-tickets');
+    persistedComments = [{ ...ownComment, user_id: 'someone-else' }];
+    const anotherAuthor = await deleteClientTicketComment('own-comment');
+    expect(anotherAuthor).toMatchObject({ actionError: 'Comment not found or not authorized to delete' });
+    expect(deleted).toBe(false);
+    hasPermissionMock.mockImplementation(async (_user: any, resource: string, action: string) => resource === 'ticket' && ['read', 'create'].includes(action));
+    const readOnly = await deleteClientTicketComment('own-comment');
+    expect(readOnly).toMatchObject({ permissionError: expect.any(String) });
+    expect(deleted).toBe(false);
+  });
+});
+
 describe('client portal ticket response projection', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -1081,6 +1142,10 @@ describe('client portal ticket response projection', () => {
     const sharedWorkspaceDetail = await getClientTicketDetails(TICKET_1) as any;
     expect(sharedWorkspaceDetail.can_interact).toBe(false);
     expect(sharedWorkspaceDetail.conversations.find((c: any) => c.comment_id === 'comment-own').portal_can_edit).toBe(false);
+
+    hasPermissionMock.mockImplementation(async (_user: any, _resource: string, action: string) => action !== 'update');
+    const readOnlyDetail = await getClientTicketDetails(TICKET_1) as any;
+    expect(readOnlyDetail.conversations.find((c: any) => c.comment_id === 'comment-own')).toMatchObject({ portal_can_edit: false, portal_can_delete: false });
   });
 });
 
@@ -1123,7 +1188,7 @@ describe('contact-scoped portal enforcement', () => {
     const touched: string[] = [];
     withTransactionMock.mockImplementation(async (_db, callback) => callback(Object.assign((table: string) => {
       touched.push(table);
-      if (table === 'comments' && (path === 'edit-comment' || path === 'delete-comment')) return filteredTickets([{ comment_id: 'comment-1', ticket_id: SIBLING_TICKET, user_id: 'u' }]);
+      if (table === 'comments' && (path === 'edit-comment' || path === 'delete-comment')) return filteredTickets([{ comment_id: 'comment-1', ticket_id: SIBLING_TICKET, user_id: 'u', is_internal: false, is_system_generated: false, deleted_at: null, actor_display_name: null }]);
       if (table === 'users') return makeUserQuery();
       if (table === 'tickets as t' || table === 'tickets') return filteredTickets([{ ticket_id: SIBLING_TICKET, client_id: 'client-1', contact_name_id: 'contact-2', board_id: 'board-1' }]);
       return makeChainable([]);
@@ -1154,7 +1219,7 @@ describe('contact-scoped portal enforcement', () => {
   ] as Array<[string, boolean]>)('%s gate includes workspace tickets: %s', async (path, expectsWorkspace) => {
     getVisibilityContextMock.mockResolvedValue({ ticketScope: 'contact', effectiveTicketScope: 'contact', isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: 'g', visibleBoardIds: ['board-1'] });
     withTransactionMock.mockImplementation(async (_db: any, callback: any) => callback(Object.assign((table: string) => {
-      if (table === 'comments') return filteredTickets([{ comment_id: 'comment-1', ticket_id: TICKET_1, user_id: 'u' }]);
+      if (table === 'comments') return filteredTickets([{ comment_id: 'comment-1', ticket_id: TICKET_1, user_id: 'u', is_internal: false, is_system_generated: false, deleted_at: null, actor_display_name: null }]);
       if (table === 'users') return makeUserQuery();
       if (table === 'tickets as t' || table === 'tickets') return filteredTickets([]);
       return makeChainable([]);
