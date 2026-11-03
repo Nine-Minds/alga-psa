@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   getAll: vi.fn(),
-  getSanitizedCurrentUser: vi.fn(),
+  getAuthenticatedCurrentUser: vi.fn(),
 }));
 
 vi.mock('@alga-psa/db/models/user', () => ({ default: { getAll: mocks.getAll } }));
@@ -10,10 +10,8 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
   withTransaction: vi.fn(async (_knex, callback) => callback({})),
 }));
-vi.mock('./currentUserAction', () => ({
-  getCurrentUser: mocks.getSanitizedCurrentUser,
-}));
 vi.mock('@alga-psa/auth', () => ({
+  getCurrentUser: mocks.getAuthenticatedCurrentUser,
   withAuth: (action: (...args: any[]) => unknown) => (...args: any[]) => action(
     { user_id: 'actor-1', tenant: 'tenant-1', user_type: 'internal' },
     { tenant: 'tenant-1' },
@@ -48,29 +46,39 @@ describe('browser-facing user response fields', () => {
 
   beforeEach(() => {
     mocks.getAll.mockReset();
-    mocks.getSanitizedCurrentUser.mockReset();
+    mocks.getAuthenticatedCurrentUser.mockReset();
   });
 
-  it('preserves profile fields in directory and current-user responses while excluding credentials', async () => {
+  it('preserves profile fields in directory responses while excluding credentials', async () => {
     mocks.getAll.mockResolvedValue([fixture]);
-    const { hashed_password: _hash, two_factor_secret: _totp, ...sanitizedCurrentUser } = fixture;
-    mocks.getSanitizedCurrentUser.mockResolvedValue(sanitizedCurrentUser);
 
     const directory = await getAllUsersBasic();
-    const currentUser = await getCurrentUser();
-    expect(mocks.getSanitizedCurrentUser).toHaveBeenCalledOnce();
+    const response = directory[0];
+    expect(response).toMatchObject({
+      phone: fixture.phone,
+      phone_extension: fixture.phone_extension,
+      icon: fixture.icon,
+    });
+    expect(JSON.stringify(response)).not.toContain(fixture.hashed_password);
+    expect(JSON.stringify(response)).not.toContain(fixture.two_factor_secret);
+    expect(response).not.toHaveProperty('hashed_password');
+    expect(response).not.toHaveProperty('two_factor_secret');
+  });
 
-    for (const response of [directory[0], currentUser]) {
-      expect(response).toMatchObject({
-        phone: fixture.phone,
-        phone_extension: fixture.phone_extension,
-        icon: fixture.icon,
-      });
-      const serialized = JSON.stringify(response);
-      expect(serialized).not.toContain(fixture.hashed_password);
-      expect(serialized).not.toContain(fixture.two_factor_secret);
-      expect(response).not.toHaveProperty('hashed_password');
-      expect(response).not.toHaveProperty('two_factor_secret');
-    }
+  it('sanitizes credential canaries through the public current-user action while preserving profile fields', async () => {
+    mocks.getAuthenticatedCurrentUser.mockResolvedValue(fixture);
+
+    const response = await getCurrentUser();
+
+    expect(mocks.getAuthenticatedCurrentUser).toHaveBeenCalledOnce();
+    expect(response).toMatchObject({
+      phone: fixture.phone,
+      phone_extension: fixture.phone_extension,
+      icon: fixture.icon,
+    });
+    expect(JSON.stringify(response)).not.toContain(fixture.hashed_password);
+    expect(JSON.stringify(response)).not.toContain(fixture.two_factor_secret);
+    expect(response).not.toHaveProperty('hashed_password');
+    expect(response).not.toHaveProperty('two_factor_secret');
   });
 });
