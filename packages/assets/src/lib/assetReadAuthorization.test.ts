@@ -32,6 +32,7 @@ const h = vi.hoisted(() => {
 vi.mock('@alga-psa/db', () => ({
   tenantDb: () => ({ table: (table: string) => h.tableQuery(table) }),
 }));
+vi.mock('@alga-psa/auth', () => ({ hasPermission: vi.fn(async () => true) }));
 
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),
