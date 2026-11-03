@@ -39,6 +39,7 @@ import { sealPortableArchive } from '../../../../packages/co-managed/src/portabl
 import type { PortableContributorRegistry } from '../../../../packages/co-managed/src/portableContributorRegistry';
 import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
 import { restorePortableWorkspaceForInstallation } from '../../../../ee/server/src/lib/co-managed/portableWorkspaceRestore';
+import { beginPortableRestoreUpload, cleanupPortableRestoreUploadsForInstallation } from '../../../../packages/co-managed/src/portableRestoreUploads';
 
 const require = createRequire(import.meta.url);
 const migrations = ['20261102120200_create_portable_workspace_restore_uploads.cjs', '20261102120100_create_portable_workspace_restores.cjs',
@@ -203,6 +204,49 @@ describe('portable restore round trip (A6)', () => {
       await expect(restorePortableWorkspaceForInstallation(db, { ...request(), resume: true }, {}, { createProvider: async () => localProvider() as never })).rejects.toThrow(/nothing to resume/);
     });
 
+    await step('cleanup recovers expired interrupted uploads, including legacy NULL deadlines, while retaining live and referenced bytes', async () => {
+      const recoveryTenant = await createTenant(db, 'Portable restore cleanup recovery');
+      const recoveryUploader = await createUser(db, recoveryTenant, { first_name: 'Cleanup', last_name: 'Uploader' });
+      const provider = await localProvider();
+      const createAttempt = async (label: string) => {
+        const fileId = randomUUID();
+        const attempt = await beginPortableRestoreUpload(db, { tenant: recoveryTenant, packageId: randomUUID(),
+          archiveSha256: createHash('sha256').update(label).digest('hex'), fileIds: [fileId] }, provider);
+        const row = await db('portable_workspace_restore_uploads').where({ tenant: recoveryTenant, attempt_id: attempt.attemptId }).first();
+        expect(row.next_cleanup_at).toBeTruthy();
+        const key = `${recoveryTenant}/portable-restores/${attempt.attemptId}/${fileId}`;
+        await provider.upload(Buffer.from(label), key, { mime_type: 'text/plain', size: label.length });
+        return { attempt, fileId, key };
+      };
+      const interrupted = await createAttempt('interrupted unreferenced upload');
+      const referenced = await createAttempt('expired but referenced upload');
+      const live = await createAttempt('still-live upload');
+      // Simulate the old broken insert shape and a killed process: no settlement call occurs.
+      await db('portable_workspace_restore_uploads').where({ tenant: recoveryTenant, attempt_id: interrupted.attempt.attemptId })
+        .update({ expires_at: db.raw("now() - interval '1 minute'"), next_cleanup_at: null });
+      await db('portable_workspace_restore_uploads').where({ tenant: recoveryTenant, attempt_id: referenced.attempt.attemptId })
+        .update({ expires_at: db.raw("now() - interval '1 minute'"), next_cleanup_at: db.raw('now()') });
+      await db('portable_workspace_restore_uploads').where({ tenant: recoveryTenant, attempt_id: live.attempt.attemptId })
+        .update({ next_cleanup_at: db.raw('now()') });
+      await db('external_files').insert({ tenant: recoveryTenant, file_id: referenced.fileId, file_name: 'retained',
+        original_name: 'retained.txt', mime_type: 'text/plain', file_size: Buffer.byteLength('expired but referenced upload'),
+        storage_path: referenced.key, uploaded_by_id: recoveryUploader, is_deleted: false });
+
+      const outcome = await cleanupPortableRestoreUploadsForInstallation(db, provider as never);
+      expect(outcome.destinations).toBeGreaterThanOrEqual(1);
+      expect(outcome.cleaned).toBeGreaterThanOrEqual(1);
+      expect(outcome.failed).toBe(0);
+      await expect(provider.download(interrupted.key)).rejects.toThrow();
+      expect(await provider.download(referenced.key)).toEqual(Buffer.from('expired but referenced upload'));
+      expect(await provider.download(live.key)).toEqual(Buffer.from('still-live upload'));
+      expect(await db('portable_workspace_restore_uploads').where({ tenant: recoveryTenant, attempt_id: interrupted.attempt.attemptId })
+        .first()).toMatchObject({ status: 'abandoned', cleaned_at: expect.anything() });
+      expect(await db('portable_workspace_restore_uploads').where({ tenant: recoveryTenant, attempt_id: referenced.attempt.attemptId })
+        .first()).toMatchObject({ cleanup_error_code: 'native_reference_retained' });
+      expect(await db('portable_workspace_restore_uploads').where({ tenant: recoveryTenant, attempt_id: live.attempt.attemptId })
+        .first()).toMatchObject({ status: 'uploading' });
+    });
+
     await step('a failure inside promotion (after bytes are staged) rolls the receipt and suspension back too (D4)', async () => {
       await db.raw(`CREATE OR REPLACE FUNCTION l7b2_force_promotion_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
         IF NEW.tenant = '${destination}' THEN RAISE EXCEPTION 'forced promotion failure'; END IF; RETURN NEW; END $$`);
@@ -242,7 +286,7 @@ describe('portable restore round trip (A6)', () => {
       expect(createHash('sha256').update(stored).digest('hex')).toBe(FILE_SHA);
       expect(Number(files[0].file_size)).toBe(FILE_BYTES.length);
       expect((await storedObjects()).filter(path => path.endsWith(files[0].storage_path.split('/').pop()))).toHaveLength(1); // the bytes landed once
-      expect(await storedObjects()).toHaveLength(2); // one source object and one promoted destination object; failed attempts were removed
+      expect(await storedObjects()).toHaveLength(4); // source, promoted destination, and the live/referenced recovery objects
       expect(await db('users').where({ tenant: destination, user_id: result.receipt.administrator_user_id }).first()).toBeTruthy();
     });
 

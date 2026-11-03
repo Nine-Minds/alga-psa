@@ -10,14 +10,14 @@ interface RecoveryProvider { getLocationIdentity?(): string; delete(path: string
 export interface PortableRestoreUploadAttempt { tenant: string; attemptId: string; providerIdentity: string }
 interface UploadRow {
   tenant: string; attempt_id: string; package_id: string; archive_sha256: string; provider_identity: string;
-  file_ids: string[]; status: 'uploading' | 'committed' | 'abandoned'; expires_at: Date; next_cleanup_at: Date;
+  file_ids: string[]; status: 'uploading' | 'committed' | 'abandoned'; expires_at: Date; next_cleanup_at: Date | null;
 }
 export function portableRestoreProviderIdentity(provider: Pick<RecoveryProvider, 'getLocationIdentity'>) {
   const identity = provider.getLocationIdentity?.();
   if (typeof identity !== 'string' || !/^[a-f0-9]{64}$/.test(identity)) return fail();
   return identity;
 }
-function validate(row: UploadRow) {
+function validate(row: Pick<UploadRow, 'tenant' | 'attempt_id' | 'package_id' | 'archive_sha256' | 'provider_identity' | 'file_ids'>) {
   if (![row.tenant, row.attempt_id, row.package_id].every(isCoManagedUuid) || !/^[a-f0-9]{64}$/.test(row.provider_identity) ||
       !/^[a-f0-9]{64}$/.test(row.archive_sha256) || !Array.isArray(row.file_ids) || row.file_ids.length > 100_000 ||
       row.file_ids.some(id => !isCoManagedUuid(id)) || new Set(row.file_ids).size !== row.file_ids.length) fail();
@@ -46,11 +46,12 @@ export async function beginPortableRestoreUpload(db: Knex, input: {
 }, provider: Pick<RecoveryProvider, 'getLocationIdentity'>): Promise<PortableRestoreUploadAttempt> {
   if (db.isTransaction) fail();
   const row = { tenant: input.tenant.toLowerCase(), attempt_id: randomUUID(), package_id: input.packageId.toLowerCase(),
-    archive_sha256: input.archiveSha256, provider_identity: portableRestoreProviderIdentity(provider), file_ids: [...input.fileIds].map(id => id.toLowerCase()) } as UploadRow;
+    archive_sha256: input.archiveSha256, provider_identity: portableRestoreProviderIdentity(provider), file_ids: [...input.fileIds].map(id => id.toLowerCase()) };
   validate(row);
   await db.transaction(async trx => {
     await lock(trx, row.tenant);
-    await tenantDb(trx, row.tenant).table(TABLE).insert({ ...row, file_ids: JSON.stringify(row.file_ids) });
+    await tenantDb(trx, row.tenant).table(TABLE).insert({ ...row, file_ids: JSON.stringify(row.file_ids),
+      expires_at: trx.raw("now() + interval '35 minutes'"), next_cleanup_at: trx.raw("now() + interval '35 minutes'") });
   });
   return { tenant: row.tenant, attemptId: row.attempt_id, providerIdentity: row.provider_identity };
 }
@@ -105,14 +106,19 @@ export async function cleanupPortableRestoreUploads(db: Knex, tenant: string, pr
   tenant = tenant.toLowerCase(); const identity = portableRestoreProviderIdentity(provider);
   await assertPortableRestoreInstallationAuthority(db);
   const own = tenantDb(db, tenant), due = await own.table(TABLE).where('provider_identity', identity).whereIn('status', ['uploading', 'abandoned'])
-    .where('next_cleanup_at', '<=', db.raw('clock_timestamp()')).orderBy('next_cleanup_at').limit(limit).select('attempt_id');
+    .where((q) => {
+      q.whereNull('next_cleanup_at').orWhere('next_cleanup_at', '<=', db.raw('clock_timestamp()'));
+    })
+    .orderByRaw('next_cleanup_at ASC NULLS FIRST').limit(limit).select('attempt_id');
   const result = { cleaned: 0, failed: 0, skipped: 0 };
   for (const candidate of due) {
     const claim = randomUUID();
     const row = await db.transaction(async trx => {
       await lock(trx, tenant);
       const current = await tenantDb(trx, tenant).table(TABLE).where({ attempt_id: candidate.attempt_id, provider_identity: identity })
-        .whereIn('status', ['uploading', 'abandoned']).where('next_cleanup_at', '<=', trx.raw('clock_timestamp()')).forUpdate().first() as UploadRow | undefined;
+        .whereIn('status', ['uploading', 'abandoned'])
+        .where((q) => q.whereNull('next_cleanup_at').orWhere('next_cleanup_at', '<=', trx.raw('clock_timestamp()')))
+        .forUpdate().first() as UploadRow | undefined;
       if (!current) return; validate(current);
       const now = new Date((await trx.select({ at: trx.raw('clock_timestamp()') }).first()).at);
       if (current.status === 'uploading' && new Date(current.expires_at) > now) {
@@ -157,8 +163,9 @@ export async function cleanupPortableRestoreUploadsForInstallation(db: Knex, pro
   // Cross-tenant journal enumeration is confined to actual installation-owner
   // maintenance. Rows contain only attempted destinations and allocated IDs.
   const destinations = await db(TABLE).where('provider_identity', identity).whereIn('status', ['uploading', 'abandoned'])
-    .where('next_cleanup_at', '<=', db.raw('clock_timestamp()')).select('tenant').min('next_cleanup_at as next')
-    .groupBy('tenant').orderBy('next').limit(limit);
+    .where((q) => q.whereNull('next_cleanup_at').orWhere('next_cleanup_at', '<=', db.raw('clock_timestamp()')))
+    .select('tenant').min('next_cleanup_at as next')
+    .groupBy('tenant').orderByRaw('next ASC NULLS FIRST').limit(limit);
   const result = { destinations: 0, cleaned: 0, failed: 0, skipped: 0 };
   for (const destination of destinations) {
     const current = await cleanupPortableRestoreUploads(db, destination.tenant, provider, limit);

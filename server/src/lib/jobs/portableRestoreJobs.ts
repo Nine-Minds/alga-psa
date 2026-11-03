@@ -3,8 +3,9 @@ import { cleanupPortableRestoreUploadsForInstallation } from '@alga-psa/co-manag
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
 import { forcedValue } from '@alga-psa/core/capability';
+import { PORTABLE_RESTORE_UPLOAD_CLEANUP_SCHEDULE, type MaintenanceScheduleEdition } from '@alga-psa/types';
 
-export const PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB = 'portable-restore-upload-cleanup';
+export const PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB = PORTABLE_RESTORE_UPLOAD_CLEANUP_SCHEDULE.jobName;
 
 /** The shared kill switch: `FORCE_CAPABILITIES=co-managed:off` (or a malformed entry) disables the sweep entirely. */
 const forcedOff = () => { const state = forcedValue(process.env.FORCE_CAPABILITIES, 'co-managed'); return state === 'off' || state === 'malformed'; };
@@ -29,11 +30,12 @@ export async function portableRestoreUploadCleanup() {
  * The sweep appears on the next start after a restore has journaled bytes. Until then, abandoned attempts wait
  * for that start; a resumed restore stages under a fresh attempt id and does not reclaim the earlier one itself.
  */
-export async function registerPortableRestoreJobs() {
+export async function registerPortableRestoreJobs(edition: MaintenanceScheduleEdition) {
   if (forcedOff() || getJobDescriptor(PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB)) return false;
   const db = await getAdminConnection();
   if (!await db.schema.hasTable('portable_workspace_restore_uploads')) return false;
   if (!(await db('portable_workspace_restore_uploads').select(db.raw('1')).first())) return false;
-  defineJob({ name: PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB, scope: 'system', schedule: { cron: '*/15 * * * *' }, run: portableRestoreUploadCleanup });
+  defineJob({ name: PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB, scope: 'system', edition,
+    schedule: { cron: PORTABLE_RESTORE_UPLOAD_CLEANUP_SCHEDULE.cron }, run: portableRestoreUploadCleanup });
   return true;
 }
