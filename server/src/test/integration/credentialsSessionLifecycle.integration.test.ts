@@ -1,8 +1,15 @@
 import { randomUUID } from 'node:crypto';
 import { Auth } from '@auth/core';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
+import { workAsyncStorage } from 'next/dist/server/app-render/work-async-storage.external';
+import { workUnitAsyncStorage } from 'next/dist/server/app-render/work-unit-async-storage.external';
+
+// This suite exercises authentication itself, including the Next.js adapter.
+// Opt out of the shared UI-test authentication and NextResponse stubs.
+vi.unmock('@alga-psa/auth');
+vi.unmock('next/server');
 
 // Exercises the real Auth.js credentials provider, password lookup, JWT callback,
 // and PostgreSQL-backed durable session model without starting the application server.
@@ -17,10 +24,15 @@ let db: Knex;
 let tenant: string;
 let userId: string;
 let email: string;
+let passwordHash: string;
 let authConfig: Record<string, any>;
 let cookieName: string;
 let originalSecret: string | undefined;
 let originalUrl: string | undefined;
+let getSession: typeof import('@alga-psa/auth').getSession;
+let getSessionWithRevocationCheck: typeof import('@alga-psa/auth').getSessionWithRevocationCheck;
+let getCurrentUser: typeof import('@alga-psa/auth/getCurrentUser').getCurrentUser;
+let getCurrentUserWithRevocationCheck: typeof import('@alga-psa/auth/getCurrentUser').getCurrentUserWithRevocationCheck;
 
 function makeCookieJarRequest() {
   const jar = new Map<string, string>();
@@ -38,6 +50,20 @@ function makeCookieJarRequest() {
   return { jar, request };
 }
 
+async function withRequestCookie<T>(cookie: string | null, run: () => Promise<T>): Promise<T> {
+  const headers = new Headers(cookie ? { cookie } : undefined);
+  const request = new Request(`${appOrigin}/msp/profile`, { headers });
+  const workStore = {
+    route: '/msp/profile',
+    page: '/msp/profile/page',
+    forceDynamic: true,
+  } as any;
+  const { createRequestStoreForAPI } = await import('next/dist/server/async-storage/request-store');
+  const workUnitStore = createRequestStoreForAPI(request, new URL(request.url), []);
+
+  return workAsyncStorage.run(workStore, () => workUnitAsyncStorage.run(workUnitStore, run));
+}
+
 describe('credentials sign-in with durable session enforcement', () => {
   beforeAll(async () => {
     originalSecret = process.env.NEXTAUTH_SECRET;
@@ -47,15 +73,23 @@ describe('credentials sign-in with durable session enforcement', () => {
     wireLocalTestDbEnv();
     db = await createTestDbConnection();
     tenant = await createTenant(db, 'Credentials session lifecycle');
+    passwordHash = await hashPassword(password);
     userId = await createUser(db, tenant, {
       email: `auth-${randomUUID()}@example.test`,
       user_type: 'internal',
-      hashed_password: await hashPassword(password),
+      hashed_password: passwordHash,
+      two_factor_secret: 'totp-secret-lifecycle-fixture',
     });
     email = (await db('users').where({ tenant, user_id: userId }).first('email')).email;
 
     const { getAuthOptions } = await import('@alga-psa/auth/nextAuthOptions');
-    authConfig = { ...await getAuthOptions(), trustHost: true, basePath: '/api/auth' };
+    ({ getSession, getSessionWithRevocationCheck } = await import('@alga-psa/auth'));
+    ({ getCurrentUser, getCurrentUserWithRevocationCheck } = await import('@alga-psa/auth/getCurrentUser'));
+    authConfig = {
+      ...await withRequestCookie(null, () => getAuthOptions()),
+      trustHost: true,
+      basePath: '/api/auth',
+    };
     cookieName = authConfig.cookies.sessionToken.name;
   }, 180_000);
 
@@ -139,5 +173,33 @@ describe('credentials sign-in with durable session enforcement', () => {
       userType: 'internal',
     })).resolves.toBeNull();
     expect(await UserSession.getActiveSessionCount(tenant, userId)).toBe(5);
+
+    const currentCookie = `${cookieName}=${jar.get(cookieName)}`;
+    for (let read = 0; read < 2; read += 1) {
+      const session = await withRequestCookie(currentCookie, getSession);
+      expect(session).toMatchObject({ user: { id: userId, tenant }, session_id: current.session_id });
+      const checkedSession = await withRequestCookie(currentCookie, getSessionWithRevocationCheck);
+      expect(checkedSession).toMatchObject({ user: { id: userId, tenant }, session_id: current.session_id });
+      const currentUser = await withRequestCookie(currentCookie, getCurrentUser);
+      const revocationCheckedUser = await withRequestCookie(currentCookie, getCurrentUserWithRevocationCheck);
+      for (const safeUser of [currentUser, revocationCheckedUser]) {
+        expect(safeUser).toMatchObject({ user_id: userId, tenant });
+        expect(safeUser).not.toHaveProperty('hashed_password');
+        expect(safeUser).not.toHaveProperty('two_factor_secret');
+        expect(JSON.stringify(safeUser)).not.toContain(passwordHash);
+        expect(JSON.stringify(safeUser)).not.toContain('totp-secret-lifecycle-fixture');
+      }
+    }
+
+    await UserSession.revokeSession(tenant, current.session_id, 'security');
+    await expect(withRequestCookie(currentCookie, getSession)).resolves.toBeNull();
+    await expect(withRequestCookie(currentCookie, getSessionWithRevocationCheck)).resolves.toBeNull();
+    await expect(withRequestCookie(currentCookie, getCurrentUser)).resolves.toBeNull();
+    await expect(withRequestCookie(currentCookie, getCurrentUserWithRevocationCheck)).resolves.toBeNull();
+
+    await expect(withRequestCookie(null, getSession)).resolves.toBeNull();
+    await expect(withRequestCookie(null, getSessionWithRevocationCheck)).resolves.toBeNull();
+    await expect(withRequestCookie(null, getCurrentUser)).resolves.toBeNull();
+    await expect(withRequestCookie(null, getCurrentUserWithRevocationCheck)).resolves.toBeNull();
   });
 });
