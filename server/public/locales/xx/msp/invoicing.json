@@ -78,7 +78,8 @@
       "poScopeDiffers": "⟦ƤȮ şƈȯƥḗ ḓīƒƒḗřş⟧",
       "currencyDiffers": "⟦Ƈŭřřḗƞƈẏ ḓīƒƒḗřş⟧",
       "taxTreatmentDiffers": "⟦Ŧȧẋ ŧřḗȧŧḿḗƞŧ ḓīƒƒḗřş⟧",
-      "exportShapeDiffers": "⟦Ḗẋƥȯřŧ şħȧƥḗ ḓīƒƒḗřş⟧"
+      "exportShapeDiffers": "⟦Ḗẋƥȯřŧ şħȧƥḗ ḓīƒƒḗřş⟧",
+      "billingProfileDiffers": "⟦Īƞṽȯīƈḗ ƥřȯƒīŀḗ ḓīƒƒḗřş⟧"
     },
     "executionRows": {
       "labels": {

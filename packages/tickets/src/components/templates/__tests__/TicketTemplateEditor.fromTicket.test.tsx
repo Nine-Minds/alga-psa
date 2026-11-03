@@ -157,6 +157,8 @@ describe('TicketTemplateEditor with ?fromTicket', () => {
       // A new template is offered in the picker unless the editor says otherwise (R5).
       offer_for_manual_use: true,
       description: paragraph('Move steps'),
+      // A template from a ticket starts tenant-wide.
+      client_id: null,
       board_id: UUID(1),
       category_id: UUID(2),
       subcategory_id: UUID(3),

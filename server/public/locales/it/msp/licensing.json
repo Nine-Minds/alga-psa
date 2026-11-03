@@ -716,6 +716,21 @@
       "rejected": "Impossibile salvare questa attività.",
       "saved": "Salvato.",
       "save": "Salva"
+    },
+    "portableExport": {
+      "title": "Esporta area di lavoro",
+      "description": "Scarica un archivio portabile e crittografato con i record e i file della tua area di lavoro.",
+      "recovery": "Conserva la passphrase di recupero in un luogo sicuro. Senza di essa, l'archivio non può essere aperto.",
+      "connections": "L'archivio contiene i record della tua area di lavoro e i file in essa archiviati. I record e le associazioni dei documenti, oltre alla cronologia di tempo, pianificazione, riunioni e conversazioni, non sono ancora inclusi e arriveranno in una versione successiva. Fatturazione, dati privati dell'MSP e segreti di integrazione non sono inclusi.",
+      "passphrase": "Passphrase di recupero",
+      "confirmPassphrase": "Conferma passphrase di recupero",
+      "download": "Prepara e scarica archivio",
+      "requested": "La richiesta si apre in una nuova scheda. La preparazione può richiedere alcuni minuti; il browser scaricherà il file quando sarà pronto.",
+      "loadError": "Non puoi esportare quest'area di lavoro con il tuo accesso attuale.",
+      "lengthError": "Usa una passphrase compresa tra 16 e 1024 byte UTF-8.",
+      "matchError": "Le passphrase di recupero devono coincidere.",
+      "unavailable": "L'esportazione dell'area di lavoro non è disponibile in questa edizione.",
+      "loading": "Caricamento…"
     }
   },
   "common": {
