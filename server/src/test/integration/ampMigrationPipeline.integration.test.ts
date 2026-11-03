@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createHash } from 'node:crypto';
@@ -22,6 +22,8 @@ import { MigrationDomainApplier } from '../../lib/migrations/appliers/MigrationD
 import { MigrationReportService } from '../../lib/migrations/MigrationReportService';
 import { spreadsheetImportNamespace } from '../../lib/migrations/spreadsheetNamespace';
 import type { MigrationJobConfiguration } from '../../lib/migrations/types';
+
+vi.unmock('redis');
 
 const HOOK_TIMEOUT = 180_000;
 
@@ -151,6 +153,10 @@ async function applyMigrationThroughIsolatedTemporalAndEventBus(
   let clearServerRegistry: (() => void) | undefined;
 
   try {
+    // The server Vitest project routes Redis to a non-connecting stub by
+    // default. This end-to-end forwarding check needs the actual client and an
+    // isolated Redis instance, so opt this dynamic module graph back into Redis.
+    vi.resetModules();
     // Docker chooses an unused host port. This Redis instance and its global
     // workflow stream are private to this test run, so no shared worker can
     // claim the forwarded request.
@@ -267,6 +273,22 @@ async function applyMigrationThroughIsolatedTemporalAndEventBus(
     );
     expect(workflowResult.success).toBe(true);
 
+    const jobService = await (await import('../../services/job.service')).JobService.create();
+    const forwardedExecution = await jobService.getForwardedJobExecution(scheduled.jobId, fixture.tenantId);
+    expect(forwardedExecution).toMatchObject({ status: 'completed' });
+    expect(forwardedExecution?.executionId).toEqual(expect.any(String));
+    // A delayed completion from a prior Temporal run must not replace the newer
+    // run's persisted outcome. This uses the same real JobService persistence
+    // path as the live subscriber above.
+    await expect(jobService.recordForwardedJobOutcome(
+      scheduled.jobId,
+      fixture.tenantId,
+      'late-prior-run',
+      { status: 'failed', error: 'late delivery' },
+    )).resolves.toBe(false);
+    await expect(jobService.getForwardedJobExecution(scheduled.jobId, fixture.tenantId))
+      .resolves.toMatchObject(forwardedExecution!);
+
     // Event publication is durable but asynchronous relative to the Temporal
     // activity. Wait for the real subscriber + migration handler to reach a
     // terminal state, failing early if the subscriber records an error.
@@ -292,6 +314,7 @@ async function applyMigrationThroughIsolatedTemporalAndEventBus(
     if (resetTemporalRunner) resetTemporalRunner();
     if (environment) await environment.teardown().catch(() => undefined);
     if (clearServerRegistry) clearServerRegistry();
+    vi.resetModules();
     if (redisContainerId) {
       execFileSync('docker', ['stop', redisContainerId], { stdio: 'ignore' });
     }

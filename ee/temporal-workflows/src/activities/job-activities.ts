@@ -19,7 +19,7 @@ import {
   kbArticleImportHandler,
 } from '@alga-psa/jobs/handlers/kbArticleImportHandler';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
-import { waitForForwardedJobCompletion } from '@alga-psa/jobs/lib/forwardedJobCompletion';
+import { beginForwardedJobExecution, waitForForwardedJobCompletion } from '@alga-psa/jobs/lib/forwardedJobCompletion';
 
 // rmm/huntress poll + accounting-sync-cycle handlers import src-consumed vertical
 // packages (@alga-psa/integrations, @alga-psa/billing) the plain-Node-ESM worker
@@ -130,6 +130,21 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   // bus and let a subscriber execute the real handler for the tenant.
   const forwardJobToServer = (jobName: string, options?: { strict: boolean }) =>
     async (jobId: string, data: Record<string, unknown>) => {
+      const tenantId = (data?.tenantId as string) ?? SYSTEM_TENANT_ID;
+      const executionId = String(data?.jobExecutionId ?? '');
+      if (!executionId) throw new Error(`Forwarded job '${jobName}' is missing its Temporal execution id`);
+      const adminDb = await getAdminConnection();
+      await adminDb.transaction(async (trx) => {
+        await trx.raw('SELECT set_config(\'app.current_tenant\', ?, true)', [tenantId]);
+        const job = await tenantDb(trx, tenantId).table('jobs')
+          .where({ job_id: jobId }).forUpdate().first('metadata');
+        if (!job) throw new Error(`Job ${jobId} not found before forwarding '${jobName}'`);
+        const metadata = typeof job.metadata === 'string' ? JSON.parse(job.metadata) : (job.metadata ?? {});
+        await tenantDb(trx, tenantId).table('jobs').where({ job_id: jobId }).update({
+          metadata: JSON.stringify(beginForwardedJobExecution(metadata, executionId)),
+          updated_at: new Date(),
+        });
+      });
       await publishEvent({
         eventType: 'MAINTENANCE_JOB_REQUESTED',
         payload: {
@@ -137,6 +152,7 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
           occurredAt: new Date().toISOString(),
           jobName,
           jobId,
+          executionId,
           data: data ?? {},
         },
       }, options);
@@ -144,9 +160,9 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
       // serverExecution outcome after its registered handler has actually
       // returned, so Temporal must wait for that durable completion signal.
       await waitForForwardedJobCompletion(async () => runWithTenant(
-        (data?.tenantId as string) ?? SYSTEM_TENANT_ID,
+        tenantId,
         async (trx) => {
-          const job = await tenantDb(trx, (data?.tenantId as string) ?? SYSTEM_TENANT_ID)
+          const job = await tenantDb(trx, tenantId)
             .table('jobs')
             .where({ job_id: jobId })
             .first<{ status: string; metadata?: Record<string, unknown> | string } | undefined>(
@@ -157,13 +173,14 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
             ? JSON.parse(job.metadata)
             : job.metadata;
           return {
+            executionId: metadata?.serverExecution?.executionId ?? '',
             status: metadata?.serverExecution?.status ?? 'queued',
             error: typeof metadata?.serverExecution?.error === 'string'
               ? metadata.serverExecution.error
               : typeof metadata?.error === 'string' ? metadata.error : undefined,
           };
         },
-      ));
+      ), executionId);
     };
   registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, forwardJobToServer(RMM_ALERT_RECONCILIATION_JOB));
   registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, forwardJobToServer(HUNTRESS_INCIDENT_POLL_JOB));

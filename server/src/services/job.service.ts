@@ -3,7 +3,8 @@ import { JobScheduler } from '../lib/jobs/jobScheduler';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { JobStatus } from '../types/job';
 import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
-import { tenantDb } from '@alga-psa/db';
+import { getAdminConnection, tenantDb } from '@alga-psa/db';
+import { recordForwardedJobExecutionOutcome } from '@alga-psa/jobs/lib/forwardedJobCompletion';
 
 export interface JobStep {
   stepName: string;
@@ -184,30 +185,48 @@ export class JobService {
   async recordForwardedJobOutcome(
     jobId: string,
     tenantId: string,
+    executionId: string,
     outcome: { status: 'completed' | 'failed'; error?: string },
-  ): Promise<void> {
-    await runWithTenant(tenantId, async () => {
-      const { knex } = await createTenantKnex();
-      const job = await tenantDb(knex, tenantId).table('jobs')
-        .where({ job_id: jobId })
-        .first('metadata');
+  ): Promise<boolean> {
+    const db = await getAdminConnection();
+    return db.transaction(async (trx) => {
+      await trx.raw('SELECT set_config(\'app.current_tenant\', ?, true)', [tenantId]);
+      const table = tenantDb(trx, tenantId).table('jobs');
+      const job = await table.where({ job_id: jobId }).forUpdate().first('metadata');
       if (!job) throw new Error(`Job with ID ${jobId} not found`);
       const metadata = job.metadata
         ? (typeof job.metadata === 'string' ? JSON.parse(job.metadata) : job.metadata)
         : {};
-      await tenantDb(knex, tenantId).table('jobs')
-        .where({ job_id: jobId })
-        .update({
-          metadata: JSON.stringify({
-            ...metadata,
-            serverExecution: {
-              status: outcome.status,
-              ...(outcome.error ? { error: outcome.error } : {}),
-              completedAt: new Date().toISOString(),
-            },
-          }),
-          updated_at: new Date(),
-        });
+      const transition = recordForwardedJobExecutionOutcome(metadata, executionId, outcome);
+      if (!transition.recorded) return false;
+      await table.where({ job_id: jobId }).update({
+        metadata: JSON.stringify(transition.metadata),
+        updated_at: new Date(),
+      });
+      return true;
+    });
+  }
+
+  async getForwardedJobExecution(jobId: string, tenantId: string): Promise<{
+    executionId: string;
+    status: 'queued' | 'completed' | 'failed';
+    error?: string;
+  } | undefined> {
+    return runWithTenant(tenantId, async () => {
+      const { knex } = await createTenantKnex();
+      const job = await tenantDb(knex, tenantId).table('jobs')
+        .where({ job_id: jobId }).first('metadata');
+      if (!job) return undefined;
+      const metadata = job.metadata
+        ? (typeof job.metadata === 'string' ? JSON.parse(job.metadata) : job.metadata)
+        : {};
+      const execution = metadata.serverExecution;
+      if (typeof execution?.executionId !== 'string') return undefined;
+      return {
+        executionId: execution.executionId,
+        status: execution.status,
+        ...(typeof execution.error === 'string' ? { error: execution.error } : {}),
+      };
     });
   }
 

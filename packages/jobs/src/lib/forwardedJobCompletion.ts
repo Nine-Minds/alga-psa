@@ -1,4 +1,37 @@
 export type ForwardedJobStatus = 'queued' | 'processing' | 'completed' | 'failed' | string;
+export interface ForwardedJobExecutionOutcome {
+  executionId: string;
+  status: ForwardedJobStatus;
+  error?: string;
+}
+
+export function beginForwardedJobExecution(
+  metadata: Record<string, unknown>,
+  executionId: string,
+): Record<string, unknown> {
+  return { ...metadata, serverExecution: { executionId, status: 'queued' } };
+}
+
+export function recordForwardedJobExecutionOutcome(
+  metadata: Record<string, unknown>,
+  executionId: string,
+  outcome: { status: 'completed' | 'failed'; error?: string },
+): { metadata: Record<string, unknown>; recorded: boolean } {
+  const activeExecution = metadata.serverExecution as { executionId?: unknown } | undefined;
+  if (activeExecution?.executionId !== executionId) return { metadata, recorded: false };
+  return {
+    recorded: true,
+    metadata: {
+      ...metadata,
+      serverExecution: {
+        executionId,
+        status: outcome.status,
+        ...(outcome.error ? { error: outcome.error } : {}),
+        completedAt: new Date().toISOString(),
+      },
+    },
+  };
+}
 
 /**
  * Wait for the application subscriber to finish a forwarded job. Event
@@ -7,7 +40,8 @@ export type ForwardedJobStatus = 'queued' | 'processing' | 'completed' | 'failed
  * job's terminal status transition.
  */
 export async function waitForForwardedJobCompletion(
-  readStatus: () => Promise<{ status: ForwardedJobStatus; error?: string } | undefined>,
+  readStatus: () => Promise<ForwardedJobExecutionOutcome | undefined>,
+  executionId: string,
   options: { timeoutMs?: number; pollIntervalMs?: number; sleep?: (ms: number) => Promise<void> } = {},
 ): Promise<void> {
   const timeoutMs = options.timeoutMs ?? 9 * 60 * 1000;
@@ -17,8 +51,10 @@ export async function waitForForwardedJobCompletion(
 
   while (Date.now() < deadline) {
     const job = await readStatus();
-    if (job?.status === 'completed') return;
-    if (job?.status === 'failed') {
+    if (job?.executionId !== executionId) {
+      if (job?.executionId) throw new Error(`Forwarded job execution ${executionId} was superseded by ${job.executionId}`);
+    } else if (job.status === 'completed') return;
+    else if (job.status === 'failed') {
       throw new Error(job.error || 'Forwarded application job failed');
     }
     await sleep(Math.min(pollIntervalMs, Math.max(0, deadline - Date.now())));

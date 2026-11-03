@@ -52,7 +52,7 @@ export async function unregisterMaintenanceJobSubscriber(): Promise<void> {
 
 async function handleMaintenanceJobRequested(event: unknown): Promise<void> {
   const validated = EventSchemas.MAINTENANCE_JOB_REQUESTED.parse(event);
-  const { jobName, jobId, data, tenantId } = validated.payload;
+  const { jobName, jobId, data, tenantId, executionId } = validated.payload;
 
   try {
     // Maintenance schedules publish a bare jobName; forwarded jobs always carry
@@ -69,16 +69,22 @@ async function handleMaintenanceJobRequested(event: unknown): Promise<void> {
       // can't load. Run the registered handler directly for the tenant.
       logger.info(`[MaintenanceJobSubscriber] Running forwarded job '${jobName}' for tenant ${tenantId}`);
       await runWithTenant(tenantId, async () => {
+        const jobService = jobId && executionId ? await JobService.create() : undefined;
+        if (jobService) {
+          const current = await jobService.getForwardedJobExecution(jobId!, tenantId);
+          if (current?.executionId !== executionId) {
+            logger.warn(`[MaintenanceJobSubscriber] Ignoring stale forwarded execution '${executionId}' for job '${jobId}'`);
+            return;
+          }
+        }
         try {
           await executeJobHandler(jobName, jobId ?? `evt:${jobName}`, (data ?? {}) as any);
-          if (jobId) {
-            const jobService = await JobService.create();
-            await jobService.recordForwardedJobOutcome(jobId, tenantId, { status: 'completed' });
+          if (jobService) {
+            await jobService.recordForwardedJobOutcome(jobId!, tenantId, executionId!, { status: 'completed' });
           }
         } catch (error) {
-          if (jobId) {
-            const jobService = await JobService.create();
-            await jobService.recordForwardedJobOutcome(jobId, tenantId, {
+          if (jobService) {
+            await jobService.recordForwardedJobOutcome(jobId!, tenantId, executionId!, {
               status: 'failed',
               error: error instanceof Error ? error.message : String(error),
             });

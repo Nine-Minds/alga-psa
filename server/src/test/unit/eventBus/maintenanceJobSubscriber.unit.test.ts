@@ -6,6 +6,7 @@ const releaseMock = vi.fn();
 const executeJobHandlerMock = vi.fn();
 const configureLauncherMock = vi.fn();
 const recordForwardedOutcomeMock = vi.fn();
+const getForwardedExecutionMock = vi.fn();
 let subscribedHandler: ((event: unknown) => Promise<void>) | null = null;
 const registrationOrder: string[] = [];
 
@@ -37,7 +38,10 @@ vi.mock('../../../lib/jobs/jobHandlerRegistry', () => ({
   executeJobHandler: (...args: unknown[]) => executeJobHandlerMock(...args),
 }));
 vi.mock('../../../services/job.service', () => ({
-  JobService: { create: async () => ({ recordForwardedJobOutcome: (...args: unknown[]) => recordForwardedOutcomeMock(...args) }) },
+  JobService: { create: async () => ({
+    getForwardedJobExecution: (...args: unknown[]) => getForwardedExecutionMock(...args),
+    recordForwardedJobOutcome: (...args: unknown[]) => recordForwardedOutcomeMock(...args),
+  }) },
 }));
 vi.mock('../../../lib/eventBus/subscribers/maintenanceJobLock', () => ({
   acquireMaintenanceJobLock: (...args: unknown[]) => acquireLockMock(...args),
@@ -72,6 +76,7 @@ describe('maintenanceJobSubscriber', () => {
     acquireLockMock.mockReset().mockResolvedValue({ release: releaseMock });
     releaseMock.mockReset().mockResolvedValue(undefined);
     executeJobHandlerMock.mockReset().mockResolvedValue(undefined);
+    getForwardedExecutionMock.mockReset().mockResolvedValue({ executionId: 'run-1', status: 'queued' });
     recordForwardedOutcomeMock.mockReset().mockResolvedValue(undefined);
   });
 
@@ -114,19 +119,20 @@ describe('maintenanceJobSubscriber', () => {
   });
 
   it('does not lock forwarded per-tenant jobs', async () => {
-    await subscribedHandler!(event('rmm-device-sync', { jobId: 'job-1', data: { tenantId: '11111111-1111-1111-1111-111111111111' } }));
+    await subscribedHandler!(event('rmm-device-sync', { jobId: 'job-1', executionId: 'run-1', data: { tenantId: '11111111-1111-1111-1111-111111111111' } }));
     expect(acquireLockMock).not.toHaveBeenCalled();
     expect(executeJobHandlerMock).toHaveBeenCalledWith('rmm-device-sync', 'job-1', expect.any(Object));
-    expect(recordForwardedOutcomeMock).toHaveBeenCalledWith('job-1', expect.any(String), { status: 'completed' });
+    expect(recordForwardedOutcomeMock).toHaveBeenCalledWith('job-1', expect.any(String), 'run-1', { status: 'completed' });
   });
 
   it('records a forwarded handler failure and rethrows it for observable failure', async () => {
     executeJobHandlerMock.mockRejectedValueOnce(new Error('PDF generation failed'));
     await expect(subscribedHandler!(event('invoice_email', {
       jobId: 'invoice-job',
+      executionId: 'run-1',
       data: { tenantId: '11111111-1111-1111-1111-111111111111' },
     }))).rejects.toThrow('PDF generation failed');
-    expect(recordForwardedOutcomeMock).toHaveBeenCalledWith('invoice-job', expect.any(String), {
+    expect(recordForwardedOutcomeMock).toHaveBeenCalledWith('invoice-job', expect.any(String), 'run-1', {
       status: 'failed', error: 'PDF generation failed',
     });
   });
