@@ -5,11 +5,12 @@ import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { getSecret } from '../../lib/utils/getSecret';
 
 // Real-Postgres proof that internal-user seat consumption is serialized by the
-// tenant-row lock taken in checkInternalUserLicenseLimit.
+// transaction-scoped advisory lock taken in checkInternalUserLicenseLimit.
 // Run: see docs in the commit message / the Draft Implementation fact.
 
 import { runAsSystem, createSystemContext, runWithTenant } from '@alga-psa/db';
 import { UserService } from '../../../../packages/users/src/services/UserService';
+import { changeCoManagedAllocation } from '../../../../packages/licensing/src/lib/co-managed-admission';
 import {
   assertInternalUserSeatsWithinLimit,
   checkInternalUserLicenseLimit,
@@ -86,7 +87,7 @@ describe('internal user seat lock', () => {
 
     // Hold ACCESS EXCLUSIVE on users from a separate connection. Every create
     // blocks in its seat-count read (with the lock: 1 on the table, 7 on the
-    // tenant row; without it: all 8 on the table). Only when 8 backends are
+    // advisory lock; without it: all 8 on the table). Only when 8 backends are
     // provably blocked do we release, so the overlap is real, not incidental.
     const holder = await db.transaction();
     await holder.raw('LOCK TABLE users IN ACCESS EXCLUSIVE MODE');
@@ -168,7 +169,7 @@ describe('internal user seat lock', () => {
     expect(await activeInternal(tenant)).toBe(2);
 
     // Restore the same fixture, then exercise the actual service with the same
-    // disjoint partial patches. Its tenant-row/user-row lock order must let at
+    // disjoint partial patches. Its advisory-lock/user-row order must let at
     // most the non-seat patch succeed and reject the seat-consuming transition.
     await db('users').where({ tenant, user_id: userId }).update({ user_type: 'client', is_inactive: true });
     const holder = await db.transaction();
@@ -188,6 +189,58 @@ describe('internal user seat lock', () => {
     expect(await activeInternal(tenant)).toBe(1);
     const finalUser = await db('users').where({ tenant, user_id: userId }).first('user_type', 'is_inactive');
     expect(finalUser.user_type === 'internal' && finalUser.is_inactive === false).toBe(false);
+  }, 60_000);
+
+  it('completes seat admission alongside co-managed allocation locking without deadlock', async () => {
+    const sponsor = await seedTenant({ limit: null, product: 'psa' });
+    const customer = await seedTenant({ limit: 2, product: 'co_managed' });
+    const relationshipId = randomUUID();
+    const operationId = randomUUID();
+    const allocationId = randomUUID();
+    const sponsorActor = randomUUID();
+    await db('co_managed_entitlements').insert({ tenant: sponsor, source: 'admin_grant',
+      source_reference: `seat-lock-${sponsor}`, capacity: 5, verified_at: db.fn.now(),
+      valid_until: db.raw("now() + interval '1 year'") });
+    await db('co_management_relationships').insert({ tenant: customer, relationship_id: relationshipId,
+      sponsor_tenant: sponsor, sponsor_client_id: randomUUID(), state: 'active', accepted_by: randomUUID(),
+      accepted_at: db.fn.now() });
+    await db('co_managed_allocations').insert({ tenant: sponsor, allocation_id: allocationId, operation_id: operationId,
+      request_fingerprint: 'a'.repeat(64), customer_tenant: customer, relationship_id: relationshipId,
+      seats: 2, state: 'active' });
+    await db('co_managed_provisioning_operations').insert({ tenant: sponsor, operation_id: operationId,
+      allocation_id: allocationId, customer_tenant: customer, relationship_id: relationshipId, requested_by: sponsorActor,
+      escalation_board_id: randomUUID(), customer_board_id: randomUUID(), customer_client_id: randomUUID(),
+      administrator_invitation_id: randomUUID(), request_fingerprint: 'a'.repeat(64), request: {}, state: 'pending_acceptance' });
+
+    await seedUser(customer, 'seat-admin@example.test');
+    const clientEmail = 'seat-client@example.test';
+    await db('users').insert({ tenant: customer, user_id: randomUUID(), username: clientEmail, email: clientEmail,
+      first_name: 'T', last_name: 'U', user_type: 'client', is_inactive: true, hashed_password: 'unused' });
+    const clientId = (await db('users').where({ tenant: customer, email: clientEmail }).first('user_id')).user_id;
+
+    // Hold the first shared row lock briefly so both real paths overlap while
+    // queued on the co-managed entitlement. After release, each must finish
+    // using the common entitlement → sponsor → operation → relationship →
+    // customer-tenant row order; UserService's seat lock is advisory and does
+    // not add the customer tenant row ahead of that sequence.
+    const blocker = await db.transaction();
+    await blocker('co_managed_entitlements').where({ tenant: sponsor }).forUpdate().first();
+    const admission = runWithTenant(customer, () => runAsSystem('seat-lock-test', async () =>
+      new UserService().update(clientId, { user_type: 'internal', is_inactive: false } as any, createSystemContext(customer))));
+    const allocation = changeCoManagedAllocation(db, sponsor, { customerTenant: customer,
+      relationshipId, expectedSeats: 2, seats: 3 });
+    const settled = Promise.all([admission, allocation]);
+    try {
+      await waitForBlockedBackends(2);
+      await blocker.commit();
+      await settled;
+    } catch (error) {
+      if (!blocker.isCompleted()) await blocker.rollback();
+      throw error;
+    }
+    expect(await activeInternal(customer)).toBe(2);
+    expect(await db('co_managed_allocations').where({ tenant: sponsor, allocation_id: allocationId }).first('seats'))
+      .toMatchObject({ seats: 3 });
   }, 60_000);
 
   it('UserService.update refuses a client -> internal change at the limit; bulk activation is all-or-nothing', async () => {

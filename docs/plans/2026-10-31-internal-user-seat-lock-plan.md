@@ -18,13 +18,13 @@ Measured on real Postgres with the lock disabled: 8 concurrent
 ## Mechanism
 
 `checkInternalUserLicenseLimit(trx, tenant, opts)` requires a real `Knex.Transaction`
-(it throws for anything else). Its first statement locks the tenant row:
+(it throws for anything else). Its first statement takes the shared advisory lock:
 
 ```sql
-SELECT tenant FROM tenants WHERE tenant = <tenant> FOR UPDATE
+SELECT pg_advisory_xact_lock(hashtext(<tenant>))
 ```
 
-- The row lock is held until commit or rollback and covers the
+- The transaction lock is held until commit or rollback and covers the
   check plus the insert, reactivation or invitation write that follows.
 - The lock is per tenant: tenants never block each other.
 - Callers may take it early (`lockTenantSeatState`) and then call the check.
@@ -77,11 +77,21 @@ so the tripwire does not catch their race (the no-lock runs above show it passin
 
 ## Lock order
 
-Every seat path takes the tenant row lock first, then user row locks. Co-managed admission and SCIM
-reactivation were arranged to follow this (SCIM takes the seat lock before
-`FOR UPDATE` on the user row). Deactivate, role change, licence-count edits and
-invitation revoke do not take the seat lock, so they cannot invert. Co-managed
-provisioning and allocation changes take only their own row locks, never the seat lock.
+Seat admission paths first take `pg_advisory_xact_lock(hashtext(tenant))`, a
+transaction-scoped per-tenant lock that does not participate in PostgreSQL's
+row-lock graph. The lock is held through admission and the corresponding write.
+Seat-defining user updates take this advisory lock before locking and reading the
+target user, then derive occupancy from that locked row plus the patch.
+
+Co-managed allocation and user-admission paths retain their row order: sponsor
+entitlement, sponsor tenant, provisioning operation, customer relationship, then
+customer tenant (`FOR NO KEY UPDATE`); when reactivating an existing account, its
+user row follows. Co-managed acceptance locks sponsor entitlement, sponsor tenant,
+operation, and customer relationship, rechecks the administrator identity and
+permission rows, and only then takes the customer tenant lock. The advisory seat
+lock is independent of these row locks, so a seat update cannot hold the customer
+tenant row while waiting for entitlement or relationship locks. Co-managed
+allocation and acceptance do not acquire the seat advisory lock.
 
 ## `lock_timeout`
 
@@ -102,7 +112,7 @@ actor). MCP agent service users (`ee/server/src/lib/mcp/agents.ts`) are inserted
   admin retries.
 - `isCoManagedInvitationServed` runs while the seat lock is held (accept path and send
   path), so its latency extends the queue for that tenant.
-- `UserService.update` takes the tenant row lock before selecting the target user `FOR UPDATE`;
+- `UserService.update` takes the seat advisory lock before selecting the target user `FOR UPDATE`;
   it derives seat transitions from that locked row plus the supplied patch.
 
 ## Tests

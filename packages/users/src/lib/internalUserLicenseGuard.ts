@@ -39,17 +39,16 @@ export async function countPendingInvitationSeats(
 }
 
 /**
- * Per-tenant seat lock. The tenant row is locked before any user row so seat
- * admission and seat-state changes serialize using one consistent lock order.
- * The row lock is held until the transaction commits or rolls back.
+ * Per-tenant transaction-scoped seat lock. Advisory locks serialize seat
+ * consumers without joining the tenant-row lock graph used by co-managed
+ * admission (entitlement, sponsor tenant, operation, relationship, customer
+ * tenant, then user). PostgreSQL releases this lock at commit or rollback.
  */
 export async function lockTenantSeatState(trx: Knex.Transaction, tenant: string): Promise<void> {
   assertTransaction(trx, 'lockTenantSeatState');
-  const row = await tenantDb(trx, tenant).table('tenants')
-    .where({ tenant })
-    .forUpdate()
-    .first('tenant');
-  if (!row) throw new Error(`Tenant not found: ${tenant}`);
+  // hashtext(text) yields the same int4 key for all callers and
+  // pg_advisory_xact_lock is transaction-scoped, including savepoints.
+  await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?))', [tenant]);
 }
 
 /** @deprecated Use lockTenantSeatState; retained for existing seat-admission callers. */

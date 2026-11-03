@@ -16,7 +16,7 @@ function asTransaction(fn: any) {
 }
 
 function fakeTrx(input: { plan: string | null; licensedUserCount: number | null; usedInternalUsers: number }) {
-  return asTransaction((table: string) => {
+  const trx: any = (table: string) => {
     if (table === 'tenants') {
       const tenantRow = { licensed_user_count: input.licensedUserCount, plan: input.plan };
       return {
@@ -36,17 +36,19 @@ function fakeTrx(input: { plan: string | null; licensedUserCount: number | null;
     }
 
     throw new Error(`Unexpected tenant table ${table}`);
-  }) as any;
+  };
+  trx.raw = async (query: string, bindings: unknown[]) => { lockCalls.push(['advisory-xact-lock', query, bindings]); };
+  return asTransaction(trx);
 }
 
 describe('seat lock and transaction requirement', () => {
-  it('locks the tenant row before seat admission reads', async () => {
+  it('takes a transaction-scoped advisory lock before seat admission reads', async () => {
     lockCalls.length = 0;
     await checkInternalUserLicenseLimit(
       fakeTrx({ plan: 'pro', licensedUserCount: 3, usedInternalUsers: 0 }),
       'tenant-1'
     );
-    expect(lockCalls).toEqual([['tenant-for-update', { tenant: 'tenant-1' }]]);
+    expect(lockCalls).toEqual([['advisory-xact-lock', 'SELECT pg_advisory_xact_lock(hashtext(?))', ['tenant-1']]]);
   });
 
   it('requires a transaction before locking tenant seat state', async () => {
@@ -139,6 +141,7 @@ describe('checkInternalUserLicenseLimit', () => {
       }
       throw new Error(`Unexpected tenant table ${table}`);
     }) as any;
+    trx.raw = async () => undefined;
 
     await expect(checkInternalUserLicenseLimit(trx, 'missing-tenant')).rejects.toThrow(
       'Tenant not found: missing-tenant'
