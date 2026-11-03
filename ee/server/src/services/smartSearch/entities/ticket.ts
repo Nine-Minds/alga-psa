@@ -32,6 +32,7 @@ import {
 } from '../candidate';
 import type { SmartSearchEntityDefinition } from '../entityDefinition';
 import type { RelevancePrompt } from '../scoreBatch';
+import { ticketReadMask, ticketRedactionKey } from '@alga-psa/tickets/lib';
 
 export type TicketCommentAuthor = 'technician' | 'client' | 'system';
 
@@ -88,8 +89,10 @@ export function assembleTicketCandidate(
     {
       id: row.ticket_id,
       head: {
-        ticket_number: row.ticket_number ?? '',
-        title: hidden('title') ? 'Restricted ticket' : row.title?.trim() || row.ticket_number || row.ticket_id,
+        ticket_number: hidden('ticket_number') ? '' : row.ticket_number ?? '',
+        title: hidden('title')
+          ? 'Restricted ticket'
+          : row.title?.trim() || (hidden('ticket_number') ? row.ticket_id : row.ticket_number || row.ticket_id),
         client: hidden('client_name') ? null : nonEmpty(row.client_name),
         status: hidden('status_name') ? null : nonEmpty(row.status_name),
         is_closed: hidden('status_name') ? null : row.is_closed === true,
@@ -116,7 +119,25 @@ export function assembleTicketCandidate(
   );
 }
 
-async function loadTicketTextRows(trx: Knex.Transaction, tenant: string, ticketIds: string[]): Promise<TicketTextRow[]> {
+async function loadTicketTextRows(
+  trx: Knex.Transaction,
+  tenant: string,
+  ticketIds: string[],
+  redactedFields: readonly string[]
+): Promise<TicketTextRow[]> {
+  const mask = ticketReadMask(redactedFields);
+  if (mask.dropResource || ticketIds.length === 0) return [];
+  const text = (expression: string, field: string, alias = field, neutral?: string) => {
+    if (ticketReadFieldHidden(redactedFields, field)) {
+      return field === 'title' && neutral
+        ? trx.raw('?::text as ??', [neutral, alias])
+        : trx.raw('NULL::text as ??', [alias]);
+    }
+    return trx.raw(`${expression} as ??`, [alias]);
+  };
+  const date = (field: string) => ticketReadFieldHidden(redactedFields, field)
+    ? trx.raw('NULL::timestamptz as ??', [field])
+    : `t.${field}`;
   const db = tenantDb(trx, tenant);
   const query = db.table('tickets as t');
   db.tenantJoin(query, 'clients as comp', 't.client_id', 'comp.client_id', { type: 'left' });
@@ -132,20 +153,24 @@ async function loadTicketTextRows(trx: Knex.Transaction, tenant: string, ticketI
     .whereIn('t.ticket_id', ticketIds)
     .select(
       't.ticket_id',
-      't.ticket_number',
-      't.title',
-      trx.raw("t.attributes->>'description' as description"),
-      'comp.client_name',
-      's.name as status_name',
-      's.is_closed',
-      'p.priority_name',
-      'b.board_name',
-      trx.raw("NULLIF(TRIM(CONCAT(au.first_name, ' ', au.last_name)), '') as assigned_to_name"),
-      'tm.team_name as assigned_team_name',
-      't.entered_at',
-      't.updated_at',
-      't.closed_at',
-      't.due_date'
+      text('t.ticket_number', 'ticket_number'),
+      text('t.title', 'title', 'title', 'Restricted ticket'),
+      mask.fields.has('attributes') || ticketReadFieldHidden(redactedFields, 'description')
+        ? trx.raw('NULL::text as description')
+        : trx.raw("t.attributes->>'description' as description"),
+      text('comp.client_name', 'client_name'),
+      text('s.name', 'status_name'),
+      ticketReadFieldHidden(redactedFields, 'is_closed')
+        ? trx.raw('NULL::boolean as is_closed')
+        : 's.is_closed',
+      text('p.priority_name', 'priority_name'),
+      text('b.board_name', 'board_name'),
+      text("NULLIF(TRIM(CONCAT(au.first_name, ' ', au.last_name)), '')", 'assigned_to_name'),
+      text('tm.team_name', 'assigned_team_name'),
+      date('entered_at'),
+      date('updated_at'),
+      date('closed_at'),
+      date('due_date')
     );
 }
 
@@ -185,26 +210,37 @@ export async function loadTicketCandidates(
   tenant: string,
   user: IUserWithRoles,
   ticketIds: string[],
-  redactions: ReadonlyMap<string, readonly string[]> = new Map()
+  redactions: ReadonlyMap<string, readonly string[]>
 ): Promise<SmartSearchCandidate[]> {
   if (ticketIds.length === 0) {
     return [];
   }
-  const principal = await resolveSearchAclPrincipal(trx, user);
-  const [ticketRows, commentRows] = await Promise.all([
-    loadTicketTextRows(trx, tenant, ticketIds),
-    loadVisibleCommentRows(trx, tenant, principal, ticketIds),
-  ]);
-
+  const groups = new Map<string, { redactedFields: readonly string[]; ids: string[] }>();
+  for (const id of ticketIds) {
+    const fields = redactions.get(id);
+    if (!Array.isArray(fields)) continue; // Enumeration metadata is required; absent means no candidate.
+    const key = ticketRedactionKey(fields);
+    const group = groups.get(key) ?? { redactedFields: fields, ids: [] };
+    group.ids.push(id);
+    groups.set(key, group);
+  }
+  const ticketRows: TicketTextRow[] = [];
   const commentsByTicket = new Map<string, TicketComment[]>();
-  for (const row of commentRows) {
-    const text = normalizeRichText(row.body);
-    if (!text) {
-      continue;
+  for (const group of groups.values()) {
+    const mask = ticketReadMask(group.redactedFields);
+    if (mask.dropResource) continue;
+    ticketRows.push(...await loadTicketTextRows(trx, tenant, group.ids, group.redactedFields));
+    // Comments have no independent field projection. Do not query their bodies for any redacted ticket.
+    if (group.redactedFields.length > 0) continue;
+    const principal = await resolveSearchAclPrincipal(trx, user);
+    const commentRows = await loadVisibleCommentRows(trx, tenant, principal, group.ids);
+    for (const row of commentRows) {
+      const text = normalizeRichText(row.body);
+      if (!text) continue;
+      const list = commentsByTicket.get(row.parent_id) ?? [];
+      list.push({ author: toAuthor(row.metadata), text });
+      commentsByTicket.set(row.parent_id, list);
     }
-    const list = commentsByTicket.get(row.parent_id) ?? [];
-    list.push({ author: toAuthor(row.metadata), text });
-    commentsByTicket.set(row.parent_id, list);
   }
 
   const rowsById = new Map(ticketRows.map((row) => [row.ticket_id, row] as const));

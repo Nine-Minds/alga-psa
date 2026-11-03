@@ -108,9 +108,11 @@ describe('ticket list redaction projection', () => {
       due_date: '2026-09-01',
       latest_activity_actor: 'Secret author',
       latest_activity_at: '2026-09-01T00:00:00Z',
+      bundle_child_count: 2,
+      bundle_master_ticket_number: 'SECRET MASTER NUMBER',
     }, ['title', 'description', 'client_name', 'assigned_to', 'due_date']);
     expect(projected.title).toBe('Restricted ticket');
-    expect(projected.attributes).toEqual({ description: null, public: true });
+    expect(projected.attributes).toBeNull();
     expect(projected.client_name).toBeNull();
     expect(projected.client_id).toBeNull();
     expect(projected.assigned_to).toBeNull();
@@ -119,6 +121,8 @@ describe('ticket list redaction projection', () => {
     expect(projected.due_date).toBeNull();
     expect(projected.latest_activity_actor).toBeNull();
     expect(projected.latest_activity_at).toBeNull();
+    expect(projected.bundle_child_count).toBeNull();
+    expect(projected.bundle_master_ticket_number).toBeNull();
   });
 });
 
