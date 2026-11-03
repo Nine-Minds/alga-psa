@@ -8,7 +8,9 @@ export interface ForwardedJobExecutionOutcome {
 export function beginForwardedJobExecution(
   metadata: Record<string, unknown>,
   executionId: string,
-): Record<string, unknown> {
+): Record<string, unknown> & {
+  serverExecution: { executionId: string; status: 'queued' };
+} {
   return { ...metadata, serverExecution: { executionId, status: 'queued' } };
 }
 

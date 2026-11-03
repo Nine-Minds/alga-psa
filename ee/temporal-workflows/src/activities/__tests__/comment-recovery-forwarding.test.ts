@@ -1,7 +1,29 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 
-const mocks = vi.hoisted(() => ({ publish: vi.fn(), wait: vi.fn(async () => undefined), execution: { metadata: '{}' } }));
+const mocks = vi.hoisted(() => {
+  const jobs = new Map<string, { metadata: string }>();
+  let active = 0;
+  let tail = Promise.resolve();
+  let peak = 0;
+  const acquire = async () => {
+    const previous = tail;
+    let releaseTurn!: () => void;
+    tail = new Promise<void>(resolve => { releaseTurn = resolve; });
+    await previous;
+    active++;
+    peak = Math.max(peak, active);
+    return () => {
+      active--;
+      releaseTurn();
+    };
+  };
+  const transaction = async (fn: any) => {
+    const release = await acquire();
+    try { return await fn({ raw: vi.fn() }); } finally { release(); }
+  };
+  return { publish: vi.fn(), wait: vi.fn(async (..._args: any[]) => undefined), jobs, transaction, getPeak: () => peak };
+});
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: mocks.publish, publishWorkflowEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 vi.mock('@alga-psa/jobs/lib/forwardedJobCompletion', () => ({
   beginForwardedJobExecution: (metadata: Record<string, unknown>, executionId: string) => ({
@@ -15,16 +37,24 @@ vi.mock('@alga-psa/jobs/handlers/kbArticleImportHandler', () => ({ KB_ARTICLE_IM
 vi.mock('@alga-psa/jobs/runners/TemporalJobRunner', () => ({ TemporalJobRunner: { create: vi.fn() } }));
 // Only the job-name constants are used here; the workflow runtime behind them is not under test.
 vi.mock('@alga-psa/workflows/lib/workflowScheduleLifecycle', () => ({ WORKFLOW_ONE_TIME_TRIGGER_JOB: 'workflow-one-time-trigger', WORKFLOW_RECURRING_TRIGGER_JOB: 'workflow-recurring-trigger' }));
-vi.mock('@alga-psa/db/admin', () => ({ getAdminConnection: async () => ({ transaction: async (fn: any) => fn({ raw: vi.fn() }) }), withAdminTransactionRetryReadOnly: (fn: any) => fn({ raw: vi.fn() }) }));
+vi.mock('@alga-psa/db/admin', () => ({ getAdminConnection: async () => ({ transaction: mocks.transaction }), withAdminTransactionRetryReadOnly: mocks.transaction }));
 vi.mock('@alga-psa/db', async original => ({
   ...await original<any>(),
   isTenantSuspended: async () => false,
-  getAdminConnection: async () => ({ transaction: async (fn: any) => fn({ raw: vi.fn() }) }),
+  getAdminConnection: async () => ({ transaction: mocks.transaction }),
   tenantDb: () => ({ table: () => ({
-    where: () => ({
-      forUpdate: () => ({ first: async () => ({ metadata: mocks.execution.metadata }) }),
-      first: async () => ({ metadata: mocks.execution.metadata }),
-      update: async (value: any) => { mocks.execution.metadata = value.metadata; return 1; },
+    where: (criteria: { job_id: string }) => ({
+      forUpdate: () => ({ first: async () => mocks.jobs.get(criteria.job_id) }),
+      first: async () => {
+        const job = mocks.jobs.get(criteria.job_id);
+        return job && { status: 'queued', metadata: job.metadata };
+      },
+      update: async (value: any) => {
+        const job = mocks.jobs.get(criteria.job_id);
+        if (!job) return 0;
+        job.metadata = value.metadata;
+        return 1;
+      },
     }),
   }) }),
 }));
@@ -39,7 +69,7 @@ describe('recover-comment-publications worker forwarding', () => {
   it('forwards the job to the server as a strict MAINTENANCE_JOB_REQUESTED event and reports publish failures', async () => {
     await initializeJobHandlersForWorker();
     const tenantId = randomUUID(), jobId = randomUUID();
-    mocks.execution.metadata = '{}';
+    mocks.jobs.set(jobId, { metadata: '{}' });
     mocks.publish.mockResolvedValue(undefined);
     expect(await executeJobHandler({ jobName: 'recover-comment-publications', jobId, tenantId, jobExecutionId: randomUUID(), data: {} })).toEqual({ success: true });
     expect(mocks.publish).toHaveBeenCalledOnce();
@@ -55,4 +85,33 @@ describe('recover-comment-publications worker forwarding', () => {
     mocks.publish.mockRejectedValueOnce(new Error('Redis unavailable'));
     expect(await executeJobHandler({ jobName: 'recover-comment-publications', jobId, tenantId, jobExecutionId: randomUUID(), data: {} })).toEqual({ success: false, error: 'Redis unavailable' });
   });
+
+  it('completes concurrent forwarded executions with a one-connection admin pool', async () => {
+    const { waitForForwardedJobCompletion } = await vi.importActual<
+      typeof import('@alga-psa/jobs/lib/forwardedJobCompletion')
+    >('@alga-psa/jobs/lib/forwardedJobCompletion');
+    await initializeJobHandlersForWorker();
+    const tenantId = randomUUID();
+    const jobIds = [randomUUID(), randomUUID()];
+    for (const jobId of jobIds) mocks.jobs.set(jobId, { metadata: '{}' });
+    mocks.publish.mockImplementation(async (event: any) => {
+      const row = mocks.jobs.get(event.payload.jobId)!;
+      row.metadata = JSON.stringify({ serverExecution: {
+        executionId: event.payload.executionId,
+        status: 'completed',
+      } });
+    });
+    mocks.wait.mockImplementation((readStatus: any, executionId: string) =>
+      waitForForwardedJobCompletion(readStatus, executionId, { pollIntervalMs: 1 }));
+
+    const results = await Promise.all(jobIds.map(jobId => executeJobHandler({
+      jobName: 'invoice_email', jobId, tenantId, jobExecutionId: randomUUID(), data: {},
+    })));
+
+    expect(results).toEqual([{ success: true }, { success: true }]);
+    expect(mocks.getPeak()).toBe(1);
+    for (const jobId of jobIds) {
+      expect(JSON.parse(mocks.jobs.get(jobId)!.metadata).serverExecution.status).toBe('completed');
+    }
+  }, 5000);
 });

@@ -58,6 +58,7 @@ type JobHandler = (
 ) => Promise<void | Record<string, unknown>>;
 
 const jobHandlers = new Map<string, JobHandler>();
+const forwardedJobHandlers = new Set<string>();
 let jobHandlersInitialized = false;
 
 async function runWithTenant<T>(
@@ -182,77 +183,57 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
         },
       ), executionId);
     };
-  registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, forwardJobToServer(RMM_ALERT_RECONCILIATION_JOB));
-  registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, forwardJobToServer(HUNTRESS_INCIDENT_POLL_JOB));
+  const registerForwardedJobHandler = (jobName: string, options?: { strict: boolean }) => {
+    forwardedJobHandlers.add(jobName);
+    registerJobHandlerForActivities(jobName, forwardJobToServer(jobName, options));
+  };
+  registerForwardedJobHandler(RMM_ALERT_RECONCILIATION_JOB);
+  registerForwardedJobHandler(HUNTRESS_INCIDENT_POLL_JOB);
   // Device sync reaches provider clients under ee/server, so it forwards to the
   // server like the other RMM jobs rather than running in the worker.
-  registerJobHandlerForActivities(RMM_DEVICE_SYNC_JOB, forwardJobToServer(RMM_DEVICE_SYNC_JOB));
-  registerJobHandlerForActivities(ACCOUNTING_SYNC_CYCLE_JOB, forwardJobToServer(ACCOUNTING_SYNC_CYCLE_JOB));
-  registerJobHandlerForActivities(HUDU_AUTO_SYNC_JOB, forwardJobToServer(HUDU_AUTO_SYNC_JOB));
+  registerForwardedJobHandler(RMM_DEVICE_SYNC_JOB);
+  registerForwardedJobHandler(ACCOUNTING_SYNC_CYCLE_JOB);
+  registerForwardedJobHandler(HUDU_AUTO_SYNC_JOB);
   // AMP apply uses server-bound migration appliers and the tenant database
   // connection, so Temporal forwards it to the server's registered handler.
-  registerJobHandlerForActivities(MIGRATION_APPLY_JOB, forwardJobToServer(MIGRATION_APPLY_JOB, { strict: true }));
+  registerForwardedJobHandler(MIGRATION_APPLY_JOB, { strict: true });
   // Teams meeting Graph cleanup (cancel/decline): the handler imports
   // src-consumed vertical packages (@alga-psa/clients + EE Teams lib), so the
   // worker forwards it to the server like the polling jobs above. The
   // recurring sweep-teams-online-meetings maintenance job re-attempts any
   // cancel_pending rows if a forwarded run is lost.
-  registerJobHandlerForActivities('teams-meeting-cleanup', forwardJobToServer('teams-meeting-cleanup'));
+  registerForwardedJobHandler('teams-meeting-cleanup');
   // Teams meeting recording/transcript capture, enqueued by the app's
   // /api/teams/webhooks/recordings route when Graph notifies about a new
   // artifact. Same constraint as the cleanup job: the handler imports
   // src-consumed vertical packages (@alga-psa/clients, @alga-psa/scheduling),
   // so it executes server-side via the event bus.
-  registerJobHandlerForActivities(
-    'process-teams-meeting-artifact-notification',
-    forwardJobToServer('process-teams-meeting-artifact-notification'),
-  );
+  registerForwardedJobHandler('process-teams-meeting-artifact-notification');
   // Teams Phone call journaling, enqueued by the app's
   // /api/telephony/webhooks/teams-calls route when Graph notifies about a new
   // call record. The handler reaches the EE Teams lib and the telephony core
   // (both src-consumed), so it executes server-side via the event bus.
-  registerJobHandlerForActivities(
-    'process-telephony-call-notification',
-    forwardJobToServer('process-telephony-call-notification'),
-  );
+  registerForwardedJobHandler('process-telephony-call-notification');
   // 3CX call journaling, enqueued by the app's /api/telephony/3cx/[tenantSlug]/
   // report-call route with an already-canonical record. The handler reaches the
   // telephony core and the EE 3CX/Teams libs (src-consumed), so it executes
   // server-side via the event bus like the Teams call notification above.
-  registerJobHandlerForActivities(
-    'process-telephony-canonical-call',
-    forwardJobToServer('process-telephony-canonical-call'),
-  );
+  registerForwardedJobHandler('process-telephony-canonical-call');
   // 3CX chat journaling (report-chat route), incoming-call events from the
   // Call Control consumer, and single-contact phonebook pushes all run
   // server-side for the same src-consumed-package reason.
-  registerJobHandlerForActivities(
-    'process-threecx-chat',
-    forwardJobToServer('process-threecx-chat'),
-  );
-  registerJobHandlerForActivities(
-    'process-threecx-call-event',
-    forwardJobToServer('process-threecx-call-event'),
-  );
-  registerJobHandlerForActivities(
-    'sync-threecx-phonebook-contact',
-    forwardJobToServer('sync-threecx-phonebook-contact'),
-  );
+  registerForwardedJobHandler('process-threecx-chat');
+  registerForwardedJobHandler('process-threecx-call-event');
+  registerForwardedJobHandler('sync-threecx-phonebook-contact');
   // Invoice bundling/delivery, enqueued from billing UI actions via the shared
   // enqueueImmediateJob seam. The handlers live server-side (StorageService,
   // PDF generation), so the worker forwards them like the jobs above.
-  registerJobHandlerForActivities('invoice_zip', forwardJobToServer('invoice_zip'));
-  registerJobHandlerForActivities('invoice_email', forwardJobToServer('invoice_email'));
+  registerForwardedJobHandler('invoice_zip');
+  registerForwardedJobHandler('invoice_email');
   // Scheduled comment publication reaches server-local ticket settings and job
   // modules, so execute it through the same server-side forwarding boundary.
-  registerJobHandlerForActivities(
-    PUBLISH_SCHEDULED_COMMENT_JOB,
-    forwardJobToServer(PUBLISH_SCHEDULED_COMMENT_JOB),
-  );
-  registerJobHandlerForActivities(
-    RECOVER_COMMENT_PUBLICATIONS_JOB,
-    forwardJobToServer(RECOVER_COMMENT_PUBLICATIONS_JOB, { strict: true }),
-  );
+  registerForwardedJobHandler(PUBLISH_SCHEDULED_COMMENT_JOB);
+  registerForwardedJobHandler(RECOVER_COMMENT_PUBLICATIONS_JOB, { strict: true });
 
   // User-defined workflow schedules: after the pg-boss → Temporal cutover these
   // arrive as Temporal Schedules (TemporalJobRunner.scheduleJobAt /
@@ -354,7 +335,10 @@ export async function executeJobHandler(input: {
   }
 
   try {
-    const result = await runWithTenant(tenantId, async () => {
+    // Forwarded handlers perform their own short transactions while staging
+    // and polling. Holding an outer tenant transaction across publication and
+    // completion waiting can consume every connection in the shared admin pool.
+    const invokeHandler = async () => {
       const maybeResult = await handler(jobId, {
         ...data,
         tenantId,
@@ -364,7 +348,10 @@ export async function executeJobHandler(input: {
         return maybeResult as Record<string, unknown>;
       }
       return undefined;
-    });
+    };
+    const result = forwardedJobHandlers.has(jobName)
+      ? await invokeHandler()
+      : await runWithTenant(tenantId, invokeHandler);
 
     logger.info('Job handler executed successfully', { jobId, jobName });
     return { success: true, ...(result ? { result } : {}) };
