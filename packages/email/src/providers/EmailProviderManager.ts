@@ -4,6 +4,7 @@
 
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { findProviderSecretMismatch, normalizeProviderSecretAliases, SECRET_IDENTITY_MISMATCH_MESSAGE } from '@alga-psa/core/providerConnectionIdentity';
 import { getConnection, tenantDb } from '@alga-psa/db';
 import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
 import { SystemEmailProviderFactory } from '../system/SystemEmailProviderFactory';
@@ -28,6 +29,16 @@ export class EmailProviderManager implements IEmailProviderManager {
 
   async initialize(tenantSettings: TenantEmailSettings): Promise<void> {
     const tenantId = tenantSettings.tenantId;
+    const secretMismatch = findProviderSecretMismatch(tenantSettings);
+    if (secretMismatch) {
+      throw new EmailProviderError(
+        SECRET_IDENTITY_MISMATCH_MESSAGE,
+        secretMismatch.providerId ?? secretMismatch.providerType,
+        secretMismatch.providerType,
+        false,
+        'SECRET_IDENTITY_MISMATCH',
+      );
+    }
     logger.info(`[EmailProviderManager] Initializing for tenant: ${tenantId}`);
     
     this.tenantSettings.set(tenantId, tenantSettings);
@@ -250,7 +261,10 @@ export class EmailProviderManager implements IEmailProviderManager {
    * selection instead of re-deriving it.
    */
   public async resolveProviderConfig(tenantId: string, config: EmailProviderConfig, providerId?: string): Promise<Record<string, any>> {
-    const originalConfig = typeof config.config === 'object' && config.config !== null ? config.config : {};
+    const rawConfig = typeof config.config === 'object' && config.config !== null ? config.config : {};
+    const originalConfig = config.providerType === 'resend'
+      ? normalizeProviderSecretAliases(rawConfig, config.providerType)
+      : rawConfig;
 
     if (config.providerType === 'microsoft') {
       return this.resolveMicrosoftProviderConfig(tenantId, config, providerId ?? config.providerId);

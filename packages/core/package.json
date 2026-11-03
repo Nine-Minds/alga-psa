@@ -58,6 +58,10 @@
       "import": "./dist/lib/secrets/index.js",
       "types": "./src/lib/secrets/index.ts"
     },
+    "./providerConnectionIdentity": {
+      "import": "./dist/lib/providerConnectionIdentity.js",
+      "types": "./src/lib/providerConnectionIdentity.ts"
+    },
     "./events": {
       "import": "./dist/lib/events/index.js",
       "types": "./src/lib/events/index.ts"
