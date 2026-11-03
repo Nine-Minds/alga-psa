@@ -2,7 +2,13 @@
 
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import type { IClient, IClientLocation, IContact } from '@alga-psa/types';
+import {
+  isClientUserType,
+  type IClient,
+  type IClientLocation,
+  type IContact,
+  type IUserWithRoles,
+} from '@alga-psa/types';
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
@@ -23,18 +29,49 @@ function withClientSinceDateString<T extends Record<string, any>>(row: T): T {
   return { ...row, client_since: `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}` };
 }
 
+type ClientAccessScope = { mode: 'all' } | { mode: 'scoped'; clientIds: string[] };
+
+/** Client visibility follows the principal semantics used by app search. */
+function resolveAssetClientScope(user: IUserWithRoles): ClientAccessScope {
+  if (isClientUserType(user.user_type)) {
+    return { mode: 'scoped', clientIds: user.clientId ? [user.clientId] : [] };
+  }
+  return { mode: 'all' };
+}
+
+async function assertAssetClientReadAccess(
+  user: IUserWithRoles,
+  clientId?: string,
+): Promise<ClientAccessScope> {
+  if (!await hasPermission(user, 'asset', 'read')) {
+    throw new Error('Permission denied: Cannot read asset client options');
+  }
+
+  const scope = resolveAssetClientScope(user);
+  if (clientId !== undefined && scope.mode === 'scoped' && !scope.clientIds.includes(clientId)) {
+    throw new Error('Permission denied: Client is outside the caller\'s client scope');
+  }
+  return scope;
+}
+
 export const getAllClientsForAssets = withAuth(async (
-  _user,
+  user,
   { tenant },
   includeInactive: boolean = true
 ): Promise<IClient[]> => {
   await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  const clientScope = await assertAssetClientReadAccess(user);
+  if (clientScope.mode === 'scoped' && clientScope.clientIds.length === 0) return [];
   const { knex } = await createTenantKnex();
 
   const clients = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const query = tenantScopedTable(trx, tenant, 'clients')
       .select('*')
       .orderBy('client_name', 'asc');
+
+    if (clientScope.mode === 'scoped') {
+      query.whereIn('client_id', clientScope.clientIds);
+    }
 
     if (!includeInactive) {
       query.andWhere({ is_inactive: false });
@@ -53,11 +90,12 @@ export const getAllClientsForAssets = withAuth(async (
 });
 
 export const getClientByIdForAssets = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string
 ): Promise<IClient | null> => {
   await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  await assertAssetClientReadAccess(user, clientId);
   const { knex } = await createTenantKnex();
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -79,11 +117,12 @@ export const getClientByIdForAssets = withAuth(async (
 });
 
 export const getClientLocationsForAssets = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string
 ): Promise<IClientLocation[]> => {
   await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  await assertAssetClientReadAccess(user, clientId);
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -104,12 +143,13 @@ export const getClientLocationsForAssets = withAuth(async (
  * still show who the asset belongs to.
  */
 export const getClientContactsForAssets = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string,
   currentContactId?: string | null
 ): Promise<IContact[]> => {
   await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
+  await assertAssetClientReadAccess(user, clientId);
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -138,7 +178,9 @@ export const getVendorOptionsForAssets = withAuth(async (
   currentVendorId?: string | null
 ): Promise<Array<{ vendor_id: string; vendor_name: string }>> => {
   await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
-  if (!await hasPermission(user, 'asset', 'read')) return [];
+  if (!await hasPermission(user, 'asset', 'read')) {
+    throw new Error('Permission denied: Cannot read asset vendor options');
+  }
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -166,7 +208,7 @@ export const getClientBillingProfilesForAssets = withAuth(async (
   clientId: string
 ): Promise<Array<{ billing_profile_id: string; name: string; is_default: boolean }>> => {
   await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
-  if (!await hasPermission(user, 'asset', 'read')) return [];
+  await assertAssetClientReadAccess(user, clientId);
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
