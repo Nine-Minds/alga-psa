@@ -5,6 +5,7 @@ import {
   isLabelClass,
   type IUserWithRoles,
   type LabelClass,
+  type LabelLinkedAssetInfo,
   type LabelRequestContext,
   type LabelPrintFailure,
   type LabelViewModel,
@@ -119,6 +120,7 @@ export interface PrintLabelsDeps {
       serialSuffix: string | null;
       custodyLocation?: string | null;
       nextAction?: string | null;
+      linkedAssetInfo?: LabelLinkedAssetInfo | null;
     } | null>
   >;
   describeClientError: (error: unknown) => { message: string; failures?: LabelPrintFailure[] } | null;
