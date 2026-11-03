@@ -42,7 +42,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     : null;
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projectMetadata, setProjectMetadata] = useState<ProjectMetadata | null>(null);
-  const [metadataAccess, setMetadataAccess] = useState<'loading' | 'ready' | 'denied'>('loading');
+  const [metadataAccess, setMetadataAccess] = useState<{ projectId: string | null; status: 'loading' | 'ready' | 'denied' }>({
+    projectId: null,
+    status: 'loading',
+  });
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
   // The edit drawer deletes status columns (moving their tasks) without the
@@ -50,38 +53,50 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [statusRefreshKey, setStatusRefreshKey] = useState(0);
 
   useEffect(() => {
+    let active = true;
     const initializeParams = async () => {
       const resolvedParams = await params;
-      setProjectId(resolvedParams.id);
+      if (active) setProjectId(resolvedParams.id);
     };
-    initializeParams();
+    void initializeParams();
+    return () => { active = false; };
   }, [params]);
 
   useEffect(() => {
     if (!projectId) return;
+    let active = true;
+    setProjectMetadata(null);
+    setMetadataAccess({ projectId, status: 'loading' });
 
     const fetchProjectMetadata = async () => {
       const metadata = await getProjectMetadata(projectId);
+      if (!active) return;
       if (isReturnedActionError(metadata)) {
         if (isActionPermissionError(metadata) || getErrorMessage(metadata).toLowerCase().includes('permission denied')) {
-          setMetadataAccess('denied');
+          setProjectMetadata(null);
+          setMetadataAccess({ projectId, status: 'denied' });
           return;
         }
         handleError(getErrorMessage(metadata));
-        setMetadataAccess('denied');
+        setProjectMetadata(null);
+        setMetadataAccess({ projectId, status: 'denied' });
         return;
       }
       setProjectMetadata(metadata);
-      setMetadataAccess('ready');
+      setMetadataAccess({ projectId, status: 'ready' });
     };
     void fetchProjectMetadata().catch((error) => {
+      if (!active) return;
       if (error instanceof Error && error.message.toLowerCase().includes('permission denied')) {
-        setMetadataAccess('denied');
+        setProjectMetadata(null);
+        setMetadataAccess({ projectId, status: 'denied' });
         return;
       }
       handleError(getErrorMessage(error));
-      setMetadataAccess('denied');
+      setProjectMetadata(null);
+      setMetadataAccess({ projectId, status: 'denied' });
     });
+    return () => { active = false; };
   }, [projectId]);
 
   const handleAssignedUserChange = async (userId: string | null) => {
@@ -182,10 +197,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     window.history.replaceState(null, '', newUrl);
   }, [pathname, taskIdFromUrl]);
 
-  if (metadataAccess === 'loading' || !projectMetadata) {
-    if (metadataAccess === 'denied') {
-      return <div role="alert">{t('projectDetail.permissionDenied', { defaultValue: 'You do not have permission to view this project.' })}</div>;
-    }
+  if (metadataAccess.projectId === projectId && metadataAccess.status === 'denied') {
+    return <div role="alert">{t('projectDetail.permissionDenied', { defaultValue: 'You do not have permission to view this project.' })}</div>;
+  }
+  if (!projectId || metadataAccess.projectId !== projectId || metadataAccess.status === 'loading' || !projectMetadata) {
     return <div>{t('projectDetail.loading')}</div>;
   }
 
