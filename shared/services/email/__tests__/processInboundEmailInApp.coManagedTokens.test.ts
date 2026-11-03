@@ -127,6 +127,19 @@ describe('inbound reply token matrix (CM L5)', () => {
     expect(writes).toHaveLength(0);
   });
 
+  it('requester identity lookup errors retry without falling through to an available thread-header target', async () => {
+    const { InboundRetryLaterError } = await import('../inboundRetryLaterError');
+    admission = { admitted: true, audience: 'requester', relationshipId: 'rel', threadId: 'thr', ticketId: 'ticket-1', parentCommentId: null, requesterContactId: 'contact-1', requesterClientId: 'client-1' };
+    findContactByEmailMock.mockRejectedValueOnce(new Error('identity store unavailable'));
+    findTicketByEmailThreadMock.mockResolvedValue({ ticketId: 'fallback-ticket' });
+
+    await expect(inbound('cm2:abc')).rejects.toBeInstanceOf(InboundRetryLaterError);
+    expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+    expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+    expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
+    expect(writes).toHaveLength(0);
+  });
+
   it.each([
     ['cm1 legacy token', 'cm1:abc', 'legacy_token'],
     ['stale generation', 'cm2:abc', 'stale_generation'],

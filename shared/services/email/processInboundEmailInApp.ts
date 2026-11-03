@@ -1315,9 +1315,14 @@ export async function processInboundEmailInApp(
     authorizedRequesterContactId?: string;
     authorizedRequesterClientId?: string;
   }): Promise<ProcessInboundEmailInAppResult | null> => {
-    let matchedSenderContact = params.authorizedRequesterContactId
-      ? await resolveSenderContact({ ticketId: params.ticketId })
-      : undefined;
+    let matchedSenderContact: Awaited<ReturnType<typeof resolveSenderContact>> | undefined;
+    if (params.authorizedRequesterContactId) {
+      try {
+        matchedSenderContact = await resolveSenderContact({ ticketId: params.ticketId });
+      } catch {
+        throw new InboundRetryLaterError('could not revalidate the admitted requester contact; retrying before any fallback processing');
+      }
+    }
     if (params.authorizedRequesterContactId && (
       !matchedSenderContact
       || matchedSenderContact.contact_id !== params.authorizedRequesterContactId
