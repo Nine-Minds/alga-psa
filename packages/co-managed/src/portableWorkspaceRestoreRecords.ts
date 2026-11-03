@@ -2,6 +2,7 @@ import { CO_MANAGED_PORTABLE_CORE_COLUMNS } from './portableCoreExport';
 import { CO_MANAGED_PORTABLE_WORK_COLUMNS } from './portableWorkCatalog';
 import { CO_MANAGED_PORTABLE_ASSET_COLUMNS } from './portableAssetCatalog';
 import { CO_MANAGED_PORTABLE_WORKFLOW_COLUMNS } from './portableWorkflowCatalog';
+import { CO_MANAGED_PORTABLE_FILE_COLUMNS } from './portableFileExport';
 import { validatePortableRecordSection, validatePortableRecordReferences,
   type PortableRecordReference, type PortableRecords } from './portableRecordValidation';
 import type { CoManagedPortableWorkspaceManifest } from './portableWorkspaceManifest';
@@ -127,13 +128,19 @@ const workflowProfile: PortableRestoreProfile = {
   ],
   apply: ({ records }) => { for (const row of records.workflow_definitions) row.is_paused = true; },
 };
+const fileProfile: PortableRestoreProfile = {
+  id: 'files',
+  // The file row is promoted through the native storage adapter after its bytes are staged.
+  // Its identity and uploader still participate in the same deterministic record remap.
+  identities: { external_files: ['file_id'] },
+};
 // LEVERAGE: pattern portable-contributor-boilerplate — restore profiles re-declare identities/polymorphic edges the export contributors already know; one declaration per domain would serve both halves.
-export const CORE_PORTABLE_RESTORE_PROFILES: readonly PortableRestoreProfile[] = Object.freeze([coreProfile, workProfile, assetProfile, workflowProfile]);
+export const CORE_PORTABLE_RESTORE_PROFILES: readonly PortableRestoreProfile[] = Object.freeze([coreProfile, workProfile, assetProfile, workflowProfile, fileProfile]);
 
 /** Columns the shipped contributors project, kept for tests that compare against the live registry. */
 export const CO_MANAGED_PORTABLE_RESTORE_SECTIONS = {
   core: CO_MANAGED_PORTABLE_CORE_COLUMNS, work: CO_MANAGED_PORTABLE_WORK_COLUMNS,
-  assets: CO_MANAGED_PORTABLE_ASSET_COLUMNS, workflows: CO_MANAGED_PORTABLE_WORKFLOW_COLUMNS,
+  assets: CO_MANAGED_PORTABLE_ASSET_COLUMNS, workflows: CO_MANAGED_PORTABLE_WORKFLOW_COLUMNS, files: CO_MANAGED_PORTABLE_FILE_COLUMNS,
 } as const;
 
 export type PortableDestinationCatalogMappings = Record<string, Record<string, string>>;

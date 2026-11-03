@@ -138,7 +138,8 @@ export async function insertCoManagedPortableWorkspaceDatabase(trx: Knex.Transac
         if (!current || signature(current, spec.fields) !== signature(row, spec.fields)) fail('destination catalog changed');
       }
     }
-    const tables = [...prepared.tables.filter(table => !globals.has(table) && !historical.has(table)), ...Object.keys(EXTRAS)];
+    const tables = [...prepared.tables.filter(table => !globals.has(table) && !historical.has(table)),
+      ...Object.keys(EXTRAS).filter(table => records[table].length > 0)];
     const metadata = await schema(retained, tables), byTable = new Map<string, Map<string, Column>>();
     for (const column of metadata.columns) {
       if (!byTable.has(column.table_name)) byTable.set(column.table_name, new Map());

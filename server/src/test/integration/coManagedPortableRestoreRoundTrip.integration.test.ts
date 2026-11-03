@@ -8,10 +8,9 @@
  * What is real: the migrated schema (including the three L7b2 migrations, run down and up here), the L7b1 contributors'
  * SQL, the archive, the restore database layer (catalog/FK discovery, topological insert, cycle deferral), the receipt
  * state machine, the upload journal and the promotion transaction.
- * What is stood in: the co-managed export admission seam (relationship/entitlement/session plumbing is not what this
- * test is about). The storage provider is the REAL StorageProviderFactory local provider on a temp basePath (its own
- * getLocationIdentity; nothing here supplies one). No L7b1 contributor emits blobs, so one test-only contributor
- * and binder supply the file; see the final test for what that means for production.
+ * What is stood in: only the export admission seam, since a source relationship and a fresh destination cannot coexist
+ * in one installation. Local permission evaluation, the L7b1 files contributor, the storage provider and production
+ * restore binding all run without test-only permission or blob adapters.
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
@@ -28,40 +27,31 @@ vi.mock('../../../../packages/co-managed/src/portableExport', async importOrigin
   withCoManagedExportAdmin: (db: Knex, actor: any, work: (trx: Knex.Transaction, actor: any, subject: any) => Promise<unknown>) =>
     db.transaction(trx => work(trx, actor, { tenant: actor.tenant, userId: actor.userId })),
 }));
-vi.mock('../../../../packages/co-managed/src/localPermission', async importOriginal => ({ ...(await importOriginal<any>()), hasCoManagedLocalPermission: async () => true }));
 vi.mock('../../../../packages/co-managed/src/sharedWorkIdentity', async importOriginal => ({
   ...(await importOriginal<any>()), authorizeCoManagedLocalRecord: async () => ({ redactedFields: [] }),
 }));
 
-import { CORE_PORTABLE_CONTRIBUTORS } from '../../../../packages/co-managed/src/portableCoreRegistry';
+import { createCorePortableRegistry } from '../../../../packages/co-managed/src/portableCoreRegistry';
 import { collectPortableWorkspace } from '../../../../packages/co-managed/src/portableWorkspaceGraph';
 import { buildCoManagedPortableWorkspaceManifest } from '../../../../packages/co-managed/src/portableWorkspaceManifest';
 import { withCoManagedPortableSnapshot } from '../../../../packages/co-managed/src/portableSnapshot';
 import { sealPortableArchive } from '../../../../packages/co-managed/src/portableArchive';
-import { createPortableContributorRegistry, type PortableContributor } from '../../../../packages/co-managed/src/portableContributorRegistry';
-import type { PortableRestoreBlobBinder } from '../../../../packages/co-managed/src/portableWorkspaceRestoreFiles';
+import type { PortableContributorRegistry } from '../../../../packages/co-managed/src/portableContributorRegistry';
 import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
 import { restorePortableWorkspaceForInstallation } from '../../../../ee/server/src/lib/co-managed/portableWorkspaceRestore';
 
 const require = createRequire(import.meta.url);
-const migrations = ['20261031090200_create_portable_workspace_restore_uploads.cjs', '20261031090100_create_portable_workspace_restores.cjs',
-  '20261031090000_create_portable_restore_suspensions.cjs'].map(file => require(`../../../migrations/${file}`));
+const migrations = ['20261102120200_create_portable_workspace_restore_uploads.cjs', '20261102120100_create_portable_workspace_restores.cjs',
+  '20261102120000_create_portable_restore_suspensions.cjs'].map(file => require(`../../../migrations/${file}`));
 
 const PASSPHRASE = 'round trip passphrase 2026 correct horse';
 const FILE_BYTES = Buffer.from('portable restore integration bytes\n'.repeat(64));
 const FILE_SHA = createHash('sha256').update(FILE_BYTES).digest('hex');
-const BLOB_ID = `test_file:${randomUUID()}`;
-
 let db: Knex, root: string, archivePath: string, storageRoot: string;
-let source: string, third: string, sourceAdmin: string, sourceAuthor: string, ticketId: string, sourceContact: string;
+let source: string, third: string, thirdClientId: string, sourceAdmin: string, sourceAuthor: string, ticketId: string, sourceContact: string, sourceFileId: string;
 const destination = randomUUID();
 
-/** Test-only: the real work contributor, plus one blob. No L7b1 contributor emits blobs (documents are L7b3). */
-const withFile = (contributor: PortableContributor): PortableContributor => ({ ...contributor,
-  export: async ctx => ({ ...(await contributor.export(ctx)),
-    files: { files: [{ id: BLOB_ID, path: join(root, 'source.txt'), size: FILE_BYTES.length, sha256: FILE_SHA }], dispose: async () => {} } }) });
-const testRegistry = () => createPortableContributorRegistry(CORE_PORTABLE_CONTRIBUTORS.map(c => c.id === 'work' ? withFile(c) : c));
-const binders: PortableRestoreBlobBinder[] = [{ kind: 'test_file', bind: () => ({ name: 'report.txt', mimeType: 'text/plain' }) }];
+const testRegistry = (): PortableContributorRegistry => createCorePortableRegistry();
 
 /** The production local provider on a temp basePath. `failUploads` wraps it so staging crashes mid-restore. */
 async function localProvider(options: { failUploads?: boolean } = {}) {
@@ -100,15 +90,29 @@ beforeAll(async () => {
   storageRoot = join(root, 'storage');
   process.env.STORAGE_DEFAULT_PROVIDER = 'local'; process.env.STORAGE_LOCAL_BASE_PATH = storageRoot;
   StorageProviderFactory.clearProvider();
-  await writeFile(join(root, 'source.txt'), FILE_BYTES);
-
   source = await createTenant(db, 'Source workspace'); third = await createTenant(db, 'Unrelated third tenant');
   sourceAdmin = await createUser(db, source, { first_name: 'Ada', last_name: 'Admin' });
-  const permission = randomUUID(), role = randomUUID(), client = randomUUID(), board = randomUUID(), status = randomUUID();
-  await db('permissions').insert({ tenant: source, permission_id: permission, resource: 'co_management', action: 'manage', msp: true, client: false });
+  const role = randomUUID(), client = randomUUID(), board = randomUUID(), status = randomUUID();
   await db('roles').insert({ tenant: source, role_id: role, role_name: 'Co-management admin', msp: true, client: false });
-  await db('role_permissions').insert({ tenant: source, role_id: role, permission_id: permission });
   await db('user_roles').insert({ tenant: source, user_id: sourceAdmin, role_id: role });
+  const permissionRows = ['co_management:manage', 'user:read', 'team:read', 'client:read', 'contact:read', 'security_settings:read',
+    'ticket:read', 'ticket_settings:read', 'project:read', 'asset:read', 'workflow:admin', 'workflow:read'].map(value => {
+      const [resource, action] = value.split(':');
+      return { tenant: source, permission_id: randomUUID(), resource, action, msp: true, client: false };
+    });
+  await db('permissions').insert(permissionRows);
+  await db('role_permissions').insert(permissionRows.map(row => ({ tenant: source, role_id: role, permission_id: row.permission_id })));
+  // The real L7b1 file contributor checks the actor's home permission through tenantDb.
+  const sessionId = randomUUID();
+  await db('sessions').insert({ tenant: source, session_id: sessionId, user_id: sourceAdmin, created_at: db.fn.now(),
+    expires_at: db.raw("now() + interval '1 day'") });
+  sourceFileId = randomUUID(); const sourceStoragePath = `${source}/${sourceFileId}`;
+  const sourceProvider = await localProvider();
+  const uploaded = await sourceProvider.upload(FILE_BYTES, sourceStoragePath, { mime_type: 'text/plain', size: FILE_BYTES.length,
+    metadata: { sha256: FILE_SHA, origin: 'fixture' } });
+  await db('external_files').insert({ tenant: source, file_id: sourceFileId, file_name: sourceFileId, original_name: 'report.txt', mime_type: 'text/plain',
+    file_size: uploaded.size, storage_path: uploaded.path, uploaded_by_id: sourceAdmin, is_deleted: false, deleted_at: null, deleted_by_id: null,
+    metadata: { sha256: FILE_SHA, origin: 'fixture' } });
   await db('clients').insert({ tenant: source, client_id: client, client_name: 'Customer' });
   await db('boards').insert({ tenant: source, board_id: board, board_name: 'Support' });
   await db('statuses').insert({ tenant: source, status_id: status, name: 'Open', status_type: 'ticket', item_type: 'ticket', order_number: 1, board_id: board, is_default: true });
@@ -140,15 +144,19 @@ beforeAll(async () => {
   await audit({ actor_type: 'user', actor_user_id: sourceAuthor });
   await audit({ actor_type: 'user', actor_reference_id: actorReference, actor_display_name: 'Partner Tech', actor_organization_name: 'Partner IT' });
   // The third tenant holds data of its own so "unchanged" is a real assertion.
-  const thirdClient = randomUUID(); await db('clients').insert({ tenant: third, client_id: thirdClient, client_name: 'Bystander' });
-  await db('tickets').insert({ tenant: third, ticket_id: randomUUID(), ticket_number: 'T-1', title: 'Bystander ticket', client_id: thirdClient });
+  thirdClientId = randomUUID(); await db('clients').insert({ tenant: third, client_id: thirdClientId, client_name: 'Bystander' });
+  await db('tickets').insert({ tenant: third, ticket_id: randomUUID(), ticket_number: 'T-1', title: 'Bystander ticket', client_id: thirdClientId });
 
   // Export with the L7b1 contributors, in-process: same snapshot, collect, manifest and seal steps as the exporter.
   const registry = testRegistry();
   const packageId = randomUUID();
-  const actor = { kind: 'session' as const, tenant: source, userId: sourceAdmin, sessionId: randomUUID() };
+  const actor = { kind: 'session' as const, tenant: source, userId: sourceAdmin, sessionId };
   const capture = await withCoManagedPortableSnapshot(db, async snapshot => {
     const collected = await collectPortableWorkspace(registry, { db, actor: actor as never, packageId, snapshot });
+    expect(collected.files.map(file => file.id)).toEqual([`file:${sourceFileId}`]);
+    expect(collected.sections.find(section => section.id === 'files')?.records.external_files).toMatchObject([
+      { file_id: sourceFileId, original_name: 'report.txt', mime_type: 'text/plain', uploaded_by_id: sourceAdmin },
+    ]);
     const context = { packageId, sourceTenant: source, capturedAt: snapshot.capturedAt };
     return { collected, manifest: buildCoManagedPortableWorkspaceManifest({ context, collected, registry }) };
   });
@@ -179,30 +187,20 @@ describe('portable restore round trip (A6)', () => {
     const tables = await tenantTables(), thirdBefore = await counts(third, tables), sourceBefore = await counts(source, tables);
 
     await step('refuses a wrong passphrase before writing anything', async () => {
-      await expect(restorePortableWorkspaceForInstallation(db, { ...request(), passphrase: 'a different passphrase entirely' }, {}, { createProvider: async () => localProvider() as never, binders }))
+      await expect(restorePortableWorkspaceForInstallation(db, { ...request(), passphrase: 'a different passphrase entirely' }, {}, { createProvider: async () => localProvider() as never }))
         .rejects.toThrow();
       expect(await counts(destination, tables)).toEqual({});
       expect(await db('portable_workspace_restores').where({ tenant: destination })).toHaveLength(0);
     });
 
-    await step('states plainly what is test-only: without a registered binder the restore of a file-bearing archive fails closed, before any receipt exists', async () => {
-      // Production ships no blob binder (L7b1 contributors emit no blobs; documents arrive with L7b3). A file-bearing
-      // archive therefore cannot be restored in production yet: this is a named gap, not a silent skip.
-      const fresh = randomUUID();
-      await expect(restorePortableWorkspaceForInstallation(db, { ...request(), destinationTenant: fresh }, {}, { createProvider: async () => localProvider() as never, }))
-        .rejects.toThrow(/no file binder/);
-      expect(await counts(fresh, tables)).toEqual({});
-      expect(await db('portable_workspace_restores').where({ tenant: fresh })).toHaveLength(0);
-    });
-
     const journal = () => db('portable_workspace_restore_uploads').where({ tenant: destination });
     await step('a crash while staging leaves nothing that blocks a later restore: no receipt, no suspension, no rows (D4)', async () => {
-      await expect(restorePortableWorkspaceForInstallation(db, request(), {}, { createProvider: async () => localProvider({ failUploads: true }) as never, binders })).rejects.toThrow(/simulated provider crash/);
+      await expect(restorePortableWorkspaceForInstallation(db, request(), {}, { createProvider: async () => localProvider({ failUploads: true }) as never })).rejects.toThrow(/simulated provider crash/);
       expect(await db('portable_workspace_restores').where({ tenant: destination })).toHaveLength(0);
       expect(await db('portable_restore_suspensions').where({ tenant: destination })).toHaveLength(0);
       expect(await counts(destination, tables.filter(name => !name.startsWith('portable_')))).toEqual({});
       expect((await journal()).every(row => row.status !== 'committed')).toBe(true); // uploads are recovered by the journal + cleanup job
-      await expect(restorePortableWorkspaceForInstallation(db, { ...request(), resume: true }, {}, { createProvider: async () => localProvider() as never, binders })).rejects.toThrow(/nothing to resume/);
+      await expect(restorePortableWorkspaceForInstallation(db, { ...request(), resume: true }, {}, { createProvider: async () => localProvider() as never })).rejects.toThrow(/nothing to resume/);
     });
 
     await step('a failure inside promotion (after bytes are staged) rolls the receipt and suspension back too (D4)', async () => {
@@ -210,7 +208,7 @@ describe('portable restore round trip (A6)', () => {
         IF NEW.tenant = '${destination}' THEN RAISE EXCEPTION 'forced promotion failure'; END IF; RETURN NEW; END $$`);
       await db.raw('CREATE TRIGGER l7b2_force_promotion_failure BEFORE INSERT ON tickets FOR EACH ROW EXECUTE FUNCTION l7b2_force_promotion_failure()');
       try {
-        await expect(restorePortableWorkspaceForInstallation(db, request(), {}, { createProvider: async () => localProvider() as never, binders })).rejects.toThrow(/forced promotion failure/);
+        await expect(restorePortableWorkspaceForInstallation(db, request(), {}, { createProvider: async () => localProvider() as never })).rejects.toThrow(/forced promotion failure/);
       } finally {
         await db.raw('DROP TRIGGER IF EXISTS l7b2_force_promotion_failure ON tickets'); await db.raw('DROP FUNCTION IF EXISTS l7b2_force_promotion_failure()');
       }
@@ -222,7 +220,7 @@ describe('portable restore round trip (A6)', () => {
 
     await step('the same destination then restores in a single --apply', async () => {
       const provider = await localProvider();
-      const result = await restorePortableWorkspaceForInstallation(db, request(), {}, { createProvider: async () => provider as never, binders });
+      const result = await restorePortableWorkspaceForInstallation(db, request(), {}, { createProvider: async () => provider as never });
       expect(result.outcome).toBe('restored');
       expect(result.receipt.state).toBe('verified');
       expect(await db('portable_workspace_restores').where({ tenant: destination })).toHaveLength(1);
@@ -236,12 +234,15 @@ describe('portable restore round trip (A6)', () => {
       expect(await db('clients').where({ tenant: destination, client_id: ticket.client_id }).first()).toMatchObject({ client_name: 'Customer' });
       const files = await db('external_files').where({ tenant: destination });
       expect(files).toHaveLength(1);
-      expect(files[0]).toMatchObject({ original_name: 'report.txt', mime_type: 'text/plain', is_deleted: false });
+      expect(files[0]).toMatchObject({ file_name: files[0].file_id, original_name: 'report.txt', mime_type: 'text/plain',
+        uploaded_by_id: result.receipt.administrator_user_id, is_deleted: false,
+        metadata: { portable_restore: { version: 2, source_blob_id: expect.stringMatching(/^file:/), sha256: FILE_SHA } } });
+      expect(files[0].file_id).not.toBe(sourceFileId);
       const stored = await provider.download(files[0].storage_path);
       expect(createHash('sha256').update(stored).digest('hex')).toBe(FILE_SHA);
       expect(Number(files[0].file_size)).toBe(FILE_BYTES.length);
       expect((await storedObjects()).filter(path => path.endsWith(files[0].storage_path.split('/').pop()))).toHaveLength(1); // the bytes landed once
-      expect(await storedObjects()).toHaveLength(1); // and nothing from the failed attempts remains
+      expect(await storedObjects()).toHaveLength(2); // one source object and one promoted destination object; failed attempts were removed
       expect(await db('users').where({ tenant: destination, user_id: result.receipt.administrator_user_id }).first()).toBeTruthy();
     });
 
@@ -293,7 +294,7 @@ describe('portable restore round trip (A6)', () => {
     await step('--resume completes a restore interrupted after promotion (state promoted), without duplicates', async () => {
       const before = await counts(destination, tables);
       await db('portable_workspace_restores').where({ tenant: destination }).update({ state: 'promoted', verified_at: null });
-      const result = await restorePortableWorkspaceForInstallation(db, { ...request(), resume: true }, {}, { createProvider: async () => localProvider() as never, binders });
+      const result = await restorePortableWorkspaceForInstallation(db, { ...request(), resume: true }, {}, { createProvider: async () => localProvider() as never });
       expect(result.outcome).toBe('resumed'); expect(result.receipt.state).toBe('verified');
       expect(await counts(destination, tables)).toEqual(before);
     });
@@ -302,11 +303,11 @@ describe('portable restore round trip (A6)', () => {
       const before = await counts(destination, tables);
       const objectsBefore = await storedObjects();
       const provider = await localProvider();
-      const result = await restorePortableWorkspaceForInstallation(db, request(), {}, { createProvider: async () => provider as never, binders });
+      const result = await restorePortableWorkspaceForInstallation(db, request(), {}, { createProvider: async () => provider as never });
       expect(result.outcome).toBe('already-restored');
       expect(await storedObjects()).toEqual(objectsBefore);
       expect(await counts(destination, tables)).toEqual(before);
-      const again = await restorePortableWorkspaceForInstallation(db, { ...request(), resume: true }, {}, { createProvider: async () => provider as never, binders });
+      const again = await restorePortableWorkspaceForInstallation(db, { ...request(), resume: true }, {}, { createProvider: async () => provider as never });
       expect(again.outcome).toBe('already-restored');
       expect(await counts(destination, tables)).toEqual(before);
     });
@@ -317,10 +318,19 @@ describe('portable restore round trip (A6)', () => {
 
     await step('refuses a restore into a non-fresh installation (a different destination while a restore receipt exists)', async () => {
       const other = randomUUID();
-      await expect(restorePortableWorkspaceForInstallation(db, { ...request(), destinationTenant: other }, {}, { createProvider: async () => localProvider() as never, binders }))
+      await expect(restorePortableWorkspaceForInstallation(db, { ...request(), destinationTenant: other }, {}, { createProvider: async () => localProvider() as never }))
         .rejects.toThrow(/already holds|fresh/);
       expect(await counts(other, tables)).toEqual({});
       expect(await db('portable_workspace_restores').where({ tenant: other })).toHaveLength(0);
+    });
+
+    await step('refuses even an otherwise-empty destination when this installation already has a relationship', async () => {
+      await db('co_management_relationships').insert({ tenant: source, relationship_id: randomUUID(), sponsor_tenant: third,
+        sponsor_client_id: thirdClientId, state: 'active', accepted_by: sourceAdmin, accepted_at: db.fn.now() });
+      const other = randomUUID();
+      await expect(restorePortableWorkspaceForInstallation(db, { ...request(), destinationTenant: other }, {}, { createProvider: async () => localProvider() as never }))
+        .rejects.toThrow(/already holds a co-managed relationship/);
+      expect(await counts(other, tables)).toEqual({});
     });
 
   }, 1_200_000);

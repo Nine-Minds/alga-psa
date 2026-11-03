@@ -1,8 +1,7 @@
-// Shared fixtures: the real L7b1 contributor registry, collect and manifest pipeline with fixture rows in place of database reads.
-import { createCorePortableRegistry, CORE_PORTABLE_CONTRIBUTORS } from '../../../../../packages/co-managed/src/portableCoreRegistry';
-import { createPortableContributorRegistry } from '../../../../../packages/co-managed/src/portableContributorRegistry';
-import { collectPortableWorkspace } from '../../../../../packages/co-managed/src/portableWorkspaceGraph';
-import { buildCoManagedPortableWorkspaceManifest, validateCoManagedPortableWorkspaceManifest } from '../../../../../packages/co-managed/src/portableWorkspaceManifest';
+// Shared fixtures: the real L7b1 contributor registry and manifest validation with fixture rows in place of database reads.
+import { createCorePortableRegistry } from '../../../../../packages/co-managed/src/portableCoreRegistry';
+import { buildPortableReferenceEdges, normalizePortableRecords, portableDigest } from '../../../../../packages/co-managed/src/portableWorkspaceGraph';
+import { buildCoManagedPortableWorkspaceManifest, validateCoManagedPortableWorkspaceManifest, type CoManagedPortableBlobDescriptor } from '../../../../../packages/co-managed/src/portableWorkspaceManifest';
 import { prepareCoManagedPortableWorkspaceRecords }
   from '../../../../../packages/co-managed/src/portableWorkspaceRestoreRecords';
 
@@ -37,14 +36,20 @@ export function fixtureRecords() {
 }
 
 /** The real engine (collect + manifest build + validation) with fixture rows in place of database reads. */
-export async function fixtureManifest(extra: (add: ReturnType<typeof fixtureRecords>['add']) => void = () => {}, blobs: { id: string; size: number; sha256: string; path: string }[] = [], credentialVault: Record<string, unknown> | null = null) {
+export async function fixtureManifest(extra: (add: ReturnType<typeof fixtureRecords>['add']) => void = () => {}, blobs: ({ id: string; size: number; sha256: string; path: string } & CoManagedPortableBlobDescriptor)[] = [], credentialVault: Record<string, unknown> | null = null) {
   const { registry, records, add } = fixtureRecords();
   extra(add);
-  const stubbed = createPortableContributorRegistry(CORE_PORTABLE_CONTRIBUTORS.map(c => ({ ...c, export: async () => ({ records: records[c.id], ...(c.id === 'work' && blobs.length ? { files: { files: blobs, dispose: async () => {} } } : {}) }) })));
+  const workspace = Object.assign({}, ...Object.values(records));
+  for (const contributor of registry.list()) contributor.validate(records[contributor.id], workspace);
   const context = { packageId: PACKAGE, sourceTenant: SOURCE, capturedAt: '2026-01-01T00:00:00.000Z' };
-  const collected = await collectPortableWorkspace(stubbed, { db: {} as never, actor: {} as never, packageId: PACKAGE, snapshot: { capturedAt: context.capturedAt } } as never);
-  const manifest = buildCoManagedPortableWorkspaceManifest({ context, collected: { sections: collected.sections, edges: collected.edges, files: collected.files }, registry, credentialVault: credentialVault as never });
-  return { manifest: validateCoManagedPortableWorkspaceManifest(JSON.parse(JSON.stringify(manifest)), context, collected.files, registry), registry, context, files: collected.files };
+  const sections = registry.list().map(contributor => {
+    const sectionRecords = normalizePortableRecords(records[contributor.id]);
+    return { id: contributor.id, version: contributor.version, reason: contributor.reason, columns: contributor.columns, records: sectionRecords, annotations: {},
+      sha256: portableDigest({ id: contributor.id, version: contributor.version, columns: contributor.columns, records: sectionRecords }), notProvisioned: [] };
+  });
+  const files = blobs.map(({ id, size, sha256, path }) => ({ id, size, sha256, path, contributor: 'files' }));
+  const manifest = buildCoManagedPortableWorkspaceManifest({ context, collected: { sections, edges: buildPortableReferenceEdges(registry), files, exclusions: [] }, registry, credentialVault: credentialVault as never });
+  return { manifest: validateCoManagedPortableWorkspaceManifest(JSON.parse(JSON.stringify(manifest)), context, files, registry), registry, context, files };
 }
 export const prepare = (manifest: Awaited<ReturnType<typeof fixtureManifest>>['manifest'], mappings: Record<string, Record<string, string>> = { standard_statuses: { [id(40)]: id(900) } }) => {
   let n = 1000;

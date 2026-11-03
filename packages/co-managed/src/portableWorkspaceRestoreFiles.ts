@@ -32,9 +32,47 @@ export const PORTABLE_RESTORE_DEFAULT_STAGED_BYTES_CAP = 16 * 1024 ** 3;
  */
 export interface PortableRestoreBlobBinder {
   kind: string;
+  validate?(input: { manifest: CoManagedPortableWorkspaceManifest; records: PreparedPortableWorkspaceRecords['records'];
+    mapped(value: unknown, table: string, column: string): string | number }): void;
+  /** Resolve the native identity carried by this blob when a contributor owns its file row. */
+  destinationFileId?(input: { blobId: string; mapped(value: unknown, table: string, column: string): string | number }): string;
   bind(input: { blobId: string; sha256: string; size: number; destinationFileId: string; records: PreparedPortableWorkspaceRecords['records'];
-    mapped(value: unknown, table: string, column: string): string | number; importedByUserId: string }): { name: string; mimeType: string };
+    mapped(value: unknown, table: string, column: string): string | number; importedByUserId: string }):
+      { name: string; mimeType: string; uploadedByUserId?: string };
 }
+
+/** L7b1 file rows and their blobs share the source file identity. Restore the row through
+ * the native file staging path while retaining its remapped uploader and descriptive metadata. */
+export const PORTABLE_RESTORE_FILE_BLOB_BINDER: PortableRestoreBlobBinder = {
+  kind: 'file',
+  validate: ({ manifest, records, mapped }) => {
+    const rows = records.external_files;
+    const blobs = manifest.blobs.filter(blob => blob.id.startsWith('file:'));
+    if (rows.length !== blobs.length) throw new Error('Portable restore file records and file blobs do not match');
+    const mismatched = blobs.find(blob => {
+      const sourceFileId = blob.id.slice('file:'.length);
+      const destinationFileId = mapped(sourceFileId, 'external_files', 'file_id');
+      const row = rows.find(candidate => same(candidate.file_id, destinationFileId));
+      return !row || Number(row.file_size) !== blob.size;
+    });
+    if (mismatched) throw new Error('Portable restore file identity or size does not match its blob');
+  },
+  destinationFileId: ({ blobId, mapped }) => {
+    const sourceFileId = blobId.slice('file:'.length);
+    const id = mapped(sourceFileId, 'external_files', 'file_id');
+    if (typeof id !== 'string' || !isCoManagedUuid(id)) fail();
+    return id as string;
+  },
+  bind: ({ blobId, records, mapped }) => {
+    const sourceFileId = blobId.slice('file:'.length);
+    const fileId = mapped(sourceFileId, 'external_files', 'file_id');
+    const row = records.external_files.find(file => String(file.file_id).toLowerCase() === String(fileId).toLowerCase());
+    const name = row?.original_name, mimeType = row?.mime_type, uploadedByUserId = row?.uploaded_by_id;
+    if (typeof name !== 'string' || typeof mimeType !== 'string' || typeof uploadedByUserId !== 'string') fail();
+    return { name: name as string, mimeType: mimeType as string, uploadedByUserId: uploadedByUserId as string };
+  },
+};
+export const CORE_PORTABLE_RESTORE_BLOB_BINDERS: readonly PortableRestoreBlobBinder[] = Object.freeze([PORTABLE_RESTORE_FILE_BLOB_BINDER]);
 
 /** Pure binding adapter for an authenticated archive and a trusted record transformation.
  * No provider, database or source trust is recreated; transport happens separately before DB insertion. */
@@ -50,7 +88,11 @@ export function prepareCoManagedPortableWorkspaceFiles(input: {
       !prepared.records.users.some(row => same(row.user_id, input.importedByUserId))) fail();
   const total = manifest.blobs.reduce((sum, blob) => sum + blob.size, 0);
   if (total > cap) throw new Error(`Portable restore blobs (${total} bytes) exceed the staged-bytes cap (${cap} bytes)`);
-  const binders = new Map((input.binders ?? []).map(binder => [binder.kind, binder]));
+  const binders = new Map<string, PortableRestoreBlobBinder>();
+  for (const binder of input.binders ?? []) {
+    if (binders.has(binder.kind)) fail();
+    binders.set(binder.kind, binder);
+  }
   const reserved = new Set<string>([prepared.sourceTenant, prepared.destinationTenant, input.importedByUserId].map(id => id.toLowerCase()));
   for (const domain of prepared.domains) for (const row of domain.mappings) for (const value of [row.source, row.destination]) {
     if (isCoManagedUuid(value)) reserved.add(value.toLowerCase());
@@ -69,6 +111,7 @@ export function prepareCoManagedPortableWorkspaceFiles(input: {
     const destination = maps.get(JSON.stringify([table, column]))?.get(String(value).toLowerCase());
     return destination ?? fail();
   };
+  for (const binder of binders.values()) binder.validate?.({ manifest, records: prepared.records, mapped });
   const sources = new Map(input.files.map(file => [file.id.toLowerCase(), file]));
   const externalFiles: NativeRow[] = [], transfers: Transfer[] = [];
   for (const descriptor of manifest.blobs) {
@@ -76,11 +119,19 @@ export function prepareCoManagedPortableWorkspaceFiles(input: {
     const binder = binders.get(descriptor.id.split(':')[0]);
     if (!binder) throw new Error(`Portable restore has no file binder for blob kind "${descriptor.id.split(':')[0]}"`);
     if (!source || typeof source.path !== 'string' || !source.path || source.path.includes('\0') || source.size !== descriptor.size || source.sha256 !== descriptor.sha256) fail();
-    const fileId = allocate();
+    const mappedFileId = binder.destinationFileId?.({ blobId: descriptor.id, mapped });
+    const fileId = mappedFileId ?? allocate();
+    if (!isCoManagedUuid(fileId)) fail();
+    if (mappedFileId !== undefined) {
+      // Identity allocation is owned by the records stage and already reserved.
+      if (!reserved.has(fileId.toLowerCase()) || allocatedIds.includes(fileId.toLowerCase())) fail();
+    } else if (!allocatedIds.includes(fileId.toLowerCase())) fail();
+    reserved.add(fileId.toLowerCase());
     const name = binder.bind({ blobId: descriptor.id, sha256: descriptor.sha256, size: descriptor.size, destinationFileId: fileId,
       records: prepared.records, mapped, importedByUserId: input.importedByUserId });
+    if (name.uploadedByUserId && !prepared.records.users.some(user => same(user.user_id, name.uploadedByUserId))) fail();
     externalFiles.push({ tenant: prepared.destinationTenant, file_id: fileId, original_name: name.name, mime_type: name.mimeType,
-      file_size: descriptor.size, uploaded_by_id: input.importedByUserId, is_deleted: false, deleted_at: null, deleted_by_id: null,
+      file_size: descriptor.size, uploaded_by_id: name.uploadedByUserId ?? input.importedByUserId, is_deleted: false, deleted_at: null, deleted_by_id: null,
       metadata: { portable_restore: { version: 2, package_id: manifest.context.packageId, source_blob_id: descriptor.id, sha256: descriptor.sha256 } } });
     transfers.push({ ...descriptor, path: source!.path, fileId, ...name });
   }

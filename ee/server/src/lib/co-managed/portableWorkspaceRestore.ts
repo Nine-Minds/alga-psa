@@ -12,7 +12,8 @@ import { openPortableArchive, PORTABLE_ARCHIVE_LIMITS } from '../../../../../pac
 import { validateCoManagedPortableWorkspaceManifest, type CoManagedPortableWorkspaceManifest } from '../../../../../packages/co-managed/src/portableWorkspaceManifest';
 import { createCorePortableRegistry } from '../../../../../packages/co-managed/src/portableCoreRegistry';
 import { prepareCoManagedPortableWorkspaceRecords } from '../../../../../packages/co-managed/src/portableWorkspaceRestoreRecords';
-import { prepareCoManagedPortableWorkspaceFiles, stageCoManagedPortableWorkspaceFiles, type PortableRestoreBlobBinder } from '../../../../../packages/co-managed/src/portableWorkspaceRestoreFiles';
+import { CORE_PORTABLE_RESTORE_BLOB_BINDERS, prepareCoManagedPortableWorkspaceFiles, stageCoManagedPortableWorkspaceFiles,
+  type PortableRestoreBlobBinder } from '../../../../../packages/co-managed/src/portableWorkspaceRestoreFiles';
 import { assertPortableTransferActive, awaitPortableTransfer, createPortableWriteStream, portableTransferSignal,
   withPortableTransfer, type PortableTransferOptions } from '../../../../../packages/co-managed/src/portableTransfer';
 import { isCoManagedUuid } from '../../../../../packages/co-managed/src/sharedWorkIdentity';
@@ -170,7 +171,7 @@ export async function restorePortableWorkspaceForInstallation(db: Knex, input: {
           .find(pair => same(pair.source, request.sourceAdministratorUserId))?.destination;
         if (!isCoManagedUuid(administratorUserId)) fail('administrator identity mapping');
         const files = prepareCoManagedPortableWorkspaceFiles({ manifest, files: archive.files, preparedRecords: records, importedByUserId: administratorUserId,
-          binders: dependencies.binders, maxStagedBytes: request.maxStagedBytes },
+          binders: dependencies.binders ?? CORE_PORTABLE_RESTORE_BLOB_BINDERS, maxStagedBytes: request.maxStagedBytes },
           { allocateUuid: deterministicUuids(sha256, tenant, 'files') });
         const vault = await prepareCoManagedPortableWorkspaceVault({ manifest, restoreRecords: files, passphrase: request.passphrase }, { reservedUuids: files.allocatedIds, allocateUuid: deterministicUuids(sha256, tenant, 'vault') });
         const summary = (written: Record<string, number>, historical: string[], globals: string[]) => ({ written, historical, globals });
@@ -235,7 +236,7 @@ export async function restorePortableWorkspaceForInstallation(db: Knex, input: {
           const current = await readReceipt(trx);
           if (!current || !matches(current)) fail('restore receipt changed');
           if (current.state === 'staged') fail('restore was not promoted');
-          const expected = await expectedCounts(files);
+          const expected = portableRestoreExpectedCounts(files);
           for (const [table, count] of Object.entries(expected)) {
             const row = await trx(table).where({ tenant }).count({ count: '*' }).first();
             if (Number(row?.count) !== count) fail(`verification failed for ${table}`);
@@ -251,7 +252,7 @@ export async function restorePortableWorkspaceForInstallation(db: Knex, input: {
 }
 
 /** Expected per-table destination row counts, derived from the same prepared graph that was inserted. */
-async function expectedCounts(files: ReturnType<typeof prepareCoManagedPortableWorkspaceFiles>) {
+export function portableRestoreExpectedCounts(files: ReturnType<typeof prepareCoManagedPortableWorkspaceFiles>) {
   const historical = new Set(files.profiles.flatMap(profile => [...(profile.historical ?? [])]));
   const globals = new Set(Object.keys(files.globalCatalogs));
   const counts: Record<string, number> = {};

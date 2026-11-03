@@ -6,7 +6,7 @@ import { Readable } from 'node:stream';
 import { afterEach, describe, expect, it } from 'vitest';
 import { openPortableArchive, sealPortableArchive } from '../../../../../packages/co-managed/src/portableArchive';
 import { prepareCoManagedPortableWorkspaceFiles, stageCoManagedPortableWorkspaceFiles, PORTABLE_RESTORE_DEFAULT_STAGED_BYTES_CAP,
-  type PortableRestoreBlobBinder } from '../../../../../packages/co-managed/src/portableWorkspaceRestoreFiles';
+  PORTABLE_RESTORE_FILE_BLOB_BINDER, type PortableRestoreBlobBinder } from '../../../../../packages/co-managed/src/portableWorkspaceRestoreFiles';
 import { fixtureManifest, prepare, ADMIN, PACKAGE, SOURCE, TARGET } from './portableRestoreFixtures';
 
 const PASSPHRASE = 'correct horse battery staple';
@@ -77,6 +77,28 @@ describe('portable restore bytes: prepare, stage, verify', () => {
       await expect(stageCoManagedPortableWorkspaceFiles({ ...staged, maxStagedBytes: bytes.length - 1 }, storage)).rejects.toThrow();
       expect(storage.objects.size).toBe(0);
     } finally { await dispose(); }
+  });
+  it('binds L7b1 file blobs to the remapped native row and uploader identity', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'alga-l7b2-')); roots.push(root);
+    const path = join(root, 'native-file.bin'); await writeFile(path, bytes);
+    const sourceFileId = '00000000-0000-4000-8000-0000000000bb';
+    const blob = { id: `file:${sourceFileId}`, size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'), path };
+    const { manifest, files } = await fixtureManifest(add => add('external_files', { file_id: sourceFileId, original_name: 'native.txt',
+      mime_type: 'application/octet-stream', file_size: bytes.length, uploaded_by_id: ADMIN, created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z' }), [blob]);
+    const records = prepare(manifest), sourceFile = records.records.external_files[0];
+    const prepared = prepareCoManagedPortableWorkspaceFiles({ manifest, files, preparedRecords: records,
+      importedByUserId: records.records.users[0].user_id as string, binders: [PORTABLE_RESTORE_FILE_BLOB_BINDER] });
+    expect(prepared.externalFiles).toMatchObject([{ file_id: sourceFile.file_id, original_name: 'native.txt', mime_type: 'application/octet-stream',
+      uploaded_by_id: sourceFile.uploaded_by_id, file_size: bytes.length }]);
+  });
+  it('refuses a file record when its archive has no matching bytes', async () => {
+    const { manifest, files } = await fixtureManifest(add => add('external_files', { file_id: '00000000-0000-4000-8000-0000000000bc',
+      original_name: 'missing.txt', mime_type: 'text/plain', file_size: bytes.length, uploaded_by_id: ADMIN,
+      created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z' }));
+    const records = prepare(manifest);
+    expect(() => prepareCoManagedPortableWorkspaceFiles({ manifest, files, preparedRecords: records,
+      importedByUserId: records.records.users[0].user_id as string, binders: [PORTABLE_RESTORE_FILE_BLOB_BINDER] })).toThrow(/file records and file blobs do not match/);
   });
   it('documents a 16 GiB default staged-bytes cap', () => {
     expect(PORTABLE_RESTORE_DEFAULT_STAGED_BYTES_CAP).toBe(16 * 1024 ** 3);
