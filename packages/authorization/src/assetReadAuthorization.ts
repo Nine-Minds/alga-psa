@@ -102,7 +102,7 @@ export async function resolveAssetAuthorizationRecords(
   const associationRows = await tenantDb(trx, tenant)
     .table('asset_associations')
     .whereIn('asset_id', assetIds)
-    .orderByRaw('created_at ASC NULLS LAST')
+    .orderBy('created_at', 'asc')
     .orderBy('entity_id', 'asc')
     .select<Array<{ asset_id: string; entity_type: string; entity_id: string }>>('asset_id', 'entity_type', 'entity_id');
 

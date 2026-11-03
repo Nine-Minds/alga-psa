@@ -16,6 +16,9 @@ const h = vi.hoisted(() => {
       whereIn(_column: string, _values: unknown[]) {
         return query;
       },
+      orderBy(_column: string, _direction?: 'asc' | 'desc') {
+        return query;
+      },
       select<T>(...columns: string[]): Promise<T> {
         const rows = (dbState[table] ?? []).filter((row) =>
           filters.every((where) => Object.entries(where).every(([key, value]) => row[key] === value))
