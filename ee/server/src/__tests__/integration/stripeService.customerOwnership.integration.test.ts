@@ -129,6 +129,54 @@ describe('migration: global uniqueness of stripe_customer_external_id', () => {
     expect(await db('stripe_customer_bindings').select('tenant')).toEqual([{ tenant: TENANT_A }]);
   });
 
+  it('database trigger rejects conflicting legacy inserts and updates', async () => {
+    await db('stripe_customer_bindings').insert({ stripe_customer_external_id: 'cus_legacy', tenant: TENANT_A });
+    await expect(db('stripe_customers').insert({ tenant: TENANT_B, stripe_customer_external_id: 'cus_legacy', email: 'x' }))
+      .rejects.toThrow(/already bound to another tenant/i);
+    await db('stripe_customers').insert({ tenant: TENANT_A, stripe_customer_external_id: 'cus_update', email: 'x' });
+    await expect(db('stripe_customers').where({ tenant: TENANT_A }).update({ stripe_customer_external_id: 'cus_legacy' }))
+      .rejects.toThrow(/already bound to another tenant/i);
+    expect(await db('stripe_customers').select('tenant', 'stripe_customer_external_id'))
+      .toEqual([{ tenant: TENANT_A, stripe_customer_external_id: 'cus_update' }]);
+  });
+
+  it('concurrent legacy claims cannot assign the same Stripe id to different tenants', async () => {
+    const second = knexFactory({
+      client: 'pg',
+      connection: {
+        host: process.env.DB_HOST || 'localhost', port: parseInt(process.env.DB_PORT || '5432', 10),
+        database: process.env.DB_NAME_SERVER || process.env.DB_NAME || 'server',
+        user: process.env.DB_USER_SERVER || 'postgres', password: String(process.env.DB_PASSWORD_SERVER || ''),
+        options: `-c search_path=${SCHEMA},public`,
+      },
+      pool: { min: 1, max: 1 },
+    });
+    try {
+      const results = await Promise.allSettled([
+        db('stripe_customers').insert({ tenant: TENANT_A, stripe_customer_external_id: 'cus_race', email: 'x' }),
+        second('stripe_customers').insert({ tenant: TENANT_B, stripe_customer_external_id: 'cus_race', email: 'x' }),
+      ]);
+      expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+      expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+      expect(await db('stripe_customer_bindings').where({ stripe_customer_external_id: 'cus_race' })).toHaveLength(1);
+      expect(await db('stripe_customers').where({ stripe_customer_external_id: 'cus_race' })).toHaveLength(1);
+    } finally {
+      await second.destroy();
+    }
+  });
+
+  it('backfill refuses a pre-existing binding that disagrees with the mapping', async () => {
+    await db.raw('DROP TABLE stripe_customer_bindings');
+    await db('stripe_customers').insert({ tenant: TENANT_A, stripe_customer_external_id: 'cus_backfill', email: 'x' });
+    await db.schema.createTable('stripe_customer_bindings', (table) => {
+      table.text('stripe_customer_external_id').primary(); table.uuid('tenant').notNullable();
+    });
+    await db('stripe_customer_bindings').insert({ stripe_customer_external_id: 'cus_backfill', tenant: TENANT_B });
+    await expect(migration.up(db)).rejects.toThrow(/backfill mismatch/i);
+    expect(await db('stripe_customer_bindings').where({ stripe_customer_external_id: 'cus_backfill' }).first())
+      .toMatchObject({ tenant: TENANT_B });
+  });
+
   it('raw inserts of the same id for a second tenant violate the primary key', async () => {
     await db('stripe_customer_bindings').insert({ stripe_customer_external_id: 'cus_raw', tenant: TENANT_A });
     await expect(
@@ -138,6 +186,28 @@ describe('migration: global uniqueness of stripe_customer_external_id', () => {
 });
 
 describe('getOrImportCustomer ownership proof', () => {
+  it('existing mapping requires matching binding and remote ownership metadata', async () => {
+    await db('stripe_customers').insert({ tenant: TENANT_A, stripe_customer_external_id: 'cus_existing', email: 'x' });
+    const service = makeService([{ id: 'cus_existing', email: 'x', metadata: { tenant_id: TENANT_A } }]);
+    await expect(service.getOrImportCustomer(TENANT_A)).resolves.toMatchObject({ stripe_customer_external_id: 'cus_existing' });
+
+    await db('stripe_customer_bindings').where({ stripe_customer_external_id: 'cus_existing' }).update({ tenant: TENANT_B });
+    await expect(service.getOrImportCustomer(TENANT_A)).rejects.toMatchObject({ code: 'already_bound' });
+    await db('stripe_customer_bindings').where({ stripe_customer_external_id: 'cus_existing' }).update({ tenant: TENANT_A });
+    service.stripe.customers.retrieve.mockResolvedValue({ id: 'cus_existing', metadata: { tenant_id: TENANT_B } });
+    await expect(service.getOrImportCustomer(TENANT_A)).rejects.toMatchObject({ code: 'not_owned' });
+  });
+
+  it('refuses existing mappings with missing bindings or missing remote ownership metadata', async () => {
+    await db('stripe_customers').insert({ tenant: TENANT_A, stripe_customer_external_id: 'cus_existing', email: 'x' });
+    await db('stripe_customer_bindings').where({ stripe_customer_external_id: 'cus_existing' }).del();
+    await expect(makeService([{ id: 'cus_existing', email: 'x', metadata: { tenant_id: TENANT_A } }]).getOrImportCustomer(TENANT_A))
+      .rejects.toMatchObject({ code: 'already_bound' });
+    await db('stripe_customer_bindings').insert({ stripe_customer_external_id: 'cus_existing', tenant: TENANT_A });
+    await expect(makeService([{ id: 'cus_existing', email: 'x', metadata: {} }]).getOrImportCustomer(TENANT_A))
+      .rejects.toMatchObject({ code: 'not_owned' });
+  });
+
   it('two tenants share an email: tenant A imports only the customer whose metadata names A', async () => {
     const customers: FakeCustomer[] = [
       { id: 'cus_other', email: SHARED_EMAIL, metadata: { tenant_id: TENANT_B } },

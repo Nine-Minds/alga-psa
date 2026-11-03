@@ -484,6 +484,18 @@ export class StripeService {
       .first();
 
     if (customer) {
+      const externalId = customer.stripe_customer_external_id;
+      const binding = await tenantDb(knex, tenantId)
+        .unscoped('stripe_customer_bindings', 'Verify authoritative global ownership before reusing an existing Stripe customer')
+        .where({ stripe_customer_external_id: externalId })
+        .first();
+      if (!binding || binding.tenant !== tenantId) {
+        throw new StripeOwnershipError('already_bound', tenantId, [externalId], 'The stored Stripe customer mapping has no matching tenant ownership binding.');
+      }
+      const remote = await this.stripe.customers.retrieve(externalId);
+      if (remote.deleted || stripeMetadataTenant(remote as Stripe.Customer) !== tenantId) {
+        throw new StripeOwnershipError('not_owned', tenantId, [externalId], 'Stripe customer ownership metadata does not match this tenant.');
+      }
       logger.info(`[StripeService] Customer found in database for tenant ${tenantId}`);
       return customer;
     }
