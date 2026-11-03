@@ -77,16 +77,27 @@ export function iterateRRuleBounded(
     };
     const hasCalendarFilters = [options.bymonth, options.bymonthday, options.bynmonthday, options.byweekno,
       options.byyearday, options.byeaster].some(value => Array.isArray(value) ? value.length > 0 : value != null);
-    const weekdays = Array.isArray(options.byweekday) ? options.byweekday : options.byweekday == null ? [] : [options.byweekday];
-    const dailyCountSafe = freq === Frequency.DAILY && !hasCalendarFilters &&
-      weekdays.length === 0;
+    const weekdays = [...new Set<number>(Array.isArray(options.byweekday) ? options.byweekday : options.byweekday == null ? [] : [options.byweekday])];
+    const dailyCountSafe = freq === Frequency.DAILY && !hasCalendarFilters;
     const weeklyCountSafe = freq === Frequency.WEEKLY && !hasCalendarFilters &&
       (options.bysetpos == null || (Array.isArray(options.bysetpos) && options.bysetpos.length === 0));
     if (freq === Frequency.DAILY && (!count || dailyCountSafe)) {
       const days = Math.floor((utcMidnight(target.year, target.month, target.day) - utcMidnight(counterDate.year, counterDate.month, counterDate.day)) / 86400000);
       const periods = Math.max(0, Math.floor(days / interval));
+      const startWeekday = counterDate.getWeekday();
       counterDate.addDaily(periods * interval);
-      if (count && dailyCountSafe) count = Math.max(0, count - periods);
+      if (count && dailyCountSafe) {
+        const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
+        const cycleLength = 7 / gcd(7, interval);
+        const cycleMatches = Array.from({ length: cycleLength }, (_, index) =>
+          weekdays.length === 0 || weekdays.includes((startWeekday + index * interval) % 7)).filter(Boolean).length;
+        const fullCycles = Math.floor(periods / cycleLength), remainder = periods % cycleLength;
+        let skippedMatches = fullCycles * cycleMatches;
+        for (let index = 0; index < remainder; index++) {
+          if (weekdays.length === 0 || weekdays.includes((startWeekday + index * interval) % 7)) skippedMatches++;
+        }
+        count = Math.max(0, count - skippedMatches);
+      }
     } else if (freq === Frequency.WEEKLY && (!count || weeklyCountSafe)) {
       const weekStart = (value: DateTime) => {
         const back = ((value.getWeekday() - Number(options.wkst)) % 7 + 7) % 7;

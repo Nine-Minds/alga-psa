@@ -479,6 +479,7 @@ describe('bounded recurrence generation', () => {
 
   it.each([
     ['daily interval alignment and large COUNT', makePattern({ startDate: new Date('2018-01-03T00:00:00Z'), interval: 3, count: 100000 })],
+    ['daily weekday filter and large COUNT', makePattern({ startDate: new Date('2018-01-03T00:00:00Z'), interval: 2, daysOfWeek: [0, 2, 4], count: 100000 })],
     ['weekly interval and week boundary', makePattern({ frequency: 'weekly', startDate: new Date('2020-01-08T00:00:00Z'), interval: 2, daysOfWeek: [0, 3] })],
     ['weekly COUNT across interval weeks', makePattern({ frequency: 'weekly', startDate: new Date('2020-01-08T00:00:00Z'), interval: 2, daysOfWeek: [0, 3], count: 100000 })],
     ['weekly COUNT beginning mid-week', makePattern({ frequency: 'weekly', startDate: new Date('2026-11-04T00:00:00Z'), daysOfWeek: [0, 3], count: 1 })],
