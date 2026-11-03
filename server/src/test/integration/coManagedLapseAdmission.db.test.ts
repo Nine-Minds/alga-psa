@@ -5,14 +5,14 @@
  *   renewal -> writes restored; ended relationship -> reads kept, every write refused.
  */
 import type { Knex } from 'knex';
-import { afterAll, beforeAll, expect, it } from 'vitest';
+import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import { OPERATIONAL_WRITE_TABLES, admitOperationalWrite, registerWriteAdmissionResolver, resetWriteAdmissionResolver } from '@alga-psa/db';
 import { admits, registerCapabilityEligibility } from '@alga-psa/core/capability';
 import { clearCapabilityCache } from '@alga-psa/core/capability/testing';
-import { flagTargetingEnvName } from '@alga-psa/core/features';
+import { flagTargetingEnvName, registerFeatureFlagChecker } from '@alga-psa/core/features';
 import { invalidateWriteAdmission } from '@alga-psa/db/writeAdmission';
 import { GRACE_MS, readCoManagedLifecycleLockFree } from '@alga-psa/licensing';
-import { createCoManagedWriteAdmissionResolver, installCoManagedWriteAdmission } from '@alga-psa/licensing/co-managed-write-admission';
+import { createCoManagedWriteAdmissionResolver, installCoManagedWriteAdmission, readCoManagedLifecycleForServer } from '@alga-psa/licensing/co-managed-write-admission';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { seedBoundaryFixture, type BoundaryFixture } from './coManagedArchiveBoundaryCases';
@@ -115,6 +115,88 @@ describeDb('co-managed lapse enforced through the write-admission choke point', 
       expect([...await outcomes()]).toEqual(['refused']);
     } finally {
       registerWriteAdmissionResolver(createCoManagedWriteAdmissionResolver((conn, tenant) => readCoManagedLifecycleLockFree(conn as Knex, tenant, () => clock)));
+      if (originalFlag === undefined) delete process.env[flagEnv]; else process.env[flagEnv] = originalFlag;
+      if (originalForce === undefined) delete process.env.FORCE_CAPABILITIES; else process.env.FORCE_CAPABILITIES = originalForce;
+      clearCapabilityCache();
+      invalidateWriteAdmission(f.customer);
+    }
+  });
+
+  it.each(['checker absent', 'checker unavailable'])('worker default reader enforces ended and lapsed state when the feature checker is %s without calling it', async (checkerMode) => {
+    const flagEnv = flagTargetingEnvName('release-v2-0-feature');
+    const checkerKey = Symbol.for('alga.core.featureFlagChecker');
+    const registry = globalThis as typeof globalThis & Record<symbol, unknown>;
+    const originalChecker = registry[checkerKey];
+    const originalFlag = process.env[flagEnv];
+    const originalForce = process.env.FORCE_CAPABILITIES;
+    const checker = vi.fn(async () => { throw new Error('PostHog unavailable in worker'); });
+    try {
+      installCoManagedWriteAdmission();
+      delete process.env.FORCE_CAPABILITIES;
+      process.env[flagEnv] = f.msp;
+      clearCapabilityCache();
+      if (checkerMode === 'checker absent') delete registry[checkerKey];
+      else registerFeatureFlagChecker(checker);
+
+      const attempt = async () => {
+        invalidateWriteAdmission(f.customer);
+        await expect(admitOperationalWrite(db, f.customer, tables[0], 'worker-lifecycle-probe')).rejects.toThrow();
+      };
+
+      await db('co_management_relationships').where({ tenant: f.customer, relationship_id: f.relationshipId })
+        .update({ state: 'terminated', ended_at: new Date() });
+      await lapse(new Date(Date.now() - GRACE_MS - DAY));
+      await attempt();
+
+      await db('co_management_relationships').where({ tenant: f.customer, relationship_id: f.relationshipId })
+        .update({ state: 'active', ended_at: null });
+      await db('co_managed_allocations').where({ tenant: f.msp, relationship_id: f.relationshipId }).update({ state: 'active' });
+      await attempt();
+      expect(checker).not.toHaveBeenCalled();
+    } finally {
+      await db('co_management_relationships').where({ tenant: f.customer, relationship_id: f.relationshipId })
+        .update({ state: 'active', ended_at: null });
+      await lapse(null);
+      if (originalChecker === undefined) delete registry[checkerKey]; else registry[checkerKey] = originalChecker;
+      if (originalFlag === undefined) delete process.env[flagEnv]; else process.env[flagEnv] = originalFlag;
+      if (originalForce === undefined) delete process.env.FORCE_CAPABILITIES; else process.env.FORCE_CAPABILITIES = originalForce;
+      clearCapabilityCache();
+      invalidateWriteAdmission(f.customer);
+    }
+  });
+
+  it('server admission keeps known flag-off neutrality and fails back to durable lifecycle state when flag evaluation is unavailable', async () => {
+    const flagEnv = flagTargetingEnvName('release-v2-0-feature');
+    const checkerKey = Symbol.for('alga.core.featureFlagChecker');
+    const registry = globalThis as typeof globalThis & Record<symbol, unknown>;
+    const originalChecker = registry[checkerKey];
+    const originalFlag = process.env[flagEnv];
+    const originalForce = process.env.FORCE_CAPABILITIES;
+    let unavailable = false;
+    const checker = vi.fn(async () => {
+      if (unavailable) throw new Error('PostHog unavailable');
+      return false;
+    });
+    try {
+      delete process.env[flagEnv];
+      delete process.env.FORCE_CAPABILITIES;
+      registerFeatureFlagChecker(checker);
+      installCoManagedWriteAdmission({ readState: readCoManagedLifecycleForServer });
+      await db('co_management_relationships').where({ tenant: f.customer, relationship_id: f.relationshipId })
+        .update({ state: 'terminated', ended_at: new Date() });
+      await lapse(new Date(Date.now() - GRACE_MS - DAY));
+      clearCapabilityCache();
+      expect([...await outcomes()]).toEqual(['admitted']);
+      expect(checker).toHaveBeenCalled();
+
+      unavailable = true;
+      clearCapabilityCache();
+      expect([...await outcomes()]).toEqual(['refused']);
+    } finally {
+      await db('co_management_relationships').where({ tenant: f.customer, relationship_id: f.relationshipId })
+        .update({ state: 'active', ended_at: null });
+      await lapse(null);
+      if (originalChecker === undefined) delete registry[checkerKey]; else registry[checkerKey] = originalChecker;
       if (originalFlag === undefined) delete process.env[flagEnv]; else process.env[flagEnv] = originalFlag;
       if (originalForce === undefined) delete process.env.FORCE_CAPABILITIES; else process.env.FORCE_CAPABILITIES = originalForce;
       clearCapabilityCache();

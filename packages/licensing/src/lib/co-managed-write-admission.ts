@@ -24,30 +24,59 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { invalidateWriteAdmission, registerWriteAdmissionResolver, type WriteAdmissionResolver } from '@alga-psa/db/writeAdmission';
 import { admits, forcedValue } from '@alga-psa/core/capability';
+import { resolveFlagTargeting } from '@alga-psa/core/features';
 import { CoManagedLifecycleError, type CoManagedOperationalState } from './co-managed-lifecycle-error';
 
 export type CoManagedLifecycleReader = (db: Knex | Knex.Transaction, tenant: string) => Promise<CoManagedOperationalState>;
 
 const INDEPENDENT: CoManagedOperationalState = { state: 'independent', canWrite: true, graceEndsAt: null };
 
-/** L7a's reader: licence lapse and relationship closure, read without locks. */
-const lifecycleReader: CoManagedLifecycleReader = async (db, tenant) => {
+async function lifecycleModule() {
   let lifecycle: typeof import('./co-managed-lifecycle');
   try {
     lifecycle = await import('./co-managed-lifecycle');
   } catch {
     // The lifecycle module pulls in the DB barrel; a worker image where it does not load fails open.
-    return INDEPENDENT;
+    return null;
   }
-  // L0c is installed during every server boot, so its default reader must honor the same
-  // release-and-entitlement gate as the rest of the product. The sponsor owns the durable
-  // entitlement; the customer workspace's relationship identifies that tenant. An existing
-  // entitlement row remains the eligibility fact through lapse, so the lifecycle reader still
-  // enforces grace/read-only after expiry. `admits` also observes FORCE_CAPABILITIES semantics.
+  return lifecycle;
+}
+
+/** Durable participant check shared by the worker-safe and server lifecycle readers. */
+async function lifecycleSponsor(db: Knex | Knex.Transaction, tenant: string): Promise<string | null> {
+  // Workers share this reader and must never evaluate PostHog. An explicit tenant targeting
+  // decision can still close the rollout; otherwise durable relationship participation plus the
+  // sponsor's entitlement row decides whether lifecycle admission applies. The entitlement row is
+  // deliberately retained through lapse, so checker outages cannot reopen writes for an ended or
+  // lapsed workspace.
   const customer = tenantDb(db, tenant);
   const relationship = await customer.table('co_management_relationships').whereNull('ended_at').first('sponsor_tenant')
     ?? await customer.table('co_management_relationships').orderBy('ended_at', 'desc').first('sponsor_tenant');
-  if (!relationship?.sponsor_tenant || !(await admits('co-managed', relationship.sponsor_tenant)).admitted) return INDEPENDENT;
+  if (!relationship?.sponsor_tenant || resolveFlagTargeting('release-v2-0-feature', relationship.sponsor_tenant) === false) return null;
+  const entitlement = await tenantDb(db, relationship.sponsor_tenant).table('co_managed_entitlements').first('tenant');
+  if (!entitlement) return null;
+  return relationship.sponsor_tenant;
+}
+
+/** L0c worker/default reader: lifecycle decisions use durable participation only, never PostHog. */
+const lifecycleReader: CoManagedLifecycleReader = async (db, tenant) => {
+  const lifecycle = await lifecycleModule();
+  if (!lifecycle) return INDEPENDENT;
+  if (!await lifecycleSponsor(db, tenant)) return INDEPENDENT;
+  return lifecycle.readCoManagedLifecycleLockFree(db as Knex, tenant);
+};
+
+/** Server composition applies the release gate when it is available. A known flag-off or missing
+ * entitlement preserves baseline behavior; an unavailable flag/eligibility check falls back to
+ * the same durable lifecycle enforcement used in workers. */
+export const readCoManagedLifecycleForServer: CoManagedLifecycleReader = async (db, tenant) => {
+  const lifecycle = await lifecycleModule();
+  if (!lifecycle) return INDEPENDENT;
+  const sponsor = await lifecycleSponsor(db, tenant);
+  if (!sponsor) return INDEPENDENT;
+  const admission = await admits('co-managed', sponsor);
+  if (admission.reasons.admitted === 'flag-off' || admission.reasons.admitted === 'not-eligible' ||
+      admission.reasons.admitted === 'resolver-unregistered') return INDEPENDENT;
   return lifecycle.readCoManagedLifecycleLockFree(db as Knex, tenant);
 };
 

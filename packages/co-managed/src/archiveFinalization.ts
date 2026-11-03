@@ -7,6 +7,8 @@ import { retainCoManagedSharedConversationBeforeReduction } from './conversation
 import { classifyArchiveCandidate, registerCoManagedArchiveFileSource } from './archiveManifest';
 import { retainFile, retainedCoManagedArchiveFileSource } from './archiveFiles';
 import { coManagedAttachmentParent } from './attachmentParent';
+import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
+import { hasEffectiveSharedGrant } from './effectiveSharedGrant';
 
 // This is the L7a production connection from retained participation evidence to durable bytes.
 registerCoManagedArchiveFileSource(retainedCoManagedArchiveFileSource);
@@ -75,18 +77,44 @@ export async function finalizeCoManagedArchive(context: CoManagedClosureContext)
     relationship_id: relationshipId, source_type: 'conversation' }).orderBy('evidence_id')
     .select('resource_type', 'resource_id', 'occurred_at', 'payload');
   for (const row of evidence) {
+    // The current attachment surface supports ticket threads. Participation history
+    // identifies where to look; it is not authorization for a newly uploaded file.
+    if (row.resource_type !== 'ticket' || !isCoManagedUuid(row.resource_id)) continue;
     const candidate = { evidence_id: '', payload_hash: '', source_type: 'conversation', occurred_at: row.occurred_at, payload: row.payload };
     if (!classifyArchiveCandidate(candidate, cutoffAt).include) continue;
     const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
     if (payload?.deleted || !['requester', 'shared_it'].includes(payload?.audience) ||
         !isCoManagedUuid(payload?.commentId) || !isCoManagedUuid(payload?.threadId)) continue;
+    const resource = { tenant: customerTenant, relationshipId, kind: 'ticket' as const, id: row.resource_id };
+    if (!await hasEffectiveSharedGrant(trx, resource)) continue;
+
+    // Re-check the specific comment and its root at closure time. Old shared
+    // participation evidence cannot authorize a comment that is private now.
+    const comment = tenantDb(trx, customerTenant).table('comments as c')
+      .where({ 'c.ticket_id': row.resource_id, 'c.thread_id': payload.threadId, 'c.comment_id': payload.commentId, 'c.publish_state': 'published' });
+    tenantDb(trx, customerTenant).tenantJoin(comment, 'comment_threads as t', 'c.thread_id', 't.thread_id', {
+      on: join => join.andOn('t.ticket_id', '=', 'c.ticket_id'),
+    });
+    tenantDb(trx, customerTenant).tenantJoin(comment, 'comments as root', 't.root_comment_id', 'root.comment_id', {
+      on: join => join.andOn('root.ticket_id', '=', 'c.ticket_id').andOn('root.thread_id', '=', 'c.thread_id'),
+    });
+    const currentComment = await comment.where('root.publish_state', 'published').whereNull('c.deleted_at').whereNull('root.deleted_at')
+      .forShare('c', 't', 'root').select({ audience: commentAudienceSql(trx, 't', 'root', 'c') }).first();
+    if (!currentComment || !['requester', 'shared_it'].includes(currentComment.audience)) continue;
+
+    const publishedDraft = tenantDb(trx, customerTenant).table('co_management_conversation_drafts as d')
+      .where({ 'd.status': 'published', 'd.customer_tenant': customerTenant, 'd.relationship_id': relationshipId,
+        'd.ticket_id': row.resource_id, 'd.thread_id': payload.threadId, 'd.operation_id': payload.commentId })
+      .whereRaw('d.operation_id = co_management_conversation_attachments.draft_operation_id')
+      .whereRaw('d.relationship_id = co_management_conversation_attachments.relationship_id');
     const source = tenantDb(trx, customerTenant).table('co_management_conversation_attachments')
       .where({ customer_tenant: customerTenant, relationship_id: relationshipId, thread_id: payload.threadId,
         comment_id: payload.commentId, status: 'ready', ...coManagedAttachmentParent({ kind: row.resource_type, id: row.resource_id }) })
-      .whereNull('discarded_at').whereNull('purged_at').forShare();
+      .whereNull('discarded_at').whereNull('purged_at')
+      .where(query => query.whereNull('draft_operation_id').orWhereExists(publishedDraft)).forShare();
     const files = await source.select('attachment_id', 'content_hash');
     for (const file of files) await retainFile(trx, { tenant: sponsorTenant, sourceTenant: customerTenant, fileId: file.attachment_id,
-      hash: file.content_hash, relationshipId, clientId: relationship.sponsor_client_id, audience: payload.audience });
+      hash: file.content_hash, relationshipId, clientId: relationship.sponsor_client_id, audience: currentComment.audience });
   }
 
   // Additional owned evidence producers run after the built-in participation snapshotters and

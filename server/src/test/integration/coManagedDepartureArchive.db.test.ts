@@ -2,7 +2,7 @@
  * L7a on real Postgres (A1, A2): relationship closure releases exactly once; replay is idempotent;
  * an unauthorized party is refused; the sealed MSP archive holds retained participation evidence only.
  */
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { closeCoManagedRelationship, CoManagedClosureError, finalizeCoManagedArchive, getCoManagedArchiveHistory, getCoManagedDepartureScreen,
@@ -17,6 +17,39 @@ vi.mock('@alga-psa/storage/StorageProviderFactory', () => ({
   StorageProviderFactory: { createProvider: async () => ({ download: async () => retainedBytes }) },
 }));
 
+async function seedTicketWithCurrentGrant(db: Knex, f: BoundaryFixture) {
+  const clientId = randomUUID(), boardId = randomUUID(), statusId = randomUUID(), priorityId = randomUUID();
+  await db('clients').insert({ tenant: f.customer, client_id: clientId, client_name: `Archive ${clientId.slice(0, 8)}`,
+    billing_cycle: 'monthly', is_tax_exempt: false });
+  await db('boards').insert({ tenant: f.customer, board_id: boardId, board_name: `Archive ${boardId.slice(0, 8)}`, is_default: true, is_inactive: false });
+  await db('priorities').insert({ tenant: f.customer, priority_id: priorityId, priority_name: 'Normal', item_type: 'ticket', color: '#777777', order_number: 10, created_by: f.customerAdmin.userId });
+  await db('statuses').insert({ tenant: f.customer, status_id: statusId, board_id: boardId, name: 'Open', status_type: 'ticket', is_closed: false,
+    is_default: true, order_number: 10, created_by: f.customerAdmin.userId });
+  await db('tickets').insert({ tenant: f.customer, ticket_id: f.resourceId, ticket_number: `ARCHIVE-${randomUUID()}`, title: 'Archive evidence',
+    client_id: clientId, board_id: boardId, status_id: statusId, priority_id: priorityId, entered_by: f.customerAdmin.userId });
+  await db('co_management_ticket_work').insert({ tenant: f.customer, relationship_id: f.relationshipId, ticket_id: f.resourceId,
+    work_id: randomUUID(), revision: 1, responsibility: 'customer', can_collaborate: true,
+    first_escalated_at: new Date(), last_transition_at: new Date() });
+}
+
+async function seedCurrentComment(db: Knex, f: BoundaryFixture, audience: 'shared_it' | 'organization_private', commentId: string, threadId: string) {
+  const isInternal = audience !== 'requester';
+  await db('comment_threads').insert({ tenant: f.customer, thread_id: threadId, ticket_id: f.resourceId, root_comment_id: commentId,
+    is_internal: isInternal, collaboration_audience: audience, created_by: f.customerAdmin.userId });
+  await db('comments').insert({ tenant: f.customer, comment_id: commentId, thread_id: threadId, ticket_id: f.resourceId,
+    user_id: f.customerAdmin.userId, author_type: 'internal', note: 'Current comment visibility', is_internal: isInternal, is_resolution: false });
+}
+
+async function seedCustomerAttachment(db: Knex, f: BoundaryFixture, commentId: string, threadId: string, name: string) {
+  const attachmentId = randomUUID();
+  await db('co_management_conversation_attachments').insert({ tenant: f.customer, attachment_id: attachmentId, customer_tenant: f.customer,
+    relationship_id: f.relationshipId, ticket_id: f.resourceId, thread_id: threadId, comment_id: commentId, actor_tenant: f.customer,
+    actor_user_id: f.customerAdmin.userId, file_name: name, mime_type: 'text/plain', file_size: retainedBytes.length,
+    content_hash: createHash('sha256').update(retainedBytes).digest('hex'), request_hash: randomUUID().replace(/-/g, '').padEnd(64, 'a').slice(0, 64),
+    storage_path: `co-management/${f.customer}/${attachmentId}`, status: 'ready', ready_at: new Date(), draft_operation_id: null });
+  return attachmentId;
+}
+
 describeDb('co-managed closure and archive on real Postgres', { shuffle: false }, () => {
   let db: Knex; let f: BoundaryFixture; const operationId = randomUUID(); const fileId = randomUUID();
   const finalizeArchive = finalizeCoManagedArchive;
@@ -26,6 +59,9 @@ describeDb('co-managed closure and archive on real Postgres', { shuffle: false }
     process.env.FORCE_CAPABILITIES = 'co-managed:on';
     db = await createTestDbConnection({ databaseName: 'l7a_closure_archive_test' });
     f = await seedBoundaryFixture(db);
+    await seedTicketWithCurrentGrant(db, f);
+    await seedCurrentComment(db, f, 'shared_it', f.fileCommentId, f.fileThreadId);
+    await seedCurrentComment(db, f, 'organization_private', f.privateFileCommentId, f.privateFileThreadId);
     const entryId = randomUUID();
     await db('time_entries').insert({ tenant: f.msp, entry_id: entryId, user_id: f.mspAdmin.userId, work_date: new Date(Date.now() - 900_000), work_timezone: 'UTC', start_time: new Date(Date.now() - 1800_000),
       end_time: new Date(Date.now() - 900_000), work_item_type: 'co_managed', work_item_id: randomUUID(), created_at: new Date(Date.now() - 900_000) });
@@ -33,7 +69,7 @@ describeDb('co-managed closure and archive on real Postgres', { shuffle: false }
       relationship_id: f.relationshipId, source_kind: 'ticket', source_id: f.resourceId, local_reference_id: randomUUID(),
       client_id: f.sponsorClient, title: 'Shared work', ticket_number: 'L7-TIME' });
     await db.transaction(trx => retainCoManagedTimeParticipation(trx, f.msp, entryId));
-    const contentHash = (await import('node:crypto')).createHash('sha256').update(retainedBytes).digest('hex');
+    const contentHash = createHash('sha256').update(retainedBytes).digest('hex');
     await db('co_management_conversation_attachments').insert({ tenant: f.customer, attachment_id: fileId, customer_tenant: f.customer,
       relationship_id: f.relationshipId, ticket_id: f.resourceId, thread_id: f.fileThreadId, comment_id: f.fileCommentId,
       actor_tenant: f.msp, actor_user_id: f.mspAdmin.userId, file_name: 'handoff.txt', mime_type: 'text/plain', file_size: retainedBytes.length,
@@ -119,6 +155,32 @@ describeDb('co-managed closure and archive on real Postgres', { shuffle: false }
 
   it('A2: a reader without co_management:read gets nothing', async () => {
     await expect(listCoManagedArchives(db, f.stranger)).rejects.toThrow();
+  });
+
+  it('does not retain a new customer file when historical shared evidence now points to a private comment', async () => {
+    const g = await seedBoundaryFixture(db);
+    await seedTicketWithCurrentGrant(db, g);
+    await seedCurrentComment(db, g, 'organization_private', g.fileCommentId, g.fileThreadId);
+    await seedCustomerAttachment(db, g, g.fileCommentId, g.fileThreadId, 'uploaded-after-audience-narrowing.txt');
+    const operationId = randomUUID();
+    await closeCoManagedRelationship(db, g.mspAdmin, { customerTenant: g.customer, relationshipId: g.relationshipId },
+      { operationId, expectedRevision: 1, reason: 'departure' }, finalizeArchive);
+    expect((await getCoManagedArchiveHistory(db, g.mspAdmin, operationId)).files).toHaveLength(0);
+    expect(await db('co_managed_archive_files').where({ tenant: g.msp, customer_tenant: g.customer, relationship_id: g.relationshipId })).toHaveLength(0);
+  });
+
+  it('does not retain a new shared-looking file after the current ticket grant was revoked', async () => {
+    const g = await seedBoundaryFixture(db);
+    await seedTicketWithCurrentGrant(db, g);
+    await seedCurrentComment(db, g, 'shared_it', g.fileCommentId, g.fileThreadId);
+    await seedCustomerAttachment(db, g, g.fileCommentId, g.fileThreadId, 'uploaded-after-sharing-revocation.txt');
+    await db('co_management_ticket_work').where({ tenant: g.customer, relationship_id: g.relationshipId, ticket_id: g.resourceId })
+      .update({ grant_revoked_at: new Date(), responsibility: 'customer', can_collaborate: false, first_escalated_at: null, last_transition_at: null });
+    const operationId = randomUUID();
+    await closeCoManagedRelationship(db, g.mspAdmin, { customerTenant: g.customer, relationshipId: g.relationshipId },
+      { operationId, expectedRevision: 1, reason: 'departure' }, finalizeArchive);
+    expect((await getCoManagedArchiveHistory(db, g.mspAdmin, operationId)).files).toHaveLength(0);
+    expect(await db('co_managed_archive_files').where({ tenant: g.msp, customer_tenant: g.customer, relationship_id: g.relationshipId })).toHaveLength(0);
   });
 
   it('A1 (R1): concurrent replays and concurrent distinct operations release the seats exactly once', async () => {
