@@ -1,5 +1,8 @@
 FROM node:alpine
 
+# FreeFont ships as CFF-based OTF (and ghostscript's fonts are Type 1); Chromium embeds
+# those in PDFs as Type 3 glyph outlines that print poorly. DejaVu (sans-serif/monospace)
+# and Liberation (Arial/Helvetica/Courier) are TrueType and embed cleanly.
 RUN apk add --no-cache \
     bash \
     curl \
@@ -13,7 +16,9 @@ RUN apk add --no-cache \
     freetype \
     harfbuzz \
     ca-certificates \
-    ttf-freefont
+    ttf-freefont \
+    font-dejavu \
+    font-liberation
 
 # Tell Puppeteer to use system Chromium instead of downloading
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
