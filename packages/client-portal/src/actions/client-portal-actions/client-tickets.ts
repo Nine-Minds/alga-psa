@@ -404,7 +404,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         .first();
 
       const documentsQuery = scopedDb.table('documents as d').select(
-        'd.document_id', 'd.document_name', 'd.type_id', 'd.client_id', 'd.ticket_id',
+        'd.document_id', 'd.document_name', 'd.type_id', 'da.entity_id as ticket_id',
         'd.order_number', 'd.entered_at', 'd.updated_at', 'd.file_id', 'd.mime_type',
         'd.file_size', 'd.folder_path', 'd.is_client_visible',
       );
@@ -550,7 +550,18 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
             visibility
           )
         : false;
-      return { ticket, canInteract, portalExternalLinks, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
+      return {
+        ticket,
+        canInteract,
+        portalExternalLinks,
+        conversations,
+        // documents has no client_id after associations were normalized. The
+        // ticket relationship comes from document_associations; client_id is
+        // inherited only from the already-authorized ticket row.
+        documents: await filterReadableCommentAttachments(trx, tenant, userId, documents),
+        users,
+        linkedAssets,
+      };
     }) as any;
 
     if (!result.ticket) {
@@ -675,7 +686,10 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       /** False for a ticket visible only through a shared workspace. */
       can_interact: result.canInteract,
       conversations: conversationsWithProvenance,
-      documents: result.documents.map((document: any) => projectClientTicketDocument(document)),
+      documents: result.documents.map((document: any) => projectClientTicketDocument({
+        ...document,
+        client_id: ticketRow.client_id,
+      })),
       // Linked assets joined from asset_associations; the type is broadened on
       // the consumer side via a small augmentation since ITicketWithDetails
       // doesn't model this today.
