@@ -2,7 +2,7 @@
  * admitReplyToken: the single admission point for cm2 inbound replies. The REAL provider runs over a tiny
  * tenant-scoped in-memory store; mocked: the DB wiring and the modules the provider imports for other methods.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 type Row = Record<string, any>;
 const store = vi.hoisted(() => ({ tables: {} as Record<string, Row[]>, lookups: [] as string[] }));
@@ -93,6 +93,12 @@ const admit = (sender: { email: string | null; internalAttributionTrusted: boole
   createCoManagedDeliveryProvider().admitReplyToken(CUSTOMER, 'cm2:t', metadata('thr'), sender);
 
 describe('admitReplyToken sender authentication', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+  });
+  afterEach(() => vi.useRealTimers());
+
   describe('shared_it', () => {
     beforeEach(() => seed('shared_it'));
 
@@ -168,6 +174,12 @@ describe('admitReplyToken sender authentication', () => {
     it('admits a valid requester with a future expiry', async () => {
       store.tables.email_reply_tokens[0].expires_at = '2099-01-01T00:00:00.000Z';
       expect(await admit(trusted('req@CUSTOMER.test'))).toMatchObject({ admitted: true, requesterContactId: 'k1' });
+    });
+    it('treats the exact expiry instant as expired before looking up requester participants', async () => {
+      store.tables.email_reply_tokens[0].expires_at = '2026-01-01T00:00:00.000Z';
+      expect(await admit({ ...trusted('req@CUSTOMER.test'), contactAttributionTrusted: true }))
+        .toEqual({ admitted: false, reason: 'sender_unauthenticated', acknowledge: false });
+      expect(store.lookups).not.toContain('contacts');
     });
     it('a contact of another client is refused', async () => { expect(await admit(trusted('other@elsewhere.test'))).toEqual(refused); });
     it('the same email in another tenant is refused', async () => { expect(await admit(trusted('foreign@customer.test'))).toEqual(refused); });
