@@ -7,10 +7,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   product: 'co_managed', gate: vi.fn(async () => undefined), screen: vi.fn(), access: vi.fn(),
+  session: { user: { tenant: 'tenant-customer', id: 'customer-admin' } }, sessionStatus: 'authenticated',
 }));
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NEXT_NOT_FOUND'); }, useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 vi.mock('next/link', () => ({ default: ({ children, href }: any) => <a href={href}>{children}</a> }));
-vi.mock('next-auth/react', () => ({ useSession: () => ({ data: { user: { tenant: 't', id: 'u' } }, update: vi.fn() }) }));
+vi.mock('next-auth/react', () => ({ useSession: () => ({ data: mocks.session, status: mocks.sessionStatus, update: vi.fn() }) }));
 vi.mock('@alga-psa/auth', () => ({ getSession: vi.fn(async () => ({ user: { tenant: 'tenant-1' } })) }));
 vi.mock('@alga-psa/core/capability/server', () => ({ requireCapabilityForPage: mocks.gate }));
 vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({ getServerTranslation: async () => ({ t: (_k: string, o: any) => o?.defaultValue ?? _k }) }));
@@ -34,16 +35,45 @@ import CoManagedUpgradePage, { generateMetadata } from '../../../app/msp/co-mana
 const eligible = (over: Record<string, unknown> = {}) => ({ state: 'eligible', relationshipId: 'r', revision: 2, departed: false, selfHosted: false,
   purchaseConfigured: true, seatsRequired: 3, entitlementReady: false, pendingPurchase: null, hasOwnBilling: false, paidSeats: null, progress: 'idle', ...over });
 
-beforeEach(() => { mocks.product = 'co_managed'; mocks.gate.mockReset(); mocks.gate.mockResolvedValue(undefined); mocks.screen.mockReset();
+beforeEach(() => { mocks.product = 'co_managed'; mocks.session = { user: { tenant: 'tenant-customer', id: 'customer-admin' } }; mocks.sessionStatus = 'authenticated'; mocks.gate.mockReset(); mocks.gate.mockResolvedValue(undefined); mocks.screen.mockReset();
   mocks.access.mockReset(); mocks.access.mockImplementation(async () => ({ access: 'customer' })); });
 
 describe('co-managed independent upgrade UI', () => {
-  it('the entry point exists for a co_managed workspace only', () => {
+  it('shows the entry only after the shared server gate admits an eligible customer', async () => {
+    mocks.access.mockResolvedValue({ access: 'closed' });
+    const first = render(<CoManagedUpgradeEntry />);
+    await waitFor(() => expect(mocks.access).toHaveBeenCalledOnce());
+    expect(first.container.querySelector('a[href="/msp/co-management/upgrade"]')).toBeNull();
+    first.unmount();
+
+    mocks.access.mockResolvedValue({ access: 'customer' });
+    const second = render(<CoManagedUpgradeEntry />);
+    await waitFor(() => expect(second.container.querySelector('a[href="/msp/co-management/upgrade"]')).not.toBeNull());
+    expect(mocks.access).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails closed when entry access cannot be resolved and hides the entry for non co-managed products', async () => {
+    mocks.access.mockRejectedValue(new Error('access unavailable'));
     const { container, rerender } = render(<CoManagedUpgradeEntry />);
-    expect(container.querySelector('a[href="/msp/co-management/upgrade"]')).not.toBeNull();
+    await waitFor(() => expect(mocks.access).toHaveBeenCalledOnce());
+    expect(container.querySelector('a[href="/msp/co-management/upgrade"]')).toBeNull();
     mocks.product = 'psa';
     rerender(<CoManagedUpgradeEntry />);
     expect(container.querySelector('a')).toBeNull();
+  });
+
+  it('does not let a late access decision from the previous tenant expose the entry', async () => {
+    let resolveOld!: (value: { access: 'customer' }) => void;
+    mocks.access.mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve; }));
+    const { container, rerender } = render(<CoManagedUpgradeEntry />);
+    await waitFor(() => expect(mocks.access).toHaveBeenCalledOnce());
+    mocks.session = { user: { tenant: 'tenant-switched', id: 'different-admin' } };
+    mocks.access.mockResolvedValue({ access: 'closed' });
+    rerender(<CoManagedUpgradeEntry />);
+    expect(container.querySelector('a[href="/msp/co-management/upgrade"]')).toBeNull();
+    resolveOld({ access: 'customer' });
+    await waitFor(() => expect(mocks.access).toHaveBeenCalledTimes(2));
+    expect(container.querySelector('a[href="/msp/co-management/upgrade"]')).toBeNull();
   });
 
   it('the route is gated by the shared upgrade gate: a closed gate makes the page unreachable', async () => {

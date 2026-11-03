@@ -9,7 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@alga-psa/ui/components/Card';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getCoManagedUpgradeScreenAction, startCoManagedUpgradeAction } from '@ee/lib/actions/coManagedUpgradeActions';
+import { getCoManagedUpgradeAccessAction, getCoManagedUpgradeScreenAction, startCoManagedUpgradeAction } from '@ee/lib/actions/coManagedUpgradeActions';
 
 import CoManagedUpgradeBilling from './CoManagedUpgradeBilling';
 import CoManagedUpgradePurchase from './CoManagedUpgradePurchase';
@@ -20,8 +20,28 @@ type Request = Parameters<typeof startCoManagedUpgradeAction>[0];
 
 export function CoManagedUpgradeEntry() {
   const { productCode } = useProduct();
+  const { data: session, status } = useSession();
   const { t } = useTranslation('msp/licensing');
-  if (productCode !== 'co_managed') return null;
+  const tenant = session?.user?.tenant;
+  const userId = session?.user?.id;
+  const identity = `${tenant ?? ''}:${userId ?? ''}`;
+  const [decision, setDecision] = useState<{ identity: string; access: 'customer' | 'former' | 'closed' } | null>(null);
+
+  useEffect(() => {
+    let current = true;
+    setDecision(null);
+    if (productCode !== 'co_managed' || status !== 'authenticated' || !tenant || !userId) {
+      return () => { current = false; };
+    }
+    getCoManagedUpgradeAccessAction()
+      .then(({ access }) => { if (current) setDecision({ identity, access }); })
+      .catch(() => { if (current) setDecision({ identity, access: 'closed' }); });
+    return () => { current = false; };
+  }, [identity, productCode, status, tenant, userId]);
+
+  // The identity check hides an old decision synchronously during session or tenant changes,
+  // before the next effect runs. Only the server's shared gate can expose this entry.
+  if (productCode !== 'co_managed' || status !== 'authenticated' || decision?.identity !== identity || decision.access !== 'customer') return null;
   return <div className="mx-auto max-w-5xl px-6 pt-6"><Button id="co-upgrade-open" variant="outline" asChild>
     <Link href="/msp/co-management/upgrade">{t('coManaged.upgrade.title')}</Link>
   </Button></div>;
