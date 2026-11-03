@@ -78,7 +78,7 @@ import {
 
 interface TicketConversationProps {
   id?: string;
-  ticket: ITicket;
+  ticket: Pick<ITicket, 'client_id' | 'tenant' | 'ticket_id'>;
   conversations: IComment[];
   documents: IDocument[];
   userMap: Record<string, CommentUserAuthor>;

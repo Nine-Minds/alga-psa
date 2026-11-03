@@ -597,8 +597,8 @@ describe('client portal ticket visibility enforcement', () => {
       expect(c).not.toHaveProperty('metadata');
       expect(Object.keys(c).sort()).toEqual(
         [
-          'comment_id', 'thread_id', 'parent_comment_id', 'created_at', 'deleted_at', 'user_id',
-          'contact_id', 'is_internal', 'publish_state', 'note', 'markdown_content', 'bundle_mirror_source',
+          'comment_id', 'thread_id', 'parent_comment_id', 'created_at', 'deleted_at',
+          'is_internal', 'publish_state', 'note', 'markdown_content', 'bundle_mirror_source',
         ].sort(),
       );
       expect(c.note).toBe('[deleted]');
@@ -963,6 +963,104 @@ describe('client portal ticket visibility enforcement', () => {
       3
     );
     expect(ticket.ticket_id).toBe('ticket-new');
+  });
+});
+
+describe('client portal ticket response projection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentUser = { user_id: 'portal-user', user_type: 'client', email: 'portal@example.test', tenant: 'tenant-1' };
+    hasPermissionMock.mockResolvedValue(true);
+    const db = makeConnection();
+    db.mockImplementation((table: string) => table === 'contacts'
+      ? makeChainable([{ contact_name_id: 'contact-1', full_name: 'Morgan Contact', email: 'contact-secret@example.test' }])
+      : makeChainable([]));
+    getConnectionMock.mockResolvedValue(db);
+    getVisibilityContextMock.mockResolvedValue({ ticketScope: 'client', effectiveTicketScope: 'client', isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: null, visibleBoardIds: null });
+  });
+
+  it('serializes list and detail using safe identity and ticket allowlists', async () => {
+    const secretUserId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const listRow = {
+      ticket_id: TICKET_1, ticket_number: 'T-1', title: 'Portal title', url: null,
+      board_id: 'board-1', client_id: 'client-1', contact_name_id: 'contact-1', status_id: 'status-1',
+      category_id: null, subcategory_id: null, entered_at: '2026-01-01T00:00:00.000Z', updated_at: null,
+      closed_at: null, due_date: null, priority_id: 'priority-1', response_state: null,
+      status_name: 'Open', priority_name: 'Normal', priority_color: '#123456', board_name: 'Support',
+      category_name: null, assigned_to: secretUserId, assigned_to_name: 'Avery Agent', assigned_team_id: 'team-1',
+      assigned_team_name: 'Support Team', tenant: 'tenant-1', additional_agent_count: 1,
+      additional_agents: [{ user_id: secretUserId, name: 'Avery Agent' }],
+      attributes: { description: 'private-watch-data', watch_list: [{ email: 'watcher-secret@example.test', user_id: secretUserId }] },
+      email_metadata: { from: 'sender-secret@example.test' }, future_internal_field: 'unknown-secret',
+    };
+    const listBuilder = makeListBuilder([listRow]);
+    withTransactionMock.mockImplementation(async (_db: any, callback: any) => callback(Object.assign((table: string) => {
+      if (table === 'users') return makeUserQuery();
+      if (table === 'tickets as t') return listBuilder;
+      return makeChainable([]);
+    }, { raw: vi.fn() })));
+
+    const { getClientTickets, getClientTicketDetails } = await import('./client-tickets');
+    const list = await getClientTickets('__status_filter__:all') as any[];
+    const serializedList = JSON.stringify(list);
+    expect(serializedList).not.toContain('watcher-secret@example.test');
+    expect(serializedList).not.toContain('private-watch-data');
+    expect(serializedList).not.toContain('sender-secret@example.test');
+    expect(serializedList).not.toContain(secretUserId);
+    expect(serializedList).not.toContain('unknown-secret');
+    expect(list[0]).toMatchObject({ ticket_number: 'T-1', title: 'Portal title', assigned_to_name: 'Avery Agent', additional_agents: [{ name: 'Avery Agent', role: 'staff' }] });
+
+    const detailRow = {
+      ...listRow,
+      attributes: { description: 'Customer facing description', watch_list: [{ email: 'watcher-secret@example.test', user_id: secretUserId }], hidden: 'unknown-secret' },
+      email_metadata: { from: 'sender-secret@example.test', messageId: 'message-secret' },
+      ticket_origin: 'inbound_email', entered_by_user_type: 'internal',
+      future_internal_field: 'unknown-secret',
+    };
+    const comment = {
+      comment_id: 'comment-1', ticket_id: TICKET_1, thread_id: 'thread-1', parent_comment_id: null,
+      user_id: secretUserId, contact_id: null, author_type: 'internal', note: 'Visible response',
+      is_internal: false, is_system_generated: false, is_resolution: false, audience: 'requester',
+      publish_state: 'published', created_at: '2026-01-01T00:00:00.000Z', updated_at: null, deleted_at: null,
+      metadata: { email: { fromAddress: 'comment-secret@example.test' } },
+    };
+    const contactComment = { ...comment, comment_id: 'comment-2', user_id: null, contact_id: 'contact-1', author_type: 'contact', note: 'Customer reply' };
+    const involved = makeChainable([{ user_id: secretUserId, first_name: 'Avery', last_name: 'Agent', email: 'staff-secret@example.test', user_type: 'internal', avatar_file_id: null }]);
+    withTransactionMock.mockImplementation(async (_db: any, callback: any) => callback(Object.assign((table: string) => {
+      if (table === 'users') return makeUserQuery();
+      if (table === 'tickets as t') return makeDetailBuilder(detailRow);
+      if (table === 'comments') return makeChainable([comment, contactComment]);
+      if (table === 'users as u') return involved;
+      if (table === 'ticket_comment_attachments') return { where: vi.fn().mockReturnThis(), first: vi.fn().mockResolvedValue(undefined) };
+      if (table === 'documents as d') return makeChainable([{
+        document_id: 'document-1', document_name: 'portal.pdf', type_id: null, client_id: 'client-1',
+        ticket_id: TICKET_1, order_number: 1, file_id: 'file-1', mime_type: 'application/pdf', file_size: 12,
+        user_id: secretUserId, created_by: secretUserId, edited_by: secretUserId, future_internal_field: 'unknown-secret',
+      }]);
+      if (table === 'asset_associations as aa') return makeChainable([]);
+      return makeChainable([]);
+    }, { raw: vi.fn() })));
+    const detail = await getClientTicketDetails(TICKET_1) as any;
+    const serializedDetail = JSON.stringify(detail);
+    for (const secret of [secretUserId, 'watcher-secret@example.test', 'sender-secret@example.test', 'message-secret', 'staff-secret@example.test', 'contact-secret@example.test', 'comment-secret@example.test', 'unknown-secret', 'email_metadata', 'watch_list']) {
+      expect(serializedDetail).not.toContain(secret);
+    }
+    expect(detail.attributes).toEqual({ description: 'Customer facing description' });
+    expect(detail.has_original_email).toBe(true);
+    expect(detail.ticket_origin).toBe('inbound_email');
+    expect(detail.assigned_to_name).toBe('Avery Agent');
+    expect(detail.assigned_team_id).toBe('team-1');
+    expect(detail.additional_agents).toEqual([{ name: 'Avery Agent', role: 'staff', avatar_url: null }]);
+    expect(detail.conversations[0].note).toBe('Visible response');
+    expect(detail.conversations[0].portal_author).toMatchObject({ name: 'Avery Agent', role: 'staff' });
+    expect(detail.conversations[1].portal_author).toMatchObject({ name: 'Morgan Contact', role: 'contact' });
+    expect(detail.documents).toEqual([expect.objectContaining({ document_id: 'document-1', document_name: 'portal.pdf' })]);
+    expect(detail.documents[0]).not.toHaveProperty('user_id');
+    expect(detail.documents[0]).not.toHaveProperty('created_by');
+    expect(detail.conversations[0]).not.toHaveProperty('user_id');
+    expect(detail.can_interact).toBe(true);
+    expect(detail).not.toHaveProperty('userMap');
+    expect(detail).not.toHaveProperty('contactMap');
   });
 });
 

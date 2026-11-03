@@ -38,7 +38,7 @@ const UNKNOWN_AUTHOR: ResolvedCommentAuthor = {
   avatarUrl: null,
 };
 
-type CommentAuthorFields = Pick<IComment, 'user_id' | 'contact_id' | 'is_system_generated' | 'actor_reference_id' | 'actor_display_name' | 'actor_organization_name'>;
+type CommentAuthorFields = Pick<IComment, 'user_id' | 'contact_id' | 'is_system_generated' | 'actor_reference_id' | 'actor_display_name' | 'actor_organization_name' | 'portal_author'>;
 
 /** Partial or malformed foreign attribution must not trigger a local lookup. */
 export function hasCommentCollaborationAttribution(comment: CommentAuthorFields): boolean {
@@ -59,6 +59,16 @@ export function resolveCommentAuthor(
     contactMap?: Record<string, CommentContactAuthor>;
   }
 ): ResolvedCommentAuthor {
+  if (comment.portal_author) {
+    return {
+      source: comment.portal_author.role === 'system' ? 'system' : 'user',
+      displayName: comment.portal_author.name,
+      authorKind: comment.portal_author.role === 'staff' ? 'internal' : 'client',
+      userType: comment.portal_author.role === 'staff' ? 'internal' : 'client',
+      avatarKind: comment.portal_author.role === 'staff' ? 'user' : 'contact',
+      avatarUrl: comment.portal_author.avatarUrl ?? null,
+    };
+  }
   if (hasCommentCollaborationAttribution(comment)) {
     // Never resolve an attributed foreign author through an owner-local user or
     // contact map, even if a malformed/partial DTO also contains those IDs.

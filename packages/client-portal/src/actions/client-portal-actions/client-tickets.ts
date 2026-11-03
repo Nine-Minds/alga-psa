@@ -15,7 +15,7 @@ import Comment from '@alga-psa/tickets/models/comment';
 import { reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { redactCommentForClient, tombstoneCommentForClient } from '@alga-psa/tickets/lib/commentVisibility';
 import { isUuidShaped, validateData } from '@alga-psa/validation';
-import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
+import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, TICKET_ORIGINS } from '@alga-psa/types';
 import { isClientUserType } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
@@ -59,7 +59,7 @@ import { resolveAssetBillingProfileId } from '@shared/models/assetBillingProfile
 import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { coManagedRefusalMessageKey, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
-import { projectClientTicket } from './clientTicketProjection';
+import { projectClientTicketDetail, projectClientTicketDocument, projectClientTicketList, type ClientTicketDetailResponse, type ClientTicketListResponse } from './clientTicketProjection';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),
@@ -211,7 +211,7 @@ async function resolveVisibleTicket(
   return ticket;
 }
 
-export const getClientTickets = withAuth(async (user, { tenant }, status: string): Promise<ClientTicketActionResult<ITicketListItem[]>> => {
+export const getClientTickets = withAuth(async (user, { tenant }, status: string): Promise<ClientTicketActionResult<ClientTicketListResponse[]>> => {
   try {
     const userId = clientPortalUserIdOrError(user);
     if (typeof userId !== 'string') {
@@ -249,7 +249,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       scopedDb.tenantJoin(additionalAgentsSubquery, 'users as uu', 'tr2.additional_user_id', 'uu.user_id');
       additionalAgentsSubquery
         .whereRaw('tr2.ticket_id = t.ticket_id')
-        .select(trx.raw("COALESCE(json_agg(json_build_object('name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json)"))
+        .select(trx.raw("COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name), 'role', 'staff')), '[]'::json)"))
         .as('additional_agents');
 
       let query = scopedDb.table('tickets as t');
@@ -272,11 +272,13 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         't.status_id',
         't.category_id',
         't.subcategory_id',
+        't.assigned_to',
+        't.assigned_team_id',
+        't.tenant',
         't.entered_at',
         't.updated_at',
         't.closed_at',
         't.due_date',
-        't.attributes',
         't.priority_id',
         't.response_state',
         's.name as status_name',
@@ -286,7 +288,6 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         'cat.category_name',
         db.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
         db.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
-        't.assigned_team_id',
         'tm.team_name as assigned_team_name',
         additionalAgentCountSubquery,
         additionalAgentsSubquery.as('additional_agents')
@@ -310,18 +311,26 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       query = query.where('t.status_id', parsedStatusFilter.statusId);
     }
 
-      const tickets = await query.orderBy('t.entered_at', 'desc') as ITicketListItem[];
+      const tickets = await query.orderBy('t.entered_at', 'desc') as any[];
 
       return tickets;
     }) as any[];
 
-    return result.map((ticket: any) => projectClientTicket(ticket));
+    return Promise.all(result.map(async (ticket: any) => {
+      const agents = await Promise.all((ticket.additional_agents ?? []).map(async (agent: any) => ({
+        name: agent.name,
+        role: 'staff' as const,
+        avatar_url: await getUserAvatarUrlAction(agent.user_id, tenant).catch(() => null),
+      })));
+      const assignedAvatar = ticket.assigned_to ? await getUserAvatarUrlAction(ticket.assigned_to, tenant).catch(() => null) : null;
+      return projectClientTicketList({ ...ticket, additional_agents: agents, assigned_to_avatar_url: assignedAvatar });
+    }));
   } catch (error) {
     return expectedOrThrow(error, 'Failed to fetch client tickets:');
   }
 });
 
-export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId: string): Promise<ClientTicketActionResult<ITicketWithDetails>> => {
+export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId: string): Promise<ClientTicketActionResult<ClientTicketDetailResponse>> => {
   try {
     const userId = clientPortalUserIdOrError(user);
     if (typeof userId !== 'string') {
@@ -358,24 +367,26 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       scopedDb.tenantJoin(ticketAdditionalAgentsSubquery, 'users as uu', 'tr2.additional_user_id', 'uu.user_id');
       ticketAdditionalAgentsSubquery
         .whereRaw('tr2.ticket_id = t.ticket_id')
-        .select(trx.raw("COALESCE(json_agg(json_build_object('name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json)"));
+        .select(trx.raw("COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name), 'role', 'staff')), '[]'::json)"));
 
       const ticketQuery = scopedDb.table('tickets as t');
       scopedDb.tenantJoin(ticketQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
       scopedDb.tenantJoin(ticketQuery, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
       scopedDb.tenantJoin(ticketQuery, 'users as u_creator', 't.entered_by', 'u_creator.user_id', { type: 'left' });
+      scopedDb.tenantJoin(ticketQuery, 'users as u_assignee', 't.assigned_to', 'u_assignee.user_id', { type: 'left' });
       scopedDb.tenantJoin(ticketQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id', { type: 'left' });
       ticketQuery
         .select(
           't.ticket_id', 't.ticket_number', 't.title', 't.url', 't.board_id', 't.client_id',
           't.contact_name_id', 't.status_id', 't.category_id', 't.subcategory_id',
           't.entered_at', 't.updated_at', 't.closed_at', 't.due_date', 't.response_state',
-          't.priority_id', 't.assigned_to', 't.assigned_team_id', 't.attributes',
-          't.is_closed', 't.email_metadata', 't.source', 't.ticket_origin', 't.origin_link_system',
+          't.priority_id', 't.assigned_to', 't.assigned_team_id', 't.tenant', 't.billing_profile_id', 't.attributes',
+          't.is_closed', 't.email_metadata', 't.source', 't.ticket_origin',
           's.name as status_name',
           'p.priority_name',
           'p.color as priority_color',
           'u_creator.user_type as entered_by_user_type',
+          db.raw("CONCAT(u_assignee.first_name, ' ', u_assignee.last_name) as assigned_to_name"),
           'tm.team_name as assigned_team_name',
           ticketAdditionalAgentsSubquery.as('additional_agents')
         )
@@ -388,7 +399,11 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         })
         .first();
 
-      const documentsQuery = scopedDb.table('documents as d').select('d.*');
+      const documentsQuery = scopedDb.table('documents as d').select(
+        'd.document_id', 'd.document_name', 'd.type_id', 'd.client_id', 'd.ticket_id',
+        'd.order_number', 'd.entered_at', 'd.updated_at', 'd.file_id', 'd.mime_type',
+        'd.file_size', 'd.folder_path', 'd.is_client_visible',
+      );
       scopedDb.tenantJoin(documentsQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
       documentsQuery.where({
         'da.entity_id': ticketId,
@@ -610,9 +625,9 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
     }), {} as Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>);
 
     const ticketRow = result.ticket as any;
-    const safeTicket = projectClientTicket(ticketRow, true);
-    safeTicket.ticket_origin = getTicketOrigin(ticketRow);
-    safeTicket.has_original_email = Boolean(ticketRow.email_metadata?.messageId || ticketRow.email_metadata?.originalEmailId);
+    const agentsWithAvatars = await Promise.all((ticketRow.additional_agents ?? []).map(async (agent: any) => ({ name: agent.name, role: 'staff' as const, avatar_url: await getUserAvatarUrlAction(agent.user_id, tenant).catch(() => null) })));
+    const assignedAvatar = ticketRow.assigned_to ? await getUserAvatarUrlAction(ticketRow.assigned_to, tenant).catch(() => null) : null;
+    const safeTicket = projectClientTicketDetail({ ...ticketRow, additional_agents: agentsWithAvatars, assigned_to_avatar_url: assignedAvatar, ticket_origin: getTicketOrigin(ticketRow), has_original_email: Boolean(ticketRow.email_metadata?.messageId || ticketRow.email_metadata?.originalEmailId) });
 
     // Every portal comment goes through the shared client projection: deleted rows become an
     // allowlisted tombstone, all others are redacted (scheduling columns, Bcc, metadata.email).
@@ -628,12 +643,26 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       if (projected.parent_comment_id && !servedIds.has(projected.parent_comment_id)) {
         projected.parent_comment_id = null;
       }
+      const authorUser = commentRow.user_id ? userMap[commentRow.user_id] : undefined;
+      const authorContact = commentRow.contact_id ? contactMap[commentRow.contact_id] : undefined;
+      const safeAuthor = projected.actor_display_name && projected.actor_organization_name
+        ? { name: `${projected.actor_display_name} (${projected.actor_organization_name})`, role: 'staff' as const, avatarUrl: null }
+        : authorUser
+        ? { name: `${authorUser.first_name} ${authorUser.last_name}`.trim(), role: authorUser.user_type === 'internal' ? 'staff' as const : 'client' as const, avatarUrl: authorUser.avatarUrl }
+        : authorContact
+          ? { name: authorContact.full_name, role: 'contact' as const, avatarUrl: authorContact.avatarUrl }
+          : projected.is_system_generated ? { name: 'System', role: 'system' as const, avatarUrl: null } : null;
+      const commentWithoutPrivateIdentity = { ...projected };
+      delete commentWithoutPrivateIdentity.user_id;
+      delete commentWithoutPrivateIdentity.contact_id;
+      delete commentWithoutPrivateIdentity.actor_reference_id;
       return {
-        ...projected,
+        ...commentWithoutPrivateIdentity,
+        ...(safeAuthor ? { portal_author: safeAuthor } : {}),
         bundle_mirror_source: bundle_mirror_source_comment_id
           ? { source_comment_id: bundle_mirror_source_comment_id }
           : null,
-      };
+      } as IComment & { portal_author?: { name: string; role: 'staff' | 'client' | 'contact' | 'system'; avatarUrl?: string | null }; bundle_mirror_source: { source_comment_id: string } | null };
     });
 
     return {
@@ -641,14 +670,12 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       /** False for a ticket visible only through a shared workspace. */
       can_interact: result.canInteract,
       conversations: conversationsWithProvenance,
-      documents: result.documents,
+      documents: result.documents.map((document: any) => projectClientTicketDocument(document)),
       // Linked assets joined from asset_associations; the type is broadened on
       // the consumer side via a small augmentation since ITicketWithDetails
       // doesn't model this today.
       linkedAssets: result.linkedAssets,
       portalExternalLinks: result.portalExternalLinks,
-      userMap,
-      contactMap
     };
   } catch (error) {
     return expectedOrThrow(error, 'Failed to fetch ticket details:');

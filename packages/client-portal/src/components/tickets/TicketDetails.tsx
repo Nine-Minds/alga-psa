@@ -18,10 +18,7 @@ import type { Asset, ProductCode } from '@alga-psa/types';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
 import { getTicketOrigin } from '@alga-psa/tickets/lib/ticketOrigin';
 import { useInboundEmailView } from '@alga-psa/ui/components/EmailHtmlViewer';
-import {
-  originalEmailSourceForTicket,
-  originalEmailToggleLabels,
-} from '@alga-psa/tickets/lib/inboundEmailOriginalView';
+import { originalEmailToggleLabels } from '@alga-psa/tickets/lib/inboundEmailOriginalView';
 import { useInboundEmailViewPreference } from '@alga-psa/tickets/hooks/useInboundEmailViewPreference';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -40,7 +37,8 @@ import {
 } from '@alga-psa/client-portal/actions';
 import { formatDistanceToNow, format } from 'date-fns';
 import { getDateFnsLocale } from '@alga-psa/ui';
-import { ITicketWithDetails, TicketResponseState } from '@alga-psa/types';
+import { TicketResponseState } from '@alga-psa/types';
+import type { ClientTicketDetailResponse, ClientTicketDocument } from '../../actions/client-portal-actions/clientTicketProjection';
 import { IComment } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { PartialBlock } from '@blocknote/core';
@@ -63,8 +61,8 @@ interface TicketDetailsProps {
   onClose: () => void;
   asStandalone?: boolean; // When true, renders without Dialog wrapper
   // Pre-fetched data from server component (required)
-  initialTicket: ITicketWithDetails;
-  initialDocuments: IDocument[];
+  initialTicket: ClientTicketDetailResponse;
+  initialDocuments: ClientTicketDocument[];
   initialStatusOptions: IStatus[];
   productCode?: ProductCode;
 }
@@ -89,8 +87,8 @@ export function TicketDetails({
   const dateLocale = getDateFnsLocale(i18n.language);
   const isAlgaDeskPortal = productCode === 'algadesk';
   // Use pre-fetched data from server component
-  const [ticket, setTicket] = useState<ITicketWithDetails>(initialTicket);
-  const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
+  const [ticket, setTicket] = useState<ClientTicketDetailResponse>(initialTicket);
+  const [documents, setDocuments] = useState<ClientTicketDocument[]>(initialDocuments);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null; avatarUrl?: string | null } | null>(null);
   const [activeTab, setActiveTab] = useState('all-comments');
@@ -108,7 +106,7 @@ export function TicketDetails({
    * workspace clause and answer "Ticket not found".
    */
   const canInteract = (ticket as { can_interact?: boolean }).can_interact !== false;
-  const originalEmailSrc = useMemo(() => originalEmailSourceForTicket(ticket), [ticket]);
+  const originalEmailSrc = useMemo(() => ticket.has_original_email ? `/api/tickets/${ticket.ticket_id}/email-html` : null, [ticket]);
   // Same stored per-user preference as the MSP screen drives the Text / Email
   // switcher on every inbound-email body below.
   useInboundEmailViewPreference();
@@ -183,7 +181,7 @@ export function TicketDetails({
         handleReturnedActionError(docs);
         return;
       }
-      setDocuments(docs || []);
+      setDocuments((docs || []) as unknown as ClientTicketDocument[]);
     } catch (error) {
       console.error('Failed to refresh ticket documents after clipboard upload:', error);
     }
@@ -457,7 +455,7 @@ export function TicketDetails({
           }
           return conv;
         });
-        return { ...prev, conversations: updatedConversations } as ITicketWithDetails;
+        return { ...prev, conversations: updatedConversations } as ClientTicketDetailResponse;
       });
 
       // Set override to guarantee immediate child render with latest note
@@ -478,7 +476,7 @@ export function TicketDetails({
         handleReturnedActionError(details);
         return;
       }
-      const detailsWithExtras = details as ITicketWithDetails;
+      const detailsWithExtras = details as ClientTicketDetailResponse;
       const fetchedConv = (detailsWithExtras.conversations || []).find(c => c.comment_id === optimisticCommentId);
       if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][handleSave] Refetch result for edited comment', {
         comment_id: optimisticCommentId,
@@ -487,7 +485,7 @@ export function TicketDetails({
       });
       // Merge: prefer our optimistic update if it’s newer than fetched data
       setTicket(() => {
-        const merged = { ...detailsWithExtras } as ITicketWithDetails;
+        const merged = { ...detailsWithExtras } as ClientTicketDetailResponse;
         merged.conversations = (detailsWithExtras.conversations || []).map(conv => {
           if (conv.comment_id === optimisticCommentId) {
             const fetchedTime = conv.updated_at ? new Date(conv.updated_at).getTime() : 0;
@@ -698,46 +696,44 @@ export function TicketDetails({
                 {t('fields.assignedTo', 'Assigned To')}
               </label>
               <div className="flex items-center gap-2">
-                {ticket.assigned_to && ticket.userMap?.[ticket.assigned_to] ? (
+                {ticket.assigned_to_name ? (
                   <>
                     <UserAvatar
-                      userId={ticket.userMap[ticket.assigned_to].user_id}
-                      userName={`${ticket.userMap[ticket.assigned_to].first_name} ${ticket.userMap[ticket.assigned_to].last_name}`}
-                      avatarUrl={ticket.userMap[ticket.assigned_to].avatarUrl || null}
+                      userId={ticket.assigned_to_name}
+                      userName={ticket.assigned_to_name}
+                      avatarUrl={ticket.assigned_to_avatar_url || null}
                       size="sm"
                     />
-                    <span className="text-sm text-gray-900">
-                      {ticket.userMap[ticket.assigned_to].first_name} {ticket.userMap[ticket.assigned_to].last_name}
-                    </span>
+                    <span className="text-sm text-gray-900">{ticket.assigned_to_name}</span>
                   </>
                 ) : (
                   <span className="text-sm text-gray-500">-</span>
                 )}
-                {ticket.assigned_team_id && (ticket as any).assigned_team_name && (
+                {ticket.assigned_team_id && ticket.assigned_team_name && (
                   <>
                     <TeamAvatar
                       teamId={ticket.assigned_team_id}
-                      teamName={(ticket as any).assigned_team_name}
+                      teamName={ticket.assigned_team_name}
                       avatarUrl={teamAvatarUrl}
                       size="sm"
                     />
-                    <span className="text-xs text-gray-500">{(ticket as any).assigned_team_name}</span>
+                    <span className="text-xs text-gray-500">{ticket.assigned_team_name}</span>
                   </>
                 )}
                 {(() => {
-                  const additionalAgents = (ticket as any).additional_agents || [];
+                  const additionalAgents = ticket.additional_agents || [];
                   if (additionalAgents.length === 0) return null;
                   return (
                     <Tooltip
                       content={
                         <div className="text-xs space-y-1.5">
                           <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
-                          {additionalAgents.map((agent: { user_id: string; name: string }, i: number) => (
+                          {additionalAgents.map((agent, i: number) => (
                             <div key={i} className="flex items-center gap-2">
                               <UserAvatar
-                                userId={agent.user_id}
+                                userId={agent.name}
                                 userName={agent.name}
-                                avatarUrl={ticket.userMap?.[agent.user_id]?.avatarUrl || null}
+                                avatarUrl={agent.avatar_url || null}
                                 size="xs"
                               />
                               <span>{agent.name}</span>
@@ -779,7 +775,7 @@ export function TicketDetails({
 
             {/* Linked assets — populated from asset_associations on the server. */}
             {(() => {
-              const linkedAssets = (ticket as ITicketWithDetails & {
+              const linkedAssets = (ticket as ClientTicketDetailResponse & {
                 linkedAssets?: Array<{ asset_id: string; name: string; asset_tag: string | null; asset_type?: string | null }>;
               }).linkedAssets;
               if (!linkedAssets || linkedAssets.length === 0) return null;
@@ -928,9 +924,9 @@ export function TicketDetails({
                 key={`conv-${conversationVersion}`}
                 ticket={ticket}
                 conversations={ticket.conversations}
-                documents={ticket.documents || []}
-                userMap={ticket.userMap || {}}
-                contactMap={ticket.contactMap || {}}
+                documents={(ticket.documents || []) as unknown as IDocument[]}
+                userMap={{}}
+                contactMap={{}}
                 currentUser={currentUser}
                 activeTab={activeTab === 'internal' ? 'all-comments' : activeTab}
                 hideInternalTab={true}
@@ -964,7 +960,7 @@ export function TicketDetails({
               <Card>
                 <TicketDocumentsSection
                   ticketId={ticket.ticket_id}
-                  initialDocuments={documents}
+                  initialDocuments={documents as unknown as IDocument[]}
                   onDocumentCreated={async () => {
                     // Refresh documents after creation
                     const docs = await getClientTicketDocuments(ticketId);
@@ -972,7 +968,7 @@ export function TicketDetails({
                       handleReturnedActionError(docs);
                       return;
                     }
-                    setDocuments(docs);
+                    setDocuments(docs as unknown as ClientTicketDocument[]);
                   }}
                   getFoldersFn={getClientFolders}
                   forceUploadToRoot={isAlgaDeskPortal}
