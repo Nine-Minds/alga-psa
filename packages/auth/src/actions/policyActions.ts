@@ -13,7 +13,7 @@ import { filterPermissionsByServedCapabilities } from '../lib/permissionCapabili
 import { hasPermission } from '../lib/rbac';
 import { isBuiltInRoleName } from '../lib/policy/builtInRoles';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
-import { assertMspRoleGrantsWithinActorPermissions } from '@alga-psa/users/lib/roleGrantAuthorization';
+import { assertMspRoleGrantsWithinActorPermissions } from '@alga-psa/authorization/roleGrantAuthorization';
 
 const policyEngine = new PolicyEngine();
 

@@ -33,7 +33,7 @@ import {
 import { hashPassword, verifyPassword } from '@alga-psa/core/encryption';
 import { verifyAuthenticator } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/user-composition/lib/permissions';
-import { assertMspRoleGrantsWithinActorPermissions } from '../lib/roleGrantAuthorization';
+import { assertMspRoleGrantsWithinActorPermissions } from '@alga-psa/authorization/roleGrantAuthorization';
 import { validateSystemContext } from '@alga-psa/db';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';

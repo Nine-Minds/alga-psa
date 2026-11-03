@@ -31,7 +31,7 @@ vi.mock('../lib/withAuth', () => ({
 vi.mock('../lib/rbac', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));
-vi.mock('@alga-psa/users/lib/roleGrantAuthorization', () => ({
+vi.mock('@alga-psa/authorization/roleGrantAuthorization', () => ({
   assertMspRoleGrantsWithinActorPermissions: (...args: any[]) => grantGateMock(...args),
 }));
 

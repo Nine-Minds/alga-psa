@@ -6,7 +6,7 @@
 import { IRole, IUserRole, getRoleAssignmentViolation } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { assertMspRoleGrantsWithinActorPermissions } from './roleGrantAuthorization';
+import { assertMspRoleGrantsWithinActorPermissions } from '@alga-psa/authorization/roleGrantAuthorization';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import {
     actionError,

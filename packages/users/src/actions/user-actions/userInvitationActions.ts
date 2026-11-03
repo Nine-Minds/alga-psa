@@ -11,7 +11,7 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { checkInternalUserLicenseLimit, countPendingInvitationSeats, isInternalUserLicenseLimitRejected, lockInternalUserSeats } from '../../lib/internalUserLicenseGuard';
 import { assertCoManagedSeatAdmission, CoManagedAdmissionError } from '@alga-psa/licensing';
 import { isCoManagedInvitationServed } from '../../lib/coManagedInvitationCapability';
-import { assertMspRoleGrantsWithinActorPermissions } from '../../lib/roleGrantAuthorization';
+import { assertMspRoleGrantsWithinActorPermissions } from '@alga-psa/authorization/roleGrantAuthorization';
 
 export type UserInvitationErrorCode =
   | 'PERMISSION_DENIED_INVITE'

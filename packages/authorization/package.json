@@ -58,6 +58,10 @@
       "import": "./dist/assetReadAuthorization.js",
       "types": "./src/assetReadAuthorization.ts"
     },
+    "./roleGrantAuthorization": {
+      "import": "./dist/roleGrantAuthorization.js",
+      "types": "./src/roleGrantAuthorization.ts"
+    },
     "./rbac": {
       "import": "./dist/rbac.js",
       "types": "./src/rbac.ts"

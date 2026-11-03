@@ -139,6 +139,7 @@
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@alga-psa/authorization": "*",
     "@auth/core": "^0.41.3",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
