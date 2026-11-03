@@ -50,9 +50,8 @@ export const createTimeSheetSchema = z.object({
 
 // Update time sheet schema
 export const updateTimeSheetSchema = z.object({
-  notes: z.string().optional(),
-  approval_status: approvalStatusSchema.optional()
-});
+  notes: z.string().optional()
+}).strict();
 
 // Time sheet filter schema
 export const timeSheetFilterSchema = baseFilterSchema.extend({

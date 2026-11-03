@@ -15,6 +15,10 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishBuiltWorkflowPayload: vi.fn(async () => undefined),
   publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
+vi.mock('@alga-psa/auth', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  hasPermission: vi.fn(async () => true),
+}));
 
 // T043 (F056): TimeSheetService.approveTimeSheet end to end against the real schema.
 describe('T043 TimeSheetService.approveTimeSheet (F056)', () => {
@@ -30,7 +34,7 @@ describe('T043 TimeSheetService.approveTimeSheet (F056)', () => {
     // canApproveTimeSheets is a stub that always returns false in CE ("Simplified for now");
     // stub it so the update path under test is reachable.
     vi.spyOn(svc as any, 'canApproveTimeSheets').mockResolvedValue(true);
-    return { svc, context: { tenant, userId } as any };
+    return { svc, context: { tenant, userId, user: { user_id: userId, user_type: 'internal', tenant } } as any };
   }
 
   async function submittedSheet(): Promise<{ sheetId: string; entryId: string }> {

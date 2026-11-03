@@ -9,6 +9,7 @@ import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { TimeSheetService } from '@/lib/api/services/TimeSheetService';
 import { ConflictError, ForbiddenError } from '@/lib/api/middleware/apiMiddleware';
 import { publishUnregisteredEventType } from 'server/src/lib/eventBus/publishers';
+import { updateTimeSheetSchema } from '@/lib/api/schemas/timeSheet';
 
 /**
  * REST `POST /api/v1/time-sheets` and `PUT /api/v1/time-sheets/:id` are thin wrappers over
@@ -34,6 +35,11 @@ vi.mock('@alga-psa/auth', async (importOriginal) => ({
   hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
     grants.byUser.get(user.user_id)?.has(`${resource}:${action}`) ?? false),
 }));
+vi.mock('@/lib/auth/rbac', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
+    grants.byUser.get(user.user_id)?.has(`${resource}:${action}`) ?? false),
+}));
 
 let db: Knex;
 const tenantsToCleanup = new Set<string>();
@@ -43,6 +49,8 @@ const tenantRows = () =>
   tenantDb(db, '__test_tenant_fixture__').unscoped('tenants', 'test fixture creates and removes tenant rows');
 
 async function cleanupTenant(tenantId: string) {
+  await tenantTable(tenantId, 'time_entries').del();
+  await tenantTable(tenantId, 'time_sheet_comments').del();
   await tenantTable(tenantId, 'time_sheets').del();
   await tenantTable(tenantId, 'time_periods').del();
   await tenantTable(tenantId, 'users').del();
@@ -124,17 +132,101 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     expect(rows[0].id).toBe(created.id);
   });
 
-  it('PUT updates the sheet', async () => {
+  it('generic PUT only updates notes and rejects lifecycle fields', async () => {
     const f = await seed();
     const service = serviceFor(f.tenantId);
     const ctx = contextFor(f.tenantId, f.actor);
     const created = await service.create({ period_id: f.periodId }, ctx);
 
-    const updated = await service.update(created.id, { approval_status: 'SUBMITTED' }, ctx);
+    const updated = await service.update(created.id, { notes: 'updated' }, ctx);
 
-    expect(updated).toMatchObject({ id: created.id, approval_status: 'SUBMITTED' });
+    expect(updated).toMatchObject({ id: created.id, approval_status: 'DRAFT', notes: 'updated' });
+    expect(() => updateTimeSheetSchema.parse({ approval_status: 'APPROVED' })).toThrow();
+    await service.update(created.id, { approval_status: 'APPROVED' } as any, ctx);
     const [row] = await sheetsFor(f.tenantId, f.actor);
-    expect(row.approval_status).toBe('SUBMITTED');
+    expect(row.approval_status).toBe('DRAFT');
+  });
+
+  it('scopes reads before list retrieval and by-id lookup; read_all widens only within the tenant', async () => {
+    const f = await seed();
+    const otherTenant = await seed();
+    const service = serviceFor(f.tenantId);
+    const own = await service.create({ period_id: f.periodId }, contextFor(f.tenantId, f.actor));
+    const other = await service.create({ period_id: f.periodId, user_id: f.subject }, contextFor(f.tenantId, f.subject));
+    const ctx = contextFor(f.tenantId, f.actor);
+    const foreignSheet = await serviceFor(otherTenant.tenantId).create(
+      { period_id: otherTenant.periodId }, contextFor(otherTenant.tenantId, otherTenant.actor)
+    );
+    const entryId = uuidv4();
+    await tenantTable(f.tenantId, 'time_entries').insert({
+      tenant: f.tenantId, entry_id: entryId, user_id: f.subject, time_sheet_id: other.id,
+      start_time: new Date().toISOString(), end_time: new Date().toISOString(), work_date: '2026-01-06',
+      work_timezone: 'UTC', approval_status: 'DRAFT', created_at: db.fn.now(), updated_at: db.fn.now(),
+    });
+
+    expect(await service.getById(other.id, ctx)).toBeNull();
+    expect(await service.getById(foreignSheet.id, ctx)).toBeNull();
+    expect((await service.list({ page: 1, limit: 25 } as any, ctx)).data.map((sheet: any) => sheet.id)).toEqual([own.id]);
+    expect((await service.list({ page: 1, limit: 25, filters: { user_id: f.subject } } as any, ctx)).data).toEqual([]);
+    expect(await service.search({ query: 'Subject', user_ids: [f.subject] } as any, ctx)).toEqual([]);
+    expect(await service.getWithDetails(other.id, ctx)).toBeNull();
+    expect(await service.getTimeSheetEntries(other.id, ctx)).toEqual([]);
+    expect(await service.getTimeSheetSummary(other.id, ctx)).toBeNull();
+    expect(await service.getTimeSheetComments(other.id, ctx)).toEqual([]);
+
+    await tenantTable(f.tenantId, 'users').where({ user_id: f.subject }).update({ reports_to: f.actor });
+    grants.byUser.set(f.actor, new Set(['time_sheet:approve']));
+    expect((await service.list({ page: 1, limit: 25 } as any, ctx)).data.map((sheet: any) => sheet.id).sort()).toEqual([own.id, other.id].sort());
+
+    grants.byUser.set(f.actor, new Set(['time_sheet:read_all']));
+    expect((await service.list({ page: 1, limit: 25 } as any, ctx)).data.map((sheet: any) => sheet.id).sort()).toEqual([own.id, other.id].sort());
+    expect(await service.getById(other.id, ctx)).toMatchObject({ id: other.id, user_id: f.subject });
+    expect(await service.getById(foreignSheet.id, ctx)).toBeNull();
+  });
+
+  it('lifecycle transitions require their own permission and atomically synchronize entries', async () => {
+    const f = await seed();
+    const service = serviceFor(f.tenantId);
+    const ctx = contextFor(f.tenantId, f.actor);
+    const sheet = await service.create({ period_id: f.periodId }, ctx);
+    const entryId = uuidv4();
+    await tenantTable(f.tenantId, 'time_entries').insert({
+      tenant: f.tenantId, entry_id: entryId, user_id: f.actor, time_sheet_id: sheet.id,
+      start_time: new Date().toISOString(), end_time: new Date().toISOString(), work_date: '2026-01-06',
+      work_timezone: 'UTC', approval_status: 'DRAFT', created_at: db.fn.now(), updated_at: db.fn.now(),
+    });
+
+    grants.byUser.set(f.actor, new Set(['time_sheet:update']));
+    await expect(service.approveTimeSheet(sheet.id, {}, ctx)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(service.update(sheet.id, { approval_status: 'APPROVED' } as any, ctx)).resolves.toMatchObject({ approval_status: 'DRAFT' });
+    expect((await tenantTable(f.tenantId, 'time_sheets').where({ id: sheet.id }).first()).approval_status).toBe('DRAFT');
+    expect((await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first()).approval_status).toBe('DRAFT');
+
+    grants.byUser.set(f.actor, new Set(['time_sheet:submit']));
+    await service.submitTimeSheet(sheet.id, {}, ctx);
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: sheet.id }).first()).toMatchObject({ approval_status: 'SUBMITTED' });
+    expect((await tenantTable(f.tenantId, 'time_sheets').where({ id: sheet.id }).first()).submitted_at).not.toBeNull();
+    expect((await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first()).approval_status).toBe('SUBMITTED');
+
+    grants.byUser.set(f.actor, new Set(['time_sheet:approve']));
+    vi.mocked(publishUnregisteredEventType).mockRejectedValueOnce(new Error('event transport unavailable'));
+    const concurrentApprovals = await Promise.allSettled([
+      service.approveTimeSheet(sheet.id, {}, ctx),
+      service.approveTimeSheet(sheet.id, {}, ctx),
+    ]);
+    expect(concurrentApprovals.filter((result) => result.status === 'fulfilled')).toHaveLength(0);
+    const rejectionMessages = concurrentApprovals
+      .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+      .map((result) => String(result.reason?.message));
+    expect(rejectionMessages).toContain('event transport unavailable');
+    expect(rejectionMessages.some((message) => message.includes('Cannot transition time sheet from APPROVED'))).toBe(true);
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: sheet.id }).first()).toMatchObject({ approval_status: 'APPROVED', approved_by: f.actor });
+    expect((await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first()).approval_status).toBe('APPROVED');
+
+    grants.byUser.set(f.actor, new Set(['time_sheet:reverse']));
+    await service.reverseApproval(sheet.id, { reversal_reason: 'correction' } as any, ctx);
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: sheet.id }).first()).toMatchObject({ approval_status: 'CHANGES_REQUESTED', approved_at: null, approved_by: null });
+    expect((await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first()).approval_status).toBe('CHANGES_REQUESTED');
   });
 
   it('creating a sheet for yourself by explicit user_id needs no delegation rights', async () => {
