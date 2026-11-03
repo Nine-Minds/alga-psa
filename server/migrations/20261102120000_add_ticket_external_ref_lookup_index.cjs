@@ -20,10 +20,28 @@ async function readIndex(knex) {
 }
 
 function normalizedExpression(expression) {
-  return String(expression || '')
-    .toLowerCase()
-    .replace(/::text\b/g, '')
-    .replace(/[()\s]/g, '');
+  const source = String(expression || '');
+  let normalized = '';
+  let quote = null;
+  for (let i = 0; i < source.length; i += 1) {
+    const char = source[i];
+    if (quote) {
+      normalized += char;
+      if (char === quote) {
+        // SQL escapes a quote inside a quoted identifier or string by doubling it.
+        if (source[i + 1] === quote) normalized += source[++i];
+        else quote = null;
+      }
+      continue;
+    }
+    if (char === "'" || char === '"') {
+      quote = char;
+      normalized += char;
+    } else if (!/[()\s]/.test(char)) {
+      normalized += char.toLowerCase();
+    }
+  }
+  return normalized;
 }
 
 function isExpectedIndex(index) {
@@ -35,7 +53,7 @@ function isExpectedIndex(index) {
     && index.columns.length === 2
     && index.columns[0] === 'tenant'
     && index.columns[1] === null
-    && normalizedExpression(index.expression) === "attributes->>'external_ref'";
+    && normalizedExpression(index.expression) === "attributes->>'external_ref'::text";
 }
 
 exports.up = async function up(knex) {

@@ -21,6 +21,7 @@ beforeAll(() => {
 afterAll(async () => { await db?.destroy(); });
 
 it('creates, repairs, rolls back, and reapplies the selector index on an isolated table', async () => {
+  expect(migration.config).toEqual({ transaction: false });
   const schema = `ticket_external_ref_${randomUUID().replaceAll('-', '')}`;
   await db.raw('CREATE SCHEMA ??', [schema]);
   const connection = await db.client.acquireConnection();
@@ -83,6 +84,17 @@ it('creates, repairs, rolls back, and reapplies the selector index on an isolate
     expect(await validIndex()).toBeUndefined();
     await migration.up(scoped);
     expect(await validIndex()).toMatchObject({ indisvalid: true, indisready: true });
+
+    await migration.down(scoped);
+    for (const wrongKey of ['EXTERNAL_REF', 'external_ ref', 'external_(ref)']) {
+      await scoped.raw(`CREATE INDEX CONCURRENTLY ${INDEX}
+        ON tickets (tenant, (attributes->>'${wrongKey}'))`);
+      const before = await validIndex();
+      expect(before).toMatchObject({ indisvalid: true, indisready: true });
+      await expect(migration.up(scoped)).rejects.toThrow('different definition');
+      expect(await validIndex()).toEqual(before);
+      await scoped.raw(`DROP INDEX CONCURRENTLY ${INDEX}`);
+    }
   } finally {
     await blocker?.rollback().catch(() => undefined);
     await scoped.raw(`DROP INDEX CONCURRENTLY IF EXISTS ${INDEX}`).catch(() => undefined);
