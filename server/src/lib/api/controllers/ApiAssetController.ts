@@ -38,7 +38,7 @@ const ASSET_UPDATE = [{ resource: 'asset', action: 'update' }] as const satisfie
 const ASSET_UPDATE_RELATED_READ = [...ASSET_UPDATE, ...ASSET_READ] as const satisfies AssetChecks;
 const ASSET_DELETE = [{ resource: 'asset', action: 'delete' }] as const satisfies AssetChecks;
 const ASSET_TICKET_READ = [...ASSET_READ, { resource: 'ticket', action: 'read' }] as const satisfies AssetChecks;
-const ASSET_TICKET_LINK = [{ resource: 'asset', action: 'update' }, { resource: 'ticket', action: 'read' }] as const satisfies AssetChecks;
+const ASSET_TICKET_LINK = [{ resource: 'asset', action: 'update' }, { resource: 'ticket', action: 'update' }] as const satisfies AssetChecks;
 
 export class ApiAssetController {
   private assetService: AssetService;
@@ -47,7 +47,11 @@ export class ApiAssetController {
     this.assetService = new AssetService();
   }
 
-  private async authorize(req: NextRequest, checks: AssetChecks): Promise<{ context: ApiContext; denied: NextResponse | null }> {
+  private async authorize<T = never>(
+    req: NextRequest,
+    checks: AssetChecks,
+    resolveBeforeAuthorization?: (context: ApiContext) => Promise<T | null>,
+  ): Promise<{ context: ApiContext; denied: NextResponse | null; resolved?: T | null }> {
     const context = requireRequestContext(req);
     const pathname = new URL(req.url).pathname;
     const productCode = await getTenantProduct(context.tenant);
@@ -57,13 +61,16 @@ export class ApiAssetController {
       throw new ProductAccessError(`api_route:${pathname}`, productCode);
     }
     if (!context.user) return { context, denied: createErrorResponse('User context required', 401, 'UNAUTHORIZED') };
+    // Association-ID routes must hide missing and foreign-tenant associations
+    // before evaluating the caller's resource permissions.
+    const resolved = resolveBeforeAuthorization ? await resolveBeforeAuthorization(context) : undefined;
     const knex = await getConnection(context.tenant);
     for (const { resource, action } of checks) {
       if (!await hasPermission(context.user, resource, action, knex)) {
-        return { context, denied: createErrorResponse(`Permission denied: Cannot ${action} ${resource}`, 403, 'FORBIDDEN') };
+        return { context, denied: createErrorResponse(`Permission denied: Cannot ${action} ${resource}`, 403, 'FORBIDDEN'), resolved };
       }
     }
-    return { context, denied: null };
+    return { context, denied: null, resolved };
   }
 
   private async authorizeRecord(
@@ -289,8 +296,8 @@ export class ApiAssetController {
     const { context, denied: authDenied } = await this.authorize(req, ASSET_TICKET_LINK);
     if (authDenied) return authDenied;
 
-    // Mutating the asset's associations needs asset:update; the ticket is only
-    // referenced, so ticket:read is enough.
+    // Linking a ticket changes the ticket's related-asset association, so both
+    // the asset and ticket mutation permissions are required.
     const denied = await this.authorizeRecord(context, params.id, 'update');
     if (denied) return denied;
 
@@ -347,11 +354,14 @@ export class ApiAssetController {
    * DELETE /api/v2/assets/relationships/{relationshipId} - Delete asset relationship
    */
   async deleteRelationship(req: NextRequest, params: { relationshipId: string }): Promise<NextResponse> {
-    const { context, denied: authDenied } = await this.authorize(req, ASSET_UPDATE_RELATED_READ);
+    const { context, denied: authDenied, resolved: assetIds } = await this.authorize(
+      req,
+      ASSET_UPDATE_RELATED_READ,
+      (authorizationContext) => this.assetService.getRelationshipAssetIds(params.relationshipId, authorizationContext),
+    );
+    if (!assetIds) return createErrorResponse('Asset relationship not found', 404, 'NOT_FOUND');
     if (authDenied) return authDenied;
 
-    const assetIds = await this.assetService.getRelationshipAssetIds(params.relationshipId, context);
-    if (!assetIds) return createErrorResponse('Asset relationship not found', 404, 'NOT_FOUND');
     const targetDenied = await this.authorizeRecord(context, assetIds[0], 'update');
     if (targetDenied) return targetDenied;
     const relatedDenied = await this.authorizeRecord(context, assetIds[1], 'read');
@@ -400,11 +410,14 @@ export class ApiAssetController {
    * DELETE /api/v2/assets/documents/{associationId} - Remove document association
    */
   async removeDocumentAssociation(req: NextRequest, params: { associationId: string }): Promise<NextResponse> {
-    const { context, denied: authDenied } = await this.authorize(req, ASSET_UPDATE);
+    const { context, denied: authDenied, resolved: assetId } = await this.authorize(
+      req,
+      ASSET_UPDATE,
+      (authorizationContext) => this.assetService.getDocumentAssociationAssetId(params.associationId, authorizationContext),
+    );
+    if (!assetId) return createErrorResponse('Asset document association not found', 404, 'NOT_FOUND');
     if (authDenied) return authDenied;
 
-    const assetId = await this.assetService.getDocumentAssociationAssetId(params.associationId, context);
-    if (!assetId) return createErrorResponse('Asset document association not found', 404, 'NOT_FOUND');
     const denied = await this.authorizeRecord(context, assetId, 'update');
     if (denied) return denied;
     await this.assetService.removeDocumentAssociation(params.associationId, context);

@@ -83,6 +83,22 @@ async function createCaller(actions: string[]) {
   return { userId, apiKey: key.api_key, apiKeyId: key.api_key_id };
 }
 
+async function grantPermission(caller: { userId: string }, resource: string, action: string) {
+  const assignment = await table('user_roles').where({ user_id: caller.userId }).first('role_id');
+  if (!assignment) throw new Error('Caller role is required to grant an integration-test permission');
+  let permission = await table('permissions').where({ resource, action }).first('permission_id');
+  if (!permission) {
+    const permissionId = randomUUID();
+    [permission] = await table('permissions')
+      .insert({ tenant, permission_id: permissionId, resource, action, msp: true, client: false })
+      .returning('permission_id');
+  }
+  await table('role_permissions')
+    .insert({ tenant, role_id: assignment.role_id, permission_id: permission.permission_id })
+    .onConflict(['tenant', 'role_id', 'permission_id'])
+    .ignore();
+}
+
 async function grantBundle(caller: { userId: string; apiKeyId: string }, clientIds: string[], actions = ['read']) {
   const bundle = await createAuthorizationBundle(connection.db!, { tenant, name: `Asset scope ${randomUUID()}`, actorUserId: caller.userId });
   for (const action of actions) {
@@ -197,6 +213,34 @@ describe('asset API-key authorization through public routes and migrated Postgre
     expect((await invoke(assetItemDelete, request(deleter, `/api/v1/assets/${assetId}`, 'DELETE'), { id: assetId })).status).toBe(204);
   }, 180_000);
 
+  it('requires ticket:update for ticket links even when the API key can read tickets', async () => {
+    const { a } = await clients();
+    const assetId = await createAsset(a, 'Ticket authorization target');
+    const caller = await createCaller(['update']);
+    await grantPermission(caller, 'ticket', 'read');
+
+    const ticketId = randomUUID();
+    const linked = await invoke(
+      (await import('../../app/api/v1/assets/[id]/tickets/route')).POST,
+      request(caller, `/api/v1/assets/${assetId}/tickets`, 'POST', { ticket_id: ticketId }),
+      { id: assetId },
+    );
+    expect(linked.status).toBe(403);
+    expect(await table('asset_associations').where({ asset_id: assetId, entity_id: ticketId, entity_type: 'ticket' })).toHaveLength(0);
+
+    await table('asset_associations').insert({
+      tenant, asset_id: assetId, entity_id: ticketId, entity_type: 'ticket',
+      relationship_type: 'affected', created_by: caller.userId,
+    });
+    const unlinked = await invoke(
+      (await import('../../app/api/v1/assets/[id]/tickets/[ticketId]/route')).DELETE,
+      request(caller, `/api/v1/assets/${assetId}/tickets/${ticketId}`, 'DELETE'),
+      { id: assetId, ticketId },
+    );
+    expect(unlinked.status).toBe(403);
+    expect(await table('asset_associations').where({ asset_id: assetId, entity_id: ticketId, entity_type: 'ticket' })).toHaveLength(1);
+  }, 180_000);
+
   it('requires coarse permissions across every public ApiAssetController action, including document and maintenance mutations', async () => {
     const caller = await createCaller([]);
     const id = randomUUID();
@@ -204,7 +248,7 @@ describe('asset API-key authorization through public routes and migrated Postgre
     const relationshipId = `${id}:${randomUUID()}`;
     const scheduleId = randomUUID();
     const associationId = randomUUID();
-    const routeCases: Array<[string, string, Function, Record<string, string>?]> = [];
+    const routeCases: Array<[string, string, Function, Record<string, string>?, number?]> = [];
     const [collection, item, relationships, assignments, tickets, docs, documentAssociation, maintenance, maintenanceRecord, maintenanceSchedule, history, relationship, assetExport, search, stats, bulkUpdateRoute, bulkStatusRoute, assetStatuses] = await Promise.all([
       import('../../app/api/v1/assets/route'),
       import('../../app/api/v1/assets/[id]/route'),
@@ -233,7 +277,7 @@ describe('asset API-key authorization through public routes and migrated Postgre
       ['DELETE', `/api/v1/assets/${id}`, item.DELETE, { id }],
       ['GET', `/api/v1/assets/${id}/relationships`, relationships.GET, { id }],
       ['POST', `/api/v1/assets/${id}/relationships`, relationships.POST, { id }],
-      ['DELETE', `/api/v1/assets/relationships/${relationshipId}`, relationship.DELETE, { relationshipId }],
+      ['DELETE', `/api/v1/assets/relationships/${relationshipId}`, relationship.DELETE, { relationshipId }, 404],
       ['GET', `/api/v1/assets/${id}/assignments`, assignments.GET, { id }],
       ['GET', '/api/v1/asset-statuses', assetStatuses.GET],
       ['GET', `/api/v1/assets/${id}/tickets`, tickets.GET, { id }],
@@ -241,7 +285,7 @@ describe('asset API-key authorization through public routes and migrated Postgre
       ['DELETE', `/api/v1/assets/${id}/tickets/${ticketId}`, (await import('../../app/api/v1/assets/[id]/tickets/[ticketId]/route')).DELETE, { id, ticketId }],
       ['GET', `/api/v1/assets/${id}/documents`, docs.GET, { id }],
       ['POST', `/api/v1/assets/${id}/documents`, docs.POST, { id }],
-      ['DELETE', `/api/v1/assets/documents/${associationId}`, documentAssociation.DELETE, { associationId }],
+      ['DELETE', `/api/v1/assets/documents/${associationId}`, documentAssociation.DELETE, { associationId }, 404],
       ['GET', `/api/v1/assets/${id}/maintenance`, maintenance.GET, { id }],
       ['POST', `/api/v1/assets/${id}/maintenance`, maintenance.POST, { id }],
       ['PUT', `/api/v1/assets/maintenance/${scheduleId}`, maintenanceSchedule.PUT, { scheduleId }],
@@ -255,9 +299,9 @@ describe('asset API-key authorization through public routes and migrated Postgre
       ['PUT', '/api/v1/assets/bulk-status', bulkStatusRoute.PUT],
     );
 
-    for (const [method, path, handler, params] of routeCases) {
+    for (const [method, path, handler, params, expectedStatus = 403] of routeCases) {
       const response = await invoke(handler, request(caller, path, method, method === 'GET' || method === 'DELETE' ? undefined : {}), params);
-      expect(response.status, `${method} ${path} should require its coarse permission`).toBe(403);
+      expect(response.status, `${method} ${path} should hide missing association IDs before checking permissions`).toBe(expectedStatus);
     }
   }, 180_000);
 
