@@ -375,6 +375,39 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
 
 type TicketAuthorizationContext = Awaited<ReturnType<typeof createTicketAuthorizationContext>>;
 
+/** Per-ticket kernel decisions for callers that forward ticket data outside the list action. */
+export const authorizeTicketIdsWithRedactions = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[]
+): Promise<Array<{ ticketId: string; redactedFields: string[] }> | TicketActionError> => {
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      return { permissionError: 'Permission denied: Cannot view tickets' } as TicketActionError;
+    }
+    const requested = Array.from(new Set(ticketIds.filter((id) => typeof id === 'string' && id.length > 0)));
+    if (!requested.length) return [];
+    const context = await createTicketAuthorizationContext(trx, tenant, user as IUserWithRoles);
+    const rows = await tenantScopedTable(trx, 'tickets', tenant).whereIn('ticket_id', requested).select(
+      'ticket_id', 'assigned_to', 'entered_by', 'client_id', 'board_id', 'assigned_team_id',
+      'contact_name_id', 'billing_profile_id', 'attributes'
+    );
+    const decisions = await Promise.all(rows.map((ticket: any) => context.authorizationKernel.authorizeResource({
+      subject: context.authorizationSubject,
+      resource: { type: 'ticket', action: 'read', id: ticket.ticket_id },
+      record: toTicketAuthorizationRecord(ticket),
+      selectedBoardIds: context.selectedBoardIds,
+      contactVisibility: context.contactVisibility,
+      requestCache: context.requestCache,
+      knex: trx,
+    })));
+    const byId = new Map(rows.flatMap((row: any, index: number) => decisions[index]?.allowed
+      ? [[row.ticket_id, decisions[index].redactedFields ?? []] as const] : []));
+    return requested.flatMap((id) => byId.has(id) ? [{ ticketId: id, redactedFields: byId.get(id)! }] : []);
+  });
+});
+
 function applyTicketReadAuthorizationSql(
   query: TenantScopedQuery,
   trx: Knex.Transaction,
