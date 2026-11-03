@@ -361,7 +361,8 @@
   },
   "errors": {
     "notSignedIn": "Unauthorized. Sign in to manage licensing.",
-    "accountManagementRead": "Permission denied: account_management read required"
+    "accountManagementRead": "Permission denied: account_management read required",
+    "accountManagementUpdate": "Permission denied: account_management update required"
   },
   "coManaged": {
     "acceptance": {

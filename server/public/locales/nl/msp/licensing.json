@@ -361,7 +361,8 @@
   },
   "errors": {
     "notSignedIn": "Niet geautoriseerd. Meld u aan om licenties te beheren.",
-    "accountManagementRead": "Toestemming geweigerd: leesrechten voor accountbeheer vereist"
+    "accountManagementRead": "Toestemming geweigerd: leesrechten voor accountbeheer vereist",
+    "accountManagementUpdate": "Toestemming geweigerd: updaterechten voor accountbeheer vereist"
   },
   "coManaged": {
     "acceptance": {

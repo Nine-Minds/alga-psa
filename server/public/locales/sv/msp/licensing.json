@@ -361,7 +361,8 @@
   },
   "errors": {
     "notSignedIn": "Inte inloggad. Logga in för att hantera licenser.",
-    "accountManagementRead": "Åtkomst nekad: läsbehörighet för account_management krävs"
+    "accountManagementRead": "Åtkomst nekad: läsbehörighet för account_management krävs",
+    "accountManagementUpdate": "Åtkomst nekad: uppdateringsbehörighet för account_management krävs"
   },
   "coManaged": {
     "acceptance": {

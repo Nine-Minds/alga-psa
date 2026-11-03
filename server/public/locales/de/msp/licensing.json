@@ -361,7 +361,8 @@
   },
   "errors": {
     "notSignedIn": "Nicht autorisiert. Melden Sie sich an, um die Lizenzierung zu verwalten.",
-    "accountManagementRead": "Berechtigung verweigert: Leseberechtigung für die Kontoverwaltung erforderlich"
+    "accountManagementRead": "Berechtigung verweigert: Leseberechtigung für die Kontoverwaltung erforderlich",
+    "accountManagementUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für die Kontoverwaltung erforderlich"
   },
   "coManaged": {
     "acceptance": {

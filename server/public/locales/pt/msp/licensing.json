@@ -361,7 +361,8 @@
   },
   "errors": {
     "notSignedIn": "Não autorizado. Faça login para gerenciar o licenciamento.",
-    "accountManagementRead": "Permissão negada: é necessária permissão de leitura do gerenciamento de contas"
+    "accountManagementRead": "Permissão negada: é necessária permissão de leitura do gerenciamento de contas",
+    "accountManagementUpdate": "Permissão negada: é necessária permissão de atualização do gerenciamento de contas"
   },
   "coManaged": {
     "acceptance": {

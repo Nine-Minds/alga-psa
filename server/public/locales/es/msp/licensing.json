@@ -361,7 +361,8 @@
   },
   "errors": {
     "notSignedIn": "No autorizado. Inicie sesión para gestionar las licencias.",
-    "accountManagementRead": "Permiso denegado: se requiere permiso de lectura de la gestión de cuentas"
+    "accountManagementRead": "Permiso denegado: se requiere permiso de lectura de la gestión de cuentas",
+    "accountManagementUpdate": "Permiso denegado: se requiere permiso de actualización de la gestión de cuentas"
   },
   "coManaged": {
     "acceptance": {

@@ -361,7 +361,8 @@
   },
   "errors": {
     "notSignedIn": "Non autorizzato. Accedi per gestire le licenze.",
-    "accountManagementRead": "Autorizzazione negata: è richiesta l'autorizzazione di lettura per la gestione degli account"
+    "accountManagementRead": "Autorizzazione negata: è richiesta l'autorizzazione di lettura per la gestione degli account",
+    "accountManagementUpdate": "Autorizzazione negata: è richiesta l'autorizzazione di aggiornamento per la gestione degli account"
   },
   "coManaged": {
     "acceptance": {

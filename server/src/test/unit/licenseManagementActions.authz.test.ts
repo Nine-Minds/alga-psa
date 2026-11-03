@@ -1,4 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { isActionPermissionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+
+const originalLicenseServiceUrl = process.env.ALGA_LICENSE_SERVICE_URL;
 
 const state = vi.hoisted(() => ({
   user: { user_id: 'user-1', tenant: 'tenant-1' } as any,
@@ -24,10 +27,6 @@ const verifyLicense = vi.fn(() => ({ valid: true, claims: { exp: Math.floor(Date
 
 vi.mock('@alga-psa/auth', () => ({ getCurrentUser, localizeActionError: (error: unknown) => error }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission }));
-vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
-  isActionPermissionError: (value: any) => value?.type === 'permission_error',
-  permissionError: (message: string, key: string) => ({ type: 'permission_error', message, permissionError: key }),
-}));
 vi.mock('node:crypto', () => ({ default: { createHash: () => ({ update: () => ({ digest: () => '12345678' }) }) } }));
 vi.mock('@alga-psa/licensing', () => ({
   getLicenseStateRow,
@@ -60,6 +59,15 @@ describe('license management action authorization', () => {
     process.env.ALGA_LICENSE_SERVICE_URL = 'https://license.example';
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    if (originalLicenseServiceUrl === undefined) {
+      delete process.env.ALGA_LICENSE_SERVICE_URL;
+    } else {
+      process.env.ALGA_LICENSE_SERVICE_URL = originalLicenseServiceUrl;
+    }
+  });
+
   it('lets a read-only account manager retrieve appliance license status', async () => {
     const { getLicenseStatus } = await import('@/lib/actions/licenseManagementActions');
 
@@ -82,7 +90,7 @@ describe('license management action authorization', () => {
       upsertLicenseState.mockClear();
       vi.mocked(fetch).mockClear();
       const result = await invoke();
-      expect(result).toMatchObject({ success: false, error: 'msp/licensing:errors.accountManagementUpdate' });
+      expect(result).toEqual({ success: false, error: 'Permission denied: account_management update required' });
       expect(hasPermission).toHaveBeenLastCalledWith(state.user, 'account_management', 'update');
       expect(getLicenseStateRow).not.toHaveBeenCalled();
       expect(upsertLicenseState).not.toHaveBeenCalled();
@@ -116,8 +124,13 @@ describe('license management action authorization', () => {
     state.user = null;
     const actions = await import('@/lib/actions/licenseManagementActions');
 
-    expect(await actions.getLicenseStatus()).toMatchObject({ type: 'permission_error' });
-    expect(await actions.startTrial()).toMatchObject({ success: false, error: 'msp/licensing:errors.notSignedIn' });
+    const statusResult = await actions.getLicenseStatus();
+    expect(isActionPermissionError(statusResult)).toBe(true);
+    expect(statusResult).toEqual(permissionError(
+      'Unauthorized. Sign in to manage licensing.',
+      'msp/licensing:errors.notSignedIn',
+    ));
+    expect(await actions.startTrial()).toEqual({ success: false, error: 'Unauthorized. Sign in to manage licensing.' });
     expect(getLicenseStateRow).not.toHaveBeenCalled();
     expect(upsertLicenseState).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();

@@ -361,7 +361,8 @@
   },
   "errors": {
     "notSignedIn": "Brak autoryzacji. Zaloguj się, aby zarządzać licencjami.",
-    "accountManagementRead": "Odmowa uprawnień: wymagane uprawnienie odczytu zarządzania kontami"
+    "accountManagementRead": "Odmowa uprawnień: wymagane uprawnienie odczytu zarządzania kontami",
+    "accountManagementUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji zarządzania kontami"
   },
   "coManaged": {
     "acceptance": {
