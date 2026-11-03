@@ -196,7 +196,7 @@ export function generateOccurrences(
           throw new RecurrencePeriodLimitError();
         }
         recurrenceWork.remaining--;
-      });
+      }, rangeStart);
     } catch (error) {
       if (!(error instanceof RecurrencePeriodLimitError)) throw error;
     }

@@ -16,6 +16,7 @@ const gate = vi.hoisted(() => ({
   hooks: [] as Array<() => Promise<void>>,
   admissionCalls: 0,
   denyKernel: false,
+  canUpdateOthers: true,
   model: { create: [] as any[], update: [] as any[], delete: [] as any[] },
 }));
 
@@ -38,7 +39,7 @@ vi.mock('../localAuthentication', () => ({
   snapshotCoManagedAuthenticatedActor: (actor: any) => ({ ...actor }),
   lockCoManagedLocalAuthentication: async (_trx: any, actor: any) => ({ actor, subject: { tenant: actor.tenant, userId: actor.userId, teamIds: [], roleIds: [] }, assertCurrent: async () => undefined }),
 }));
-vi.mock('../localPermission', () => ({ hasCoManagedLocalPermission: async () => true }));
+vi.mock('../localPermission', () => ({ hasCoManagedLocalPermission: async (_trx: any, _actor: any, _resource: any, action: string) => action !== 'update' || gate.canUpdateOthers }));
 vi.mock('@alga-psa/authorization', () => {
   const decision = () => gate.denyKernel ? { allowed: false, redactedFields: [], scope: { constraints: [] } } : { allowed: true, redactedFields: [], scope: { constraints: [] } };
   return {
@@ -112,7 +113,7 @@ function seedEntry(overrides: Record<string, any> = {}, assignees = [USER]) {
 beforeEach(() => {
   ({ store, db } = createFake());
   (globalThis as any).__scheduleStore = store;
-  published = []; gate.hooks.length = 0; gate.admissionCalls = 0; gate.denyKernel = false;
+  published = []; gate.hooks.length = 0; gate.admissionCalls = 0; gate.denyKernel = false; gate.canUpdateOthers = true;
   gate.model = { create: [], update: [], delete: [] };
 });
 
@@ -154,6 +155,15 @@ describe('native calendar read work bounds', () => {
     expect(transaction).not.toHaveBeenCalled();
   });
 
+  it('rejects a malformed continuation cursor before querying', async () => {
+    seedWorkspace();
+    const transaction = vi.spyOn(db, 'transaction');
+    await expect(readCoManagedNativeSchedules(db, TENANT, async () => calendarActor, { calendar: {
+      start: '2025-01-01T00:00:00.000Z', end: '2025-01-02T00:00:00.000Z', afterEntryId: 'not-a-uuid',
+    } })).rejects.toBeInstanceOf(CoManagedSharedWorkError);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
   it('accepts the exact shared window boundary and rejects one millisecond beyond it', async () => {
     seedWorkspace();
     seedEntry();
@@ -166,11 +176,40 @@ describe('native calendar read work bounds', () => {
     expect(transaction).not.toHaveBeenCalled();
   });
 
-  it('refuses candidate sets beyond the database loading cap', async () => {
+  it('returns a bounded page and keyset continuation for candidate sets beyond the loading cap', async () => {
     seedWorkspace();
     for (let n = 0; n < 501; n++) seedEntry({ entry_id: id(1000 + n), scheduled_start: new Date('2025-01-01T09:00:00.000Z'), scheduled_end: new Date('2025-01-01T10:00:00.000Z') });
-    await expect(readWindow('2025-01-01T00:00:00.000Z', '2025-01-02T00:00:00.000Z'))
-      .rejects.toBeInstanceOf(CoManagedSharedWorkError);
+    const page = await readWindow('2025-01-01T00:00:00.000Z', '2025-01-02T00:00:00.000Z');
+    expect(page).toMatchObject({ handled: true, hasMore: true, nextCursor: id(1499) });
+    expect((page as any).entries).toHaveLength(500);
+    const next = await readCoManagedNativeSchedules(db, TENANT, async () => calendarActor, { calendar: {
+      start: '2025-01-01T00:00:00.000Z', end: '2025-01-02T00:00:00.000Z', afterEntryId: (page as any).nextCursor,
+    } });
+    expect(next).toMatchObject({ handled: true, hasMore: false, nextCursor: null });
+    expect((next as any).entries).toHaveLength(1);
+  });
+
+  it('applies list-mode date bounds before selecting the bounded candidate page', async () => {
+    seedWorkspace();
+    for (let n = 0; n < 501; n++) seedEntry({ entry_id: id(2000 + n), scheduled_start: new Date('2025-01-01T09:00:00.000Z'), scheduled_end: new Date('2025-01-01T10:00:00.000Z') });
+    seedEntry({ entry_id: id(3000), scheduled_start: new Date('2025-01-02T09:00:00.000Z'), scheduled_end: new Date('2025-01-02T10:00:00.000Z') });
+    const result = await readCoManagedNativeSchedules(db, TENANT, async () => calendarActor, {
+      start: '2025-01-02T00:00:00.000Z', end: '2025-01-03T00:00:00.000Z',
+    });
+    expect(result).toMatchObject({ handled: true, hasMore: false });
+    expect((result as any).entries.map((entry: any) => entry.entry_id)).toEqual([id(3000)]);
+  });
+
+  it('continues the same calendar query after a page filtered to no authorized entries', async () => {
+    seedWorkspace();
+    gate.canUpdateOthers = false;
+    for (let n = 0; n < 501; n++) seedEntry({ entry_id: id(4000 + n), scheduled_start: new Date('2025-01-01T09:00:00.000Z'), scheduled_end: new Date('2025-01-01T10:00:00.000Z') }, [TECH]);
+    const first = await readWindow('2025-01-01T00:00:00.000Z', '2025-01-02T00:00:00.000Z');
+    expect(first).toMatchObject({ handled: true, entries: [], hasMore: true });
+    const second = await readCoManagedNativeSchedules(db, TENANT, async () => calendarActor, { calendar: {
+      start: '2025-01-01T00:00:00.000Z', end: '2025-01-02T00:00:00.000Z', afterEntryId: (first as any).nextCursor,
+    } });
+    expect(second).toMatchObject({ handled: true, entries: [], hasMore: false, nextCursor: null });
   });
 
   it('rejects aggregate occurrence exhaustion across otherwise bounded daily series', async () => {
@@ -204,6 +243,28 @@ describe('native calendar read work bounds', () => {
     const result = await readWindow('2025-01-02T00:00:00.000Z', '2025-01-04T00:00:00.000Z');
     expect(result).toMatchObject({ handled: true });
     expect((result as any).entries.map((entry: any) => entry.scheduled_start.slice(0, 10))).toEqual(['2025-01-01', '2025-01-02', '2025-01-03']);
+  });
+
+  it('reads an old daily COUNT master for a recent month', async () => {
+    seedWorkspace();
+    const start = new Date('2018-01-01T09:00:00.000Z');
+    seedEntry({ is_recurring: true, scheduled_start: start, scheduled_end: new Date(start.getTime() + 30 * 60 * 1000),
+      recurrence_pattern: { frequency: 'daily', interval: 1, startDate: '2018-01-01T00:00:00.000Z', count: 100000 } });
+    const result = await readWindow('2026-11-01T00:00:00.000Z', '2026-12-01T00:00:00.000Z');
+    expect((result as any).entries.map((entry: any) => entry.scheduled_start.slice(0, 10))).toEqual(
+      Array.from({ length: 30 }, (_, day) => `2026-11-${String(day + 1).padStart(2, '0')}`));
+  });
+
+  it('reads four old weekly series under the shared request work budget', async () => {
+    seedWorkspace();
+    for (let n = 0; n < 4; n++) {
+      const start = new Date(Date.UTC(2020, 0, 6 + n, 9));
+      seedEntry({ entry_id: id(5000 + n), is_recurring: true, scheduled_start: start,
+        scheduled_end: new Date(start.getTime() + 30 * 60 * 1000),
+        recurrence_pattern: { frequency: 'weekly', interval: 1, startDate: new Date(Date.UTC(2020, 0, 6 + n)).toISOString(), daysOfWeek: [(start.getUTCDay() + 6) % 7] } });
+    }
+    const result = await readWindow('2026-11-01T00:00:00.000Z', '2026-12-01T00:00:00.000Z');
+    expect((result as any).entries.length).toBeGreaterThan(12);
   });
 });
 

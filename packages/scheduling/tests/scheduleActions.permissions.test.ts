@@ -43,6 +43,8 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: hasPermissionMock,
 }));
 
+vi.mock('@alga-psa/core/capability', () => ({ serves: async () => ({ served: true }) }));
+
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: publishEventMock,
   publishWorkflowEvent: publishWorkflowEventMock,
@@ -137,6 +139,29 @@ describe('schedule entry mutation permissions', () => {
       await performDelete({}, tenant);
       return { deleted: true, canDelete: true, dependencies: [], alternatives: [] };
     });
+  });
+
+  it('forwards calendar continuation through the shared provider and returns its page metadata', async () => {
+    const { scheduleSeam } = await import('../src/lib/sharedWorkScheduling');
+    const { getScheduleEntries } = await import('../src/actions/scheduleActions');
+    const readSchedules = vi.fn(async (_db: unknown, _tenant: string, _identify: unknown, options: any) => ({
+      handled: true as const, entries: [], hasMore: options.calendar.afterEntryId == null, nextCursor: options.calendar.afterEntryId == null ? '00000000-0000-4000-8000-000000000500' : null,
+    }));
+    scheduleSeam.reset();
+    scheduleSeam.register(() => ({ readSchedules } as any));
+    try {
+      const start = new Date('2026-11-01T00:00:00Z'), end = new Date('2026-11-30T23:59:59Z');
+      const first = await getScheduleEntries(start, end, ['tech-1'], ['calendar-1']);
+      expect(first).toMatchObject({ success: true, entries: [], hasMore: true, nextCursor: '00000000-0000-4000-8000-000000000500' });
+      const next = await getScheduleEntries(start, end, ['tech-1'], ['calendar-1'], first.success ? first.nextCursor ?? undefined : undefined);
+      expect(next).toMatchObject({ success: true, entries: [], hasMore: false, nextCursor: null });
+      expect(readSchedules.mock.calls.map(call => call[3].calendar)).toEqual([
+        { start: start.toISOString(), end: end.toISOString(), technicianIds: ['tech-1'], afterEntryId: undefined },
+        { start: start.toISOString(), end: end.toISOString(), technicianIds: ['tech-1'], afterEntryId: '00000000-0000-4000-8000-000000000500' },
+      ]);
+    } finally {
+      scheduleSeam.reset();
+    }
   });
 
   it.each([undefined, ['user-1']])('denies own-entry update without schedule read permission (assignment %j)', async (assigned_user_ids) => {

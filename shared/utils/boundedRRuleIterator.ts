@@ -55,13 +55,64 @@ interface ResultSink {
 export function iterateRRuleBounded(
   options: ParsedOptions,
   result: ResultSink,
-  visitPeriod: () => void
+  visitPeriod: () => void,
+  seekDate?: Date
 ): Date[] {
   const { dtstart, freq, interval, until, bysetpos } = options;
   let count = options.count;
   if (count === 0 || interval === 0) return result.getValue();
 
   const counterDate = DateTime.fromDate(dtstart);
+  // Daily and weekly rules can be sought while retaining COUNT when the
+  // occurrence ordinal has a closed form. Rules with additional calendar
+  // filters stay on the bounded iterator because counting those matches needs
+  // the full filter semantics.
+  if (seekDate && (freq === Frequency.DAILY || freq === Frequency.WEEKLY)) {
+    const target = DateTime.fromDate(seekDate);
+    const utcMidnight = (year: number, month: number, day: number) => {
+      const date = new Date(0);
+      date.setUTCFullYear(year, month - 1, day);
+      date.setUTCHours(0, 0, 0, 0);
+      return date.getTime();
+    };
+    const hasCalendarFilters = [options.bymonth, options.bymonthday, options.bynmonthday, options.byweekno,
+      options.byyearday, options.byeaster].some(value => Array.isArray(value) ? value.length > 0 : value != null);
+    const weekdays = Array.isArray(options.byweekday) ? options.byweekday : options.byweekday == null ? [] : [options.byweekday];
+    const dailyCountSafe = freq === Frequency.DAILY && !hasCalendarFilters &&
+      weekdays.length === 0;
+    const weeklyCountSafe = freq === Frequency.WEEKLY && !hasCalendarFilters &&
+      (options.bysetpos == null || (Array.isArray(options.bysetpos) && options.bysetpos.length === 0));
+    if (freq === Frequency.DAILY && (!count || dailyCountSafe)) {
+      const days = Math.floor((utcMidnight(target.year, target.month, target.day) - utcMidnight(counterDate.year, counterDate.month, counterDate.day)) / 86400000);
+      const periods = Math.max(0, Math.floor(days / interval));
+      counterDate.addDaily(periods * interval);
+      if (count && dailyCountSafe) count = Math.max(0, count - periods);
+    } else if (freq === Frequency.WEEKLY && (!count || weeklyCountSafe)) {
+      const weekStart = (value: DateTime) => {
+        const back = ((value.getWeekday() - Number(options.wkst)) % 7 + 7) % 7;
+        return utcMidnight(value.year, value.month, value.day - back);
+      };
+      const periodDays = interval * 7;
+      const periods = Math.max(0, Math.floor((weekStart(target) - weekStart(counterDate)) / (periodDays * 86400000)));
+      if (count && weeklyCountSafe) {
+        const activeWeekdays = weekdays.length
+          ? weekdays
+          : [counterDate.getWeekday()];
+        const firstPeriodBeforeStart = activeWeekdays.filter(day => {
+          const firstWeekStart = weekStart(counterDate);
+          const candidate = firstWeekStart + (((day - Number(options.wkst)) % 7 + 7) % 7) * 86400000;
+          return candidate < utcMidnight(counterDate.year, counterDate.month, counterDate.day);
+        }).length;
+        const skippedOccurrences = periods > 0 ? periods * activeWeekdays.length - firstPeriodBeforeStart : 0;
+        count = Math.max(0, count - skippedOccurrences);
+      }
+      if (periods > 0) {
+        const sought = new Date(weekStart(counterDate) + periods * periodDays * 86400000);
+        counterDate.year = sought.getUTCFullYear(); counterDate.month = sought.getUTCMonth() + 1; counterDate.day = sought.getUTCDate();
+      }
+    }
+    if (count === 0) return result.getValue();
+  }
   const ii = new Iterinfo(options);
   ii.rebuild(counterDate.year, counterDate.month);
   let timeset = makeTimeset(ii, counterDate, options);

@@ -105,10 +105,12 @@ export function scheduleView(row: any, assignments: string[], actor: CoManagedAu
  * become a membership oracle. Calendar occurrences inherit actual master and
  * linked-source authority; raw recurrence data stays inside the transaction. */
 export async function readCoManagedNativeSchedules(db: Knex, tenant: string, identify: () => Promise<CoManagedAuthenticatedActor>,
-  options: { id?: string; start?: string; end?: string; userId?: string; calendar?: { start: string; end: string; technicianIds?: string[] } } = {}
-): Promise<{ handled: false } | { handled: true; entries: any[] }> {
+  options: { id?: string; start?: string; end?: string; userId?: string; afterEntryId?: string; calendar?: { start: string; end: string; technicianIds?: string[]; afterEntryId?: string } } = {}
+): Promise<{ handled: false } | { handled: true; entries: any[]; hasMore: boolean; nextCursor: string | null }> {
   options = { ...options, calendar: options.calendar ? { ...options.calendar, technicianIds: options.calendar.technicianIds ? [...options.calendar.technicianIds] : undefined } : undefined };
-  if (!isCoManagedUuid(tenant) || (options.id && !isCoManagedUuid(options.id)) || (options.userId && !isCoManagedUuid(options.userId))) throw new CoManagedSharedWorkError();
+  if (!isCoManagedUuid(tenant) || (options.id && !isCoManagedUuid(options.id)) || (options.userId && !isCoManagedUuid(options.userId)) ||
+    (options.afterEntryId !== undefined && !isCoManagedUuid(options.afterEntryId)) ||
+    (options.calendar?.afterEntryId !== undefined && !isCoManagedUuid(options.calendar.afterEntryId))) throw new CoManagedSharedWorkError();
   const start = options.start ? new Date(options.start).getTime() : null, end = options.end ? new Date(options.end).getTime() : null;
   if ((start !== null && !Number.isFinite(start)) || (end !== null && !Number.isFinite(end))) throw new CoManagedSharedWorkError();
   const calendarStart = options.calendar ? Date.parse(options.calendar.start) : null, calendarEnd = options.calendar ? Date.parse(options.calendar.end) : null;
@@ -125,8 +127,21 @@ export async function readCoManagedNativeSchedules(db: Knex, tenant: string, ide
     if (options.id) query.where('entry_id', options.id);
     if (options.calendar) query.whereNull('original_entry_id').where('scheduled_start', '<', new Date(calendarEnd!))
       .where(query => query.where('is_recurring', true).orWhere('scheduled_end', '>', new Date(calendarStart!)));
+    // The list reader accepts optional caller bounds too. Apply them before
+    // the bounded candidate page, while keeping masters eligible if their
+    // recurrence can overlap the requested interval.
+    if (!options.calendar && (start !== null || end !== null)) {
+      if (end !== null) query.where('scheduled_start', '<=', new Date(end));
+      query.where(builder => builder.where('is_recurring', true).orWhere(regular => {
+        if (start !== null) regular.where('scheduled_start', '>=', new Date(start));
+        if (end !== null) regular.where('scheduled_end', '<=', new Date(end));
+      }));
+    }
+    const afterEntryId = options.calendar?.afterEntryId ?? options.afterEntryId;
+    if (afterEntryId) query.where('entry_id', '>', afterEntryId);
     const hints = await query.limit(MAX_SCHEDULE_CANDIDATES + 1).select('entry_id', 'work_item_id', 'work_item_type'), entries: any[] = [];
-    if (hints.length > MAX_SCHEDULE_CANDIDATES) throw new CoManagedScheduleLimitError();
+    const hasMore = hints.length > MAX_SCHEDULE_CANDIDATES;
+    const pageHints = hints.slice(0, MAX_SCHEDULE_CANDIDATES);
     let holidays: any[] | undefined, projectedCount = 0;
     const recurrenceWork = { remaining: MAX_SCHEDULE_RESULTS };
     const calendarRows = async (row: any) => {
@@ -153,7 +168,7 @@ export async function readCoManagedNativeSchedules(db: Knex, tenant: string, ide
         scheduled_start: occurrence, scheduled_end: new Date(occurrence.getTime() + duration), recurrence_pattern: pattern,
       }));
     };
-    for (const hint of hints) {
+    for (const hint of pageHints) {
       try {
         const source = await retainScheduleSource(trx, actor, credential.subject, hint);
         const row = await owner.table('schedule_entries').where('entry_id', hint.entry_id).forShare().first();
@@ -193,6 +208,6 @@ export async function readCoManagedNativeSchedules(db: Knex, tenant: string, ide
     }
     await credential.assertCurrent();
     entries.sort((a, b) => a.scheduled_start.localeCompare(b.scheduled_start) || a.entry_id.localeCompare(b.entry_id));
-    return { handled: true, entries };
+    return { handled: true, entries, hasMore, nextCursor: hasMore ? pageHints[pageHints.length - 1]?.entry_id ?? null : null };
   });
 }

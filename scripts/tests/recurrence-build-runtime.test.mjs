@@ -30,11 +30,12 @@ test('built recurrence utility bounds periods with no matching occurrences', () 
   assert.equal(workBudget.remaining, 0);
 });
 
-test('built recurrence utility bounds historical traversal for a narrow far-future window', () => {
+test('built recurrence utility seeks historical daily series within the work budget', () => {
   const workBudget = { remaining: 12 };
   const endless = { ...entry, recurrence_pattern: { ...entry.recurrence_pattern, count: undefined } };
-  assert.throws(() => generateOccurrences(endless, new Date('9999-01-01'), new Date('9999-01-02'), {
+  const dates = generateOccurrences(endless, new Date('9999-01-01'), new Date('9999-01-02'), {
     workBudget,
-  }), RecurrenceOccurrenceLimitError);
-  assert.equal(workBudget.remaining, 0);
+  });
+  assert.ok(dates.length > 0);
+  assert.ok(workBudget.remaining > 0);
 });

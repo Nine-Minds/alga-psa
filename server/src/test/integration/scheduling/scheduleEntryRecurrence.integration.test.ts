@@ -85,6 +85,19 @@ describe('Schedule entry recurrence integration', () => {
   // ── getAll: virtual recurring instances ──────────────────────────────────
 
   describe('getAll() with recurring entries', () => {
+    it('reads an old daily COUNT master in a recent month within the bounded recurrence path', async () => {
+      await createRecurringEntry({
+        scheduled_start: new Date('2018-01-01T09:00:00Z'),
+        scheduled_end: new Date('2018-01-01T09:30:00Z'),
+        recurrence_pattern: JSON.stringify({ frequency: 'daily', interval: 1, startDate: '2018-01-01T00:00:00.000Z', count: 100000 }),
+      });
+      const entries = await ScheduleEntry.getAll(ctx.db, ctx.tenantId,
+        new Date('2026-11-01T00:00:00Z'), new Date('2026-11-30T23:59:59Z'));
+      const virtuals = entries.filter(entry => entry.original_entry_id);
+      expect(virtuals.map(entry => new Date(entry.scheduled_start).toISOString().slice(0, 10))).toEqual(
+        Array.from({ length: 30 }, (_, day) => `2026-11-${String(day + 1).padStart(2, '0')}`));
+    });
+
     it('returns virtual instances for a daily recurring entry within the date range', async () => {
       await createRecurringEntry();
 

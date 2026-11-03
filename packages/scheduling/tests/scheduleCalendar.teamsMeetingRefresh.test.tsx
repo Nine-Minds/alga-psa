@@ -423,6 +423,19 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
     vi.clearAllMocks();
   });
 
+  it('continues an empty authorization-filtered page with the same calendar filters and cursor', async () => {
+    getScheduleEntries
+      .mockResolvedValueOnce({ success: true, entries: [], hasMore: true, nextCursor: 'cursor-500' })
+      .mockResolvedValueOnce({ success: true, entries: [], hasMore: false, nextCursor: null });
+    render(<ScheduleCalendar />);
+    const loadMore = await screen.findByRole('button', { name: 'Load more schedules' });
+    fireEvent.click(loadMore);
+    await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(2));
+    expect(getScheduleEntries.mock.calls[1].slice(0, 4)).toEqual(getScheduleEntries.mock.calls[0].slice(0, 4));
+    expect(getScheduleEntries.mock.calls[1][4]).toBe('cursor-500');
+    expect(screen.queryByRole('button', { name: 'Load more schedules' })).toBeNull();
+  });
+
   it.each(['save', 'resize', 'drop'] as const)('surfaces a provider warning after a successful local %s without reverting it', async (gesture) => {
     const warning = 'Entry moved, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.';
     const entry = baseEntry({ entry_id: 'entry-warning', notes: `Join Teams Meeting: ${JOIN_URL}` });
