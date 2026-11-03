@@ -74,9 +74,10 @@ export interface RunningDevServer {
 /**
  * Next 16 defaults to Turbopack when a custom server omits both bundler flags.
  * Keep the ordinary `dev` command on Webpack and make Turbopack opt-in through
- * the explicit `dev:turbo` command/environment flag. A Turbo restart update on
- * the shared server entry chunk makes the current HMR client reload, then the
- * next subscription races the advanced HMR version and reloads again.
+ * the explicit `dev:turbo` command/environment flag. The captured session
+ * shows repeated Turbopack restart events for a shared server entry chunk and
+ * HMR hash-mismatch reload messages. It does not establish the underlying
+ * cause; this keeps ordinary dev off the captured Turbo path.
  */
 export function resolveNextDevBundlerOptions(
   options: Pick<DevServerOptions, 'turbopack' | 'webpack'> = {},
@@ -93,6 +94,7 @@ export function resolveNextDevBundlerOptions(
 
 export async function startDevServer(
   options: DevServerOptions = {},
+  createNextApp: CreateNext = createNext,
 ): Promise<RunningDevServer> {
   if (process.env.NEXT_TURBOPACK_HMR_SUBSCRIPTION_DIAGNOSTICS === '1') {
     const swc = require('next/dist/build/swc') as {
@@ -106,7 +108,7 @@ export async function startDevServer(
   const dir = options.dir ?? import.meta.dirname;
   const bundlerOptions = resolveNextDevBundlerOptions(options);
 
-  const app = createNext({
+  const app = createNextApp({
     dev: true,
     hostname,
     port,
