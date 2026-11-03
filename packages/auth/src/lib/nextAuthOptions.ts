@@ -1943,6 +1943,15 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
         maxAge: SESSION_MAX_AGE,
     },
     cookies: NEXTAUTH_COOKIES,
+    events: {
+        async signOut({ token }: any) {
+            const sessionId = token?.session_id;
+            if (typeof sessionId === 'string' && sessionId.length > 0) {
+                // Auth.js clears the browser cookie here; durable revocation is a separate action.
+                UserSession.logLifecycle?.('signed_out', sessionId);
+            }
+        },
+    },
     callbacks: {
         async signIn({ user, account, credentials, profile, ...context }: any) {
             const providerId = account?.provider;

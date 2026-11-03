@@ -6,6 +6,8 @@
  */
 
 import type { Knex } from 'knex';
+import { createHash } from 'node:crypto';
+import logger from '@alga-psa/core/logger';
 import { getConnection } from '../lib/tenant';
 import { tenantDb } from '../lib/tenantDb';
 
@@ -67,6 +69,36 @@ export type RevocationReason =
   | 'inactivity'
   | 'expired';
 
+const SESSION_LIFECYCLE_REASONS = new Set<string>([
+  'user_logout', 'user_logout_all', 'admin_revoke', 'max_sessions',
+  'security', 'scim', 'inactivity', 'expired', 'revoked', 'missing',
+  'user_missing', 'identity_mismatch', 'lookup_unavailable',
+]);
+
+/** A stable, non-secret join key for server-side session lifecycle diagnostics. */
+export function sessionCorrelationId(sessionId: string): string {
+  return createHash('sha256').update(sessionId).digest('hex').slice(0, 24);
+}
+
+/** Log only the hashed session key and a bounded event/reason; never pass session data here. */
+export function logSessionLifecycle(
+  event: 'created' | 'rejected' | 'revoked' | 'signed_out',
+  sessionId: string,
+  reason?: string,
+): void {
+  if (typeof sessionId !== 'string' || sessionId.length === 0) return;
+  const safeReason = reason
+    ? (SESSION_LIFECYCLE_REASONS.has(reason) ? reason : 'other')
+    : undefined;
+  const meta = {
+    event,
+    sessionCorrelationId: sessionCorrelationId(sessionId),
+    ...(safeReason ? { reason: safeReason } : {}),
+  };
+  if (event === 'rejected') logger.warn('[auth] session_lifecycle', meta);
+  else logger.info('[auth] session_lifecycle', meta);
+}
+
 function sessions<Row extends object = IUserSession>(
   conn: Knex | Knex.Transaction,
   tenant: string
@@ -74,7 +106,18 @@ function sessions<Row extends object = IUserSession>(
   return tenantDb(conn, tenant).table<Row>('sessions');
 }
 
+function logRevokedRows(rows: unknown, reason: RevocationReason): void {
+  if (!Array.isArray(rows)) return;
+  for (const row of rows) {
+    if (row && typeof row === 'object' && typeof (row as { session_id?: unknown }).session_id === 'string') {
+      logSessionLifecycle('revoked', (row as { session_id: string }).session_id, reason);
+    }
+  }
+}
+
 export class UserSession {
+  static logLifecycle = logSessionLifecycle;
+
   static async create(params: CreateSessionParams): Promise<string> {
     const knex = await getConnection(params.tenant);
 
@@ -97,7 +140,9 @@ export class UserSession {
       })
       .returning('session_id');
 
-    return (session as any).session_id;
+    const sessionId = (session as any).session_id as string;
+    logSessionLifecycle('created', sessionId);
+    return sessionId;
   }
 
   static async findById(tenant: string, sessionId: string): Promise<IUserSession | null> {
@@ -170,17 +215,18 @@ export class UserSession {
   static async revokeSession(tenant: string, sessionId: string, reason: RevocationReason): Promise<void> {
     const knex = await getConnection(tenant);
 
-    await sessions(knex, tenant).where({ session_id: sessionId }).update({
+    const updated = await sessions(knex, tenant).where({ session_id: sessionId }).update({
       revoked_at: knex.fn.now(),
       revoked_reason: reason,
       updated_at: knex.fn.now(),
     });
+    if (Number(updated) > 0) logSessionLifecycle('revoked', sessionId, reason);
   }
 
   static async revokeAllExcept(tenant: string, userId: string, keepSessionId: string): Promise<number> {
     const knex = await getConnection(tenant);
 
-    const count = await sessions(knex, tenant)
+    const revokedRows = await sessions<Record<string, any>>(knex, tenant)
       .where({ user_id: userId })
       .whereNot({ session_id: keepSessionId })
       .whereNull('revoked_at')
@@ -188,24 +234,28 @@ export class UserSession {
         revoked_at: knex.fn.now(),
         revoked_reason: 'user_logout_all',
         updated_at: knex.fn.now(),
-      });
+      }).returning('session_id');
 
-    return Number(count);
+    logRevokedRows(revokedRows, 'user_logout_all');
+
+    return Array.isArray(revokedRows) ? revokedRows.length : Number(revokedRows);
   }
 
   static async revokeAllForUser(tenant: string, userId: string): Promise<number> {
     const knex = await getConnection(tenant);
 
-    const count = await sessions(knex, tenant)
+    const revokedRows = await sessions<Record<string, any>>(knex, tenant)
       .where({ user_id: userId })
       .whereNull('revoked_at')
       .update({
         revoked_at: knex.fn.now(),
         revoked_reason: 'admin_revoke',
         updated_at: knex.fn.now(),
-      });
+      }).returning('session_id');
 
-    return Number(count);
+    logRevokedRows(revokedRows, 'admin_revoke');
+
+    return Array.isArray(revokedRows) ? revokedRows.length : Number(revokedRows);
   }
 
   static async isRevoked(tenant: string, sessionId: string): Promise<boolean> {
@@ -241,6 +291,7 @@ export class UserSession {
       .where({ 'sessions.session_id': sessionId })
       .select({
         revoked_at: 'sessions.revoked_at',
+        revoked_reason: 'sessions.revoked_reason',
         session_user_id: 'sessions.user_id',
         actual_user_type: 'users.user_type',
       });
@@ -250,7 +301,10 @@ export class UserSession {
     const session = await query.first();
 
     if (!session) return 'missing';
-    if (session.revoked_at !== null) return 'revoked';
+    if (session.revoked_at !== null) {
+      logSessionLifecycle('rejected', sessionId, isRevocationReason(session.revoked_reason) ? session.revoked_reason : 'revoked');
+      return 'revoked';
+    }
     if (session.actual_user_type == null) return 'user_missing';
     if (session.session_user_id !== identity.userId || session.actual_user_type !== identity.userType) return 'identity_mismatch';
     return null;
@@ -258,6 +312,7 @@ export class UserSession {
 
   static async enforceMaxSessions(tenant: string, userId: string, maxSessions: number): Promise<void> {
     const knex = await getConnection(tenant);
+    const revokedSessionIds: string[] = [];
 
     await knex.transaction(async (trx) => {
       const activeSessions = await sessions(trx, tenant)
@@ -280,23 +335,28 @@ export class UserSession {
             revoked_reason: 'max_sessions',
             updated_at: trx.fn.now(),
           });
+        revokedSessionIds.push(...sessionIdsToRevoke);
       }
     });
+
+    for (const sessionId of revokedSessionIds) logSessionLifecycle('revoked', sessionId, 'max_sessions');
   }
 
   static async cleanupExpired(tenant: string): Promise<number> {
     const knex = await getConnection(tenant);
 
-    const count = await sessions(knex, tenant)
+    const revokedRows = await sessions<Record<string, any>>(knex, tenant)
       .where('expires_at', '<', knex.fn.now())
       .whereNull('revoked_at')
       .update({
         revoked_at: knex.fn.now(),
         revoked_reason: 'expired',
         updated_at: knex.fn.now(),
-      });
+      }).returning('session_id');
 
-    return Number(count);
+    logRevokedRows(revokedRows, 'expired');
+
+    return Array.isArray(revokedRows) ? revokedRows.length : Number(revokedRows);
   }
 
   static async cleanupInactive(tenant: string, inactiveDays: number = 30): Promise<number> {
@@ -305,16 +365,18 @@ export class UserSession {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - inactiveDays);
 
-    const count = await sessions(knex, tenant)
+    const revokedRows = await sessions<Record<string, any>>(knex, tenant)
       .where('last_activity_at', '<', cutoffDate)
       .whereNull('revoked_at')
       .update({
         revoked_at: knex.fn.now(),
         revoked_reason: 'inactivity',
         updated_at: knex.fn.now(),
-      });
+      }).returning('session_id');
 
-    return Number(count);
+    logRevokedRows(revokedRows, 'inactivity');
+
+    return Array.isArray(revokedRows) ? revokedRows.length : Number(revokedRows);
   }
 
   static async isKnownDevice(tenant: string, userId: string, deviceFingerprint: string): Promise<boolean> {
@@ -332,4 +394,11 @@ export class UserSession {
 
     return Number((count as any)?.count || 0) > 0;
   }
+}
+
+function isRevocationReason(value: unknown): value is RevocationReason {
+  return typeof value === 'string' && [
+    'user_logout', 'user_logout_all', 'admin_revoke', 'max_sessions',
+    'security', 'scim', 'inactivity', 'expired',
+  ].includes(value);
 }
