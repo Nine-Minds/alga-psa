@@ -110,6 +110,35 @@ describe('co-managed native interaction paging', () => {
       .rejects.toThrow('Invalid interaction continuation');
   });
 
+  it('uses the list default and honors the maximum page size without exceeding the candidate budget', async () => {
+    const identify = async () => ({
+      kind: 'session' as const, tenant: 'tenant-a', userId: 'user-a', sessionId: 'session-a',
+    });
+    const defaultPage = await readCoManagedNativeInteractions({} as never, 'tenant-a', identify, { paginated: true });
+    expect(defaultPage.handled).toBe(true);
+    if (!defaultPage.handled) return;
+    expect(defaultPage.pageSize).toBe(10);
+    expect(defaultPage.interactions).toHaveLength(10);
+
+    harness.fetches = [];
+    const maximumPage = await readCoManagedNativeInteractions({} as never, 'tenant-a', identify, {
+      paginated: true, filters: { pageSize: 100 },
+    });
+    expect(maximumPage.handled).toBe(true);
+    if (!maximumPage.handled) return;
+    expect(maximumPage.pageSize).toBe(100);
+    expect(maximumPage.interactions).toHaveLength(100);
+    expect(harness.fetches.every(fetch => fetch.limit === 50)).toBe(true);
+    expect(harness.fetches).toHaveLength(4); // Three result windows and one bounded total window.
+  });
+
+  it('refuses a request above the list maximum before reading candidates', async () => {
+    await expect(readCoManagedNativeInteractions({} as never, 'tenant-a', async () => ({
+      kind: 'session', tenant: 'tenant-a', userId: 'user-a', sessionId: 'session-a',
+    }), { paginated: true, filters: { pageSize: 101 } })).rejects.toThrow();
+    expect(harness.fetches).toHaveLength(0);
+  });
+
   it('keeps denied-window progress in an opaque continuation without exposing denied IDs or dates', async () => {
     harness.denied = new Set(harness.candidates.slice(0, 150).map(row => String(row.interaction_id)));
     const result = await readCoManagedNativeInteractions({} as never, 'tenant-a', async () => ({
