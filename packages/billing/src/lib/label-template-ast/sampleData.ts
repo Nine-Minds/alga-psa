@@ -13,6 +13,8 @@ export const buildSampleLabelViewModel = (): LabelViewModel => ({
   detail: 'Diagnose power fault',
   secondaryIdentifier: 'AT-000123',
   serialSuffix: '7K2Q',
+  assetSerialNumber: 'LAPTOP-7K2Q',
+  ticketDescription: 'The laptop no longer powers on.\nPlease diagnose the power fault.',
   // Held-equipment lines replace the reason line when present; the preview shows the common case (none) so it
   // matches the print path, which collapses the reason when custody prints.
   custodyLocation: null,
@@ -24,7 +26,7 @@ export const buildSampleLabelViewModel = (): LabelViewModel => ({
     manufacturer: 'Dell',
     model: 'Latitude 5540',
     osLine: 'Windows 11 Pro 23H2',
-    cpuLine: 'Intel Core i7-1365U / 10 cores',
+    cpuLine: 'Intel Core i7-1365U',
     ramLine: '16 GB',
     storageLine: 'SSD 512 GB',
   },

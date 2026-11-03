@@ -1377,7 +1377,9 @@
           "quote-totals": "Totales de cotización",
           "invoice": "Factura",
           "customer": "Cliente",
-          "tenant": "Inquilino"
+          "tenant": "Inquilino",
+          "work-tag": "Etiqueta de trabajo",
+          "asset": "Activo"
         }
       },
       "noFieldsMatch": "Ningún campo coincide.",
@@ -1436,6 +1438,12 @@
       "insertDataField": "+ Insertar campo de datos…",
       "searchDataFields": "Buscar campos de datos…",
       "dataFields": "Campos de datos",
+      "noFieldSelected": "Ningún campo seleccionado",
+      "bindingPathHint": "Escriba una ruta de vinculación si el campo que necesita no aparece en la lista.",
+      "useFieldPicker": "Usar selector de campos",
+      "currentField": "Actual",
+      "unbound": "Sin vincular",
+      "useCustomPath": "Usar ruta personalizada",
       "box": {
         "top": "Arriba",
         "right": "Derecha",
@@ -2286,6 +2294,86 @@
       "tenantClient_address": {
         "label": "Dirección del tenant",
         "description": "La dirección de su empresa."
+      },
+      "label_recordUrl": {
+        "label": "Enlace al registro",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "label_identifier": {
+        "label": "Identificador",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "label_code128Value": {
+        "label": "Valor del código de barras",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "label_title": {
+        "label": "Título",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "label_clientName": {
+        "label": "Nombre del cliente",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "label_detail": {
+        "label": "Detalle / motivo",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "label_secondaryIdentifier": {
+        "label": "Identificador secundario",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "label_serialSuffix": {
+        "label": "Terminación del número de serie",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "label_assetSerialNumber": {
+        "label": "Número de serie completo del activo",
+        "description": "Solo disponible en hojas de ticket tamaño carta. Ruta de datos: {{path}}"
+      },
+      "label_ticketDescription": {
+        "label": "Descripción del ticket",
+        "description": "Solo disponible en hojas de ticket tamaño carta. Ruta de datos: {{path}}"
+      },
+      "label_custodyLocation": {
+        "label": "Ubicación de custodia",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "label_nextAction": {
+        "label": "Próxima acción",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "linkedAsset_name": {
+        "label": "Nombre del activo",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "linkedAsset_manufacturer": {
+        "label": "Fabricante del activo",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "linkedAsset_model": {
+        "label": "Modelo del activo",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "linkedAsset_osLine": {
+        "label": "Sistema operativo del activo",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "linkedAsset_cpuLine": {
+        "label": "CPU del activo",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "linkedAsset_ramLine": {
+        "label": "RAM del activo",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "linkedAsset_storageLine": {
+        "label": "Almacenamiento del activo",
+        "description": "Ruta de datos: {{path}}"
+      },
+      "tenant_brandText": {
+        "label": "Nombre de la empresa sin logotipo",
+        "description": "Ruta de datos: {{path}}"
       }
     },
     "canvas": {
@@ -2793,7 +2881,10 @@
         "version": "Versión",
         "labelClass": "Clase de etiqueta",
         "labelFields": "Campos que se muestran en la etiqueta",
-        "labelFieldsHint": "El enlace del registro (código QR) y el identificador siempre se muestran."
+        "labelFieldsHint": "El enlace del registro (código QR) y el identificador siempre se muestran.",
+        "worksheetMode": "Hoja de cliente tamaño carta",
+        "worksheetModeHint": "Permite incluir el número de serie completo y la descripción del ticket. Seleccione el tamaño carta en el diseñador.",
+        "worksheetFieldsHint": "Ocultar la terminación de serie también oculta el número completo; ocultar el detalle también oculta la descripción del ticket."
       },
       "placeholders": {
         "templateName": "Plantilla de {{type}}"
@@ -2834,6 +2925,29 @@
       "workTag": "Etiqueta de trabajo / Etiqueta",
       "stagingManifest": "Manifiesto de embalaje",
       "rmaReturnSlip": "Albarán de devolución RMA"
+    },
+    "labelClasses": {
+      "ticket-work-tag": "Etiqueta de ticket",
+      "asset-identity": "Etiqueta de activo",
+      "stock-unit-identity": "Etiqueta de unidad de stock",
+      "staging-container": "Etiqueta de caja de preparación",
+      "rma-work-tag": "Etiqueta RMA"
+    },
+    "labelFields": {
+      "clientName": "Nombre del cliente",
+      "title": "Título",
+      "detail": "Detalle / motivo",
+      "secondaryIdentifier": "Identificador secundario",
+      "serialSuffix": "Terminación del número de serie",
+      "assetSerialNumber": "Número de serie completo del activo",
+      "ticketDescription": "Descripción del ticket",
+      "custodyLocation": "Ubicación de custodia",
+      "nextAction": "Próxima acción",
+      "tenantLogo": "Logotipo de la empresa",
+      "tenantName": "Nombre de la empresa"
+    },
+    "standardNames": {
+      "standard-ticket-customer-worksheet": "Hoja de cliente estándar"
     }
   },
   "errors": {

@@ -1685,7 +1685,9 @@
       "useTemplate": "Usa {{template}}",
       "copiesPerAsset": "Copie per asset",
       "adjacentCopies": "Le copie di ciascun asset vengono stampate insieme.",
-      "templatePaperWarning": "Questo modello viene stampato su un foglio intero. Scegli \"Carta del modello\" (o un layout a foglio intero), altrimenti il contenuto non entrerà nell'etichetta."
+      "templatePaperWarning": "Questo modello viene stampato su un foglio intero. Scegli \"Carta del modello\" (o un layout a foglio intero), altrimenti il contenuto non entrerà nell'etichetta.",
+      "worksheetPageSizeError": "Il foglio deve usare carta Letter o più grande in verticale, sia nel designer sia nel layout di stampa.",
+      "worksheetTextOverflowError": "Il foglio {{numbers}} contiene testo che non entra. Modifica il layout o riduci il contenuto prima di stampare."
     },
     "layout": {
       "template-preferred": "Carta del modello (predefinita)",
@@ -1693,6 +1695,9 @@
       "letter-2x5": "Foglio Letter, 2 × 5 (stile Avery 5163)",
       "a4-2x7": "Foglio A4, 2 × 7 (stile 99,1 × 38,1 mm)",
       "letter-full": "Foglio Letter, uno per pagina"
+    },
+    "standardTemplates": {
+      "standard-ticket-customer-worksheet": "Foglio cliente standard"
     }
   },
   "deleteEntity": {

@@ -234,7 +234,7 @@ describe('DesignerSchemaInspector (schema-driven integration)', () => {
 
     expect(screen.getByText('Current')).toBeTruthy();
 
-    const searchInput = screen.getByPlaceholderText('Search fields...') as HTMLInputElement;
+    const searchInput = screen.getByPlaceholderText('Search data fields…') as HTMLInputElement;
     fireEvent.change(searchInput, { target: { value: 'recurring service period' } });
     fireEvent.click(screen.getByText('Recurring Service Period'));
 
@@ -249,7 +249,10 @@ describe('DesignerSchemaInspector (schema-driven integration)', () => {
     expect((updated.props as any)?.metadata?.bindingKey).toBe('customer.address');
     expect((updated.props as any)?.metadata?.placeholder).toBe('Customer Address');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Use custom path' }));
+    const useCustomPath = screen.getByRole('button', { name: 'Use custom path' });
+    expect(useCustomPath.id).toMatch(/-use-custom$/);
+    fireEvent.click(useCustomPath);
+    expect(screen.getByRole('button', { name: 'Use field picker' }).id).toMatch(/-use-picker$/);
 
     const customInput = screen.getByDisplayValue('customer.address') as HTMLInputElement;
     expect(customInput.getAttribute('data-template-insert-target')).toBe('metadata.bindingKey');
@@ -304,7 +307,7 @@ describe('DesignerSchemaInspector (schema-driven integration)', () => {
 
     render(<Wrapper />);
 
-    const searchInput = screen.getByPlaceholderText('Search fields...') as HTMLInputElement;
+    const searchInput = screen.getByPlaceholderText('Search data fields…') as HTMLInputElement;
     fireEvent.change(searchInput, { target: { value: 'customer address' } });
     fireEvent.click(screen.getByText('Customer Address'));
 

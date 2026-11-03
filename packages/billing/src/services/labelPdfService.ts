@@ -6,7 +6,7 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { renderLabelBatchHtml, type LabelPrintItem } from '../lib/label-batch/renderLabelBatchHtml';
-import { labelMetadataPrefersPaperPage, type LabelBatchLayout } from '../lib/label-batch/layout';
+import { LabelLayoutError, labelMetadataPrefersPaperPage, type LabelBatchLayout } from '../lib/label-batch/layout';
 import { listDocumentTemplates } from '../lib/document-templates/storage';
 import { labelClassOfCustomTemplate } from '../lib/label-template-ast/labelTemplates';
 import {
@@ -26,6 +26,49 @@ export async function renderHtmlToPdf(html: string, printOptions: InvoicePdfPrin
   try {
     page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'load' });
+    await page.emulateMediaType('print');
+    const clippedWorksheets = await page.evaluate(async () => {
+      await document.fonts.ready;
+      const clipped: number[] = [];
+      const tolerance = 0.75;
+      for (const cell of document.querySelectorAll<HTMLElement>('.label-cell[data-validate-text-fits="true"]')) {
+        const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+        let isClipped = false;
+        for (let node = walker.nextNode(); node && !isClipped; node = walker.nextNode()) {
+          if (!node.textContent?.trim()) continue;
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
+          for (let element = node.parentElement; element && cell.contains(element); element = element.parentElement) {
+            const style = getComputedStyle(element);
+            const clipX = element === cell || ['hidden', 'clip', 'auto', 'scroll'].includes(style.overflowX);
+            const clipY = element === cell || ['hidden', 'clip', 'auto', 'scroll'].includes(style.overflowY);
+            if (!clipX && !clipY) continue;
+            const box = element.getBoundingClientRect();
+            const left = box.left + element.clientLeft;
+            const top = box.top + element.clientTop;
+            const right = left + element.clientWidth;
+            const bottom = top + element.clientHeight;
+            if (rects.some((rect) =>
+              (clipX && (rect.left < left - tolerance || rect.right > right + tolerance)) ||
+              (clipY && (rect.top < top - tolerance || rect.bottom > bottom + tolerance))
+            )) {
+              isClipped = true;
+              break;
+            }
+          }
+        }
+        if (isClipped) clipped.push(Number(cell.dataset.labelIndex) + 1);
+      }
+      return clipped;
+    });
+    if (clippedWorksheets.length > 0) {
+      throw new LabelLayoutError(
+        `Worksheet ${clippedWorksheets.join(', ')} contains text that does not fit. ` +
+        'Adjust the layout or shorten the content before printing.',
+        { errorCode: 'worksheetTextOverflow', worksheetNumbers: clippedWorksheets },
+      );
+    }
     return Buffer.from(await page.pdf(printOptions));
   } finally {
     if (page) {

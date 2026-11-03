@@ -1377,7 +1377,9 @@
           "quote-totals": "Offertetotalen",
           "invoice": "Factuur",
           "customer": "Klant",
-          "tenant": "Tenant"
+          "tenant": "Tenant",
+          "work-tag": "Werklabel",
+          "asset": "Asset"
         }
       },
       "noFieldsMatch": "Geen velden gevonden.",
@@ -1436,6 +1438,12 @@
       "insertDataField": "+ Gegevensveld invoegen…",
       "searchDataFields": "Gegevensvelden zoeken…",
       "dataFields": "Gegevensvelden",
+      "noFieldSelected": "Geen veld geselecteerd",
+      "bindingPathHint": "Voer een bindingspad in als het gewenste veld niet in de lijst staat.",
+      "useFieldPicker": "Veldkiezer gebruiken",
+      "currentField": "Huidig",
+      "unbound": "Niet gekoppeld",
+      "useCustomPath": "Aangepast pad gebruiken",
       "box": {
         "top": "Boven",
         "right": "Rechts",
@@ -2286,6 +2294,86 @@
       "tenantClient_address": {
         "label": "Tenant-adres",
         "description": "Het adres van uw bedrijf."
+      },
+      "label_recordUrl": {
+        "label": "Link naar record",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "label_identifier": {
+        "label": "Identificatie",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "label_code128Value": {
+        "label": "Barcodewaarde",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "label_title": {
+        "label": "Titel",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "label_clientName": {
+        "label": "Klantnaam",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "label_detail": {
+        "label": "Detail / reden",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "label_secondaryIdentifier": {
+        "label": "Secundaire identificatie",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "label_serialSuffix": {
+        "label": "Einde serienummer",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "label_assetSerialNumber": {
+        "label": "Volledig serienummer van asset",
+        "description": "Alleen beschikbaar op ticketworksheets in Letter-formaat. Gegevenspad: {{path}}"
+      },
+      "label_ticketDescription": {
+        "label": "Ticketbeschrijving",
+        "description": "Alleen beschikbaar op ticketworksheets in Letter-formaat. Gegevenspad: {{path}}"
+      },
+      "label_custodyLocation": {
+        "label": "Bewaarlocatie",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "label_nextAction": {
+        "label": "Volgende actie",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "linkedAsset_name": {
+        "label": "Assetnaam",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "linkedAsset_manufacturer": {
+        "label": "Fabrikant van asset",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "linkedAsset_model": {
+        "label": "Assetmodel",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "linkedAsset_osLine": {
+        "label": "Besturingssysteem van asset",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "linkedAsset_cpuLine": {
+        "label": "CPU van asset",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "linkedAsset_ramLine": {
+        "label": "RAM van asset",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "linkedAsset_storageLine": {
+        "label": "Opslag van asset",
+        "description": "Gegevenspad: {{path}}"
+      },
+      "tenant_brandText": {
+        "label": "Bedrijfsnaam zonder logo",
+        "description": "Gegevenspad: {{path}}"
       }
     },
     "canvas": {
@@ -2793,7 +2881,10 @@
         "version": "Versie",
         "labelClass": "Labelklasse",
         "labelFields": "Velden die op het label worden getoond",
-        "labelFieldsHint": "De recordlink (QR-code) en de identificatie worden altijd getoond."
+        "labelFieldsHint": "De recordlink (QR-code) en de identificatie worden altijd getoond.",
+        "worksheetMode": "Klantwerkblad in Letter-formaat",
+        "worksheetModeHint": "Hiermee zijn het volledige serienummer en de ticketbeschrijving beschikbaar. Stel het paginaformaat in de ontwerper in op Letter.",
+        "worksheetFieldsHint": "Als u het einde van het serienummer verbergt, wordt ook het volledige serienummer verborgen; als u het detail verbergt, ook de ticketbeschrijving."
       },
       "placeholders": {
         "templateName": "Sjabloon voor {{type}}"
@@ -2834,6 +2925,29 @@
       "workTag": "Werklabel / Label",
       "stagingManifest": "Paklijst",
       "rmaReturnSlip": "RMA-retourbon"
+    },
+    "labelClasses": {
+      "ticket-work-tag": "Ticketwerklabel",
+      "asset-identity": "Assetlabel",
+      "stock-unit-identity": "Voorraadlabel",
+      "staging-container": "Label voor verzameldoos",
+      "rma-work-tag": "RMA-label"
+    },
+    "labelFields": {
+      "clientName": "Klantnaam",
+      "title": "Titel",
+      "detail": "Detail / reden",
+      "secondaryIdentifier": "Secundaire identificatie",
+      "serialSuffix": "Einde serienummer",
+      "assetSerialNumber": "Volledig serienummer van asset",
+      "ticketDescription": "Ticketbeschrijving",
+      "custodyLocation": "Bewaarlocatie",
+      "nextAction": "Volgende actie",
+      "tenantLogo": "Bedrijfslogo",
+      "tenantName": "Bedrijfsnaam"
+    },
+    "standardNames": {
+      "standard-ticket-customer-worksheet": "Standaard klantwerkblad"
     }
   },
   "errors": {

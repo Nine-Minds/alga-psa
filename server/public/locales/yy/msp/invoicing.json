@@ -1377,7 +1377,9 @@
           "quote-totals": "〖Ɋŭȯŧḗ Ŧȯŧȧŀş ·····〗",
           "invoice": "〖Īƞṽȯīƈḗ ···〗",
           "customer": "〖Ƈŭşŧȯḿḗř ····〗",
-          "tenant": "〖Ŧḗƞȧƞŧ ···〗"
+          "tenant": "〖Ŧḗƞȧƞŧ ···〗",
+          "work-tag": "〖Ẇȯřķ Ŧȧɠ ····〗",
+          "asset": "〖Ȧşşḗŧ ··〗"
         }
       },
       "noFieldsMatch": "〖Ƞȯ ƒīḗŀḓş ḿȧŧƈħ ŧħīş şḗȧřƈħ. ············〗",
@@ -1436,6 +1438,12 @@
       "insertDataField": "〖+ Īƞşḗřŧ ḓȧŧȧ ƒīḗŀḓ… ········〗",
       "searchDataFields": "〖Şḗȧřƈħ ḓȧŧȧ ƒīḗŀḓş… ········〗",
       "dataFields": "〖Ḓȧŧȧ ƒīḗŀḓş ·····〗",
+      "noFieldSelected": "〖Ƞȯ ƒīḗŀḓ şḗŀḗƈŧḗḓ ·······〗",
+      "bindingPathHint": "〖Ŧẏƥḗ ȧƞẏ ƀīƞḓīƞɠ ƥȧŧħ ẇħḗƞ ŧħḗ ƒīḗŀḓ ẏȯŭ ƞḗḗḓ īş ƞȯŧ ŀīşŧḗḓ. ························〗",
+      "useFieldPicker": "〖Ŭşḗ ƒīḗŀḓ ƥīƈķḗř ·······〗",
+      "currentField": "〖Ƈŭřřḗƞŧ ···〗",
+      "unbound": "〖Ŭƞƀȯŭƞḓ ···〗",
+      "useCustomPath": "〖Ŭşḗ ƈŭşŧȯḿ ƥȧŧħ ······〗",
       "box": {
         "top": "〖Ŧȯƥ ··〗",
         "right": "〖Řīɠħŧ ··〗",
@@ -2286,6 +2294,86 @@
       "tenantClient_address": {
         "label": "〖Ŧḗƞȧƞŧ Ȧḓḓřḗşş ······〗",
         "description": "〖Ẏȯŭř ƈȯḿƥȧƞẏ ȧḓḓřḗşş. ·········〗"
+      },
+      "label_recordUrl": {
+        "label": "〖Řḗƈȯřḓ ŀīƞķ ·····〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "label_identifier": {
+        "label": "〖Īḓḗƞŧīƒīḗř ····〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "label_code128Value": {
+        "label": "〖Ɓȧřƈȯḓḗ ṽȧŀŭḗ ······〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "label_title": {
+        "label": "〖Ŧīŧŀḗ ··〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "label_clientName": {
+        "label": "〖Ƈŀīḗƞŧ ƞȧḿḗ ·····〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "label_detail": {
+        "label": "〖Ḓḗŧȧīŀ / řḗȧşȯƞ ······〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "label_secondaryIdentifier": {
+        "label": "〖Şḗƈȯƞḓȧřẏ īḓḗƞŧīƒīḗř ········〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "label_serialSuffix": {
+        "label": "〖Şḗřīȧŀ şŭƒƒīẋ ······〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "label_assetSerialNumber": {
+        "label": "〖Ƒŭŀŀ ȧşşḗŧ şḗřīȧŀ ƞŭḿƀḗř ··········〗",
+        "description": "〖Ȧṽȧīŀȧƀŀḗ ȯƞŀẏ ȯƞ Ŀḗŧŧḗř ŧīƈķḗŧ ẇȯřķşħḗḗŧş. Ḓȧŧȧ ƥȧŧħ: {{path}} ··························〗"
+      },
+      "label_ticketDescription": {
+        "label": "〖Ŧīƈķḗŧ ḓḗşƈřīƥŧīȯƞ ········〗",
+        "description": "〖Ȧṽȧīŀȧƀŀḗ ȯƞŀẏ ȯƞ Ŀḗŧŧḗř ŧīƈķḗŧ ẇȯřķşħḗḗŧş. Ḓȧŧȧ ƥȧŧħ: {{path}} ··························〗"
+      },
+      "label_custodyLocation": {
+        "label": "〖Ƈŭşŧȯḓẏ ŀȯƈȧŧīȯƞ ·······〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "label_nextAction": {
+        "label": "〖Ƞḗẋŧ ȧƈŧīȯƞ ·····〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "linkedAsset_name": {
+        "label": "〖Ȧşşḗŧ ƞȧḿḗ ····〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "linkedAsset_manufacturer": {
+        "label": "〖Ȧşşḗŧ ḿȧķḗ ····〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "linkedAsset_model": {
+        "label": "〖Ȧşşḗŧ ḿȯḓḗŀ ·····〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "linkedAsset_osLine": {
+        "label": "〖Ȧşşḗŧ ȯƥḗřȧŧīƞɠ şẏşŧḗḿ ·········〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "linkedAsset_cpuLine": {
+        "label": "〖Ȧşşḗŧ ƇƤŬ ····〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "linkedAsset_ramLine": {
+        "label": "〖Ȧşşḗŧ ŘȦḾ ····〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "linkedAsset_storageLine": {
+        "label": "〖Ȧşşḗŧ şŧȯřȧɠḗ ······〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
+      },
+      "tenant_brandText": {
+        "label": "〖Ƈȯḿƥȧƞẏ ƞȧḿḗ ẇīŧħȯŭŧ ŀȯɠȯ ··········〗",
+        "description": "〖Ḓȧŧȧ ƥȧŧħ: {{path}} ········〗"
       }
     },
     "canvas": {
@@ -2793,7 +2881,10 @@
         "version": "〖Ṽḗřşīȯƞ ···〗",
         "labelClass": "〖Ŀȧƀḗŀ ƈŀȧşş ·····〗",
         "labelFields": "〖Ƒīḗŀḓş şħȯẇƞ ȯƞ ŧħḗ ŀȧƀḗŀ ··········〗",
-        "labelFieldsHint": "〖Ŧħḗ řḗƈȯřḓ ŀīƞķ (ɊŘ ƈȯḓḗ) ȧƞḓ ŧħḗ īḓḗƞŧīƒīḗř ȧřḗ ȧŀẇȧẏş şħȯẇƞ. ·························〗"
+        "labelFieldsHint": "〖Ŧħḗ řḗƈȯřḓ ŀīƞķ (ɊŘ ƈȯḓḗ) ȧƞḓ ŧħḗ īḓḗƞŧīƒīḗř ȧřḗ ȧŀẇȧẏş şħȯẇƞ. ·························〗",
+        "worksheetMode": "〖Ŀḗŧŧḗř ƈŭşŧȯḿḗř ẇȯřķşħḗḗŧ ··········〗",
+        "worksheetModeHint": "〖Ȧŀŀȯẇş ŧħḗ ƒŭŀŀ ȧşşḗŧ şḗřīȧŀ ȧƞḓ ŧīƈķḗŧ ḓḗşƈřīƥŧīȯƞ. Şḗŧ ŧħḗ ƥȧɠḗ şīẑḗ ŧȯ Ŀḗŧŧḗř īƞ ŧħḗ ḓḗşīɠƞḗř. ·······································〗",
+        "worksheetFieldsHint": "〖Ħīḓīƞɠ ŧħḗ şḗřīȧŀ şŭƒƒīẋ ȧŀşȯ ħīḓḗş ŧħḗ ƒŭŀŀ şḗřīȧŀ; ħīḓīƞɠ ḓḗŧȧīŀ ȧŀşȯ ħīḓḗş ŧħḗ ŧīƈķḗŧ ḓḗşƈřīƥŧīȯƞ. ·········································〗"
       },
       "placeholders": {
         "templateName": "〖{{type}} Ŧḗḿƥŀȧŧḗ ·······〗"
@@ -2834,6 +2925,29 @@
       "workTag": "〖Ẇȯřķ Ŧȧɠ / Ŀȧƀḗŀ ·······〗",
       "stagingManifest": "〖Ƥȧƈķīƞɠ Ḿȧƞīƒḗşŧ ·······〗",
       "rmaReturnSlip": "〖ŘḾȦ Řḗŧŭřƞ Şŀīƥ ······〗"
+    },
+    "labelClasses": {
+      "ticket-work-tag": "〖Ŧīƈķḗŧ ẇȯřķ ŧȧɠ ······〗",
+      "asset-identity": "〖Ȧşşḗŧ ŀȧƀḗŀ ·····〗",
+      "stock-unit-identity": "〖Şŧȯƈķ ŭƞīŧ ŀȧƀḗŀ ·······〗",
+      "staging-container": "〖Şŧȧɠīƞɠ ƀȯẋ ŀȧƀḗŀ ·······〗",
+      "rma-work-tag": "〖ŘḾȦ ŧȧɠ ···〗"
+    },
+    "labelFields": {
+      "clientName": "〖Ƈŀīḗƞŧ ƞȧḿḗ ·····〗",
+      "title": "〖Ŧīŧŀḗ ··〗",
+      "detail": "〖Ḓḗŧȧīŀ / řḗȧşȯƞ ······〗",
+      "secondaryIdentifier": "〖Şḗƈȯƞḓȧřẏ īḓḗƞŧīƒīḗř ········〗",
+      "serialSuffix": "〖Şḗřīȧŀ şŭƒƒīẋ ······〗",
+      "assetSerialNumber": "〖Ƒŭŀŀ ȧşşḗŧ şḗřīȧŀ ƞŭḿƀḗř ··········〗",
+      "ticketDescription": "〖Ŧīƈķḗŧ ḓḗşƈřīƥŧīȯƞ ········〗",
+      "custodyLocation": "〖Ƈŭşŧȯḓẏ ŀȯƈȧŧīȯƞ ·······〗",
+      "nextAction": "〖Ƞḗẋŧ ȧƈŧīȯƞ ·····〗",
+      "tenantLogo": "〖Ƈȯḿƥȧƞẏ ŀȯɠȯ ·····〗",
+      "tenantName": "〖Ƈȯḿƥȧƞẏ ƞȧḿḗ ·····〗"
+    },
+    "standardNames": {
+      "standard-ticket-customer-worksheet": "〖Şŧȧƞḓȧřḓ Ƈŭşŧȯḿḗř Ẇȯřķşħḗḗŧ ···········〗"
     }
   },
   "errors": {

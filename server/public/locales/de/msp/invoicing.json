@@ -1377,7 +1377,9 @@
           "quote-totals": "Angebotssummen",
           "invoice": "Rechnung",
           "customer": "Kunde",
-          "tenant": "Mandant"
+          "tenant": "Mandant",
+          "work-tag": "Arbeitsetikett",
+          "asset": "Asset"
         }
       },
       "noFieldsMatch": "Keine Felder gefunden.",
@@ -1436,6 +1438,12 @@
       "insertDataField": "+ Datenfeld einfügen…",
       "searchDataFields": "Datenfelder suchen…",
       "dataFields": "Datenfelder",
+      "noFieldSelected": "Kein Feld ausgewählt",
+      "bindingPathHint": "Geben Sie einen Bindungspfad ein, wenn das gewünschte Feld nicht aufgeführt ist.",
+      "useFieldPicker": "Feldauswahl verwenden",
+      "currentField": "Aktuell",
+      "unbound": "Nicht zugeordnet",
+      "useCustomPath": "Benutzerdefinierten Pfad verwenden",
       "box": {
         "top": "Oben",
         "right": "Rechts",
@@ -2286,6 +2294,86 @@
       "tenantClient_address": {
         "label": "Mandantenadresse",
         "description": "Die Adresse Ihres Unternehmens."
+      },
+      "label_recordUrl": {
+        "label": "Link zum Datensatz",
+        "description": "Datenpfad: {{path}}"
+      },
+      "label_identifier": {
+        "label": "Kennung",
+        "description": "Datenpfad: {{path}}"
+      },
+      "label_code128Value": {
+        "label": "Barcodewert",
+        "description": "Datenpfad: {{path}}"
+      },
+      "label_title": {
+        "label": "Titel",
+        "description": "Datenpfad: {{path}}"
+      },
+      "label_clientName": {
+        "label": "Kundenname",
+        "description": "Datenpfad: {{path}}"
+      },
+      "label_detail": {
+        "label": "Detail / Grund",
+        "description": "Datenpfad: {{path}}"
+      },
+      "label_secondaryIdentifier": {
+        "label": "Sekundäre Kennung",
+        "description": "Datenpfad: {{path}}"
+      },
+      "label_serialSuffix": {
+        "label": "Seriennummern-Endung",
+        "description": "Datenpfad: {{path}}"
+      },
+      "label_assetSerialNumber": {
+        "label": "Vollständige Asset-Seriennummer",
+        "description": "Nur auf Ticket-Arbeitsblättern im Letter-Format verfügbar. Datenpfad: {{path}}"
+      },
+      "label_ticketDescription": {
+        "label": "Ticketbeschreibung",
+        "description": "Nur auf Ticket-Arbeitsblättern im Letter-Format verfügbar. Datenpfad: {{path}}"
+      },
+      "label_custodyLocation": {
+        "label": "Aufbewahrungsort",
+        "description": "Datenpfad: {{path}}"
+      },
+      "label_nextAction": {
+        "label": "Nächste Aktion",
+        "description": "Datenpfad: {{path}}"
+      },
+      "linkedAsset_name": {
+        "label": "Asset-Name",
+        "description": "Datenpfad: {{path}}"
+      },
+      "linkedAsset_manufacturer": {
+        "label": "Asset-Hersteller",
+        "description": "Datenpfad: {{path}}"
+      },
+      "linkedAsset_model": {
+        "label": "Asset-Modell",
+        "description": "Datenpfad: {{path}}"
+      },
+      "linkedAsset_osLine": {
+        "label": "Asset-Betriebssystem",
+        "description": "Datenpfad: {{path}}"
+      },
+      "linkedAsset_cpuLine": {
+        "label": "Asset-CPU",
+        "description": "Datenpfad: {{path}}"
+      },
+      "linkedAsset_ramLine": {
+        "label": "Asset-RAM",
+        "description": "Datenpfad: {{path}}"
+      },
+      "linkedAsset_storageLine": {
+        "label": "Asset-Speicher",
+        "description": "Datenpfad: {{path}}"
+      },
+      "tenant_brandText": {
+        "label": "Firmenname ohne Logo",
+        "description": "Datenpfad: {{path}}"
       }
     },
     "canvas": {
@@ -2793,7 +2881,10 @@
         "version": "Version",
         "labelClass": "Etikettenklasse",
         "labelFields": "Auf dem Etikett angezeigte Felder",
-        "labelFieldsHint": "Der Datensatzlink (QR-Code) und die Kennung werden immer angezeigt."
+        "labelFieldsHint": "Der Datensatzlink (QR-Code) und die Kennung werden immer angezeigt.",
+        "worksheetMode": "Kundenarbeitsblatt im Letter-Format",
+        "worksheetModeHint": "Ermöglicht die vollständige Seriennummer und die Ticketbeschreibung. Stellen Sie im Designer das Letter-Format ein.",
+        "worksheetFieldsHint": "Das Ausblenden der Seriennummern-Endung blendet auch die vollständige Nummer aus; das Ausblenden des Details auch die Ticketbeschreibung."
       },
       "placeholders": {
         "templateName": "Vorlage für {{type}}"
@@ -2834,6 +2925,29 @@
       "workTag": "Arbeitsetikett / Label",
       "stagingManifest": "Packliste",
       "rmaReturnSlip": "RMA-Rücksendeschein"
+    },
+    "labelClasses": {
+      "ticket-work-tag": "Ticket-Arbeitsetikett",
+      "asset-identity": "Asset-Etikett",
+      "stock-unit-identity": "Lagereinheiten-Etikett",
+      "staging-container": "Bereitstellungskarton-Etikett",
+      "rma-work-tag": "RMA-Etikett"
+    },
+    "labelFields": {
+      "clientName": "Kundenname",
+      "title": "Titel",
+      "detail": "Detail / Grund",
+      "secondaryIdentifier": "Sekundäre Kennung",
+      "serialSuffix": "Seriennummern-Endung",
+      "assetSerialNumber": "Vollständige Asset-Seriennummer",
+      "ticketDescription": "Ticketbeschreibung",
+      "custodyLocation": "Aufbewahrungsort",
+      "nextAction": "Nächste Aktion",
+      "tenantLogo": "Firmenlogo",
+      "tenantName": "Firmenname"
+    },
+    "standardNames": {
+      "standard-ticket-customer-worksheet": "Standard-Kundenarbeitsblatt"
     }
   },
   "errors": {

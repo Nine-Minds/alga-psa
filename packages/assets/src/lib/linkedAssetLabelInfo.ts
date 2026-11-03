@@ -23,6 +23,11 @@ export interface LinkedAssetInfoBase {
   model: string | null;
 }
 
+export type FormatCpuCoreCount = (count: number) => string;
+
+const formatEnglishCpuCoreCount: FormatCpuCoreCount = (count) =>
+  `${count} ${count === 1 ? 'core' : 'cores'}`;
+
 /** Columns worth reading from each extension table for the worksheet block (everything else stays off the tag). */
 const EXTENSION_SPEC_COLUMNS_BY_TABLE: Readonly<Record<string, readonly string[]>> = {
   workstation_assets: ['os_type', 'os_version', 'cpu_model', 'cpu_cores', 'ram_gb', 'storage_type', 'storage_capacity_gb'],
@@ -73,15 +78,16 @@ export function summarizeServerStorage(value: unknown): string | null {
 /** Pure composition of the printable lines from base columns + one extension row. Exported for tests. */
 export function composeLinkedAssetInfo(
   base: LinkedAssetInfoBase,
-  extension: Record<string, unknown> | null
+  extension: Record<string, unknown> | null,
+  formatCpuCoreCount: FormatCpuCoreCount = formatEnglishCpuCoreCount
 ): LabelLinkedAssetInfo {
   const osLine = [text(extension?.os_type), text(extension?.os_version)].filter((s): s is string => Boolean(s)).join(' ') || null;
 
   const cpuModel = text(extension?.cpu_model);
   const cores = wholeNumber(extension?.cpu_cores);
+  const coreCount = cores != null ? formatCpuCoreCount(cores) : null;
   const cpuLine =
-    cpuModel && cores != null ? `${cpuModel} / ${cores} cores`
-      : cpuModel || (cores != null ? `${cores} cores` : null);
+    cpuModel && coreCount ? `${cpuModel} / ${coreCount}` : cpuModel || coreCount;
 
   const ramGb = wholeNumber(extension?.ram_gb);
   const ramLine = ramGb != null ? `${ramGb} GB` : null;
@@ -113,7 +119,8 @@ export function composeLinkedAssetInfo(
 export async function getLinkedAssetInfoForAssets(
   knex: Knex,
   tenant: string,
-  bases: ReadonlyArray<LinkedAssetInfoBase>
+  bases: ReadonlyArray<LinkedAssetInfoBase>,
+  formatCpuCoreCount?: FormatCpuCoreCount
 ): Promise<Map<string, LabelLinkedAssetInfo>> {
   const db = tenantDb(knex, tenant);
 
@@ -141,6 +148,6 @@ export async function getLinkedAssetInfoForAssets(
 
   return new Map(bases.map((base) => [
     base.asset_id,
-    composeLinkedAssetInfo(base, extensionById.get(base.asset_id) ?? null),
+    composeLinkedAssetInfo(base, extensionById.get(base.asset_id) ?? null, formatCpuCoreCount),
   ]));
 }

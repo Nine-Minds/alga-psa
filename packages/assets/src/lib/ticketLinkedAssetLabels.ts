@@ -5,10 +5,11 @@ import type { LabelLinkedAssetInfo, LabelRequestContext } from '@alga-psa/types'
 import { createAssetReadContext, isAssetReadAllowed, type AssetAuthUser } from './assetReadAuthorization';
 import { getOpenCustodyForAssets } from './custody/queries';
 import { formatCustodyForLabel, formatCustodyForLabelSubject, type CustodyLabelFacts } from './custody/labelFormat';
-import { getLinkedAssetInfoForAssets, type LinkedAssetInfoBase } from './linkedAssetLabelInfo';
+import { getLinkedAssetInfoForAssets, type FormatCpuCoreCount, type LinkedAssetInfoBase } from './linkedAssetLabelInfo';
 
 /**
- * The asset half of a ticket work tag: the linked asset's tag and a serial SUFFIX. Read-only.
+ * The asset half of a ticket work tag: the linked asset's tag and a serial suffix. Read-only.
+ * A Letter worksheet may also receive the full serial of the same authorized asset.
  *
  * Lives in the assets package because the asset kernel check must run here (tickets never import
  * assets; the composition root merges this into the ticket view models). An asset the caller cannot
@@ -19,6 +20,8 @@ export interface TicketLinkedAssetLabelParts {
   assetId: string;
   assetTag: string | null;
   serialSuffix: string | null;
+  /** Present only when the resolved template explicitly requests Letter worksheet details. */
+  assetSerialNumber?: string | null;
   /** Held-equipment line ("Main Office / Shelf B3", "With vendor", "2 items held"), or null. Never the note. */
   custodyLocation: string | null;
   /** "Waiting on vendor, Oct 29" etc., or null. Derived from party + follow-up date only. */
@@ -59,7 +62,8 @@ export interface TicketLabelSubject {
  */
 export async function getTicketLinkedAssetLabelParts(
   context: LabelRequestContext,
-  subjects: ReadonlyArray<TicketLabelSubject>
+  subjects: ReadonlyArray<TicketLabelSubject>,
+  options: { formatCpuCoreCount?: FormatCpuCoreCount } = {}
 ): Promise<Array<TicketLinkedAssetLabelParts | null>> {
   const result: Array<TicketLinkedAssetLabelParts | null> = subjects.map(() => null);
   const ticketIds = Array.from(new Set(subjects.map((s) => s.recordId)));
@@ -143,6 +147,9 @@ export async function getTicketLinkedAssetLabelParts(
       assetId: assetId ?? '',
       assetTag: asset?.asset_tag ?? null,
       serialSuffix: asset ? serialSuffixOf(asset.serial_number) : null,
+      ...(context.includeWorksheetDetails
+        ? { assetSerialNumber: asset?.serial_number?.trim() || null }
+        : {}),
       custodyLocation: custody?.custodyLocation ?? null,
       nextAction: custody?.nextAction ?? null,
       linkedAssetInfo: null,
@@ -157,7 +164,7 @@ export async function getTicketLinkedAssetLabelParts(
       if (!a) return [];
       return [{ asset_id: a.asset_id, asset_type: a.asset_type, name: a.name, manufacturer: a.manufacturer, model: a.model }];
     });
-    const infoById = await getLinkedAssetInfoForAssets(knex, context.tenant, bases);
+    const infoById = await getLinkedAssetInfoForAssets(knex, context.tenant, bases, options.formatCpuCoreCount);
     result.forEach((parts, index) => {
       const assetId = resolved[index];
       if (!parts || !assetId) return;

@@ -1,4 +1,4 @@
-import type { LabelClass, TemplateAst } from '@alga-psa/types';
+import type { LabelClass, TemplateAst, TemplateI18nRef } from '@alga-psa/types';
 import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
 import { buildLabelTemplateBindings } from './bindings';
@@ -170,10 +170,9 @@ const identifier = (id: string, fontPx: number): Node =>
  * paper instead of the 4 x 2 in roll. Ported from the tenant-authored template the MSP runs today, with
  * two changes: the logo binds `tenantLogo` (a hardcoded `/api/documents/view/...` source only resolves
  * server-side, never in the print path), and an "Asset Specifications" block prints the linked asset's
- * name, make/model, OS, CPU, RAM and storage. Always-shown rows use `field` nodes (they keep their
- * label when empty); the spec rows are `text` nodes so lines collapse when the asset has no such value
- * (a `field` always paints its label). The line-budget trims that shrink fields to a 4 x 2 in tag do
- * not apply in worksheet mode.
+ * name, make/model, OS, CPU, RAM and storage. Field labels remain visible when values are missing,
+ * so a technician can fill in the blanks. The line-budget trims that shrink fields to a 4 x 2 in tag
+ * do not apply in worksheet mode.
  */
 const WORKSHEET_FIELD_STYLE: Record<string, unknown> = {
   width: 'auto',
@@ -184,20 +183,13 @@ const WORKSHEET_FIELD_STYLE: Record<string, unknown> = {
   justifyContent: 'space-between',
 };
 
-const worksheetField = (id: string, bindingId: string, labelText: string): Node => ({
+const worksheetField = (id: string, bindingId: string, labelText: TemplateI18nRef): Node => ({
   id,
   type: 'field',
   binding: { bindingId },
   label: labelText,
   labelStyle: { inline: { color: '#374151', fontWeight: 700 } },
   style: { inline: { ...WORKSHEET_FIELD_STYLE } },
-});
-
-const worksheetSpecLine = (id: string, content: Node['content'], extra: Record<string, unknown> = {}): Node => ({
-  id,
-  type: 'text',
-  content,
-  style: { inline: { margin: '0', fontSize: '14px', lineHeight: '1.5', overflowWrap: 'anywhere', color: '#374151', ...extra } },
 });
 
 const buildTicketCustomerWorksheet = (): TemplateAst => ({
@@ -235,9 +227,18 @@ const buildTicketCustomerWorksheet = (): TemplateAst => ({
               },
               {
                 id: 'ticket-number',
-                type: 'text',
-                content: { type: 'template', template: 'Ticket #{{label_identifier}}', args: { label_identifier: { type: 'path', path: 'identifier' } } },
-                style: { inline: { margin: '0', fontSize: '30px', fontWeight: 800, fontFamily: 'monospace', lineHeight: '1.2', overflowWrap: 'anywhere' } },
+                type: 'stack',
+                direction: 'row',
+                style: { inline: { gap: '0.25em', fontSize: '30px', fontWeight: 800, fontFamily: 'monospace', lineHeight: '1.2' } },
+                children: [
+                  {
+                    id: 'ticket-number-label',
+                    type: 'text',
+                    content: { type: 'i18n', i18nKey: 'labels.worksheet.ticketNumber', defaultValue: 'Ticket #' },
+                    style: { inline: { margin: '0' } },
+                  },
+                  text('ticket-number-value', 'identifier', { minWidth: '0', flex: '1 1 0', overflowWrap: 'anywhere' }),
+                ],
               },
               {
                 id: 'ticket-title',
@@ -270,9 +271,9 @@ const buildTicketCustomerWorksheet = (): TemplateAst => ({
             direction: 'column',
             style: { inline: { minWidth: '0', flexGrow: 1, flexBasis: '0', display: 'flex', flexDirection: 'column', gap: '8px' } },
             children: [
-              worksheetField('fld-name', 'clientName', 'Customer'),
-              worksheetField('fld-asset', 'assetLine', 'Asset'),
-              worksheetField('fld-serial', 'serialLine', 'Serial'),
+              worksheetField('fld-name', 'clientName', { i18nKey: 'labels.worksheet.customer', defaultValue: 'Customer' }),
+              worksheetField('fld-asset', 'secondaryIdentifier', { i18nKey: 'labels.asset', defaultValue: 'Asset' }),
+              worksheetField('fld-serial', 'assetSerialNumber', { i18nKey: 'labels.worksheet.serial', defaultValue: 'Serial' }),
             ],
           },
           {
@@ -281,8 +282,8 @@ const buildTicketCustomerWorksheet = (): TemplateAst => ({
             direction: 'column',
             style: { inline: { minWidth: '0', flexGrow: 1, flexBasis: '0', display: 'flex', flexDirection: 'column', gap: '8px' } },
             children: [
-              worksheetField('fld-custody', 'custodyLocation', 'Custody location'),
-              worksheetField('fld-next', 'nextAction', 'Next action'),
+              worksheetField('fld-custody', 'custodyLocation', { i18nKey: 'labels.worksheet.custodyLocation', defaultValue: 'Custody location' }),
+              worksheetField('fld-next', 'nextAction', { i18nKey: 'labels.worksheet.nextAction', defaultValue: 'Next action' }),
             ],
           },
         ],
@@ -297,33 +298,30 @@ const buildTicketCustomerWorksheet = (): TemplateAst => ({
           {
             id: 'asset-specs-heading',
             type: 'text',
-            content: { type: 'literal', value: 'Asset Specifications' },
+            content: { type: 'i18n', i18nKey: 'labels.worksheet.assetSpecifications', defaultValue: 'Asset Specifications' },
             style: { inline: { margin: '0 0 6px 0', color: '#111827', fontSize: '15px', fontWeight: 700 } },
           },
-          worksheetSpecLine('spec-name', { type: 'binding', bindingId: 'assetName' }, { fontWeight: 600, color: '#111827' }),
-          worksheetSpecLine('spec-make-model', {
-            type: 'template',
-            template: '{{manufacturer}} {{model}}',
-            args: { manufacturer: { type: 'path', path: 'linkedAsset.manufacturer' }, model: { type: 'path', path: 'linkedAsset.model' } },
-          }),
-          worksheetSpecLine('spec-os', { type: 'binding', bindingId: 'assetOs' }),
-          worksheetSpecLine('spec-cpu', { type: 'binding', bindingId: 'assetCpu' }),
-          worksheetSpecLine('spec-ram', { type: 'binding', bindingId: 'assetRam' }),
-          worksheetSpecLine('spec-storage', { type: 'binding', bindingId: 'assetStorage' }),
+          worksheetField('spec-name', 'assetName', { i18nKey: 'labels.worksheet.assetName', defaultValue: 'Name' }),
+          worksheetField('spec-make', 'assetManufacturer', { i18nKey: 'labels.worksheet.make', defaultValue: 'Make' }),
+          worksheetField('spec-model', 'assetModel', { i18nKey: 'labels.worksheet.model', defaultValue: 'Model' }),
+          worksheetField('spec-os', 'assetOs', { i18nKey: 'labels.worksheet.os', defaultValue: 'Operating system' }),
+          worksheetField('spec-cpu', 'assetCpu', { i18nKey: 'labels.worksheet.cpu', defaultValue: 'CPU' }),
+          worksheetField('spec-ram', 'assetRam', { i18nKey: 'labels.worksheet.ram', defaultValue: 'RAM' }),
+          worksheetField('spec-storage', 'assetStorage', { i18nKey: 'labels.worksheet.storage', defaultValue: 'Storage' }),
         ],
       },
       { id: 'details-divider', type: 'divider', style: { inline: { margin: '18px 0 12px 0' } } },
       {
         id: 'details-heading',
         type: 'text',
-        content: { type: 'literal', value: 'Ticket Details' },
+        content: { type: 'i18n', i18nKey: 'labels.worksheet.ticketDetails', defaultValue: 'Ticket Details' },
         style: { inline: { margin: '0 0 6px 0', color: '#111827', fontSize: '15px', fontWeight: 700 } },
       },
       {
         id: 'fld-details',
         type: 'text',
-        content: { type: 'binding', bindingId: 'detail' },
-        style: { inline: { margin: '0', fontSize: '14px', lineHeight: '1.6', overflowWrap: 'anywhere' } },
+        content: { type: 'binding', bindingId: 'ticketDescription' },
+        style: { inline: { margin: '0', fontSize: '14px', lineHeight: '1.6', overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' } },
       },
     ],
   },
