@@ -4,27 +4,31 @@ const state = vi.hoisted(() => ({
   decision: { allowed: true, redactedFields: [] as string[] },
   decisionsByProject: {} as Record<string, { allowed: boolean; redactedFields: string[] }>,
   taskName: 'Map New Areas',
+  phaseTenant: 't1',
+  phaseProjectId: 'project1',
 }));
 
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'u1', user_type: 'internal' }, { tenant: 't1' }, ...args) }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
 vi.mock('@alga-psa/db', () => {
   const raw = (sql: string, args?: any[]) => ({ sql, args });
-  const query = (table: string) => {
+  const query = (table: string, tenant = 't1') => {
     let selection: any[] = [];
     let ordering: string | undefined;
     const filters: Array<{ kind: string; field: any; value: any }> = [];
     const q: any = new Proxy({}, { get(_target, prop) {
       if (prop === 'then') return (resolve: any) => {
-        const result = rows(table, selection, filters);
+        const result = rows(table, selection, filters, tenant);
         const orderColumn = ordering;
         if (table === 'project_phases' && orderColumn) result.sort((a: any, b: any) => String(a[orderColumn]).localeCompare(String(b[orderColumn])));
         return Promise.resolve(result).then(resolve);
       };
       if (prop === 'select') return (...columns: any[]) => { selection = columns; return q; };
       if (prop === 'first') return async () => table === 'project_tasks'
-        ? { phase_name: 'Phase', project_id: 'project1', status_id: 'status1', assigned_to_first_name: null, assigned_to_last_name: null }
-        : rows(table, selection, filters)[0];
+        ? { phase_name: selection.includes('project_phases.phase_name') ? 'Phase One' : undefined,
+          project_id: selection.includes('project_phases.project_id') ? 'project1' : undefined,
+          status_id: 'status1', assigned_to_first_name: null, assigned_to_last_name: null }
+        : rows(table, selection, filters, tenant)[0];
       if (prop === 'where') return (field: any, value?: any) => { filters.push({ kind: 'where', field, value }); return q; };
       if (prop === 'whereIn') return (field: any, value: any) => { filters.push({ kind: 'whereIn', field, value }); return q; };
       if (prop === 'orderBy') return (field: string) => { ordering = field; return q; };
@@ -32,7 +36,7 @@ vi.mock('@alga-psa/db', () => {
     }});
     return q;
   };
-  const rows = (table: string, selection: any[], filters: Array<{ kind: string; field: any; value: any }>) => {
+  const rows = (table: string, selection: any[], filters: Array<{ kind: string; field: any; value: any }>, tenant = 't1') => {
     if (table === 'project_tasks as pt') {
       const taskId = filters.find((filter) => filter.kind === 'where' && typeof filter.field === 'object')?.field?.['pt.task_id'];
       return [{ project_id: ({ task1: 'project1', pred: 'project2', succ: 'project3' } as any)[taskId] ?? 'project1' }];
@@ -41,10 +45,14 @@ vi.mock('@alga-psa/db', () => {
       const nameMask = selection.flat().find((column) => column?.sql?.includes('as phase_name') || column?.args?.includes('phase_name'));
       const descriptionMask = selection.flat().some((column) => column?.sql?.includes('as description') || column?.args?.includes('description'));
       const wbsMask = selection.flat().some((column) => column?.sql?.includes('as wbs_code') || column?.args?.includes('wbs_code'));
-      return [
-        { phase_id: 'ph1', project_id: 'project1', phase_name: nameMask?.args?.[0] ?? 'Phase One', description: descriptionMask ? null : 'Phase one description', wbs_code: wbsMask ? null : '1', order_key: 'b' },
-        { phase_id: 'ph2', project_id: 'project1', phase_name: nameMask?.args?.[0] ?? 'Phase Two', description: descriptionMask ? null : 'Phase two description', wbs_code: wbsMask ? null : '2', order_key: 'a' },
+      const all = [
+        { tenant: state.phaseTenant, phase_id: 'ph1', project_id: state.phaseProjectId, phase_name: nameMask?.args?.[0] ?? 'Phase One', description: descriptionMask ? null : 'Phase one description', wbs_code: wbsMask ? null : '1', order_key: 'b' },
+        { tenant: 't1', phase_id: 'ph2', project_id: 'project1', phase_name: nameMask?.args?.[0] ?? 'Phase Two', description: descriptionMask ? null : 'Phase two description', wbs_code: wbsMask ? null : '2', order_key: 'a' },
       ];
+      return all.filter((row) => row.tenant === tenant && filters.every((filter) => filter.kind !== 'where' ||
+        (typeof filter.field === 'object'
+          ? Object.entries(filter.field).every(([field, value]) => row[field.replace('project_phases.', '') as keyof typeof row] === value)
+          : row[filter.field as keyof typeof row] === filter.value)));
     }
     if (table === 'project_tasks') {
       const nameMask = selection.flat().find((column) => column?.sql?.includes('as task_name'));
@@ -83,7 +91,7 @@ vi.mock('@alga-psa/db', () => {
   return {
     createTenantKnex: async () => ({ knex: {} }),
     withTransaction: async (_db: any, fn: any) => fn({ raw }),
-    tenantDb: () => ({ table: query, tenantJoin: () => undefined }),
+    tenantDb: (_conn: any, tenant: string) => ({ table: (table: string) => query(table, tenant), tenantJoin: () => undefined }),
   };
 });
 vi.mock('../models/project', () => ({ default: { getById: async (_trx: any, _tenant: string, id: string) => ({ project_id: id }) } }));
@@ -107,6 +115,8 @@ beforeEach(() => {
   state.decision = { allowed: true, redactedFields: [] };
   state.decisionsByProject = {};
   state.taskName = 'Map New Areas';
+  state.phaseTenant = 't1';
+  state.phaseProjectId = 'project1';
 });
 
 describe('getProjectTaskData project redactions', () => {
@@ -246,6 +256,42 @@ describe('getProjectTaskData project redactions', () => {
     expect(listResult.tasks[0].description).toBeNull();
     expect(detailResult.description).toBeNull();
     expect(detailResult.description_rich_text).toBeNull();
+  });
+
+  it('uses the authorized phase projection in task detail and preserves unrestricted names', async () => {
+    for (const redaction of ['phase_name', 'fields.phase_name', 'project_phases.phase_name']) {
+      state.decision = { allowed: true, redactedFields: [redaction] };
+      const masked: any = await getTaskWithDetails('task1');
+      expect(masked.phase_name).toBe('Project phase');
+      expect(JSON.stringify(masked)).not.toContain('Phase One');
+    }
+
+    state.decision = { allowed: true, redactedFields: ['*'] };
+    const wildcard: any = await getTaskWithDetails('task1');
+    expect(JSON.stringify(wildcard)).not.toContain('Phase One');
+
+    state.decision = { allowed: true, redactedFields: [] };
+    const unrestricted: any = await getTaskWithDetails('task1');
+    expect(unrestricted.phase_name).toBe('Phase One');
+  });
+
+  it('does not return a phase belonging to another project or tenant in task detail', async () => {
+    state.decision = { allowed: true, redactedFields: [] };
+    state.phaseProjectId = 'other-project';
+    const otherProjectPhase: any = await getTaskWithDetails('task1');
+    expect(otherProjectPhase.phase_name).toBeNull();
+
+    state.phaseTenant = 't2';
+    const otherTenantPhase: any = await getTaskWithDetails('task1');
+    expect(otherTenantPhase.phase_name).toBeNull();
+  });
+
+  it('does not disclose task or phase data to a denied project reader', async () => {
+    state.decision = { allowed: false, redactedFields: [] };
+    const denied: any = await getTaskWithDetails('task1');
+    expect(denied).toHaveProperty('permissionError');
+    expect(JSON.stringify(denied)).not.toContain('Phase One');
+    expect(JSON.stringify(denied)).not.toContain('Map New Areas');
   });
 
   it('masks phase display fields in the task list using the effective project redactions', async () => {

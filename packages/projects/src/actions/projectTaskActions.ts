@@ -64,7 +64,7 @@ import {
 } from '@alga-psa/workflow-streams';
 import { createProjectReadAuthorizer, createProjectReadDecider, type ProjectReadDecision } from '../lib/projectReadAuthorization';
 import { loadAuthorizedProjectTasks } from '../lib/projectTaskReadProjection';
-import { loadAuthorizedProjectPhases } from '../lib/projectPhaseReadProjection';
+import { loadAuthorizedProjectPhase, loadAuthorizedProjectPhases } from '../lib/projectPhaseReadProjection';
 import {
   actionError,
   actionErrorFromValidationIssue,
@@ -2560,8 +2560,6 @@ export const getTaskWithDetails = withAuth(async (
             const taskDetails = await taskQuery
                 .where('project_tasks.task_id', taskId)
                 .select(
-                    'project_phases.phase_name',
-                    'project_phases.project_id',
                     projectedTask.project_status_mapping_id === null
                         ? trx.raw('NULL::text as status_id')
                         : 'project_status_mappings.status_id',
@@ -2575,7 +2573,14 @@ export const getTaskWithDetails = withAuth(async (
                 .first();
 
             if (!taskDetails) throw new Error('Task not found');
-            const task = { ...projectedTask, ...taskDetails };
+            const phase = projectedTask.phase_id
+                ? await loadAuthorizedProjectPhase(trx, tenant, projectedTask.phase_id, readDecision.redactedFields)
+                : null;
+            const task = {
+                ...projectedTask,
+                ...taskDetails,
+                ...(phase?.project_id === projectId ? { phase_name: phase.phase_name } : { phase_name: null }),
+            };
 
             // Get additional data needed for TaskEdit
             const [checklistItems, ticketLinks, resources] = await Promise.all([
