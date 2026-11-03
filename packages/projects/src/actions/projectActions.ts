@@ -354,7 +354,14 @@ function projectStatusesHidden(redactedFields: string[]): boolean {
     standard_statuses: ['standard_status_id', 'name', 'item_type', 'display_order', 'is_closed', 'is_default'],
   };
   return Object.entries(fieldsByTable).some(([table, fields]) => fields.some((field) =>
-    coManagedColumnHidden(redactedFields, table, field, ['status', 'statuses'])
+    coManagedColumnHidden(redactedFields, table, field, [
+      'status', 'statuses',
+      ...(table === 'project_status_mappings' && field === 'project_status_mapping_id'
+        ? ['mapping_id']
+        : table === 'project_status_mappings' && field === 'mapping_id'
+          ? ['project_status_mapping_id']
+          : []),
+    ])
   ));
 }
 
@@ -2148,7 +2155,9 @@ async function getProjectTaskStatusesInternal(
     if (!await hasPermission(user, 'project', 'read', trx)) {
         throw new Error('Permission denied: Cannot read project');
     }
-    await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+    const [authorized] = await loadAuthorizedProjectProjections(trx, tenant, user as IUserWithRoles, [projectId]);
+    if (!authorized) throw new Error('Permission denied: Cannot read project');
+    if (projectStatusesHidden(authorized.redactedFields)) return [];
     return resolvePhaseStatusesInternal(trx, tenant, projectId, phaseId);
 }
 
@@ -2399,7 +2408,6 @@ export const getProjectTaskStatuses = withAuth(async (
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
             return await getProjectTaskStatusesInternal(trx, tenant, projectId, user, phaseId);
         });
     } catch (error) {
@@ -2430,9 +2438,13 @@ export const getProjectStatusesByPhase = withAuth(async (
             if (!await hasPermission(user, 'project', 'read', trx)) {
                 throw new Error('Permission denied: Cannot read project');
             }
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            const [authorized] = await loadAuthorizedProjectProjections(trx, tenant, user as IUserWithRoles, [projectId]);
+            if (!authorized) throw new Error('Permission denied: Cannot read project');
 
             const phases = await ProjectModel.getPhases(trx, tenant, projectId);
+            if (projectStatusesHidden(authorized.redactedFields)) {
+                return Object.fromEntries(phases.map((phase) => [phase.phase_id, []]));
+            }
             return resolveAllPhaseStatusesInternal(trx, tenant, projectId, phases);
         });
     } catch (error) {

@@ -23,11 +23,13 @@ function queryFor(tableName: string): any {
     if (tableName === 'projects') return [{ project_id: 'redacted-project', assigned_to: 'user-1', client_id: 'client-1' }];
     if (tableName === 'clients') return [{ client_id: 'client-1', client_name: 'Secret client name' }];
     if (tableName === 'statuses') return [{ status_id: 'status-1', name: 'Secret status name', is_closed: false }];
+    if (tableName === 'project_status_mappings') return mocks.statusMappings;
     if (tableName === 'project_status_mappings as psm') return [{
       mapping_id: 'mapping-1', project_id: 'redacted-project', phase_id: 'phase-1',
       name: 'Secret custom status', is_closed: false, display_order: 0,
     }];
     if (tableName === 'project_phases') {
+      if (selected.includes('order_key')) return [];
       const row: any = { tenant: 'tenant-1', phase_id: 'phase-1', project_id: 'redacted-project', phase_name: 'Secret phase', description: 'Secret phase description', wbs_code: '1.1' };
       for (const column of selected.flat()) {
         if (column && typeof column === 'object' && typeof column.sql === 'string') {
@@ -90,21 +92,25 @@ vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
   findUserById: mocks.findUserById,
 }));
 vi.mock('../models/project', () => ({ default: {
+  getById: vi.fn(async (_trx: unknown, _tenant: string, projectId: string) => ({ project_id: projectId })),
   getByIds: mocks.getByIds,
   getMaskedByIds: mocks.getMaskedByIds,
-  getPhases: vi.fn(),
+  getPhases: vi.fn(async () => [{ phase_id: 'phase-1', project_id: 'redacted-project' }]),
   getProjectStatusMappings: vi.fn(async () => mocks.statusMappings),
   getStandardStatusesByType: vi.fn(async () => []),
   getEffectiveStatusMappings: vi.fn(async () => mocks.statusMappings),
   addProjectStatusMapping: vi.fn(),
 } }));
 vi.mock('../models/projectTask', () => ({ default: {
+  getTaskTicketLinksForTasks: vi.fn(async () => []),
+  getTaskResourcesForTasks: vi.fn(async () => []),
   getAllTaskChecklistItems: mocks.getAllTaskChecklistItems,
   getAllTaskTicketLinks: mocks.getAllTaskTicketLinks,
   getAllTaskResources: mocks.getAllTaskResources,
 } }));
 vi.mock('@alga-psa/tags/models/tagMapping', () => ({ default: { getByEntities: mocks.getProjectTags } }));
-import { getProject, getProjects, getProjectsWithPhases, getProjectTreeData, getProjectMetadata, getProjectDetails, getAuthorizedProjectTags, getAuthorizedProjectTagSuggestions, loadProjectListItemsByIds } from './projectActions';
+import { getProject, getProjects, getProjectsWithPhases, getProjectTreeData, getProjectMetadata, getProjectDetails, getProjectTaskStatuses, getProjectStatusesByPhase, getAuthorizedProjectTags, getAuthorizedProjectTagSuggestions, loadProjectListItemsByIds } from './projectActions';
+import { getAllProjectTasksForListView } from './projectTaskActions';
 
 const projectRedactions = ['description', 'client_name', 'manager_name', 'contact_name_id', 'body', 'task_name', 'status', 'phase_name', 'project_phases.wbs_code'];
 
@@ -129,6 +135,40 @@ beforeEach(() => {
 });
 
 describe('ordinary project action field redaction', () => {
+  it.each(['mapping_id', 'project_status_mapping_id'])('redacts all status response paths through %s', async (alias) => {
+    mocks.authorizeResource.mockResolvedValue({ allowed: true, redactedFields: ['description'] });
+    const unrestricted = await getProjectTaskStatuses('redacted-project');
+    expect(unrestricted).toHaveLength(1);
+    expect(unrestricted[0]).toMatchObject({ project_status_mapping_id: 'mapping-1', name: 'Secret status name' });
+    expect(await getProjectStatusesByPhase('redacted-project')).toMatchObject({ 'phase-1': unrestricted });
+
+    mocks.authorizeResource.mockResolvedValue({ allowed: true, redactedFields: [alias] });
+    await expect(getProjectTaskStatuses('redacted-project')).resolves.toEqual([]);
+    await expect(getProjectStatusesByPhase('redacted-project')).resolves.toEqual({ 'phase-1': [] });
+    await expect(getProjectMetadata('redacted-project')).resolves.toMatchObject({ statuses: [] });
+    await expect(getProjectDetails('redacted-project')).resolves.toMatchObject({ statuses: [] });
+    const list = await getAllProjectTasksForListView('redacted-project');
+    expect(list).toMatchObject({ statuses: [] });
+  });
+
+  it('preserves unrestricted status values and denial behavior', async () => {
+    mocks.authorizeResource.mockResolvedValue({ allowed: true, redactedFields: [] });
+    const direct = await getProjectTaskStatuses('redacted-project');
+    expect(direct).toHaveLength(1);
+    expect(await getProjectStatusesByPhase('redacted-project')).toEqual({ 'phase-1': direct });
+    expect(await getProjectMetadata('redacted-project')).toMatchObject({ statuses: direct });
+    expect(await getProjectDetails('redacted-project')).toMatchObject({ statuses: direct });
+    expect(await getAllProjectTasksForListView('redacted-project')).toMatchObject({ statuses: direct });
+
+    mocks.authorizeResource.mockResolvedValue({ allowed: false, redactedFields: [] });
+    await expect(getProjectTaskStatuses('redacted-project')).resolves.toEqual([]);
+    await expect(getProjectStatusesByPhase('redacted-project')).resolves.toMatchObject({
+      permissionError: expect.any(String),
+    });
+    await expect(getAllProjectTasksForListView('redacted-project')).resolves.toMatchObject({
+      permissionError: expect.any(String),
+    });
+  });
   it.each(['project.tags', 'fields.tags', 'values.tags', 'project_tags.tag_text', '*'])(
     'preserves %s redactions across project tag loaders and list hydration', async (field) => {
       mocks.authorizeResource.mockResolvedValue({ allowed: true, redactedFields: [field] });
