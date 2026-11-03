@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const currentUser = { user_id: 'user-1', tenant: 'tenant-1', roles: [] };
+let currentUser = { user_id: 'user-1', user_type: 'client', contact_id: 'contact-1', tenant: 'tenant-1', roles: [] };
 
 const getConnectionMock = vi.fn();
 const generateAndStoreMock = vi.fn();
 const getStoredInvoicePdfMock = vi.fn();
 const enqueueImmediateJobMock = vi.fn();
+const getClientIdFromPortalUserMock = vi.fn(async (): Promise<string | null> => 'client-1');
+const hasClientBillingReadPermissionMock = vi.fn(async () => true);
 let storedInvoiceDocument: { file_id: string } | undefined;
 let invoiceRow: Record<string, unknown> | undefined;
 let jobRow: Record<string, unknown> | undefined;
@@ -29,8 +31,8 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('./clientBillingPermissions', () => ({
-  getClientIdFromPortalUser: vi.fn(async () => 'client-1'),
-  hasClientBillingReadPermission: vi.fn(async () => true),
+  getClientIdFromPortalUser: getClientIdFromPortalUserMock,
+  hasClientBillingReadPermission: hasClientBillingReadPermissionMock,
 }));
 
 vi.mock('@alga-psa/billing/actions/invoiceJobActions', () => ({
@@ -77,9 +79,12 @@ function makeChain(result: unknown, tableName?: string) {
   return chain;
 }
 
-describe('downloadClientInvoicePdf', () => {
+describe('client billing actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    currentUser = { user_id: 'user-1', user_type: 'client', contact_id: 'contact-1', tenant: 'tenant-1', roles: [] };
+    getClientIdFromPortalUserMock.mockResolvedValue('client-1');
+    hasClientBillingReadPermissionMock.mockResolvedValue(true);
     storedInvoiceDocument = undefined;
     invoiceRow = { invoice_id: 'invoice-1', client_id: 'client-1', status: 'sent', invoice_number: 'INV-001' };
     jobRow = { job_id: 'job-1', status: 'completed', metadata: {} };
@@ -116,6 +121,35 @@ describe('downloadClientInvoicePdf', () => {
     const result = await sendClientInvoiceEmail('invoice-other-client');
 
     expect(result).toMatchObject({ actionError: 'Invoice not found or access denied' });
+    expect(enqueueImmediateJobMock).not.toHaveBeenCalled();
+  });
+
+  it('denies an internal user with a linked contact before enqueueing', async () => {
+    currentUser = { user_id: 'internal-1', user_type: 'internal', contact_id: 'contact-1', tenant: 'tenant-1', roles: [] };
+    const { sendClientInvoiceEmail } = await import('./client-billing');
+    const result = await sendClientInvoiceEmail('invoice-1');
+
+    expect(result).toMatchObject({ permissionError: 'Unauthorized' });
+    expect(getConnectionMock).not.toHaveBeenCalled();
+    expect(enqueueImmediateJobMock).not.toHaveBeenCalled();
+  });
+
+  it('denies a portal user without contact identity before enqueueing', async () => {
+    currentUser = { ...currentUser, contact_id: '' };
+    getClientIdFromPortalUserMock.mockResolvedValue(null);
+    const { sendClientInvoiceEmail } = await import('./client-billing');
+    const result = await sendClientInvoiceEmail('invoice-1');
+
+    expect(result).toMatchObject({ permissionError: 'Unauthorized' });
+    expect(enqueueImmediateJobMock).not.toHaveBeenCalled();
+  });
+
+  it('denies a portal user without billing read permission before enqueueing', async () => {
+    hasClientBillingReadPermissionMock.mockResolvedValue(false);
+    const { sendClientInvoiceEmail } = await import('./client-billing');
+    const result = await sendClientInvoiceEmail('invoice-1');
+
+    expect(result).toMatchObject({ permissionError: 'Unauthorized to access invoice data' });
     expect(enqueueImmediateJobMock).not.toHaveBeenCalled();
   });
 

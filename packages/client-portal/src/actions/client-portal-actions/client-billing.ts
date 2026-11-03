@@ -31,7 +31,7 @@ import Quote from '@alga-psa/billing/models/quote';
 import QuoteActivity from '@alga-psa/billing/models/quoteActivity';
 import { recalculateQuoteFinancials } from '@alga-psa/billing/services';
 import { withAuth } from '@alga-psa/auth';
-import { JobStatus } from '@alga-psa/types';
+import { isClientUserType, JobStatus } from '@alga-psa/types';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { computeRemainingBlockValueMinor } from '@alga-psa/shared/billingClients/hourBlockService';
 import { getAvailableCredit } from '@alga-psa/billing/lib/creditBalance';
@@ -1063,6 +1063,10 @@ export interface SendEmailResult {
  * Send invoice email - schedules job, waits for completion
  */
 export const sendClientInvoiceEmail = withAuth(async (user, { tenant }, invoiceId: string): Promise<ClientBillingActionResult<SendEmailResult>> => {
+  if (!isClientUserType(user.user_type)) {
+    return permissionError('Unauthorized', 'client-portal:errors.access.unauthorized');
+  }
+
   const knex = await getConnection(tenant);
 
   try {
