@@ -232,6 +232,12 @@ export const addCommentToTimeSheet = withAuth(async (
     const commenter = { user_id: user.user_id, is_approver: isApprover };
 
     // Time-source seam receives only server-derived attribution.
+    // LEVERAGE: friction timesource-comment-authz — comment is the one seam method that now
+    // runs native authorization (and a native `time_sheets` lookup) BEFORE asking the source,
+    // while every sibling method delegates first and lets the provider decide without querying.
+    // A provider that owns sheets unknown to the native table cannot answer this call; when one
+    // is actually registered, the derivation belongs in the native branch and the provider
+    // should compute its own attribution from `ctx`.
     const delegated = await delegateToTimeSource(
       { tenant, userId: user.user_id },
       (source, ctx) => source.sheets.comment(ctx, timeSheetId, comment, commenter)
