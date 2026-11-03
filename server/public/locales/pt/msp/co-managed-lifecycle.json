@@ -3,7 +3,7 @@
     "loading": "A carregar…",
     "titleCustomer": "Terminar a TI cogerida com {{name}}",
     "titleSponsor": "Terminar a TI cogerida para {{name}}",
-    "keepCustomer": "Mantém o seu espaço de trabalho, tickets, utilizadores e ficheiros. O seu MSP perde o acesso de imediato e guarda apenas um registo do trabalho em que participou.",
+    "keepCustomer": "Você mantém seu espaço de trabalho, chamados, usuários e arquivos. Seu MSP perde o acesso imediatamente e guarda apenas um registro do trabalho em que participou.",
     "keepSponsor": "Mantém um arquivo só de leitura do trabalho em que participou. O seu acesso ao espaço de trabalho do cliente termina de imediato e as licenças voltam para o seu conjunto.",
     "warnHandoffs_one": "{{count}} ticket partilhado ainda está com o MSP. Continuará aberto e o MSP perderá o acesso.",
     "warnHandoffs_other": "{{count}} tickets partilhados ainda estão com o MSP. Continuarão abertos e o MSP perderá o acesso.",
@@ -44,15 +44,15 @@
       "author": "Autor",
       "content": "Conteúdo",
       "deleted": "Removido pelo autor",
-      "empty": "Nenhum registo foi mantido."
+      "empty": "Nenhum registro foi mantido."
     },
     "more": "Carregar mais",
     "filesHeading": "Ficheiros",
-    "fileUnnamed": "Transferir ficheiro",
+    "fileUnnamed": "Baixar arquivo",
     "exclusionsHeading": "Não mantido",
     "exclusion": "{{count}} · {{reason}}",
     "reason": {
-      "class": "Não faz parte do registo mantido",
+      "class": "Não faz parte do registro mantido",
       "audience": "Privado do cliente",
       "afterCutoff": "Depois do fim da relação"
     }
