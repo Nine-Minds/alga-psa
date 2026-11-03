@@ -2,17 +2,15 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BentoTimelineTile } from './BentoTimelineTile';
 import { TicketDataSourceProvider } from '../TicketDataSourceContext';
 import { nativeTicketDataSource } from '../../../lib/nativeTicketDataSource';
-import { composeTicketDataSource, type TicketConversationConfig } from '../../../lib/ticketDataSource';
+import { composeTicketDataSource } from '../../../lib/ticketDataSource';
+import { createAttachmentStaging } from '../../../../../../server/src/lib/co-managed/attachmentStaging';
 
-/**
- * The bento composer has its own editor and its own submit path, so the Cc/Bcc
- * control has to be wired there separately from the classic conversation.
- */
+/** Exercise the rendered composer with the real upload-session discard path. */
 type BentoTimelineTileProps = React.ComponentProps<typeof BentoTimelineTile>;
 
 vi.mock('next/dynamic', () => ({
@@ -197,19 +195,6 @@ vi.mock('../TicketNotificationSuppressionControl', () => ({
   default: () => null,
 }));
 
-// Mirrors the real hook: with pasted images Cancel opens a dialog and discards nothing yet.
-const upload = vi.hoisted(() => ({ dialogOpen: false, onDiscard: undefined as undefined | (() => void) }));
-vi.mock('../useTicketRichTextUploadSession', () => ({
-  useTicketRichTextUploadSession: (options: { onDiscard?: () => void; componentLabel?: string }) => {
-    if (options.componentLabel === 'BentoTimelineTile-compose') upload.onDiscard = options.onDiscard;
-    return {
-      uploadFile: vi.fn(),
-      resetDraftTracking: vi.fn(),
-      requestDiscard: vi.fn(async () => { if (!upload.dialogOpen) options.onDiscard?.(); }),
-    };
-  },
-}));
-
 const defaultProps: BentoTimelineTileProps = {
   id: 'ticket-timeline',
   // Newest-first: the composer entry sits above the history (see composer placement).
@@ -233,9 +218,9 @@ const defaultProps: BentoTimelineTileProps = {
 
 const onComposerCancel = vi.fn();
 
-function renderTimeline(hooked: boolean, overrides: Partial<BentoTimelineTileProps> = {}) {
+function renderTimeline(hooked: boolean, overrides: Partial<BentoTimelineTileProps> = {}, onCancel: () => void = onComposerCancel) {
   const dataSource = hooked
-    ? composeTicketDataSource(nativeTicketDataSource, { screen: { onComposerCancel } })
+    ? composeTicketDataSource(nativeTicketDataSource, { screen: { onComposerCancel: onCancel } })
     : nativeTicketDataSource;
   const result = render(
     <TicketDataSourceProvider dataSource={dataSource}>
@@ -254,8 +239,6 @@ describe('BentoTimelineTile composer Cancel and screen.onComposerCancel', () => 
   beforeEach(() => {
     vi.clearAllMocks();
     capability.enabled = true;
-    upload.dialogOpen = false;
-    upload.onDiscard = undefined;
   });
 
   it('fires once when Cancel discards the composer', async () => {
@@ -266,15 +249,30 @@ describe('BentoTimelineTile composer Cancel and screen.onComposerCancel', () => 
     expect(composerOpen()).toBe(false);
   });
 
-  it('does not fire while the pasted-images dialog is pending, and fires once the discard is confirmed', async () => {
-    renderTimeline(true);
-    upload.dialogOpen = true;
+  it('clears Attach files staging on Cancel so the next message receives only newly selected files', async () => {
+    let sequence = 0;
+    const staging = createAttachmentStaging(() => `file-${++sequence}`);
+    const abandoned = new File(['private note'], 'private.txt', { type: 'text/plain' });
+    staging.add([abandoned]);
+    const onAddNewComment = vi.fn(async () => {
+      const files = staging.getSnapshot().map(entry => entry.file);
+      staging.clear();
+      return files;
+    });
+    // Both co-managed hosts install staging.clear as screen.onComposerCancel.
+    renderTimeline(true, { onAddNewComment: async () => { await onAddNewComment(); return true; } }, staging.clear);
+    expect(staging.getSnapshot().map(entry => entry.file)).toEqual([abandoned]);
     cancel();
-    await Promise.resolve();
-    expect(onComposerCancel).not.toHaveBeenCalled();
-    expect(composerOpen()).toBe(true);
-    await act(async () => { upload.onDiscard?.(); });
-    expect(onComposerCancel).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(composerOpen()).toBe(false));
+    expect(staging.getSnapshot()).toEqual([]);
+
+    fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
+    const selected = new File(['shared message'], 'shared.txt', { type: 'text/plain' });
+    staging.add([selected]);
+    fireEvent.click(screen.getByTestId('composer-editor'));
+    fireEvent.click(document.getElementById('ticket-timeline-composer-send')!);
+    await waitFor(() => expect(onAddNewComment).toHaveBeenCalledTimes(1));
+    expect(await onAddNewComment.mock.results[0].value).toEqual([selected]);
   });
 
   it('a native data source (no hook) cancels without throwing and closes the composer', async () => {
