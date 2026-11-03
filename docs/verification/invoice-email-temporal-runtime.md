@@ -89,10 +89,50 @@ If all previous `dev-server` records are concluded, supply `--command` and `--cw
 
 Run these checks only when **Smoke Test** is the active board step and its board-managed `dev-server` is enabled. Provision the legitimate credential key and set the same worktree-unique `REDIS_PREFIX` on the app and worker board services before testing.
 
+### Prepare the linked internal portal principal
+
+The prior `invoice-authz-1103` account is an existing client/contact fixture restored as inactive/internal with its password disabled. Do not convert it to a client, reuse its login, or modify any client account. The repeatable setup creates a separate reserved internal principal and dedicated MSP role linked to the contact of `SMOKE-AUTHZ-1102`.
+
+Create a private login secret without printing it:
+
+```sh
+umask 077
+openssl rand -base64 36 > secrets/invoice-email-authz-internal-password
+chmod 600 secrets/invoice-email-authz-internal-password
+```
+
+Run these commands from `server/` against the existing local `server` database. The script refuses writes unless the DB host is loopback, database name is `server`, and the explicit local-fixture confirmation is set. It does not launch the application.
+
+```sh
+set -a
+. ../.env.localtest
+set +a
+export NODE_ENV=development
+export INVOICE_AUTHZ_FIXTURE_CONFIRM=local-smoke-db
+export INVOICE_AUTHZ_FIXTURE_TENANT=6d178771-ad9a-4d43-8809-83992745f8f9
+export INVOICE_AUTHZ_FIXTURE_INVOICE=SMOKE-AUTHZ-1102
+export INVOICE_AUTHZ_FIXTURE_CONTACT_ID=c4d47c69-86d5-4d21-bb0c-6b3eb01246cc
+export INVOICE_AUTHZ_FIXTURE_PASSWORD_FILE=../secrets/invoice-email-authz-internal-password
+npx tsx scripts/invoiceEmailAuthzLinkedInternalFixture.ts setup
+npx tsx scripts/invoiceEmailAuthzLinkedInternalFixture.ts check
+```
+
+Both setup and check assert that the invoice is issued, the contact belongs to its client, the persisted fixture is active and `internal`, `authenticateUser` accepts the stored password as an internal login, its only assigned role is MSP-only, `billing:read` and `billing:create` are granted, and `invoice:send` is absent. Setup additionally snapshots and compares the client account and all user rows linked to the contact before/after its transaction to prove existing client data was preserved. The fixture login is `invoice-authz-linked-internal@example.invalid`; retrieve its password privately from `secrets/invoice-email-authz-internal-password` for the fresh MSP sign-in. Do not include the password or session cookie in evidence.
+
+This setup was run against the local smoke database. It verified invoice `SMOKE-AUTHZ-1102` (`f1743d03-d848-4e2a-b72b-a163b183ee50`), owner client `3e29472d-8409-4f14-b218-4a4951dd077d`, contact `c4d47c69-86d5-4d21-bb0c-6b3eb01246cc`, and active internal login user `9f2425d8-0c8d-4f0a-a2a2-adf7fb6db570`; permission assertions were billing read=true, billing create=true, invoice send=false. This verifies persisted fixture readiness and application password authentication only. Smoke Test must still establish a fresh browser session through the MSP login flow and confirm its claims match this persisted user before invoking portal resend.
+
+After Smoke Test is complete, clear the browser session and remove only the dedicated fixture user/role with:
+
+```sh
+npx tsx scripts/invoiceEmailAuthzLinkedInternalFixture.ts cleanup
+```
+
+Cleanup refuses to proceed if the reserved account or role no longer matches the managed internal fixture, or if another user has been assigned its dedicated role. It deletes the dedicated DB session/user-role/role-permission/user/role rows, leaves catalog permissions intact, and asserts the contact's client accounts remain. Remove the private password file separately with `rm ../secrets/invoice-email-authz-internal-password` once no longer needed.
+
 1. Sign in as an internal MSP user with `billing:read` and `billing:create`, but without `invoice:send`. Open the invoice list, select the controlled finalized invoice, open **Send Invoice Email**, and click **Schedule**. Capture the authenticated UI action/network result showing the invoice-send permission denial. Confirm no `invoice_email` job was inserted or published for this invocation.
 2. Grant that user `invoice:send`, refresh/re-authenticate so the session reflects the permission change, and repeat the same UI path on the same invoice. Capture the successful scheduler response and its job ID. Do not use **Send** for this check: it is the separate immediate-send action.
 3. Correlate that job ID to the `MAINTENANCE_JOB_REQUESTED` event and matching forwarded execution ID. Capture the worker workflow/run ID, handler claim/start and terminal execution outcome, handler invoice-sending log, and GreenMail message ID. Inspect the received MIME message and verify its PDF attachment is the selected invoice (filename and valid PDF content). Workflow completion, a Redis event, or a temporal completion record alone is not delivery evidence.
-4. Authenticate through the portal as a persisted internal MSP user whose backing `users.user_type` and authenticated session both say `internal`, and whose real `contact_id` is linked to the controlled client's contact. Ensure that contact owns the invoice and the user has other billing permissions. Use an internal login fixture; do not convert the client portal account in place or reuse its client cookie. Clear any prior client session and create a fresh session through the MSP login flow. If the session identity does not match the persisted row, stop and repair the fixture/authentication setup before calling the action. Attempt portal resend and capture the unauthorized response plus evidence that no resend job was created/enqueued.
+4. Authenticate through the portal as the prepared `invoice-authz-linked-internal@example.invalid` internal MSP user. Its backing `users.user_type` is `internal`, its real `contact_id` belongs to the invoice owner, and it has billing read/create without invoice send. Do not reuse the client account or cookie. Clear prior client session state, create a fresh session through the MSP login flow, and verify the session identity matches persisted user `9f2425d8-0c8d-4f0a-a2a2-adf7fb6db570` before calling portal resend. Capture the unauthorized response and evidence that no resend job was created/enqueued.
 5. As a positive control, authenticate as an actual client portal user for the invoice owner and resend `SMOKE-AUTHZ-1102`. Correlate its job through event consumption, matching handler execution, and GreenMail receipt with the invoice PDF as in step 3.
 6. Exercise immediate **Send** authorization parity through the MSP dialog: the user without `invoice:send` is denied; the authorized user may send. Record its separate job or send result and delivery evidence.
 
