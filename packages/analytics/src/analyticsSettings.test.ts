@@ -12,9 +12,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/tenancy/server', () => ({
   getTenantForCurrentRequest: mocks.getTenantForCurrentRequest,
-}));
-
-vi.mock('@alga-psa/tenancy/actions', () => ({
   getTenantSettingsByTenantId: mocks.getTenantSettingsByTenantId,
 }));
 
