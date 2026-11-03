@@ -80,6 +80,7 @@ export const nativeTicketDataSource: TicketDataSource = Object.freeze({
     getAllClients: lazy(() => import('../actions/clientLookupActions'), 'getAllClients'),
     getClientLocations: lazy(() => import('../actions/clientLookupActions'), 'getClientLocations'),
     getClientBillingProfiles: lazy(() => import('../actions/clientLookupActions'), 'getClientBillingProfiles'),
+    searchClientsForPicker: lazy(() => import('../actions/clientLookupActions'), 'searchClientsForPicker'),
   }),
 
   resources: Object.freeze({
