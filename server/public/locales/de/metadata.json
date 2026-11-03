@@ -541,6 +541,9 @@
         "title": "Geteilte Aufgaben",
         "taskTitle": "Geteilte Aufgabe",
         "projectTitle": "Geteiltes Projekt"
+      },
+      "export": {
+        "title": "Arbeitsbereich exportieren"
       }
     }
   },

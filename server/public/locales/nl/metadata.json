@@ -541,6 +541,9 @@
         "title": "Gedeelde taken",
         "taskTitle": "Gedeelde taak",
         "projectTitle": "Gedeeld project"
+      },
+      "export": {
+        "title": "Werkruimte exporteren"
       }
     }
   },

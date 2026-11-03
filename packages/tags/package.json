@@ -41,6 +41,11 @@
       "import": "./dist/lib/tagCleanup.js",
       "require": "./dist/lib/tagCleanup.js"
     },
+    "./lib/displayTags": {
+      "types": "./dist/lib/displayTags.d.ts",
+      "import": "./dist/lib/displayTags.js",
+      "require": "./dist/lib/displayTags.js"
+    },
     "./lib/tagDisplayRules": {
       "types": "./dist/lib/tagDisplayRules.d.ts",
       "import": "./dist/lib/tagDisplayRules.js",

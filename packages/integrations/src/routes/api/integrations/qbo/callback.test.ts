@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   resolveQboOAuthCredentials: vi.fn(),
   upsertStoredQboCredentials: vi.fn(),
   getQboRedirectUri: vi.fn(),
+  resolveTenantQboEnvironment: vi.fn(async () => 'production' as const),
   axiosPost: vi.fn(),
 }));
 
@@ -57,6 +58,7 @@ vi.mock('@alga-psa/core/logger', () => ({
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
   getQboRedirectUri: mocks.getQboRedirectUri,
   resolveQboOAuthCredentials: mocks.resolveQboOAuthCredentials,
+  resolveTenantQboEnvironment: mocks.resolveTenantQboEnvironment,
   upsertStoredQboCredentials: mocks.upsertStoredQboCredentials,
   QBO_TOKEN_URL: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
 }));
@@ -160,6 +162,9 @@ describe('QBO OAuth callback authorization', () => {
         accessToken: 'access-token',
         refreshToken: 'refresh-token',
         realmId: 'realm-1',
+        // Stamped from the tenant's resolved Intuit environment, so this realm
+        // keeps using the host it was authorized against.
+        environment: 'production',
       }),
       { authorizationFlowStartedAt: created.payload.initiatedAt }
     );
