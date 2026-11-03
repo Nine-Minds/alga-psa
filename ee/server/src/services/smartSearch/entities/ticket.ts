@@ -31,6 +31,7 @@ import {
 } from '../candidate';
 import type { SmartSearchEntityDefinition, SmartSearchRedactions } from '../entityDefinition';
 import type { RelevancePrompt } from '../scoreBatch';
+import { hiddenTicketFields } from '@alga-psa/tickets/lib/ticketFieldProjection';
 
 export type TicketCommentAuthor = 'technician' | 'client' | 'system';
 
@@ -118,8 +119,8 @@ function maskedColumn(trx: Knex.Transaction, hidden: ReadonlySet<string>, field:
 }
 
 async function loadTicketTextRows(trx: Knex.Transaction, tenant: string, ticketIds: string[], redactedFields: readonly string[]): Promise<TicketTextRow[]> {
-  const hidden = new Set(redactedFields);
-  if (hidden.has('tickets') || hidden.has('ticket_id')) return [];
+  const hidden = hiddenTicketFields(redactedFields);
+  if (hidden.has('ticket_id') || redactedFields.includes('*')) return [];
   const db = tenantDb(trx, tenant);
   const query = db.table('tickets as t');
   db.tenantJoin(query, 'clients as comp', 't.client_id', 'comp.client_id', { type: 'left' });
@@ -190,15 +191,17 @@ export async function loadTicketCandidates(
   tenant: string,
   user: IUserWithRoles,
   ticketIds: string[],
-  redactions: SmartSearchRedactions = new Map()
+  redactions: SmartSearchRedactions
 ): Promise<SmartSearchCandidate[]> {
   if (ticketIds.length === 0) {
     return [];
   }
+  const authorizedIds = ticketIds.filter((id) => redactions.has(id));
+  if (authorizedIds.length === 0) return [];
   const principal = await resolveSearchAclPrincipal(trx, user);
   const grouped = new Map<string, string[]>();
-  for (const id of ticketIds) {
-    const fields = [...new Set(redactions.get(id) ?? [])].sort();
+  for (const id of authorizedIds) {
+    const fields = [...new Set(redactions.get(id)!)].sort();
     const key = JSON.stringify(fields);
     grouped.set(key, [...(grouped.get(key) ?? []), id]);
   }
@@ -227,7 +230,7 @@ export async function loadTicketCandidates(
 
   const rowsById = new Map(ticketRows.map((row) => [row.ticket_id, row] as const));
   const candidates: SmartSearchCandidate[] = [];
-  for (const ticketId of ticketIds) {
+  for (const ticketId of authorizedIds) {
     const row = rowsById.get(ticketId);
     if (!row) {
       // Filtered out or deleted between enumeration and load; the runner
@@ -280,25 +283,25 @@ export const ticketSmartSearch: SmartSearchEntityDefinition<TicketSmartSearchSco
   },
   loadCandidates: loadTicketCandidates,
   hydrateRows: async (scope, ids, originalRedactions) => {
-    const result = await loadTicketListItemsByIds(scope, ids);
-    if (isActionMessageError(result) || isActionPermissionError(result)) {
-      return result;
-    }
     const fresh = await authorizeTicketIdsWithRedactions(ids);
     if (isActionMessageError(fresh) || isActionPermissionError(fresh)) return fresh;
-    const byId = new Map(fresh.map(({ ticketId, redactedFields }) => [ticketId, new Set([...(originalRedactions.get(ticketId) ?? []), ...redactedFields])] as const));
-    const rows = result.tickets.filter((ticket) => byId.has(ticket.ticket_id)).map((ticket) => {
-      const hidden = byId.get(ticket.ticket_id)!;
-      const copy = { ...ticket } as ITicketListItem;
-      for (const field of hidden) {
-        if (field === 'tickets' || field === 'ticket_id') return null;
-        if (field === 'title') copy.title = 'Hidden ticket';
-        else if (field === 'description') copy.attributes = { ...(copy.attributes ?? {}), description: null };
-        else if (field in copy) (copy as unknown as Record<string, unknown>)[field] = null;
-      }
-      return copy;
-    }).filter((ticket): ticket is ITicketListItem => ticket !== null);
-    return { rows, metadata: result.metadata };
+    const byId = new Map(fresh.map(({ ticketId, redactedFields }) => [ticketId, [...new Set([...(originalRedactions.get(ticketId) ?? []), ...redactedFields])]] as const));
+    const authorizedIds = ids.filter((id) => byId.has(id));
+    const callerRedactions = Object.fromEntries(authorizedIds.map((id) => [id, [...byId.get(id)!]])) as Record<string, string[]>;
+    const result = await loadTicketListItemsByIds(scope, authorizedIds, callerRedactions);
+    if (isActionMessageError(result) || isActionPermissionError(result)) return result;
+    const rows = result.tickets.filter((ticket) => byId.has(ticket.ticket_id));
+    const visibleIds = new Set(rows.map((ticket) => ticket.ticket_id));
+    const visibleAgents = new Set(rows.flatMap((ticket) => ticket.assigned_to ? [ticket.assigned_to] : []));
+    const visibleTeams = new Set(rows.flatMap((ticket) => ticket.assigned_team_id ? [ticket.assigned_team_id] : []));
+    return {
+      rows,
+      metadata: {
+        agentAvatarUrls: Object.fromEntries(Object.entries(result.metadata.agentAvatarUrls).filter(([id]) => visibleAgents.has(id))),
+        teamAvatarUrls: Object.fromEntries(Object.entries(result.metadata.teamAvatarUrls).filter(([id]) => visibleTeams.has(id))),
+        ticketTags: Object.fromEntries(Object.entries(result.metadata.ticketTags).filter(([id]) => visibleIds.has(id))),
+      },
+    };
   },
   rowId: (ticket) => ticket.ticket_id as string,
   relevance: TICKET_RELEVANCE,

@@ -1,0 +1,86 @@
+/** Shared authorization projection for ticket source fields, list aliases and derived values. */
+export type TicketFieldProjection = {
+  field: string;
+  sources: readonly string[];
+  aliases: readonly string[];
+  neutral?: string | null;
+};
+
+export const TICKET_FIELD_PROJECTIONS: readonly TicketFieldProjection[] = [
+  { field: 'ticket_id', sources: ['ticket_id'], aliases: ['ticket_id'] },
+  { field: 'ticket_number', sources: ['ticket_number'], aliases: ['ticket_number', 'bundle_master_ticket_number'] },
+  { field: 'title', sources: ['title', 'tickets.title'], aliases: ['title'], neutral: 'Hidden ticket' },
+  { field: 'url', sources: ['url'], aliases: ['url'], neutral: null },
+  { field: 'description', sources: ['attributes.description', 'description'], aliases: ['description'], neutral: null },
+  { field: 'client_id', sources: ['client_id', 'clients.client_name'], aliases: ['client_name', 'client_tags', 'bundle_distinct_client_count'], neutral: null },
+  { field: 'contact_name_id', sources: ['contact_name_id', 'contacts.full_name'], aliases: ['contact_name', 'contact_tags'], neutral: null },
+  { field: 'status_id', sources: ['status_id', 'statuses.name', 'statuses.is_closed'], aliases: ['status_name', 'is_closed'], neutral: null },
+  { field: 'priority_id', sources: ['priority_id', 'priorities.priority_name', 'priorities.color'], aliases: ['priority_name', 'priority_color'], neutral: null },
+  { field: 'board_id', sources: ['board_id', 'boards.board_name'], aliases: ['board_name'], neutral: null },
+  { field: 'category_id', sources: ['category_id'], aliases: ['category_name'], neutral: null },
+  { field: 'assigned_to', sources: ['assigned_to', 'users.first_name', 'users.last_name'], aliases: ['assigned_to_name', 'additional_agents', 'additional_agent_count'], neutral: null },
+  { field: 'assigned_team_id', sources: ['assigned_team_id', 'teams.team_name'], aliases: ['assigned_team_name'], neutral: null },
+  { field: 'entered_by', sources: ['entered_by', 'users.first_name', 'users.last_name'], aliases: ['entered_by_name'], neutral: null },
+  { field: 'updated_by', sources: ['updated_by'], aliases: ['updated_by'], neutral: null },
+  { field: 'closed_by', sources: ['closed_by'], aliases: ['closed_by'], neutral: null },
+  { field: 'location_id', sources: ['location_id'], aliases: ['location_id'], neutral: null },
+  { field: 'subcategory_id', sources: ['subcategory_id'], aliases: ['subcategory_id'], neutral: null },
+  { field: 'billing_profile_id', sources: ['billing_profile_id'], aliases: ['billing_profile_id'], neutral: null },
+  { field: 'attributes', sources: ['attributes', 'attributes.description'], aliases: ['attributes', 'description'], neutral: null },
+  { field: 'entered_at', sources: ['entered_at'], aliases: ['entered_at'], neutral: null },
+  { field: 'updated_at', sources: ['updated_at'], aliases: ['updated_at'], neutral: null },
+  { field: 'closed_at', sources: ['closed_at'], aliases: ['closed_at'], neutral: null },
+  { field: 'due_date', sources: ['due_date'], aliases: ['due_date'], neutral: null },
+  { field: 'master_ticket_id', sources: ['master_ticket_id'], aliases: ['master_ticket_id'], neutral: null },
+  { field: 'itil_impact', sources: ['itil_impact'], aliases: ['itil_impact'], neutral: null },
+  { field: 'itil_urgency', sources: ['itil_urgency'], aliases: ['itil_urgency'], neutral: null },
+  { field: 'itil_priority_level', sources: ['itil_priority_level'], aliases: ['itil_priority_level'], neutral: null },
+  { field: 'response_state', sources: ['response_state'], aliases: ['response_state'], neutral: null },
+  { field: 'ticket_origin', sources: ['ticket_origin'], aliases: ['ticket_origin'], neutral: null },
+  { field: 'sla_policy_id', sources: ['sla_policy_id'], aliases: ['sla_policy_id'], neutral: null },
+  { field: 'sla_started_at', sources: ['sla_started_at'], aliases: ['sla_started_at'], neutral: null },
+  { field: 'sla_response_due_at', sources: ['sla_response_due_at'], aliases: ['sla_response_due_at'], neutral: null },
+  { field: 'sla_response_at', sources: ['sla_response_at'], aliases: ['sla_response_at'], neutral: null },
+  { field: 'sla_response_met', sources: ['sla_response_met'], aliases: ['sla_response_met'], neutral: null },
+  { field: 'sla_resolution_due_at', sources: ['sla_resolution_due_at'], aliases: ['sla_resolution_due_at'], neutral: null },
+  { field: 'sla_resolution_at', sources: ['sla_resolution_at'], aliases: ['sla_resolution_at'], neutral: null },
+  { field: 'sla_resolution_met', sources: ['sla_resolution_met'], aliases: ['sla_resolution_met'], neutral: null },
+  { field: 'sla_paused_at', sources: ['sla_paused_at'], aliases: ['sla_paused_at'], neutral: null },
+  { field: 'sla_total_pause_minutes', sources: ['sla_total_pause_minutes'], aliases: ['sla_total_pause_minutes'], neutral: null },
+  { field: 'tickets', sources: ['*'], aliases: ['*'], neutral: null },
+];
+
+function paths(field: string): string[] {
+  return field.toLowerCase().replace(/\["?([^\]"']+)"?\]/g, '.$1').split('.').filter(Boolean);
+}
+
+function matches(pattern: string, candidate: string): boolean {
+  const p = paths(pattern);
+  const c = paths(candidate);
+  if (p.length === 1 && p[0] === '*') return true;
+  // Unqualified names match their source regardless of a table qualifier.
+  // A parent path matches every descendant; a wildcard matches one path segment.
+  const suffixMatch = (longer: string[], shorter: string[]) => {
+    if (shorter.length > longer.length) return false;
+    const offset = longer.length - shorter.length;
+    return shorter.every((part, index) => part === '*' || part === longer[offset + index]);
+  };
+  const prefixMatch = (parent: string[], child: string[]) => parent.length <= child.length &&
+    parent.every((part, index) => part === '*' || part === child[index]);
+  return suffixMatch(p, c) || suffixMatch(c, p) || prefixMatch(p, c) || prefixMatch(c, p);
+}
+
+export function isTicketFieldHidden(redactions: readonly string[], projection: TicketFieldProjection): boolean {
+  const names = [projection.field, ...projection.sources, ...projection.aliases];
+  return redactions.some((redaction) => {
+    if (!redaction) return false;
+    const field = redaction.toLowerCase();
+    return names.some((name) => matches(field, name) || matches(name, field) || matches(field, `tickets.${name}`) || matches(field, `ticket.${name}`));
+  });
+}
+
+export function hiddenTicketFields(redactions: readonly string[]): Set<string> {
+  return new Set(TICKET_FIELD_PROJECTIONS
+    .filter((projection) => isTicketFieldHidden(redactions, projection))
+    .flatMap(({ field, sources, aliases }) => [field, ...sources, ...aliases]));
+}

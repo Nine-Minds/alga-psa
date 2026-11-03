@@ -102,10 +102,13 @@ describe('ticketSmartSearch definition', () => {
   it('keeps original redactions, applies fresh restrictions, and omits tickets denied during hydration', async () => {
     vi.mocked(loadTicketListItemsByIds).mockResolvedValue({
       tickets: [
-        { ticket_id: 'a', title: 'Hidden title', attributes: { description: 'Hidden description' }, client_name: 'Visible client' } as never,
+        { ticket_id: 'a', title: 'Hidden ticket', attributes: { description: null }, client_name: null, assigned_to: null } as never,
         { ticket_id: 'b', title: 'Denied ticket' } as never,
       ],
-      metadata: { agentAvatarUrls: {}, teamAvatarUrls: {}, ticketTags: {} },
+      metadata: {
+        agentAvatarUrls: { hiddenAgent: '/avatar' }, teamAvatarUrls: { team: '/avatar' },
+        ticketTags: { a: [], b: [] },
+      },
     });
     vi.mocked(authorizeTicketIdsWithRedactions).mockResolvedValue([
       { ticketId: 'a', redactedFields: ['client_name'] },
@@ -114,9 +117,11 @@ describe('ticketSmartSearch definition', () => {
       ['a', ['title', 'description']],
       ['b', []],
     ]));
-    expect(result).toMatchObject({ rows: [{ ticket_id: 'a', title: 'Hidden ticket', attributes: { description: null }, client_name: null }] });
-    expect(JSON.stringify(result)).not.toContain('Hidden title');
-    expect(JSON.stringify(result)).not.toContain('Hidden description');
+    expect(loadTicketListItemsByIds).toHaveBeenLastCalledWith({}, ['a'], { a: ['title', 'description', 'client_name'] });
+    expect(result).toMatchObject({
+      rows: [{ ticket_id: 'a', title: 'Hidden ticket', attributes: { description: null }, client_name: null }],
+      metadata: { agentAvatarUrls: {}, teamAvatarUrls: {}, ticketTags: { a: [] } },
+    });
     expect(JSON.stringify(result)).not.toContain('Denied ticket');
   });
 

@@ -20,7 +20,7 @@ export type ActionFailure = ActionPermissionErrorShape | ActionMessageErrorShape
 /** One enumerated row: its id, and the fields the caller may not see for it (empty or absent when nothing is hidden). */
 export interface SmartSearchTarget {
   id: string;
-  redactedFields?: readonly string[];
+  redactedFields: readonly string[];
 }
 
 /** Redactions by row id, handed to candidate loading and hydration so neither reads what the caller may not see. */
