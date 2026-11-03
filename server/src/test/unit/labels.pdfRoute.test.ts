@@ -135,6 +135,8 @@ describe('worksheet PDF route', () => {
   it.each([
     ['fr', 1, '1 cœur'],
     ['fr', 8, '8 cœurs'],
+    ['it', 1, '1 nucleo'],
+    ['it', 8, '8 nuclei'],
     ['pl', 2, '2 rdzenie'],
     ['pl', 5, '5 rdzeni'],
   ])('passes %s locale and localized %i-core asset details to the renderer', async (locale, count, coreLabel) => {

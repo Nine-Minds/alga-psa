@@ -142,10 +142,10 @@
       "cpu": "Processore",
       "ram": "Memoria RAM",
       "storage": "Archiviazione",
-      "cpuCoreCount_one": "{{count}} core",
-      "cpuCoreCount_other": "{{count}} core",
-      "cpuCoreCount_few": "{{count}} core",
-      "cpuCoreCount_many": "{{count}} core"
+      "cpuCoreCount_one": "{{count}} nucleo",
+      "cpuCoreCount_other": "{{count}} nuclei",
+      "cpuCoreCount_few": "{{count}} nuclei",
+      "cpuCoreCount_many": "{{count}} nuclei"
     }
   },
   "errors": {
