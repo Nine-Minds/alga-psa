@@ -716,6 +716,21 @@
       "rejected": "Não foi possível salvar esta tarefa.",
       "saved": "Salvo.",
       "save": "Salvar"
+    },
+    "portableExport": {
+      "title": "Exportar espaço de trabalho",
+      "description": "Baixe um arquivo portátil e criptografado com os registros e arquivos do seu espaço de trabalho.",
+      "recovery": "Guarde a frase secreta de recuperação em um local seguro. Sem ela, o arquivo não pode ser aberto.",
+      "connections": "O arquivo contém os registros do seu espaço de trabalho e os arquivos armazenados nele. Registros e associações de documentos, bem como o histórico de tempo, agenda, reuniões e conversas, ainda não estão incluídos e chegarão em uma versão posterior. Faturamento, dados privados do MSP e segredos de integração não estão incluídos.",
+      "passphrase": "Frase secreta de recuperação",
+      "confirmPassphrase": "Confirmar frase secreta de recuperação",
+      "download": "Preparar e baixar arquivo",
+      "requested": "Sua solicitação será aberta em uma nova aba. A preparação pode levar alguns minutos; seu navegador baixará o arquivo quando estiver pronto.",
+      "loadError": "Você não pode exportar este espaço de trabalho com seu acesso atual.",
+      "lengthError": "Use uma frase secreta entre 16 e 1024 bytes UTF-8.",
+      "matchError": "As frases secretas de recuperação devem coincidir.",
+      "unavailable": "A exportação do espaço de trabalho não está disponível nesta edição.",
+      "loading": "Carregando…"
     }
   },
   "common": {

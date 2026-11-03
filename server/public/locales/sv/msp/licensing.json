@@ -716,6 +716,21 @@
       "rejected": "Det gick inte att spara uppgiften.",
       "saved": "Sparat.",
       "save": "Spara"
+    },
+    "portableExport": {
+      "title": "Exportera arbetsyta",
+      "description": "Ladda ned ett krypterat, portabelt arkiv med arbetsytans poster och filer.",
+      "recovery": "Förvara återställningslösenfrasen på ett säkert ställe. Utan den går arkivet inte att öppna.",
+      "connections": "Arkivet innehåller arbetsytans poster och de filer som lagras i arbetsytan. Dokumentposter och kopplingar samt historik för tid, schema, möten och konversationer ingår ännu inte och kommer i en senare version. Fakturering, MSP-privata data och integrationshemligheter ingår inte.",
+      "passphrase": "Återställningslösenfras",
+      "confirmPassphrase": "Bekräfta återställningslösenfras",
+      "download": "Förbered och ladda ned arkiv",
+      "requested": "Din begäran öppnas i en ny flik. Förberedelsen kan ta några minuter; webbläsaren laddar ned filen när den är klar.",
+      "loadError": "Du kan inte exportera den här arbetsytan med din nuvarande åtkomst.",
+      "lengthError": "Använd en lösenfras på mellan 16 och 1024 UTF-8-byte.",
+      "matchError": "Återställningslösenfraserna måste matcha.",
+      "unavailable": "Export av arbetsyta är inte tillgänglig i den här utgåvan.",
+      "loading": "Läser in…"
     }
   },
   "common": {
