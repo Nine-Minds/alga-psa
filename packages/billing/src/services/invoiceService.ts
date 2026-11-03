@@ -296,7 +296,7 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
   }
 }
 
-async function linkAndMarkSourceBillingRecord(params: {
+export async function linkAndMarkSourceBillingRecord(params: {
   tx: Knex.Transaction;
   tenant: string;
   invoiceId: string;
@@ -409,11 +409,15 @@ async function linkAndMarkSourceBillingRecord(params: {
   // Prepaid hour block informational line: mark the fully-covered time entries
   // invoiced and link invoice_time_entries rows so covered time does not linger
   // forever as "unbilled". Partially covered entries are already marked by
-  // their hourly remainder charge. Best-effort per entry: an entry that is
-  // already invoiced (e.g. re-generated line) is simply skipped.
+  // their hourly remainder charge. An entry already linked to an invoice
+  // (e.g. a re-generated line) is skipped; a stale unlinked source aborts below.
   if (charge.type === 'hour_block') {
     const coveredEntryIds = (charge as { coveredEntryIds?: string[] }).coveredEntryIds ?? [];
     for (const entryId of coveredEntryIds) {
+      const alreadyLinked = await tenantScopedTable(tx, tenant, 'invoice_time_entries')
+        .where({ entry_id: entryId }).first('invoice_time_entry_id');
+      if (alreadyLinked) continue;
+
       const updatedCount = await tenantScopedTable(tx, tenant, 'time_entries')
         .where({ entry_id: entryId, invoiced: false, approval_status: 'APPROVED' })
         .update({ invoiced: true });
@@ -427,6 +431,21 @@ async function linkAndMarkSourceBillingRecord(params: {
           tenant,
           created_at: linkedAt,
         });
+      } else {
+        // A pre-existing invoice link is an idempotent duplicate. A source entry
+        // that is still unlinked but no longer approved was concurrently reversed
+        // (or otherwise changed) after charge calculation; abort the whole invoice
+        // transaction so its already-persisted consumption line cannot go stale.
+        const source = await tenantScopedTable(tx, tenant, 'time_entries')
+          .where({ entry_id: entryId }).first('invoiced', 'approval_status');
+        const linked = await tenantScopedTable(tx, tenant, 'invoice_time_entries')
+          .where({ entry_id: entryId }).first('invoice_time_entry_id');
+        if (!source) {
+          throw new Error(`Time entry ${entryId} disappeared before hour block invoice linkage.`);
+        }
+        if (!linked) {
+          throw new Error(`Time entry ${entryId} is no longer approved for hour block invoice linkage.`);
+        }
       }
     }
   }

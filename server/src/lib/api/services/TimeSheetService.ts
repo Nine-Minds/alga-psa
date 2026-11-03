@@ -551,7 +551,6 @@ export class TimeSheetService extends BaseService<any> {
       }
       try {
         if (target === 'APPROVED') {
-          if (sheet.user_id === context.userId) throw new ForbiddenError('Self approval is not permitted');
           await assertCanApproveSubject(context.user as any, context.tenant, sheet.user_id, trx);
         } else {
           await assertCanActOnBehalf(context.user as any, context.tenant, sheet.user_id, trx);

@@ -627,6 +627,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         try { data = rejectTimeSheetSchema.parse(await req.json()); }
         catch (error) {
           if (error instanceof ZodError) throw new ValidationError('Invalid rejection data', error.issues);
+          if (error instanceof SyntaxError) throw new ValidationError('Invalid rejection data: expected a JSON body');
           throw error;
         }
         const sheet = await runWithTenant(tenantId, () => this.timeSheetService.rejectTimeSheet(id, data.notes, {

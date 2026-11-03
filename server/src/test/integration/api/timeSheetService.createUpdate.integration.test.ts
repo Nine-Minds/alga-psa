@@ -53,8 +53,8 @@ vi.mock('@/lib/auth/rbac', async (importOriginal) => ({
   hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
     grants.has(user, resource, action)),
 }));
-// The shared self-approval predicate ("is the actor the sole approver?") resolves RBAC
-// through @alga-psa/authorization's own copy, so point it at the same fixture.
+// The shared self-approval policy resolves RBAC through @alga-psa/authorization's own
+// copy, so point it at the same fixture.
 vi.mock('@alga-psa/authorization/rbac', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
@@ -69,6 +69,9 @@ const tenantRows = () =>
   tenantDb(db, '__test_tenant_fixture__').unscoped('tenants', 'test fixture creates and removes tenant rows');
 
 async function cleanupTenant(tenantId: string) {
+  await tenantTable(tenantId, 'invoice_time_entries').del();
+  await tenantTable(tenantId, 'invoices').del();
+  await tenantTable(tenantId, 'clients').del();
   await tenantTable(tenantId, 'time_entries').del();
   await tenantTable(tenantId, 'time_sheet_comments').del();
   await tenantTable(tenantId, 'time_sheets').del();
@@ -145,6 +148,14 @@ async function postRoute(route: (request: Request, ...args: any[]) => Promise<Re
     headers: { 'content-type': 'application/json', 'x-api-key': 'route-test-api-key', 'x-tenant-id': routeTenantId },
     body: JSON.stringify(body),
   }), ...(path.includes('/reverse-approval') || path.includes('/reject') ? [{ params: Promise.resolve({ id: path.split('/').at(-2)! }) }] : []));
+}
+
+async function postRawRoute(route: (request: Request, ...args: any[]) => Promise<Response>, path: string, body: string) {
+  return route(new Request(`http://localhost${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': 'route-test-api-key', 'x-tenant-id': routeTenantId },
+    body,
+  }), [{ params: Promise.resolve({ id: path.split('/').at(-2)! }) }]);
 }
 
 describe('TimeSheetService.create / update (real Postgres)', () => {
@@ -350,7 +361,7 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     expect(await tenantTable(f.tenantId, 'time_sheet_comments').whereIn('time_sheet_id', [permittedSingle.sheetId, permittedBulk.sheetId]).orderBy('comment_id').select('*'))
       .toEqual(permittedCommentsBefore);
 
-    // Sole approver: the shared guard permits self-approval again.
+    // Removing co-approver grants does not create a sole-approver self-approval exception.
     grants.byUser.delete(coApprover);
     await expect(runWithTenant(f.tenantId, () => service.approveTimeSheet(permittedSingle.sheetId, { approval_notes: 'approved' }, ctx)))
       .rejects.toBeInstanceOf(ForbiddenError);
@@ -613,6 +624,38 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: sheetId }).select('*')).toEqual(commentsBefore);
   });
 
+  it('refuses to reverse when an invoice link exists even if the entry flag is false', async () => {
+    const f = await seed();
+    const sheetId = uuidv4();
+    const entryId = uuidv4();
+    const clientId = uuidv4();
+    const invoiceId = uuidv4();
+    await tenantTable(f.tenantId, 'clients').insert({ tenant: f.tenantId, client_id: clientId, client_name: 'Reversal invoice fixture', billing_cycle: 'monthly' });
+    await tenantTable(f.tenantId, 'invoices').insert({
+      tenant: f.tenantId, invoice_id: invoiceId, client_id: clientId,
+      invoice_number: `REV-${invoiceId.slice(0, 8)}`, invoice_date: new Date(), due_date: new Date(),
+      total_amount: 0, status: 'draft',
+    });
+    await tenantTable(f.tenantId, 'time_sheets').insert({ tenant: f.tenantId, id: sheetId, user_id: f.actor, period_id: f.periodId, approval_status: 'APPROVED', approved_by: f.subject, approved_at: new Date() });
+    await tenantTable(f.tenantId, 'time_entries').insert({
+      tenant: f.tenantId, entry_id: entryId, user_id: f.actor, time_sheet_id: sheetId,
+      start_time: new Date().toISOString(), end_time: new Date().toISOString(), work_date: '2026-01-06',
+      work_timezone: 'UTC', approval_status: 'APPROVED', invoiced: false, created_at: db.fn.now(), updated_at: db.fn.now(),
+    });
+    await tenantTable(f.tenantId, 'invoice_time_entries').insert({
+      invoice_time_entry_id: uuidv4(), tenant: f.tenantId, invoice_id: invoiceId, entry_id: entryId,
+    });
+    const sheetBefore = await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first();
+    const entryBefore = await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first();
+    const commentsBefore = await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: sheetId }).select('*');
+    grants.byUser.set(f.actor, new Set(['time_sheet:reverse', 'time_sheet:manage']));
+    await expect(runWithTenant(f.tenantId, () => serviceFor(f.tenantId).reverseApproval(sheetId, { reversal_reason: 'linked invoice' }, contextFor(f.tenantId, f.actor))))
+      .rejects.toBeInstanceOf(ConflictError);
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first()).toEqual(sheetBefore);
+    expect(await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first()).toEqual(entryBefore);
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: sheetId }).select('*')).toEqual(commentsBefore);
+  });
+
   it('bulk route performs approvals and persists approval metadata, entry state, and comment', async () => {
     const f = await seed();
     const sheetId = uuidv4();
@@ -692,10 +735,21 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     grants.byUser.set(f.actor, new Set(['time_sheet:approve']));
     const invalidPayload = await postRoute(rejectTimeSheetRoute as any, `/api/v1/time-sheets/${submittedId}/reject`, { approval_status: 'CHANGES_REQUESTED' });
     expect(invalidPayload.status).toBe(400);
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: submittedId }).first()).toEqual(submittedBefore);
+    expect(await tenantTable(f.tenantId, 'time_entries').where({ entry_id: submittedEntryId }).first()).toEqual(entryBefore);
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: submittedId }).select('*')).toEqual(commentsBefore);
+    for (const malformedBody of ['{', '']) {
+      const malformed = await postRawRoute(rejectTimeSheetRoute as any, `/api/v1/time-sheets/${submittedId}/reject`, malformedBody);
+      expect(malformed.status).toBe(400);
+      expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: submittedId }).first()).toEqual(submittedBefore);
+      expect(await tenantTable(f.tenantId, 'time_entries').where({ entry_id: submittedEntryId }).first()).toEqual(entryBefore);
+      expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: submittedId }).select('*')).toEqual(commentsBefore);
+    }
     const invalidState = await postRoute(rejectTimeSheetRoute as any, `/api/v1/time-sheets/${draftId}/reject`, { notes: 'No draft rejection' });
     expect(invalidState.status).toBe(409);
     expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: draftId }).first()).toMatchObject({ approval_status: 'DRAFT' });
     expect(await tenantTable(f.tenantId, 'time_entries').where({ entry_id: draftEntryId }).first()).toMatchObject({ approval_status: 'DRAFT' });
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: draftId }).select('*')).toEqual([]);
     const success = await postRoute(rejectTimeSheetRoute as any, `/api/v1/time-sheets/${submittedId}/reject`, { notes: 'Please correct the hours' });
     expect(success.status).toBe(200);
     expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: submittedId }).first()).toMatchObject({ approval_status: 'CHANGES_REQUESTED' });
