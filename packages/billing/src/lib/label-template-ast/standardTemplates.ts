@@ -180,7 +180,8 @@ const WORKSHEET_FIELD_STYLE: Record<string, unknown> = {
   fontSize: '14px',
   lineHeight: '1.5',
   overflowWrap: 'anywhere',
-  justifyContent: 'space-between',
+  // Field rows default to space-between; keep each value next to its label.
+  justifyContent: 'flex-start',
 };
 
 const worksheetField = (id: string, bindingId: string, labelText: TemplateI18nRef): Node => ({
@@ -272,7 +273,7 @@ const buildTicketCustomerWorksheet = (): TemplateAst => ({
             style: { inline: { minWidth: '0', flexGrow: 1, flexBasis: '0', display: 'flex', flexDirection: 'column', gap: '8px' } },
             children: [
               worksheetField('fld-name', 'clientName', { i18nKey: 'labels.worksheet.customer', defaultValue: 'Customer' }),
-              worksheetField('fld-asset', 'secondaryIdentifier', { i18nKey: 'labels.asset', defaultValue: 'Asset' }),
+              worksheetField('fld-asset', 'secondaryIdentifier', { i18nKey: 'labels.assetTag', defaultValue: 'Asset tag' }),
               worksheetField('fld-serial', 'assetSerialNumber', { i18nKey: 'labels.worksheet.serial', defaultValue: 'Serial' }),
             ],
           },
