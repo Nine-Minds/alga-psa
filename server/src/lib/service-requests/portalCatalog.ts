@@ -2,9 +2,11 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getServiceRequestVisibilityProvider } from './providers/registry';
 import type { ServiceRequestDefinitionShape } from './domain';
+import { isAudienceSatisfied, loadRequesterRecord } from './definitionAudience';
 
 interface PortalCatalogDefinitionRow {
   definition_id: string;
+  audience: unknown;
 }
 
 interface PortalCatalogDefinitionVersionRow {
@@ -55,7 +57,7 @@ export async function listVisibleServiceRequestCatalogItems(
         .select(knex.raw('1'))
         .whereRaw('version.definition_id = definition.definition_id')
     )
-    .select('definition.definition_id')) as PortalCatalogDefinitionRow[];
+    .select('definition.definition_id', 'definition.audience')) as PortalCatalogDefinitionRow[];
 
   if (definitionRows.length === 0) {
     return [];
@@ -89,6 +91,8 @@ export async function listVisibleServiceRequestCatalogItems(
       latestVersionByDefinitionId.set(row.definition_id, row);
     }
   }
+
+  const requester = await loadRequesterRecord(knex, context.tenant, context);
 
   const visible: ServiceRequestPortalCatalogItem[] = [];
 
@@ -129,7 +133,7 @@ export async function listVisibleServiceRequestCatalogItems(
       row.visibility_config ?? {}
     );
 
-    if (!canAccess) {
+    if (!canAccess || !isAudienceSatisfied(definitionRow.audience, requester)) {
       continue;
     }
 

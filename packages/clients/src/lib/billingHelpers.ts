@@ -3,6 +3,7 @@
 import type { Knex } from 'knex';
 import { createTenantKnex, withTransaction, tenantDb } from '@alga-psa/db';
 import { resolveProductCode } from '@alga-psa/types';
+import type { ResolvedTemplateAmounts } from '@alga-psa/shared/billingClients/templateAmounts';
 import { withAuth, withAuthCheck } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';import {
   getPrepaidBalanceAlertSettingsDb,
@@ -111,6 +112,8 @@ export async function cloneTemplateContractLineAsync(
     templateContractId?: string | null;
     overrideRate?: number | null;
     effectiveDate?: string | null;
+    /** The template's amounts resolved for the target contract's currency. */
+    amounts: ResolvedTemplateAmounts;
   }
 ): Promise<{ appliedCustomRate: number | null }> {
   return cloneTemplateContractLine(trx, options);

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildWorkflowReferenceFieldOptions } from '../workflowReferenceOptions';
-import type { DataContext } from '../workflowDataContext';
+import { buildDataContext, type DataContext } from '../workflowDataContext';
+import type { WorkflowDefinition } from '@alga-psa/workflows/runtime/client';
 
 const payloadSchema = {
   type: 'object',
@@ -301,6 +302,40 @@ describe('workflow reference options', () => {
       'URL (vars.firstTicket.url)',
       'URL (vars.secondTicket.url)',
     ]);
+  });
+
+  it('lists a variable set to one value by "Set variables", scoped key or bare', () => {
+    const assignDefinition = (key: string): WorkflowDefinition => ({
+      id: 'workflow-set-variables',
+      version: 1,
+      name: 'Set variables workflow',
+      payloadSchemaRef: 'system:default',
+      steps: [
+        {
+          id: 'set-vars',
+          type: 'transform.assign',
+          name: 'Set variables',
+          config: { assign: { [key]: { $expr: 'payload.senderEmail' } } },
+        },
+        {
+          id: 'find-contact',
+          type: 'action.call',
+          config: { actionId: 'contacts.find', version: 1 },
+        },
+      ],
+    } as unknown as WorkflowDefinition);
+
+    for (const key of ['vars.senderEmail', 'senderEmail']) {
+      const context = buildDataContext(assignDefinition(key), 'find-contact', [], {
+        type: 'object',
+        properties: { senderEmail: { type: 'string' } },
+      });
+      const options = buildWorkflowReferenceFieldOptions(context.payloadSchema, context);
+      expect(options.map((option) => option.value), key).toContain('vars.senderEmail');
+      expect(options.find((option) => option.value === 'vars.senderEmail')?.label, key).toContain(
+        'Set variables'
+      );
+    }
   });
 
   it('gives fields without a description a plain-language name, like described ones', () => {

@@ -13,6 +13,7 @@ import { EventSchemas } from '@alga-psa/event-schemas';
 import { buildPrepaidBlockUsageChangedPayload } from '@alga-psa/scheduling/lib/timeEntryWriteCore';
 import { expiredHourBlocksHandler } from '@alga-psa/jobs/handlers/expiredHourBlocksHandler';
 import { expiringHourBlocksNotificationHandler } from '@alga-psa/jobs/handlers/expiringHourBlocksNotificationHandler';
+import { applyPrepaidCoverage } from '@alga-psa/billing/lib/billing/chargeResolution/prepaidBlockRules';
 
 // Acceptance test: Ryan's scenario (plan section 9, steps 1-6) end to end on a
 // real database. A 40 h Prepaid Block of Remote Support sold at 4,400.00 with a
@@ -269,6 +270,15 @@ async function billedHourly(w: World, lineId: string): Promise<BilledEntry[]> {
     w.clientId, period, clientContractLine(w, lineId), undefined, TIMING, 'persisted',
     undefined, undefined, sink,
   );
+  // The loader no longer applies block coverage: the charge resolver does,
+  // from the engine's coverage rows, with the one shared rule.
+  for (const obligation of sink.obligations) {
+    const rows = await (engine as any).loadPrepaidCoverageRows(
+      lineId,
+      obligation.facts.activity.map((e: any) => e.sourceId),
+    );
+    obligation.facts.activity = applyPrepaidCoverage(obligation.facts.activity, rows);
+  }
   const charges: any[] = (engine as any).calculateLoadedContractObligations(sink, w.clientId, period, 'EUR');
   return charges.filter((c) => c.type === 'time').map((c) => ({
     entry_id: c.entryId, billable_duration: Math.round(Number(c.duration) * 60), rate: Number(c.rate), total: Number(c.total),

@@ -316,7 +316,20 @@
     "inboundDomainAutoCreateHelp": "Os domínios mapeados podem, opcionalmente, criar um contato para um novo remetente confiável. Os domínios precisam ser únicos entre os clientes.",
     "inboundDomainAutoCreateUpdated": "A configuração de contatos do remetente foi atualizada.",
     "inboundDomainAutoCreateUpdateFailed": "Não foi possível atualizar a configuração de contatos do remetente.",
-    "recurringTickets": "Tickets recorrentes"
+    "recurringTickets": "Tickets recorrentes",
+    "software": "Software",
+    "checklistsTab": "Listas de verificação",
+    "checklists": {
+      "name": "Nome",
+      "items": "Itens",
+      "status": "Status",
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "description": "Modelos de checklist oferecidos apenas nos tickets deste cliente. Edite-os em Configurações > Tickets > Modelos de checklist.",
+      "empty": "Nenhum modelo de checklist específico do cliente.",
+      "loadFailed": "Falha ao carregar os modelos de checklist",
+      "retry": "Tentar novamente"
+    }
   },
   "clientCommandCenter": {
     "cards": {
@@ -329,7 +342,8 @@
       "people": "Pessoas",
       "record": "Ficha do cliente",
       "service": "Serviço",
-      "timeline": "Tudo, por ordem"
+      "timeline": "Tudo, por ordem",
+      "software": "Software"
     },
     "csatEmpty": "Ainda não há respostas de inquéritos.",
     "discardCancel": "Continuar a editar",
@@ -406,6 +420,12 @@
       "primary": "Principal"
     },
     "pulseError": "Não foi possível carregar o resumo do cliente.",
+    "quickLinks": {
+      "assets": "Ativos",
+      "contacts": "Contatos",
+      "label": "Links rápidos",
+      "software": "Software"
+    },
     "rail": {
       "close": "Fechar",
       "installBase": "Base instalada",
@@ -441,6 +461,13 @@
       "onTrackLeft": "SLA: faltam {{left}}",
       "paused": "SLA em pausa"
     },
+    "software": {
+      "assetsMeta_one": "1 ativo",
+      "assetsMeta_other": "{{count}} ativos",
+      "loadError": "Não foi possível carregar o inventário de software.",
+      "titles": "títulos",
+      "viewAll": "Todo o software"
+    },
     "timeline": {
       "daysAgo": "há {{count}} d",
       "empty": "Ainda não há nenhum registro para este cliente.",
@@ -465,7 +492,8 @@
       "ticketClosed": "Ticket fechado",
       "ticketOpened": "Ticket aberto",
       "unitDelivered": "Equipamento entregue"
-    }
+    },
+    "discardFeatureMessage": "Você tem alterações não salvas nesta visualização. Fechar e descartá-las?"
   },
   "quickAddClient": {
     "lifecycleStatus": "Ciclo de vida",
@@ -572,11 +600,6 @@
     "invoiceDeliveryMethod": "Método de entrega de fatura",
     "invoiceTemplate": "Modelo de fatura",
     "invoiceTemplateHelp": "Selecione um modelo ou use o padrão",
-    "paymentTerms": {
-      "dueOnReceipt": "Vencimento no recebimento",
-      "net15": "Líquido 15",
-      "net30": "Líquido 30"
-    },
     "preferredPaymentMethod": "Método de pagamento preferido",
     "defaultCurrency": "Moeda padrão",
     "selectTaxRegion": "Selecione a região fiscal (opcional)",
@@ -588,11 +611,6 @@
       "both": "Ambos",
       "email": "E-mail",
       "mail": "Correspondência"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Transferência Bancária",
-      "check": "Verificar",
-      "creditCard": "Cartão de crédito"
     },
     "paymentTermsLabel": "Condições de pagamento",
     "standardTemplateLabel": "(Padrão)",
@@ -1764,7 +1782,8 @@
     },
     "cardExpiry": ", expira em {{month}}/{{year}}",
     "legacyPaymentTerms": "«{{value}}» não é uma condição de pagamento reconhecida e nunca foi aplicada. Será removida ao guardar.",
-    "cardOnFile": "{{type}} com final {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} com final {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Padrão do inquilino: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alertas de saldo pré-pago",
@@ -1930,6 +1949,7 @@
       "sourceAlreadyMerged": "Este cliente já foi mesclado em outro cliente.",
       "targetAlreadyMerged": "O cliente de destino foi ele próprio mesclado em outro cliente. Mescle naquele.",
       "sourceIsTenantDefault": "O registro da sua própria organização não pode ser mesclado em um cliente.",
+      "sourceHasCoManagement": "Este cliente tem um espaço de trabalho de TI cogerenciada. Cancele a configuração ou encerre a cogestão antes de mesclá-lo.",
       "parentLinkCycle": "Esse cliente está registrado como filho do que você está mesclando, então a mesclagem inverteria a hierarquia.",
       "invalidContractCutover": "Uma das datas de virada está fora da vigência do contrato correspondente."
     },
@@ -2031,5 +2051,21 @@
     "manager": "Responsável",
     "seesTickets": "Vê os chamados do perfil",
     "editHint": "Estes itens são editados no perfil de faturamento, nas configurações de faturamento do cliente."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Ativos",
+      "lastSeen": "Visto pela última vez",
+      "title": "Título",
+      "versions": "Versões"
+    },
+    "empty": "Ainda não há inventário de software — o inventário é coletado por dispositivo",
+    "emptyAssetsLink": "Ver ativos",
+    "exportCsv": "Exportar CSV",
+    "exportError": "Não foi possível exportar o inventário de software.",
+    "installedOn": "Instalado em",
+    "loadError": "Não foi possível carregar o inventário de software.",
+    "moreAssets": "e mais {{count}} (mostrando os primeiros {{limit}} por nome)",
+    "searchPlaceholder": "Pesquisar software..."
   }
 }

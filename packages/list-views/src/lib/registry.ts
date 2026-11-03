@@ -2,6 +2,12 @@ import type { z } from 'zod';
 import type { ListViewKey, ListViewSettings } from '@alga-psa/types';
 import { buildListViewSettingsSchema } from './settingsSchema';
 import { ticketListViewFiltersSchema } from './definitions/tickets';
+import {
+  TICKET_FILTERS_SCHEMA_VERSION,
+  legacyTagTexts,
+  migrateTicketFilters,
+  type TicketFilterMigrationContext,
+} from './ticketFilterMigration';
 import { projectListViewFiltersSchema } from './definitions/projects';
 import { clientListViewFiltersSchema } from './definitions/clients';
 import { contactListViewFiltersSchema } from './definitions/contacts';
@@ -22,25 +28,60 @@ export interface ListViewDefinition {
   settingsSchema: z.ZodTypeAny;
   /** Version written with every save. */
   schemaVersion: number;
-  /** Upgrades a document stored under an older `schema_version`. */
-  migrate?: (settings: ListViewSettings, fromVersion: number) => ListViewSettings;
+  /**
+   * Upgrades a document stored under an older `schema_version`. Pure and synchronous; anything that
+   * needs the database arrives through `context`, which `prepareMigration` fills.
+   */
+  migrate?: (settings: ListViewSettings, fromVersion: number, context?: ListViewMigrationContext) => ListViewSettings;
+  /** Resolves, once per read, whatever lookups `migrate` needs for the given stored documents. */
+  prepareMigration?: (
+    documents: ListViewSettings[],
+    lookups: ListViewMigrationLookups,
+  ) => Promise<ListViewMigrationContext>;
+}
+
+export type ListViewMigrationContext = TicketFilterMigrationContext;
+
+/** Tenant-scoped lookups the action layer offers to `prepareMigration`. */
+export interface ListViewMigrationLookups {
+  /** Ticket tag definition ids by tag text. */
+  ticketTagIdsByText(texts: string[]): Promise<Map<string, string>>;
+}
+
+export interface ListViewDefinitionOptions {
+  schemaVersion?: number;
+  migrate?: ListViewDefinition['migrate'];
+  prepareMigration?: ListViewDefinition['prepareMigration'];
 }
 
 function define(
   listKey: ListViewKey,
   readPermission: ListViewDefinition['readPermission'],
   filtersSchema: z.ZodTypeAny,
+  options: ListViewDefinitionOptions = {},
 ): ListViewDefinition {
   return {
     listKey,
     readPermission,
     settingsSchema: buildListViewSettingsSchema(filtersSchema),
-    schemaVersion: 1,
+    schemaVersion: options.schemaVersion ?? 1,
+    ...(options.migrate ? { migrate: options.migrate } : {}),
+    ...(options.prepareMigration ? { prepareMigration: options.prepareMigration } : {}),
   };
 }
 
 const LIST_VIEW_DEFINITIONS: Record<ListViewKey, ListViewDefinition> = {
-  tickets: define('tickets', { resource: 'ticket', action: 'read' }, ticketListViewFiltersSchema),
+  tickets: define('tickets', { resource: 'ticket', action: 'read' }, ticketListViewFiltersSchema, {
+    schemaVersion: TICKET_FILTERS_SCHEMA_VERSION,
+    migrate: (settings, fromVersion, context) => ({
+      ...settings,
+      filters: migrateTicketFilters(settings.filters as Record<string, unknown> | undefined, fromVersion, context),
+    }) as ListViewSettings,
+    prepareMigration: async (documents, lookups) => {
+      const texts = Array.from(new Set(documents.flatMap((doc) => legacyTagTexts(doc.filters))));
+      return { tagIdsByText: texts.length > 0 ? await lookups.ticketTagIdsByText(texts) : new Map() };
+    },
+  }),
   projects: define('projects', { resource: 'project', action: 'read' }, projectListViewFiltersSchema),
   clients: define('clients', { resource: 'client', action: 'read' }, clientListViewFiltersSchema),
   contacts: define('contacts', { resource: 'contact', action: 'read' }, contactListViewFiltersSchema),
@@ -61,11 +102,12 @@ export function migrateListViewSettings(
   definition: ListViewDefinition,
   settings: ListViewSettings,
   storedVersion: number,
+  context?: ListViewMigrationContext,
 ): ListViewSettings {
   if (storedVersion >= definition.schemaVersion || !definition.migrate) {
     return settings;
   }
-  return definition.migrate(settings, storedVersion);
+  return definition.migrate(settings, storedVersion, context);
 }
 
 /** `user_preferences.setting_name` holding a user's default view for a list. */

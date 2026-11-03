@@ -701,3 +701,140 @@ describe("hardcoded currency (locale files)", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Detector 3: currency glyph baked into a LABEL's unit suffix.
+//
+// "Hourly Rate ($)", "Rate ($/hr)", "(€/h)", "($/Std.)" — the unit belongs in
+// the label, the currency belongs in the in-field adornment, which follows the
+// contract's currency. A label with a glyph is wrong for every non-USD
+// contract. Detector 1 misses this shape (no digit follows the symbol).
+//
+// Scoped to the billing screens: the whole billing dashboard and the EE
+// billing components (contract simulator). Widen when other directories are
+// triaged for false positives.
+const LABEL_SCOPE_DIRS = [
+  "../packages/billing/src/components/billing-dashboard",
+  "../ee/server/src/components/billing",
+];
+const GLYPHS = SYMBOLIC; // letter-only symbols ("kr", "R") are ordinary words in labels
+const GLYPH_ALT = alternation(GLYPHS);
+// "(" glyph, optional "/unit", ")" — e.g. ($), ($/hr), (€/h), ($/Std.)
+const LABEL_GLYPH = new RegExp(`\\(\\s*(?:${GLYPH_ALT})\\s*(?:/[^)]*)?\\)`);
+
+function scanLabelDefaults(absFile: string, out: Violation[]): void {
+  const text = fs.readFileSync(absFile, "utf8");
+  if (!LABEL_GLYPH.test(text)) return;
+  const sourceFile = ts.createSourceFile(
+    absFile,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    /x$/.test(absFile) ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
+  const file = path.relative(REPO_ROOT, absFile);
+  const report = (node: ts.Node, snippet: string): void => {
+    const { line } = sourceFile.getLineAndCharacterOfPosition(
+      node.getStart(sourceFile),
+    );
+    out.push({ file, line: line + 1, snippet });
+  };
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isPropertyAssignment(node) &&
+      ((ts.isIdentifier(node.name) && node.name.text === "defaultValue") ||
+        (ts.isStringLiteral(node.name) && node.name.text === "defaultValue")) &&
+      (ts.isStringLiteral(node.initializer) ||
+        ts.isNoSubstitutionTemplateLiteral(node.initializer)) &&
+      LABEL_GLYPH.test(node.initializer.text)
+    ) {
+      report(node, node.initializer.text);
+    } else if (ts.isJsxText(node) && LABEL_GLYPH.test(node.text)) {
+      // Raw JSX text, e.g. <span>Rate ($)</span>
+      report(node, node.text.trim());
+    } else if (
+      ts.isJsxAttribute(node) &&
+      node.initializer &&
+      ts.isStringLiteral(node.initializer) &&
+      LABEL_GLYPH.test(node.initializer.text)
+    ) {
+      // Literal attribute text, e.g. placeholder="Rate ($/hr)"
+      report(node, node.initializer.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+}
+
+describe("currency glyph in billing rate labels", () => {
+  it("LABEL_GLYPH flags the known bad shapes and spares good labels", () => {
+    for (const bad of [
+      "Hourly Rate ($)",
+      "Rate ($/hr)",
+      "Rate (€/h)",
+      "Überstundensatz ($/Std.)",
+      "Taxa ( $ /hora)",
+      "Amount ($)",
+    ]) {
+      expect(LABEL_GLYPH.test(bad), bad).toBe(true);
+    }
+    for (const good of [
+      "Hourly Rate (per hour)",
+      "Rate (per hour)",
+      "Stawka (za godzinę)",
+      "Threshold (hours/period)",
+    ]) {
+      expect(LABEL_GLYPH.test(good), good).toBe(false);
+    }
+  });
+
+  it("no t() defaultValue or JSX text in billing components carries a currency glyph", () => {
+    const files: string[] = [];
+    for (const dir of LABEL_SCOPE_DIRS) {
+      const before = files.length;
+      collectSourceFiles(path.resolve(process.cwd(), dir), files);
+      expect(files.length, `${dir} yielded no source files`).toBeGreaterThan(before);
+    }
+    const violations: Violation[] = [];
+    for (const f of files) scanLabelDefaults(f, violations);
+    expect(
+      violations.map((v) => `${v.file}:${v.line} ${v.snippet}`),
+      "rate labels must carry the period (per hour), never the currency — the in-field adornment shows the contract's symbol",
+    ).toEqual([]);
+  });
+
+  it("billing locale strings carry no currency glyph in any locale", () => {
+    const FILES = ["contract-lines.json", "contracts.json"];
+    const locales = fs
+      .readdirSync(LOCALES_ROOT, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name);
+    expect(locales.length).toBeGreaterThanOrEqual(11);
+    for (const required of ["sv", "xx", "yy"]) expect(locales).toContain(required);
+    const glyph = new RegExp(`\\(\\s*(?:${GLYPH_ALT})`);
+    // A currency *word* is as wrong as a glyph: "Tier rate dollars" is announced on a EUR field.
+    const CURRENCY_WORD =
+      /(?<!\p{L})(?:dollars?|dollari|dollaro|dólares?|dolar(?:es|ach|y|ów)?)(?!\p{L})/iu;
+    const offenders: string[] = [];
+    const walk = (value: unknown, where: string): void => {
+      if (typeof value === "string") {
+        if (glyph.test(value) || LABEL_GLYPH.test(value) || CURRENCY_WORD.test(value)) {
+          offenders.push(`${where} = ${value}`);
+        }
+      } else if (value && typeof value === "object") {
+        for (const [k, v] of Object.entries(value)) walk(v, `${where}.${k}`);
+      }
+    };
+    for (const locale of locales) {
+      for (const name of FILES) {
+        const file = path.join(LOCALES_ROOT, locale, "msp", name);
+        if (!fs.existsSync(file)) {
+          offenders.push(`${locale}/msp/${name} (missing)`);
+          continue;
+        }
+        walk(JSON.parse(fs.readFileSync(file, "utf8")), `${locale}::${name}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});

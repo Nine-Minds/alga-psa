@@ -4,6 +4,7 @@
  * Deliberately NOT in a 'use server' module: these helpers take a Knex handle and an explicit
  * tenant, so they must never be reachable as client-callable server actions.
  */
+import { delegateToTimeSource } from './timeSource';
 import { Temporal } from '@js-temporal/polyfill';
 import type { Knex } from 'knex';
 import type { ITimePeriod, ITimePeriodSettings } from '@alga-psa/types';
@@ -143,6 +144,10 @@ export async function ensureTimePeriodCoversDate(
   tenant: string,
   date: Temporal.PlainDate
 ): Promise<void> {
+  // Time-source seam: a registered non-native source may own period coverage; native falls through (0 statements).
+  const delegated = await delegateToTimeSource({ tenant }, (source, ctx) =>
+    source.periods.ensureCovers(ctx, knex, tenant, date));
+  if (delegated.handled) return;
   try {
     const existing = await TimePeriod.findByDate(knex, tenant, date.toString());
     if (existing) return;

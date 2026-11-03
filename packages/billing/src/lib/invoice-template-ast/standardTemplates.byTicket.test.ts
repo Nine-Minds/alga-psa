@@ -52,7 +52,7 @@ describe('standard by-ticket table layout (alga-2026-0002771)', () => {
     const vm = getPreviewSampleScenarioById('sample-ticket-time-detail')!.data;
     const html = await render(vm);
     expect(html).toMatch(/<table id="ticket-time-summary"[^>]*style="[^"]*table-layout:fixed/);
-    const widths: Record<string, string> = { Ticket: '27%', Description: '33%', 'Qty / Hours': '14%', Rate: '12%', Amount: '14%' };
+    const widths: Record<string, string> = { Ticket: '20%', Description: '26%', 'Service Period': '18%', 'Qty / Hours': '8%', Rate: '13%', Amount: '15%' };
     for (const [header, width] of Object.entries(widths)) {
       expect(html).toMatch(new RegExp(`<th[^>]*style="[^"]*width:${width}[^"]*"[^>]*>${header.replace('/', '\\/')}</th>`));
     }

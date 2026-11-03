@@ -14,6 +14,7 @@
       "semiAnnually": "Halbjährlich"
     },
     "cadenceTotal": "{{cadence}} gesamt",
+    "currency": "Währung",
     "date": "Datum",
     "description": "Beschreibung",
     "discounts": "Rabatte",
@@ -60,6 +61,7 @@
     "rate": "Satz",
     "recurring": "Wiederkehrend",
     "service": "Leistung",
+    "servicePeriod": "Leistungszeitraum",
     "shipDate": "Versanddatum",
     "shipTo": "Lieferadresse",
     "shipped": "Versendet",
@@ -83,16 +85,47 @@
       "noLineItems": "Keine Positionen",
       "noMonthlyItems": "Keine monatlichen Positionen",
       "noOneTimeItems": "Keine einmaligen Positionen",
-      "noPhasesDefined": "Keine Phasen definiert"
+      "noPhasesDefined": "Keine Phasen definiert",
+      "noItemsInBox": "Diese Box ist leer"
     },
     "note": {
       "billedTimePortalDetail": "Wenden Sie sich für eine Aufschlüsselung der abgerechneten Zeit an Ihren Dienstleister.",
       "pickedBy": "Kommissioniert von: ____________________     Datum: ____________",
       "preTaxTotals": "Die angegebenen Summen verstehen sich ohne Steuer. Die anfallende Steuer wird auf Ihrer Rechnung ausgewiesen.",
-      "thankYouForOrder": "Vielen Dank für Ihren Auftrag."
+      "thankYouForOrder": "Vielen Dank für Ihren Auftrag.",
+      "checkedBy": "Geprüft von: ____________________     Datum: ____________",
+      "releasedBy": "Freigegeben von: ____________________     Unterschrift: ____________________     Datum: ____________"
     },
     "serialNumbers": "Seriennummern",
-    "allocatedSerialsNote": "Zugeordnete Seriennummern; können sich bei der Erfüllung ändern."
+    "allocatedSerialsNote": "Zugeordnete Seriennummern; können sich bei der Erfüllung ändern.",
+    "stagingManifestTitle": "PACKLISTE",
+    "boxNumber": "Box-Nr.",
+    "project": "Projekt",
+    "client": "Kunde",
+    "task": "Aufgabe",
+    "status": "Status",
+    "sealedOn": "Versiegelt",
+    "sealedBy": "Versiegelt von",
+    "location": "Standort",
+    "checked": "Geprüft",
+    "item": "Artikel",
+    "skuOrTag": "Artikelnr. / Tag",
+    "serialNumber": "Seriennummer",
+    "owner": "Eigentümer",
+    "ownerMsp": "MSP",
+    "ownerClient": "Kunde",
+    "statusOpen": "Offen",
+    "statusSealed": "Versiegelt",
+    "rmaReturnSlipTitle": "RMA-RÜCKSENDESCHEIN",
+    "device": "Gerät",
+    "vendor": "Lieferant",
+    "vendorReference": "Lieferantenreferenz",
+    "asset": "Asset",
+    "assetTag": "Asset-Tag",
+    "replacementSerial": "Ersatzseriennummer",
+    "shipping": "Versand",
+    "returnBy": "Rückgabe bis",
+    "returnShipTo": "Rücksendung an"
   },
   "errors": {
     "permissions": {

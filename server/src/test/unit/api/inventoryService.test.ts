@@ -162,6 +162,79 @@ describe('InventoryService', () => {
     }
   });
 
+  describe('asset visibility (alga-2026-0002683 B2)', () => {
+    const productRow = {
+      service_id: SERVICE_ID,
+      service_name: 'Switch',
+      sku: 'SW-1',
+      barcode: null,
+      unit_of_measure: 'each',
+      item_kind: 'product',
+      is_serialized: false,
+      track_stock: true,
+    };
+    const unitRow = { ...productRow, unit_id: UNIT_ID, serial_number: 'SW-1', status: 'in_stock', location_id: LOCATION_ID };
+    const assetRow = (id: string) => ({
+      asset_id: id,
+      asset_tag: null,
+      name: `Asset ${id}`,
+      serial_number: 'SW-1',
+      asset_type: 'workstation',
+      status: 'active',
+      client_id: 'client-1',
+    });
+    const readable = (...ids: string[]) => async (_trx: unknown, rows: any[]) => rows.filter((row) => ids.includes(row.asset_id));
+
+    it('returns no assets when the visibility argument is omitted', async () => {
+      const service = new InventoryService();
+      const assetOnly = await service.lookup('SW-1', context(makeDb({ 'assets as a': [assetRow('a1')] })));
+      expect(assetOnly.type).toBe('none');
+      expect(JSON.stringify(assetOnly)).not.toContain('a1');
+
+      const withProduct = await service.lookup('SW-1', context(makeDb({
+        'service_catalog as sc': [productRow],
+        'assets as a': [assetRow('a1')],
+      })));
+      expect(withProduct.type).toBe('product');
+    });
+
+    it('collapses multi to a single type when the only asset is removed', async () => {
+      const service = new InventoryService();
+      const db = makeDb({ 'service_catalog as sc': [productRow], 'assets as a': [assetRow('a1')] });
+      const kept = await service.lookup('SW-1', context(db), readable('a1'));
+      expect(kept.type).toBe('multi');
+      const dropped = await service.lookup('SW-1', context(db), readable());
+      expect(dropped.type).toBe('product');
+    });
+
+    it('collapses multi to unit, and an asset-only result to none, when assets are removed', async () => {
+      const service = new InventoryService();
+      const unitDb = makeDb({ 'stock_units as su': [unitRow], 'assets as a': [assetRow('a1')] });
+      expect((await service.lookup('SW-1', context(unitDb), readable())).type).toBe('unit');
+      const assetDb = makeDb({ 'assets as a': [assetRow('a1')] });
+      expect((await service.lookup('SW-1', context(assetDb), readable('a1'))).type).toBe('asset');
+      expect((await service.lookup('SW-1', context(assetDb), readable())).type).toBe('none');
+    });
+
+    it('keeps readable assets when only some are removed', async () => {
+      const service = new InventoryService();
+      const db = makeDb({ 'service_catalog as sc': [productRow], 'assets as a': [assetRow('a1'), assetRow('a2')] });
+      const result = await service.lookup('SW-1', context(db), readable('a2'));
+      expect(result.type).toBe('multi');
+      if (result.type === 'multi') {
+        expect(result.matches.map((m) => m.kind)).toEqual(['product', 'asset']);
+      }
+    });
+  });
+
+  it('C3: getUnit queries by the caller tenant and returns null for another tenant\'s unit (REST 404)', async () => {
+    mocks.queryUnitDetail.mockResolvedValue(null);
+    const service = new InventoryService();
+    const result = await service.getUnit(UNIT_ID, context(makeDb({})));
+    expect(result).toBeNull();
+    expect(mocks.queryUnitDetail).toHaveBeenCalledWith(expect.anything(), TENANT, UNIT_ID);
+  });
+
   it('T020: matches MAC case-insensitively while ignoring separators', async () => {
     const row = {
       service_id: SERVICE_ID,

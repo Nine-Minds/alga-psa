@@ -5,12 +5,17 @@ import type {
   ContractDraftSimulationInput,
   ContractScenario,
 } from "@alga-psa/types";
-import { isContractSimulationUnavailable } from "@alga-psa/types";
+import {
+  isContractSimulationRefusal,
+  isContractSimulationUnavailable,
+  type SimulationDiagnostic,
+} from "@alga-psa/types";
 import { getContractDraftSimulationScenario } from "@alga-psa/billing/actions/contractSimulationActions";
 import LoadingIndicator from "@alga-psa/ui/components/LoadingIndicator";
 import { Alert, AlertDescription } from "@alga-psa/ui/components/Alert";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import ContractSimulatorWorkspace from "./ContractSimulatorWorkspace";
+import { SimulationBlockedCallout } from "./SimulationBlockedCallout";
 
 export default function ContractDraftSimulator({
   draft,
@@ -21,6 +26,7 @@ export default function ContractDraftSimulator({
   const [scenario, setScenario] = useState<ContractScenario | null>(null);
   const [isReloading, setIsReloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refusal, setRefusal] = useState<SimulationDiagnostic | null>(null);
   // The wizard rebuilds the draft object on every render, so refetch on what it
   // says and not on its identity. A reload keeps the live workspace mounted
   // instead of tearing its projection down, and reports itself so the run bar
@@ -32,6 +38,7 @@ export default function ContractDraftSimulator({
   useEffect(() => {
     let cancelled = false;
     setError(null);
+    setRefusal(null);
     if (latest.current.hasScenario) setIsReloading(true);
     void getContractDraftSimulationScenario(latest.current.draft)
       .then((outcome) => {
@@ -43,6 +50,10 @@ export default function ContractDraftSimulator({
                 "The contract simulator is available in AlgaPSA Pro.",
             }),
           );
+          return;
+        }
+        if (isContractSimulationRefusal(outcome)) {
+          setRefusal(outcome.diagnostic);
           return;
         }
         setScenario(outcome);
@@ -60,6 +71,9 @@ export default function ContractDraftSimulator({
     };
   }, [draftKey]);
 
+  if (refusal) {
+    return <SimulationBlockedCallout diagnostics={[refusal]} />;
+  }
   if (error) {
     return (
       <Alert variant="destructive">

@@ -15,9 +15,9 @@ import { isBuiltinAssetTypeSlug, pickSchemaAttributes, validateAttributesAgainst
 import { buildAssetTypeOptions, findCustomAssetType, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
 import { buildAssetStatusOptions, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
-import type { CreateAssetRequest, IClient, IClientLocation, IContact } from '@alga-psa/types';
+import type { CreateAssetRequest, IClientLocation, IContact } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { getAllClientsForAssets, getClientContactsForAssets, getClientLocationsForAssets, getVendorOptionsForAssets } from '../actions/clientLookupActions';
+import { getClientContactsForAssets, getClientLocationsForAssets, getVendorOptionsForAssets } from '../actions/clientLookupActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -37,6 +37,7 @@ interface FormData {
   asset_type: string;
   /** An asset_statuses slug (F020); no longer a closed union. */
   status: string;
+  ownership: 'client' | 'msp';
   serial_number: string;
   location_id: string | null;
   contact_name_id: string | null;
@@ -77,7 +78,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   const { renderQuickAddClient } = useQuickAddClient();
   const [open, setOpen] = useState(defaultOpen);
   const [error, setError] = useState<string | null>(null);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(clientId || null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -113,6 +113,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     asset_tag: '',
     asset_type: '',
     status: 'active',
+    ownership: 'client',
     serial_number: '',
     location_id: null,
     contact_name_id: null,
@@ -172,25 +173,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
       isMounted = false;
     };
   }, [open]);
-
-  useEffect(() => {
-    const fetchClients = async () => {
-      try {
-        if (!clientId) {
-          const clientsData = await getAllClientsForAssets(false);
-          setClients(clientsData);
-        }
-      } catch (error) {
-        console.error('Error fetching clients:', error);
-        setError(t('quickAddAsset.errors.fetchClientsFailed', {
-          defaultValue: 'Failed to fetch clients'
-        }));
-      }
-    };
-    if (open) {
-      fetchClients();
-    }
-  }, [open, clientId, t]);
 
   const effectiveClientId = clientId || selectedClientId;
 
@@ -323,6 +305,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         asset_tag: formData.asset_tag,
         name: formData.name,
         status: formData.status,
+        ownership: formData.ownership,
         location_id: formData.location_id,
         contact_name_id: formData.contact_name_id,
         location: formData.location.trim() || undefined,
@@ -409,6 +392,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         asset_tag: '',
         asset_type: '',
         status: 'active',
+        ownership: 'client',
         serial_number: '',
         manufacturer: '',
         model: '',
@@ -717,7 +701,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                 <div className={hasAttemptedSubmit && !selectedClientId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                   <ClientPicker
                     {...withDataAutomationId({ id: 'client-picker' })}
-                    clients={clients}
                     selectedClientId={selectedClientId}
                     onSelect={(id) => {
                       setSelectedClientId(id);
@@ -866,6 +849,21 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
               />
             </div>
 
+            <div {...withDataAutomationId({ id: 'asset-ownership-container' })}>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.ownership', { defaultValue: 'Ownership' })}
+              </label>
+              <CustomSelect
+                {...withDataAutomationId({ id: 'asset-ownership-select' })}
+                options={[
+                  { value: 'client', label: t('assetForm.ownership.client', { defaultValue: 'Client-owned' }) },
+                  { value: 'msp', label: t('assetForm.ownership.msp', { defaultValue: 'MSP-owned' }) },
+                ]}
+                value={formData.ownership}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, ownership: value as 'client' | 'msp' }))}
+              />
+            </div>
+
             <div {...withDataAutomationId({ id: 'serial-number-container' })}>
               <label className="block text-sm font-medium text-gray-700">
                 {t('quickAddAsset.fields.serialNumber', { defaultValue: 'Serial Number' })}
@@ -961,7 +959,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         open: isQuickAddClientOpen,
         onOpenChange: setIsQuickAddClientOpen,
         onClientAdded: (newClient) => {
-          setClients(prev => [...prev, newClient]);
           setSelectedClientId(newClient.client_id);
           setFormData(prev => ({ ...prev, location_id: null, contact_name_id: null, location: '' }));
         },

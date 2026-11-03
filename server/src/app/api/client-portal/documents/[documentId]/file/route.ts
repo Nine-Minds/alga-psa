@@ -3,10 +3,11 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getConnection, runWithTenant, withTransaction } from '@alga-psa/db';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { resolveClientPortalDocument } from '@alga-psa/client-portal/lib/clientDocumentAccess';
-import { isInlineTextDocumentMimeType } from '@alga-psa/core';
+import { resolveDocumentServingPolicy, buildContentDisposition } from '@alga-psa/core';
 import type { IUser } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 
-// LEVERAGE: pattern document-byte-serving
+// LEVERAGE: pattern document-byte-serving — serving policy now lives in @alga-psa/core resolveDocumentServingPolicy; byte fetching is still per-route
 
 const EXTENSION_BY_MIME_TYPE: Record<string, string> = {
   'application/pdf': '.pdf', 'application/json': '.json', 'application/ld+json': '.json',
@@ -29,7 +30,7 @@ function ensureUsableExtension(name: string, mimeType: string): string {
 export async function GET(request: NextRequest, { params }: { params: Promise<{ documentId: string }> }) {
   const user = await getCurrentUser().catch(() => null);
   if (!user?.tenant) return NextResponse.json({ error: 'Sign in to access this document.', code: 'unauthorized' }, { status: 401 });
-  if (user.user_type !== 'client') return NextResponse.json({ error: 'Client portal access is required.', code: 'forbidden' }, { status: 403 });
+  if (!isClientUserType(user.user_type)) return NextResponse.json({ error: 'Client portal access is required.', code: 'forbidden' }, { status: 403 });
   const { documentId } = await params;
   return runWithTenant(user.tenant, async () => {
     const db = await getConnection(user.tenant);
@@ -47,14 +48,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!authorized.file_id) return NextResponse.json({ error: 'This document has no uploaded file.', code: 'no_file' }, { status: 404 });
     const disposition = request.nextUrl.searchParams.get('disposition') === 'inline' ? 'inline' : 'attachment';
     const mime = String(authorized.mime_type || 'application/octet-stream').toLowerCase();
-    if (disposition === 'inline' && !(mime === 'application/pdf' || (mime.startsWith('image/') && mime !== 'image/svg+xml') || isInlineTextDocumentMimeType(mime))) return NextResponse.json({ error: 'Preview is unavailable for this file type.', code: 'unsupported_preview' }, { status: 415 });
+    const policy = resolveDocumentServingPolicy(mime);
+    if (disposition === 'inline' && policy.disposition !== 'inline') return NextResponse.json({ error: 'Preview is unavailable for this file type.', code: 'unsupported_preview' }, { status: 415 });
     const stored = await StorageService.downloadFile(authorized.file_id).catch(() => null);
     if (!stored?.buffer) return NextResponse.json({ error: 'The uploaded file is missing from storage.', code: 'missing_file' }, { status: 404 });
     const originalName = stored.metadata.original_name?.split(/[\\/]/).pop()?.trim();
     const filename = ensureUsableExtension(originalName || authorized.document_name || 'document', mime);
-    const ascii = filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\\;]/g, '_').replace(/[\r\n]/g, '_');
-    const headers = new Headers({ 'Content-Type': mime, 'Content-Disposition': `${disposition}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`, 'Content-Length': String(stored.buffer.length), 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' });
-    if (disposition === 'inline') headers.set('Content-Security-Policy', "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox");
+    const headers = new Headers({ 'Content-Type': mime, 'Content-Disposition': buildContentDisposition(disposition, filename), 'Content-Length': String(stored.buffer.length), 'Cache-Control': 'private, no-store' });
+    // Inline responses get the sandbox CSP; attachments only get nosniff.
+    const attachmentOnly = disposition === 'attachment' ? { 'X-Content-Type-Options': policy.headers['X-Content-Type-Options'] } : policy.headers;
+    for (const [k, v] of Object.entries(attachmentOnly)) headers.set(k, v);
     return new Response(stored.buffer as any, { headers });
   });
 }

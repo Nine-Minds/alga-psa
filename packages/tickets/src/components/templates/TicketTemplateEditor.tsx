@@ -6,13 +6,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { PartialBlock } from '@blocknote/core';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import type { ITicketTemplate, PendingTag, TicketTemplateReferenceProblem, TicketTemplateUsage } from '@alga-psa/types';
+import type { IClient, ITicketTemplate, PendingTag, TicketTemplateReferenceProblem, TicketTemplateUsage } from '@alga-psa/types';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -33,6 +34,7 @@ import {
 } from '../../actions/ticketTemplateActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActions';
 import { getTicketTemplateDraftFromTicket } from '../../actions/ticketActions';
+import { getAllClients } from '../../actions/clientLookupActions';
 import { TICKET_TITLE_TOKENS } from '../../lib/ticketTitleTokens';
 import { ticketTemplateInputSchema } from '../../lib/ticketTemplateSchema';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
@@ -68,6 +70,8 @@ interface FormState {
   title: string;
   offer_for_manual_use: boolean;
   description: PartialBlock[] | null;
+  /** null = available to every client. */
+  client_id: string | null;
   board_id: string;
   category_id: string | null;
   subcategory_id: string | null;
@@ -84,7 +88,7 @@ const nextKey = () => `row-${(rowCounter += 1)}`;
 
 function emptyForm(): FormState {
   return {
-    name: '', notes: '', title: '', offer_for_manual_use: true, description: null, board_id: '', category_id: null, subcategory_id: null,
+    name: '', notes: '', title: '', offer_for_manual_use: true, description: null, client_id: null, board_id: '', category_id: null, subcategory_id: null,
     priority_id: '', itil_impact: null, itil_urgency: null, tags: [], checklist: [], customFields: [],
   };
 }
@@ -95,6 +99,8 @@ interface TemplateLike {
   notes: string | null;
   title: string;
   description: string | null;
+  /** Absent on a draft prefilled from a ticket: that starts tenant-wide. */
+  client_id?: string | null;
   board_id: string | null;
   category_id: string | null;
   subcategory_id: string | null;
@@ -113,6 +119,7 @@ function formFromTemplate(template: TemplateLike): FormState {
     title: template.title,
     offer_for_manual_use: template.offer_for_manual_use ?? true,
     description: template.description ? parseTicketRichTextContent(template.description) : null,
+    client_id: template.client_id ?? null,
     board_id: template.board_id ?? '',
     category_id: template.category_id,
     subcategory_id: template.subcategory_id,
@@ -152,6 +159,7 @@ function toInput(form: FormState) {
     description: isBlankDocument(form.description as Record<string, unknown>[] | null)
       ? null
       : serializeTicketRichTextContent(form.description as PartialBlock[]),
+    client_id: form.client_id,
     board_id: form.board_id || null,
     category_id: form.category_id,
     subcategory_id: form.subcategory_id,
@@ -208,6 +216,9 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
   const [form, setForm] = useState<FormState>(emptyForm);
   const [baseline, setBaseline] = useState<string>(() => snapshot(emptyForm()));
   const [fromTicket, setFromTicket] = useState<{ number: string; hasInlineImages: boolean } | null>(null);
+  const [clients, setClients] = useState<IClient[]>([]);
+  const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [loading, setLoading] = useState(!isNew || Boolean(fromTicketId));
   const [loadError, setLoadError] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
@@ -280,6 +291,15 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
     return () => { cancelled = true; };
   }, [templateId, fromTicketId, isNew, seed]);
 
+  // The scope picker's options. A failure only costs the names, so the editor still loads.
+  useEffect(() => {
+    let cancelled = false;
+    getAllClients(true)
+      .then((all) => { if (!cancelled) setClients(all); })
+      .catch(() => { if (!cancelled) setClients([]); });
+    return () => { cancelled = true; };
+  }, []);
+
   const dirty = useMemo(() => !loading && snapshot(form) !== baseline, [form, baseline, loading]);
 
   // Feeds the provider above: in-app navigation (back button, sidebar links) asks for confirmation and
@@ -299,7 +319,7 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
   const patchCustomField = (key: string, changes: Partial<CustomFieldRow>) =>
     patch({ customFields: form.customFields.map((row) => (row.key === key ? { ...row, ...changes } : row)) });
 
-  const issueMessages = (error: { issues: Array<{ message: string; path: (string | number)[]; params?: Record<string, unknown> }> }) =>
+  const issueMessages = (error: { issues: Array<{ message: string; path: ReadonlyArray<PropertyKey>; params?: Record<string, unknown> }> }) =>
     error.issues.map((issue) => {
       const params = (issue as { params?: { messageKey?: string; messageParams?: Record<string, unknown> } }).params;
       if (params?.messageKey) {
@@ -453,6 +473,32 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
               {t('templates.fields.offerForManualUseHelp', 'Turn off for templates that only recurring schedules use.')}
             </p>
           </div>
+        </div>
+        <div className="md:max-w-md">
+          <Label htmlFor={`${ID}-client`}>{t('templates.fields.client', 'Client')}</Label>
+          <div className="flex items-center gap-2">
+            <ClientPicker
+              id={`${ID}-client`}
+              clients={clients}
+              selectedClientId={form.client_id}
+              onSelect={(clientId) => patch({ client_id: clientId })}
+              filterState={clientFilterState}
+              onFilterStateChange={setClientFilterState}
+              clientTypeFilter={clientTypeFilter}
+              onClientTypeFilterChange={setClientTypeFilter}
+              placeholder={t('templates.fields.clientPlaceholder', 'All clients')}
+              disabled={readOnly}
+            />
+            {/* The picker has no empty entry, so widening the template back to every client needs its own control. */}
+            {form.client_id && !readOnly && (
+              <Button id={`${ID}-client-clear`} type="button" variant="outline" size="sm" onClick={() => patch({ client_id: null })}>
+                {t('templates.fields.clientPlaceholder', 'All clients')}
+              </Button>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
+            {t('templates.fields.clientHelp', 'Leave empty to offer the template for every client. Pick one to offer it only on that client\u2019s tickets.')}
+          </p>
         </div>
         {template && (
           <div id={`${ID}-usage`} className="space-y-1 rounded-md border border-[rgb(var(--color-border-200))] p-3 text-sm">

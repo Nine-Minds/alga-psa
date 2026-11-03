@@ -21,6 +21,12 @@ const I18nWrapperMock = ({ children }: { children?: React.ReactNode }) => childr
 
 const inner = (result: unknown) => (result as any)?.props?.children;
 
+const requestLinksActionMock = vi.hoisted(() => vi.fn());
+vi.mock('@/app/actions/tenantDiscoveryActions', () => ({
+  requestMspSignInLinksAction: requestLinksActionMock,
+  requestClientPortalLoginLinksAction: requestLinksActionMock,
+}));
+
 vi.mock('next/navigation', () => ({
   redirect: redirectMock,
 }));
@@ -116,6 +122,7 @@ describe('ClientPortalSignInPage', () => {
     // wrapped: unwrapped it renders English whatever the visitor's locale is.
     expect((result as any)?.type).toBe(I18nWrapperMock);
     expect(inner(result)?.type).toBe(ClientPortalTenantDiscoveryMock);
+    expect(inner(result)?.props.requestLoginLinks).toBe(requestLinksActionMock);
     // An SSO mapping failure can redirect here with no tenant; discovery shows
     // no error of its own, so the notice has to travel with it.
     expect(inner(result)?.props?.notice?.type).toBe(ClientPortalSsoFailureNoticeMock);

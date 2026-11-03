@@ -3,7 +3,7 @@ import { TemplateEvaluationError } from './evaluator';
 import { localizeTimePresentation } from './timePresentationLocalization';
 import type { TemplateLabelTranslator } from './i18nLabels';
 import React from 'react';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits, fromMinorUnits } from '@alga-psa/core';
 import { SYSTEM_DATE_FORMAT, type CountryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import type {
   TemplateAst,
@@ -261,10 +261,12 @@ const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ct
       return String(value);
     }
     try {
+      // LEVERAGE: pattern minor-unit-currency-format — same Intl currency format as fieldFormatting.formatCurrency; a core formatter honouring a caller-supplied currencyDisplay would remove both
+      const currency = ctx.currencyCode || FALLBACK_CURRENCY;
       return new Intl.NumberFormat(ctx.locale, {
         style: 'currency',
-        currency: ctx.currencyCode || 'USD',
-      }).format(numeric / 100);
+        currency,
+      }).format(fromMinorUnits(numeric, ctx.locale, currency));
     } catch {
       // Invalid currency code in template metadata — last-resort fallback.
       return formatCurrencyFromMinorUnits(numeric, ctx.locale, FALLBACK_CURRENCY);
@@ -662,6 +664,13 @@ const renderNode = (
         gap: '8px',
       };
       const mergedStyle: React.CSSProperties = { ...defaultStackStyle, ...(style ?? {}) };
+      // A blank text line in a column takes no space: rendered, it is a zero-height item that still costs
+      // the stack's gap, so optional lines (a label's custody or brand line) would eat the fixed-height
+      // budget even when empty. Rows keep it: there a blank cell can be holding a position.
+      const renderChildren = (childScope: RenderScope) =>
+        node.children
+          .filter((child) => node.direction === 'row' || child.type !== 'text' || nodeHasVisibleContent(child, evaluation, childScope, ctx))
+          .map((child) => renderNode(child, evaluation, childScope, ctx));
 
       if (node.repeat) {
         const itemBinding = node.repeat.itemBinding;
@@ -675,7 +684,7 @@ const renderNode = (
               };
               return (
                 <React.Fragment key={`${node.id}-iter-${index}`}>
-                  {node.children.map((child) => renderNode(child, evaluation, iterationScope, ctx))}
+                  {renderChildren(iterationScope)}
                 </React.Fragment>
               );
             })}
@@ -685,7 +694,7 @@ const renderNode = (
 
       return (
         <div key={node.id} id={node.id} className={elementClassName || undefined} style={mergedStyle}>
-          {node.children.map((child) => renderNode(child, evaluation, scope, ctx))}
+          {renderChildren(scope)}
         </div>
       );
     }

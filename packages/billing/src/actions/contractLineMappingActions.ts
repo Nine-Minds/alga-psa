@@ -9,6 +9,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
+import { assertLiveLineMatchesTemplateCurrency } from '@alga-psa/shared/billingClients/templateAmounts';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 import {
@@ -141,6 +142,7 @@ type DetailedContractLineResultRow =
   Record<string, unknown> & {
     cadence_owner?: IContractLineMapping['cadence_owner'] | null;
     billing_timing?: IContractLineMapping['billing_timing'] | null;
+    billing_profile_id?: string | null;
   };
 
 export async function ensureTemplateLineSnapshot(
@@ -156,6 +158,11 @@ export async function ensureTemplateLineSnapshot(
 
   if (!contractLine) {
     throw new ContractLineMappingDomainError(`Base contract line ${contractLineId} not found for tenant ${tenant}`);
+  }
+  try {
+    await assertLiveLineMatchesTemplateCurrency(knex as any, tenant, templateId, contractLineId);
+  } catch (error) {
+    throw new ContractLineMappingDomainError((error as Error).message);
   }
 
   const now = new Date().toISOString();
@@ -561,6 +568,8 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
             'lines.round_up_to_nearest',
             'tfc.base_rate as default_rate',
             trx.raw('NULL::uuid as location_id'),
+            // LEVERAGE: pattern detailed-template-line-select — same template-line projection as ContractLineMapping.getDetailedContractLines; the two selects must be kept in step by hand
+            trx.raw('NULL::uuid as billing_profile_id'),
           ])
           .orderBy('lines.display_order', 'asc') as unknown as DetailedContractLineResultRow[];
 

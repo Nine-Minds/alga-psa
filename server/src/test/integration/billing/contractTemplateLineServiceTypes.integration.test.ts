@@ -128,6 +128,18 @@ async function insertService(options: {
     tax_rate_id: null,
     category_id: null,
   });
+  // A template member rate is snapshotted from the catalog price IN THE
+  // TEMPLATE'S BASE CURRENCY, never from the currency-untagged
+  // service_catalog.default_rate, so the catalog needs a USD price row to match
+  // the USD templates below.
+  if (options.defaultRate != null) {
+    await t('service_prices').insert({
+      tenant: tenantId,
+      service_id: serviceId,
+      currency_code: 'USD',
+      rate: options.defaultRate,
+    });
+  }
   return serviceId;
 }
 
@@ -139,6 +151,9 @@ async function insertTemplateLine(lineType: 'Fixed' | 'Hourly' | 'Usage'): Promi
     template_name: `Template ${templateId.slice(0, 6)}`,
     default_billing_frequency: 'monthly',
     template_status: 'published',
+    // Same base currency as the contracts these templates are cloned into, so
+    // the clone reads the template's own amounts.
+    currency_code: 'USD',
   });
   const templateLineId = uuidv4();
   await t('contract_template_lines').insert({

@@ -34,7 +34,11 @@
     "createProduct": "Create a new product",
     "registerAsset": "Register as a client's asset",
     "useCamera": "Use the camera instead",
-    "grantAccess": "Allow camera access"
+    "grantAccess": "Allow camera access",
+    "foreignServer": "This label is from a different Alga server",
+    "openInBrowserHint": "This record opens in the browser",
+    "openInBrowser": "Open in browser",
+    "dismiss": "Dismiss"
   },
   "stock": {
     "title": "Stock",

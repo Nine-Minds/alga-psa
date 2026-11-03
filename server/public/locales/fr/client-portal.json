@@ -327,7 +327,8 @@
       "missing_email": "Votre fournisseur d'identité n'a renvoyé aucune adresse e-mail, aucun compte du portail client n'a donc pu être identifié. Connectez-vous avec votre mot de passe ou contactez votre prestataire de services.",
       "inactive_user": "Le compte du portail client correspondant à {{providerEmail}} est inactif. Contactez votre prestataire de services pour le réactiver.",
       "user_type_mismatch": "{{providerEmail}} n'est pas un compte du portail client. Contactez votre prestataire de services.",
-      "tenant_mismatch": "{{providerEmail}} appartient au portail d'une autre organisation. Connectez-vous avec votre mot de passe ou contactez votre prestataire de services."
+      "tenant_mismatch": "{{providerEmail}} appartient au portail d'une autre organisation. Connectez-vous avec votre mot de passe ou contactez votre prestataire de services.",
+      "tenant_required": "{{providerEmail}} est utilisé dans plusieurs organisations. Contactez votre fournisseur de services pour obtenir de l'aide."
     },
     "configurationTitle": "Échec de la connexion",
     "configurationMessage": "La connexion a échoué. Veuillez réessayer ou contacter votre prestataire de services.",
@@ -478,6 +479,15 @@
         "failed": "Nous n'avons pas pu enregistrer votre carte",
         "savedDescription": "Votre carte est prête pour vos prochains paiements.",
         "failedDescription": "La configuration n'a pas pu être vérifiée. Demandez un nouveau lien à votre prestataire de facturation."
+      },
+      "payLink": {
+        "heading": "Ce lien de paiement ne peut pas être utilisé",
+        "expired": "Ce lien de paiement a expiré.",
+        "invalid": "Ce lien de paiement n'est pas valide.",
+        "notPayable": "Cette facture ne peut plus être payée avec ce lien. Elle est peut-être déjà payée ou n'accepte plus le paiement en ligne.",
+        "unavailable": "Nous n'avons pas pu ouvrir la page de paiement pour le moment. Veuillez réessayer dans quelques minutes.",
+        "viewInPortal": "Voir la facture dans le portail client",
+        "contactProvider": "Veuillez contacter votre fournisseur de facturation pour obtenir un nouveau lien."
       }
     }
   },

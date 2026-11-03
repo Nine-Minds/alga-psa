@@ -3,6 +3,7 @@
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import { getAuthenticatedClientId } from '@alga-psa/client-portal/lib/clientAuth';
 import {
   listClientServiceRequestSubmissions,
@@ -15,7 +16,7 @@ export const listMyServiceRequestSubmissionsAction = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: AuthContext
 ): Promise<ServiceRequestClientSubmissionListRow[]> => {
-  if (currentUser.user_type !== 'client') {
+  if (!isClientUserType(currentUser.user_type)) {
     return [];
   }
 
@@ -31,7 +32,7 @@ export const getMyServiceRequestSubmissionDetailAction = withAuth(async (
   { tenant }: AuthContext,
   submissionId: string
 ): Promise<ServiceRequestClientSubmissionDetail | null> => {
-  if (currentUser.user_type !== 'client') {
+  if (!isClientUserType(currentUser.user_type)) {
     return null;
   }
 

@@ -35,6 +35,7 @@ import { getTaxRates } from '../../../actions/taxRateActions';
 import { ITaxRate } from '@alga-psa/types';
 import { IService, IServicePrice } from '@alga-psa/types';
 import { getCurrencySymbol } from '@alga-psa/core';
+import { minorUnitsToRateText } from '@alga-psa/billing/lib/currency/rateInput';
 import { getServiceCategories } from '../../../actions/categoryActions';
 import { IServiceCategory } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -143,9 +144,11 @@ const ProductsManager: React.FC = () => {
     }
   };
 
+  // Stored amounts are the currency's own minor units, so a ¥50 product reads ¥50 here
+  // and on its invoice instead of being divided by a fixed 100.
   const formatMoneyCents = (cents: number, currencyCode: string) => {
     const symbol = getCurrencySymbol(currencyCode);
-    return `${symbol}${((cents ?? 0) / 100).toFixed(2)} (${currencyCode})`;
+    return `${symbol}${minorUnitsToRateText(cents ?? 0, currencyCode)} (${currencyCode})`;
   };
 
   // LEVERAGE: pattern catalog-list-query — product catalog filters use the same server-paginated list shape.

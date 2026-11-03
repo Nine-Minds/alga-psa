@@ -87,6 +87,9 @@ const ContractTemplateModel = {
     if (!tenant) {
       throw new Error('Tenant context is required for creating contract templates');
     }
+    if (!payload.currency_code) {
+      throw new Error('A contract template requires a base currency_code');
+    }
 
     const [record] = await tenantScopedTable(knex, tenant, 'contract_templates')
       .insert({
@@ -94,7 +97,7 @@ const ContractTemplateModel = {
         template_name: payload.template_name,
         template_description: payload.template_description ?? null,
         default_billing_frequency: payload.default_billing_frequency,
-        // currency_code removed - templates are now currency-neutral
+        currency_code: payload.currency_code,
         template_status: payload.template_status ?? 'draft',
         template_metadata: payload.template_metadata ?? null,
       })

@@ -64,6 +64,15 @@ vi.mock('../../../../../ee/server/src/lib/integrations/levelio/levelApiClient', 
   createLevelIoClient: vi.fn(async () => ({ resolveAlert: levelResolveAlert })),
 }));
 
+const dattoResetAlert = vi.fn(async (_args: unknown) => undefined);
+const dattoIsResetEnabled = vi.fn(async (_args: unknown) => true);
+vi.mock('@enterprise/lib/integrations/datto/alertOutbound', () => ({
+  dattoRmmAlertOutboundAdapter: {
+    isResetEnabled: (args: unknown) => dattoIsResetEnabled(args),
+    resetAlert: (args: unknown) => dattoResetAlert(args),
+  },
+}));
+
 vi.mock('server/src/lib/db/db', () => ({
   getConnection: vi.fn(async () => knexMock),
 }));
@@ -154,6 +163,41 @@ describe('rmmAlertTicketClosedSubscriber', () => {
     await dispatch();
     expect(resetAlert).not.toHaveBeenCalled();
     expect(state.rmm_alerts[0].status).toBe('active');
+  });
+
+  describe('datto adapter (EE lazy import)', () => {
+    beforeEach(() => {
+      dattoResetAlert.mockReset();
+      dattoResetAlert.mockResolvedValue(undefined);
+      dattoIsResetEnabled.mockReset();
+      dattoIsResetEnabled.mockResolvedValue(true);
+      state.rmm_alerts[0].provider = 'datto';
+    });
+
+    it('skips the alert entirely (no remote call, stays active) when resolve-on-close is off', async () => {
+      dattoIsResetEnabled.mockResolvedValue(false);
+      await dispatch();
+      expect(dattoIsResetEnabled).toHaveBeenCalledWith({ tenantId: 'tenant_1', integrationId: 'integration_1' });
+      expect(dattoResetAlert).not.toHaveBeenCalled();
+      expect(state.rmm_alerts[0].status).toBe('active');
+    });
+
+    it('resolves the adapter without prior registration and marks the alert resolved', async () => {
+      await dispatch();
+      expect(dattoResetAlert).toHaveBeenCalledWith({
+        tenantId: 'tenant_1',
+        integrationId: 'integration_1',
+        externalAlertId: 'ext-1',
+      });
+      expect(state.rmm_alerts[0].status).toBe('resolved');
+    });
+
+    it('a Datto resolve failure is stamped, not resolved', async () => {
+      dattoResetAlert.mockRejectedValueOnce(new Error('needs write rights'));
+      await dispatch();
+      expect(state.rmm_alerts[0].status).toBe('active');
+      expect(state.rmm_alerts[0].metadata.bindings[0]).toContain('needs write rights');
+    });
   });
 
   describe('levelio adapter', () => {

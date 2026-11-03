@@ -22,6 +22,7 @@ export interface ResetOriginEnv {
   HOST?: string;
 }
 
+// LEVERAGE: friction tenant-link-context — password-reset origin must be tenant/surface-aware (custom domain) but @alga-psa/tenancy depends on @alga-psa/auth, so getTenantAppBaseUrl cannot be used here without a cycle.
 export function resolvePasswordResetOrigin(
   env: ResetOriginEnv | Record<string, string | undefined> = process.env
 ): string | null {

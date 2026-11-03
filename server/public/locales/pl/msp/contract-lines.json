@@ -135,7 +135,6 @@
         "overtime": {
           "enableLabel": "Włącz stawki za nadgodziny",
           "rateHelp": "Stawka stosowana po przekroczeniu progu.",
-          "rateLabel": "Stawka za nadgodziny ($/godz.)",
           "thresholdHelp": "Godziny przed zastosowaniem OT.",
           "thresholdLabel": "Próg nadgodzin (godziny/okres)",
           "thresholdPlaceholder": "40",
@@ -375,7 +374,6 @@
     },
     "hourlyConfig": {
       "labels": {
-        "hourlyRate": "Stawka godzinowa ($)",
         "minimumBillableTime": "Minimalny czas rozliczeniowy (minuty)",
         "roundUpToNearest": "Zaokrąglij do najbliższego (minuty)"
       },
@@ -398,7 +396,6 @@
           "technician": "Technik"
         },
         "perHourSuffix": "/godz",
-        "rateSrLabel": "Stawka ($/godz.)",
         "selectTypePlaceholder": "Wybierz typ",
         "tooltip": "Zdefiniuj różne stawki godzinowe dla określonych typów użytkowników pracujących w tej usłudze. Zastępują one domyślną stawkę godzinową usługi.",
         "userTypeSrLabel": "Typ użytkownika",
@@ -822,7 +819,8 @@
       "notAllowed": "Jedna z wartości linii umowy jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
       "missingField": "Brakuje wymaganego pola linii umowy.",
       "missingFieldNamed": "Brakuje wymaganego pola linii umowy: {{field}}.",
-      "advanceTimingNotAllowed": "Rozliczanie z góry jest dostępne tylko dla stałych pozycji umowy. Pozycje godzinowe i rozliczane według zużycia są zawsze rozliczane z dołu, po wykonaniu pracy."
+      "advanceTimingNotAllowed": "Rozliczanie z góry jest dostępne tylko dla stałych pozycji umowy. Pozycje godzinowe i rozliczane według zużycia są zawsze rozliczane z dołu, po wykonaniu pracy.",
+      "versionConflict": "Ta pozycja umowy została zmieniona przez kogoś innego od momentu rozpoczęcia edycji. Załaduj ją ponownie i zastosuj swoje zmiany jeszcze raz."
     },
     "templateLine": {
       "unavailable": "Wybrany wiersz szablonu nie jest już dostępny. Odśwież stronę i spróbuj ponownie."

@@ -3,7 +3,7 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/auth/session';
 import { canAccessDocument } from 'server/src/lib/utils/documentPermissionUtils';
-import { tenantDb } from '@alga-psa/db';
+import { runWithTenant, tenantDb } from '@alga-psa/db';
 
 export async function GET(
     request: NextRequest,
@@ -35,8 +35,8 @@ export async function GET(
 
         console.log('Attempting to download file with ID:', fileId);
         
-        // Use the static downloadFile method with just the fileId
-        const result = await StorageService.downloadFile(fileId);
+        // Storage resolves its own connection from the authenticated tenant context.
+        const result = await runWithTenant(tenant, () => StorageService.downloadFile(fileId));
         console.log('File downloaded successfully. Metadata:', result.metadata);
 
         // Set appropriate headers for file download

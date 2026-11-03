@@ -95,6 +95,7 @@ vi.mock('@alga-psa/db', () => ({
   }),
   withTransaction: mocks.withTransaction,
   createTenantKnex: mocks.createTenantKnex,
+  writeInvoiceAudit: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -103,7 +104,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 vi.mock('../../../../../packages/billing/src/actions/creditActions', () => ({
-  applyCreditToInvoice: mocks.applyCreditToInvoice,
+  applyCreditToInvoiceInternal: mocks.applyCreditToInvoice,
   resolveCreditExpirationDate: vi.fn(async () => undefined),
   resolveCreditDrawdownPolicy: vi.fn(async () => ({
     autoApplyEnabled: true,

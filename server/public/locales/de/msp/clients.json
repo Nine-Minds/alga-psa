@@ -316,7 +316,20 @@
     "inboundDomainAutoCreateHelp": "Zugeordnete Domains können für vertrauenswürdige neue Absender einen Kontakt erstellen.",
     "inboundDomainAutoCreateUpdated": "Absendereinstellung aktualisiert.",
     "inboundDomainAutoCreateUpdateFailed": "Absendereinstellung konnte nicht aktualisiert werden.",
-    "recurringTickets": "Wiederkehrende Tickets"
+    "recurringTickets": "Wiederkehrende Tickets",
+    "software": "Software",
+    "checklistsTab": "Checklisten",
+    "checklists": {
+      "name": "Name",
+      "items": "Punkte",
+      "status": "Status",
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "description": "Checklistenvorlagen, die nur bei Tickets dieses Clients angeboten werden. Bearbeitung unter Einstellungen > Tickets > Checklistenvorlagen.",
+      "empty": "Keine clientspezifischen Checklistenvorlagen.",
+      "loadFailed": "Checklistenvorlagen konnten nicht geladen werden",
+      "retry": "Erneut versuchen"
+    }
   },
   "clientCommandCenter": {
     "cards": {
@@ -329,7 +342,8 @@
       "people": "Personen",
       "record": "Kundendatensatz",
       "service": "Dienst",
-      "timeline": "Alles der Reihe nach"
+      "timeline": "Alles der Reihe nach",
+      "software": "Software"
     },
     "csatEmpty": "Noch keine Umfrageantworten.",
     "discardCancel": "Weiter bearbeiten",
@@ -406,6 +420,12 @@
       "primary": "Primär"
     },
     "pulseError": "Die Kundenübersicht konnte nicht geladen werden.",
+    "quickLinks": {
+      "assets": "Assets",
+      "contacts": "Kontakte",
+      "label": "Schnellzugriff",
+      "software": "Software"
+    },
     "rail": {
       "close": "Schließen",
       "installBase": "Installationsbasis",
@@ -441,6 +461,13 @@
       "onTrackLeft": "SLA {{left}} übrig",
       "paused": "SLA pausiert"
     },
+    "software": {
+      "assetsMeta_one": "1 Gerät",
+      "assetsMeta_other": "{{count}} Geräte",
+      "loadError": "Software-Inventar konnte nicht geladen werden.",
+      "titles": "Titel",
+      "viewAll": "Gesamte Software"
+    },
     "timeline": {
       "daysAgo": "vor {{count}} T",
       "empty": "Für diesen Kunden ist noch nichts erfasst.",
@@ -465,7 +492,8 @@
       "ticketClosed": "Ticket geschlossen",
       "ticketOpened": "Ticket eröffnet",
       "unitDelivered": "Ausstattung geliefert"
-    }
+    },
+    "discardFeatureMessage": "Sie haben nicht gespeicherte Änderungen in dieser Ansicht. Schließen und verwerfen?"
   },
   "quickAddClient": {
     "lifecycleStatus": "Lebenszyklus",
@@ -572,11 +600,6 @@
     "invoiceDeliveryMethod": "Rechnungszustellungsmethode",
     "invoiceTemplate": "Rechnungsvorlage",
     "invoiceTemplateHelp": "Wählen Sie eine Vorlage aus oder verwenden Sie die Standardvorlage",
-    "paymentTerms": {
-      "dueOnReceipt": "Fällig bei Erhalt",
-      "net15": "Netto 15",
-      "net30": "Netto 30"
-    },
     "preferredPaymentMethod": "Bevorzugte Zahlungsmethode",
     "defaultCurrency": "Standardwährung",
     "selectTaxRegion": "Steuerregion auswählen (optional)",
@@ -588,11 +611,6 @@
       "both": "Beide",
       "email": "E-Mail",
       "mail": "Post"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Banküberweisung",
-      "check": "Scheck",
-      "creditCard": "Kreditkarte"
     },
     "paymentTermsLabel": "Zahlungsbedingungen",
     "standardTemplateLabel": "(Standard)",
@@ -1764,7 +1782,8 @@
     },
     "cardExpiry": ", gültig bis {{month}}/{{year}}",
     "legacyPaymentTerms": "„{{value}}“ ist keine anerkannte Zahlungsbedingung und wurde nie angewendet. Beim Speichern wird sie gelöscht.",
-    "cardOnFile": "{{type}} mit Endziffern {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} mit Endziffern {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Mandantenstandard: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid-Saldo-Warnungen",
@@ -1930,6 +1949,7 @@
       "sourceAlreadyMerged": "Dieser Kunde wurde bereits in einen anderen Kunden zusammengeführt.",
       "targetAlreadyMerged": "Der Zielkunde wurde selbst in einen anderen Kunden zusammengeführt. Führen Sie stattdessen dorthin zusammen.",
       "sourceIsTenantDefault": "Der Datensatz Ihrer eigenen Organisation kann nicht in einen Kunden zusammengeführt werden.",
+      "sourceHasCoManagement": "Dieser Kunde hat einen Co-Managed-IT-Arbeitsbereich. Brechen Sie dessen Einrichtung ab oder beenden Sie das Co-Management, bevor Sie ihn zusammenführen.",
       "parentLinkCycle": "Dieser Kunde ist als untergeordneter Kunde des zusammenzuführenden Kunden hinterlegt; die Zusammenführung würde die Hierarchie umkehren.",
       "invalidContractCutover": "Einer der Stichtage liegt außerhalb der Laufzeit seines Vertrags."
     },
@@ -2031,5 +2051,21 @@
     "manager": "Leitung",
     "seesTickets": "Sieht Profil-Tickets",
     "editHint": "Diese Angaben werden am Abrechnungsprofil in den Abrechnungseinstellungen des Kunden bearbeitet."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Assets",
+      "lastSeen": "Zuletzt gesehen",
+      "title": "Titel",
+      "versions": "Versionen"
+    },
+    "empty": "Noch kein Software-Inventar — das Inventar wird pro Gerät erfasst",
+    "emptyAssetsLink": "Assets anzeigen",
+    "exportCsv": "CSV exportieren",
+    "exportError": "Software-Inventar konnte nicht exportiert werden.",
+    "installedOn": "Installiert auf",
+    "loadError": "Software-Inventar konnte nicht geladen werden.",
+    "moreAssets": "und {{count}} weitere (die ersten {{limit}} nach Name)",
+    "searchPlaceholder": "Software suchen..."
   }
 }

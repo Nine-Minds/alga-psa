@@ -158,7 +158,7 @@ export class ApiClientController extends ApiBaseController {
             data = createClientLocationSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
@@ -211,7 +211,7 @@ export class ApiClientController extends ApiBaseController {
             data = updateClientLocationSchema.parse(await req.json());
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
@@ -306,7 +306,7 @@ export class ApiClientController extends ApiBaseController {
       return schema.parse(await req.json());
     } catch (error) {
       if (error instanceof ZodError) {
-        throw new ValidationError('Validation failed', error.errors);
+        throw new ValidationError('Validation failed', error.issues);
       }
       throw error;
     }

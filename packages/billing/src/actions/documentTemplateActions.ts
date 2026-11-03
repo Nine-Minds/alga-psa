@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import type { TemplateAst } from '@alga-psa/types';
+import { LABEL_CLASSES, LABEL_HIDEABLE_FIELDS, isLabelClass, type LabelClass, type LabelViewModel, type TemplateAst } from '@alga-psa/types';
 import { normalizeLocale } from '@alga-psa/core/i18n/config';
 import {
   actionError,
@@ -28,6 +28,8 @@ import {
   setDefaultAssignment,
   type DocumentTemplateListItem,
 } from '../lib/document-templates/storage';
+import { labelClassOfCustomTemplate, labelClassOfStandardCode } from '../lib/label-template-ast/labelTemplates';
+import { buildLabelModel } from '../lib/label-batch/renderLabelBatchHtml';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/server-render';
@@ -79,6 +81,24 @@ export const getDocumentTemplates = withAuth(
   },
 );
 
+/**
+ * `work-tag` customs must record which label class they print (`metadata.labelClass`), and any
+ * `labelSettings.hiddenFields` must name hideable fields only (`url` / `identifier` never qualify).
+ */
+function validateWorkTagMetadata(ast: TemplateAst): string | null {
+  const labelClass = ast.metadata?.labelClass;
+  if (!isLabelClass(labelClass)) {
+    return `Label templates must set a label class (${LABEL_CLASSES.join(', ')}).`;
+  }
+  const hidden = ast.metadata?.labelSettings?.hiddenFields;
+  if (hidden !== undefined) {
+    if (!Array.isArray(hidden) || hidden.some((field) => !(LABEL_HIDEABLE_FIELDS as readonly string[]).includes(field))) {
+      return `Hidden label fields must be among: ${LABEL_HIDEABLE_FIELDS.join(', ')}.`;
+    }
+  }
+  return null;
+}
+
 export const saveDocumentTemplate = withAuth(
   async (
     user,
@@ -95,6 +115,10 @@ export const saveDocumentTemplate = withAuth(
     }
     if (!input.name?.trim()) return { success: false, error: 'Template name is required.' };
     if (!input.templateAst) return { success: false, error: 'Template is required.' };
+    if (type === 'work-tag') {
+      const metadataError = validateWorkTagMetadata(input.templateAst);
+      if (metadataError) return { success: false, error: metadataError };
+    }
 
     const { knex } = await createTenantKnex();
     const templateId = input.template_id && !input.isClone ? input.template_id : uuidv4();
@@ -128,6 +152,45 @@ export const setDefaultDocumentTemplate = withAuth(
       return type;
     }
     const { knex } = await createTenantKnex();
+
+    if (type === 'work-tag') {
+      // One generic `work-tag` type serves every label class, so its default is per CLASS
+      // (scope_type 'label_class'); a plain tenant-scope assignment is never written for it.
+      let labelClass: LabelClass | null;
+      if (payload.templateSource === 'standard') {
+        labelClass = labelClassOfStandardCode(payload.standardTemplateCode);
+      } else {
+        const custom = await getCustomDocumentTemplate(knex, tenant, type, payload.templateId);
+        labelClass = custom ? labelClassOfCustomTemplate(custom.templateAst) : null;
+      }
+      if (!labelClass) {
+        return actionError('Template not found.', 'msp/billing:errors.documentTemplate.existingNotFound');
+      }
+      const scopeClass = labelClass;
+      await withTransaction(knex, async (trx: Knex.Transaction) => {
+        // is_default tracks the default of the template's own class only.
+        const customs = (await trx('document_templates')
+          .where({ tenant, document_type: type })
+          .select('template_id', 'templateAst')) as Array<{ template_id: string; templateAst: TemplateAst }>;
+        const sameClassIds = customs
+          .filter((row) => labelClassOfCustomTemplate(row.templateAst) === scopeClass)
+          .map((row) => row.template_id);
+        if (sameClassIds.length > 0) {
+          await trx('document_templates')
+            .where({ tenant, document_type: type })
+            .whereIn('template_id', sameClassIds)
+            .update({ is_default: false });
+        }
+        if (payload.templateSource === 'custom') {
+          await trx('document_templates')
+            .where({ tenant, document_type: type, template_id: payload.templateId })
+            .update({ is_default: true });
+        }
+        await setDefaultAssignment(trx, tenant, type, { scopeType: 'label_class', scopeKey: scopeClass }, payload, user.user_id);
+      });
+      return { success: true };
+    }
+
     const scope = opts?.clientId
       ? ({ scopeType: 'client', scopeId: opts.clientId } as const)
       : ({ scopeType: 'tenant', scopeId: null } as const);
@@ -288,6 +351,16 @@ export const runAuthoritativeTemplatePreview = withAuth(
       // the live document uses. Null branding keeps the sample's synthetic issuer.
       const tenantParty = await fetchTenantParty(knex, tenant).catch(() => null);
       previewModel = overlaySalesOrderSampleTenant(sample, tenantParty);
+    }
+
+    if (type === 'work-tag') {
+      // The preview shows what the printed label shows: hidden fields nulled, display lines derived.
+      const sampleLabel = previewModel as unknown as LabelViewModel;
+      previewModel = buildLabelModel(
+        sampleLabel,
+        sampleLabel.tenantClient,
+        templateAst.metadata?.labelSettings?.hiddenFields
+      ) as unknown as Record<string, unknown>;
     }
 
     const evaluation = evaluateTemplateAst(templateAst, previewModel, {

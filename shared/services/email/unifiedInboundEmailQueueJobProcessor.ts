@@ -1,3 +1,4 @@
+import { isInboundRetryLaterError } from './inboundRetryLaterError';
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { INBOUND_MIME_PARSE_OPTIONS } from './inboundMimeParseOptions';
@@ -23,6 +24,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { resolveListRewriteSender } from '@alga-psa/shared/lib/email/listRewriteSender';
 import { extractRelevantInboundHeaders } from '@alga-psa/shared/lib/email/automatedMessage';
 import { classifyInboundAuthFailure } from '@alga-psa/shared/services/email/InboundEmailAuthFailurePolicy';
+import { classifyGraphFailure } from '@alga-psa/shared/services/diagnostics/graphFailure';
 import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
 import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
 import { normalizeInboundMessageIdentity } from '@alga-psa/shared/services/email/inboundEmailIdentity';
@@ -439,6 +441,105 @@ function mapParsedMimeToEmailMessageDetails(params: {
   };
 }
 
+/**
+ * Marker on provider error messages written by this consumer. It keeps the
+ * single status writer's ownership clear: a later successful connect clears
+ * only our own red card and never a message curated by the subscription or
+ * auth-pause paths.
+ */
+const CONSUMER_CONNECT_ERROR_PREFIX = 'Inbound message fetch failed: ';
+
+function isTransientGraphConnectFailure(failure: { status?: number; code?: string; message?: string }): boolean {
+  const status = Number(failure.status);
+  if (status === 429 || (status >= 500 && status <= 599)) return true;
+  const code = String(failure.code || '').toUpperCase();
+  if (['ECONNRESET', 'ECONNABORTED', 'ETIMEDOUT', 'EAI_AGAIN', 'ENOTFOUND', 'EPIPE', 'ERR_NETWORK'].includes(code)) {
+    return true;
+  }
+  return /timeout|socket hang up|network error/i.test(String(failure.message || ''));
+}
+
+async function writeConsumerConnectFailure(providerId: string, tenant: string, message: string): Promise<void> {
+  try {
+    // Lazy import: the maintenance service owns the status writers and pulls in
+    // the producer/queue modules, which the consumer must not depend on.
+    const { EmailWebhookMaintenanceService } = await import(
+      '@alga-psa/shared/services/email/EmailWebhookMaintenanceService'
+    );
+    const maintenance = new EmailWebhookMaintenanceService();
+    await maintenance.updateProviderConnectionStatus(providerId, tenant, 'error', message);
+    await maintenance.updateHealthStatus(providerId, tenant, {
+      subscription_status: 'error',
+      last_renewal_result: 'consumer_connect_failed',
+      failure_reason: message,
+      is_healthy: false,
+    });
+  } catch (writeError) {
+    console.warn('[UnifiedInboundEmailQueueJobProcessor] failed to record provider connect failure', {
+      event: 'inbound_email_provider_connect_status_write_failed',
+      tenantId: tenant,
+      providerId,
+      error: writeError instanceof Error ? writeError.message : String(writeError),
+    });
+  }
+}
+
+async function clearConsumerConnectFailure(providerId: string, tenant: string): Promise<void> {
+  try {
+    const db = await getAdminConnection();
+    const row = (await tenantDb(db, tenant)
+      .table('email_providers')
+      .where({ id: providerId })
+      .first('status', 'error_message')) as { status?: string; error_message?: string } | undefined;
+    if (row?.status !== 'error' || !String(row?.error_message || '').startsWith(CONSUMER_CONNECT_ERROR_PREFIX)) {
+      return;
+    }
+    const { EmailWebhookMaintenanceService } = await import(
+      '@alga-psa/shared/services/email/EmailWebhookMaintenanceService'
+    );
+    await new EmailWebhookMaintenanceService().updateProviderConnectionStatus(providerId, tenant, 'connected', null);
+  } catch (clearError) {
+    console.warn('[UnifiedInboundEmailQueueJobProcessor] failed to clear provider connect failure', {
+      event: 'inbound_email_provider_connect_status_clear_failed',
+      tenantId: tenant,
+      providerId,
+      error: clearError instanceof Error ? clearError.message : String(clearError),
+    });
+  }
+}
+
+/**
+ * Connect the Graph adapter for a pointer fetch and keep the provider card
+ * honest. A non-transient connect failure here (for example a folder filter
+ * Graph cannot resolve) is invisible to the subscription path, which swallows
+ * folder-resolution failures and falls back to Inbox.
+ */
+export async function connectMicrosoftAdapterForFetch(
+  adapter: Pick<MicrosoftGraphAdapter, 'connect'>,
+  config: Pick<EmailProviderConfig, 'id' | 'tenant'> & Partial<Pick<EmailProviderConfig, 'connection_status'>>,
+): Promise<void> {
+  try {
+    await adapter.connect();
+  } catch (error: any) {
+    const failure = classifyGraphFailure(error);
+    if (!isTransientGraphConnectFailure(failure)) {
+      await writeConsumerConnectFailure(
+        config.id,
+        config.tenant,
+        `${CONSUMER_CONNECT_ERROR_PREFIX}${failure.message || 'Microsoft Graph connection failed'}`,
+      );
+    }
+    // The queue retry policy stays authoritative for the attempt itself.
+    throw error;
+  }
+  // Only a card already showing red can need clearing, so the healthy path —
+  // every message of a working mailbox — skips the lookup. A card turned red
+  // after this job read its config clears on the next message instead.
+  if (config.connection_status === undefined || config.connection_status === 'error') {
+    await clearConsumerConnectFailure(config.id, config.tenant);
+  }
+}
+
 export async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails> {
   if (job.provider !== 'microsoft') {
     throw new Error('invalid provider for microsoft fetch');
@@ -455,7 +556,7 @@ export async function fetchMicrosoftMessageForPointer(job: UnifiedInboundEmailQu
 
   const config = await fetchMicrosoftProviderConfig(job);
   const adapter = new MicrosoftGraphAdapter(config);
-  await adapter.connect();
+  await connectMicrosoftAdapterForFetch(adapter, config);
 
   let rawMimeBuffer: Buffer;
   try {
@@ -810,6 +911,13 @@ async function insertProcessingRecord(params: {
   }
 }
 
+async function releaseProcessingRecord(params: { job: UnifiedInboundEmailQueueJob; externalIdentity: string }): Promise<void> {
+  const db = await getAdminConnection();
+  await tenantDb(db, params.job.tenantId).table('email_processed_messages')
+    .where({ message_id: params.externalIdentity, provider_id: params.job.providerId, processing_status: 'processing' })
+    .delete();
+}
+
 async function updateProcessingRecord(params: {
   job: UnifiedInboundEmailQueueJob;
   externalIdentity: string;
@@ -1102,6 +1210,12 @@ export async function processUnifiedInboundEmailQueueJob(
       });
     } catch (error: any) {
       recordMessageOutcome({ providerType: job.provider, outcome: 'failed', reason: 'error' });
+      if (isInboundRetryLaterError(error)) {
+        // Not a verdict on the message: drop its processing record so the queue retry re-runs it
+        // instead of being deduped against a 'failed' row.
+        await releaseProcessingRecord({ job, externalIdentity });
+        throw error;
+      }
       await updateProcessingRecord({
         job,
         externalIdentity,

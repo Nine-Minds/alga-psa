@@ -6,6 +6,7 @@ export * from './accountingExport.interfaces';
 export * from './accountingExportAdapter.interfaces';
 export * from './activity.interfaces';
 export * from './asset.interfaces';
+export * from './assetCustody.interfaces';
 export * from './inventory.interfaces';
 export type {
   IUser,
@@ -50,6 +51,7 @@ export * from './interaction.interfaces';
 export * from './invoice.interfaces';
 export * from './job';
 export * from './material.interfaces';
+export * from './staging.interfaces';
 export * from './microsoft365-diagnostics.interfaces';
 export * from './online-meeting.interfaces';
 export * from './payment.interfaces';
@@ -66,6 +68,7 @@ export * from './salesOrderDocument.interfaces';
 export * from './recurrenceRule.interfaces';
 export * from './recurringTiming.interfaces';
 export * from './ticketTemplate.interfaces';
+export * from './cannedResponse.interfaces';
 export * from './schedule.interfaces';
 export * from './scheduling.interfaces';
 export * from './stopwatch.interfaces';

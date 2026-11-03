@@ -316,7 +316,20 @@
     "inboundDomainAutoCreateHelp": "Gekoppelde domeinen kunnen een contact maken voor een vertrouwde nieuwe afzender.",
     "inboundDomainAutoCreateUpdated": "Instelling voor afzendercontacten bijgewerkt.",
     "inboundDomainAutoCreateUpdateFailed": "Instelling voor afzendercontacten kan niet worden bijgewerkt.",
-    "recurringTickets": "Terugkerende tickets"
+    "recurringTickets": "Terugkerende tickets",
+    "software": "Software",
+    "checklistsTab": "Controlelijsten",
+    "checklists": {
+      "name": "Naam",
+      "items": "Punten",
+      "status": "Status",
+      "active": "Actief",
+      "inactive": "Inactief",
+      "description": "Checklistsjablonen die alleen bij tickets van deze klant worden aangeboden. Bewerk ze via Instellingen > Tickets > Checklistsjablonen.",
+      "empty": "Geen klantspecifieke checklistsjablonen.",
+      "loadFailed": "Checklistsjablonen laden mislukt",
+      "retry": "Opnieuw proberen"
+    }
   },
   "clientCommandCenter": {
     "cards": {
@@ -329,7 +342,8 @@
       "people": "Personen",
       "record": "Klantrecord",
       "service": "Service",
-      "timeline": "Alles, op volgorde"
+      "timeline": "Alles, op volgorde",
+      "software": "Software"
     },
     "csatEmpty": "Nog geen enquêtereacties.",
     "discardCancel": "Verder bewerken",
@@ -406,6 +420,12 @@
       "primary": "Primair"
     },
     "pulseError": "Het klantoverzicht kon niet worden geladen.",
+    "quickLinks": {
+      "assets": "Assets",
+      "contacts": "Contactpersonen",
+      "label": "Snelkoppelingen",
+      "software": "Software"
+    },
     "rail": {
       "close": "Sluiten",
       "installBase": "Geïnstalleerde basis",
@@ -441,6 +461,13 @@
       "onTrackLeft": "SLA: nog {{left}}",
       "paused": "SLA gepauzeerd"
     },
+    "software": {
+      "assetsMeta_one": "{{count}} asset",
+      "assetsMeta_other": "{{count}} assets",
+      "loadError": "Softwareinventaris kon niet worden geladen.",
+      "titles": "titels",
+      "viewAll": "Alle software"
+    },
     "timeline": {
       "daysAgo": "{{count}} d geleden",
       "empty": "Er is nog niets vastgelegd voor deze klant.",
@@ -465,7 +492,8 @@
       "ticketClosed": "Ticket gesloten",
       "ticketOpened": "Ticket geopend",
       "unitDelivered": "Apparatuur geleverd"
-    }
+    },
+    "discardFeatureMessage": "U hebt niet-opgeslagen wijzigingen in deze weergave. Sluiten en negeren?"
   },
   "quickAddClient": {
     "lifecycleStatus": "Levenscyclus",
@@ -572,11 +600,6 @@
     "invoiceDeliveryMethod": "Factuurleveringsmethode",
     "invoiceTemplate": "Factuursjabloon",
     "invoiceTemplateHelp": "Selecteer een sjabloon of gebruik de standaardsjabloon",
-    "paymentTerms": {
-      "dueOnReceipt": "Verschuldigd bij ontvangst",
-      "net15": "Netto 15",
-      "net30": "Netto 30"
-    },
     "preferredPaymentMethod": "Voorkeursbetaalmethode",
     "defaultCurrency": "Standaardvaluta",
     "selectTaxRegion": "Selecteer belastingregio (optioneel)",
@@ -588,11 +611,6 @@
       "both": "Beide",
       "email": "E-mail",
       "mail": "E-mail"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Bankoverschrijving",
-      "check": "Rekening",
-      "creditCard": "Creditcard"
     },
     "paymentTermsLabel": "Betalingsvoorwaarden",
     "standardTemplateLabel": "(Standaard)",
@@ -1764,7 +1782,8 @@
     },
     "cardExpiry": ", geldig tot {{month}}/{{year}}",
     "legacyPaymentTerms": "‘{{value}}’ is geen erkende betalingsvoorwaarde en is nooit toegepast. Bij het opslaan wordt deze verwijderd.",
-    "cardOnFile": "{{type}} eindigend op {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} eindigend op {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Standaard van de tenant: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid-saldo-meldingen",
@@ -1930,6 +1949,7 @@
       "sourceAlreadyMerged": "Deze klant is al met een andere klant samengevoegd.",
       "targetAlreadyMerged": "De doelklant is zelf met een andere klant samengevoegd. Voeg met die klant samen.",
       "sourceIsTenantDefault": "Het record van uw eigen organisatie kan niet met een klant worden samengevoegd.",
+      "sourceHasCoManagement": "Deze klant heeft een werkruimte voor co-managed IT. Annuleer de instelling of beëindig het co-management voordat u de klant samenvoegt.",
       "parentLinkCycle": "Die klant staat geregistreerd als onderliggend aan de klant die u samenvoegt; zo zou de hiërarchie worden omgedraaid.",
       "invalidContractCutover": "Een van de overstapdatums valt buiten de looptijd van het bijbehorende contract."
     },
@@ -2031,5 +2051,21 @@
     "manager": "Beheerder",
     "seesTickets": "Ziet profieltickets",
     "editHint": "Deze worden bewerkt op het facturatieprofiel, bij de facturatie-instellingen van de klant."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Assets",
+      "lastSeen": "Laatst gezien",
+      "title": "Titel",
+      "versions": "Versies"
+    },
+    "empty": "Nog geen softwareinventaris — de inventaris wordt per apparaat verzameld",
+    "emptyAssetsLink": "Assets bekijken",
+    "exportCsv": "CSV exporteren",
+    "exportError": "Softwareinventaris kon niet worden geëxporteerd.",
+    "installedOn": "Geïnstalleerd op",
+    "loadError": "Softwareinventaris kon niet worden geladen.",
+    "moreAssets": "en {{count}} meer (de eerste {{limit}} op naam)",
+    "searchPlaceholder": "Software zoeken..."
   }
 }

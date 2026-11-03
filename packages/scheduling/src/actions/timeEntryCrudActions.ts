@@ -1,5 +1,6 @@
 'use server'
 
+import { delegateToTimeSource } from '../lib/timeSource';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 // Bucket usage MUST go through the shared canonical service. This package used
 // to carry a local fork (src/services/bucketUsageService.ts) that kept querying
@@ -122,6 +123,9 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   { tenant },
   timeSheetId: string
 ): Promise<ITimeEntryWithWorkItem[] | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.entries.list(ctx, timeSheetId));
+  if (delegated.handled) return delegated.value;
   try {
     const {knex: db} = await createTenantKnex();
     const tenantScopedDb = tenantDb(db, tenant) as any;
@@ -248,8 +252,14 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
           };
         }
         break;
-      default:
-        throw new Error(`Unknown work item type: ${entry.work_item_type}`);
+      default: {
+        // Time-source seam: a registered provider may own this work item type; native keeps its failure.
+        const described = await delegateToTimeSource(
+          { tenant, userId: user.user_id, workItemType: entry.work_item_type, workItemId: entry.work_item_id },
+          (source, ctx) => source.work.describeItem(ctx, db, entry.work_item_type, entry.work_item_id));
+        if (!described.handled) throw new Error(`Unknown work item type: ${entry.work_item_type}`);
+        workItem = described.value;
+      }
     }
 
     // Fetch service information without treating billing mode as service identity/type.
@@ -275,7 +285,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
       end_date: formatISO(entry.end_time),
       type: entry.work_item_type,
       is_billable: entry.billable_duration > 0,
-      ticket_number: entry.work_item_type === 'ticket' ? workItem.ticket_number : undefined,
+      ticket_number: workItem.ticket_number, // only ticket (and provider-described) items select one
       service: service ? {
         id: entry.service_id,
         name: service.service_name,
@@ -322,6 +332,9 @@ export const saveTimeEntry = withAuth(async (
   { tenant },
   timeEntry: Omit<ITimeEntry, 'tenant'> & { stopwatch_session_id?: string | null }
 ): Promise<ITimeEntryWithWorkItem | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id, workItemType: timeEntry.work_item_type, workItemId: timeEntry.work_item_id }, (source, ctx) => source.entries.admit(ctx, timeEntry));
+  if (delegated.handled) return delegated.value;
   const {knex: db} = await createTenantKnex();
   const tenantScopedDb = tenantDb(db, tenant) as any;
 
@@ -529,6 +542,9 @@ export const updateTimeEntryApprovalStatus = withAuth(async (
     changeRequestComment?: string;
   }
 ): Promise<void | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.entries.review(ctx, params));
+  if (delegated.handled) return delegated.value;
   const { knex: db } = await createTenantKnex();
   const tenantScopedDb = tenantDb(db, tenant) as any;
 
@@ -641,6 +657,9 @@ export const deleteTimeEntry = withAuth(async (
   { tenant },
   entryId: string
 ): Promise<void | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.entries.remove(ctx, entryId));
+  if (delegated.handled) return delegated.value;
   const {knex: db} = await createTenantKnex();
 
   try {
@@ -710,6 +729,9 @@ export const getTimeEntryById = withAuth(async (
   { tenant },
   entryId: string
 ): Promise<ITimeEntryWithWorkItem | null | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.entries.read(ctx, entryId));
+  if (delegated.handled) return delegated.value;
   const { knex: db } = await createTenantKnex();
   const tenantScopedDb = tenantDb(db, tenant) as any;
 
@@ -826,8 +848,14 @@ export const getTimeEntryById = withAuth(async (
           };
           break;
         }
-        default:
-          throw new Error(`Unknown work item type: ${entry.work_item_type}`);
+        default: {
+          // Time-source seam: a registered provider may own this work item type; native keeps its failure.
+          const described = await delegateToTimeSource(
+            { tenant, userId: user.user_id, workItemType: entry.work_item_type, workItemId: entry.work_item_id },
+            (source, ctx) => source.work.describeItem(ctx, db, entry.work_item_type, entry.work_item_id));
+          if (!described.handled) throw new Error(`Unknown work item type: ${entry.work_item_type}`);
+          workItemDetails = { ...described.value, is_billable: entry.billable_duration > 0 } as IWorkItem;
+        }
       }
 
       // Return the complete time entry with work item details.

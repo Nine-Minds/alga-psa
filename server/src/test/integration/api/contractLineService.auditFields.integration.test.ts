@@ -53,6 +53,7 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   await tenantTable(tenantId, 'contract_lines').del();
   await tenantTable(tenantId, 'client_contracts').del();
   await tenantTable(tenantId, 'contracts').del();
+  await tenantTable(tenantId, 'contract_templates').del();
   await tenantTable(tenantId, 'role_permissions').del();
   await tenantTable(tenantId, 'roles').del();
   await tenantTable(tenantId, 'clients').del();
@@ -329,13 +330,24 @@ describe('contract line audit-field persistence (real schema)', () => {
 
       const targetContractId = await insertContract(tenantId, clientId);
       const templateContractId = await insertContract(tenantId, null, true);
+      // client_contracts.template_contract_id is a contract_templates.template_id
+      // (Contract.getAllWithClients joins it that way), and the assignment now
+      // resolves the template's amounts for the target contract's currency through
+      // it, so the template row has to exist and carry a base currency.
+      const templateId = uuidv4();
+      await tenantTable(tenantId, 'contract_templates').insert({
+        tenant: tenantId,
+        template_id: templateId,
+        template_name: `Assignable template ${templateId.slice(0, 8)}`,
+        currency_code: 'USD',
+      });
       const clientContractId = uuidv4();
       await tenantTable(tenantId, 'client_contracts').insert({
         tenant: tenantId,
         client_contract_id: clientContractId,
         client_id: clientId,
         contract_id: targetContractId,
-        template_contract_id: templateContractId,
+        template_contract_id: templateId,
         start_date: '2026-01-01',
         is_active: true,
       });

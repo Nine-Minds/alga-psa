@@ -310,7 +310,9 @@
       "hourlyRate": "Stawka / h",
       "expirationDate": "Wygasa",
       "neverExpires": "Nigdy",
-      "adhocBlock": "Doraźny"
+      "adhocBlock": "Doraźny",
+      "remainingValue": "Pozostała wartość",
+      "validFrom": "Obowiązuje od"
     },
     "statusValues": {
       "active": "Aktywny",
@@ -318,7 +320,8 @@
       "yes": "Tak",
       "no": "Nie",
       "expired": "Wygasły",
-      "voided": "Unieważniony"
+      "voided": "Unieważniony",
+      "all": "Wszystkie statusy"
     },
     "profitability": {
       "formats": {

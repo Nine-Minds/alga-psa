@@ -221,7 +221,7 @@ export const tagAnalyticsResponseSchema = z.object({
     usage_count: z.number(),
     entity_types: z.array(z.string())
   })),
-  tags_by_entity_type: z.record(z.number()),
+  tags_by_entity_type: z.record(z.string(), z.number()),
   recent_tags: z.array(z.object({
     tag_text: z.string(),
     created_at: z.string(),
@@ -300,8 +300,8 @@ export const tagValidationRulesSchema = z.object({
   allowed_characters: z.string().optional().default('a-zA-Z0-9-_\\s'),
   min_tag_length: z.number().int().min(1).optional().default(1),
   max_tag_length: z.number().int().max(100).optional().default(50),
-  case_sensitive: booleanTransform.optional().default("false"),
-  auto_suggest: booleanTransform.optional().default("true")
+  case_sensitive: booleanTransform.prefault("false"),
+  auto_suggest: booleanTransform.prefault("true")
 });
 
 // ============================================================================

@@ -1,0 +1,88 @@
+// L6c smoke harness (NOT committed): real createTeamsMeeting / recoverTeamsMeetingCreation code
+// against the running repo msgraph emulator (packages/emulators). Only the DB-backed config lookup,
+// logger and background artifact subscription renewal are stubbed.
+import { beforeAll, expect, it, vi } from 'vitest';
+const cfg = { organizerUpn: 'organizer@l6c.invalid', organizerUserId: 'l6c-organizer', clientId: 'l6c-smoke-client', clientSecret: 'l6c-smoke-secret', microsoftTenantId: 'l6c-directory', sendMeetingInvites: false };
+vi.mock('@alga-psa/core/logger', () => ({ default: { info: (...a: unknown[]) => console.log('[info]', JSON.stringify(a)), warn: (...a: unknown[]) => console.log('[warn]', JSON.stringify(a)), error: vi.fn() } }));
+vi.mock('../meetingConfig', () => ({ resolveTeamsMeetingConfigState: vi.fn(async () => ({ status: 'ready', config: cfg })), resolveTeamsMeetingGraphConfig: vi.fn(async () => cfg) }));
+vi.mock('../artifactSubscriptions', () => ({ renewTeamsMeetingArtifactSubscriptions: vi.fn(async () => undefined) }));
+import { createTeamsMeetingWithResult } from '../createTeamsMeeting';
+import { recoverTeamsMeetingCreation, TEAMS_CREATION_OPERATION_PROPERTY } from '../meetingCreationRecovery';
+const CONTROL = 'http://127.0.0.1:9586/control/msgraph';
+const target = { microsoftTenantId: cfg.microsoftTenantId, organizerUserId: cfg.organizerUserId, organizerUpn: cfg.organizerUpn, sendMeetingInvites: false };
+const base = { tenantId: 'alga-tenant', subject: 'L6c smoke appointment', startDateTime: '2026-11-02T15:00:00', endDateTime: '2026-11-02T16:00:00' };
+beforeAll(() => { process.env.TEAMS_EMULATOR_MODE = 'true'; process.env.MICROSOFT_GRAPH_BASE_URL = 'http://127.0.0.1:4586/v1.0'; process.env.MICROSOFT_LOGIN_BASE_URL = 'http://127.0.0.1:4586'; });
+const log = (label: string, v: unknown) => console.log(`\n=== ${label}\n${JSON.stringify(v, null, 2)}`);
+
+it('A. native (legacy) create without a durable identity: POST event, resolve onlineMeeting', async () => {
+  const out = await createTeamsMeetingWithResult(base);
+  log('A native create', out);
+  expect(out.status).toBe('created');
+});
+
+it('B. durable create with a co-managed operation identity (GET-before-POST, transactionId + extended property)', async () => {
+  const operationId = crypto.randomUUID();
+  const out = await createTeamsMeetingWithResult({ ...base, creationIdentity: { operationId, target } });
+  log('B durable create', out);
+  const reqs = await (await fetch(`${CONTROL}/requests`)).json();
+  log('B emulator requests (tail)', (Array.isArray(reqs) ? reqs : reqs.requests ?? reqs).slice?.(-4));
+  expect(out.status).toBe('created');
+});
+
+it('C. recovery after a lost POST response: event exists under the operation id, recover must find it read-only', async () => {
+  const operationId = crypto.randomUUID();
+  const tok = await (await fetch('http://127.0.0.1:4586/l6c-directory/oauth2/v2.0/token', { method: 'POST', body: new URLSearchParams({ client_id: cfg.clientId, client_secret: cfg.clientSecret, grant_type: 'client_credentials', scope: 'https://graph.microsoft.com/.default' }) })).json();
+  const posted = await fetch(`http://127.0.0.1:4586/v1.0/users/${cfg.organizerUserId}/events`, { method: 'POST', headers: { Authorization: `Bearer ${tok.access_token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ transactionId: operationId, singleValueExtendedProperties: [{ id: TEAMS_CREATION_OPERATION_PROPERTY, value: operationId }], subject: 'committed but response lost', start: { dateTime: base.startDateTime, timeZone: 'UTC' }, end: { dateTime: base.endDateTime, timeZone: 'UTC' }, isOnlineMeeting: true, onlineMeetingProvider: 'teamsForBusiness' }) });
+  log('C pre-committed event', { status: posted.status, body: await posted.json() });
+  const out = await recoverTeamsMeetingCreation({ tenantId: 'alga-tenant', identity: { operationId, target } });
+  log('C recover', out);
+  expect(out.status).toBe('found');
+});
+
+it('D. Graph error body is kept in the failure message (DNP #5)', async () => {
+  const armed = await fetch(`${CONTROL}/faults/operation-fault/arm`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ operation: "POST /users/*", status: 403, remaining: 1, body: { error: { code: 'ErrorAccessDenied', message: 'L6c smoke: Access is denied. Check credentials and try again.' } } }) });
+  log('D fault armed', await armed.json());
+  const out = await createTeamsMeetingWithResult(base);
+  log('D graph 403', out);
+  expect(out.status).toBe('failed');
+  expect((out as any).errorMessage).toContain('ErrorAccessDenied');
+});
+
+const SHIM = 'http://127.0.0.1:4587/v1.0';
+it('B2. [via shim] durable create: GET lookup (absent) then a single POST carrying transactionId + extended property', async () => {
+  process.env.MICROSOFT_GRAPH_BASE_URL = SHIM;
+  const operationId = crypto.randomUUID();
+  const out = await createTeamsMeetingWithResult({ ...base, creationIdentity: { operationId, target } });
+  log('B2 durable create via shim', out);
+  const events = (await (await fetch(`${CONTROL}/state/calendar-events`)).json()).result.filter((e: any) => (e.singleValueExtendedProperties || []).some((p: any) => p.value === operationId));
+  log('B2 emulator events carrying the operation id', events.map((e: any) => ({ id: e.id, organizer: e.organizerUserId, props: e.singleValueExtendedProperties })));
+  expect(out.status).toBe('created');
+  expect(events).toHaveLength(1);
+});
+it('C2. [via shim] recovery after a lost POST response finds the committed event read-only', async () => {
+  process.env.MICROSOFT_GRAPH_BASE_URL = SHIM;
+  const operationId = crypto.randomUUID();
+  const tok = await (await fetch('http://127.0.0.1:4586/l6c-directory/oauth2/v2.0/token', { method: 'POST', body: new URLSearchParams({ client_id: cfg.clientId, client_secret: cfg.clientSecret, grant_type: 'client_credentials', scope: 'https://graph.microsoft.com/.default' }) })).json();
+  await fetch(`http://127.0.0.1:4586/v1.0/users/${cfg.organizerUserId}/events`, { method: 'POST', headers: { Authorization: `Bearer ${tok.access_token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ transactionId: operationId, singleValueExtendedProperties: [{ id: TEAMS_CREATION_OPERATION_PROPERTY, value: operationId }], subject: 'committed but response lost', start: { dateTime: base.startDateTime, timeZone: 'UTC' }, end: { dateTime: base.endDateTime, timeZone: 'UTC' }, isOnlineMeeting: true, onlineMeetingProvider: 'teamsForBusiness' }) });
+  const before = (await (await fetch(`${CONTROL}/state/calendar-events`)).json()).result.length;
+  const out = await recoverTeamsMeetingCreation({ tenantId: 'alga-tenant', identity: { operationId, target } });
+  const after = (await (await fetch(`${CONTROL}/state/calendar-events`)).json()).result.length;
+  log('C2 recover via shim', { out, eventsBefore: before, eventsAfter: after });
+  expect(out.status).toBe('found');
+  expect(after).toBe(before);
+  // and a retried durable create for the same operation must attach, not POST a second event
+  const retry = await createTeamsMeetingWithResult({ ...base, creationIdentity: { operationId, target } });
+  const afterRetry = (await (await fetch(`${CONTROL}/state/calendar-events`)).json()).result.length;
+  log('C2 retried create for same operation', { retry, eventsAfterRetry: afterRetry });
+  expect(retry.status).toBe('created');
+  expect(afterRetry).toBe(before);
+});
+it('E. [via shim] organizer drift is refused before any Graph call', async () => {
+  process.env.MICROSOFT_GRAPH_BASE_URL = SHIM;
+  const out = await createTeamsMeetingWithResult({ ...base, creationIdentity: { operationId: crypto.randomUUID(), target: { ...target, organizerUserId: 'someone-else' } } });
+  log('E drift', out);
+  expect(out.status).toBe('failed');
+  expect((out as any).errorCode).toBe('creation_target_changed');
+});

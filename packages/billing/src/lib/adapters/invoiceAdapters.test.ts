@@ -1,11 +1,130 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildInvoiceTimeCollections,
+  buildLocationAddressBlock,
   mapDbInvoiceToWasmViewModel,
   type InvoiceTimeCollectionSource,
 } from './invoiceAdapters';
 
 describe('mapDbInvoiceToWasmViewModel', () => {
+  describe('per-line service period', () => {
+    const base = {
+      invoice_number: 'INV-700',
+      invoice_date: '2026-02-01',
+      due_date: '2026-02-01',
+      currency_code: 'JPY',
+      client: { name: 'Acme', address: '123 Main' },
+      subtotal: '0',
+      tax: '0',
+      total: '0',
+    };
+
+    it('gives a recurring line a date-only period and label that never shifts a day', () => {
+      const mapped = mapDbInvoiceToWasmViewModel(
+        {
+          ...base,
+          invoice_charges: [
+            {
+              item_id: 'recurring',
+              description: 'Managed Service',
+              quantity: 1,
+              unit_price: 1000,
+              total_price: 1000,
+              billing_timing: 'arrears',
+              // Midnight local time in UTC+5 is the previous UTC day; the written date wins.
+              service_period_start: '2026-03-01T00:00:00+05:00',
+              service_period_end: '2026-04-01T00:00:00.000+05:00',
+            },
+            {
+              item_id: 'recurring-date',
+              description: 'Dates from the database layer',
+              quantity: 1,
+              unit_price: 1000,
+              total_price: 1000,
+              billing_timing: 'advance',
+              service_period_start: new Date(Date.UTC(2026, 2, 1)),
+              service_period_end: new Date(Date.UTC(2026, 3, 1)),
+            },
+          ],
+        },
+        'en-US'
+      );
+
+      for (const item of mapped!.items) {
+        expect(item.servicePeriodStart).toBe('2026-03-01');
+        expect(item.servicePeriodEnd).toBe('2026-04-01');
+        expect(item.servicePeriodLabel).toBe('Mar 1, 2026 - Apr 1, 2026');
+      }
+    });
+
+    it('maps the late-time suffix and the closed period it names through to the line', () => {
+      const mapped = mapDbInvoiceToWasmViewModel(
+        {
+          ...base,
+          invoice_charges: [
+            {
+              item_id: 'late',
+              description: 'Remote Support (late time, service period 2024-12-01–2024-12-31)',
+              quantity: 1,
+              unit_price: 12000,
+              total_price: 12000,
+              service_period_start: '2024-12-01',
+              service_period_end: '2024-12-31',
+            },
+          ],
+        },
+        'en-US'
+      );
+
+      expect(mapped!.items[0].description).toBe('Remote Support (late time, service period 2024-12-01–2024-12-31)');
+      expect(mapped!.items[0].servicePeriodStart).toBe('2024-12-01');
+      expect(mapped!.items[0].servicePeriodEnd).toBe('2024-12-31');
+    });
+
+    it('leaves a one-time line blank', () => {
+      const mapped = mapDbInvoiceToWasmViewModel({
+        ...base,
+        invoice_charges: [
+          { item_id: 'once', description: 'Setup', quantity: 1, unit_price: 500, total_price: 500 },
+        ],
+      });
+
+      expect(mapped!.items[0].servicePeriodLabel ?? null).toBeNull();
+    });
+
+    it('fills the label on an already-mapped view model that lacks it', () => {
+      const mapped = mapDbInvoiceToWasmViewModel(
+        {
+          invoiceNumber: 'INV-1',
+          issueDate: '2026-02-01',
+          dueDate: '2026-02-01',
+          customer: { name: 'Acme', address: 'x' },
+          currencyCode: 'USD',
+          subtotal: 0,
+          tax: 0,
+          total: 0,
+          items: [
+            {
+              id: 'a',
+              description: 'Recurring',
+              quantity: 1,
+              unitPrice: 1,
+              total: 1,
+              billingTiming: 'arrears',
+              servicePeriodStart: '2026-01-01',
+              servicePeriodEnd: '2026-02-01',
+            },
+            { id: 'b', description: 'One-time', quantity: 1, unitPrice: 1, total: 1 },
+          ],
+        },
+        'en-US'
+      );
+
+      expect(mapped!.items[0].servicePeriodLabel).toBe('Jan 1, 2026 - Feb 1, 2026');
+      expect(mapped!.items[1].servicePeriodLabel ?? null).toBeNull();
+    });
+  });
+
   it('maps the payment-method snapshot to its label, and a missing one to null', () => {
     const base = {
       invoice_number: 'INV-600',
@@ -644,5 +763,28 @@ describe('mapDbInvoiceToWasmViewModel billed-time collections', () => {
     expect(mapped).not.toBeNull();
     expect(mapped?.timeEntries).toBeUndefined();
     expect(mapped?.ticketGroups).toBeUndefined();
+  });
+});
+
+describe('buildLocationAddressBlock', () => {
+  it('skips an empty or whitespace address_line2 instead of printing an empty line', () => {
+    const base = {
+      address_line1: '2315 W Ayleen St',
+      city: 'Tampa',
+      state_province: 'FL',
+      postal_code: '33607',
+      country_name: 'United States',
+    } as any;
+    const expected = '2315 W Ayleen St\nTampa, FL, 33607\nUnited States';
+    expect(buildLocationAddressBlock({ ...base, address_line2: '' })).toBe(expected);
+    expect(buildLocationAddressBlock({ ...base, address_line2: '   ' })).toBe(expected);
+    expect(buildLocationAddressBlock({ ...base, address_line2: null })).toBe(expected);
+  });
+
+  it('skips empty city-line parts and returns null for an all-empty location', () => {
+    expect(
+      buildLocationAddressBlock({ address_line1: '1 Main', city: 'Tampa', state_province: '', postal_code: ' ' } as any),
+    ).toBe('1 Main\nTampa');
+    expect(buildLocationAddressBlock({ address_line1: '', city: '  ' } as any)).toBeNull();
   });
 });

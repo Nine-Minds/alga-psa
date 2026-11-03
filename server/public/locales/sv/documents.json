@@ -14,6 +14,7 @@
       "semiAnnually": "Halvårsvis"
     },
     "cadenceTotal": "{{cadence}} totalt",
+    "currency": "Valuta",
     "date": "Datum",
     "description": "Beskrivning",
     "discounts": "Rabatter",
@@ -60,6 +61,7 @@
     "rate": "À-pris",
     "recurring": "Återkommande",
     "service": "Tjänst",
+    "servicePeriod": "Tjänsteperiod",
     "shipDate": "Leveransdatum",
     "shipTo": "Leveransadress",
     "shipped": "Skickat",
@@ -83,16 +85,47 @@
       "noLineItems": "Inga rader",
       "noMonthlyItems": "Inga månadskostnader",
       "noOneTimeItems": "Inga engångskostnader",
-      "noPhasesDefined": "Inga faser har definierats"
+      "noPhasesDefined": "Inga faser har definierats",
+      "noItemsInBox": "Lådan är tom"
     },
     "note": {
       "billedTimePortalDetail": "Kontakta er IT-leverantör för en specifikation av fakturerad tid.",
       "pickedBy": "Plockad av: ____________________     Datum: ____________",
       "preTaxTotals": "Beloppen visas exklusive moms. Moms tillkommer och beräknas på fakturan.",
-      "thankYouForOrder": "Tack för er beställning."
+      "thankYouForOrder": "Tack för er beställning.",
+      "checkedBy": "Kontrollerad av: ____________________     Datum: ____________",
+      "releasedBy": "Utlämnad av: ____________________     Signatur: ____________________     Datum: ____________"
     },
     "serialNumbers": "Serienummer",
-    "allocatedSerialsNote": "Tilldelade serienummer; kan ändras vid leverans."
+    "allocatedSerialsNote": "Tilldelade serienummer; kan ändras vid leverans.",
+    "stagingManifestTitle": "PACKLISTA",
+    "boxNumber": "Låda nr",
+    "project": "Projekt",
+    "client": "Kund",
+    "task": "Uppgift",
+    "status": "Status",
+    "sealedOn": "Förseglad",
+    "sealedBy": "Förseglad av",
+    "location": "Plats",
+    "checked": "Kontrollerad",
+    "item": "Artikel",
+    "skuOrTag": "SKU / tagg",
+    "serialNumber": "Serienummer",
+    "owner": "Ägare",
+    "ownerMsp": "MSP",
+    "ownerClient": "Kund",
+    "statusOpen": "Öppen",
+    "statusSealed": "Förseglad",
+    "rmaReturnSlipTitle": "RMA-RETURFÖLJE",
+    "device": "Enhet",
+    "vendor": "Leverantör",
+    "vendorReference": "Leverantörsreferens",
+    "asset": "Tillgång",
+    "assetTag": "Tillgångstagg",
+    "replacementSerial": "Ersättningens serienummer",
+    "shipping": "Frakt",
+    "returnBy": "Retur senast",
+    "returnShipTo": "Returnera till"
   },
   "errors": {
     "permissions": {

@@ -31,6 +31,7 @@ export interface InboundEmailRuleRecord {
   is_active: boolean;
   position: number;
   provider_ids: string[] | null;
+  // LEVERAGE: pattern condition-dialects — overlapping condition dialect; candidate to converge on @alga-psa/predicates (also: workflow event-wait filters, reporting FilterDefinition, inbound email rules, service-request visibility)
   conditions: InboundEmailRule['conditions'];
   action_type: InboundEmailRule['action_type'];
   action_config: Record<string, unknown>;

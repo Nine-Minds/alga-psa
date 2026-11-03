@@ -2,14 +2,16 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
-import type { ITag } from '@alga-psa/types';
+import type { IDisplayTag, ITag } from '@alga-psa/types';
 
 import { AsyncSearchableSelect, type SelectOption } from './AsyncSearchableSelect';
 import CustomSelect from './CustomSelect';
 import { Button } from './Button';
 import ClientAvatar from './ClientAvatar';
+import { EntityTagBadges } from './EntityChip';
 import { TagFilter } from './tags/TagFilter';
 import { useClientTags } from '../context/ClientTagsContext';
+import { useClientPickerSearch } from '../context/ClientPickerSearchContext';
 import { useTranslation } from '../lib/i18n/client';
 import type { AutomationProps } from '../ui-reflection/types';
 
@@ -23,6 +25,8 @@ export interface PickerClientOption {
   client_type?: string | null;
   is_inactive?: boolean;
   logoUrl?: string | null;
+  /** Chip tags for the viewer, already filtered by the display rules. */
+  displayTags?: IDisplayTag[];
 }
 
 export interface ClientPickerSearchParams {
@@ -44,8 +48,11 @@ export type ClientPickerSearchFn = (
 
 export interface AsyncClientPickerProps {
   id?: string;
-  /** Server search; pass `searchClientsForPicker`. */
-  searchClients: ClientPickerSearchFn;
+  /**
+   * Server search (`searchClientsForPicker`). Optional: falls back to the searcher supplied by
+   * `ClientPickerSearchProvider` (mounted in the MSP shells). An explicit prop wins.
+   */
+  searchClients?: ClientPickerSearchFn;
   onSelect: (clientId: string | null) => void;
   selectedClientId: string | null;
   filterState?: ClientPickerStatusFilter;
@@ -67,6 +74,12 @@ export interface AsyncClientPickerProps {
 }
 
 const DEFAULT_PAGE_SIZE = 25;
+
+const missingSearcher: ClientPickerSearchFn = async () => {
+  throw new Error(
+    'AsyncClientPicker has no searcher: pass `searchClients` or mount ClientPickerSearchProvider'
+  );
+};
 
 function PickerFilters({
   id,
@@ -166,7 +179,7 @@ function PickerFilters({
  */
 export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProps> = ({
   id = 'client-picker',
-  searchClients,
+  searchClients: searchClientsProp,
   onSelect,
   selectedClientId,
   filterState,
@@ -185,6 +198,9 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
   debounceMs,
 }) => {
   const { t } = useTranslation('common');
+  const contextSearch = useClientPickerSearch();
+  const searchClients: ClientPickerSearchFn =
+    searchClientsProp ?? contextSearch.searchClients ?? missingSearcher;
   const [internalStatus, setInternalStatus] = useState<ClientPickerStatusFilter>(filterState ?? 'active');
   const [internalType, setInternalType] = useState<ClientPickerTypeFilter>(clientTypeFilter ?? 'all');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -257,6 +273,7 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
           disabled: isDisabled,
           title: isDisabled ? disabledTooltip : undefined,
           badge: isDisabled ? { text: disabledTooltip, variant: 'secondary' } : undefined,
+          trailing: <EntityTagBadges tags={client.displayTags} maxBadges={2} />,
           icon: (
             <ClientAvatar
               clientId={client.client_id}
@@ -299,6 +316,7 @@ export const AsyncClientPicker: React.FC<AsyncClientPickerProps & AutomationProp
       debounceMs={debounceMs}
       placeholder={placeholder}
       selectedLabel={selected?.client_name}
+      selectedTrailing={<EntityTagBadges tags={selected?.displayTags} maxBadges={2} />}
       selectedIcon={
         selected ? (
           <ClientAvatar

@@ -33,6 +33,7 @@ import { calculateManualInvoiceEditorTotal } from './manualInvoiceTotals';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
+import { useBillingClient } from '../../hooks/useBillingClient';
 import { useClientBillingProfiles } from '@alga-psa/ui/hooks/useClientBillingProfiles';
 import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/billingProfileActions';
 import type { IClient } from '@alga-psa/types';
@@ -45,6 +46,7 @@ import type { JSX } from 'react';
 import { v4 as uuidv4, v5 as uuidv5 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRouter } from 'next/navigation';
@@ -74,7 +76,11 @@ interface TaxRateChoice {
 }
 
 interface ManualInvoicesProps {
-  clients: IClient[];
+  /**
+   * The invoice's own client when the host already loaded it (draft adjustments). Otherwise
+   * the client is looked up by id once an invoice or a picker selection supplies one.
+   */
+  client?: IClient | null;
   services: IService[];
   onGenerateSuccess: () => void;
   invoice?: InvoiceViewModel;
@@ -202,7 +208,7 @@ const AutomatedItemsTable: React.FC<{
   currencyCode?: string;
 }> = ({ items, currencyCode = 'USD' }) => {
   const { t } = useTranslation('msp/invoicing');
-  const { formatCurrency } = useFormatters();
+  const { locale } = useFormatters();
   console.log('[Render] Rendering automated items table:', {
     count: items.length,
     items: items.map(item => ({
@@ -248,7 +254,7 @@ const AutomatedItemsTable: React.FC<{
               </td>
               {/* Display total_price */}
               <td className={`text-right ${item.isDiscount ? 'text-[rgb(var(--color-text-600))]' : ''}`}>
-                {formatCurrency(item.total / 100, currencyCode)}
+                {formatCurrencyFromMinorUnits(item.total, locale, currencyCode)}
               </td>
             </tr>
           ))}
@@ -282,7 +288,7 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
 }
 
 const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
-  clients,
+  client: providedClient = null,
   services,
   onGenerateSuccess,
   invoice, // This is the initial invoice prop
@@ -295,15 +301,24 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const isDraftAdjustments = variant === 'draftAdjustments';
   const { t } = useTranslation('msp/invoicing');
   const router = useRouter();
-  const { formatCurrency } = useFormatters();
+  // Every amount on this screen — including the partial-period description written onto
+  // the invoice line — is in the currency's own minor units.
+  const { locale } = useFormatters();
   const { renderQuickAddClient } = useQuickAddClient();
-  const [clientOptions, setClientOptions] = useState<IClient[]>(clients);
   const [selectedClient, setSelectedClient] = useState<string | null>(
     invoice?.client_id || null
   );
   const [selectedSalesOrderId, setSelectedSalesOrderId] = useState<string>('');
   // State to hold the full invoice data, initialized from prop but updated locally after fetch/changes
   const [currentInvoiceData, setCurrentInvoiceData] = useState<InvoiceViewModel | undefined>(invoice);
+  // Currency, region and name of the client this invoice is for: the host-provided client when
+  // it matches, otherwise a by-id lookup (the picker no longer carries a tenant client list).
+  const activeClientId = currentInvoiceData?.client_id || invoice?.client_id || selectedClient;
+  const providedMatches = Boolean(providedClient && providedClient.client_id === activeClientId);
+  const { client: lookedUpClient, prime: primeLookedUpClient } = useBillingClient(
+    providedMatches ? null : activeClientId,
+  );
+  const activeClientData = providedMatches ? providedClient : lookedUpClient;
   // State specifically for the manual items being edited
   // Persisted rows become editable only after a coherent snapshot loads. A
   // list projection may be stale and must never become a write payload.
@@ -420,10 +435,6 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     });
   };
 
-  useEffect(() => {
-    setClientOptions(clients);
-  }, [clients]);
-
   // Pre-select the client's default profile — the operator picks another only
   // when this invoice belongs to a different segment. Only a segmented client
   // gets a pick at all: with one profile there is nothing to choose and
@@ -486,10 +497,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         label: [
           so.so_number,
           so.client_name ?? so.client_id,
-          formatCurrency(so.billable_amount / 100, so.currency_code || 'USD'),
+          formatCurrencyFromMinorUnits(so.billable_amount, locale, so.currency_code || 'USD'),
         ].join(' · '),
       })),
-    [formatCurrency, invoiceableSalesOrders],
+    [invoiceableSalesOrders, locale],
   );
   const hasSalesOrderSource = !currentInvoiceData && Boolean(selectedSalesOrder);
 
@@ -828,7 +839,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         coveredDays: calculation.coveredDays,
         fullPeriodDays: calculation.fullPeriodDays,
         currencyCode,
-        formatCurrency,
+        formatCurrency: (minorUnits, code) => formatCurrencyFromMinorUnits(minorUnits, locale, code),
         describe: (direction, values) => t(`manualInvoices.partialPeriod.invoiceDescription.${direction}`, {
           ...values,
           defaultValue: direction === 'increase'
@@ -1408,8 +1419,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   console.log('[Render] Rendering ManualInvoicesContent. currentInvoiceData items:', currentInvoiceData?.invoice_charges?.length);
 
   // Get currency code from invoice data, selected client, or default to USD
-  const selectedClientData = clientOptions.find(c => c.client_id === (currentInvoiceData?.client_id || selectedClient));
-  const currencyCode = currentInvoiceData?.currencyCode || selectedClientData?.default_currency_code || 'USD';
+  const currencyCode = currentInvoiceData?.currencyCode || activeClientData?.default_currency_code || 'USD';
 
   const partialPeriodCalculation = (() => {
     try {
@@ -1476,8 +1486,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   // cannot be reconstructed resolves to `undefined` so opening and saving it
   // preserves the stored treatment instead of stripping it.
   const resolveInitialTaxRateId = (item: EditableInvoiceItem): string | null | undefined => {
-    const invoiceClientId = currentInvoiceData?.client_id || invoice?.client_id || selectedClient;
-    const clientRegion = clientOptions.find((client) => client.client_id === invoiceClientId)?.region_code ?? null;
+    const clientRegion = activeClientData?.region_code ?? null;
     return resolveInitialManualTaxRateId({
       isDiscount: Boolean(item.is_discount),
       explicitTaxRateId: item.tax_rate_id,
@@ -1567,7 +1576,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                   {t('manualInvoices.fields.client', { defaultValue: 'Client' })}
                 </label>
                 <div className="text-[rgb(var(--color-text-900))]">
-                  {clientOptions.find(c => c.client_id === currentInvoiceData.client_id)?.client_name
+                  {activeClientData?.client_name
                     || t('common.labels.unknownClient', { defaultValue: 'Unknown client' })}
                 </div>
               </div>
@@ -1681,8 +1690,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                           </div>
                         </div>
                         <div className="text-right font-semibold text-[rgb(var(--color-text-900))]">
-                          {formatCurrency(
-                            selectedSalesOrder.billable_amount / 100,
+                          {formatCurrencyFromMinorUnits(
+                            selectedSalesOrder.billable_amount,
+                            locale,
                             selectedSalesOrder.currency_code || 'USD',
                           )}
                         </div>
@@ -1718,7 +1728,6 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                     <>
                       <ClientPicker
                         id='client-picker'
-                        clients={clientOptions}
                         selectedClientId={selectedClient}
                         onSelect={setSelectedClient}
                         filterState={filterState}
@@ -1734,7 +1743,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                         open: isQuickAddClientOpen,
                         onOpenChange: setIsQuickAddClientOpen,
                         onClientAdded: (newClient) => {
-                          setClientOptions(prev => [...prev, newClient]);
+                          primeLookedUpClient(newClient);
                           setSelectedClient(newClient.client_id);
                         },
                         skipSuccessDialog: true,
@@ -2001,7 +2010,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                       />
                       <Input id="partial-period-effective-date" label={t('manualInvoices.partialPeriod.effectiveDate', { defaultValue: 'Effective date' })} type="date" value={partialEffectiveDate} onChange={(event) => setPartialEffectiveDate(event.target.value)} required />
                     </div>
-                    {partialPeriodSource && <div className="space-y-1"><p className="text-xs text-muted-foreground">{partialPeriodSource.description}: {partialPeriodSource.service_period_start} – {partialPeriodSource.service_period_end} · {t('manualInvoices.partialPeriod.sourceRate', { defaultValue: 'Rate {{rate}}', rate: formatCurrency(Number(partialPeriodSource.unit_price) / 100, currencyCode) })} · {partialEffectiveDate && partialPeriodPreview !== null ? `${partialUnits} × ${formatCurrency(Math.abs(partialPeriodCalculation?.unitPrice ?? 0) / 100, currencyCode)} = ${formatCurrency((partialPeriodPreview ?? 0) / 100, currencyCode)} (${formatCurrency(Math.abs(Number(partialPeriodSource.unit_price)) / 100, currencyCode)} × ${partialPeriodCalculation?.coveredDays ?? 0}/${partialPeriodCalculation?.fullPeriodDays ?? 0}, rounded per unit)` : ''}</p>{partialPeriodSource.contract_line_id && partialPeriodSource.client_contract_id && <a className="text-xs text-primary-600 underline" href={`/msp/billing?tab=client-contracts&clientContractId=${encodeURIComponent(partialPeriodSource.client_contract_id)}&contractView=lines&contractLineId=${encodeURIComponent(partialPeriodSource.contract_line_id)}`}>{t('manualInvoices.partialPeriod.permanentChangeNudge', { defaultValue: 'Is this a permanent change? Record it on the contract instead.' })}</a>}</div>}
+                    {partialPeriodSource && <div className="space-y-1"><p className="text-xs text-muted-foreground">{partialPeriodSource.description}: {partialPeriodSource.service_period_start} – {partialPeriodSource.service_period_end} · {t('manualInvoices.partialPeriod.sourceRate', { defaultValue: 'Rate {{rate}}', rate: formatCurrencyFromMinorUnits(Number(partialPeriodSource.unit_price), locale, currencyCode) })} · {partialEffectiveDate && partialPeriodPreview !== null ? `${partialUnits} × ${formatCurrencyFromMinorUnits(Math.abs(partialPeriodCalculation?.unitPrice ?? 0), locale, currencyCode)} = ${formatCurrencyFromMinorUnits(partialPeriodPreview ?? 0, locale, currencyCode)} (${formatCurrencyFromMinorUnits(Math.abs(Number(partialPeriodSource.unit_price)), locale, currencyCode)} × ${partialPeriodCalculation?.coveredDays ?? 0}/${partialPeriodCalculation?.fullPeriodDays ?? 0}, rounded per unit)` : ''}</p>{partialPeriodSource.contract_line_id && partialPeriodSource.client_contract_id && <a className="text-xs text-primary-600 underline" href={`/msp/billing?tab=client-contracts&clientContractId=${encodeURIComponent(partialPeriodSource.client_contract_id)}&contractView=lines&contractLineId=${encodeURIComponent(partialPeriodSource.contract_line_id)}`}>{t('manualInvoices.partialPeriod.permanentChangeNudge', { defaultValue: 'Is this a permanent change? Record it on the contract instead.' })}</a>}</div>}
                     <Input
                       id="partial-period-description-input"
                       label={t('manualInvoices.partialPeriod.description', { defaultValue: 'Description (optional)' })}
@@ -2021,7 +2030,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                           ? t('manualInvoices.partialPeriod.previewUnavailable', { defaultValue: 'Enter a valid calculation.' })
                           : t('manualInvoices.partialPeriod.resolvedAmount', {
                             defaultValue: 'Resolved amount: {{amount}}',
-                            amount: formatCurrency(partialPeriodPreview / 100, currencyCode),
+                            amount: formatCurrencyFromMinorUnits(partialPeriodPreview, locale, currencyCode),
                           })}
                       </span>
                       <Button
@@ -2059,7 +2068,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                 <div className="text-lg font-semibold">
                   {/* Always use the calculated total for consistency */}
                   <>
-                    {t('manualInvoices.labels.total', { defaultValue: 'Total' })}: {formatCurrency(calculatedGrandTotal / 100, currencyCode)}
+                    {t('manualInvoices.labels.total', { defaultValue: 'Total' })}: {formatCurrencyFromMinorUnits(calculatedGrandTotal, locale, currencyCode)}
                   </>
                 </div>
               </div>

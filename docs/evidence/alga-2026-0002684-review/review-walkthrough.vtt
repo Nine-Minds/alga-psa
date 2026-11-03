@@ -1,0 +1,73 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:06.351
+1. The contract: service desk fee + one Prepaid Block line (Billing > Contracts > EQUIT Prepaid Hours Acceptance R2 > Contract Lines)
+
+2
+00:00:06.351 --> 00:00:10.812
+2. Block hours, price, issue mode and rollover are configured in one place (Prepaid Block > Edit)
+
+3
+00:00:10.812 --> 00:00:14.499
+3. First invoice INV-000163 = $3,000: fixed fee + 10 h block, both billed in advance (Billing > Invoicing > Finalized)
+
+4
+00:00:14.499 --> 00:00:17.875
+4. Next invoice INV-000164 = $3,600: next block in advance + 4 overage hours x $150 in arrears
+
+5
+00:00:17.875 --> 00:00:23.349
+5. Simulator on the saved contract: 14 assumed hours gives $3,000 then $3,600, no manual edits (Client Contracts > R2 > Simulate)
+
+6
+00:00:23.349 --> 00:00:38.564
+6. Compare with past invoices (Sep-Oct 2026): every simulated line matches INV-000163 / INV-000164 at +$0.00
+
+7
+00:00:38.564 --> 00:00:55.908
+7. After a client switches to quarterly billing, Compare with past invoices still replays the billed monthly windows: Sep $1,500 = INV-000168, Oct $2,100 = INV-000170 (Client Contracts > EQUIT Block Hours R5 > Simulate)
+
+8
+00:00:55.908 --> 00:01:08.133
+8. Due Work: the Nov group combines Oct overage (arrears) with the Nov block and fixed fee (advance) (Billing > Invoicing > Generate, Invoice window to 11/30/2026)
+
+9
+00:01:08.133 --> 00:01:12.732
+9. Preview: $1,500 fee + $1,500 Nov block + 3 Oct overage hours x $150 = $3,450
+
+10
+00:01:12.732 --> 00:01:15.480
+10. Generate the invoice from the preview; the group leaves Due Work
+
+11
+00:01:15.480 --> 00:01:19.213
+11. Draft INV-000172 = $3,450: block fee, overage and $0 draw line, each with its own period (Billing > Invoicing > Drafts)
+
+12
+00:01:19.213 --> 00:01:25.830
+12. Remaining hours with dollar value: client Hour Blocks (Clients > EQUIT Acceptance 2684 R2 > Billing Dashboard)
+
+13
+00:01:25.830 --> 00:01:31.047
+13. Contract Reports: used, remaining, remaining value, valid from and expiry per block (Billing > Reports > Bucket Hours)
+
+14
+00:01:31.047 --> 00:01:35.740
+14. Templates carry the same priced block (Billing > Contract Templates > EQUIT Block Hours Template R2)
+
+15
+00:01:35.740 --> 00:01:45.272
+Failure & recovery A: invoice generated too early. Reverse Draft voids the Nov block and releases the overage hours (Drafts > INV-000172 > Reverse Draft)
+
+16
+00:01:45.272 --> 00:01:55.174
+Recovery: the Nov group is back in Due Work, ready to generate again
+
+17
+00:01:55.174 --> 00:02:10.612
+Failure B: a zero-hour block is refused with a clear message; Cancel leaves the saved block unchanged (Contract Lines > Prepaid Block > Edit)
+
+18
+00:02:10.612 --> 00:02:23.887
+15. Client portal: the client sees prepaid hours left with their dollar value (Client Portal > Billing; signed in as tinus.smoke2684@equit.example)

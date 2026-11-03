@@ -18,6 +18,7 @@ import {
 } from './config';
 import { formatDateValue } from './formatDateValue';
 import { useDateFormat } from '../dateFormat/useDateFormat';
+import { interpolateFallback } from './interpolateFallback';
 
 /**
  * Initialize i18next on the client side.
@@ -450,7 +451,28 @@ export function useOptionalI18n() {
  * Hook for translations (wrapper around react-i18next)
  */
 export function useTranslation(namespace?: string | string[], options?: any) {
-  return useI18nextTranslation(namespace as any, options);
+  const result = useI18nextTranslation(namespace as any, options);
+  const { t, i18n } = result as { t: (...args: any[]) => unknown; i18n?: { isInitialized?: boolean } };
+
+  // Until the instance is initialised (server render, first client paint),
+  // react-i18next's `t` hands back the resource or `defaultValue` with its
+  // `{{placeholders}}` untouched, so server and client would disagree and the
+  // page would hydrate with a literal "{{name}}". Interpolate in that window
+  // from the call's own options; once initialised, i18next does it itself.
+  const preInitT = useMemo(() => {
+    if (typeof t !== 'function' || i18n?.isInitialized) return null;
+    return (key: unknown, tOptions?: unknown, ...rest: unknown[]) => {
+      const text = t(key, tOptions, ...rest);
+      if (typeof text !== 'string' || !tOptions || typeof tOptions !== 'object') return text;
+      return interpolateFallback(text, tOptions as Record<string, string | number | null | undefined>);
+    };
+  }, [t, i18n?.isInitialized]);
+
+  if (!preInitT) return result;
+  // react-i18next's result is an [t, i18n, ready] tuple that also exposes the
+  // same fields by name; keep both shapes.
+  const wrapped = [preInitT, ...(Array.isArray(result) ? result.slice(1) : [i18n, (result as any).ready])] as any;
+  return Object.assign(wrapped, result, { t: preInitT }) as typeof result;
 }
 
 /**

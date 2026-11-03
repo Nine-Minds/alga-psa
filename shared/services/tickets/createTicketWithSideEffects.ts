@@ -286,7 +286,16 @@ export async function createTicketWithSideEffects(
   }
 
   if (input.checklistTemplateId) {
-    await applyChecklistTemplateToTicket(trx, tenant, ticketId, input.checklistTemplateId, 'template');
+    // A client-scoped template that doesn't match the new ticket's client is skipped, not fatal:
+    // ticket creation must never fail because of an optional checklist.
+    const checklistResult = await applyChecklistTemplateToTicket(trx, tenant, ticketId, input.checklistTemplateId, 'template');
+    if (checklistResult.reason) {
+      console.warn('[createTicketWithSideEffects] checklist template not applied', {
+        ticketId,
+        templateId: input.checklistTemplateId,
+        reason: checklistResult.reason,
+      });
+    }
   }
 
   const fullTicket = await db.table('tickets').where({ ticket_id: ticketId }).first();

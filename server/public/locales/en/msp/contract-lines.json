@@ -135,7 +135,6 @@
         "overtime": {
           "enableLabel": "Enable Overtime Rates",
           "rateHelp": "Rate applied after threshold.",
-          "rateLabel": "Overtime Rate ($/hr)",
           "thresholdHelp": "Hours before OT applies.",
           "thresholdLabel": "Overtime Threshold (hrs/period)",
           "thresholdPlaceholder": "40",
@@ -375,7 +374,6 @@
     },
     "hourlyConfig": {
       "labels": {
-        "hourlyRate": "Hourly Rate ($)",
         "minimumBillableTime": "Minimum Billable Time (minutes)",
         "roundUpToNearest": "Round Up To Nearest (minutes)"
       },
@@ -398,7 +396,6 @@
           "technician": "Technician"
         },
         "perHourSuffix": "/hr",
-        "rateSrLabel": "Rate ($/hr)",
         "selectTypePlaceholder": "Select type",
         "tooltip": "Define different hourly rates for specific user types working on this service. These override the service's default hourly rate.",
         "userTypeSrLabel": "User Type",
@@ -822,7 +819,8 @@
       "notAllowed": "One of the contract line values is not allowed. Please review the form and try again.",
       "missingField": "Missing required contract line field.",
       "missingFieldNamed": "Missing required contract line field: {{field}}.",
-      "advanceTimingNotAllowed": "Advance billing is only available for fixed contract lines. Hourly and usage lines always bill in arrears, after the work happens."
+      "advanceTimingNotAllowed": "Advance billing is only available for fixed contract lines. Hourly and usage lines always bill in arrears, after the work happens.",
+      "versionConflict": "This contract line was changed by someone else since you started editing. Reload it and re-apply your edit."
     },
     "templateLine": {
       "unavailable": "The selected template line is no longer available. Please refresh and try again."

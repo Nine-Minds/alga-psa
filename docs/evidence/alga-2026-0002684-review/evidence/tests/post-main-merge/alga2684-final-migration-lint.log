@@ -1,0 +1,19 @@
+migration-lint: change set vs origin/main
+server/migrations/20261025090748_prepaid_block_cadence_mode.cjs:1: R6 timestamp 20261025090748 is not later than the newest on base (20261027130000)
+server/migrations/20261025090751_hour_blocks_validity_and_period_link.cjs:1: R6 timestamp 20261025090751 is not later than the newest on base (20261027130000)
+server/migrations/20261025090751_hour_blocks_validity_and_period_link.cjs:29: R2 ADD CONSTRAINT hour_blocks_issuance_fkey on existing table "hour_blocks" must be NOT VALID
+server/migrations/20261025090751_hour_blocks_validity_and_period_link.cjs:48: R2 ADD CONSTRAINT hour_blocks_valid_from_expiration_check on existing table "hour_blocks" must be NOT VALID
+server/migrations/20261025090751_hour_blocks_validity_and_period_link.cjs:57: R3 DROP CONSTRAINT hour_blocks_contract_source_check on existing table "hour_blocks" without re-adding it in the same file
+server/migrations/20261025090751_hour_blocks_validity_and_period_link.cjs:69: R1 CREATE INDEX on existing table "hour_blocks": missing CONCURRENTLY
+server/migrations/20261025090751_hour_blocks_validity_and_period_link.cjs:72: R1 CREATE INDEX on existing table "hour_blocks": missing CONCURRENTLY
+server/migrations/20261025090753_recurring_service_periods_prepaid_block_family.cjs:1: R6 timestamp 20261025090753 is not later than the newest on base (20261027130000)
+server/migrations/20261025090753_recurring_service_periods_prepaid_block_family.cjs:20: R2 ADD CONSTRAINT recurring_service_periods_charge_family_check on existing table "recurring_service_periods" must be NOT VALID
+server/migrations/20261025090748_prepaid_block_cadence_mode.cjs:38: R*-UNRESOLVED knex.raw() text has a substitution the lint cannot resolve to a literal in a structural position (lint could not decide)
+server/migrations/20261025090748_prepaid_block_cadence_mode.cjs:38: R*-UNRESOLVED knex.raw() text has a substitution the lint cannot resolve to a literal in a structural position (lint could not decide)
+server/migrations/20261025090748_prepaid_block_cadence_mode.cjs:38: R*-UNRESOLVED knex.raw() text has a substitution the lint cannot resolve to a literal in a structural position (lint could not decide)
+server/migrations/20261025090751_hour_blocks_validity_and_period_link.cjs:58: R*-UNRESOLVED knex.raw() text has a substitution the lint cannot resolve to a literal in a structural position (lint could not decide)
+9 violation(s), 0 annotation(s) honoured, 4 undecided, 0 stale annotation(s), 3 file(s) scanned
+  R6: migration timestamp must be later than the newest on the base branch and unique within the change
+  R2: ADD CONSTRAINT CHECK/FOREIGN KEY on an existing table needs NOT VALID, with VALIDATE CONSTRAINT in a different `transaction: false` file
+  R3: SET NOT NULL / ALTER COLUMN TYPE / DROP / RENAME on an existing table is refused
+  R1: CREATE INDEX on an existing table needs CONCURRENTLY + IF NOT EXISTS in a `transaction: false` migration

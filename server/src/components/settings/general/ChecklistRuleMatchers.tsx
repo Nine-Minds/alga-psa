@@ -1,266 +1,321 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  isPredicateGroup,
+  operatorTakesList,
+  operatorTakesValue,
+  predicateGroupSchema,
+  validateClause,
+} from '@alga-psa/predicates';
+import type { PredicateClause, PredicateGroup, PredicateNode, PredicateOperator } from '@alga-psa/predicates';
+import type { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
-import { Label } from '@alga-psa/ui/components/Label';
-import { Switch } from '@alga-psa/ui/components/Switch';
-import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
-import type {
-  IChecklistTemplateApplyRule,
-  ChecklistRuleServiceRequestDefinitionOption,
-} from '@alga-psa/tickets/actions/checklists/checklistTemplateActions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { ticketQuerySchema } from '@alga-psa/tickets/lib/ticketQuerySchema';
 import {
-  APPLY_RULE_MAX_KEYWORDS,
-  APPLY_RULE_MAX_KEYWORD_LENGTH,
-  APPLY_RULE_TICKET_ORIGINS,
-  normalizeRuleKeywords,
-} from '@alga-psa/tickets/actions/checklists/applyRuleMatcherValidation';
+  TICKET_PREDICATE_FIELDS,
+  isEditableChecklistWhere,
+  normalizeChecklistEditorWhere,
+  newChecklistClause,
+  type TicketPredicateField,
+} from '@alga-psa/tickets/lib/ticketPredicateFields';
+import type { IChecklistTemplateApplyRule } from '@alga-psa/tickets/actions/checklists/checklistTemplateActions';
 
-export type ChecklistRuleMatcherPatch = Partial<
-  Pick<
-    IChecklistTemplateApplyRule,
-    | 'client_ids'
-    | 'ticket_origins'
-    | 'from_service_request'
-    | 'service_request_definition_id'
-    | 'keywords'
-    | 'keyword_mode'
-    | 'keyword_target'
-  >
->;
+const P = 'ticketing.checklistTemplates.predicate';
 
-interface ChecklistRuleMatchersProps {
+interface Props {
   rule: IChecklistTemplateApplyRule;
   index: number;
+  options: Record<string, SelectOption[]>;
+  tags: Record<'client' | 'contact', ITag[]>;
   clientNames: Record<string, string>;
-  definitions: ChecklistRuleServiceRequestDefinitionOption[];
-  onClientPicked: (clientId: string) => void;
-  onChange: (patch: ChecklistRuleMatcherPatch) => void;
+  ownerClientName?: string | null;
+  onClientPicked: (id: string) => void;
+  onChange: (where: PredicateGroup) => Promise<void>;
 }
 
-/** True when the rule has no filter at all, i.e. it matches every ticket. */
-export function ruleHasNoMatchers(rule: IChecklistTemplateApplyRule): boolean {
-  return (
-    !rule.board_id &&
-    !rule.category_id &&
-    !rule.subcategory_id &&
-    !rule.priority_id &&
-    !(rule.client_ids && rule.client_ids.length) &&
-    !(rule.ticket_origins && rule.ticket_origins.length) &&
-    !rule.from_service_request &&
-    !rule.service_request_definition_id &&
-    !(rule.keywords && rule.keywords.length)
-  );
-}
-
-const P = 'ticketing.checklistTemplates.fields.rules';
-
-const ChecklistRuleMatchers: React.FC<ChecklistRuleMatchersProps> = ({
+export default function ChecklistRuleMatchers({
   rule,
   index,
+  options,
+  tags,
   clientNames,
-  definitions,
+  ownerClientName,
   onClientPicked,
   onChange,
-}) => {
+}: Props) {
   const { t } = useTranslation('msp/settings');
-  const [keywordDraft, setKeywordDraft] = useState('');
+  const [where, setWhere] = useState(rule.where);
+  const [saving, setSaving] = useState(false);
+  const savedWhere = useRef(JSON.stringify(rule.where));
+  useEffect(() => {
+    const serialized = JSON.stringify(rule.where);
+    if (serialized !== savedWhere.current) {
+      setWhere(rule.where);
+      savedWhere.current = serialized;
+    }
+  }, [rule.where]);
+  const editable = isEditableChecklistWhere(where);
+  const normalized = normalizeChecklistEditorWhere(where);
+  const valid =
+    predicateGroupSchema.safeParse(normalized).success &&
+    normalized.clauses.every(
+      (node) => isPredicateGroup(node) || validateClause(ticketQuerySchema, node) === null
+    );
+  const changed = JSON.stringify(normalized) !== JSON.stringify(rule.where);
+  const label = (descriptor: TicketPredicateField) =>
+    t(descriptor.labelKey, { defaultValue: descriptor.defaultLabel });
+  const id = `checklist-rule-${index}`;
+  const update = (row: number, next: PredicateClause) =>
+    setWhere((current) => ({
+      ...current,
+      clauses: current.clauses.map((node, i) => (i === row ? next : node)),
+    }));
+  const describe = (node: PredicateNode): React.ReactNode =>
+    isPredicateGroup(node) ? (
+      <div>
+        {t(`${P}.${node.join}`)}
+        <ul className="list-disc pl-5">
+          {node.clauses.map((child, i) => (
+            <li key={i}>{describe(child)}</li>
+          ))}
+        </ul>
+      </div>
+    ) : (
+      <span>
+        {label(
+          TICKET_PREDICATE_FIELDS.find((field) => field.path === node.path) ?? {
+            path: node.path,
+            labelKey: node.path,
+            defaultLabel: node.path,
+            control: 'text',
+            operators: [],
+          }
+        )}{' '}
+        {t(`${P}.operators.${node.operator}`)}{' '}
+        {Array.isArray(node.value) ? node.value.join(', ') : String(node.value ?? '')}
+      </span>
+    );
 
-  const clientIds = rule.client_ids ?? [];
-  const origins = rule.ticket_origins ?? [];
-  const keywords = rule.keywords ?? [];
-
-  const commitKeywords = (raw: string) => {
-    const parts = raw.split(',');
-    const next = normalizeRuleKeywords([...keywords, ...parts]).filter(
-      (k) => k.length <= APPLY_RULE_MAX_KEYWORD_LENGTH
-    ).slice(0, APPLY_RULE_MAX_KEYWORDS);
-    setKeywordDraft('');
-    if (next.length !== keywords.length) onChange({ keywords: next });
-  };
-
-  const definitionOptions: SelectOption[] = [
-    { value: '', label: t(`${P}.anyServiceRequest`) },
-    ...definitions.map((d) => ({ value: d.definition_id, label: d.name })),
-  ];
-
-  const modeOptions: SelectOption[] = [
-    { value: 'any', label: t(`${P}.keywordModeAny`) },
-    { value: 'all', label: t(`${P}.keywordModeAll`) },
-  ];
-  const targetOptions: SelectOption[] = [
-    { value: 'title_and_description', label: t(`${P}.keywordTargetBoth`) },
-    { value: 'title', label: t(`${P}.keywordTargetTitle`) },
-    { value: 'description', label: t(`${P}.keywordTargetDescription`) },
-  ];
-
-  const chip = 'inline-flex items-center gap-1 rounded-full border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-2 py-0.5 text-xs';
+  if (!editable)
+    return (
+      <div id={`${id}-advanced`} className="space-y-2 text-sm">
+        <p>{t(`${P}.advanced`)}</p>
+        {describe(where)}
+      </div>
+    );
 
   return (
-    <div className="grid gap-3 md:grid-cols-2">
-      <div className="space-y-2">
-        <Label htmlFor={`checklist-template-rule-client-${index}`}>{t(`${P}.clients`)}</Label>
-        <ClientPicker
-          id={`checklist-template-rule-client-${index}`}
-          searchClients={searchClientsForPicker}
-          selectedClientId={null}
-          excludeIds={clientIds}
-          onSelect={(clientId) => {
-            if (clientId && !clientIds.includes(clientId)) {
-              onClientPicked(clientId);
-              onChange({ client_ids: [...clientIds, clientId] });
-            }
-          }}
-          placeholder={clientIds.length ? t(`${P}.clientsAddAnother`) : t(`${P}.clientsAny`)}
-          fitContent={false}
-        />
-        {clientIds.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {clientIds.map((clientId) => {
-              const name = clientNames[clientId] ?? clientId;
-              return (
-                <span key={clientId} className={chip}>
-                  {name}
-                  <button
-                    id={`checklist-template-rule-client-remove-${index}-${clientId}`}
-                    type="button"
-                    aria-label={t(`${P}.removeClient`, { name })}
-                    onClick={() => onChange({ client_ids: clientIds.filter((c) => c !== clientId) })}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label>{t(`${P}.origins`)}</Label>
-        <div className="flex flex-wrap gap-x-4 gap-y-1">
-          {APPLY_RULE_TICKET_ORIGINS.map((origin) => (
-            <Checkbox
-              key={origin}
-              id={`checklist-template-rule-origin-${index}-${origin}`}
-              label={t(`${P}.originLabels.${origin}`)}
-              checked={origins.includes(origin)}
-              onChange={(event) =>
-                onChange({
-                  ticket_origins: event.target.checked
-                    ? [...origins, origin]
-                    : origins.filter((o) => o !== origin),
-                })
+    <fieldset disabled={saving} className="space-y-3">
+      <legend className="sr-only">{t(`${P}.conditions`)}</legend>
+      {ownerClientName != null && (
+        <p className="text-sm text-muted-foreground">
+          {t('ticketing.checklistTemplates.fields.rules.clientsFixedByTemplate', { client: ownerClientName })}
+        </p>
+      )}
+      <CustomSelect
+        id={`${id}-join`}
+        label={t(`${P}.match`)}
+        value={where.join}
+        options={['and', 'or'].map((join) => ({ value: join, label: t(`${P}.${join}`) }))}
+        onValueChange={(join) => setWhere({ ...where, join: join as 'and' | 'or' })}
+      />
+      {where.clauses.map((node, row) => {
+        const clause = node as PredicateClause;
+        const descriptor = TICKET_PREDICATE_FIELDS.find((field) => field.path === clause.path)!;
+        const rowId = `${id}-condition-${row}`;
+        const values = Array.isArray(clause.value)
+          ? clause.value.map(String)
+          : typeof clause.value === 'string'
+            ? [clause.value]
+            : [];
+        const locked = descriptor.ownerSensitive && ownerClientName != null;
+        const sourceOptions =
+          typeof descriptor.options === 'string' ? (options[descriptor.options] ?? []) : [];
+        const tagOptions =
+          typeof descriptor.options === 'object'
+            ? tags[descriptor.options.tags].map((tag) => ({ value: tag.tag_id!, label: tag.tag_text }))
+            : [];
+        const choices = [...sourceOptions, ...tagOptions];
+        for (const selected of values)
+          if (selected && !choices.some((option) => option.value === selected))
+            choices.push({ value: selected, label: selected });
+        const setValue = (value: PredicateClause['value']) => update(row, { ...clause, value });
+        return (
+          <div
+            key={row}
+            className="grid gap-2 rounded-md border border-[rgb(var(--color-border-200))] p-3 md:grid-cols-[1fr_1fr_2fr_auto] md:items-end"
+          >
+            <CustomSelect
+              id={`${rowId}-path`}
+              label={t(`${P}.field`)}
+              value={clause.path}
+              disabled={locked}
+              options={TICKET_PREDICATE_FIELDS.filter(
+                (field) => !field.ownerSensitive || ownerClientName == null || field.path === clause.path
+              ).map((field) => ({ value: field.path, label: label(field) }))}
+              onValueChange={(path) =>
+                update(row, newChecklistClause(TICKET_PREDICATE_FIELDS.find((field) => field.path === path)!))
               }
             />
-          ))}
-        </div>
-        {origins.length === 0 && (
-          <p className="text-xs text-muted-foreground">{t(`${P}.originsAny`)}</p>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <Label htmlFor={`checklist-template-rule-from-sr-${index}`}>{t(`${P}.fromServiceRequest`)}</Label>
-          <Switch
-            id={`checklist-template-rule-from-sr-${index}`}
-            checked={rule.from_service_request}
-            // A named request already requires one, so the switch stays on.
-            disabled={Boolean(rule.service_request_definition_id)}
-            onCheckedChange={(checked) =>
-              onChange(
-                checked
-                  ? { from_service_request: true }
-                  : { from_service_request: false, service_request_definition_id: null }
-              )
-            }
-          />
-        </div>
-        {rule.from_service_request && (
-          <CustomSelect
-            id={`checklist-template-rule-sr-definition-${index}`}
-            value={rule.service_request_definition_id || ''}
-            onValueChange={(value) =>
-              onChange({ service_request_definition_id: value || null, from_service_request: true })
-            }
-            options={definitionOptions}
-            placeholder={t(`${P}.anyServiceRequest`)}
-            showPlaceholderInDropdown={false}
-          />
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor={`checklist-template-rule-keywords-${index}`}>{t(`${P}.keywords`)}</Label>
-        <Input
-          id={`checklist-template-rule-keywords-${index}`}
-          value={keywordDraft}
-          maxLength={APPLY_RULE_MAX_KEYWORD_LENGTH}
-          disabled={keywords.length >= APPLY_RULE_MAX_KEYWORDS}
-          onChange={(event) => setKeywordDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && keywordDraft.trim()) {
-              event.preventDefault();
-              commitKeywords(keywordDraft);
+            <CustomSelect
+              id={`${rowId}-operator`}
+              label={t(`${P}.operator`)}
+              value={clause.operator}
+              disabled={locked}
+              options={descriptor.operators.map((operator) => ({
+                value: operator,
+                label: t(`${P}.operators.${operator}`),
+              }))}
+              onValueChange={(operator) => {
+                const op = operator as PredicateOperator;
+                update(row, {
+                  path: clause.path,
+                  operator: op,
+                  ...(operatorTakesValue(op)
+                    ? {
+                        value: operatorTakesList(op)
+                          ? values
+                          : (values[0] ?? (descriptor.control === 'boolean' ? true : '')),
+                      }
+                    : {}),
+                });
+              }}
+            />
+            {locked ? (
+              <p>{ownerClientName}</p>
+            ) : !operatorTakesValue(clause.operator) ? (
+              <span />
+            ) : descriptor.control === 'client' ? (
+              <div className="space-y-1">
+                <ClientPicker
+                  id={`${rowId}-client`}
+                  searchClients={searchClientsForPicker}
+                  selectedClientId={null}
+                  modal
+                  onSelect={(clientId) => {
+                    if (!clientId) {
+                      setValue(operatorTakesList(clause.operator) ? [] : '');
+                      return;
+                    }
+                    onClientPicked(clientId);
+                    setValue(
+                      operatorTakesList(clause.operator) ? [...new Set([...values, clientId])] : clientId
+                    );
+                  }}
+                />
+                {values.filter(Boolean).map((clientId) => (
+                  <Button
+                    id={`${rowId}-client-${values.indexOf(clientId)}`}
+                    key={clientId}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() =>
+                      setValue(
+                        operatorTakesList(clause.operator) ? values.filter((value) => value !== clientId) : ''
+                      )
+                    }
+                  >
+                    {clientNames[clientId] ?? clientId} ×
+                  </Button>
+                ))}
+              </div>
+            ) : descriptor.control === 'text' ? (
+              <Input
+                id={`${rowId}-value`}
+                aria-label={t(`${P}.value`)}
+                value={String(clause.value ?? '')}
+                onChange={(event) => setValue(event.target.value)}
+              />
+            ) : descriptor.control === 'boolean' ? (
+              <CustomSelect
+                id={`${rowId}-value`}
+                label={t(`${P}.value`)}
+                value={String(clause.value)}
+                options={[
+                  { value: 'true', label: t(`${P}.yes`) },
+                  { value: 'false', label: t(`${P}.no`) },
+                ]}
+                onValueChange={(value) => setValue(value === 'true')}
+              />
+            ) : operatorTakesList(clause.operator) ? (
+              <label className="space-y-1 text-sm" htmlFor={`${rowId}-values`}>
+                <span>{t(`${P}.value`)}</span>
+                <select
+                  id={`${rowId}-values`}
+                  multiple
+                  value={values}
+                  className="w-full rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-2"
+                  onChange={(event) =>
+                    setValue(Array.from(event.target.selectedOptions, (option) => option.value))
+                  }
+                >
+                  {choices
+                    .filter((option) => option.value)
+                    .map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                </select>
+              </label>
+            ) : (
+              <CustomSelect
+                id={`${rowId}-value`}
+                label={t(`${P}.value`)}
+                value={String(clause.value ?? '')}
+                options={choices.filter((option) => option.value)}
+                onValueChange={setValue}
+              />
+            )}
+            <Button
+              id={`${rowId}-remove`}
+              variant="ghost"
+              onClick={() => setWhere({ ...where, clauses: where.clauses.filter((_node, i) => i !== row) })}
+            >
+              {t('ticketing.checklistTemplates.actions.remove')}
+            </Button>
+          </div>
+        );
+      })}
+      <div className="flex gap-2">
+        <Button
+          id={`${id}-add-condition`}
+          variant="outline"
+          onClick={() =>
+            setWhere({
+              ...where,
+              clauses: [...where.clauses, newChecklistClause(TICKET_PREDICATE_FIELDS[0])],
+            })
+          }
+        >
+          {t(`${P}.add`)}
+        </Button>
+        <Button
+          id={`${id}-save`}
+          disabled={!changed || !valid || saving}
+          onClick={async () => {
+            setSaving(true);
+            try {
+              await onChange(normalized);
+            } finally {
+              setSaving(false);
             }
           }}
-          onBlur={() => keywordDraft.trim() && commitKeywords(keywordDraft)}
-          placeholder={t(`${P}.keywordsPlaceholder`)}
-        />
-        {keywords.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {keywords.map((keyword) => (
-              <span key={keyword} className={chip}>
-                {keyword}
-                <button
-                  id={`checklist-template-rule-keyword-remove-${index}-${keyword}`}
-                  type="button"
-                  aria-label={t(`${P}.removeKeyword`, { keyword })}
-                  onClick={() => onChange({ keywords: keywords.filter((k) => k !== keyword) })}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
-        {keywords.length > 0 && (
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label htmlFor={`checklist-template-rule-keyword-mode-${index}`}>{t(`${P}.keywordMode`)}</Label>
-              <CustomSelect
-                id={`checklist-template-rule-keyword-mode-${index}`}
-                value={rule.keyword_mode}
-                onValueChange={(value) => onChange({ keyword_mode: value as 'any' | 'all' })}
-                options={modeOptions}
-                showPlaceholderInDropdown={false}
-              />
-            </div>
-            <div>
-              <Label htmlFor={`checklist-template-rule-keyword-target-${index}`}>{t(`${P}.keywordTarget`)}</Label>
-              <CustomSelect
-                id={`checklist-template-rule-keyword-target-${index}`}
-                value={rule.keyword_target}
-                onValueChange={(value) =>
-                  onChange({ keyword_target: value as IChecklistTemplateApplyRule['keyword_target'] })
-                }
-                options={targetOptions}
-                showPlaceholderInDropdown={false}
-              />
-            </div>
-          </div>
-        )}
-        <p className="text-xs text-muted-foreground">{t(`${P}.keywordsHelp`)}</p>
+        >
+          {t(`${P}.save`)}
+        </Button>
       </div>
-    </div>
+      {where.clauses.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          {t(`${P}.${where.join === 'and' ? 'matchesAll' : 'matchesNone'}`)}
+        </p>
+      )}
+    </fieldset>
   );
-};
-
-export default ChecklistRuleMatchers;
+}

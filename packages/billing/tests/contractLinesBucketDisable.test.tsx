@@ -10,6 +10,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const actionMocks = vi.hoisted(() => ({
+  saveContractLineEdit: vi.fn(),
+  getContractLineEditVersion: vi.fn(),
   applyContractLineServiceMembershipChanges: vi.fn(),
   checkContractHasInvoices: vi.fn(),
   deleteBucketOverlay: vi.fn(),
@@ -54,6 +56,11 @@ vi.mock('@alga-psa/billing/actions/contractLineServiceActions', () => ({
   applyContractLineServiceMembershipChanges: actionMocks.applyContractLineServiceMembershipChanges,
   getContractLineServicesWithConfigurations: actionMocks.getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations: actionMocks.getTemplateLineServicesWithConfigurations,
+}));
+
+vi.mock('@alga-psa/billing/actions/contractLineSaveAction', () => ({
+  saveContractLineEdit: actionMocks.saveContractLineEdit,
+  getContractLineEditVersion: actionMocks.getContractLineEditVersion,
 }));
 
 vi.mock('@alga-psa/billing/actions/contractLineAction', () => ({
@@ -275,6 +282,8 @@ const renderContractLines = () => render(
 describe('disabling a bucket on a contract line service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    actionMocks.getContractLineEditVersion.mockResolvedValue('v1');
+    actionMocks.saveContractLineEdit.mockResolvedValue({ status: 'saved', line: { contract_line_id: 'line-1' }, version: 'v2', rematerialized: false });
     actionMocks.applyContractLineServiceMembershipChanges.mockResolvedValue(true);
     actionMocks.checkContractHasInvoices.mockResolvedValue(false);
     actionMocks.getActiveClientLocationsForBilling.mockResolvedValue([]);
@@ -329,11 +338,12 @@ describe('disabling a bucket on a contract line service', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => expect(actionMocks.deleteBucketOverlay).toHaveBeenCalledWith('line-1', 'svc-bucketed'));
-    expect(actionMocks.deleteBucketOverlay).toHaveBeenCalledTimes(1);
-    // Never for the service that had no overlay to begin with, and never as an upsert.
-    expect(actionMocks.deleteBucketOverlay).not.toHaveBeenCalledWith('line-1', 'svc-plain');
-    expect(actionMocks.upsertBucketConfiguration).not.toHaveBeenCalled();
+    await waitFor(() => expect(actionMocks.saveContractLineEdit).toHaveBeenCalledTimes(1));
+    // One deletion, for the service whose overlay was switched off; none for the
+    // service that had no overlay to begin with, and no upsert.
+    expect(actionMocks.saveContractLineEdit.mock.calls[0][1].bucket_overlays).toEqual([
+      { service_id: 'svc-bucketed', overlay: null },
+    ]);
 
     // The reloaded line no longer renders the overlay summary.
     await waitFor(() => expect(screen.queryByText('Bucket Configuration')).toBeNull());
@@ -366,9 +376,10 @@ describe('disabling a bucket on a contract line service', () => {
     fireEvent.click(switches[0]);
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => expect(actionMocks.deleteBucketOverlay).toHaveBeenCalledWith('line-1', 'svc-bucketed'));
-    expect(actionMocks.deleteBucketOverlay).toHaveBeenCalledTimes(1);
-    expect(actionMocks.upsertBucketConfiguration).not.toHaveBeenCalled();
+    await waitFor(() => expect(actionMocks.saveContractLineEdit).toHaveBeenCalledTimes(1));
+    expect(actionMocks.saveContractLineEdit.mock.calls[0][1].bucket_overlays).toEqual([
+      { service_id: 'svc-bucketed', overlay: null },
+    ]);
 
     // Re-entering edit after the save reads the pools again: the bucket stays off.
     fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
@@ -397,9 +408,8 @@ describe('disabling a bucket on a contract line service', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => expect(actionMocks.updateContractLine).toHaveBeenCalled());
-    expect(actionMocks.deleteBucketOverlay).not.toHaveBeenCalled();
-    expect(actionMocks.upsertBucketConfiguration).not.toHaveBeenCalled();
+    await waitFor(() => expect(actionMocks.saveContractLineEdit).toHaveBeenCalled());
+    expect(actionMocks.saveContractLineEdit.mock.calls[0][1].bucket_overlays).toEqual([]);
   });
 
   it('leaves an untouched overlay alone', async () => {
@@ -413,20 +423,19 @@ describe('disabling a bucket on a contract line service', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-    await waitFor(() => expect(actionMocks.updateContractLine).toHaveBeenCalled());
-    expect(actionMocks.deleteBucketOverlay).not.toHaveBeenCalled();
-    expect(actionMocks.upsertBucketConfiguration).toHaveBeenCalledWith('line-1', 'svc-bucketed', {
-      total_minutes: 600,
-      overage_rate: 18000,
-      allow_rollover: false,
-      billing_period: 'monthly',
-    });
+    await waitFor(() => expect(actionMocks.saveContractLineEdit).toHaveBeenCalled());
+    // The untouched overlay is re-sent as its current value, never deleted.
+    expect(actionMocks.saveContractLineEdit.mock.calls[0][1].bucket_overlays).toEqual([
+      { service_id: 'svc-bucketed', overlay: { total_minutes: 600, overage_rate: 18000, allow_rollover: false, billing_period: 'monthly' } },
+    ]);
   });
 });
 
 describe('contract line number inputs ignore the mouse wheel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    actionMocks.getContractLineEditVersion.mockResolvedValue('v1');
+    actionMocks.saveContractLineEdit.mockResolvedValue({ status: 'saved', line: { contract_line_id: 'line-1' }, version: 'v2', rematerialized: false });
     actionMocks.checkContractHasInvoices.mockResolvedValue(false);
     actionMocks.getActiveClientLocationsForBilling.mockResolvedValue([]);
     actionMocks.getTemplateLineServicesWithConfigurations.mockResolvedValue([]);

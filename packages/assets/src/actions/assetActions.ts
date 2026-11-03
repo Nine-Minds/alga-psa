@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { z } from 'zod';
 import {
     CreateAssetRequest,
@@ -61,9 +62,17 @@ import {
     createAssetRelationshipSchema
 } from '../lib/schemas/asset.schema';
 import { formatClientLocation, type ClientLocationLike } from '../lib/formatClientLocation';
-import { advanceMaintenanceDate } from '../lib/maintenanceRecurrence';
+import {
+    lockMaintenanceOccurrence,
+    linkMaintenanceOccurrenceTicket,
+    completeMaintenanceOccurrence,
+    skipMaintenanceOccurrence,
+    setMaintenanceSchedulePaused,
+} from '@alga-psa/shared/services/assets/maintenanceLifecycle';
+import { advanceMaintenanceDate, parseCustomRecurrence } from '../lib/maintenanceRecurrence';
+import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAssetOrder';
+import { applyAssetListFilters, applyAssetTypeFilter, joinAssetListRelations } from '../lib/assetListFilters';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
-import { toCalendarDateString, toISOTimestamp, toPlainDate } from '@alga-psa/core';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { resolveEffectiveTimeZone } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -85,6 +94,7 @@ import {
     createAuthorizationKernel,
     type AuthorizationRecord,
     type AuthorizationSubject,
+    type BundleNarrowingRule,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
@@ -96,6 +106,14 @@ import {
 } from '../lib/assetTypeAttributes';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '../lib/assetAttributeWrites';
 import { validateAssetStatusSlug } from '../lib/assetStatusRegistry';
+import {
+    resolveAuthorizationSubjectForUser as resolveSharedAuthorizationSubject,
+    resolveAssetAuthorizationRecords as resolveSharedAssetAuthorizationRecords,
+    isAssetActionAllowed as isSharedAssetActionAllowed,
+    isAssetReadAllowed as isSharedAssetReadAllowed,
+    filterReadableAssets,
+    type AssetAuthUser as SharedAssetAuthUser,
+} from '../lib/assetReadAuthorization';
 import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
 import { getAssetGroupSummariesForAssets, getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
 import {
@@ -178,7 +196,7 @@ function normalizeBulkAssetIds(assetIds: string[]): string[] {
     if (ids.length > BULK_ASSET_ACTION_LIMIT) {
         throw new Error(`Bulk actions are limited to ${BULK_ASSET_ACTION_LIMIT} assets at a time`);
     }
-    z.array(z.string().uuid()).parse(ids);
+    z.array(z.string().guid()).parse(ids);
     return ids;
 }
 
@@ -485,60 +503,17 @@ async function applyPurchaseCostCurrency(
     candidate.purchase_cost_currency = currency || (await resolveTenantDefaultCurrency(trx, tenant));
 }
 
-type AssetAuthUser = {
-    user_id: string;
-    user_type: 'internal' | 'client';
-    clientId?: string | null;
-    roles?: Array<{ role_id?: string } | string>;
-};
-
-function extractRoleIdsFromUser(user: AssetAuthUser): string[] {
-    if (!Array.isArray(user.roles)) {
-        return [];
-    }
-
-    return user.roles
-        .map((role) => {
-            if (typeof role === 'string') {
-                return role;
-            }
-            return typeof role?.role_id === 'string' ? role.role_id : null;
-        })
-        .filter((value): value is string => Boolean(value));
-}
+// Subject and record resolution live in ../lib/assetReadAuthorization (shared with the label code
+// paths). The thin wrappers and the kernel/decision text below stay here because
+// assetAuthorization.contract.test.ts pins them in this file's source.
+type AssetAuthUser = SharedAssetAuthUser;
 
 async function resolveAuthorizationSubjectForUser(
     trx: Knex.Transaction,
     tenant: string,
     user: AssetAuthUser
 ): Promise<AuthorizationSubject> {
-    let roleIds = extractRoleIdsFromUser(user);
-    if (roleIds.length === 0) {
-        try {
-            const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-                .where({ user_id: user.user_id })
-                .select<{ role_id: string }[]>('role_id');
-            roleIds = roleRows.map((row) => row.role_id);
-        } catch {
-            roleIds = [];
-        }
-    }
-
-    const [teamRows, managedRows] = await Promise.all([
-        tenantScopedTable(trx, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-        tenantScopedTable(trx, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
-    ]);
-
-    return {
-        tenant,
-        userId: user.user_id,
-        userType: user.user_type,
-        roleIds,
-        teamIds: teamRows.map((row) => row.team_id),
-        managedUserIds: managedRows.map((row) => row.user_id),
-        clientId: user.clientId ?? null,
-        portfolioClientIds: user.clientId ? [user.clientId] : [],
-    };
+    return resolveSharedAuthorizationSubject(trx, tenant, user);
 }
 
 async function resolveAssetAuthorizationRecords(
@@ -546,42 +521,7 @@ async function resolveAssetAuthorizationRecords(
     tenant: string,
     assets: Array<Pick<Asset, 'asset_id' | 'client_id'>>
 ): Promise<Map<string, AuthorizationRecord>> {
-    const assetIds = assets.map((asset) => asset.asset_id);
-    if (assetIds.length === 0) {
-        return new Map();
-    }
-
-    const associationRows = await tenantScopedTable(trx, 'asset_associations', tenant)
-        .whereIn('asset_id', assetIds)
-        .select<Array<{ asset_id: string; entity_type: string; entity_id: string }>>('asset_id', 'entity_type', 'entity_id');
-
-    const associationsByAsset = new Map<string, Array<{ entity_type: string; entity_id: string }>>();
-    for (const row of associationRows) {
-        const existing = associationsByAsset.get(row.asset_id) ?? [];
-        existing.push({ entity_type: row.entity_type, entity_id: row.entity_id });
-        associationsByAsset.set(row.asset_id, existing);
-    }
-
-    const records = new Map<string, AuthorizationRecord>();
-    for (const asset of assets) {
-        const associations = associationsByAsset.get(asset.asset_id) ?? [];
-        const assignedUserIds = associations
-            .filter((association) => association.entity_type === 'user')
-            .map((association) => association.entity_id);
-        const teamIds = associations
-            .filter((association) => association.entity_type === 'team')
-            .map((association) => association.entity_id);
-
-        records.set(asset.asset_id, {
-            id: asset.asset_id,
-            ownerUserId: assignedUserIds[0] ?? null,
-            assignedUserIds,
-            clientId: asset.client_id ?? null,
-            teamIds,
-        });
-    }
-
-    return records;
+    return resolveSharedAssetAuthorizationRecords(trx, tenant, assets);
 }
 
 type AssetAuthorizationInput = Pick<Asset, 'asset_id' | 'client_id'>;
@@ -592,13 +532,17 @@ type AssetReadAuthorizationContext = {
     requestCache: RequestLocalAuthorizationCache;
 };
 
-function createAssetReadAuthorizationKernel(trx: Knex.Transaction) {
+function createAssetReadAuthorizationKernel(trx: Knex.Transaction, assetReadRules?: BundleNarrowingRule[]) {
     return createAuthorizationKernel({
         builtinProvider: new BuiltinAuthorizationKernelProvider(),
         bundleProvider: new BundleAuthorizationKernelProvider({
             resolveRules: async (input) => {
+                if (assetReadRules && input.resource.type === 'asset' && input.resource.action === 'read') {
+                    return assetReadRules;
+                }
                 try {
                     return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+                // write-admission: exempt — authorization-rule read, never a write
                 } catch {
                     return [];
                 }
@@ -688,6 +632,25 @@ async function createAuthorizedAssetReadContextForUser(
 ): Promise<{ context: AssetReadAuthorizationContext; asset: AssetAuthorizationInput }> {
     const context = await createAssetReadAuthorizationContext(trx, tenant, user);
     const asset = await assertAssetReadAllowedById(trx, tenant, context, asset_id);
+    return { context, asset };
+}
+
+async function createAuthorizedAssetUpdateContextForUser(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: AssetAuthUser,
+    asset_id: string
+): Promise<{ context: AssetReadAuthorizationContext; asset: AssetAuthorizationInput }> {
+    const context = await createAssetReadAuthorizationContext(trx, tenant, user);
+    const asset = await resolveAssetAuthorizationInputById(trx, tenant, asset_id);
+
+    if (!await isSharedAssetReadAllowed(trx, tenant, context, asset)) {
+        throw new Error('Asset not found');
+    }
+    if (!await isSharedAssetActionAllowed(trx, tenant, context, asset, 'update')) {
+        throw new Error('Permission denied: Cannot update assets');
+    }
+
     return { context, asset };
 }
 
@@ -1168,6 +1131,7 @@ export async function createAssetInTransaction(
                 asset_tag: validatedData.asset_tag,
                 name: validatedData.name,
                 status: validatedData.status,
+                ownership: validatedData.ownership ?? 'client',
                 location_id: selectedLocation?.location_id ?? null,
                 location: validatedData.location !== undefined && validatedData.location !== ''
                     ? validatedData.location
@@ -1475,6 +1439,16 @@ export async function updateAssetRecord(
                 await assertValidAssetStatus(trx, tenant, baseCandidate.status, asset.status);
             }
 
+            if (baseCandidate.client_id && baseCandidate.client_id !== asset.client_id) {
+                const openEpisode = await tenantScopedTable(trx, 'asset_custody', tenant)
+                    .where({ asset_id })
+                    .whereNull('closed_at')
+                    .first('custody_id');
+                if (openEpisode) {
+                    throw new Error('This asset is currently in custody and cannot move to another client. Return it first.');
+                }
+            }
+
             if (Object.prototype.hasOwnProperty.call(baseCandidate, 'vendor_id')) {
                 const selectedVendor = await resolveValidatedAssetVendor(
                     trx,
@@ -1762,6 +1736,18 @@ export async function deleteAssetRecord(
 
             if (!asset) {
                 throw new Error('Asset not found');
+            }
+
+            // C4: custody is a chain of custody, so an asset that is physically here cannot be deleted, and
+            // closed episodes (append-only events with FKs to the asset) keep the row alive as history.
+            const custodyRows = await tenantScopedTable(trx as Knex.Transaction, 'asset_custody', tenantId)
+                .where({ asset_id })
+                .select('closed_at');
+            if (custodyRows.some((row: { closed_at: unknown }) => row.closed_at === null)) {
+                throw new Error('This asset is currently in custody. Return it to the client before deleting it.');
+            }
+            if (custodyRows.length > 0) {
+                throw new Error('This asset has custody history that must be kept. Set its status to retired instead of deleting it.');
             }
 
             // Citus does not enforce ON DELETE CASCADE across distributed
@@ -2297,65 +2283,6 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 return allowed[sortBy] ?? null;
             };
 
-            const applyFilters = (query: Knex.QueryBuilder) => {
-                if (validatedParams.client_id) {
-                    query.where('assets.client_id', validatedParams.client_id);
-                }
-                if (validatedParams.location_id) {
-                    query.where('assets.location_id', validatedParams.location_id);
-                }
-                if (validatedParams.contact_name_id) {
-                    query.where('assets.contact_name_id', validatedParams.contact_name_id);
-                }
-                if (validatedParams.asset_type) {
-                    query.where('assets.asset_type', validatedParams.asset_type);
-                }
-                if (validatedParams.status) {
-                    query.where('assets.status', validatedParams.status);
-                }
-                if (validatedParams.vendor_id) {
-                    query.where('assets.vendor_id', validatedParams.vendor_id);
-                }
-                if (validatedParams.group_id) {
-                    query.whereIn(
-                        'assets.asset_id',
-                        tenantScopedTable(trx, 'asset_group_members', tenant)
-                            .where({ group_id: validatedParams.group_id })
-                            .select('asset_id')
-                    );
-                }
-                if (validatedParams.ungrouped_only) {
-                    query.whereNotIn(
-                        'assets.asset_id',
-                        tenantScopedTable(trx, 'asset_group_members', tenant).select('asset_id')
-                    );
-                }
-                if (validatedParams.search) {
-                    const searchTerm = `%${validatedParams.search}%`;
-                    query.where(function () {
-                        this.whereILike('assets.name', searchTerm)
-                            .orWhereILike('assets.asset_tag', searchTerm)
-                            .orWhereILike('assets.serial_number', searchTerm)
-                            .orWhereILike('assets.location', searchTerm)
-                            .orWhereILike('assets.manufacturer', searchTerm)
-                            .orWhereILike('assets.model', searchTerm)
-                            .orWhereILike('clients.client_name', searchTerm);
-                    });
-                }
-                if (validatedParams.agent_status) {
-                    query.where('assets.agent_status', validatedParams.agent_status);
-                }
-                if (validatedParams.rmm_managed !== undefined) {
-                    if (validatedParams.rmm_managed) {
-                        query.whereNotNull('assets.rmm_provider').whereNotNull('assets.rmm_device_id');
-                    } else {
-                        query.where(function () {
-                            this.whereNull('assets.rmm_provider').orWhereNull('assets.rmm_device_id');
-                        });
-                    }
-                }
-            };
-
             const applySort = (query: Knex.QueryBuilder) => {
                 const sortColumn = resolveSortColumn(validatedParams.sort_by);
                 const sortDirection = validatedParams.sort_direction ?? 'desc';
@@ -2372,63 +2299,111 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 query.orderBy('assets.created_at', 'desc');
             };
 
-            const buildAssetListQuery = () => {
-                const query = tenantScopedTable(trx, 'assets', tenant);
-                tenantDb(trx, tenant).tenantJoin(query, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
-                tenantDb(trx, tenant).tenantJoin(query, 'contacts', 'contacts.contact_name_id', 'assets.contact_name_id', { type: 'left' });
-                tenantDb(trx, tenant).tenantJoin(query, 'vendors', 'vendors.vendor_id', 'assets.vendor_id', { type: 'left' });
-
-                applyFilters(query);
-                return query;
+            // Type counts remain a facet over every filter except the selected type.
+            const facetQuery = joinAssetListRelations(trx, tenant);
+            applyAssetListFilters(facetQuery, { trx, tenant, params: validatedParams, exclude: 'asset_type' });
+            const baseContext = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
+            // Use one rule snapshot for both the page and its facet.
+            const assetReadRules = await resolveBundleNarrowingRulesForEvaluation(trx, {
+                subject: baseContext.subject,
+                resource: { type: 'asset', action: 'read' },
+                requestCache: baseContext.requestCache,
+                knex: trx,
+            });
+            const context: AssetReadAuthorizationContext = {
+                ...baseContext,
+                authorizationKernel: createAssetReadAuthorizationKernel(trx, assetReadRules),
             };
+            const requiresRecordAuthorization = context.subject.userType === 'client'
+                || assetReadRules.some((rule) => rule.resource === 'asset' && rule.action === 'read');
+            const requiresIndividualOwnerResolution = assetReadRules.some((rule) =>
+                rule.resource === 'asset' && rule.action === 'read'
+                && (rule.templateKey === 'own' || rule.templateKey === 'own_or_assigned' || rule.templateKey === 'own_or_managed')
+            );
+            // Restricted users must authorize every matching type before counting.
+            const listQuery = requiresRecordAuthorization
+                ? facetQuery.clone()
+                : applyAssetTypeFilter(facetQuery.clone(), validatedParams.asset_type);
+            const assetTypeCounts = new Map<string, number>();
 
+            if (!requiresRecordAuthorization) {
+                const typeCountRows = await facetQuery.clone()
+                    .select('assets.asset_type')
+                    .groupBy('assets.asset_type')
+                    .count<Array<{ asset_type: string | null; count: string | number }>>('assets.asset_id as count');
+                for (const row of typeCountRows) {
+                    assetTypeCounts.set(row.asset_type ?? 'unknown', Number(row.count));
+                }
+            }
+
+            type AssetListQueryRow = Asset & { client_name: string | null };
+            type AssetListScanRow = { asset: AssetListQueryRow; readable: boolean };
             const fetchPage = async (sourcePage: number, sourceLimit: number) => {
                 const offset = (sourcePage - 1) * sourceLimit;
-                const countRow = await buildAssetListQuery()
+                const countRow = await listQuery.clone()
                     .count<{ count: string }>('assets.asset_id as count')
                     .first();
-                const rows = await buildAssetListQuery()
-                    .select('assets.*', 'clients.client_name', 'contacts.full_name as contact_name', 'vendors.vendor_name')
+                if (!countRow || countRow.count === null || countRow.count === undefined) {
+                    throw new Error('Asset list count query returned no count');
+                }
+                const sourceTotal = Number(countRow.count);
+                if (!Number.isSafeInteger(sourceTotal) || sourceTotal < 0) {
+                    throw new Error('Asset list count query returned an invalid count');
+                }
+                const rows: AssetListQueryRow[] = await listQuery.clone()
+                    .select<AssetListQueryRow[]>('assets.*', 'clients.client_name', 'contacts.full_name as contact_name', 'vendors.vendor_name')
                     .modify(applySort)
                     .limit(sourceLimit)
                     .offset(offset);
+                const readableAssets = await filterReadableAssets(trx, tenant, context, rows, {
+                    resolveMultiUserOwnersIndividually: requiresIndividualOwnerResolution,
+                });
+                const readableAssetIds = new Set(readableAssets.map((asset) => asset.asset_id));
 
                 return {
-                    data: rows,
-                    total: Number(countRow?.count || 0),
+                    data: rows.map((asset) => ({ asset, readable: readableAssetIds.has(asset.asset_id) })),
+                    total: sourceTotal,
                 };
             };
 
             const page = validatedParams.page || 1;
             const limit = validatedParams.limit || 10;
-            const context = await createAssetReadAuthorizationContext(trx, tenant, user as AssetAuthUser);
-            const authorizedPage = await buildAuthorizationAwarePage<any>({
+            const authorizedPage = await buildAuthorizationAwarePage<AssetListScanRow>({
                 page,
                 limit,
                 fetchPage,
-                authorizeRecord: async (asset) => {
-                    const decision = await authorizeAssetReadDecision(
-                        trx,
-                        tenant,
-                        context,
-                        { asset_id: asset.asset_id, client_id: asset.client_id }
-                    );
-                    return decision.allowed;
+                authorizeRecord: async ({ asset, readable }) => {
+                    if (!readable) return false;
+                    if (requiresRecordAuthorization) {
+                        const assetType = asset.asset_type ?? 'unknown';
+                        assetTypeCounts.set(assetType, (assetTypeCounts.get(assetType) ?? 0) + 1);
+                        return !validatedParams.asset_type || asset.asset_type === validatedParams.asset_type;
+                    }
+                    return true;
                 },
                 scanLimit: Math.max(limit, 100),
             });
+            const pageAssets = authorizedPage.data.map(({ asset }) => asset);
 
         // F075: the Group column reads `asset.group`, so the page's summaries
         // are fetched in one batch rather than per row.
         const groupSummaries = await getAssetGroupSummariesForAssets(
             trx,
             tenant,
-            authorizedPage.data.map((asset: any) => asset.asset_id)
+            pageAssets.map((asset) => asset.asset_id)
         );
+
+        // Logos only for the distinct clients on this page (one batched lookup).
+        const pageClientIds = Array.from(new Set(
+            authorizedPage.data.map((asset: any) => asset.client_id).filter(Boolean)
+        )) as string[];
+        const clientLogoUrls = pageClientIds.length > 0
+            ? await getClientLogoUrlsBatch(pageClientIds, tenant)
+            : new Map<string, string | null>();
 
         // Get extension data for each asset if requested
         const assetsWithExtensions = await Promise.all(
-            authorizedPage.data.map(async (asset: any): Promise<Asset> => {
+            pageAssets.map(async (asset): Promise<Asset> => {
                 const extensionData = validatedParams.include_extension_data
                     ? await getExtensionData(trx, tenant, asset.asset_id, asset.asset_type)
                     : null;
@@ -2437,7 +2412,8 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     ...asset,
                     client: {
                         client_id: asset.client_id,
-                        client_name: asset.client_name || ''
+                        client_name: asset.client_name || '',
+                        client_logo_url: clientLogoUrls.get(asset.client_id) ?? null,
                     },
                     group: groupSummaries.get(asset.asset_id) ?? null,
                     relationships: [],  // Initialize empty array for relationships
@@ -2452,7 +2428,8 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 assets: assetsWithExtensions,
                 total: authorizedPage.total,
                 page,
-                limit
+                limit,
+                asset_type_counts: Object.fromEntries(assetTypeCounts)
             };
 
             return response;
@@ -2479,7 +2456,7 @@ export const createMaintenanceSchedule = withAuth(async (user, { tenant }, data:
         const validatedData = validateData(createMaintenanceScheduleSchema, data);
 
         const schedule = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, validatedData.asset_id);
+            await createAuthorizedAssetUpdateContextForUser(trx, tenant, user as AssetAuthUser, validatedData.asset_id);
 
             // Insert the schedule
             const [createdSchedule] = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
@@ -2581,7 +2558,11 @@ export const updateMaintenanceSchedule = withAuth(async (
                 throw new Error('Maintenance schedule not found');
             }
 
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, existingSchedule.asset_id);
+            await createAuthorizedAssetUpdateContextForUser(trx, tenant, user as AssetAuthUser, existingSchedule.asset_id);
+
+            if ((validatedData.frequency ?? existingSchedule.frequency) === 'custom') {
+                parseCustomRecurrence(validatedData.schedule_config ?? existingSchedule.schedule_config);
+            }
 
             // Update the schedule
             const [updatedSchedule] = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
@@ -2675,7 +2656,7 @@ export const deleteMaintenanceSchedule = withAuth(async (user, { tenant }, sched
                 throw new Error('Maintenance schedule not found');
             }
 
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, existingSchedule.asset_id);
+            await createAuthorizedAssetUpdateContextForUser(trx, tenant, user as AssetAuthUser, existingSchedule.asset_id);
 
             const history = await tenantScopedTable(trx, 'asset_maintenance_history', tenant)
                 .where({ schedule_id })
@@ -2728,25 +2709,9 @@ async function getOccurrenceForMutation(
     user: AssetAuthUser,
     occurrence_id: string,
 ): Promise<any> {
-    const occurrence = await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant)
-        .where({ occurrence_id })
-        .forUpdate()
-        .first();
-    if (!occurrence) throw new Error('Maintenance occurrence not found');
-    await createAuthorizedAssetReadContextForUser(trx, tenant, user, occurrence.asset_id);
+    const occurrence = await lockMaintenanceOccurrence(trx, tenant, occurrence_id);
+    await createAuthorizedAssetUpdateContextForUser(trx, tenant, user, occurrence.asset_id);
     return occurrence;
-}
-
-async function openNextOccurrence(
-    trx: Knex.Transaction,
-    tenant: string,
-    schedule: any,
-    dueDate: Date,
-): Promise<any> {
-    const [next] = await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant)
-        .insert({ tenant, schedule_id: schedule.schedule_id, asset_id: schedule.asset_id, due_date: dueDate, status: 'open' })
-        .returning('*');
-    return next;
 }
 
 /** Tenant-wide work queue. Authorization is evaluated per asset after structural tenant scoping. */
@@ -2869,19 +2834,7 @@ export const createOccurrenceTicket = withAuth(async (user, { tenant }, occurren
     try {
         const occurrence = await withTransaction(knex, async (trx) => {
             const current = await getOccurrenceForMutation(trx, tenant, user as AssetAuthUser, occurrence_id);
-            if (current.status !== 'open') throw new Error('Maintenance occurrence is no longer open');
-            if (current.ticket_id) return current;
-            const ticket = await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id }).first();
-            if (!ticket) throw new Error('Maintenance ticket not found');
-            // Quick Add has already created this association by the time its callback
-            // reaches us. Keep the association and occurrence stamp in this transaction,
-            // but treat that pre-existing link as the expected retry path.
-            await tenantScopedTable(trx, 'asset_associations', tenant)
-                .insert({ tenant, asset_id: current.asset_id, entity_id: ticket_id, entity_type: 'ticket', relationship_type: 'affected', created_by: user.user_id, created_at: trx.fn.now() })
-                .onConflict(['tenant', 'asset_id', 'entity_id', 'entity_type'])
-                .ignore();
-            const [updated] = await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id }).update({ ticket_id, updated_at: trx.fn.now() }).returning('*');
-            return updated;
+            return linkMaintenanceOccurrenceTicket(trx, tenant, user.user_id, current.occurrence_id, ticket_id);
         });
         return asOccurrence(occurrence);
     } catch (error) { const expected = expectedAssetActionError(error); if (expected) return expected; throw error; }
@@ -2892,23 +2845,8 @@ export const completeOccurrence = withAuth(async (user, { tenant }, input: { occ
     if (!await hasPermission(user, 'asset', 'update', knex)) return expectedAssetActionError(new Error('Permission denied: Cannot complete maintenance'))!;
     try {
         const next = await withTransaction(knex, async (trx) => {
-            const occurrence = await getOccurrenceForMutation(trx, tenant, user as AssetAuthUser, input.occurrence_id);
-            if (input.asset_id && input.asset_id !== occurrence.asset_id) throw new Error('Maintenance occurrence does not belong to the provided asset');
-            if (occurrence.status !== 'open') throw new Error('Maintenance occurrence has already been closed');
-            const schedule = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: occurrence.schedule_id, asset_id: occurrence.asset_id, is_active: true }).forUpdate().first();
-            if (!schedule || schedule.archived_at) throw new Error('Maintenance schedule is inactive');
-            // A maintenance completion is a calendar-date event. Canonical UTC
-            // midnight storage keeps existing timestamp columns and reports
-            // compatible while calendar-date renderers preserve the selected day.
-            const performedDate = toCalendarDateString(input.performed_at || new Date());
-            if (!performedDate) throw new Error('A performed date is required');
-            const performedAt = toISOTimestamp(toPlainDate(performedDate));
-            const nextDue = advanceMaintenanceDate(performedAt, schedule.frequency, schedule.frequency_interval);
-            const [history] = await tenantScopedTable(trx, 'asset_maintenance_history', tenant).insert({ tenant, schedule_id: schedule.schedule_id, asset_id: schedule.asset_id, maintenance_type: schedule.maintenance_type, description: input.notes || `${schedule.maintenance_type} maintenance completed`, maintenance_data: input.maintenance_data || {}, performed_at: performedAt, performed_by: user.user_id }).returning('*');
-            await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id: occurrence.occurrence_id, status: 'open' }).update({ status: 'completed', history_id: history.history_id, closed_at: trx.fn.now(), closed_by: user.user_id, updated_at: trx.fn.now() });
-            await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: schedule.schedule_id }).update({ last_maintenance: performedAt, next_maintenance: nextDue, updated_at: trx.fn.now() });
-            await tenantScopedTable(trx, 'asset_maintenance_notifications', tenant).insert({ tenant, schedule_id: schedule.schedule_id, asset_id: schedule.asset_id, notification_type: 'upcoming', notification_date: nextDue, notification_data: { schedule_name: schedule.schedule_name, maintenance_type: schedule.maintenance_type } });
-            return openNextOccurrence(trx, tenant, schedule, nextDue);
+            await getOccurrenceForMutation(trx, tenant, user as AssetAuthUser, input.occurrence_id);
+            return completeMaintenanceOccurrence(trx, tenant, user.user_id, input);
         });
         revalidatePath('/msp/assets/maintenance');
         return asOccurrence(next);
@@ -2921,14 +2859,8 @@ export const skipOccurrence = withAuth(async (user, { tenant }, occurrence_id: s
     if (!await hasPermission(user, 'asset', 'update', knex)) return expectedAssetActionError(new Error('Permission denied: Cannot skip maintenance'))!;
     try {
         const next = await withTransaction(knex, async (trx) => {
-            const occurrence = await getOccurrenceForMutation(trx, tenant, user as AssetAuthUser, occurrence_id);
-            if (occurrence.status !== 'open') throw new Error('Maintenance occurrence has already been closed');
-            const schedule = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: occurrence.schedule_id, asset_id: occurrence.asset_id, is_active: true }).forUpdate().first();
-            if (!schedule || schedule.archived_at) throw new Error('Maintenance schedule is inactive');
-            const nextDue = advanceMaintenanceDate(new Date(), schedule.frequency, schedule.frequency_interval);
-            await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id }).update({ status: 'skipped', skip_reason: reason.trim(), closed_at: trx.fn.now(), closed_by: user.user_id, updated_at: trx.fn.now() });
-            await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: schedule.schedule_id }).update({ next_maintenance: nextDue, updated_at: trx.fn.now() });
-            return openNextOccurrence(trx, tenant, schedule, nextDue);
+            await getOccurrenceForMutation(trx, tenant, user as AssetAuthUser, occurrence_id);
+            return skipMaintenanceOccurrence(trx, tenant, user.user_id, occurrence_id, reason);
         });
         revalidatePath('/msp/assets/maintenance'); return asOccurrence(next);
     } catch (error) { const expected = expectedAssetActionError(error); if (expected) return expected; throw error; }
@@ -2941,11 +2873,8 @@ export const setSchedulePaused = withAuth(async (user, { tenant }, schedule_id: 
         await withTransaction(knex, async (trx) => {
             const schedule = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id }).forUpdate().first();
             if (!schedule) throw new Error('Maintenance schedule not found');
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, schedule.asset_id);
-            if (schedule.archived_at) throw new Error('Maintenance schedule is archived');
-            await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id }).update({ is_active: !paused, updated_at: trx.fn.now() });
-            if (paused) await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ schedule_id, status: 'open' }).update({ status: 'cancelled', closed_at: trx.fn.now(), closed_by: user.user_id, updated_at: trx.fn.now() });
-            else await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).insert({ tenant, schedule_id, asset_id: schedule.asset_id, due_date: schedule.next_maintenance, status: 'open' }).onConflict().ignore();
+            await createAuthorizedAssetUpdateContextForUser(trx, tenant, user as AssetAuthUser, schedule.asset_id);
+            await setMaintenanceSchedulePaused(trx, tenant, user.user_id, schedule_id, paused);
         });
         revalidatePath('/msp/assets/maintenance');
     } catch (error) { const expected = expectedAssetActionError(error); if (expected) return expected; throw error; }
@@ -2969,7 +2898,7 @@ export const setOccurrenceTicketAssignee = withAuth(async (user, { tenant }, occ
         await withTransaction(knex, async (trx) => {
             const occurrence = await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id }).first();
             if (!occurrence) throw new Error('Maintenance occurrence not found');
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, occurrence.asset_id);
+            await createAuthorizedAssetUpdateContextForUser(trx, tenant, user as AssetAuthUser, occurrence.asset_id);
             if (!occurrence.ticket_id) throw new Error('Occurrence has no linked ticket to assign');
             await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id: occurrence.ticket_id }).update({ assigned_to: assignee_user_id, updated_at: trx.fn.now(), updated_by: user.user_id });
         });
@@ -2994,7 +2923,7 @@ export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: 
                 .where({
                     schedule_id: validatedData.schedule_id
                 })
-                .select('schedule_id', 'asset_id', 'frequency', 'frequency_interval', 'schedule_name', 'maintenance_type')
+                .select('schedule_id', 'asset_id', 'frequency', 'frequency_interval', 'schedule_config', 'schedule_name', 'maintenance_type')
                 .first();
 
             if (!schedule) {
@@ -3005,7 +2934,7 @@ export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: 
                 throw new Error('Maintenance history schedule does not belong to the provided asset');
             }
 
-            await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, schedule.asset_id);
+            await createAuthorizedAssetUpdateContextForUser(trx, tenant, user as AssetAuthUser, schedule.asset_id);
 
             // Record the maintenance history
             const [createdHistory] = await tenantScopedTable(trx, 'asset_maintenance_history', tenant)
@@ -3023,16 +2952,9 @@ export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: 
                 })
                 .update({
                     last_maintenance: validatedData.performed_at,
-                    next_maintenance: trx.raw(`
-                        CASE frequency
-                            WHEN 'daily' THEN ? + INTERVAL '1 day' * frequency_interval
-                            WHEN 'weekly' THEN ? + INTERVAL '1 week' * frequency_interval
-                            WHEN 'monthly' THEN ? + INTERVAL '1 month' * frequency_interval
-                            WHEN 'quarterly' THEN ? + INTERVAL '3 months' * frequency_interval
-                            WHEN 'yearly' THEN ? + INTERVAL '1 year' * frequency_interval
-                            ELSE ? + INTERVAL '1 day' * frequency_interval
-                        END
-                    `, Array(6).fill(validatedData.performed_at))
+                    next_maintenance: advanceMaintenanceDate(
+                        validatedData.performed_at, schedule.frequency, schedule.frequency_interval, schedule.schedule_config
+                    )
                 })
                 .returning('*');
 
@@ -3694,7 +3616,8 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
                     entity_id,
                     entity_type
                 })
-                .select('asset_id');
+                .select('asset_id', 'created_at')
+                .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'asset_id', order: 'asc' }]);
 
             const candidateAssetIds = associations.map((association: { asset_id: string }) => association.asset_id);
             const uniqueAssetIds: string[] = Array.from(new Set<string>(candidateAssetIds));
@@ -3710,9 +3633,13 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
                 candidateAssets.map((asset) => authorizeAssetReadDecision(trx, tenant, context, asset))
             );
 
-            const authorizedAssetIds = candidateAssets
-                .filter((_, index) => decisions[index]?.allowed)
-                .map((asset) => asset.asset_id);
+            // Newest association first, so the panel's collapsed rows include a just-received item.
+            const authorizedAssetIds = orderEntityAssetIds(
+                associations as EntityAssociationRow[],
+                candidateAssets
+                    .filter((_, index) => decisions[index]?.allowed)
+                    .map((asset) => asset.asset_id)
+            );
 
             if (authorizedAssetIds.length === 0) {
                 return [];

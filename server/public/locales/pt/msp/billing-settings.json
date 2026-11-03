@@ -202,6 +202,27 @@
         "save": "Falha ao salvar configurações",
         "range": "Insira um número inteiro de 1 a 365."
       }
+    },
+    "paymentTerms": {
+      "title": "Condições de pagamento padrão",
+      "description": "Defina as condições de pagamento usadas pelas novas faturas quando nem o cliente nem o perfil de faturamento as definem.",
+      "fields": {
+        "terms": {
+          "label": "Condições de pagamento",
+          "help": "Aplica-se apenas a novas faturas. Faturas existentes e clientes com condições próprias as mantêm."
+        }
+      },
+      "actions": {
+        "save": "Salvar"
+      },
+      "toast": {
+        "updated": "As condições de pagamento padrão foram atualizadas."
+      },
+      "errors": {
+        "load": "Falha ao carregar as configurações",
+        "save": "Falha ao salvar as configurações",
+        "invalid": "Escolha uma condição de pagamento válida."
+      }
     }
   },
   "quoting": {
@@ -215,8 +236,56 @@
     }
   },
   "tax": {
-    "defaultRate": { "title": "Taxa de imposto predefinida", "tooltip": "Escolha a taxa herdada por novos clientes, produtos e serviços.", "description": "Defina a taxa atribuída a novos clientes e itens do catálogo. Os registos existentes não são alterados.", "loading": "A carregar taxa predefinida...", "empty": "Crie uma taxa ativa antes de escolher uma predefinida.", "invalid": "A taxa configurada já não está ativa ou válida. Escolha outra.", "field": { "label": "Taxa de imposto predefinida" }, "options": { "none": "Sem predefinição do inquilino" }, "help": "Sem taxa predefinida, novos itens ficam isentos e clientes usam a taxa ativa mais antiga, se existir.", "actions": { "save": "Guardar predefinição", "saving": "A guardar..." }, "toast": { "saved": "Taxa predefinida guardada." }, "errors": { "load": "Não foi possível carregar a taxa predefinida.", "save": "Não foi possível guardar a taxa predefinida." } },
-    "backfill": { "title": "Aplicar predefinição ao catálogo existente", "description": "Pré-visualize produtos e serviços sem taxa de imposto.", "warning": "Isto altera a tributação futura e não reescreve faturas emitidas.", "loading": "A carregar pré-visualização...", "empty": "Nenhum produto ou serviço elegível encontrado.", "target": "Taxa de destino: {{rate}}", "count": "{{count}} itens elegíveis", "dialog": { "title": "Aplicar taxa predefinida" }, "actions": { "preview": "Pré-visualizar itens", "apply": "Aplicar selecionados", "applying": "A aplicar..." }, "toast": { "applied": "Taxa predefinida aplicada aos itens selecionados." }, "errors": { "preview": "Não foi possível pré-visualizar o catálogo.", "apply": "Não foi possível aplicar a taxa predefinida." } },
+    "defaultRate": {
+      "title": "Taxa de imposto predefinida",
+      "tooltip": "Escolha a taxa herdada por novos clientes, produtos e serviços.",
+      "description": "Defina a taxa atribuída a novos clientes e itens do catálogo. Os registos existentes não são alterados.",
+      "loading": "A carregar taxa predefinida...",
+      "empty": "Crie uma taxa ativa antes de escolher uma predefinida.",
+      "invalid": "A taxa configurada já não está ativa ou válida. Escolha outra.",
+      "field": {
+        "label": "Taxa de imposto predefinida"
+      },
+      "options": {
+        "none": "Sem predefinição do inquilino"
+      },
+      "help": "Sem taxa predefinida, novos itens ficam isentos e clientes usam a taxa ativa mais antiga, se existir.",
+      "actions": {
+        "save": "Guardar predefinição",
+        "saving": "A guardar..."
+      },
+      "toast": {
+        "saved": "Taxa predefinida guardada."
+      },
+      "errors": {
+        "load": "Não foi possível carregar a taxa predefinida.",
+        "save": "Não foi possível guardar a taxa predefinida."
+      }
+    },
+    "backfill": {
+      "title": "Aplicar predefinição ao catálogo existente",
+      "description": "Pré-visualize produtos e serviços sem taxa de imposto.",
+      "warning": "Isto altera a tributação futura e não reescreve faturas emitidas.",
+      "loading": "A carregar pré-visualização...",
+      "empty": "Nenhum produto ou serviço elegível encontrado.",
+      "target": "Taxa de destino: {{rate}}",
+      "count": "{{count}} itens elegíveis",
+      "dialog": {
+        "title": "Aplicar taxa predefinida"
+      },
+      "actions": {
+        "preview": "Pré-visualizar itens",
+        "apply": "Aplicar selecionados",
+        "applying": "A aplicar..."
+      },
+      "toast": {
+        "applied": "Taxa predefinida aplicada aos itens selecionados."
+      },
+      "errors": {
+        "preview": "Não foi possível pré-visualizar o catálogo.",
+        "apply": "Não foi possível aplicar a taxa predefinida."
+      }
+    },
     "taxRegions": {
       "title": "Regiões fiscais",
       "description": "Gerencie regiões fiscais e configurações relacionadas."
@@ -998,7 +1067,10 @@
       "taxRate": {
         "label": "Taxa de imposto (opcional)",
         "placeholder": "Selecione a taxa de imposto (opcional)",
-        "loading": "Carregando taxas de imposto...", "inherit": "Usar predefinição do inquilino", "inheritNamed": "Usar predefinição do inquilino ({{rate}})", "nonTaxable": "Não tributável"
+        "loading": "Carregando taxas de imposto...",
+        "inherit": "Usar predefinição do inquilino",
+        "inheritNamed": "Usar predefinição do inquilino ({{rate}})",
+        "nonTaxable": "Não tributável"
       },
       "sku": {
         "label": "SKU",
@@ -1094,7 +1166,10 @@
       "taxRate": {
         "label": "Taxa de imposto",
         "placeholder": "Não Tributável",
-        "loading": "Carregando...", "inherit": "Usar predefinição do inquilino", "inheritNamed": "Usar predefinição do inquilino ({{rate}})", "nonTaxable": "Não tributável"
+        "loading": "Carregando...",
+        "inherit": "Usar predefinição do inquilino",
+        "inheritNamed": "Usar predefinição do inquilino ({{rate}})",
+        "nonTaxable": "Não tributável"
       },
       "active": {
         "label": "Ativo"
@@ -1420,6 +1495,103 @@
     }
   },
   "payment": {
+    "import": {
+      "title": "Importar clientes Stripe existentes",
+      "description": "Traga clientes Stripe e cartões salvos de outro sistema. A importação nunca inscreve um cliente no pagamento automático; você confirma isso por linha.",
+      "open": "Iniciar importação",
+      "preview": "Pré-visualizar",
+      "execute": "Importar",
+      "reset": "Recomeçar",
+      "default": "padrão",
+      "done": "Importação concluída",
+      "attest": "O cliente autorizou cobranças recorrentes neste cartão",
+      "alreadyEnrolled": "Já inscrito",
+      "scaRisk": "Risco de SCA: sem prova de que foi salvo para uso fora da sessão",
+      "cardsImported": "{{count}} cartão(ões) importado(s)",
+      "csv": {
+        "label": "Linhas (cliente, perfil de faturamento, ID de cliente Stripe)",
+        "upload": "Enviar CSV"
+      },
+      "assisted": {
+        "run": "Corresponder por e-mail e depois por nome",
+        "summary": "{{matched}} propostos, {{ambiguous}} ambíguos (não propostos){{truncated}}",
+        "truncated": "; lista truncada",
+        "ambiguousTitle": "Correspondências ambíguas (não propostas)",
+        "addRow": "Adicionar como linha",
+        "matchedBy": "Correspondência por {{by}}",
+        "by": {
+          "email": "e-mail",
+          "name": "nome"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Corresponde a vários perfis de faturamento",
+          "multiple-customers": "Corresponde a vários clientes Stripe"
+        }
+      },
+      "errors": {
+        "preview": "Falha na pré-visualização",
+        "noRows": "Adicione pelo menos uma linha",
+        "match": "Falha na correspondência",
+        "execute": "Falha na importação"
+      },
+      "table": {
+        "customer": "Cliente Stripe",
+        "plan": "Plano",
+        "cards": "Cartões",
+        "enroll": "Inscrever no pagamento automático",
+        "clientProfile": "Cliente / perfil de faturamento",
+        "include": "Incluir"
+      },
+      "actions": {
+        "adopt": "Adotar",
+        "already-imported": "Já importado",
+        "conflict": "Conflito",
+        "skip": "Ignorar"
+      },
+      "cardActions": {
+        "import": "Importar",
+        "already-imported": "Já importado",
+        "conflict": "Conflito",
+        "skip": "Ignorar"
+      },
+      "cardReasons": {
+        "unsupported-method": "método não suportado",
+        "expired-card": "cartão expirado",
+        "card-claimed-elsewhere": "o cartão pertence a outro cliente"
+      },
+      "reasons": {
+        "invalid-customer-id": "ID de cliente Stripe inválido",
+        "customer-not-found": "Cliente não encontrado no Stripe",
+        "customer-deleted": "O cliente foi excluído no Stripe",
+        "profile-not-found": "Cliente ou perfil de faturamento não encontrado",
+        "profile-inactive": "O perfil de faturamento está inativo",
+        "currency-not-configured": "Nenhuma moeda de faturamento configurada para este cliente",
+        "currency-unsupported": "A moeda de faturamento não é suportada pelo pagamento automático do Stripe",
+        "duplicate-customer-in-input": "O mesmo cliente Stripe aparece em mais de uma linha",
+        "duplicate-profile-in-input": "O mesmo perfil de faturamento aparece com mais de um cliente Stripe",
+        "customer-claimed-by-other": "O cliente Stripe já está mapeado para outro cliente ou perfil de faturamento",
+        "customer-metadata-owned-by-other": "Os metadados do cliente Stripe indicam outro tenant, cliente ou perfil de faturamento",
+        "profile-mapped-to-other-customer": "Este perfil de faturamento já usa um cliente Stripe diferente"
+      },
+      "warnings": {
+        "no-cards": "O cliente não tem métodos de pagamento",
+        "customer-currency-mismatch": "A moeda do cliente Stripe difere da moeda de faturamento",
+        "no-importable-card": "Nenhum cartão pode ser importado"
+      },
+      "resultStatus": {
+        "imported": "Importado",
+        "unchanged": "Nada a fazer",
+        "skipped": "Ignorado",
+        "conflict": "Conflito",
+        "failed": "Falhou"
+      },
+      "enrollment": {
+        "enrolled": "inscrito no pagamento automático",
+        "not-eligible": "não elegível para inscrição",
+        "already-enrolled": "já inscrito",
+        "failed": "falha na inscrição"
+      }
+    },
     "messages": {
       "loadConfigFailed": "Falha ao carregar a configuração de pagamento",
       "keysRequired": "Insira a chave secreta e a chave publicável",
@@ -1446,7 +1618,7 @@
       "daysPlural": "{{count}} dias",
       "daysDecimal": "{{count}} dias",
       "hoursUnit": "horas ({{formatted}})",
-      "willExpireAfter": "Os links de pagamento expirarão após {{duration}}"
+      "willExpireAfter": "O link de pagamento enviado por e-mail funcionará durante {{duration}}"
     },
     "notConnected": {
       "title": "Faixa não conectada",
@@ -1464,7 +1636,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Expiração do link de pagamento",
-        "description": "Quanto tempo os links de pagamento permanecem válidos antes de expirarem"
+        "description": "Por quanto tempo o link de pagamento nos e-mails de fatura continua a funcionar (de 1 hora a 30 dias). Cada clique abre um novo pagamento seguro enquanto a fatura estiver por pagar."
       },
       "actions": {
         "save": "Salvar configurações",

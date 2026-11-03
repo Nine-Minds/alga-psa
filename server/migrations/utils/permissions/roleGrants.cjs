@@ -9,6 +9,7 @@
 
 const {
   ACTIVE_PERMISSIONS,
+  isEntryAvailable,
   PRODUCTS,
   permissionGrantKeys,
   permissionIdentity,
@@ -36,6 +37,14 @@ const DEFAULT_ROLES = {
     { key: 'msp:Dispatcher', roleName: 'Dispatcher', msp: true, client: false },
     { key: 'client:Admin', roleName: 'Admin', msp: false, client: true },
     { key: 'client:Finance', roleName: 'Finance', msp: false, client: true },
+    { key: 'client:User', roleName: 'User', msp: false, client: true },
+  ],
+  co_managed: [
+    { key: 'msp:Admin', roleName: 'Admin', msp: true, client: false, allMsp: true },
+    { key: 'msp:Technician', roleName: 'Technician', msp: true, client: false },
+    { key: 'msp:Project Manager', roleName: 'Project Manager', msp: true, client: false },
+    { key: 'msp:Dispatcher', roleName: 'Dispatcher', msp: true, client: false },
+    { key: 'client:Admin', roleName: 'Admin', msp: false, client: true },
     { key: 'client:User', roleName: 'User', msp: false, client: true },
   ],
   algadesk: [
@@ -93,7 +102,7 @@ function compileRoleGrants(product, entries = ACTIVE_PERMISSIONS) {
   }
 
   for (const entry of entries) {
-    if (!entry.products.includes(product)) continue;
+    if (!entry.products.includes(product) || !isEntryAvailable(entry, product)) continue;
     const identity = permissionIdentity(entry);
 
     for (const [key, target] of compiled) {
@@ -128,7 +137,7 @@ function compileLegacyRoleGrants(product, entries = ACTIVE_PERMISSIONS) {
 
     const keys = [];
     for (const entry of entries) {
-      if (!entry.products.includes(product)) continue;
+      if (!entry.products.includes(product) || !isEntryAvailable(entry, product)) continue;
       if (!entryScopeAllows(entry, role)) continue;
       if (!((entry.defaultGrants || {})[product] || []).includes(role.key)) continue;
       keys.push(`${entry.resource}:${entry.action}:${scope}`);

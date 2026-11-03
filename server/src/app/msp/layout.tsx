@@ -2,10 +2,15 @@ import { cache } from "react";
 import { cookies } from "next/headers.js";
 import { redirect } from "next/navigation";
 import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
+import { isLicensedUserType } from "@alga-psa/types";
 import { getTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
+import { getWorkspaceSetupAccess } from "@alga-psa/onboarding/actions/onboarding-actions/onboardingActions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale";
 import { MspLayoutClient } from "./MspLayoutClient";
+import { getCoManagedWorkspaceState } from "@/lib/actions/coManagedWorkspaceActions";
+import type { CoManagedWorkspaceNoticeState } from "@/components/co-managed/CoManagedWorkspaceNotice";
 import { getCurrentTenantProduct } from "@/lib/productAccess";
+import { productUsesWorkspaceOnboarding } from '@/lib/workspaceOnboardingPolicy';
 import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
 import { getDateFormatPreference } from "@alga-psa/clients/actions/countryActions";
 import { SYSTEM_DATE_FORMAT } from "@alga-psa/core/i18n/countryDateFormat";
@@ -87,11 +92,23 @@ export default async function MspLayout({
     redirect('/auth/msp/signin');
   }
 
-  // Check if user is trying to access wrong portal
-  if (session.user.user_type === 'client') {
-    console.log('[msp-layout] Client user trying to access MSP portal, redirecting to switch prompt');
+  // Only internal users belong in the MSP portal. Client users are in the wrong portal;
+  // a non-interactive type must never hold a UI session, so send both to sign-in rather
+  // than to the client portal.
+  if (!isLicensedUserType(session.user.user_type)) {
+    console.log('[msp-layout] Non-internal session trying to access MSP portal, redirecting to sign-in');
     redirect('/auth/msp/signin');
   }
+
+  const productCode = await getCurrentTenantProduct();
+
+  // Only a customer workspace has a relationship notice; psa and algadesk read nothing.
+  // A failed or gated read is no notice: the shell must never block on it.
+  const workspaceNotice: CoManagedWorkspaceNoticeState = productCode === 'co_managed'
+    ? await getCoManagedWorkspaceState()
+        .then((state) => (state.kind === 'ended' ? { kind: 'ended' as const, endedAt: state.endedAt, sponsorName: state.sponsorName } : null))
+        .catch(() => null)
+    : null;
 
   const cookieStore = await cookies();
   const sidebarCookie = cookieStore.get('sidebar_collapsed')?.value;
@@ -99,18 +116,26 @@ export default async function MspLayout({
   let needsOnboarding = false;
   let onboardingResolvedServerSide = false;
   try {
-    const tenantSettings = await getTenantSettings();
-    if (tenantSettings) {
-      needsOnboarding = !tenantSettings.onboarding_completed && !tenantSettings.onboarding_skipped;
+    if (!productUsesWorkspaceOnboarding(productCode)) {
       onboardingResolvedServerSide = true;
+    } else {
+      const tenantSettings = await getTenantSettings();
+      if (tenantSettings) {
+        needsOnboarding = !tenantSettings.onboarding_completed && !tenantSettings.onboarding_skipped;
+        onboardingResolvedServerSide = true;
+      }
     }
   } catch (error) {
     console.error('Failed to load tenant settings for onboarding check:', error);
   }
+  // Only an administrator is sent to workspace setup; other users work in the
+  // workspace as configured so far instead of being stuck on a wizard they
+  // cannot complete.
+  const canRunOnboarding = productUsesWorkspaceOnboarding(productCode) && await getWorkspaceSetupAccess().then(access => access.canRun).catch(() => false);
+  needsOnboarding = needsOnboarding && canRunOnboarding;
 
   const locale = await getHierarchicalLocaleAction();
   const preloadedLocaleResources = await preloadLocaleResources(locale).catch(() => undefined);
-  const productCode = await getCurrentTenantProduct();
   // Only self-host installs carry a license_state row; gate the trial/expiry
   // banner here so it never mounts (or calls getLicenseStatus) on hosted/SaaS.
   const selfHostLicensing = await isSelfHostLicensing();
@@ -131,7 +156,9 @@ export default async function MspLayout({
       currencyCode={currencyCode}
       dateFormat={dateFormat}
       productCode={productCode}
+      workspaceNotice={workspaceNotice}
       needsOnboarding={needsOnboarding}
+      canRunOnboarding={canRunOnboarding}
       initialSidebarCollapsed={initialSidebarCollapsed}
       initialLocale={locale}
       preloadedLocaleResources={preloadedLocaleResources}

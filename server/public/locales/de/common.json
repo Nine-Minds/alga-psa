@@ -160,6 +160,10 @@
     "confirmDeletion": "Löschung bestätigen"
   },
   "errors": {
+    "coManaged": {
+      "readOnly": "Dieser gemeinsam verwaltete Arbeitsbereich ist schreibgeschützt. Anmeldung, Lesen, Export und Lizenzwiederherstellung bleiben verfügbar.",
+      "acceptancePending": "Ein Kundenadministrator muss die gemeinsame Verwaltung akzeptieren, bevor dieser Arbeitsbereich verwendet werden kann."
+    },
     "validation": {
       "required": "{{field}} ist erforderlich.",
       "invalidType": "{{field}} hat den falschen Typ.",
@@ -1580,7 +1584,42 @@
     }
   },
   "labels": {
-    "printColumns": "Druckspalten"
+    "printColumns": "Druckspalten",
+    "dialog": {
+      "assetTitle": "Asset-Etiketten drucken",
+      "batch_one": "Ein Etikett für das gehaltene Element ({{count}})",
+      "batch_other": "Ein Etikett pro gehaltenem Element ({{count}})",
+      "count_one": "{{count}} ausgewählt",
+      "count_other": "{{count}} ausgewählt",
+      "failed": "Die Etiketten konnten nicht gedruckt werden.",
+      "item": "Element",
+      "layout": "Layout",
+      "linkedAsset": "Verknüpftes Asset",
+      "noAsset": "Kein Asset",
+      "notFound": "Diese Datensätze konnten nicht geöffnet werden.",
+      "openPdf": "PDF öffnen",
+      "previewBatch_one": "{{count}} Etikett für das gehaltene Element drucken.",
+      "previewBatch_other": "{{count}} Etiketten drucken, eines pro gehaltenem Element.",
+      "previewPicked": "Das Etikett zeigt den Standort und die nächste Aktion dieses Elements.",
+      "previewPickedNotHeld": "Dieses Element wird nicht gehalten, daher zeigt das Etikett keinen Standort.",
+      "previewSingle": "Das Etikett zeigt {{location}}.",
+      "previewSingleNoLocation": "Das Etikett zeigt die nächste Aktion dieses Elements.",
+      "previewSummary_one": "{{count}} Element gehalten.",
+      "previewSummary_other": "{{count}} Elemente gehalten.",
+      "printed_one": "{{count}} Etikett gedruckt.",
+      "printed_other": "{{count}} Etiketten gedruckt.",
+      "printing": "Wird vorbereitet…",
+      "print": "Drucken",
+      "reason": "Grund",
+      "skipFailures": "Diese überspringen und den Rest drucken",
+      "skipped_one": "{{count}} Datensatz wurde übersprungen, weil er nicht geöffnet werden konnte.",
+      "skipped_other": "{{count}} Datensätze wurden übersprungen, weil sie nicht geöffnet werden konnten.",
+      "template": "Vorlage",
+      "ticketTitle": "Arbeitsetiketten drucken",
+      "tooMany": "Sie können höchstens {{max}} Etiketten auf einmal drucken.",
+      "unnamedAsset": "Unbenanntes Asset",
+      "useTemplate": "{{template}} verwenden"
+    }
   },
   "deleteEntity": {
     "checkingDependenciesTitle": "Abhängigkeiten werden geprüft",
@@ -2172,5 +2211,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Ansicht wechseln"
+  },
+  "entityChip": {
+    "moreTags": "{{count}} weitere Tags: {{names}}"
   }
 }

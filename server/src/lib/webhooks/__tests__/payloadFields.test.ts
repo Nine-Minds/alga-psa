@@ -103,3 +103,21 @@ describe('webhook payload fields', () => {
     });
   });
 });
+
+describe('client / contact / client_location payload fields', () => {
+  it('registers allowlist entities and accepts their selectable fields', () => {
+    expect(WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY.client).toBeDefined();
+    expect(payloadFieldsByEntitySchema.safeParse({ contact: ['client_id', 'changed_fields'] }).success).toBe(true);
+    expect(payloadFieldsByEntitySchema.safeParse({ client_location: ['client_id'] }).success).toBe(true);
+    expect(payloadFieldsByEntitySchema.safeParse({ contact: ['email'] }).success).toBe(false);
+  });
+
+  it('always keeps the entity id, even with an empty selection', () => {
+    expect(ALWAYS_INCLUDED_KEYS_BY_ENTITY.client).toEqual(['client_id']);
+    expect(ALWAYS_INCLUDED_KEYS_BY_ENTITY.contact).toEqual(['contact_id']);
+    expect(ALWAYS_INCLUDED_KEYS_BY_ENTITY.client_location).toEqual(['location_id']);
+    expect(
+      applyPayloadAllowlist('contact', { contact_id: 'c', client_id: 'k', changed_fields: ['x'] }, []),
+    ).toEqual({ contact_id: 'c' });
+  });
+});

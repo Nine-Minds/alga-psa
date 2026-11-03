@@ -33,6 +33,14 @@ describe('workflow event catalog parity (system_event_catalog)', () => {
     const dateTriggerDocRows = new Set<string>(
       dateTriggerSourceDefinitions.flatMap((definition) => ('catalogEventType' in definition ? [definition.catalogEventType] : []))
     );
+    for (const definition of dateTriggerSourceDefinitions) {
+      if ('catalogEventType' in definition) {
+        expect(rows.find((row) => row.event_type === definition.catalogEventType)).toEqual({
+          event_type: definition.catalogEventType,
+          payload_schema_ref: definition.payloadSchemaRef,
+        });
+      }
+    }
     const actual = Object.fromEntries(
       rows.filter((row) => !dateTriggerDocRows.has(row.event_type)).map((row) => [row.event_type, row.payload_schema_ref])
     );

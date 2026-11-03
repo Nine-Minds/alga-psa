@@ -2515,12 +2515,16 @@ it('T-REST-DEL-1: REST DELETE of a fresh recurring draft removes it, releases it
   const response = await restDelete(invoiceId);
   expect(response.status).toBe(204);
 
-  // The audit row is written through onBeforeCommit, atomically with the delete.
-  const auditRow = await tenantTable(db, tenantId, 'audit_logs')
-    .where({ tenant: tenantId, table_name: 'invoices', record_id: invoiceId, operation: 'DELETE' })
-    .first();
-  expect(auditRow).toBeTruthy();
-  expect(auditRow.details).toMatchObject({ action: 'invoice.deleted' });
+  // The engine writes the lifecycle invoice_deleted row atomically with the
+  // delete; REST adds the recurring provenance to its details.
+  const auditRows = await tenantTable(db, tenantId, 'audit_logs')
+    .where({ tenant: tenantId, table_name: 'invoices', record_id: invoiceId })
+    .select('operation', 'user_id', 'details');
+  expect(auditRows.map((row: any) => row.operation)).toEqual(['invoice_deleted']);
+  expect(auditRows[0].details).toMatchObject({
+    before: { status: 'draft' },
+    recurring_provenance: expect.anything(),
+  });
 
   expect(await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
   expect(await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
@@ -5933,7 +5937,7 @@ async function storeLegacyAdvanceTiming(lineIds: string[]): Promise<void> {
     .update({ billing_timing: 'advance' });
 }
 
-it('T1: time logged after an empty legacy advance hourly period is stranded, then the repair makes it billable once', async () => {
+it('T1: time logged after an empty legacy advance hourly period bills on the next invoice (draft window is not closed), and the repair adds no double billing', async () => {
   setupCommonMocks({ tenantId, userId: 'stranding-probe-user', permissionCheck: () => true });
   const { contextLike, clientId } = await createClientWithRecurringCycles({
     clientName: 'Stranding Probe Client',
@@ -6014,16 +6018,25 @@ it('T1: time logged after an empty legacy advance hourly period is stranded, the
   const marchResult = await generateInvoiceForSelectionInput(marchRow!.selectorInput);
   expect(marchResult).toMatchObject({ invoice_id: expect.any(String) });
 
-  // 4. Was the Feb 15 entry billed anywhere?
+  // 4. The Feb 15 entry is no longer stranded. The February window's invoice is still a draft, so
+  //    the window is not closed (T0-2): the entry bills as ordinary time on the March invoice, once,
+  //    with no late flag and no late-time suffix.
   const persisted = await tenantTable(db, tenantId, 'time_entries')
     .where({ tenant: tenantId, entry_id: entry.entry_id })
     .first('invoiced');
   const billedLinks = await tenantTable(db, tenantId, 'invoice_time_entries')
     .where({ tenant: tenantId, entry_id: entry.entry_id });
-  expect({ invoiced: persisted?.invoiced, links: billedLinks.length }).toEqual({ invoiced: false, links: 0 });
+  expect({ invoiced: persisted?.invoiced, links: billedLinks.length }).toEqual({ invoiced: true, links: 1 });
+  expect(billedLinks[0].invoice_id).toBe((marchResult as any).invoice_id);
+  const billedLine = await tenantTable(db, tenantId, 'invoice_charges')
+    .where({ tenant: tenantId, item_id: billedLinks[0].item_id })
+    .first('description');
+  expect(billedLine).toBeDefined();
+  expect(String(billedLine?.description)).not.toMatch(/late time/);
 
-  // 5. Repair. The billed advance rows stay exactly as they are; a sibling arrears
-  //    catch-up row for February makes the stranded entry billable again.
+  // 5. Repair. The billed advance rows stay exactly as they are. The repair adds an arrears catch-up row
+  //    only for a window that still holds uninvoiced time (hasUninvoicedActivity); the Feb 15 entry
+  //    already billed on March, so none is created.
   const billedBefore = await tenantTable(db, tenantId, 'recurring_service_periods')
     .where({ tenant: tenantId, obligation_id: line.contractLineId, due_position: 'advance', lifecycle_state: 'billed' })
     .orderBy('service_period_start')
@@ -6033,7 +6046,8 @@ it('T1: time logged after an empty legacy advance hourly period is stranded, the
   const repair = await db.transaction((trx) => repairArrearsOnlyLineSchedulesForTenant(trx, { tenant: tenantId }));
   // Other tests in this file leave stored-advance legacy lines in the tenant; the repair is tenant-wide.
   expect(repair.timingFlipped).toBeGreaterThanOrEqual(1);
-  expect(repair).toMatchObject({ catchUpRowsCreated: 1, rowsRehomed: 0 });
+  expect(repair).toMatchObject({ catchUpRowsCreated: 0, rowsRehomed: 0 });
+  expect(repair.advanceRowsSuperseded).toBeGreaterThanOrEqual(1);
   // The repair is tenant-wide: other tests' flagged lines (e.g. the T5b bucket line) re-appear here.
   expect(repair.manualReview.filter((item) => item.contractLineId === line.contractLineId)).toEqual([]);
   expect(await tenantTable(db, tenantId, 'contract_lines')
@@ -6050,21 +6064,19 @@ it('T1: time logged after an empty legacy advance hourly period is stranded, the
     .where({ tenant: tenantId, obligation_id: line.contractLineId, reason_code: 'stranded_advance_catch_up' })
     .select('due_position', 'lifecycle_state', 'provenance_kind', 'revision', 'service_period_start', 'service_period_end',
       'invoice_window_start', 'invoice_window_end');
-  expect(catchUps).toHaveLength(1);
-  expect(catchUps[0]).toMatchObject({ due_position: 'arrears', lifecycle_state: 'generated', provenance_kind: 'repair', revision: 1 });
-  expect(String(catchUps[0].service_period_start).slice(0, 10) === '2025-02-01' || catchUps[0].service_period_start instanceof Date).toBe(true);
+  expect(catchUps).toEqual([]);
 
-  // 6. The catch-up window bills the stranded entry exactly once.
-  // Arrears: the February service period is invoiced in the March window.
+  // 6. No double billing. With no catch-up row there is no February catch-up window to generate: the
+  //    due-work listing offers nothing for it, and the entry stays billed exactly once, on the March invoice.
   const catchUpRow = await findDueRow('2025-03-01', '2025-04-01', { from: '2025-02-01', to: '2025-03-01' });
-  expect(catchUpRow).toBeTruthy();
-  const catchUpResult = await generateInvoiceForSelectionInput(catchUpRow!.selectorInput);
-  expect(catchUpResult).toMatchObject({ invoice_id: expect.any(String) });
+  expect(catchUpRow).toBeUndefined();
   expect(await tenantTable(db, tenantId, 'time_entries')
     .where({ tenant: tenantId, entry_id: entry.entry_id })
     .first('invoiced')).toMatchObject({ invoiced: true });
-  expect(await tenantTable(db, tenantId, 'invoice_time_entries')
-    .where({ tenant: tenantId, entry_id: entry.entry_id })).toHaveLength(1);
+  const linksAfterRepair = await tenantTable(db, tenantId, 'invoice_time_entries')
+    .where({ tenant: tenantId, entry_id: entry.entry_id });
+  expect(linksAfterRepair).toHaveLength(1);
+  expect(linksAfterRepair[0].invoice_id).toBe((marchResult as any).invoice_id);
 
   // 7. Idempotent: a second run changes nothing.
   const countRows = async () => Number((await tenantTable(db, tenantId, 'recurring_service_periods')
@@ -6362,7 +6374,9 @@ it('T5/T2: Migration A flips stored-advance Hourly/Usage rows to arrears and sup
   const fixedPresetId = uuidv4();
   await dropArrearsOnlyChecks(['contract_template_lines', 'contract_line_presets']);
   await tenantTable(db, tenantId, 'contract_templates').insert({
-    tenant: tenantId, template_id: templateId, template_name: 'Migration A Template',
+    // Base currency is required on every template; this one is only here for the
+    // timing migration to flip, so it matches the suite's USD contracts.
+    tenant: tenantId, template_id: templateId, template_name: 'Migration A Template', currency_code: 'USD',
   });
   await tenantTable(db, tenantId, 'contract_template_lines').insert({
     tenant: tenantId, template_id: templateId, template_line_id: templateLineId,
@@ -7071,7 +7085,8 @@ async function convertContractLineToMeteredType(
         .insert({
           tenant: contextLike.tenantId,
           config_id: configRow.config_id,
-          hourly_rate: params.baseRateCents / 100,
+          // hourly_rate is stored in cents (the engine bills it as-is)
+          hourly_rate: params.baseRateCents,
           minimum_billable_time: 15,
           round_up_to_nearest: 15,
           created_at: now,
@@ -7079,7 +7094,7 @@ async function convertContractLineToMeteredType(
         })
         .onConflict(['tenant', 'config_id'])
         .merge({
-          hourly_rate: params.baseRateCents / 100,
+          hourly_rate: params.baseRateCents,
           minimum_billable_time: 15,
           round_up_to_nearest: 15,
           updated_at: now,

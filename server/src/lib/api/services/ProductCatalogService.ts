@@ -1,11 +1,15 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { normalizeGtin } from '@alga-psa/core';
-import { resolveCatalogUnitForCreate, resolveCatalogUnitForUpdate } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
-import { resolveCatalogTaxRateIdForCreate } from '@alga-psa/shared/billingClients/defaultTaxRate';
+import {
+  createProductCore,
+  updateProductCore,
+  ProductCatalogCoreError,
+} from '@alga-psa/billing/lib/catalog/productCatalogCore';
+import { isServiceCatalogPricingError } from '@alga-psa/billing/lib/catalog/serviceCatalogPricing';
 import { ListOptions } from '../controllers/types';
-import { publishServiceCatalogSearchEvent, writePricing } from './ServiceCatalogService';
+import { publishServiceCatalogSearchEvent } from './ServiceCatalogService';
 import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 type SortField = 'service_name' | 'billing_method' | 'default_rate';
@@ -17,22 +21,16 @@ type FilterOptions = {
   is_license?: boolean;
 };
 
-function rethrowProductUniqueViolation(error: unknown): never {
-  const databaseError = error as { code?: string; constraint?: string };
-
-  if (databaseError?.code === '23505') {
-    if (databaseError.constraint?.includes('service_catalog_product_barcode_unique')) {
-      throw new ConflictError(
-        'A product with this barcode already exists. Use a different barcode or edit the existing product.'
-      );
-    }
-    if (databaseError.constraint?.includes('service_catalog_product_sku_unique')) {
-      throw new ConflictError(
-        'A product with this SKU already exists. Use a different SKU or edit the existing product.'
-      );
-    }
+/** Map the transport-neutral core errors onto the REST error classes. */
+function mapProductCoreError(error: unknown): never {
+  if (error instanceof ProductCatalogCoreError) {
+    if (error.code === 'not_found') throw new NotFoundError(error.message);
+    if (error.code === 'validation') throw new ValidationError(error.message);
+    throw new ConflictError(error.message);
   }
-
+  if (isServiceCatalogPricingError(error)) {
+    throw new ValidationError(error.message, { issues: error.issues });
+  }
   throw error;
 }
 
@@ -218,32 +216,15 @@ export class ProductCatalogService extends BaseService<IService> {
     const tenant = context.tenant;
 
     const rawData = data as any;
-    // Keys with no service_catalog column (currency_code, prices, scheduled_prices)
-    // are destructured out here so `...rest` can never leak them into the insert
-    // (Postgres 42703). billing_method is re-set canonically below.
     const {
-      currency_code: currencyCode,
-      prices: explicitPrices,
+      prices,
       scheduled_prices: scheduledPrices,
       billing_method: _billing_method,
       unit_of_measure,
       ...rest
     } = rawData;
-    if (currencyCode !== undefined && explicitPrices !== undefined) {
-      throw new ValidationError('currency_code cannot be combined with prices; send either the currency_code + default_rate shorthand or prices[]');
-    }
-    // currency_code + default_rate is shorthand for one price. default_rate and
-    // prices[].rate are both integer minor units, so no conversion. An omitted
-    // default_rate is a 400 (same rule as update), never an implicit 0-rate price.
-    if (currencyCode !== undefined && rest.default_rate === undefined) {
-      throw new ValidationError('default_rate is required when currency_code is sent');
-    }
-    const prices = currencyCode !== undefined
-      ? [{ currency_code: currencyCode, rate: Number(rest.default_rate) }]
-      : explicitPrices;
-    // default_rate mirrors the primary price (prices[0]); with no prices and no
-    // default_rate the row is created with 0.
-    rest.default_rate = rest.default_rate ?? 0;
+    // currency_code (single-price shorthand) rides in `rest`; createProductCore
+    // owns its expansion into prices[] and keeps it out of the insert.
 
     // DD-2/F-2: resolve the product cost currency when not explicitly provided.
     // Products are tenant-scoped (no client_id), so precedence is:
@@ -257,67 +238,28 @@ export class ProductCatalogService extends BaseService<IService> {
       const billingSettings = await tenantDb(knex, tenant).table('default_billing_settings')
         .select('default_currency_code')
         .first();
+      // LEVERAGE: friction tenant-currency-usd-fallback — REST create still falls back to 'USD'; the AMP applier resolves strictly via resolveConfiguredTenantCurrency and fails the row instead.
       costCurrency = billingSettings?.default_currency_code || 'USD';
     }
 
-    // Resolve inherited defaults and units in the transaction, holding the
-    // documented rate/region locks until the catalog row is persisted.
     // Publication happens only after commit so search consumers can read it.
     const createdResult = await withTransaction(knex, async (trx) => {
-      const productData = {
-        ...rest,
-        cost_currency: costCurrency,
-        item_kind: 'product',
-        billing_method: 'usage',
-        ...(await resolveCatalogUnitForCreate(trx, tenant, { unit_of_measure, unit_code: rest.unit_code, item_kind: 'product' })),
-        tenant,
-        default_rate: typeof rest.default_rate === 'string'
-          ? parseFloat(rest.default_rate) || 0
-          : rest.default_rate,
-        // Omitted inherits the tenant default; explicit null stays non-taxable.
-        tax_rate_id: await resolveCatalogTaxRateIdForCreate(
-          trx,
-          tenant,
-          rest.tax_rate_id,
-          undefined,
-          { lock: true },
-        ),
-        category_id: rest.category_id ?? null,
-        barcode: normalizeGtin(rest.barcode ?? '') || null,
-      };
-
-      let created: IService;
       try {
-        [created] = await tenantDb(trx, tenant).table<IService>('service_catalog')
-          .insert(productData)
-          .returning('*');
-      } catch (error) {
-        rethrowProductUniqueViolation(error);
-      }
-
-      // Prices go through the shared catalog pricing writer (billing lock,
-      // validation, display order, default_rate mirror) in this transaction.
-      if (prices !== undefined || scheduledPrices !== undefined) {
-        const { servicePatch } = await writePricing(trx, tenant, created.service_id, {
-          current: prices,
-          scheduled: scheduledPrices,
+        const created = await createProductCore(trx, tenant, {
+          ...rest,
+          prices,
+          scheduled_prices: scheduledPrices,
+          unit_of_measure,
+          cost_currency: costCurrency,
         });
-        if (servicePatch.default_rate !== undefined) {
-          await tenantDb(trx, tenant).table('service_catalog')
-            .where('service_id', created.service_id)
-            .update(servicePatch);
-        }
+        return {
+          serviceId: created.serviceId,
+          itemKind: 'product' as const,
+          changedFields: created.changedFields,
+        };
+      } catch (error) {
+        mapProductCoreError(error);
       }
-
-      return {
-        serviceId: created.service_id,
-        itemKind: 'product' as const,
-        changedFields: [
-          ...Object.keys(productData),
-          ...(prices !== undefined ? ['prices'] : []),
-          ...(scheduledPrices !== undefined ? ['scheduled_prices'] : []),
-        ],
-      };
     });
 
     await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, createdResult.serviceId, {
@@ -333,89 +275,14 @@ export class ProductCatalogService extends BaseService<IService> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
 
-    // Keys with no service_catalog column (currency_code, prices, scheduled_prices)
-    // are destructured out so `...updateData` can never leak them into the update.
-    const {
-      currency_code: currencyCode,
-      prices: explicitPrices,
-      scheduled_prices: scheduledPrices,
-      billing_method: _billing_method,
-      service_type_name: _,
-      ...updateData
-    } = data as any;
-    if (currencyCode !== undefined && explicitPrices !== undefined) {
-      throw new ValidationError('currency_code cannot be combined with prices; send either the currency_code + default_rate shorthand or prices[]');
-    }
-    if (currencyCode !== undefined && updateData.default_rate === undefined) {
-      throw new ValidationError('default_rate is required when currency_code is sent');
-    }
-
     // One transaction for the catalog row and its prices: a failure after the
     // catalog write leaves no partial state.
-    const changedFields = await withTransaction(knex, async (trx) => {
-      // Verify it's a product
-      const existing = await tenantDb(trx, tenant).table('service_catalog')
-        .where('service_id', id)
-        .select('item_kind')
-        .first();
-      if (!existing || existing.item_kind !== 'product') {
-        throw new NotFoundError('Resource not found or permission denied');
-      }
-
-      // Shorthand: upsert one currency as the primary price and keep the rest of
-      // the current window (the writer replaces the whole window, so the full
-      // list must be passed). default_rate and rates are both integer minor units.
-      let prices = explicitPrices;
-      if (currencyCode !== undefined) {
-        const currentRows = await tenantDb(trx, tenant).table('service_prices')
-          .where('service_id', id)
-          .select('*')
-          .orderBy([{ column: 'display_order' }, { column: 'currency_code' }]);
-        const { current } = splitServicePricesByEffectiveDate(currentRows);
-        prices = [
-          { currency_code: currencyCode, rate: Number(updateData.default_rate) },
-          ...current
-            .filter((price: any) => price.currency_code !== currencyCode)
-            .map((price: any) => ({ currency_code: price.currency_code, rate: Number(price.rate) })),
-        ];
-      }
-
-      const normalizedUpdateData = {
-        ...updateData,
-        ...(await resolveCatalogUnitForUpdate(trx, tenant, updateData)),
-        ...(updateData.barcode !== undefined
-          ? { barcode: normalizeGtin(updateData.barcode ?? '') || null }
-          : {}),
-      };
-
-      if (prices !== undefined || scheduledPrices !== undefined || normalizedUpdateData.default_rate !== undefined) {
-        const { servicePatch } = await writePricing(trx, tenant, id, {
-          current: prices,
-          scheduled: scheduledPrices,
-          defaultRate: normalizedUpdateData.default_rate === undefined
-            ? undefined
-            : Number(normalizedUpdateData.default_rate),
-        });
-        Object.assign(normalizedUpdateData, servicePatch);
-      }
-
+    const { changedFields } = await withTransaction(knex, async (trx) => {
       try {
-        await tenantDb(trx, tenant).table('service_catalog')
-          .where('service_id', id)
-          .update({
-            ...normalizedUpdateData,
-            item_kind: 'product',
-            billing_method: 'usage'
-          });
+        return await updateProductCore(trx, tenant, id, data as Record<string, any>);
       } catch (error) {
-        rethrowProductUniqueViolation(error);
+        mapProductCoreError(error);
       }
-
-      return [
-        ...Object.keys(normalizedUpdateData),
-        ...(prices !== undefined ? ['prices'] : []),
-        ...(scheduledPrices !== undefined ? ['scheduled_prices'] : []),
-      ];
     });
 
     await publishServiceCatalogSearchEvent('SERVICE_CATALOG_UPDATED', tenant, id, {

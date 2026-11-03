@@ -404,7 +404,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
         {sectionsToRender.map((section, sectionIndex) => (
-          <div key={section.title || 'nav-section'} className="px-2">
+          <div key={section.id ?? (section.title || `nav-section-${sectionIndex}`)} className="px-2">
             {sidebarOpen && section.title ? (
               <p className={`text-xs uppercase tracking-wide text-sidebar-text/60 px-2 mb-2 ${sectionIndex === 0 ? 'mt-0' : 'mt-6'}`} aria-label={section.title}>
                 {section.title}

@@ -23,18 +23,10 @@ import AsyncSearchableSelect, { type SelectOption } from '@alga-psa/ui/component
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import type { ITicketMaterial, IServicePrice, IStockUnit } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import {
-  listTicketMaterials,
-  addTicketMaterial,
-  deleteTicketMaterial,
-  searchServiceCatalogForPicker,
-  getServicePrices,
-  listAvailableStockUnitsForMaterial,
-} from '../../actions/materialCatalogActions';
-import {
-  getProductAvailability,
-  type ProductAvailability,
-} from '@alga-psa/inventory/actions/availabilityActions';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { isStockConflictResult, type StockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
+import { useTicketDataSource, useTicketScreenReadOnly } from './TicketDataSourceContext';
+import type { ProductAvailability } from '@alga-psa/inventory/actions/availabilityActions';
 
 interface TicketMaterialsCardProps {
   id?: string;
@@ -48,19 +40,21 @@ function isReturnedActionError(value: unknown): value is ActionMessageError | Ac
   return isActionMessageError(value) || isActionPermissionError(value);
 }
 
-// On-hand badge for tracked products in the picker (F012): red at zero, amber at/below
-// reorder point, plain otherwise. Untracked products and rows whose stock fields haven't
-// loaded yet (undefined) get no badge.
+// Free-stock badge for tracked products in the picker (F012): red at zero, amber at/below
+// reorder point, plain otherwise. Shows free stock (on hand - reserved - held at the
+// location a material add consumes from) so it agrees with the add-time refusal (B1).
+// Untracked products and rows whose stock fields haven't loaded yet get no badge.
+// LEVERAGE: pattern material-picker-stock-ui — onHandBadge, the add handler with reservedConflict/override retry, and the stockConflict dialog are duplicated in ProjectMaterialsDrawer; a shared material-add component in a layer below tickets/projects is missing.
 function onHandBadge(fields: {
   track_stock?: boolean;
-  on_hand_total?: number | null;
+  free_total?: number | null;
   reorder_point?: number | null;
-}): SelectOption['badge'] | undefined {
-  if (!fields.track_stock || fields.on_hand_total == null) return undefined;
-  const onHand = fields.on_hand_total;
+}, label: (count: number) => string): SelectOption['badge'] | undefined {
+  if (!fields.track_stock || fields.free_total == null) return undefined;
+  const free = fields.free_total;
   const variant =
-    onHand <= 0 ? 'danger' : fields.reorder_point != null && onHand <= fields.reorder_point ? 'warning' : 'secondary';
-  return { text: `On hand: ${onHand}`, variant };
+    free <= 0 ? 'danger' : fields.reorder_point != null && free <= fields.reorder_point ? 'warning' : 'secondary';
+  return { text: label(free), variant };
 }
 
 export default function TicketMaterialsCard({
@@ -70,6 +64,17 @@ export default function TicketMaterialsCard({
   initialMaterials,
 }: TicketMaterialsCardProps) {
   const { t } = useTranslation('features/tickets');
+  // A read-only ticket screen lists materials but offers no add or delete.
+  const readOnly = useTicketScreenReadOnly();
+  const {
+    listTicketMaterials,
+    addTicketMaterial,
+    deleteTicketMaterial,
+    searchServiceCatalogForPicker,
+    getServicePrices,
+    listAvailableStockUnitsForMaterial,
+    getProductAvailability,
+  } = useTicketDataSource().materials;
   const { money, currencyCode } = useCurrencyFormat();
   const [materials, setMaterials] = useState<ITicketMaterial[]>([]);
   const [isLoading, setIsLoading] = useState(!initialMaterials);
@@ -94,6 +99,8 @@ export default function TicketMaterialsCard({
   const [availability, setAvailability] = useState<ProductAvailability | null>(null);
   // Inline add error (F018) — e.g. insufficient stock — shown in the form so the user's inputs survive.
   const [addError, setAddError] = useState<string | null>(null);
+  // Soft-reservation refusal awaiting the user's override confirmation (B1).
+  const [reservedConflict, setReservedConflict] = useState<StockConflictResult['stockConflict'] | null>(null);
 
   // Load materials
   const loadMaterials = useCallback(async () => {
@@ -161,13 +168,13 @@ export default function TicketMaterialsCard({
           value: item.service_id,
           label: item.sku ? `${item.service_name} (${item.sku})` : item.service_name,
           secondaryLabel: item.product_category || undefined,
-          badge: onHandBadge(item),
+          badge: onHandBadge(item, (available) => t('materials.availableBadge', 'Available: {{available}}', { available })),
         };
       });
 
       return { options, total: result.totalCount };
     },
-    []
+    [t]
   );
 
   // Load product prices when product is selected
@@ -246,7 +253,7 @@ export default function TicketMaterialsCard({
   const selectedPrice = productPrices.find(p => p.currency_code === selectedCurrency);
 
   // Handle add material
-  const handleAddMaterial = async () => {
+  const handleAddMaterial = async (allowReservedOverride = false) => {
     if (!selectedProductId || !clientId) {
       toast.error(t('validation.materials.productRequired', 'Please select a product'));
       return;
@@ -279,7 +286,27 @@ export default function TicketMaterialsCard({
         currency_code: selectedPrice.currency_code,
         description: description.trim() || null,
         unit_id: selectedUnitId || null,
+        ...(allowReservedOverride ? { allow_reserved_override: true } : {}),
       });
+      if (isStockConflictResult(result)) {
+        const conflict = result.stockConflict;
+        if (conflict.overrideable) {
+          setReservedConflict(conflict); // confirm → retry with the override
+        } else if (conflict.reason === 'held') {
+          setAddError(t(
+            'materials.stockHeld',
+            'Only {{free}} available. {{held}} on hand is on hard hold for sales orders or projects and can\'t be used here.',
+            { free: Math.max(0, conflict.free), held: conflict.held },
+          ));
+        } else {
+          setAddError(t(
+            'materials.stockInsufficient',
+            'Only {{onHand}} on hand, {{requested}} requested.',
+            { onHand: conflict.onHand, requested: conflict.requested },
+          ));
+        }
+        return;
+      }
       if (isReturnedActionError(result)) {
         setAddError(getErrorMessage(result));
         return;
@@ -356,14 +383,14 @@ export default function TicketMaterialsCard({
         title={t('materials.title', 'Materials')}
         headerIcon={<Package className="w-5 h-5" />}
         count={materials.length}
-        addButton={clientId && !showAddForm ? {
+        addButton={clientId && !showAddForm && !readOnly ? {
           id: `${id}-add-btn`,
           label: t('materials.addMaterial', 'Add Material'),
           onClick: () => setShowAddForm(true),
         } : undefined}
       >
         {/* Add Form */}
-        {showAddForm && clientId && (
+        {showAddForm && clientId && !readOnly && (
           <div className="border rounded-md p-4 space-y-4 bg-gray-50">
             <div className="space-y-2">
               <Label htmlFor={`${id}-product-select`}>{t('materials.product', 'Product')}</Label>
@@ -483,11 +510,13 @@ export default function TicketMaterialsCard({
 
             {availability?.track_stock && availability.locations.length > 0 && (
               <div id={`${id}-availability`} className="text-xs text-gray-500 space-y-0.5">
-                <div className="font-medium text-gray-600">{t('materials.onHandByLocation', 'On hand by location')}</div>
+                <div className="font-medium text-gray-600">{t('materials.availableByLocation', 'Free stock by location')}</div>
                 {availability.locations.map((loc) => (
                   <div key={loc.location_id} className="flex justify-between">
                     <span>{loc.location_name}</span>
-                    <span className="tabular-nums">{loc.on_hand}</span>
+                    <span className="tabular-nums">
+                      {t('materials.freeOfOnHand', '{{free}} free of {{onHand}}', { free: loc.free, onHand: loc.on_hand })}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -521,7 +550,7 @@ export default function TicketMaterialsCard({
               <Button
                 {...withDataAutomationId({ id: `${id}-save-add-btn` })}
                 size="sm"
-                onClick={handleAddMaterial}
+                onClick={() => handleAddMaterial()}
                 disabled={isAdding || !selectedProductId || !selectedPrice}
               >
                 {isAdding ? (
@@ -592,7 +621,7 @@ export default function TicketMaterialsCard({
                         )}
                       </td>
                       <td className="py-2 text-right">
-                        {!material.is_billed && (
+                        {!material.is_billed && !readOnly && (
                           <Button
                             {...withDataAutomationId({ id: `${id}-delete-${material.ticket_material_id}` })}
                             variant="ghost"
@@ -644,6 +673,24 @@ export default function TicketMaterialsCard({
           </div>
         )}
       </ContentCard>
+      <ConfirmationDialog
+        id={`${id}-reserved-stock-confirm`}
+        isOpen={reservedConflict !== null}
+        onClose={() => setReservedConflict(null)}
+        title={t('materials.reservedStockTitle', 'Stock is reserved for a sales order or project')}
+        message={reservedConflict ? t(
+          'materials.reservedStockMessage',
+          'Only {{free}} of this product is free. {{reserved}} on hand is reserved for sales orders or projects, and you asked for {{requested}}. Adding it anyway takes stock a sales order or project is counting on and may leave it short.',
+          { free: Math.max(0, reservedConflict.free), reserved: reservedConflict.reserved, requested: reservedConflict.requested },
+        ) : ''}
+        confirmLabel={t('materials.reservedStockConfirm', 'Add anyway')}
+        cancelLabel={t('actions.cancel', 'Cancel')}
+        isConfirming={isAdding}
+        onConfirm={async () => {
+          setReservedConflict(null);
+          await handleAddMaterial(true);
+        }}
+      />
     </ReflectionContainer>
   );
 }

@@ -55,7 +55,13 @@ jobs:
     # Chromium install below dies with "Playwright does not support chromium
     # on ubuntu26.04-x64". Unpin once Playwright ships 26.04 dependencies.
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # The Chromium step below is network-bound on a mirror we do not control
+    # and has taken anywhere from 21s to 8m51s. At 15 minutes a slow-but-
+    # healthy install left the ~4-minute tooling suite less room than it
+    # needs, and the suite was cancelled mid-run. That step now carries its
+    # own 12-minute ceiling; this budget covers it alongside npm ci and the
+    # suite, so only a genuine hang can reach the job cap.
+    timeout-minutes: 22
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -71,7 +77,40 @@ jobs:
       - uses: ./.github/actions/prepare-apt
       - name: Install Chromium for authenticated dashboard hydration tests
         working-directory: e2e-tests
-        run: npx --no-install playwright install --with-deps chromium
+        # Split from the single `--with-deps` call. The browser binary comes
+        # from the Playwright CDN in seconds; only the system packages touch
+        # apt, and azure.archive.ubuntu.com is intermittently degraded (see
+        # .github/actions/install-ripgrep). On 2026-10-22 it served those
+        # 24.3 MB at 47.3 kB/s: `--with-deps` took 8m33s of a 15-minute job,
+        # the tooling suite was cancelled four minutes in, and the gate could
+        # only report a cancelled job plus a half-written report it could not
+        # parse. Bound each apt attempt so a stall cannot run forever, and
+        # retry once -- apt resumes its partial .debs, so a degraded mirror
+        # finishes on the second pass instead of starving the suite.
+        timeout-minutes: 12
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          set -euo pipefail
+          npx --no-install playwright install chromium
+          attempt=1
+          max_attempts=2
+          until timeout 330 npx --no-install playwright install-deps chromium; do
+            code=$?
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "playwright install-deps failed after ${attempt} attempts (last exit ${code})" >&2
+              exit "$code"
+            fi
+            echo "install-deps attempt ${attempt} failed or stalled (exit ${code}); clearing apt locks and retrying" >&2
+            # A timed-out attempt can leave apt/dpkg holding a lock or a
+            # half-unpacked package; clear both so the retry can proceed.
+            sudo pkill -9 -f 'apt-get|dpkg' 2>/dev/null || true
+            sudo rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock \
+              /var/lib/dpkg/lock /var/lib/dpkg/lock-frontend 2>/dev/null || true
+            sudo dpkg --configure -a 2>/dev/null || true
+            attempt=$((attempt+1))
+            sleep 10
+          done
       - uses: ./.github/actions/install-ripgrep
       - name: Run every required tooling test and reconcile execution
         run: node scripts/run-node-tooling-tests.mjs

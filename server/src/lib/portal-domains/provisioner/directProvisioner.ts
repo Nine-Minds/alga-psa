@@ -1,8 +1,17 @@
 import {
   deletePortalDomain,
+  updatePortalDomain,
   upsertPortalDomain,
 } from '@/models/PortalDomainModel';
 import { clearPortalDomainSeen } from '@/lib/portal-domains/portalDomainSeen';
+import {
+  buildSsoRedirectUriState,
+  resolveSsoProvidersForTenant,
+  describeMissingRedirectUris,
+  evaluateSsoRedirectUriGate,
+  readSsoRedirectUriState,
+  withSsoRedirectUriState,
+} from '@/lib/portal-domains/ssoRedirectUris';
 
 import type {
   PortalDomainProvisioner,
@@ -38,7 +47,9 @@ function getAppHost(): string | null {
  */
 export const directProvisioner: PortalDomainProvisioner = {
   async register(input: RegisterInput): Promise<RegisterResult> {
-    const { knex, tenant, domain } = input;
+    const { knex, tenant, domain, surface, existing } = input;
+    // Every provider that can sign in on the domain (platform env + the tenant's own IdPs).
+    const ssoProviders = await resolveSsoProvidersForTenant(tenant);
 
     const appHost = getAppHost();
     if (appHost && domain === appHost) {
@@ -47,18 +58,34 @@ export const directProvisioner: PortalDomainProvisioner = {
       );
     }
 
-    await upsertPortalDomain(knex, tenant, {
+    const ssoState = buildSsoRedirectUriState({
       domain,
-      status: 'active',
-      statusMessage:
-        `Active. Ensure ${domain} resolves to this server and that your reverse proxy ` +
-        'terminates TLS and forwards the original Host header to it.',
-      verificationDetails: {
+      surface,
+      providers: ssoProviders,
+      previous: existing && existing.domain === domain ? readSsoRedirectUriState(existing.verificationDetails) : null,
+    });
+    const verificationDetails = withSsoRedirectUriState(
+      {
         requested_domain: domain,
         proxy_target_host: appHost,
         proxy_target_port: PORTAL_DOMAIN_SERVICE_PORT,
         forward_host_header: true,
       },
+      ssoState
+    );
+    // MSP surfaces are not activated until the SSO redirect URIs are confirmed (D3).
+    const gate = evaluateSsoRedirectUriGate(surface, verificationDetails);
+
+    await upsertPortalDomain(knex, tenant, {
+      domain,
+      surface,
+      matchSurface: existing?.surface,
+      status: gate.ok ? 'active' : 'pending_redirect_uri',
+      statusMessage: gate.ok
+        ? `Active. Ensure ${domain} resolves to this server and that your reverse proxy ` +
+          'terminates TLS and forwards the original Host header to it.'
+        : describeMissingRedirectUris(gate.missing),
+      verificationDetails,
       lastCheckedAt: new Date().toISOString(),
       certificateSecretName: null,
       lastSyncedResourceVersion: null,
@@ -67,9 +94,24 @@ export const directProvisioner: PortalDomainProvisioner = {
     return { enqueued: false };
   },
 
-  // Nothing to poll: direct mode has no asynchronous provisioning. Idempotent no-op.
-  async refresh(_input: ReconcileInput): Promise<void> {
-    return;
+  // No asynchronous provisioning to poll. The only waiting state is
+  // `pending_redirect_uri`: re-evaluate the gate (e.g. after the operator confirmed).
+  async refresh(input: ReconcileInput): Promise<void> {
+    const { knex, tenant, existing } = input;
+    if (existing.status !== 'pending_redirect_uri') {
+      return;
+    }
+    const gate = evaluateSsoRedirectUriGate(existing.surface, existing.verificationDetails);
+    if (!gate.ok) {
+      return;
+    }
+    await updatePortalDomain(knex, tenant, { id: existing.id }, {
+      status: 'active',
+      statusMessage:
+        `Active. Ensure ${existing.domain} resolves to this server and that your reverse proxy ` +
+        'terminates TLS and forwards the original Host header to it.',
+      lastCheckedAt: new Date().toISOString(),
+    });
   },
 
   // No transient/failed states exist in direct mode (register goes straight to
@@ -83,7 +125,7 @@ export const directProvisioner: PortalDomainProvisioner = {
     const { knex, tenant, existing } = input;
     // Delete the row outright — there are no K8s/cert resources to tear down, and
     // outstanding one-time-tokens cascade away (portal_domain_session_otts FK).
-    await deletePortalDomain(knex, tenant);
+    await deletePortalDomain(knex, tenant, { id: existing.id });
     // Clear the last-seen marker so re-adding the domain starts from a clean slate.
     await clearPortalDomainSeen(existing.domain);
   },

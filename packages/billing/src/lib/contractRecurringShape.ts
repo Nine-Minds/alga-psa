@@ -13,6 +13,7 @@
  * several lines that share every attribute into one line passes.
  */
 import type { ContractWizardFixedLine, ContractDraftBucketOverlayInput } from '@alga-psa/types';
+import { resolveEffectiveBillingTiming } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 
 type Scalar = string | number | boolean | null;
 
@@ -301,7 +302,8 @@ export function recurringShapeFromWizard(data: WizardRecurringInput): RecurringS
       attrs: {
         rate: roundOrNull(h.hourly_rate),
         frequency: data.hourly_billing_frequency ?? contractFrequency,
-        timing: contractTiming,
+        // Creation stores hourly lines arrears-only (arrearsOnlyLinePolicy); project what it writes.
+        timing: resolveEffectiveBillingTiming('Hourly', contractTiming),
         cadence_owner: owner,
         location: null,
         minimum: data.minimum_billable_time ?? 0,
@@ -320,7 +322,8 @@ export function recurringShapeFromWizard(data: WizardRecurringInput): RecurringS
         rate: roundOrNull(u.unit_rate),
         unit_of_measure: u.unit_of_measure ?? null,
         frequency: data.usage_billing_frequency ?? contractFrequency,
-        timing: contractTiming,
+        // Creation stores usage lines arrears-only (arrearsOnlyLinePolicy); project what it writes.
+        timing: resolveEffectiveBillingTiming('Usage', contractTiming),
         cadence_owner: owner,
         location: null,
         bucket: bucketKey(u.bucket_overlay),

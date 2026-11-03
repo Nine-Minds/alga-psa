@@ -1,6 +1,7 @@
 // @ts-nocheck
 'use server'
 
+import { transitionQuoteStatus } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
 import { loadInvoiceChargeLineIds } from '../services/invoiceChargeLineage';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -9,8 +10,8 @@ import { Temporal } from '@js-temporal/polyfill';
 import { resolveSourceDerivedPartialPeriod } from '../lib/billing/compute/contractInvoiceAdjustments';
 import { createTenantKnex } from '@alga-psa/db';
 import { toISODate } from '@alga-psa/core';
-// import { auditLog } from '@alga-psa/db';
-import { applyCreditToInvoice, resolveCreditExpirationDate, resolveCreditDrawdownPolicy } from './creditActions';
+import { writeInvoiceAudit } from '@alga-psa/db';
+import { applyCreditToInvoiceInternal, resolveCreditExpirationDate, resolveCreditDrawdownPolicy } from './creditActions';
 import { getAvailableCredit } from '../lib/creditBalance';
 import { reverseCreditApplicationsForInvoice } from '../lib/creditReversal';
 import { clearPrepaidReplenishmentForInvoice } from '../lib/prepaidAutoReplenishment';
@@ -21,6 +22,8 @@ import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import { capAppliesToInvoiceCurrency } from '../lib/billing/compute/projectCapMath';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
 import { persistInvoiceCharges, persistManualInvoiceCharges, recalculatePercentageDiscountInvoiceCharges, resolveTaxRegionCodeForRate, validateManualChargeAttribution } from '../services/invoiceService'; // Import persistManualInvoiceCharges
+import QuoteActivity from '../models/quoteActivity';
+import { QUOTE_ACTIVITY_TYPES } from '../lib/quoteActivityTypes';
 import { reconcileAutomaticInvoiceAdjustments } from '../services/invoiceAutomaticAdjustments';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { v4 as uuidv4 } from 'uuid';
@@ -68,6 +71,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import logger from '@alga-psa/core/logger';
+import { repointHeaderFollowingCharges } from '../lib/billing/repointHeaderFollowingCharges';
 import {
   ManualInvoiceError,
   type ManualInvoiceErrorCode,
@@ -96,13 +100,13 @@ export async function activateHourBlocksForFinalizedInvoice(
 /**
  * Unfinalize hook for ad-hoc prepaid hour blocks. Runs inside the unfinalize
  * transaction so the invoice and its blocks move together or not at all:
- *   - an ACTIVE block that was never used (immutable `first_allocated_at`
+ *   - an ACTIVE or EXPIRED block that was never used (immutable `first_allocated_at`
  *     marker null, no live allocation rows) returns to `pending` so FIFO burn
  *     can no longer select it, with a `purchase_reversal` audit row;
- *   - an ACTIVE block that has been used blocks unfinalization with an
+ *   - an ACTIVE or EXPIRED block that has been used blocks unfinalization with an
  *     actionable error naming the block and its usage (v1 answer: reject, never
  *     half-reverse);
- *   - terminal states (expired/voided) and already-pending blocks are left as-is.
+ *   - voided and already-pending blocks are left as-is.
  */
 async function deactivateHourBlocksForUnfinalizedInvoice(
   trx: Knex.Transaction,
@@ -127,7 +131,7 @@ async function deactivateHourBlocksForUnfinalizedInvoice(
     .select('block_id', 'status', 'total_minutes', 'remaining_minutes', 'first_allocated_at', 'contract_line_id');
 
   for (const block of linkedBlocks) {
-    if (block.status !== 'active') {
+    if (block.status !== 'active' && block.status !== 'expired') {
       continue;
     }
 
@@ -147,7 +151,9 @@ async function deactivateHourBlocksForUnfinalizedInvoice(
       const usedHours = (usedMinutes / 60).toFixed(1);
       const totalHours = (Number(block.total_minutes) / 60).toFixed(1);
       throw expectedInvoiceActionError(
-        `Cannot unfinalize this invoice: its hour block ${block.block_id} has already been used (${usedHours} of ${totalHours} hrs). Expire or adjust the hour block instead of unfinalizing the invoice.`,
+        `Cannot unfinalize this invoice: its hour block ${block.block_id} has already been used (${usedHours} of ${totalHours} hrs). Consider a separate adjustment or credit note to correct the invoice.`,
+        'msp/invoicing:errors.invoice.usedHourBlockUnfinalize',
+        { blockId: block.block_id, usedHours, totalHours },
       );
     }
 
@@ -709,15 +715,41 @@ export type DraftInvoicePropertiesUpdateActionResult =
   | InvoiceActionError;
 
 export type InvoiceMutationActionResult = InvoiceActionSuccess | InvoiceActionError;
+
+/**
+ * Steps that run after the finalize transaction has committed. They are
+ * best-effort; a failure is reported as a warning and never un-finalizes.
+ */
+export type FinalizeWarningStep =
+  | 'credit_auto_apply'
+  | 'project_deposit_credits'
+  | 'workflow_events'
+  | 'accounting_export'
+  | 'replenishment_status'
+  | 'autopay';
+
+export interface FinalizeWarning {
+  step: FinalizeWarningStep;
+  message: string;
+}
+
+/**
+ * `success: true` means the finalize COMMITTED, even when `warnings` is present.
+ * A clean finalize returns exactly `{ success: true }`; `warnings` appears only
+ * when at least one post-commit step failed.
+ */
+export type FinalizeInvoiceActionResult =
+  | { success: true; warnings?: FinalizeWarning[] }
+  | InvoiceActionError;
 export type InvoiceManualItemsUpdateActionResult = InvoiceViewModel | InvoiceActionError | ManualInvoiceFailure;
 
-function expectedInvoiceActionError(message: string, i18nKey?: string): ExpectedInvoiceActionError {
-  return new ExpectedInvoiceActionError(message, i18nKey);
+function expectedInvoiceActionError(message: string, i18nKey?: string, messageParams?: Record<string, string | number>): ExpectedInvoiceActionError {
+  return new ExpectedInvoiceActionError(message, i18nKey, messageParams);
 }
 
 function toInvoiceActionError(error: unknown): InvoiceActionError | null {
   if (error instanceof ExpectedInvoiceActionError) {
-    return actionError(error.message, error.i18nKey);
+    return actionError(error.message, error.i18nKey, error.messageParams);
   }
 
   return null;
@@ -1014,16 +1046,12 @@ export const updateDraftInvoiceProperties = withAuth(async (
       // followed the invoice header move with it, so profile spend and AR stay
       // consistent with what the invoice now bills.
       const previousBillingProfileId = resolvedBillingProfileId;
-      const chargeRepoint = tenantScopedTable(trx, tenant, 'invoice_charges')
-        .where({ invoice_id: invoiceId });
-      if (previousBillingProfileId) {
-        chargeRepoint.where((qb) => {
-          qb.where('billing_profile_id', previousBillingProfileId).orWhereNull('billing_profile_id');
-        });
-      } else {
-        chargeRepoint.whereNull('billing_profile_id');
-      }
-      await chargeRepoint.update({ billing_profile_id: nextBillingProfileId });
+      await repointHeaderFollowingCharges(trx, {
+        tenant,
+        invoiceId,
+        fromProfileId: previousBillingProfileId,
+        toProfileId: nextBillingProfileId,
+      });
 
       await tenantScopedTable(trx, tenant, 'invoices')
         .where({ invoice_id: invoiceId, tenant })
@@ -1061,14 +1089,15 @@ export const finalizeInvoice = withAuth(async (
   user,
   { tenant },
   invoiceId: string
-): Promise<InvoiceMutationActionResult> => {
+): Promise<FinalizeInvoiceActionResult> => {
   if (!await hasPermission(user, 'invoice', 'update')) {
     return permissionError('Permission denied: invoice update required', 'msp/invoicing:errors.permissions.invoiceUpdate');
   }
   const { knex } = await createTenantKnex();
+  let warnings: FinalizeWarning[] = [];
 
   try {
-    await finalizeInvoiceWithKnex(invoiceId, knex, tenant, user.user_id);
+    ({ warnings } = await finalizeInvoiceWithKnex(invoiceId, knex, tenant, user.user_id));
   } catch (error) {
     const expectedError = toInvoiceActionError(error);
     if (expectedError) {
@@ -1078,7 +1107,9 @@ export const finalizeInvoice = withAuth(async (
     throw error;
   }
 
-  return { success: true };
+  // The finalize has committed. Post-commit failures are reported as warnings;
+  // the caller must treat this as a success and reload.
+  return warnings.length > 0 ? { success: true, warnings } : { success: true };
 });
 
 export async function finalizeInvoiceWithKnex(
@@ -1091,8 +1122,18 @@ export async function finalizeInvoiceWithKnex(
     /** System callers may suppress the issued-state write until delivery is queued. */
     deferPrepaidActivation?: boolean;
     markReplenishmentIssued?: boolean;
+    /**
+     * Use the session-free tax-source validation. For callers that have already
+     * authorized the actor themselves (REST API-key requests carry no session).
+     */
+    internalValidation?: boolean;
+    /** Caller-supplied finalized_at (REST `finalized_at`); defaults to today. */
+    finalizedAt?: string;
+    /** Extra detail merged into the finalize audit row (e.g. recurring provenance). */
+    auditDetails?: Record<string, unknown>;
   } = {},
-): Promise<void> {
+): Promise<{ warnings: FinalizeWarning[] }> {
+  const warnings: FinalizeWarning[] = [];
   let invoice: any;
   let projectDepositCreditEvents: ProjectDepositCreditEvent[] = [];
   let createdCreditNote: {
@@ -1114,7 +1155,7 @@ export async function finalizeInvoiceWithKnex(
   let prepaidBlockActivatesAtFinalize = false;
 
   // Validate tax source before finalization
-  const taxValidation = userId === null
+  const taxValidation = userId === null || options.internalValidation === true
     ? await validateInvoiceFinalizationInternal(knex, tenant, invoiceId)
     : await validateInvoiceFinalization(invoiceId);
   if (isActionMessageError(taxValidation) || isActionPermissionError(taxValidation)) {
@@ -1136,7 +1177,10 @@ export async function finalizeInvoiceWithKnex(
     throw error;
   }
 
-  // First transaction to update invoice status
+  // Everything that is part of the finalize itself commits atomically here:
+  // the status change, hour-block activation, prepayment / negative-total
+  // credit issuance and the audit row. Anything that can fail without
+  // invalidating the finalize runs after the commit (see runPostCommitStep).
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if invoice exists and is not already finalized
     invoice = await tenantScopedTable(trx, tenant, 'invoices')
@@ -1189,11 +1233,15 @@ export async function finalizeInvoiceWithKnex(
       identityUpdates.invoice_type = 'prepayment';
     }
 
+    const previousStatus = invoice.status ?? null;
+    const previousFinalizedAt = invoice.finalized_at ?? null;
+    const finalizedAtValue = options.finalizedAt || toISODate(Temporal.Now.plainDateISO());
+
     await tenantScopedTable(trx, tenant, 'invoices')
       .where({ invoice_id: invoiceId })
       .update({
         status: 'sent',
-        finalized_at: toISODate(Temporal.Now.plainDateISO()),
+        finalized_at: finalizedAtValue,
         updated_at: toISODate(Temporal.Now.plainDateISO()),
         ...identityUpdates
       });
@@ -1214,31 +1262,15 @@ export async function finalizeInvoiceWithKnex(
       await activateHourBlocksForFinalizedInvoice(invoiceId, trx, tenant, userId);
     }
 
-    // Record audit log
-    // await auditLog(
-    //   trx,
-    //   {
-    //     userId: userId,
-    //     operation: 'invoice_finalized',
-    //     tableName: 'invoices',
-    //     recordId: invoiceId,
-    //     changedData: { finalized_at: toISODate(Temporal.Now.plainDateISO()) },
-    //     details: {
-    //       action: 'Invoice finalized',
-    //       invoiceNumber: invoice.invoice_number
-    //     }
-    //   }
-    // );
-  });
+    // Prepayments and negative invoices use explicit financial-document
+    // classification. Credit issuance belongs to the finalize (money), so it
+    // commits or rolls back with the status change.
+    const invoiceCreditHandlingKind = classifyInvoiceCreditHandling(invoice);
 
-  // Prepayments and negative invoices use explicit financial-document classification.
-  const invoiceCreditHandlingKind = classifyInvoiceCreditHandling(invoice);
-
-  if (invoice && invoiceCreditHandlingKind === 'prepayment' && !deferPrepaidActivation) {
-    // Prepayment credit is issued here, at finalization — a draft prepayment
-    // grants nothing. The invoice carries the chosen expiration date from
-    // creation; absent one, the client/default billing settings decide.
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
+    if (invoiceCreditHandlingKind === 'prepayment' && !deferPrepaidActivation) {
+      // Prepayment credit is issued here, at finalization — a draft prepayment
+      // grants nothing. The invoice carries the chosen expiration date from
+      // creation; absent one, the client/default billing settings decide.
       const now = new Date().toISOString();
       const creditAmount = invoice.subtotal;
       const currencyCode = String(invoice.currency_code ?? 'USD');
@@ -1299,17 +1331,11 @@ export async function finalizeInvoiceWithKnex(
         sourceServicePeriodStart: null,
         sourceServicePeriodEnd: null,
       };
-    });
 
-    console.log(`Issued prepayment credit of ${invoice.subtotal} for client ${invoice.client_id} from invoice ${invoiceId}`);
-  }
-  // Handle regular invoices with negative totals
-  else if (invoice && invoiceCreditHandlingKind === 'negative_total') {
-    // Get absolute value of negative total
-    const creditAmount = Math.abs(invoice.total_amount);
-
-    // Update client credit balance and record transaction in a single transaction
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      console.log(`Issued prepayment credit of ${invoice.subtotal} for client ${invoice.client_id} from invoice ${invoiceId}`);
+    } else if (invoiceCreditHandlingKind === 'negative_total') {
+      // Get absolute value of negative total
+      const creditAmount = Math.abs(invoice.total_amount);
       const now = new Date().toISOString();
       const expirationDate = await resolveCreditExpirationDate(trx, tenant, invoice.client_id);
 
@@ -1368,184 +1394,207 @@ export async function finalizeInvoiceWithKnex(
         sourceServicePeriodEnd: null,
       };
 
-      // Log audit
-      // await auditLog(
-      //   trx,
-      //   {
-      //     userId: userId,
-      //     operation: 'credit_issuance_from_negative_invoice',
-      //     tableName: 'clients',
-      //     recordId: invoice.client_id,
-      //     changedData: {
-      //       credit_balance: newBalance,
-      //       expiration_date: expirationDate
-      //     },
-      //     details: {
-      //       action: 'Credit issued from negative invoice',
-      //       invoiceId: invoiceId,
-      //       amount: creditAmount,
-      //       expiration_date: expirationDate
-      //     }
-      //   }
-      // );
-    });
-
-    // Log the credit update
-    console.log(`Created credit of ${creditAmount} from negative invoice ${invoiceId} (${invoice.invoice_number})`);
-  }
-  // For regular invoices, check if there's available credit to apply
-  else if (invoice && invoice.client_id && !options.skipAutoApply) {
-    // Auto-apply is a policy-controlled *automatic* path only: with the toggle
-    // off, the invoice finalizes with credit_applied 0 and manual application
-    // (UI / REST) stays available. Eligibility + ordering are enforced inside
-    // the canonical apply engine.
-    const policy = await resolveCreditDrawdownPolicy(knex, tenant, invoice.client_id);
-    if (policy.autoApplyEnabled !== false) {
-      const availableCredit = await getAvailableCredit(knex, tenant, invoice.client_id, invoice.currency_code ?? undefined);
-
-      if (availableCredit > 0) {
-        // Get the current invoice with updated totals
-        const updatedInvoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await tenantScopedTable(trx, tenant, 'invoices')
-            .where({ invoice_id: invoiceId })
-            .first();
-        });
-
-        if (updatedInvoice && updatedInvoice.total_amount > 0) {
-          // Calculate how much credit to apply
-          const creditToApply = Math.min(availableCredit, updatedInvoice.total_amount);
-
-          if (creditToApply > 0) {
-            // Apply credit to the invoice
-            const creditResult = await applyCreditToInvoice(invoice.client_id, invoiceId, creditToApply);
-            if (
-              typeof creditResult === 'object' &&
-              creditResult !== null &&
-              (
-                typeof (creditResult as { actionError?: unknown }).actionError === 'string' ||
-                typeof (creditResult as { permissionError?: unknown }).permissionError === 'string'
-              )
-            ) {
-              throw new Error(
-                'permissionError' in creditResult
-                  ? creditResult.permissionError
-                  : creditResult.actionError
-              );
-            }
-          }
-        }
-      }
+      console.log(`Created credit of ${creditAmount} from negative invoice ${invoiceId} (${invoice.invoice_number})`);
     }
-  }
 
-  // (Ad-hoc prepaid hour blocks went active inside the finalization
-  // transaction above — see activateHourBlocksForFinalizedInvoice.)
+    // Audit row in the same transaction: a failed audit rolls the finalize back.
+    await writeInvoiceAudit(trx, tenant, 'invoice_finalized', {
+      invoiceId,
+      userId,
+      invoiceNumber: invoice.invoice_number ?? null,
+      before: { status: previousStatus, finalized_at: previousFinalizedAt },
+      after: { status: 'sent', finalized_at: finalizedAtValue },
+      extraDetails: options.auditDetails,
+    });
+  });
+
+  const invoiceCreditHandlingKind = classifyInvoiceCreditHandling(invoice);
+
+  // ---- Post-commit: the invoice is finalized from here on. -----------------
+  // Every step is best-effort and safe to run twice; a failure becomes a
+  // warning, never a thrown error, so callers cannot report a committed
+  // finalize as failed.
+
+  // Credit auto-apply is a policy-controlled *automatic* path only: with the
+  // toggle off, the invoice finalizes with credit_applied 0 and manual
+  // application (UI / REST) stays available. Runs as a system policy so a user
+  // with only invoice:update is not refused credit:update after the commit.
+  // Re-running applies only the headroom still unapplied.
+  if (
+    invoice
+    && invoiceCreditHandlingKind === 'standard'
+    && invoice.client_id
+    && !options.skipAutoApply
+  ) {
+    await runPostCommitStep(warnings, 'credit_auto_apply', invoiceId, tenant, async () => {
+      const policy = await resolveCreditDrawdownPolicy(knex, tenant, invoice.client_id);
+      if (policy.autoApplyEnabled === false) return;
+
+      const availableCredit = await getAvailableCredit(knex, tenant, invoice.client_id, invoice.currency_code ?? undefined);
+      if (availableCredit <= 0) return;
+
+      const updatedInvoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await tenantScopedTable(trx, tenant, 'invoices')
+          .where({ invoice_id: invoiceId })
+          .first();
+      });
+      if (!updatedInvoice) return;
+
+      const unapplied = Number(updatedInvoice.total_amount) - Number(updatedInvoice.credit_applied ?? 0);
+      const creditToApply = Math.min(availableCredit, unapplied);
+      if (creditToApply > 0) {
+        await applyCreditToInvoiceInternal(
+          tenant,
+          { user_id: userId } as any,
+          invoice.client_id,
+          invoiceId,
+          creditToApply,
+          { systemPolicy: true },
+        );
+      }
+    });
+  }
 
   if (invoice) {
-    projectDepositCreditEvents = await issueProjectDepositCreditsForInvoice(
-      knex,
-      tenant,
-      invoice,
-      userId,
-    );
+    await runPostCommitStep(warnings, 'project_deposit_credits', invoiceId, tenant, async () => {
+      projectDepositCreditEvents = await issueProjectDepositCreditsForInvoice(
+        knex,
+        tenant,
+        invoice,
+        userId,
+      );
+    });
   }
 
-  if (createdCreditNote) {
-    if (createdCreditNote.sourceDocumentKind === 'negative_invoice') {
-      // Negative-invoice credit notes inherit date meaning from the source
-      // invoice when canonical recurring detail rows exist; otherwise they
-      // fall back to the source document date as a financial artifact.
-      const sourceInvoice = await Invoice.getById(knex as any, tenant, createdCreditNote.sourceInvoiceId);
-      const servicePeriodStarts = (sourceInvoice?.invoice_charges ?? [])
-        .map((charge) => charge.service_period_start)
-        .filter((value): value is string => typeof value === 'string' && value.length > 0)
-        .sort();
-      const servicePeriodEnds = (sourceInvoice?.invoice_charges ?? [])
-        .map((charge) => charge.service_period_end)
-        .filter((value): value is string => typeof value === 'string' && value.length > 0)
-        .sort();
+  await runPostCommitStep(warnings, 'workflow_events', invoiceId, tenant, async () => {
+    if (createdCreditNote) {
+      if (createdCreditNote.sourceDocumentKind === 'negative_invoice') {
+        // Negative-invoice credit notes inherit date meaning from the source
+        // invoice when canonical recurring detail rows exist; otherwise they
+        // fall back to the source document date as a financial artifact.
+        const sourceInvoice = await Invoice.getById(knex as any, tenant, createdCreditNote.sourceInvoiceId);
+        const servicePeriodStarts = (sourceInvoice?.invoice_charges ?? [])
+          .map((charge) => charge.service_period_start)
+          .filter((value): value is string => typeof value === 'string' && value.length > 0)
+          .sort();
+        const servicePeriodEnds = (sourceInvoice?.invoice_charges ?? [])
+          .map((charge) => charge.service_period_end)
+          .filter((value): value is string => typeof value === 'string' && value.length > 0)
+          .sort();
 
-      createdCreditNote = {
-        ...createdCreditNote,
-        sourceInvoiceNumber: sourceInvoice?.invoice_number ?? createdCreditNote.sourceInvoiceNumber,
-        sourceInvoiceStatus: sourceInvoice?.status ?? createdCreditNote.sourceInvoiceStatus,
-        sourceInvoiceDateBasis:
-          servicePeriodStarts.length > 0 || servicePeriodEnds.length > 0
-            ? 'canonical_recurring_service_period'
-            : 'financial_document_date',
-        sourceServicePeriodStart: servicePeriodStarts[0] ?? null,
-        sourceServicePeriodEnd: servicePeriodEnds[servicePeriodEnds.length - 1] ?? null,
-      };
+        createdCreditNote = {
+          ...createdCreditNote,
+          sourceInvoiceNumber: sourceInvoice?.invoice_number ?? createdCreditNote.sourceInvoiceNumber,
+          sourceInvoiceStatus: sourceInvoice?.status ?? createdCreditNote.sourceInvoiceStatus,
+          sourceInvoiceDateBasis:
+            servicePeriodStarts.length > 0 || servicePeriodEnds.length > 0
+              ? 'canonical_recurring_service_period'
+              : 'financial_document_date',
+          sourceServicePeriodStart: servicePeriodStarts[0] ?? null,
+          sourceServicePeriodEnd: servicePeriodEnds[servicePeriodEnds.length - 1] ?? null,
+        };
+      }
+
+      await publishWorkflowEvent({
+        eventType: 'CREDIT_NOTE_CREATED',
+        payload: buildCreditNoteCreatedPayload({
+          creditNoteId: createdCreditNote.creditNoteId,
+          clientId: createdCreditNote.clientId,
+          createdByUserId: createdCreditNote.createdByUserId ?? undefined,
+          createdAt: createdCreditNote.createdAt,
+          amount: createdCreditNote.amount,
+          currency: createdCreditNote.currency,
+          status: 'issued',
+          sourceDocumentKind: createdCreditNote.sourceDocumentKind,
+          sourceInvoiceId: createdCreditNote.sourceInvoiceId,
+          sourceInvoiceNumber: createdCreditNote.sourceInvoiceNumber,
+          sourceInvoiceStatus: createdCreditNote.sourceInvoiceStatus,
+          sourceInvoiceDateBasis: createdCreditNote.sourceInvoiceDateBasis,
+          sourceServicePeriodStart: createdCreditNote.sourceServicePeriodStart,
+          sourceServicePeriodEnd: createdCreditNote.sourceServicePeriodEnd,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: createdCreditNote.createdAt,
+          actor: createdCreditNote.createdByUserId
+            ? { actorType: 'USER', actorUserId: createdCreditNote.createdByUserId }
+            : { actorType: 'SYSTEM' },
+        },
+        idempotencyKey: `credit_note_created:${createdCreditNote.creditNoteId}`,
+      });
     }
 
-    await publishWorkflowEvent({
-      eventType: 'CREDIT_NOTE_CREATED',
-      payload: buildCreditNoteCreatedPayload({
-        creditNoteId: createdCreditNote.creditNoteId,
-        clientId: createdCreditNote.clientId,
-        createdByUserId: createdCreditNote.createdByUserId ?? undefined,
-        createdAt: createdCreditNote.createdAt,
-        amount: createdCreditNote.amount,
-        currency: createdCreditNote.currency,
-        status: 'issued',
-        sourceDocumentKind: createdCreditNote.sourceDocumentKind,
-        sourceInvoiceId: createdCreditNote.sourceInvoiceId,
-        sourceInvoiceNumber: createdCreditNote.sourceInvoiceNumber,
-        sourceInvoiceStatus: createdCreditNote.sourceInvoiceStatus,
-        sourceInvoiceDateBasis: createdCreditNote.sourceInvoiceDateBasis,
-        sourceServicePeriodStart: createdCreditNote.sourceServicePeriodStart,
-        sourceServicePeriodEnd: createdCreditNote.sourceServicePeriodEnd,
-      }),
-      ctx: {
-        tenantId: tenant,
-        occurredAt: createdCreditNote.createdAt,
-        actor: createdCreditNote.createdByUserId
-          ? { actorType: 'USER', actorUserId: createdCreditNote.createdByUserId }
-          : { actorType: 'SYSTEM' },
-      },
-      idempotencyKey: `credit_note_created:${createdCreditNote.creditNoteId}`,
-    });
-  }
+    for (const event of projectDepositCreditEvents) {
+      await publishWorkflowEvent({
+        eventType: 'CREDIT_NOTE_CREATED',
+        payload: buildCreditNoteCreatedPayload({
+          creditNoteId: event.creditNoteId,
+          clientId: event.clientId,
+          createdByUserId: event.createdByUserId ?? undefined,
+          createdAt: event.createdAt,
+          amount: event.amount,
+          currency: event.currency,
+          status: 'issued',
+          sourceInvoiceId: invoice.invoice_id,
+          sourceInvoiceNumber: invoice.invoice_number ?? null,
+          sourceInvoiceStatus: invoice.status ?? null,
+          sourceInvoiceDateBasis: 'financial_document_date',
+          sourceServicePeriodStart: null,
+          sourceServicePeriodEnd: null,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt: event.createdAt,
+          actor: event.createdByUserId
+            ? { actorType: 'USER', actorUserId: event.createdByUserId }
+            : { actorType: 'SYSTEM' },
+        },
+        idempotencyKey: `credit_note_created:${event.creditNoteId}`,
+      });
+    }
+  });
 
-  for (const event of projectDepositCreditEvents) {
-    await publishWorkflowEvent({
-      eventType: 'CREDIT_NOTE_CREATED',
-      payload: buildCreditNoteCreatedPayload({
-        creditNoteId: event.creditNoteId,
-        clientId: event.clientId,
-        createdByUserId: event.createdByUserId ?? undefined,
-        createdAt: event.createdAt,
-        amount: event.amount,
-        currency: event.currency,
-        status: 'issued',
-        sourceInvoiceId: invoice.invoice_id,
-        sourceInvoiceNumber: invoice.invoice_number ?? null,
-        sourceInvoiceStatus: invoice.status ?? null,
-        sourceInvoiceDateBasis: 'financial_document_date',
-        sourceServicePeriodStart: null,
-        sourceServicePeriodEnd: null,
-      }),
-      ctx: {
-        tenantId: tenant,
-        occurredAt: event.createdAt,
-        actor: event.createdByUserId
-          ? { actorType: 'USER', actorUserId: event.createdByUserId }
-          : { actorType: 'SYSTEM' },
-      },
-      idempotencyKey: `credit_note_created:${event.creditNoteId}`,
-    });
-  }
+  // Auto-export producer (accounting sync): never blocks finalize.
+  await runPostCommitStep(warnings, 'accounting_export', invoiceId, tenant, async () => {
+    await enqueueInvoiceAutoExport(knex, tenant, invoiceId);
+  });
 
-  // Auto-export producer (accounting sync): fire-and-forget, never blocks finalize.
-  await enqueueInvoiceAutoExport(knex, tenant, invoiceId);
   if ((deferPrepaidActivation || prepaidBlockActivatesAtFinalize) && options.markReplenishmentIssued !== false) {
-    await tenantScopedTable(knex, tenant, 'prepaid_balance_alerts')
-      .where({ replenishment_invoice_id: invoiceId, replenishment_status: 'pending' })
-      .update({ replenishment_status: 'issued', updated_at: knex.fn.now() });
+    await runPostCommitStep(warnings, 'replenishment_status', invoiceId, tenant, async () => {
+      await tenantScopedTable(knex, tenant, 'prepaid_balance_alerts')
+        .where({ replenishment_invoice_id: invoiceId, replenishment_status: 'pending' })
+        .update({ replenishment_status: 'issued', updated_at: knex.fn.now() });
+    });
   }
 
-  // Post-commit, fire-and-forget start. Temporal availability must never slow or fail finalize.
-  void startInvoiceAutopay(knex, tenant, invoiceId);
+  // startInvoiceAutopay swallows its own errors; the wrapper only guards a
+  // misbehaving bridge. Temporal availability must never fail finalize.
+  await runPostCommitStep(warnings, 'autopay', invoiceId, tenant, async () => {
+    await startInvoiceAutopay(knex, tenant, invoiceId);
+  });
+
+  return { warnings };
+}
+
+async function runPostCommitStep(
+  warnings: FinalizeWarning[],
+  step: FinalizeWarningStep,
+  invoiceId: string,
+  tenant: string,
+  run: () => Promise<void>,
+): Promise<void> {
+  try {
+    await run();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error('[finalizeInvoice] Post-commit step failed; invoice remains finalized', {
+      step,
+      invoiceId,
+      tenant,
+      error: message,
+    });
+    warnings.push({ step, message });
+  }
 }
 
 export async function settlePrepaidReplenishmentInvoice(
@@ -1645,21 +1694,17 @@ export const unfinalizeInvoice = withAuth(async (
       })
       .update(updatedFields);
 
-    // Record audit log
-    // await auditLog(
-    //   trx,
-    //   {
-    //     userId: session.user.id,
-    //     operation: 'invoice_unfinalized',
-    //     tableName: 'invoices',
-    //     recordId: invoiceId,
-    //     changedData: { finalized_at: null },
-    //     details: {
-    //       action: 'Invoice unfinalized',
-    //       invoiceNumber: invoice.invoice_number
-    //     }
-    //   }
-    // );
+    // Audit row in the same transaction: a failed audit rolls the unfinalize back.
+    await writeInvoiceAudit(trx, tenant, 'invoice_unfinalized', {
+      invoiceId,
+      userId: user.user_id,
+      invoiceNumber: invoice.invoice_number ?? null,
+      before: { status: invoice.status ?? null, finalized_at: invoice.finalized_at ?? null },
+      after: {
+        status: (updatedFields.status as string | undefined) ?? invoice.status ?? null,
+        finalized_at: null,
+      },
+    });
     });
   } catch (error) {
     const expected = toInvoiceActionError(error);
@@ -2505,8 +2550,71 @@ export interface DeleteInvoiceOptions {
    * exist for it. Checked after the invoice row lock, inside the delete trx.
    */
   requireDraft?: boolean;
+  /** Extra context recorded on the invoice_deleted audit row (e.g. recurring provenance). */
+  auditDetails?: Record<string, unknown>;
   /** Runs inside the delete transaction just before commit. */
   onBeforeCommit?: (trx: Knex.Transaction) => Promise<void>;
+}
+
+/**
+ * Releases the quote -> invoice link before the invoice row is deleted.
+ *
+ * `quotes.converted_invoice_id` is declared SET NULL but is NO ACTION on Citus
+ * (20260611150000_fix_tenant_nulling_foreign_keys.cjs), where deleting a
+ * quote-converted invoice raised a raw FK error. Plain Postgres hides this, so
+ * the link is nulled explicitly here on every backend.
+ *
+ * Quote status: a quote that is `converted` with no converted_contract_id was
+ * converted only by this invoice, so it goes back to `accepted` (and may be
+ * converted again; quoteConversionService tolerates a missing invoice). A quote
+ * that also converted to a contract keeps its status.
+ */
+async function releaseQuoteConversionForDeletedInvoice(
+  trx: Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  userId: string | null,
+): Promise<void> {
+  const quotes = await tenantScopedTable(trx, tenant, 'quotes')
+    .where({ converted_invoice_id: invoiceId })
+    .forUpdate()
+    .select('quote_id', 'status', 'converted_contract_id', 'quote_number');
+
+  const nowIso = new Date().toISOString();
+  for (const quote of quotes) {
+    const revertToAccepted = quote.status === 'converted' && !quote.converted_contract_id;
+    if (revertToAccepted) {
+      await transitionQuoteStatus(trx, tenant, quote.quote_id, 'accepted', {
+        system: true, reason: 'Converted draft invoice deleted; quote returned to accepted',
+        activity: { activity_type: QUOTE_ACTIVITY_TYPES.convertedInvoiceDeleted, metadata: { invoice_id: invoiceId, previous_status: quote.status, status_reverted: true } },
+        actor: userId ? { actorType: 'USER', actorUserId: userId } : { actorType: 'SYSTEM' },
+        details: { releasedInvoiceId: invoiceId },
+        patch: { converted_invoice_id: null, converted_at: null, updated_by: userId },
+      });
+      continue;
+    }
+    await tenantScopedTable(trx, tenant, 'quotes')
+      .where({ quote_id: quote.quote_id })
+      .update({
+        converted_invoice_id: null,
+        updated_by: userId,
+        updated_at: nowIso,
+      });
+
+    await QuoteActivity.create(trx, tenant, {
+      quote_id: quote.quote_id,
+      activity_type: QUOTE_ACTIVITY_TYPES.convertedInvoiceDeleted,
+      description: revertToAccepted
+        ? 'Converted draft invoice was deleted; quote returned to accepted'
+        : 'Converted draft invoice was deleted; quote link released',
+      performed_by: userId,
+      metadata: {
+        invoice_id: invoiceId,
+        previous_status: quote.status,
+        status_reverted: revertToAccepted,
+      },
+    });
+  }
 }
 
 /**
@@ -2818,6 +2926,11 @@ export async function deleteInvoiceWithKnex(
         .update({ invoice_id: null });
     }
 
+    // 10b. quotes.converted_invoice_id is NO ACTION on Citus (SET NULL only on
+    // plain Postgres), so the link must be released explicitly before the
+    // invoice row goes.
+    await releaseQuoteConversionForDeletedInvoice(trx, tenant, invoiceId, userId);
+
     // 11. Delete invoice record
     await tenantScopedTable(trx, tenant, 'invoices')
       .where({
@@ -2826,6 +2939,16 @@ export async function deleteInvoiceWithKnex(
       })
       .delete();
     deletedInvoice = true;
+
+    // Audit row commits atomically with the delete; a failed audit rolls it back.
+    await writeInvoiceAudit(trx, tenant, 'invoice_deleted', {
+      invoiceId,
+      userId,
+      invoiceNumber: invoice.invoice_number ?? null,
+      before: { status: invoice.status ?? null, finalized_at: invoice.finalized_at ?? null },
+      after: { status: null, finalized_at: null },
+      extraDetails: options.auditDetails,
+    });
 
     // Caller-supplied work (e.g. the REST audit row) commits atomically with the delete.
     if (options.onBeforeCommit) {
@@ -2918,6 +3041,42 @@ export const hardDeleteInvoice = withAuth(async (
   try {
     await deleteInvoiceWithKnex(knex, tenant, invoiceId, user.user_id);
   } catch (error) {
+    const expectedError = toInvoiceActionError(error);
+    if (expectedError) {
+      return expectedError;
+    }
+
+    throw error;
+  }
+
+  return { success: true };
+});
+
+/**
+ * Delete for the Drafts UI. Unlike hardDeleteInvoice (billing-cycle rollbacks),
+ * this refuses anything that is not a true draft without payments, so the UI can
+ * never delete a paid/finalized invoice and silently reverse its payments.
+ * Refusals come back as validation messages, never as a thrown 500.
+ */
+export const deleteDraftInvoice = withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<InvoiceMutationActionResult> => {
+  if (!await hasPermission(user, 'invoice', 'delete')) {
+    return permissionError('Permission denied: invoice delete required', 'msp/invoicing:errors.permissions.invoiceDelete');
+  }
+  const { knex } = await createTenantKnex();
+
+  try {
+    await deleteInvoiceWithKnex(knex, tenant, invoiceId, user.user_id, { requireDraft: true });
+  } catch (error) {
+    if (error instanceof InvoiceNotDraftError) {
+      return actionError(error.message, 'msp/invoicing:errors.invoice.deleteNotDraft');
+    }
+    if (error instanceof InvoiceHasPaymentsError) {
+      return actionError(error.message, 'msp/invoicing:errors.invoice.deleteHasPayments');
+    }
     const expectedError = toInvoiceActionError(error);
     if (expectedError) {
       return expectedError;

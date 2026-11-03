@@ -58,6 +58,18 @@ vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
+vi.mock('@alga-psa/shared/billingClients/templateAmounts', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  resolveTemplateAmountsForContract: vi.fn(async () => ({
+    source: 'base',
+    template_currency: 'USD',
+    target_currency: 'USD',
+    price_set_currencies: [],
+    slots: [],
+    amountBySlot: new Map(),
+  })),
+}));
+
 vi.mock('@alga-psa/billing/lib/billing/utils/templateClone', () => ({
   cloneTemplateContractLine: (...args: any[]) => cloneTemplateContractLine(...args),
 }));
@@ -428,6 +440,7 @@ describe('ContractLineService client-owned mutation paths', () => {
         templateContractId: 'template-contract-1',
         templateContractLineId: 'template-line-1',
         contractLineId: expect.any(String),
+        amounts: expect.objectContaining({ target_currency: 'USD' }),
       }),
     );
   });

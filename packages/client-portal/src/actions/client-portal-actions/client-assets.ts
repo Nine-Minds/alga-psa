@@ -6,6 +6,7 @@ import { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { Asset, AssetStatus, AssetStatusKind, IUserWithRoles } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import { applyAssetVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/authorization/portal/visibility';
 import {
   assetStatusKindForSlug,
@@ -105,7 +106,7 @@ async function resolveAssetVisibility(
   user: IUserWithRoles,
   tenant: string,
 ): Promise<ContactVisibilityContext> {
-  if (user.user_type !== 'client') {
+  if (!isClientUserType(user.user_type)) {
     throw new Error('Unauthorized: Invalid user type for client portal');
   }
   if (!user.contact_id) {
