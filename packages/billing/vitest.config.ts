@@ -70,6 +70,9 @@ export default defineConfig({
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.tenantBranding.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
       'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',
+      // Totals-row presets are selected from the active document binding catalog
+      // and export only render-model paths that catalog publishes.
+      'src/components/invoice-designer/inspector/TotalsRowsEditorWidget.integration.test.tsx',
       'src/components/invoice-designer/preview/tenantBrandingOverlay.test.ts',
       // Tenant logo precedence on generated documents (Settings -> Branding
       // first, own-company client record second) — listed for the same reason

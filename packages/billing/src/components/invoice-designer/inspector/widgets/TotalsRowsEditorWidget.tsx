@@ -15,6 +15,8 @@ import {
 } from '../../utils/translatableText';
 import { StandardLabelControl } from './StandardLabelControl';
 import { getStandardDocumentLabel } from '../../../../lib/invoice-template-ast/standardDocumentLabels';
+import { resolveDocumentCanonicalBindings } from '../../fields/documentBindingCatalog';
+import { resolveDesignerDocumentKind } from '../../utils/documentKind';
 
 type Props = {
   node: DesignerNode;
@@ -95,22 +97,28 @@ const setInlineColor = (
 // Rows a totals block can add; value paths are the render model's totals. Labels
 // are the standard document labels of the same name (namespace `documents`), so a
 // new row translates for each recipient like the rows a preset ships with.
-const TOTALS_ROW_PRESETS: Array<{
+const TOTALS_ROW_PRESET_DEFINITIONS: Array<{
   id: string;
   label: TranslatableRef;
-  valuePath: string;
   hideWhenZero?: boolean;
 }> = [
   ...(['subtotal', 'tax', 'total'] as const).map((id) => ({
     id,
     label: getStandardDocumentLabel(`labels.${id}`)!,
-    valuePath: id,
   })),
   // Opt-in discount rows (alga0002295). `subtotal` stays net of discounts, so the layout
   // `grossSubtotal / discountTotal / subtotal` adds up without double-counting.
-  { id: 'grossSubtotal', label: getStandardDocumentLabel('labels.subtotalBeforeDiscounts')!, valuePath: 'grossSubtotal' },
-  { id: 'discountTotal', label: getStandardDocumentLabel('labels.discounts')!, valuePath: 'discountTotal', hideWhenZero: true },
+  { id: 'grossSubtotal', label: getStandardDocumentLabel('labels.subtotalBeforeDiscounts')! },
+  { id: 'discountTotal', label: getStandardDocumentLabel('labels.discounts')!, hideWhenZero: true },
 ];
+
+const getTotalsRowPresets = (documentKind: ReturnType<typeof resolveDesignerDocumentKind>) => {
+  const valueBindings = resolveDocumentCanonicalBindings(documentKind).values ?? {};
+  return TOTALS_ROW_PRESET_DEFINITIONS.flatMap((preset) => {
+    const binding = valueBindings[preset.id];
+    return binding ? [{ ...preset, valuePath: binding.path }] : [];
+  });
+};
 
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{6})$/;
 
@@ -195,6 +203,9 @@ export const TotalsRowsEditorWidget: React.FC<Props> = ({ node }) => {
   const { t } = useTranslation('msp/invoicing');
   const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
   const currentNode = useInvoiceDesignerStore((state) => state.nodesById[node.id] as DesignerNode | undefined);
+  const nodes = useInvoiceDesignerStore((state) => state.nodes);
+  const documentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
+  const presets = useMemo(() => getTotalsRowPresets(documentKind), [documentKind]);
 
   const metadata = useMemo(() => getNodeMetadata(currentNode ?? node), [currentNode, node]);
   const rows = useMemo(() => readRows(metadata), [metadata]);
@@ -249,7 +260,7 @@ export const TotalsRowsEditorWidget: React.FC<Props> = ({ node }) => {
 
   const addRow = useCallback(
     (presetId: string) => {
-      const preset = TOTALS_ROW_PRESETS.find((candidate) => candidate.id === presetId);
+      const preset = presets.find((candidate) => candidate.id === presetId);
       if (!preset) return;
       const takenIds = new Set(rows.map((row) => String(row.id)));
       let id = preset.id;
@@ -273,7 +284,7 @@ export const TotalsRowsEditorWidget: React.FC<Props> = ({ node }) => {
         true
       );
     },
-    [rows, t, updateRows]
+    [presets, rows, updateRows]
   );
 
   const clearRowColors = useCallback(
@@ -298,7 +309,7 @@ export const TotalsRowsEditorWidget: React.FC<Props> = ({ node }) => {
       <span className="text-[11px] text-slate-400 dark:text-slate-500">
         {t('invoiceDesigner.totalsRowsEditor.addRow', { defaultValue: 'Add row:' })}
       </span>
-      {TOTALS_ROW_PRESETS.map((preset) => (
+      {presets.map((preset) => (
         <button
           key={preset.id}
           type="button"
