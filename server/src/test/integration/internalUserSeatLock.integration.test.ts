@@ -5,7 +5,7 @@ import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { getSecret } from '../../lib/utils/getSecret';
 
 // Real-Postgres proof that internal-user seat consumption is serialized by the
-// per-tenant advisory xact lock taken in checkInternalUserLicenseLimit.
+// tenant-row lock taken in checkInternalUserLicenseLimit.
 // Run: see docs in the commit message / the Draft Implementation fact.
 
 import { runAsSystem, createSystemContext, runWithTenant } from '@alga-psa/db';
@@ -14,6 +14,7 @@ import {
   assertInternalUserSeatsWithinLimit,
   checkInternalUserLicenseLimit,
   lockInternalUserSeats,
+  lockTenantSeatState,
 } from '../../../../packages/users/src/lib/internalUserLicenseGuard';
 
 let db: Knex;
@@ -85,7 +86,7 @@ describe('internal user seat lock', () => {
 
     // Hold ACCESS EXCLUSIVE on users from a separate connection. Every create
     // blocks in its seat-count read (with the lock: 1 on the table, 7 on the
-    // advisory lock; without it: all 8 on the table). Only when 8 backends are
+    // tenant row; without it: all 8 on the table). Only when 8 backends are
     // provably blocked do we release, so the overlap is real, not incidental.
     const holder = await db.transaction();
     await holder.raw('LOCK TABLE users IN ACCESS EXCLUSIVE MODE');
@@ -128,6 +129,65 @@ describe('internal user seat lock', () => {
     expect(results.length - rejected.length).toBe(1);
     for (const r of rejected) expect(r.reason).toMatchObject({ code: 'LICENSE_LIMIT_REACHED' });
     expect(await activeInternal(tenant)).toBe(2);
+  }, 60_000);
+
+  it('serializes concurrent partial updates to an inactive client at the seat limit', async () => {
+    const tenant = await seedTenant({ limit: 1 });
+    await seedUser(tenant, 'owner@example.test');
+    const email = 'inactive-client@example.test';
+    await db('users').insert({
+      tenant, user_id: randomUUID(), username: email, email, first_name: 'T', last_name: 'U',
+      user_type: 'client', hashed_password: 'unused', is_inactive: true,
+    });
+    const userId = (await db('users').where({ tenant, email }).first('user_id')).user_id;
+
+    // Reproduce the vulnerable read/patch composition: both independent
+    // transactions take their snapshots before either writes, then update
+    // disjoint columns. Neither patch alone sees a seat transition. Reads
+    // overlap deterministically; writes then proceed in a controlled order.
+    const first = await db.transaction();
+    const second = await db.transaction();
+    try {
+      const [firstSnapshot, secondSnapshot] = await Promise.all([
+        first('users').where({ tenant, user_id: userId }).first('user_type', 'is_inactive'),
+        second('users').where({ tenant, user_id: userId }).first('user_type', 'is_inactive'),
+      ]);
+      expect(firstSnapshot).toMatchObject({ user_type: 'client', is_inactive: true });
+      expect(secondSnapshot).toMatchObject({ user_type: 'client', is_inactive: true });
+      await first('users').where({ tenant, user_id: userId }).update({ user_type: 'internal' });
+      await first.commit();
+      await second('users').where({ tenant, user_id: userId }).update({ is_inactive: false });
+      await second.commit();
+    } catch (error) {
+      if (!first.isCompleted()) await first.rollback();
+      if (!second.isCompleted()) await second.rollback();
+      throw error;
+    }
+    expect(await db('users').where({ tenant, user_id: userId }).first('user_type', 'is_inactive'))
+      .toMatchObject({ user_type: 'internal', is_inactive: false });
+    expect(await activeInternal(tenant)).toBe(2);
+
+    // Restore the same fixture, then exercise the actual service with the same
+    // disjoint partial patches. Its tenant-row/user-row lock order must let at
+    // most the non-seat patch succeed and reject the seat-consuming transition.
+    await db('users').where({ tenant, user_id: userId }).update({ user_type: 'client', is_inactive: true });
+    const holder = await db.transaction();
+    await lockTenantSeatState(holder, tenant);
+    const attempts = [
+      runWithTenant(tenant, () => runAsSystem('seat-lock-test', async () =>
+        new UserService().update(userId, { user_type: 'internal' } as any, createSystemContext(tenant)))),
+      runWithTenant(tenant, () => runAsSystem('seat-lock-test', async () =>
+        new UserService().update(userId, { is_inactive: false } as any, createSystemContext(tenant)))),
+    ];
+    const settled = Promise.allSettled(attempts);
+    await waitForBlockedBackends(2);
+    await holder.commit();
+    const results = await settled;
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    expect(await activeInternal(tenant)).toBe(1);
+    const finalUser = await db('users').where({ tenant, user_id: userId }).first('user_type', 'is_inactive');
+    expect(finalUser.user_type === 'internal' && finalUser.is_inactive === false).toBe(false);
   }, 60_000);
 
   it('UserService.update refuses a client -> internal change at the limit; bulk activation is all-or-nothing', async () => {

@@ -39,19 +39,22 @@ export async function countPendingInvitationSeats(
 }
 
 /**
- * Per-tenant seat lock. `pg_advisory_xact_lock` is transaction-scoped: it is
- * held until the caller's transaction commits or rolls back, so it covers the
- * seat check *and* the user insert / reactivation / invitation write that
- * follows. Two int4 keys (namespace, tenant) keep it clear of other advisory
- * locks and make tenants independent of one another.
+ * Per-tenant seat lock. The tenant row is locked before any user row so seat
+ * admission and seat-state changes serialize using one consistent lock order.
+ * The row lock is held until the transaction commits or rolls back.
  */
-export const INTERNAL_USER_SEAT_LOCK_NAMESPACE = 'internal_user_seats';
+export async function lockTenantSeatState(trx: Knex.Transaction, tenant: string): Promise<void> {
+  assertTransaction(trx, 'lockTenantSeatState');
+  const row = await tenantDb(trx, tenant).table('tenants')
+    .where({ tenant })
+    .forUpdate()
+    .first('tenant');
+  if (!row) throw new Error(`Tenant not found: ${tenant}`);
+}
 
+/** @deprecated Use lockTenantSeatState; retained for existing seat-admission callers. */
 export async function lockInternalUserSeats(trx: Knex.Transaction, tenant: string): Promise<void> {
-  await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?), hashtext(?))', [
-    INTERNAL_USER_SEAT_LOCK_NAMESPACE,
-    String(tenant),
-  ]);
+  await lockTenantSeatState(trx, tenant);
 }
 
 function assertTransaction(trx: Knex.Transaction | Knex, caller: string): asserts trx is Knex.Transaction {
@@ -163,9 +166,9 @@ async function countActiveInternalUsers(trx: Knex.Transaction, tenant: string): 
  * the EE appliance/signed seat claim) for any path that can occupy a seat:
  * direct creation, reactivation, invitation send (reservation) and acceptance.
  *
- * REQUIRES a transaction. The first statement takes a per-tenant transaction
- * advisory lock (see `lockInternalUserSeats`) before any read, and the lock is
- * held until the caller's transaction ends — so the caller MUST perform the
+ * REQUIRES a transaction. The first statement locks the tenant seat state
+ * before any admission read, and the lock is held until the caller's
+ * transaction ends — so the caller MUST perform the
  * seat-consuming write in that same transaction, and concurrent checks for the
  * same tenant are serialized end to end. Passing a non-transaction throws.
  *
