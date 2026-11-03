@@ -17,6 +17,7 @@ import { getClientById } from '@alga-psa/shared/billingClients/clients';
 import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
 import { ensureInvoiceEmailLinks } from '../services/ensureInvoiceEmailLinks';
 import { getInvoiceEmailLinkContext } from './invoiceEmailLinkContext';
+import { buildInvoiceEmailJobPayload } from '../lib/invoiceEmailJobPayload';
 import type { Knex } from 'knex';
 
 interface InitialJobData {
@@ -158,31 +159,14 @@ export const scheduleInvoiceEmailAction = withAuth(async (
     });
   }
 
-  const steps = invoiceDetails.flatMap(({ invoiceId, invoiceNumber, clientName }) => [
-    {
-      stepName: `PDF Generation for Invoice #${invoiceNumber} (${clientName})`,
-      type: 'pdf_generation',
-      metadata: { invoiceId, tenantId: tenant },
-    },
-    {
-      stepName: `Email Sending for Invoice #${invoiceNumber} (${clientName})`,
-      type: 'email_sending',
-      metadata: { invoiceId, tenantId: tenant },
-    },
-  ]);
-
-  const jobData = {
+  const labels = new Map(invoiceDetails.map((d) => [d.invoiceId, `Invoice #${d.invoiceNumber} (${d.clientName})`]));
+  const jobData = buildInvoiceEmailJobPayload({
+    tenant,
+    userId: user.user_id,
     invoiceIds,
     senderId,
-    tenantId: tenant,
-    user_id: user.user_id,
-    steps,
-    metadata: {
-      user_id: user.user_id,
-      invoice_count: invoiceIds.length,
-      tenantId: tenant,
-    },
-  };
+    labelFor: (invoiceId) => labels.get(invoiceId) ?? `Invoice ${invoiceId}`,
+  });
 
   try {
     const { jobId, scheduledJobId } = await enqueueImmediateJob('invoice_email', jobData);

@@ -31,6 +31,7 @@ import Quote from '@alga-psa/billing/models/quote';
 import QuoteActivity from '@alga-psa/billing/models/quoteActivity';
 import { recalculateQuoteFinancials } from '@alga-psa/billing/services';
 import { withAuth } from '@alga-psa/auth';
+import { buildInvoiceEmailJobPayload } from '@alga-psa/billing/lib/invoiceEmailJobPayload';
 import { isClientUserType, JobStatus } from '@alga-psa/types';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { computeRemainingBlockValueMinor } from '@alga-psa/shared/billingClients/hourBlockService';
@@ -1081,17 +1082,13 @@ export const sendClientInvoiceEmail = withAuth(async (user, { tenant }, invoiceI
 
     // Portal resend is deliberately narrow: the invoice and recipient are
     // derived from the authenticated portal identity and server-side records.
-    // No sender or message controls are exposed to the client.
-    const jobData = {
+    // No sender or message controls are exposed to the client. The job payload
+    // itself is built by the billing layer so it cannot drift from the MSP path.
+    const jobData = buildInvoiceEmailJobPayload({
+      tenant,
+      userId: user.user_id,
       invoiceIds: [invoiceId],
-      tenantId: tenant,
-      user_id: user.user_id,
-      steps: [
-        { stepName: `PDF Generation for Invoice ${invoiceId}`, type: 'pdf_generation', metadata: { invoiceId, tenantId: tenant } },
-        { stepName: `Email Sending for Invoice ${invoiceId}`, type: 'email_sending', metadata: { invoiceId, tenantId: tenant } },
-      ],
-      metadata: { user_id: user.user_id, invoice_count: 1, tenantId: tenant },
-    };
+    });
     const { jobId, scheduledJobId } = await enqueueImmediateJob('invoice_email', jobData);
 
     if (!scheduledJobId || !jobId) {

@@ -35,9 +35,6 @@ vi.mock('./clientBillingPermissions', () => ({
   hasClientBillingReadPermission: hasClientBillingReadPermissionMock,
 }));
 
-vi.mock('@alga-psa/billing/actions/invoiceJobActions', () => ({
-  scheduleInvoiceEmailAction: vi.fn(),
-}));
 vi.mock('@alga-psa/core', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   enqueueImmediateJob: enqueueImmediateJobMock,
