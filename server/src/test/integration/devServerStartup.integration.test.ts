@@ -36,11 +36,11 @@ const { workAsyncStorageInstance } = require(
  * never contends with the user's running dev service for the shared
  * `server/.next/dev` lock. Hocuspocus is configured explicitly.
  *
- * One fixture per process: a Next 16 custom server bundles with Turbopack
- * unless `webpack: true` is passed, so `npm run dev` and `dev:turbo` share the
- * same bundler, and since Next 16.3 the Turbopack loader worker pool registers
- * with the native binding once per process, so a second project in the same
- * process fails with "Worker creator already registered".
+ * One fixture per process: this suite explicitly exercises the opt-in
+ * Turbopack path, whose loader worker pool registers with the native binding
+ * once per process; a second project in the same process fails with "Worker
+ * creator already registered". The ordinary custom-server path pins Webpack
+ * because Next 16 otherwise auto-selects Turbopack when neither flag is set.
  */
 
 const DEADLINE_MS = 5_000;
@@ -188,6 +188,9 @@ describe('development server startup path (npm run dev / dev:turbo)', () => {
     sweepStaleFixtureApps();
     const unusedUpstreamPort = await findUnusedPort();
     ({ running, fixtureDir } = await bootFixture({
+      // Exercise the explicit turbo path while the regular `dev` command uses
+      // Webpack to avoid Next's implicit Turbopack selection.
+      turbopack: true,
       // Match the common dev setup: listen on all interfaces, then browse via
       // loopback. The HMR Origin must be allowed independently of hostname.
       hostname: '0.0.0.0',

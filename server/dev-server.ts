@@ -71,6 +71,26 @@ export interface RunningDevServer {
   close: () => Promise<void>;
 }
 
+/**
+ * Next 16 defaults to Turbopack when a custom server omits both bundler flags.
+ * Keep the ordinary `dev` command on Webpack and make Turbopack opt-in through
+ * the explicit `dev:turbo` command/environment flag. A Turbo restart update on
+ * the shared server entry chunk makes the current HMR client reload, then the
+ * next subscription races the advanced HMR version and reloads again.
+ */
+export function resolveNextDevBundlerOptions(
+  options: Pick<DevServerOptions, 'turbopack' | 'webpack'> = {},
+  environment: Pick<NodeJS.ProcessEnv, 'DEV_TURBOPACK'> = process.env,
+): { turbopack: true } | { webpack: true } {
+  const useTurbopack = options.turbopack ?? (
+    options.webpack === true ? false : environment.DEV_TURBOPACK === '1'
+  );
+  if (useTurbopack && options.webpack === true) {
+    throw new Error('Development server cannot enable Webpack and Turbopack together');
+  }
+  return useTurbopack ? { turbopack: true } : { webpack: true };
+}
+
 export async function startDevServer(
   options: DevServerOptions = {},
 ): Promise<RunningDevServer> {
@@ -84,15 +104,14 @@ export async function startDevServer(
   const port = options.port ?? Number.parseInt(process.env.PORT || '3000', 10);
   const hostname = options.hostname ?? process.env.HOSTNAME ?? '0.0.0.0';
   const dir = options.dir ?? import.meta.dirname;
-  const turbopack = options.turbopack ?? process.env.DEV_TURBOPACK === '1';
+  const bundlerOptions = resolveNextDevBundlerOptions(options);
 
   const app = createNext({
     dev: true,
     hostname,
     port,
     dir,
-    ...(turbopack ? { turbopack: true } : {}),
-    ...(options.webpack ? { webpack: true } : {}),
+    ...bundlerOptions,
   });
   await app.prepare();
 
@@ -132,7 +151,7 @@ export async function startDevServer(
   const actualPort =
     typeof address === 'object' && address ? address.port : port;
   console.log(
-    `[dev-server] ready on http://${hostname}:${actualPort}${turbopack ? ' (turbopack)' : ''} (custom upgrade handler active)`,
+    `[dev-server] ready on http://${hostname}:${actualPort}${'turbopack' in bundlerOptions ? ' (turbopack)' : ' (webpack)'} (custom upgrade handler active)`,
   );
 
   return {
