@@ -13,7 +13,7 @@
 
 - The Ryzen checkout reports the published revision above. The Turbopack alias for `@alga-psa/core/capability` is already present at `server/next.config.mjs:306`; it was not changed.
 - With `Host: feature-validate-priority-type-against-board-recurring-t.localhost:3810`, `/api/health` returned HTTP 200, `/api/auth/providers` returned HTTP 200, and `/auth/msp/signin` returned HTTP 200. Requests without the card hostname can be redirected by tenant/domain middleware.
-- The board lifecycle suspended the service again because the current step is Draft Implementation and does not use `dev-server`. Thus the successful probe is fresh but the service is not yet reliably held for a smoke run.
+- The board lifecycle suspended the service again at `2026-11-03T23:08:17Z` because the current step is Draft Implementation and does not use `dev-server`. A later probe confirmed port 3810 was closed. Thus the successful probe is fresh but the service is not yet reliably held for a smoke run.
 - The registered browser tabs are visible in layout metadata, but browser IPC is not available for their Ryzen-owned panes. Current UI smoke, video, screenshots, and database checks could not be captured. `takeover-walkthrough.webm`, the screenshots, and database results in this directory are retained evidence from the earlier takeover revision, not fresh results for this recovery.
 
 ## Check status
@@ -22,6 +22,7 @@
 - Server typecheck with Node defaults: failed at the ~4 GB V8 heap limit (exit 134). Retry with `NODE_OPTIONS=--max-old-space-size=8192 npm run typecheck`: passed.
 - Production build with `NODE_OPTIONS=--max-old-space-size=24576 npm run build`: passed (exit 0). Webpack compiled in 5.1 minutes and all 74 static pages generated. Existing warnings include a conflicting star export in scheduling and dynamic dependency warnings; none blocked the build.
 - Attempted `priorityBoardType.integration.test.ts` and `recurringTicketGenerator.integration.test.ts` with `TEST_DB_NAME=pr3880_priority_test_20261103` and one worker. Both suites failed during database setup because the test PostgreSQL at port 5472 rejected the `postgres` password; all 33 tests were skipped. No tests reached assertions and no database was mutated.
+- Evidence was pushed to PR #3880 at branch commit `cc9d92283dc6fd66717653dc8a031bf850abaa60`. CI for that commit was queued when inspected; no CI result is claimed.
 - Existing takeover evidence records 44 affected UI tests passing, tickets/server typechecks passing, and a production build passing at `a055d8c541d6751d575eb8b200ca8053d54b6674`; the application source was unchanged for that build. Those results are prior evidence, not a new smoke run.
 
 ## Plan and scope notes
