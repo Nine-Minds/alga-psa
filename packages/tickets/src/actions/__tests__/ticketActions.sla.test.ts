@@ -16,6 +16,7 @@ const {
   deleteEntityWithValidationMock,
   resolveBundleRulesMock,
   deleteTicketChildRecordsMock,
+  getClientContactVisibilityContextMock,
 } = vi.hoisted(() => ({
   withTransactionMock: vi.fn(),
   createTenantKnexMock: vi.fn(),
@@ -27,6 +28,10 @@ const {
   deleteEntityWithValidationMock: vi.fn(),
   resolveBundleRulesMock: vi.fn(async (..._args: any[]): Promise<any[]> => []),
   deleteTicketChildRecordsMock: vi.fn(),
+  getClientContactVisibilityContextMock: vi.fn(async () => ({
+    effectiveTicketScope: 'contact', ticketScope: 'contact', contactId: 'contact-1', clientId: 'client-1',
+    visibleBoardIds: ['board-1'], isClientAdmin: false, visibilityGroupId: null,
+  })),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -62,11 +67,8 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: (...args: unknown[]) => resolveBundleRulesMock(...args),
 }));
 
-vi.mock('../../lib/clientPortalVisibility.server', () => ({
-  getClientContactVisibilityContext: vi.fn(async () => ({
-    effectiveTicketScope: 'contact', ticketScope: 'contact', contactId: 'contact-1', clientId: 'client-1',
-    visibleBoardIds: ['board-1'], isClientAdmin: false, visibilityGroupId: null,
-  })),
+vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
+  getClientContactVisibilityContext: (...args: unknown[]) => getClientContactVisibilityContextMock(...args),
 }));
 
 vi.mock('../../lib/deleteTicketChildRecords', () => ({
@@ -156,6 +158,10 @@ describe('ticketActions deleteTicket', () => {
     hasPermissionMock.mockReset().mockResolvedValue(true);
     deleteEntityWithValidationMock.mockReset();
     deleteTicketChildRecordsMock.mockResolvedValue(undefined);
+    getClientContactVisibilityContextMock.mockReset().mockResolvedValue({
+      effectiveTicketScope: 'contact', ticketScope: 'contact', contactId: 'contact-1', clientId: 'client-1',
+      visibleBoardIds: ['board-1'], isClientAdmin: false, visibilityGroupId: null,
+    });
   });
 
   it('cancels SLA tracking when deleting a ticket', async () => {
@@ -310,5 +316,31 @@ describe('ticketActions deleteTicket', () => {
     expect(missingTrx.ticketDeleteMock).not.toHaveBeenCalled();
     expect(invisibleTrx.ticketDeleteMock).not.toHaveBeenCalled();
     expect(invisibleTrx.getTicket()).toMatchObject({ contact_name_id: 'another-contact' });
+    expect(getClientContactVisibilityContextMock).toHaveBeenCalledTimes(1);
+    expect(getClientContactVisibilityContextMock).toHaveBeenCalledWith(invisibleTrx, 'tenant-1', 'contact-1');
+  });
+
+  it('allows an authorized client ticket to reach deletion dependency validation', async () => {
+    const trx = createMockTrx(makeTicket());
+    createTenantKnexMock.mockResolvedValue({ knex: trx });
+    const dependencyBlock = {
+      canDelete: false,
+      code: 'DEPENDENCIES_EXIST',
+      message: '1 time entry blocks deletion',
+      dependencies: [{ type: 'time_entry', count: 1 }],
+      alternatives: [{ action: 'archive' }],
+    };
+    deleteEntityWithValidationMock.mockResolvedValue(dependencyBlock);
+    const client = {
+      user_id: 'client-1', user_type: 'client', clientId: 'client-1', contact_id: 'contact-1',
+      roles: [{ role_id: 'r1' }],
+    };
+
+    const result = await (deleteTicket as any)(client, { tenant: 'tenant-1' }, 'ticket-1');
+
+    expect(result).toMatchObject({ ...dependencyBlock, success: false });
+    expect(getClientContactVisibilityContextMock).toHaveBeenCalledTimes(1);
+    expect(deleteEntityWithValidationMock).toHaveBeenCalledTimes(1);
+    expect(trx.ticketDeleteMock).not.toHaveBeenCalled();
   });
 });

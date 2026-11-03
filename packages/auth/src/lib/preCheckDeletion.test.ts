@@ -12,6 +12,10 @@ const getVisibilityMock = vi.hoisted(() => vi.fn(async () => ({
   effectiveTicketScope: 'contact', ticketScope: 'contact', contactId: 'contact-1', clientId: 'client-1',
   visibleBoardIds: ['board-1'], isClientAdmin: false, visibilityGroupId: null,
 })));
+const clientPrincipal = {
+  user_id: 'client-u', tenant: 't1', user_type: 'client', contact_id: 'contact-1', clientId: 'client-1',
+  roles: [{ role_id: 'client-role' }],
+};
 
 vi.mock('./getCurrentUser', () => ({
   getCurrentUser: (...args: any[]) => getCurrentUserMock(...args)
@@ -175,7 +179,7 @@ describe('preCheckDeletion permission mapping', () => {
         canDelete: false, code: 'DEPENDENCIES_EXIST', message: '1 time entry blocks deletion',
         dependencies: [{ type: 'time_entry', count: 1 }], alternatives: [{ action: 'archive' }]
       });
-    getCurrentUserMock.mockResolvedValue({ user_id: 'client-u', tenant: 't1', user_type: 'client' });
+    getCurrentUserMock.mockResolvedValue(clientPrincipal);
     gateFixtures.ticket = {
       ticket_id: 'hidden-ticket', assigned_to: null, entered_by: 'owner-1', client_id: 'client-1',
       board_id: 'board-1', assigned_team_id: null, contact_name_id: 'another-contact', attributes: {}
@@ -188,7 +192,34 @@ describe('preCheckDeletion permission mapping', () => {
     expect(invisible).toEqual(missing);
     expect(invisible).toMatchObject({ canDelete: false, code: 'PERMISSION_DENIED', dependencies: [], alternatives: [] });
     expect(JSON.stringify(invisible)).not.toMatch(/time_entry|archive|"count"/i);
+    expect(getVisibilityMock).toHaveBeenCalledTimes(1);
+    expect(getVisibilityMock).toHaveBeenCalledWith({}, 't1', 'contact-1');
     expect(validateDeletionMock).not.toHaveBeenCalled();
+  });
+
+  it('preserves dependency blocking for an authorized client principal', async () => {
+    getDeletionConfigMock.mockReturnValueOnce({ entityType: 'ticket', dependencies: [] });
+    getCurrentUserMock.mockResolvedValueOnce(clientPrincipal);
+    gateFixtures.ticket = {
+      ticket_id: 'client-visible-ticket', assigned_to: null, entered_by: 'owner-1', client_id: 'client-1',
+      board_id: 'board-1', assigned_team_id: null, contact_name_id: 'contact-1', attributes: {}
+    };
+    const blockingResult = {
+      canDelete: false,
+      code: 'DEPENDENCIES_EXIST',
+      message: '1 time entry blocks deletion',
+      dependencies: [{ type: 'time_entry', count: 1 }],
+      alternatives: [{ action: 'archive' }]
+    };
+    validateDeletionMock.mockResolvedValueOnce(blockingResult);
+
+    await expect(preCheckDeletion('ticket', 'client-visible-ticket')).resolves.toEqual(blockingResult);
+
+    expect(getVisibilityMock).toHaveBeenCalledTimes(1);
+    expect(hasPermissionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ ...clientPrincipal }), 'ticket', 'delete', expect.anything()
+    );
+    expect(validateDeletionMock).toHaveBeenCalledTimes(1);
   });
 
   it('preserves dependency blocking for an authorized ticket', async () => {

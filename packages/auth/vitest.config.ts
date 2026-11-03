@@ -23,6 +23,10 @@ export default defineConfig({
         '../authorization/src/ticketRecordAuthorization.ts'
       ),
       '@alga-psa/authorization/rbac': path.resolve(__dirname, '../authorization/src/rbac.ts'),
+      '@alga-psa/authorization/portal/visibility.server': path.resolve(
+        __dirname,
+        '../authorization/src/portal/visibility.server.ts'
+      ),
       '@alga-psa/documents/lib/avatarUtils': path.resolve(__dirname, '../documents/src/lib/avatarUtils.ts'),
       '@alga-psa/documents/actions/documentActions': path.resolve(__dirname, '../documents/src/actions/documentActions.ts'),
       '@alga-psa/client-portal/models/PortalDomainModel': path.resolve(
