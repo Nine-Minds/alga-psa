@@ -17,7 +17,8 @@ vi.mock('@alga-psa/db', () => {
     const q: any = new Proxy({}, { get(_target, prop) {
       if (prop === 'then') return (resolve: any) => {
         const result = rows(table, selection, filters);
-        if (table === 'project_phases' && ordering) result.sort((a: any, b: any) => String(a[ordering]).localeCompare(String(b[ordering])));
+        const orderColumn = ordering;
+        if (table === 'project_phases' && orderColumn) result.sort((a: any, b: any) => String(a[orderColumn]).localeCompare(String(b[orderColumn])));
         return Promise.resolve(result).then(resolve);
       };
       if (prop === 'select') return (...columns: any[]) => { selection = columns; return q; };
