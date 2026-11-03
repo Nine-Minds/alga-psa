@@ -10,7 +10,7 @@ const h = vi.hoisted(() => ({
   resolverCalls: 0,
 }));
 
-vi.mock('@alga-psa/auth', () => ({
+vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn(async (...args: unknown[]) => { h.permissionCalls.push(args); return h.permission; }),
 }));
 vi.mock('@alga-psa/db', () => ({

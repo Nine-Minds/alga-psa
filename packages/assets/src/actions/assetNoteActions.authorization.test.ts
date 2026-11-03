@@ -9,8 +9,8 @@ const h = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'user-1', user_type: 'internal' }, { tenant: 'tenant-1' }, ...args),
-  hasPermission: vi.fn(async () => true),
 }));
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: h })),
   withTransaction: vi.fn(async (_knex: unknown, cb: (trx: any) => Promise<unknown>) => cb(h)),

@@ -1,6 +1,6 @@
 export * from '@alga-psa/authorization/assetReadAuthorization';
 
-import { hasPermission } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import {
