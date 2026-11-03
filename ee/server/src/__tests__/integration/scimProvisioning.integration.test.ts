@@ -6,7 +6,7 @@ import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '@ee/lib/testing/db-test-utils';
 import { SCIM_USER_SCHEMA } from '@ee/lib/scim/protocol';
 import { generateScimToken } from '@ee/lib/scim/credentials';
-import { handleScimPost, handleScimPut } from '@ee/lib/scim/handler';
+import { handleScimPatch, handleScimPost, handleScimPut } from '@ee/lib/scim/handler';
 import { ScimProvisioningService } from '@ee/lib/scim/service';
 
 const { getAdminConnectionMock } = vi.hoisted(() => ({ getAdminConnectionMock: vi.fn() }));
@@ -174,6 +174,29 @@ describe('SCIM provisioning database lifecycle', () => {
         .first(['upstream_active', 'link_state', 'scim_inactive_at'])).toEqual(linkBefore);
       expect(await customer.table('users').where({ user_id: fixture.userId }).first('is_inactive'))
         .toEqual(userBefore);
+    } finally { await fixture.trx.rollback(); }
+  });
+
+  it('PATCH without an active operation preserves the linked identity lifecycle state', async () => {
+    const fixture = await reactivationFixture();
+    try {
+      getAdminConnectionMock.mockResolvedValue(fixture.trx);
+      const customer = tenantDb(fixture.trx, fixture.tenant);
+      const response = await handleScimPatch(new Request(`https://example.test/api/scim/v2/test/Users/${fixture.linkId}`, {
+        method: 'PATCH',
+        headers: { authorization: `Bearer ${fixture.token}`, 'content-type': 'application/scim+json' },
+        body: JSON.stringify({
+          schemas: ['urn:ietf:params:scim:api:messages:2.0:PatchOp'],
+          Operations: [{ op: 'replace', path: 'displayName', value: 'Ada Lovelace' }],
+        }),
+      }), { connectionId: fixture.connection.connection_id, scimPath: ['Users', fixture.linkId] });
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ displayName: 'Ada Lovelace', active: false });
+      expect(await customer.table('users').where({ user_id: fixture.userId }).first('is_inactive'))
+        .toMatchObject({ is_inactive: true });
+      expect(await customer.table('scim_user_links').where({ link_id: fixture.linkId })
+        .first(['upstream_active', 'scim_inactive_at'])).toMatchObject({ upstream_active: false });
     } finally { await fixture.trx.rollback(); }
   });
 
