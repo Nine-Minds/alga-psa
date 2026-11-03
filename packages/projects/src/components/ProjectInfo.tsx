@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IClient, IProject, IProjectPhase, IUserWithRoles } from '@alga-psa/types';
+import { IProject, IProjectPhase, IUserWithRoles } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import HoursProgressBar from './HoursProgressBar';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
@@ -40,7 +40,6 @@ interface ProjectInfoProps {
   };
   assignedUser?: IUserWithRoles;
   users: IUserWithRoles[];
-  clients: IClient[];
   onContactChange?: (contactId: string | null) => void;
   onAssignedUserChange?: (userId: string | null) => void;
   onProjectUpdate?: (project: IProject) => void;
@@ -64,7 +63,6 @@ export default function ProjectInfo({
   contact,
   assignedUser,
   users,
-  clients,
   onContactChange,
   onAssignedUserChange,
   onProjectUpdate,
@@ -158,7 +156,6 @@ export default function ProjectInfo({
     openDrawer(
       <ProjectDetailsEdit
         initialProject={currentProject}
-        clients={clients}
         onSave={(updatedProject) => {
           setCurrentProject(updatedProject);
           if (onProjectUpdate) {

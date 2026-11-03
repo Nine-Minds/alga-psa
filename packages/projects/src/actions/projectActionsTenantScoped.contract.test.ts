@@ -24,7 +24,6 @@ describe('project actions tenant-scoped query contract', () => {
     expect(sharedAuthorizationSource).toContain("tenantScopedTable(conn, 'users', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_phases', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_status_mappings', tenant)");
-    expect(source).toContain("tenantScopedTable(trx, 'clients', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'projects', tenant)");
     expect(source).toContain("tenantScopedTable(trx, 'project_status_mappings as psm', tenant)");
     expect(source).toContain("db.tenantJoin(statusMappingsQuery, 'standard_statuses as ss'");
