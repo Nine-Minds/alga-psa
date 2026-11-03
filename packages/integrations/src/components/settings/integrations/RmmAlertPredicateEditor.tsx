@@ -30,6 +30,33 @@ const valueForOperator = (operator: PredicateOperator, current: unknown): string
     ? Array.isArray(current) ? current.map(String) : current == null || current === '' ? [] : [String(current)]
     : Array.isArray(current) ? String(current[0] ?? '') : String(current ?? '');
 
+/** Preserve separators and spaces while typing; only the predicate value is normalized. */
+function PredicateValueInput({ id, value, operator, disabled, label, onChange }: {
+  id: string;
+  value: unknown;
+  operator: PredicateOperator;
+  disabled?: boolean;
+  label: string;
+  onChange: (value: string | string[]) => void;
+}) {
+  const formatted = Array.isArray(value) ? value.join(', ') : String(value ?? '');
+  const [draft, setDraft] = React.useState(formatted);
+  const [editing, setEditing] = React.useState(false);
+  React.useEffect(() => {
+    if (!editing) setDraft(formatted);
+  }, [formatted, editing]);
+
+  return <Input id={id} value={draft} disabled={disabled} aria-label={label}
+    onFocus={() => setEditing(true)}
+    onBlur={() => setEditing(false)}
+    onChange={event => {
+      const text = event.target.value;
+      setDraft(text);
+      onChange(listOps.has(operator) ? text.split(',').map(item => item.trim()).filter(Boolean) : text);
+    }}
+  />;
+}
+
 function mapAt(group: PredicateGroup, path: number[], fn: (node: PredicateNode) => PredicateNode): PredicateGroup {
   if (!path.length) return fn(group) as PredicateGroup;
   const [index, ...tail] = path;
@@ -83,7 +110,13 @@ export default function RmmAlertPredicateEditor({ value, fields, onChange, disab
           const operator = operatorValue as PredicateOperator;
           updateAt(childPath, () => ({ ...clause, operator, value: valueForOperator(operator, clause.value) }));
         }} options={operators.map(operator=>({value:operator,label:t(`integrations.rmm.alertAutomation.predicate.operators.${operator}`,operator.replaceAll('_',' '))}))}/>
-        {!noValueOps.has(clause.operator) && <Input id={`rmm-predicate-value-${childPath.join('-')}`} value={Array.isArray(clause.value) ? clause.value.join(', ') : String(clause.value ?? '')} onChange={(event)=>updateAt(childPath, () => ({ ...clause, value:listOps.has(clause.operator) ? event.target.value.split(',').map(v=>v.trim()).filter(Boolean) : event.target.value }))} disabled={disabled} aria-label={t('integrations.rmm.alertAutomation.predicate.value','Value')}/>}
+        {!noValueOps.has(clause.operator) && <PredicateValueInput
+          key={`${clause.path}-${clause.operator}`}
+          id={`rmm-predicate-value-${childPath.join('-')}`}
+          value={clause.value} operator={clause.operator} disabled={disabled}
+          label={t('integrations.rmm.alertAutomation.predicate.value','Value')}
+          onChange={value => updateAt(childPath, () => ({ ...clause, value }))}
+        />}
         {noValueOps.has(clause.operator) && <div />}
         <Button id={`rmm-predicate-remove-${childPath.join('-')}`} type="button" variant="outline" onClick={()=>onChange({ ...root, ...removeAt(root, childPath) })} disabled={disabled}>{t('integrations.rmm.alertAutomation.predicate.remove','Remove')}</Button>
       </div>;

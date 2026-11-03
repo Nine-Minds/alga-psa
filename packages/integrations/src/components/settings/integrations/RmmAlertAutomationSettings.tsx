@@ -443,7 +443,7 @@ function RuleEditorDialog({
     }));
   };
 
-  const isCatchAll = f.conditions.clauses.length === 0;
+  const isCatchAll = f.conditions.clauses.length === 0 && f.conditions.legacyMessagePattern === undefined;
 
   const canSave = f.name.trim().length > 0 && !saving;
 

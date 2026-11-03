@@ -71,6 +71,30 @@ describe('RmmAlertPredicateEditor', () => {
     expect(onChange).toHaveBeenLastCalledWith({ join: 'and', clauses: [] });
   });
 
+  it('preserves typed spaces and separators while entering multiple list values', () => {
+    const onChange = vi.fn();
+    function Editor() {
+      const [value, setValue] = React.useState<PredicateGroup>({
+        join: 'and', clauses: [{ path: 'alertClass', operator: 'in', value: [] }],
+      });
+      return <RmmAlertPredicateEditor value={value} fields={RMM_ALERT_PREDICATE_FIELDS}
+        onChange={next => { setValue(next); onChange(next); }}
+        t={(_key, fallback) => fallback ?? _key} />;
+    }
+    render(<Editor />);
+    const input = screen.getByRole('textbox', { name: 'Value' }) as HTMLInputElement;
+    fireEvent.focus(input);
+    for (const text of ['Critical ', 'Critical Service Crashed, ', 'Critical Service Crashed, Other Service']) {
+      fireEvent.change(input, { target: { value: text } });
+      expect(input.value).toBe(text);
+    }
+    expect(onChange).toHaveBeenLastCalledWith({
+      join: 'and', clauses: [{ path: 'alertClass', operator: 'in', value: ['Critical Service Crashed', 'Other Service'] }],
+    });
+    fireEvent.blur(input);
+    expect(input.value).toBe('Critical Service Crashed, Other Service');
+  });
+
   it('keeps legacy regex conditions visible while editing other clauses', () => {
     const onChange = vi.fn();
     render(<RmmAlertPredicateEditor value={{ join: 'and', clauses: [], legacyMessagePattern: 'Sentinel.*' }} fields={RMM_ALERT_PREDICATE_FIELDS} onChange={onChange} t={(_key, fallback) => fallback ?? _key} />);

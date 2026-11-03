@@ -50,6 +50,31 @@ describe('rule conditions schema', () => {
     expect(rmmAlertRuleConditionsSchema.safeParse({ join: 'and', clauses: [{ path: 'severity', operator: 'contains_ci', value: 'critical' }] }).success).toBe(false);
   });
 
+  it.each([
+    undefined, null, false, 0, [],
+    { join: 'invalid', clauses: [] },
+    { join: 'and', clauses: null },
+    { join: 'and', clauses: {} },
+    { join: 'and', clauses: [null] },
+    { join: 'and', clauses: [{ join: 'invalid', clauses: [] }] },
+    { join: 'and', clauses: [{ join: 'or', clauses: null }] },
+    { join: 'and', clauses: [{ path: 'text', operator: 'contains_ci' }] },
+    { join: 'and', clauses: [], extra: true },
+    { join: 'and', clauses: [], legacyMessagePattern: 'Sentinel.*', extra: true },
+    { join: 'and', clauses: [{ path: 'text', operator: 'contains_ci', value: 'Sentinel', extra: true }] },
+    { join: 'and', clauses: [{ join: 'or', clauses: [], extra: true }] },
+  ])('rejects malformed predicate input without throwing: %j', (input) => {
+    expect(rmmAlertRuleConditionsSchema.safeParse(input).success).toBe(false);
+    expect(rmmAlertRuleConditionsSchema.safeParse(JSON.stringify(input)).success).toBe(false);
+  });
+
+  it('rejects unknown stored keys during normalization rather than silently discarding them', async () => {
+    const { normalizeRmmAlertConditions } = await import('@alga-psa/shared/rmm/alerts');
+    expect(() => normalizeRmmAlertConditions({
+      join: 'and', clauses: [], legacyMessagePattern: 'Sentinel.*', extra: true,
+    })).toThrow('Invalid stored RMM alert conditions');
+  });
+
   it('rejects an invalid regex in messagePattern', () => {
     const parsed = rmmAlertRuleConditionsSchema.safeParse({ messagePattern: '([invalid' });
     expect(parsed.success).toBe(false);
