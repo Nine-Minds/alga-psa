@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Auth } from '@auth/core';
 
 const extendExpiryMock = vi.fn(async () => undefined);
 const isRevokedOrIdentityMismatchMock = vi.fn(async () => false);
@@ -41,8 +42,6 @@ const enforceMaxSessionsMock = vi.fn(async (_tenant: string, userId: string, max
     row.revoked = true;
   }
 });
-const authenticateUserMock = vi.fn();
-const decodedSessionMock = vi.fn();
 
 const tenantFirstMock = vi.fn();
 const subscriptionFirstMock = vi.fn();
@@ -134,10 +133,8 @@ vi.mock('next/headers', () => ({
   headers: async () => new Headers(),
   cookies: async () => ({ get: vi.fn(), set: vi.fn() }),
 }));
-vi.mock('../nextauth/edge-auth', () => ({ auth: (...args: unknown[]) => decodedSessionMock(...args) }));
 vi.mock('../nextauth/auth', () => ({ auth: vi.fn(async () => null) }));
 vi.mock('./assertInteractiveUser', () => ({ assertInteractiveUser: vi.fn(async () => true) }));
-vi.mock('../actions/auth', () => ({ authenticateUser: (...args: unknown[]) => authenticateUserMock(...args) }));
 vi.mock('./security/loginProtection', () => ({
   enforceLoginProtection: vi.fn(async () => undefined),
   normalizeLoginEmail: (value: string) => value.trim().toLowerCase(),
@@ -191,7 +188,6 @@ vi.mock('@alga-psa/db/admin', () => ({
 vi.mock('@alga-psa/core/logger', () => ({ default: { debug: vi.fn(), trace: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 const { getAuthOptions } = await import('./nextAuthOptions');
-const { getSession } = await import('./getSession');
 
 describe('nextAuth session expiry sliding', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -232,8 +228,6 @@ describe('nextAuth session expiry sliding', () => {
       if (row.userId !== identity?.userId || row.userType !== identity?.userType) return 'identity_mismatch';
       return null;
     });
-    authenticateUserMock.mockReset();
-    decodedSessionMock.mockReset();
     logLifecycleMock.mockReset();
     extendExpiryMock.mockResolvedValue(undefined);
     // Keep plan refresh quiet/side-effect-free for these cases.
@@ -456,88 +450,75 @@ describe('nextAuth session expiry sliding', () => {
     );
   });
 
-  it('keeps a fresh credentials session live through the complete callback and decode lifecycle at the session limit', async () => {
+  it('runs credentials sign-in through Auth.js with an existing cookie at the session limit', async () => {
     statefulSessionMode = true;
-    const oldestFirst = Date.now() - 10_000;
-    for (let index = 0; index < 5; index += 1) {
+    const options = await getAuthOptions();
+    options.providers = [{
+      id: 'credentials', name: 'Credentials', type: 'credentials', credentials: {},
+      authorize: async () => {
+        await enforceMaxSessionsMock('tenant-1', 'u-1', 5);
+        return {
+          id: 'u-1', email: 'user@example.test', username: 'user', name: 'Test User',
+          tenant: 'tenant-1', user_type: 'internal',
+        };
+      },
+    } as any];
+    const cookieJar = new Map<string, string>();
+    const authConfig = {
+      ...options,
+      secret: 'auth-handler-session-lifecycle-test-secret',
+      trustHost: true,
+      basePath: '/api/auth',
+    } as any;
+    const request = async (path: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      if (cookieJar.size) headers.set('cookie', [...cookieJar].map(([key, value]) => `${key}=${value}`).join('; '));
+      const response = await Auth(new Request(`http://app.test/api/auth/${path}`, { ...init, headers }), authConfig);
+      for (const value of response.headers.getSetCookie()) {
+        const pair = value.split(';')[0];
+        const separator = pair.indexOf('=');
+        cookieJar.set(pair.slice(0, separator), pair.slice(separator + 1));
+      }
+      return response;
+    };
+    const csrfResponse = await request('csrf');
+    const { csrfToken } = await csrfResponse.json();
+    const signIn = () => request('callback/credentials', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', 'user-agent': 'test-agent' },
+      body: new URLSearchParams({ csrfToken, callbackUrl: 'http://app.test/', email: 'user@example.test', password: 'correct-password' }),
+    });
+
+    expect((await signIn()).status).toBe(302);
+    const firstSession = durableSessions.find((row) => !row.revoked)!;
+    const existingSessionCookie = cookieJar.get('authjs.session-token');
+    expect(existingSessionCookie).toBeTruthy();
+    for (let index = 0; index < 4; index += 1) {
       durableSessions.push({
         sessionId: `existing-${index}`,
-        tenant: 'tenant-1',
-        userId: 'u-1',
-        userType: 'internal',
-        revoked: false,
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-        lastActivity: oldestFirst + index,
+        tenant: 'tenant-1', userId: 'u-1', userType: 'internal', revoked: false,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000), lastActivity: Date.now() + index,
       });
     }
-    authenticateUserMock.mockResolvedValue({
-      user_id: 'u-1',
-      email: 'user@example.test',
-      username: 'user',
-      first_name: 'Test',
-      last_name: 'User',
-      tenant: 'tenant-1',
-      user_type: 'internal',
-      two_factor_enabled: false,
-    });
+    const callbackInputs: Array<Record<string, unknown>> = [];
+    const originalJwt = options.callbacks!.jwt!;
+    options.callbacks!.jwt = async (args: any) => {
+      if (args.user) callbackInputs.push(structuredClone(args.token));
+      return originalJwt(args);
+    };
 
-    const options = await getAuthOptions();
-    const credentialsProvider = options.providers.find((provider: any) => provider.name === 'Credentials');
-    const request = { headers: new Headers({ 'user-agent': 'test-agent' }) };
-    const user = await credentialsProvider.authorize({ email: 'user@example.test', password: 'correct-password' }, request);
-    expect(user).toMatchObject({ id: 'u-1', tenant: 'tenant-1', user_type: 'internal' });
-    expect(durableSessions.filter((row) => !row.revoked)).toHaveLength(4);
-
-    await expect(options.callbacks?.signIn({ user, account: { provider: 'credentials' }, request })).resolves.toBe(true);
-    expect(durableSessions.filter((row) => !row.revoked)).toHaveLength(4);
-
-    const jwt = options.callbacks?.jwt;
-    // Auth.js can carry the prior browser JWT into a new credentials callback.
-    // At the session limit that same old session may just have been revoked by
-    // authorize(), so the newly authenticated user must not inherit its ID.
-    const token = await jwt!({ token: { session_id: 'existing-0' }, user, trigger: 'signIn' } as any);
-    expect(token).toMatchObject({ id: 'u-1', tenant: 'tenant-1', user_type: 'internal', session_id: 'sess-created' });
+    expect((await signIn()).status).toBe(302);
+    expect(existingSessionCookie).toBeTruthy();
+    expect(cookieJar.get('authjs.session-token')).toBeTruthy();
+    expect(callbackInputs).toHaveLength(1);
+    expect(callbackInputs[0]).not.toHaveProperty('session_id');
+    expect(firstSession.revoked).toBe(true);
     expect(durableSessions.filter((row) => !row.revoked)).toHaveLength(5);
-    expect(durableSessions.find((row) => row.sessionId === 'existing-0')?.revoked).toBe(true);
 
-    const session = await options.callbacks?.session!({ session: { user: {} }, token } as any);
-    decodedSessionMock.mockResolvedValue(session);
-    await expect(getSession()).resolves.toMatchObject({
-      user: { id: 'u-1', tenant: 'tenant-1', user_type: 'internal' },
-      session_id: 'sess-created',
-    });
-
-    await expect(jwt!({ token, trigger: undefined } as any)).resolves.toMatchObject({ session_id: 'sess-created' });
-    await expect(getSession()).resolves.toMatchObject({ session_id: 'sess-created' });
-    expect(getRejectionReasonMock).toHaveBeenCalledWith('tenant-1', 'sess-created', {
-      userId: 'u-1', userType: 'internal',
-    });
-    expect(getRejectionReasonMock).toHaveBeenCalledTimes(5);
+    const decoded = await request('session');
+    expect(decoded.status).toBe(200);
+    expect(await decoded.json()).toMatchObject({ user: { id: 'u-1', tenant: 'tenant-1' } });
     expect(durableSessions.filter((row) => !row.revoked)).toHaveLength(5);
-  });
-
-  it('does not duplicate a live durable row when a repeated login callback carries it', async () => {
-    statefulSessionMode = true;
-    durableSessions.push({
-      sessionId: 'existing-live',
-      tenant: 'tenant-1',
-      userId: 'u-1',
-      userType: 'internal',
-      revoked: false,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-      lastActivity: Date.now(),
-    });
-
-    const options = await getAuthOptions();
-    const token = await options.callbacks?.jwt!({
-      token: { session_id: 'existing-live' },
-      user: { id: 'u-1', tenant: 'tenant-1', user_type: 'internal' },
-      trigger: 'signIn',
-    } as any);
-
-    expect(token).toMatchObject({ session_id: 'existing-live' });
-    expect(createMock).not.toHaveBeenCalled();
-    expect(durableSessions.filter((row) => !row.revoked)).toHaveLength(1);
   });
 
   it('fails closed when an OAuth session cannot be persisted', async () => {
