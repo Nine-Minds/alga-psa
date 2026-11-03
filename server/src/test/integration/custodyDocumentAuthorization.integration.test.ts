@@ -9,6 +9,7 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/
 import { seedLabelWorld, type LabelWorld } from './labelsFixtures';
 import { authorizeAndRedactDocuments, canAuthorizeDocumentAssociation } from '@shared/lib/documentAuthorization';
 import { createBlockDocument } from '@alga-psa/block-content/actions/blockContentActions';
+import { getBlockContent } from '@alga-psa/documents/actions/documentBlockContentActions';
 
 const session = vi.hoisted(() => ({ user: null as any, db: null as any, tenant: '' }));
 vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: async () => session.user }));
@@ -66,6 +67,14 @@ describe('asset-associated document authorization', () => {
     await db('documents').where({ tenant: world.tenant, document_id }).update({
       file_id: fileIds[0], thumbnail_file_id: fileIds[1], preview_file_id: fileIds[2], mime_type: 'image/png',
     });
+    await db('document_block_content').insert({
+      tenant: world.tenant,
+      document_id,
+      content_id: randomUUID(),
+      block_data: JSON.stringify({ body: 'private block document payload' }),
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
     doc = await db('documents').where({ tenant: world.tenant, document_id }).first();
   }, 180_000);
   afterAll(async () => { await db?.destroy(); rmSync(dir, { recursive: true, force: true }); });
@@ -76,6 +85,24 @@ describe('asset-associated document authorization', () => {
   });
   it('refuses a user without asset access', async () => {
     expect(await read(world.noPerm)).toEqual([]);
+  });
+  it('denies block document content when a record-level asset boundary rejects the document', async () => {
+    const invoke = () => getBlockContent(doc.document_id);
+
+    session.user = world.tech;
+    const allowed = await invoke();
+    expect(allowed).toMatchObject({ block_data: { body: 'private block document payload' } });
+
+    session.user = world.restricted;
+    try {
+      const denied = await invoke();
+      expect(denied).toMatchObject({
+        permissionError: 'Permission denied: Cannot read documents',
+        messageKey: 'documents:errors.permissions.read',
+      });
+    } finally {
+      session.user = world.tech;
+    }
   });
   it('honours a verified mailbox grant for a roleless recipient but never for an asset-linked document', async () => {
     // Callers own document RBAC; a verified recipient has no roles, only the lifecycle grant.
