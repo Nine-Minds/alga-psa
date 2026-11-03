@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { useCredentialSignIn } from './useCredentialSignIn';
+import type { TwoFactorContinuation } from './useTwoFactorChallenge';
 import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { Label, Input, Button, Alert, AlertDescription, AlertTitle, Checkbox } from '@alga-psa/ui/components';
@@ -31,7 +32,7 @@ interface MspLoginFormProps {
   /** Open with the "email me sign-in links" offer (SSO `tenant_required` hand-off). */
   initialTenantRequired?: boolean;
   onError: (alertInfo: AlertProps) => void;
-  onTwoFactorRequired: () => void;
+  onTwoFactorRequired: (submit: TwoFactorContinuation) => void;
 }
 
 export default function MspLoginForm({
@@ -53,6 +54,7 @@ export default function MspLoginForm({
   const [linksRequested, setLinksRequested] = useState(false);
   const [isSendingLinks, setIsSendingLinks] = useState(false);
   const captcha = useLoginCaptcha();
+  const signInCredentials = useCredentialSignIn();
   const { t } = useTranslation('msp/auth', { useSuspense: false });
 
   useEffect(() => {
@@ -94,13 +96,12 @@ export default function MspLoginForm({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitCredentials = async (twoFactorCode?: string) => {
     setLookupError(null);
     setIsSubmitting(true);
 
     try {
-      const result = (await signIn('credentials', {
+      const result = await signInCredentials({
         email,
         password,
         userType: 'internal',
@@ -108,10 +109,10 @@ export default function MspLoginForm({
         redirect: false,
         callbackUrl,
         ...(captcha.token ? { captchaToken: captcha.token } : {}),
-      })) as unknown as { error?: string; code?: string; url?: string } | undefined;
+      }, twoFactorCode);
 
-      if (result?.error === '2FA_REQUIRED') {
-        onTwoFactorRequired();
+      if (result?.code === '2FA_REQUIRED') {
+        onTwoFactorRequired(submitCredentials);
       } else if (result?.code === 'CAPTCHA_REQUIRED') {
         await captcha.requireCaptcha();
         setLookupError(t('signIn.errors.captchaRequired', 'Please complete the verification below, then sign in again.'));
@@ -155,7 +156,10 @@ export default function MspLoginForm({
   return (
     <form 
       className="mt-8 space-y-6" 
-      onSubmit={handleSubmit}
+      onSubmit={(event) => {
+        event.preventDefault();
+        void submitCredentials();
+      }}
       method="POST"
       {...withDataAutomationId({ id: 'msp-login-form' })}
     >

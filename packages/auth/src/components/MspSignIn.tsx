@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components';
 import MspLoginForm, { type RequestSignInLinks } from './MspLoginForm';
 import TwoFactorInput from './TwoFA';
+import { useTwoFactorChallenge } from './useTwoFactorChallenge';
 import Alert from './Alert';
 import type { AlertProps } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -34,7 +35,7 @@ const FEATURES = [
 export default function MspSignIn({ requestSignInLinks, initialEmail, scopedTenant }: MspSignInProps) {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
-  const [isOpen2FA, setIsOpen2FA] = useState(false);
+  const twoFactor = useTwoFactorChallenge();
   const searchParams = useSearchParams();
   const { t } = useTranslation('msp/auth', { useSuspense: false });
 
@@ -84,10 +85,6 @@ export default function MspSignIn({ requestSignInLinks, initialEmail, scopedTena
     }
   }, [error, reason, providerEmail, t]);
 
-  const handle2FA = (twoFactorCode: string) => {
-    setIsOpen2FA(false);
-  };
-
   const handleError = (error: AlertProps | string) => {
     if (typeof error === 'string') {
       // SsoProviderButtons signals "clear previous error" with an empty string.
@@ -109,9 +106,9 @@ export default function MspSignIn({ requestSignInLinks, initialEmail, scopedTena
   return (
     <div className="min-h-screen auth-page-surface">
       <TwoFactorInput
-        isOpen={isOpen2FA}
-        onClose={() => setIsOpen2FA(false)}
-        onComplete={handle2FA}
+        isOpen={twoFactor.isOpen}
+        onClose={twoFactor.cancel}
+        onComplete={twoFactor.complete}
       />
 
       <Alert
@@ -240,7 +237,7 @@ export default function MspSignIn({ requestSignInLinks, initialEmail, scopedTena
                 tenantSlug={scopedTenant?.slug}
                 initialTenantRequired={ssoTenantRequired}
                 onError={handleError}
-                onTwoFactorRequired={() => setIsOpen2FA(true)}
+                onTwoFactorRequired={twoFactor.request}
               />
               <div className="mt-6 text-center">
                 <a href="/auth/client-portal/signin" className="block text-sm text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]">

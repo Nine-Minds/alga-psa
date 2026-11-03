@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import ClientLoginForm from './ClientLoginForm';
 import TwoFactorInput from './TwoFA';
+import { useTwoFactorChallenge } from './useTwoFactorChallenge';
 import Alert from './Alert';
 import type { AlertProps } from '@alga-psa/types';
 import { Ticket, FileText, Eye, History } from 'lucide-react';
@@ -30,7 +31,7 @@ export default function ClientPortalSignIn({ branding, portalDomain, tenantSlug:
   const { t } = useTranslation('client-portal');
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
-  const [isOpen2FA, setIsOpen2FA] = useState(false);
+  const twoFactor = useTwoFactorChallenge();
   const searchParams = useSearchParams();
 
   const callbackUrl = searchParams?.get('callbackUrl') || '/client-portal/dashboard';
@@ -92,10 +93,6 @@ export default function ClientPortalSignIn({ branding, portalDomain, tenantSlug:
       setIsAlertOpen(true);
     }
   }, [error, registered, reason, providerEmail, t]);
-
-  const handle2FA = (_twoFactorCode: string) => {
-    setIsOpen2FA(false);
-  };
 
   const handleError = (error: AlertProps | string) => {
     if (typeof error === 'string') {
@@ -206,9 +203,9 @@ export default function ClientPortalSignIn({ branding, portalDomain, tenantSlug:
     <div className={typeof gradientStyle === 'string' ? `min-h-screen ${gradientStyle}` : 'min-h-screen'}
          style={typeof gradientStyle === 'object' ? gradientStyle : undefined}>
       <TwoFactorInput
-        isOpen={isOpen2FA}
-        onClose={() => setIsOpen2FA(false)}
-        onComplete={handle2FA}
+        isOpen={twoFactor.isOpen}
+        onClose={twoFactor.cancel}
+        onComplete={twoFactor.complete}
       />
 
       <Alert
@@ -348,7 +345,7 @@ export default function ClientPortalSignIn({ branding, portalDomain, tenantSlug:
               <ClientLoginForm
                 callbackUrl={callbackUrl}
                 onError={handleError}
-                onTwoFactorRequired={() => setIsOpen2FA(true)}
+                onTwoFactorRequired={twoFactor.request}
                 tenantSlug={tenantSlug}
                 portalDomain={resolvedPortalDomain}
               />

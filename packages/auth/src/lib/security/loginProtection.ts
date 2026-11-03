@@ -66,6 +66,11 @@ export class TenantRequiredError extends CredentialsSignin {
   code = 'TENANT_REQUIRED';
 }
 
+/** Password verified, but a second factor is still required; no session is issued. */
+export class TwoFactorRequiredError extends CredentialsSignin {
+  code = '2FA_REQUIRED';
+}
+
 export interface LoginAttemptContext {
   /** Normalized (trimmed, lowercased) email the attempt is for. */
   email: string;

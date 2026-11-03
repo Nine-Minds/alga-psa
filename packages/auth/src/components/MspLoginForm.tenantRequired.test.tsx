@@ -176,8 +176,8 @@ describe('MspLoginForm TENANT_REQUIRED handling', () => {
     expect(refreshChallengeMock).not.toHaveBeenCalled();
   });
 
-  it('leaves the 2FA_REQUIRED branch unchanged', async () => {
-    const { onError, onTwoFactorRequired } = await submitWith({ error: '2FA_REQUIRED' });
+  it('surfaces the second-factor challenge without a generic failure', async () => {
+    const { onError, onTwoFactorRequired } = await submitWith({ error: 'CredentialsSignin', code: '2FA_REQUIRED' });
     await waitFor(() => expect(onTwoFactorRequired).toHaveBeenCalledTimes(1));
     expect(onError).not.toHaveBeenCalled();
   });
