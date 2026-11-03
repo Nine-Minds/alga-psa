@@ -174,11 +174,16 @@ export async function runAuthorizedSearchCandidates(input: {
   sort?: 'relevance' | 'recent';
   includeSnippets?: boolean;
   searchIndex?: SearchQueryOptions['searchIndex'];
-}): Promise<{ visibleHits: SearchIndexHit[]; groups: Record<SearchObjectType, number> }> {
+}): Promise<{
+  visibleHits: SearchIndexHit[];
+  groups: Record<SearchObjectType, number>;
+  rankingAsOf: string;
+}> {
   const sort = input.sort ?? 'relevance';
   // Validate at the action boundary even though this cursor is applied after
   // authorization rather than to the raw candidate query.
   const pageCursor = decodeSearchCursor(input.cursor);
+  const rankingAsOf = pageCursor?.rankingAsOf ?? new Date().toISOString();
   const clientAccess = resolveClientAccess(input.user);
   const acl = await resolveSearchAclPrincipal(input.knex, input.user, clientAccess);
   const allowedTypes = filterTypesByPermission(input.requestedTypes, acl.permissions);
@@ -195,6 +200,7 @@ export async function runAuthorizedSearchCandidates(input: {
       limit: AUTHORIZED_SEARCH_SCAN_SIZE,
       cursor: candidateCursor,
       sort,
+      rankingAsOf,
       includeSnippets: input.includeSnippets,
       acl,
       searchIndex: input.searchIndex,
@@ -210,7 +216,7 @@ export async function runAuthorizedSearchCandidates(input: {
     }
 
     if (batch.length < AUTHORIZED_SEARCH_SCAN_SIZE) break;
-    const nextCursor = encodeSearchCursor(batch[batch.length - 1]);
+    const nextCursor = encodeSearchCursor(batch[batch.length - 1], rankingAsOf);
     if (nextCursor === candidateCursor) {
       throw new Error('Search candidate scan did not advance its cursor');
     }
@@ -220,6 +226,7 @@ export async function runAuthorizedSearchCandidates(input: {
   return {
     visibleHits,
     groups,
+    rankingAsOf,
   };
 }
 
@@ -242,7 +249,7 @@ export async function runAppSearch(
 ): Promise<SearchAppResult> {
   const limit = normalizeLimit(input.limit);
   const requestedTypes = resolveAllowedTypes(input.types);
-  const { visibleHits, groups } = await runAuthorizedSearchCandidates({
+  const { visibleHits, groups, rankingAsOf } = await runAuthorizedSearchCandidates({
     knex,
     tenant,
     user,
@@ -262,7 +269,9 @@ export async function runAppSearch(
     results: pageHits.map(toSearchResultRow),
     groups,
     totalCount,
-    nextCursor: visibleHits.length > limit && lastHit ? encodeSearchCursor(lastHit) : undefined,
+    nextCursor: visibleHits.length > limit && lastHit
+      ? encodeSearchCursor(lastHit, rankingAsOf)
+      : undefined,
   };
 
   return searchAppResultSchema.parse(result) as SearchAppResult;

@@ -8,6 +8,9 @@ const mocks = vi.hoisted(() => ({
   runSearchQuery: vi.fn(),
   countSearchMatchesByType: vi.fn(),
   encodeSearchCursor: vi.fn(),
+  decodeSearchCursor: vi.fn((cursor?: string) => cursor
+    ? JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'))
+    : undefined),
   registeredObjectTypes: vi.fn(),
 }));
 
@@ -20,6 +23,7 @@ vi.mock('@alga-psa/search/query', () => ({
   runSearchQuery: mocks.runSearchQuery,
   countSearchMatchesByType: mocks.countSearchMatchesByType,
   encodeSearchCursor: mocks.encodeSearchCursor,
+  decodeSearchCursor: mocks.decodeSearchCursor,
 }));
 
 vi.mock('@alga-psa/search/index', () => ({
@@ -62,6 +66,8 @@ describe('runAppSearch', () => {
     mocks.registeredObjectTypes.mockReturnValue([...SEARCH_OBJECT_TYPES]);
     mocks.countSearchMatchesByType.mockResolvedValue({ ticket: 1 });
     mocks.encodeSearchCursor.mockReturnValue('cursor-token');
+    mocks.runSearchQuery.mockResolvedValue([]);
+    mocks.verifyResultVisibility.mockImplementation(async (_knex, _acl, rows) => rows);
   });
 
   it('scopes client-portal users to their own client', async () => {
@@ -131,7 +137,7 @@ describe('runAppSearch', () => {
   it('returns a nextCursor only when there are more results than the page', async () => {
     const acl = { userId: 'user-1', tenant: 'tenant-1', permissions: ['ticket:read'] };
     mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
-    // limit 1 -> runSearchQuery is asked for limit + 1 = 2; returning 2 signals "more".
+    // The complete scan admits both hits, so the first result page has a cursor.
     const hits = [hit({ id: 'ticket-1' }), hit({ id: 'ticket-2' })];
     mocks.runSearchQuery.mockResolvedValue(hits);
     mocks.verifyResultVisibility.mockResolvedValue(hits);
@@ -144,8 +150,8 @@ describe('runAppSearch', () => {
     expect(result.results).toHaveLength(1);
     expect(result.results[0].id).toBe('ticket-1');
     expect(result.nextCursor).toBe('cursor-token');
-    expect(result.totalCount).toBe(1);
-    expect(result.groups.ticket).toBe(1);
+    expect(result.totalCount).toBe(2);
+    expect(result.groups.ticket).toBe(2);
   });
 
   it('omits nextCursor when the result set fits the page', async () => {
@@ -160,5 +166,39 @@ describe('runAppSearch', () => {
     });
 
     expect(result.nextCursor).toBeUndefined();
+  });
+
+  it('paginates admitted hits without repeating rows and keeps full authorized totals', async () => {
+    const acl = { userId: 'user-1', tenant: 'tenant-1', permissions: ['ticket:read'] };
+    const hits = [
+      hit({ id: 'ticket-1', score: 2 }),
+      hit({ id: 'ticket-2', score: 1 }),
+    ];
+    mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
+    mocks.runSearchQuery.mockResolvedValue(hits);
+    mocks.verifyResultVisibility.mockResolvedValue(hits);
+    mocks.encodeSearchCursor.mockImplementation((searchHit: ReturnType<typeof hit>, rankingAsOf?: string) =>
+      Buffer.from(JSON.stringify({
+        score: searchHit.score,
+        updatedAt: searchHit.updatedAt.toISOString(),
+        objectId: searchHit.id,
+        rankingAsOf,
+      })).toString('base64url'));
+    mocks.decodeSearchCursor.mockImplementation((cursor?: string) => cursor
+      ? JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'))
+      : undefined);
+
+    const first = await runAppSearch(knex, 'tenant-1', internalUser, { query: 'laptop', limit: 1 });
+    const second = await runAppSearch(knex, 'tenant-1', internalUser, {
+      query: 'laptop',
+      limit: 1,
+      cursor: first.nextCursor,
+    });
+
+    expect(first.results.map(({ id }) => id)).toEqual(['ticket-1']);
+    expect(second.results.map(({ id }) => id)).toEqual(['ticket-2']);
+    expect(first.totalCount).toBe(2);
+    expect(second.totalCount).toBe(2);
+    expect(second.nextCursor).toBeUndefined();
   });
 });

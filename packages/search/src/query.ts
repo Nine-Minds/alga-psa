@@ -58,6 +58,8 @@ export interface SearchQueryOptions {
   sort?: 'relevance' | 'recent';
   includeSnippets?: boolean;
   acl?: SearchAclPrincipal;
+  /** Fixed relevance time shared by every batch and subsequent cursor page. */
+  rankingAsOf?: string | Date;
   /**
    * Admitted, redacted relation standing in for the tenant's raw `app_search_index`.
    * Ranking, pagination, counts and typeahead all read this one relation, so a masked
@@ -98,6 +100,7 @@ interface SearchCursorPayload {
   score: number;
   updatedAt: string;
   objectId: string;
+  rankingAsOf?: string;
 }
 
 function scopedSearchIndexSql(knex: Knex, tenant: string, override?: SearchQueryOptions['searchIndex']): { sql: string; bindings: Knex.RawBinding[] } {
@@ -232,11 +235,16 @@ function toSearchHit(row: SearchIndexHitRow): SearchIndexHit {
   };
 }
 
-export function encodeSearchCursor(hit: Pick<SearchIndexHit, 'score' | 'updatedAt' | 'id'>): string {
+export function encodeSearchCursor(
+  hit: Pick<SearchIndexHit, 'score' | 'updatedAt' | 'id'>,
+  rankingAsOf?: string | Date,
+): string {
+  const asOf = rankingAsOf instanceof Date ? rankingAsOf.toISOString() : rankingAsOf;
   const payload: SearchCursorPayload = {
     score: hit.score,
     updatedAt: hit.updatedAt.toISOString(),
     objectId: hit.id,
+    ...(asOf ? { rankingAsOf: asOf } : {}),
   };
   return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
 }
@@ -263,10 +271,18 @@ export function decodeSearchCursor(cursor: string | undefined): SearchCursorPayl
       throw new Error('Invalid cursor timestamp');
     }
 
+    const rankingAsOf = decoded.rankingAsOf === undefined
+      ? undefined
+      : new Date(decoded.rankingAsOf);
+    if (rankingAsOf && !Number.isFinite(rankingAsOf.getTime())) {
+      throw new Error('Invalid cursor ranking timestamp');
+    }
+
     return {
       score: decoded.score,
       updatedAt: updatedAt.toISOString(),
       objectId: decoded.objectId,
+      ...(rankingAsOf ? { rankingAsOf: rankingAsOf.toISOString() } : {}),
     };
   } catch (error) {
     throw new SearchQueryError('invalid_cursor', 'Search cursor is invalid');
@@ -280,6 +296,9 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
   const offset = cursor ? 0 : normalizeOffset(options.offset);
   const includeSnippets = options.includeSnippets ?? true;
   const sort = options.sort ?? 'relevance';
+  const rankingAsOf = options.rankingAsOf
+    ? (options.rankingAsOf instanceof Date ? options.rankingAsOf.toISOString() : options.rankingAsOf)
+    : cursor?.rankingAsOf ?? new Date().toISOString();
 
   if (options.allowedTypes.length === 0) {
     return [];
@@ -348,7 +367,8 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
           websearch_to_tsquery('english', ?) AS tsq,
           CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
           ?::text AS raw,
-          ?::text AS identifier
+          ?::text AS identifier,
+          ?::timestamptz AS ranked_at
       ),
       ranked AS (
         SELECT
@@ -379,7 +399,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
                   ) * 0.4
               )
               * GREATEST(
-                  exp(-EXTRACT(epoch FROM (now() - s.source_updated_at)) / (90 * 86400)),
+                  exp(-EXTRACT(epoch FROM (q.ranked_at - s.source_updated_at)) / (90 * 86400)),
                   0.05
                 )
             )
@@ -418,6 +438,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
       parsed.prefixTsquery,
       parsed.raw,
       parsed.identifier ?? null,
+      rankingAsOf,
       ...searchIndex.bindings,
       options.allowedTypes,
       ...aclPredicate.bindings,

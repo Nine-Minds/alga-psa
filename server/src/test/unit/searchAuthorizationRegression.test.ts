@@ -113,10 +113,11 @@ vi.mock('@alga-psa/search/query', () => ({
   decodeSearchCursor: (cursor?: string) => cursor
     ? JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'))
     : undefined,
-  encodeSearchCursor: (hit: any) => Buffer.from(JSON.stringify({
+  encodeSearchCursor: (hit: any, rankingAsOf?: string) => Buffer.from(JSON.stringify({
     score: hit.score,
     updatedAt: hit.updatedAt.toISOString(),
     objectId: hit.id,
+    rankingAsOf,
   })).toString('base64url'),
 }));
 

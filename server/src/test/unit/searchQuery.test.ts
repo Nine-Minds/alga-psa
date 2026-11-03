@@ -380,7 +380,8 @@ describe('search query parsing', () => {
     });
 
     const sql = knex.raw.mock.calls[0]?.[0] as string;
-    expect(sql).toContain('exp(-EXTRACT(epoch FROM (now() - s.source_updated_at)) / (90 * 86400))');
+    expect(sql).toContain('exp(-EXTRACT(epoch FROM (q.ranked_at - s.source_updated_at)) / (90 * 86400))');
+    expect(sql).not.toContain('now() - s.source_updated_at');
     expect(sql).toContain('ORDER BY score DESC, source_updated_at DESC, object_id ASC');
   });
 
@@ -414,14 +415,26 @@ describe('search query parsing', () => {
     });
   });
 
+  it('round-trips the relevance timestamp with a public cursor', () => {
+    const rankingAsOf = '2026-11-03T12:00:00.000Z';
+    const cursor = encodeSearchCursor({
+      score: 12.5,
+      updatedAt: new Date('2026-05-13T12:34:56.789Z'),
+      id: 'client-1',
+    }, rankingAsOf);
+
+    expect(decodeSearchCursor(cursor)?.rankingAsOf).toBe(rankingAsOf);
+  });
+
   it('T100 uses strict cursor predicates so page two does not repeat page one rows', async () => {
     const knex = createSearchKnex();
     const updatedAt = new Date('2026-05-13T12:34:56.789Z');
+    const rankingAsOf = '2026-11-03T12:00:00.000Z';
     const cursor = encodeSearchCursor({
       score: 3.14,
       updatedAt,
       id: 'client-1',
-    });
+    }, rankingAsOf);
 
     await runSearchQuery({
       knex: knex as never,
@@ -436,7 +449,8 @@ describe('search query parsing', () => {
     expect(sql).toContain('score < ?::double precision');
     expect(sql).toContain('source_updated_at < ?::timestamptz');
     expect(sql).toContain('object_id > ?');
-    expect(bindings.slice(7, 14)).toEqual([
+    expect(bindings[5]).toBe(rankingAsOf);
+    expect(bindings.slice(8, 15)).toEqual([
       3.14,
       3.14,
       3.14,
@@ -510,7 +524,7 @@ describe('search query parsing', () => {
     const knex = createSearchKnex(async (sql: string, bindings: unknown[]) => {
         expect(sql).toContain('from "app_search_index" where "app_search_index"."tenant" = ?');
         expect(sql).not.toContain('WHERE s.tenant = ?::uuid');
-        const tenant = bindings[5] as string;
+        const tenant = bindings[6] as string;
         if (!tenants.includes(tenant)) {
           leakedRows.push(`unknown:${tenant}`);
         }
@@ -564,6 +578,6 @@ describe('search query parsing', () => {
     const [sql, bindings] = knex.raw.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain('from "app_search_index" where "app_search_index"."tenant" = ?');
     expect(sql).not.toContain('WHERE s.tenant = ?::uuid');
-    expect(bindings[5]).toBe('00000000-0000-4000-8000-000000000123');
+    expect(bindings[6]).toBe('00000000-0000-4000-8000-000000000123');
   });
 });
