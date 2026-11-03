@@ -11,7 +11,7 @@ export async function stampTimeEntryAttribution(
   entryId: string,
   operation: 'create' | 'update',
   viaPrincipalUserId: string | null | undefined,
-): Promise<void> {
+): Promise<Record<string, string | null>> {
   const update: Record<string, string | null> = {
     updated_via_principal_id: viaPrincipalUserId ?? null,
   };
@@ -19,5 +19,13 @@ export async function stampTimeEntryAttribution(
     update.created_via_principal_id = viaPrincipalUserId ?? null;
   }
 
-  await tenantDb(conn, tenant).table('time_entries').where({ entry_id: entryId }).update(update);
+  const [stamped] = await tenantDb(conn, tenant)
+    .table('time_entries')
+    .where({ entry_id: entryId })
+    .update(update)
+    .returning(Object.keys(update));
+  if (!stamped) {
+    throw new Error(`Time entry ${entryId} was not available for attribution stamping`);
+  }
+  return stamped as Record<string, string | null>;
 }

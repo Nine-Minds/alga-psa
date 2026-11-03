@@ -5,6 +5,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { tenantDb } from '@alga-psa/db';
+import { persistTimeEntry } from '@alga-psa/scheduling/lib/timeEntryWriteCore';
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@alga-psa/event-bus/publishers', async () => (await import('./helpers/spMocks')).publishersMock());
@@ -20,7 +21,7 @@ import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 import { TimeEntryService } from 'server/src/lib/api/services/TimeEntryService';
 
 beforeAll(async () => {
-  await boot('server_card_sp_c4');
+  await boot('sp_t017_time_entry');
   // The service resolves the entry's time sheet from a period covering its work date.
   await tenantDb(harness().db, harness().tenant).table('time_periods').insert({
     tenant: harness().tenant,
@@ -78,6 +79,8 @@ describe('T017 time entry create under a service principal', () => {
 
     const entry = await service().create(await payload(), context as never);
     const row = await tenantDb(db, tenant).table('time_entries').where({ entry_id: entry.entry_id }).first();
+    expect(entry.created_via_principal_id).toBe(principal.userId);
+    expect(entry.updated_via_principal_id).toBe(principal.userId);
     expect(row.user_id).toBe(human);
     expect(row.created_by).toBe(human);
     expect(row.created_via_principal_id).toBe(principal.userId);
@@ -89,23 +92,56 @@ describe('T017 time entry create under a service principal', () => {
     const firstPrincipal = await createPrincipal({ allowActAs: true });
     const created = await service().create(await payload(), await contextFor(firstPrincipal, human) as never);
     const entryId = created.entry_id as string;
+    expect(created).toMatchObject({
+      created_via_principal_id: firstPrincipal.userId,
+      updated_via_principal_id: firstPrincipal.userId,
+    });
 
     const humanUser = await tenantDb(db, tenant).table('users').where({ user_id: human }).first();
-    const humanContext = { tenant, userId: human, user: humanUser };
-    await service().update(entryId, { notes: 'edited by human' } as never, humanContext as never);
+    const beforeHumanWrite = await tenantDb(db, tenant).table('time_entries').where({ entry_id: entryId }).first();
+    const humanWrite = await db.transaction((trx) => persistTimeEntry(trx, {
+      tenant,
+      actor: humanUser,
+      entry: {
+        entry_id: entryId,
+        work_item_id: beforeHumanWrite.work_item_id,
+        work_item_type: beforeHumanWrite.work_item_type,
+        start_time: beforeHumanWrite.start_time,
+        end_time: beforeHumanWrite.end_time,
+        billable_duration: beforeHumanWrite.billable_duration,
+        notes: 'edited by human through shared writer',
+        time_sheet_id: beforeHumanWrite.time_sheet_id,
+        approval_status: beforeHumanWrite.approval_status,
+        service_id: beforeHumanWrite.service_id,
+        tax_region: beforeHumanWrite.tax_region,
+        contract_line_id: beforeHumanWrite.contract_line_id,
+        tax_rate_id: beforeHumanWrite.tax_rate_id,
+        user_id: human,
+      } as never,
+    }));
+    expect(humanWrite.entry).toMatchObject({
+      notes: 'edited by human through shared writer',
+      created_via_principal_id: firstPrincipal.userId,
+      updated_via_principal_id: null,
+    });
     let row = await tenantDb(db, tenant).table('time_entries').where({ entry_id: entryId }).first();
     expect(row).toMatchObject({
-      notes: 'edited by human',
+      notes: 'edited by human through shared writer',
       created_via_principal_id: firstPrincipal.userId,
       updated_via_principal_id: null,
     });
 
     const secondPrincipal = await createPrincipal({ allowActAs: true });
-    await service().update(
+    const delegatedUpdate = await service().update(
       entryId,
       { notes: 'edited by second principal' } as never,
       await contextFor(secondPrincipal, human) as never,
     );
+    expect(delegatedUpdate).toMatchObject({
+      notes: 'edited by second principal',
+      created_via_principal_id: firstPrincipal.userId,
+      updated_via_principal_id: secondPrincipal.userId,
+    });
     row = await tenantDb(db, tenant).table('time_entries').where({ entry_id: entryId }).first();
     expect(row).toMatchObject({
       notes: 'edited by second principal',

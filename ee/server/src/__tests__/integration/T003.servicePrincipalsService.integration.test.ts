@@ -87,7 +87,7 @@ const hash = (k: string) => crypto.createHash('sha256').update(k).digest('hex');
 
 beforeAll(async () => {
   mergedDir = buildMergedEeMigrationsDir();
-  db = await createTestDbConnection({ databaseName: 'server_card_sp_c4', migrationsDir: mergedDir });
+  db = await createTestDbConnection({ databaseName: 'sp_c4_service_test', migrationsDir: mergedDir });
   conn.db = db;
 }, 600_000);
 

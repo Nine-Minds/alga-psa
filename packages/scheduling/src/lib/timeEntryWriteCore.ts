@@ -627,15 +627,16 @@ export async function persistTimeEntry(
   // attribution for human writes and stamps the current principal for delegated
   // writes; its CE implementation is inert against the CE schema.
   const entryId = (resultingEntry as { entry_id?: string } | null)?.entry_id;
-  if (entryId) {
+  if (entryId && resultingEntry) {
     const { stampTimeEntryAttribution } = await import('@product/service-principals/entry');
-    await stampTimeEntryAttribution(
+    const stampedAttribution = await stampTimeEntryAttribution(
       trx,
       tenant,
       entryId,
       entry_id ? 'update' : 'create',
       input.viaPrincipalUserId,
     );
+    Object.assign(resultingEntry, stampedAttribution);
   }
 
   // --- Bucket Usage Update Logic ---

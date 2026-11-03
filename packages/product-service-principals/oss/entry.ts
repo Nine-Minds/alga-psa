@@ -31,7 +31,9 @@ export async function stampTimeEntryAttribution(
   _entryId: string,
   _operation: 'create' | 'update',
   _viaPrincipalUserId: string | null | undefined,
-): Promise<void> {}
+): Promise<Record<string, string | null>> {
+  return {};
+}
 
 export function mapServicePrincipalError<T>(error: T): T {
   return error;

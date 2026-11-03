@@ -159,7 +159,7 @@
   },
   {
     "id": "T017",
-    "description": "DB integration: POST time entry as a service principal without act-as \u2192 422 ACT_AS_REQUIRED; with act-as the human owns the entry and created_via_principal_id is the principal; a later direct human update clears updated_via_principal_id while preserving creation attribution, and a delegated update by another principal replaces update attribution and persists edited values",
+    "description": "DB integration: POST time entry as a service principal without act-as \u2192 422 ACT_AS_REQUIRED; delegated creation returns and persists both via values; a direct human write through the shared/UI writer returns and persists a cleared updated_via_principal_id while preserving creation attribution; a later delegated update by another principal returns and persists the replacement update attribution and edited values",
     "implemented": true,
     "featureIds": [
       "F055",

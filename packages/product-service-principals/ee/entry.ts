@@ -27,7 +27,7 @@ export async function stampTimeEntryAttribution(
   entryId: string,
   operation: 'create' | 'update',
   viaPrincipalUserId: string | null | undefined,
-): Promise<void> {
+): Promise<Record<string, string | null>> {
   const attribution = await import('@ee/lib/service-principals/timeEntryAttribution');
   return attribution.stampTimeEntryAttribution(conn, tenant, entryId, operation, viaPrincipalUserId);
 }

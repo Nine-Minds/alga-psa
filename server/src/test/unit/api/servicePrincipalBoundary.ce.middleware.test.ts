@@ -47,7 +47,7 @@ describe('T037: CE service-principal boundary (oss entry) — API context', () =
     ).resolves.toBe(false);
     await expect(ossEntry.stampTimeEntryAttribution({
       table: () => { throw new Error('CE attribution hook must not query EE-only columns'); },
-    }, 'tenant-1', 'entry-1', 'update', undefined)).resolves.toBeUndefined();
+    }, 'tenant-1', 'entry-1', 'update', undefined)).resolves.toEqual({});
     const error = new Error('x');
     expect(ossEntry.mapServicePrincipalError(error)).toBe(error);
   });
