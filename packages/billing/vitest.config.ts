@@ -107,6 +107,7 @@ export default defineConfig({
       'src/services/pdfGenerationService.renderCountry.test.ts',
       'src/services/pdfGenerationService.printSettings.test.ts',
       'src/services/pdfGenerationService.locale.test.ts',
+      'src/services/pdfGenerationService.documentHtml.test.ts',
       // Per-seat unit-rate rendering on the template detail page and the
       // currency-neutral template review step — listed for the same reason as above.
       'src/components/billing-dashboard/contracts/ContractTemplateDetail.unitRate.test.tsx',

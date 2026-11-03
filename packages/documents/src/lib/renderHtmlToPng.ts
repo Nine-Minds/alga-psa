@@ -14,7 +14,10 @@ export interface RenderHtmlToPngOptions {
    * Resolve a remote asset URL to bytes. Defaults to safeFetch's public-only fetch.
    * Injectable so tests can assert the rewritten HTML without the network.
    */
-  fetchAsset?: (url: string) => Promise<{ bytes: Buffer; contentType: string }>;
+  fetchAsset?: (
+    url: string,
+    options?: { maxBytes?: number; timeoutMs?: number },
+  ) => Promise<{ bytes: Buffer; contentType: string }>;
 }
 
 const PLACEHOLDER_STYLE =

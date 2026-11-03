@@ -37,18 +37,33 @@ describe('shared secure Chromium HTML policy', () => {
     expect(proceed).toHaveBeenCalledOnce();
   });
 
-  it('inlines safe images and enforces one aggregate remote resource budget', async () => {
+  it('passes the remaining byte allowance and never fetches later images after exhaustion', async () => {
     const page = fakePage();
     const fetchAsset = vi.fn(async () => ({ bytes: Buffer.alloc(4), contentType: 'image/png' }));
     await setSecureHtmlContent(
       page as any,
       '<img src="https://public.example/a" alt="a"><img src="https://public.example/b" alt="b">',
-      { fetchAsset, maxRemoteAssetBytes: 6 },
+      { fetchAsset, maxRemoteAssetBytes: 4 },
     );
 
-    expect(fetchAsset).toHaveBeenCalledTimes(2);
+    expect(fetchAsset).toHaveBeenCalledTimes(1);
+    expect(fetchAsset).toHaveBeenCalledWith('https://public.example/a', { maxBytes: 4, timeoutMs: 5000 });
     expect(page.html).toContain('data:image/png;base64,');
-    // The second image exceeds the aggregate limit and is rendered as a placeholder.
+    // The later image is rendered as a placeholder without starting another fetch.
     expect(page.html).toContain('aria-label="b"');
+  });
+
+  it('caps aggregate resolution time even when an injected fetch does not settle', async () => {
+    const page = fakePage();
+    const fetchAsset = vi.fn(() => new Promise<{ bytes: Buffer; contentType: string }>(() => undefined));
+    const started = Date.now();
+
+    await setSecureHtmlContent(page as any, '<img src="https://public.example/hangs" alt="slow">', {
+      fetchAsset,
+      maxRemoteAssetTimeMs: 20,
+    });
+
+    expect(Date.now() - started).toBeLessThan(500);
+    expect(page.html).toContain('aria-label="slow"');
   });
 });
