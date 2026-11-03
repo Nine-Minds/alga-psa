@@ -5,7 +5,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ContentCard } from '@alga-psa/ui/components';
-import type { EmailSendingLogRecord } from '@alga-psa/email/actions';
+import type { TicketEmailLogRecord } from '@alga-psa/email/actions';
 import { useTicketDataSource } from './TicketDataSourceContext';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -19,24 +19,6 @@ interface TicketEmailNotificationsProps {
 
 const INITIAL_LIMIT = 20;
 const LOAD_MORE_STEP = 20;
-
-function parseEmailList(value: unknown): string[] {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item)).filter(Boolean);
-  }
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value) as unknown;
-      if (Array.isArray(parsed)) {
-        return parsed.map((item) => String(item)).filter(Boolean);
-      }
-    } catch {
-      // ignore
-    }
-    return value ? [value] : [];
-  }
-  return [];
-}
 
 function formatSentAt(value: unknown, locale: string): string {
   const date = value instanceof Date ? value : new Date(String(value));
@@ -60,7 +42,7 @@ const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
   const { t, i18n } = useTranslation('features/tickets');
   const { getEmailLogsForTicket } = useTicketDataSource().email;
   const [isLoading, setIsLoading] = useState(false);
-  const [logs, setLogs] = useState<EmailSendingLogRecord[]>([]);
+  const [logs, setLogs] = useState<TicketEmailLogRecord[]>([]);
   const [limit, setLimit] = useState(INITIAL_LIMIT);
   const [hasMore, setHasMore] = useState(false);
 
@@ -86,7 +68,7 @@ const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
     void fetchLogs();
   }, [fetchLogs]);
 
-  const columns: ColumnDefinition<EmailSendingLogRecord>[] = useMemo(() => {
+  const columns: ColumnDefinition<TicketEmailLogRecord>[] = useMemo(() => {
     return [
       {
         title: t('emailNotifications.time', 'Time'),
@@ -95,11 +77,8 @@ const TicketEmailNotifications: React.FC<TicketEmailNotificationsProps> = ({
       },
       {
         title: t('emailNotifications.recipient', 'Recipient'),
-        dataIndex: 'to_addresses',
-        render: (value) => {
-          const list = parseEmailList(value);
-          return list[0] || '—';
-        },
+        dataIndex: 'recipient',
+        render: (value) => String(value || '—'),
       },
       {
         title: t('emailNotifications.subject', 'Subject'),

@@ -4,6 +4,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles, PaginatedResult } from '@alga-psa/types';
+import { authorizeTicketRecordAccess } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 
 // MSP-only: email sending logs expose tenant-wide correspondence (subjects,
 // addresses, ticket numbers, entity ids), so client-portal callers
@@ -46,13 +47,38 @@ export interface EmailSendingLogRecord {
   updated_at: Date;
 }
 
+export interface TicketEmailLogRecord {
+  id: number;
+  recipient: string | null;
+  subject: string | null;
+  status: EmailSendingLogRecord['status'];
+  error_message: string | null;
+  sent_at: Date;
+}
+
+function firstRecipient(value: unknown): string | null {
+  if (Array.isArray(value)) {
+    return value.find((item) => typeof item === 'string' && item.length > 0) ?? null;
+  }
+  if (typeof value !== 'string' || value.length === 0) return null;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed.find((item) => typeof item === 'string' && item.length > 0) ?? null;
+    }
+  } catch {
+    // Legacy rows may store a single address as plain text.
+  }
+  return value;
+}
+
 export const getEmailLogsForTicket = withAuth(
   async (
     user,
     { tenant },
     ticketId: string,
     options?: { limit?: number }
-  ): Promise<EmailSendingLogRecord[]> => {
+  ): Promise<TicketEmailLogRecord[]> => {
     assertInternalEmailLogAccess(user);
     // Surfaced from the MSP ticket details UI, so mirror the ticket read check.
     if (!await hasPermission(user, 'ticket', 'read')) {
@@ -62,37 +88,16 @@ export const getEmailLogsForTicket = withAuth(
     const limit = Math.min(Math.max(options?.limit ?? 20, 1), 200);
 
     return withTransaction(knex, async (trx: Knex.Transaction) => {
-      return tenantDb(trx, tenant).table('email_sending_logs')
+      await authorizeTicketRecordAccess({ trx, tenant, user, ticketId, action: 'read' });
+
+      const rows = await tenantDb(trx, tenant).table('email_sending_logs')
         .select(
           'id',
-          'tenant',
-          'message_id',
-          'provider_message_id',
-          'rfc_message_id',
-          'provider_id',
-          'provider_type',
-          'from_address',
           'to_addresses',
-          'cc_addresses',
-          'bcc_addresses',
           'subject',
           'status',
           'error_message',
-          'metadata',
-          'sent_at',
-          'delivered_at',
-          'opened_at',
-          'clicked_at',
-          'entity_type',
-          'entity_id',
-          'contact_id',
-          'notification_subtype_id',
-          'thread_id',
-          'comment_id',
-          'reply_token_hash',
-          'reply_token_suffix',
-          'created_at',
-          'updated_at'
+          'sent_at'
         )
         .where({
           entity_type: 'ticket',
@@ -100,6 +105,15 @@ export const getEmailLogsForTicket = withAuth(
         })
         .orderBy('sent_at', 'desc')
         .limit(limit);
+
+      return rows.map((row) => ({
+        id: row.id,
+        recipient: firstRecipient(row.to_addresses),
+        subject: row.subject,
+        status: row.status,
+        error_message: row.error_message,
+        sent_at: row.sent_at,
+      }));
     });
   }
 );
