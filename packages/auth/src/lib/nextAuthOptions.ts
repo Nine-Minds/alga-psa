@@ -2222,9 +2222,24 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 }
 	              }
 
-	            // NEW: Create session record on initial sign-in
-	            // CRITICAL: Only create if session_id doesn't exist (prevents duplicates on OTT redemption)
-	            if (user && !token.session_id) {
+	            // A browser can present its prior JWT while signing in again. Session-limit
+	            // enforcement runs before this callback and may have revoked that JWT's
+	            // durable row, so only reuse a session ID that still belongs to this
+	            // authenticated identity. This also keeps a repeated callback idempotent
+	            // when the existing tracked row remains live.
+	            const priorTrackedSession = user && token.session_id
+	                ? await checkTrackedSession(
+	                    token.tenant,
+	                    token.session_id,
+	                    token.id || token.sub,
+	                    token.user_type,
+	                )
+	                : undefined;
+
+	            // Create a durable row for a new login or replace an old/mismatched
+	            // session row. The downstream check still rejects the request if this
+	            // new row cannot be persisted or verified.
+	            if (user && (!token.session_id || priorTrackedSession !== 'live')) {
 	                try {
                     const extendedUser = user as any; // ExtendedUser with deviceInfo and loginMethod added in signIn callback
                     const expiresAt = new Date(Date.now() + SESSION_MAX_AGE * 1000);

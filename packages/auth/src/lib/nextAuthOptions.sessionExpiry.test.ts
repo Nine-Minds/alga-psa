@@ -2,9 +2,47 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const extendExpiryMock = vi.fn(async () => undefined);
 const isRevokedOrIdentityMismatchMock = vi.fn(async () => false);
-const getRejectionReasonMock = vi.fn(async () => null as string | null);
-const createMock = vi.fn(async () => 'sess-created');
+const getRejectionReasonMock = vi.fn(async (
+  _tenant?: string,
+  _sessionId?: string,
+  _identity?: { userId: string; userType: string },
+) => null as string | null);
+const durableSessions: Array<{
+  sessionId: string;
+  tenant: string;
+  userId: string;
+  userType: string;
+  revoked: boolean;
+  expiresAt: Date;
+  lastActivity: number;
+}> = [];
+let nextSessionNumber = 1;
+let statefulSessionMode = false;
+const createMock = vi.fn(async (params?: Record<string, any>) => {
+  const sessionId = nextSessionNumber === 1 ? 'sess-created' : `sess-created-${nextSessionNumber}`;
+  nextSessionNumber += 1;
+  durableSessions.push({
+    sessionId,
+    tenant: params?.tenant ?? 'tenant-1',
+    userId: params?.user_id ?? 'u-1',
+    userType: 'internal',
+    revoked: false,
+    expiresAt: params?.expires_at ?? new Date(Date.now() + 60 * 60 * 1000),
+    lastActivity: Date.now(),
+  });
+  return sessionId;
+});
 const logLifecycleMock = vi.fn();
+const enforceMaxSessionsMock = vi.fn(async (_tenant: string, userId: string, maxSessions: number) => {
+  const active = durableSessions
+    .filter((row) => !row.revoked && row.userId === userId && row.expiresAt.getTime() > Date.now())
+    .sort((a, b) => a.lastActivity - b.lastActivity);
+  for (const row of active.slice(0, Math.max(0, active.length - maxSessions + 1))) {
+    row.revoked = true;
+  }
+});
+const authenticateUserMock = vi.fn();
+const decodedSessionMock = vi.fn();
 
 const tenantFirstMock = vi.fn();
 const subscriptionFirstMock = vi.fn();
@@ -12,10 +50,16 @@ const addonsSelectMock = vi.fn();
 
 function makeTableQuery(table: string) {
   if (table === 'tenants') {
-    return { where: vi.fn(() => ({ select: vi.fn(() => ({ first: tenantFirstMock })) })) };
+    return {
+      select: vi.fn(() => ({ first: tenantFirstMock })),
+      where: vi.fn(() => ({ select: vi.fn(() => ({ first: tenantFirstMock })) })),
+    };
   }
   if (table === 'stripe_subscriptions') {
     return {
+      whereIn: vi.fn(() => ({
+        orderByRaw: vi.fn(() => ({ select: vi.fn(() => ({ first: subscriptionFirstMock })) })),
+      })),
       where: vi.fn(() => ({
         whereIn: vi.fn(() => ({
           orderByRaw: vi.fn(() => ({ select: vi.fn(() => ({ first: subscriptionFirstMock })) })),
@@ -24,7 +68,7 @@ function makeTableQuery(table: string) {
     };
   }
   if (table === 'tenant_addons') {
-    return { where: vi.fn(() => ({ select: addonsSelectMock })) };
+    return { select: addonsSelectMock, where: vi.fn(() => ({ select: addonsSelectMock })) };
   }
   throw new Error(`Unexpected table ${table}`);
 }
@@ -86,6 +130,20 @@ vi.mock('./microsoftConsumerProfileResolution', () => ({
   })),
 }));
 vi.mock('next/headers.js', () => ({ cookies: async () => ({ get: vi.fn(), set: vi.fn() }) }));
+vi.mock('next/headers', () => ({
+  headers: async () => new Headers(),
+  cookies: async () => ({ get: vi.fn(), set: vi.fn() }),
+}));
+vi.mock('../nextauth/edge-auth', () => ({ auth: (...args: unknown[]) => decodedSessionMock(...args) }));
+vi.mock('../nextauth/auth', () => ({ auth: vi.fn(async () => null) }));
+vi.mock('./assertInteractiveUser', () => ({ assertInteractiveUser: vi.fn(async () => true) }));
+vi.mock('../actions/auth', () => ({ authenticateUser: (...args: unknown[]) => authenticateUserMock(...args) }));
+vi.mock('./security/loginProtection', () => ({
+  enforceLoginProtection: vi.fn(async () => undefined),
+  normalizeLoginEmail: (value: string) => value.trim().toLowerCase(),
+  recordLoginFailure: vi.fn(async () => undefined),
+  recordLoginSuccess: vi.fn(async () => undefined),
+}));
 vi.mock('./sso/mspSsoResolution', () => ({
   // clientPortalSsoResolution re-exports several of these, so the mock has to
   // carry them even though nextAuthOptions itself only reads the cookie helpers.
@@ -107,15 +165,24 @@ vi.mock('@alga-psa/db/models/UserSession', () => ({
     isRevokedOrIdentityMismatch: (...args: unknown[]) => isRevokedOrIdentityMismatchMock(...(args as [])),
     getRejectionReason: (...args: unknown[]) => getRejectionReasonMock(...(args as [])),
     extendExpiry: (...args: unknown[]) => extendExpiryMock(...(args as [])),
-    create: (...args: unknown[]) => createMock(...(args as [])),
+    create: (...args: unknown[]) => createMock(...(args as [Record<string, any>])),
+    enforceMaxSessions: (...args: unknown[]) => enforceMaxSessionsMock(...(args as [string, string, number])),
     logLifecycle: (...args: unknown[]) => logLifecycleMock(...(args as [])),
     updateLocation: vi.fn(),
   },
 }));
-vi.mock('./ipAddress', () => ({ getClientIp: vi.fn() }));
-vi.mock('./deviceFingerprint', () => ({ generateDeviceFingerprint: vi.fn(), getDeviceInfo: vi.fn() }));
+vi.mock('./ipAddress', () => ({ getClientIp: vi.fn(() => '127.0.0.1') }));
+vi.mock('./deviceFingerprint', () => ({
+  generateDeviceFingerprint: vi.fn(() => 'test-fingerprint'),
+  getDeviceInfo: vi.fn(() => ({ name: 'Test Browser', type: 'desktop' })),
+}));
 vi.mock('./geolocation', () => ({ getLocationFromIp: vi.fn(async () => null) }));
-vi.mock('@alga-psa/db', () => ({ getConnection: vi.fn() }));
+vi.mock('@alga-psa/db', () => ({
+  getConnection: vi.fn(),
+  tenantDb: vi.fn((_connection: unknown, _tenant: string) => ({
+    table: (table: string) => makeTableQuery(table),
+  })),
+}));
 vi.mock('./PortalDomainModel', () => ({ getPortalDomain: vi.fn(), getPortalDomainByHostname: vi.fn() }));
 vi.mock('@alga-psa/db/models/user', () => ({ default: { updateLastLogin: vi.fn() } }));
 vi.mock('@alga-psa/db/admin', () => ({
@@ -124,6 +191,7 @@ vi.mock('@alga-psa/db/admin', () => ({
 vi.mock('@alga-psa/core/logger', () => ({ default: { debug: vi.fn(), trace: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 const { getAuthOptions } = await import('./nextAuthOptions');
+const { getSession } = await import('./getSession');
 
 describe('nextAuth session expiry sliding', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -133,6 +201,39 @@ describe('nextAuth session expiry sliding', () => {
     isRevokedOrIdentityMismatchMock.mockResolvedValue(false);
     getRejectionReasonMock.mockResolvedValue(null);
     createMock.mockResolvedValue('sess-created');
+    durableSessions.splice(0, durableSessions.length);
+    nextSessionNumber = 1;
+    createMock.mockImplementation(async (params?: Record<string, any>) => {
+      const sessionId = nextSessionNumber === 1 ? 'sess-created' : `sess-created-${nextSessionNumber}`;
+      nextSessionNumber += 1;
+      durableSessions.push({
+        sessionId,
+        tenant: params?.tenant ?? 'tenant-1',
+        userId: params?.user_id ?? 'u-1',
+        userType: 'internal',
+        revoked: false,
+        expiresAt: params?.expires_at ?? new Date(Date.now() + 60 * 60 * 1000),
+        lastActivity: Date.now(),
+      });
+      return sessionId;
+    });
+    enforceMaxSessionsMock.mockImplementation(async (_tenant, userId, maxSessions) => {
+      const active = durableSessions
+        .filter((row) => !row.revoked && row.userId === userId && row.expiresAt.getTime() > Date.now())
+        .sort((a, b) => a.lastActivity - b.lastActivity);
+      for (const row of active.slice(0, Math.max(0, active.length - maxSessions + 1))) row.revoked = true;
+    });
+    statefulSessionMode = false;
+    getRejectionReasonMock.mockImplementation(async (_tenant, sessionId, identity) => {
+      if (!statefulSessionMode) return null;
+      const row = durableSessions.find((candidate) => candidate.sessionId === sessionId);
+      if (!row) return 'missing';
+      if (row.revoked) return 'revoked';
+      if (row.userId !== identity?.userId || row.userType !== identity?.userType) return 'identity_mismatch';
+      return null;
+    });
+    authenticateUserMock.mockReset();
+    decodedSessionMock.mockReset();
     logLifecycleMock.mockReset();
     extendExpiryMock.mockResolvedValue(undefined);
     // Keep plan refresh quiet/side-effect-free for these cases.
@@ -353,6 +454,90 @@ describe('nextAuth session expiry sliding', () => {
       'sess-created',
       { userId: 'u-1', userType: 'internal' }
     );
+  });
+
+  it('keeps a fresh credentials session live through the complete callback and decode lifecycle at the session limit', async () => {
+    statefulSessionMode = true;
+    const oldestFirst = Date.now() - 10_000;
+    for (let index = 0; index < 5; index += 1) {
+      durableSessions.push({
+        sessionId: `existing-${index}`,
+        tenant: 'tenant-1',
+        userId: 'u-1',
+        userType: 'internal',
+        revoked: false,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        lastActivity: oldestFirst + index,
+      });
+    }
+    authenticateUserMock.mockResolvedValue({
+      user_id: 'u-1',
+      email: 'user@example.test',
+      username: 'user',
+      first_name: 'Test',
+      last_name: 'User',
+      tenant: 'tenant-1',
+      user_type: 'internal',
+      two_factor_enabled: false,
+    });
+
+    const options = await getAuthOptions();
+    const credentialsProvider = options.providers.find((provider: any) => provider.name === 'Credentials');
+    const request = { headers: new Headers({ 'user-agent': 'test-agent' }) };
+    const user = await credentialsProvider.authorize({ email: 'user@example.test', password: 'correct-password' }, request);
+    expect(user).toMatchObject({ id: 'u-1', tenant: 'tenant-1', user_type: 'internal' });
+    expect(durableSessions.filter((row) => !row.revoked)).toHaveLength(4);
+
+    await expect(options.callbacks?.signIn({ user, account: { provider: 'credentials' }, request })).resolves.toBe(true);
+    expect(durableSessions.filter((row) => !row.revoked)).toHaveLength(4);
+
+    const jwt = options.callbacks?.jwt;
+    // Auth.js can carry the prior browser JWT into a new credentials callback.
+    // At the session limit that same old session may just have been revoked by
+    // authorize(), so the newly authenticated user must not inherit its ID.
+    const token = await jwt!({ token: { session_id: 'existing-0' }, user, trigger: 'signIn' } as any);
+    expect(token).toMatchObject({ id: 'u-1', tenant: 'tenant-1', user_type: 'internal', session_id: 'sess-created' });
+    expect(durableSessions.filter((row) => !row.revoked)).toHaveLength(5);
+    expect(durableSessions.find((row) => row.sessionId === 'existing-0')?.revoked).toBe(true);
+
+    const session = await options.callbacks?.session!({ session: { user: {} }, token } as any);
+    decodedSessionMock.mockResolvedValue(session);
+    await expect(getSession()).resolves.toMatchObject({
+      user: { id: 'u-1', tenant: 'tenant-1', user_type: 'internal' },
+      session_id: 'sess-created',
+    });
+
+    await expect(jwt!({ token, trigger: undefined } as any)).resolves.toMatchObject({ session_id: 'sess-created' });
+    await expect(getSession()).resolves.toMatchObject({ session_id: 'sess-created' });
+    expect(getRejectionReasonMock).toHaveBeenCalledWith('tenant-1', 'sess-created', {
+      userId: 'u-1', userType: 'internal',
+    });
+    expect(getRejectionReasonMock).toHaveBeenCalledTimes(5);
+    expect(durableSessions.filter((row) => !row.revoked)).toHaveLength(5);
+  });
+
+  it('does not duplicate a live durable row when a repeated login callback carries it', async () => {
+    statefulSessionMode = true;
+    durableSessions.push({
+      sessionId: 'existing-live',
+      tenant: 'tenant-1',
+      userId: 'u-1',
+      userType: 'internal',
+      revoked: false,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      lastActivity: Date.now(),
+    });
+
+    const options = await getAuthOptions();
+    const token = await options.callbacks?.jwt!({
+      token: { session_id: 'existing-live' },
+      user: { id: 'u-1', tenant: 'tenant-1', user_type: 'internal' },
+      trigger: 'signIn',
+    } as any);
+
+    expect(token).toMatchObject({ session_id: 'existing-live' });
+    expect(createMock).not.toHaveBeenCalled();
+    expect(durableSessions.filter((row) => !row.revoked)).toHaveLength(1);
   });
 
   it('fails closed when an OAuth session cannot be persisted', async () => {
