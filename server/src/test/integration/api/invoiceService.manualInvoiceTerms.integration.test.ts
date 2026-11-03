@@ -260,9 +260,6 @@ describe('REST manual invoice creation takes terms from the effective billing id
     const base = () => ({
       client_id: context.clientId,
       invoice_date: '2026-03-01',
-      subtotal: 0,
-      tax: 0,
-      total_amount: 0,
       status: 'draft',
     });
 

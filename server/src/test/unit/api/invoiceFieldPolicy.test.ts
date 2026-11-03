@@ -54,10 +54,11 @@ describe('checkInvoicePayload(create)', () => {
     expect(keys({ is_manual: false, is_prepayment: false })).toEqual([]);
   });
 
-  it('accepts draft / no status, zero or absent credit, and ignores derived totals and tenant', () => {
+  it('accepts draft / no status, zero or absent credit; rejects derived totals', () => {
     expect(keys({ status: 'draft', credit_applied: 0 })).toEqual([]);
     expect(keys({ client_id: 'c' })).toEqual([]);
-    expect(keys({ subtotal: 5, tax: 1, total_amount: 6, tenant: 't' })).toEqual([]);
+    expect(keys({ subtotal: 0, tax: 0, total_amount: 0 })).toEqual(['subtotal', 'tax', 'total_amount']);
+    expect(keys({ tenant: 't' })).toEqual([]);
   });
 });
 
@@ -72,6 +73,19 @@ describe('create request schema hands the raw body to the classifier', () => {
     expect(checkInvoicePayload('create', parsed).forbidden.map((f) => [f.key, f.command])).toEqual([
       ['tax_source', 'changeInvoiceTaxSource'],
     ]);
+  });
+
+  it('rejects every supplied total in the schema, including zero, with the field path', () => {
+    for (const key of ['subtotal', 'tax', 'total_amount']) {
+      const result = createInvoiceSchema.safeParse({
+        client_id: '11111111-1111-4111-8111-111111111111',
+        invoice_date: '2026-01-01',
+        due_date: '2026-02-01',
+        [key]: 0,
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error.issues[0].path).toEqual([key]);
+    }
   });
 
   it('does not strip unknown keys either, so the classifier sees the body it validates', () => {

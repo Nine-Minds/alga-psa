@@ -73,6 +73,13 @@ export const INVOICE_FIELD_POLICY = {
 } as const satisfies Record<string, InvoiceFieldRule>;
 
 type PolicyKey = keyof typeof INVOICE_FIELD_POLICY;
+type CreateKeys = {
+  [K in PolicyKey]: (typeof INVOICE_FIELD_POLICY)[K]['create']['kind'] extends 'writable'
+    ? K
+    : (typeof INVOICE_FIELD_POLICY)[K] extends { createAllows: readonly unknown[] } ? K : never;
+}[PolicyKey];
+/** Create-surface fields callers may submit, including command-owned defaults. */
+export type InvoiceCreateField = CreateKeys;
 type UpdateKeys<Writable extends boolean> = {
   [K in PolicyKey]: (typeof INVOICE_FIELD_POLICY)[K]['update']['kind'] extends 'writable'
     ? (Writable extends true ? K : never)
@@ -95,7 +102,8 @@ export interface ForbiddenInvoiceField {
  * Update surface: every submitted field must be `writable`; anything else is rejected
  * (unknown keys are reported by the caller). Create surface: `command-owned` and
  * `immutable` fields are rejected unless the value is the field's allowed default
- * (`createAllows`); `engine-derived` fields are tolerated and ignored by the service;
+ * (`createAllows`); engine-derived fields are rejected because callers must not submit
+ * values the engine owns;
  * `immutable` ones like `tenant` are overridden by the service, so they are not
  * rejected either.
  */
@@ -106,13 +114,12 @@ export function checkInvoicePayload(
   const forbidden: ForbiddenInvoiceField[] = [];
   for (const key of Object.keys(data ?? {})) {
     const value = (data as Record<string, unknown>)[key];
-    if (value === undefined) continue;
     const rule = (INVOICE_FIELD_POLICY as Record<string, InvoiceFieldRule>)[key];
     if (!rule) continue; // unknown keys are the caller's concern
     const disposition = rule[surface];
+    if (value === undefined && disposition.kind !== 'engine-derived') continue;
     if (disposition.kind === 'writable') continue;
     if (surface === 'create') {
-      if (disposition.kind === 'engine-derived') continue; // ignored, never persisted
       if (key === 'tenant' || key === 'invoice_id') continue; // overridden by the service
       if (rule.createAllows?.some((allowed) => (typeof allowed === 'number' ? Number(value) === allowed : allowed === value))) {
         continue;

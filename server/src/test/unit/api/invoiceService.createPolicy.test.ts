@@ -117,17 +117,17 @@ describe('InvoiceService.create is draft-only', () => {
     });
   });
 
-  it('never persists caller-supplied header totals and forces the tenant', async () => {
-    await service.create(
-      { client_id: 'client-1', due_date: '2026-01-01', subtotal: 999, tax: 99, total_amount: 1098, tenant: 'evil' } as any,
+  it.each(['subtotal', 'tax', 'total_amount'])('rejects supplied %s before inserting', async (field) => {
+    await expect(service.create(
+      { client_id: 'client-1', due_date: '2026-01-01', [field]: 0 } as any,
       context,
-    );
-    expect(mocks.inserted[0]).toMatchObject({ subtotal: 0, tax: 0, total_amount: 0, tenant: 'tenant-1' });
+    )).rejects.toMatchObject({ statusCode: 400, message: expect.stringContaining(field) });
+    expect(mocks.inserted).toHaveLength(0);
   });
 
   it('derives totals through the billing engine helpers when items are present', async () => {
     await service.create(
-      { client_id: 'client-1', due_date: '2026-01-01', total_amount: 5, items: [{ description: 'x', quantity: 1, unit_price: 100 }] } as any,
+      { client_id: 'client-1', due_date: '2026-01-01', items: [{ description: 'x', quantity: 1, unit_price: 100 }] } as any,
       context,
     );
     expect(mocks.calculateAndDistributeTax).toHaveBeenCalledTimes(1);

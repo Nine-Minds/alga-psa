@@ -115,12 +115,16 @@ describe('POST /api/v1/invoices (InvoiceService.create) is draft-only', () => {
   const base = () => ({ client_id: context.clientId, invoice_date: '2026-03-01', due_date: '2026-03-31' });
   const invoiceCount = async () =>
     Number((await context.db('invoices').where({ tenant: context.tenantId }).count('* as n').first())?.n ?? 0);
+  const chargeCount = async () =>
+    Number((await context.db('invoice_charges').where({ tenant: context.tenantId }).count('* as n').first())?.n ?? 0);
   const headerOf = (invoiceId: string) =>
     context.db('invoices').where({ tenant: context.tenantId, invoice_id: invoiceId }).first();
 
   let baselineCount = 0;
+  let baselineChargeCount = 0;
   beforeEach(async () => {
     baselineCount = await invoiceCount();
+    baselineChargeCount = await chargeCount();
   });
 
   it("a 'sent' status is a 400 at the API boundary and creates nothing", async () => {
@@ -134,11 +138,11 @@ describe('POST /api/v1/invoices (InvoiceService.create) is draft-only', () => {
 
   it('POST rejects a non-draft status through the controller without writing an invoice', async () => {
     const response = await postInvoice({
-      ...base(), status: 'sent', subtotal: 0, tax: 0, total_amount: 0,
+      ...base(), status: 'sent',
     });
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ error: { message: expect.stringContaining('status') } });
+    expect(JSON.stringify(await response.json())).toContain('status');
     expect(await invoiceCount()).toBe(baselineCount);
   });
 
@@ -150,14 +154,36 @@ describe('POST /api/v1/invoices (InvoiceService.create) is draft-only', () => {
     expect(await invoiceCount()).toBe(baselineCount);
   });
 
+  it.each(['subtotal', 'tax', 'total_amount'])('POST rejects supplied %s, even when zero, before any write', async (field) => {
+    const response = await postInvoice({ ...base(), [field]: 0 });
+    expect(response.status).toBe(400);
+    expect(JSON.stringify(await response.json())).toContain(field);
+    expect(await invoiceCount()).toBe(baselineCount);
+    expect(await chargeCount()).toBe(baselineChargeCount);
+  });
+
+  it('POST retains the tax_source rejection and names its owning command', async () => {
+    const response = await postInvoice({ ...base(), tax_source: 'external' });
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain('changeInvoiceTaxSource');
+    expect(await invoiceCount()).toBe(baselineCount);
+    expect(await chargeCount()).toBe(baselineChargeCount);
+  });
+
+  it.each(['subtotal', 'tax', 'total_amount'])('service rejects supplied %s, even when zero, before any write', async (field) => {
+    const error = await serviceUnderTest()
+      .create({ ...base(), [field]: 0 } as any, ctx())
+      .then(() => null, (e) => e);
+    expect(error).toMatchObject({ statusCode: 400, message: expect.stringContaining(field) });
+    expect(await invoiceCount()).toBe(baselineCount);
+    expect(await chargeCount()).toBe(baselineChargeCount);
+  });
+
   it('POST creates an authorized draft through the controller, schema, and service', async () => {
     const response = await postInvoice({
       ...base(),
       status: 'draft',
       credit_applied: 0,
-      subtotal: 999999,
-      tax: 123456,
-      total_amount: 1,
       items: [{ description: 'HTTP work', quantity: 2, unit_price: 750, rate: 750, tax_amount: 0 }],
     });
 
@@ -207,15 +233,12 @@ describe('POST /api/v1/invoices (InvoiceService.create) is draft-only', () => {
     expect(await invoiceCount()).toBe(baselineCount);
   });
 
-  it('header totals come from the charges, not the posted values', async () => {
+  it('header totals come from the charges', async () => {
     const created = await serviceUnderTest().create(
       {
         ...base(),
         status: 'draft',
         credit_applied: 0,
-        subtotal: 999999,
-        tax: 123456,
-        total_amount: 1,
         items: [
           { description: 'A', quantity: 1, unit_price: 1000 },
           { description: 'B', quantity: 2, unit_price: 500 },
@@ -237,9 +260,9 @@ describe('POST /api/v1/invoices (InvoiceService.create) is draft-only', () => {
     expect(Number(header.total_amount)).toBe(Math.round(net + tax));
   });
 
-  it('an invoice without items has zero totals whatever the body says', async () => {
+  it('an invoice without items has zero totals', async () => {
     const created = await serviceUnderTest().create(
-      { ...base(), subtotal: 500, tax: 50, total_amount: 550 } as any,
+      { ...base() } as any,
       ctx(),
     );
     const header = await headerOf((created as any).invoice_id);
