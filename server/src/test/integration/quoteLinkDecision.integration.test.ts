@@ -133,6 +133,22 @@ async function submit(token: string, input: any, ctx = CTX) {
   return submitQuoteLinkDecision(token, withFp, ctx);
 }
 
+async function waitForBlockedQuoteLinkUpdate(timeoutMs = 10_000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const { rows } = await db.raw(
+      `SELECT 1 FROM pg_stat_activity
+       WHERE datname = current_database()
+         AND wait_event_type = 'Lock'
+         AND query ILIKE '%quote_access_links%'
+         AND query ILIKE '%update%'`
+    );
+    if (rows.length) return true;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  return false;
+}
+
 describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
   beforeAll(async () => {
     db = await createTestDbConnection();
@@ -332,6 +348,7 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
       [{ agreementTextHash: 'f'.repeat(64) }, 'agreement_outdated'],
       [{ agreementVersion: undefined }, 'agreement_outdated'],
       [{ signer: { name: 'x'.repeat(201) } }, 'too_long'],
+      [{ signer: { name: 'Jane Doe', title: 123 } }, 'invalid_field_type'],
       [{ selectedOptionalQuoteItemIds: [uuidv4()] }, 'invalid_selection'],
       [{ selectedOptionalQuoteItemIds: [s.required] }, 'invalid_selection'],
     ];
@@ -382,6 +399,37 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
     ]);
     expect(mixed.filter((r) => r.status === 'decided')).toHaveLength(1);
     expect(await decisionRows(s2.tenantId, s2.quoteId)).toHaveLength(1);
+  });
+
+  it('4c. revocation that wins the link row lock prevents acceptance and audit writes', async () => {
+    const s = await setup();
+    let releaseRevocation!: () => void;
+    let signalLocked!: () => void;
+    const locked = new Promise<void>((resolve) => { signalLocked = resolve; });
+    const hold = new Promise<void>((resolve) => { releaseRevocation = resolve; });
+
+    const revocation = db.transaction(async (trx) => {
+      await tt(s.tenantId, 'quote_access_links').transacting(trx)
+        .where({ link_id: s.link.link_id }).forUpdate().first();
+      signalLocked();
+      await hold;
+      const { QuoteAccessLinks } = await import('@alga-psa/billing/services');
+      await QuoteAccessLinks.revoke(trx, s.tenantId, { linkId: s.link.link_id }, 'superseded');
+    });
+
+    await locked;
+    const decision = submit(s.token, await acceptInput());
+    try {
+      expect(await waitForBlockedQuoteLinkUpdate()).toBe(true);
+    } finally {
+      releaseRevocation();
+    }
+    await revocation;
+    expect(await decision).toEqual({ status: 'invalid_link' });
+    expect((await quoteRow(s.tenantId, s.quoteId)).status).toBe('sent');
+    expect(await decisionRows(s.tenantId, s.quoteId)).toHaveLength(0);
+    expect(await tt(s.tenantId, 'quote_activities').where({ quote_id: s.quoteId })).toHaveLength(0);
+    expect(onQuoteAcceptedSpy).not.toHaveBeenCalled();
   });
 
   it('5a. MSP edits an item price while the quote stays sent: "changed", no decision, hook not called', async () => {

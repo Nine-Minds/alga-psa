@@ -234,23 +234,47 @@ export async function resolve(
 
   // 4. Tenant-scoped reads. expiry is evaluated on the DB clock.
   const db = tenantDb(knex, tenant);
-  const link = await db
+  const candidate = await db
     .table<IQuoteAccessLink & { is_expired: boolean }>(TABLE)
     .select('*', knex.raw('(expires_at <= now()) as is_expired'))
     .where({ token_hash: hash })
     .first();
-  if (!link) {
-    return { status: 'not_found' };
-  }
-  const quote = await db.table<IQuote>('quotes').where({ quote_id: link.quote_id }).first();
-  if (!quote) {
+  if (!candidate) {
     return { status: 'not_found' };
   }
 
-  // 5. Status mapping.
-  if (link.is_expired) {
-    return { status: 'expired' };
+  // 5. Claim a usage atomically before authorizing the link. The guarded UPDATE
+  // takes the link row lock and rechecks revocation/expiry after any lock wait.
+  // This orders resolution against resend/reminder revocation: whichever write
+  // gets the row lock first determines whether this request may proceed.
+  const [link] = await db
+    .table<IQuoteAccessLink>(TABLE)
+    .where({ link_id: candidate.link_id })
+    .whereNull('revoked_at')
+    .whereRaw('expires_at > now()')
+    .update({ last_used_at: knex.fn.now(), use_count: knex.raw('use_count + 1') })
+    .returning('*');
+
+  if (!link) {
+    // The candidate may have been revoked or expired while the UPDATE waited.
+    const current = await db
+      .table<IQuoteAccessLink & { is_expired: boolean }>(TABLE)
+      .select('*', knex.raw('(expires_at <= now()) as is_expired'))
+      .where({ link_id: candidate.link_id })
+      .first();
+    if (!current) return { status: 'not_found' };
+    if (current.is_expired) return { status: 'expired' };
+    if (current.revoked_at && current.revoked_reason === 'superseded') return { status: 'superseded' };
+    if (current.revoked_at) return { status: 'revoked' };
+    return { status: 'not_found' };
   }
+
+  // The UPDATE predicate itself evaluates expiry on the database clock and has
+  // just succeeded while holding the row lock.
+  const quote = await db.table<IQuote>('quotes').where({ quote_id: link.quote_id }).first();
+  if (!quote) return { status: 'not_found' };
+
+  // 6. Status mapping, using the row returned by the guarded UPDATE.
   if (link.revoked_at && link.revoked_reason === 'superseded') {
     return { status: 'superseded' };
   }
@@ -263,18 +287,11 @@ export async function resolve(
 
   const readOnly = quote.status === 'accepted' || quote.status === 'rejected' || quote.status === 'converted';
 
-  // 7. Usage bump (only these two columns).
-  await db
-    .table(TABLE)
-    .where({ link_id: link.link_id })
-    .update({ last_used_at: knex.fn.now(), use_count: knex.raw('use_count + 1') });
-
-  const { is_expired: _isExpired, ...cleanLink } = link;
   return {
     status: 'ok',
     tenant,
     quote,
-    link: cleanLink as IQuoteAccessLink,
+    link,
     recipient: { contactId: link.contact_id ?? null, email: link.recipient_email },
     readOnly,
   };

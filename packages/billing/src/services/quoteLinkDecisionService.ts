@@ -72,6 +72,7 @@ export type QuoteLinkInputProblem =
   | 'invalid_selection'
   | 'too_long'
   | 'invalid_action'
+  | 'invalid_field_type'
   | 'fingerprint_required';
 
 /** The quote as persisted by the decision transaction (minor units, as on the quotes row). */
@@ -144,6 +145,7 @@ function validateShape(input: QuoteLinkDecisionInput): QuoteLinkInputProblem | n
 
   const name = typeof input.signer?.name === 'string' ? input.signer.name.trim() : '';
   if (!name) return 'name_required';
+  if (input.signer?.title != null && typeof input.signer.title !== 'string') return 'invalid_field_type';
   const title = typeof input.signer?.title === 'string' ? input.signer.title.trim() : '';
   if (name.length > L.name || title.length > L.title) return 'too_long';
   if (input.agreed !== true) return 'agreement_required';
