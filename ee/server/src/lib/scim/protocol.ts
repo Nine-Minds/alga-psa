@@ -113,7 +113,7 @@ export function parseScimUser(
     throw new ScimError(400, 'userName is required.', 'invalidValue');
   }
 
-  if (input.active !== undefined && typeof input.active !== 'boolean') {
+  if (typeof input.active !== 'boolean') {
     throw new ScimError(400, 'active must be a boolean.', 'invalidValue');
   }
 
@@ -126,7 +126,7 @@ export function parseScimUser(
   return {
     externalId: externalId ?? '',
     userName,
-    active: input.active !== false,
+    active: input.active,
     primaryEmail: parsePrimaryEmail(input.emails),
     displayName: optionalString(input.displayName, 'displayName'),
     givenName: optionalString(structuredName.givenName, 'name.givenName'),

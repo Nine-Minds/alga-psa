@@ -4,6 +4,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '@ee/lib/testing/db-test-utils';
+import { parseScimUser, SCIM_USER_SCHEMA } from '@ee/lib/scim/protocol';
 import { ScimProvisioningService } from '@ee/lib/scim/service';
 
 describe('SCIM provisioning database lifecycle', () => {
@@ -95,6 +96,33 @@ describe('SCIM provisioning database lifecycle', () => {
   }
 
   const activePatch = [{ op: 'replace' as const, path: 'active', value: true }];
+
+  it.each(['POST', 'PUT'] as const)('%s rejects omitted active before provisioning or lifecycle changes', async (method) => {
+    const fixture = await reactivationFixture();
+    const newEmail = `scim-omitted-active-${randomUUID()}@example.test`;
+    const payload = {
+      schemas: [SCIM_USER_SCHEMA],
+      externalId: `entra-${randomUUID()}`,
+      userName: method === 'POST' ? newEmail : fixture.email,
+    };
+    try {
+      // POST and PUT both normalize through parseScimUser before dispatching to
+      // createUser/replaceUser. A rejected payload therefore cannot reach either
+      // transaction that creates a SCIM link or changes lifecycle state.
+      expect(() => parseScimUser(payload)).toThrowError(
+        expect.objectContaining({ status: 400, scimType: 'invalidValue' })
+      );
+
+      const customer = tenantDb(fixture.trx, fixture.tenant);
+      expect(await customer.table('users').where({ email: newEmail }).first()).toBeUndefined();
+      expect(await customer.table('scim_user_links').where({ external_id: payload.externalId }).first()).toBeUndefined();
+      expect(await customer.table('scim_user_links').where({ link_id: fixture.linkId })
+        .first(['upstream_active', 'link_state', 'scim_inactive_at']))
+        .toMatchObject({ upstream_active: false, link_state: 'active' });
+      expect(await customer.table('users').where({ user_id: fixture.userId }).first('is_inactive'))
+        .toMatchObject({ is_inactive: true });
+    } finally { await fixture.trx.rollback(); }
+  });
 
   it.each([
     ['expired sponsor entitlement', 'expired-entitlement'],

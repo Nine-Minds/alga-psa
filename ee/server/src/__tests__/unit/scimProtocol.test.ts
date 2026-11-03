@@ -51,6 +51,19 @@ describe('SCIM protocol and credentials', () => {
     });
   });
 
+  it('requires active for create and replace payloads while accepting false', () => {
+    const user = {
+      schemas: [SCIM_USER_SCHEMA],
+      externalId: 'entra-object-1',
+      userName: 'ada@example.com',
+    };
+
+    expect(() => parseScimUser(user)).toThrowError(
+      expect.objectContaining({ status: 400, scimType: 'invalidValue' })
+    );
+    expect(parseScimUser({ ...user, active: false }).active).toBe(false);
+  });
+
   it('accepts only the supported exact filters', () => {
     expect(parseScimFilter('userName eq "ada@example.com"')).toEqual({
       attribute: 'userName',
@@ -73,6 +86,15 @@ describe('SCIM protocol and credentials', () => {
       ],
     })).toEqual([
       { op: 'replace', path: 'active', value: false },
+    ]);
+  });
+
+  it('continues to accept PATCH operations that omit active', () => {
+    expect(parsePatchOperations({
+      schemas: [SCIM_PATCH_SCHEMA],
+      Operations: [{ op: 'replace', path: 'displayName', value: 'Ada Lovelace' }],
+    })).toEqual([
+      { op: 'replace', path: 'displayName', value: 'Ada Lovelace' },
     ]);
   });
 
