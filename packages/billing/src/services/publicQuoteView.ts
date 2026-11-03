@@ -23,7 +23,6 @@ import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailL
 import { QUOTE_ACTIVITY_TYPES } from '../lib/quoteActivityTypes';
 
 export const PUBLIC_QUOTE_FIELDS = [
-  'quote_id',
   'quote_number',
   'title',
   'description',
@@ -42,7 +41,6 @@ export const PUBLIC_QUOTE_FIELDS = [
 ] as const satisfies ReadonlyArray<keyof IQuote>;
 
 export const PUBLIC_QUOTE_ITEM_FIELDS = [
-  'quote_item_id',
   'description',
   'quantity',
   'unit_price',
@@ -51,11 +49,9 @@ export const PUBLIC_QUOTE_ITEM_FIELDS = [
   'is_optional',
   'is_selected',
   'is_discount',
-  'location_id',
 ] as const satisfies ReadonlyArray<keyof IQuoteItem>;
 
 export const PUBLIC_QUOTE_LOCATION_FIELDS = [
-  'location_id',
   'location_name',
   'address_line1',
   'address_line2',
@@ -68,10 +64,13 @@ export const PUBLIC_QUOTE_LOCATION_FIELDS = [
 ] as const;
 
 export type PublicQuote = Pick<IQuote, (typeof PUBLIC_QUOTE_FIELDS)[number]>;
-export type PublicQuoteItem = Pick<IQuoteItem, (typeof PUBLIC_QUOTE_ITEM_FIELDS)[number]>;
+export type PublicQuoteItem = Pick<IQuoteItem, (typeof PUBLIC_QUOTE_ITEM_FIELDS)[number]> & {
+  publicRef: string;
+  locationRef: string | null;
+};
 export type PublicQuoteLocation = {
   [K in (typeof PUBLIC_QUOTE_LOCATION_FIELDS)[number]]?: string | null;
-} & { location_id: string };
+} & { publicRef: string };
 
 export interface PublicQuoteView {
   quote: PublicQuote;
@@ -100,7 +99,45 @@ export function projectPublicQuote(quote: IQuote): PublicQuote {
 }
 
 export function projectPublicQuoteItems(items: ReadonlyArray<IQuoteItem>): PublicQuoteItem[] {
-  return items.map((item) => pick(item, PUBLIC_QUOTE_ITEM_FIELDS));
+  return items.map((item, index) => ({
+    ...pick(item, PUBLIC_QUOTE_ITEM_FIELDS),
+    publicRef: `item-${index}`,
+    locationRef: null,
+  }));
+}
+
+/**
+ * Projects the complete browser-bound quote payload. Item/location joins use
+ * page-local positional references, never database identifiers.
+ */
+export function projectPublicQuoteView(
+  quote: IQuote,
+  locationRows: ReadonlyArray<Record<string, unknown>> = [],
+): PublicQuoteView {
+  const sourceItems = quote.quote_items ?? [];
+  const sourceLocationIds = Array.from(new Set(sourceItems
+    .map((item) => item.location_id)
+    .filter((id): id is string => Boolean(id && id.trim()))));
+  const publicRefByLocationId = new Map(sourceLocationIds.map((id, index) => [id, `location-${index}`]));
+  const locationById = new Map(locationRows.map((row) => [String(row.location_id), row]));
+  const items = sourceItems.map((item, index): PublicQuoteItem => ({
+    ...pick(item, PUBLIC_QUOTE_ITEM_FIELDS),
+    publicRef: `item-${index}`,
+    locationRef: item.location_id ? publicRefByLocationId.get(item.location_id) ?? null : null,
+  }));
+  const locations = sourceLocationIds.flatMap((id): PublicQuoteLocation[] => {
+    const location = locationById.get(id);
+    if (!location) return [];
+    return [{
+      ...pick(location, PUBLIC_QUOTE_LOCATION_FIELDS as ReadonlyArray<keyof typeof location>),
+      publicRef: publicRefByLocationId.get(id)!,
+    } as PublicQuoteLocation];
+  });
+
+  const projectedQuote = pick(quote, PUBLIC_QUOTE_FIELDS);
+  (projectedQuote as any).quote_date = toIso(projectedQuote.quote_date);
+  (projectedQuote as any).valid_until = toIso(projectedQuote.valid_until);
+  return { quote: projectedQuote as PublicQuote, items, locations };
 }
 
 /** Loads the quote the way the portal does (Quote.getById) and returns only the allow-listed view. */
@@ -115,21 +152,19 @@ export async function loadPublicQuoteView(
     return null;
   }
 
-  const items = projectPublicQuoteItems(quote.quote_items ?? []);
-
-  const locationIds = Array.from(
-    new Set(items.map((i) => i.location_id).filter((id): id is string => Boolean(id && id.trim()))),
-  );
-  let locations: PublicQuoteLocation[] = [];
+  const locationIds = Array.from(new Set((quote.quote_items ?? [])
+    .map((item) => item.location_id)
+    .filter((id): id is string => Boolean(id && id.trim()))));
+  let locations: Record<string, unknown>[] = [];
   if (quote.client_id && locationIds.length > 0) {
     locations = await tenantDb(knex, tenant)
       .table('client_locations')
-      .select(...PUBLIC_QUOTE_LOCATION_FIELDS)
+      .select('location_id', ...PUBLIC_QUOTE_LOCATION_FIELDS)
       .where({ client_id: quote.client_id })
       .whereIn('location_id', locationIds);
   }
 
-  return { quote: projectPublicQuote(quote), items, locations };
+  return projectPublicQuoteView(quote, locations);
 }
 
 const VIEW_DEBOUNCE_MS = 60_000;

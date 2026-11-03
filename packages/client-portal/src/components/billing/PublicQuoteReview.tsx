@@ -7,36 +7,27 @@
  */
 
 import React, { useMemo } from 'react';
-import type { IQuoteItem } from '@alga-psa/types';
 import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
 import { I18nProvider, useTranslation, type PreloadedNamespaceResources } from '@alga-psa/ui/lib/i18n/client';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
-import type { ClientPortalLocationSummary } from '@alga-psa/client-portal/actions';
-import { QuoteDocumentView, type QuoteDocumentQuote } from './QuoteDocumentView';
+import { QuoteDocumentView, type QuoteDocumentItem, type QuoteDocumentLocation, type QuoteDocumentQuote } from './QuoteDocumentView';
 
-export type PublicQuoteReviewItem = Pick<
-  IQuoteItem,
-  | 'quote_item_id'
-  | 'description'
-  | 'quantity'
-  | 'unit_price'
-  | 'total_price'
-  | 'display_order'
-  | 'is_optional'
-  | 'is_selected'
-  | 'is_discount'
-  | 'location_id'
->;
+export type PublicQuoteReviewItem = Omit<QuoteDocumentItem, 'quote_item_id' | 'location_id' | 'publicRef' | 'locationRef'> & {
+  publicRef: string;
+  locationRef: string | null;
+};
+export type PublicQuoteReviewLocation = Omit<QuoteDocumentLocation, 'location_id' | 'publicRef'> & { publicRef: string };
+export type PublicQuoteReviewQuote = Omit<QuoteDocumentQuote, 'quote_id'> & {
+  subtotal: number;
+  discount_total: number;
+  tax: number;
+  total_amount: number;
+};
 
 export interface PublicQuoteReviewProps {
-  quote: QuoteDocumentQuote & {
-    subtotal: number;
-    discount_total: number;
-    tax: number;
-    total_amount: number;
-  };
+  quote: PublicQuoteReviewQuote;
   items: PublicQuoteReviewItem[];
-  locations: ClientPortalLocationSummary[];
+  locations: PublicQuoteReviewLocation[];
   locale: SupportedLocale;
   resources?: PreloadedNamespaceResources;
   branding: { name: string | null; logoUrl: string | null };
@@ -80,7 +71,7 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice }: Pu
       )}
       <QuoteDocumentView
         quote={quote}
-        items={items as IQuoteItem[]}
+        items={items}
         locations={locations}
         totals={totals}
         pdfHref={pdfHref}

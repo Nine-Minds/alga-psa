@@ -41,7 +41,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
   // View telemetry: ok only, debounced per (link, minute). Never blocks the page.
   try {
     await recordQuoteViewedViaEmailLink(knex, tenant, {
-      quoteId: view.quote.quote_id,
+      quoteId: resolved.quote.quote_id,
       linkId: link.link_id,
       recipientEmail: recipient.email,
     });
@@ -66,9 +66,9 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
 
   return (
     <PublicQuoteReview
-      quote={view.quote as any}
+      quote={view.quote}
       items={view.items}
-      locations={view.locations as any}
+      locations={view.locations}
       locale={locale}
       resources={resources}
       branding={{
