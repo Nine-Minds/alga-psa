@@ -128,6 +128,7 @@ export async function readCoManagedNativeSchedules(db: Knex, tenant: string, ide
     const hints = await query.limit(MAX_SCHEDULE_CANDIDATES + 1).select('entry_id', 'work_item_id', 'work_item_type'), entries: any[] = [];
     if (hints.length > MAX_SCHEDULE_CANDIDATES) throw new CoManagedScheduleLimitError();
     let holidays: any[] | undefined, projectedCount = 0;
+    const recurrenceWork = { remaining: MAX_SCHEDULE_RESULTS };
     const calendarRows = async (row: any) => {
       if (!options.calendar || !row.is_recurring || !row.recurrence_pattern) return [row];
       const pattern = typeof row.recurrence_pattern === 'string' ? JSON.parse(row.recurrence_pattern) : row.recurrence_pattern;
@@ -145,7 +146,7 @@ export async function readCoManagedNativeSchedules(db: Knex, tenant: string, ide
       }
       const remaining = MAX_SCHEDULE_RESULTS - projectedCount;
       const occurrences = generateOccurrences({ ...row, recurrence_pattern: pattern }, from, new Date(calendarEnd!), {
-        holidays, includeMaster: true, maxOccurrences: remaining,
+        holidays, includeMaster: true, maxOccurrences: remaining, workBudget: recurrenceWork,
       });
       return occurrences.map(occurrence => ({
         ...row, entry_id: `${row.entry_id}_${occurrence.getTime()}`, original_entry_id: row.entry_id,

@@ -65,15 +65,19 @@ export interface GenerateOccurrencesOptions {
   holidays?: IHoliday[];
   /** Include the master date when the caller materializes the whole series virtually. */
   includeMaster?: boolean;
-  /** Maximum number of dates the rule engine may materialize for this call. */
+  /** Maximum recurrence dates the rule engine may visit, including dates before the requested range. */
   maxOccurrences?: number;
+  /** Shared request budget. Visits before the requested range consume it too. */
+  workBudget?: RecurrenceWorkBudget;
 }
+
+export interface RecurrenceWorkBudget { remaining: number }
 
 export const MAX_CALENDAR_WINDOW_MS = 366 * 24 * 60 * 60 * 1000;
 export const DEFAULT_MAX_RECURRENCE_OCCURRENCES = 10000;
 
 export class RecurrenceOccurrenceLimitError extends Error {
-  constructor() {
+  constructor(readonly maxOccurrences: number, readonly occurrencesVisited: number) {
     super('The recurrence produces too many occurrences for this request.');
     this.name = 'RecurrenceOccurrenceLimitError';
   }
@@ -88,9 +92,12 @@ export function generateOccurrences(
 ): Date[] {
   try {
     const maxOccurrences = options?.maxOccurrences ?? DEFAULT_MAX_RECURRENCE_OCCURRENCES;
-    if (!Number.isSafeInteger(maxOccurrences) || maxOccurrences < 0) throw new RecurrenceOccurrenceLimitError();
+    const workBudget = options?.workBudget;
+    if (!Number.isSafeInteger(maxOccurrences) || maxOccurrences < 0 || (workBudget && (!Number.isSafeInteger(workBudget.remaining) || workBudget.remaining < 0))) {
+      throw new RecurrenceOccurrenceLimitError(maxOccurrences, 0);
+    }
     if (!entry.recurrence_pattern) {
-      if (maxOccurrences < 1) throw new RecurrenceOccurrenceLimitError();
+      if (maxOccurrences < 1) throw new RecurrenceOccurrenceLimitError(maxOccurrences, 0);
       return [new Date(entry.scheduled_start)];
     }
     const pattern = entry.recurrence_pattern;
@@ -160,11 +167,26 @@ export function generateOccurrences(
     if (allDay) rangeEnd.setUTCHours(23, 59, 59, 999);
     else rangeEnd.setHours(23, 59, 59, 999);
 
-    // Get the base occurrences using normalized dates
-    // rrule.between accepts an iterator that can halt generation. Ask for one
-    // more than the budget so callers can reject instead of silently truncate.
-    const baseOccurrences = rrule.between(rangeStart, rangeEnd, true, (_date, index) => index <= maxOccurrences);
-    if (baseOccurrences.length > maxOccurrences) throw new RecurrenceOccurrenceLimitError();
+    // `between` filters dates before invoking its iterator, so its callback
+    // cannot bound work for old masters queried far in the future. `all`
+    // exposes each generated date. Keep historical dates inside the bounded
+    // rule result, collect only the requested range, and stop at the range end.
+    const baseOccurrences: Date[] = [];
+    const visitLimit = Math.min(maxOccurrences, workBudget?.remaining ?? maxOccurrences);
+    if (visitLimit === 0) throw new RecurrenceOccurrenceLimitError(visitLimit, 0);
+    let occurrencesVisited = 0, traversalExceeded = false;
+    rrule.all(date => {
+      if (date > rangeEnd) return false;
+      occurrencesVisited++;
+      if (occurrencesVisited > visitLimit) {
+        traversalExceeded = true;
+        return false;
+      }
+      if (date >= rangeStart) baseOccurrences.push(date);
+      return true;
+    });
+    if (workBudget) workBudget.remaining -= Math.min(occurrencesVisited, visitLimit);
+    if (traversalExceeded) throw new RecurrenceOccurrenceLimitError(visitLimit, occurrencesVisited);
 
     // Validate and get the original time
     const originalTime = new Date(entry.scheduled_start);

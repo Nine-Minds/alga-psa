@@ -476,9 +476,14 @@ describe('bounded recurrence generation', () => {
   const endless = makeEntry({ is_recurring: true, scheduled_start: new Date('1970-01-01T09:00:00Z'),
     scheduled_end: new Date('1970-01-01T10:00:00Z'), recurrence_pattern: makePattern({ startDate: new Date('1970-01-01T00:00:00Z') }) });
 
-  it('halts an endless daily rule at the occurrence budget instead of materializing the 1970–9999 range', () => {
-    expect(() => generateOccurrences(endless, new Date('1970-01-01'), new Date('9999-12-31'), { maxOccurrences: 100 }))
-      .toThrow(RecurrenceOccurrenceLimitError);
+  it('halts historical traversal at the work budget for a narrow year-9999 query', () => {
+    try {
+      generateOccurrences(endless, new Date('9999-01-01'), new Date('9999-01-02'), { maxOccurrences: 100 });
+      throw new Error('Expected recurrence traversal to exceed its work budget');
+    } catch (error) {
+      expect(error).toBeInstanceOf(RecurrenceOccurrenceLimitError);
+      expect((error as RecurrenceOccurrenceLimitError).occurrencesVisited).toBe(101);
+    }
   });
 
   it('accepts an exact occurrence budget and rejects one occurrence beyond it', () => {
@@ -497,5 +502,11 @@ describe('bounded recurrence generation', () => {
     expect(results[1].getTime() - results[0].getTime()).toBe(24 * 60 * 60 * 1000);
     expect(results[2].getTime() - results[1].getTime()).toBe(24 * 60 * 60 * 1000);
     expect(MAX_CALENDAR_WINDOW_MS).toBe(366 * 24 * 60 * 60 * 1000);
+  });
+
+  it('preserves finite count and interval semantics when the requested window is after the series ended', () => {
+    const entry = { ...endless, recurrence_pattern: makePattern({ startDate: new Date('2024-01-01'), interval: 2, count: 3 }),
+      scheduled_start: new Date('2024-01-01T09:00:00Z') };
+    expect(generateOccurrences(entry, new Date('2024-02-01'), new Date('2024-02-02'), { maxOccurrences: 10 })).toEqual([]);
   });
 });
