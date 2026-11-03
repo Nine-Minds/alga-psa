@@ -71,7 +71,7 @@ describe('POST /api/v1/invoices (InvoiceService.create) is draft-only', () => {
     }
 
     protected async checkPermission(_req: any, action: string) {
-      expect(action).toBe('create');
+      expect(['create', 'update']).toContain(action);
     }
 
     protected runWithApiKeyContext<T>(_req: any, callback: () => Promise<T>): Promise<T> {
@@ -96,6 +96,17 @@ describe('POST /api/v1/invoices (InvoiceService.create) is draft-only', () => {
       body: JSON.stringify(body),
     });
     return controller.create()(request);
+  }
+
+  function putInvoice(invoiceId: string, body: Record<string, unknown>) {
+    const controller = controllerUnderTest();
+    const request = new NextRequest(`http://localhost/api/v1/invoices/${invoiceId}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    (request as any).params = Promise.resolve({ id: invoiceId });
+    return controller.update()(request);
   }
 
   function duplicateInvoice(invoiceId: string) {
@@ -267,6 +278,45 @@ describe('POST /api/v1/invoices (InvoiceService.create) is draft-only', () => {
     );
     const header = await headerOf((created as any).invoice_id);
     expect([Number(header.subtotal), Number(header.tax), Number(header.total_amount)]).toEqual([0, 0, 0]);
+  });
+
+  it.each([
+    ['empty item', {}],
+    ['item without monetary inputs', { description: 'missing monetary inputs' }],
+  ])('rejects an %s replacement without deleting existing charges', async (_label, item) => {
+    const created = await serviceUnderTest().create({
+      ...base(), items: [{ description: 'existing charge', quantity: 1, unit_price: 1200 }],
+    } as any, ctx());
+    const before = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: (created as any).invoice_id })
+      .select('item_id', 'description', 'unit_price', 'quantity');
+
+    const response = await putInvoice((created as any).invoice_id, { items: [item] });
+
+    expect(response.status).toBe(400);
+    expect(JSON.stringify(await response.json())).toContain('items');
+    const after = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: (created as any).invoice_id })
+      .select('item_id', 'description', 'unit_price', 'quantity');
+    expect(after).toEqual(before);
+  });
+
+  it('accepts a complete replacement item and persists it', async () => {
+    const created = await serviceUnderTest().create({
+      ...base(), items: [{ description: 'original charge', quantity: 1, unit_price: 1200 }],
+    } as any, ctx());
+
+    const response = await putInvoice((created as any).invoice_id, {
+      items: [{ description: 'replacement charge', quantity: 3, unit_price: 400, rate: 400, tax_amount: 0 }],
+    });
+
+    expect(response.status).toBe(200);
+    const charges = await context.db('invoice_charges')
+      .where({ tenant: context.tenantId, invoice_id: (created as any).invoice_id });
+    expect(charges).toHaveLength(1);
+    expect(charges[0].description).toBe('replacement charge');
+    expect(Number(charges[0].quantity)).toBe(3);
+    expect(Number(charges[0].unit_price)).toBe(400);
   });
 
   it.each([['is_manual'], ['is_prepayment']])('%s = true in the create body is a 400 and creates nothing', async (field) => {

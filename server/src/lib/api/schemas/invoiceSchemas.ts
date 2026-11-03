@@ -241,7 +241,7 @@ const updateInvoiceFields = Object.fromEntries(
       key === 'tax_source'
         ? z.enum(['internal', 'external', 'pending_external']).optional()
         : key === 'items'
-          ? z.array(updateInvoiceItemSchema).optional()
+          ? z.array(createInvoiceItemSchema).optional()
         : (baseInvoiceShape as Record<string, z.ZodTypeAny>)[key],
     ])
     .filter(([, schema]) => !!schema)
@@ -816,7 +816,7 @@ export type CreateInvoice = Pick<InvoiceBase, RequiredCreateInvoiceField>
   & Partial<Pick<InvoiceBase, Exclude<Extract<InvoiceCreateField, keyof InvoiceBase>, RequiredCreateInvoiceField>>>
   & { tenant?: string; items?: CreateInvoiceItem[] };
 export type UpdateInvoice = Partial<Pick<InvoiceBase, Extract<InvoiceUpdateField, keyof InvoiceBase>>>
-  & { items?: UpdateInvoiceItem[]; tax_source?: 'internal' | 'external' | 'pending_external' };
+  & { items?: CreateInvoiceItem[]; tax_source?: 'internal' | 'external' | 'pending_external' };
 export type InvoiceResponse = z.infer<typeof invoiceResponseSchema>;
 export type InvoiceViewModel = z.infer<typeof invoiceViewModelSchema>;
 export type InvoiceTemplate = z.infer<typeof invoiceTemplateSchema>;
