@@ -98,6 +98,10 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
   // other portal, which therefore behaves exactly as before).
   const sharedTaskIds = useRequesterSharedTaskIds(project.project_id);
   const taskLinkHandledFor = useRef<string | null>(null);
+  const linkedTaskId = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('taskId') : null;
+  const eligibleLinkedTaskId = sharedTaskIds?.has(linkedTaskId ?? '') && tasks.some(task => task.task_id === linkedTaskId)
+    ? linkedTaskId
+    : null;
 
   // Persist viewMode to localStorage when it changes
   const handleViewModeChange = (newMode: ViewMode) => {
@@ -215,10 +219,9 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
   useEffect(() => {
     if (!sharedTaskIds || tasks.length === 0 || taskLinkHandledFor.current === project.project_id) return;
     taskLinkHandledFor.current = project.project_id;
-    const linkedTaskId = new URLSearchParams(window.location.search).get('taskId');
     const linkedTask = linkedTaskId && sharedTaskIds.has(linkedTaskId) ? tasks.find(task => task.task_id === linkedTaskId) : undefined;
     if (linkedTask) setSelectedPhaseId(linkedTask.phase_id);
-  }, [sharedTaskIds, tasks, project.project_id]);
+  }, [sharedTaskIds, tasks, linkedTaskId, project.project_id]);
 
   // View switcher options
   const viewOptions = useMemo(() => [
@@ -322,6 +325,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
                 config={config}
                 loading={dataLoading}
                 taskDependencies={taskDependencies}
+                linkedTaskId={eligibleLinkedTaskId}
               />
             )}
           </div>
