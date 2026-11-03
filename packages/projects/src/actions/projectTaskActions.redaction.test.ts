@@ -281,6 +281,7 @@ describe('getProjectTaskData project redactions', () => {
     const otherProjectPhase: any = await getTaskWithDetails('task1');
     expect(otherProjectPhase.phase_name).toBeNull();
 
+    state.phaseProjectId = 'project1';
     state.phaseTenant = 't2';
     const otherTenantPhase: any = await getTaskWithDetails('task1');
     expect(otherTenantPhase.phase_name).toBeNull();
