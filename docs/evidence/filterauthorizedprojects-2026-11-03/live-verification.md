@@ -43,3 +43,10 @@ The `security-finding-resolved` acceptance check was not run; no callable check 
 ## Conclusion
 
 Live verification remains blocked until the board admits and restores the existing dev-server service. Reviewer should first inspect this service-queue evidence and then rerun the supplied plan at the exact origin HEAD. Required live cases remain pending; this is not a verification pass.
+
+## Follow-up retry after review
+
+- On 2026-11-03, origin HEAD was re-fetched and confirmed as `e801a24275197bd097ffecb6cb6b4eda6084bced` before this follow-up evidence update.
+- The existing service was re-ensured twice through `alga-dev workflow-ensure-service`; it remained `suspended` with the board recovery request queued. Latest response at 16:20 UTC: resume queue position 51, requiring 6 GB on `robert-X670E-Pro-RS` (34 GB free, 12 GB reserved, 8 GB floor; 20 earlier reservations ahead).
+- The service still records the expected worktree `server` cwd. Port 3397 remained without a listener, and the required hostname failed to connect. No server was started outside the board.
+- Therefore none of the PLAN.md authenticated baseline, redaction alias, isolation, denied-reader, or restored-access cases were executable at this exact origin revision. No temporary DB fixtures or authorization changes were created.
