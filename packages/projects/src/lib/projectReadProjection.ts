@@ -24,6 +24,10 @@ export function isProjectFieldRedacted(redactedFields: readonly string[], field:
   );
 }
 
+export function isWholeProjectRedacted(redactedFields: readonly string[]): boolean {
+  return redactedFields.some((field) => field === '*' || field === 'projects.*' || field === 'project.*');
+}
+
 export function assertProjectFieldsWritable(redactedFields: readonly string[], fields: readonly string[]): void {
   const hidden = fields.filter((field) => {
     const related = [field];
@@ -44,7 +48,7 @@ export function projectRecord<T extends ProjectRecord>(record: T, redactedFields
 
   // A wildcard decision covers the complete record, including fields not yet
   // known to this projection (and every display value added by enrichment).
-  if (redactedFields.some((field) => field === '*' || field === 'projects.*' || field === 'project.*')) {
+  if (isWholeProjectRedacted(redactedFields)) {
     return {} as T;
   }
 
@@ -76,7 +80,9 @@ export async function authorizeAndProjectProjectRecords<T extends object>(
   const decisions = await Promise.all(records.map((record) => authorize(record)));
   return records.flatMap((record, index) => {
     const decision = decisions[index];
-    return decision?.allowed ? [projectRecord(record as ProjectRecord, decision.redactedFields ?? []) as T] : [];
+    return decision?.allowed && !isWholeProjectRedacted(decision.redactedFields ?? [])
+      ? [projectRecord(record as ProjectRecord, decision.redactedFields ?? []) as T]
+      : [];
   });
 }
 
@@ -88,8 +94,14 @@ export async function authorizeProjectRecordsForDisplay<T extends object>(
 ): Promise<T[]> {
   const decisions = await Promise.all(records.map((record) => authorize(record)));
   const authorized = records.flatMap((record, index) =>
-    decisions[index]?.allowed ? [{ record: projectRecord(record as ProjectRecord, decisions[index].redactedFields ?? []) as T, decision: decisions[index] }] : [],
+    decisions[index]?.allowed && !isWholeProjectRedacted(decisions[index].redactedFields ?? [])
+      ? [{ record: projectRecord(record as ProjectRecord, decisions[index].redactedFields ?? []) as T, decision: decisions[index] }]
+      : [],
   );
+  if (authorized.length === 0) return [];
   const enriched = await enrich(authorized.map(({ record }) => record));
-  return enriched.map((record, index) => projectRecord(record as ProjectRecord, authorized[index].decision.redactedFields ?? []) as T);
+  return enriched.flatMap((record, index) => {
+    const redactedFields = authorized[index].decision.redactedFields ?? [];
+    return isWholeProjectRedacted(redactedFields) ? [] : [projectRecord(record as ProjectRecord, redactedFields) as T];
+  });
 }

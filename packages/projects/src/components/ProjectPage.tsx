@@ -42,6 +42,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     : null;
   const [projectId, setProjectId] = useState<string | null>(null);
   const [projectMetadata, setProjectMetadata] = useState<ProjectMetadata | null>(null);
+  const [metadataAccess, setMetadataAccess] = useState<'loading' | 'ready' | 'denied'>('loading');
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
   // The edit drawer deletes status columns (moving their tasks) without the
@@ -62,12 +63,25 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     const fetchProjectMetadata = async () => {
       const metadata = await getProjectMetadata(projectId);
       if (isReturnedActionError(metadata)) {
+        if (isActionPermissionError(metadata) || getErrorMessage(metadata).toLowerCase().includes('permission denied')) {
+          setMetadataAccess('denied');
+          return;
+        }
         handleError(getErrorMessage(metadata));
+        setMetadataAccess('denied');
         return;
       }
       setProjectMetadata(metadata);
+      setMetadataAccess('ready');
     };
-    fetchProjectMetadata();
+    void fetchProjectMetadata().catch((error) => {
+      if (error instanceof Error && error.message.toLowerCase().includes('permission denied')) {
+        setMetadataAccess('denied');
+        return;
+      }
+      handleError(getErrorMessage(error));
+      setMetadataAccess('denied');
+    });
   }, [projectId]);
 
   const handleAssignedUserChange = async (userId: string | null) => {
@@ -168,7 +182,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     window.history.replaceState(null, '', newUrl);
   }, [pathname, taskIdFromUrl]);
 
-  if (!projectMetadata) {
+  if (metadataAccess === 'loading' || !projectMetadata) {
+    if (metadataAccess === 'denied') {
+      return <div role="alert">{t('projectDetail.permissionDenied', { defaultValue: 'You do not have permission to view this project.' })}</div>;
+    }
     return <div>{t('projectDetail.loading')}</div>;
   }
 

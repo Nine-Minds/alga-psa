@@ -53,22 +53,24 @@ describe('project read projection', () => {
     expect(() => assertProjectFieldsWritable(['*'], ['project_name'])).toThrow(/redacted project field/);
   });
 
-  it('wildcard redaction survives display enrichment in the shared list/detail pipeline', async () => {
+  it('wildcard redaction suppresses records before display enrichment', async () => {
     const row = { ...rows[0] } as any;
+    let enrichmentCalls = 0;
     const decisions = await authorizeProjectRecordsForDisplay([row], async () => ({
       allowed: true,
       redactedFields: ['*'],
     }), async (projected) => {
-      // Model the display lookup boundary attempting to attach values from its joins.
-      expect(projected).toEqual([{}]);
-      return [{ ...projected[0], project_id: 'p1', description: 'restored', client_name: 'restored' }];
+      enrichmentCalls++;
+      return projected;
     });
-    expect(decisions).toEqual([{}]);
+    expect(enrichmentCalls).toBe(0);
+    expect(decisions).toEqual([]);
   });
 
   it('actual display enrichment does not recreate wildcard-hidden fields', async () => {
     const projected = projectRecord({ ...rows[0] } as any, ['*']);
     const enriched = await ProjectModel.enrichDisplayData({} as any, 'tenant', [projected as any]);
     expect(enriched).toEqual([{}]);
+    expect(await authorizeAndProjectProjectRecords([{ ...rows[0] }], async () => ({ allowed: true, redactedFields: ['*'] }))).toEqual([]);
   });
 });

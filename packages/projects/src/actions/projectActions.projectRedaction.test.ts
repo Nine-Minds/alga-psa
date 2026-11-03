@@ -24,7 +24,7 @@ vi.mock('../models/project', () => ({ default: {
   update: h.update,
   enrichDisplayData: async (_trx: unknown, _tenant: string, records: any[]) => {
     h.enrichedInput = records;
-    return records.map((record) => ({ ...record, description: 'restored secret', client_name: 'restored client' }));
+    return records.map((record) => ({ ...record, ...(record.project_name === undefined ? { project_name: 'restored hidden name' } : {}), description: 'restored secret', client_name: 'restored client' }));
   },
 } }));
 vi.mock('../lib/projectReadAuthorization', () => ({
@@ -69,15 +69,21 @@ describe('project list/detail authorization and enrichment', () => {
     expect(h.update).not.toHaveBeenCalled();
   });
 
-  it('list projects cannot regain wildcard-redacted values through display enrichment', async () => {
+  it('wildcard redaction suppresses list and detail records before display enrichment', async () => {
     const projects = await getProjects();
-    expect(h.enrichedInput).toEqual([{}]);
-    expect(projects).toEqual([{}]);
+    expect(projects).toEqual([]);
+    expect(h.enrichedInput).toEqual([]);
+    const project = await getProject('p1');
+    expect(project).toBeNull();
+    expect(h.enrichedInput).toEqual([]);
   });
 
-  it('project detail cannot regain wildcard-redacted values through display enrichment', async () => {
-    const project = await getProject('p1');
-    expect(h.enrichedInput).toEqual([{}]);
-    expect(project).toEqual({});
+  it('project name redaction remains absent in action results after enrichment', async () => {
+    h.decision.redactedFields = ['project_name'];
+    const projects = await getProjects();
+    const detail = await getProject('p1');
+    expect(projects).toHaveLength(1);
+    expect(projects[0]).not.toHaveProperty('project_name');
+    expect(detail).not.toHaveProperty('project_name');
   });
 });

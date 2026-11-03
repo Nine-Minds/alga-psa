@@ -51,6 +51,7 @@ import {
   pickProjectViewFilters,
   type ProjectListLiveState,
 } from '../lib/projectListViewAdapter';
+import { compareProjectsByName, projectNameMatchesSearch, ProjectListProjectName } from './ProjectListProjectName';
 
 type AnySmartSearchResultsProps = SmartSearchResultsProps<unknown, Record<string, unknown>, unknown>;
 
@@ -624,12 +625,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
     }
 
     // Sort projects alphabetically with natural numeric ordering (e.g. "Project 2" before "Project 10")
-    filtered.sort((a, b) =>
-      a.project_name.localeCompare(b.project_name, undefined, {
-        numeric: true,
-        sensitivity: 'base',
-      })
-    );
+    filtered.sort(compareProjectsByName);
 
     return filtered;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tagsVersion tracks projectTagsRef mutations
@@ -642,11 +638,8 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
     }
     return chipFilteredProjects.filter(project =>
       indexedSearchProjectIds
-        ? (typeof project.project_id === 'string' && indexedSearchProjectIds.has(project.project_id)) ||
-          project.project_name.toLowerCase().includes(search) ||
-          project.project_number?.toLowerCase().includes(search)
-        : project.project_name.toLowerCase().includes(search) ||
-          project.project_number?.toLowerCase().includes(search)
+        ? (typeof project.project_id === 'string' && indexedSearchProjectIds.has(project.project_id)) || projectNameMatchesSearch(project, search)
+        : projectNameMatchesSearch(project, search)
     );
   }, [chipFilteredProjects, activeFilters.searchQuery, indexedSearchProjectIds]);
 
@@ -835,22 +828,16 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
       dataIndex: 'project_number',
       width: '8%',
       render: (text: string, record: IProject) => {
-        return (
-          <Link href={`/msp/projects/${record.project_id}`} className="text-blue-600 hover:text-blue-800">
-            {text}
-          </Link>
-        );
+        return record.project_id
+          ? <Link href={`/msp/projects/${record.project_id}`} className="text-blue-600 hover:text-blue-800">{text || projectListT('notAvailable', 'N/A')}</Link>
+          : <span>{text || projectListT('notAvailable', 'N/A')}</span>;
       },
     },
     {
       title: projectListT('columns.projectName', 'Project Name'),
       dataIndex: 'project_name',
       width: '15%',
-      render: (text: string, record: IProject) => (
-        <Link href={`/msp/projects/${record.project_id}`} className="text-blue-600 hover:text-blue-800 block whitespace-normal break-words">
-          {text}
-        </Link>
-      ),
+      render: (_text: string, record: IProject) => <ProjectListProjectName project={record} fallback={projectListT('projectNameRedacted', 'Project name hidden')} />,
     },
     {
       title: projectListT('columns.client', 'Client'),
