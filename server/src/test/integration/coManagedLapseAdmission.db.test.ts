@@ -207,6 +207,61 @@ describeDb('co-managed lapse enforced through the write-admission choke point', 
     }
   });
 
+  it('the server lifecycle reader is neutral when admission is off, but enforces admitted lapsed and ended workspaces', async () => {
+    const flagEnv = flagTargetingEnvName('release-v2-0-feature');
+    const checkerKey = Symbol.for('alga.core.featureFlagChecker');
+    const registry = globalThis as typeof globalThis & Record<symbol, unknown>;
+    const originalChecker = registry[checkerKey];
+    const originalFlag = process.env[flagEnv];
+    const originalForce = process.env.FORCE_CAPABILITIES;
+    const entitlement = await db('co_managed_entitlements').where({ tenant: f.msp }).first();
+    const flags = new FeatureFlags({ clientResolver: () => ({ isFeatureEnabled: async () => true }) as any });
+    try {
+      await db('co_management_relationships').where({ tenant: f.customer, relationship_id: f.relationshipId })
+        .update({ state: 'active', ended_at: null });
+      await db('co_managed_allocations').where({ tenant: f.msp, relationship_id: f.relationshipId }).update({ state: 'active' });
+      await lapse(new Date(Date.now() - GRACE_MS - DAY));
+      delete process.env.FORCE_CAPABILITIES;
+      registerFeatureFlagChecker((flag, context) => flags.evaluate(flag, context));
+
+      process.env[flagEnv] = '';
+      clearCapabilityCache();
+      expect((await readCoManagedLifecycleForServer(db, f.customer)).canWrite).toBe(true);
+
+      process.env[flagEnv] = f.msp;
+      await db('co_managed_entitlements').where({ tenant: f.msp }).delete();
+      clearCapabilityCache();
+      expect((await readCoManagedLifecycleForServer(db, f.customer)).canWrite).toBe(true);
+
+      await db('co_managed_entitlements').insert(entitlement);
+      await lapse(new Date(Date.now() - GRACE_MS - DAY));
+      process.env.FORCE_CAPABILITIES = 'co-managed:off';
+      clearCapabilityCache();
+      expect((await readCoManagedLifecycleForServer(db, f.customer)).canWrite).toBe(true);
+
+      delete process.env.FORCE_CAPABILITIES;
+      clearCapabilityCache();
+      expect(await readCoManagedLifecycleForServer(db, f.customer)).toMatchObject({ state: 'read_only', canWrite: false });
+
+      await db('co_management_relationships').where({ tenant: f.customer, relationship_id: f.relationshipId })
+        .update({ state: 'terminated', ended_at: new Date() });
+      clearCapabilityCache();
+      expect(await readCoManagedLifecycleForServer(db, f.customer)).toMatchObject({ state: 'terminated', canWrite: false });
+    } finally {
+      await db('co_management_relationships').where({ tenant: f.customer, relationship_id: f.relationshipId })
+        .update({ state: 'active', ended_at: null });
+      if (!await db('co_managed_entitlements').where({ tenant: f.msp }).first()) {
+        await db('co_managed_entitlements').insert(entitlement);
+      }
+      await lapse(null);
+      if (originalChecker === undefined) delete registry[checkerKey]; else registry[checkerKey] = originalChecker;
+      if (originalFlag === undefined) delete process.env[flagEnv]; else process.env[flagEnv] = originalFlag;
+      if (originalForce === undefined) delete process.env.FORCE_CAPABILITIES; else process.env.FORCE_CAPABILITIES = originalForce;
+      clearCapabilityCache();
+      invalidateWriteAdmission(f.customer);
+    }
+  });
+
   it.each(['throwing client', 'missing client', 'undefined result'])('server uses the real feature runtime and keeps an ended workspace read-only on %s', async (failure) => {
     const flagEnv = flagTargetingEnvName('release-v2-0-feature');
     const checkerKey = Symbol.for('alga.core.featureFlagChecker');

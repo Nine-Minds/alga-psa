@@ -71,9 +71,9 @@ describe('getWorkspaceReadOnly cost and neutrality', () => {
     expect(await getWorkspaceReadOnly()).toBe(false);
   });
 
-  it('a co_managed workspace with no live relationship is read-only (the probe does reach the lifecycle reader)', async () => {
+  it('a co_managed workspace without durable participation stays writable under the gated reader', async () => {
     session.tenant = CO;
     harness.knex = fakeKnex((sql) => /from "tenants"/.test(sql) ? { rows: [{ product_code: 'co_managed' }] } : { rows: [] });
-    expect(await getWorkspaceReadOnly()).toBe(true);
+    expect(await getWorkspaceReadOnly()).toBe(false);
   });
 });

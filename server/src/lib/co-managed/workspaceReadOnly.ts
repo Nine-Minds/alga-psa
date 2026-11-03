@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { getSession } from '@alga-psa/auth';
 import { createTenantKnex, isCoManagedWorkspace } from '@alga-psa/db';
-import { readCoManagedLifecycleLockFree } from '@alga-psa/licensing';
+import { readCoManagedLifecycleForServer } from '@alga-psa/licensing/co-managed-write-admission';
 
 /**
  * Whether the signed-in workspace is a co-managed one that may no longer write (lapsed past grace,
@@ -19,7 +19,7 @@ export const getWorkspaceReadOnly = cache(async (): Promise<boolean> => {
   try {
     const { knex } = await createTenantKnex(tenant);
     if (!await isCoManagedWorkspace(knex, tenant)) return false;
-    return !(await readCoManagedLifecycleLockFree(knex, tenant)).canWrite;
+    return !(await readCoManagedLifecycleForServer(knex, tenant)).canWrite;
   } catch {
     // Never turn a failed probe into a locked-out workspace; the write choke point is the authority.
     return false;
