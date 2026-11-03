@@ -236,6 +236,10 @@ const exactApiKeySkipPaths = [
   // x-api-key). The route re-checks the session itself, and
   // `/api/notifications` has no other route to exempt.
   '/api/notifications/live-token',
+  // Customer-admin workspace export: a browser form POST from the session-authenticated export page (no
+  // x-api-key). The route re-checks the session, the co-managed capability and the export permission itself.
+  // Exact match only, so nothing else under /api/co-management is exempted by this entry.
+  '/api/co-management/export',
 ];
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {

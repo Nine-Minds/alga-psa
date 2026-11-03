@@ -79,6 +79,11 @@ export default defineConfig({
       // Behavioral coverage for realm-exact QBO mapping resolution — listed
       // explicitly for the same reason as the suites above.
       'src/services/accountingSync/realmScopedOperations.test.ts',
+      // Provider/organisation scoping of sync status and health, and the
+      // resolved target's realm + Intuit environment that the invoice deep
+      // link reads — listed for the same reason as the suites above.
+      'src/actions/accountingSyncActions.org.test.ts',
+      'src/actions/resolveSyncTarget.test.ts',
       // Project billing-currency drift notices and cap re-pinning — listed for
       // the same reason as the suites above.
       'src/components/project-billing/projectBillingCurrency.test.tsx',

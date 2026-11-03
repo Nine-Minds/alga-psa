@@ -547,6 +547,9 @@
       },
       "departure": {
         "title": "Zakończ współzarządzanie IT"
+      },
+      "export": {
+        "title": "Eksportuj obszar roboczy"
       }
     }
   },

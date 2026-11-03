@@ -45,7 +45,10 @@ export const ENTRY_POINT_FAMILIES: readonly EntryPointFamily[] = [
   { id: 'temporal-activities', glob: 'ee/temporal-workflows/src/activities/coManaged*', ruleA: true },
   { id: 'temporal-workflows', glob: 'ee/temporal-workflows/src/workflows/coManaged*', ruleA: true },
   // The Temporal files are kebab-case; the camelCase globs above do not match them.
-  { id: 'temporal-activities-kebab', glob: 'ee/temporal-workflows/src/activities/co-managed*', ruleA: true },
+  { id: 'temporal-activities-kebab', glob: 'ee/temporal-workflows/src/activities/co-managed-provisioning*', ruleA: true },
+  // Tenant deletion is a cross-capability lifecycle hook: it must clean up existing co-managed state even after
+  // the capability lapses, so it is deliberately not gated by the current capability resolver.
+  { id: 'tenant-deletion-cleanup', glob: 'ee/temporal-workflows/src/activities/co-managed-tenant-deletion-activities.ts', ruleA: false },
   // A workflow sandbox cannot import the adapter: its activities carry the gate.
   { id: 'temporal-workflows-kebab', glob: 'ee/temporal-workflows/src/workflows/co-managed*', ruleA: false },
   { id: 'ee-server-actions', glob: 'ee/server/src/lib/actions/coManaged*', ruleA: true },
@@ -66,9 +69,9 @@ export const ENTRY_POINT_GLOBS: readonly string[] = ENTRY_POINT_FAMILIES.map((f)
  * updates the count in the same diff.
  */
 export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string; files: number }>> = {
-  'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 12 },
-  'rest-routes': { glob: 'server/src/app/api/**/co-management/**', files: 1 },
-  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 23 },
+  'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 13 },
+  'rest-routes': { glob: 'server/src/app/api/**/co-management/**', files: 3 },
+  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 24 },
   'package-actions': { glob: 'packages/co-managed/src/**/actions*', files: 0 },
   'user-invitation-actions': { glob: 'packages/users/src/actions/user-actions/userInvitationActions.ts', files: 1 },
   'user-invitation-service': { glob: 'packages/users/src/services/UserInvitationService.ts', files: 1 },
@@ -77,11 +80,12 @@ export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string
   subscribers: { glob: 'server/src/lib/eventBus/subscribers/coManaged*', files: 1 },
   'temporal-activities': { glob: 'ee/temporal-workflows/src/activities/coManaged*', files: 0 },
   'temporal-workflows': { glob: 'ee/temporal-workflows/src/workflows/coManaged*', files: 0 },
-  'temporal-activities-kebab': { glob: 'ee/temporal-workflows/src/activities/co-managed*', files: 1 },
+  'temporal-activities-kebab': { glob: 'ee/temporal-workflows/src/activities/co-managed-provisioning*', files: 1 },
+  'tenant-deletion-cleanup': { glob: 'ee/temporal-workflows/src/activities/co-managed-tenant-deletion-activities.ts', files: 1 },
   'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 1 },
   'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 2 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 58 },
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 59 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 

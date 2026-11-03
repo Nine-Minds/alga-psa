@@ -547,6 +547,9 @@
       },
       "departure": {
         "title": "Beëindig gezamenlijk beheerde IT"
+      },
+      "export": {
+        "title": "Werkruimte exporteren"
       }
     }
   },

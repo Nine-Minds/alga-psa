@@ -37,7 +37,6 @@ const addIdToContacts = (contacts: IContact[]): ContactWithId[] => {
   }));
 };
 
-// LEVERAGE: friction client-picker-option-threading — ClientPicker's options are threaded from every caller (about 51 files call getAllClients). A caller that passes a list scoped to its page quietly shrinks the picker, as alga0002338 showed. A ClientPicker that loads its own tenant list would remove this class of bug.
 const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, client }) => {
   const { t } = useTranslation('msp/contacts');
   const [contacts, setContacts] = useState<ContactWithId[]>([]);
@@ -371,7 +370,6 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
             .then(data => setContacts(addIdToContacts(data)))
             .catch(err => console.error('Error refreshing contacts after quick add:', err));
         }}
-        clients={[client]}
         selectedClientId={clientId}
       />
     </div>

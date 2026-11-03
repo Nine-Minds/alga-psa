@@ -547,6 +547,9 @@
       },
       "departure": {
         "title": "Mettre fin à la gestion informatique partagée"
+      },
+      "export": {
+        "title": "Exporter l'espace de travail"
       }
     }
   },

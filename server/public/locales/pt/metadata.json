@@ -547,6 +547,9 @@
       },
       "departure": {
         "title": "Encerrar TI co-gerenciada"
+      },
+      "export": {
+        "title": "Exportar espaço de trabalho"
       }
     }
   },

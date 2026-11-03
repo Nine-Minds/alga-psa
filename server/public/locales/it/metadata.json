@@ -547,6 +547,9 @@
       },
       "departure": {
         "title": "Termina l’IT co-gestita"
+      },
+      "export": {
+        "title": "Esporta area di lavoro"
       }
     }
   },

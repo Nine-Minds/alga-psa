@@ -629,6 +629,9 @@
       },
       "departure": {
         "title": "Avsluta samhanterad IT"
+      },
+      "export": {
+        "title": "Exportera arbetsyta"
       }
     }
   },

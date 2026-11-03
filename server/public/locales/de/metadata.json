@@ -547,6 +547,9 @@
       },
       "departure": {
         "title": "Gemeinsam verwaltete IT beenden"
+      },
+      "export": {
+        "title": "Arbeitsbereich exportieren"
       }
     }
   },
