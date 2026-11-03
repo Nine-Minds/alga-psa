@@ -21,7 +21,24 @@ function requesterComments(context: Access) {
   const query = own.table('project_task_comments as c').where('c.task_id', target.taskId);
   own.tenantJoin(query, 'comment_threads as t', 'c.thread_id', 't.thread_id', { on: join => join.andOn('t.project_task_id', '=', 'c.task_id').andOnNull('t.ticket_id') });
   own.tenantJoin(query, 'project_task_comments as root', 't.root_comment_id', 'root.task_comment_id', { on: join => join.andOn('root.task_id', '=', 'c.task_id').andOn('root.thread_id', '=', 'c.thread_id') });
-  return query.whereRaw('? = ?', [projectTaskAudienceSql(trx, 't'), 'requester']);
+  // A requester participates by having a contact-authored comment in the thread. Bind that
+  // membership to the contact resolved from the verified portal session, never to input data.
+  // Reuse this scoped query for both listing and parent selection so reads and replies agree.
+  const participation = own.table('project_task_comments as participant')
+    .select('participant.task_comment_id')
+    .whereRaw('?? = ??', ['participant.thread_id', 'c.thread_id'])
+    .whereRaw('?? = ??', ['participant.task_id', 'c.task_id'])
+    .where({ 'participant.author_kind': 'contact', 'participant.contact_id': context.user.contact_id });
+  const anyContactParticipation = own.table('project_task_comments as contact_participant')
+    .select('contact_participant.task_comment_id')
+    .whereRaw('?? = ??', ['contact_participant.thread_id', 'c.thread_id'])
+    .whereRaw('?? = ??', ['contact_participant.task_id', 'c.task_id'])
+    .where('contact_participant.author_kind', 'contact');
+  return query.where(function () {
+    // Staff may start requester-audience threads before a contact joins. Those remain available
+    // to the requester audience. Once a contact participates, the thread is scoped to its contacts.
+    this.whereExists(participation).orWhereNotExists(anyContactParticipation);
+  }).whereRaw('? = ?', [projectTaskAudienceSql(trx, 't'), 'requester']);
 }
 export async function getRequesterTaskConversation(db: Knex, actor: CoManagedSessionActor, target: RequesterTaskTarget,
   before?: { createdAt: string; commentId: string }) {

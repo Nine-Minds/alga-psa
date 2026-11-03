@@ -10,6 +10,16 @@ import { seedL4cWorld, type L4cWorld } from './coManagedTaskDisclosureCases';
 
 interface Portal { userId: string; sessionId: string; contactId: string }
 
+function noteText(note: string | null): string {
+  if (!note) return '';
+  try {
+    return (JSON.parse(note) as Array<{ content?: Array<{ text?: string }> }>).flatMap(block => block.content ?? [])
+      .map(part => part.text ?? '').join('');
+  } catch {
+    return note;
+  }
+}
+
 async function grant(db: Knex, tenant: string, roleId: string, resource: string, action: string) {
   let permission = await db('permissions').where({ tenant, resource, action, client: true }).first();
   if (!permission) {
@@ -97,6 +107,42 @@ export function registerCoManagedRequesterTaskCases() {
       const own = items.find(item => item.commentId === ownComment.commentId);
       expect(own).toMatchObject({ authorKind: 'contact', isOwn: true });
       expect(items.find(item => (item.note ?? '').includes(`requester-${marker}`))).toMatchObject({ authorKind: 'user', isOwn: false });
+    });
+
+    it('isolates requester participation across contacts on the same client, including task deep links', async () => {
+      const { getRequesterTaskConversation, createRequesterTaskComment } = await requester();
+      const contactB = await addPortalUser(db, w);
+      const threadA = await createRequesterTaskComment(db, actorOf(portal), target(), {
+        operationId: randomUUID(), text: 'Private thread from contact A',
+      });
+      const messageA = await createRequesterTaskComment(db, actorOf(portal), target(), {
+        operationId: randomUUID(), text: 'Follow-up from contact A', parent: { threadId: threadA.threadId, commentId: threadA.commentId },
+      });
+
+      // Resolving ?taskId= uses this same server read action with the linked task locator.
+      // A shared task is visible to both contacts, while its conversation remains participant-scoped.
+      const linkedScreenB = await getRequesterTaskConversation(db, actorOf(contactB), target());
+      expect(linkedScreenB.items).toEqual([]);
+      await expect(createRequesterTaskComment(db, actorOf(contactB), target(), {
+        operationId: randomUUID(), text: 'Attempt against A thread',
+        parent: { threadId: threadA.threadId, commentId: threadA.commentId },
+      })).rejects.toThrow();
+      expect(await db('project_task_comments').where({ tenant: w.world.customer, task_comment_id: messageA.commentId }).first('task_comment_id'))
+        .toMatchObject({ task_comment_id: messageA.commentId });
+      expect(Number((await db('project_task_comments').where({ tenant: w.world.customer, thread_id: threadA.threadId }).count('* as n').first())!.n))
+        .toBe(2);
+
+      const threadB = await createRequesterTaskComment(db, actorOf(contactB), target(), {
+        operationId: randomUUID(), text: 'Private thread from contact B',
+      });
+      const replyB = await createRequesterTaskComment(db, actorOf(contactB), target(), {
+        operationId: randomUUID(), text: 'Follow-up from contact B', parent: { threadId: threadB.threadId, commentId: threadB.commentId },
+      });
+      expect((await getRequesterTaskConversation(db, actorOf(contactB), target())).items.map(item => noteText(item.note)))
+        .toEqual(expect.arrayContaining(['Private thread from contact B', 'Follow-up from contact B']));
+      expect((await getRequesterTaskConversation(db, actorOf(portal), target())).items.map(item => noteText(item.note)))
+        .toEqual(expect.arrayContaining(['Private thread from contact A', 'Follow-up from contact A']));
+      expect(replyB.threadId).toBe(threadB.threadId);
     });
 
     it('is idempotent on the operation id and refuses a changed payload under the same id', async () => {
