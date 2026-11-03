@@ -1727,13 +1727,25 @@ export async function processInboundEmailInApp(
   if (token) {
     try {
       const match = await findTicketByReplyToken(String(token), tenantId);
+      const tokenClass = classifyReplyToken(String(token));
+      if (match?.ticketId && match.expiryValid === false && tokenClass === 'cm2') {
+        // A known expired cm2 bearer credential is terminal. Do this
+        // before admission fallbacks, thread-header matching, or ticket creation.
+        if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
+        return withDiagnostics({
+          outcome: 'quarantined',
+          reason: 'co_managed_token_refused',
+          ticketId: match.ticketId,
+          matchedBy: 'reply_token',
+        }, diagnostics);
+      }
       // CM L5 admission hook: the prefix check is a string compare, so a native (psa) token costs
       // 0 extra statements. Only cm1:/cm2: tokens consult the delivery seam, and a refusal happens
       // before any comment write.
       let tokenInert = false;
       let authorizedRequesterContactId: string | undefined;
       let authorizedRequesterClientId: string | undefined;
-      if (match?.ticketId && classifyReplyToken(String(token)) !== 'native') {
+      if (match?.ticketId && tokenClass !== 'native') {
         // No provider registered in THIS process (as opposed to a provider that says "not served"):
         // admission cannot be evaluated, so the token must neither be treated as inert (native
         // write by thread headers) nor reach a writer that throws and is then deduped.

@@ -225,6 +225,60 @@ describe('email-service boot registers co-managed inbound', () => {
     expect(await acks()).toHaveLength(acksBefore);
   });
 
+  it.each([
+    ['expired', () => new Date(Date.now() - 1)],
+    ['legacy null expiry', () => null],
+  ])('quarantines a known cm2 token with %s expiry before matching thread headers or side effects', async (label, expiry) => {
+    const { REFUSAL_ACK_KIND } = await import('@alga-psa/co-managed/refusalAck');
+    const { findTicketByReplyToken, findTicketByEmailThread } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
+    const tokenUnderTest = `cm2:${uuidv4()}`;
+    const anchor = `<expiry-anchor-${uuidv4()}@customer-it.example.test>`;
+    const text = `expired-token-${label.replace(/\W/g, '')}-${MARK}`;
+    const ticketBefore = await db('tickets').where({ tenant: ticketTenant }).count('* as count').first();
+    const commentsBefore = await db('comments').where({ tenant: ticketTenant, ticket_id: ticketId }).count('* as count').first();
+    const watchersBefore = await db('ticket_watchers').where({ tenant: ticketTenant, ticket_id: ticketId }).count('* as count').first();
+    const acksBefore = await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: REFUSAL_ACK_KIND }).count('* as count').first();
+    const originalTicket = await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).first('email_metadata', 'attributes');
+    const expiryTokenMetadata = { namespace: 'cm', version: 2, relationshipId, grantGeneration: 0, threadId };
+    await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).update({
+      email_metadata: { messageId: anchor, references: [anchor], threadId },
+    });
+    await db('email_reply_tokens').insert({
+      tenant: ticketTenant,
+      token: tokenUnderTest,
+      ticket_id: ticketId,
+      comment_id: parentCommentId,
+      entity_type: 'ticket',
+      recipient_email: aliceEmail,
+      metadata: JSON.stringify(expiryTokenMetadata),
+      expires_at: expiry(),
+    });
+
+    try {
+      const knownToken = await findTicketByReplyToken(tokenUnderTest, ticketTenant);
+      expect(knownToken).toMatchObject({ ticketId, expiryValid: false });
+      expect(await findTicketByEmailThread({ inReplyTo: anchor }, ticketTenant)).toMatchObject({ ticketId });
+
+      const message = emailData(`<msg-${uuidv4()}@customer-it.example.test>`, text);
+      message.inReplyTo = anchor;
+      message.references = [anchor];
+      message.body = { text: `${text}\n\n[ALGA-REPLY-TOKEN ${tokenUnderTest}]` };
+      const result: any = await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
+
+      expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_token_refused', ticketId, matchedBy: 'reply_token' });
+      expect(await db('tickets').where({ tenant: ticketTenant }).count('* as count').first()).toMatchObject({ count: ticketBefore?.count });
+      expect(await db('comments').where({ tenant: ticketTenant, ticket_id: ticketId }).count('* as count').first()).toMatchObject({ count: commentsBefore?.count });
+      expect(await db('ticket_watchers').where({ tenant: ticketTenant, ticket_id: ticketId }).count('* as count').first()).toMatchObject({ count: watchersBefore?.count });
+      expect(await db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: REFUSAL_ACK_KIND }).count('* as count').first()).toMatchObject({ count: acksBefore?.count });
+      const afterTicket = await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).first('attributes');
+      expect(afterTicket?.attributes?.watch_list).toEqual(originalTicket?.attributes?.watch_list);
+      expect(await sharedComments(text)).toHaveLength(0);
+    } finally {
+      await db('email_reply_tokens').where({ tenant: ticketTenant, token: tokenUnderTest }).delete();
+      await db('tickets').where({ tenant: ticketTenant, ticket_id: ticketId }).update({ email_metadata: originalTicket?.email_metadata });
+    }
+  });
+
   it('email-service writes no comment and queues one ack; the sender path sends it once; a replay adds nothing', async () => {
     const { registerWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
     const { REFUSAL_ACK_KIND, deliverPendingRefusalAcks } = await import('@alga-psa/co-managed/refusalAck');
