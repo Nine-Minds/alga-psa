@@ -6,12 +6,13 @@ import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { CO_MANAGED_LEDGER, claimDelivery, finishDelivery } from '@shared/lib/deliveryLedger';
 import { coManagedDeliverySeam, coManagedInboundCommentSeam, coManagedInboundOperationId, type RoutingDelivery, type CoManagedDeliveryProvider } from '@shared/lib/coManagedDelivery';
 
-const h = vi.hoisted(() => ({ conn: null as any, sent: [] as string[], crashAfterClaim: false }));
+const h = vi.hoisted(() => ({ conn: null as any, sent: [] as string[], emailParams: [] as any[], crashAfterClaim: false }));
 vi.mock('../../lib/db/db', () => ({ getConnection: async () => h.conn }));
 // Provider boundary stubs. Both honour the real ledger protocol (claimDelivery / finishDelivery) exactly as the
 // production senders do, so the assertions exercise the real co_management_deliveries table.
 vi.mock('../../lib/notifications/sendEventEmail', () => ({
   sendEventEmail: async (o: any) => {
+    h.emailParams.push(o);
     const { claimDelivery, finishDelivery } = await import('@shared/lib/deliveryLedger');
     const t = o.delivery.ledgerTenant;
     if (!(await claimDelivery(h.conn, o.delivery.ledger, t, o.delivery.key, o.delivery.extra))) return;
@@ -67,7 +68,7 @@ describe('co-managed delivery: exactly once, query cost, kill switch (migrated P
 
   beforeAll(async () => { conn = await createTestDbConnection(); h.conn = conn; });
   afterAll(async () => { await conn?.destroy(); });
-  beforeEach(() => { h.sent.length = 0; h.crashAfterClaim = false; delete process.env.FORCE_CAPABILITIES; coManagedDeliverySeam.reset(); });
+  beforeEach(() => { h.sent.length = 0; h.emailParams.length = 0; h.crashAfterClaim = false; delete process.env.FORCE_CAPABILITIES; coManagedDeliverySeam.reset(); });
   afterEach(async () => { await conn('co_management_deliveries').where({ tenant }).delete(); process.env.FORCE_CAPABILITIES = ''; coManagedDeliverySeam.reset(); });
 
   describe('exactly once per audience, in-app and email', () => {
@@ -172,6 +173,8 @@ describe('co-managed delivery: exactly once, query cost, kill switch (migrated P
       expect(await deliverRoutingRow(row)).toBe('sent');
       expect(await deliverRoutingRow(row)).toBe('sent');
       expect(h.sent).toEqual(['email:current@example.test']);
+      expect(h.emailParams[0]).toMatchObject({ coManagedRouting: true,
+        delivery: { key: { recipient: 'old@example.test' }, ledgerTenant: tenant } });
       const [stored] = await rowsOf(source).where({ delivery_kind: 'routing_email' });
       expect(stored).toMatchObject({ recipient: 'old@example.test', state: 'sent', attempts: 1 });
     });

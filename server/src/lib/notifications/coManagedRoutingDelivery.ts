@@ -60,6 +60,7 @@ export async function deliverRoutingRow(d: RoutingDelivery): Promise<'sent' | 's
       subject: HEADLINE[d.event]({ ...d, actorName, ticketTitle, ticketNumber }), template: 'co-managed-routing', entityType: 'ticket', entityId: d.ticketId,
       context: { routing: { headline: HEADLINE[d.event]({ ...d, actorName, ticketTitle, ticketNumber }), body: `${actorName}${actorOrganization ? ` (${actorOrganization})` : ''}: ${ticketTitle}` },
         ticket: { url: `${baseUrl()}${link}`, id: ticketNumber } },
+      coManagedRouting: true,
       delivery: { ledger: CO_MANAGED_LEDGER, key, extra: { recipient_kind: d.recipient.kind }, ledgerTenant: d.tenant },
     });
     return 'sent';

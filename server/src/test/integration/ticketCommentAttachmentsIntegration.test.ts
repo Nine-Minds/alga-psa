@@ -788,7 +788,8 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       ...JSON.parse(note(pdf.file)),
     ]) });
     await table('tenant_email_templates').insert({ tenant, name: 'ticket-comment-added', language_code: 'en',
-      subject: 'Update {{ticket.id}}', html_content: '{{{comment.content}}} {{ticket.metaLine}}', text_content: '{{comment.text}} {{ticket.metaLine}}' });
+      subject: 'Update {{ticket.id}}', html_content: '{{{comment.content}}} {{ticket.metaLine}} {{ticket.requesterDetails}} {{ticket.assignedDetails}} {{ticket.categoryDetails}} {{ticket.subcategory}}',
+      text_content: '{{comment.text}} {{ticket.metaLine}} {{ticket.requesterDetails}} {{ticket.assignedDetails}} {{ticket.categoryDetails}} {{ticket.subcategory}}' });
     const messages: any[] = [];
     const stream = nodemailer.createTransport({ streamTransport: true, buffer: true });
     const provider = new SMTPEmailProvider('sponsor-retry');
@@ -803,35 +804,195 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     vi.spyOn(StorageService, 'downloadFile').mockResolvedValue({ buffer: Buffer.from('%PDF-private') } as any);
     let redactedFields: string[] = [];
     let currentEmail = 'sponsor-current@example.test';
+    let revoked = false;
     const sponsorTenant = randomUUID();
     await tenantDb(trx, sponsorTenant).unscoped('tenants', 'create isolated sponsor tenant').insert({ tenant: sponsorTenant, client_name: 'Sponsor', email: 'sponsor@example.test', product_code: 'psa' });
     process.env.FORCE_CAPABILITIES = 'co-managed:on';
     coManagedDeliverySeam.reset();
-    coManagedDeliverySeam.register(() => ({ reauthorizeCommentRecipient: async () => ({ kind: 'msp_user', principalId: actor, email: currentEmail, redactedFields }) }) as any);
+    coManagedDeliverySeam.register(() => ({ reauthorizeCommentRecipient: async () => revoked ? null : ({ kind: 'msp_user', principalId: actor, email: currentEmail, redactedFields }) }) as any);
     const pending = { mailClass: 'ticket' as const, tenantId: tenant, to: currentEmail, subject: 'Update', template: 'ticket-comment-added', locale: 'en' as const,
-      context: { ticket: { id: 'ATT-1', title: 'Attachment tests', priority: 'Urgent', status: 'Open', metaLine: 'Ticket #ATT-1 · Urgent Priority · Open' },
+      context: { ticket: { id: 'ATT-1', title: 'Attachment tests', priority: 'Urgent', status: 'Open', metaLine: 'Ticket #ATT-1 · Urgent Priority · Open',
+        requesterDetails: 'Hidden Requester · request@example.test', assignedDetails: 'Hidden Assignee (assignee@example.test)',
+        categoryDetails: 'Hardware / Hidden Subcategory', subcategory: 'Hidden Subcategory' },
         comment: { content: 'Sponsor secret comment body', text: 'Sponsor secret comment body', author: 'Agent' } },
       replyContext: { ticketId: ticket, commentId: comment },
       delivery: { ledger: CO_MANAGED_LEDGER, ledgerTenant: sponsorTenant,
         key: { delivery_kind: 'ticket_comment_email', source_id: comment, recipient: 'sponsor-original@example.test' }, extra: { recipient_kind: 'msp_user' } },
       coManagedRecipient: { tenant, ticketId: ticket, commentId: comment, relationshipId: randomUUID(), sponsorTenant, principalId: actor } };
-    const fail = vi.spyOn(service, 'sendEmail').mockResolvedValueOnce({ success: false, error: 'Rate limited', providerId: 'sponsor-retry', providerType: 'smtp',
-      metadata: { retryable: true, definitelyNotSent: true, status: 429 } } as any);
+    const { EventEmailRetryQueue } = await import('@/lib/notifications/EventEmailRetryQueue');
+    const { DelayedEmailQueue } = await import('@alga-psa/email');
+    (EventEmailRetryQueue as any).instance = null;
+    const data = new Map<string, string>(), scores = new Map<string, Map<string, number>>();
+    const redis = { get: async (key: string) => data.get(key) ?? null, set: async (key: string, value: string) => { data.set(key, value); },
+      del: async (key: string) => Number(data.delete(key)), zAdd: async (key: string, item: any) => { const z = scores.get(key) ?? new Map(); z.set(item.value, item.score); scores.set(key, z); return 1; },
+      zRem: async (key: string, id: string) => Number(scores.get(key)?.delete(id)), zRangeByScore: async (key: string, min: number, max: number) => [...(scores.get(key) ?? new Map()).entries()].filter(([, score]) => score >= min && score <= max).map(([id]) => id),
+      eval: async (script: string, args: any) => { const [source, processing] = args.keys, [id, expires] = args.arguments;
+        if (script.startsWith('local ids')) return 0;
+        if (scores.get(source)?.delete(id)) { const z = scores.get(processing) ?? new Map(); z.set(id, Number(expires)); scores.set(processing, z); return 1; } return 0; } };
+    const retryQueue = EventEmailRetryQueue.getInstance({ checkIntervalMs: 3600000 });
+    await retryQueue.initialize(async () => redis as any);
+    (DelayedEmailQueue as any).instance = null;
+    const delayedQueue = DelayedEmailQueue.getInstance({ checkIntervalMs: 3600000 });
+    await delayedQueue.initialize(async () => redis as any);
+    const rateLimit = vi.spyOn(service as any, 'checkRateLimits').mockResolvedValue({ allowed: false, retryAfterMs: 1, reason: 'test' });
     try {
       await expect(sendEventEmail(pending)).rejects.toMatchObject({ isRetryable: true });
-      redactedFields = ['note', 'ticket_number'];
+      expect([...scores.entries()].some(([key, z]) => key.includes('ratelimit') && z.size > 0)).toBe(false);
+      rateLimit.mockRestore();
+      redactedFields = ['note', 'ticket_number', 'requester_name', 'assignee_name', 'subcategory_name'];
       currentEmail = 'sponsor-renamed@example.test';
-      await sendEventEmail(pending);
+      await retryQueue.enqueue(pending, { retryAfterMs: 1 });
+      await new Promise(resolve => setTimeout(resolve, 5));
+      await (retryQueue as any).processReady();
       expect(messages).toHaveLength(1);
       expect(messages[0].to.value[0].address).toBe(currentEmail);
       expect(messages[0].text).not.toContain('Sponsor secret comment body');
       expect(messages[0].text).not.toContain('ATT-1');
+      expect(messages[0].text).not.toContain('Hidden Requester');
+      expect(messages[0].text).not.toContain('Hidden Assignee');
+      expect(messages[0].text).not.toContain('Hidden Subcategory');
+      expect(messages[0].html).not.toContain('Hidden Requester');
+      expect(messages[0].html).not.toContain('Hidden Assignee');
+      expect(messages[0].html).not.toContain('Hidden Subcategory');
       expect(messages[0].attachments).toEqual([]);
       expect(await tenantDb(trx, sponsorTenant).table('co_management_deliveries')
         .where({ delivery_kind: 'ticket_comment_email', source_id: comment, recipient: 'sponsor-original@example.test' }).first()).toMatchObject({ state: 'sent' });
+      const attachmentFreeComment = await makeComment({ note: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Attachment-free source body' }] }]) });
+      const attachmentFreePending = { ...pending, context: { ...pending.context, comment: { content: 'Attachment-free source body', text: 'Attachment-free source body', author: 'Agent' } },
+        replyContext: { ticketId: ticket, commentId: attachmentFreeComment },
+        coManagedRecipient: { ...pending.coManagedRecipient, commentId: attachmentFreeComment },
+        delivery: { ...pending.delivery, key: { ...pending.delivery.key, source_id: attachmentFreeComment } } };
+      redactedFields = [];
+      currentEmail = 'sponsor-before-rate@example.test';
+      const attachmentFreeRateLimit = vi.spyOn(service as any, 'checkRateLimits').mockResolvedValue({ allowed: false, retryAfterMs: 1, reason: 'test' });
+      await expect(sendEventEmail(attachmentFreePending)).rejects.toMatchObject({ isRetryable: true });
+      attachmentFreeRateLimit.mockRestore();
+      redactedFields = ['note']; currentEmail = 'sponsor-after-rate@example.test';
+      await retryQueue.enqueue(attachmentFreePending, { retryAfterMs: 1 });
+      await new Promise(resolve => setTimeout(resolve, 5));
+      await (retryQueue as any).processReady();
+      expect(messages).toHaveLength(2);
+      expect(messages[1].to.value[0].address).toBe(currentEmail);
+      expect(messages[1].text).not.toContain('Attachment-free source body');
+      expect(messages[1].attachments).toEqual([]);
+      expect(await tenantDb(trx, sponsorTenant).table('co_management_deliveries')
+        .where({ delivery_kind: 'ticket_comment_email', source_id: attachmentFreeComment, recipient: 'sponsor-original@example.test' }).first()).toMatchObject({ state: 'sent' });
+      const revokedComment = await makeComment();
+      const revokedPending = { ...pending, replyContext: { ticketId: ticket, commentId: revokedComment }, coManagedRecipient: { ...pending.coManagedRecipient, commentId: revokedComment },
+        delivery: { ...pending.delivery, key: { ...pending.delivery.key, source_id: revokedComment } } };
+      const revokedFail = vi.spyOn(service, 'sendEmail').mockResolvedValueOnce({ success: false, error: 'Rate limited', providerId: 'sponsor-retry', providerType: 'smtp',
+        metadata: { retryable: true, definitelyNotSent: true, status: 429 } } as any);
+      try { await expect(sendEventEmail(revokedPending)).rejects.toMatchObject({ isRetryable: true }); } finally { revokedFail.mockRestore(); }
+      await retryQueue.enqueue(revokedPending, { retryAfterMs: 1 });
+      revoked = true;
+      await new Promise(resolve => setTimeout(resolve, 5));
+      await (retryQueue as any).processReady();
+      expect(messages).toHaveLength(2);
     } finally {
-      fail.mockRestore(); smtp.mockRestore(); connection.mockRestore(); tenantConnection.mockRestore();
+      await retryQueue.shutdown(); await delayedQueue.shutdown(); rateLimit.mockRestore(); smtp.mockRestore(); connection.mockRestore(); tenantConnection.mockRestore();
       coManagedDeliverySeam.reset(); delete process.env.FORCE_CAPABILITIES;
+    }
+  });
+
+  it.each([false, true])('renders independent sponsor comment content from the ticket email subscriber (reverse=%s)', async reverse => {
+    const { TenantEmailService } = await import('@alga-psa/email');
+    const { SMTPEmailProvider } = await import('@alga-psa/email/providers/SMTPEmailProvider');
+    const { coManagedDeliverySeam } = await import('@shared/lib/coManagedDelivery');
+    const { ticketEmailSubscriberTestHarness } = await import('@/lib/eventBus/subscribers/ticketEmailSubscriber');
+    const ids = { hidden: randomUUID(), visible: randomUUID() };
+    const addresses = { [ids.hidden]: 'hidden-sponsor@example.test', [ids.visible]: 'visible-sponsor@example.test' };
+    const policies: Record<string, string[]> = { [ids.hidden]: ['note', 'actor_display_name'], [ids.visible]: [] };
+    const principals = reverse ? [ids.visible, ids.hidden] : [ids.hidden, ids.visible];
+    const redactedFields = [{ kind: 'msp_user', principalId: ids.hidden, email: addresses[ids.hidden], redactedFields: policies[ids.hidden] },
+      { kind: 'msp_user', principalId: ids.visible, email: addresses[ids.visible], redactedFields: policies[ids.visible] }];
+    const plan = { audience: 'shared_it', threadId: randomUUID(), relationshipId: randomUUID(), sponsorTenant: tenant,
+      sponsorRecipients: principals.map(id => redactedFields.find(r => r.principalId === id)),
+      replyTokenMetadata: { namespace: 'cm', version: 2, relationshipId: randomUUID(), grantGeneration: 0, threadId: null } };
+    await table('tenant_email_templates').insert({ tenant, name: 'ticket-comment-added', language_code: 'en', subject: 'Update {{ticket.id}}',
+      html_content: '{{{comment.html}}}|{{comment.author}}|{{ticket.requesterDetails}}|{{ticket.assignedDetails}}|{{ticket.categoryDetails}}',
+      text_content: '{{comment.text}}|{{comment.author}}|{{ticket.requesterDetails}}|{{ticket.assignedDetails}}|{{ticket.categoryDetails}}' });
+    const messages: any[] = [];
+    const stream = nodemailer.createTransport({ streamTransport: true, buffer: true });
+    const provider = new SMTPEmailProvider('co-managed-order');
+    (provider as any).initialized = true; (provider as any).config = { from: 'agent@example.test' };
+    (provider as any).transporter = { sendMail: async (mail: any) => { const sent = await stream.sendMail(mail); messages.push(await simpleParser(sent.message as Buffer)); return sent; } };
+    const service = TenantEmailService.getInstance(tenant);
+    const refresh = vi.spyOn(service as any, 'refreshProviderState').mockResolvedValue({ emailProvider: provider, providerInitError: null, fromAddress: 'agent@example.test' });
+    const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(trx);
+    const tenantConnection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant } as any);
+    process.env.FORCE_CAPABILITIES = 'co-managed:on';
+    coManagedDeliverySeam.reset();
+    coManagedDeliverySeam.register(() => ({ planTicketComment: async () => plan,
+      reauthorizeCommentRecipient: async (input: any) => redactedFields.find(r => r.principalId === input.principalId) ?? null }) as any);
+    try {
+      await ticketEmailSubscriberTestHarness.handleTicketCommentAdded({ id: randomUUID(), eventType: 'TICKET_COMMENT_ADDED', payload: {
+        tenantId: tenant, ticketId: ticket, actorUserId: actor,
+        comment: { id: comment, content: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'One recipient secret body' }] }]), author: 'Hidden Author', isInternal: false },
+      } } as any);
+      expect(messages).toHaveLength(2);
+      const hidden = messages.find(m => m.to.value[0].address === addresses[ids.hidden]);
+      const visible = messages.find(m => m.to.value[0].address === addresses[ids.visible]);
+      expect(hidden.text).not.toContain('One recipient secret body');
+      expect(hidden.text).not.toContain('Hidden Author');
+      expect(visible.text).toContain('One recipient secret body');
+      expect(visible.text).toContain('Hidden Author');
+    } finally {
+      refresh.mockRestore(); connection.mockRestore(); tenantConnection.mockRestore();
+      coManagedDeliverySeam.reset(); delete process.env.FORCE_CAPABILITIES;
+    }
+  });
+
+  it('routes a rate-limited sponsor routing email through ledger recovery with current recipient content', async () => {
+    const { TenantEmailService, DelayedEmailQueue } = await import('@alga-psa/email');
+    const { SMTPEmailProvider } = await import('@alga-psa/email/providers/SMTPEmailProvider');
+    const { deliverRoutingRow } = await import('@/lib/notifications/coManagedRoutingDelivery');
+    const sourceId = randomUUID(), originalEmail = 'routing-original@example.test', currentEmail = 'routing-current@example.test';
+    await table('co_management_deliveries').insert({ tenant, delivery_kind: 'routing_email', source_id: sourceId, recipient: originalEmail,
+      recipient_kind: 'msp_user', state: 'pending', attempts: 0 });
+    await table('tenant_email_templates').insert({ tenant, name: 'co-managed-routing', language_code: 'en', subject: '{{routing.headline}}',
+      html_content: '{{routing.body}} {{ticket.id}}', text_content: '{{routing.body}} {{ticket.id}}' });
+    const messages: any[] = [], stream = nodemailer.createTransport({ streamTransport: true, buffer: true });
+    const provider = new SMTPEmailProvider('routing-retry');
+    (provider as any).initialized = true; (provider as any).config = { from: 'agent@example.test' };
+    (provider as any).transporter = { sendMail: async (mail: any) => { const sent = await stream.sendMail(mail); messages.push(await simpleParser(sent.message as Buffer)); return sent; } };
+    const service = TenantEmailService.getInstance(tenant);
+    const refresh = vi.spyOn(service as any, 'refreshProviderState').mockResolvedValue({ emailProvider: provider, providerInitError: null, fromAddress: 'agent@example.test' });
+    const rate = vi.spyOn(service as any, 'checkRateLimits').mockResolvedValueOnce({ allowed: false, retryAfterMs: 1, reason: 'test' })
+      .mockResolvedValue({ allowed: true });
+    const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(trx);
+    const tenantConnection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant } as any);
+    (DelayedEmailQueue as any).instance = null;
+    const data = new Map<string, string>(), scores = new Map<string, Map<string, number>>();
+    const redis = { get: async (key: string) => data.get(key) ?? null, set: async (key: string, value: string) => { data.set(key, value); },
+      del: async (key: string) => Number(data.delete(key)), zAdd: async (key: string, item: any) => { const z = scores.get(key) ?? new Map(); z.set(item.value, item.score); scores.set(key, z); return 1; },
+      zRem: async (key: string, id: string) => Number(scores.get(key)?.delete(id)), zRangeByScore: async (key: string, min: number, max: number) => [...(scores.get(key) ?? new Map()).entries()].filter(([, score]) => score >= min && score <= max).map(([id]) => id),
+      eval: async (script: string, args: any) => { if (script.startsWith('local ids')) return 0; return 0; } };
+    const delayed = DelayedEmailQueue.getInstance({ checkIntervalMs: 3600000 }); await delayed.initialize(async () => redis as any);
+    const route = (email: string, redactedFields: string[]) => ({ tenant, deliveryKind: 'routing_email', sourceId, event: 'escalation_received' as const,
+      recipient: { kind: 'msp_user' as const, principalId: actor, email, redactedFields }, ledgerRecipient: originalEmail,
+      recipientTenant: tenant, ticketId: ticket, ticketNumber: 'R-41', ticketTitle: 'Restricted routing title', actorName: 'Routing actor', actorOrganization: 'Sponsor Org', allowed: true });
+    try {
+      expect(await deliverRoutingRow(route(originalEmail, []))).toBe('failed');
+      expect((await table('co_management_deliveries').where({ delivery_kind: 'routing_email', source_id: sourceId }).first()).state).toBe('failed');
+      expect([...scores.entries()].some(([key, z]) => key.includes('ratelimit') && z.size > 0)).toBe(false);
+      expect(await deliverRoutingRow(route(currentEmail, ['ticket_number', 'tickets.title', 'actor_display_name']))).toBe('sent');
+      expect(messages).toHaveLength(1);
+      expect(messages[0].to.value[0].address).toBe(currentEmail);
+      expect(messages[0].text).not.toContain('R-41');
+      expect(messages[0].text).not.toContain('Restricted routing title');
+      expect(messages[0].text).not.toContain('Routing actor');
+      expect((await table('co_management_deliveries').where({ delivery_kind: 'routing_email', source_id: sourceId }).first())
+        .recipient).toBe(originalEmail);
+      expect((await table('co_management_deliveries').where({ delivery_kind: 'routing_email', source_id: sourceId }).first()).state).toBe('sent');
+      const revokedSource = randomUUID();
+      await table('co_management_deliveries').insert({ tenant, delivery_kind: 'routing_email', source_id: revokedSource, recipient: originalEmail,
+        recipient_kind: 'msp_user', state: 'pending', attempts: 0 });
+      expect(await deliverRoutingRow({ ...route(currentEmail, []), sourceId: revokedSource, allowed: false })).toBe('skipped');
+      expect(messages).toHaveLength(1);
+      expect((await table('co_management_deliveries').where({ delivery_kind: 'routing_email', source_id: revokedSource }).first())
+        .error_code).toBe('recipient_not_permitted');
+    } finally {
+      await delayed.shutdown(); rate.mockRestore(); refresh.mockRestore(); connection.mockRestore(); tenantConnection.mockRestore();
     }
   });
 

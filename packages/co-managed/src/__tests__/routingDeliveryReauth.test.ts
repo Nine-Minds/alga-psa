@@ -13,8 +13,11 @@ vi.mock('@alga-psa/db', () => {
   const builder = (table: string, rows: any[]) => {
     let result = rows;
     const q: any = {
-      where(c: any) { if (typeof c === 'object') result = result.filter((r) => Object.entries(c).every(([k, v]) => r[k] === v)); return q; },
+      where(c: any, val?: any) { const cond = typeof c === 'object' ? c : { [c]: val };
+        result = result.filter((r) => Object.entries(cond).every(([k, v]) => r[k] === v || r[k.split('.').at(-1)!] === v)); return q; },
+      whereNull(col: string) { result = result.filter((r) => r[col] == null); return q; },
       whereIn(col: string, vals: any[]) { result = result.filter((r) => (vals as any[]).includes(r[col])); return q; },
+      count: async () => [{ count: '0' }], select() { return q; },
       orderBy() { return q; }, limit() { return q; },
       first() { return Promise.resolve(result[0]); },
       then(res: any, rej: any) { h.queries.push(table); return Promise.resolve(result).then(res, rej); },
@@ -23,7 +26,7 @@ vi.mock('@alga-psa/db', () => {
   };
   return {
     withAdminTransaction: async (fn: any) => fn({}),
-    tenantDb: () => ({ table: (t: string) => builder(t, h.data[t] ?? []) }),
+    tenantDb: () => ({ table: (t: string) => builder(t, h.data[t] ?? []), tenantJoin: () => undefined }),
   };
 });
 vi.mock('../sharedWork', () => ({ withCoManagedNotificationRecipient: (...a: any[]) => (h.sponsor as any)(...a) }));
@@ -157,5 +160,32 @@ describe('pendingRouting re-authorizes customer recipients', () => {
     }));
     const deliveries = await run();
     expect(deliveries.map((d) => d.recipient.redactedFields)).toEqual([['tickets.title'], ['assignee_name']]);
+  });
+});
+
+describe('sponsor comment retry authorization', () => {
+  it('resolves an assigned team member through the production provider plan and reauthorization methods', async () => {
+    h.data = {
+      co_management_ticket_work: [{ ticket_id: 'tk1', relationship_id: 'rel', grant_revoked_at: null, first_escalated_at: new Date() }],
+      co_management_relationships: [{ relationship_id: 'rel', sponsor_tenant: 's1', state: 'active', ended_at: null }],
+      co_management_ticket_handoffs: [],
+      co_managed_ticket_references: [{ relationship_id: 'rel', ticket_id: 'tk1', customer_tenant: 't1', assigned_team_id: 'team1' }],
+      comments: [{ comment_id: 'c1', thread_id: 'th1', is_internal: false }],
+      comment_threads: [{ thread_id: 'th1', collaboration_audience: 'shared_it', is_internal: true }],
+      'team_members as tm': [{ team_id: 'team1', user_id: 'principal', email: 'team@example.test', user_type: 'internal', is_inactive: false }],
+    };
+    const provider = createCoManagedDeliveryProvider();
+    const result = await provider.reauthorizeCommentRecipient!({ tenant: 't1', ticketId: 'tk1', commentId: 'c1', relationshipId: 'rel', sponsorTenant: 's1', principalId: 'principal' });
+    expect(result).toMatchObject({ kind: 'team', principalId: 'principal', email: 'team@example.test' });
+  });
+
+  it.each(['msp_user', 'team'] as const)('retains currently authorized %s participants through the production provider method', async kind => {
+    const realProvider = createCoManagedDeliveryProvider();
+    const plan = { audience: 'shared_it' as const, threadId: 'thread', relationshipId: 'rel', sponsorTenant: 's1',
+      sponsorRecipients: [{ kind, principalId: 'principal', email: 'now@example.test', redactedFields: ['note'] }],
+      replyTokenMetadata: { namespace: 'cm' as const, version: 2 as const, relationshipId: 'rel', grantGeneration: 0, threadId: 'thread' } };
+    vi.spyOn(realProvider, 'planTicketComment').mockResolvedValue(plan);
+    await expect(realProvider.reauthorizeCommentRecipient!({ tenant: 't1', ticketId: 'tk1', commentId: 'c1', relationshipId: 'rel', sponsorTenant: 's1', principalId: 'principal' }))
+      .resolves.toEqual(plan.sponsorRecipients[0]);
   });
 });

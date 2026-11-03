@@ -98,6 +98,8 @@ export interface SendEmailParams {
   delivery?: { ledger: DeliveryLedger; key: DeliveryKey; extra?: Record<string, unknown>; ledgerTenant?: string };
   /** Serializable identity used to reauthorize a sponsor recipient on every immediate or delayed send. */
   coManagedRecipient?: { tenant: string; ticketId: string; commentId: string; relationshipId: string; sponsorTenant: string; principalId: string };
+  /** Routing delivery is retried from its ledger by routing recovery, never as rendered mail. */
+  coManagedRouting?: true;
   from?: EmailAddress;
   /**
    * Optional: explicitly specify recipient's locale
@@ -673,7 +675,9 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       mailClass: params.mailClass,
       boardId: params.boardId,
       senderId: params.senderId,
-      revalidateCommentOnRetry: managedCommentDelivery,
+      // Sponsor deliveries must return through EventEmailRetryQueue (or routing recovery)
+      // so persisted rendered messages cannot bypass current authorization on rate-limit retry.
+      revalidateCommentOnRetry: managedCommentDelivery || Boolean(params.coManagedRecipient) || Boolean(params.coManagedRouting),
       to: params.to,
       ...(params.cc?.length ? { cc: params.cc } : {}),
       ...(params.bcc?.length ? { bcc: params.bcc } : {}),

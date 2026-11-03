@@ -55,6 +55,10 @@ describe('projectCoManagedNotificationSnapshot', () => {
     expect(projectCoManagedNotificationSnapshot(['contact_id'], { authorName: 'Morgan' }).authorName).toBeNull();
     expect(projectCoManagedNotificationSnapshot(['priority_id'], row)).toMatchObject({ priority: null, metaLine: null });
     expect(projectCoManagedNotificationSnapshot(['ticket_number'], row).metaLine).toBeNull();
+    expect(projectCoManagedNotificationSnapshot(['requester_name'], { requesterDetails: 'Name · email' }).requesterDetails).toBeNull();
+    expect(projectCoManagedNotificationSnapshot(['assignee_name'], { assignedDetails: 'Name (email)' }).assignedDetails).toBeNull();
+    expect(projectCoManagedNotificationSnapshot(['subcategory_name'], { categoryDetails: 'Category / Subcategory', subcategory: 'Subcategory' }))
+      .toMatchObject({ categoryDetails: null, subcategory: null });
     expect(projectCoManagedNotificationSnapshot(['*'], row)).toMatchObject({ priority: null, status: null, board: null, categoryDetails: null, metaLine: null });
   });
 });
