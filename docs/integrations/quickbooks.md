@@ -97,9 +97,18 @@ happens on the Intuit side except the last two.
      shows them on the Production tab after you complete its app assessment
      questionnaire.
 
-   The settings page shows which one AlgaPSA is calling under **Intuit
-   Environment**, set by the `QBO_ENVIRONMENT` variable on your deployment. Use
-   the matching keys; a Development key against Production fails at sign-in.
+   Which one you need is the **Intuit Environment** setting on the Intuit App
+   card, chosen per tenant: **Production** for real QuickBooks companies,
+   **Sandbox** for an Intuit test company. It defaults to the deployment-wide
+   `QBO_ENVIRONMENT` value (production when unset on a production build), and a
+   tenant admin can change it while nothing is connected — switching
+   environments requires disconnecting first, because a realm ID and its tokens
+   exist only in the environment they were authorized in.
+
+   Use the keys that match: a Development key against Production fails at
+   sign-in, and a Production key against a sandbox company fails the same way.
+   Because Intuit accepts only Development keys against sandbox companies, a
+   tenant on **Sandbox** must connect through its own Intuit app — see below.
 4. On the same **Keys & credentials** page, find **Redirect URIs** and add the
    **Redirect URI** shown on the AlgaPSA settings page. Intuit matches it
    character for character, so copy and paste rather than retyping. Save the
@@ -118,6 +127,13 @@ set it as the app-level secrets `QBO_CLIENT_ID` and `QBO_CLIENT_SECRET`
 and `qbo_client_secret` are accepted too) rather than pasting it into a tenant's
 card. Optionally set `QBO_REDIRECT_URI` if the public callback URL differs from
 `NEXT_PUBLIC_BASE_URL` plus `/api/integrations/qbo/callback`.
+
+A shared app is registered with one set of keys, normally Production. So a
+tenant that selects **Sandbox** cannot use it: AlgaPSA blocks the connection
+with a message naming the Intuit app's Development keys, and that tenant has to
+register its own app and save its Development keys on the card. This is how a
+hosted tenant tests against an Intuit sandbox company without changing anything
+for the rest of the deployment.
 
 Save both tenant keys together. If only one of the two is stored, connecting
 fails with a message that the client ID and secret were not fully configured,

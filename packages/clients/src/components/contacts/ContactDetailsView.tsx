@@ -44,7 +44,8 @@ const isReturnedActionError = (value: unknown) =>
 interface ContactDetailsViewProps {
   id?: string; // Made optional to maintain backward compatibility
   initialContact: IContact;
-  clients: IClient[];
+  /** @deprecated Ignored. The client name and country come from a by-id lookup; the picker searches on the server. */
+  clients?: IClient[];
   isInDrawer?: boolean;
   userId?: string;
   documents?: IDocument[];
@@ -82,7 +83,6 @@ const TableRow: React.FC<TableRowProps> = ({ label, value, onClick }) => (
 const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   id = 'contact-details',
   initialContact,
-  clients,
   isInDrawer = false,
   userId,
   documents: initialDocuments = EMPTY_DOCUMENTS,
@@ -105,6 +105,36 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const { openDrawer, goBack } = useDrawer();
   const clientDrawer = useClientDrawer();
+  // Name and phone default country of the contact's current client, loaded by id. The result is
+  // keyed by client id, so a slow response for a previous client can never label the new one.
+  const [contactClient, setContactClient] = useState<{ clientId: string; name: string | null; countryCode: string | null } | null>(null);
+  useEffect(() => {
+    const clientId = contact.client_id;
+    if (!clientId) {
+      setContactClient(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const client = await getClientById(clientId);
+        if (cancelled) return;
+        setContactClient({
+          clientId,
+          name: client?.client_name ?? null,
+          countryCode: client?.location_country_code ?? null,
+        });
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error loading contact client:', err);
+          setContactClient({ clientId, name: null, countryCode: null });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [contact.client_id]);
   const { renderDocuments } = useDocumentsCrossFeature();
 
   useEffect(() => {
@@ -198,7 +228,6 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
       <ContactDetailsEdit
         id={`${id}-edit`}
         initialContact={contact}
-        clients={clients}
         isInDrawer={true}
         onSave={(updatedContact) => {
           setContact(updatedContact);
@@ -206,7 +235,6 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
             <ContactDetailsView 
               id={id}
               initialContact={updatedContact} 
-              clients={clients}
               isInDrawer={true}
               userId={userId}
               documents={documents}
@@ -218,7 +246,6 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
           <ContactDetailsView 
             id={id}
             initialContact={contact} 
-            clients={clients}
             isInDrawer={true}
             userId={userId}
             documents={documents}
@@ -250,10 +277,10 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
     };
   }, [contact.manager_contact_id, contact.client_id]);
 
-  const getClientName = (clientId: string) => {
-    const client = clients.find(c => c.client_id === clientId);
-    return client ? client.client_name : t('contactDetailsView.empty.unknownClient', { defaultValue: 'Unknown Client' });
-  };
+  const getClientName = (clientId: string) =>
+    contactClient?.clientId === clientId && contactClient.name
+      ? contactClient.name
+      : t('contactDetailsView.empty.unknownClient', { defaultValue: 'Unknown Client' });
 
   const handleClientClick = async () => {
     if (contact.client_id) {
@@ -456,7 +483,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                   <div className="space-y-2">
                     {contact.phone_numbers.map((phone) => (
                       <div key={phone.contact_phone_number_id} className="rounded-md border border-gray-200 px-3 py-2">
-                        <div className="text-sm font-medium text-gray-900"><PhoneText value={phone.phone_number} extension={phone.extension} defaultCountry={clients.find((client) => client.client_id === contact.client_id)?.location_country_code} /></div>
+                        <div className="text-sm font-medium text-gray-900"><PhoneText value={phone.phone_number} extension={phone.extension} defaultCountry={contactClient?.clientId === contact.client_id ? contactClient?.countryCode : undefined} /></div>
                         <div className="text-xs text-gray-500">
                           {getPhoneTypeLabel(phone)}
                           {phone.is_default ? ` • ${t('contactDetailsView.fields.defaultPhone', { defaultValue: 'Default' })}` : ''}
@@ -474,7 +501,6 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                   <div className="flex-1">
                     <ClientPicker
                       id="contact-client-picker"
-                      clients={clients}
                       onSelect={handleClientChange}
                       selectedClientId={selectedClientId}
                       filterState={filterState}

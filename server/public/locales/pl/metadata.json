@@ -544,6 +544,9 @@
       },
       "sla": {
         "title": "Priorytety SLA współzarządzania"
+      },
+      "export": {
+        "title": "Eksportuj obszar roboczy"
       }
     }
   },

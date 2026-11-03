@@ -544,6 +544,9 @@
       },
       "sla": {
         "title": "Co-Managed-SLA-Prioritäten"
+      },
+      "export": {
+        "title": "Arbeitsbereich exportieren"
       }
     }
   },

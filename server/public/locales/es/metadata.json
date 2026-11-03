@@ -544,6 +544,9 @@
       },
       "sla": {
         "title": "Prioridades de SLA cogestionado"
+      },
+      "export": {
+        "title": "Exportar espacio de trabajo"
       }
     }
   },

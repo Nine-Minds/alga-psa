@@ -544,6 +544,9 @@
       },
       "sla": {
         "title": "Priorità SLA cogestite"
+      },
+      "export": {
+        "title": "Esporta area di lavoro"
       }
     }
   },

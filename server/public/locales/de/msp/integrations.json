@@ -36,6 +36,15 @@
         "suggested": "Vorgeschlagen",
         "toSave": "{{total}} zu speichern"
       },
+      "customerMapping": {
+        "unlink": "Zuordnung aufheben",
+        "unlinkConfirm": {
+          "title": "Zuordnung von {{client}} zu QuickBooks aufheben?",
+          "body": "{{client}} wird nicht mehr zum QuickBooks-Kunden {{customer}} exportiert. In QuickBooks ändert sich nichts, und Sie können den Kunden jederzeit erneut über diese Liste zuordnen.",
+          "confirm": "Zuordnung aufheben",
+          "cancel": "Zuordnung behalten"
+        }
+      },
       "dialog": {
         "cancel": "Abbrechen",
         "enterPlaceholder": "{{field}} eingeben...",
@@ -2084,11 +2093,18 @@
         "environment": "Intuit-Umgebung",
         "environmentProduction": "Produktion",
         "environmentSandbox": "Sandbox",
+        "environmentHint": "Produktion verbindet sich mit echten QuickBooks-Unternehmen. Sandbox verbindet sich mit einem Intuit-Testunternehmen, sodass Sie Exporte ausprobieren können, ohne echte Buchhaltung zu verändern.",
+        "environmentLockedHint": "Trennen Sie QuickBooks, bevor Sie die Umgebung wechseln. Das verbundene Unternehmen und seine Token existieren nur in der Umgebung, in der sie autorisiert wurden.",
+        "environmentSandboxKeysTitle": "Sandbox benötigt Ihre eigene Intuit-App",
+        "environmentSandboxKeysDescription": "Intuit-Sandbox-Unternehmen akzeptieren nur die Development-Schlüssel einer Intuit-App, die Sie selbst verwalten. Die gemeinsame App dieser Installation verwendet Production-Schlüssel. Registrieren Sie daher Ihre eigene App und speichern Sie unten deren Development-Schlüssel, bevor Sie eine Verbindung herstellen.",
+        "environmentSavedSandbox": "QuickBooks verbindet sich jetzt mit einem Intuit-Sandbox-Unternehmen. Stellen Sie die Verbindung mit den Development-Schlüsseln Ihrer eigenen Intuit-App her.",
+        "environmentSavedProduction": "QuickBooks verbindet sich jetzt mit echten QuickBooks-Unternehmen.",
         "errors": {
           "automatedSalesTax": "Der Automated-Sales-Tax-Modus konnte nicht aktualisiert werden.",
           "disconnect": "QuickBooks konnte nicht getrennt werden.",
           "load": "QuickBooks-Einstellungen konnten nicht geladen werden.",
-          "saveCredentials": "QuickBooks-Anmeldedaten konnten nicht gespeichert werden."
+          "saveCredentials": "QuickBooks-Anmeldedaten konnten nicht gespeichert werden.",
+          "environment": "Die Intuit-Umgebung konnte nicht geändert werden."
         },
         "howItWorksDescription": "Verbinden Sie Ihr QuickBooks-Unternehmen, indem Sie sich bei Intuit anmelden. AlgaPSA verwendet es dann als Standard-Live-Kontext für Exporte und Zuordnungen. Die Karte „Intuit-App“ unten zeigt, ob Ihre Installation die App für diese Anmeldung bereits bereitstellt oder ob Sie zuerst eine registrieren müssen.",
         "howItWorksTitle": "So funktioniert Live-QuickBooks in dieser Version",
@@ -2120,6 +2136,7 @@
         "credentialSource": {
           "app": "Diese Installation stellt eine gemeinsame Intuit-App bereit, sodass Sie QuickBooks verbinden können, ohne selbst eine zu registrieren. Überspringen Sie diese Karte und klicken Sie unten auf „QuickBooks verbinden“.",
           "none": "Es ist noch keine Intuit-App verfügbar. Registrieren Sie eine bei Intuit, bevor Sie verbinden können.",
+          "noneSandbox": "Die Sandbox benötigt eine eigene Intuit-App. Registrieren Sie eine und speichern Sie deren Development-Schlüssel, bevor Sie verbinden können.",
           "tenant": "Dieser Mandant verbindet sich über seine eigene Intuit-App mit den unten gespeicherten Zugangsdaten. Zum Rotieren eines Schlüssels den neuen Wert einfügen und speichern.",
           "appTitle": "Keine Zugangsdaten erforderlich"
         },

@@ -626,6 +626,9 @@
       },
       "sla": {
         "title": "Samhanterade SLA-prioriteter"
+      },
+      "export": {
+        "title": "Exportera arbetsyta"
       }
     }
   },
