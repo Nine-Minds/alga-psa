@@ -7,9 +7,12 @@
 import type { Knex } from 'knex';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import { OPERATIONAL_WRITE_TABLES, admitOperationalWrite, registerWriteAdmissionResolver, resetWriteAdmissionResolver } from '@alga-psa/db';
+import { admits, registerCapabilityEligibility } from '@alga-psa/core/capability';
+import { clearCapabilityCache } from '@alga-psa/core/capability/testing';
+import { flagTargetingEnvName } from '@alga-psa/core/features';
 import { invalidateWriteAdmission } from '@alga-psa/db/writeAdmission';
 import { GRACE_MS, readCoManagedLifecycleLockFree } from '@alga-psa/licensing';
-import { createCoManagedWriteAdmissionResolver } from '@alga-psa/licensing/co-managed-write-admission';
+import { createCoManagedWriteAdmissionResolver, installCoManagedWriteAdmission } from '@alga-psa/licensing/co-managed-write-admission';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { seedBoundaryFixture, type BoundaryFixture } from './coManagedArchiveBoundaryCases';
@@ -31,6 +34,7 @@ describeDb('co-managed lapse enforced through the write-admission choke point', 
     process.env.FORCE_CAPABILITIES = 'co-managed:on';
     db = await createTestDbConnection({ databaseName: 'l7a_lapse_admission_test' });
     f = await seedBoundaryFixture(db);
+    registerCapabilityEligibility('co-managed', async ({ tenantId }) => Boolean(await db('co_managed_entitlements').where({ tenant: tenantId }).first('tenant')));
     // The allocation is `active` so the relationship is in good standing until the entitlement lapses.
     registerWriteAdmissionResolver(createCoManagedWriteAdmissionResolver((conn, tenant) => readCoManagedLifecycleLockFree(conn as Knex, tenant, () => clock)));
   }, 300_000);
@@ -67,6 +71,55 @@ describeDb('co-managed lapse enforced through the write-admission choke point', 
     await db('co_management_relationships').where({ tenant: f.customer, relationship_id: f.relationshipId }).update({ state: 'terminated', ended_at: new Date() });
     expect([...await outcomes()]).toEqual(['refused']);
     expect(await db('co_managed_participation_evidence').where({ tenant: f.msp }).count('* as n').first()).toMatchObject({ n: expect.any(String) });
+  });
+
+  it('the installed default reader preserves flag-off and unentitled neutrality, then enforces an entitled lapse and ended state', async () => {
+    const flagEnv = flagTargetingEnvName('release-v2-0-feature');
+    const originalFlag = process.env[flagEnv];
+    const originalForce = process.env.FORCE_CAPABILITIES;
+    const entitlement = await db('co_managed_entitlements').where({ tenant: f.msp }).first();
+    try {
+      await db('co_management_relationships').where({ tenant: f.customer, relationship_id: f.relationshipId }).update({ state: 'active', ended_at: null });
+      await db('co_managed_allocations').where({ tenant: f.msp, relationship_id: f.relationshipId }).update({ state: 'active' });
+      const started = new Date(Date.now() - GRACE_MS - DAY);
+      await lapse(started);
+      installCoManagedWriteAdmission();
+      delete process.env.FORCE_CAPABILITIES;
+
+      process.env[flagEnv] = f.msp;
+      process.env.FORCE_CAPABILITIES = 'co-managed:off';
+      clearCapabilityCache();
+      expect([...await outcomes()]).toEqual(['admitted']);
+      delete process.env.FORCE_CAPABILITIES;
+
+      process.env[flagEnv] = '';
+      clearCapabilityCache();
+      expect([...await outcomes()]).toEqual(['admitted']);
+
+      process.env[flagEnv] = f.msp;
+      await db('co_managed_entitlements').where({ tenant: f.msp }).delete();
+      clearCapabilityCache();
+      expect([...await outcomes()]).toEqual(['admitted']);
+
+      await db('co_managed_entitlements').insert(entitlement);
+      await lapse(started);
+      clearCapabilityCache();
+      expect(await admits('co-managed', f.msp)).toMatchObject({ admitted: true });
+      expect([...await outcomes()]).toEqual(['refused']);
+      await lapse(null);
+      clearCapabilityCache();
+      expect([...await outcomes()]).toEqual(['admitted']);
+
+      await db('co_management_relationships').where({ tenant: f.customer, relationship_id: f.relationshipId }).update({ state: 'terminated', ended_at: new Date() });
+      clearCapabilityCache();
+      expect([...await outcomes()]).toEqual(['refused']);
+    } finally {
+      registerWriteAdmissionResolver(createCoManagedWriteAdmissionResolver((conn, tenant) => readCoManagedLifecycleLockFree(conn as Knex, tenant, () => clock)));
+      if (originalFlag === undefined) delete process.env[flagEnv]; else process.env[flagEnv] = originalFlag;
+      if (originalForce === undefined) delete process.env.FORCE_CAPABILITIES; else process.env.FORCE_CAPABILITIES = originalForce;
+      clearCapabilityCache();
+      invalidateWriteAdmission(f.customer);
+    }
   });
 
   it('a plain PSA tenant is never refused, whatever the sponsor lapse', async () => {

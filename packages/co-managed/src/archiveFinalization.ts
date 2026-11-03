@@ -4,6 +4,12 @@ import type { CoManagedSharedResource } from './sharedWork';
 import { CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
 import { retainCoManagedHistoricalWorkEvidence } from './historicalWorkEvidence';
 import { retainCoManagedSharedConversationBeforeReduction } from './conversationParticipationEvidence';
+import { classifyArchiveCandidate, registerCoManagedArchiveFileSource } from './archiveManifest';
+import { retainFile, retainedCoManagedArchiveFileSource } from './archiveFiles';
+import { coManagedAttachmentParent } from './attachmentParent';
+
+// This is the L7a production connection from retained participation evidence to durable bytes.
+registerCoManagedArchiveFileSource(retainedCoManagedArchiveFileSource);
 
 /**
  * Evidence sources that contribute to a closing archive beyond the built-in ticket/task history
@@ -29,8 +35,6 @@ export async function finalizeCoManagedArchive(context: CoManagedClosureContext)
   const relationship = await customer.table('co_management_relationships').where({ relationship_id: relationshipId, sponsor_tenant: sponsorTenant, state: 'active' })
     .whereNull('ended_at').forShare().first('sponsor_client_id');
   if (!relationship) throw new CoManagedSharedWorkError();
-  for (const name of [...sources.keys()].sort()) await sources.get(name)!(context);
-
   // Discover from actual participation, never an oversight list; every customer source still
   // requires its effective grant inside the retainers.
   const candidates = new Map<string, CoManagedSharedResource>();
@@ -64,4 +68,28 @@ export async function finalizeCoManagedArchive(context: CoManagedClosureContext)
     await retainCoManagedHistoricalWorkEvidence(historical, resource);
     await retainCoManagedSharedConversationBeforeReduction(trx, resource, operationId, { cutoffAt });
   }
+
+  // Built-in history/snapshots above produce the final participation set. Copy only attachments
+  // belonging to archived, visible conversation evidence before the seal can name their bytes.
+  const evidence = await sponsor.table('co_managed_participation_evidence').where({ customer_tenant: customerTenant,
+    relationship_id: relationshipId, source_type: 'conversation' }).orderBy('evidence_id')
+    .select('resource_type', 'resource_id', 'occurred_at', 'payload');
+  for (const row of evidence) {
+    const candidate = { evidence_id: '', payload_hash: '', source_type: 'conversation', occurred_at: row.occurred_at, payload: row.payload };
+    if (!classifyArchiveCandidate(candidate, cutoffAt).include) continue;
+    const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
+    if (payload?.deleted || !['requester', 'shared_it'].includes(payload?.audience) ||
+        !isCoManagedUuid(payload?.commentId) || !isCoManagedUuid(payload?.threadId)) continue;
+    const source = tenantDb(trx, customerTenant).table('co_management_conversation_attachments')
+      .where({ customer_tenant: customerTenant, relationship_id: relationshipId, thread_id: payload.threadId,
+        comment_id: payload.commentId, status: 'ready', ...coManagedAttachmentParent({ kind: row.resource_type, id: row.resource_id }) })
+      .whereNull('discarded_at').whereNull('purged_at').forShare();
+    const files = await source.select('attachment_id', 'content_hash');
+    for (const file of files) await retainFile(trx, { tenant: sponsorTenant, sourceTenant: customerTenant, fileId: file.attachment_id,
+      hash: file.content_hash, relationshipId, clientId: relationship.sponsor_client_id, audience: payload.audience });
+  }
+
+  // Additional owned evidence producers run after the built-in participation snapshotters and
+  // before sealCoManagedArchive, so each source can see their finalized evidence set.
+  for (const name of [...sources.keys()].sort()) await sources.get(name)!(context);
 }

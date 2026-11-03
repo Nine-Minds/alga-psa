@@ -64,9 +64,10 @@ describe('archive allowlist classification, per row class', () => {
     expect(classifyArchiveCandidate({ ...at(before), source_type: 'work_audit', payload: {} }, cutoff)).toEqual({ include: true });
   });
 
-  it('the allowlist holds only classes the evidence store accepts; a time entry is not one (excluded by default)', () => {
-    expect([...ARCHIVE_EVIDENCE_CLASSES].sort()).toEqual(['conversation', 'private_conversation', 'ticket_handoff', 'work_audit', 'work_snapshot']);
-    expect(classifyArchiveCandidate({ ...at(before), source_type: 'time_entry', payload: {} }, cutoff)).toEqual({ include: false, reason: 'class_not_allowlisted' });
+  it('the allowlist holds only classes the evidence store accepts, including MSP-owned time evidence', () => {
+    expect([...ARCHIVE_EVIDENCE_CLASSES].sort()).toEqual(['conversation', 'private_conversation', 'ticket_handoff', 'time_entry', 'work_audit', 'work_snapshot']);
+    expect(classifyArchiveCandidate({ ...at(before), source_type: 'time_entry', payload: { audience: 'organization_private' } }, cutoff)).toEqual({ include: true });
+    expect(classifyArchiveCandidate({ ...at(before), source_type: 'time_entry', payload: { audience: 'shared_it' } }, cutoff)).toEqual({ include: false, reason: 'audience_not_allowlisted' });
   });
 
   it('a customer-private row under either MSP-private label is never archivable (absent cases)', () => {

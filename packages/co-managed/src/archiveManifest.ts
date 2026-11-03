@@ -13,7 +13,7 @@ import { isCoManagedUuid, CoManagedSharedWorkError } from './sharedWorkIdentity'
  * evidence ids are included (the allowlist later reads page over) and, per class, how many rows
  * were excluded and why, so over-sharing and under-sharing are both reviewable after the fact.
  */
-export const ARCHIVE_EVIDENCE_CLASSES = ['conversation', 'ticket_handoff', 'work_audit', 'work_snapshot', 'private_conversation'] as const;
+export const ARCHIVE_EVIDENCE_CLASSES = ['conversation', 'ticket_handoff', 'time_entry', 'work_audit', 'work_snapshot', 'private_conversation'] as const;
 export type CoManagedArchiveEvidenceClass = typeof ARCHIVE_EVIDENCE_CLASSES[number];
 
 /** Every audience any archived class may carry. `internal` (customer-private) and anything unrecognised is excluded. */
@@ -28,6 +28,9 @@ export const ARCHIVE_ALLOWED_AUDIENCES = ['requester', 'shared_it', 'organizatio
  */
 const AUDIENCES_BY_CLASS: Readonly<Record<string, readonly string[]>> = {
   conversation: ['requester', 'shared_it'],
+  // Time evidence is the MSP's own participation receipt. It may be private to the MSP
+  // organization, while private/customer conversation content remains excluded by class.
+  time_entry: ['organization_private'],
   private_conversation: ['organization_private'],
 };
 
@@ -63,10 +66,9 @@ export function classifyArchiveCandidate(row: CoManagedArchiveCandidate, cutoffA
 }
 
 /**
- * A source of retained archive files. This is the documented extension point for a future retained-file
- * store (L4a / L5); NOTHING registers one in production today, so `manifest.files` is always empty and the
- * bytes route has nothing to serve. Do not list a class here that `co_managed_participation_evidence.source_type`
- * does not accept. The seal only needs identity, hash and size. */
+ * A source of retained archive files. L7a registers the sponsor-owned L4b store during archive
+ * finalization. Do not list a class here that `co_managed_participation_evidence.source_type` does
+ * not accept. The seal only needs identity, hash and size. */
 export interface CoManagedArchiveFileSource {
   name: string;
   list(trx: Knex.Transaction, key: { sponsorTenant: string; customerTenant: string; relationshipId: string }): Promise<Array<{ id: string; hash: string; size: number }>>;

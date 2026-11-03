@@ -21,8 +21,9 @@
  * this subpath directly and must boot when the co-managed package does not resolve.
  */
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
 import { invalidateWriteAdmission, registerWriteAdmissionResolver, type WriteAdmissionResolver } from '@alga-psa/db/writeAdmission';
-import { forcedValue } from '@alga-psa/core/capability';
+import { admits, forcedValue } from '@alga-psa/core/capability';
 import { CoManagedLifecycleError, type CoManagedOperationalState } from './co-managed-lifecycle-error';
 
 export type CoManagedLifecycleReader = (db: Knex | Knex.Transaction, tenant: string) => Promise<CoManagedOperationalState>;
@@ -38,6 +39,15 @@ const lifecycleReader: CoManagedLifecycleReader = async (db, tenant) => {
     // The lifecycle module pulls in the DB barrel; a worker image where it does not load fails open.
     return INDEPENDENT;
   }
+  // L0c is installed during every server boot, so its default reader must honor the same
+  // release-and-entitlement gate as the rest of the product. The sponsor owns the durable
+  // entitlement; the customer workspace's relationship identifies that tenant. An existing
+  // entitlement row remains the eligibility fact through lapse, so the lifecycle reader still
+  // enforces grace/read-only after expiry. `admits` also observes FORCE_CAPABILITIES semantics.
+  const customer = tenantDb(db, tenant);
+  const relationship = await customer.table('co_management_relationships').whereNull('ended_at').first('sponsor_tenant')
+    ?? await customer.table('co_management_relationships').orderBy('ended_at', 'desc').first('sponsor_tenant');
+  if (!relationship?.sponsor_tenant || !(await admits('co-managed', relationship.sponsor_tenant)).admitted) return INDEPENDENT;
   return lifecycle.readCoManagedLifecycleLockFree(db as Knex, tenant);
 };
 

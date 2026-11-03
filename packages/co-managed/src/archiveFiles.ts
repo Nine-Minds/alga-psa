@@ -5,12 +5,13 @@ import { coManagedArchiveStorageProvider } from './archiveStorageProvider';
 import { assertCoManagedAttachmentPath } from './attachmentStoragePath';
 import { coManagedAttachmentParent } from './attachmentParent';
 import { CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
+import type { CoManagedArchiveFileSource } from './archiveManifest';
 
 /**
  * Archive files: a copy-on-retain PRIMITIVE. L4b builds the ability to take an owned, hash-verified
  * copy of a conversation file that survives the customer's tenant deletion; L7a decides WHAT is
- * retained and WHEN (departure/closure policy) and runs the mover. Nothing here is registered,
- * scheduled or called from a native or conversation path.
+ * retained and WHEN (departure/closure policy) and runs the mover. The production source is
+ * registered by archive finalization and only closure calls the retain primitive.
  *
  * Lifecycle: `retainFile` snapshots verified bytes into the sponsor's row inside the caller's
  * transaction (status `pending`) so neither trust closure nor upload cleanup can lose them;
@@ -110,3 +111,17 @@ export async function storeCoManagedArchiveFiles(db: Knex, tenant: string, limit
   }
   return result;
 }
+
+/** Production file source for sealed departure archives. Rows can be listed only after the
+ * closure retainer has copied and verified their bytes into this sponsor-owned table. */
+export const retainedCoManagedArchiveFileSource: CoManagedArchiveFileSource = {
+  name: 'retained-conversation-attachments',
+  async list(trx, { sponsorTenant, customerTenant, relationshipId }) {
+    return tenantDb(trx, sponsorTenant).table(TABLE).where({ customer_tenant: customerTenant, relationship_id: relationshipId })
+      .orderBy('archive_file_id').select({ id: 'archive_file_id', hash: 'content_hash', size: 'file_size' });
+  },
+  async open(db, sponsorTenant, archiveFileId) {
+    const file = await readArchivedFile(db, sponsorTenant, archiveFileId);
+    return { fileName: file.fileName, mimeType: file.mimeType, size: file.size, body: file.content };
+  },
+};

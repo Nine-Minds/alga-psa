@@ -12,6 +12,7 @@ export const sha = (value: unknown) => createHash('sha256').update(JSON.stringif
 
 export interface BoundaryFixture {
   msp: string; customer: string; relationshipId: string; sponsorClient: string; seats: number;
+  resourceId: string; fileCommentId: string; fileThreadId: string; privateFileCommentId: string; privateFileThreadId: string;
   mspAdmin: CoManagedSessionActor; customerAdmin: CoManagedSessionActor; stranger: CoManagedSessionActor;
   evidence: Record<'sharedMessage' | 'requesterMessage' | 'privateMessage' | 'customerPrivate' | 'afterCutoff' | 'audit' | 'unknownClass' | 'customerOrgPrivate' | 'customerPrivateAsPrivateConversation', string>;
 }
@@ -48,6 +49,8 @@ export async function seedBoundaryFixture(db: Knex): Promise<BoundaryFixture> {
     customer_tenant: customer, relationship_id: relationshipId, seats, state: 'active' });
 
   const resourceId = randomUUID();
+  const fileCommentId = randomUUID(), fileThreadId = randomUUID();
+  const privateFileCommentId = randomUUID(), privateFileThreadId = randomUUID();
   const row = (name: string, sourceType: string, payload: Record<string, unknown>, occurredAt: Date) => {
     const evidenceId = randomUUID();
     return { name, evidenceId, record: { tenant: msp, evidence_id: evidenceId, customer_tenant: customer, relationship_id: relationshipId,
@@ -57,18 +60,18 @@ export async function seedBoundaryFixture(db: Knex): Promise<BoundaryFixture> {
   };
   const past = new Date(Date.now() - 3600_000), future = new Date(Date.now() + 86_400_000);
   const rows = [
-    row('sharedMessage', 'conversation', { audience: 'shared_it', markdown: 'shared with IT' }, past),
+    row('sharedMessage', 'conversation', { audience: 'shared_it', markdown: 'shared with IT', commentId: fileCommentId, threadId: fileThreadId }, past),
     row('requesterMessage', 'conversation', { audience: 'requester', markdown: 'told the requester' }, past),
     row('privateMessage', 'private_conversation', { audience: 'organization_private', markdown: 'MSP-private note' }, past),
-    row('customerPrivate', 'conversation', { audience: 'internal', markdown: 'CUSTOMER-PRIVATE SECRET' }, past),
+    row('customerPrivate', 'conversation', { audience: 'internal', markdown: 'CUSTOMER-PRIVATE SECRET', commentId: privateFileCommentId, threadId: privateFileThreadId }, past),
     // Absent cases: a CUSTOMER-private row stored under each MSP-private label must never be archived.
     row('customerOrgPrivate', 'conversation', { audience: 'organization_private', markdown: 'CUSTOMER-ORG-PRIVATE SECRET' }, past),
     row('customerPrivateAsPrivateConversation', 'private_conversation', { audience: 'internal', markdown: 'CUSTOMER-AS-PRIVATE-CONVERSATION SECRET' }, past),
     row('afterCutoff', 'conversation', { audience: 'shared_it', markdown: 'POST-CUTOFF SECRET' }, future),
     row('audit', 'work_audit', { changes: { task_name: 'renamed' } }, past),
-    // No `time_entry` class: nothing produces time evidence and the source_type CHECK rejects it (split out, see plan).
   ];
   const evidence = {} as BoundaryFixture['evidence'];
   for (const r of rows) { await db('co_managed_participation_evidence').insert(r.record); (evidence as any)[r.name] = r.evidenceId; }
-  return { msp, customer, relationshipId, sponsorClient, seats, mspAdmin, customerAdmin, stranger, evidence };
+  return { msp, customer, relationshipId, sponsorClient, seats, resourceId, fileCommentId, fileThreadId, privateFileCommentId, privateFileThreadId,
+    mspAdmin, customerAdmin, stranger, evidence };
 }
