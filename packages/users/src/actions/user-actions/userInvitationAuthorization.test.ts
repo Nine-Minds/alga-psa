@@ -104,4 +104,20 @@ describe('sendUserInvitation authorization boundary', () => {
     expect(mocks.invitationCreateCalls).toBe(0);
     expect(mocks.sendInvitation).not.toHaveBeenCalled();
   });
+
+  it('rejects an inviter without role assignment authority before persistence', async () => {
+    mocks.hasPermission.mockImplementation(async (_user: unknown, _resource: string, action: string) => action !== 'update');
+
+    const result = await sendUserInvitation({
+      email: 'attacker@example.test',
+      firstName: 'Attacker',
+      lastName: 'Account',
+      roleId: 'admin-role',
+    } as any);
+
+    expect(result).toMatchObject({ success: false, errorCode: 'PERMISSION_DENIED_INVITE' });
+    expect(mocks.authorizeRole).not.toHaveBeenCalled();
+    expect(mocks.invitationCreateCalls).toBe(0);
+    expect(mocks.sendInvitation).not.toHaveBeenCalled();
+  });
 });
