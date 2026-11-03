@@ -39,15 +39,16 @@ describeDb('native interaction candidate PostgreSQL timestamp precision', () => 
     await trx.raw(`CREATE TEMP TABLE interactions (
       tenant text NOT NULL,
       interaction_id text NOT NULL,
-      interaction_date timestamptz NULL
+      interaction_date timestamptz NULL,
+      title text NULL
     ) ON COMMIT DROP`);
     await trx('interactions').insert([
-      { tenant, interaction_id: 'precision-row-a', interaction_date: '2026-04-01T12:00:00.123456Z' },
-      { tenant, interaction_id: 'precision-row-b', interaction_date: '2026-04-01T12:00:00.123456Z' },
-      { tenant, interaction_id: 'precision-row-c', interaction_date: '2026-04-01T12:00:00.123455Z' },
-      { tenant, interaction_id: 'precision-row-d', interaction_date: '2026-04-01T12:00:00.123001Z' },
-      { tenant, interaction_id: 'precision-row-e', interaction_date: '2026-04-01T12:00:00.123000Z' },
-      { tenant, interaction_id: 'precision-row-f', interaction_date: '2026-04-01T12:00:00.122999Z' },
+      { tenant, interaction_id: 'precision-row-a', interaction_date: '2026-04-01T12:00:00.123456Z', title: 'protected title' },
+      { tenant, interaction_id: 'precision-row-b', interaction_date: '2026-04-01T12:00:00.123456Z', title: 'protected title' },
+      { tenant, interaction_id: 'precision-row-c', interaction_date: '2026-04-01T12:00:00.123455Z', title: 'protected title' },
+      { tenant, interaction_id: 'precision-row-d', interaction_date: '2026-04-01T12:00:00.123001Z', title: 'protected title' },
+      { tenant, interaction_id: 'precision-row-e', interaction_date: '2026-04-01T12:00:00.123000Z', title: 'protected title' },
+      { tenant, interaction_id: 'precision-row-f', interaction_date: '2026-04-01T12:00:00.122999Z', title: 'protected title' },
     ]);
   });
   afterEach(async () => { await trx.rollback(); });
@@ -57,9 +58,12 @@ describeDb('native interaction candidate PostgreSQL timestamp precision', () => 
       nativeInteractionCandidates(owner(), {}, after, {}, 2);
 
     const firstWindow = await readCandidates(null);
-    expect(firstWindow[0].interaction_date).toBeInstanceOf(Date);
-    expect(firstWindow[0].interaction_date.toISOString()).toContain('.123Z');
+    expect(firstWindow[0]).not.toHaveProperty('interaction_date');
     expect(firstWindow[0].interaction_date_sort_key).toContain('.123456');
+    expect(firstWindow[0]).toEqual({
+      interaction_date_sort_key: firstWindow[0].interaction_date_sort_key,
+      interaction_id: 'precision-row-a',
+    });
 
     const windowIds: string[] = [];
     let after: { interaction_date_sort_key: string | null; interaction_id: string } | null = null;

@@ -4,6 +4,7 @@ const harness = vi.hoisted(() => ({
   candidates: [] as Array<Record<string, unknown>>,
   authorized: [] as string[],
   fetches: [] as Array<{ after: unknown; limit: number; filters: unknown }>,
+  readOrder: [] as string[],
   denied: new Set<string>(),
   redactDate: false,
 }));
@@ -13,7 +14,11 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: () => ({
     table: (table: string) => ({
       where: (_column: string, id: string) => ({
-        forShare: () => ({ first: async () => table === 'interactions' ? harness.candidates.find(row => row.interaction_id === id) : undefined }),
+        forShare: () => ({ first: async () => {
+          if (table !== 'interactions') return undefined;
+          harness.readOrder.push(`materialize:${id}`);
+          return harness.candidates.find(row => row.interaction_id === id);
+        } }),
       }),
     }),
   }),
@@ -21,6 +26,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 vi.mock('../nativeWorkspace', () => ({ retainCoManagedWorkspace: async () => true }));
 vi.mock('../nativeScheduleRead', () => ({ retainScheduleSource: async (_trx: unknown, _actor: unknown, _subject: unknown, target: { work_item_id: string }) => {
+  harness.readOrder.push(`authorize:${target.work_item_id}`);
   harness.authorized.push(target.work_item_id);
   if (harness.denied.has(target.work_item_id)) throw new CoManagedSharedWorkError();
   return { fields: [] };
@@ -58,6 +64,7 @@ describe('co-managed native interaction paging', () => {
     }));
     harness.authorized = [];
     harness.fetches = [];
+    harness.readOrder = [];
     harness.denied = new Set();
     harness.redactDate = false;
   });
@@ -74,6 +81,7 @@ describe('co-managed native interaction paging', () => {
     expect(result.total).toBe(0); // The independent count window does not reach the matching row.
     expect(result.totalExact).toBe(false);
     expect(harness.authorized).toHaveLength(200); // 3 result windows + 1 count window.
+    expect(harness.readOrder.slice(0, 2)).toEqual(['authorize:interaction-000', 'materialize:interaction-000']);
     expect(harness.fetches).toHaveLength(4);
     expect(harness.fetches.every(fetch => fetch.limit === 50)).toBe(true);
     expect(harness.fetches.every(fetch => (fetch.filters as { clientId: string }).clientId === 'client-a')).toBe(true);

@@ -25,5 +25,8 @@ export function nativeInteractionCandidates(owner: TenantDb, filters: NativeInte
       this.whereRaw('interaction_date = ?::timestamptz', [after.interaction_date_sort_key]).andWhere('interaction_id', '>', after.interaction_id);
     }).orWhereNull('interaction_date');
   });
-  return query.orderByRaw('interaction_date DESC NULLS LAST').orderBy('interaction_id', 'asc').limit(limit).select('*');
+  // Candidate windows run before authorization. Return only the opaque keyset
+  // needed to advance the bounded scan; protected interaction fields are loaded
+  // later by the authorized, locked read in nativeInteractionRead.
+  return query.orderByRaw('interaction_date DESC NULLS LAST').orderBy('interaction_id', 'asc').limit(limit).select('interaction_id');
 }
