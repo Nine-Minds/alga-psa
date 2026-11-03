@@ -2567,6 +2567,7 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Permissão negada: é necessária permissão de atualização de faturas",
+      "invoiceFinalize": "Permissão negada: é necessária permissão para finalizar faturas",
       "invoiceDelete": "Permissão negada: é necessária permissão de exclusão de faturas",
       "invoiceAccess": "Permissão negada: acesso à fatura negado",
       "otherClientInvoices": "Permissão negada: não é possível acessar as faturas de outro cliente",

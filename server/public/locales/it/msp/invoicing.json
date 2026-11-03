@@ -2567,6 +2567,7 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Autorizzazione negata: è richiesta l’autorizzazione di aggiornamento delle fatture",
+      "invoiceFinalize": "Autorizzazione negata: è richiesta l’autorizzazione per finalizzare le fatture",
       "invoiceDelete": "Autorizzazione negata: è richiesta l’autorizzazione di eliminazione delle fatture",
       "invoiceAccess": "Autorizzazione negata: accesso alla fattura negato",
       "otherClientInvoices": "Autorizzazione negata: impossibile accedere alle fatture di un altro cliente",

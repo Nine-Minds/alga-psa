@@ -2567,6 +2567,7 @@
   "errors": {
     "permissions": {
       "invoiceUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für Rechnungen erforderlich",
+      "invoiceFinalize": "Berechtigung verweigert: Finalisierungsberechtigung für Rechnungen erforderlich",
       "invoiceDelete": "Berechtigung verweigert: Löschberechtigung für Rechnungen erforderlich",
       "invoiceAccess": "Berechtigung verweigert: Zugriff auf die Rechnung verweigert",
       "otherClientInvoices": "Berechtigung verweigert: Auf Rechnungen eines anderen Kunden kann nicht zugegriffen werden",

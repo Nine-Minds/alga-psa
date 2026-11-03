@@ -7,6 +7,7 @@ import { writeAccountingAudit } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { INVOICE_ACTION_CAPABILITY } from './invoiceActionCapabilities';
 import { findLocalVoidBlocker, voidInvoiceLocally } from '../lib/invoiceVoidCore';
 import { enqueueInvoiceVoid } from '../services/accountingSync/syncProducers';
 import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
@@ -35,7 +36,7 @@ export const voidInvoice = withAuth(async (
   if (user.user_type === 'client') {
     return { success: false, error: 'Permission denied: operation not available in client portal' };
   }
-  if (!await hasPermission(user, 'invoice', 'void')) {
+  if (!await hasPermission(user, 'invoice', INVOICE_ACTION_CAPABILITY.voidInvoice)) {
     return { success: false, error: 'Permission denied: invoice void required' };
   }
 
