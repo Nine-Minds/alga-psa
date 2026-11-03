@@ -30,6 +30,8 @@ import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
+import { finalizeInvoiceWithKnex } from '@alga-psa/billing/actions/invoiceModification';
+import { voidInvoice } from '@alga-psa/billing/actions/voidInvoiceActions';
 import {
   BadRequestError,
   ConflictError,
@@ -1584,108 +1586,102 @@ export class FinancialService extends BaseService<ITransaction> {
     operation: BulkInvoiceOperation,
     context: ServiceContext
   ): Promise<FinancialResponse<BulkOperationResult>> {
-    await this.validatePermissions('update', 'invoice', context);
-    
+    const command = {
+      finalize: { permission: 'finalize' },
+      cancel: { permission: 'void' },
+    } as const;
+    const selectedCommand = command[operation.operation as keyof typeof command];
+    if (!selectedCommand) {
+      throw new BadRequestError(`Unsupported operation: ${operation.operation}`);
+    }
+
+    // This service-level gate protects non-route callers too. The controller
+    // separately retains financial:update authorization for this API surface.
+    await this.validatePermissions(selectedCommand.permission, 'invoice', context);
+
     const { knex } = await this.getKnex();
-    
-    return withTransaction(knex, async (trx) => {
-      const results: Array<{
+    const results: Array<{
         id: string;
         success: boolean;
         error?: string;
         result?: any;
       }> = [];
 
-      for (const invoiceId of operation.invoice_ids) {
-        try {
-          let result: any;
-          
-          switch (operation.operation) {
-            case 'finalize':
-              result = await tenantDb(trx, context.tenant).table('invoices')
-                .where('invoice_id', invoiceId)
-                .update({
-                  status: 'sent',
-                  finalized_at: new Date().toISOString()
-                })
-                .returning('*');
-              break;
-              
-            case 'cancel':
-              result = await tenantDb(trx, context.tenant).table('invoices')
-                .where('invoice_id', invoiceId)
-                .update({
-                  status: 'cancelled'
-                })
-                .returning('*');
-              break;
-              
-            case 'apply_credit':
-              // This would need additional parameters in the operation
-              const creditAmount = operation.parameters?.credit_amount || 0;
-              const invoice = await tenantDb(trx, context.tenant).table('invoices')
-                .where('invoice_id', invoiceId)
-                .first();
-              
-              if (invoice && creditAmount > 0) {
-                // Apply credit logic here
-                result = { applied_amount: creditAmount };
-              }
-              break;
-              
-            default:
-              throw new BadRequestError(`Unsupported operation: ${operation.operation}`);
+    for (const invoiceId of operation.invoice_ids) {
+      try {
+        // Recheck at the per-invoice boundary so a permission revoked during a
+        // long batch cannot authorize the remaining lifecycle commands.
+        await this.validatePermissions(selectedCommand.permission, 'invoice', context);
+        let result: any;
+
+        switch (operation.operation) {
+          case 'finalize':
+            result = await finalizeInvoiceWithKnex(invoiceId, knex, context.tenant, context.userId, {
+              internalValidation: true,
+            });
+            break;
+
+          case 'cancel': {
+            // voidInvoice owns its transaction, locking, credit reversal,
+            // accounting propagation and payment-link retirement. API-key
+            // callers run under runWithApiKeyContext in the controller.
+            const voidResult = await voidInvoice(invoiceId, operation.parameters?.reason ?? 'Bulk invoice cancellation');
+            if (!voidResult.success) throw new ConflictError(voidResult.error);
+            result = voidResult;
+            break;
           }
-          
-          results.push({
-            id: invoiceId,
-            success: true,
-            result
-          });
-          
-        } catch (error) {
-          results.push({
-            id: invoiceId,
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          });
         }
+
+        results.push({ id: invoiceId, success: true, result });
+      } catch (error) {
+        results.push({
+          id: invoiceId,
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
       }
+    }
 
-      // Audit log for bulk operation
-      await auditLog(trx, {
-        userId: context.userId,
-        operation: 'bulk_invoice_operation',
-        tableName: 'invoices',
-        recordId: 'bulk',
-        changedData: operation,
-        details: {
-          action: `Bulk ${operation.operation} operation`,
-          total_requested: operation.invoice_ids.length,
-          successful: results.filter(r => r.success).length,
-          failed: results.filter(r => !r.success).length
-        }
-      });
-
-      const bulkResult: BulkOperationResult = {
+    // Audit the attempted batch after per-invoice lifecycle transactions have
+    // completed. A single invoice failure continues to leave other results
+    // available, preserving the established bulk response contract.
+    await auditLog(knex, {
+      userId: context.userId,
+      operation: 'bulk_invoice_operation',
+      tableName: 'invoices',
+      recordId: 'bulk',
+      changedData: operation,
+      details: {
+        action: `Bulk ${operation.operation} operation`,
         total_requested: operation.invoice_ids.length,
         successful: results.filter(r => r.success).length,
-        failed: results.filter(r => !r.success).length,
-        results
-      };
-
-      return {
-        data: bulkResult,
-        links: [
-          {
-            rel: 'invoices',
-            href: `/api/v1/financial/invoices`,
-            method: 'GET',
-            description: 'List invoices'
-          }
-        ]
-      };
+        failed: results.filter(r => !r.success).length
+      }
+    }).catch((error) => {
+      // Lifecycle engines have already committed their own transactions; an
+      // audit sink failure must not turn the completed batch into a false
+      // failure response.
+      console.error('Failed to audit bulk invoice operation:', error);
     });
+
+    const bulkResult: BulkOperationResult = {
+      total_requested: operation.invoice_ids.length,
+      successful: results.filter(r => r.success).length,
+      failed: results.filter(r => !r.success).length,
+      results
+    };
+
+    return {
+      data: bulkResult,
+      links: [
+        {
+          rel: 'invoices',
+          href: `/api/v1/financial/invoices`,
+          method: 'GET',
+          description: 'List invoices'
+        }
+      ]
+    };
   }
 
   /**

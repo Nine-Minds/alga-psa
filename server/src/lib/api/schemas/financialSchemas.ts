@@ -782,7 +782,7 @@ export const creditAnalyticsSchema = z.object({
 
 export const bulkInvoiceOperationSchema = z.object({
   invoice_ids: z.array(uuidSchema).min(1).max(50),
-  operation: z.enum(['finalize', 'send', 'cancel', 'apply_credit']),
+  operation: z.enum(['finalize', 'cancel']),
   parameters: z.record(z.string(), z.any()).optional()
 });
 

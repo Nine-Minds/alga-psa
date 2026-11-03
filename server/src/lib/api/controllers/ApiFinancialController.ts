@@ -611,7 +611,7 @@ export class ApiFinancialController extends ApiBaseController {
       try {
         const apiRequest = await this.authenticate(req);
         
-        return await runWithTenant(apiRequest.context!.tenant, async () => {
+        return await this.runWithApiKeyContext(apiRequest, async () => {
           await this.checkPermission(apiRequest, 'update');
 
           const body = await apiRequest.json();
