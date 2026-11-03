@@ -357,7 +357,7 @@ export const QuoteDocumentView: React.FC<QuoteDocumentViewProps> = ({
               {quote.quote_number ||
                 (quote.quote_id
                   ? t('quotes.detail.fallbackTitle', { defaultValue: 'Quote {{id}}', id: quote.quote_id.slice(0, 8) })
-                  : t('quotes.detail.fallbackTitle', { defaultValue: 'Quote' }))}
+                  : t('quotes.detail.unnumberedTitle', { defaultValue: 'Quote' }))}
             </h1>
             <p className="text-sm text-muted-foreground">{quote.title}</p>
           </div>

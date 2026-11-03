@@ -203,6 +203,7 @@
       "exclude": "Excluir",
       "excluded": "Excluido",
       "fallbackTitle": "Cotización {{id}}",
+      "unnumberedTitle": "Cotización",
       "include": "Incluir",
       "included": "Incluido",
       "lineItems": "Artículos",

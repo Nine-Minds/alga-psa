@@ -203,6 +203,7 @@
       "exclude": "Escludi",
       "excluded": "Esclusa",
       "fallbackTitle": "Preventivo {{id}}",
+      "unnumberedTitle": "Preventivo",
       "include": "Includi",
       "included": "Inclusa",
       "lineItems": "Voci",

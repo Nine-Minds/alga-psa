@@ -203,6 +203,7 @@
       "exclude": "Uitsluiten",
       "excluded": "Niet inbegrepen",
       "fallbackTitle": "Offerte {{id}}",
+      "unnumberedTitle": "Offerte",
       "include": "Opnemen",
       "included": "Inbegrepen",
       "lineItems": "Regels",
