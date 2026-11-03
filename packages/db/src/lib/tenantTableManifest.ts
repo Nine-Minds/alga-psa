@@ -404,6 +404,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'time_entry_suggestion_dismissals', deletion: 'ordered' },
   { table: 'time_sheet_comments', deletion: 'ordered', export: { rank: 10 } },
   { table: 'time_entry_change_requests', deletion: 'ordered' },
+  { table: 'co_managed_time_work_references', deletion: 'ordered', clientKeyed: true },
   { table: 'time_entries', deletion: 'ordered', export: { rank: 8 } },
   { table: 'time_sheets', deletion: 'ordered', export: { rank: 9 } },
   { table: 'user_cost_rates', deletion: 'ordered' },

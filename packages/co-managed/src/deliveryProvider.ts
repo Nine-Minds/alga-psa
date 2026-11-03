@@ -1,10 +1,12 @@
 import type { Knex } from 'knex';
 import { withAdminTransaction, tenantDb } from '@alga-psa/db';
 import { claimDelivery, finishDelivery, CO_MANAGED_LEDGER } from '@alga-psa/shared/lib/deliveryLedger';
+import { normalizeEmailAddress } from '@alga-psa/shared/lib/email/addressUtils';
+import { contactEmailMatch } from '@alga-psa/shared/lib/email/contactEmailMatch';
 import { resolveCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import {
   decideReplyToken, parseCm2Metadata,
-  type CoManagedDeliveryProvider, type CommentDeliveryPlan, type RoutingDelivery, type DeliveryRecipient, type InboundAdmission,
+  type CoManagedDeliveryProvider, type CommentDeliveryPlan, type InboundSender, type RoutingDelivery, type DeliveryRecipient, type InboundAdmission,
 } from '@alga-psa/shared/lib/coManagedDelivery';
 import { withCoManagedNotificationRecipient } from './sharedWork';
 import { projectTaskAudience } from './projectTaskAudience';
@@ -200,7 +202,7 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
         { delivery_kind: kind, source_id: sourceId, recipient: recipient.email ?? recipient.principalId }, state, { error: outcome?.error, errorCode: outcome?.code }));
     },
 
-    async admitReplyToken(tenant, token, metadata, senderEmail): Promise<InboundAdmission> {
+    async admitReplyToken(tenant, token, metadata, inboundSender: InboundSender): Promise<InboundAdmission> {
       const parsed = parseCm2Metadata(metadata);
       if (!parsed) {
         // cm1 (or an unparseable cm2) never reaches a comment write.
@@ -221,9 +223,21 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
           : null;
         const audience = resolveCommentAudience(thread ?? { is_internal: false });
         const base = { admitted: true as const, audience, relationshipId: parsed.relationshipId, threadId: parsed.threadId, ticketId, parentCommentId: (record?.comment_id as string | null) ?? null };
-        // The requester thread keeps the native writer (the sender is a contact; native sender rules apply).
-        if (audience === 'requester') return base;
-        const sender = normalize(senderEmail);
+        const sender = normalizeEmailAddress(inboundSender.email) ?? '';
+        if (audience === 'requester') {
+          // Requester threads keep the native writer (its contact-auth rules still apply), but only an active
+          // contact of the ticket's own client, in this tenant, is admitted to it.
+          if (!sender) return { admitted: false, reason: 'not_participant', acknowledge: true };
+          const ticket = await tenantDb(trx, tenant).table('tickets').where({ ticket_id: ticketId }).first('client_id');
+          const contact = ticket?.client_id
+            ? await tenantDb(trx, tenant).table('contacts').where({ 'contacts.client_id': ticket.client_id, 'contacts.is_inactive': false })
+              .andWhere(contactEmailMatch(tenantDb(trx, tenant), trx, sender)).first('contacts.contact_name_id')
+            : null;
+          return contact ? base : { admitted: false, reason: 'not_participant', acknowledge: true };
+        }
+        // shared_it / organization_private resolve the sender to an internal user. An unauthenticated From is
+        // only a claim: refuse BEFORE any user lookup, and never mail the unverified address.
+        if (!inboundSender.internalAttributionTrusted) return { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
         if (!sender) return { admitted: false, reason: 'not_participant', acknowledge: true };
         // Resolve the sender to an internal user of either organisation. The writer then re-authorizes them.
         for (const candidateTenant of [tenant, shared.relationship.sponsor_tenant as string]) {
