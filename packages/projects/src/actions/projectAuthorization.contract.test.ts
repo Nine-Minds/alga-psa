@@ -29,7 +29,7 @@ describe('project authorization kernel contracts', () => {
   it('T038: narrows project tree/phase/detail/status mutation surfaces through shared project read authorization helpers', () => {
     expect(projectReadAuthorizationSource).toContain('export async function createProjectReadAuthorizer(');
     expect(projectActionsSource).toContain("import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';");
-    expect(projectTaskActionsSource).toContain("import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';");
+    expect(projectTaskActionsSource).toContain("import { createProjectReadAuthorizer, createProjectReadDecider, type ProjectReadDecision } from '../lib/projectReadAuthorization';");
     expect(projectActionsSource).not.toContain('async function createProjectReadAuthorizer(');
     expect(projectTaskActionsSource).not.toContain('async function createProjectReadAuthorizer(');
     expect(projectActionsSource).toContain('async function assertProjectReadAllowed(');
