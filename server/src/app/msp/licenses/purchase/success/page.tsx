@@ -6,7 +6,7 @@ import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { CheckCircle, ArrowRight, Loader2, Calendar, Users } from 'lucide-react';
 import Link from 'next/link';
-import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
+import { getLicenseUsageAction } from '@/lib/actions/licensingActions';
 import { getSubscriptionInfoAction } from '@enterprise/lib/actions/license-actions';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
