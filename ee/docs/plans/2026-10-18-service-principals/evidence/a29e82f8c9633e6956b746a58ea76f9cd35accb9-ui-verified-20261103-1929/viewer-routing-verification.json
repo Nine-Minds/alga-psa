@@ -33,5 +33,14 @@
     "viewer handover disconnected original authenticated browser pane during timesheet flow",
     "new local card-scoped browser had no QA session",
     "reopened notes field not visually asserted"
-  ]
+  ],
+  "activationCaveat": {
+    "observedSupervisorRelease": "202611031936-gf1627486d2",
+    "matchesAlgaDevRevision": "f1627486d2440b5b82734a29c0782482630e17eb",
+    "explicitSupervisorRestartCommandIssued": false,
+    "algaPsaAppRestarted": false,
+    "authenticatedPaneDisconnectedDuringHandover": true,
+    "impactToOtherAlgaDevSessions": "unknown",
+    "safeFollowUpRequirement": "Install the tested dispatcher without replacing the shared supervised release while unrelated viewers are connected, then attach an authenticated QA browser to the card project."
+  }
 }
