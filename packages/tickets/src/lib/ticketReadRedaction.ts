@@ -130,6 +130,7 @@ export function ticketReadFieldHidden(redactedFields: readonly string[], field: 
     is_closed: ['status_name'],
     priority_id: ['priority_name'],
     priority_name: ['priority_id'],
+    priority_color: ['priority_name', 'priority_id'],
     board_id: ['board_name'],
     board_name: ['board_id'],
     description: ['attributes'],

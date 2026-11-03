@@ -374,6 +374,7 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
   return tickets.flatMap((ticket, index) => {
     const decision = decisions[index];
     if (!decision?.allowed || !Array.isArray(decision.redactedFields)) return [];
+    if (ticketReadMask(decision.redactedFields).dropResource) return [];
     return [redactTicketReadPayload(ticket as Record<string, any>, decision.redactedFields) as T];
   });
 }
@@ -1911,7 +1912,7 @@ function buildTicketListItemsQuery(
       joined('mt.ticket_number', 'bundle_master_ticket_number'),
       joined('s.name', 'status_name', 'text', 'status_name'),
       joined('p.priority_name', 'priority_name', 'text', 'priority_name'),
-      joined('p.color', 'priority_color', 'text', 'priority_name'),
+      joined('p.color', 'priority_color', 'text', 'priority_color'),
       joined('c.board_name', 'board_name', 'text', 'board_name'),
       joined('cat.category_name', 'category_name', 'text', 'category_name'),
       joined('comp.client_name', 'client_name', 'text', 'client_name'),
