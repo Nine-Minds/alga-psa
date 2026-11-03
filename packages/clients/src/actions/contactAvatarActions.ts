@@ -7,39 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { isClientUserType } from '@alga-psa/types';
-import { hasMspPermission } from '../lib/authHelpers';
-
-async function canManageContactAvatar(
-  currentUser: IUserWithRoles,
-  tenant: string,
-  contactId: string,
-  knex: Knex
-): Promise<boolean> {
-  if (currentUser.user_type === 'internal') {
-    return hasMspPermission(currentUser, 'contact', 'update', knex);
-  }
-
-  if (!isClientUserType(currentUser.user_type)) {
-    return false;
-  }
-
-  if (currentUser.contact_id === contactId) {
-    return true;
-  }
-
-  const linkedUser = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantDb(trx, tenant).table('users')
-      .select('user_id')
-      .where({
-        contact_id: contactId,
-        user_id: currentUser.user_id,
-      })
-      .first();
-  });
-
-  return !!linkedUser;
-}
+import { canManageContactAvatar } from '../lib/contactAvatarAuthorization';
 
 /**
  * Upload a contact avatar image

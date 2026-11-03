@@ -20,6 +20,7 @@ import { collectReportContactIds } from '@alga-psa/authorization/portal/visibili
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { isClientUserType } from '@alga-psa/types';
+import { canManageContactAvatar } from '@alga-psa/clients/lib/contactAvatarAuthorization';
 
 export type ClientUserActionError =
   | { readonly actionError: string }
@@ -627,48 +628,7 @@ export const uploadContactAvatar = withAuth(async (
 ): Promise<{ success: boolean; message?: string; imageUrl?: string | null }> => {
   const { knex } = await createTenantKnex();
 
-  // Permission check
-  let canModify = false;
-  if (currentUser.user_type === 'client') {
-    // For client users, we need to check if they're trying to modify their own contact's avatar
-    // This can happen in two ways:
-    // 1. The contactId matches their contact_id (direct match)
-    // 2. They're trying to modify a contact that's associated with their user account
-    if (currentUser.contact_id === contactId) {
-      canModify = true;
-    } else {
-      // Check if this contact is associated with the current user
-      const userContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await tenantDb(trx, tenant).table('contacts')
-          .where({
-            contact_name_id: contactId,
-          })
-          .first();
-      });
-      
-      if (userContact) {
-        // Check if there's a user with this contact_id
-        const contactUser = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await tenantDb(trx, tenant).table('users')
-            .where({
-              contact_id: contactId,
-              user_id: currentUser.user_id,
-            })
-            .first();
-        });
-        
-        if (contactUser) {
-          canModify = true;
-        }
-      }
-    }
-  } else if (currentUser.user_type === 'internal') {
-    // MSP (internal) users can modify any contact's avatar by default
-    console.log(`[uploadContactAvatar] Internal user ${currentUser.user_id} granted permission to modify contact avatar`);
-    canModify = true;
-  }
-
-  if (!canModify) {
+  if (!await canManageContactAvatar(currentUser, tenant, contactId, knex)) {
     return { success: false, message: 'You do not have permission to modify this contact\'s avatar' };
   }
 
@@ -738,48 +698,7 @@ export const deleteContactAvatar = withAuth(async (
 ): Promise<{ success: boolean; message?: string }> => {
   const { knex } = await createTenantKnex();
 
-  // Permission check
-  let canDelete = false;
-  if (currentUser.user_type === 'client') {
-    // For client users, we need to check if they're trying to delete their own contact's avatar
-    // This can happen in two ways:
-    // 1. The contactId matches their contact_id (direct match)
-    // 2. They're trying to delete a contact that's associated with their user account
-    if (currentUser.contact_id === contactId) {
-      canDelete = true;
-    } else {
-      // Check if this contact is associated with the current user
-      const userContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await tenantDb(trx, tenant).table('contacts')
-          .where({
-            contact_name_id: contactId,
-          })
-          .first();
-      });
-
-      if (userContact) {
-        // Check if there's a user with this contact_id
-        const contactUser = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await tenantDb(trx, tenant).table('users')
-            .where({
-              contact_id: contactId,
-              user_id: currentUser.user_id,
-            })
-            .first();
-        });
-
-        if (contactUser) {
-          canDelete = true;
-        }
-      }
-    }
-  } else if (currentUser.user_type === 'internal') {
-    // MSP (internal) users can delete any contact's avatar by default
-    console.log(`[deleteContactAvatar] Internal user ${currentUser.user_id} granted permission to delete contact avatar`);
-    canDelete = true;
-  }
-
-  if (!canDelete) {
+  if (!await canManageContactAvatar(currentUser, tenant, contactId, knex)) {
     return { success: false, message: 'You do not have permission to delete this contact\'s avatar' };
   }
 
