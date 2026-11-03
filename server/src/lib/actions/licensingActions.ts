@@ -3,7 +3,7 @@
 import { withAuth, type AuthContext } from '@alga-psa/auth/withAuth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getConnection, tenantDb } from '@alga-psa/db';
-import { getLicenseUsage, type LicenseUsage } from '@alga-psa/licensing';
+import { getLicenseUsage, type LicenseUsage } from '@alga-psa/licensing/server';
 
 /** Read license usage for the authenticated tenant. */
 export const getLicenseUsageAction = withAuth(async (

@@ -15,7 +15,7 @@ import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@alg
 import { persistTenantOnboardingProgress } from '@alga-psa/tenancy/server';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { isLicensedUserType, type IUserWithRoles, type WizardData } from '@alga-psa/types';
-import { getLicenseUsage } from '../../../../licensing/src/lib/get-license-usage';
+import { getLicenseUsage } from '@alga-psa/licensing/server';
 import { countPendingInvitationSeats } from '../../../../users/src/lib/internalUserLicenseGuard';
 import { teamMemberEmailKey, uniqueTeamMemberEmails } from '../../lib/teamMemberEmails';
 

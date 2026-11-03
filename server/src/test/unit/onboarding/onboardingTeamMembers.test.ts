@@ -41,7 +41,7 @@ vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions
 vi.mock('@alga-psa/users/actions/user-actions/userActions', () => ({ addUser: mocks.addUser }));
 vi.mock('@alga-psa/clients/actions/clientActions', () => ({ createClient: vi.fn() }));
 vi.mock('@alga-psa/clients/actions/contact-actions/contactActions', () => ({ createClientContact: vi.fn() }));
-vi.mock('../../../../../packages/licensing/src/lib/get-license-usage', () => ({
+vi.mock('@alga-psa/licensing/server', () => ({
   getLicenseUsage: vi.fn(async () => ({ limit: 3, used: 1 })),
 }));
 vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }));

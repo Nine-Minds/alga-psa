@@ -14,7 +14,7 @@ vi.mock('./localizeActionError', () => ({ localizeActionError: async (value: unk
 vi.mock('next/headers.js', () => ({
   headers: vi.fn(async () => new Headers({ 'x-tenant-id': 'tenant-b' })),
 }));
-vi.mock('@alga-psa/licensing', () => ({ getLicenseUsage: mocks.getLicenseUsage }));
+vi.mock('@alga-psa/licensing/server', () => ({ getLicenseUsage: mocks.getLicenseUsage }));
 vi.mock('@alga-psa/db', () => ({
   getConnection: mocks.getConnection,
   tenantDb: mocks.tenantDb,
