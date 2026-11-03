@@ -3,20 +3,26 @@ type PageResult<T> = {
   total: number;
 };
 
-type ReadDecision = boolean | { allowed: boolean; redactedFields: readonly string[] };
+type ReadDecision = { allowed: boolean; redactedFields: readonly string[] };
 
-function isAllowed(decision: ReadDecision): boolean {
+function isAllowed(decision: boolean | ReadDecision): boolean {
   return typeof decision === 'boolean' ? decision : decision.allowed;
 }
 
-export async function buildAuthorizationAwarePage<T>(input: {
+type AuthorizedPageInput<T> = {
   page: number;
   limit: number;
   fetchPage: (page: number, limit: number) => Promise<PageResult<T>>;
-  authorizeRecord: (record: T) => Promise<ReadDecision>;
-  projectRecord?: (record: T, redactedFields: readonly string[]) => T | null;
   scanLimit?: number;
-}): Promise<PageResult<T>> {
+} & (
+  | { authorizeRecord: (record: T) => Promise<boolean>; projectRecord?: never }
+  | {
+      authorizeRecord: (record: T) => Promise<ReadDecision>;
+      projectRecord: (record: T, redactedFields: readonly string[]) => T | null;
+    }
+);
+
+export async function buildAuthorizationAwarePage<T>(input: AuthorizedPageInput<T>): Promise<PageResult<T>> {
   const requestedPage = Number.isFinite(input.page) && input.page > 0 ? Math.floor(input.page) : 1;
   const requestedLimit = Number.isFinite(input.limit) && input.limit > 0 ? Math.floor(input.limit) : 25;
   const scanLimit = Math.max(requestedLimit, input.scanLimit ?? 100);
@@ -44,8 +50,11 @@ export async function buildAuthorizationAwarePage<T>(input: {
         continue;
       }
 
-      const projected = input.projectRecord && typeof decision !== 'boolean'
-        ? input.projectRecord(pageResult.data[index], decision.redactedFields)
+      if (typeof decision !== 'boolean' && !input.projectRecord) {
+        throw new Error('Authorization decisions with field policies require a record projector');
+      }
+      const projected = typeof decision !== 'boolean'
+        ? input.projectRecord!(pageResult.data[index], decision.redactedFields)
         : pageResult.data[index];
       if (projected === null) continue;
 

@@ -32,4 +32,18 @@ describe('asset get response projection', () => {
     const response = await new ApiAssetController().getById(request(), { id: 'a1' });
     expect(response.status).toBe(404);
   });
+
+  it('hides related and derived asset values when their source fields are redacted', async () => {
+    state.asset = {
+      ...row(), client: { client_id: 'c1', client_name: 'Secret client' },
+      vendor_id: 'v1', vendor_name: 'Secret vendor', contact_name_id: 'contact-1', contact_name: 'Secret contact',
+      warranty_end_date: '2020-01-01', warranty_status: 'expired',
+    };
+    state.decision = { allowed: true, redactedFields: ['assets.client_id', 'assets.vendor_id', 'values.contact_name_id', 'assets.warranty_end_date'] };
+    const response = await new ApiAssetController().getById(request(), { id: 'a1' });
+    const { data } = await response.json();
+    for (const field of ['client', 'client_name', 'vendor_name', 'contact_name', 'warranty_status']) {
+      expect(data).not.toHaveProperty(field);
+    }
+  });
 });

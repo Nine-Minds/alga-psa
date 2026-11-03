@@ -721,11 +721,11 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
-
+          const authorization = await this.authorizeQuoteRead(apiRequest, id, knex);
           const preview = await this.quoteService.getConversionPreview(id, apiRequest.context);
-
-          return createSuccessResponse(preview);
+          const projected = projectApiRecord('quote', preview, authorization.redactedFields);
+          if (!projected) throw new NotFoundError('Quote not found');
+          return createSuccessResponse(projected);
         });
       } catch (error) {
         return handleApiError(error);

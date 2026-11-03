@@ -292,7 +292,7 @@ export class ApiTicketController extends ApiBaseController {
     if (visible(['status_is_closed', 'due_date'])) stats.overdue_tickets = 0;
     if (visible(['assigned_to', 'assigned_to_name'])) stats.unassigned_tickets = tickets.filter((ticket) => !ticket.assigned_to).length;
     if (visible(['status_name'])) stats.tickets_by_status = tickets.reduce((acc: Record<string, number>, ticket) => {
-      const key = String(ticket.status_name ?? ticket.status_id ?? 'unknown');
+      const key = String(ticket.status_id ?? ticket.status_name ?? 'unknown');
       acc[key] = (acc[key] ?? 0) + 1;
       return acc;
     }, {});

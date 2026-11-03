@@ -18,6 +18,18 @@ function controller() {
     getById: async () => ({ quote_id: 'q1', quote_number: 'Q-1', client_id: 'c1', client_name: 'Secret client' }),
     listItems: async () => state.items,
     listVersions: async () => state.versions,
+    getConversionPreview: async () => ({
+      quote_id: 'q1',
+      available_actions: ['contract'],
+      contract_items: [{ description: 'Confidential service', unit_price: 500 }],
+      contract_discounts: [{ amount: 10 }],
+      contract_monthly_before_discounts: 500,
+      contract_monthly_total: 490,
+      contract_blocked_item_description: 'Confidential service',
+      invoice_items: [],
+      sales_order_items: [],
+      excluded_items: [],
+    }),
   };
   return instance;
 }
@@ -44,5 +56,21 @@ describe('quote child read responses', () => {
     state.decision = { allowed: true, redactedFields: ['values.quote_id'] };
     const versions = await controller().listVersions()(request());
     expect(versions.status).toBe(404);
+  });
+
+  it.each(['quote_items', 'quotes.quote_items.description', 'values.unit_price'])('projects conversion preview dependencies hidden by %s', async (redaction) => {
+    state.decision = { allowed: true, redactedFields: [redaction] };
+    const response = await controller().conversionPreview()(request());
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toEqual({ quote_id: 'q1' });
+  });
+
+  it('preserves unrestricted conversion previews', async () => {
+    state.decision = { allowed: true, redactedFields: [] };
+    const response = await controller().conversionPreview()(request());
+    expect((await response.json()).data).toMatchObject({
+      contract_items: [{ description: 'Confidential service', unit_price: 500 }],
+      contract_monthly_total: 490,
+    });
   });
 });

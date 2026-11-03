@@ -90,6 +90,11 @@ describe('projectRecord REST projection', () => {
     expect(nestedValues).not.toHaveProperty('values');
   });
 
+  it.each(['project', 'ticket', 'quote', 'asset'] as const)('suppresses %s records for values-qualified public identifiers', (resource) => {
+    const field = resource === 'asset' ? 'asset_tag' : `${resource}_number`;
+    expect(projectApiRecord(resource, { [field]: 'public-id' }, [`values.${field}`])).toBeNull();
+  });
+
   it('suppresses rows when the project resource or identifier is hidden', () => {
     expect(projectRecord(project, ['projects'])).toBeNull();
     expect(projectRecord(project, ['fields.project_id'])).toBeNull();

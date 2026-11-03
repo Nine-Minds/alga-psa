@@ -1,6 +1,10 @@
 import { isCoManagedReadFieldHidden } from '@alga-psa/co-managed/sharedWorkRedaction';
 import { isCoManagedResourceHidden } from '@alga-psa/co-managed/sharedWorkProjection';
-import { CO_MANAGED_PROJECT_NAME_ALIASES } from '@alga-psa/co-managed/sharedWorkProjection';
+import {
+  CO_MANAGED_PHASE_NAME_ALIASES,
+  CO_MANAGED_PROJECT_NAME_ALIASES,
+  CO_MANAGED_TASK_NAME_ALIASES,
+} from '@alga-psa/co-managed/sharedWorkProjection';
 
 type ResourceDefinition = {
   aliases: readonly string[];
@@ -11,6 +15,16 @@ type ResourceDefinition = {
 const commonClientName = ['client_name', 'clientName', 'client_id', 'clients', 'clients.client_name', 'values.client_id', 'projects.client_id', 'tickets.client_id', 'quotes.client_id', 'assets.client_id'] as const;
 const commonAssignedName = ['assigned_user_name', 'assigned_to_name', 'assigned_to', 'users', 'users.first_name', 'users.last_name', 'values.assigned_to', 'projects.assigned_to', 'tickets.assigned_to', 'assets.assigned_to'] as const;
 const commonStatusName = ['status_name', 'status', 'status_id', 'status_is_closed', 'statuses', 'statuses.name', 'statuses.is_closed', 'projects.status', 'tickets.status', 'tickets.status_id'] as const;
+// Conversion previews partition and summarize the quote's item collection. A
+// hidden item source hides these derived outputs rather than recomputing a
+// misleading preview from incomplete line items.
+const quoteConversionSources = [
+  'quote_items', 'quote_item_id', 'description', 'quantity', 'unit_price', 'total_price',
+  'is_optional', 'is_selected', 'is_recurring', 'is_discount', 'billing_method',
+  'billing_frequency', 'discount_type', 'discount_percentage', 'discount_amount',
+  'service_id', 'service_item_kind', 'applies_to_item_id', 'applies_to_service_id',
+  'net_amount', 'location_id', 'locations', 'locations.location_name',
+] as const;
 
 const DEFINITIONS: Record<'project' | 'ticket' | 'quote' | 'asset', ResourceDefinition> = {
   project: {
@@ -24,6 +38,12 @@ const DEFINITIONS: Record<'project' | 'ticket' | 'quote' | 'asset', ResourceDefi
       status_name: [...commonStatusName, 'standard_statuses', 'standard_statuses.name', 'project_status_mapping_id', 'project_status_mappings', 'project_status_mappings.custom_name'],
       assigned_user_name: commonAssignedName,
       contact_name: ['contact_name', 'contact_name_id', 'contacts', 'contacts.full_name', 'values.contact_name_id', 'projects.contact_name_id'],
+      phase_id: ['phase_id', 'project_phases.phase_id'],
+      phase_name: [...CO_MANAGED_PHASE_NAME_ALIASES, 'phase_id', 'project_phases', 'project_phases.phase_id'],
+      task_id: ['task_id', 'project_tasks.task_id', 'tasks.task_id'],
+      task_name: [...CO_MANAGED_TASK_NAME_ALIASES, 'task_id', 'project_tasks.task_id'],
+      task_updated_at: ['task_updated_at', 'project_tasks.updated_at'],
+      is_closed: ['is_closed', 'status', 'status_id', 'project_status_mapping_id', 'statuses.is_closed', 'standard_statuses.is_closed'],
     },
   },
   ticket: {
@@ -55,28 +75,46 @@ const DEFINITIONS: Record<'project' | 'ticket' | 'quote' | 'asset', ResourceDefi
       clientName: commonClientName,
       display_quote_number: ['display_quote_number', 'quote_number', 'version', 'quote_id', 'quotes.quote_number'],
       quote_items: ['quote_items', 'quotes.quote_items'],
+      available_actions: [...quoteConversionSources, 'status'],
+      invoice_error: quoteConversionSources,
+      contract_blocked_reason: quoteConversionSources,
+      contract_blocked_item_description: quoteConversionSources,
+      contract_items: quoteConversionSources,
+      contract_discounts: quoteConversionSources,
+      contract_monthly_before_discounts: quoteConversionSources,
+      contract_monthly_total: quoteConversionSources,
+      invoice_items: quoteConversionSources,
+      sales_order_items: quoteConversionSources,
+      excluded_items: quoteConversionSources,
     },
   },
   asset: {
     aliases: ['asset', 'assets'],
     identifiers: ['asset_id', 'assets.asset_id', 'values.asset_id', 'asset_tag', 'assets.asset_tag'],
     fields: {
+      client: ['client', ...commonClientName],
       client_name: commonClientName,
       clientName: commonClientName,
       assigned_user_name: commonAssignedName,
       asset_type_name: ['asset_type_name', 'asset_type_id', 'asset_types', 'asset_types.name'],
       location_name: ['location_name', 'location_id', 'locations', 'locations.location_name'],
+      vendor_name: ['vendor_name', 'vendor_id', 'vendors', 'vendors.vendor_name'],
+      contact_name: ['contact_name', 'contact_name_id', 'contacts', 'contacts.full_name'],
+      warranty_status: ['warranty_status', 'warranty_end_date'],
     },
   },
 };
 
-function fieldAliases(resource: keyof typeof DEFINITIONS, field: string): readonly string[] {
-  const definition = DEFINITIONS[resource];
-  const dependencies = definition.fields[field] ?? [];
-  const dependencyAliases = dependencies.flatMap((alias) => alias.includes('.')
+function sourceAliases(definition: ResourceDefinition, sources: readonly string[]): string[] {
+  return sources.flatMap((alias) => alias.includes('.')
     ? [alias]
     : [alias, `values.${alias}`, `${definition.aliases[1]}.${alias}`]);
-  return [...new Set([field, `values.${field}`, `${definition.aliases[1]}.${field}`, ...dependencyAliases])];
+}
+
+function fieldAliases(resource: keyof typeof DEFINITIONS, field: string): readonly string[] {
+  const definition = DEFINITIONS[resource];
+  const dependencies = Object.hasOwn(definition.fields, field) ? definition.fields[field] : [];
+  return [...new Set(sourceAliases(definition, [field, ...dependencies]))];
 }
 
 export function isApiRecordFieldHidden(resource: keyof typeof DEFINITIONS, field: string, redactedFields: readonly string[]): boolean {
@@ -95,7 +133,7 @@ export function projectApiRecord<T extends Record<string, any>>(
 ): Partial<T> | null {
   const definition = DEFINITIONS[resource];
   if (isCoManagedResourceHidden(redactedFields, definition.aliases)) return null;
-  if (isCoManagedReadFieldHidden(redactedFields, definition.identifiers)) return null;
+  if (isCoManagedReadFieldHidden(redactedFields, sourceAliases(definition, definition.identifiers))) return null;
 
   const projected: Record<string, unknown> = {};
   for (const [field, value] of Object.entries(record)) {

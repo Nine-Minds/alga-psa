@@ -889,16 +889,23 @@ export class ApiProjectController extends ApiBaseController {
           const links = await this.projectService.getTicketProjectLinks(ticketId, apiRequest.context);
           const projects = [...new Map(links.map((l) => [l.project_id, {
             project_id: l.project_id,
+            project_name: l.project_name,
+            project_number: l.project_number,
             assigned_to: l.project_assigned_to,
             client_id: l.project_client_id,
             status: l.project_status,
             is_closed: l.project_is_closed,
           }])).values()];
-          const readable = new Set((await this.filterAuthorizedProjects(apiRequest, projects, knex)).map((p) => p.project_id));
-
-          const data = links
-            .filter((l) => readable.has(l.project_id))
-            .map(({ project_assigned_to, project_client_id, project_status, project_is_closed, ...link }) => link);
+          const authorizedProjects = new Map(
+            (await this.authorizeProjectRows(apiRequest, projects, knex))
+              .map((row) => [row.record.project_id, row]),
+          );
+          const data = links.flatMap(({ project_assigned_to, project_client_id, project_status, project_is_closed, ...link }) => {
+            const authorization = authorizedProjects.get(link.project_id);
+            if (!authorization) return [];
+            const projected = projectRecord(link, authorization.redactedFields);
+            return projected ? [projected] : [];
+          });
           return createSuccessResponse(data, 200, undefined, apiRequest);
         });
       } catch (error) {

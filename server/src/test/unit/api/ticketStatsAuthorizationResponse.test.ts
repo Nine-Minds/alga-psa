@@ -62,7 +62,7 @@ describe('ticket statistics authorization response', () => {
   it('preserves unrestricted aggregates from realistic service rows', async () => {
     const response = await controller().stats()(request());
     const body = await response.json();
-    expect(body.data).toMatchObject({ total_tickets: 2, open_tickets: 2, tickets_by_status: { Open: 2 }, tickets_by_priority: { High: 2 }, tickets_by_category: { Support: 2 }, tickets_by_board: { Helpdesk: 2 } });
+    expect(body.data).toMatchObject({ total_tickets: 2, open_tickets: 2, tickets_by_status: { s1: 2 }, tickets_by_priority: { High: 2 }, tickets_by_category: { Support: 2 }, tickets_by_board: { Helpdesk: 2 } });
   });
 
   it('omits each aggregate when any row hides one of its source dependencies', async () => {
