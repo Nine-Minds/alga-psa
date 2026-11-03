@@ -2,11 +2,11 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { CoManagedSlaNotification } from '@alga-psa/co-managed';
-import { renderTemplate } from '../actions/internal-notification-actions/createNotificationCore';
-import { coManagedSlaPresentation } from './coManagedSlaPresentation';
+import { renderTemplate } from '@alga-psa/notifications/actions/internal-notification-actions/createNotificationCore';
+import { coManagedSlaPresentation } from '@alga-psa/notifications/lib/coManagedSlaPresentation';
 
 const require = createRequire(import.meta.url);
-const { TEMPLATES } = require(path.resolve(__dirname, '../../../../server/migrations/utils/templates/internal/sla.cjs')) as {
+const { TEMPLATES } = require(path.resolve(__dirname, '../../../../migrations/utils/templates/internal/sla.cjs')) as {
   TEMPLATES: Array<{ templateName: string; translations: Record<string, { message: string }> }>;
 };
 const breachTemplate = TEMPLATES.find(template => template.templateName === 'sla-breach')!.translations.en.message;
