@@ -2612,12 +2612,15 @@
       "columns": {
         "name": "Nome",
         "title": "Titolo del ticket",
+        "client": "Cliente",
         "board": "Bacheca",
         "checklist": "Voci della checklist",
         "status": "Stato",
         "schedules": "Pianificazioni"
       },
-      "deleteBlocked": "Usato da {{count}} pianificazione/i ricorrente/i. Assegna prima un altro modello o archiviale."
+      "deleteBlocked": "Usato da {{count}} pianificazione/i ricorrente/i. Assegna prima un altro modello o archiviale.",
+      "allClients": "Tutti i clienti",
+      "clientFilter": "Tutti i clienti"
     },
     "status": {
       "active": "Attivo",
@@ -2645,6 +2648,9 @@
       "title": "Titolo del ticket",
       "description": "Descrizione",
       "descriptionPlaceholder": "Descrizione",
+      "client": "Cliente",
+      "clientPlaceholder": "Tutti i clienti",
+      "clientHelp": "Lascia vuoto per offrire il modello a tutti i clienti. Scegline uno per offrirlo solo sui ticket di quel cliente.",
       "offerForManualUse": "Offri nel selettore dei nuovi ticket",
       "offerForManualUseHelp": "Disattiva per i modelli usati solo dalle pianificazioni ricorrenti.",
       "titleTokens": "Nel titolo puoi usare {{tokens}}; vengono compilati per ogni ticket."

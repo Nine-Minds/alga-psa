@@ -85,7 +85,8 @@
     "test:nx": "vitest run --config tools/nx-tests/vitest.config.ts",
     "affected:test": "NX_DAEMON=false nx affected -t test --output-style=static",
     "affected:build": "NX_DAEMON=false nx affected -t build --output-style=static",
-    "guard:hocuspocus-compose-build": "node scripts/guard-hocuspocus-compose-build.mjs"
+    "guard:hocuspocus-compose-build": "node scripts/guard-hocuspocus-compose-build.mjs",
+    "guard:service-principals-boundary": "node scripts/guard-service-principals-boundary.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.1",

@@ -36,6 +36,15 @@
         "suggested": "Föreslagen",
         "toSave": "{{total}} att spara"
       },
+      "customerMapping": {
+        "unlink": "Ta bort koppling",
+        "unlinkConfirm": {
+          "title": "Ta bort kopplingen mellan {{client}} och QuickBooks?",
+          "body": "{{client}} exporteras inte längre till QuickBooks-kunden {{customer}}. Inget ändras i QuickBooks, och du kan koppla kunden igen från den här listan när du vill.",
+          "confirm": "Ta bort koppling",
+          "cancel": "Behåll kopplingen"
+        }
+      },
       "dialog": {
         "cancel": "Avbryt",
         "enterPlaceholder": "Ange {{field}}…",

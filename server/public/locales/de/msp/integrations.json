@@ -36,6 +36,15 @@
         "suggested": "Vorgeschlagen",
         "toSave": "{{total}} zu speichern"
       },
+      "customerMapping": {
+        "unlink": "Zuordnung aufheben",
+        "unlinkConfirm": {
+          "title": "Zuordnung von {{client}} zu QuickBooks aufheben?",
+          "body": "{{client}} wird nicht mehr zum QuickBooks-Kunden {{customer}} exportiert. In QuickBooks ändert sich nichts, und Sie können den Kunden jederzeit erneut über diese Liste zuordnen.",
+          "confirm": "Zuordnung aufheben",
+          "cancel": "Zuordnung behalten"
+        }
+      },
       "dialog": {
         "cancel": "Abbrechen",
         "enterPlaceholder": "{{field}} eingeben...",
