@@ -63,7 +63,7 @@ import {
   buildProjectTaskAdditionalAgentAssignedPayload,
 } from '@alga-psa/workflow-streams';
 import { createProjectReadAuthorizer, createProjectReadDecider, type ProjectReadDecision } from '../lib/projectReadAuthorization';
-import { coManagedColumnHidden, coManagedProjectFamilyMask } from '@alga-psa/co-managed/projectFieldMask';
+import { loadAuthorizedProjectTasks } from '../lib/projectTaskReadProjection';
 import {
   actionError,
   actionErrorFromValidationIssue,
@@ -184,39 +184,6 @@ function tenantScopedTable(
     tenant: string,
 ): Knex.QueryBuilder {
     return tenantDb(conn, tenant).table(table);
-}
-
-function projectTaskTitleMask(decision: ProjectReadDecision): string | null {
-    const mask = coManagedProjectFamilyMask(decision.redactedFields, 'project_task');
-    return mask.title || coManagedColumnHidden(decision.redactedFields, 'project_tasks', 'task_name')
-        ? mask.neutralTitle
-        : null;
-}
-
-function maskTaskAndDependencyNames<T extends { task_name?: string | null }>(task: T, maskedTitle: string | null): T {
-    return maskedTitle === null ? task : { ...task, task_name: maskedTitle };
-}
-
-function maskTaskDependencyCollections(
-    dependencies: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>,
-    maskedTitle: string | null,
-) {
-    if (maskedTitle === null) return dependencies;
-    for (const pair of Object.values(dependencies)) {
-        for (const dependency of [...pair.predecessors, ...pair.successors]) {
-            const extended = dependency as IProjectTaskDependency & {
-                predecessor_task_name?: string | null;
-                successor_task_name?: string | null;
-                predecessor_task?: IProjectTask | null;
-                successor_task?: IProjectTask | null;
-            };
-            if (Object.hasOwn(extended, 'predecessor_task_name')) extended.predecessor_task_name = maskedTitle;
-            if (Object.hasOwn(extended, 'successor_task_name')) extended.successor_task_name = maskedTitle;
-            if (extended.predecessor_task) extended.predecessor_task = maskTaskAndDependencyNames(extended.predecessor_task, maskedTitle);
-            if (extended.successor_task) extended.successor_task = maskTaskAndDependencyNames(extended.successor_task, maskedTitle);
-        }
-    }
-    return dependencies;
 }
 
 // Local (not exported) because every export of a 'use server' module must be an
@@ -587,6 +554,79 @@ async function resolveProjectIdForTask(
         .first<{ project_id: string }>('pp.project_id');
 
     return row?.project_id ?? null;
+}
+
+async function projectAuthorizedTaskDependencies(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: IUserWithRoles,
+    dependencies: IProjectTaskDependency[],
+): Promise<IProjectTaskDependency[]> {
+    if (dependencies.length === 0) return [];
+    const endpointIds = Array.from(new Set(dependencies.flatMap((dependency) => [
+        dependency.predecessor_task_id, dependency.successor_task_id,
+    ])));
+    const projectByTaskId = new Map<string, string>();
+    for (const endpointId of endpointIds) {
+        const projectId = await resolveProjectIdForTask(trx, tenant, endpointId);
+        if (projectId) projectByTaskId.set(endpointId, projectId);
+    }
+
+    const redactionsByProject = new Map<string, string[]>();
+    for (const projectId of new Set(projectByTaskId.values())) {
+        const decision = await decideProjectReadById(trx, tenant, user, projectId);
+        redactionsByProject.set(projectId, decision.redactedFields);
+    }
+
+    const taskProjectionById = new Map<string, IProjectTask>();
+    for (const [projectId, redactedFields] of redactionsByProject) {
+        const taskIds = endpointIds.filter((id) => projectByTaskId.get(id) === projectId);
+        const tasks = await loadAuthorizedProjectTasks(trx, tenant, projectId, redactedFields, taskIds);
+        for (const task of tasks) taskProjectionById.set(task.task_id, task);
+    }
+
+    return dependencies.flatMap((dependency) => {
+        const predecessor = taskProjectionById.get(dependency.predecessor_task_id);
+        const successor = taskProjectionById.get(dependency.successor_task_id);
+        // A hidden task row must not remain observable through a dependency edge.
+        if (!predecessor || !successor) return [];
+        return [{
+            ...dependency,
+            predecessor_task_name: predecessor.task_name,
+            predecessor_task_wbs_code: predecessor.wbs_code,
+            predecessor_task_type_key: predecessor.task_type_key,
+            successor_task_name: successor.task_name,
+            successor_task_wbs_code: successor.wbs_code,
+            successor_task_type_key: successor.task_type_key,
+            predecessor_task: {
+                task_id: predecessor.task_id,
+                task_name: predecessor.task_name,
+                wbs_code: predecessor.wbs_code,
+                task_type_key: predecessor.task_type_key,
+            },
+            successor_task: {
+                task_id: successor.task_id,
+                task_name: successor.task_name,
+                wbs_code: successor.wbs_code,
+                task_type_key: successor.task_type_key,
+            },
+        }];
+    });
+}
+
+async function projectAuthorizedTaskDependencyMap(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: IUserWithRoles,
+    dependencyMap: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>,
+) {
+    const all = Object.values(dependencyMap).flatMap(({ predecessors, successors }) => [...predecessors, ...successors]);
+    const projected = await projectAuthorizedTaskDependencies(trx, tenant, user, all);
+    const byId = new Map(projected.map((dependency) => [dependency.dependency_id, dependency]));
+    return Object.fromEntries(Object.entries(dependencyMap).map(([taskId, dependencies]) => [taskId, {
+        predecessors: dependencies.predecessors.flatMap((dependency) => byId.has(dependency.dependency_id) ? [byId.get(dependency.dependency_id)!] : []),
+        successors: dependencies.successors.flatMap((dependency) => byId.has(dependency.dependency_id) ? [byId.get(dependency.dependency_id)!] : []),
+    }]));
 }
 
 async function resolveProjectIdForChecklistItem(
@@ -1364,7 +1404,9 @@ export const getTasksForPhase = withAuth(async (
             }
 
             // Get all tasks for this phase
-            const tasks = await ProjectTaskModel.getTasksByPhase(trx, tenant, phaseId);
+            const tasks = (await loadAuthorizedProjectTasks(
+                trx, tenant, projectId, readDecision.redactedFields,
+            )).filter((task) => task.phase_id === phaseId);
 
             // Get all related data in parallel
             const taskIds = tasks.map(t => t.task_id);
@@ -1485,11 +1527,10 @@ export const getTasksForPhase = withAuth(async (
                 }
             }
 
-            const maskedTitle = projectTaskTitleMask(readDecision);
             return {
-                tasks: (tasks as IProjectTask[]).map((task) => maskTaskAndDependencyNames(task, maskedTitle)),
+                tasks,
                 ticketLinks, taskResources,
-                taskDependencies: maskTaskDependencyCollections(taskDependencies, maskedTitle),
+                taskDependencies: await projectAuthorizedTaskDependencyMap(trx, tenant, user as IUserWithRoles, taskDependencies),
                 checklistItems, taskTags,
             };
         });
@@ -2497,6 +2538,10 @@ export const getTaskWithDetails = withAuth(async (
             // Example of proper tenant handling in JOINs:
             // Each JOIN includes an andOn clause to match tenants across tables,
             // ensuring data isolation between tenants even in complex queries
+            const [projectedTask] = await loadAuthorizedProjectTasks(
+                trx, tenant, projectId, readDecision.redactedFields, [taskId],
+            );
+            if (!projectedTask) throw new Error('Task not found');
             const taskQuery = tenantScopedTable(trx, 'project_tasks', tenant);
             const db = tenantDb(trx, tenant);
             db.tenantJoin(taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id', { type: 'left' });
@@ -2508,21 +2553,25 @@ export const getTaskWithDetails = withAuth(async (
                 { type: 'left' }
             );
             db.tenantJoin(taskQuery, 'users as assigned_user', 'project_tasks.assigned_to', 'assigned_user.user_id', { type: 'left' });
-            const task = await taskQuery
+            const taskDetails = await taskQuery
                 .where('project_tasks.task_id', taskId)
                 .select(
-                    'project_tasks.*',
                     'project_phases.phase_name',
                     'project_phases.project_id',
-                    'project_status_mappings.status_id',
-                    'assigned_user.first_name as assigned_to_first_name',
-                    'assigned_user.last_name as assigned_to_last_name'
+                    projectedTask.project_status_mapping_id === null
+                        ? trx.raw('NULL::text as status_id')
+                        : 'project_status_mappings.status_id',
+                    projectedTask.assigned_to === null
+                        ? trx.raw('NULL::text as assigned_to_first_name')
+                        : 'assigned_user.first_name as assigned_to_first_name',
+                    projectedTask.assigned_to === null
+                        ? trx.raw('NULL::text as assigned_to_last_name')
+                        : 'assigned_user.last_name as assigned_to_last_name',
                 )
                 .first();
 
-            if (!task) {
-                throw new Error('Task not found');
-            }
+            if (!taskDetails) throw new Error('Task not found');
+            const task = { ...projectedTask, ...taskDetails };
 
             // Get additional data needed for TaskEdit
             const [checklistItems, ticketLinks, resources] = await Promise.all([
@@ -2540,7 +2589,7 @@ export const getTaskWithDetails = withAuth(async (
             const authorizedTicketLinks = ticketLinks.map((link) => applyTicketLinkRestriction(link, allowedTicketIds));
 
             return {
-                ...maskTaskAndDependencyNames(task, projectTaskTitleMask(readDecision)),
+                ...task,
                 checklist_items: checklistItems,
                 ticket_links: authorizedTicketLinks,
                 resources: resources
@@ -2880,9 +2929,18 @@ export const getTaskDependencies = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            const readDecision = await decideProjectReadById(trx, tenant, user as IUserWithRoles, projectId);
+            const [authorizedTask] = await loadAuthorizedProjectTasks(
+                trx, tenant, projectId, readDecision.redactedFields, [taskId],
+            );
+            if (!authorizedTask) return { predecessors: [], successors: [] };
 
-            return TaskDependencyModel.getTaskDependencies(trx, tenant, taskId);
+            const dependencies = await TaskDependencyModel.getTaskDependencies(trx, tenant, taskId);
+            const [predecessors, successors] = await Promise.all([
+                projectAuthorizedTaskDependencies(trx, tenant, user as IUserWithRoles, dependencies.predecessors),
+                projectAuthorizedTaskDependencies(trx, tenant, user as IUserWithRoles, dependencies.successors),
+            ]);
+            return { predecessors, successors };
         });
     });
 });
@@ -3001,11 +3059,8 @@ export const getTaskById = withAuth(async (
             }
             const readDecision = await decideProjectReadById(trx, tenant, user as IUserWithRoles, projectId);
 
-            const task = await tenantScopedTable(trx, 'project_tasks', tenant)
-                .where('project_tasks.task_id', taskId)
-                .first();
-
-            return task ? maskTaskAndDependencyNames(task, projectTaskTitleMask(readDecision)) : null;
+            const [task] = await loadAuthorizedProjectTasks(trx, tenant, projectId, readDecision.redactedFields, [taskId]);
+            return task ?? null;
         });
     } catch (error) {
         const expected = projectTaskActionErrorFrom(error);
@@ -3047,9 +3102,7 @@ export const getAllProjectTasksForListView = withAuth(async (
 
         // 2. Get all tasks across all phases (base fields)
         const tasks = phaseIds.length > 0
-            ? await tenantScopedTable(trx, 'project_tasks', tenant)
-                .whereIn('phase_id', phaseIds)
-                .orderBy(['phase_id', 'order_key'])
+            ? await loadAuthorizedProjectTasks(trx, tenant, projectId, readDecision.redactedFields)
             : [];
 
         const taskIds = tasks.map((t: { task_id: string }) => t.task_id);
@@ -3159,12 +3212,11 @@ export const getAllProjectTasksForListView = withAuth(async (
             });
         }
 
-            const maskedTitle = projectTaskTitleMask(readDecision);
             return {
                 phases,
-                tasks: (tasks as IProjectTask[]).map((task) => maskTaskAndDependencyNames(task, maskedTitle)),
                 statuses, ticketLinks, taskResources, checklistItems, taskTags,
-                taskDependencies: maskTaskDependencyCollections(taskDependencies, maskedTitle),
+                tasks,
+                taskDependencies: await projectAuthorizedTaskDependencyMap(trx, tenant, user as IUserWithRoles, taskDependencies),
             };
         });
     });
@@ -3307,13 +3359,8 @@ export const getProjectTaskData = withAuth(async (
             .select('phase_id');
         const phaseIds = phases.map((p: { phase_id: string }) => p.phase_id);
 
-        const maskedDependencyName = projectTaskTitleMask(projectReadDecision);
-        const taskNameHidden = maskedDependencyName !== null;
-        const taskQuery = tenantScopedTable(trx, 'project_tasks', tenant).whereIn('phase_id', phaseIds);
         const tasks: IProjectTask[] = phaseIds.length > 0
-            ? await taskQuery.select('project_tasks.*', ...(taskNameHidden
-                ? [trx.raw('?::text as task_name', [maskedDependencyName])]
-                : [])).orderBy(['phase_id', 'order_key'])
+            ? await loadAuthorizedProjectTasks(trx, tenant, projectId, projectReadDecision.redactedFields)
             : [];
 
         const taskIds = tasks.map(t => t.task_id);
@@ -3334,12 +3381,12 @@ export const getProjectTaskData = withAuth(async (
             taskIds.length > 0
                 ? projectTaskDependencyTaskQuery(trx, tenant, 'predecessor_task_id')
                     .whereIn('ptd.successor_task_id', taskIds)
-                    .select('ptd.*', taskNameHidden ? trx.raw('?::text as predecessor_task_name', [maskedDependencyName]) : 'pt.task_name as predecessor_task_name', 'pt.wbs_code as predecessor_wbs_code')
+                    .select('ptd.*', 'pt.task_name as predecessor_task_name', 'pt.wbs_code as predecessor_wbs_code')
                 : [],
             taskIds.length > 0
                 ? projectTaskDependencyTaskQuery(trx, tenant, 'successor_task_id')
                     .whereIn('ptd.predecessor_task_id', taskIds)
-                    .select('ptd.*', taskNameHidden ? trx.raw('?::text as successor_task_name', [maskedDependencyName]) : 'pt.task_name as successor_task_name', 'pt.wbs_code as successor_wbs_code')
+                    .select('ptd.*', 'pt.task_name as successor_task_name', 'pt.wbs_code as successor_wbs_code')
                 : []
         ]);
         const safeTagsArray = isTagActionError(tagsArray) ? [] : tagsArray;
@@ -3376,7 +3423,7 @@ export const getProjectTaskData = withAuth(async (
                 ...dep,
                 predecessor_task: {
                     task_id: dep.predecessor_task_id,
-                    task_name: maskedDependencyName ?? dep.predecessor_task_name,
+                    task_name: dep.predecessor_task_name,
                     wbs_code: dep.predecessor_wbs_code
                 }
             });
@@ -3390,13 +3437,19 @@ export const getProjectTaskData = withAuth(async (
                 ...dep,
                 successor_task: {
                     task_id: dep.successor_task_id,
-                    task_name: maskedDependencyName ?? dep.successor_task_name,
+                    task_name: dep.successor_task_name,
                     wbs_code: dep.successor_wbs_code
                 }
             });
         }
 
-            return { tasks, taskResources, taskTags, checklistItems, taskDependencies };
+            return {
+                tasks,
+                taskResources,
+                taskTags,
+                checklistItems,
+                taskDependencies: await projectAuthorizedTaskDependencyMap(trx, tenant, user as IUserWithRoles, taskDependencies),
+            };
         });
     });
 });

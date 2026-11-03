@@ -3,15 +3,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 
-type DependencyWithTaskDetails = IProjectTaskDependency & {
-    predecessor_task_name?: string | null;
-    predecessor_task_wbs_code?: string | null;
-    predecessor_task_type_key?: string | null;
-    successor_task_name?: string | null;
-    successor_task_wbs_code?: string | null;
-    successor_task_type_key?: string | null;
-};
-
 type SuccessorTaskIdRow = {
     successor_task_id: string;
 };
@@ -89,45 +80,15 @@ const TaskDependencyModel = {
     }> => {
         if (!tenant) throw new Error('Tenant context is required for dependency operations');
         
-        const db = tenantDb(knexOrTrx, tenant);
-        const predecessorsQuery = tenantScopedTable(knexOrTrx, 'project_task_dependencies as ptd', tenant);
-        db.tenantJoin(predecessorsQuery, 'project_tasks as pt_pred', 'ptd.predecessor_task_id', 'pt_pred.task_id', { type: 'left' });
-        const predecessors = await predecessorsQuery
-            .where({ 'ptd.successor_task_id': taskId })
-            .select('ptd.*', 
-                    'pt_pred.task_name as predecessor_task_name', 
-                    'pt_pred.wbs_code as predecessor_task_wbs_code',
-                    'pt_pred.task_type_key as predecessor_task_type_key') as DependencyWithTaskDetails[];
-            
-        const successorsQuery = tenantScopedTable(knexOrTrx, 'project_task_dependencies as ptd', tenant);
-        db.tenantJoin(successorsQuery, 'project_tasks as pt_succ', 'ptd.successor_task_id', 'pt_succ.task_id', { type: 'left' });
-        const successors = await successorsQuery
-            .where({ 'ptd.predecessor_task_id': taskId })
-            .select('ptd.*', 
-                    'pt_succ.task_name as successor_task_name', 
-                    'pt_succ.wbs_code as successor_task_wbs_code',
-                    'pt_succ.task_type_key as successor_task_type_key') as DependencyWithTaskDetails[];
-        
-        return { 
-            predecessors: predecessors.map(d => ({
-                ...d, 
-                predecessor_task: { 
-                    task_id: d.predecessor_task_id, 
-                    task_name: d.predecessor_task_name ?? '',
-                    wbs_code: d.predecessor_task_wbs_code ?? '',
-                    task_type_key: d.predecessor_task_type_key ?? ''
-                }
-            })), 
-            successors: successors.map(d => ({
-                ...d, 
-                successor_task: { 
-                    task_id: d.successor_task_id, 
-                    task_name: d.successor_task_name ?? '',
-                    wbs_code: d.successor_task_wbs_code ?? '',
-                    task_type_key: d.successor_task_type_key ?? ''
-                }
-            }))
-        };
+        // Task names and display fields come from the caller's authorized masked projection.
+        const predecessors = await tenantScopedTable(knexOrTrx, 'project_task_dependencies', tenant)
+            .where({ successor_task_id: taskId })
+            .select('*') as IProjectTaskDependency[];
+        const successors = await tenantScopedTable(knexOrTrx, 'project_task_dependencies', tenant)
+            .where({ predecessor_task_id: taskId })
+            .select('*') as IProjectTaskDependency[];
+
+        return { predecessors, successors };
     },
     
     updateDependency: async (
