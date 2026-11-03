@@ -40,6 +40,9 @@ export function visibleCoManagedFields(candidates: Record<string, CoManagedSumma
 }
 const text = (value: unknown): string | null => value == null ? null : String(value);
 /** Organization display values are projected at the response boundary just like summary fields. */
+// LEVERAGE: pattern co-managed-org-name-projection — each response envelope calls this by hand (ticket list
+// here, ticket screen in ticketCollaboration.ts). A single projection boundary would make the third and later
+// envelopes impossible to forget; ticketConversation.ts:68 is the next one that would move onto it.
 export function visibleCoManagedOrganizationName(value: unknown, redactions: readonly string[]): string {
   return isCoManagedReadFieldHidden(redactions, CO_MANAGED_ORGANIZATION_NAME_ALIASES) ? '' : text(value) ?? '';
 }
