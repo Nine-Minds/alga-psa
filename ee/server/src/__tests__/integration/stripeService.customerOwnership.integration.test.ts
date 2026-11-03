@@ -328,9 +328,13 @@ describe('migration: global uniqueness of stripe_customer_external_id', () => {
     const blocker = makeTestConnection();
     const migrator = makeTestConnection();
     const writer = makeTestConnection('stripe_binding_writer');
+    const updater = makeTestConnection('stripe_binding_updater');
     let writerTrx: Knex.Transaction | undefined;
     try {
-      await db('stripe_customers').insert({ tenant: TENANT_A, stripe_customer_external_id: 'cus_rollout', email: 'x' });
+      await db('stripe_customers').insert([
+        { tenant: TENANT_A, stripe_customer_external_id: 'cus_rollout', email: 'x' },
+        { tenant: TENANT_B, stripe_customer_external_id: 'cus_rollout_update_original', email: 'x' },
+      ]);
       await blocker.raw('BEGIN');
       await blocker.raw('LOCK TABLE stripe_customers IN ACCESS EXCLUSIVE MODE');
 
@@ -348,23 +352,35 @@ describe('migration: global uniqueness of stripe_customer_external_id', () => {
       let writerSettled = false;
       const writerRun = writerTrx('stripe_customers').insert({ tenant: TENANT_B, stripe_customer_external_id: 'cus_rollout', email: 'x' })
         .then(() => { writerSettled = true; }, (error) => { writerSettled = true; throw error; });
+      let updaterSettled = false;
+      const updaterRun = updater('stripe_customers')
+        .where({ tenant: TENANT_B, stripe_customer_external_id: 'cus_rollout_update_original' })
+        .update({ stripe_customer_external_id: 'cus_rollout' })
+        .then(() => { updaterSettled = true; }, (error) => { updaterSettled = true; throw error; });
       const writerDeadline = Date.now() + 5000;
-      let writerActive = false;
+      let bothWritersActive = false;
       while (Date.now() < writerDeadline) {
-        const activity = await db.raw(`SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE application_name='stripe_binding_writer' AND state='active') AS active`);
-        if (activity.rows[0].active) { writerActive = true; break; }
+        const activity = await db.raw(`SELECT
+          bool_or(application_name='stripe_binding_writer' AND state='active') AS writer_active,
+          bool_or(application_name='stripe_binding_updater' AND state='active') AS updater_active
+          FROM pg_stat_activity WHERE application_name IN ('stripe_binding_writer', 'stripe_binding_updater')`);
+        if (activity.rows[0].writer_active && activity.rows[0].updater_active) { bothWritersActive = true; break; }
         await new Promise((resolve) => setTimeout(resolve, 25));
       }
-      expect(writerActive).toBe(true);
+      expect(bothWritersActive).toBe(true);
       expect(writerSettled).toBe(false);
+      expect(updaterSettled).toBe(false);
       expect(migrationFinished).toBe(false);
       await blocker.raw('COMMIT');
       await migrationRun;
       await expect(writerRun).rejects.toThrow(/foreign key|violates foreign key/i);
+      await expect(updaterRun).rejects.toThrow(/foreign key|violates foreign key/i);
       await writerTrx.rollback().catch(() => undefined);
       expect(await db('stripe_customers').where({ stripe_customer_external_id: 'cus_rollout' })).toHaveLength(1);
       expect(await db('stripe_customer_bindings').where({ stripe_customer_external_id: 'cus_rollout' }).first())
         .toMatchObject({ tenant: TENANT_A });
+      expect(await db('stripe_customers').where({ tenant: TENANT_B }).select('stripe_customer_external_id'))
+        .toEqual([{ stripe_customer_external_id: 'cus_rollout_update_original' }]);
 
       // Matching ownership is accepted, while a later legacy update cannot
       // move that mapping onto a customer owned by the other tenant.
@@ -375,10 +391,13 @@ describe('migration: global uniqueness of stripe_customer_external_id', () => {
       await expect(writer('stripe_customers').where({ tenant: TENANT_B, stripe_customer_external_id: 'cus_tenant_b_original' }).update({ stripe_customer_external_id: 'cus_rollout' }))
         .rejects.toThrow(/foreign key|violates foreign key/i);
       expect(await db('stripe_customers').where({ tenant: TENANT_B }).select('stripe_customer_external_id'))
-        .toEqual([{ stripe_customer_external_id: 'cus_tenant_b_original' }]);
+        .toEqual(expect.arrayContaining([
+          { stripe_customer_external_id: 'cus_rollout_update_original' },
+          { stripe_customer_external_id: 'cus_tenant_b_original' },
+        ]));
     } finally {
       if (writerTrx && !writerTrx.isCompleted()) await writerTrx.rollback().catch(() => undefined);
-      await blocker.destroy(); await migrator.destroy(); await writer.destroy();
+      await blocker.destroy(); await migrator.destroy(); await writer.destroy(); await updater.destroy();
     }
   });
 
