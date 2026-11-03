@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) => fn({ user_id: 'user-1', user_type: 'internal' }, { tenant: 'tenant-1' }, ...args),
+  hasPermission: vi.fn(async () => true),
 }));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: h })),
@@ -16,22 +17,29 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (_conn: any, _tenant: string) => ({ table: (table: string) => {
     let rows = h.tables[table] ?? [];
     let where: Record<string, unknown> = {};
+    let columns: string[] = [];
     const query: any = {
       where(criteria: Record<string, unknown>) { where = criteria; rows = rows.filter((row) => Object.entries(criteria).every(([k, v]) => row[k] === v)); return query; },
-      select() { return query; },
-      first() { return Promise.resolve(rows[0]); },
+      whereIn(column: string, values: unknown[]) { rows = rows.filter((row) => values.includes(row[column])); return query; },
+      select(...selected: string[]) { columns = selected; return query; },
+      first() { return Promise.resolve(project(rows[0])); },
       insert(row: Row) { h.tables[table] ??= []; h.tables[table].push(row); return Promise.resolve(); },
       update(values: Row) { rows.forEach((row) => Object.assign(row, values)); return Promise.resolve(); },
       delete() { h.tables[table] = (h.tables[table] ?? []).filter((row) => !Object.entries(where).every(([k, v]) => row[k] === v)); return Promise.resolve(); },
+      then(resolve: any, reject: any) { return Promise.resolve(rows.map(project)).then(resolve, reject); },
+      catch(reject: any) { return Promise.resolve(rows.map(project)).catch(reject); },
     };
+    function project(row?: Row) { return !row || columns.length === 0 ? row : Object.fromEntries(columns.map((column) => [column, row[column]])); }
     return query;
   } }),
 }));
-vi.mock('../lib/assetReadAuthorization', () => ({
-  assertAssetAccess: vi.fn(async (_trx: unknown, _tenant: string, _user: unknown, assetId: string, action: string) => {
-    h.authorizationCalls.push(action);
-    if (!h.allowed || assetId !== 'asset-1') throw new Error('Asset not found');
-    return { asset_id: assetId, client_id: 'client-1' };
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  resolveBundleNarrowingRulesForEvaluation: vi.fn(async (_trx: unknown, input: any) => {
+    h.authorizationCalls.push(input.resource.action);
+    return [{
+      id: `asset-${input.resource.action}-rule`, resource: 'asset', action: input.resource.action,
+      templateKey: 'selected_clients', selectedClientIds: h.allowed ? ['client-1'] : ['client-outside-policy'],
+    }];
   }),
 }));
 vi.mock('../assetActionErrors', () => ({
@@ -48,6 +56,10 @@ function seedNotes() {
     documents: [{ document_id: 'doc-1', document_name: 'Device Notes', updated_at: '2026-01-01' }],
     document_block_content: [{ document_id: 'doc-1', block_data: '[{"type":"paragraph"}]', updated_at: '2026-01-02' }],
     document_associations: [{ document_id: 'doc-1', entity_id: 'asset-1', entity_type: 'asset' }],
+    asset_associations: [],
+    user_roles: [],
+    team_members: [],
+    users: [],
   };
   (h as any).fn = { now: () => 'now' };
 }

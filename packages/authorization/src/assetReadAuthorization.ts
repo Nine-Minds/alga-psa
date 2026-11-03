@@ -8,6 +8,7 @@ import {
   type AuthorizationRecord,
   type AuthorizationSubject,
 } from './kernel';
+import type { BundleNarrowingRule } from './kernel/providers/bundleProvider';
 import { resolveBundleNarrowingRulesForEvaluation } from './bundles/service';
 
 /**
@@ -144,6 +145,25 @@ export async function createAssetReadContext(
   return {
     subject: await resolveAuthorizationSubjectForUser(trx, tenant, user),
     authorizationKernel: createAssetReadKernel(trx),
+    requestCache: new RequestLocalAuthorizationCache(),
+  };
+}
+
+/** Build an asset authorization context from one already-resolved policy snapshot. */
+export async function createAssetReadContextWithRules(
+  trx: Knex | Knex.Transaction,
+  subject: AuthorizationSubject,
+  rules: readonly BundleNarrowingRule[]
+): Promise<AssetReadAuthorizationContext> {
+  return {
+    subject,
+    authorizationKernel: createAuthorizationKernel({
+      builtinProvider: new BuiltinAuthorizationKernelProvider(),
+      bundleProvider: new BundleAuthorizationKernelProvider({
+        resolveRules: async () => [...rules],
+      }),
+      rbacEvaluator: async () => true,
+    }),
     requestCache: new RequestLocalAuthorizationCache(),
   };
 }

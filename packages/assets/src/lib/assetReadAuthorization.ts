@@ -4,8 +4,9 @@ import { hasPermission } from '@alga-psa/auth';
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import {
-  createAssetReadContext,
+  createAssetReadContextWithRules,
   isAssetActionAllowed,
+  resolveAuthorizationSubjectForUser,
   type AssetAuthUser,
   type AssetAuthorizationAction,
 } from '@alga-psa/authorization/assetReadAuthorization';
@@ -33,18 +34,23 @@ export async function assertAssetAccess(
     throw new Error('Asset not found');
   }
 
-  const context = await createAssetReadContext(trx, tenant, user);
-  const rules = await resolveBundleNarrowingRulesForEvaluation(trx, {
-    subject: context.subject,
-    resource: { type: 'asset', action, id: asset.asset_id },
-    record: { id: asset.asset_id, clientId: asset.client_id, ownerUserId: null, assignedUserIds: [], teamIds: [] },
-    requestCache: context.requestCache,
-    knex: trx,
-  });
+  const subject = await resolveAuthorizationSubjectForUser(trx, tenant, user);
+  let rules: Awaited<ReturnType<typeof resolveBundleNarrowingRulesForEvaluation>>;
+  try {
+    rules = await resolveBundleNarrowingRulesForEvaluation(trx, {
+      subject,
+      resource: { type: 'asset', action, id: asset.asset_id },
+      record: { id: asset.asset_id, clientId: asset.client_id, ownerUserId: null, assignedUserIds: [], teamIds: [] },
+      knex: trx,
+    });
+  } catch {
+    throw new Error('Asset not found');
+  }
   if (!rules.some((rule) => rule.resource === 'asset' && rule.action === action)) {
     throw new Error('Asset not found');
   }
 
+  const context = await createAssetReadContextWithRules(trx, subject, rules);
   if (!await isAssetActionAllowed(trx, tenant, context, asset, action)) {
     throw new Error('Asset not found');
   }
