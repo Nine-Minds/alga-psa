@@ -33,6 +33,13 @@ vi.mock('@alga-psa/db', () => {
       },
       count: async () => [{ count: String(rows().length) }],
       first: async () => { store.lookups.push(name); return rows()[0]; },
+      insert(values: Row | Row[]) {
+        const inserted = (Array.isArray(values) ? values : [values]).map((row) => ({ ...row }));
+        store.tables[name] = [...(store.tables[name] ?? []), ...inserted];
+        const result: any = Promise.resolve(inserted);
+        result.onConflict = () => ({ ignore: () => Promise.resolve(inserted) });
+        return result;
+      },
     };
     return b;
   }
@@ -50,6 +57,7 @@ vi.mock('@alga-psa/db', () => {
   };
 });
 vi.mock('@alga-psa/shared/lib/deliveryLedger', () => ({ claimDelivery: vi.fn(), finishDelivery: vi.fn(), CO_MANAGED_LEDGER: {} }));
+vi.mock('@alga-psa/core/logger', () => ({ default: { warn: vi.fn() } }));
 vi.mock('../sharedWork', () => ({ withCoManagedNotificationRecipient: vi.fn() }));
 vi.mock('../sharedWorkIdentity', () => ({ isCoManagedSharedWorkError: () => false }));
 vi.mock('../routingOutbox', () => ({ ROUTING_IN_APP_KIND: 'routing_in_app', ROUTING_EMAIL_KIND: 'routing_email' }));
@@ -174,6 +182,32 @@ describe('admitReplyToken sender authentication', () => {
     it('admits a valid requester with a future expiry', async () => {
       store.tables.email_reply_tokens[0].expires_at = '2099-01-01T00:00:00.000Z';
       expect(await admit(trusted('req@CUSTOMER.test'))).toMatchObject({ admitted: true, requesterContactId: 'k1' });
+    });
+    it('admits a requester cm2 token issued through outbound persistence, then refuses it at expiry', async () => {
+      const { persistReplyToken, EMAIL_REPLY_TOKEN_LIFETIME_MS } = await import('../../../../server/src/lib/notifications/replyTokenPersistence');
+      const issuedAt = Date.now();
+      await persistReplyToken({ schema: { hasTable: async () => true } }, CUSTOMER, {
+        token: 'cm2:issued-by-outbound', ticketId: 'tk', commentId: 'c1', threadId: 'thr',
+        extraMetadata: { namespace: 'cm', version: 2, relationshipId: 'rel', grantGeneration: 0 },
+      }, { template: 'ticket-comment-added', subject: 'Re: ticket', recipient: 'req@customer.test' });
+
+      const issued = store.tables.email_reply_tokens.find((row) => row.token === 'cm2:issued-by-outbound');
+      expect(issued).toBeTruthy();
+      if (!issued) throw new Error('Outbound token persistence did not produce a token record');
+      expect(new Date(issued.expires_at).getTime()).toBe(issuedAt + EMAIL_REPLY_TOKEN_LIFETIME_MS);
+      const provider = createCoManagedDeliveryProvider();
+      const sender = { email: 'req@customer.test', internalAttributionTrusted: false, contactAttributionTrusted: true };
+      const admitted = await provider.admitReplyToken(CUSTOMER, issued.token, JSON.parse(issued.metadata), sender);
+      expect(admitted).toMatchObject({ admitted: true, audience: 'requester', requesterContactId: 'k1', requesterClientId: 'client-1' });
+
+      vi.setSystemTime(new Date(issued.expires_at));
+      expect(await provider.admitReplyToken(CUSTOMER, issued.token, JSON.parse(issued.metadata), sender))
+        .toEqual({ admitted: false, reason: 'sender_unauthenticated', acknowledge: false });
+    });
+    it('continues refusing a legacy requester cm2 token with null expiry', async () => {
+      store.tables.email_reply_tokens[0].expires_at = null;
+      expect(await admit({ ...trusted('req@customer.test'), contactAttributionTrusted: true }))
+        .toEqual({ admitted: false, reason: 'sender_unauthenticated', acknowledge: false });
     });
     it('treats the exact expiry instant as expired before looking up requester participants', async () => {
       store.tables.email_reply_tokens[0].expires_at = '2026-01-01T00:00:00.000Z';
