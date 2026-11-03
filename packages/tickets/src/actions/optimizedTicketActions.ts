@@ -103,6 +103,7 @@ import {
   type RelationshipSqlCompileResult,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { redactTicketReadPayload } from '../lib/ticketReadRedaction';
 import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
 import { compilePredicateFragment } from '@alga-psa/predicates/sql';
@@ -351,7 +352,7 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
   const decisions = await Promise.all(
     tickets.map((ticket) => {
       if (!ticket.ticket_id) {
-        return Promise.resolve({ allowed: false });
+        return Promise.resolve({ allowed: false, redactedFields: [] as string[] });
       }
 
       return context.authorizationKernel.authorizeResource({
@@ -370,7 +371,11 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
     })
   );
 
-  return tickets.filter((_, index) => decisions[index]?.allowed);
+  return tickets.flatMap((ticket, index) => {
+    const decision = decisions[index];
+    if (!decision?.allowed || !Array.isArray(decision.redactedFields)) return [];
+    return [redactTicketReadPayload(ticket as Record<string, any>, decision.redactedFields) as T];
+  });
 }
 
 type TicketAuthorizationContext = Awaited<ReturnType<typeof createTicketAuthorizationContext>>;
@@ -2008,6 +2013,7 @@ async function attachLatestActivityActors(
   }
 
   for (const ticket of ticketListItems) {
+    if ((ticket as any).__ticket_read_has_redactions) continue;
     ticket.latest_activity_actor = resolveLatestActivityActor(
       ticket,
       latestCommentByTicket.get(ticket.ticket_id as string) ?? null,
@@ -2102,6 +2108,9 @@ async function enrichTicketListItems(
   });
 
   await attachLatestActivityActors(trx, tenant, ticketListItems, ticketIds);
+  for (const ticket of ticketListItems) {
+    delete (ticket as any).__ticket_read_has_redactions;
+  }
 
   // Convert Maps to Records for serialization
   const agentAvatarUrls: Record<string, string | null> = {};
@@ -2192,7 +2201,8 @@ export const getTicketsForList = withAuth(async (
         .limit(normalizedPageSize)
         .offset(offset);
 
-      const [countRow, pageTickets] = await Promise.all([countQuery, pageQuery]);
+      const [countRow, pageTicketsRaw] = await Promise.all([countQuery, pageQuery]);
+      const pageTickets = await filterAuthorizedTickets(trx, authorizationContext, pageTicketsRaw);
       totalCount = Number((countRow as { count?: string | number } | undefined)?.count ?? 0);
       ticketListItems = mapTicketListItems(pageTickets);
     } else {
@@ -2287,6 +2297,40 @@ export const getAllMatchingTicketIds = withAuth(async (
   });
 });
 
+/** Re-authorize explicit ticket ids and retain each ticket's field redactions for readers that forward data. */
+export const getTicketReadTargetsByIds = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[]
+): Promise<Array<{ id: string; redactedFields: string[] }> | TicketActionError> => {
+  const ids = Array.from(new Set(ticketIds.filter((id) => typeof id === 'string' && id.length > 0)));
+  if (ids.length === 0) return [];
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+    const context = await createTicketAuthorizationContext(trx, tenant, user as IUserWithRoles);
+    const rows = await tenantScopedTable(trx, 'tickets as t', tenant).whereIn('t.ticket_id', ids)
+      .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.contact_name_id', 't.board_id', 't.assigned_team_id', 't.billing_profile_id', 't.attributes');
+    const decisions = await Promise.all(rows.map(async (ticket: any) => ({
+      ticket,
+      decision: ticket.ticket_id ? await context.authorizationKernel.authorizeResource({
+        subject: context.authorizationSubject,
+        resource: { type: 'ticket', action: 'read', id: ticket.ticket_id },
+        record: toTicketAuthorizationRecord(ticket),
+        selectedBoardIds: context.selectedBoardIds,
+        contactVisibility: context.contactVisibility,
+        requestCache: context.requestCache,
+        knex: trx,
+      }) : { allowed: false, redactedFields: [] as string[] },
+    })));
+    const byId = new Map(decisions.flatMap(({ ticket, decision }) => decision.allowed && Array.isArray(decision.redactedFields)
+      ? [[ticket.ticket_id, [...decision.redactedFields] as string[]] as const] : []));
+    return ids.flatMap((id) => byId.has(id) ? [{ id, redactedFields: byId.get(id)! }] : []);
+  });
+});
+
 /**
  * List rows for an explicit set of ticket ids, in the order the ids were given.
  * The rows pass through the same filter, authorization, and enrichment path as
@@ -2298,7 +2342,8 @@ export const loadTicketListItemsByIds = withAuth(async (
   user,
   { tenant },
   filters: ITicketListFilters,
-  ticketIds: string[]
+  ticketIds: string[],
+  callerRedactions?: Record<string, readonly string[]>
 ): Promise<TicketListRowsWithMetadata | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
@@ -2337,6 +2382,9 @@ export const loadTicketListItemsByIds = withAuth(async (
           .clearOrder();
         rows = await filterAuthorizedTickets(trx, authorizationContext, candidates);
       }
+      if (authSqlResult.supported) {
+        rows = await filterAuthorizedTickets(trx, authorizationContext, rows);
+      }
 
       const byId = new Map<string, any>();
       for (const row of rows) {
@@ -2348,7 +2396,11 @@ export const loadTicketListItemsByIds = withAuth(async (
         .map((id) => byId.get(id))
         .filter((row): row is any => Boolean(row));
 
-      return enrichTicketListItems(trx, tenant, mapTicketListItems(ordered));
+      const effectiveRows = ordered.map((row) => redactTicketReadPayload(
+        row,
+        callerRedactions?.[row.ticket_id] ?? []
+      ));
+      return enrichTicketListItems(trx, tenant, mapTicketListItems(effectiveRows));
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
       if (expected) {

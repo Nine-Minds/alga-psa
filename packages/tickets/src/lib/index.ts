@@ -1,4 +1,5 @@
 export { createTicketColumns } from './ticket-columns';
+export { ticketReadFieldHidden, redactTicketReadPayload } from './ticketReadRedaction';
 export {
   hashString,
   statusPillHue,

@@ -13,7 +13,8 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { aclPredicateSql, resolveSearchAclPrincipal, type SearchAclPrincipal } from '@alga-psa/search/acl';
-import { getAllMatchingTicketIds, loadTicketListItemsByIds } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { getAllMatchingTicketIds, getTicketReadTargetsByIds, loadTicketListItemsByIds } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { ticketReadFieldHidden } from '@alga-psa/tickets/lib';
 import { ticketListFiltersSchema } from '@alga-psa/tickets/schemas/ticket.schema';
 import type { TicketSmartSearchRowMetadata, TicketSmartSearchScope } from '@alga-psa/tickets/lib/smartTicketSearch/types';
 import type { ITicketListItem, IUserWithRoles } from '@alga-psa/types';
@@ -79,31 +80,33 @@ function toAuthor(metadata: Record<string, unknown> | null): TicketCommentAuthor
 export function assembleTicketCandidate(
   row: TicketTextRow,
   comments: TicketComment[],
-  budgets: CandidateBudgets = SMART_SEARCH_BUDGETS
+  budgets: CandidateBudgets = SMART_SEARCH_BUDGETS,
+  redactedFields: readonly string[] = []
 ): SmartSearchCandidate {
+  const hidden = (field: string) => ticketReadFieldHidden(redactedFields, field);
   return assembleCandidate(
     {
       id: row.ticket_id,
       head: {
         ticket_number: row.ticket_number ?? '',
-        title: row.title?.trim() || row.ticket_number || row.ticket_id,
-        client: nonEmpty(row.client_name),
-        status: nonEmpty(row.status_name),
-        is_closed: row.is_closed === true,
-        priority: nonEmpty(row.priority_name),
-        board: nonEmpty(row.board_name),
-        assigned_to: nonEmpty(row.assigned_to_name),
-        assigned_team: nonEmpty(row.assigned_team_name),
-        entered_at: toIso(row.entered_at),
-        updated_at: toIso(row.updated_at),
-        closed_at: toIso(row.closed_at),
-        due_date: toIso(row.due_date),
+        title: hidden('title') ? 'Restricted ticket' : row.title?.trim() || row.ticket_number || row.ticket_id,
+        client: hidden('client_name') ? null : nonEmpty(row.client_name),
+        status: hidden('status_name') ? null : nonEmpty(row.status_name),
+        is_closed: hidden('status_name') ? null : row.is_closed === true,
+        priority: hidden('priority_name') ? null : nonEmpty(row.priority_name),
+        board: hidden('board_name') ? null : nonEmpty(row.board_name),
+        assigned_to: hidden('assigned_to_name') ? null : nonEmpty(row.assigned_to_name),
+        assigned_team: hidden('assigned_team_name') ? null : nonEmpty(row.assigned_team_name),
+        entered_at: hidden('entered_at') ? null : toIso(row.entered_at),
+        updated_at: hidden('updated_at') ? null : toIso(row.updated_at),
+        closed_at: hidden('closed_at') ? null : toIso(row.closed_at),
+        due_date: hidden('due_date') ? null : toIso(row.due_date),
       },
-      description: row.description,
+      description: hidden('description') ? null : row.description,
       sections: [
         {
           key: 'comments',
-          items: comments
+          items: (redactedFields.length ? [] : comments)
             .map((comment): CandidateChild => ({ author: comment.author, text: comment.text.trim() }))
             .filter((comment) => comment.text.length > 0),
         },
@@ -181,7 +184,8 @@ export async function loadTicketCandidates(
   trx: Knex.Transaction,
   tenant: string,
   user: IUserWithRoles,
-  ticketIds: string[]
+  ticketIds: string[],
+  redactions: ReadonlyMap<string, readonly string[]> = new Map()
 ): Promise<SmartSearchCandidate[]> {
   if (ticketIds.length === 0) {
     return [];
@@ -212,7 +216,7 @@ export async function loadTicketCandidates(
       // reports it as unscored rather than guessing.
       continue;
     }
-    candidates.push(assembleTicketCandidate(row, commentsByTicket.get(ticketId) ?? []));
+    candidates.push(assembleTicketCandidate(row, commentsByTicket.get(ticketId) ?? [], SMART_SEARCH_BUDGETS, redactions.get(ticketId) ?? []));
   }
   return candidates;
 }
@@ -251,11 +255,12 @@ export const ticketSmartSearch: SmartSearchEntityDefinition<TicketSmartSearchSco
   normalizeScope: (scope) => ({ ...scope, searchQuery: '' }),
   enumerate: async (scope) => {
     const ids = await getAllMatchingTicketIds(scope);
-    return Array.isArray(ids) ? ids.map((id) => ({ id })) : ids;
+    if (!Array.isArray(ids)) return ids;
+    return getTicketReadTargetsByIds(ids);
   },
   loadCandidates: loadTicketCandidates,
-  hydrateRows: async (scope, ids) => {
-    const result = await loadTicketListItemsByIds(scope, ids);
+  hydrateRows: async (scope, ids, redactions) => {
+    const result = await loadTicketListItemsByIds(scope, ids, Object.fromEntries(redactions));
     if (isActionMessageError(result) || isActionPermissionError(result)) {
       return result;
     }
