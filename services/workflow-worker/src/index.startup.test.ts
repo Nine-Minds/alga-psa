@@ -17,7 +17,9 @@ const {
   loggerInfoMock,
   loggerErrorMock,
   registerFeatureFlagCheckerMock,
-  featureFlagIsEnabledMock
+  featureFlagIsEnabledMock,
+  registerCapabilityEligibilityMock,
+  registerCapabilityParticipationMock
 } = vi.hoisted(() => ({
   dotenvConfigMock: vi.fn(),
   initializeWorkflowRuntimeV2Mock: vi.fn(),
@@ -35,7 +37,9 @@ const {
   loggerInfoMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   registerFeatureFlagCheckerMock: vi.fn(),
-  featureFlagIsEnabledMock: vi.fn(async () => false)
+  featureFlagIsEnabledMock: vi.fn(async () => false),
+  registerCapabilityEligibilityMock: vi.fn(),
+  registerCapabilityParticipationMock: vi.fn()
 }));
 
 vi.mock('dotenv', () => ({
@@ -147,8 +151,22 @@ vi.mock('@alga-psa/core/capability', () => ({
   isCapabilityServed: capabilityThrow,
   filterCapabilityServed: capabilityThrow,
   activityServesCapability: capabilityThrow,
-  evaluateCapability: capabilityThrow
+  evaluateCapability: capabilityThrow,
+  registerCapabilityEligibility: (...args: unknown[]) => registerCapabilityEligibilityMock(...args),
+  registerCapabilityParticipation: (...args: unknown[]) => registerCapabilityParticipationMock(...args)
 }));
+
+vi.mock('@alga-psa/db', () => ({
+  getAdminConnection: vi.fn(),
+  registerWriteAdmissionProvider: vi.fn(),
+  tenantDb: vi.fn()
+}));
+vi.mock('@alga-psa/licensing/lifecycle', () => ({
+  CO_MANAGED_OPERATIONAL_WRITE: 'co-managed-operational-write',
+  coManagedLifecycleProvider: { readState: vi.fn() },
+  registerCoManagedLifecycleProvider: vi.fn()
+}));
+vi.mock('@alga-psa/licensing/lifecycle-error', () => ({ CoManagedLifecycleError: class extends Error {} }));
 
 describe('workflow worker startup', () => {
   beforeEach(() => {
@@ -173,6 +191,8 @@ describe('workflow worker startup', () => {
     loggerErrorMock.mockReset();
     registerFeatureFlagCheckerMock.mockReset();
     featureFlagIsEnabledMock.mockReset();
+    registerCapabilityEligibilityMock.mockReset();
+    registerCapabilityParticipationMock.mockReset();
   });
 
   it('T024: starts the Temporal worker, event ingress, and data-store sweep unconditionally', async () => {
@@ -194,6 +214,10 @@ describe('workflow worker startup', () => {
         expect(processOnSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
         expect(processOnSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
       });
+      const { coManagedWorkflowTicketSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
+      expect(coManagedWorkflowTicketSeam.hasProvider()).toBe(true);
+      expect(registerCapabilityParticipationMock).toHaveBeenCalledTimes(1);
+      expect(registerCapabilityParticipationMock.mock.invocationCallOrder[0]).toBeLessThan(initializeWorkflowRuntimeV2Mock.mock.invocationCallOrder[0]);
 
       const checker = registerFeatureFlagCheckerMock.mock.calls[0]?.[0];
       await checker('sample-flag', { tenantId: 'tenant-1' });

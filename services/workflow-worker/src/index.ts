@@ -24,6 +24,10 @@ import { HealthServer } from './healthServer.js';
 import { getWorkflowWorkerMetrics } from './metrics.js';
 import { registerEnterpriseStorageProviders } from './registerEnterpriseStorageProviders.js';
 
+// Compose the co-managed ticket authority before workflow actions are registered. This
+// module also installs the capability classification used by the shared mutation guard.
+import '@alga-psa/co-managed/deliveryRegistration';
+
 async function startServices() {
   const healthServer = new HealthServer(undefined, getWorkflowWorkerMetrics().registry);
   try {

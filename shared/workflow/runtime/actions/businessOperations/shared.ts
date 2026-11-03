@@ -2,6 +2,8 @@ import { z } from 'zod';
 import type { Knex } from 'knex';
 import { admitWrite, tenantDb, withTransaction } from '@alga-psa/db';
 import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
+import { serves } from '@alga-psa/core/capability';
+import logger from '@alga-psa/core/logger';
 import { v4 as uuidv4 } from 'uuid';
 import type { ActionContext } from '../../registries/actionRegistry';
 import { coManagedWorkflowTicketSeam } from '../../../../lib/coManagedDelivery';
@@ -563,12 +565,31 @@ export function actionProvidedKey(input: { idempotency_key?: string | null }, ct
 
 /**
  * Ticket-mutation adapter (CM L4a): for a tenant the co-managed capability serves, retain the executing
- * run / published-version / author authority before a workflow action mutates a ticket. A tenant that is
- * not served costs 0 statements and runs the action unchanged. Workflow actions never publish
- * TICKET_COMMENT_ADDED (DO-NOT-PORT #2); this adapter publishes nothing either.
+ * run / published-version / author authority before a workflow action mutates a ticket. Only an
+ * authoritative not-served decision permits the native action to continue unchanged. Workflow actions
+ * never publish TICKET_COMMENT_ADDED (DO-NOT-PORT #2); this adapter publishes nothing either.
  */
 export async function retainWorkflowTicketAuthority(ctx: ActionContext, tx: TenantTxContext, ticketId: string, fields: string[], readFields: string[] = []): Promise<void> {
+  let classification;
+  try {
+    classification = await serves('co-managed', tx.tenantId);
+  } catch (error) {
+    logger.error('[WorkflowTicketAuthority] Tenant classification failed; refusing ticket mutation', { tenantId: tx.tenantId, error });
+    throwActionError(ctx, { category: 'ActionError', code: 'AUTHORIZATION_UNAVAILABLE', message: 'Ticket authorization is unavailable' });
+  }
+
+  // Only an authoritative negative classification permits native tenant behavior. A resolver
+  // outage or missing capability registration cannot be treated as proof that this is not served.
+  if (!classification.served) {
+    if (classification.reasons.served === 'not-participating' || classification.reasons.served === 'forced-off') return;
+    logger.error('[WorkflowTicketAuthority] Tenant classification was inconclusive; refusing ticket mutation', { tenantId: tx.tenantId, reason: classification.reasons.served });
+    throwActionError(ctx, { category: 'ActionError', code: 'AUTHORIZATION_UNAVAILABLE', message: 'Ticket authorization is unavailable' });
+  }
+
   const authority = await coManagedWorkflowTicketSeam.resolve(tx.tenantId);
-  if (!authority) return;
+  if (!authority) {
+    logger.error('[WorkflowTicketAuthority] Provider missing for served tenant; refusing ticket mutation', { tenantId: tx.tenantId });
+    throwActionError(ctx, { category: 'ActionError', code: 'AUTHORIZATION_UNAVAILABLE', message: 'Ticket authorization is unavailable' });
+  }
   await authority.retain(tx.trx, { tenant: tx.tenantId, ticketId, workflowRunId: ctx.runId, actorUserId: tx.actorUserId, fields, readFields });
 }
