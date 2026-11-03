@@ -144,6 +144,7 @@ beforeAll(async () => {
   threadId = stored.thread_id;
   token = `cm2:${uuidv4()}`;
   await db('email_reply_tokens').insert({ tenant: ticketTenant, token, ticket_id: ticketId, comment_id: parentCommentId, entity_type: 'ticket', recipient_email: aliceEmail,
+    expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     metadata: JSON.stringify({ namespace: 'cm', version: 2, relationshipId, grantGeneration: 0, threadId }) });
 }, 120_000);
 

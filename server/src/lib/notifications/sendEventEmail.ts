@@ -19,6 +19,9 @@ import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage'
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
 const EMAIL_SERVICE_DISABLED_MESSAGE = 'Email service is disabled or not configured';
+// Reply links should remain usable for a practical support window, then expire as bearer credentials.
+// Keep this finite because admission deliberately refuses rows without a valid expires_at.
+export const EMAIL_REPLY_TOKEN_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
 
 function isEmailServiceDisabledErrorMessage(message: unknown): boolean {
   if (typeof message !== 'string') return false;
@@ -201,6 +204,7 @@ async function persistReplyToken(
       template: metadata.template,
       recipient_email: metadata.recipient,
       entity_type: payload.projectId ? 'project' : 'ticket',
+      expires_at: new Date(Date.now() + EMAIL_REPLY_TOKEN_LIFETIME_MS),
     };
 
     await tenantDb(knex, tenantId).table('email_reply_tokens')
