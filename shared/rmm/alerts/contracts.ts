@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import type { Knex } from 'knex';
 import type { RmmProvider } from '@alga-psa/types';
+import { predicateGroupSchema } from '@alga-psa/predicates';
+import type { PredicateGroup } from '@alga-psa/predicates';
 
 /** Severity scale every provider normalizes into (matches rmm_alerts.severity). */
 export type NormalizedRmmAlertSeverity = 'critical' | 'major' | 'moderate' | 'minor' | 'none';
@@ -31,6 +33,8 @@ export interface NormalizedRmmAlertEvent {
   sourceType?: string | null;
   severity: NormalizedRmmAlertSeverity;
   message?: string | null;
+  /** Provider's long-form alert body, kept verbatim for matching and audit. */
+  details?: string | null;
   deviceName?: string | null;
   externalOrganizationId?: string | null;
   /** ISO timestamp of the provider-side occurrence. */
@@ -95,7 +99,7 @@ export const rmmMaintenanceWindowRecurrenceSchema = z
 
 export type RmmMaintenanceWindowRecurrence = z.infer<typeof rmmMaintenanceWindowRecurrenceSchema>;
 
-export const rmmAlertRuleConditionsSchema = z
+const legacyRmmAlertConditionsSchema = z
   .object({
     severities: z.array(z.enum(NORMALIZED_RMM_ALERT_SEVERITIES)).optional(),
     activityTypes: z.array(z.string().min(1)).optional(),
@@ -127,7 +131,38 @@ export const rmmAlertRuleConditionsSchema = z
   })
   .strict();
 
-export type RmmAlertRuleConditions = z.infer<typeof rmmAlertRuleConditionsSchema>;
+export const rmmAlertRuleConditionsSchema = z.preprocess(
+  (value) => {
+    const parsed = predicateGroupSchema.safeParse(value);
+    if (parsed.success) return parsed.data;
+    try { return normalizeRmmAlertConditions(value); } catch { return value; }
+  },
+  predicateGroupSchema,
+);
+
+export type RmmAlertRuleConditions = PredicateGroup;
+
+/** Convert pre-predicate rows at the read boundary; old rows remain editable. */
+export function normalizeRmmAlertConditions(value: unknown): PredicateGroup {
+  const predicate = predicateGroupSchema.safeParse(value);
+  if (predicate.success) return predicate.data;
+  const legacy = legacyRmmAlertConditionsSchema.safeParse(value ?? {});
+  if (!legacy.success) throw new Error(`Invalid stored RMM alert conditions: ${legacy.error.message}`);
+  const old = legacy.data;
+  const clauses: PredicateGroup['clauses'] = [];
+  const lists: Array<[keyof typeof old, string]> = [
+    ['severities', 'severity'], ['activityTypes', 'activityType'], ['alertClasses', 'alertClass'],
+    ['sourceTypes', 'sourceType'], ['organizationIds', 'organizationId'],
+  ];
+  for (const [key, path] of lists) {
+    const values = old[key];
+    if (Array.isArray(values) && values.length) clauses.push({ path, operator: 'in', value: values });
+  }
+  if (old.keywords?.length) clauses.push({ join: 'or', clauses: old.keywords.map(value => ({ path: 'text', operator: 'contains' as const, value })) });
+  // Regex is retained as a compatibility-only evaluator escape hatch in ruleEvaluator.
+  if (old.messagePattern) clauses.push({ path: '__legacyMessagePattern', operator: 'equals', value: old.messagePattern });
+  return { join: 'and', clauses };
+}
 
 export const rmmAlertRuleActionsSchema = z
   .object({
