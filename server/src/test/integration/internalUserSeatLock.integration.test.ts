@@ -161,6 +161,16 @@ describe('internal user seat lock', () => {
     expect(await check(2)).toMatchObject({ ok: false, code: 'LICENSE_LIMIT_REACHED' });
   });
 
+  it('UserService.update persists an active member email change through the API service path', async () => {
+    const tenant = await seedTenant({ limit: 3 });
+    await seedUser(tenant, 'before@example.test');
+    const userId = (await db('users').where({ tenant, email: 'before@example.test' }).first('user_id')).user_id;
+    await runWithTenant(tenant, () => runAsSystem('seat-lock-test', async () =>
+      new UserService().update(userId, { email: 'after@example.test' } as any, createSystemContext(tenant))));
+    expect(await db('users').where({ tenant, user_id: userId }).first('email')).toEqual({ email: 'after@example.test' });
+    expect(await activeInternal(tenant)).toBe(1);
+  });
+
   it('solo plan: second user gets SOLO_PLAN_LIMIT', async () => {
     const tenant = await seedTenant({ limit: 5, plan: 'solo' });
     await createUser(tenant, 'first@example.test');

@@ -427,14 +427,15 @@ export async function completeUserInvitationSetup(
             // Co-managed admission consumes the invitation token itself.
             const { user, coManaged } = await userService.createFromInvitation(userData, systemContext, trx, token);
             if (!coManaged) {
-              const invitations = tenantDb(trx, tenant).table('user_invitations');
-              const acceptedInvitation = await invitations.where({ token, used_at: null }).forUpdate()
+              const acceptedInvitation = await tenantDb(trx, tenant).table('user_invitations')
+                .where({ token, used_at: null }).forUpdate()
                 .first('invitation_id', 'email_normalized');
               if (!acceptedInvitation) throw new UserInvitationError('Invitation already used', 'INVALID_OR_EXPIRED_TOKEN');
-              await invitations.where({ email_normalized: acceptedInvitation.email_normalized, used_at: null })
+              await tenantDb(trx, tenant).table('user_invitations')
+                .where({ email_normalized: acceptedInvitation.email_normalized, used_at: null })
                 .whereNull('invited_user_id')
                 .update({ invited_user_id: user.user_id });
-              const consumed = await invitations
+              const consumed = await tenantDb(trx, tenant).table('user_invitations')
                 .where({ token, used_at: null })
                 .update({ used_at: trx.fn.now() });
               if (consumed !== 1) throw new UserInvitationError('Invitation already used', 'INVALID_OR_EXPIRED_TOKEN');

@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest';
 import { createHash, randomUUID } from 'node:crypto';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
-import { assertCoManagedSeatAdmission, assertCoManagedSeatCapacity, getCoManagedEntitlementState, lockCoManagedSeatScope } from '@alga-psa/licensing';
+import { assertCoManagedSeatAdmission, assertCoManagedSeatCapacity, countCoManagedCommittedSeats, getCoManagedEntitlementState, lockCoManagedSeatScope } from '@alga-psa/licensing';
 import { acceptCoManagedRelationship, getCoManagedAcceptanceState } from '../../../../../../packages/co-managed/src/acceptance';
 import { prepareCoManagedProvisioning, runCoManagedProvisioningStep, recordCoManagedProvisioningFailure, requestCoManagedProvisioningCleanup,
   type CoManagedProvisioningOperation } from '../../../../../../packages/co-managed/src/provisioning';
@@ -70,13 +70,22 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       db.on('query', record);
       try {
         delete process.env.FORCE_CAPABILITIES;
-        expect((await invite()).success).toBe(true);
+        const acceptedByAction = await invite();
+        expect(acceptedByAction.success).toBe(true);
         const ordinary = [...captured];
         captured.length = 0;
         process.env.FORCE_CAPABILITIES = 'co-managed:off';
         expect((await invite()).success).toBe(true);
         expect(captured.length).toBe(ordinary.length);
         expect([...ordinary, ...captured].some(sql => /co_manag/i.test(sql))).toBe(false);
+        const createdInvitation = await sponsor.table('user_invitations').where({ invitation_id: acceptedByAction.invitationId }).first();
+        const { completeUserInvitationSetup } = await import('../../../../../../packages/users/src/actions/user-actions/userInvitationActions');
+        const accepted = await completeUserInvitationSetup(createdInvitation.token, 'ValidPassword!2026');
+        expect(accepted).toMatchObject({ success: true });
+        const stored = await sponsor.table('user_invitations').where({ invitation_id: createdInvitation.invitation_id }).first();
+        expect(stored.used_at).not.toBeNull();
+        expect(stored.invited_user_id).toBe(accepted.userId);
+        expect(await sponsor.table('users').where({ user_id: accepted.userId })).toHaveLength(1);
       } finally {
         db.removeListener('query', record);
         appliance.check.mockReset();
@@ -120,6 +129,11 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       await bootstrapCoManagedCustomer(input(operation));
       const customer = tenantDb(db, operation.customer_tenant);
       const invitation = await customer.table('user_invitations').first();
+      const duplicateToken = randomUUID();
+      await customer.table('user_invitations').insert({ tenant: operation.customer_tenant,
+        email: invitation.email, email_normalized: invitation.email_normalized, invited_user_id: null,
+        first_name: 'Duplicate', last_name: 'Reservation', token: duplicateToken,
+        expires_at: new Date(Date.now() + 3600000) });
       const { completeUserInvitationSetup, sendUserInvitation, verifyUserInvitationToken } = await import('../../../../../../packages/users/src/actions/user-actions/userInvitationActions');
       const expiredToken = randomUUID();
       const expiredEmail = `${randomUUID()}@example.test`;
@@ -148,7 +162,13 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       const result = await completeUserInvitationSetup(invitation.token, 'ValidPassword!2026');
       expect(result).toMatchObject({ success: true });
       expect(await customer.table('users').where({ email: invitation.email })).toHaveLength(1);
-      expect((await customer.table('user_invitations').first()).used_at).not.toBeNull();
+      const consumed = await customer.table('user_invitations').where({ token: invitation.token }).first();
+      const duplicate = await customer.table('user_invitations').where({ token: duplicateToken }).first();
+      expect(consumed.used_at).not.toBeNull();
+      expect(consumed.invited_user_id).toBe(result.userId);
+      expect(duplicate.used_at).toBeNull();
+      expect(duplicate.invited_user_id).toBe(result.userId);
+      expect(await countCoManagedCommittedSeats(db, operation.customer_tenant)).toBe(1);
       expect(await customer.table('user_roles').where('user_id', result.userId)).toHaveLength(1);
       expect((await completeUserInvitationSetup(invitation.token, 'ValidPassword!2026')).success).toBe(false);
       const actor = { tenant: operation.customer_tenant, userId: result.userId! };
@@ -170,6 +190,13 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       expect(await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, actor.tenant)).toMatchObject({ user_id: actor.userId });
       expect(await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey)).toMatchObject({ user_id: actor.userId });
       expect(await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, operation.tenant)).toBeNull();
+      const committedBeforeEmailChange = await countCoManagedCommittedSeats(db, actor.tenant);
+      actorState.user = { tenant: actor.tenant, user_id: actor.userId, user_type: 'internal', username: invitation.email };
+      const { updateUser } = await import('../../../../../../packages/users/src/actions/user-actions/userActions');
+      const actionEmail = `action-${randomUUID()}@example.test`;
+      expect(await runWithTenant(actor.tenant, () => updateUser(actor.userId, { email: actionEmail })))
+        .toMatchObject({ success: true });
+      expect(await countCoManagedCommittedSeats(db, actor.tenant)).toBe(committedBeforeEmailChange);
       // Exercise the actual RBAC reader against the role assigned by signup.
       // The harness mocks the action facade's permission helper, so do not use it here.
       const { hasPermission } = await import('../../../../../../packages/auth/src/lib/rbac');

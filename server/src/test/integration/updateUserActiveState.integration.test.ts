@@ -90,6 +90,14 @@ it('still deactivates and reactivates with a real boolean', async () => {
   expect(await storedActiveState()).toBe(false);
 });
 
+it('updates an active internal user email through the action and persists the identity change', async () => {
+  await seedUser(false);
+  const nextEmail = `renamed-${randomUUID()}@example.test`;
+  await expect(updateUser(context.userId, { email: nextEmail })).resolves.toMatchObject({ success: true });
+  expect(await db('users').where({ tenant: context.tenant, user_id: context.userId }).first('email'))
+    .toEqual({ email: nextEmail });
+});
+
 it('stores no user without an active state', async () => {
   await seedUser(false);
   await expect(db('users').where({ tenant: context.tenant, user_id: context.userId }).update({ is_inactive: null }))

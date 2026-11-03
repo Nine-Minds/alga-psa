@@ -267,11 +267,11 @@ export class UserService extends BaseService<IUser> {
       if (!admission.invitation || admission.invitation.role_id !== data.role_ids?.[0]) {
         throw new Error('Invalid or changed invitation');
       }
-      const invitations = tenantDb(trx, context.tenant).table('user_invitations');
-      await invitations.where({ email_normalized: admission.invitation.email_normalized, used_at: null })
+      await tenantDb(trx, context.tenant).table('user_invitations')
+        .where({ email_normalized: admission.invitation.email_normalized, used_at: null })
         .whereNull('invited_user_id')
         .update({ invited_user_id: user.user_id });
-      const updated = await invitations
+      const updated = await tenantDb(trx, context.tenant).table('user_invitations')
         .where({ invitation_id: admission.invitation.invitation_id, token, used_at: null }).update({ used_at: trx.fn.now() });
       if (updated !== 1) throw new Error('Invitation already consumed');
     }
