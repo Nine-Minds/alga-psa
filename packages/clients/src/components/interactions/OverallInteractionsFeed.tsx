@@ -598,28 +598,37 @@ export default function OverallInteractionsFeed({
       {loadError ? <p className="m-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">{loadError}</p> : null}
       {isLoading ? (
         <p className="p-6 text-sm text-[rgb(var(--color-text-500))]" id="overall-interactions-loading">{t('interactions.overall.loading', { defaultValue: 'Loading interactions…' })}</p>
-      ) : tableData.length === 0 ? (
-        <p className="p-6 text-sm text-[rgb(var(--color-text-500))]" id="overall-interactions-empty">{t('interactions.overall.empty', { defaultValue: 'No interactions match these filters.' })}</p>
       ) : (
-        <DataTable
-          id="overall-interactions-table"
-          data={tableData}
-          columns={columns}
-          pagination
-          currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          pageSize={pageSize}
-          totalItems={total}
-          totalItemsExact={totalExact}
-          hasMorePages={hasMore}
-          onItemsPerPageChange={(nextPageSize) => {
-            setPageSize(nextPageSize);
-            setCurrentPage(1);
-            cursorsByPageRef.current = {};
-          }}
-          rowClassName={() => 'cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus-within:outline-none hover:!bg-table-hover'}
-          onRowClick={handleInteractionClick}
-        />
+        <>
+          {tableData.length === 0 ? (
+            <p className="p-6 text-sm text-[rgb(var(--color-text-500))]" id="overall-interactions-empty">
+              {hasMore
+                ? t('interactions.overall.incompleteEmpty', { defaultValue: 'More interactions remain to search.' })
+                : t('interactions.overall.empty', { defaultValue: 'No interactions match these filters.' })}
+            </p>
+          ) : null}
+          {(tableData.length > 0 || hasMore || currentPage > 1) ? (
+            <DataTable
+              id="overall-interactions-table"
+              data={tableData}
+              columns={columns}
+              pagination
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              totalItems={total}
+              totalItemsExact={totalExact}
+              hasMorePages={hasMore}
+              onItemsPerPageChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setCurrentPage(1);
+                cursorsByPageRef.current = {};
+              }}
+              rowClassName={() => 'cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus-within:outline-none hover:!bg-table-hover'}
+              onRowClick={handleInteractionClick}
+            />
+          ) : null}
+        </>
       )}
 
       <QuickAddContact
