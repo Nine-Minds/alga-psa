@@ -22,6 +22,8 @@ const ALLOWED_PREFIXES = ['ee/', 'packages/ee/'];
 const ALLOWED_FILES = new Set<string>([
   // This guard itself (contains the patterns).
   'server/src/test/unit/credentialsEditionBoundary.contract.test.ts',
+  // Portable vault coverage intentionally exercises EE-only encryption and export modules.
+  'server/src/test/unit/product/coManagedPortableVault.test.ts',
 
   // CE no-op placeholders for migrations whose real files live in ee/server/migrations.
   'server/migrations/20260811100000_create_credentials_tables.cjs',
