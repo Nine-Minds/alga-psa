@@ -169,7 +169,7 @@ export async function matchingRuleTemplateIds(
       // Predicate literals are string/number/boolean/null values and identifier
       // bindings are strings. Narrow the compiler's opaque binding type before
       // passing it to Knex; keep every value parameterized.
-      const bindings: Knex.RawBinding[] = fragment.bindings.map((binding) => {
+      const bindings: Array<string | number | boolean | null> = fragment.bindings.map((binding) => {
         if (binding === null || typeof binding === 'string' || typeof binding === 'number' || typeof binding === 'boolean') {
           return binding;
         }
