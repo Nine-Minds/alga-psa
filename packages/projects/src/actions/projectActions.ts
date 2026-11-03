@@ -494,8 +494,8 @@ export const loadProjectListItemsByIds = withAuth(async (
 
     return withTransaction(knex, async (trx: Knex.Transaction) => {
         const rows = await ProjectModel.getByIdsRecords(trx, tenant, requestedIds);
-        const projected = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);
-        const authorized = await ProjectModel.enrichDisplayData(trx, tenant, projected);
+        const authorize = await createProjectReadAuthorizer(trx, tenant, user as IUserWithRoles);
+        const authorized = await authorizeProjectRecordsForDisplay(rows, authorize, (projected) => ProjectModel.enrichDisplayData(trx, tenant, projected));
         const byId = new Map(authorized.map((project) => [project.project_id, project] as const));
         const ordered = requestedIds
             .map((projectId) => byId.get(projectId))
