@@ -456,6 +456,7 @@ export default defineConfig({
       { find: '@product/chat/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-chat-entry.ts') },
       { find: '@product/billing/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-billing-entry.tsx') },
       { find: '@product/mcp/entry', replacement: path.resolve(__dirname, '../packages/product-mcp/oss/entry.ts') },
+      { find: '@product/service-principals/entry', replacement: path.resolve(__dirname, '../packages/product-service-principals/oss/entry.ts') },
       { find: 'pdf-lib', replacement: 'empty-module' },
     ],
   },
