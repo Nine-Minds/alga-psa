@@ -4,7 +4,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { configureL3cDbEnv, connectL3cDb, cleanupL3cTenants, seedL3cProject } from './coManagedL3cFixture';
 import { seedL4cWorld, type L4cWorld } from './coManagedTaskDisclosureCases';
 
@@ -50,12 +50,20 @@ export function registerCoManagedRequesterTaskCases() {
       }));
       configureL3cDbEnv();
       db = await connectL3cDb();
+    }, 180_000);
+    // Vitest shuffles cases. Give every case its own tenant world so comments,
+    // relationship references, roles, and grants cannot become input to a sibling.
+    beforeEach(async () => {
       w = await seedL4cWorld(db);
       await db('projects').where({ tenant: w.world.customer, project_id: w.project.projectId }).update({ client_portal_config: JSON.stringify({ show_tasks: true }) });
       portal = await addPortalUser(db, w);
     }, 180_000);
-    afterAll(async () => {
+    afterEach(async () => {
       await cleanupL3cTenants(w?.world.tenants ?? []);
+      w = undefined as unknown as L4cWorld;
+      portal = undefined as unknown as Portal;
+    });
+    afterAll(async () => {
       await db?.destroy().catch(() => undefined);
     });
 
@@ -78,12 +86,15 @@ export function registerCoManagedRequesterTaskCases() {
       for (const audience of ['requester', 'shared_it', 'organization_private'] as const) {
         await mutateCoManagedProjectTaskComment(db, w.techActor, w.resource, { operationId: randomUUID(), kind: 'create', audience, ...body(`${audience}-${marker}`) } as any);
       }
+      const ownComment = await (await requester()).createRequesterTaskComment(db, actorOf(portal), target(), {
+        operationId: randomUUID(), text: `requester-own-${marker}`,
+      });
       const { items, canWrite } = await getRequesterTaskConversation(db, actorOf(portal), target());
       const notes = items.map(item => item.note ?? '');
       expect(canWrite).toBe(true);
       expect(notes.some(n => n.includes(`requester-${marker}`))).toBe(true);
       expect(notes.some(n => n.includes(`shared_it-${marker}`) || n.includes(`organization_private-${marker}`))).toBe(false);
-      const own = items.find(item => item.authorName === 'Pat Requester');
+      const own = items.find(item => item.commentId === ownComment.commentId);
       expect(own).toMatchObject({ authorKind: 'contact', isOwn: true });
       expect(items.find(item => (item.note ?? '').includes(`requester-${marker}`))).toMatchObject({ authorKind: 'user', isOwn: false });
     });
