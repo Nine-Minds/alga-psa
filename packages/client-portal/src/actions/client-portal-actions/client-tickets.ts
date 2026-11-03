@@ -59,6 +59,7 @@ import { resolveAssetBillingProfileId } from '@shared/models/assetBillingProfile
 import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { coManagedRefusalMessageKey, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
+import { projectClientTicket } from './clientTicketProjection';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),
@@ -248,7 +249,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       scopedDb.tenantJoin(additionalAgentsSubquery, 'users as uu', 'tr2.additional_user_id', 'uu.user_id');
       additionalAgentsSubquery
         .whereRaw('tr2.ticket_id = t.ticket_id')
-        .select(trx.raw("COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json)"))
+        .select(trx.raw("COALESCE(json_agg(json_build_object('name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json)"))
         .as('additional_agents');
 
       let query = scopedDb.table('tickets as t');
@@ -271,17 +272,12 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
         't.status_id',
         't.category_id',
         't.subcategory_id',
-        't.entered_by',
-        't.updated_by',
-        't.closed_by',
-        't.assigned_to',
         't.entered_at',
         't.updated_at',
         't.closed_at',
         't.due_date',
         't.attributes',
         't.priority_id',
-        't.tenant',
         't.response_state',
         's.name as status_name',
         'p.priority_name',
@@ -319,12 +315,7 @@ export const getClientTickets = withAuth(async (user, { tenant }, status: string
       return tickets;
     }) as any[];
 
-    return result.map((ticket: any): ITicketListItem => ({
-      ...ticket,
-      entered_at: ticket.entered_at instanceof Date ? ticket.entered_at.toISOString() : ticket.entered_at,
-      updated_at: ticket.updated_at instanceof Date ? ticket.updated_at.toISOString() : ticket.updated_at,
-      closed_at: ticket.closed_at instanceof Date ? ticket.closed_at.toISOString() : ticket.closed_at,
-    }));
+    return result.map((ticket: any) => projectClientTicket(ticket));
   } catch (error) {
     return expectedOrThrow(error, 'Failed to fetch client tickets:');
   }
@@ -367,7 +358,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       scopedDb.tenantJoin(ticketAdditionalAgentsSubquery, 'users as uu', 'tr2.additional_user_id', 'uu.user_id');
       ticketAdditionalAgentsSubquery
         .whereRaw('tr2.ticket_id = t.ticket_id')
-        .select(trx.raw("COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json)"));
+        .select(trx.raw("COALESCE(json_agg(json_build_object('name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json)"));
 
       const ticketQuery = scopedDb.table('tickets as t');
       scopedDb.tenantJoin(ticketQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
@@ -376,7 +367,11 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       scopedDb.tenantJoin(ticketQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id', { type: 'left' });
       ticketQuery
         .select(
-          't.*',
+          't.ticket_id', 't.ticket_number', 't.title', 't.url', 't.board_id', 't.client_id',
+          't.contact_name_id', 't.status_id', 't.category_id', 't.subcategory_id',
+          't.entered_at', 't.updated_at', 't.closed_at', 't.due_date', 't.response_state',
+          't.priority_id', 't.assigned_to', 't.assigned_team_id', 't.attributes',
+          't.is_closed', 't.email_metadata', 't.source', 't.ticket_origin', 't.origin_link_system',
           's.name as status_name',
           'p.priority_name',
           'p.color as priority_color',
@@ -614,7 +609,10 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       }
     }), {} as Record<string, { contact_id: string; full_name: string; email?: string; avatarUrl: string | null }>);
 
-    const { entered_by_user_type, ...ticketWithoutCreatorType } = result.ticket as any;
+    const ticketRow = result.ticket as any;
+    const safeTicket = projectClientTicket(ticketRow, true);
+    safeTicket.ticket_origin = getTicketOrigin(ticketRow);
+    safeTicket.has_original_email = Boolean(ticketRow.email_metadata?.messageId || ticketRow.email_metadata?.originalEmailId);
 
     // Every portal comment goes through the shared client projection: deleted rows become an
     // allowlisted tombstone, all others are redacted (scheduling columns, Bcc, metadata.email).
@@ -639,13 +637,9 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
     });
 
     return {
-      ...ticketWithoutCreatorType,
+      ...safeTicket,
       /** False for a ticket visible only through a shared workspace. */
       can_interact: result.canInteract,
-      ticket_origin: getTicketOrigin(result.ticket as any),
-      entered_at: result.ticket.entered_at instanceof Date ? result.ticket.entered_at.toISOString() : result.ticket.entered_at,
-      updated_at: result.ticket.updated_at instanceof Date ? result.ticket.updated_at.toISOString() : result.ticket.updated_at,
-      closed_at: result.ticket.closed_at instanceof Date ? result.ticket.closed_at.toISOString() : result.ticket.closed_at,
       conversations: conversationsWithProvenance,
       documents: result.documents,
       // Linked assets joined from asset_associations; the type is broadened on
