@@ -143,6 +143,10 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
     res.json(core.getCustomer(String(req.params.id)));
   }));
 
+  v1.delete('/customers/:id', route((req, res) => {
+    res.json(core.deleteCustomer(String(req.params.id)));
+  }));
+
   v1.post('/checkout/sessions', route((req, res) => {
     checkFault(core, 'checkout.sessions.create');
     const body = (req.body ?? {}) as Record<string, any>;

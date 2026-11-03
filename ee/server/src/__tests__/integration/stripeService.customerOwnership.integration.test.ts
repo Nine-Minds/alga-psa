@@ -9,12 +9,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import knexFactory, { type Knex } from 'knex';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
+import Stripe from 'stripe';
 
 const dbHolder = vi.hoisted(() => ({ db: null as any }));
 vi.mock('@/lib/db/db', () => ({ getConnection: async () => dbHolder.db }));
 
 import { StripeService } from '../../lib/stripe/StripeService';
 import { StripeOwnershipError } from '../../lib/stripe/stripeCustomerOwnership';
+import { stripeApiOverride } from '../../lib/stripe/stripeApiOverride';
 import { tenantDeletionOrder } from '../../../../../packages/db/src/lib/tenantTableManifest';
 
 const require_ = createRequire(import.meta.url);
@@ -32,14 +34,14 @@ const SHARED_EMAIL = 'billing@shared.example';
 let db: Knex;
 
 async function removeBindingEnforcement({ dropBindings = true } = {}) {
-  await db.raw('ALTER TABLE stripe_customers DROP CONSTRAINT IF EXISTS stripe_customers_binding_owner_fk');
-  if (dropBindings) await db.raw('DROP TABLE IF EXISTS stripe_customer_bindings');
+  await db.raw(`ALTER TABLE ${SCHEMA}.stripe_customers DROP CONSTRAINT IF EXISTS stripe_customers_binding_owner_fk`);
+  if (dropBindings) await db.raw(`DROP TABLE IF EXISTS ${SCHEMA}.stripe_customer_bindings`);
 }
 
 async function restoreOwnerConstraint() {
-  await db.raw(`ALTER TABLE stripe_customers ADD CONSTRAINT stripe_customers_binding_owner_fk
+  await db.raw(`ALTER TABLE ${SCHEMA}.stripe_customers ADD CONSTRAINT stripe_customers_binding_owner_fk
     FOREIGN KEY (tenant, stripe_customer_external_id)
-    REFERENCES stripe_customer_bindings (tenant, stripe_customer_external_id) NOT VALID`);
+    REFERENCES ${SCHEMA}.stripe_customer_bindings (tenant, stripe_customer_external_id) NOT VALID`);
 }
 
 function makeTestConnection(applicationName = 'stripe_binding_test') {
@@ -98,6 +100,11 @@ beforeAll(async () => {
   });
   dbHolder.db = db;
   await db.raw(`CREATE SCHEMA ${SCHEMA}`);
+  await db.raw(`SET search_path TO ${SCHEMA}, public`);
+  const publicCollision = await db.raw(`SELECT to_regclass('public.stripe_customers') IS NOT NULL OR to_regclass('public.stripe_customer_bindings') IS NOT NULL AS present`);
+  if (publicCollision.rows[0].present) {
+    throw new Error('Stripe ownership integration test requires a dedicated database with no public Stripe tables; refusing search_path fallback.');
+  }
   await db.raw(`CREATE TABLE tenants (tenant uuid PRIMARY KEY, email text)`);
   await db.raw(`
     CREATE TABLE stripe_customers (
@@ -116,7 +123,12 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await db.raw(`DROP SCHEMA ${SCHEMA} CASCADE`);
+  await db.raw(`DROP TABLE IF EXISTS ${SCHEMA}.stripe_customers`);
+  await db.raw(`DROP TABLE IF EXISTS ${SCHEMA}.stripe_customer_bindings`);
+  await db.raw(`DROP TABLE IF EXISTS ${SCHEMA}.stripe_subscriptions`);
+  await db.raw(`DROP TABLE IF EXISTS ${SCHEMA}.audit_logs`);
+  await db.raw(`DROP TABLE IF EXISTS ${SCHEMA}.tenants`);
+  await db.raw(`DROP SCHEMA ${SCHEMA}`);
   await db.destroy();
 });
 
@@ -358,9 +370,12 @@ describe('migration: global uniqueness of stripe_customer_external_id', () => {
       // move that mapping onto a customer owned by the other tenant.
       await writer('stripe_customer_bindings').insert({ stripe_customer_external_id: 'cus_matching', tenant: TENANT_A });
       await writer('stripe_customers').insert({ tenant: TENANT_A, stripe_customer_external_id: 'cus_matching', email: 'matching' });
-      await expect(writer('stripe_customers').where({ tenant: TENANT_B }).update({ stripe_customer_external_id: 'cus_rollout' }))
+      await writer('stripe_customer_bindings').insert({ stripe_customer_external_id: 'cus_tenant_b_original', tenant: TENANT_B });
+      await writer('stripe_customers').insert({ tenant: TENANT_B, stripe_customer_external_id: 'cus_tenant_b_original', email: 'tenant-b' });
+      await expect(writer('stripe_customers').where({ tenant: TENANT_B, stripe_customer_external_id: 'cus_tenant_b_original' }).update({ stripe_customer_external_id: 'cus_rollout' }))
         .rejects.toThrow(/foreign key|violates foreign key/i);
-      expect(await db('stripe_customers').where({ tenant: TENANT_B })).toHaveLength(0);
+      expect(await db('stripe_customers').where({ tenant: TENANT_B }).select('stripe_customer_external_id'))
+        .toEqual([{ stripe_customer_external_id: 'cus_tenant_b_original' }]);
     } finally {
       if (writerTrx && !writerTrx.isCompleted()) await writerTrx.rollback().catch(() => undefined);
       await blocker.destroy(); await migrator.destroy(); await writer.destroy();
@@ -411,6 +426,48 @@ describe('getOrImportCustomer ownership proof', () => {
     await expect(service.getOrImportCustomer(TENANT_A)).rejects.toMatchObject({ code: 'not_owned' });
     expect(service.stripe.subscriptions.list).not.toHaveBeenCalled();
     expect(service.importSubscription).not.toHaveBeenCalled();
+  });
+
+  it.skipIf(!process.env.STRIPE_API_BASE_URL)('validates the existing-customer fast path against the Stripe simulator', async () => {
+    const secretKey = process.env.STRIPE_SECRET_KEY || 'sk_test_algasim';
+    const endpoint = process.env.STRIPE_API_BASE_URL!;
+    const stripe = new Stripe(secretKey, {
+      apiVersion: '2024-12-18.acacia' as any,
+      ...stripeApiOverride(secretKey, { ...process.env, STRIPE_API_BASE_URL: endpoint }),
+    });
+    const service = new StripeService() as any;
+    service.config = { masterTenantId: MASTER };
+    service.ensureInitialized = async () => undefined;
+    service.stripe = stripe;
+    service.importSubscription = vi.fn(async () => undefined);
+    const mismatchTenant = randomUUID();
+    const deletedTenant = randomUUID();
+    const incompatibleTenant = randomUUID();
+
+    const matching = await stripe.customers.create({ email: 'match@simulator.test', metadata: { tenant_id: TENANT_A } });
+    await db('stripe_customer_bindings').insert({ stripe_customer_external_id: matching.id, tenant: TENANT_A });
+    await db('stripe_customers').insert({ tenant: TENANT_A, stripe_customer_external_id: matching.id, email: 'match@simulator.test' });
+    await expect(service.getOrImportCustomer(TENANT_A)).resolves.toMatchObject({ stripe_customer_external_id: matching.id });
+
+    const mismatched = await stripe.customers.create({ email: 'mismatch@simulator.test', metadata: { tenant_id: TENANT_B } });
+    await db('stripe_customer_bindings').insert({ stripe_customer_external_id: mismatched.id, tenant: mismatchTenant });
+    await db('stripe_customers').insert({ tenant: mismatchTenant, stripe_customer_external_id: mismatched.id, email: 'mismatch@simulator.test' });
+    await expect(service.getOrImportCustomer(mismatchTenant)).rejects.toMatchObject({ code: 'not_owned' });
+
+    const deleted = await stripe.customers.create({ email: 'deleted@simulator.test', metadata: { tenant_id: TENANT_A } });
+    await db('stripe_customer_bindings').insert({ stripe_customer_external_id: deleted.id, tenant: deletedTenant });
+    await db('stripe_customers').insert({ tenant: deletedTenant, stripe_customer_external_id: deleted.id, email: 'deleted@simulator.test' });
+    await stripe.customers.del(deleted.id);
+    await expect(service.getOrImportCustomer(deletedTenant)).rejects.toMatchObject({ code: 'not_owned' });
+
+    const incompatible = await stripe.customers.create({ email: 'binding@simulator.test', metadata: { tenant_id: TENANT_A } });
+    await db('stripe_customer_bindings').insert({ stripe_customer_external_id: incompatible.id, tenant: incompatibleTenant });
+    await db('stripe_customers').insert({ tenant: incompatibleTenant, stripe_customer_external_id: incompatible.id, email: 'binding@simulator.test' });
+    await removeBindingEnforcement({ dropBindings: false });
+    await db('stripe_customer_bindings').where({ stripe_customer_external_id: incompatible.id }).update({ tenant: TENANT_B });
+    await expect(service.getOrImportCustomer(incompatibleTenant)).rejects.toMatchObject({ code: 'already_bound' });
+    await db('stripe_customer_bindings').where({ stripe_customer_external_id: incompatible.id }).update({ tenant: incompatibleTenant });
+    await restoreOwnerConstraint();
   });
 
   it('two tenants share an email: tenant A imports only the customer whose metadata names A', async () => {

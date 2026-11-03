@@ -286,7 +286,7 @@ export class StripeEmulatorCore implements EmulatorCore {
 
   listCustomers(email?: string): StripeList<StripeCustomer> {
     const data = [...this.customers.values()].filter(
-      (customer) => !email || customer.email === email,
+      (customer) => !customer.deleted && (!email || customer.email === email),
     );
     return { object: 'list', url: '/v1/customers', has_more: false, data };
   }
@@ -311,6 +311,12 @@ export class StripeEmulatorCore implements EmulatorCore {
     if (!customer) {
       throw new StripeWireError(404, `No such customer: ${id}`);
     }
+    return customer;
+  }
+
+  deleteCustomer(id: string): StripeCustomer {
+    const customer = this.getCustomer(id);
+    customer.deleted = true;
     return customer;
   }
 

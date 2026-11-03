@@ -14,6 +14,41 @@ import { startRecording, emitStep } from '../../../../../scripts/review/hotpathR
 const enabled = process.env.HOTPATH_DB === '1';
 
 describe.skipIf(!enabled)('tenant deletion query budget', () => {
+  it('deletes Stripe mappings before bindings and preserves another tenant through the real deletion activity', async () => {
+    const { getAdminConnection } = await import('@alga-psa/db/admin.js');
+    const { deleteTenantData } = await import('../tenant-deletion-activities');
+    const admin = await getAdminConnection();
+    const target = randomUUID();
+    const other = randomUUID();
+    const targetCustomer = `cus_delete_${target}`;
+    const otherCustomer = `cus_keep_${other}`;
+    try {
+      await admin('tenants').insert([
+        { tenant: target, client_name: 'Stripe deletion target', email: `${target}@example.test` },
+        { tenant: other, client_name: 'Stripe deletion neighbor', email: `${other}@example.test` },
+      ]);
+      await admin('stripe_customer_bindings').insert([
+        { tenant: target, stripe_customer_external_id: targetCustomer },
+        { tenant: other, stripe_customer_external_id: otherCustomer },
+      ]);
+      await admin('stripe_customers').insert([
+        { tenant: target, stripe_customer_external_id: targetCustomer, email: `${target}@example.test` },
+        { tenant: other, stripe_customer_external_id: otherCustomer, email: `${other}@example.test` },
+      ]);
+
+      const result = await new MockActivityEnvironment().run(() => deleteTenantData(target, randomUUID()));
+      expect(result.success, JSON.stringify(result)).toBe(true);
+      expect(await admin('stripe_customers').where({ tenant: target })).toHaveLength(0);
+      expect(await admin('stripe_customer_bindings').where({ tenant: target })).toHaveLength(0);
+      expect(await admin('stripe_customers').where({ tenant: other }).select('stripe_customer_external_id'))
+        .toEqual([{ stripe_customer_external_id: otherCustomer }]);
+      expect(await admin('stripe_customer_bindings').where({ tenant: other }).select('stripe_customer_external_id'))
+        .toEqual([{ stripe_customer_external_id: otherCustomer }]);
+    } finally {
+      await admin.destroy();
+    }
+  }, 300_000);
+
   it('deleteTenantData on a fixture tenant records a stable statement list', async () => {
     const { getAdminConnection } = await import('@alga-psa/db/admin.js');
     const { deleteTenantData } = await import('../tenant-deletion-activities');

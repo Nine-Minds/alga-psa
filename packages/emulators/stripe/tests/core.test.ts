@@ -31,6 +31,15 @@ function seedSession(core: StripeEmulatorCore): string {
 
 describe('stripe emulator pure core', () => {
 
+  it('marks deleted customers for retrieval and omits them from customer searches', () => {
+    const { core } = makeCore();
+    const customer = core.createCustomer({ email: 'deleted@example.test', metadata: { tenant_id: 'tenant-a' } });
+
+    expect(core.deleteCustomer(customer.id)).toMatchObject({ id: customer.id, deleted: true });
+    expect(core.getCustomer(customer.id)).toMatchObject({ id: customer.id, deleted: true });
+    expect(core.listCustomers('deleted@example.test').data).toEqual([]);
+  });
+
   it('creates deterministic ids and computes totals from nested line items', () => {
     const { core } = makeCore();
     const session = core.createCheckoutSession(
