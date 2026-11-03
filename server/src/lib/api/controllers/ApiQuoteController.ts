@@ -117,7 +117,7 @@ export class ApiQuoteController extends ApiBaseController {
       throw new NotFoundError('Quote not found');
     }
 
-    const allowed = await authorizeApiResourceRead({
+    const { allowed } = await authorizeApiResourceRead({
       knex: resolvedKnex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
@@ -290,15 +290,15 @@ export class ApiQuoteController extends ApiBaseController {
                 apiRequest.context,
                 filters
               ),
-            authorizeRecord: (quote) =>
-              authorizeApiResourceRead({
+            authorizeRecord: async (quote) =>
+              (await authorizeApiResourceRead({
                 knex,
                 tenant: apiRequest.context.tenant,
                 user: apiRequest.context.user,
                 apiKeyId: apiRequest.context.apiKeyId,
                 resource: 'billing',
                 recordContext: this.buildQuoteRecordContext(quote),
-              }),
+              })).allowed,
             scanLimit: 100,
           });
 

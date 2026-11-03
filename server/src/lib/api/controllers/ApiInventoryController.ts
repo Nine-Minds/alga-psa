@@ -99,7 +99,7 @@ export class ApiInventoryController extends ApiBaseController {
       for (const asset of assets) {
         const recordContext = records.get(asset.asset_id);
         if (!recordContext) continue;
-        if (await authorizeApiResourceRead({ knex: trx, tenant, user, apiKeyId, resource: 'asset', recordContext })) {
+        if ((await authorizeApiResourceRead({ knex: trx, tenant, user, apiKeyId, resource: 'asset', recordContext })).allowed) {
           readable.push(asset);
         }
       }

@@ -20,7 +20,7 @@ const state = vi.hoisted(() => ({
 
 const authorizeReadMock = vi.hoisted(() =>
   vi.fn(async ({ resource, recordContext }: { resource: string; recordContext: { id: string } }) =>
-    state.readable.has(`${resource}:${recordContext.id}`)
+    ({ allowed: state.readable.has(`${resource}:${recordContext.id}`), redactedFields: [] })
   )
 );
 const getTicketProjectLinksMock = vi.hoisted(() => vi.fn(async () => state.links));

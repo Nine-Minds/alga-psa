@@ -61,7 +61,7 @@ export async function assertAssetRecordAccess(
     throw new NotFoundError(ASSET_NOT_FOUND_MESSAGE);
   }
 
-  const allowed = await authorizeApiResourceRead({
+  const { allowed } = await authorizeApiResourceRead({
     knex,
     tenant: context.tenant,
     user: context.user,

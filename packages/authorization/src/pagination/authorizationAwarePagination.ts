@@ -3,11 +3,18 @@ type PageResult<T> = {
   total: number;
 };
 
+type ReadDecision = boolean | { allowed: boolean; redactedFields: readonly string[] };
+
+function isAllowed(decision: ReadDecision): boolean {
+  return typeof decision === 'boolean' ? decision : decision.allowed;
+}
+
 export async function buildAuthorizationAwarePage<T>(input: {
   page: number;
   limit: number;
   fetchPage: (page: number, limit: number) => Promise<PageResult<T>>;
-  authorizeRecord: (record: T) => Promise<boolean>;
+  authorizeRecord: (record: T) => Promise<ReadDecision>;
+  projectRecord?: (record: T, redactedFields: readonly string[]) => T | null;
   scanLimit?: number;
 }): Promise<PageResult<T>> {
   const requestedPage = Number.isFinite(input.page) && input.page > 0 ? Math.floor(input.page) : 1;
@@ -29,15 +36,21 @@ export async function buildAuthorizationAwarePage<T>(input: {
       break;
     }
 
-    const allowedByRow = await Promise.all(pageResult.data.map((row) => input.authorizeRecord(row)));
+    const decisions = await Promise.all(pageResult.data.map((row) => input.authorizeRecord(row)));
 
     for (let index = 0; index < pageResult.data.length; index += 1) {
-      if (!allowedByRow[index]) {
+      const decision = decisions[index];
+      if (!isAllowed(decision)) {
         continue;
       }
 
+      const projected = input.projectRecord && typeof decision !== 'boolean'
+        ? input.projectRecord(pageResult.data[index], decision.redactedFields)
+        : pageResult.data[index];
+      if (projected === null) continue;
+
       if (authorizedTotal >= pageOffset && authorizedTotal < pageUpperBoundExclusive) {
-        authorizedRowsForPage.push(pageResult.data[index] as T);
+        authorizedRowsForPage.push(projected as T);
       }
       authorizedTotal += 1;
     }

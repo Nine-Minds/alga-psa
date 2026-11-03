@@ -102,7 +102,7 @@ export async function authorizeApiResourceRead(input: {
   apiKeyId?: string;
   resource: string;
   recordContext: AuthorizationRecord;
-}): Promise<boolean> {
+}): Promise<{ allowed: boolean; redactedFields: string[] }> {
   const kernel = await getAuthorizationKernel();
   const subject = buildAuthorizationPrincipalSubject(input.user, input.apiKeyId);
   subject.tenant = input.tenant;
@@ -114,5 +114,5 @@ export async function authorizeApiResourceRead(input: {
     record: input.recordContext,
   });
 
-  return decision.allowed;
+  return { allowed: decision.allowed, redactedFields: decision.redactedFields ?? [] };
 }

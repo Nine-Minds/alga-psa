@@ -57,7 +57,7 @@ vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
   authorizeApiResourceRead: vi.fn(async () => {
     state.calls.push('record-level');
-    return state.recordLevelAllowed;
+    return { allowed: state.recordLevelAllowed, redactedFields: [] };
   }),
 }));
 

@@ -152,7 +152,7 @@ export class ApiTicketController extends ApiBaseController {
     }
 
     const ticketRow = ticket as Record<string, any>;
-    const allowed = await authorizeApiResourceRead({
+    const { allowed } = await authorizeApiResourceRead({
       knex: resolvedKnex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
@@ -178,7 +178,7 @@ export class ApiTicketController extends ApiBaseController {
     }
 
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const allowedByRow = await Promise.all(
+    const decisions = await Promise.all(
       tickets.map((ticket) =>
         authorizeApiResourceRead({
           knex: resolvedKnex,
@@ -191,7 +191,7 @@ export class ApiTicketController extends ApiBaseController {
       )
     );
 
-    return tickets.filter((_, index) => allowedByRow[index]);
+    return tickets.filter((_, index) => decisions[index].allowed);
   }
 
   private async listAllAuthorizedTickets(
@@ -373,14 +373,14 @@ export class ApiTicketController extends ApiBaseController {
                 apiRequest.context
               ),
             authorizeRecord: async (ticket) => {
-              return authorizeApiResourceRead({
+              return (await authorizeApiResourceRead({
                 knex,
                 tenant: apiRequest.context.tenant,
                 user: apiRequest.context.user,
                 apiKeyId: apiRequest.context.apiKeyId,
                 resource: 'ticket',
                 recordContext: this.buildTicketRecordContext(ticket),
-              });
+              })).allowed;
             },
             scanLimit: 100,
           });

@@ -82,7 +82,7 @@ describe('api authorization kernel helper', () => {
       },
     });
 
-    expect(denied).toBe(false);
+    expect(denied).toEqual({ allowed: false, redactedFields: [] });
     expect(authorizeResourceMock).toHaveBeenCalledWith(
       expect.objectContaining({
         subject: expect.objectContaining({
@@ -95,7 +95,7 @@ describe('api authorization kernel helper', () => {
       })
     );
 
-    authorizeResourceMock.mockResolvedValueOnce({ allowed: true });
+    authorizeResourceMock.mockResolvedValueOnce({ allowed: true, redactedFields: ['description'] });
     const allowed = await authorizeApiResourceRead({
       knex: {} as any,
       tenant: 'tenant-1',
@@ -109,6 +109,6 @@ describe('api authorization kernel helper', () => {
       },
     });
 
-    expect(allowed).toBe(true);
+    expect(allowed).toEqual({ allowed: true, redactedFields: ['description'] });
   });
 });

@@ -33,6 +33,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import { authorizeApiResourceRead } from './authorizationKernel';
+import { projectRecord } from './projectRecord';
 import { buildProjectRecordContext, buildTicketRecordContext } from './recordContexts';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { tenantDb } from '@alga-psa/db';
@@ -90,7 +91,7 @@ export class ApiProjectController extends ApiBaseController {
       throw new NotFoundError('Project not found');
     }
 
-    const allowed = await authorizeApiResourceRead({
+    const decision = await authorizeApiResourceRead({
       knex: resolvedKnex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
@@ -99,11 +100,13 @@ export class ApiProjectController extends ApiBaseController {
       recordContext: this.buildProjectRecordContext(project as Record<string, any>),
     });
 
-    if (!allowed) {
+    if (!decision.allowed) {
       throw new ForbiddenError('Permission denied: Cannot read project');
     }
 
-    return project as Record<string, any>;
+    const projected = projectRecord(project as Record<string, any>, decision.redactedFields);
+    if (!projected) throw new NotFoundError('Project not found');
+    return projected;
   }
 
   // LEVERAGE: pattern ticket-record-context — thin wrapper over the shared builder; callers should import ./recordContexts directly
@@ -121,7 +124,7 @@ export class ApiProjectController extends ApiBaseController {
     }
 
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const allowedByRow = await Promise.all(
+    const decisions = await Promise.all(
       projects.map((project) =>
         authorizeApiResourceRead({
           knex: resolvedKnex,
@@ -134,7 +137,12 @@ export class ApiProjectController extends ApiBaseController {
       )
     );
 
-    return projects.filter((_, index) => allowedByRow[index]);
+    return projects.flatMap((project, index) => {
+      const decision = decisions[index];
+      if (!decision.allowed) return [];
+      const projected = projectRecord(project, decision.redactedFields);
+      return projected ? [projected as Record<string, any>] : [];
+    });
   }
 
   private async listAllAuthorizedProjects(
@@ -220,34 +228,46 @@ export class ApiProjectController extends ApiBaseController {
       .sort((left, right) => right.project_count - left.project_count)
       .slice(0, 10);
 
-    return {
+    const stats: Record<string, unknown> = {
       total_projects: projects.length,
-      active_projects: projects.filter((project) => statusNameById.get(project.status) === 'Active').length,
-      completed_projects: projects.filter((project) => statusNameById.get(project.status) === 'Completed').length,
-      on_hold_projects: projects.filter((project) => statusNameById.get(project.status) === 'On Hold').length,
-      cancelled_projects: projects.filter((project) => statusNameById.get(project.status) === 'Cancelled').length,
-      overdue_projects: projects.filter((project) => {
-        if (!project.end_date) {
-          return false;
-        }
+    };
+
+    if (projects.every((project) => Object.hasOwn(project, 'status') && Object.hasOwn(project, 'status_name'))) {
+      stats.active_projects = projects.filter((project) => statusNameById.get(project.status) === 'Active').length;
+      stats.completed_projects = projects.filter((project) => statusNameById.get(project.status) === 'Completed').length;
+      stats.on_hold_projects = projects.filter((project) => statusNameById.get(project.status) === 'On Hold').length;
+      stats.cancelled_projects = projects.filter((project) => statusNameById.get(project.status) === 'Cancelled').length;
+    }
+    if (projects.every((project) => Object.hasOwn(project, 'end_date') && Object.hasOwn(project, 'status') && Object.hasOwn(project, 'status_name'))) {
+      stats.overdue_projects = projects.filter((project) => {
+        if (!project.end_date) return false;
         return new Date(project.end_date) < new Date() && statusNameById.get(project.status) !== 'Completed';
-      }).length,
-      total_budgeted_hours: projects.reduce(
+      }).length;
+    }
+    if (projects.every((project) => Object.hasOwn(project, 'created_at'))) {
+      stats.projects_created_this_month = projects.filter(
+        (project) => project.created_at && new Date(project.created_at) >= monthStart,
+      ).length;
+    }
+    if (projects.every((project) => Object.hasOwn(project, 'updated_at') && Object.hasOwn(project, 'status') && Object.hasOwn(project, 'status_name'))) {
+      stats.projects_completed_this_month = projects.filter(
+        (project) => statusNameById.get(project.status) === 'Completed' && project.updated_at && new Date(project.updated_at) >= monthStart,
+      ).length;
+    }
+
+    if (projects.every((project) => Object.hasOwn(project, 'budgeted_hours'))) {
+      stats.total_budgeted_hours = projects.reduce(
         (sum, project) => sum + Number(project.budgeted_hours ?? 0),
         0,
-      ),
-      projects_created_this_month: projects.filter(
-        (project) => project.created_at && new Date(project.created_at) >= monthStart,
-      ).length,
-      projects_completed_this_month: projects.filter(
-        (project) =>
-          statusNameById.get(project.status) === 'Completed' &&
-          project.updated_at &&
-          new Date(project.updated_at) >= monthStart,
-      ).length,
-      projects_by_status: projectsByStatus,
-      top_clients_by_project_count: topClientsByProjectCount,
-    };
+      );
+    }
+    if (projects.every((project) => Object.hasOwn(project, 'status') && Object.hasOwn(project, 'status_name'))) {
+      stats.projects_by_status = projectsByStatus;
+    }
+    if (projects.every((project) => Object.hasOwn(project, 'client_id') && Object.hasOwn(project, 'client_name'))) {
+      stats.top_clients_by_project_count = topClientsByProjectCount;
+    }
+    return stats;
   }
 
   private convertProjectsToCsv(projects: Record<string, any>[]): string {
@@ -373,6 +393,10 @@ export class ApiProjectController extends ApiBaseController {
                 resource: 'project',
                 recordContext: this.buildProjectRecordContext(project),
               }),
+            projectRecord: (project, redactedFields) => {
+              const projected = projectRecord(project, redactedFields);
+              return projected as Record<string, any> | null;
+            },
             scanLimit: 100,
           });
 
@@ -779,15 +803,15 @@ export class ApiProjectController extends ApiBaseController {
                 { page: sourcePage, limit: sourceLimit },
                 apiRequest.context!
               ),
-            authorizeRecord: (ticket) =>
-              authorizeApiResourceRead({
+            authorizeRecord: async (ticket) =>
+              (await authorizeApiResourceRead({
                 knex,
                 tenant: tenantId!,
                 user,
                 apiKeyId: keyRecord.api_key_id,
                 resource: 'ticket',
                 recordContext: this.buildTicketRecordContext(ticket),
-              }),
+              })).allowed,
             scanLimit: 100,
           });
           
@@ -833,7 +857,7 @@ export class ApiProjectController extends ApiBaseController {
           if (!ticket) {
             throw new NotFoundError('Ticket not found');
           }
-          const ticketAllowed = await authorizeApiResourceRead({
+          const { allowed: ticketAllowed } = await authorizeApiResourceRead({
             knex,
             tenant,
             user,
