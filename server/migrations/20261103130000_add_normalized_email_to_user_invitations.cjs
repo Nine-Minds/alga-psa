@@ -23,23 +23,36 @@ exports.up = async function up(knex) {
       .update({ email_normalized: normalizedEmail });
   }
 
+  const catalog = await knex.raw(
+    "SELECT to_regclass('pg_dist_partition') IS NOT NULL AS has_citus_catalog"
+  );
+  const hasCitusCatalog = Boolean(catalog.rows?.[0]?.has_citus_catalog);
   let distributed = false;
-  try {
+  if (hasCitusCatalog) {
     const result = await knex.raw(
       "SELECT EXISTS (SELECT 1 FROM pg_dist_partition WHERE logicalrelid = 'user_invitations'::regclass) AS distributed"
     );
     distributed = Boolean(result.rows?.[0]?.distributed);
-  } catch {
-    // Plain PostgreSQL has no pg_dist_partition catalog.
   }
 
   if (distributed) {
-    await knex.raw(`
+    const shardResult = await knex.raw(`
       SELECT * FROM run_command_on_shards(
         'user_invitations',
         $$ALTER TABLE %s ALTER COLUMN email_normalized SET NOT NULL$$
       )
     `);
+    const shardResults = shardResult.rows ?? [];
+    const failedShards = shardResults.filter((row) => row.success !== true);
+    if (shardResults.length === 0 || failedShards.length > 0) {
+      const failures = failedShards
+        .map((row) => `${row.nodename ?? 'unknown'}:${row.nodeport ?? 'unknown'} ${row.result ?? 'unsuccessful'}`)
+        .join('; ');
+      throw new Error(
+        `Could not enforce user_invitations.email_normalized NOT NULL on all Citus shards` +
+          (failures ? `: ${failures}` : ': run_command_on_shards returned no shard results')
+      );
+    }
     await knex.raw(`
       UPDATE pg_attribute
       SET attnotnull = true
@@ -59,10 +72,8 @@ exports.up = async function up(knex) {
 exports.config = { transaction: false };
 
 exports.down = async function down(knex) {
-  await knex.raw('DROP INDEX IF EXISTS idx_user_invitations_email_normalized');
-  if (await knex.schema.hasColumn('user_invitations', 'email_normalized')) {
-    await knex.schema.alterTable('user_invitations', (table) => {
-      table.dropColumn('email_normalized');
-    });
-  }
+  // Preserve the additive key on rollback: it may have existed before this
+  // migration was recorded in a drifted environment, and its contents are
+  // useful canonical data. Removing it cannot be made safe from this ledger.
+  void knex;
 };
