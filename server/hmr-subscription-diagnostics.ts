@@ -61,7 +61,13 @@ function instrumentSubscription<T>(
       return this;
     },
     async next(): Promise<IteratorResult<T>> {
-      const result = await subscription.next();
+      let result: IteratorResult<T>;
+      try {
+        result = await subscription.next();
+      } catch (error) {
+        record({ phase: 'rejected', sequence: sequence++, error: String(error) });
+        throw error;
+      }
       record({
         phase: result.done ? 'complete' : initial ? 'initial' : 'stream',
         sequence: sequence++,
@@ -97,6 +103,19 @@ export async function installTurbopackHmrSubscriptionDiagnostics(
   if (instrumentedBindings.has(bindings)) return;
   instrumentedBindings.add(bindings);
   const createProject = bindings.turbo.createProject;
+  let subscriptionId = 0;
+  let writerFailed = false;
+  const report: DiagnosticWriter = (line) => {
+    if (writerFailed) return;
+    try {
+      write(line);
+    } catch (error) {
+      // A broken diagnostic sink must not create the HMR failure it observes
+      // or prevent Next from closing the native subscription.
+      writerFailed = true;
+      console.warn('Turbopack subscription diagnostics disabled: writer failed', error);
+    }
+  };
 
   bindings.turbo.createProject = async function (...args) {
     const result = await createProject.apply(this, args);
@@ -113,14 +132,14 @@ export async function installTurbopackHmrSubscriptionDiagnostics(
       const subscription = clientHmrEvents(chunkName);
       return instrumentSubscription(
         subscription,
-        { ...context, chunkName },
-        write,
+        { ...context, chunkName, subscriptionId: subscriptionId++ },
+        report,
       );
     };
     return result;
   };
 
-  write(
+  report(
     JSON.stringify({
       source: 'next-turbopack-client-hmr-subscription',
       at: new Date().toISOString(),
