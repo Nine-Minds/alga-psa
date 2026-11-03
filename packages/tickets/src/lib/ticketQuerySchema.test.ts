@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import knex from 'knex';
 import { describe, expect, it } from 'vitest';
 import { allowedOperators, resolvePath, validateClause } from '@alga-psa/predicates';
 import type { PredicateClause } from '@alga-psa/predicates';
@@ -9,6 +10,7 @@ import { TICKET_COMPUTED_ATTRIBUTES, createTicketQuerySchema, ticketQuerySchema 
 const NOW = '2026-10-25T12:00:00.000Z';
 const schema = createTicketQuerySchema(() => NOW);
 const UUID = '11111111-1111-4111-8111-111111111111';
+const sqlClient = knex({ client: 'pg' });
 
 const SAMPLE_VALUES: Record<string, PredicateClause['value']> = {
   title_folded: 'onboarding',
@@ -43,6 +45,13 @@ describe('ticket query schema: computed attributes (T032)', () => {
       const clause: PredicateClause = { path: name, operator, value };
       expect(validateClause(schema, clause)).toBeNull();
       const fragment = compilePredicateFragment(schema, clause, { rootAlias: 't' });
+      // Exercise the raw SELECT composition used by checklist rule matching, including
+      // both identifier bindings and literal values, without opening a connection.
+      const query = sqlClient('tickets as t').select(
+        sqlClient.raw(`(${fragment.sql}) AS ??`, [...fragment.bindings, 'rule_matches'])
+      ).toSQL();
+      expect(query.bindings).not.toContain(undefined);
+      expect(() => query.toNative()).not.toThrow();
       expect(fragment.sql).not.toBe('');
       // Every `?` has a binding and every subselect is tenant-correlated.
       const placeholders = (fragment.sql.match(/\?\??/g) ?? []).length;
