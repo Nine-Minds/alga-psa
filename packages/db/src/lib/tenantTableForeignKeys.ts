@@ -602,7 +602,6 @@ export const TENANT_TABLE_FOREIGN_KEYS: readonly TenantTableForeignKey[] = [
   { child: 'payment_webhook_events', parent: 'invoices', column: 'invoice_id', deleteRule: 'NO ACTION', name: 'payment_webhook_events_tenant_invoice_id_foreign' },
   { child: 'payment_webhook_events', parent: 'tenants', column: '', deleteRule: 'CASCADE', name: 'payment_webhook_events_tenant_foreign' },
   { child: 'pending_reactivation_refunds', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'pending_reactivation_refunds_tenant_foreign' },
-  { child: 'pending_tenant_deletions', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'pending_tenant_deletions_tenant_foreign' },
   { child: 'permissions', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'permissions_tenant_foreign' },
   { child: 'po_landed_costs', parent: 'purchase_orders', column: 'po_id', deleteRule: 'CASCADE', name: 'fk_po_landed_costs_po' },
   { child: 'policies', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'policies_tenant_foreign' },

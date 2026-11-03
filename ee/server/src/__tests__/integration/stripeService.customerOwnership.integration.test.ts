@@ -24,6 +24,7 @@ const migration = require_('../../../migrations/20261031090000_create_stripe_cus
 const ownerIndexMigration = require_('../../../migrations/20261102080000_add_stripe_customer_binding_owner_index.cjs');
 const upgradeMigration = require_('../../../migrations/20261102090000_enforce_stripe_customer_binding_writes.cjs');
 const validationMigration = require_('../../../migrations/20261103090000_validate_stripe_customer_binding_owner_fk.cjs');
+const deletionAuditMigration = require_('../../../migrations/20261103100000_retain_tenant_deletion_audit.cjs');
 
 const SCHEMA = `t0002926_${process.pid}`;
 const TENANT_A = randomUUID();
@@ -164,6 +165,49 @@ describe('migration: global uniqueness of stripe_customer_external_id', () => {
       .toEqual([{ stripe_customer_external_id: 'cus_delete_b' }]);
     expect(await db('stripe_customer_bindings').where({ tenant: TENANT_B }).select('stripe_customer_external_id'))
       .toEqual([{ stripe_customer_external_id: 'cus_delete_b' }]);
+  });
+
+  it('retains workflow-created deletion history while deleting tenant-owned Stripe rows', async () => {
+    await db.raw(`CREATE TABLE pending_tenant_deletions (
+      deletion_id uuid PRIMARY KEY, tenant uuid NOT NULL,
+      status text NOT NULL, updated_at timestamptz NOT NULL DEFAULT now(), deleted_at timestamptz
+    )`);
+    try {
+      await db.raw(`ALTER TABLE pending_tenant_deletions ADD CONSTRAINT pending_tenant_deletions_tenant_foreign FOREIGN KEY (tenant) REFERENCES tenants(tenant)`);
+      await db('stripe_customer_bindings').insert([
+        { tenant: TENANT_A, stripe_customer_external_id: 'cus_lifecycle_a' },
+        { tenant: TENANT_B, stripe_customer_external_id: 'cus_lifecycle_b' },
+      ]);
+      await db('stripe_customers').insert([
+        { tenant: TENANT_A, stripe_customer_external_id: 'cus_lifecycle_a', email: 'a' },
+        { tenant: TENANT_B, stripe_customer_external_id: 'cus_lifecycle_b', email: 'b' },
+      ]);
+      const deletionId = randomUUID();
+      // Mirrors recordPendingDeletion: the audit row exists before removal starts.
+      await db('pending_tenant_deletions').insert({ deletion_id: deletionId, tenant: TENANT_A, status: 'deleting' });
+      expect(await db('pending_tenant_deletions').where({ deletion_id: deletionId }).first()).toMatchObject({ tenant: TENANT_A, status: 'deleting' });
+      await expect(db('tenants').where({ tenant: TENANT_A }).del()).rejects.toThrow(/pending_tenant_deletions_tenant_foreign/);
+
+      await deletionAuditMigration.up(db);
+      for (const table of tenantDeletionOrder().filter((table) => table === 'stripe_customers' || table === 'stripe_customer_bindings')) {
+        await db(table).where({ tenant: TENANT_A }).del();
+      }
+      await db('tenants').where({ tenant: TENANT_A }).del();
+
+      // Mirrors the workflow's post-delete status activity, which locates by deletion_id.
+      await db('pending_tenant_deletions').where({ deletion_id: deletionId }).update({ status: 'deleted', deleted_at: db.fn.now() });
+      expect(await db('tenants').where({ tenant: TENANT_A })).toHaveLength(0);
+      expect(await db('stripe_customers').where({ tenant: TENANT_A })).toHaveLength(0);
+      expect(await db('stripe_customer_bindings').where({ tenant: TENANT_A })).toHaveLength(0);
+      expect(await db('pending_tenant_deletions').where({ deletion_id: deletionId }).first()).toMatchObject({
+        tenant: TENANT_A, status: 'deleted', deleted_at: expect.any(Date),
+      });
+      expect(await db('tenants').where({ tenant: TENANT_B })).toHaveLength(1);
+      expect(await db('stripe_customers').where({ tenant: TENANT_B, stripe_customer_external_id: 'cus_lifecycle_b' })).toHaveLength(1);
+      expect(await db('stripe_customer_bindings').where({ tenant: TENANT_B, stripe_customer_external_id: 'cus_lifecycle_b' })).toHaveLength(1);
+    } finally {
+      await db.raw('DROP TABLE IF EXISTS pending_tenant_deletions');
+    }
   });
 
   it('pre-flight fails listing cross-tenant duplicates, changes nothing, and does not auto-resolve', async () => {
@@ -351,12 +395,14 @@ describe('migration: global uniqueness of stripe_customer_external_id', () => {
       writerTrx = await writer.transaction();
       let writerSettled = false;
       const writerRun = writerTrx('stripe_customers').insert({ tenant: TENANT_B, stripe_customer_external_id: 'cus_rollout', email: 'x' })
-        .then(() => { writerSettled = true; }, (error) => { writerSettled = true; throw error; });
+        .then(() => ({ error: null as unknown }), (error: unknown) => ({ error }))
+        .then((result) => { writerSettled = true; return result; });
       let updaterSettled = false;
       const updaterRun = updater('stripe_customers')
         .where({ tenant: TENANT_B, stripe_customer_external_id: 'cus_rollout_update_original' })
         .update({ stripe_customer_external_id: 'cus_rollout' })
-        .then(() => { updaterSettled = true; }, (error) => { updaterSettled = true; throw error; });
+        .then(() => ({ error: null as unknown }), (error: unknown) => ({ error }))
+        .then((result) => { updaterSettled = true; return result; });
       const writerDeadline = Date.now() + 5000;
       let bothWritersActive = false;
       while (Date.now() < writerDeadline) {
@@ -373,8 +419,8 @@ describe('migration: global uniqueness of stripe_customer_external_id', () => {
       expect(migrationFinished).toBe(false);
       await blocker.raw('COMMIT');
       await migrationRun;
-      await expect(writerRun).rejects.toThrow(/foreign key|violates foreign key/i);
-      await expect(updaterRun).rejects.toThrow(/foreign key|violates foreign key/i);
+      expect((await writerRun).error).toMatchObject({ message: expect.stringMatching(/foreign key|violates foreign key/i) });
+      expect((await updaterRun).error).toMatchObject({ message: expect.stringMatching(/foreign key|violates foreign key/i) });
       await writerTrx.rollback().catch(() => undefined);
       expect(await db('stripe_customers').where({ stripe_customer_external_id: 'cus_rollout' })).toHaveLength(1);
       expect(await db('stripe_customer_bindings').where({ stripe_customer_external_id: 'cus_rollout' }).first())

@@ -1863,7 +1863,9 @@ export async function deleteTenantData(
       }
     }
 
-    // Step 3: Delete pending_tenant_deletions records for this tenant (except current)
+    // Step 3: Remove previous records, but retain this workflow's audit row.
+    // Its tenant UUID is historical identity; the FK is removed by the audit
+    // retention migration so it can survive deletion of the live tenant row.
     try {
       const deletedPending = await withReadOnlyRetry(
         (k) =>
