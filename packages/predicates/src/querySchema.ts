@@ -6,7 +6,8 @@ export type AttributeType = 'string' | 'number' | 'boolean' | 'uuid' | 'timestam
 /** A fragment of SQL with positional `?` bindings and `??` identifier bindings (knex syntax). */
 export interface SqlFragment {
   sql: string;
-  bindings: unknown[];
+  /** Knex-compatible scalar bindings, including identifier names for `??` slots. */
+  bindings: PredicateLiteral[];
 }
 
 export interface ColumnAttribute {
