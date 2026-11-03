@@ -83,6 +83,7 @@ function toTemplate(row: Record<string, any>, items: Record<string, any>[]): ITi
     notes: row.notes ?? null,
     title: row.title,
     description: row.description ?? null,
+    client_id: row.client_id ?? null,
     board_id: row.board_id ?? null,
     category_id: row.category_id ?? null,
     subcategory_id: row.subcategory_id ?? null,
@@ -118,6 +119,11 @@ function allowlistedCustomFields(fields: Record<string, unknown>): Record<string
 
 async function assertValidReferences(trx: Knex.Transaction, tenant: string, input: ParsedTicketTemplateInput) {
   const problems = await findTicketFieldReferenceProblems(trx, tenant, { fields: input });
+  // The client scope is not part of the shared ticket field group, so it is checked here.
+  if (input.client_id) {
+    const client = await tenantDb(trx, tenant).table('clients').where({ client_id: input.client_id }).first('client_id');
+    if (!client) problems.push({ field: 'client_id', message: 'The selected client no longer exists' });
+  }
   if (problems.length > 0) {
     throw new TicketTemplateError(
       problems.map((problem) => problem.message).join('. '),
@@ -194,6 +200,7 @@ function templateColumns(input: ParsedTicketTemplateInput) {
     notes: input.notes,
     title: input.title,
     description: input.description,
+    client_id: input.client_id,
     board_id: input.board_id,
     category_id: input.category_id,
     subcategory_id: input.subcategory_id,
@@ -217,7 +224,7 @@ async function failed(error: unknown, label: string): Promise<TicketTemplateActi
 export const listTicketTemplates = withAuth(async (
   user,
   { tenant },
-  options: { includeInactive?: boolean } = {}
+  options: { includeInactive?: boolean; clientId?: string | null; search?: string } = {}
 ): Promise<TicketTemplateListItem[] | TicketTemplateActionError> => {
   try {
     requireInternal(user);
@@ -228,8 +235,17 @@ export const listTicketTemplates = withAuth(async (
 
       const query = db.table(`${TEMPLATES} as t`);
       db.tenantJoin(query, 'boards as b', 't.board_id', 'b.board_id', { type: 'left' });
+      db.tenantJoin(query, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
       if (!options.includeInactive) query.where('t.is_active', true);
-      const rows = await query.orderBy('t.name', 'asc').select('t.*', 'b.board_name');
+      // A client filter is "what this client can use": its own templates plus the tenant-wide ones.
+      if (options.clientId) {
+        query.where((builder) => builder.whereNull('t.client_id').orWhere('t.client_id', options.clientId!));
+      }
+      if (options.search?.trim()) {
+        const term = `%${options.search.trim()}%`;
+        query.where((builder) => builder.whereILike('t.name', term).orWhereILike('t.title', term));
+      }
+      const rows = await query.orderBy('t.name', 'asc').select('t.*', 'b.board_name', 'c.client_name');
       if (rows.length === 0) return [];
 
       const counts = await db
@@ -245,6 +261,8 @@ export const listTicketTemplates = withAuth(async (
         template_id: row.template_id,
         name: row.name,
         title: row.title,
+        client_id: row.client_id ?? null,
+        client_name: row.client_name ?? null,
         board_id: row.board_id ?? null,
         board_name: row.board_name ?? null,
         checklist_count: countById.get(row.template_id) ?? 0,
@@ -412,10 +430,15 @@ export const deleteTicketTemplate = withAuth(async (
   }
 });
 
-/** Active templates for the Quick Add picker. Needs `ticket:create` as well as template read. */
+/**
+ * Active templates for the Quick Add picker. Needs `ticket:create` as well as template read.
+ * With a client: the tenant-wide templates plus that client's. Without one: every offered template,
+ * each carrying its `client_id` so a picker can narrow as the client is chosen.
+ */
 export const listTicketTemplatesForCreate = withAuth(async (
   user,
-  { tenant }
+  { tenant },
+  clientId?: string | null
 ): Promise<TicketTemplateOption[] | TicketTemplateActionError> => {
   try {
     requireInternal(user);
@@ -423,14 +446,17 @@ export const listTicketTemplatesForCreate = withAuth(async (
     return await withTransaction(knex, async (trx) => {
       await requirePermission(user, 'ticket', 'create', trx);
       await requirePermission(user, 'ticket_template', 'read', trx);
-      const rows = await tenantDb(trx, tenant)
+      const query = tenantDb(trx, tenant)
         .table(TEMPLATES)
-        .where({ is_active: true, offer_for_manual_use: true })
-        .orderBy('name', 'asc')
-        .select('template_id', 'name', 'board_id');
+        .where({ is_active: true, offer_for_manual_use: true });
+      if (clientId) {
+        query.where((builder) => builder.whereNull('client_id').orWhere('client_id', clientId));
+      }
+      const rows = await query.orderBy('name', 'asc').select('template_id', 'name', 'client_id', 'board_id');
       return rows.map((row): TicketTemplateOption => ({
         template_id: row.template_id,
         name: row.name,
+        client_id: row.client_id ?? null,
         board_id: row.board_id ?? null,
       }));
     });
@@ -446,7 +472,8 @@ export const listTicketTemplatesForCreate = withAuth(async (
 export const getTicketTemplateForCreate = withAuth(async (
   user,
   { tenant },
-  templateId: string
+  templateId: string,
+  clientId?: string | null
 ): Promise<TicketTemplateForCreate | TicketTemplateActionError> => {
   try {
     requireInternal(user);
@@ -455,6 +482,10 @@ export const getTicketTemplateForCreate = withAuth(async (
       await requirePermission(user, 'ticket', 'create', trx);
       await requirePermission(user, 'ticket_template', 'read', trx);
       const row = await loadTemplateRow(trx, tenant, templateId, { manualUseOnly: true });
+      // A client-bound template belongs to one client only; it is not offered for another.
+      if (clientId && row.client_id && row.client_id !== clientId) {
+        throw new TicketTemplateError('This template belongs to a different client', 'NOT_AVAILABLE');
+      }
       const items = await loadItemRows(trx, tenant, row.template_id);
       const template = toTemplate(row, items);
 
@@ -472,6 +503,7 @@ export const getTicketTemplateForCreate = withAuth(async (
         name: template.name,
         title: template.title,
         description: template.description ?? '',
+        client_id: template.client_id,
         board_id: boardGone ? null : template.board_id,
         category_id: categoryGone ? null : template.category_id,
         subcategory_id: subcategoryGone ? null : template.subcategory_id,

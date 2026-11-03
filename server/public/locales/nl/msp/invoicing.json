@@ -78,7 +78,8 @@
       "poScopeDiffers": "De reikwijdte van de PO verschilt",
       "currencyDiffers": "Valuta verschilt",
       "taxTreatmentDiffers": "De fiscale behandeling verschilt",
-      "exportShapeDiffers": "De exportvorm verschilt"
+      "exportShapeDiffers": "De exportvorm verschilt",
+      "billingProfileDiffers": "Het factuurprofiel verschilt"
     },
     "executionRows": {
       "labels": {

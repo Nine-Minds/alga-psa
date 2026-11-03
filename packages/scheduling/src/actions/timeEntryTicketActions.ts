@@ -20,7 +20,8 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { resolveManagedSubjectUserIds } from './timeEntryDelegationAuth';
-import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
+import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
+import { delegateToTimeSource } from '../lib/timeSource';
 import {
   timeSheetActionErrorFrom,
   type TimeSheetActionError,
@@ -214,7 +215,18 @@ export const fetchTimeEntriesForTicket = withAuth(async (
   ticketId: string,
 ): Promise<TicketTimeEntriesSummary | TimeSheetActionError> => {
   try {
-    await assertPsaOnlyTenantAccess(tenant, 'scheduling_time_actions');
+    // OWNERSHIP CROSSING (L6a2 -> L6a1): when the tenant-level product guard denies, a registered time source may still serve
+    // this tenant for this ticket. The seam is asked ONLY after a denial, so a psa tenant (and any empty registry) costs nothing
+    // extra, and when the source does not serve it the ORIGINAL error is rethrown untouched (same class, message, capability).
+    // LEVERAGE: friction product-guard-not-time-source-aware — assertPsaOnlyTenantAccess knows nothing about time sources; the guard should consult the registry itself.
+    try {
+      await assertPsaOnlyTenantAccess(tenant, 'scheduling_time_actions');
+    } catch (denied) {
+      if (!(denied instanceof ProductAccessError)) throw denied;
+      const served = await delegateToTimeSource({ tenant, userId: user.user_id, workItemType: 'ticket', workItemId: ticketId },
+        (source, ctx) => source.work.servesWorkItem(ctx, 'ticket', ticketId));
+      if (!(served.handled && served.value === true)) throw denied;
+    }
     const { knex: db } = await createTenantKnex();
     return fetchTimeEntriesForTicketCore(user, tenant, db, ticketId);
   } catch (error) {

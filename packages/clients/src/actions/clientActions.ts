@@ -2,6 +2,7 @@
 
 import { trackContactUpdates } from '@alga-psa/shared/lib/contacts/contactEvents';
 import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
 import type { DeletionValidationResult, IClient, IClientWithLocation } from '@alga-psa/types';
 import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
 import { unparseCSV, isEnterprise } from '@alga-psa/core';
@@ -1305,8 +1306,9 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
 
       await cleanupEntraReferencesBeforeClientDelete(trx, tenantId, clientId);
 
-      // Client-scoped checklist templates are deactivated and detached first (no SET NULL on Citus).
+      // Client-scoped checklist and ticket templates are deactivated and detached first (no SET NULL on Citus).
       await deactivateClientScopedChecklistTemplates(trx, tenantId, clientId);
+      await deactivateClientScopedTicketTemplates(trx, tenantId, clientId);
 
       const deleted = await tenantScopedTable(trx, 'clients', tenantId)
         .where({ client_id: clientId })
@@ -1602,6 +1604,28 @@ export const checkExistingClients = withAuth(async (
   });
 
   return existingClients;
+});
+
+/**
+ * Resolve client names (exact, case-sensitive match) to ids. Used by the contacts CSV import so it
+ * never needs the whole client list. Returns `{ client_id, client_name }` only.
+ */
+export const findClientsByNames = withAuth(async (
+  user,
+  { tenant },
+  names: string[]
+): Promise<Array<{ client_id: string; client_name: string }>> => {
+  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
+
+  const distinctNames = Array.from(new Set((names ?? []).filter((name) => typeof name === 'string' && name.length > 0)));
+  if (distinctNames.length === 0) return [];
+
+  const { knex: db } = await createTenantKnex();
+  return await withTransaction(db, async (trx: Knex.Transaction) => {
+    return await tenantScopedTable(trx, 'clients', tenant)
+      .select('client_id', 'client_name')
+      .whereIn('client_name', distinctNames);
+  });
 });
 
 export interface ImportClientResult {

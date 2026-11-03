@@ -541,6 +541,9 @@
         "title": "Tareas compartidas",
         "taskTitle": "Tarea compartida",
         "projectTitle": "Proyecto compartido"
+      },
+      "export": {
+        "title": "Exportar espacio de trabajo"
       }
     }
   },

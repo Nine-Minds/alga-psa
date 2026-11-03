@@ -716,6 +716,21 @@
       "rejected": "Diese Aufgabe konnte nicht gespeichert werden.",
       "saved": "Gespeichert.",
       "save": "Speichern"
+    },
+    "portableExport": {
+      "title": "Arbeitsbereich exportieren",
+      "description": "Laden Sie ein verschlüsseltes, portables Archiv der Datensätze und Dateien Ihres Arbeitsbereichs herunter.",
+      "recovery": "Bewahren Sie die Wiederherstellungspassphrase sicher auf. Ohne sie lässt sich das Archiv nicht öffnen.",
+      "connections": "Das Archiv enthält die Datensätze Ihres Arbeitsbereichs und die darin gespeicherten Dateien. Dokumentdatensätze und -zuordnungen sowie Zeit-, Termin-, Besprechungs- und Konversationsverlauf sind noch nicht enthalten und folgen in einer späteren Version. Abrechnungsdaten, MSP-interne Daten und Integrationsgeheimnisse sind nicht enthalten.",
+      "passphrase": "Wiederherstellungspassphrase",
+      "confirmPassphrase": "Wiederherstellungspassphrase bestätigen",
+      "download": "Archiv vorbereiten und herunterladen",
+      "requested": "Ihre Anfrage wird in einem neuen Tab geöffnet. Die Vorbereitung kann einige Minuten dauern; Ihr Browser lädt die Datei herunter, sobald sie bereit ist.",
+      "loadError": "Mit Ihren aktuellen Berechtigungen können Sie diesen Arbeitsbereich nicht exportieren.",
+      "lengthError": "Verwenden Sie eine Passphrase mit 16 bis 1024 UTF-8-Bytes.",
+      "matchError": "Die Wiederherstellungspassphrasen müssen übereinstimmen.",
+      "unavailable": "Der Export von Arbeitsbereichen ist in dieser Edition nicht verfügbar.",
+      "loading": "Wird geladen…"
     }
   },
   "common": {

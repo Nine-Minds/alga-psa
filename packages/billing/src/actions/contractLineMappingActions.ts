@@ -142,6 +142,7 @@ type DetailedContractLineResultRow =
   Record<string, unknown> & {
     cadence_owner?: IContractLineMapping['cadence_owner'] | null;
     billing_timing?: IContractLineMapping['billing_timing'] | null;
+    billing_profile_id?: string | null;
   };
 
 export async function ensureTemplateLineSnapshot(
@@ -567,6 +568,8 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
             'lines.round_up_to_nearest',
             'tfc.base_rate as default_rate',
             trx.raw('NULL::uuid as location_id'),
+            // LEVERAGE: pattern detailed-template-line-select — same template-line projection as ContractLineMapping.getDetailedContractLines; the two selects must be kept in step by hand
+            trx.raw('NULL::uuid as billing_profile_id'),
           ])
           .orderBy('lines.display_order', 'asc') as unknown as DetailedContractLineResultRow[];
 
