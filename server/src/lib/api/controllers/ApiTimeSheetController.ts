@@ -559,15 +559,15 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasManagePermission = await hasPermission(
+        const hasReversePermission = await hasPermission(
           user,
           'time_sheet',
-          'manage',
+          'reverse',
           db
         );
 
-        if (!hasManagePermission) {
-          throw new ForbiddenError('Permission denied: Cannot manage time sheets');
+        if (!hasReversePermission) {
+          throw new ForbiddenError('Permission denied: Cannot reverse time sheet approvals');
         }
 
         // Extract ID from path

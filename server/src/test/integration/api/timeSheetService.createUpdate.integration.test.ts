@@ -11,6 +11,12 @@ import { TimeSheetService } from '@/lib/api/services/TimeSheetService';
 import { ConflictError, ForbiddenError } from '@/lib/api/middleware/apiMiddleware';
 import { publishUnregisteredEventType } from 'server/src/lib/eventBus/publishers';
 import { updateTimeSheetSchema } from '@/lib/api/schemas/timeSheet';
+import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
+import * as usersActions from '@alga-psa/users/actions';
+import * as apiDb from '@/lib/db/db';
+import { ApiBaseController } from '@/lib/api/controllers/ApiBaseController';
+import { POST as reverseApprovalRoute } from '@/app/api/v1/time-sheets/[id]/reverse-approval/route';
+import { POST as bulkApprovalRoute } from '@/app/api/v1/time-sheets/bulk/route';
 
 /**
  * REST `POST /api/v1/time-sheets` and `PUT /api/v1/time-sheets/:id` are thin wrappers over
@@ -44,6 +50,7 @@ vi.mock('@/lib/auth/rbac', async (importOriginal) => ({
 }));
 let db: Knex;
 const tenantsToCleanup = new Set<string>();
+let routeTenantId = '';
 
 const tenantTable = (tenantId: string, table: string) => tenantDb(db, tenantId).table(table);
 const tenantRows = () =>
@@ -54,6 +61,8 @@ async function cleanupTenant(tenantId: string) {
   await tenantTable(tenantId, 'time_sheet_comments').del();
   await tenantTable(tenantId, 'time_sheets').del();
   await tenantTable(tenantId, 'time_periods').del();
+  await tenantTable(tenantId, 'team_members').del();
+  await tenantTable(tenantId, 'teams').del();
   await tenantTable(tenantId, 'users').del();
   await tenantRows().where({ tenant: tenantId }).del();
 }
@@ -104,6 +113,27 @@ const contextFor = (tenantId: string, userId: string) =>
 
 const sheetsFor = (tenantId: string, userId: string) =>
   tenantTable(tenantId, 'time_sheets').where({ user_id: userId }).select('*');
+
+function configureRouteBoundary(tenantId: string, actorId: string) {
+  routeTenantId = tenantId;
+  vi.spyOn(ApiKeyServiceForApi, 'validateApiKeyForTenant').mockResolvedValue({
+    api_key_id: 'route-test-key', user_id: actorId, tenant: tenantId,
+  } as any);
+  vi.spyOn(usersActions, 'findUserByIdForApi').mockResolvedValue({
+    user_id: actorId, tenant: tenantId, user_type: 'internal',
+  } as any);
+  vi.spyOn(apiDb, 'getConnection').mockResolvedValue(db as any);
+  vi.spyOn(TimeSheetService.prototype as any, 'getKnex').mockResolvedValue({ knex: db, tenant: tenantId });
+  vi.spyOn(ApiBaseController.prototype as any, 'assertProductApiAccess').mockResolvedValue(undefined);
+}
+
+async function postRoute(route: (request: Request, ...args: any[]) => Promise<Response>, path: string, body: unknown) {
+  return route(new Request(`http://localhost${path}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': 'route-test-api-key', 'x-tenant-id': routeTenantId },
+    body: JSON.stringify(body),
+  }), ...(path.includes('/reverse-approval') ? [{ params: Promise.resolve({ id: path.split('/').at(-2)! }) }] : []));
+}
 
 describe('TimeSheetService.create / update (real Postgres)', () => {
   beforeAll(async () => {
@@ -486,6 +516,77 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
         await adminDb.destroy();
       }
     });
+  });
+
+  it('reverse-approval route permits a manager with reverse permission and synchronizes the managed sheet', async () => {
+    const f = await seed();
+    const teamId = uuidv4();
+    const sheetId = uuidv4();
+    const entryId = uuidv4();
+    await tenantTable(f.tenantId, 'teams').insert({ tenant: f.tenantId, team_id: teamId, team_name: 'Managed team', manager_id: f.actor });
+    await tenantTable(f.tenantId, 'team_members').insert({ tenant: f.tenantId, team_id: teamId, user_id: f.subject });
+    await tenantTable(f.tenantId, 'time_sheets').insert({
+      tenant: f.tenantId, id: sheetId, user_id: f.subject, period_id: f.periodId,
+      approval_status: 'APPROVED', approved_by: f.actor, approved_at: new Date(),
+    });
+    await tenantTable(f.tenantId, 'time_entries').insert({
+      tenant: f.tenantId, entry_id: entryId, user_id: f.subject, time_sheet_id: sheetId,
+      start_time: new Date().toISOString(), end_time: new Date().toISOString(), work_date: '2026-01-06',
+      work_timezone: 'UTC', approval_status: 'APPROVED', created_at: db.fn.now(), updated_at: db.fn.now(),
+    });
+    configureRouteBoundary(f.tenantId, f.actor);
+    grants.byUser.set(f.actor, new Set(['time_sheet:approve', 'time_sheet:reverse']));
+    const response = await postRoute(reverseApprovalRoute as any, `/api/v1/time-sheets/${sheetId}/reverse-approval`, { reversal_reason: 'Correction' });
+    expect(response.status).toBe(200);
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first())
+      .toMatchObject({ approval_status: 'CHANGES_REQUESTED', approved_at: null, approved_by: null });
+    expect((await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first()).approval_status).toBe('CHANGES_REQUESTED');
+  });
+
+  it('bulk route performs approvals and persists approval metadata, entry state, and comment', async () => {
+    const f = await seed();
+    const sheetId = uuidv4();
+    const entryId = uuidv4();
+    await tenantTable(f.tenantId, 'time_sheets').insert({ tenant: f.tenantId, id: sheetId, user_id: f.actor, period_id: f.periodId, approval_status: 'SUBMITTED', submitted_at: new Date() });
+    await tenantTable(f.tenantId, 'time_entries').insert({
+      tenant: f.tenantId, entry_id: entryId, user_id: f.actor, time_sheet_id: sheetId,
+      start_time: new Date().toISOString(), end_time: new Date().toISOString(), work_date: '2026-01-06',
+      work_timezone: 'UTC', approval_status: 'SUBMITTED', created_at: db.fn.now(), updated_at: db.fn.now(),
+    });
+    configureRouteBoundary(f.tenantId, f.actor);
+    grants.byUser.set(f.actor, new Set(['time_sheet:approve']));
+    const response = await postRoute(bulkApprovalRoute as any, '/api/v1/time-sheets/bulk', { time_sheet_ids: [sheetId], approval_notes: 'smoke' });
+    const payload = await response.json();
+    expect(response.status).toBe(200);
+    expect(payload.data.results).toMatchObject([{ success: true, time_sheet_id: sheetId }]);
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first()).toMatchObject({ approval_status: 'APPROVED', approved_by: f.actor });
+    expect((await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first()).approval_status).toBe('APPROVED');
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: sheetId }).select('comment')).toEqual([{ comment: 'smoke' }]);
+  });
+
+  it('bulk route denies not_self_approver without changing sheet, entries, or comments', async () => {
+    const f = await seed();
+    const sheetId = uuidv4();
+    const entryId = uuidv4();
+    await tenantTable(f.tenantId, 'time_sheets').insert({ tenant: f.tenantId, id: sheetId, user_id: f.actor, period_id: f.periodId, approval_status: 'SUBMITTED', submitted_at: new Date() });
+    await tenantTable(f.tenantId, 'time_entries').insert({
+      tenant: f.tenantId, entry_id: entryId, user_id: f.actor, time_sheet_id: sheetId,
+      start_time: new Date().toISOString(), end_time: new Date().toISOString(), work_date: '2026-01-06',
+      work_timezone: 'UTC', approval_status: 'SUBMITTED', created_at: db.fn.now(), updated_at: db.fn.now(),
+    });
+    configureRouteBoundary(f.tenantId, f.actor);
+    grants.byUser.set(f.actor, new Set(['time_sheet:approve']));
+    approvalBundleRules.rules = [{ resource: 'time_entry', action: 'approve', constraintKey: 'not_self_approver' }];
+    const sheetBefore = await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first();
+    const entryBefore = await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first();
+    const commentsBefore = await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: sheetId }).select('*');
+    const response = await postRoute(bulkApprovalRoute as any, '/api/v1/time-sheets/bulk', { time_sheet_ids: [sheetId], approval_notes: 'must not persist' });
+    const payload = await response.json();
+    expect(response.status).toBe(200);
+    expect(payload.data.results).toMatchObject([{ success: false, time_sheet_id: sheetId }]);
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first()).toEqual(sheetBefore);
+    expect(await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first()).toEqual(entryBefore);
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: sheetId }).select('*')).toEqual(commentsBefore);
   });
 });
 
