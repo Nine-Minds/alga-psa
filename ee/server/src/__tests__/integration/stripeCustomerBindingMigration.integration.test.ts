@@ -9,35 +9,54 @@ const forwardMigration = require('../../../migrations/20261103130000_enforce_str
 const connectionString = process.env.STRIPE_BINDING_TEST_DATABASE_URL;
 const isCitus = process.env.STRIPE_BINDING_TEST_CITUS === '1';
 const schema = `stripe_binding_migration_${process.pid}_${randomUUID().replaceAll('-', '')}`;
+const sentinelSchema = `stripe_binding_sentinel_${process.pid}_${randomUUID().replaceAll('-', '')}`;
+const preexistingSchema = `stripe_binding_preexisting_${process.pid}_${randomUUID().replaceAll('-', '')}`;
 
 const suite = describe.skipIf(!connectionString);
 let admin: Knex;
 let db: Knex;
+let ownedSchemas: Set<string>;
 const tenantA = '00000000-0000-4000-8000-000000000001';
 const tenantB = '00000000-0000-4000-8000-000000000002';
 const sentinelTenant = '00000000-0000-4000-8000-000000000099';
 
 const quoteIdentifier = (identifier: string) => `"${identifier.replaceAll('"', '""')}"`;
 const fixtureTable = (name: string) => `${quoteIdentifier(schema)}.${quoteIdentifier(name)}`;
+const sentinelTable = (name: string, ownerSchema = sentinelSchema) => `${quoteIdentifier(ownerSchema)}.${quoteIdentifier(name)}`;
 
-async function expectPublicSentinelsIntact() {
+async function createOwnedSchema(connection: Knex, name: string, ownership: Set<string>) {
+  await connection.raw(`CREATE SCHEMA ${quoteIdentifier(name)}`);
+  ownership.add(name);
+}
+
+async function dropOwnedSchema(connection: Knex, name: string, ownership: Set<string>) {
+  if (!ownership.has(name)) return;
+  await connection.raw(`DROP SCHEMA IF EXISTS ${quoteIdentifier(name)} CASCADE`);
+  ownership.delete(name);
+}
+
+async function cleanupOwnedSchemas(connection: Knex, ownership: Set<string>) {
+  for (const name of [...ownership]) await dropOwnedSchema(connection, name, ownership);
+}
+
+async function expectSentinelsIntact(ownerSchema = sentinelSchema) {
   const bindings = await admin.raw(`
     SELECT stripe_customer_external_id, tenant
-    FROM public.stripe_customer_bindings
-    WHERE stripe_customer_external_id = 'cus_public_sentinel'`);
+    FROM ${sentinelTable('stripe_customer_bindings', ownerSchema)}
+    WHERE stripe_customer_external_id = 'cus_schema_sentinel'`);
   const customers = await admin.raw(`
     SELECT stripe_customer_external_id, tenant
-    FROM public.stripe_customers
-    WHERE stripe_customer_external_id = 'cus_public_sentinel'`);
+    FROM ${sentinelTable('stripe_customers', ownerSchema)}
+    WHERE stripe_customer_external_id = 'cus_schema_sentinel'`);
   const constraint = await admin.raw(`
     SELECT convalidated
     FROM pg_constraint
     WHERE conname = 'stripe_customer_sentinel_fk'
-      AND conrelid = 'public.stripe_customers'::regclass
+      AND conrelid = '${sentinelTable('stripe_customers', ownerSchema)}'::regclass
       AND contype = 'f'`);
 
-  expect(bindings.rows).toEqual([{ stripe_customer_external_id: 'cus_public_sentinel', tenant: sentinelTenant }]);
-  expect(customers.rows).toEqual([{ stripe_customer_external_id: 'cus_public_sentinel', tenant: sentinelTenant }]);
+  expect(bindings.rows).toEqual([{ stripe_customer_external_id: 'cus_schema_sentinel', tenant: sentinelTenant }]);
+  expect(customers.rows).toEqual([{ stripe_customer_external_id: 'cus_schema_sentinel', tenant: sentinelTenant }]);
   expect(constraint.rows).toEqual([{ convalidated: true }]);
 }
 
@@ -92,31 +111,33 @@ async function waitForBindingMigrationLock(timeoutMs = 5_000) {
 suite('Stripe customer binding migration ownership enforcement', () => {
   beforeAll(async () => {
     admin = knexFactory({ client: 'pg', connection: connectionString, pool: { min: 1, max: 4 } });
-    await admin.raw(`CREATE SCHEMA "${schema}"`);
+    ownedSchemas = new Set();
+    await createOwnedSchema(admin, schema, ownedSchemas);
+    await createOwnedSchema(admin, sentinelSchema, ownedSchemas);
     if (isCitus) await admin.raw('CREATE EXTENSION IF NOT EXISTS citus');
     await admin.raw(`
-      CREATE TABLE public.stripe_customer_bindings (
+      CREATE TABLE ${sentinelTable('stripe_customer_bindings')} (
         stripe_customer_external_id text NOT NULL PRIMARY KEY,
         tenant uuid NOT NULL,
         UNIQUE (stripe_customer_external_id, tenant)
       )`);
     await admin.raw(`
-      CREATE TABLE public.stripe_customers (
+      CREATE TABLE ${sentinelTable('stripe_customers')} (
         tenant uuid NOT NULL,
         stripe_customer_external_id text NOT NULL,
         CONSTRAINT stripe_customer_sentinel_fk
           FOREIGN KEY (stripe_customer_external_id, tenant)
-          REFERENCES public.stripe_customer_bindings (stripe_customer_external_id, tenant)
+          REFERENCES ${sentinelTable('stripe_customer_bindings')} (stripe_customer_external_id, tenant)
       )`);
     await admin.raw(
-      `INSERT INTO public.stripe_customer_bindings (stripe_customer_external_id, tenant) VALUES ('cus_public_sentinel', ?);`,
+      `INSERT INTO ${sentinelTable('stripe_customer_bindings')} (stripe_customer_external_id, tenant) VALUES ('cus_schema_sentinel', ?);`,
       [sentinelTenant]
     );
     await admin.raw(
-      `INSERT INTO public.stripe_customers (stripe_customer_external_id, tenant) VALUES ('cus_public_sentinel', ?);`,
+      `INSERT INTO ${sentinelTable('stripe_customers')} (stripe_customer_external_id, tenant) VALUES ('cus_schema_sentinel', ?);`,
       [sentinelTenant]
     );
-    await expectPublicSentinelsIntact();
+    await expectSentinelsIntact();
 
     db = knexFactory({
       client: 'pg',
@@ -134,11 +155,10 @@ suite('Stripe customer binding migration ownership enforcement', () => {
     await db?.destroy();
     if (admin) {
       try {
-        await admin.raw(`DROP SCHEMA IF EXISTS ${quoteIdentifier(schema)} CASCADE`);
-        await expectPublicSentinelsIntact();
+        await dropOwnedSchema(admin, schema, ownedSchemas);
+        await expectSentinelsIntact();
       } finally {
-        await admin.raw('DROP TABLE IF EXISTS public.stripe_customers CASCADE');
-        await admin.raw('DROP TABLE IF EXISTS public.stripe_customer_bindings CASCADE');
+        await cleanupOwnedSchemas(admin, ownedSchemas);
         await admin.destroy();
       }
     }
@@ -146,10 +166,43 @@ suite('Stripe customer binding migration ownership enforcement', () => {
 
   beforeEach(async () => {
     await createFixture();
-    await expectPublicSentinelsIntact();
+    await expectSentinelsIntact();
   });
 
-  afterEach(async () => expectPublicSentinelsIntact());
+  afterEach(async () => expectSentinelsIntact());
+
+  it('preserves pre-existing tables and dependent constraints when schema setup fails', async () => {
+    await admin.raw(`CREATE SCHEMA ${quoteIdentifier(preexistingSchema)}`);
+    try {
+      await admin.raw(`CREATE TABLE ${sentinelTable('stripe_customer_bindings', preexistingSchema)} (
+        stripe_customer_external_id text NOT NULL PRIMARY KEY,
+        tenant uuid NOT NULL,
+        UNIQUE (stripe_customer_external_id, tenant)
+      )`);
+      await admin.raw(`CREATE TABLE ${sentinelTable('stripe_customers', preexistingSchema)} (
+        tenant uuid NOT NULL,
+        stripe_customer_external_id text NOT NULL,
+        CONSTRAINT stripe_customer_sentinel_fk
+          FOREIGN KEY (stripe_customer_external_id, tenant)
+          REFERENCES ${sentinelTable('stripe_customer_bindings', preexistingSchema)} (stripe_customer_external_id, tenant)
+      )`);
+      await admin.raw(
+        `INSERT INTO ${sentinelTable('stripe_customer_bindings', preexistingSchema)} VALUES ('cus_schema_sentinel', ?)`,
+        [sentinelTenant]
+      );
+      await admin.raw(
+        `INSERT INTO ${sentinelTable('stripe_customers', preexistingSchema)} VALUES (?, 'cus_schema_sentinel')`,
+        [sentinelTenant]
+      );
+
+      const failedSetupOwnership = new Set<string>();
+      await expect(createOwnedSchema(admin, preexistingSchema, failedSetupOwnership)).rejects.toThrow();
+      await cleanupOwnedSchemas(admin, failedSetupOwnership);
+      await expectSentinelsIntact(preexistingSchema);
+    } finally {
+      await admin.raw(`DROP SCHEMA ${quoteIdentifier(preexistingSchema)} CASCADE`);
+    }
+  });
 
   it('backfills valid mappings and enforces matching bindings for later writes', async () => {
     await db('stripe_customers').insert([
