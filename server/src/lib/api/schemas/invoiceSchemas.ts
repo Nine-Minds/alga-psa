@@ -211,7 +211,14 @@ const createInvoiceSchema = baseInvoiceSchema.omit({
   subtotal: monetaryAmountSchema.optional(),
   tax: monetaryAmountSchema.optional(),
   total_amount: monetaryAmountSchema.optional(),
-});
+})
+  // Nothing is stripped before the field classifier sees it. Zod's default (strip) would
+  // delete keys this schema does not declare — e.g. the update-only `tax_source` — so a
+  // create body carrying them would be silently ignored instead of refused. The policy in
+  // invoiceFieldPolicy.ts is the single authority for what a create body may carry;
+  // InvoiceService.create runs checkInvoicePayload('create', data) and returns a 400 naming
+  // the field and the command that owns it.
+  .passthrough();
 
 // Update invoice schema. tax_source is update-only: a new invoice takes its
 // tax source from the client/tenant default, while an existing one may be

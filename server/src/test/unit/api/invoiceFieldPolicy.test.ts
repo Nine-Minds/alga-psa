@@ -60,3 +60,23 @@ describe('checkInvoicePayload(create)', () => {
     expect(keys({ subtotal: 5, tax: 1, total_amount: 6, tenant: 't' })).toEqual([]);
   });
 });
+
+describe('create request schema hands the raw body to the classifier', () => {
+  // The defect this guards: createInvoiceSchema does not declare tax_source (it is
+  // update-only), so a strip-mode object schema deletes it before InvoiceService.create
+  // can refuse it, turning a 400 into a silent no-op. The schema must preserve what the
+  // caller sent so the policy — not zod's unknown-key handling — decides.
+  it('does not strip a field the policy forbids on create (tax_source)', () => {
+    const parsed = createInvoiceSchema.partial().parse({ tax_source: 'external' }) as Record<string, unknown>;
+    expect(parsed.tax_source).toBe('external');
+    expect(checkInvoicePayload('create', parsed).forbidden.map((f) => [f.key, f.command])).toEqual([
+      ['tax_source', 'changeInvoiceTaxSource'],
+    ]);
+  });
+
+  it('does not strip unknown keys either, so the classifier sees the body it validates', () => {
+    const parsed = createInvoiceSchema.partial().parse({ credit_applied: 25 }) as Record<string, unknown>;
+    expect(parsed.credit_applied).toBe(25);
+    expect(checkInvoicePayload('create', parsed).forbidden.map((f) => f.key)).toEqual(['credit_applied']);
+  });
+});
