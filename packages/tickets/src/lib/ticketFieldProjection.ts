@@ -77,6 +77,9 @@ function matches(pattern: string, candidate: string): boolean {
 }
 
 export function isTicketFieldHidden(redactions: readonly string[], projection: TicketFieldProjection): boolean {
+  if (projection.field === 'attributes') {
+    return redactions.some((redaction) => ['attributes', 'ticket.attributes', 'tickets.attributes'].includes(redaction.toLowerCase()));
+  }
   const names = [projection.field, ...projection.sources, ...projection.aliases];
   return redactions.some((redaction) => {
     if (!redaction) return false;
@@ -91,6 +94,47 @@ export function hiddenTicketFields(redactions: readonly string[]): Set<string> {
   const hidden = new Set(matched.flatMap(({ field, sources, aliases }) => [field, ...sources, ...aliases]));
   if (resourceWide) hidden.add('ticket_id');
   return hidden;
+}
+
+/** Resolve policy names once against the ticket's actual custom-attribute keys.
+ * Unqualified custom keys are supported; names that are neither known ticket
+ * fields nor present custom keys are rejected so callers cannot return data
+ * after silently dropping an unrecognized policy instruction.
+ */
+export function interpretTicketRedactions(
+  redactions: readonly string[],
+  attributes: Record<string, unknown> | null | undefined
+): { hiddenFields: Set<string>; hiddenAttributes: Set<string> } {
+  const hiddenFields = hiddenTicketFields([]);
+  const hiddenAttributes = new Set<string>();
+  for (const raw of redactions) {
+    if (typeof raw !== 'string' || raw.trim() === '') throw new Error('Unsupported empty ticket redaction');
+    const name = raw.trim();
+    const attributeName = name.replace(/^(?:tickets?|attributes)\./i, '').toLowerCase();
+    const attributeKeys = Object.keys(attributes ?? {});
+    const attributeKey = attributeKeys.find((key) => key.toLowerCase() === attributeName);
+    const customAttributePath = /^(?:tickets?\.)?attributes\./i.test(name) && attributeKey !== undefined && attributeName !== 'description';
+    const fieldMatch = TICKET_FIELD_PROJECTIONS.some((projection) =>
+      !(customAttributePath && projection.field === 'attributes') && isTicketFieldHidden([name], projection));
+    if (fieldMatch) {
+      for (const field of hiddenTicketFields([name])) hiddenFields.add(field);
+    } else if (attributeKey) {
+      hiddenAttributes.add(attributeKey);
+    } else {
+      throw new Error(`Unsupported ticket redaction: ${name}`);
+    }
+  }
+  return { hiddenFields, hiddenAttributes };
+}
+
+export function redactTicketAttributes(
+  attributes: Record<string, unknown> | null | undefined,
+  redactions: readonly string[]
+): Record<string, unknown> | null {
+  if (!attributes) return attributes ?? null;
+  const { hiddenFields, hiddenAttributes } = interpretTicketRedactions(redactions, attributes);
+  if (hiddenFields.has('attributes')) return null;
+  return Object.fromEntries(Object.entries(attributes).filter(([key]) => !hiddenAttributes.has(key)));
 }
 
 function setPathValue(target: Record<string, unknown>, path: string, value: unknown): void {

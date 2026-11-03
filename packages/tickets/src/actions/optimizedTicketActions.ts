@@ -109,7 +109,7 @@ import { compilePredicateFragment } from '@alga-psa/predicates/sql';
 import type { PredicateGroup } from '@alga-psa/predicates';
 import { resolveTicketTagIdsByText } from '../lib/ticketTagFilter';
 import { createTicketQuerySchema } from '../lib/ticketQuerySchema';
-import { hiddenTicketFields, isTicketFieldHidden, projectTicketRow, TICKET_FIELD_PROJECTIONS } from '../lib/ticketFieldProjection';
+import { hiddenTicketFields, interpretTicketRedactions, isTicketFieldHidden, projectTicketRow, TICKET_FIELD_PROJECTIONS } from '../lib/ticketFieldProjection';
 import { ticketFiltersToPredicates, type TicketFilterCodecContext } from '../lib/ticketFilterPredicates';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
@@ -1800,7 +1800,8 @@ function buildTicketListItemsQuery(
   tenant: string,
   baseQuery: Knex.QueryBuilder,
   audience: TagDisplayAudience,
-  hiddenFields: ReadonlySet<string> = new Set()
+  hiddenFields: ReadonlySet<string> = new Set(),
+  hiddenAttributes: ReadonlySet<string> = new Set()
 ): Knex.QueryBuilder {
   const nullable = (field: string, type: string, expression: string) => hiddenFields.has(field)
     ? trx.raw(`NULL::${type} as ??`, [field]) : trx.raw(`${expression} as ??`, [field]);
@@ -1867,7 +1868,9 @@ function buildTicketListItemsQuery(
       nullable('closed_at', 'timestamptz', 't.closed_at'), nullable('due_date', 'timestamptz', 't.due_date'),
       nullable('is_closed', 'boolean', 't.is_closed'),
       hiddenFields.has('attributes') ? trx.raw('NULL::jsonb as attributes')
-        : hiddenFields.has('description') ? trx.raw("jsonb_set(COALESCE(t.attributes, '{}'::jsonb), '{description}', 'null'::jsonb) as attributes") : 't.attributes',
+        : hiddenAttributes.size > 0 || hiddenFields.has('description')
+          ? trx.raw(`${hiddenFields.has('description') ? "jsonb_set(COALESCE(t.attributes, '{}'::jsonb) - ?::text[], '{description}', 'null'::jsonb)" : "(COALESCE(t.attributes, '{}'::jsonb) - ?::text[])"} as attributes`, [Array.from(hiddenAttributes)])
+          : 't.attributes',
       nullable('master_ticket_id', 'uuid', 't.master_ticket_id'), nullable('tenant', 'uuid', 't.tenant'),
       nullable('itil_impact', 'text', 't.itil_impact'), nullable('itil_urgency', 'text', 't.itil_urgency'), nullable('itil_priority_level', 'integer', 't.itil_priority_level'),
       nullable('response_state', 'text', 't.response_state'), nullable('ticket_origin', 'text', 't.ticket_origin'),
@@ -2414,6 +2417,7 @@ export const loadTicketListItemsByIds = withAuth(async (
           'contact_name_id', 'billing_profile_id', 'attributes');
       const freshDecisions = await authorizeTicketRowsWithRedactions(trx, authorizationContext, authorizationRecords);
       const freshById = new Map(freshDecisions.map(({ ticket, redactedFields }) => [ticket.ticket_id!, redactedFields] as const));
+      const attributesById = new Map(authorizationRecords.map((row: any) => [row.ticket_id, row.attributes] as const));
       const redactionsById = new Map<string, string[]>();
       for (const id of requestedIds) {
         if (!freshById.has(id)) continue;
@@ -2423,22 +2427,23 @@ export const loadTicketListItemsByIds = withAuth(async (
 
       const scopedBaseQuery = scopedQuery.clone();
       const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
-      const groups = new Map<string, { ids: string[]; hidden: Set<string> }>();
+      const groups = new Map<string, { ids: string[]; hidden: Set<string>; hiddenAttributes: Set<string> }>();
       for (const id of authorizedIds) {
         const fields = redactionsById.get(id)!;
+        const interpreted = interpretTicketRedactions(fields, attributesById.get(id) as Record<string, unknown> | null | undefined);
         const key = JSON.stringify([...new Set(fields)].sort());
-        const group = groups.get(key) ?? { ids: [], hidden: hiddenTicketFields(fields) };
+        const group = groups.get(key) ?? { ids: [], hidden: interpreted.hiddenFields, hiddenAttributes: interpreted.hiddenAttributes };
         group.ids.push(id);
         groups.set(key, group);
       }
       const rows: any[] = [];
-      for (const { ids, hidden } of groups.values()) {
+      for (const { ids, hidden, hiddenAttributes } of groups.values()) {
         if (hidden.has('ticket_id')) continue;
         if (authSqlResult.supported) {
-          rows.push(...await buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder.clone(), displayAudienceForUser(user), hidden)
+          rows.push(...await buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder.clone(), displayAudienceForUser(user), hidden, hiddenAttributes)
             .whereIn('t.ticket_id', ids).clearOrder());
         } else {
-          const candidates = await buildTicketListItemsQuery(trx, tenant, baseQuery, displayAudienceForUser(user), hidden)
+          const candidates = await buildTicketListItemsQuery(trx, tenant, baseQuery, displayAudienceForUser(user), hidden, hiddenAttributes)
             .whereIn('t.ticket_id', ids).clearOrder();
           rows.push(...candidates.filter((row: { ticket_id?: string }) => freshById.has(row.ticket_id ?? '')));
         }

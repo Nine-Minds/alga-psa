@@ -115,7 +115,7 @@ async function seed() {
   });
   await db('tickets').insert([
     t(ids.M, 1, ids.k2, { assigned_to: actor }),
-    t(ids.A, 2, ids.k1, { title: 'DB-SECRET-TITLE', attributes: { description: 'DB-SECRET-DESCRIPTION' }, assigned_to: actor }),
+    t(ids.A, 2, ids.k1, { title: 'DB-SECRET-TITLE', attributes: { description: 'DB-SECRET-DESCRIPTION', secret_alias: 'SMOKE4050-SECRET-ALIAS', visible_alias: 'VISIBLE-CUSTOM-ATTRIBUTE' }, assigned_to: actor }),
     t(ids.B, 3, ids.k2),
   ]);
   await db('tickets').insert(t(ids.CH, 4, ids.k1, { master_ticket_id: ids.M }));
@@ -202,6 +202,26 @@ describeDb('ticket chip tag hydration (DB)', () => {
       await db('tag_display_rules').where({ tenant: ids.tenant }).del();
       await db('tag_display_rules').insert(rules);
     }
+  });
+
+  it('Smart Search hydration removes custom attribute redactions before returning rows and fails closed on unknown names', async () => {
+    const freshRules = vi.spyOn(bundleService, 'resolveBundleNarrowingRulesForEvaluation').mockResolvedValue([
+      { id: 'fresh-custom-redaction', resource: 'ticket', action: 'read', constraintKey: 'hide_sensitive_fields', redactedFields: ['secret_alias'] },
+    ] as never);
+    let result: any;
+    try {
+      result = await optimized.loadTicketListItemsByIds(base, [ids.A], { [ids.A]: ['description'] });
+    } finally {
+      freshRules.mockRestore();
+    }
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain('SMOKE4050-SECRET-ALIAS');
+    expect(result.tickets[0].attributes.description).toBeNull();
+    expect(result.tickets[0]).toMatchObject({ title: 'DB-SECRET-TITLE', ticket_number: 'CH-2' });
+    expect(result.tickets[0].attributes).toMatchObject({ visible_alias: 'VISIBLE-CUSTOM-ATTRIBUTE' });
+
+    await expect(optimized.loadTicketListItemsByIds(base, [ids.A], { [ids.A]: ['never_a_ticket_field'] }))
+      .rejects.toThrow(/Unsupported ticket redaction/);
   });
 
   it('by-id loads preserve list rows and metadata, request order, deduplication and filters', async () => {

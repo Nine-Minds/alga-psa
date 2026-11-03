@@ -31,7 +31,7 @@ import {
 } from '../candidate';
 import type { SmartSearchEntityDefinition, SmartSearchRedactions } from '../entityDefinition';
 import type { RelevancePrompt } from '../scoreBatch';
-import { hiddenTicketFields } from '@alga-psa/tickets/lib/ticketFieldProjection';
+import { hiddenTicketFields, interpretTicketRedactions } from '@alga-psa/tickets/lib/ticketFieldProjection';
 
 export type TicketCommentAuthor = 'technician' | 'client' | 'system';
 
@@ -199,9 +199,13 @@ export async function loadTicketCandidates(
   const authorizedIds = ticketIds.filter((id) => redactions.has(id));
   if (authorizedIds.length === 0) return [];
   const principal = await resolveSearchAclPrincipal(trx, user);
+  const attributesRows = await tenantDb(trx, tenant).table('tickets').whereIn('ticket_id', authorizedIds).select('ticket_id', 'attributes');
+  const attributesById = new Map(attributesRows.map((row: { ticket_id: string; attributes: Record<string, unknown> | null }) => [row.ticket_id, row.attributes]));
   const grouped = new Map<string, string[]>();
   for (const id of authorizedIds) {
     const fields = [...new Set(redactions.get(id)!)].sort();
+    // Candidate construction must reject policy names it cannot interpret just as hydration does.
+    interpretTicketRedactions(fields, attributesById.get(id));
     const key = JSON.stringify(fields);
     grouped.set(key, [...(grouped.get(key) ?? []), id]);
   }
