@@ -9,7 +9,9 @@ export type InvoiceFieldCategory =
   | 'Quote Totals'
   | 'Sales Order'
   | 'Client'
-  | 'Contact';
+  | 'Contact'
+  | 'Work Tag'
+  | 'Asset';
 
 export type TemplateFieldKind = 'generic' | 'address';
 
@@ -23,6 +25,18 @@ export type TemplateFieldDefinition = {
 };
 
 const FIELD_DEFINITIONS: Record<string, TemplateFieldDefinition> = {
+  'label.assetSerialNumber': {
+    path: 'label.assetSerialNumber',
+    label: 'Full asset serial number',
+    category: 'Work Tag',
+    description: 'Full serial of the selected asset, available on Letter customer worksheets.',
+  },
+  'label.ticketDescription': {
+    path: 'label.ticketDescription',
+    label: 'Ticket description',
+    category: 'Work Tag',
+    description: 'Ticket description as plain text, available on Letter customer worksheets.',
+  },
   'invoice.number': {
     path: 'invoice.number',
     label: 'Invoice Number',

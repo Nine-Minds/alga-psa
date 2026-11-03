@@ -55,6 +55,14 @@ There is no user-authored code execution — no compilation, no Wasm, no sandbox
 - Declarative transform operations: `filter`, `sort`, `group`, `aggregate`, `computed-field`, `totals-compose`
 - Optional `strategyId` extension points on transform operations
 
+### Ticket Work-Tag Customer Worksheets
+
+The **Standard Customer Worksheet** is a work-tag layout for Letter paper. Select it in the ticket print dialog and use the existing linked-asset picker when a ticket has multiple readable linked assets. If no single asset is selected, asset fields can be blank. The print job uses the existing linked-asset selection rules and independently checks access to the ticket and the selected asset.
+
+The worksheet includes the ticket description as plain text, the asset tag without a prefix, the full asset serial number (including short serials), and available asset specifications. Empty specification fields remain labeled so they can be filled in by hand. The ticket description may contain information that should not be shared with a customer; review it before printing.
+
+Custom work-tag layouts can opt in with **Letter customer worksheet** and use Letter or larger portrait paper. The designer offers `assetSerialNumber` and `ticketDescription` in addition to the existing `secondaryIdentifier` and `serialSuffix` fields. Hiding the serial suffix also hides the full serial; hiding detail also hides the description. Ordinary work tags do not receive the full serial or description. A worksheet print is rejected if the selected output cell is too small or text would be clipped.
+
 ### Per-Location Grouping
 
 Invoice and quote view models can expose a pre-computed `groupsByLocation` collection binding. Each group contains `{ name, address, items, subtotal }` where `subtotal` is the sum of the group's item totals. A `hasMultipleLocations` flag is also set on the view model.

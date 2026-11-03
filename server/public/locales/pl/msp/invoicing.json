@@ -1429,7 +1429,9 @@
           "quote-totals": "Sumy oferty",
           "invoice": "Faktura",
           "customer": "Klient",
-          "tenant": "Organizacja"
+          "tenant": "Organizacja",
+          "work-tag": "Etykieta pracy",
+          "asset": "Zasób"
         }
       },
       "noFieldsMatch": "Brak pasujących pól.",
@@ -1488,6 +1490,12 @@
       "insertDataField": "+ Wstaw pole danych…",
       "searchDataFields": "Szukaj pól danych…",
       "dataFields": "Pola danych",
+      "noFieldSelected": "Nie wybrano pola",
+      "bindingPathHint": "Wpisz ścieżkę powiązania, jeśli potrzebnego pola nie ma na liście.",
+      "useFieldPicker": "Użyj selektora pól",
+      "currentField": "Bieżące",
+      "unbound": "Niepowiązane",
+      "useCustomPath": "Użyj ścieżki niestandardowej",
       "box": {
         "top": "Góra",
         "right": "Prawo",
@@ -2108,6 +2116,86 @@
       "tenantClient_address": {
         "label": "Adres organizacji",
         "description": "Adres Twojej firmy."
+      },
+      "label_recordUrl": {
+        "label": "Link do rekordu",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "label_identifier": {
+        "label": "Identyfikator",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "label_code128Value": {
+        "label": "Wartość kodu kreskowego",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "label_title": {
+        "label": "Tytuł",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "label_clientName": {
+        "label": "Nazwa klienta",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "label_detail": {
+        "label": "Szczegóły / powód",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "label_secondaryIdentifier": {
+        "label": "Identyfikator dodatkowy",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "label_serialSuffix": {
+        "label": "Końcówka numeru seryjnego",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "label_assetSerialNumber": {
+        "label": "Pełny numer seryjny zasobu",
+        "description": "Dostępne tylko na kartach zgłoszenia w formacie Letter. Ścieżka danych: {{path}}"
+      },
+      "label_ticketDescription": {
+        "label": "Opis zgłoszenia",
+        "description": "Dostępne tylko na kartach zgłoszenia w formacie Letter. Ścieżka danych: {{path}}"
+      },
+      "label_custodyLocation": {
+        "label": "Miejsce przechowywania",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "label_nextAction": {
+        "label": "Następne działanie",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "linkedAsset_name": {
+        "label": "Nazwa zasobu",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "linkedAsset_manufacturer": {
+        "label": "Producent zasobu",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "linkedAsset_model": {
+        "label": "Model zasobu",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "linkedAsset_osLine": {
+        "label": "System operacyjny zasobu",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "linkedAsset_cpuLine": {
+        "label": "Procesor zasobu",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "linkedAsset_ramLine": {
+        "label": "RAM zasobu",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "linkedAsset_storageLine": {
+        "label": "Dysk zasobu",
+        "description": "Ścieżka danych: {{path}}"
+      },
+      "tenant_brandText": {
+        "label": "Nazwa firmy bez logo",
+        "description": "Ścieżka danych: {{path}}"
       }
     },
     "canvas": {
@@ -2579,7 +2667,10 @@
         "version": "Wersja",
         "labelClass": "Klasa etykiety",
         "labelFields": "Pola wyświetlane na etykiecie",
-        "labelFieldsHint": "Link do rekordu (kod QR) i identyfikator są zawsze wyświetlane."
+        "labelFieldsHint": "Link do rekordu (kod QR) i identyfikator są zawsze wyświetlane.",
+        "worksheetMode": "Karta klienta w formacie Letter",
+        "worksheetModeHint": "Umożliwia użycie pełnego numeru seryjnego i opisu zgłoszenia. Ustaw format Letter w projektancie.",
+        "worksheetFieldsHint": "Ukrycie końcówki numeru seryjnego ukrywa też pełny numer; ukrycie szczegółów ukrywa też opis zgłoszenia."
       },
       "placeholders": {
         "templateName": "Szablon dokumentu typu „{{type}}”"
@@ -2620,6 +2711,29 @@
       "workTag": "Etykieta robocza / Etykieta",
       "stagingManifest": "Lista pakowa",
       "rmaReturnSlip": "Dokument zwrotu RMA"
+    },
+    "labelClasses": {
+      "ticket-work-tag": "Etykieta zgłoszenia",
+      "asset-identity": "Etykieta zasobu",
+      "stock-unit-identity": "Etykieta jednostki magazynowej",
+      "staging-container": "Etykieta pudełka kompletacyjnego",
+      "rma-work-tag": "Etykieta RMA"
+    },
+    "labelFields": {
+      "clientName": "Nazwa klienta",
+      "title": "Tytuł",
+      "detail": "Szczegóły / powód",
+      "secondaryIdentifier": "Identyfikator dodatkowy",
+      "serialSuffix": "Końcówka numeru seryjnego",
+      "assetSerialNumber": "Pełny numer seryjny zasobu",
+      "ticketDescription": "Opis zgłoszenia",
+      "custodyLocation": "Miejsce przechowywania",
+      "nextAction": "Następne działanie",
+      "tenantLogo": "Logo firmy",
+      "tenantName": "Nazwa firmy"
+    },
+    "standardNames": {
+      "standard-ticket-customer-worksheet": "Standardowa karta klienta"
     }
   },
   "errors": {

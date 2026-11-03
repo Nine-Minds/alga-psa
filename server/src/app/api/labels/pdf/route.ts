@@ -39,6 +39,7 @@ import { rmaLabelViewModelProvider } from '@alga-psa/inventory/lib/rmaLabelViewM
 import { ticketLabelViewModelProvider } from '@alga-psa/tickets/lib/labelViewModelProvider';
 import { stagingContainerLabelViewModelProvider } from '@alga-psa/projects/lib/stagingLabelViewModelProvider';
 import { BarcodeError } from '@alga-psa/billing/lib/invoice-template-ast/barcode/constraints';
+import { getServerLocale, getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { LabelClass, LabelViewModelProvider } from '@alga-psa/types';
 
 import { printLabels, type PrintLabelsDeps } from '../../../../lib/labels/printLabels';
@@ -55,15 +56,30 @@ const PROVIDERS: Record<LabelClass, LabelViewModelProvider> = {
 
 const deps: PrintLabelsDeps = {
   providers: PROVIDERS,
-  renderPdf: (tenant, items, layout) => renderLabelBatchPdf(tenant, items, layout),
+  renderPdf: async (tenant, items, layout) =>
+    renderLabelBatchPdf(tenant, items, layout, { locale: await getServerLocale() }),
   resolveTemplate: (tenant, labelClass, templateId) => resolveLabelTemplateForTenant(tenant, labelClass, templateId),
-  getLinkedAssetParts: (context, subjects) => getTicketLinkedAssetLabelParts(context, subjects),
+  getLinkedAssetParts: async (context, subjects) => {
+    const locale = await getServerLocale();
+    const { t } = await getServerTranslation(locale, 'documents');
+    return getTicketLinkedAssetLabelParts(context, subjects, {
+      formatCpuCoreCount: (count) =>
+        String(t('labels.worksheet.cpuCoreCount', {
+          count,
+          defaultValue: count === 1 ? '{{count}} core' : '{{count}} cores',
+        })),
+    });
+  },
   describeClientError: (error) => {
     if (error instanceof LabelRenderError) {
       return { message: error.message, failures: error.failures };
     }
     if (error instanceof LabelLayoutError || error instanceof BarcodeError) {
-      return { message: error.message };
+      return {
+        message: error.message,
+        ...(error instanceof LabelLayoutError && error.errorCode ? { errorCode: error.errorCode } : {}),
+        ...(error instanceof LabelLayoutError && error.worksheetNumbers ? { worksheetNumbers: error.worksheetNumbers } : {}),
+      };
     }
     return null;
   },
@@ -100,7 +116,12 @@ export async function POST(request: Request) {
   try {
     const result = await printLabelsAuthenticated(body as Record<string, unknown>, baseUrl);
     if (!result.ok) {
-      return json(result.status, { error: result.message, ...(result.failures ? { failures: result.failures } : {}) });
+      return json(result.status, {
+        error: result.message,
+        ...(result.failures ? { failures: result.failures } : {}),
+        ...(result.errorCode ? { errorCode: result.errorCode } : {}),
+        ...(result.worksheetNumbers ? { worksheetNumbers: result.worksheetNumbers } : {}),
+      });
     }
     return new Response(new Uint8Array(result.pdf), {
       status: 200,

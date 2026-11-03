@@ -1619,7 +1619,9 @@
       "tooMany": "Vous pouvez imprimer au maximum {{max}} étiquettes à la fois.",
       "unnamedAsset": "Actif sans nom",
       "useTemplate": "Utiliser {{template}}",
-      "templatePaperWarning": "Ce modèle s'imprime sur une feuille entière. Choisissez « Papier du modèle » (ou une mise en page pleine feuille), sinon le contenu ne tiendra pas sur l'étiquette."
+      "templatePaperWarning": "Ce modèle s'imprime sur une feuille entière. Choisissez « Papier du modèle » (ou une mise en page pleine feuille), sinon le contenu ne tiendra pas sur l'étiquette.",
+      "worksheetPageSizeError": "La fiche doit utiliser du papier Letter ou plus grand en orientation portrait, dans le concepteur comme à l'impression.",
+      "worksheetTextOverflowError": "La fiche {{numbers}} contient du texte qui ne tient pas. Ajustez la mise en page ou raccourcissez le contenu avant impression."
     },
     "layout": {
       "template-preferred": "Papier du modèle (par défaut)",
@@ -1627,6 +1629,9 @@
       "letter-2x5": "Feuille Letter, 2 × 5 (style Avery 5163)",
       "a4-2x7": "Feuille A4, 2 × 7 (style 99,1 × 38,1 mm)",
       "letter-full": "Feuille Letter, une par page"
+    },
+    "standardTemplates": {
+      "standard-ticket-customer-worksheet": "Fiche client standard"
     }
   },
   "deleteEntity": {

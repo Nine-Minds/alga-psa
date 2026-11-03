@@ -81,6 +81,28 @@ describe('document binding catalog generation', () => {
     expect(renderPathOf('sales-order', 'tenant.name')).toBe('tenantClient.name');
   });
 
+  it('offers worksheet fields and asset specifications in the work-tag picker with round-trip paths', () => {
+    const expected = [
+      ['label.secondaryIdentifier', 'secondaryIdentifier'],
+      ['label.assetSerialNumber', 'assetSerialNumber'],
+      ['label.ticketDescription', 'ticketDescription'],
+      ['linkedAsset.name', 'linkedAsset.name'],
+      ['linkedAsset.cpuLine', 'linkedAsset.cpuLine'],
+      ['linkedAsset.ramLine', 'linkedAsset.ramLine'],
+      ['linkedAsset.storageLine', 'linkedAsset.storageLine'],
+    ] as const;
+    const options = buildDocumentExpressionPathOptions({ mode: 'template', includeRootPaths: false, documentKind: 'work-tag' });
+    for (const [display, render] of expected) {
+      const option = options.find((candidate) => candidate.path === display);
+      expect(option, display).toBeDefined();
+      expect(describeBindingOption(option!), display).not.toBeNull();
+      expect(resolveDocumentRenderPath('work-tag', display)).toBe(render);
+      expect(resolveDocumentDisplayPath('work-tag', render)).toBe(display);
+    }
+    expect(describeBindingOption(options.find((option) => option.path === 'label.assetSerialNumber')!)?.label)
+      .toBe('Full asset serial number');
+  });
+
   it('keeps every invoice option that shipped before, minus invoice.discount', () => {
     const invoiceOptions = new Set(optionPaths('invoice'));
 

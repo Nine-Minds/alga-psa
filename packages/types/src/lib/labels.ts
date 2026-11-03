@@ -26,6 +26,8 @@ export const LABEL_HIDEABLE_FIELDS = [
   'detail',
   'secondaryIdentifier',
   'serialSuffix',
+  'assetSerialNumber',
+  'ticketDescription',
   'custodyLocation',
   'nextAction',
   'tenantLogo',
@@ -86,8 +88,9 @@ export interface LabelTenantClient {
 
 /**
  * One uniform shape for every label class (decision: one generic `work-tag` document type).
- * Fields a class has no use for are null. Defaults deliberately exclude sensitive data: no
- * comments, credentials or full serial numbers (only `serialSuffix`).
+ * Fields a class has no use for are null. Ordinary tags exclude comments, credentials and full
+ * serial numbers; the explicitly selected Letter worksheet may include the ticket description and
+ * full serial of its authorized linked asset.
  */
 export interface LabelViewModel {
   labelClass: LabelClass;
@@ -107,6 +110,10 @@ export interface LabelViewModel {
   secondaryIdentifier: string | null;
   /** Last characters of the serial number, never the whole serial. */
   serialSuffix: string | null;
+  /** Full serial of the authorized linked asset, supplied only for a Letter ticket worksheet. */
+  assetSerialNumber?: string | null;
+  /** Plain-text ticket description, supplied only for a Letter ticket worksheet. */
+  ticketDescription?: string | null;
   /**
    * Ticket work tag only: where held client equipment is ("Main Office / Shelf B3", "With vendor"). Filled by the
    * linked-asset seam from the open custody episode, behind the asset read check. Never the free-text note.
@@ -150,6 +157,8 @@ export interface LabelRequestContext {
   user: IUserWithRoles;
   /** Absolute http(s) origin used to build `url` through `recordUrl`. */
   baseUrl: string;
+  /** Set by the print composition root only when the resolved ticket template is a Letter worksheet. */
+  includeWorksheetDetails?: boolean;
 }
 
 /**
@@ -178,6 +187,8 @@ export interface LabelViewModelProvider {
  * reprint them with `suggestedTemplateCode`. Only returned for records the caller was authorized to
  * read (authorization runs first; unreadable records are skipped and counted, never listed).
  */
+export type LabelPrintErrorCode = 'worksheetPageSize' | 'worksheetTextOverflow';
+
 export interface LabelPrintFailure {
   /** Zero-based position among the labels actually printed (after unreadable records were skipped). */
   index: number;
@@ -185,6 +196,7 @@ export interface LabelPrintFailure {
   identifier: string;
   templateCode: string;
   message: string;
+  errorCode?: LabelPrintErrorCode;
   /** A standard template of the same label class that can print this record, when there is one. */
   suggestedTemplateCode?: string;
 }

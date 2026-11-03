@@ -1619,7 +1619,9 @@
       "tooMany": "Du kan skriva ut högst {{max}} etiketter åt gången.",
       "unnamedAsset": "Namnlös tillgång",
       "useTemplate": "Använd {{template}}",
-      "templatePaperWarning": "Den här mallen skrivs ut på ett helt ark. Välj \"Mallens papper\" (eller en helsideslayout), annars får innehållet inte plats på etiketten."
+      "templatePaperWarning": "Den här mallen skrivs ut på ett helt ark. Välj \"Mallens papper\" (eller en helsideslayout), annars får innehållet inte plats på etiketten.",
+      "worksheetPageSizeError": "Bladet måste använda stående Letter-papper eller större, både i designern och i utskriftslayouten.",
+      "worksheetTextOverflowError": "Blad {{numbers}} innehåller text som inte får plats. Justera layouten eller förkorta innehållet före utskrift."
     },
     "layout": {
       "template-preferred": "Mallens papper (standard)",
@@ -1627,6 +1629,9 @@
       "letter-2x5": "Letter-ark, 2 × 5 (Avery 5163-stil)",
       "a4-2x7": "A4-ark, 2 × 7 (99,1 × 38,1 mm-stil)",
       "letter-full": "Letter-ark, en per sida"
+    },
+    "standardTemplates": {
+      "standard-ticket-customer-worksheet": "Standardkundblad"
     }
   },
   "deleteEntity": {

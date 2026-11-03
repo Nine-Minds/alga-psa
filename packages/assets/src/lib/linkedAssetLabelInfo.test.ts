@@ -43,6 +43,15 @@ describe('composeLinkedAssetInfo', () => {
     expect(info.storageLine).toBeNull();
   });
 
+  it('uses the supplied localized formatter for CPU core counts', () => {
+    const formatCores = (count: number) => `${count} cœurs`;
+    expect(composeLinkedAssetInfo(base, { cpu_model: 'Example CPU', cpu_cores: 8 }, formatCores).cpuLine)
+      .toBe('Example CPU / 8 cœurs');
+    expect(composeLinkedAssetInfo(base, { cpu_cores: 8 }, formatCores).cpuLine).toBe('8 cœurs');
+    expect(composeLinkedAssetInfo(base, { cpu_model: 'Example CPU' }, formatCores).cpuLine).toBe('Example CPU');
+    expect(composeLinkedAssetInfo(base, { cpu_cores: 1 }).cpuLine).toBe('1 core');
+  });
+
   it('falls back to the extension model for mobile/printer rows', () => {
     const info = composeLinkedAssetInfo({ ...base, asset_type: 'printer', model: null }, { model: 'M407n' });
     expect(info.model).toBe('M407n');

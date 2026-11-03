@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { MAX_LABELS_PER_REQUEST, type LabelClass, type LabelPrintFailure } from '@alga-psa/types';
-import { Dialog, DialogContent, DialogFooter } from '../Dialog';
+import { MAX_LABELS_PER_REQUEST, type LabelClass, type LabelPrintErrorCode, type LabelPrintFailure } from '@alga-psa/types';
+import { Dialog, DialogContent } from '../Dialog';
 import { Button } from '../Button';
 import { Input } from '../Input';
 import { Checkbox } from '../Checkbox';
@@ -137,7 +137,12 @@ export function LabelPrintDialog({
     [t]
   );
 
-  const templateOptions = (templates?.templates ?? []).map((tpl) => ({ value: tpl.id, label: tpl.name }));
+  const templateOptions = (templates?.templates ?? []).map((tpl) => ({
+    value: tpl.id,
+    label: tpl.source === 'standard'
+      ? t(`labels.standardTemplates.${tpl.id}`, { defaultValue: tpl.name })
+      : tpl.name,
+  }));
 
   const run = useCallback(
     async (skipRecordIds: Set<string>, overrideTemplateCode?: string) => {
@@ -191,6 +196,20 @@ export function LabelPrintDialog({
   }
 
   const failures: LabelPrintFailure[] = outcome?.status === 'failed' ? outcome.failures : [];
+  const localizedWorksheetError = (code?: LabelPrintErrorCode, worksheetNumbers?: number[]): string | null => {
+    if (code === 'worksheetPageSize') {
+      return t('labels.dialog.worksheetPageSizeError', {
+        defaultValue: 'The worksheet must use Letter or larger portrait paper, both in the designer and the print layout.',
+      });
+    }
+    if (code === 'worksheetTextOverflow' && worksheetNumbers?.length) {
+      return t('labels.dialog.worksheetTextOverflowError', {
+        defaultValue: 'Worksheet {{numbers}} contains text that will not fit. Adjust the layout or shorten the content before printing.',
+        numbers: worksheetNumbers.join(', '),
+      });
+    }
+    return null;
+  };
 
   const skipFailures = () => {
     const next = new Set(excluded);
@@ -208,6 +227,22 @@ export function LabelPrintDialog({
         labelClass === 'asset-identity'
           ? t('labels.dialog.assetTitle', { defaultValue: 'Print asset labels' })
           : t('labels.dialog.ticketTitle', { defaultValue: 'Print work tags' })
+      }
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button id={`${idPrefix}-cancel-button`} variant="outline" onClick={onClose}>
+            {t('actions.close', { defaultValue: 'Close' })}
+          </Button>
+          <Button
+            id={`${idPrefix}-submit-button`}
+            disabled={isPrinting || tooMany || ids.length === 0}
+            onClick={() => void run(excluded)}
+          >
+            {isPrinting
+              ? t('labels.dialog.printing', { defaultValue: 'Preparing…' })
+              : t('labels.dialog.print', { defaultValue: 'Print' })}
+          </Button>
+        </div>
       }
     >
       <DialogContent>
@@ -370,7 +405,10 @@ export function LabelPrintDialog({
                   <p>
                     {outcome.httpStatus === 404
                       ? t('labels.dialog.notFound', { defaultValue: 'These records could not be opened.' })
-                      : outcome.message ||
+                      : localizedWorksheetError(outcome.errorCode, outcome.worksheetNumbers) ||
+                        (failures.some((failure) => failure.errorCode)
+                         ? t('labels.dialog.failed', { defaultValue: 'The labels could not be printed.' })
+                         : outcome.message) ||
                         t('labels.dialog.failed', { defaultValue: 'The labels could not be printed.' })}
                   </p>
                   {failures.length > 0 && (
@@ -378,7 +416,7 @@ export function LabelPrintDialog({
                       <ul className="list-disc pl-5">
                         {failures.map((f) => (
                           <li key={`${f.recordId}-${f.index}`}>
-                            <span className="font-medium">{f.identifier}</span>: {f.message}
+                            <span className="font-medium">{f.identifier}</span>: {localizedWorksheetError(f.errorCode) || f.message}
                             {f.suggestedTemplateCode && (
                               <Button
                                 id={`${idPrefix}-use-${f.recordId}`}
@@ -405,20 +443,6 @@ export function LabelPrintDialog({
             </Alert>
           )}
         </div>
-        <DialogFooter>
-          <Button id={`${idPrefix}-cancel-button`} variant="outline" onClick={onClose}>
-            {t('actions.close', { defaultValue: 'Close' })}
-          </Button>
-          <Button
-            id={`${idPrefix}-submit-button`}
-            disabled={isPrinting || tooMany || ids.length === 0}
-            onClick={() => void run(excluded)}
-          >
-            {isPrinting
-              ? t('labels.dialog.printing', { defaultValue: 'Preparing…' })
-              : t('labels.dialog.print', { defaultValue: 'Print' })}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

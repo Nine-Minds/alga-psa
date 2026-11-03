@@ -1619,7 +1619,9 @@
       "tooMany": "You can print at most {{max}} labels at a time.",
       "unnamedAsset": "Unnamed asset",
       "useTemplate": "Use {{template}}",
-      "templatePaperWarning": "This template prints on a full sheet. Choose \"Template paper\" (or a full-sheet layout), or the content will not fit the label."
+      "templatePaperWarning": "This template prints on a full sheet. Choose \"Template paper\" (or a full-sheet layout), or the content will not fit the label.",
+      "worksheetPageSizeError": "The worksheet must use Letter or larger portrait paper, both in the designer and the print layout.",
+      "worksheetTextOverflowError": "Worksheet {{numbers}} contains text that will not fit. Adjust the layout or shorten the content before printing."
     },
     "layout": {
       "template-preferred": "Template paper (default)",
@@ -1627,6 +1629,9 @@
       "letter-2x5": "Letter sheet, 2 × 5 (Avery 5163-style)",
       "a4-2x7": "A4 sheet, 2 × 7 (99.1 × 38.1 mm style)",
       "letter-full": "Letter sheet, one per page"
+    },
+    "standardTemplates": {
+      "standard-ticket-customer-worksheet": "Standard Customer Worksheet"
     }
   },
   "deleteEntity": {

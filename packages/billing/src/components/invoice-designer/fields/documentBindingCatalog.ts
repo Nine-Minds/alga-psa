@@ -65,6 +65,8 @@ const ROOT_METADATA: Record<string, { label: string; description: string }> = {
   customer: { label: 'Customer', description: 'Customer fields' },
   tenant: { label: 'Tenant', description: 'Tenant fields' },
   item: { label: 'Line Item', description: 'Line item fields for repeating/table contexts' },
+  label: { label: 'Work Tag', description: 'Work tag and worksheet fields' },
+  linkedAsset: { label: 'Asset', description: 'Selected asset fields' },
   manifest: { label: 'Packing Manifest', description: 'Staging box, project and client fields' },
 };
 
@@ -428,6 +430,8 @@ const FIELD_CATEGORY_BY_ROOT: Record<string, InvoiceFieldCategory> = {
   contact: 'Contact',
   tenant: 'Tenant',
   item: 'Line Item',
+  label: 'Work Tag',
+  linkedAsset: 'Asset',
 };
 
 // The picker already groups options under the category heading, so document-root fields do not
@@ -437,6 +441,7 @@ const UNPREFIXED_CATEGORIES: ReadonlySet<InvoiceFieldCategory> = new Set<Invoice
   'Invoice',
   'Quote',
   'Sales Order',
+  'Work Tag',
 ]);
 
 const toTitleCase = (value: string): string =>

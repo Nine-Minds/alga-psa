@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { recordUrl, type LabelViewModel } from '@alga-psa/types';
 
 import { composeLabelSheets } from './composeLabelSheets';
-import { LabelLayoutError, planLabelBatch, resolveLabelBatchPdfOptions, type GridLayout } from './layout';
+import {
+  LabelLayoutError,
+  labelMetadataPrefersPaperPage,
+  planLabelBatch,
+  resolveLabelBatchPdfOptions,
+  resolveTemplatePreferredPageSizes,
+  resolveWorksheetDesignSizeMm,
+  type GridLayout,
+} from './layout';
 import { LabelRenderError, assertCanonicalLabelUrl } from './renderLabelBatchHtml';
 
 const grid = (overrides: Partial<GridLayout> = {}): GridLayout => ({
@@ -31,6 +39,49 @@ describe('planLabelBatch', () => {
       height: '50.8mm',
       preferCSSPageSize: true,
       margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
+    });
+  });
+
+  describe('Letter worksheet geometry', () => {
+    const letter = { labelSettings: { worksheetMode: 'letter' as const }, printSettings: { paperPreset: 'Letter' as const } };
+
+    it('uses the Letter preset when no custom page size is set', () => {
+      expect(resolveWorksheetDesignSizeMm(letter)).toEqual({ widthMm: 215.9, heightMm: 279.4 });
+      expect(labelMetadataPrefersPaperPage(letter)).toBe(true);
+      expect(resolveTemplatePreferredPageSizes([{ metadata: letter }])).toEqual({ width: 215.9, height: 279.4, unit: 'mm' });
+    });
+
+    it('accepts equivalent Letter dimensions expressed in different units', () => {
+      const custom = {
+        ...letter,
+        printSettings: { paperPreset: 'Letter' as const, customPageSize: { width: 8.5, height: 11, unit: 'in' as const } },
+      };
+      expect(resolveTemplatePreferredPageSizes([{ metadata: custom }, { metadata: letter }])).toEqual(custom.printSettings.customPageSize);
+    });
+
+    it('accepts larger portrait pages but rejects landscape and square designs', () => {
+      expect(resolveWorksheetDesignSizeMm({
+        ...letter,
+        printSettings: { paperPreset: 'Legal' },
+      })).toEqual({ widthMm: 215.9, heightMm: 355.6 });
+      for (const width of [11, 12]) {
+        expect(() => resolveWorksheetDesignSizeMm({
+          ...letter,
+          printSettings: { customPageSize: { width, height: 11, unit: 'in' } },
+        })).toThrow(/Letter or a larger portrait page/);
+      }
+    });
+
+    it('rejects missing, thermal and too-narrow page sizes rather than exposing worksheet data on a tag', () => {
+      expect(() => resolveWorksheetDesignSizeMm({ labelSettings: { worksheetMode: 'letter' } })).toThrow(/page size/);
+      expect(() => resolveWorksheetDesignSizeMm({
+        ...letter,
+        printSettings: { paperPreset: 'Letter', customPageSize: { width: 4, height: 2, unit: 'in' } },
+      })).toThrow(/Letter or a larger portrait page/);
+      expect(() => resolveWorksheetDesignSizeMm({
+        ...letter,
+        printSettings: { paperPreset: 'A4' },
+      })).toThrow(/Letter or a larger portrait page/);
     });
   });
 

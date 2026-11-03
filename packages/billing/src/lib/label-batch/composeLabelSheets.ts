@@ -21,6 +21,8 @@ export interface RenderedLabelCell {
   designedSizeMm?: { widthMm: number; heightMm: number } | null;
   /** For error messages only. */
   description?: string;
+  /** Letter worksheets must not silently clip text, unlike intentionally compact tags. */
+  validateTextFits?: boolean;
 }
 
 export interface ComposedLabelDocument {
@@ -65,7 +67,7 @@ export function composeLabelSheets(
   cells.forEach((cell, index) => {
     const p = geometry.placements[index];
     sheets[p.sheet].push(
-      `<div class="label-cell" data-label-index="${index}" style="left:${mmCss(p.leftMm)};top:${mmCss(p.topMm)};` +
+      `<div class="label-cell" data-label-index="${index}"${cell.validateTextFits ? ' data-validate-text-fits="true"' : ''} style="left:${mmCss(p.leftMm)};top:${mmCss(p.topMm)};` +
         `width:${mmCss(p.widthMm)};height:${mmCss(p.heightMm)};">${cell.html}</div>`
     );
   });
