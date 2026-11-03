@@ -64,7 +64,14 @@
     "subscriptionLapsed": "Korzystasz teraz z wersji bezpłatnej. Wznów subskrypcję, aby przywrócić Pro.",
     "resubscribe": "Wznów subskrypcję",
     "termEnds": "Twój dostęp do Pro kończy się {{date}}. Odnów, aby zachować Pro.",
-    "termEndsNoDate": "Twój okres Pro dobiega końca. Odnów, aby zachować Pro."
+    "termEndsNoDate": "Twój okres Pro dobiega końca. Odnów, aby zachować Pro.",
+    "paymentFailed": "Płatność nie powiodła się — ponowimy próbę {{date}}. Zaktualizuj metodę płatności, aby zachować Pro.",
+    "paymentFailedNoRetry": "Płatność nie powiodła się. Zaktualizuj metodę płatności, aby zachować Pro.",
+    "paymentFailedEndsOn": "Pro kończy się {{date}}, jeśli płatność nadal będzie nieudana.",
+    "paymentFailedEnded": "Pro zakończono — płatność nie powiodła się. Twoje urządzenie działa w wersji Essentials.",
+    "paymentFailedEndedEnding": "Twoja subskrypcja Pro zakończyła się — płatność nie powiodła się. Pro pozostaje aktywne do {{date}}. Wznów subskrypcję, aby zachować Pro.",
+    "paymentFailedEndedEndingNoDate": "Twoja subskrypcja Pro zakończyła się — płatność nie powiodła się. Wznów subskrypcję, aby zachować Pro.",
+    "updatePaymentMethod": "Zaktualizuj metodę płatności"
   },
   "nav": {
     "dashboard": "Panel",

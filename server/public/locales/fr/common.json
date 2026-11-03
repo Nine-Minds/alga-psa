@@ -52,7 +52,14 @@
     "subscriptionLapsed": "Vous utilisez maintenant l'édition gratuite. Réabonnez-vous pour rétablir Pro.",
     "resubscribe": "Se réabonner",
     "termEnds": "Votre accès Pro se termine le {{date}}. Renouvelez pour conserver Pro.",
-    "termEndsNoDate": "Votre période Pro touche à sa fin. Renouvelez pour conserver Pro."
+    "termEndsNoDate": "Votre période Pro touche à sa fin. Renouvelez pour conserver Pro.",
+    "paymentFailed": "Échec du paiement — nouvelle tentative le {{date}}. Mettez à jour votre moyen de paiement pour conserver Pro.",
+    "paymentFailedNoRetry": "Échec du paiement. Mettez à jour votre moyen de paiement pour conserver Pro.",
+    "paymentFailedEndsOn": "Pro prend fin le {{date}} si le paiement échoue encore.",
+    "paymentFailedEnded": "Pro a pris fin — échec du paiement. Votre appliance fonctionne avec Essentials.",
+    "paymentFailedEndedEnding": "Votre abonnement Pro a pris fin — échec du paiement. Pro reste actif jusqu’au {{date}}. Réabonnez-vous pour conserver Pro.",
+    "paymentFailedEndedEndingNoDate": "Votre abonnement Pro a pris fin — échec du paiement. Réabonnez-vous pour conserver Pro.",
+    "updatePaymentMethod": "Mettre à jour le moyen de paiement"
   },
   "nav": {
     "dashboard": "Tableau de bord",

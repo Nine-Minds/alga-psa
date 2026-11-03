@@ -34,6 +34,9 @@ describe('parseCheckInSubscription (defensive)', () => {
       cancelsAt: new Date('2026-11-01T00:00:00.000Z'),
       licenseValidUntil: 1800000000,
       resubscribeUrl: 'https://portal.example/r',
+      nextRetryAt: null,
+      updatePaymentUrl: null,
+      endReason: null,
     });
   });
 
@@ -46,7 +49,7 @@ describe('parseCheckInSubscription (defensive)', () => {
         resubscribe_url: 'javascript:alert(1)',
         extra: { nested: true },
       }),
-    ).toEqual({ state: null, cancelsAt: null, licenseValidUntil: null, resubscribeUrl: null });
+    ).toEqual({ state: null, cancelsAt: null, licenseValidUntil: null, resubscribeUrl: null, nextRetryAt: null, updatePaymentUrl: null, endReason: null });
   });
 });
 
@@ -94,6 +97,9 @@ describe('checkInStateUpdate', () => {
     subscription_cancels_at: null,
     subscription_resubscribe_url: null,
     subscription_context_updated_at: null,
+    subscription_next_retry_at: null,
+    subscription_update_payment_url: null,
+    subscription_end_reason: null,
   };
 
   it('legacy ok stores the new token and clears any context', () => {
@@ -117,6 +123,9 @@ describe('checkInStateUpdate', () => {
       subscription_cancels_at: new Date('2026-11-01T00:00:00Z'),
       subscription_resubscribe_url: 'https://p/x',
       subscription_context_updated_at: NOW,
+      subscription_next_retry_at: null,
+      subscription_update_payment_url: null,
+      subscription_end_reason: null,
       last_checkin_at: NOW,
     });
   });
@@ -176,5 +185,72 @@ describe('applyCheckInResult', () => {
     getLicenseStateRow.mockResolvedValue({ license_token: 'tok' });
     expect(await applyCheckInResult({ kind: 'credential_revoked' })).toBeNull();
     expect(upsertLicenseState).not.toHaveBeenCalled();
+  });
+});
+
+describe('payment_failed check-in context', () => {
+  const failed = {
+    state: 'payment_failed',
+    nextRetryAt: '2026-11-05T12:00:00.000Z',
+    updatePaymentUrl: 'https://invoice.stripe.com/i/abc',
+    resubscribe_url: 'https://p/x',
+  };
+
+  it('parses every payment_failed field', () => {
+    expect(parseCheckInSubscription(failed)).toMatchObject({
+      state: 'payment_failed',
+      nextRetryAt: new Date('2026-11-05T12:00:00.000Z'),
+      updatePaymentUrl: 'https://invoice.stripe.com/i/abc',
+      endReason: null,
+    });
+  });
+
+  it('a bad date or a bad URL becomes null; the state is kept', () => {
+    expect(parseCheckInSubscription({ state: 'payment_failed', nextRetryAt: 'nope', updatePaymentUrl: 'javascript:alert(1)' })).toMatchObject({
+      state: 'payment_failed', nextRetryAt: null, updatePaymentUrl: null,
+    });
+    expect(parseCheckInSubscription({ state: 'payment_failed', nextRetryAt: null })?.nextRetryAt).toBeNull();
+  });
+
+  it('cancelled keeps endReason payment_failed only; anything else is dropped', () => {
+    expect(parseCheckInSubscription({ state: 'cancelled', endReason: 'payment_failed' })?.endReason).toBe('payment_failed');
+    expect(parseCheckInSubscription({ state: 'cancelled', endReason: 'fraud' })?.endReason).toBeNull();
+  });
+
+  it('a legacy payload without the new fields parses as before, and an unknown state is ignored', () => {
+    expect(parseCheckInSubscription({ state: 'cancelled', cancels_at: '2026-11-01T00:00:00Z' })).toMatchObject({
+      state: 'cancelled', nextRetryAt: null, updatePaymentUrl: null, endReason: null,
+    });
+    expect(parseCheckInSubscription({ state: 'payment_pending', nextRetryAt: '2026-11-05T12:00:00.000Z' })?.state).toBeNull();
+  });
+
+  it('payment_failed stores state, retry date and URL without touching the token', () => {
+    const r = interpretCheckInResponse(200, { status: 'no_change', subscription: failed });
+    expect(checkInStateUpdate(r, 'tok', NOW)).toEqual({
+      subscription_state: 'payment_failed',
+      subscription_cancels_at: null,
+      subscription_resubscribe_url: 'https://p/x',
+      subscription_context_updated_at: NOW,
+      subscription_next_retry_at: new Date('2026-11-05T12:00:00.000Z'),
+      subscription_update_payment_url: 'https://invoice.stripe.com/i/abc',
+      subscription_end_reason: null,
+      last_checkin_at: NOW,
+    });
+  });
+
+  it('active clears all three payment columns (automatic recovery)', () => {
+    const r = interpretCheckInResponse(200, { status: 'ok', jwt: 'tok', exp: 1, subscription: { state: 'active' } });
+    expect(checkInStateUpdate(r, 'tok', NOW)).toMatchObject({
+      subscription_state: null,
+      subscription_next_retry_at: null,
+      subscription_update_payment_url: null,
+      subscription_end_reason: null,
+    });
+  });
+
+  it('a lapse stores the end reason; a bare lapse stores null', () => {
+    const r = interpretCheckInResponse(200, { status: 'revoked', subscription: { state: 'cancelled', endReason: 'payment_failed' } });
+    expect(checkInStateUpdate(r, 'tok', NOW)).toMatchObject({ subscription_state: 'cancelled', subscription_end_reason: 'payment_failed' });
+    expect(checkInStateUpdate(interpretCheckInResponse(200, { status: 'revoked' }), 'tok', NOW)).toMatchObject({ subscription_end_reason: null });
   });
 });

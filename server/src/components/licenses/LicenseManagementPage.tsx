@@ -40,7 +40,7 @@ import {
 } from "@alga-psa/ui/lib/errorHandling";
 import { isEnterpriseEdition } from "@/lib/features";
 import ApplianceAiSection from "@/components/licenses/ApplianceAiSection";
-import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import { useFormatters, useTranslation } from "@alga-psa/ui/lib/i18n/client";
 
 type Tone = "neutral" | "success" | "warning" | "danger" | "premium";
 
@@ -100,7 +100,21 @@ function refreshErrorMessage(
     const sub = result.status?.subscription;
     const date = formatDate(sub?.endsAt ?? result.status?.expiresAt ?? null);
     const stillPro = sub?.phase === "ending";
-    const head = stillPro
+    const paymentFailed = sub?.cause === "payment_failed";
+    const head = paymentFailed
+      ? stillPro
+        ? date
+          ? t("managementPage.errors.subscriptionEndingPaymentFailed", {
+              date,
+              defaultValue: "Your Pro subscription ended — payment failed. Pro ends on {{date}}.",
+            })
+          : t("managementPage.errors.subscriptionEndingPaymentFailedNoDate", {
+              defaultValue: "Your Pro subscription ended — payment failed.",
+            })
+        : t("managementPage.errors.subscriptionEndedPaymentFailed", {
+            defaultValue: "Pro ended — payment failed. Your appliance runs Essentials.",
+          })
+      : stillPro
       ? date
         ? t("managementPage.errors.subscriptionEnding", {
             date,
@@ -168,10 +182,20 @@ function statusPresentation(
           tier: tierLabel(status.tier, t),
           defaultValue: "{{tier}} is active",
         }),
-        description: status.subscription?.phase === "ending" && status.subscription.cause === "term"
+        description: status.subscription?.phase === "payment_failed"
+          ? t("managementPage.status.licensed.descriptionPaymentFailed", {
+              defaultValue: "Pro is active, but the last renewal payment failed. Update your payment method to keep Pro.",
+            })
+          : status.subscription?.phase === "ending" && status.subscription.cause === "term"
           ? t("managementPage.status.licensed.descriptionTermEnds", {
               date: formatDate(status.subscription.endsAt ?? status.expiresAt),
               defaultValue: "Pro is active through {{date}}, when its fixed term ends.",
+            })
+          : status.subscription?.phase === "ending" && status.subscription.cause === "payment_failed"
+          ? t("managementPage.status.licensed.descriptionPaymentFailedEnded", {
+              date: formatDate(status.subscription.endsAt ?? status.expiresAt),
+              defaultValue:
+                "Your Pro subscription ended — payment failed. Pro stays active through {{date}}.",
             })
           : status.subscription?.phase === "ending"
           ? t("managementPage.status.licensed.descriptionEnding", {
@@ -326,6 +350,7 @@ function toneClasses(tone: Tone) {
  */
 export default function LicenseManagementPage() {
   const { t } = useTranslation("msp/licensing");
+  const { formatDate: formatLocaleDate } = useFormatters();
   const [status, setStatus] = useState<LicenseStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [licenseKey, setLicenseKey] = useState("");
@@ -519,6 +544,10 @@ export default function LicenseManagementPage() {
   const subscriptionEndDate = formatDate(
     status.subscription?.endsAt ?? null,
   );
+  const paymentFailed = status.subscription?.phase === "payment_failed";
+  const paymentRetryDate = status.subscription?.nextRetryAt
+    ? formatLocaleDate(status.subscription.nextRetryAt, { month: "short", day: "numeric", year: "numeric" })
+    : null;
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6 p-6 text-[rgb(var(--color-text-700))]">
@@ -602,14 +631,31 @@ export default function LicenseManagementPage() {
             >
               <Alert
                 id="license-subscription-lapse-alert"
-                variant={status.subscription.phase === "lapsed" ? "destructive" : "warning"}
+                variant={status.subscription.phase === "lapsed" || paymentFailed || status.subscription.cause === "payment_failed" ? "destructive" : "warning"}
               >
                 <AlertDescription className="space-y-3">
                   <p className="font-medium text-[rgb(var(--color-text-900))]">
-                    {status.subscription.phase === "lapsed"
+                    {paymentFailed
+                      ? paymentRetryDate
+                        ? t("managementPage.lapse.paymentFailedTitle", {
+                            date: paymentRetryDate,
+                            defaultValue: "Payment failed — we’ll retry on {{date}}. Update your payment method to keep Pro.",
+                          })
+                        : t("managementPage.lapse.paymentFailedTitleNoRetry", {
+                            defaultValue: "Payment failed. Update your payment method to keep Pro.",
+                          })
+                      : status.subscription.phase === "lapsed" && status.subscription.cause === "payment_failed"
+                      ? t("managementPage.lapse.paymentFailedEndedTitle", {
+                          defaultValue: "Pro ended — payment failed. Your appliance runs Essentials.",
+                        })
+                      : status.subscription.phase === "lapsed"
                       ? t("managementPage.lapse.lapsedTitle", {
                           defaultValue: "You’re now on the free edition. Resubscribe to restore Pro.",
                         })
+                      : status.subscription.cause === "payment_failed"
+                        ? t("managementPage.lapse.paymentFailedEndingTitle", {
+                            defaultValue: "Your Pro subscription ended — payment failed.",
+                          })
                       : status.subscription.cause === "term"
                         ? t("managementPage.lapse.termEndsTitle", {
                             defaultValue: "Your Pro term is ending.",
@@ -620,7 +666,12 @@ export default function LicenseManagementPage() {
                   </p>
                   {subscriptionEndDate ? (
                     <p>
-                      {status.subscription.phase === "lapsed"
+                      {paymentFailed
+                        ? t("managementPage.lapse.paymentFailedEndsOn", {
+                            date: subscriptionEndDate,
+                            defaultValue: "Pro ends on {{date}} if payment keeps failing.",
+                          })
+                        : status.subscription.phase === "lapsed"
                         ? t("managementPage.lapse.endedOn", {
                             date: subscriptionEndDate,
                             defaultValue: "Pro ended on {{date}}.",
@@ -631,15 +682,32 @@ export default function LicenseManagementPage() {
                           })}
                     </p>
                   ) : null}
+                  {paymentFailed ? null : (
                   <p>
                     {t("managementPage.lapse.dataKept", {
                       defaultValue:
                         "Nothing is deleted. Your data stays in place and Pro features turn back on after you resubscribe and refresh the license.",
                     })}
                   </p>
+                  )}
                   <div className="flex flex-wrap items-center gap-3">
+                    {paymentFailed && status.subscription.updatePaymentUrl ? (
+                      <Button id="license-update-payment-link" asChild>
+                        <a
+                          href={status.subscription.updatePaymentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="gap-2"
+                        >
+                          <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                          {t("managementPage.lapse.updatePaymentMethod", {
+                            defaultValue: "Update payment method",
+                          })}
+                        </a>
+                      </Button>
+                    ) : null}
                     {/* Fall back to the licensing portal when the server sent no URL. */}
-                    {status.subscription.resubscribeUrl || PORTAL_URL ? (
+                    {!paymentFailed && (status.subscription.resubscribeUrl || PORTAL_URL) ? (
                       <Button id="license-lapse-resubscribe-link" asChild>
                         <a
                           href={status.subscription.resubscribeUrl ?? PORTAL_URL}

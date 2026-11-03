@@ -264,7 +264,9 @@
         "descriptionWithExpiry": "Your license is active through {{date}}.",
         "badge": "Licensed",
         "descriptionEnding": "Your subscription has been cancelled. Pro stays active through {{date}}.",
-        "descriptionTermEnds": "Pro is active through {{date}}, when its fixed term ends."
+        "descriptionTermEnds": "Pro is active through {{date}}, when its fixed term ends.",
+        "descriptionPaymentFailed": "Pro is active, but the last renewal payment failed. Update your payment method to keep Pro.",
+        "descriptionPaymentFailedEnded": "Your Pro subscription ended — payment failed. Pro stays active through {{date}}."
       },
       "licenseExpired": {
         "eyebrow": "License needs attention",
@@ -363,6 +365,9 @@
       "subscriptionEnding": "Your Pro subscription has been cancelled. Pro ends on {{date}}.",
       "subscriptionEndingNoDate": "Your Pro subscription has been cancelled.",
       "subscriptionEnded": "Your Pro subscription has ended. This appliance is on the free edition.",
+      "subscriptionEndingPaymentFailed": "Your Pro subscription ended — payment failed. Pro ends on {{date}}.",
+      "subscriptionEndingPaymentFailedNoDate": "Your Pro subscription ended — payment failed.",
+      "subscriptionEndedPaymentFailed": "Pro ended — payment failed. Your appliance runs Essentials.",
       "resubscribeAt": "Resubscribe at {{url}}.",
       "resubscribeToRestore": "Resubscribe to restore Pro."
     },
@@ -373,7 +378,13 @@
       "endsOn": "Pro ends on {{date}}.",
       "dataKept": "Nothing is deleted. Your data stays in place and Pro features turn back on after you resubscribe and refresh the license.",
       "resubscribe": "Resubscribe",
-      "termEndsTitle": "Your Pro term is ending."
+      "termEndsTitle": "Your Pro term is ending.",
+      "paymentFailedTitle": "Payment failed — we’ll retry on {{date}}. Update your payment method to keep Pro.",
+      "paymentFailedTitleNoRetry": "Payment failed. Update your payment method to keep Pro.",
+      "paymentFailedEndedTitle": "Pro ended — payment failed. Your appliance runs Essentials.",
+      "paymentFailedEndingTitle": "Your Pro subscription ended — payment failed.",
+      "paymentFailedEndsOn": "Pro ends on {{date}} if payment keeps failing.",
+      "updatePaymentMethod": "Update payment method"
     }
   },
   "errors": {

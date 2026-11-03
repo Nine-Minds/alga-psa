@@ -233,7 +233,8 @@ jobs:
     name: Production browser (${{ matrix.edition }})
     needs: [changes, browser-collection, build-images]
     if: always()
-    runs-on: ubuntu-latest
+    # Keep the runner within the OS versions supported by locked Playwright.
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
       fail-fast: false

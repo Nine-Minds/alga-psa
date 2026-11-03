@@ -52,7 +52,14 @@
     "subscriptionLapsed": "Sie nutzen jetzt die kostenlose Edition. Schließen Sie das Abonnement erneut ab, um Pro wiederherzustellen.",
     "resubscribe": "Erneut abonnieren",
     "termEnds": "Ihr Pro-Zugang endet am {{date}}. Verlängern Sie, um Pro zu behalten.",
-    "termEndsNoDate": "Ihre Pro-Laufzeit endet bald. Verlängern Sie, um Pro zu behalten."
+    "termEndsNoDate": "Ihre Pro-Laufzeit endet bald. Verlängern Sie, um Pro zu behalten.",
+    "paymentFailed": "Zahlung fehlgeschlagen — wir versuchen es am {{date}} erneut. Aktualisieren Sie Ihre Zahlungsmethode, um Pro zu behalten.",
+    "paymentFailedNoRetry": "Zahlung fehlgeschlagen. Aktualisieren Sie Ihre Zahlungsmethode, um Pro zu behalten.",
+    "paymentFailedEndsOn": "Pro endet am {{date}}, wenn die Zahlung weiterhin fehlschlägt.",
+    "paymentFailedEnded": "Pro wurde beendet — Zahlung fehlgeschlagen. Ihre Appliance läuft mit Essentials.",
+    "paymentFailedEndedEnding": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen. Pro bleibt bis {{date}} aktiv. Schließen Sie das Abonnement erneut ab, um Pro zu behalten.",
+    "paymentFailedEndedEndingNoDate": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen. Schließen Sie das Abonnement erneut ab, um Pro zu behalten.",
+    "updatePaymentMethod": "Zahlungsmethode aktualisieren"
   },
   "nav": {
     "dashboard": "Dashboard",
