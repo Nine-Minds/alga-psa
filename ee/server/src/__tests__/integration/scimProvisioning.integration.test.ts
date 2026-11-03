@@ -1,11 +1,21 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '@ee/lib/testing/db-test-utils';
-import { parseScimUser, SCIM_USER_SCHEMA } from '@ee/lib/scim/protocol';
+import { SCIM_USER_SCHEMA } from '@ee/lib/scim/protocol';
+import { generateScimToken } from '@ee/lib/scim/credentials';
+import { handleScimPost, handleScimPut } from '@ee/lib/scim/handler';
 import { ScimProvisioningService } from '@ee/lib/scim/service';
+
+const { getAdminConnectionMock } = vi.hoisted(() => ({ getAdminConnectionMock: vi.fn() }));
+
+vi.mock('@alga-psa/db/admin', () => ({ getAdminConnection: getAdminConnectionMock }));
+vi.mock('@alga-psa/core/rateLimit', () => ({
+  TokenBucketRateLimiter: { getInstance: () => ({ tryConsume: async () => ({ allowed: true, remaining: 10 }) }) },
+}));
+vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({ assertTenantTierAccess: async () => undefined }));
 
 describe('SCIM provisioning database lifecycle', () => {
   let db: Knex;
@@ -38,6 +48,7 @@ describe('SCIM provisioning database lifecycle', () => {
     const connectionId = randomUUID();
     const linkId = randomUUID();
     const externalId = `entra-${randomUUID()}`;
+    const token = generateScimToken();
     await customer.table('tenants').where({ tenant }).update({
       product_code: options.coManaged ? 'co_managed' : 'psa',
       plan: 'pro',
@@ -46,7 +57,7 @@ describe('SCIM provisioning database lifecycle', () => {
     await customer.table('users').insert({ tenant, user_id: userId, username: email, email,
       hashed_password: 'not-a-real-password-hash', user_type: 'internal', is_inactive: true });
     const [connection] = await customer.table('scim_connections').insert({ tenant, connection_id: connectionId,
-      enabled: true, current_token_generation: 1 }).returning('*');
+      enabled: true, current_token_generation: 1, current_token_hash: token.hash }).returning('*');
     await customer.table('scim_user_links').insert({ tenant, link_id: linkId, connection_id: connectionId,
       user_id: userId, external_id: externalId, observed_user_name: email, observed_primary_email: email,
       upstream_active: false, link_state: 'active', scim_inactive_at: trx.fn.now() });
@@ -87,7 +98,7 @@ describe('SCIM provisioning database lifecycle', () => {
         hashed_password: 'not-a-real-password-hash', user_type: 'internal', is_inactive: false });
     }
 
-    return { trx, tenant, userId, linkId, email, connection };
+    return { trx, tenant, userId, linkId, email, externalId, connection, token: token.plaintext };
   }
 
   function serviceFor(fixture: Awaited<ReturnType<typeof reactivationFixture>>) {
@@ -97,30 +108,72 @@ describe('SCIM provisioning database lifecycle', () => {
 
   const activePatch = [{ op: 'replace' as const, path: 'active', value: true }];
 
-  it.each(['POST', 'PUT'] as const)('%s rejects omitted active before provisioning or lifecycle changes', async (method) => {
+  it('POST rejects omitted active for a new identity before provisioning', async () => {
     const fixture = await reactivationFixture();
     const newEmail = `scim-omitted-active-${randomUUID()}@example.test`;
     const payload = {
       schemas: [SCIM_USER_SCHEMA],
       externalId: `entra-${randomUUID()}`,
-      userName: method === 'POST' ? newEmail : fixture.email,
+      userName: newEmail,
     };
     try {
-      // POST and PUT both normalize through parseScimUser before dispatching to
-      // createUser/replaceUser. A rejected payload therefore cannot reach either
-      // transaction that creates a SCIM link or changes lifecycle state.
-      expect(() => parseScimUser(payload)).toThrowError(
-        expect.objectContaining({ status: 400, scimType: 'invalidValue' })
-      );
-
+      getAdminConnectionMock.mockResolvedValue(fixture.trx);
+      const response = await handleScimPost(new Request('https://example.test/api/scim/v2/test/Users', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${fixture.token}`, 'content-type': 'application/scim+json' },
+        body: JSON.stringify(payload),
+      }), { connectionId: fixture.connection.connection_id, scimPath: ['Users'] });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({ scimType: 'invalidValue' });
       const customer = tenantDb(fixture.trx, fixture.tenant);
       expect(await customer.table('users').where({ email: newEmail }).first()).toBeUndefined();
       expect(await customer.table('scim_user_links').where({ external_id: payload.externalId }).first()).toBeUndefined();
+      expect(await customer.table('scim_unresolved_identities').where({ external_id: payload.externalId }).first()).toBeUndefined();
+    } finally { await fixture.trx.rollback(); }
+  });
+
+  it('POST rejects omitted active without reactivating an existing SCIM identity', async () => {
+    const fixture = await reactivationFixture();
+    try {
+      getAdminConnectionMock.mockResolvedValue(fixture.trx);
+      const customer = tenantDb(fixture.trx, fixture.tenant);
+      const linkBefore = await customer.table('scim_user_links').where({ link_id: fixture.linkId })
+        .first(['upstream_active', 'link_state', 'scim_inactive_at']);
+      const userBefore = await customer.table('users').where({ user_id: fixture.userId }).first('is_inactive');
+      const response = await handleScimPost(new Request('https://example.test/api/scim/v2/test/Users', {
+        method: 'POST',
+        headers: { authorization: `Bearer ${fixture.token}`, 'content-type': 'application/scim+json' },
+        body: JSON.stringify({ schemas: [SCIM_USER_SCHEMA], externalId: fixture.externalId,
+          userName: fixture.email, active: undefined }),
+      }), { connectionId: fixture.connection.connection_id, scimPath: ['Users'] });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({ scimType: 'invalidValue' });
       expect(await customer.table('scim_user_links').where({ link_id: fixture.linkId })
-        .first(['upstream_active', 'link_state', 'scim_inactive_at']))
-        .toMatchObject({ upstream_active: false, link_state: 'active' });
+        .first(['upstream_active', 'link_state', 'scim_inactive_at'])).toEqual(linkBefore);
       expect(await customer.table('users').where({ user_id: fixture.userId }).first('is_inactive'))
-        .toMatchObject({ is_inactive: true });
+        .toEqual(userBefore);
+    } finally { await fixture.trx.rollback(); }
+  });
+
+  it('PUT rejects omitted active without reactivating the addressed SCIM identity', async () => {
+    const fixture = await reactivationFixture();
+    try {
+      getAdminConnectionMock.mockResolvedValue(fixture.trx);
+      const customer = tenantDb(fixture.trx, fixture.tenant);
+      const linkBefore = await customer.table('scim_user_links').where({ link_id: fixture.linkId })
+        .first(['upstream_active', 'link_state', 'scim_inactive_at']);
+      const userBefore = await customer.table('users').where({ user_id: fixture.userId }).first('is_inactive');
+      const response = await handleScimPut(new Request(`https://example.test/api/scim/v2/test/Users/${fixture.linkId}`, {
+        method: 'PUT',
+        headers: { authorization: `Bearer ${fixture.token}`, 'content-type': 'application/scim+json' },
+        body: JSON.stringify({ schemas: [SCIM_USER_SCHEMA], externalId: fixture.externalId, userName: fixture.email }),
+      }), { connectionId: fixture.connection.connection_id, scimPath: ['Users', fixture.linkId] });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({ scimType: 'invalidValue' });
+      expect(await customer.table('scim_user_links').where({ link_id: fixture.linkId })
+        .first(['upstream_active', 'link_state', 'scim_inactive_at'])).toEqual(linkBefore);
+      expect(await customer.table('users').where({ user_id: fixture.userId }).first('is_inactive'))
+        .toEqual(userBefore);
     } finally { await fixture.trx.rollback(); }
   });
 
