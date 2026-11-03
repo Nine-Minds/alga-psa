@@ -2,6 +2,7 @@
 
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import { Knex } from 'knex';
 import {
   CLOSE_RULE_REQUIRED_FIELDS,
@@ -10,6 +11,7 @@ import {
   type CloseRuleRequiredField,
 } from '../../lib/validateTicketClosure';
 import { boardActionErrorFrom, type BoardActionError } from '../board-actions/boardActionErrors';
+import { authorizeTicketRecordAccessConcealed } from '../../lib/ticketRecordAuthorization';
 
 /**
  * Per-board close rule configuration (validation gates) and auto-close rules.
@@ -94,8 +96,35 @@ function validateRequiredFields(fields: string[]): CloseRuleRequiredField[] {
   return fields as CloseRuleRequiredField[];
 }
 
+async function requireTicketPolicyAdmin(
+  user: { user_type?: string },
+  action: 'create' | 'read' | 'update' | 'delete'
+): Promise<void> {
+  if (!isMspPrincipalUserType(user.user_type)) {
+    throw new Error('Permission denied: Ticket policy settings are available to internal users only');
+  }
+  if (!await hasPermission(user as any, 'ticket_settings', action)) {
+    throw new Error(`Permission denied: Cannot ${action} ticket policy settings`);
+  }
+}
+
+function ticketNotFoundResult(): TicketClosureCheckResult {
+  return {
+    wouldClose: true,
+    allowed: false,
+    failures: [
+      {
+        rule: 'required_fields',
+        message: 'Ticket not found. It may have been deleted. Please refresh and try again.',
+      },
+    ],
+    canOverride: false,
+  };
+}
+
 export const getBoardCloseRules = withAuth(
   async (_user, { tenant }, boardId: string): Promise<IBoardCloseRules> => {
+    await requireTicketPolicyAdmin(_user, 'read');
     const { knex: db } = await createTenantKnex();
     const row = await tenantScopedTable(db, 'board_close_rules', tenant)
       .where({ board_id: boardId })
@@ -120,9 +149,7 @@ export const getBoardCloseRules = withAuth(
 export const upsertBoardCloseRules = withAuth(
   async (user, { tenant }, boardId: string, input: BoardCloseRulesInput): Promise<IBoardCloseRules | BoardActionError> => {
     try {
-      if (!(await hasPermission(user, 'ticket', 'update'))) {
-        throw new Error('Permission denied: Cannot update board close rules');
-      }
+      await requireTicketPolicyAdmin(user, 'update');
 
       const requiredFields = validateRequiredFields(input.required_fields ?? []);
       const { knex: db } = await createTenantKnex();
@@ -228,6 +255,7 @@ async function validateAutoCloseRule(
 
 export const getBoardAutoCloseRules = withAuth(
   async (_user, { tenant }, boardId: string): Promise<IBoardAutoCloseRule[]> => {
+    await requireTicketPolicyAdmin(_user, 'read');
     const { knex: db } = await createTenantKnex();
     return tenantScopedTable(db, 'board_auto_close_rules', tenant)
       .where({ board_id: boardId })
@@ -249,9 +277,7 @@ export const getBoardAutoCloseRules = withAuth(
 export const createBoardAutoCloseRule = withAuth(
   async (user, { tenant }, boardId: string, input: BoardAutoCloseRuleInput): Promise<IBoardAutoCloseRule | BoardActionError> => {
     try {
-      if (!(await hasPermission(user, 'ticket', 'update'))) {
-        throw new Error('Permission denied: Cannot update board auto-close rules');
-      }
+      await requireTicketPolicyAdmin(user, 'create');
 
       const { knex: db } = await createTenantKnex();
       return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -290,9 +316,7 @@ export const createBoardAutoCloseRule = withAuth(
 export const updateBoardAutoCloseRule = withAuth(
   async (user, { tenant }, ruleId: string, input: BoardAutoCloseRuleInput): Promise<IBoardAutoCloseRule | BoardActionError> => {
     try {
-      if (!(await hasPermission(user, 'ticket', 'update'))) {
-        throw new Error('Permission denied: Cannot update board auto-close rules');
-      }
+      await requireTicketPolicyAdmin(user, 'update');
 
       const { knex: db } = await createTenantKnex();
       return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -351,9 +375,7 @@ export const updateBoardAutoCloseRule = withAuth(
 export const deleteBoardAutoCloseRule = withAuth(
   async (user, { tenant }, ruleId: string): Promise<void | BoardActionError> => {
     try {
-      if (!(await hasPermission(user, 'ticket', 'update'))) {
-        throw new Error('Permission denied: Cannot update board auto-close rules');
-      }
+      await requireTicketPolicyAdmin(user, 'delete');
 
       const { knex: db } = await createTenantKnex();
       const deleted = await tenantScopedTable(db, 'board_auto_close_rules', tenant).where({ rule_id: ruleId }).del();
@@ -388,61 +410,79 @@ export interface TicketClosureCheckResult {
 export const checkTicketClosure = withAuth(
   async (user, { tenant }, ticketId: string, targetStatusId: string): Promise<TicketClosureCheckResult> => {
     const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read tickets');
+      }
 
-    const ticket = await tenantScopedTable(db, 'tickets', tenant).where({ ticket_id: ticketId }).first();
-    if (!ticket) {
-      return {
-        wouldClose: true,
-        allowed: false,
-        failures: [
-          {
-            rule: 'required_fields',
-            message: 'Ticket not found. It may have been deleted. Please refresh and try again.',
-          },
-        ],
-        canOverride: false,
-      };
-    }
+      try {
+        await authorizeTicketRecordAccessConcealed({
+          trx,
+          tenant,
+          user,
+          ticketId,
+          action: 'read',
+        });
+      } catch (error) {
+        if (error instanceof Error && ['Ticket not found', 'Permission denied: Cannot access ticket'].includes(error.message)) {
+          return ticketNotFoundResult();
+        }
+        throw error;
+      }
 
-    const [targetStatus, currentStatus] = await Promise.all([
-      tenantScopedTable(db, 'statuses', tenant).where({ status_id: targetStatusId }).first(),
-      ticket.status_id
-        ? tenantScopedTable(db, 'statuses', tenant).where({ status_id: ticket.status_id }).first()
-        : Promise.resolve(null),
-    ]);
+      const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: ticketId })
+        .first([
+          'ticket_id',
+          'status_id',
+          'board_id',
+          'category_id',
+          'subcategory_id',
+          'priority_id',
+          'assigned_to',
+        ]);
+      if (!ticket) return ticketNotFoundResult();
 
-    if (!targetStatus) {
-      return {
-        wouldClose: true,
-        allowed: false,
-        failures: [
-          {
-            rule: 'required_fields',
-            message: 'Target status not found. It may have been deleted. Please refresh and try again.',
-          },
-        ],
-        canOverride: false,
-      };
-    }
+      const [targetStatus, currentStatus] = await Promise.all([
+        tenantScopedTable(trx, 'statuses', tenant).where({ status_id: targetStatusId }).first(),
+        ticket.status_id
+          ? tenantScopedTable(trx, 'statuses', tenant).where({ status_id: ticket.status_id }).first()
+          : Promise.resolve(null),
+      ]);
 
-    const wouldClose = !!targetStatus?.is_closed && !currentStatus?.is_closed;
-    if (!wouldClose) {
-      return { wouldClose, allowed: true, failures: [], canOverride: false };
-    }
+      if (!targetStatus) {
+        return {
+          wouldClose: true,
+          allowed: false,
+          failures: [
+            {
+              rule: 'required_fields',
+              message: 'Target status not found. It may have been deleted. Please refresh and try again.',
+            },
+          ],
+          canOverride: false,
+        };
+      }
 
-    const failures = await evaluateTicketCloseRules(db, tenant, {
-      ticket_id: ticketId,
-      board_id: ticket.board_id ?? null,
-      category_id: ticket.category_id ?? null,
-      subcategory_id: ticket.subcategory_id ?? null,
-      priority_id: ticket.priority_id ?? null,
-      assigned_to: ticket.assigned_to ?? null,
+      const wouldClose = !!targetStatus?.is_closed && !currentStatus?.is_closed;
+      if (!wouldClose) {
+        return { wouldClose, allowed: true, failures: [], canOverride: false };
+      }
+
+      const failures = await evaluateTicketCloseRules(trx, tenant, {
+        ticket_id: ticketId,
+        board_id: ticket.board_id ?? null,
+        category_id: ticket.category_id ?? null,
+        subcategory_id: ticket.subcategory_id ?? null,
+        priority_id: ticket.priority_id ?? null,
+        assigned_to: ticket.assigned_to ?? null,
+      });
+
+      const canOverride =
+        failures.length > 0 ? await hasPermission(user, 'ticket', 'close_override', trx) : false;
+
+      return { wouldClose, allowed: failures.length === 0, failures, canOverride };
     });
-
-    const canOverride =
-      failures.length > 0 ? await hasPermission(user, 'ticket', 'close_override', db) : false;
-
-    return { wouldClose, allowed: failures.length === 0, failures, canOverride };
   }
 );
 
