@@ -59,9 +59,9 @@ vi.mock('../../lib/usersHelpers', () => ({
 }));
 vi.mock('./ContactAvatarUpload', () => ({ default: () => null }));
 
-const triage = { client_id: 'triage-id', client_name: 'Unmatched Email', is_inactive: false, client_type: 'company', logoUrl: null };
-const life = { client_id: 'life-id', client_name: 'Life Landscaping', is_inactive: false, client_type: 'company', logoUrl: null };
-const inactive = { client_id: 'inactive-id', client_name: 'Dormant Co', is_inactive: true, client_type: 'company', logoUrl: null };
+const triage: any = { client_id: 'triage-id', client_name: 'Unmatched Email', is_inactive: false, client_type: 'company', logoUrl: null };
+const life: any = { client_id: 'life-id', client_name: 'Life Landscaping', is_inactive: false, client_type: 'company', logoUrl: null };
+const inactive: any = { client_id: 'inactive-id', client_name: 'Dormant Co', is_inactive: true, client_type: 'company', logoUrl: null };
 const tenantClients = [triage, life, inactive];
 
 // Stand-in for searchClientsForPicker: honours `ids` hydration, otherwise returns everything.
