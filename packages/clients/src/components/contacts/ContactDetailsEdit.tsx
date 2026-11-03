@@ -54,7 +54,8 @@ const isReturnedActionError = (value: unknown): value is ActionMessageError | Ac
 interface ContactDetailsEditProps {
   id?: string; // Made optional to maintain backward compatibility
   initialContact: IContact;
-  clients: IClient[];
+  /** @deprecated Ignored. The client picker searches the whole tenant on the server. */
+  clients?: IClient[];
   onSave: (contact: IContact) => void;
   onCancel: () => void;
   isInDrawer?: boolean;
@@ -63,7 +64,6 @@ interface ContactDetailsEditProps {
 const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   id = 'contact-edit',
   initialContact,
-  clients,
   onSave,
   onCancel,
   isInDrawer = false
@@ -444,7 +444,6 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
               <td className="py-2">
                 <ClientPicker
                   id={`${id}-client-picker`}
-                  clients={clients}
                   onSelect={handleClientSelect}
                   selectedClientId={contact.client_id}
                   filterState={filterState}

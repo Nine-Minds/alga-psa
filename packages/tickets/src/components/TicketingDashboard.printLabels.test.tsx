@@ -210,7 +210,6 @@ function renderDashboard(count: number) {
       initialStatuses={[]}
       initialPriorities={[]}
       initialCategories={[]}
-      initialClients={[]}
       totalCount={count}
       currentPage={1}
       pageSize={count}
