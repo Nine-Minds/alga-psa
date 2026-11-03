@@ -229,14 +229,22 @@ function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEd
   // the picker only lists the board's own family, so a stored priority of the other family would
   // otherwise look like a blank picker, and the server refuses the save with its own message.
   const [allPriorities, setAllPriorities] = useState<Array<{ priority_id: string; priority_name: string; is_from_itil_standard?: boolean | null }>>([]);
+  // The lookup returns the full ticket priority list; an absent stored ID is a completed lookup too.
+  const [priorityLookupComplete, setPriorityLookupComplete] = useState(false);
   useEffect(() => {
-    if (!form.priority_id || allPriorities.some((priority) => priority.priority_id === form.priority_id)) return;
+    if (!form.priority_id || priorityLookupComplete || allPriorities.some((priority) => priority.priority_id === form.priority_id)) return;
     let cancelled = false;
     void getAllPriorities('ticket')
-      .then((rows) => { if (!cancelled && Array.isArray(rows)) setAllPriorities(rows); })
-      .catch(() => undefined);
+      .then((rows) => {
+        if (cancelled) return;
+        if (Array.isArray(rows)) setAllPriorities(rows);
+        setPriorityLookupComplete(true);
+      })
+      .catch(() => {
+        if (!cancelled) setPriorityLookupComplete(true);
+      });
     return () => { cancelled = true; };
-  }, [form.priority_id, allPriorities]);
+  }, [form.priority_id, allPriorities, priorityLookupComplete]);
   const priorityTypeMismatch = useMemo(() => {
     const board = reference.boards.find((candidate) => candidate.board_id === form.board_id);
     const priority = allPriorities.find((candidate) => candidate.priority_id === form.priority_id);
