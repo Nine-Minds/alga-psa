@@ -1065,7 +1065,17 @@ export class InvoiceService extends BaseService<IInvoice> {
           ? existing.billing_profile_id
           : null;
       }
-      await this.createInvoiceLineItems(id, normalizedItems, trx, context, callerProfileId);
+      if (normalizedItems.length > 0) {
+        await this.createInvoiceLineItems(id, normalizedItems, trx, context, callerProfileId);
+      }
+
+      // A replacement changes the tax base, so discard caller-provided tax and
+      // derive both charge tax and invoice totals from the new charges. Keep the
+      // calculation in this transaction so the response and later reads observe
+      // one consistent replacement. An empty list still recalculates to zero.
+      const client = await getClientDetails(trx, context.tenant, existing.client_id);
+      await calculateAndDistributeTax(trx, id, client, this.taxService, context.tenant);
+      await recomputeInvoiceHeaderTotals(trx, id, context.tenant);
       }
 
       const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, id);
