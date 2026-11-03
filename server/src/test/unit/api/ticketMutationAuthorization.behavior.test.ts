@@ -151,9 +151,9 @@ describe('ticket mutations are authorized against update/delete scope, not read'
     expect((await DELETE(req('DELETE'), ctx as any)).status).toBe(204);
   });
 
-  it('read denial still blocks mutation (404/403 semantics preserved)', async () => {
+  it('read denial returns not found and blocks mutation without a write', async () => {
     state.deniedActions = new Set(['read']);
-    expect((await PUT(req('PUT', '', { title: 'x' }), ctx as any)).status).toBe(403);
+    expect((await PUT(req('PUT', '', { title: 'x' }), ctx as any)).status).toBe(404);
     expect(svc.update).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 vi.mock('next/server', async () => ({
@@ -10,12 +10,21 @@ vi.mock('../../../lib/db', () => ({
   runWithTenant: (_tenant: string, callback: () => Promise<unknown>) => callback(),
 }));
 
+const policy = vi.hoisted(() => ({ redactedFields: [] as string[] }));
+vi.mock('server/src/lib/authorization/kernel', () => ({
+  getAuthorizationKernel: async () => ({
+    authorizeResource: async () => ({ allowed: true, redactedFields: policy.redactedFields }),
+  }),
+}));
+
 import { ApiProjectController } from '../../../lib/api/controllers/ApiProjectController';
+import { projectApiResourceRead } from '../../../lib/api/controllers/authorizationKernel';
 import type { AuthenticatedApiRequest } from '../../../lib/api/controllers/ApiBaseController';
 import { createTaskChecklistItemSchema, updateTaskChecklistItemSchema } from '../../../lib/api/schemas/project';
 
 const taskId = '00000000-0000-4000-8000-000000000001';
 const itemId = '00000000-0000-4000-8000-000000000002';
+beforeEach(() => { policy.redactedFields = []; });
 
 class ChecklistController extends ApiProjectController {
   constructor(projectService: Record<string, unknown>) {
@@ -29,7 +38,12 @@ class ChecklistController extends ApiProjectController {
     return { apiRequest, tenantId: 'test-tenant', knex: {} as never };
   }
 
-  protected async assertTaskProjectAllowed() {}
+  protected async assertTaskProjectAllowed() {
+    return projectApiResourceRead({
+      knex: {} as never, tenant: 'test-tenant', user: { user_id: 'user-1', user_type: 'internal' },
+      kind: 'project', record: { project_id: taskId },
+    });
+  }
 }
 
 function request(method: 'PUT' | 'DELETE', body?: Record<string, unknown>, ids = { taskId, itemId }) {
@@ -70,6 +84,24 @@ describe('PUT /api/v1/projects/tasks/{taskId}/checklist/{itemId}', () => {
 
     expect(response.status).toBe(400);
     expect(updateChecklistItem).not.toHaveBeenCalled();
+  });
+
+  it.each(['task_checklist_items.item_name', 'values.tasks.checklist_items.item_name'])(
+    'redacts the mutation response under %s', async redaction => {
+      policy.redactedFields = [redaction];
+      const updateChecklistItem = vi.fn().mockResolvedValue({ checklist_item_id: itemId, task_id: taskId, item_name: 'Private label', completed: true });
+      const response = await new ChecklistController({ updateChecklistItem }).updateChecklistItem()(request('PUT', { completed: true }));
+      expect(response.status).toBe(200);
+      expect((await response.json()).data).toEqual({ checklist_item_id: itemId, task_id: taskId, completed: true });
+    },
+  );
+
+  it('suppresses the returned item when its identifier is hidden', async () => {
+    policy.redactedFields = ['task_checklist_items.checklist_item_id'];
+    const updateChecklistItem = vi.fn().mockResolvedValue({ checklist_item_id: itemId, task_id: taskId, item_name: 'Private label', completed: true });
+    const response = await new ChecklistController({ updateChecklistItem }).updateChecklistItem()(request('PUT', { completed: true }));
+    expect(response.status).toBe(200);
+    expect((await response.json()).data).toBeNull();
   });
 
   it('answers 404 when the item is not on the task', async () => {

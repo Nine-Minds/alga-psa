@@ -69,6 +69,7 @@ describe('resolveAuthorizationSubjectForUser user types', () => {
       tenant: TENANT,
       userId: user.user_id,
       userType: 'service',
+      apiKeyId: null,
       roleIds: ['r-service'],
       teamIds: ['team-1'],
       managedUserIds: [],

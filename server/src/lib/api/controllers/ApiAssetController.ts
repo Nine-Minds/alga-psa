@@ -28,7 +28,24 @@ import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
-import { guardAssetRead } from './assetReadGuard';
+import { guardAssetRead, readAssetGateProjection, readAssetProjection } from './assetReadGuard';
+import {
+  projectApiResourceRead,
+  projectApiResourceReads,
+  reprojectUnderDecision,
+  reprojectUnderDecisions,
+  type AuthorizedProjection,
+} from './authorizationKernel';
+import {
+  ASSET_ASSIGNMENT_SOURCE,
+  ASSET_MAINTENANCE_HISTORY_SOURCE,
+  ASSET_MAINTENANCE_SCHEDULE_SOURCE,
+  ASSET_RECORD_SOURCE,
+  ASSET_RELATIONSHIP_SOURCE,
+  ASSET_TICKETS_RESPONSE_SOURCE,
+} from '@alga-psa/co-managed/recordProjection';
+import { resolveAssetAuthorizationRecords } from '@alga-psa/assets/lib/assetReadAuthorization';
+import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 
 export class ApiAssetController {
   private assetService: AssetService;
@@ -48,6 +65,35 @@ export class ApiAssetController {
     }
 
     return context;
+  }
+
+  /**
+   * Authorizes and redacts asset-shaped rows (list, search, export). Rows the caller may not read, or whose
+   * identifier is redacted, are dropped. Everything these routes serialize comes from the returned projections.
+   */
+  private async projectAssetRows(
+    context: ApiContext,
+    rows: Record<string, any>[],
+  ): Promise<AuthorizedProjection<Record<string, any>>[]> {
+    if (rows.length === 0) return [];
+    const knex = await getConnection(context.tenant);
+    const records = await resolveAssetAuthorizationRecords(knex, context.tenant, rows as any);
+    const out: AuthorizedProjection<Record<string, any>>[] = [];
+    for (const row of rows) {
+      const recordContext = records.get(row.asset_id);
+      if (!recordContext) continue;
+      const projection = await projectApiResourceRead({
+        knex,
+        tenant: context.tenant,
+        user: context.user,
+        apiKeyId: (context as any).apiKeyId,
+        kind: 'asset',
+        record: row,
+        recordContext,
+      });
+      if (projection) out.push(projection);
+    }
+    return out;
   }
 
   /**
@@ -71,8 +117,15 @@ export class ApiAssetController {
       order: order as 'asc' | 'desc' | undefined
     };
     
-    const result = await this.assetService.list(listOptions, context, filters);
-    
+    // Totals exclude rows the caller cannot read, so pagination never reveals how many were hidden.
+    const result = await buildProjectedPage<Record<string, any>, AuthorizedProjection<Record<string, any>>>({
+      page: page || 1,
+      limit: limit || 25,
+      fetchPage: (sourcePage, sourceLimit) =>
+        this.assetService.list({ ...listOptions, page: sourcePage, limit: sourceLimit }, context, filters),
+      projectRecord: async (row) => (await this.projectAssetRows(context, [row]))[0] ?? null,
+    });
+
     // Add HATEOAS links to each asset
     const assetsWithLinks = result.data.map(asset => ({
       ...asset,
@@ -91,19 +144,55 @@ export class ApiAssetController {
    */
   async getById(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    const denied = await guardAssetRead(context, params.id, this.assetService);
+    // One kernel decision: it authorizes the asset and redacts the detailed record that is serialized.
+    const { projection: asset, denied } = await readAssetProjection(
+      context,
+      params.id,
+      this.assetService,
+      () => this.assetService.getWithDetails(params.id, context),
+    );
     if (denied) return denied;
 
-    const asset = await this.assetService.getWithDetails(params.id, context);
-    
-    if (!asset) {
-      return createErrorResponse('Asset not found', 404);
-    }
+    const relationships = await this.projectAssetRelationships(context, asset, (asset as any).relationships ?? []);
 
     return createApiResponse({
       ...asset,
-      _links: getHateoasLinks('asset', asset.asset_id)
+      relationships,
+      _links: getHateoasLinks('asset', params.id)
     });
+  }
+
+  private async projectAssetRelationships(
+    context: ApiContext,
+    parentProjection: AuthorizedProjection<Record<string, any>>,
+    relationships: Record<string, any>[],
+  ): Promise<AuthorizedProjection<Record<string, any>>[]> {
+    if (relationships.length === 0) return [];
+    const knex = await getConnection(context.tenant);
+    const projected: AuthorizedProjection<Record<string, any>>[] = [];
+    for (const relationship of relationships) {
+      const parentVisible = reprojectUnderDecision(parentProjection, relationship, ASSET_RELATIONSHIP_SOURCE);
+      if (!parentVisible || typeof parentVisible.related_asset_id !== 'string') continue;
+
+      const recordContext = await this.assetService.getAuthorizationRecord(
+        parentVisible.related_asset_id,
+        { ...context, db: knex } as ApiContext,
+      );
+      if (!recordContext) continue;
+
+      const relatedProjection = await projectApiResourceRead({
+        knex,
+        tenant: context.tenant,
+        user: context.user,
+        apiKeyId: (context as any).apiKeyId,
+        kind: 'asset',
+        record: parentVisible as Record<string, any>,
+        recordContext: recordContext as any,
+        source: ASSET_RELATIONSHIP_SOURCE,
+      });
+      if (relatedProjection) projected.push(relatedProjection);
+    }
+    return projected;
   }
 
   /**
@@ -131,8 +220,11 @@ export class ApiAssetController {
    * PUT /api/v2/assets/{id} - Update asset
    */
   async update(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const data = await req.json();
     const context = await this.requireAllowedContext(req);
+    const permissionDenied = await this.requirePermissions(context, [{ resource: 'asset', action: 'update' }]);
+    if (permissionDenied) return permissionDenied;
+
+    const data = await req.json();
     
     // Validate request body
     const validation = updateAssetSchema.safeParse(data);
@@ -140,11 +232,13 @@ export class ApiAssetController {
       return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
-    const asset = await this.assetService.update(params.id, validation.data, context);
+    const result = await this.updateAuthorizedAssets(context, [{ assetId: params.id, data: validation.data }]);
+    if (result.denied) return result.denied;
+    const [projection] = result.assets;
     
     return createApiResponse({
-      ...asset,
-      _links: getHateoasLinks('asset', asset.asset_id)
+      ...projection,
+      _links: getHateoasLinks('asset', projection.asset_id)
     });
   }
 
@@ -164,10 +258,16 @@ export class ApiAssetController {
    */
   async listRelationships(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    
+    const { projection: parent, denied } = await readAssetProjection(
+      context,
+      params.id,
+      this.assetService,
+      async () => ({ asset_id: params.id }),
+    );
+    if (denied) return denied;
+
     const relationships = await this.assetService.getAssetRelationships(params.id, context);
-    
-    return createApiResponse(relationships);
+    return createApiResponse(await this.projectAssetRelationships(context, parent, relationships));
   }
 
   /**
@@ -177,16 +277,19 @@ export class ApiAssetController {
    */
   async listAssignments(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    const denied = await this.requireReadPermissions(context, ['asset']);
+    const { projection: asset, denied } = await readAssetProjection(
+      context,
+      params.id,
+      this.assetService,
+      async () => ({ asset_id: params.id }),
+    );
     if (denied) return denied;
 
-    const asset = await this.assetService.getById(params.id, context);
-    if (!asset) {
-      return createErrorResponse('Asset not found', 404, 'NOT_FOUND');
-    }
-
     const assignments = await this.assetService.getAssetAssignments(params.id, context);
-    return createApiResponse(assignments);
+    const projected = assignments
+      .map((assignment) => reprojectUnderDecision(asset, assignment, ASSET_ASSIGNMENT_SOURCE))
+      .filter((assignment): assignment is AuthorizedProjection<Record<string, any>> => assignment !== null);
+    return createApiResponse(projected);
   }
 
   /** FR-B4: GET /api/v1/asset-statuses — the tenant's status registry. */
@@ -238,6 +341,67 @@ export class ApiAssetController {
     return null;
   }
 
+  /** Authorize every target before any mutation; callers must first enforce asset:update RBAC. */
+  private async authorizeAssetUpdateTargets(
+    context: ApiContext,
+    assetIds: readonly string[],
+  ): Promise<{
+    denied: NextResponse | null;
+    gates: Map<string, AuthorizedProjection<Record<string, any>>>;
+  }> {
+    const knex = await getConnection(context.tenant);
+    const uniqueIds = [...new Set(assetIds)];
+    const records = await Promise.all(uniqueIds.map((id) => this.assetService.getAuthorizationRecord(id, context)));
+    if (records.some((record) => record === null)) {
+      return { denied: createErrorResponse('Asset not found', 404, 'NOT_FOUND'), gates: new Map() };
+    }
+
+    const gates = await Promise.all(uniqueIds.map((id, index) => projectApiResourceRead({
+      knex,
+      tenant: context.tenant,
+      user: context.user,
+      apiKeyId: (context as any).apiKeyId,
+      kind: 'asset',
+      record: { asset_id: id },
+      recordContext: records[index]!,
+    })));
+    if (gates.some((gate) => gate === null)) {
+      return { denied: createErrorResponse('Asset not found', 404, 'NOT_FOUND'), gates: new Map() };
+    }
+
+    return {
+      denied: null,
+      gates: new Map(uniqueIds.map((id, index) => [id, gates[index]!])),
+    };
+  }
+
+  /** Shared single/bulk write path: all policy gates precede writes, and only projected rows are returned. */
+  private async updateAuthorizedAssets(
+    context: ApiContext,
+    updates: Array<{ assetId: string; data: Record<string, any> }>,
+  ): Promise<{
+    denied: NextResponse | null;
+    assets: AuthorizedProjection<Record<string, any>>[];
+  }> {
+    const authorization = await this.authorizeAssetUpdateTargets(context, updates.map(({ assetId }) => assetId));
+    if (authorization.denied) return { denied: authorization.denied, assets: [] };
+
+    const updatedRows = await Promise.all(updates.map(({ assetId, data }) =>
+      this.assetService.update(assetId, data, context)));
+    if (updatedRows.some((row) => row === null)) {
+      return { denied: createErrorResponse('Asset not found', 404, 'NOT_FOUND'), assets: [] };
+    }
+
+    const assets = updatedRows.map((row, index) => {
+      const gate = authorization.gates.get(updates[index].assetId);
+      return gate && row ? reprojectUnderDecision(gate, row, ASSET_RECORD_SOURCE) : null;
+    });
+    if (assets.some((asset) => asset === null)) {
+      return { denied: createErrorResponse('Asset not found', 404, 'NOT_FOUND'), assets: [] };
+    }
+    return { denied: null, assets: assets as AuthorizedProjection<Record<string, any>>[] };
+  }
+
   /**
    * GET /api/v1/assets/{id}/tickets - List tickets linked to an asset
    */
@@ -245,12 +409,33 @@ export class ApiAssetController {
     const context = await this.requireAllowedContext(req);
 
     // Response joins ticket data onto an asset — require read on both resources.
-    const denied = await guardAssetRead(context, params.id, this.assetService, ['ticket']);
+    const { projection: assetGate, denied } = await readAssetGateProjection(
+      context, params.id, this.assetService, ['ticket'],
+    );
     if (denied) return denied;
 
+    // Ticket-owned fields: each ticket is redacted under the caller's ticket policy; hidden tickets are dropped.
     const tickets = await this.assetService.getAssetTickets(params.id, context);
+    const knex = await getConnection(context.tenant);
+    const ticketProjections = await projectApiResourceReads({
+      knex,
+      tenant: context.tenant,
+      user: context.user,
+      apiKeyId: (context as any).apiKeyId,
+      kind: 'ticket',
+      records: tickets,
+    });
+    const projectionsByTicketId = new Map(ticketProjections.map((projection) => [projection.ticket_id, projection]));
+    const visible = tickets.flatMap((ticket) => {
+      const ticketProjection = projectionsByTicketId.get(ticket.ticket_id);
+      if (!ticketProjection) return [];
+      const projection = reprojectUnderDecisions(
+        [assetGate, ticketProjection], ticket, ASSET_TICKETS_RESPONSE_SOURCE,
+      );
+      return projection ? [projection] : [];
+    });
 
-    return createApiResponse(tickets);
+    return createApiResponse(visible);
   }
 
   /**
@@ -329,10 +514,18 @@ export class ApiAssetController {
    */
   async listDocuments(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    
-    const documents = await this.assetService.getAssetDocuments(params.id, context);
-    
-    return createApiResponse(documents);
+    const { projection, denied } = await readAssetProjection(
+      context,
+      params.id,
+      this.assetService,
+      async () => ({
+        asset_id: params.id,
+        documents: await this.assetService.getAssetDocuments(params.id, context),
+      }),
+    );
+    if (denied) return denied;
+
+    return createApiResponse(projection.documents ?? []);
   }
 
   /**
@@ -369,12 +562,19 @@ export class ApiAssetController {
    */
   async listMaintenanceSchedules(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    const denied = await guardAssetRead(context, params.id, this.assetService);
+    const { projection: asset, denied } = await readAssetProjection(
+      context,
+      params.id,
+      this.assetService,
+      async () => ({ asset_id: params.id }),
+    );
     if (denied) return denied;
 
     const schedules = await this.assetService.getMaintenanceSchedules(params.id, context);
-    
-    return createApiResponse(schedules);
+    const projected = schedules
+      .map((schedule) => reprojectUnderDecision(asset, schedule, ASSET_MAINTENANCE_SCHEDULE_SOURCE))
+      .filter((schedule): schedule is AuthorizedProjection<Record<string, any>> => schedule !== null);
+    return createApiResponse(projected);
   }
 
   /**
@@ -399,8 +599,11 @@ export class ApiAssetController {
    * PUT /api/v2/assets/maintenance/{scheduleId} - Update maintenance schedule
    */
   async updateMaintenanceSchedule(req: NextRequest, params: { scheduleId: string }): Promise<NextResponse> {
-    const data = await req.json();
     const context = await this.requireAllowedContext(req);
+    const permissionDenied = await this.requirePermissions(context, [{ resource: 'asset', action: 'update' }]);
+    if (permissionDenied) return permissionDenied;
+
+    const data = await req.json();
     
     // Validate request body
     const validation = updateMaintenanceScheduleSchema.safeParse(data);
@@ -408,9 +611,21 @@ export class ApiAssetController {
       return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
+    const existing = await this.assetService.getMaintenanceScheduleForUpdate(params.scheduleId, context);
+    if (!existing) return createErrorResponse('Maintenance schedule not found', 404, 'NOT_FOUND');
+    const authorization = await this.authorizeAssetUpdateTargets(context, [existing.asset_id]);
+    if (authorization.denied) return authorization.denied;
+    const assetGate = authorization.gates.get(existing.asset_id);
+    const existingProjection = assetGate
+      ? reprojectUnderDecision(assetGate, existing, ASSET_MAINTENANCE_SCHEDULE_SOURCE)
+      : null;
+    if (!existingProjection) return createErrorResponse('Maintenance schedule not found', 404, 'NOT_FOUND');
+
     const schedule = await this.assetService.updateMaintenanceSchedule(params.scheduleId, validation.data, context);
-    
-    return createApiResponse(schedule);
+    const projection = reprojectUnderDecision(assetGate!, schedule, ASSET_MAINTENANCE_SCHEDULE_SOURCE);
+    if (!projection) return createErrorResponse('Maintenance schedule not found', 404, 'NOT_FOUND');
+
+    return createApiResponse(projection);
   }
 
   /**
@@ -447,12 +662,19 @@ export class ApiAssetController {
    */
   async getMaintenanceHistory(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    const denied = await guardAssetRead(context, params.id, this.assetService);
+    const { projection: asset, denied } = await readAssetProjection(
+      context,
+      params.id,
+      this.assetService,
+      async () => ({ asset_id: params.id }),
+    );
     if (denied) return denied;
 
     const history = await this.assetService.getMaintenanceHistory(params.id, context);
-    
-    return createApiResponse(history);
+    const projected = history
+      .map((entry) => reprojectUnderDecision(asset, entry, ASSET_MAINTENANCE_HISTORY_SOURCE))
+      .filter((entry): entry is AuthorizedProjection<Record<string, any>> => entry !== null);
+    return createApiResponse(projected);
   }
 
   /**
@@ -468,8 +690,8 @@ export class ApiAssetController {
       return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
-    const assets = await this.assetService.search(validation.data, context);
-    
+    const assets = await this.projectAssetRows(context, await this.assetService.search(validation.data, context));
+
     const assetsWithLinks = assets.map(asset => ({
       ...asset,
       _links: getHateoasLinks('asset', asset.asset_id)
@@ -506,6 +728,10 @@ export class ApiAssetController {
       page += 1;
     }
 
+    // Project before filtering/serializing: nothing below sees a field or row the caller may not read.
+    const projected: Record<string, any>[] = await this.projectAssetRows(context, rows);
+    rows = projected;
+
     // Apply the export-only set filters in memory (list() takes single-value filters).
     if (assetTypes.length) rows = rows.filter((r) => assetTypes.includes(r.asset_type));
     if (statuses.length) rows = rows.filter((r) => statuses.includes(r.status));
@@ -532,18 +758,65 @@ export class ApiAssetController {
    */
   async getStatistics(req: NextRequest): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    
-    const stats = await this.assetService.getStatistics(context);
-    
-    return createApiResponse(stats);
+    if (!context.user) return createErrorResponse('User context required', 401, 'UNAUTHORIZED');
+
+    const knex = await getConnection(context.tenant);
+    if (!(await hasPermission(context.user, 'asset', 'read', knex))) {
+      return createErrorResponse('Permission denied: Cannot read asset', 403, 'FORBIDDEN');
+    }
+
+    // Page tenant rows and authorize each record before it can contribute to an aggregate.
+    const pageSize = 200;
+    const assets: AuthorizedProjection<Record<string, any>>[] = [];
+    let page = 1;
+    let fetched = 0;
+    let sourceTotal = Number.POSITIVE_INFINITY;
+    while (fetched < sourceTotal) {
+      const result = await this.assetService.list({ page, limit: pageSize }, context);
+      fetched += result.data.length;
+      sourceTotal = result.total;
+      assets.push(...await this.projectAssetRows(context, result.data));
+      if (result.data.length < pageSize) break;
+      page += 1;
+    }
+
+    const visibleAssetIds = assets.map((asset) => String(asset.asset_id));
+    const [deployableStatusSlugs, maintenanceRows] = await Promise.all([
+      this.assetService.getDeployableStatusSlugs(context),
+      this.assetService.getMaintenanceSchedulesForAssets(context, visibleAssetIds),
+    ]);
+    const schedulesByAsset = new Map<string, Array<Record<string, any>>>();
+    for (const schedule of maintenanceRows) {
+      const schedules = schedulesByAsset.get(schedule.asset_id) ?? [];
+      schedules.push(schedule);
+      schedulesByAsset.set(schedule.asset_id, schedules);
+    }
+
+    // Related schedules are projected under each asset's original decision before aggregate logic sees them.
+    const projectionsWithSchedules: Record<string, any>[] = [];
+    for (const asset of assets) {
+      const projection = reprojectUnderDecision(asset, {
+        ...asset,
+        maintenance_schedules: schedulesByAsset.get(String(asset.asset_id)) ?? [],
+      }, ASSET_RECORD_SOURCE);
+      if (projection) projectionsWithSchedules.push(projection);
+    }
+
+    return createApiResponse(this.assetService.getStatisticsFromProjections(
+      projectionsWithSchedules,
+      deployableStatusSlugs,
+    ));
   }
 
   /**
    * PUT /api/v2/assets/bulk-update - Bulk update assets
    */
   async bulkUpdate(req: NextRequest): Promise<NextResponse> {
-    const data = await req.json();
     const context = await this.requireAllowedContext(req);
+    const permissionDenied = await this.requirePermissions(context, [{ resource: 'asset', action: 'update' }]);
+    if (permissionDenied) return permissionDenied;
+
+    const data = await req.json();
     
     // Validate request body
     const validation = bulkUpdateAssetSchema.safeParse(data);
@@ -551,21 +824,22 @@ export class ApiAssetController {
       return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
-    const results = await Promise.all(
-      validation.data.assets.map(({ asset_id, data: updateData }) =>
-        this.assetService.update(asset_id, updateData, context)
-      )
-    );
+    const result = await this.updateAuthorizedAssets(context, validation.data.assets.map(({ asset_id, data: updateData }) =>
+      ({ assetId: asset_id, data: updateData })));
+    if (result.denied) return result.denied;
 
-    return createApiResponse(results, 200, { message: `Updated ${results.length} assets` });
+    return createApiResponse(result.assets, 200, { message: `Updated ${result.assets.length} assets` });
   }
 
   /**
    * PUT /api/v2/assets/bulk-status - Bulk update asset status
    */
   async bulkStatusUpdate(req: NextRequest): Promise<NextResponse> {
-    const data = await req.json();
     const context = await this.requireAllowedContext(req);
+    const permissionDenied = await this.requirePermissions(context, [{ resource: 'asset', action: 'update' }]);
+    if (permissionDenied) return permissionDenied;
+
+    const data = await req.json();
     
     // Validate request body
     const validation = bulkAssetStatusSchema.safeParse(data);
@@ -573,20 +847,19 @@ export class ApiAssetController {
       return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
-    const results = await Promise.all(
-      validation.data.asset_ids.map((assetId: string) =>
-        this.assetService.update(assetId, { status: validation.data.status }, context)
-      )
-    );
+    const result = await this.updateAuthorizedAssets(context, validation.data.asset_ids.map((assetId: string) =>
+      ({ assetId, data: { status: validation.data.status } })));
+    if (result.denied) return result.denied;
 
-    return createApiResponse(results, 200, { message: `Updated status for ${results.length} assets` });
+    return createApiResponse(result.assets, 200, { message: `Updated status for ${result.assets.length} assets` });
   }
 
   // Helper method to convert data to CSV
   private convertToCSV(data: any[]): string {
     if (data.length === 0) return '';
     
-    const headers = Object.keys(data[0]);
+    // Redactions can differ per row, so the header set is the union of the projected rows' keys.
+    const headers = Array.from(new Set(data.flatMap((row) => Object.keys(row))));
     const csvHeaders = headers.join(',');
     const csvRows = data.map(row => 
       headers.map(header => {
@@ -595,7 +868,7 @@ export class ApiAssetController {
         if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
           return `"${value.replace(/"/g, '""')}"`;
         }
-        return value;
+        return value ?? '';
       }).join(',')
     );
     

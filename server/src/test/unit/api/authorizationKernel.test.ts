@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
-import { buildAuthorizationPrincipalSubject, authorizeApiResourceRead, authorizeApiResource } from 'server/src/lib/api/controllers/authorizationKernel';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { buildAuthorizationPrincipalSubject, authorizeApiResource, isAuthorizedProjection, projectApiResourceRead, projectApiResourceReads, reprojectUnderDecision } from 'server/src/lib/api/controllers/authorizationKernel';
+import { QUOTE_LINE_RECORD_SOURCE, QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE } from '@alga-psa/co-managed/recordProjection';
 
 const authorizeResourceMock = vi.fn();
 
@@ -10,6 +11,8 @@ vi.mock('server/src/lib/authorization/kernel', () => ({
 }));
 
 describe('api authorization kernel helper', () => {
+  beforeEach(() => authorizeResourceMock.mockReset());
+
   it('normalizes user roles, teams, and api key into authorization subject', () => {
     const subject = buildAuthorizationPrincipalSubject(
       {
@@ -65,64 +68,149 @@ describe('api authorization kernel helper', () => {
     });
   });
 
-  it('delegates to shared kernel authorizeResource and returns allow/deny', async () => {
-    authorizeResourceMock.mockResolvedValueOnce({ allowed: false });
-    const denied = await authorizeApiResourceRead({
-      knex: {} as any,
-      tenant: 'tenant-1',
-      user: {
-        user_id: 'user-1',
-        user_type: 'internal',
-      },
-      apiKeyId: 'api-key-1',
-      resource: 'ticket',
-      recordContext: {
-        id: 'ticket-1',
-        ownerUserId: 'owner-1',
-      },
+  const user = { user_id: 'user-1', user_type: 'internal' };
+  const project = {
+    project_id: 'p-1', project_name: 'Alpha', description: 'secret plan', budgeted_hours: 40,
+    client_id: 'c-1', client_name: 'Acme', assigned_to: 'u-9', assigned_user_name: 'Pat Doe', status: 's-1',
+  };
+  const read = (redactedFields: string[], record: Record<string, any> = project, kind: 'project' | 'ticket' | 'quote' | 'asset' = 'project') => {
+    authorizeResourceMock.mockResolvedValueOnce({ allowed: true, redactedFields });
+    return projectApiResourceRead({ knex: {} as any, tenant: 'tenant-1', user, kind, record });
+  };
+
+  it('delegates to kernel authorizeResource once and returns null on deny', async () => {
+    authorizeResourceMock.mockClear();
+    authorizeResourceMock.mockResolvedValueOnce({ allowed: false, redactedFields: [] });
+    const denied = await projectApiResourceRead({
+      knex: {} as any, tenant: 'tenant-1', user, apiKeyId: 'api-key-1', kind: 'ticket',
+      record: { ticket_id: 'ticket-1', entered_by: 'owner-1' },
     });
 
-    expect(denied).toBe(false);
+    expect(denied).toBeNull();
+    expect(authorizeResourceMock).toHaveBeenCalledTimes(1);
     expect(authorizeResourceMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        subject: expect.objectContaining({
-          tenant: 'tenant-1',
-          userId: 'user-1',
-          apiKeyId: 'api-key-1',
-        }),
+        subject: expect.objectContaining({ tenant: 'tenant-1', userId: 'user-1', apiKeyId: 'api-key-1' }),
         resource: { type: 'ticket', action: 'read' },
-        record: expect.objectContaining({ id: 'ticket-1' }),
+        record: expect.objectContaining({ id: 'ticket-1', ownerUserId: 'owner-1' }),
       })
     );
-
-    authorizeResourceMock.mockResolvedValueOnce({ allowed: true });
-    const allowed = await authorizeApiResourceRead({
-      knex: {} as any,
-      tenant: 'tenant-1',
-      user: {
-        user_id: 'user-1',
-        user_type: 'internal',
-      },
-      resource: 'project',
-      recordContext: {
-        id: 'project-1',
-      },
-    });
-
-    expect(allowed).toBe(true);
   });
 
-  it('authorizeApiResource passes the given action through; the read wrapper sends read', async () => {
+  it('returns a branded projection with no redaction applied when none is published', async () => {
+    const projection = await read([]);
+    expect(projection).toEqual(project);
+    expect(isAuthorizedProjection(projection)).toBe(true);
+    expect(isAuthorizedProjection({ ...project })).toBe(false);
+    expect(JSON.parse(JSON.stringify(projection))).toEqual(project);
+  });
+
+  it('retains source policy through successive response projections without serializing it', async () => {
+    const gate = await read(['values.items.unit_price'], { quote_id: 'quote-1' }, 'quote');
+    const line = { quote_item_id: 'line-1', unit_price: 4938, total_price: 4938, description: 'Visible line' };
+    const projectedLine = reprojectUnderDecision(gate!, line, QUOTE_LINE_RECORD_SOURCE);
+    const preview = reprojectUnderDecision(projectedLine!, line, QUOTE_CONVERSION_PREVIEW_ITEM_SOURCE);
+    expect(isAuthorizedProjection(preview)).toBe(true);
+    expect(JSON.parse(JSON.stringify(preview))).toEqual({
+      quote_item_id: 'line-1', total_price: null, description: 'Visible line',
+    });
+    expect(authorizeResourceMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects reprojection if copying the record discarded its authorization policy', async () => {
+    const gate = await read([], { quote_id: 'quote-1' }, 'quote');
+    expect(() => reprojectUnderDecision({ ...gate! }, { quote_item_id: 'line-1' }, QUOTE_LINE_RECORD_SOURCE))
+      .toThrow('requires an authorized projection');
+  });
+
+  it('omits a field hidden by its direct name', async () => {
+    const projection = await read(['budgeted_hours']);
+    expect(projection).not.toHaveProperty('budgeted_hours');
+    expect(projection).toHaveProperty('description', 'secret plan');
+  });
+
+  it.each(['projects.description', 'values.description', 'fields.description', 'fields.projects.description'])(
+    'omits a field hidden by the %s alias without suppressing the row', async (alias) => {
+      const projection = await read([alias]);
+      expect(projection).not.toBeNull();
+      expect(projection).not.toHaveProperty('description');
+      expect(projection).toHaveProperty('project_name', 'Alpha');
+    });
+
+  it('hides everything (suppresses the row) for *', async () => {
+    expect(await read(['*'])).toBeNull();
+    expect(await read(['fields'])).toBeNull();
+  });
+
+  it('nulls a derived field when its source is hidden, and keeps the key', async () => {
+    const projection = await read(['assigned_to']);
+    expect(projection).not.toHaveProperty('assigned_to');
+    expect(projection).toHaveProperty('assigned_user_name', null);
+    const byName = await read(['clients']);
+    expect(byName).toHaveProperty('client_name', null);
+    expect(byName).toHaveProperty('project_name', 'Alpha');
+  });
+
+  it('suppresses the row when an identifier is hidden', async () => {
+    expect(await read(['project_id'])).toBeNull();
+    expect(await read(['projects.project_id'])).toBeNull();
+  });
+
+  it('suppresses the row when the whole resource is hidden', async () => {
+    expect(await read(['projects'])).toBeNull();
+    expect(await read(['fields.projects'])).toBeNull();
+  });
+
+  it('does not suppress on a field-level redaction such as projects.description', async () => {
+    const projection = await read(['projects.description']);
+    expect(projection).not.toBeNull();
+    expect(projection).toHaveProperty('project_id', 'p-1');
+  });
+
+  it('projects tickets, quotes (including lines) and assets from their own descriptors', async () => {
+    const ticket = await read(['status_id'], { ticket_id: 't-1', title: 'x', status_id: 's', status_name: 'Open', priority_name: 'High' }, 'ticket');
+    expect(ticket).toEqual({ ticket_id: 't-1', title: 'x', status_name: null, priority_name: 'High' });
+
+    const quote = await read(['tax', 'unit_price'], {
+      quote_id: 'q-1', subtotal: 10, tax: 1, total_amount: 11,
+      items: [{ quote_item_id: 'i-1', unit_price: 5, quantity: 2, total_price: 10, cost: 3 }],
+    }, 'quote');
+    expect(quote).toEqual({ quote_id: 'q-1', subtotal: null, tax: null, total_amount: null, items: [{ quote_item_id: 'i-1', quantity: 2, total_price: null, cost: 3 }] });
+    expect(await read(['quotes'], { quote_id: 'q-1' }, 'quote')).toBeNull();
+
+    // assets have no default record context: the caller must supply one
+    await expect(projectApiResourceRead({ knex: {} as any, tenant: 'tenant-1', user, kind: 'asset', record: { asset_id: 'a-1' } })).rejects.toThrow(/recordContext/);
+    authorizeResourceMock.mockResolvedValueOnce({ allowed: true, redactedFields: ['vendor_id'] });
+    const assetProjection = await projectApiResourceRead({
+      knex: {} as any, tenant: 'tenant-1', user, kind: 'asset', recordContext: { id: 'a-1' },
+      record: { asset_id: 'a-1', vendor_id: 'v', vendor_name: 'Dell', name: 'PC' },
+    });
+    expect(assetProjection).toEqual({ asset_id: 'a-1', vendor_name: null, name: 'PC' });
+  });
+
+  it('batch form drops denied and suppressed rows and keeps order', async () => {
+    authorizeResourceMock
+      .mockResolvedValueOnce({ allowed: true, redactedFields: [] })
+      .mockResolvedValueOnce({ allowed: false, redactedFields: [] })
+      .mockResolvedValueOnce({ allowed: true, redactedFields: ['projects'] })
+      .mockResolvedValueOnce({ allowed: true, redactedFields: ['description'] });
+    const rows = await projectApiResourceReads({
+      knex: {} as any, tenant: 'tenant-1', user, kind: 'project',
+      records: [1, 2, 3, 4].map((n) => ({ project_id: `p-${n}`, description: 'd' })),
+    });
+    expect(rows).toEqual([{ project_id: 'p-1', description: 'd' }, { project_id: 'p-4' }]);
+  });
+
+  it('authorizeApiResource passes the mutation action through', async () => {
     authorizeResourceMock.mockReset();
     authorizeResourceMock.mockResolvedValue({ allowed: true });
     const base = { knex: {} as any, tenant: 't1', user: { user_id: 'u1' }, resource: 'ticket', recordContext: { id: 'r1' } };
 
     await authorizeApiResource({ ...base, action: 'update' });
     await authorizeApiResource({ ...base, action: 'delete' });
-    await authorizeApiResourceRead(base);
 
     const actions = authorizeResourceMock.mock.calls.map((c) => c[0].resource.action);
-    expect(actions).toEqual(['update', 'delete', 'read']);
+    expect(actions).toEqual(['update', 'delete']);
   });
 
   it('API-key and session principals reach the kernel with the same resource/action', async () => {
@@ -139,4 +227,26 @@ describe('api authorization kernel helper', () => {
     expect(a.subject.apiKeyId).toBe('k1');
     expect(b.subject.apiKeyId).toBeUndefined();
   });
+
+  it('batch reprojection preserves scope, row order and branding without reauthorizing', async () => {
+    authorizeResourceMock.mockResolvedValue({ allowed: true, redactedFields: ['values.items.description'] });
+    const gate = await projectApiResourceRead({
+      knex: {} as any, tenant: 't', user: { user_id: 'u' }, kind: 'quote', record: { quote_id: 'q' },
+    });
+    const lines = [1, 2].map(id => ({ quote_item_id: `line-${id}`, description: 'Private line', quantity: id }));
+    const projected = reprojectUnderDecision(gate!, lines, QUOTE_LINE_RECORD_SOURCE);
+    expect(projected).toEqual([
+      { quote_item_id: 'line-1', quantity: 1 }, { quote_item_id: 'line-2', quantity: 2 },
+    ]);
+    expect(projected.every(isAuthorizedProjection)).toBe(true);
+    expect(lines[0].description).toBe('Private line');
+    expect(authorizeResourceMock).toHaveBeenCalledTimes(1);
+
+    authorizeResourceMock.mockResolvedValue({ allowed: true, redactedFields: ['values.items.quote_item_id'] });
+    const suppressed = await projectApiResourceRead({
+      knex: {} as any, tenant: 't', user: { user_id: 'u' }, kind: 'quote', record: { quote_id: 'q' },
+    });
+    expect(reprojectUnderDecision(suppressed!, lines, QUOTE_LINE_RECORD_SOURCE)).toEqual([]);
+  });
+
 });

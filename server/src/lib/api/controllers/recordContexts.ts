@@ -30,3 +30,17 @@ export function buildProjectRecordContext(project: Record<string, any>) {
     isClosed: project.is_closed,
   };
 }
+
+// `approved_by` is the approver, NOT an assignee. Coercing it into assignedUserIds would let any approver pass the
+// `own_or_assigned` relationship rule on quotes they didn't author. Quotes have no assignee concept today, so
+// assignedUserIds stays empty. Self-approval is enforced separately via the `billing_not_self_approver_denied`
+// mutation guard in assertQuoteApproveAllowed.
+export function buildQuoteRecordContext(quote: Record<string, any>) {
+  return {
+    id: quote.quote_id,
+    ownerUserId: typeof quote.created_by === 'string' ? quote.created_by : undefined,
+    assignedUserIds: [] as string[],
+    clientId: typeof quote.client_id === 'string' ? quote.client_id : undefined,
+    status: quote.status,
+  };
+}

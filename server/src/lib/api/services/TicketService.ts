@@ -132,6 +132,7 @@ import type { PreviewGenerationResult } from '@alga-psa/documents/lib/documentPr
 import { attachDocumentFromBytes, persistDocumentPreviews } from './documents/attachDocument';
 import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
+import { createPredicateGuard, type PredicateGuard } from '../controllers/authorizationKernel';
 // import { performanceTracker } from '../../analytics/performanceTracking';
 
 const TICKET_MOBILE_LIST_FIELDS = [
@@ -370,6 +371,20 @@ function isPreviewableMime(mimeType: string | null | undefined): boolean {
   return mime.startsWith('image/') || mime === 'application/pdf' || mime.startsWith('video/');
 }
 
+// LEVERAGE: pattern filter-key-to-response-field — request filter key -> the response field it reads, so the policy
+// guard can gate filters the same way it gates search columns. Projects/assets/quotes repeat this shape inline.
+const TICKET_FILTER_RESPONSE_FIELD: Readonly<Record<string, string>> = {
+  title: 'title', ticket_number: 'ticket_number', board_id: 'board_id', client_id: 'client_id', location_id: 'location_id',
+  contact_name_id: 'contact_name_id', status_id: 'status_id', status_ids: 'status_id', category_id: 'category_id',
+  subcategory_id: 'subcategory_id', entered_by: 'entered_by', assigned_to: 'assigned_to', priority_id: 'priority_id',
+  is_open: 'status_is_closed', is_closed: 'status_is_closed', response_state: 'response_state',
+  has_assignment: 'assigned_to', client_name: 'client_name', contact_name: 'contact_name', board_name: 'board_name',
+  category_name: 'category_name', priority_name: 'priority_name', status_name: 'status_name',
+  entered_from: 'entered_at', entered_to: 'entered_at', created_from: 'entered_at', created_to: 'entered_at',
+  closed_from: 'closed_at', closed_to: 'closed_at', updated_from: 'updated_at', updated_to: 'updated_at',
+  master_ticket_id: 'master_ticket_id', bundle_view: 'master_ticket_id',
+};
+
 export class TicketService extends BaseService<ITicket> {
   constructor() {
     super({
@@ -516,9 +531,10 @@ export class TicketService extends BaseService<ITicket> {
     let dataQuery = dataScopedQuery.builder;
     let countQuery = countScopedQuery.builder;
 
-    // Apply filters
-    dataQuery = this.applyTicketFilters(dataQuery, filters, knex, context.tenant);
-    countQuery = this.applyTicketFilters(countQuery, filters, knex, context.tenant);
+    // Apply filters (policy-aware: a filter over a field the caller's redactions hide matches nothing)
+    const guard = await createPredicateGuard(knex, context, 'ticket');
+    dataQuery = this.applyTicketFilters(dataQuery, filters, knex, context.tenant, guard);
+    countQuery = this.applyTicketFilters(countQuery, filters, knex, context.tenant, guard);
 
     // Client-portal scope: same-client AND visibility-board predicates on both
     // the data and count builders, before limit/offset. Kept separate from the
@@ -2967,52 +2983,37 @@ export class TicketService extends BaseService<ITicket> {
     query = scopedDb.tenantJoin(query, 'contacts as cont', 't.contact_name_id', 'cont.contact_name_id', { type: 'left' });
     query = scopedDb.tenantJoin(query, 'statuses as stat', 't.status_id', 'stat.status_id', { type: 'left' });
 
-    // Apply search filters
-    if (!searchData.include_closed) {
+    // Apply search filters. Every predicate goes through the policy guard: a column the caller's redactions hide
+    // is dropped from the match set (and a hidden filter matches nothing).
+    const guard = await createPredicateGuard(knex, context, 'ticket');
+    // Implicit default (not a caller-supplied predicate): when the status is hidden it is skipped rather than
+    // turned into match-nothing; it can only add rows the caller is already authorized to read.
+    if (!searchData.include_closed && guard.readable('status_is_closed')) {
       query = query.where('stat.is_closed', false);
     }
 
     if (searchData.status_ids && searchData.status_ids.length > 0) {
-      query = query.whereIn('t.status_id', searchData.status_ids);
+      guard.filter(query, 't.status_id', (q, c) => { q.whereIn(c, searchData.status_ids!); });
     }
 
     if (searchData.priority_ids && searchData.priority_ids.length > 0) {
-      query = query.whereIn('t.priority_id', searchData.priority_ids);
+      guard.filter(query, 't.priority_id', (q, c) => { q.whereIn(c, searchData.priority_ids!); });
     }
 
     if (searchData.client_ids && searchData.client_ids.length > 0) {
-      query = query.whereIn('t.client_id', searchData.client_ids);
+      guard.filter(query, 't.client_id', (q, c) => { q.whereIn(c, searchData.client_ids!); });
     }
 
     if (searchData.assigned_to_ids && searchData.assigned_to_ids.length > 0) {
-      query = query.whereIn('t.assigned_to', searchData.assigned_to_ids);
+      guard.filter(query, 't.assigned_to', (q, c) => { q.whereIn(c, searchData.assigned_to_ids!); });
     }
 
     // Apply search query
     const searchFields = searchData.fields || ['title', 'ticket_number'];
-    query = query.where(subQuery => {
-      searchFields.forEach((field, index) => {
-        if (field === 'client_name') {
-          if (index === 0) {
-            subQuery.whereILike('comp.client_name', `%${searchData.query}%`);
-          } else {
-            subQuery.orWhereILike('comp.client_name', `%${searchData.query}%`);
-          }
-        } else if (field === 'contact_name') {
-          if (index === 0) {
-            subQuery.whereILike('cont.full_name', `%${searchData.query}%`);
-          } else {
-            subQuery.orWhereILike('cont.full_name', `%${searchData.query}%`);
-          }
-        } else {
-          if (index === 0) {
-            subQuery.whereILike(`t.${field}`, `%${searchData.query}%`);
-          } else {
-            subQuery.orWhereILike(`t.${field}`, `%${searchData.query}%`);
-          }
-        }
-      });
-    });
+    guard.search(query, searchFields.map(field =>
+      field === 'client_name' ? { column: 'comp.client_name', field: 'client_name' }
+      : field === 'contact_name' ? { column: 'cont.full_name', field: 'contact_name' }
+      : { column: `t.${field}`, field }), searchData.query);
 
     // Execute query
     const tickets = await query
@@ -3165,7 +3166,7 @@ export class TicketService extends BaseService<ITicket> {
   /**
    * Apply ticket-specific filters
    */
-  private applyTicketFilters(query: Knex.QueryBuilder, filters: TicketFilterData, knex: Knex, tenant: string): Knex.QueryBuilder {
+  private applyTicketFilters(query: Knex.QueryBuilder, filters: TicketFilterData, knex: Knex, tenant: string, guard: PredicateGuard): Knex.QueryBuilder {
     const scopedDb = tenantDb(knex, tenant);
 
     // external_system + external_id must match the SAME external-link row when
@@ -3192,6 +3193,13 @@ export class TicketService extends BaseService<ITicket> {
     Object.entries(filters).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
       if (handledExternalFilters.has(key)) return;
+
+      // Policy gate: the filter touches a response field the caller cannot read => it matches nothing.
+      const filteredField = TICKET_FILTER_RESPONSE_FIELD[key];
+      if (filteredField && !guard.readable(filteredField)) {
+        query.whereRaw('1 = 0');
+        return;
+      }
 
       switch (key) {
         case 'title':
@@ -3305,23 +3313,25 @@ export class TicketService extends BaseService<ITicket> {
           break;
         case 'search':
           if (this.searchableFields.length > 0) {
+            // Columns that may take part come from the policy guard; the client-name branch needs the derived
+            // `client_name` to be readable too.
+            const searchColumns = guard.columns(this.searchableFields.map(field => ({ column: `t.${field}`, field })));
+            const searchClient = guard.readable('client_name');
+            if (searchColumns.length === 0 && !searchClient) {
+              query.whereRaw('1 = 0');
+              break;
+            }
             query.where(subQuery => {
-              this.searchableFields.forEach((field, index) => {
-                if (index === 0) {
-                  subQuery.whereILike(`t.${field}`, `%${value}%`);
-                } else {
-                  subQuery.orWhereILike(`t.${field}`, `%${value}%`);
-                }
-              });
-              
-              // Also search in client name
-              subQuery.orWhereExists(
-                scopedDb.subquery('clients as c')
-                  .select('*')
-                  .whereRaw('c.tenant = t.tenant')
-                  .whereRaw('c.client_id = t.client_id')
-                  .andWhereILike('c.client_name', `%${value}%`)
-              );
+              searchColumns.forEach(column => subQuery.orWhereILike(column, `%${value}%`));
+              if (searchClient) {
+                subQuery.orWhereExists(
+                  scopedDb.subquery('clients as c')
+                    .select('*')
+                    .whereRaw('c.tenant = t.tenant')
+                    .whereRaw('c.client_id = t.client_id')
+                    .andWhereILike('c.client_name', `%${value}%`)
+                );
+              }
             });
           }
           break;

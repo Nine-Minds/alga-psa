@@ -8,21 +8,30 @@ import { NextRequest } from 'next/server';
  */
 
 const serviceState = vi.hoisted(() => ({
-  asset: null as unknown,
+  asset: null as { asset_id: string } | null,
   assignments: [] as unknown[],
-  getByIdCalls: [] as Array<{ id: string; tenant: string }>,
+  authorizationCalls: [] as Array<{ id: string; tenant: string }>,
+  assignmentLoads: 0,
+  decision: { allowed: true, redactedFields: [] as string[] },
 }));
 
 vi.mock('@/lib/api/services/AssetService', () => ({
   AssetService: class {
-    async getById(id: string, context: { tenant: string }) {
-      serviceState.getByIdCalls.push({ id, tenant: context.tenant });
-      return serviceState.asset;
+    async getAuthorizationRecord(id: string, context: { tenant: string }) {
+      serviceState.authorizationCalls.push({ id, tenant: context.tenant });
+      return serviceState.asset ? { id: serviceState.asset.asset_id } : null;
     }
     async getAssetAssignments() {
+      serviceState.assignmentLoads += 1;
       return serviceState.assignments;
     }
   },
+}));
+
+vi.mock('server/src/lib/authorization/kernel', () => ({
+  getAuthorizationKernel: vi.fn(async () => ({
+    authorizeResource: vi.fn(async () => serviceState.decision),
+  })),
 }));
 
 vi.mock('@/lib/productAccess', () => ({
@@ -56,7 +65,9 @@ function request(assetId: string): NextRequest {
 beforeEach(() => {
   serviceState.asset = null;
   serviceState.assignments = [];
-  serviceState.getByIdCalls = [];
+  serviceState.authorizationCalls = [];
+  serviceState.assignmentLoads = 0;
+  serviceState.decision = { allowed: true, redactedFields: [] };
 });
 
 describe('ApiAssetController.listAssignments', () => {
@@ -73,7 +84,7 @@ describe('ApiAssetController.listAssignments', () => {
     const body = await response.json();
     expect(body.data).toHaveLength(2);
     expect(body.data[0]).toMatchObject({ assignment_id: 'a-2', unassigned_at: null });
-    expect(serviceState.getByIdCalls).toEqual([{ id: ASSET, tenant: TENANT }]);
+    expect(serviceState.authorizationCalls).toEqual([{ id: ASSET, tenant: TENANT }]);
   });
 
   it("404s for another tenant's asset", async () => {
@@ -84,5 +95,29 @@ describe('ApiAssetController.listAssignments', () => {
     expect(response.status).toBe(404);
     const body = await response.json();
     expect(body.error?.code ?? body.code).toBe('NOT_FOUND');
+    expect(serviceState.assignmentLoads).toBe(0);
+  });
+
+  it('does not load assignment history when the asset policy denies the caller', async () => {
+    serviceState.asset = { asset_id: ASSET };
+    serviceState.decision = { allowed: false, redactedFields: [] };
+
+    const response = await new ApiAssetController().listAssignments(request(ASSET), { id: ASSET });
+    expect(response.status).toBe(404);
+    expect((await response.json()).error.code).toBe('NOT_FOUND');
+    expect(serviceState.assignmentLoads).toBe(0);
+  });
+
+  it('projects joined contact labels under the asset policy', async () => {
+    serviceState.asset = { asset_id: ASSET };
+    serviceState.assignments = [{ assignment_id: 'a-1', contact_name: 'Private contact', source: 'manual' }];
+    const controller = new ApiAssetController();
+    const visible = await controller.listAssignments(request(ASSET), { id: ASSET });
+    expect((await visible.json()).data[0].contact_name).toBe('Private contact');
+
+    serviceState.decision = { allowed: true, redactedFields: ['contacts.full_name'] };
+    const hidden = await controller.listAssignments(request(ASSET), { id: ASSET });
+    expect(hidden.status).toBe(200);
+    expect((await hidden.json()).data).toEqual([{ assignment_id: 'a-1', contact_name: null, source: 'manual' }]);
   });
 });

@@ -236,7 +236,8 @@ export abstract class BaseService<T = any> {
   protected applyRangeFilters(
     query: Knex.QueryBuilder,
     filters: Record<string, any>,
-    columns: Record<string, string | null> = this.rangeFilterColumns()
+    columns: Record<string, string | null> = this.rangeFilterColumns(),
+    apply?: (query: Knex.QueryBuilder, column: string, operator: '>=' | '<=', value: unknown) => void,
   ): Knex.QueryBuilder {
     Object.entries(filters ?? {}).forEach(([key, value]) => {
       if (value === undefined || value === null) return;
@@ -248,7 +249,9 @@ export abstract class BaseService<T = any> {
       }
 
       // Direction comes from the suffix, but only for keys declared as ranges.
-      query.where(rangeColumn, key.endsWith('_to') ? '<=' : '>=', value);
+      const operator = key.endsWith('_to') ? '<=' : '>=';
+      if (apply) apply(query, rangeColumn, operator, value);
+      else query.where(rangeColumn, operator, value);
     });
 
     return query;

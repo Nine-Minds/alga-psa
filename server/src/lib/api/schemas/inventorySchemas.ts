@@ -65,14 +65,14 @@ export const stockUnitSummarySchema = z.object({
 export const inventoryAssetSummarySchema = z.object({
   asset_id: uuidSchema,
   asset_tag: z.string().nullable().optional(),
-  name: z.string(),
+  name: z.string().optional(),
   serial_number: z.string().nullable().optional(),
   asset_type: z.string().nullable().optional(),
   status: z.string().nullable().optional(),
   client_id: uuidSchema.nullable().optional(),
   client_name: z.string().nullable().optional(),
   warranty_end_date: nullableDateSchema,
-  warranty_status: z.enum(['active', 'expiring_soon', 'expired', 'unknown']),
+  warranty_status: z.enum(['active', 'expiring_soon', 'expired', 'unknown']).nullable().optional(),
   location: z.string().nullable().optional(),
   stock_unit_id: uuidSchema.nullable().optional(),
 });

@@ -33,8 +33,21 @@ import {
   isSelfApprovalBlocked,
 } from '@alga-psa/authorization/kernel';
 import { resolveAllowSelfApprovalFlag } from '@alga-psa/authorization/quoteSelfApproval';
-import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
-import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
+import {
+  buildAuthorizationPrincipalSubject,
+  projectApiResourceRead,
+  projectApiResourceReads,
+  reprojectUnderDecision,
+  type AuthorizedProjection,
+} from './authorizationKernel';
+import {
+  QUOTE_CONVERSION_PREVIEW_SOURCE,
+  QUOTE_ACTIVITY_SOURCE,
+  QUOTE_LINE_RECORD_SOURCE,
+  QUOTE_RECORD_SOURCE,
+} from '@alga-psa/co-managed/recordProjection';
+import { buildQuoteRecordContext } from './recordContexts';
+import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import {
   ConflictError,
   ForbiddenError,
@@ -89,27 +102,40 @@ export class ApiQuoteController extends ApiBaseController {
     }
   }
 
+  // `approved_by` is the approver, NOT an assignee (see buildQuoteRecordContext); kept as a method for existing call sites.
   private buildQuoteRecordContext(quote: Record<string, any>) {
-    // `approved_by` is the approver, NOT an assignee. Coercing it into
-    // assignedUserIds would let any approver pass the `own_or_assigned`
-    // relationship rule on quotes they didn't author. Quotes have no
-    // assignee concept today, so leave assignedUserIds empty. Self-approval
-    // is enforced separately via the `billing_not_self_approver_denied`
-    // mutation guard in assertQuoteApproveAllowed.
-    return {
-      id: quote.quote_id,
-      ownerUserId: typeof quote.created_by === 'string' ? quote.created_by : undefined,
-      assignedUserIds: [] as string[],
-      clientId: typeof quote.client_id === 'string' ? quote.client_id : undefined,
-      status: quote.status,
-    };
+    return buildQuoteRecordContext(quote);
+  }
+
+  /** A quote-shaped result (mutation return value) redacted under the gate decision. Never served raw. */
+  private serializeQuote(gate: AuthorizedProjection<Record<string, any>>, quote: Record<string, any>) {
+    const projected = reprojectUnderDecision(gate, quote, QUOTE_RECORD_SOURCE);
+    if (!projected) throw new NotFoundError('Quote not found');
+    return projected;
+  }
+
+  /** Quote lines redacted under the quote's decision (hidden unit_price => total_price etc. nulled). */
+  private serializeQuoteItems(gate: AuthorizedProjection<Record<string, any>>, items: Record<string, any>[]) {
+    const out: AuthorizedProjection<Record<string, any>>[] = [];
+    for (const item of items) {
+      const projected = reprojectUnderDecision(gate, item, QUOTE_LINE_RECORD_SOURCE);
+      if (projected) out.push(projected);
+    }
+    return out;
+  }
+
+  /** Conversion previews contain quote lines and totals, so project their full declared response shape. */
+  private serializeConversionPreview(gate: AuthorizedProjection<Record<string, any>>, preview: Record<string, any>) {
+    const projected = reprojectUnderDecision(gate, preview, QUOTE_CONVERSION_PREVIEW_SOURCE);
+    if (!projected) throw new NotFoundError('Quote not found');
+    return projected;
   }
 
   private async assertQuoteReadAllowed(
     apiRequest: AuthenticatedApiRequest,
     quoteId: string,
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Record<string, any>> {
+  ): Promise<AuthorizedProjection<Record<string, any>>> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const quote = await this.quoteService.getById(quoteId, apiRequest.context);
 
@@ -117,20 +143,21 @@ export class ApiQuoteController extends ApiBaseController {
       throw new NotFoundError('Quote not found');
     }
 
-    const allowed = await authorizeApiResourceRead({
+    // Denied OR suppressed answers 404: 403 would confirm the quote exists.
+    const projection = await projectApiResourceRead({
       knex: resolvedKnex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
       apiKeyId: apiRequest.context.apiKeyId,
-      resource: 'billing',
-      recordContext: this.buildQuoteRecordContext(quote as Record<string, any>),
+      kind: 'quote',
+      record: quote as Record<string, any>,
     });
 
-    if (!allowed) {
-      throw new ForbiddenError('Permission denied: Cannot read quote');
+    if (!projection) {
+      throw new NotFoundError('Quote not found');
     }
 
-    return quote as Record<string, any>;
+    return projection;
   }
 
   /**
@@ -277,7 +304,7 @@ export class ApiQuoteController extends ApiBaseController {
           };
 
           const knex = await getConnection(apiRequest.context.tenant);
-          const authorizedPage = await buildAuthorizationAwarePage<Record<string, any>>({
+          const authorizedPage = await buildProjectedPage<Record<string, any>, AuthorizedProjection<Record<string, any>>>({
             page,
             limit,
             fetchPage: (sourcePage, sourceLimit) =>
@@ -290,14 +317,14 @@ export class ApiQuoteController extends ApiBaseController {
                 apiRequest.context,
                 filters
               ),
-            authorizeRecord: (quote) =>
-              authorizeApiResourceRead({
+            projectRecord: (quote) =>
+              projectApiResourceRead({
                 knex,
                 tenant: apiRequest.context.tenant,
                 user: apiRequest.context.user,
                 apiKeyId: apiRequest.context.apiKeyId,
-                resource: 'billing',
-                recordContext: this.buildQuoteRecordContext(quote),
+                kind: 'quote',
+                record: quote,
               }),
             scanLimit: 100,
           });
@@ -345,7 +372,7 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const gate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           const data = this.options.updateSchema
             ? await this.validateData(apiRequest, this.options.updateSchema)
@@ -356,7 +383,7 @@ export class ApiQuoteController extends ApiBaseController {
             throw new NotFoundError(`${this.options.resource} not found`);
           }
 
-          return createSuccessResponse(updated);
+          return createSuccessResponse(this.serializeQuote(gate, updated));
         });
       } catch (error) {
         return handleApiError(error);
@@ -404,10 +431,10 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const gate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
           const items = await this.quoteService.listItems(id, apiRequest.context);
 
-          return createSuccessResponse(items);
+          return createSuccessResponse(this.serializeQuoteItems(gate, items));
         });
       } catch (error) {
         return handleApiError(error);
@@ -425,13 +452,13 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const gate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
           const body = await req.json();
           const data = createQuoteItemSchema.parse(body);
 
           const item = await this.quoteService.addItem(id, data, apiRequest.context);
 
-          return createSuccessResponse(item, 201);
+          return createSuccessResponse(this.serializeQuoteItems(gate, [item])[0] ?? null, 201);
         });
       } catch (error) {
         if (error instanceof ZodError) {
@@ -452,7 +479,7 @@ export class ApiQuoteController extends ApiBaseController {
 
           const quoteId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, quoteId, knex);
+          const gate = await this.assertQuoteReadAllowed(apiRequest, quoteId, knex);
           const params = await (apiRequest as any).params;
           const itemId = params?.itemId;
 
@@ -465,7 +492,7 @@ export class ApiQuoteController extends ApiBaseController {
 
           const item = await this.quoteService.updateItem(quoteId, itemId, data, apiRequest.context);
 
-          return createSuccessResponse(item);
+          return createSuccessResponse(this.serializeQuoteItems(gate, [item])[0] ?? null);
         });
       } catch (error) {
         if (error instanceof ZodError) {
@@ -514,13 +541,13 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const gate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
           const body = await req.json();
           const data = reorderQuoteItemsSchema.parse(body);
 
           const items = await this.quoteService.reorderItems(id, data.item_ids, apiRequest.context);
 
-          return createSuccessResponse(items);
+          return createSuccessResponse(this.serializeQuoteItems(gate, items));
         });
       } catch (error) {
         if (error instanceof ZodError) {
@@ -545,13 +572,13 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const gate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
           const body = await req.json().catch(() => ({}));
           const data = sendQuoteSchema.parse(body);
 
           const quote = await this.quoteService.send(id, data, apiRequest.context);
 
-          return createSuccessResponse(quote);
+          return createSuccessResponse(this.serializeQuote(gate, quote));
         });
       } catch (error) {
         if (error instanceof ZodError) {
@@ -572,13 +599,13 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const gate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
           const body = await req.json().catch(() => ({}));
           const data = sendQuoteSchema.parse(body);
 
           const quote = await this.quoteService.send(id, data, apiRequest.context);
 
-          return createSuccessResponse(quote);
+          return createSuccessResponse(this.serializeQuote(gate, quote));
         });
       } catch (error) {
         if (error instanceof ZodError) {
@@ -599,11 +626,11 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const gate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           const quote = await this.quoteService.sendReminder(id, apiRequest.context);
 
-          return createSuccessResponse(quote);
+          return createSuccessResponse(this.serializeQuote(gate, quote));
         });
       } catch (error) {
         return handleApiError(error);
@@ -621,11 +648,11 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const gate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           const quote = await this.quoteService.submitForApproval(id, apiRequest.context);
 
-          return createSuccessResponse(quote);
+          return createSuccessResponse(this.serializeQuote(gate, quote));
         });
       } catch (error) {
         return handleApiError(error);
@@ -643,7 +670,13 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          const existingQuote = await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          // The projection only gates access. Approval logic (status, owner for the self-approval guard) needs the
+          // unredacted row, which is never serialized.
+          const gate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const existingQuote = await this.quoteService.getById(id, apiRequest.context);
+          if (!existingQuote) {
+            throw new NotFoundError('Quote not found');
+          }
 
           if (existingQuote.status !== 'pending_approval') {
             throw new ConflictError('Only quotes pending approval can be approved');
@@ -652,7 +685,7 @@ export class ApiQuoteController extends ApiBaseController {
           const { selfApproved } = await this.assertQuoteApproveAllowed(apiRequest, existingQuote as Record<string, any>);
           const quote = await this.quoteService.approve(id, apiRequest.context, { selfApproved });
 
-          return createSuccessResponse(quote);
+          return createSuccessResponse(this.serializeQuote(gate, quote));
         });
       } catch (error) {
         return handleApiError(error);
@@ -672,7 +705,12 @@ export class ApiQuoteController extends ApiBaseController {
           const knex = await getConnection(apiRequest.context.tenant);
           const body = await this.readJsonBody(req);
           const data = approvalRequestChangesSchema.parse(body);
-          const existingQuote = await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          // Gate only; the status check needs the unredacted row, which is never serialized.
+          const gate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const existingQuote = await this.quoteService.getById(id, apiRequest.context);
+          if (!existingQuote) {
+            throw new NotFoundError('Quote not found');
+          }
 
           if (existingQuote.status !== 'pending_approval') {
             throw new ConflictError('Only quotes pending approval can be sent back for changes');
@@ -680,7 +718,7 @@ export class ApiQuoteController extends ApiBaseController {
 
           const quote = await this.quoteService.requestChanges(id, data.reason, apiRequest.context);
 
-          return createSuccessResponse(quote);
+          return createSuccessResponse(this.serializeQuote(gate, quote));
         });
       } catch (error) {
         if (error instanceof ZodError) {
@@ -705,11 +743,11 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const gate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           const preview = await this.quoteService.getConversionPreview(id, apiRequest.context);
 
-          return createSuccessResponse(preview);
+          return createSuccessResponse(this.serializeConversionPreview(gate, preview as unknown as Record<string, any>));
         });
       } catch (error) {
         return handleApiError(error);
@@ -762,8 +800,16 @@ export class ApiQuoteController extends ApiBaseController {
           await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           const versions = await this.quoteService.listVersions(id, apiRequest.context);
+          const projections = await projectApiResourceReads({
+            knex,
+            tenant: apiRequest.context.tenant,
+            user: apiRequest.context.user,
+            apiKeyId: apiRequest.context.apiKeyId,
+            kind: 'quote',
+            records: versions as unknown as Record<string, any>[],
+          });
 
-          return createSuccessResponse(versions);
+          return createSuccessResponse(projections);
         });
       } catch (error) {
         return handleApiError(error);
@@ -781,11 +827,11 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const gate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           const revision = await this.quoteService.createRevision(id, apiRequest.context);
 
-          return createSuccessResponse(revision, 201);
+          return createSuccessResponse(this.serializeQuote(gate, revision), 201);
         });
       } catch (error) {
         return handleApiError(error);
@@ -807,11 +853,11 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const quoteGate = await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           const activities = await this.quoteService.listActivities(id, apiRequest.context);
 
-          return createSuccessResponse(activities);
+          return createSuccessResponse(reprojectUnderDecision(quoteGate, activities, QUOTE_ACTIVITY_SOURCE));
         });
       } catch (error) {
         return handleApiError(error);

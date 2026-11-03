@@ -4,6 +4,11 @@ import { createFakeKnex, CO_MANAGED_TENANT, clearWriteAdmissionCacheForTests, wi
 
 const h = vi.hoisted(() => ({ fake: null as any }));
 vi.mock('../../../lib/db/db', async (original) => ({ ...(await original<object>()), getConnection: async () => h.fake.knex }));
+vi.mock('server/src/lib/authorization/kernel', () => ({
+  getAuthorizationKernel: async () => ({
+    authorizeResource: async () => ({ allowed: true, redactedFields: [] }),
+  }),
+}));
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(), publishWorkflowEvent: vi.fn(), publishStoredWorkflowEvent: vi.fn(),
   publishNonCatalogWorkflowEvent: vi.fn(), publishNonCatalogEventByName: vi.fn(), publishUnregisteredEventType: vi.fn(), publishBuiltWorkflowPayload: vi.fn(),
@@ -27,15 +32,30 @@ afterEach(async () => { clearWriteAdmissionCacheForTests(); vi.unstubAllEnvs(); 
 
 async function updateThroughController() {
   const { ApiTicketController } = await import('../../../lib/api/controllers/ApiTicketController');
+  const { projectApiResourceRead } = await import('../../../lib/api/controllers/authorizationKernel');
   const controller: any = new ApiTicketController();
   const context = { tenant: CO_MANAGED_TENANT, userId: ID, user: { user_id: ID, user_type: 'internal' }, apiKeyId: ID };
   // Identity and authorization are supplied; the controller, validation, error handler,
   // TicketService, transaction and SQL builder are the production implementations.
   controller.authenticate = async (request: NextRequest) => Object.assign(request, { context });
   controller.checkPermission = async () => undefined;
-  controller.assertTicketReadAllowed = async () => undefined;
+  controller.assertTicketReadAllowed = async () => projectApiResourceRead({
+    knex: fake.knex,
+    tenant: CO_MANAGED_TENANT,
+    user: context.user,
+    apiKeyId: context.apiKeyId,
+    kind: 'ticket',
+    record: ticket,
+  });
   // update() authorizes through the mutation guard (resource + 'update' scope).
-  controller.assertTicketMutationAllowed = async () => ({ ...ticket });
+  controller.assertTicketMutationAllowed = async () => projectApiResourceRead({
+    knex: fake.knex,
+    tenant: CO_MANAGED_TENANT,
+    user: context.user,
+    apiKeyId: context.apiKeyId,
+    kind: 'ticket',
+    record: ticket,
+  });
   controller.service.getKnex = async () => ({ knex: fake.knex, tenant: CO_MANAGED_TENANT });
   return controller.update()(new NextRequest(`http://localhost/api/v1/tickets/${ID}`, {
     method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: 'Renamed' }),

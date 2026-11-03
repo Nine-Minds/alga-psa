@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { loadAssetSummaryFacts, countOpenAssetTickets, calculateAssetSummaryMetrics } from '../lib/assetSummary';
 import { z } from 'zod';
 import {
     CreateAssetRequest,
@@ -29,9 +30,6 @@ import {
     MobileDeviceAsset,
     PrinterAsset,
     AssetSummaryMetrics,
-    HealthStatus,
-    SecurityStatus,
-    WarrantyStatus,
     DeletionValidationResult,
     AssetFact,
     AssetMaintenanceOccurrence,
@@ -3809,65 +3807,12 @@ export const removeAssetAssociation = withAuth(async (
 
 export const getAssetSummaryMetrics = withAuth(async (user, { tenant }, asset_id: string): Promise<AssetSummaryMetrics | AssetActionError> => {
     const { knex } = await createTenantKnex();
-
     try {
         return await withTransaction(knex, async (trx: Knex.Transaction): Promise<AssetSummaryMetrics> => {
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, asset_id);
-
-            // Get asset info
-            const asset = await tenantScopedTable(trx, 'assets', tenant)
-                .where({ asset_id })
-                .select(
-                    'asset_type',
-                    'agent_status',
-                    'last_seen_at',
-                    'warranty_end_date'
-                )
-                .first();
-
-            if (!asset) {
-                throw new Error('Asset not found');
-            }
-
-            // Calculate health status based on agent status and last seen time
-            const { health_status, health_reason } = calculateHealthStatus(asset);
-
-            // Count open tickets associated with this asset
-            const ticketCountQuery = tenantScopedTable(trx, 'asset_associations', tenant)
-                .where('asset_associations.asset_id', asset_id)
-                .where('asset_associations.entity_type', 'ticket');
-            const db = tenantDb(trx, tenant);
-            db.tenantJoin(ticketCountQuery, 'tickets', 'tickets.ticket_id', 'asset_associations.entity_id');
-            db.tenantJoin(ticketCountQuery, 'statuses', 'statuses.status_id', 'tickets.status_id');
-            const ticketCountResult = await ticketCountQuery
-                .where('statuses.is_closed', false)
-                .count('* as count')
-                .first();
-
-            const open_tickets_count = parseInt(String(ticketCountResult?.count || 0), 10);
-
-            // Calculate security status based on asset extension data
-            const { security_status, security_issues } = await calculateSecurityStatus(
-                trx,
-                tenant,
-                asset_id,
-                asset.asset_type
-            );
-
-            // Calculate warranty status
-            const { warranty_status, warranty_days_remaining } = calculateWarrantyStatus(
-                asset.warranty_end_date
-            );
-
-            return {
-                health_status,
-                health_reason,
-                open_tickets_count,
-                security_status,
-                security_issues,
-                warranty_days_remaining,
-                warranty_status,
-            };
+            const facts = await loadAssetSummaryFacts(trx, tenant, asset_id);
+            const count = await countOpenAssetTickets(trx, tenant, asset_id);
+            return calculateAssetSummaryMetrics(facts, count);
         });
     } catch (error) {
         console.error('Error getting asset summary metrics:', error);
@@ -3876,136 +3821,3 @@ export const getAssetSummaryMetrics = withAuth(async (user, { tenant }, asset_id
         throw error;
     }
 });
-
-/**
- * Calculate health status based on agent status and last seen time
- */
-function calculateHealthStatus(asset: {
-    agent_status: string | null;
-    last_seen_at: string | null;
-}): { health_status: HealthStatus; health_reason: string | null } {
-    // If no RMM data, return unknown
-    if (!asset.agent_status) {
-        return { health_status: 'unknown', health_reason: 'No RMM data available' };
-    }
-
-    // Check agent status
-    if (asset.agent_status === 'offline' || asset.agent_status === 'overdue') {
-        const stateLabel = asset.agent_status === 'overdue' ? 'overdue' : 'offline';
-
-        // Check how long it's been offline
-        if (asset.last_seen_at) {
-            const lastSeen = new Date(asset.last_seen_at);
-            const now = new Date();
-            const hoursSinceLastSeen = (now.getTime() - lastSeen.getTime()) / (1000 * 60 * 60);
-
-            if (hoursSinceLastSeen > 72) {
-                return {
-                    health_status: 'critical',
-                    health_reason: `Device ${stateLabel} for ${Math.floor(hoursSinceLastSeen / 24)} days`,
-                };
-            } else if (hoursSinceLastSeen > 24) {
-                return {
-                    health_status: 'warning',
-                    health_reason: `Device ${stateLabel} for ${Math.floor(hoursSinceLastSeen)} hours`,
-                };
-            }
-        }
-        return { health_status: 'warning', health_reason: `Device ${stateLabel}` };
-    }
-
-    // Agent is online - consider healthy
-    return { health_status: 'healthy', health_reason: null };
-}
-
-/**
- * Calculate security status based on antivirus and patch status
- */
-async function calculateSecurityStatus(
-    knex: Knex,
-    tenant: string,
-    assetId: string,
-    assetType: string
-): Promise<{ security_status: SecurityStatus; security_issues: string[] }> {
-    const issues: string[] = [];
-
-    // Get extension data based on asset type
-    let extensionData: {
-        antivirus_status?: string;
-        antivirus_product?: string;
-        pending_patches?: number;
-        failed_patches?: number;
-    } | null = null;
-
-    if (assetType === 'workstation') {
-        extensionData = await tenantScopedTable(knex, 'workstation_assets', tenant)
-            .where({ asset_id: assetId })
-            .select('antivirus_status', 'antivirus_product', 'pending_patches', 'failed_patches')
-            .first();
-    } else if (assetType === 'server') {
-        extensionData = await tenantScopedTable(knex, 'server_assets', tenant)
-            .where({ asset_id: assetId })
-            .select('antivirus_status', 'antivirus_product', 'pending_patches', 'failed_patches')
-            .first();
-    }
-
-    if (!extensionData) {
-        return { security_status: 'secure', security_issues: [] };
-    }
-
-    // Check antivirus status
-    if (extensionData.antivirus_status === 'at_risk') {
-        issues.push('Antivirus protection at risk');
-    } else if (!extensionData.antivirus_product) {
-        issues.push('No antivirus detected');
-    }
-
-    // Check patch status
-    if (extensionData.failed_patches && extensionData.failed_patches > 0) {
-        issues.push(`${extensionData.failed_patches} failed patches`);
-    }
-
-    if (extensionData.pending_patches && extensionData.pending_patches > 10) {
-        issues.push(`${extensionData.pending_patches} pending patches`);
-    }
-
-    // Determine security status based on issues
-    let security_status: SecurityStatus = 'secure';
-    if (issues.length > 0) {
-        // Critical if AV is at risk or many failed patches
-        if (
-            extensionData.antivirus_status === 'at_risk' ||
-            (extensionData.failed_patches && extensionData.failed_patches > 5)
-        ) {
-            security_status = 'critical';
-        } else {
-            security_status = 'at_risk';
-        }
-    }
-
-    return { security_status, security_issues: issues };
-}
-
-/**
- * Calculate warranty status based on warranty end date
- */
-function calculateWarrantyStatus(warrantyEndDate: string | null): {
-    warranty_status: WarrantyStatus;
-    warranty_days_remaining: number | null;
-} {
-    if (!warrantyEndDate) {
-        return { warranty_status: 'unknown', warranty_days_remaining: null };
-    }
-
-    const endDate = new Date(warrantyEndDate);
-    const now = new Date();
-    const daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-    if (daysRemaining < 0) {
-        return { warranty_status: 'expired', warranty_days_remaining: daysRemaining };
-    } else if (daysRemaining <= 90) {
-        return { warranty_status: 'expiring_soon', warranty_days_remaining: daysRemaining };
-    } else {
-        return { warranty_status: 'active', warranty_days_remaining: daysRemaining };
-    }
-}

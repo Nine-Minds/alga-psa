@@ -18,7 +18,7 @@ Product and unit results are unchanged.
 2. **Filter inside the service**, before `domains` is computed and before shaping. Never post-filter the response union
    (`multi` requires >= 2 matches). Removing an asset collapses `multi` -> single type, and `asset` -> `none`
    (including the normal `none` candidate search, which never contains assets).
-3. **Authorization**: `hasPermission(user, 'asset', 'read')` short-circuits; otherwise `authorizeApiResourceRead({resource:'asset', recordContext})`
+3. **Authorization**: `hasPermission(user, 'asset', 'read')` short-circuits; otherwise `projectApiResourceRead({resource:'asset', recordContext})`
    per row, with `recordContext` from `resolveAssetAuthorizationRecords`. No SQL `RelationshipSqlAdapter` in this card.
    The controller builds the authorizer from the request (user, tenant, apiKeyId).
 4. **Silent denial.** No reason/suppressed field, no 403, no header. An unreadable asset looks exactly like no match.
@@ -34,4 +34,4 @@ Batch authorization API, SQL relationship adapter for assets, mobile routing cha
 - Per-row kernel calls: cost is bounded (serial/tag matches are a handful of rows) but is N kernel calls; marked `LEVERAGE`.
 - Record-level narrowing for internal users only exists in the enterprise kernel (bundles); the CE kernel is allow-all
   for internal users, so in CE `asset:read` is the effective gate.
-- API-key subjects: `authorizeApiResourceRead` receives `apiKeyId`, so API-key-targeted bundle rules apply.
+- API-key subjects: `projectApiResourceRead` receives `apiKeyId`, so API-key-targeted bundle rules apply.

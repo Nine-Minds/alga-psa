@@ -29,10 +29,11 @@ import { buildAssetCreatedPayload, buildAssetUpdatedPayload } from '@alga-psa/wo
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/apiMiddleware';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '@alga-psa/assets/lib/assetAttributeWrites';
 import { advanceMaintenanceDate, parseCustomRecurrence } from '@alga-psa/assets/lib/maintenanceRecurrence';
-import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
+import { EXTENSION_TABLE_BY_ASSET_TYPE, isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
 import { validateAssetStatusSlug } from '@alga-psa/assets/lib/assetStatusRegistry';
 import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
 import { getAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
+import { createPredicateGuard } from '../controllers/authorizationKernel';
 import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
@@ -145,72 +146,78 @@ export class AssetService extends BaseService<any> {
     const knex = await this.getDbForContext(context);
     const query = scopedTable(knex, context.tenant, this.tableName);
 
-    // Common and asset-specific range filters. Unsupported range keys fail loudly.
+    // Apply filters through the policy guard: a filter over a column the caller's redactions hide matches nothing.
+    // LEVERAGE: pattern filter-key-to-response-field — see ProjectService.list / TicketService.TICKET_FILTER_RESPONSE_FIELD.
+    const guard = await createPredicateGuard(knex, context, 'asset');
+    const T = this.tableName;
     if (filters) {
-      this.applyRangeFilters(query, filters);
-    }
-
-    // Apply filters
-    if (filters) {
+      // Common and asset-specific ranges use the same guard as scalar filters. The count query is cloned below
+      // after all predicates have been composed, so it observes the same fail-closed range decisions.
+      this.applyRangeFilters(query, filters, undefined, (q, column, operator, value) => {
+        guard.filter(q, column, (builder, readableColumn) => {
+          if (operator === '>=') builder.where(readableColumn, '>=', value as any);
+          else builder.where(readableColumn, '<=', value as any);
+        });
+      });
       if (filters.asset_tag) {
-        query.where(`${this.tableName}.asset_tag`, 'ilike', `%${filters.asset_tag}%`);
+        guard.filter(query, `${T}.asset_tag`, (q, c) => { q.where(c, 'ilike', `%${filters.asset_tag}%`); });
       }
       if (filters.name) {
-        query.where(`${this.tableName}.name`, 'ilike', `%${filters.name}%`);
+        guard.filter(query, `${T}.name`, (q, c) => { q.where(c, 'ilike', `%${filters.name}%`); });
       }
       if (filters.client_id) {
-        query.where(`${this.tableName}.client_id`, filters.client_id);
+        guard.filter(query, `${T}.client_id`, (q, c) => { q.where(c, filters.client_id); });
       }
       if (filters.location_id) {
-        query.where(`${this.tableName}.location_id`, filters.location_id);
+        guard.filter(query, `${T}.location_id`, (q, c) => { q.where(c, filters.location_id); });
       }
       if (filters.contact_name_id) {
-        query.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
+        guard.filter(query, `${T}.contact_name_id`, (q, c) => { q.where(c, filters.contact_name_id); });
       }
       if (filters.manufacturer) {
-        query.where(`${this.tableName}.manufacturer`, 'ilike', `%${filters.manufacturer}%`);
+        guard.filter(query, `${T}.manufacturer`, (q, c) => { q.where(c, 'ilike', `%${filters.manufacturer}%`); });
       }
       if (filters.model) {
-        query.where(`${this.tableName}.model`, 'ilike', `%${filters.model}%`);
+        guard.filter(query, `${T}.model`, (q, c) => { q.where(c, 'ilike', `%${filters.model}%`); });
       }
       if (filters.vendor_id) {
-        query.where(`${this.tableName}.vendor_id`, filters.vendor_id);
+        guard.filter(query, `${T}.vendor_id`, (q, c) => { q.where(c, filters.vendor_id); });
       }
       if (filters.billing_profile_id) {
-        query.where(`${this.tableName}.billing_profile_id`, filters.billing_profile_id);
+        guard.filter(query, `${T}.billing_profile_id`, (q, c) => { q.where(c, filters.billing_profile_id); });
       }
       if (filters.asset_type) {
-        query.where(`${this.tableName}.asset_type`, filters.asset_type);
+        guard.filter(query, `${T}.asset_type`, (q, c) => { q.where(c, filters.asset_type); });
       }
       if (filters.status) {
-        query.where(`${this.tableName}.status`, filters.status);
+        guard.filter(query, `${T}.status`, (q, c) => { q.where(c, filters.status); });
       }
       if (filters.location) {
-        query.where(`${this.tableName}.location`, 'ilike', `%${filters.location}%`);
+        guard.filter(query, `${T}.location`, (q, c) => { q.where(c, 'ilike', `%${filters.location}%`); });
       }
       if (filters.client_name) {
         tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id');
-        query.where('clients.client_name', 'ilike', `%${filters.client_name}%`);
+        guard.filter(query, 'clients.client_name', (q, c) => { q.where(c, 'ilike', `%${filters.client_name}%`); });
       }
       if (filters.has_warranty !== undefined) {
-        if (filters.has_warranty) {
-          query.whereNotNull(`${this.tableName}.warranty_end_date`);
-        } else {
-          query.whereNull(`${this.tableName}.warranty_end_date`);
-        }
+        guard.filter(query, `${T}.warranty_end_date`, (q, c) => {
+          if (filters.has_warranty) q.whereNotNull(c); else q.whereNull(c);
+        });
       }
       if (filters.warranty_expired !== undefined) {
-        if (filters.warranty_expired) {
-          query.where(`${this.tableName}.warranty_end_date`, '<', new Date());
-        } else {
-          const tableName = this.tableName;
-          query.where(function() {
-            this.where(`${tableName}.warranty_end_date`, '>=', new Date())
-              .orWhereNull(`${tableName}.warranty_end_date`);
-          });
-        }
+        guard.filter(query, `${T}.warranty_end_date`, (q, c) => {
+          if (filters.warranty_expired) {
+            q.where(c, '<', new Date());
+          } else {
+            q.where(function() {
+              this.where(c, '>=', new Date()).orWhereNull(c);
+            });
+          }
+        });
       }
     }
+
+    const countQuery = query.clone().clearSelect().clearOrder();
 
     // Add joins for additional data
     tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', {
@@ -233,41 +240,6 @@ export class AssetService extends BaseService<any> {
           END as warranty_status
         `)
       );
-
-    // Execute queries with pagination
-    const countQuery = scopedTable(knex, context.tenant, this.tableName);
-
-    if (filters) {
-      // Apply the same range filters to count query
-      this.applyRangeFilters(countQuery, filters);
-      // Apply the same filters to count query
-      if (filters.client_id) {
-        countQuery.where(`${this.tableName}.client_id`, filters.client_id);
-      }
-      if (filters.location_id) {
-        countQuery.where(`${this.tableName}.location_id`, filters.location_id);
-      }
-      if (filters.contact_name_id) {
-        countQuery.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
-      }
-      if (filters.status) {
-        countQuery.where(`${this.tableName}.status`, filters.status);
-      }
-      if (filters.asset_type) {
-        countQuery.where(`${this.tableName}.asset_type`, filters.asset_type);
-      }
-      if (filters.warranty_expired !== undefined) {
-        if (filters.warranty_expired) {
-          countQuery.where(`${this.tableName}.warranty_end_date`, '<', new Date());
-        } else {
-          const tableName = this.tableName;
-          countQuery.where(function() {
-            this.where(`${tableName}.warranty_end_date`, '>=', new Date())
-              .orWhereNull(`${tableName}.warranty_end_date`);
-          });
-        }
-      }
-    }
 
     // Apply pagination
     const page = options.page || 1;
@@ -1211,6 +1183,14 @@ export class AssetService extends BaseService<any> {
     return query;
   }
 
+  /** Load a schedule before mutation so its owning asset can be authorized first. */
+  async getMaintenanceScheduleForUpdate(scheduleId: string, context: ServiceContext): Promise<any | null> {
+    const knex = await this.getDbForContext(context);
+    return scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+      .where({ schedule_id: scheduleId })
+      .first();
+  }
+
   async createMaintenanceSchedule(assetId: string, data: CreateMaintenanceScheduleData, context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
     this.assertCustomRecurrence(data.frequency, data.schedule_config);
@@ -1386,37 +1366,26 @@ export class AssetService extends BaseService<any> {
     const db = tenantDb(knex, context.tenant);
     const query = db.table(this.tableName);
 
-    // Build search query
+    // Search columns/filters come from the policy guard: columns the caller's redactions hide drop out of the match
+    // set, whether defaulted or named explicitly in `fields`.
     const tableName = this.tableName;
-    if (searchData.fields && searchData.fields.length > 0) {
-      query.where(function() {
-        searchData.fields!.forEach(field => {
-          if (field === 'client_name') {
-            this.orWhere('clients.client_name', 'ilike', `%${searchData.query}%`);
-          } else {
-            this.orWhere(`${tableName}.${field}`, 'ilike', `%${searchData.query}%`);
-          }
-        });
-      });
-    } else {
-      // Default search across all text fields
-      query.where(function() {
-        this.orWhere(`${tableName}.asset_tag`, 'ilike', `%${searchData.query}%`)
-          .orWhere(`${tableName}.name`, 'ilike', `%${searchData.query}%`)
-          .orWhere(`${tableName}.serial_number`, 'ilike', `%${searchData.query}%`)
-          .orWhere(`${tableName}.location`, 'ilike', `%${searchData.query}%`);
-      });
-    }
+    const guard = await createPredicateGuard(knex, context, 'asset');
+    const searchColumns = searchData.fields && searchData.fields.length > 0
+      ? searchData.fields.map(field => field === 'client_name'
+          ? { column: 'clients.client_name', field: 'client_name' }
+          : { column: `${tableName}.${field}`, field })
+      : ['asset_tag', 'name', 'serial_number', 'location'].map(field => `${tableName}.${field}`);
+    guard.search(query, searchColumns, searchData.query);
 
     // Apply filters
     if (searchData.asset_types && searchData.asset_types.length > 0) {
-      query.whereIn(`${this.tableName}.asset_type`, searchData.asset_types);
+      guard.filter(query, `${tableName}.asset_type`, (q, c) => { q.whereIn(c, searchData.asset_types!); });
     }
     if (searchData.statuses && searchData.statuses.length > 0) {
-      query.whereIn(`${this.tableName}.status`, searchData.statuses);
+      guard.filter(query, `${tableName}.status`, (q, c) => { q.whereIn(c, searchData.statuses!); });
     }
     if (searchData.client_ids && searchData.client_ids.length > 0) {
-      query.whereIn(`${this.tableName}.client_id`, searchData.client_ids);
+      guard.filter(query, `${tableName}.client_id`, (q, c) => { q.whereIn(c, searchData.client_ids!); });
     }
 
     // Add joins for searching
@@ -1473,37 +1442,116 @@ export class AssetService extends BaseService<any> {
     return query.orderBy('display_order', 'asc').orderBy('label', 'asc');
   }
 
-  // Statistics
-  async getStatistics(context: ServiceContext): Promise<any> {
-    const [basicStats, typeStats, statusStats, clientStats, warrantyStats, maintenanceStats] = await Promise.all([
-      this.getBasicStatistics(context),
-      this.getAssetsByType(context),
-      this.getAssetsByStatus(context),
-      this.getAssetsByClient(context),
-      this.getWarrantyStatistics(context),
-      this.getMaintenanceStatistics(context)
-    ]);
+  /** Aggregates only caller-authorized, already projected asset records. */
+  getStatisticsFromProjections(
+    assets: Array<Record<string, any>>,
+    deployableStatusSlugs: readonly string[],
+    now = new Date(),
+  ): Record<string, any> {
+    const deployableStatuses = new Set(deployableStatusSlugs);
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const warrantyHorizon = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const overdueHorizon = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const dateValue = (value: unknown): Date | null => {
+      if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+      if (typeof value !== 'string' || !value) return null;
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date;
+    };
+    const countBy = (field: string, fallback?: string) => {
+      const result: Record<string, number> = {};
+      for (const asset of assets) {
+        if (!Object.hasOwn(asset, field)) continue;
+        const value = asset[field];
+        if ((value === null || value === undefined) && fallback === undefined) continue;
+        const key = String(value ?? fallback);
+        result[key] = (result[key] ?? 0) + 1;
+      }
+      return result;
+    };
+
+    const assetsAddedThisMonth = assets.reduce((count, asset) => {
+      if (!Object.hasOwn(asset, 'created_at')) return count;
+      const createdAt = dateValue(asset.created_at);
+      return count + (createdAt && createdAt >= monthStart ? 1 : 0);
+    }, 0);
+    const visibleAges = assets.flatMap((asset) => {
+      if (!Object.hasOwn(asset, 'purchase_date')) return [];
+      const purchasedAt = dateValue(asset.purchase_date);
+      return purchasedAt ? [Math.floor((now.getTime() - purchasedAt.getTime()) / 86_400_000)] : [];
+    });
+    const totalAssetValue = assets.reduce((sum, asset) => {
+      if (!Object.hasOwn(asset, 'purchase_price')) return sum;
+      const value = Number(asset.purchase_price ?? 0);
+      return sum + (Number.isFinite(value) ? value : 0);
+    }, 0);
+
+    let warrantyExpiringSoon = 0;
+    let warrantyExpired = 0;
+    let maintenanceDue = 0;
+    let maintenanceOverdue = 0;
+    for (const asset of assets) {
+      if (Object.hasOwn(asset, 'warranty_end_date')) {
+        const warrantyEnd = dateValue(asset.warranty_end_date);
+        if (warrantyEnd && warrantyEnd < now) warrantyExpired += 1;
+        else if (warrantyEnd && warrantyEnd >= now && warrantyEnd < warrantyHorizon) warrantyExpiringSoon += 1;
+      }
+
+      for (const schedule of asset.maintenance_schedules ?? []) {
+        if (!Object.hasOwn(schedule, 'is_active') || !Object.hasOwn(schedule, 'next_maintenance')) continue;
+        if (!schedule.is_active) continue;
+        const nextMaintenance = dateValue(schedule.next_maintenance);
+        if (!nextMaintenance) continue;
+        if (nextMaintenance <= now) maintenanceDue += 1;
+        if (nextMaintenance < overdueHorizon) maintenanceOverdue += 1;
+      }
+    }
 
     return {
-      ...basicStats,
-      assets_by_type: typeStats,
-      assets_by_status: statusStats,
-      assets_by_client: clientStats,
-      ...warrantyStats,
-      ...maintenanceStats
+      total_assets: assets.length,
+      deployed_assets: assets.filter((asset) =>
+        Object.hasOwn(asset, 'status') && deployableStatuses.has(String(asset.status)),
+      ).length,
+      assets_added_this_month: assetsAddedThisMonth,
+      average_asset_age_days: visibleAges.length
+        ? Math.round(visibleAges.reduce((sum, age) => sum + age, 0) / visibleAges.length)
+        : null,
+      total_asset_value: totalAssetValue,
+      assets_by_type: countBy('asset_type'),
+      assets_by_status: countBy('status', 'Unknown'),
+      assets_by_client: countBy('client_name', 'Unknown'),
+      warranty_expiring_soon: warrantyExpiringSoon,
+      warranty_expired: warrantyExpired,
+      maintenance_due: maintenanceDue,
+      maintenance_overdue: maintenanceOverdue,
     };
+  }
+
+  /** Status definitions used when statistics are aggregated from authorized asset projections. */
+  async getDeployableStatusSlugs(context: ServiceContext): Promise<string[]> {
+    const knex = await this.getDbForContext(context);
+    return scopedTable(knex, context.tenant, 'asset_statuses')
+      .where({ kind: 'deployable' })
+      .pluck('slug');
+  }
+
+  /** Related schedules are loaded only for asset ids the REST caller has already been authorized to read. */
+  async getMaintenanceSchedulesForAssets(
+    context: ServiceContext,
+    assetIds: string[],
+  ): Promise<Array<{ asset_id: string; schedule_id: string; next_maintenance: Date | string | null; is_active: boolean }>> {
+    if (assetIds.length === 0) return [];
+    const knex = await this.getDbForContext(context);
+    return scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
+      .whereIn('asset_id', assetIds)
+      .select('asset_id', 'schedule_id', 'next_maintenance', 'is_active');
   }
 
   // Helper methods
   private getExtensionTableName(assetType: string): string | null {
-    const tableMap: Record<string, string> = {
-      'workstation': 'workstation_assets',
-      'network_device': 'network_device_assets',
-      'server': 'server_assets',
-      'mobile_device': 'mobile_device_assets',
-      'printer': 'printer_assets'
-    };
-    return tableMap[assetType] || null;
+    return Object.hasOwn(EXTENSION_TABLE_BY_ASSET_TYPE, assetType)
+      ? EXTENSION_TABLE_BY_ASSET_TYPE[assetType]
+      : null;
   }
 
   // Shared with the UI actions so both paths advance schedules identically.
@@ -1558,106 +1606,4 @@ export class AssetService extends BaseService<any> {
       .first();
   }
 
-  private async getBasicStatistics(context: ServiceContext): Promise<any> {
-    const knex = await this.getDbForContext(context);
-    const stats = await scopedTable(knex, context.tenant, this.tableName)
-      .select([
-        knex.raw('COUNT(*) as total_assets'),
-        knex.raw(`COUNT(CASE WHEN created_at >= date_trunc('month', NOW()) THEN 1 END) as assets_added_this_month`),
-        knex.raw('AVG(EXTRACT(DAYS FROM NOW() - purchase_date)) as average_asset_age_days'),
-        knex.raw('SUM(COALESCE(purchase_price, 0)) as total_asset_value')
-      ])
-      .first();
-
-    // FR-B5: "deployed" is every status whose kind is `deployable`, so a
-    // tenant's custom "In use" counts and the literal `active` slug does not
-    // have to be special.
-    const deployed = await scopedTable(knex, context.tenant, this.tableName)
-      .whereIn(
-        'status',
-        scopedTable(knex, context.tenant, 'asset_statuses').where({ kind: 'deployable' }).select('slug')
-      )
-      .count<{ count: string }>('asset_id as count')
-      .first();
-
-    return {
-      total_assets: parseInt(stats?.total_assets || '0'),
-      deployed_assets: parseInt(String(deployed?.count ?? '0')),
-      assets_added_this_month: parseInt(stats?.assets_added_this_month || '0'),
-      average_asset_age_days: stats?.average_asset_age_days ? Math.round(parseFloat(stats.average_asset_age_days)) : null,
-      total_asset_value: parseFloat(stats?.total_asset_value || '0')
-    };
-  }
-
-  private async getAssetsByType(context: ServiceContext): Promise<Record<string, number>> {
-    const knex = await this.getDbForContext(context);
-    const results = await scopedTable(knex, context.tenant, this.tableName)
-      .groupBy('asset_type')
-      .select('asset_type', knex.raw('COUNT(*) as count'));
-
-    return results.reduce((acc, item) => {
-      acc[item.asset_type] = parseInt(item.count);
-      return acc;
-    }, {} as Record<string, number>);
-  }
-
-  private async getAssetsByStatus(context: ServiceContext): Promise<Record<string, number>> {
-    const knex = await this.getDbForContext(context);
-    const results = await scopedTable(knex, context.tenant, this.tableName)
-        .groupBy('status')
-        .select('status', knex.raw('COUNT(*) as count'));
-  
-      return results.reduce((acc, item) => {
-        const status = item.status ?? 'Unknown';
-        acc[status] = parseInt(item.count);
-        return acc;
-      }, {} as Record<string, number>);
-    }
-
-
-  private async getAssetsByClient(context: ServiceContext): Promise<Record<string, number>> {
-    const knex = await this.getDbForContext(context);
-    const db = tenantDb(knex, context.tenant);
-    const query = db.table(this.tableName);
-    db.tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id');
-    const results = await query
-      .groupBy('clients.client_name')
-      .select('clients.client_name', knex.raw('COUNT(*) as count'))
-      .limit(10) as unknown as Array<{ client_name: string; count: string }>;
-
-    return results.reduce((acc, item) => {
-      acc[item.client_name] = parseInt(item.count);
-      return acc;
-    }, {} as Record<string, number>);
-  }
-
-  private async getWarrantyStatistics(context: ServiceContext): Promise<any> {
-    const knex = await this.getDbForContext(context);
-    const stats = await scopedTable(knex, context.tenant, this.tableName)
-      .select([
-        knex.raw(`COUNT(CASE WHEN warranty_end_date < NOW() + INTERVAL '30 days' AND warranty_end_date >= NOW() THEN 1 END) as warranty_expiring_soon`),
-        knex.raw(`COUNT(CASE WHEN warranty_end_date < NOW() THEN 1 END) as warranty_expired`)
-      ])
-      .first();
-
-    return {
-      warranty_expiring_soon: parseInt(stats?.warranty_expiring_soon || '0'),
-      warranty_expired: parseInt(stats?.warranty_expired || '0')
-    };
-  }
-
-  private async getMaintenanceStatistics(context: ServiceContext): Promise<any> {
-    const knex = await this.getDbForContext(context);
-    const stats = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
-      .select([
-        knex.raw(`COUNT(CASE WHEN next_maintenance <= NOW() AND is_active = true THEN 1 END) as maintenance_due`),
-        knex.raw(`COUNT(CASE WHEN next_maintenance < NOW() - INTERVAL '7 days' AND is_active = true THEN 1 END) as maintenance_overdue`)
-      ])
-      .first();
-
-    return {
-      maintenance_due: parseInt(stats?.maintenance_due || '0'),
-      maintenance_overdue: parseInt(stats?.maintenance_overdue || '0')
-    };
-  }
 }

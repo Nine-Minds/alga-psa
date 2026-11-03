@@ -1,0 +1,230 @@
+import { describe, expect, it, vi } from 'vitest';
+import knexFactory from 'knex';
+import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
+
+vi.mock('server/src/lib/authorization/kernel', () => ({ getAuthorizationKernel: vi.fn() }));
+
+import { buildPredicateGuard, createPredicateGuard } from '../../../lib/api/controllers/authorizationKernel';
+import {
+  isRecordFieldReadable,
+  projectRecordByRedactions,
+  ASSET_RECORD_SOURCE,
+  PROJECT_RECORD_SOURCE,
+  QUOTE_RECORD_SOURCE,
+  TICKET_RECORD_SOURCE,
+  type RedactableRecordSource,
+} from '@alga-psa/co-managed/recordProjection';
+
+const qb = () => knexFactory({ client: 'pg' }).queryBuilder().from('projects');
+
+describe('isRecordFieldReadable (descriptor-driven)', () => {
+  it('hides a field by its own name, its values./table. forms and descriptor aliases', () => {
+    expect(isRecordFieldReadable(['description'], PROJECT_RECORD_SOURCE, 'description')).toBe(false);
+    expect(isRecordFieldReadable(['projects.description'], PROJECT_RECORD_SOURCE, 'description')).toBe(false);
+    expect(isRecordFieldReadable(['description'], PROJECT_RECORD_SOURCE, 'project_name')).toBe(true);
+  });
+
+  it('hides derived fields whose source is hidden', () => {
+    expect(isRecordFieldReadable(['client_id'], PROJECT_RECORD_SOURCE, 'client_name')).toBe(false);
+    expect(isRecordFieldReadable(['assigned_to'], TICKET_RECORD_SOURCE, 'assigned_to_name')).toBe(false);
+    expect(isRecordFieldReadable(['assigned_to'], TICKET_RECORD_SOURCE, 'title')).toBe(true);
+  });
+
+  it.each(['values.unit_price', 'quote_items.quantity', 'quote_items.quote_item_id', 'fields.quote_items.tax_rate'])(
+    'excludes transitive quote-total predicates when %s is hidden', (alias) => {
+      const guard = buildPredicateGuard('quote', [alias]);
+      expect(guard.readable('q.total_amount')).toBe(false);
+      expect(guard.readable('q.title')).toBe(true);
+      expect(buildPredicateGuard('quote', []).readable('q.total_amount')).toBe(true);
+      expect(buildPredicateGuard('quote', ['quote_items.description']).readable('q.total_amount')).toBe(true);
+    },
+  );
+
+  it.each([
+    ['assets.documents.file_size', 'documents.file_size'],
+    ['values.documents.file_size', 'documents.file_size'],
+    ['fields.assets.documents.file_size', 'documents.file_size'],
+    ['extension_data.imei', 'extension_data.imei'],
+    ['values.extension_data.imei', 'extension_data.imei'],
+    ['fields.assets.extension_data.imei', 'extension_data.imei'],
+  ])('uses recursive child aliases in projection predicates for %s', (alias, responseField) => {
+    expect(isRecordFieldReadable([], ASSET_RECORD_SOURCE, responseField)).toBe(true);
+    expect(isRecordFieldReadable([alias], ASSET_RECORD_SOURCE, responseField)).toBe(false);
+  });
+
+  it.each(['items.unit_price', 'values.items.unit_price', 'quotes.items.unit_price', 'values.items.quote_item_id'])(
+    'guards quote totals when nested dependency %s is hidden', (alias) => {
+      expect(buildPredicateGuard('quote', []).readable('q.total_amount')).toBe(true);
+      expect(buildPredicateGuard('quote', [alias]).readable('q.total_amount')).toBe(false);
+      expect(buildPredicateGuard('quote', [alias]).readable('q.title')).toBe(true);
+    },
+  );
+
+  it.each(['statuses', 'statuses.name', 'status_name', 'status', 'values.status', 'projects.status'])(
+    'projects and guards project status names hidden by %s', (alias) => {
+      const record = { project_id: 'project-1', status: 'status-1', status_name: 'Active' };
+      expect(projectRecordByRedactions([], record, PROJECT_RECORD_SOURCE)?.status_name).toBe('Active');
+      expect(projectRecordByRedactions([alias], record, PROJECT_RECORD_SOURCE)?.status_name).toBeNull();
+      expect(buildPredicateGuard('project', [alias]).columns([
+        { column: 's.name', field: 'status_name' },
+        { column: 'p.project_name', field: 'project_name' },
+      ])).toEqual(['p.project_name']);
+    },
+  );
+
+  it.each(['tickets.assigned_to', 'values.assigned_to'])(
+    'hides derived ticket names when the dependency is redacted as %s', (alias) => {
+      expect(isRecordFieldReadable([alias], TICKET_RECORD_SOURCE, 'assigned_to_name')).toBe(false);
+      expect(buildPredicateGuard('ticket', [alias]).columns([
+        { column: 't.assigned_to_name', field: 'assigned_to_name' },
+        { column: 't.title', field: 'title' },
+      ])).toEqual(['t.title']);
+    },
+  );
+
+  it.each([
+    ['entered_by', 'entered_by_name'],
+    ['board_id', 'board_name'],
+    ['subcategory_id', 'subcategory_name'],
+    ['attributes', 'description_html'],
+    ['contact_name_id', 'contact_avatar_url'],
+    ['client_id', 'client_logo_url'],
+  ])('projects and guards ticket field %s -> %s', (sourceField, derivedField) => {
+    const record = {
+      ticket_id: 'ticket-1',
+      [sourceField]: `${sourceField}-value`,
+      [derivedField]: `${derivedField}-visible`,
+    };
+    expect(projectRecordByRedactions([], record, TICKET_RECORD_SOURCE)?.[derivedField]).toBe(`${derivedField}-visible`);
+
+    for (const alias of [sourceField, `values.${sourceField}`, `tickets.${sourceField}`]) {
+      const projected = projectRecordByRedactions([alias], record, TICKET_RECORD_SOURCE);
+      expect(projected).not.toHaveProperty(sourceField);
+      expect(projected?.[derivedField], alias).toBeNull();
+      expect(buildPredicateGuard('ticket', [alias]).columns([
+        { column: `t.${derivedField}`, field: derivedField },
+        { column: 't.title', field: 'title' },
+      ])).toEqual(['t.title']);
+    }
+  });
+
+  it('projects and guards display quote numbers through quote_number and version', () => {
+    const record = { quote_id: 'quote-1', quote_number: 'Q-9', version: 2, display_quote_number: 'Q-9 v2' };
+    expect(projectRecordByRedactions([], record, QUOTE_RECORD_SOURCE)?.display_quote_number).toBe('Q-9 v2');
+
+    for (const alias of ['quote_number', 'values.quote_number', 'quotes.quote_number', 'version']) {
+      const projected = projectRecordByRedactions([alias], record, QUOTE_RECORD_SOURCE);
+      expect(projected).not.toHaveProperty(alias === 'version' ? 'version' : 'quote_number');
+      expect(projected?.display_quote_number, alias).toBeNull();
+      expect(buildPredicateGuard('quote', [alias]).columns([
+        { column: 'q.display_quote_number', field: 'display_quote_number' },
+        { column: 'q.title', field: 'title' },
+      ])).toEqual(['q.title']);
+    }
+  });
+
+  it('suppresses each resource when a values-prefixed identifier alias is hidden', () => {
+    const cases = [
+      [PROJECT_RECORD_SOURCE, 'project_id', { project_id: 'project-1', project_name: 'Project' }],
+      [TICKET_RECORD_SOURCE, 'ticket_id', { ticket_id: 'ticket-1', title: 'Ticket' }],
+      [QUOTE_RECORD_SOURCE, 'quote_id', { quote_id: 'quote-1', title: 'Quote' }],
+      [ASSET_RECORD_SOURCE, 'asset_id', { asset_id: 'asset-1', name: 'Asset' }],
+    ] as const;
+
+    for (const [source, identifier, record] of cases) {
+      expect(projectRecordByRedactions([], record, source)).not.toBeNull();
+      expect(projectRecordByRedactions([`values.${identifier}`], record, source)).toBeNull();
+    }
+  });
+
+  it('fails closed on wildcard, suppression and uninterpretable entries', () => {
+    expect(isRecordFieldReadable(['*'], PROJECT_RECORD_SOURCE, 'project_name')).toBe(false);
+    expect(isRecordFieldReadable(['projects'], PROJECT_RECORD_SOURCE, 'project_name')).toBe(false);
+    expect(isRecordFieldReadable([42 as any], PROJECT_RECORD_SOURCE, 'project_name')).toBe(false);
+    expect(isRecordFieldReadable([], PROJECT_RECORD_SOURCE, 'description')).toBe(true);
+  });
+});
+
+
+describe('variant child dependencies', () => {
+  const source: RedactableRecordSource = {
+    ...ASSET_RECORD_SOURCE,
+    derived: { ...ASSET_RECORD_SOURCE.derived, extension_label: ['extension_data.os_version'] },
+  };
+
+  it('uses variant aliases for derived output and predicates, including unloaded child records', () => {
+    const asset = { asset_id: 'asset-1', asset_type: 'workstation', extension_label: 'Private OS version',
+      extension_data: { asset_id: 'asset-1', os_version: 'Private OS version', os_type: 'Visible OS type' } };
+    expect(projectRecordByRedactions([], asset, source)).toMatchObject(asset);
+    const redactions = ['workstation_assets.os_version'];
+    expect(projectRecordByRedactions(redactions, asset, source)).toMatchObject({
+      extension_label: null, extension_data: { os_type: 'Visible OS type' },
+    });
+    expect(projectRecordByRedactions(redactions, asset, source)?.extension_data).not.toHaveProperty('os_version');
+    expect(isRecordFieldReadable(redactions, source, 'extension_label')).toBe(false);
+    expect(isRecordFieldReadable(['workstation_assets.os_type'], source, 'extension_label')).toBe(true);
+    expect(projectRecordByRedactions(redactions, { asset_id: 'asset-1', extension_label: 'Private OS version' }, source)?.extension_label)
+      .toBeNull();
+  });
+
+  it('hides derived values when a variant child identifier is suppressed', () => {
+    const asset = { asset_id: 'asset-1', asset_type: 'workstation', extension_label: 'Private OS version',
+      extension_data: { asset_id: 'asset-1', os_version: 'Private OS version' } };
+    const redactions = ['workstation_assets.asset_id'];
+    expect(projectRecordByRedactions(redactions, asset, source)).toMatchObject({ extension_label: null, extension_data: null });
+    expect(isRecordFieldReadable(redactions, source, 'extension_label')).toBe(false);
+  });
+});
+
+describe('buildPredicateGuard', () => {
+  it('drops hidden columns from the search OR-group', () => {
+    const guard = buildPredicateGuard('project', ['description']);
+    const sql = guard.search(qb(), ['projects.project_name', 'projects.description'], 'x').toSQL().sql;
+    expect(sql).toContain('"projects"."project_name" ilike');
+    expect(sql).not.toContain('description');
+  });
+
+  it('matches nothing when no searchable column is readable', () => {
+    const guard = buildPredicateGuard('project', ['description']);
+    expect(guard.search(qb(), ['projects.description'], 'x').toSQL().sql).toContain('1 = 0');
+  });
+
+  it('turns a filter on a hidden column into match-nothing and leaves visible ones alone', () => {
+    const guard = buildPredicateGuard('ticket', ['assigned_to']);
+    const hidden = guard.filter(qb(), 't.assigned_to', (q, c) => { q.where(c, 'u'); }).toSQL().sql;
+    expect(hidden).toContain('1 = 0');
+    expect(hidden).not.toContain('assigned_to');
+    expect(guard.filter(qb(), 't.client_id', (q, c) => { q.where(c, 'u'); }).toSQL().sql).toContain('"t"."client_id" = ?');
+  });
+});
+
+describe('createPredicateGuard principal resolution', () => {
+  const authorizeResource = vi.fn();
+  const setup = () => {
+    authorizeResource.mockReset();
+    authorizeResource.mockResolvedValue({ allowed: true, redactedFields: ['description'] });
+    (getAuthorizationKernel as any).mockResolvedValue({ authorizeResource });
+  };
+
+  it('builds the subject from context.userId when there is no user object', async () => {
+    setup();
+    const guard = await createPredicateGuard({} as any, { tenant: 't1', userId: 'u1' }, 'project');
+    expect(authorizeResource).toHaveBeenCalledTimes(1);
+    expect(authorizeResource.mock.calls[0][0].subject).toMatchObject({ userId: 'u1', tenant: 't1' });
+    expect(guard.readable('projects.description')).toBe(false);
+  });
+
+  it('accepts tenantId as the tenant key', async () => {
+    setup();
+    await createPredicateGuard({} as any, { tenantId: 't2', userId: 'u1' }, 'project');
+    expect(authorizeResource.mock.calls[0][0].subject.tenant).toBe('t2');
+  });
+
+  it('skips the kernel and treats every column as readable when there is no principal', async () => {
+    setup();
+    const guard = await createPredicateGuard({} as any, { tenant: 't1', userId: '' }, 'project');
+    expect(authorizeResource).not.toHaveBeenCalled();
+    expect(guard.readable('projects.description')).toBe(true);
+    expect(guard.readable('projects.project_name')).toBe(true);
+  });
+});

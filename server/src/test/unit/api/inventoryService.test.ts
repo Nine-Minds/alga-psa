@@ -79,7 +79,24 @@ class FakeQuery implements PromiseLike<Row[]> {
   }
 
   where(arg1: any, arg2?: any) {
-    if (typeof arg1 === 'function') return this;
+    if (typeof arg1 === 'function') {
+      const conditions: Array<(row: Row) => boolean> = [];
+      const predicate: any = {
+        whereRaw: () => predicate,
+        orWhereRaw: () => predicate,
+        where: (column: string, value: unknown) => {
+          conditions.push(row => row[column.split('.').pop()!] === value);
+          return predicate;
+        },
+        orWhere: (column: string, value: unknown) => {
+          conditions.push(row => row[column.split('.').pop()!] === value);
+          return predicate;
+        },
+      };
+      arg1(predicate);
+      this.rows = this.rows.filter(row => conditions.some(condition => condition(row)));
+      return this;
+    }
     if (typeof arg1 === 'object') {
       for (const [key, value] of Object.entries(arg1)) {
         const field = key.split('.').pop()!;
@@ -183,7 +200,8 @@ describe('InventoryService', () => {
       status: 'active',
       client_id: 'client-1',
     });
-    const readable = (...ids: string[]) => async (_trx: unknown, rows: any[]) => rows.filter((row) => ids.includes(row.asset_id));
+    const readable = (...ids: string[]) => async (_trx: unknown, _authorizationRecords: any[], summaries: any[]) =>
+      summaries.filter((row) => ids.includes(row.asset_id));
 
     it('returns no assets when the visibility argument is omitted', async () => {
       const service = new InventoryService();
@@ -353,5 +371,154 @@ describe('InventoryService', () => {
       reason: '',
     }, context(makeDb({})))).rejects.toMatchObject({ statusCode: 400 });
     expect(mocks.adjustStockCore).not.toHaveBeenCalled();
+  });
+});
+
+describe('InventoryService lookup applies asset projections to final output and matches', () => {
+  beforeEach(() => {
+    mocks.queryStockLevelsForProduct.mockResolvedValue([]);
+  });
+
+  const asset = {
+    asset_id: 'asset-1',
+    name: 'Visible PC',
+    serial_number: 'PRIVATE-SERIAL-4938',
+    asset_tag: 'PUBLIC-TAG',
+    asset_type: 'workstation',
+    status: 'active',
+    client_id: 'client-1',
+    client_name: 'Visible Client',
+    warranty_end_date: '2099-11-02T12:00:00Z',
+  };
+
+  const db = () => makeDb({ 'assets as a': [asset] });
+  const authorizeWithRedactions = async (redactions: string[]) => {
+    const { createRecordProjectionPolicy, ASSET_RECORD_SOURCE } = await import('@alga-psa/co-managed/recordProjection');
+    const policy = createRecordProjectionPolicy(redactions, ASSET_RECORD_SOURCE);
+    return async (_trx: unknown, _authorizationRecords: any[], summaries: any[]) => summaries
+      .map(row => policy.project(row, ASSET_RECORD_SOURCE))
+      .filter(row => row !== null);
+  };
+
+  it('keeps visible serial and derived warranty status for an authorized match', async () => {
+    const result = await new InventoryService().lookup(
+      asset.serial_number,
+      context(db()),
+      await authorizeWithRedactions([]),
+    );
+
+    expect(result).toMatchObject({
+      type: 'asset',
+      asset: { name: asset.name, serial_number: asset.serial_number, warranty_status: 'active' },
+    });
+  });
+
+  it.each(['warranty_status', 'assets.warranty_status', 'fields.assets.warranty_status'])(
+    'does not regenerate derived warranty status hidden by %s', async (alias) => {
+      const result = await new InventoryService().lookup(
+        asset.asset_tag,
+        context(db()),
+        await authorizeWithRedactions([alias]),
+      );
+
+      expect(result.type).toBe('asset');
+      expect((result as any).asset.warranty_status ?? null).toBeNull();
+    },
+  );
+
+  it('does not confirm a match made only by a hidden serial number', async () => {
+    const result = await new InventoryService().lookup(
+      asset.serial_number,
+      context(db()),
+      await authorizeWithRedactions(['assets.serial_number']),
+    );
+
+    expect(result.type).toBe('none');
+  });
+
+  it('preserves independent product and unit matches when the asset serial is hidden', async () => {
+    const authorize = await authorizeWithRedactions(['assets.serial_number']);
+    const productResult = await new InventoryService().lookup(
+      asset.serial_number,
+      context(makeDb({
+        'assets as a': [asset],
+        'service_catalog as sc': [{
+          service_id: SERVICE_ID,
+          service_name: 'Catalog Product',
+          sku: asset.serial_number,
+          barcode: null,
+          item_kind: 'product',
+        }],
+      })),
+      authorize,
+    );
+    const unitResult = await new InventoryService().lookup(
+      asset.serial_number,
+      context(makeDb({
+        'assets as a': [asset],
+        'service_catalog as sc': [{
+          service_id: SERVICE_ID,
+          service_name: 'Stock Unit Product',
+          sku: 'OTHER-SKU',
+          barcode: null,
+          item_kind: 'product',
+          is_serialized: true,
+        }],
+        'stock_units as su': [{
+          unit_id: UNIT_ID,
+          service_id: SERVICE_ID,
+          serial_number: asset.serial_number,
+          status: 'in_stock',
+          asset_id: null,
+        }],
+      })),
+      authorize,
+    );
+
+    expect(productResult.type).toBe('product');
+    expect(unitResult.type).toBe('unit');
+  });
+
+  it('still matches by a visible tag when the serial number is hidden', async () => {
+    const result = await new InventoryService().lookup(
+      asset.asset_tag,
+      context(db()),
+      await authorizeWithRedactions(['assets.serial_number']),
+    );
+
+    expect(result).toMatchObject({
+      type: 'asset',
+      asset: { name: asset.name, asset_tag: asset.asset_tag },
+    });
+    expect((result as any).asset).not.toHaveProperty('serial_number');
+  });
+
+  it('keeps raw authorization context separate from the projected response summary', async () => {
+    const { createRecordProjectionPolicy, ASSET_RECORD_SOURCE } = await import('@alga-psa/co-managed/recordProjection');
+    const policy = createRecordProjectionPolicy(['assets.client_id'], ASSET_RECORD_SOURCE);
+    let observedAuthorizationRecord: any;
+    let observedResponseSummary: any;
+    const authorize: any = async (_trx: unknown, records: any[], summaries: any[]) => {
+      observedAuthorizationRecord = records[0];
+      observedResponseSummary = summaries[0];
+      return summaries.map((summary) => policy.project(summary, ASSET_RECORD_SOURCE)).filter(Boolean);
+    };
+
+    const result = await new InventoryService().lookup(asset.asset_tag, context(db()), authorize);
+
+    expect(observedAuthorizationRecord.client_id).toBe(asset.client_id);
+    expect(observedResponseSummary.client_id).toBe(asset.client_id);
+    expect(result.type).toBe('asset');
+    expect((result as any).asset).not.toHaveProperty('client_id');
+  });
+
+  it('does not turn a nonmatching scan into an asset match', async () => {
+    const result = await new InventoryService().lookup(
+      'NONMATCH-4938',
+      context(db()),
+      await authorizeWithRedactions([]),
+    );
+
+    expect(result.type).toBe('none');
   });
 });
