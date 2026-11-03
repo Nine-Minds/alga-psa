@@ -69,8 +69,8 @@ describe('20261103130000_add_normalized_email_to_user_invitations', () => {
     db = await createTestDbConnection({ databaseName, runSeeds: false });
     // Construct the original migration schema directly. Bootstrap templates
     // may carry columns that do not correspond to their migration ledger.
-    await db.schema.dropTableIfExists('user_invitations');
-    await db.schema.createTable('user_invitations', (table) => {
+    await db.raw('DROP TABLE IF EXISTS public.user_invitations CASCADE');
+    await db.schema.withSchema('public').createTable('user_invitations', (table) => {
       table.uuid('tenant').notNullable().references('tenant').inTable('tenants');
       table.uuid('invitation_id').defaultTo(db!.raw('gen_random_uuid()')).notNullable();
       table.text('email').notNullable();
@@ -136,6 +136,14 @@ describe('20261103130000_add_normalized_email_to_user_invitations', () => {
     expect((await db('user_invitations').where({ tenant, invitation_id: invitationId }).first()).email_normalized)
       .toBe('drift.user@example.test');
     await expectRequiredColumn();
+
+    const result = await db.transaction((trx) => UserInvitationService.createInvitationWithTransaction(
+      { email: 'Drift.Service@Example.test', firstName: 'Drift', lastName: 'Service', roleId: null }, trx,
+    ));
+    expect(result.success).toBe(true);
+    expect((await db('user_invitations').where({ tenant, invitation_id: result.invitationId }).first()).email_normalized)
+      .toBe('drift.service@example.test');
+
     await migration.down(db);
     expect(await db.schema.hasColumn('user_invitations', 'email_normalized')).toBe(true);
     await expect(db('user_invitations').insert({
