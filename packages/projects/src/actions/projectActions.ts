@@ -57,6 +57,7 @@ import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
 import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
 import { createProjectReadDecider } from '../lib/projectReadAuthorization';
+import { loadAuthorizedProjectPhase, loadAuthorizedProjectPhases } from '../lib/projectPhaseReadProjection';
 import {
   coManagedColumnHidden,
   coManagedHiddenColumns,
@@ -337,55 +338,6 @@ async function decideAuthorizedProjects<T extends Partial<IProject>>(
   return projects.flatMap((project, index) =>
     decisions[index].allowed ? [{ project, redactedFields: decisions[index].redactedFields }] : []
   );
-}
-
-async function loadAuthorizedProjectPhase(
-  trx: Knex.Transaction,
-  tenant: string,
-  phaseId: string,
-  redactedFields: string[]
-): Promise<IProjectPhase | null> {
-  const mask = coManagedProjectFamilyMask(redactedFields, 'project_phase');
-  if (mask.dropRow) return null;
-  const fields = [
-    'phase_id', 'project_id', 'phase_name', 'description', 'start_date', 'end_date', 'completed_at',
-    'status', 'order_number', 'order_key', 'created_at', 'updated_at', 'wbs_code', 'service_id', 'tenant',
-  ];
-  const hidden = new Set(fields.filter((field) => coManagedColumnHidden(redactedFields, 'project_phases', field)));
-  if (mask.body) hidden.add('description');
-  const query = tenantScopedTable(trx, 'project_phases', tenant).where({ phase_id: phaseId }).select(
-    ...fields.map((field) => {
-      if (field === 'phase_name' && mask.title) return trx.raw('?::text as ??', [mask.neutralTitle, field]);
-      return hidden.has(field) ? trx.raw('CASE WHEN FALSE THEN ?? END as ??', [`project_phases.${field}`, field]) : `project_phases.${field}`;
-    })
-  );
-  return await query.first<IProjectPhase>() ?? null;
-}
-
-async function loadAuthorizedProjectPhases(
-  trx: Knex.Transaction,
-  tenant: string,
-  projectId: string,
-  redactedFields: string[]
-): Promise<IProjectPhase[]> {
-  const mask = coManagedProjectFamilyMask(redactedFields, 'project_phase');
-  if (mask.dropRow) return [];
-  const fields = [
-    'tenant', 'phase_id', 'project_id', 'phase_name', 'description', 'start_date', 'end_date', 'completed_at',
-    'status', 'order_number', 'order_key', 'created_at', 'updated_at', 'wbs_code', 'service_id',
-  ];
-  const hidden = new Set(fields.filter((field) => coManagedColumnHidden(redactedFields, 'project_phases', field)));
-  if (mask.body) hidden.add('description');
-  const query = tenantScopedTable(trx, 'project_phases', tenant)
-    .where({ project_id: projectId })
-    .select(...fields.map((field) => {
-      if (field === 'phase_name' && mask.title) return trx.raw('?::text as ??', [mask.neutralTitle, field]);
-      return hidden.has(field)
-        ? trx.raw('CASE WHEN FALSE THEN ?? END as ??', [`project_phases.${field}`, field])
-        : `project_phases.${field}`;
-    }))
-    .orderBy(hidden.has('wbs_code') ? 'phase_id' : 'wbs_code');
-  return await query as IProjectPhase[];
 }
 
 function projectStatusesHidden(redactedFields: string[]): boolean {

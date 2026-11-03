@@ -3,6 +3,8 @@ import { extractTaskDescriptionText } from './taskRichText';
 /** Only the task fields the filters read, so callers can pass any task shape. */
 export interface FilterableTask {
   task_id: string;
+  phase_id?: string | null;
+  wbs_code?: string | null;
   task_name: string;
   description?: string | null;
   description_rich_text?: string | null;
@@ -10,6 +12,11 @@ export interface FilterableTask {
   task_type_key?: string | null;
   assigned_to?: string | null;
   assigned_team_id?: string | null;
+}
+
+/** Phase membership is structural; display WBS values may be masked. */
+export function filterTasksForPhase<T extends FilterableTask>(tasks: T[], phaseId: string): T[] {
+  return tasks.filter(task => task.phase_id === phaseId);
 }
 
 export interface TaskFilterCriteria {

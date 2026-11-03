@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, fireEvent, render } from '@testing-library/react';
 import type { IProjectTask } from '@alga-psa/types';
 
 vi.mock('react-i18next', () => ({
@@ -42,7 +42,7 @@ import TaskCard from '../TaskCard';
 afterEach(cleanup);
 
 const noop = () => undefined;
-function renderCard(dates: { start_date: Date | null; due_date: Date | null }, zoomLevel = 50) {
+function renderCard(dates: { start_date: Date | null; due_date: Date | null }, zoomLevel = 50, wbsCode: string | null = '1.1', onTaskSelected = noop) {
   const task = {
     tenant: 't',
     task_id: 'task-1',
@@ -53,7 +53,7 @@ function renderCard(dates: { start_date: Date | null; due_date: Date | null }, z
     estimated_hours: 0,
     actual_hours: 0,
     project_status_mapping_id: 's',
-    wbs_code: '1.1',
+    wbs_code: wbsCode,
     task_type_key: 'task',
     created_at: new Date(),
     updated_at: new Date(),
@@ -64,7 +64,7 @@ function renderCard(dates: { start_date: Date | null; due_date: Date | null }, z
       task={task}
       users={[]}
       zoomLevel={zoomLevel}
-      onTaskSelected={noop}
+      onTaskSelected={onTaskSelected}
       onAssigneeChange={noop}
       onDragStart={noop}
       onDragEnd={noop}
@@ -108,5 +108,31 @@ describe('TaskCard dates', () => {
     expect(renderCard({ start_date: null, due_date: DUE }, 20)).toContain('full:2026-10-09');
     cleanup();
     expect(renderCard({ start_date: START, due_date: null }, 20)).not.toContain('Starts:');
+  });
+});
+
+describe('TaskCard with masked WBS', () => {
+  it('renders and still opens the task when its WBS is hidden', () => {
+    const onTaskSelected = vi.fn();
+    const { container, getByText } = render(
+      <TaskCard
+        task={{ tenant: 't', task_id: 'task-1', phase_id: 'p1', task_name: 'Rack the switch', description: null,
+          assigned_to: null, estimated_hours: 0, actual_hours: 0, project_status_mapping_id: 's', wbs_code: null,
+          task_type_key: 'task', created_at: new Date(), updated_at: new Date(), start_date: null, due_date: null } as unknown as IProjectTask}
+        users={[]}
+        onTaskSelected={onTaskSelected}
+        onAssigneeChange={noop}
+        onDragStart={noop}
+        onDragEnd={noop}
+        onMoveTaskClick={noop}
+        onDuplicateTaskClick={noop}
+        onEditTaskClick={noop}
+        onDeleteTaskClick={noop}
+      />,
+    );
+
+    expect(container.textContent).toContain('Rack the switch');
+    fireEvent.click(getByText('Rack the switch'));
+    expect(onTaskSelected).toHaveBeenCalledWith(expect.objectContaining({ task_id: 'task-1', phase_id: 'p1', wbs_code: null }));
   });
 });

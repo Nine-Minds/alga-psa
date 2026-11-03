@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   filterTasks,
+  filterTasksForPhase,
   matchesTaskFilters,
   type FilterableTask,
   type TaskFilterContext,
@@ -14,6 +15,17 @@ const task = (overrides: Partial<FilterableTask> & { task_id: string }): Filtera
   assigned_to: null,
   assigned_team_id: null,
   ...overrides,
+});
+
+describe('filterTasksForPhase', () => {
+  it('keeps phase membership when task WBS values are masked', () => {
+    const tasks = [
+      task({ task_id: 'in-phase', phase_id: 'phase-a', wbs_code: null }),
+      task({ task_id: 'other-phase', phase_id: 'phase-b', wbs_code: null }),
+    ];
+
+    expect(filterTasksForPhase(tasks, 'phase-a').map(({ task_id }) => task_id)).toEqual(['in-phase']);
+  });
 });
 
 describe('matchesTaskFilters', () => {

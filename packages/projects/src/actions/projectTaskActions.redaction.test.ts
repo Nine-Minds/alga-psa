@@ -30,7 +30,12 @@ vi.mock('@alga-psa/db', () => {
       const taskId = filters.find((filter) => filter.kind === 'where' && typeof filter.field === 'object')?.field?.['pt.task_id'];
       return [{ project_id: ({ task1: 'project1', pred: 'project2', succ: 'project3' } as any)[taskId] ?? 'project1' }];
     }
-    if (table === 'project_phases') return [{ phase_id: 'ph1', project_id: 'project1', phase_name: 'Phase' }];
+    if (table === 'project_phases') {
+      const nameMask = selection.flat().find((column) => column?.sql?.includes('as phase_name') || column?.args?.includes('phase_name'));
+      const descriptionMask = selection.flat().some((column) => column?.sql?.includes('as description') || column?.args?.includes('description'));
+      const wbsMask = selection.flat().some((column) => column?.sql?.includes('as wbs_code') || column?.args?.includes('wbs_code'));
+      return [{ phase_id: 'ph1', project_id: 'project1', phase_name: nameMask?.args?.[0] ?? 'Phase', description: descriptionMask ? null : 'Phase description', wbs_code: wbsMask ? null : '1' }];
+    }
     if (table === 'project_tasks') {
       const nameMask = selection.flat().find((column) => column?.sql?.includes('as task_name'));
       const title = nameMask?.args?.[0] ?? state.taskName;
@@ -127,6 +132,9 @@ describe('getProjectTaskData project redactions', () => {
       getProjectTaskData('project1'), getTasksForPhase('ph1'), getAllProjectTasksForListView('project1'),
     ]);
     for (const result of results) {
+      expect(result.tasks[0]).toMatchObject({ task_id: 'task1', phase_id: 'ph1', wbs_code: null });
+    }
+    for (const result of results) {
       const serialized = JSON.stringify(result);
       expect(serialized).not.toContain('RAW-PRED-WBS');
       expect(serialized).not.toContain('RAW-SUCC-WBS');
@@ -173,9 +181,11 @@ describe('getProjectTaskData project redactions', () => {
   });
 
   it('keeps the drawer task reader masked when ProjectDetail reopens a task by id', async () => {
-    state.decision = { allowed: true, redactedFields: ['task_name'] };
+    state.decision = { allowed: true, redactedFields: ['task_name', 'wbs_code'] };
     const result: any = await getTaskById('task1');
     expect(result.task_name).not.toBe('Map New Areas');
+    expect(result.phase_id).toBe('ph1');
+    expect(result.wbs_code).toBeNull();
   });
 
   it('projects both dependency directions from authorized task rows for the drawer', async () => {
@@ -226,5 +236,18 @@ describe('getProjectTaskData project redactions', () => {
     expect(listResult.tasks[0].description).toBeNull();
     expect(detailResult.description).toBeNull();
     expect(detailResult.description_rich_text).toBeNull();
+  });
+
+  it('masks phase display fields in the task list using the effective project redactions', async () => {
+    state.decision = { allowed: true, redactedFields: ['phase_name', 'description', 'wbs_code'] };
+    const result: any = await getAllProjectTasksForListView('project1');
+    expect(result.phases[0]).toMatchObject({ phase_name: 'Project phase', description: null, wbs_code: null });
+    expect(JSON.stringify(result.phases)).not.toContain('Phase description');
+  });
+
+  it('preserves populated phase fields and task phase membership for unrestricted list reads', async () => {
+    const result: any = await getAllProjectTasksForListView('project1');
+    expect(result.phases[0]).toMatchObject({ phase_name: 'Phase', description: 'Phase description', wbs_code: '1' });
+    expect(result.tasks[0].phase_id).toBe(result.phases[0].phase_id);
   });
 });

@@ -64,6 +64,7 @@ import {
 } from '@alga-psa/workflow-streams';
 import { createProjectReadAuthorizer, createProjectReadDecider, type ProjectReadDecision } from '../lib/projectReadAuthorization';
 import { loadAuthorizedProjectTasks } from '../lib/projectTaskReadProjection';
+import { loadAuthorizedProjectPhases } from '../lib/projectPhaseReadProjection';
 import {
   actionError,
   actionErrorFromValidationIssue,
@@ -3106,9 +3107,7 @@ export const getAllProjectTasksForListView = withAuth(async (
             const readDecision = await decideProjectReadById(trx, tenant, user as IUserWithRoles, projectId);
 
         // 1. Get all phases for this project
-        const phases = await tenantScopedTable(trx, 'project_phases', tenant)
-            .where('project_id', projectId)
-            .orderBy('order_key');
+        const phases = await loadAuthorizedProjectPhases(trx, tenant, projectId, readDecision.redactedFields);
 
         const phaseIds = phases.map((p: { phase_id: string }) => p.phase_id);
 

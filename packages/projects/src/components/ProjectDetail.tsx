@@ -7,7 +7,7 @@ import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { ITaskResource } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
-import { filterTasks, type TaskFilterCriteria } from '../lib/taskFilters';
+import { filterTasks, filterTasksForPhase, type TaskFilterCriteria } from '../lib/taskFilters';
 import { useTaskTypeLabel } from '../lib/useTaskTypeLabel';
 import {
   projectKanbanHiddenStatusesKey,
@@ -596,7 +596,7 @@ export default function ProjectDetail({
 
   const filteredTasks = useMemo(() => {
     if (!selectedPhase) return [];
-    const phaseTasks = projectTasks.filter(task => task.wbs_code.startsWith(selectedPhase.wbs_code + '.'));
+    const phaseTasks = filterTasksForPhase(projectTasks, selectedPhase.phase_id);
 
     return filterTasks(phaseTasks, taskFilterCriteria, {
       tags: taskTags,
@@ -2588,7 +2588,7 @@ export default function ProjectDetail({
       // Use currentPhase as fallback for list view where selectedPhase might be null
       const activePhase = selectedPhase || currentPhase;
 
-      if (activePhase && newTask.wbs_code.startsWith(activePhase.wbs_code)) {
+      if (activePhase && newTask.phase_id === activePhase.phase_id) {
         const [checklistResult, taskResourcesResult] = await Promise.all([
           getTaskChecklistItems(newTask.task_id),
           getTaskResourcesAction(newTask.task_id)
