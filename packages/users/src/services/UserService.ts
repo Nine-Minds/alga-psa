@@ -334,7 +334,7 @@ export class UserService extends BaseService<IUser> {
         // Invitation acceptance was authorized by the inviter before the
         // invitation row was created. All other direct service creation paths
         // must authorize the actor who is assigning the role.
-        if (!admissionOptions.invitationToken && context.userId !== '00000000-0000-0000-0000-000000000000') {
+        if (roles.some((role) => role.msp) && !admissionOptions.invitationToken && context.userId !== '00000000-0000-0000-0000-000000000000') {
           await this.ensurePermission(context, 'user', 'update');
           await assertMspRoleGrantsWithinActorPermissions(context.userId, context.tenant, trx, data.role_ids);
         }
