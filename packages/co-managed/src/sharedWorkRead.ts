@@ -8,6 +8,7 @@ import { withCoManagedSharedWork, CoManagedSharedWorkError, loadCoManagedHomeFac
 import { withCoManagedCustomerTicket } from './customerWork';
 import { isCoManagedUuid } from './sharedWorkIdentity';
 import { coManagedDisplayName } from './actorReferences';
+import { CO_MANAGED_ORGANIZATION_NAME_ALIASES } from './sharedWorkProjection';
 
 export interface CoManagedDisplayReference {
   tenant: string;
@@ -38,6 +39,10 @@ export function visibleCoManagedFields(candidates: Record<string, CoManagedSumma
   return fields;
 }
 const text = (value: unknown): string | null => value == null ? null : String(value);
+/** Organization display values are projected at the response boundary just like summary fields. */
+export function visibleCoManagedOrganizationName(value: unknown, redactions: readonly string[]): string {
+  return isCoManagedReadFieldHidden(redactions, CO_MANAGED_ORGANIZATION_NAME_ALIASES) ? '' : text(value) ?? '';
+}
 const date = (value: unknown): string | null => value == null ? null : value instanceof Date ? value.toISOString() : String(value);
 function reference(tenant: string, kind: CoManagedDisplayReference['kind'], id: unknown, name: unknown): CoManagedDisplayReference | null {
   return id == null ? null : { tenant, kind, id: String(id), name: text(name) };
@@ -275,6 +280,7 @@ export async function listCoManagedCustomerTickets(db: Knex, actor: CoManagedSes
       const boardIds = boards.map((b: any) => b.board_id), explicitIds = [...explicit.keys()];
       const customer = await tenantDb(trx, customerTenant).table('tenants').first('client_name');
       const redactions = home.redactedFields.concat(lifecycle.relationship.redacted_fields ?? []);
+      const customerName = visibleCoManagedOrganizationName(customer?.client_name, redactions);
       sources.push({
         fetch: async (after, limit) => {
           const query = ticketQuery(trx, customerTenant).where(scoped => scoped.whereIn('tickets.board_id', boardIds).orWhereIn('tickets.ticket_id', explicitIds)).forShare('tickets');
@@ -292,7 +298,7 @@ export async function listCoManagedCustomerTickets(db: Knex, actor: CoManagedSes
           const resource: CoManagedSharedResource = { tenant: customerTenant, relationshipId, kind: 'ticket', id: row.ticket_id };
           const grant = { visibilityMode: mode, scope: scopeByBoard.get(row.board_id) ?? null, explicit: explicit.get(row.ticket_id) ?? null };
           if (!evaluateCoManagedAccess({ lifecycle: lifecycle.lifecycle, staff: { roles }, grant, home: home.facts }).read) return null;
-          return { resource, customerName: customer?.client_name ?? '', fields: visibleCoManagedFields(ticketSummaryCandidates(customerTenant, row), redactions) };
+          return { resource, customerName, fields: visibleCoManagedFields(ticketSummaryCandidates(customerTenant, row), redactions) };
         },
       });
     }
