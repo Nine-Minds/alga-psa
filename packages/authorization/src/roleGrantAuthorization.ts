@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import User from '@alga-psa/db/models/user';
 import { tenantDb } from '@alga-psa/db';
+import { isPermissionSubset } from './permissionSubset';
 
 /**
  * Resolve grants from tenant-owned role data and prevent an actor from giving
@@ -40,9 +41,10 @@ export async function assertMspRoleGrantsWithinActorPermissions(
   scopedDb.tenantJoin(targetPermissionQuery, 'permissions as p', 'rp.permission_id', 'p.permission_id');
   const targetPermissionRows = await targetPermissionQuery;
 
-  for (const permission of targetPermissionRows) {
-    if (!actorPermissions.has(`${permission.resource}:${permission.action}`)) {
-      throw new Error('Permission denied: Cannot assign an MSP role with permissions you do not hold');
-    }
+  const targetPermissionKeys = targetPermissionRows.map(
+    (permission) => `${permission.resource}:${permission.action}`,
+  );
+  if (!isPermissionSubset(targetPermissionKeys, actorPermissions)) {
+    throw new Error('Permission denied: Cannot assign an MSP role with permissions you do not hold');
   }
 }

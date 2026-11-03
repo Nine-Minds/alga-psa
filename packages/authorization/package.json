@@ -62,6 +62,10 @@
       "import": "./dist/roleGrantAuthorization.js",
       "types": "./src/roleGrantAuthorization.ts"
     },
+    "./permissionSubset": {
+      "import": "./dist/permissionSubset.js",
+      "types": "./src/permissionSubset.ts"
+    },
     "./rbac": {
       "import": "./dist/rbac.js",
       "types": "./src/rbac.ts"
