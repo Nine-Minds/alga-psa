@@ -70,6 +70,9 @@ export const SHARED_CLIENT_INTEGRATION: ClientIntegrationContextType = Object.fr
   getContactsByClient: async () => [],
   getAllContacts: async () => [],
   getContactByContactNameId: async () => null,
+  // Shared project screens must never resolve viewer-tenant client records.
+  getClientById: async () => null,
+  getExistingClientIds: async () => [],
   renderQuickAddContact: none,
   renderQuickAddClient: none,
   renderClientDetails: none,
