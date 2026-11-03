@@ -130,6 +130,7 @@
     "worksheet": {
       "ticketNumber": "Ticket n.",
       "customer": "Cliente",
+      "assetTag": "Tag asset",
       "serial": "Serie",
       "custodyLocation": "Luogo di custodia",
       "nextAction": "Prossima azione",

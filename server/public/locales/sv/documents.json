@@ -130,6 +130,7 @@
     "worksheet": {
       "ticketNumber": "Ärende nr",
       "customer": "Kund",
+      "assetTag": "Tillgångstagg",
       "serial": "Serienummer",
       "custodyLocation": "Förvaringsplats",
       "nextAction": "Nästa åtgärd",

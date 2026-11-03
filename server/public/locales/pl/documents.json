@@ -130,6 +130,7 @@
     "worksheet": {
       "ticketNumber": "Zgłoszenie nr",
       "customer": "Klient",
+      "assetTag": "Tag zasobu",
       "serial": "Numer seryjny",
       "custodyLocation": "Miejsce przechowywania",
       "nextAction": "Następne działanie",

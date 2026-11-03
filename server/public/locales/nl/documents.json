@@ -130,6 +130,7 @@
     "worksheet": {
       "ticketNumber": "Ticketnr.",
       "customer": "Klant",
+      "assetTag": "Assettag",
       "serial": "Serienummer",
       "custodyLocation": "Bewaarlocatie",
       "nextAction": "Volgende actie",
