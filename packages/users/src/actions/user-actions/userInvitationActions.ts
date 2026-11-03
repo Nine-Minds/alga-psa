@@ -72,6 +72,9 @@ function normalizeSendUserInvitationError(
 
   if (error instanceof Error) {
     const message = error.message.trim();
+    if (message.startsWith('Permission denied:')) {
+      return { message, errorCode: 'PERMISSION_DENIED_INVITE' };
+    }
     if (message === 'Unauthorized') {
       return { message: 'Permission denied: Cannot invite users', errorCode: 'PERMISSION_DENIED_INVITE' };
     }
