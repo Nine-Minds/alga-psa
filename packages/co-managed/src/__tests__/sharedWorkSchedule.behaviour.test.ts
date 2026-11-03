@@ -87,6 +87,7 @@ import { approveCoManagedNativeAppointment } from '../nativeAppointmentApproval'
 import { declineCoManagedNativeAppointment, rescheduleCoManagedNativeAppointment } from '../nativeAppointmentRequestCommand';
 import { CoManagedSharedWorkError } from '../sharedWorkIdentity';
 import { NativeScheduleRelationError } from '../nativeScheduleRelations';
+import { readCoManagedNativeSchedules } from '../nativeScheduleRead';
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const TENANT = id(1), USER = id(2), TECH = id(3), SESSION = id(4), ENTRY = id(10), REQUEST = id(20), TICKET = id(30), SERVICE = id(40), CLIENT = id(50), OTHER_ENTRY = id(11);
@@ -138,6 +139,60 @@ describe('workspace gate', () => {
     seedWorkspace('co_managed', '2026-10-01T00:00:00.000Z');
     await expect(run()).rejects.toBeInstanceOf(CoManagedSharedWorkError);
     expect(gate.admissionCalls).toBe(0);
+  });
+});
+
+describe('native calendar read work bounds', () => {
+  const calendarActor = { kind: 'session' as const, tenant: TENANT, userId: USER, sessionId: SESSION };
+  const readWindow = (start: string, end: string) => readCoManagedNativeSchedules(db, TENANT, async () => calendarActor,
+    { calendar: { start, end } });
+
+  it('rejects the 1970–9999 range before opening a transaction', async () => {
+    const transaction = vi.spyOn(db, 'transaction');
+    await expect(readWindow('1970-01-01T00:00:00.000Z', '9999-12-31T00:00:00.000Z'))
+      .rejects.toBeInstanceOf(CoManagedSharedWorkError);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it('accepts the exact shared window boundary and rejects one millisecond beyond it', async () => {
+    seedWorkspace();
+    seedEntry();
+    const start = Date.parse('2025-01-01T00:00:00.000Z');
+    const boundary = new Date(start + 366 * DAY).toISOString();
+    expect((await readWindow(new Date(start).toISOString(), boundary)).handled).toBe(true);
+    const transaction = vi.spyOn(db, 'transaction');
+    transaction.mockClear();
+    await expect(readWindow(new Date(start).toISOString(), new Date(Date.parse(boundary) + 1).toISOString())).rejects.toBeInstanceOf(CoManagedSharedWorkError);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it('refuses candidate sets beyond the database loading cap', async () => {
+    seedWorkspace();
+    for (let n = 0; n < 501; n++) seedEntry({ entry_id: id(1000 + n), scheduled_start: new Date('2025-01-01T09:00:00.000Z'), scheduled_end: new Date('2025-01-01T10:00:00.000Z') });
+    await expect(readWindow('2025-01-01T00:00:00.000Z', '2025-01-02T00:00:00.000Z'))
+      .rejects.toBeInstanceOf(CoManagedSharedWorkError);
+  });
+
+  it('rejects aggregate occurrence exhaustion across otherwise bounded daily series', async () => {
+    seedWorkspace();
+    const first = new Date('2025-01-01T09:00:00.000Z');
+    for (let n = 0; n < 6; n++) seedEntry({ entry_id: id(100 + n), is_recurring: true,
+      scheduled_start: first, scheduled_end: new Date(first.getTime() + 60 * 60 * 1000),
+      recurrence_pattern: { frequency: 'daily', interval: 1, startDate: '2025-01-01T00:00:00.000Z' } });
+    await expect(readCoManagedNativeSchedules(db, TENANT, async () => calendarActor, { calendar: {
+      start: '2025-01-01T00:00:00.000Z', end: '2026-01-01T00:00:00.000Z', technicianIds: [TECH],
+    } }))
+      .rejects.toBeInstanceOf(CoManagedSharedWorkError);
+  });
+
+  it('returns ordinary overlapping recurrence occurrences inside an allowed interval', async () => {
+    seedWorkspace();
+    const start = new Date('2025-01-01T23:00:00.000Z');
+    seedEntry({ is_recurring: true, scheduled_start: start, scheduled_end: new Date(start.getTime() + 2 * 60 * 60 * 1000),
+      recurrence_pattern: { frequency: 'daily', interval: 1, startDate: '2025-01-01T00:00:00.000Z', count: 4 } });
+    const result = await readWindow('2025-01-02T00:00:00.000Z', '2025-01-04T00:00:00.000Z');
+    expect(result).toMatchObject({ handled: true });
+    expect((result as any).entries.map((entry: any) => entry.scheduled_start.slice(0, 10))).toEqual(['2025-01-01', '2025-01-02', '2025-01-03']);
   });
 });
 

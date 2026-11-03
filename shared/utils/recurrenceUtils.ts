@@ -65,6 +65,18 @@ export interface GenerateOccurrencesOptions {
   holidays?: IHoliday[];
   /** Include the master date when the caller materializes the whole series virtually. */
   includeMaster?: boolean;
+  /** Maximum number of dates the rule engine may materialize for this call. */
+  maxOccurrences?: number;
+}
+
+export const MAX_CALENDAR_WINDOW_MS = 366 * 24 * 60 * 60 * 1000;
+export const DEFAULT_MAX_RECURRENCE_OCCURRENCES = 10000;
+
+export class RecurrenceOccurrenceLimitError extends Error {
+  constructor() {
+    super('The recurrence produces too many occurrences for this request.');
+    this.name = 'RecurrenceOccurrenceLimitError';
+  }
 }
 
 // LEVERAGE: pattern recurrence-engine — schedule entries should move onto shared/lib/recurrence
@@ -75,7 +87,10 @@ export function generateOccurrences(
   options?: GenerateOccurrencesOptions
 ): Date[] {
   try {
+    const maxOccurrences = options?.maxOccurrences ?? DEFAULT_MAX_RECURRENCE_OCCURRENCES;
+    if (!Number.isSafeInteger(maxOccurrences) || maxOccurrences < 0) throw new RecurrenceOccurrenceLimitError();
     if (!entry.recurrence_pattern) {
+      if (maxOccurrences < 1) throw new RecurrenceOccurrenceLimitError();
       return [new Date(entry.scheduled_start)];
     }
     const pattern = entry.recurrence_pattern;
@@ -146,7 +161,10 @@ export function generateOccurrences(
     else rangeEnd.setHours(23, 59, 59, 999);
 
     // Get the base occurrences using normalized dates
-    const baseOccurrences = rrule.between(rangeStart, rangeEnd);
+    // rrule.between accepts an iterator that can halt generation. Ask for one
+    // more than the budget so callers can reject instead of silently truncate.
+    const baseOccurrences = rrule.between(rangeStart, rangeEnd, true, (_date, index) => index <= maxOccurrences);
+    if (baseOccurrences.length > maxOccurrences) throw new RecurrenceOccurrenceLimitError();
 
     // Validate and get the original time
     const originalTime = new Date(entry.scheduled_start);
@@ -203,6 +221,7 @@ export function generateOccurrences(
 
     return filteredOccurrences;
   } catch (error) {
+    if (error instanceof RecurrenceOccurrenceLimitError) throw error;
     console.error('[generateOccurrences] Unexpected error:', error);
     return [new Date(entry.scheduled_start)];
   }

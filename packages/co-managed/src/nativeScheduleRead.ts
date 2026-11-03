@@ -1,12 +1,20 @@
 import type { Knex } from 'knex';
 import type { AuthorizationRecord, AuthorizationSubject } from '@alga-psa/authorization';
 import { tenantDb, withTransaction } from '@alga-psa/db';
-import { generateOccurrences } from '@alga-psa/shared/utils/recurrenceUtils';
+import { generateOccurrences, MAX_CALENDAR_WINDOW_MS, RecurrenceOccurrenceLimitError } from '@alga-psa/shared/utils/recurrenceUtils';
 import { retainCoManagedWorkspace } from './nativeWorkspace';
 import { lockCoManagedLocalAuthentication, snapshotCoManagedAuthenticatedActor, type CoManagedAuthenticatedActor } from './localAuthentication';
 import { authorizeCoManagedLocalRecord, CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
 import { hasCoManagedLocalPermission } from './localPermission';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+
+const MAX_SCHEDULE_CANDIDATES = 500;
+const MAX_SCHEDULE_RESULTS = 2000;
+const MAX_SCHEDULE_HOLIDAYS = 500;
+const MAX_SCHEDULE_ASSIGNEES = 100;
+const MAX_SCHEDULE_TECHNICIANS = 100;
+
+class CoManagedScheduleLimitError extends CoManagedSharedWorkError {}
 
 export interface ScheduleSource { record: AuthorizationRecord; fields: readonly string[]; workItem: { id: string; type: string; title: string } | null }
 
@@ -104,7 +112,8 @@ export async function readCoManagedNativeSchedules(db: Knex, tenant: string, ide
   const start = options.start ? new Date(options.start).getTime() : null, end = options.end ? new Date(options.end).getTime() : null;
   if ((start !== null && !Number.isFinite(start)) || (end !== null && !Number.isFinite(end))) throw new CoManagedSharedWorkError();
   const calendarStart = options.calendar ? Date.parse(options.calendar.start) : null, calendarEnd = options.calendar ? Date.parse(options.calendar.end) : null;
-  if (options.calendar && (options.id || !Number.isFinite(calendarStart) || !Number.isFinite(calendarEnd) || calendarEnd! <= calendarStart! || (options.calendar.technicianIds !== undefined && !options.calendar.technicianIds.every(isCoManagedUuid)))) throw new CoManagedSharedWorkError();
+  if (options.calendar && (options.id || !Number.isFinite(calendarStart) || !Number.isFinite(calendarEnd) || calendarEnd! <= calendarStart! || calendarEnd! - calendarStart! > MAX_CALENDAR_WINDOW_MS || (options.calendar.technicianIds !== undefined && (options.calendar.technicianIds.length > MAX_SCHEDULE_TECHNICIANS || !options.calendar.technicianIds.every(isCoManagedUuid))))) throw new CoManagedSharedWorkError();
+  const technicianIds = options.calendar?.technicianIds ? new Set(options.calendar.technicianIds) : undefined;
   return withTransaction(db, async trx => {
     if (!await retainCoManagedWorkspace(trx, tenant)) return { handled: false };
     const actor = snapshotCoManagedAuthenticatedActor(await identify());
@@ -116,8 +125,9 @@ export async function readCoManagedNativeSchedules(db: Knex, tenant: string, ide
     if (options.id) query.where('entry_id', options.id);
     if (options.calendar) query.whereNull('original_entry_id').where('scheduled_start', '<', new Date(calendarEnd!))
       .where(query => query.where('is_recurring', true).orWhere('scheduled_end', '>', new Date(calendarStart!)));
-    const hints = await query.select('entry_id', 'work_item_id', 'work_item_type'), entries: any[] = [];
-    let holidays: any[] | undefined;
+    const hints = await query.limit(MAX_SCHEDULE_CANDIDATES + 1).select('entry_id', 'work_item_id', 'work_item_type'), entries: any[] = [];
+    if (hints.length > MAX_SCHEDULE_CANDIDATES) throw new CoManagedScheduleLimitError();
+    let holidays: any[] | undefined, projectedCount = 0;
     const calendarRows = async (row: any) => {
       if (!options.calendar || !row.is_recurring || !row.recurrence_pattern) return [row];
       const pattern = typeof row.recurrence_pattern === 'string' ? JSON.parse(row.recurrence_pattern) : row.recurrence_pattern;
@@ -126,10 +136,18 @@ export async function readCoManagedNativeSchedules(db: Knex, tenant: string, ide
       // Include occurrences beginning before the range whose duration crosses
       // into it. Final overlap filtering uses the actual occurrence timestamps.
       const from = new Date(Math.max(calendarStart! - duration, new Date(row.scheduled_start).getTime()));
-      if (!holidays) holidays = (await owner.table('holidays').whereNull('schedule_id').orderBy('holiday_id').forShare().select('*')).map(holiday => ({
-        ...holiday, holiday_date: holiday.holiday_date instanceof Date ? holiday.holiday_date.toISOString().slice(0, 10) : holiday.holiday_date,
-      }));
-      return generateOccurrences({ ...row, recurrence_pattern: pattern }, from, new Date(calendarEnd!), { holidays, includeMaster: true }).map(occurrence => ({
+      if (!holidays) {
+        const holidayRows = await owner.table('holidays').whereNull('schedule_id').orderBy('holiday_id').limit(MAX_SCHEDULE_HOLIDAYS + 1).forShare().select('*');
+        if (holidayRows.length > MAX_SCHEDULE_HOLIDAYS) throw new CoManagedScheduleLimitError();
+        holidays = holidayRows.map(holiday => ({
+          ...holiday, holiday_date: holiday.holiday_date instanceof Date ? holiday.holiday_date.toISOString().slice(0, 10) : holiday.holiday_date,
+        }));
+      }
+      const remaining = MAX_SCHEDULE_RESULTS - projectedCount;
+      const occurrences = generateOccurrences({ ...row, recurrence_pattern: pattern }, from, new Date(calendarEnd!), {
+        holidays, includeMaster: true, maxOccurrences: remaining,
+      });
+      return occurrences.map(occurrence => ({
         ...row, entry_id: `${row.entry_id}_${occurrence.getTime()}`, original_entry_id: row.entry_id,
         scheduled_start: occurrence, scheduled_end: new Date(occurrence.getTime() + duration), recurrence_pattern: pattern,
       }));
@@ -140,7 +158,9 @@ export async function readCoManagedNativeSchedules(db: Knex, tenant: string, ide
         const row = await owner.table('schedule_entries').where('entry_id', hint.entry_id).forShare().first();
         if (!row || row.work_item_id !== hint.work_item_id || row.work_item_type !== hint.work_item_type) throw new CoManagedSharedWorkError();
         if (options.calendar && row.original_entry_id) continue;
-        const assignments = (await owner.table('schedule_entry_assignees').where('entry_id', row.entry_id).orderBy('user_id').forShare().select('user_id')).map(item => item.user_id);
+        const assignmentRows = await owner.table('schedule_entry_assignees').where('entry_id', row.entry_id).orderBy('user_id').limit(MAX_SCHEDULE_ASSIGNEES + 1).forShare().select('user_id');
+        if (assignmentRows.length > MAX_SCHEDULE_ASSIGNEES) throw new CoManagedScheduleLimitError();
+        const assignments = assignmentRows.map(item => item.user_id);
         if (!canReadOthers && !assignments.includes(actor.userId)) throw new CoManagedSharedWorkError();
         const policy = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'user_schedule', 'read', {
           ...source.record, id: row.entry_id, ownerUserId: assignments.length === 1 ? assignments[0] : undefined, assignedUserIds: assignments,
@@ -150,16 +170,25 @@ export async function readCoManagedNativeSchedules(db: Knex, tenant: string, ide
         // still disclose their authorized occupancy without the stored pattern.
         scheduleView(row, assignments, actor, policy.redactedFields, source);
         if (options.calendar && row.is_recurring && isScheduleFieldHidden([...policy.redactedFields, ...source.fields], ['recurrence_pattern', 'is_recurring', 'original_entry_id'])) continue;
-        for (const occurrence of await calendarRows(row)) {
+        let projected: any[];
+        try { projected = await calendarRows(row); }
+        catch (error) {
+          if (error instanceof RecurrenceOccurrenceLimitError) throw new CoManagedScheduleLimitError();
+          throw error;
+        }
+        if (projected.length + projectedCount > MAX_SCHEDULE_RESULTS) throw new CoManagedScheduleLimitError();
+        projectedCount += projected.length;
+        for (const occurrence of projected) {
           const view = scheduleView(occurrence, assignments, actor, policy.redactedFields, source);
           if (options.calendar) {
             if (Date.parse(view.scheduled_start) >= calendarEnd! || Date.parse(view.scheduled_end) <= calendarStart!) continue;
-            const ids = options.calendar.technicianIds;
-            if (canReadOthers && ids?.length && !assignments.some(id => ids.includes(id)) && !(assignments.length === 0 && row.work_item_type === 'appointment_request')) continue;
+            if (canReadOthers && technicianIds?.size && !assignments.some(id => technicianIds.has(id)) && !(assignments.length === 0 && row.work_item_type === 'appointment_request')) continue;
           }
           if ((!options.userId || view.assigned_user_ids.includes(options.userId)) && (start === null || Date.parse(view.scheduled_start) >= start) && (end === null || Date.parse(view.scheduled_end) <= end)) entries.push(view);
         }
-      } catch (error) { if (!(error instanceof CoManagedSharedWorkError) || options.id) throw error; }
+      } catch (error) {
+        if (error instanceof CoManagedScheduleLimitError || !(error instanceof CoManagedSharedWorkError) || options.id) throw error;
+      }
     }
     await credential.assertCurrent();
     entries.sort((a, b) => a.scheduled_start.localeCompare(b.scheduled_start) || a.entry_id.localeCompare(b.entry_id));

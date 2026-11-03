@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { generateOccurrences, applyTimeToDate } from '@alga-psa/shared/utils/recurrenceUtils';
+import { generateOccurrences, applyTimeToDate, MAX_CALENDAR_WINDOW_MS, RecurrenceOccurrenceLimitError } from '@alga-psa/shared/utils/recurrenceUtils';
 import type { IScheduleEntry, IRecurrencePattern } from '@alga-psa/types';
 
 /**
@@ -469,5 +469,33 @@ describe('calendar master occurrence', () => {
     expect(generateOccurrences(entry, new Date('2024-01-14T00:00:00'), new Date('2024-01-19T00:00:00'), {
       includeMaster: true, holidays: [{ holiday_date: '2024-01-16', is_recurring: false } as any],
     }).map(date => date.getDate())).toEqual([17]);
+  });
+});
+
+describe('bounded recurrence generation', () => {
+  const endless = makeEntry({ is_recurring: true, scheduled_start: new Date('1970-01-01T09:00:00Z'),
+    scheduled_end: new Date('1970-01-01T10:00:00Z'), recurrence_pattern: makePattern({ startDate: new Date('1970-01-01T00:00:00Z') }) });
+
+  it('halts an endless daily rule at the occurrence budget instead of materializing the 1970–9999 range', () => {
+    expect(() => generateOccurrences(endless, new Date('1970-01-01'), new Date('9999-12-31'), { maxOccurrences: 100 }))
+      .toThrow(RecurrenceOccurrenceLimitError);
+  });
+
+  it('accepts an exact occurrence budget and rejects one occurrence beyond it', () => {
+    const entry = { ...endless, recurrence_pattern: makePattern({ startDate: new Date('2024-01-01'), count: 3 }),
+      scheduled_start: new Date('2024-01-01T09:00:00Z') };
+    expect(generateOccurrences(entry, new Date('2024-01-01'), new Date('2024-01-03'), { maxOccurrences: 3, includeMaster: true })).toHaveLength(3);
+    expect(() => generateOccurrences(entry, new Date('2024-01-01'), new Date('2024-01-03'), { maxOccurrences: 2, includeMaster: true }))
+      .toThrow(RecurrenceOccurrenceLimitError);
+  });
+
+  it('retains normal results and exports the shared one-year calendar window', () => {
+    const entry = { ...endless, recurrence_pattern: makePattern({ startDate: new Date('2024-01-01'), count: 3 }),
+      scheduled_start: new Date('2024-01-01T09:00:00Z') };
+    const results = generateOccurrences(entry, new Date('2024-01-01'), new Date('2024-01-03'), { maxOccurrences: 3, includeMaster: true });
+    expect(results).toHaveLength(3);
+    expect(results[1].getTime() - results[0].getTime()).toBe(24 * 60 * 60 * 1000);
+    expect(results[2].getTime() - results[1].getTime()).toBe(24 * 60 * 60 * 1000);
+    expect(MAX_CALENDAR_WINDOW_MS).toBe(366 * 24 * 60 * 60 * 1000);
   });
 });
