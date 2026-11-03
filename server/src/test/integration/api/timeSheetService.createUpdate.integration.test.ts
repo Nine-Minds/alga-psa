@@ -36,17 +36,28 @@ vi.mock('server/src/lib/eventBus/publishers', () => ({
 }));
 
 // RBAC itself is not under test; the permissions each actor holds are set per test.
-const grants = vi.hoisted(() => ({ byUser: new Map<string, Set<string>>() }));
+const grants = vi.hoisted(() => ({
+  byUser: new Map<string, Set<string>>(),
+  has: async (user: { user_id: string }, resource: string, action: string) =>
+    grants.byUser.get(user.user_id)?.has(`${resource}:${action}`) ?? false,
+}));
 const approvalBundleRules = vi.hoisted(() => ({ rules: [] as Array<Record<string, unknown>> }));
 vi.mock('@alga-psa/auth', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
-    grants.byUser.get(user.user_id)?.has(`${resource}:${action}`) ?? false),
+    grants.has(user, resource, action)),
 }));
 vi.mock('@/lib/auth/rbac', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
-    grants.byUser.get(user.user_id)?.has(`${resource}:${action}`) ?? false),
+    grants.has(user, resource, action)),
+}));
+// The shared self-approval predicate ("is the actor the sole approver?") resolves RBAC
+// through @alga-psa/authorization's own copy, so point it at the same fixture.
+vi.mock('@alga-psa/authorization/rbac', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
+    grants.has(user, resource, action)),
 }));
 let db: Knex;
 const tenantsToCleanup = new Set<string>();
@@ -271,6 +282,7 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
 
   it('enforces approval bundle rules through REST single and bulk approval without partial writes', async () => {
     const f = await seed();
+    const coApprover = await seedUser(f.tenantId, 'SecondApprover');
     const service = serviceFor(f.tenantId);
     const ctx = contextFor(f.tenantId, f.actor);
     const makeSubmittedSheet = async () => {
@@ -302,6 +314,13 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     const entriesBefore = await tenantTable(f.tenantId, 'time_entries')
       .whereIn('time_sheet_id', [single.sheetId, bulk.sheetId]).orderBy('entry_id').select('*');
 
+    const permittedCommentsBefore = await tenantTable(f.tenantId, 'time_sheet_comments')
+      .whereIn('time_sheet_id', [permittedSingle.sheetId, permittedBulk.sheetId]).orderBy('comment_id').select('*');
+    const permittedMetadataBefore = await tenantTable(f.tenantId, 'time_sheets')
+      .whereIn('id', [permittedSingle.sheetId, permittedBulk.sheetId]).orderBy('id').select('*');
+    const permittedEntriesBefore = await tenantTable(f.tenantId, 'time_entries')
+      .whereIn('time_sheet_id', [permittedSingle.sheetId, permittedBulk.sheetId]).orderBy('entry_id').select('*');
+
     approvalBundleRules.rules = [{
       resource: 'time_entry', action: 'approve', constraintKey: 'not_self_approver',
     }];
@@ -318,8 +337,31 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     expect(await tenantTable(f.tenantId, 'time_sheet_comments').whereIn('time_sheet_id', [single.sheetId, bulk.sheetId]).orderBy('comment_id').select('*'))
       .toEqual(commentsBefore);
 
-    // Self approval remains allowed when no bundle restriction applies.
+    // With no bundle restriction, self-approval is still denied: another tenant user
+    // holds `time_sheet:approve`, so the actor is not the sole approver.
     approvalBundleRules.rules = [];
+    grants.byUser.set(coApprover, new Set(['time_sheet:approve']));
+    await expect(runWithTenant(f.tenantId, () => service.approveTimeSheet(permittedSingle.sheetId, { approval_notes: 'should not persist' }, ctx)))
+      .rejects.toBeInstanceOf(ForbiddenError);
+    const deniedBulkResult = await runWithTenant(f.tenantId, () => service.bulkApprove(
+      { time_sheet_ids: [permittedBulk.sheetId], approval_notes: 'should not persist' } as any, ctx
+    ));
+    expect(deniedBulkResult).toHaveLength(1);
+    expect(deniedBulkResult[0]).toMatchObject({
+      success: false,
+      time_sheet_id: permittedBulk.sheetId,
+      error: 'Permission denied: Cannot act on this time sheet',
+    });
+
+    expect(await tenantTable(f.tenantId, 'time_sheets').whereIn('id', [permittedSingle.sheetId, permittedBulk.sheetId]).orderBy('id').select('*'))
+      .toEqual(permittedMetadataBefore);
+    expect(await tenantTable(f.tenantId, 'time_entries').whereIn('time_sheet_id', [permittedSingle.sheetId, permittedBulk.sheetId]).orderBy('entry_id').select('*'))
+      .toEqual(permittedEntriesBefore);
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').whereIn('time_sheet_id', [permittedSingle.sheetId, permittedBulk.sheetId]).orderBy('comment_id').select('*'))
+      .toEqual(permittedCommentsBefore);
+
+    // Sole approver: the shared guard permits self-approval again.
+    grants.byUser.delete(coApprover);
     await expect(runWithTenant(f.tenantId, () => service.approveTimeSheet(permittedSingle.sheetId, { approval_notes: 'approved' }, ctx)))
       .resolves.toMatchObject({ id: permittedSingle.sheetId, approval_status: 'APPROVED', approved_by: f.actor });
     const permittedBulkResult = await runWithTenant(f.tenantId, () => service.bulkApprove(

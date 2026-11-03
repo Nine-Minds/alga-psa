@@ -9,12 +9,16 @@ import {
   BundleAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
+  isSelfApprovalBlocked,
   type AuthorizationEvaluationInput,
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { resolveAllowSelfApprovalFlagFor } from '@alga-psa/authorization/quoteSelfApproval';
 
 export type DelegationScope = 'self' | 'tenant-wide' | 'manager';
+
+const TIME_SHEET_APPROVE = { resource: 'time_sheet', action: 'approve' } as const;
 
 async function resolveBundleRulesOrThrow(
   db: Knex | Knex.Transaction,
@@ -164,8 +168,41 @@ export async function assertCanApproveSubject(
     portfolioClientIds: actor.clientId ? [actor.clientId] : [],
   };
 
+  const allowSelfApproval = await resolveAllowSelfApprovalFlagFor(
+    db,
+    tenant,
+    actor.user_id,
+    subjectUserId,
+    TIME_SHEET_APPROVE
+  );
+
   const approvalKernel = createAuthorizationKernel({
-    builtinProvider: new BuiltinAuthorizationKernelProvider(),
+    builtinProvider: new BuiltinAuthorizationKernelProvider({
+      mutationGuards: [
+        (input: AuthorizationEvaluationInput) => {
+          // Shared decision: denies self-approval unless the caller established the
+          // subject is the sole approver (mutation.allowSelfApproval).
+          if (isSelfApprovalBlocked(input)) {
+            return {
+              allowed: false,
+              reasons: [
+                {
+                  stage: 'mutation' as const,
+                  sourceType: 'builtin' as const,
+                  code: 'scheduling_not_self_approver_denied',
+                  message: 'Approvers cannot approve their own time submissions.',
+                },
+              ],
+            };
+          }
+
+          return {
+            allowed: true,
+            reasons: [],
+          };
+        },
+      ],
+    }),
     bundleProvider: new BundleAuthorizationKernelProvider({
       resolveRules: async (input) =>
         resolveBundleRulesOrThrow(db, input, 'Permission denied: Cannot approve time submissions'),
@@ -190,6 +227,7 @@ export async function assertCanApproveSubject(
         id: subjectUserId,
         ownerUserId: subjectUserId,
       },
+      allowSelfApproval,
     },
     requestCache: new RequestLocalAuthorizationCache(),
     knex: db,

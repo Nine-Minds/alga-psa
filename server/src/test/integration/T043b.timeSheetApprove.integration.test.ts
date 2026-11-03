@@ -26,6 +26,10 @@ describe('T043 TimeSheetService.approveTimeSheet (F056)', () => {
   let db: Knex;
   let tenant: string;
   let internalId: string;
+  // A second seeded internal user. The approval case must approve SOMEONE ELSE'S sheet: since the
+  // self-approval guard landed, an approver approving their own submission is denied by default
+  // (see timeEntryDelegationAuth.assertCanApproveSubject).
+  let otherInternalId: string;
   let serviceUserId: string;
   const created: { sheets: string[]; entries: string[]; periods: string[] } = { sheets: [], entries: [], periods: [] };
 
@@ -38,7 +42,7 @@ describe('T043 TimeSheetService.approveTimeSheet (F056)', () => {
     return { svc, context: { tenant, userId, user: { user_id: userId, user_type: 'internal', tenant } } as any };
   }
 
-  async function submittedSheet(): Promise<{ sheetId: string; entryId: string }> {
+  async function submittedSheet(ownerUserId: string = internalId): Promise<{ sheetId: string; entryId: string }> {
     const periodId = uuidv4();
     const day = Math.floor(Math.random() * 20000);
     const start = new Date(Date.UTC(2100, 0, 1) + day * 86400000 * 8);
@@ -54,7 +58,7 @@ describe('T043 TimeSheetService.approveTimeSheet (F056)', () => {
     await tenantDb(db, tenant).table('time_sheets').insert({
       tenant,
       id: sheetId,
-      user_id: internalId,
+      user_id: ownerUserId,
       period_id: periodId,
       approval_status: 'SUBMITTED',
     });
@@ -63,7 +67,7 @@ describe('T043 TimeSheetService.approveTimeSheet (F056)', () => {
     await tenantDb(db, tenant).table('time_entries').insert({
       tenant,
       entry_id: entryId,
-      user_id: internalId,
+      user_id: ownerUserId,
       time_sheet_id: sheetId,
       start_time: new Date().toISOString(),
       end_time: new Date().toISOString(),
@@ -84,6 +88,14 @@ describe('T043 TimeSheetService.approveTimeSheet (F056)', () => {
     const row = await q.where('u.user_type', 'internal').select('u.tenant', 'u.user_id').first();
     tenant = row.tenant;
     internalId = row.user_id;
+    const other = await discovery
+      .unscoped('users as u', 'T043b discovery of a second internal user')
+      .where('u.user_type', 'internal')
+      .whereNot('u.user_id', internalId)
+      .select('u.user_id')
+      .first();
+    if (!other) throw new Error('T043b requires at least two seeded internal users');
+    otherInternalId = other.user_id;
     serviceUserId = (await createServiceUser(db, tenant)).userId;
   });
 
@@ -110,7 +122,7 @@ describe('T043 TimeSheetService.approveTimeSheet (F056)', () => {
   });
 
   it('an internal approver approves the sheet and its entries', async () => {
-    const { sheetId, entryId } = await submittedSheet();
+    const { sheetId, entryId } = await submittedSheet(otherInternalId);
     const { svc, context } = approverService(internalId);
     const rulesSpy = vi.spyOn(bundleService, 'resolveBundleNarrowingRulesForEvaluation').mockResolvedValue([]);
     try {
