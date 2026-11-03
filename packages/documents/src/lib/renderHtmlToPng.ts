@@ -1,4 +1,4 @@
-import puppeteer from 'puppeteer';
+import puppeteer, { type Browser } from 'puppeteer';
 import createDOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
 import { fetchPublicBytes } from '@alga-psa/core/net/safeFetch';
@@ -154,7 +154,7 @@ function isSandboxUnavailable(error: unknown): boolean {
   return /no usable sandbox|failed to move to new namespace|namespace.*operation not permitted/i.test(message);
 }
 
-async function launchBrowser() {
+async function launchBrowser(): Promise<Browser> {
   const args = [
     '--disable-dev-shm-usage',
     '--disable-gpu',
@@ -258,7 +258,7 @@ export async function resolveRemoteAssets(
 export async function renderHtmlToPng(content: RenderContent, opts: RenderHtmlToPngOptions = {}): Promise<Buffer> {
   const width = opts.width ?? 400;
   const height = opts.height ?? 300;
-  let browser;
+  let browser: Browser | undefined;
   try {
     // Escape structured values and sanitize all supported rich HTML before resolving image URLs.
     const sanitizedHtml = toHtml(content);
@@ -295,9 +295,12 @@ export async function renderHtmlToPng(content: RenderContent, opts: RenderHtmlTo
         <div>${safeHtml}</div>
       `;
     await page.setContent(styledHtml, { waitUntil: 'domcontentloaded', timeout: 5000 });
-    const imageBuffer = await withTimeout(page.screenshot({ type: 'png' }), 10000, 'Chromium screenshot');
+    // Puppeteer's default screenshot encoding is a Uint8Array. Keep that byte type
+    // explicit through the timeout wrapper so it cannot widen to unknown.
+    const screenshotBytes: Promise<Uint8Array> = page.screenshot({ type: 'png' });
+    const imageBytes = await withTimeout<Uint8Array>(screenshotBytes, 10000, 'Chromium screenshot');
 
-    return Buffer.from(imageBuffer);
+    return Buffer.from(imageBytes);
   } catch (error) {
     console.error('[renderHtmlToPng] Preview rendering failed; returning placeholder image:', error);
     return await fallbackPlaceholder();
