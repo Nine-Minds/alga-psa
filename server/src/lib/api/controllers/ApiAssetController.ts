@@ -28,7 +28,8 @@ import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
-import { guardAssetRead } from './assetReadGuard';
+import { authorizeAssetRecordAccess, guardAssetRead } from './assetReadGuard';
+import { projectApiRecord } from './apiRecordProjection';
 
 export class ApiAssetController {
   private assetService: AssetService;
@@ -91,8 +92,8 @@ export class ApiAssetController {
    */
   async getById(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    const denied = await guardAssetRead(context, params.id, this.assetService);
-    if (denied) return denied;
+    const authorization = await authorizeAssetRecordAccess(context, params.id, this.assetService);
+    if (!('record' in authorization)) return authorization;
 
     const asset = await this.assetService.getWithDetails(params.id, context);
     
@@ -100,9 +101,12 @@ export class ApiAssetController {
       return createErrorResponse('Asset not found', 404);
     }
 
+    const projected = projectApiRecord('asset', asset as Record<string, any>, authorization.redactedFields);
+    if (!projected) return createErrorResponse('Asset not found', 404);
+
     return createApiResponse({
-      ...asset,
-      _links: getHateoasLinks('asset', asset.asset_id)
+      ...projected,
+      _links: getHateoasLinks('asset', String(projected.asset_id))
     });
   }
 

@@ -34,7 +34,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveAllowSelfApprovalFlag } from '@alga-psa/authorization/quoteSelfApproval';
 import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
-import { projectApiRecord } from './apiRecordProjection';
+import { isApiRecordFieldHidden, projectApiRecord } from './apiRecordProjection';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import {
   ConflictError,
@@ -106,11 +106,11 @@ export class ApiQuoteController extends ApiBaseController {
     };
   }
 
-  private async assertQuoteReadAllowed(
+  private async authorizeQuoteRead(
     apiRequest: AuthenticatedApiRequest,
     quoteId: string,
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Record<string, any>> {
+  ): Promise<{ record: Record<string, any>; redactedFields: string[] }> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const quote = await this.quoteService.getById(quoteId, apiRequest.context);
 
@@ -133,7 +133,15 @@ export class ApiQuoteController extends ApiBaseController {
 
     const projected = projectApiRecord('quote', quote as Record<string, any>, decision.redactedFields);
     if (!projected) throw new NotFoundError('Quote not found');
-    return projected as Record<string, any>;
+    return { record: projected as Record<string, any>, redactedFields: decision.redactedFields };
+  }
+
+  private async assertQuoteReadAllowed(
+    apiRequest: AuthenticatedApiRequest,
+    quoteId: string,
+    knex?: Awaited<ReturnType<typeof getConnection>>
+  ): Promise<Record<string, any>> {
+    return (await this.authorizeQuoteRead(apiRequest, quoteId, knex)).record;
   }
 
   /**
@@ -408,10 +416,14 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const quoteAuthorization = await this.authorizeQuoteRead(apiRequest, id, knex);
           const items = await this.quoteService.listItems(id, apiRequest.context);
-
-          return createSuccessResponse(items);
+          if (isApiRecordFieldHidden('quote', 'quote_items', quoteAuthorization.redactedFields)) return createSuccessResponse([]);
+          const projectedItems = items.flatMap((item: Record<string, any>) => {
+            const projected = projectApiRecord('quote', item, quoteAuthorization.redactedFields);
+            return projected ? [projected] : [];
+          });
+          return createSuccessResponse(projectedItems);
         });
       } catch (error) {
         return handleApiError(error);
@@ -763,11 +775,14 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const quoteAuthorization = await this.authorizeQuoteRead(apiRequest, id, knex);
 
           const versions = await this.quoteService.listVersions(id, apiRequest.context);
-
-          return createSuccessResponse(versions);
+          const projectedVersions = versions.flatMap((version: Record<string, any>) => {
+            const projected = projectApiRecord('quote', version, quoteAuthorization.redactedFields);
+            return projected ? [projected] : [];
+          });
+          return createSuccessResponse(projectedVersions);
         });
       } catch (error) {
         return handleApiError(error);

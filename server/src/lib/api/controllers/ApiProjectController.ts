@@ -34,8 +34,7 @@ import {
 } from '../../auth/rbac';
 import { authorizeApiResourceRead } from './authorizationKernel';
 import { projectRecord } from './projectRecord';
-import { projectApiRecord } from './apiRecordProjection';
-import { isCoManagedReadFieldHidden } from '@alga-psa/co-managed/sharedWorkRedaction';
+import { areApiRecordFieldsVisible, isApiRecordFieldHidden, projectApiRecord } from './apiRecordProjection';
 import { buildProjectRecordContext, buildTicketRecordContext } from './recordContexts';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { tenantDb } from '@alga-psa/db';
@@ -210,13 +209,13 @@ export class ApiProjectController extends ApiBaseController {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    const visible = (fieldSources: readonly string[]) => projects.every(({ redactedFields }) => !isCoManagedReadFieldHidden(redactedFields, fieldSources));
+    const visible = (fields: readonly string[]) => projects.every(({ redactedFields }) => areApiRecordFieldsVisible('project', fields, redactedFields));
     const projectedProjects: Record<string, any>[] = projects.map(({ record, redactedFields }) => ({
       ...record,
-      ...(record.status && !Object.hasOwn(record, 'status_name') && !isCoManagedReadFieldHidden(redactedFields, ['status_name', 'status', 'projects.status', 'statuses.name', 'project_status_mappings.custom_name'])
+      ...(record.status && !Object.hasOwn(record, 'status_name') && !isApiRecordFieldHidden('project', 'status_name', redactedFields)
         ? { status_name: statusNameById.get(record.status) }
         : {}),
-      ...(record.client_id && !Object.hasOwn(record, 'client_name') && !isCoManagedReadFieldHidden(redactedFields, ['client_name', 'client_id', 'clients.client_name'])
+      ...(record.client_id && !Object.hasOwn(record, 'client_name') && !isApiRecordFieldHidden('project', 'client_name', redactedFields)
         ? { client_name: clientNameById.get(record.client_id) }
         : {}),
     }));
@@ -246,14 +245,14 @@ export class ApiProjectController extends ApiBaseController {
       total_projects: projects.length,
     };
 
-    const statusSources = ['status', 'status_name', 'projects.status', 'statuses.name', 'project_status_mappings.custom_name'];
+    const statusSources = ['status_name'];
     if (visible(statusSources)) {
       stats.active_projects = projectedProjects.filter((project) => project.status_name === 'Active').length;
       stats.completed_projects = projectedProjects.filter((project) => project.status_name === 'Completed').length;
       stats.on_hold_projects = projectedProjects.filter((project) => project.status_name === 'On Hold').length;
       stats.cancelled_projects = projectedProjects.filter((project) => project.status_name === 'Cancelled').length;
     }
-    if (visible([...statusSources, 'end_date', 'projects.end_date'])) {
+    if (visible([...statusSources, 'end_date'])) {
       stats.overdue_projects = projectedProjects.filter((project) => {
         if (!project.end_date) return false;
         return new Date(project.end_date) < new Date() && project.status_name !== 'Completed';
@@ -264,7 +263,7 @@ export class ApiProjectController extends ApiBaseController {
         (project) => project.created_at && new Date(project.created_at) >= monthStart,
       ).length;
     }
-    if (visible([...statusSources, 'updated_at', 'projects.updated_at'])) {
+    if (visible([...statusSources, 'updated_at'])) {
       stats.projects_completed_this_month = projectedProjects.filter(
         (project) => project.status_name === 'Completed' && project.updated_at && new Date(project.updated_at) >= monthStart,
       ).length;
@@ -279,7 +278,7 @@ export class ApiProjectController extends ApiBaseController {
     if (visible(statusSources)) {
       stats.projects_by_status = projectsByStatus;
     }
-    if (visible(['client_id', 'client_name', 'clients.client_name', 'projects.client_id'])) {
+    if (visible(['client_name', 'client_id'])) {
       stats.top_clients_by_project_count = topClientsByProjectCount;
     }
     return stats;

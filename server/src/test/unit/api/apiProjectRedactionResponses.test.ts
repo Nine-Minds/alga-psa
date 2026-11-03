@@ -5,6 +5,7 @@ const state = vi.hoisted(() => ({
   rows: [] as Record<string, any>[],
   decision: (row: Record<string, any>) => ({ allowed: true, redactedFields: [] as string[] }),
 }));
+const CREATED_AT = new Date();
 
 vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
   authorizeApiResourceRead: vi.fn(async ({ recordContext, resource }: any) => {
@@ -26,7 +27,7 @@ vi.mock('@/lib/api/services/ProjectService', () => ({ ProjectService: class {} }
 
 import { ApiProjectController } from '@/lib/api/controllers/ApiProjectController';
 
-const row = (id: string) => ({ project_id: id, project_name: 'Migration', description: 'Secret', client_id: 'c1', client_name: 'Acme', assigned_to: 'u1', assigned_user_name: 'Alex', status: 's1', end_date: '2020-01-01', updated_at: '2020-01-02' });
+const row = (id: string) => ({ project_id: id, project_name: 'Migration', description: 'Secret', client_id: 'c1', client_name: 'Acme', assigned_to: 'u1', assigned_user_name: 'Alex', status: 's1', end_date: '2020-01-01', updated_at: '2020-01-02', created_at: CREATED_AT });
 const request = (url: string) => new NextRequest(`http://localhost${url}`, { headers: { 'x-api-key': 'key' } });
 
 function controller() {
@@ -75,6 +76,7 @@ describe('project REST authorization response projection', () => {
       expect(body.data[0]).not.toHaveProperty('client_id');
       expect(body.data[0]).not.toHaveProperty('client_name');
       expect(body.data[0]).not.toHaveProperty('assigned_user_name');
+      expect(body.data[0].created_at).toBe(CREATED_AT.toJSON());
     }
   });
 
@@ -86,6 +88,7 @@ describe('project REST authorization response projection', () => {
     expect(body.data).toHaveLength(1);
     expect(body.data[0]).not.toHaveProperty('client_name');
     expect(body.data[0]).not.toHaveProperty('assigned_user_name');
+    expect(body.data[0].created_at).toBe(CREATED_AT.toJSON());
     const csv = await instance.export()(request('/api/v1/projects/export?format=csv'));
     const text = await csv.text();
     expect(text).not.toContain('Secret');
@@ -98,10 +101,18 @@ describe('project REST authorization response projection', () => {
     state.decision = () => ({ allowed: true, redactedFields: [] });
     const unrestricted = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
     expect(unrestricted.data).toMatchObject({ active_projects: 1, overdue_projects: 1, projects_by_status: { Active: 1 }, top_clients_by_project_count: [{ client_name: 'Acme', project_count: 1 }] });
+    expect(unrestricted.data.projects_created_this_month).toBe(1);
     state.decision = () => ({ allowed: true, redactedFields: ['projects.status', 'projects.client_id'] });
     const redacted = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
     expect(redacted.data).not.toHaveProperty('active_projects');
     expect(redacted.data).not.toHaveProperty('projects_by_status');
     expect(redacted.data).not.toHaveProperty('top_clients_by_project_count');
+    state.decision = () => ({ allowed: true, redactedFields: ['values.client_name'] });
+    const hiddenClient = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
+    expect(hiddenClient.data).not.toHaveProperty('top_clients_by_project_count');
+    state.rows = [row('p1'), row('p2')];
+    state.decision = (candidate) => ({ allowed: true, redactedFields: candidate.project_id === 'p2' ? ['values.client_name'] : [] });
+    const mixed = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
+    expect(mixed.data).not.toHaveProperty('top_clients_by_project_count');
   });
 });

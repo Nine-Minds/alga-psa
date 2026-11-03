@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { projectRecord } from '@/lib/api/controllers/projectRecord';
+import { projectApiRecord } from '@/lib/api/controllers/apiRecordProjection';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 
 const project = {
@@ -20,6 +21,51 @@ describe('projectRecord REST projection', () => {
     expect(projected).not.toHaveProperty('description');
     expect(projected).not.toHaveProperty('budgeted_hours');
     expect(projected).toMatchObject({ project_id: project.project_id, project_name: project.project_name });
+  });
+
+  it('preserves Date and other scalar objects through JSON serialization', () => {
+    const timestamp = new Date('2026-01-02T03:04:05.000Z');
+    const projected = projectRecord({ ...project, created_at: timestamp, metadata: new URL('https://example.test/path') }, []);
+    expect(projected?.created_at).toBe(timestamp);
+    expect(JSON.parse(JSON.stringify(projected)).created_at).toBe('2026-01-02T03:04:05.000Z');
+    expect(JSON.parse(JSON.stringify(projected)).metadata).toBe('https://example.test/path');
+  });
+
+  it('composes canonical aliases with default aliases for every project derived field', () => {
+    const aliases: Array<[string, string, string]> = [
+      ['client_name', 'projects.client_name', 'Secret client'],
+      ['client_name', 'values.client_name', 'Secret client'],
+      ['status_name', 'projects.status_name', 'Secret status'],
+      ['status_name', 'values.status_name', 'Secret status'],
+      ['assigned_user_name', 'projects.assigned_user_name', 'Secret assignee'],
+      ['assigned_user_name', 'values.assigned_user_name', 'Secret assignee'],
+      ['contact_name', 'projects.contact_name', 'Secret contact'],
+      ['contact_name', 'values.contact_name', 'Secret contact'],
+      ['projectName', 'projects.projectName', 'Secret project'],
+      ['projectName', 'values.projectName', 'Secret project'],
+    ];
+    for (const [field, alias, value] of aliases) {
+      const result = projectRecord({ ...project, [field]: value }, [alias]);
+      expect(result).not.toHaveProperty(field);
+    }
+  });
+
+  it('hides ticket-derived values when their source identifiers are hidden', () => {
+    const ticket = {
+      ticket_id: 't1', status_id: 's1', status_name: 'Open', status_is_closed: false,
+      priority_id: 'p1', priority_name: 'Urgent', category_id: 'c1', category_name: 'Support',
+      subcategory_id: 'sc1', subcategory_name: 'Access', board_id: 'b1', board_name: 'Helpdesk',
+      assigned_to: 'u1', assigned_to_name: 'Assigned User', entered_by: 'u2', entered_by_name: 'Creator',
+    };
+    for (const [source, derived] of [
+      ['tickets.status_id', 'status_is_closed'], ['values.status_id', 'status_name'],
+      ['tickets.priority_id', 'priority_name'], ['values.category_id', 'category_name'],
+      ['tickets.subcategory_id', 'subcategory_name'], ['values.board_id', 'board_name'],
+      ['tickets.assigned_to', 'assigned_to_name'], ['values.entered_by', 'entered_by_name'],
+    ]) {
+      const result = projectApiRecord('ticket', ticket, [source]);
+      expect(result).not.toHaveProperty(derived);
+    }
   });
 
   it('hides derived names when their source identifiers are hidden', () => {

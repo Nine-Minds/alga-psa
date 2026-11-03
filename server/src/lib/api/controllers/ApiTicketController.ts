@@ -25,7 +25,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
-import { projectApiRecord } from './apiRecordProjection';
+import { areApiRecordFieldsVisible, projectApiRecord } from './apiRecordProjection';
 import { buildTicketRecordContext } from './recordContexts';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { compileTenantScopedResourceReadAuthorizationSql, resolveDefaultBuiltinRelationshipRules } from '@alga-psa/authorization/kernel';
@@ -183,6 +183,15 @@ export class ApiTicketController extends ApiBaseController {
       return [];
     }
 
+    return (await this.authorizeTicketRows(apiRequest, tickets, knex)).map(({ record }) => record);
+  }
+
+  private async authorizeTicketRows(
+    apiRequest: AuthenticatedApiRequest,
+    tickets: Record<string, any>[],
+    knex?: Awaited<ReturnType<typeof getConnection>>
+  ): Promise<Array<{ record: Record<string, any>; redactedFields: string[] }>> {
+    if (tickets.length === 0) return [];
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const decisions = await Promise.all(
       tickets.map((ticket) =>
@@ -201,16 +210,16 @@ export class ApiTicketController extends ApiBaseController {
       const decision = decisions[index];
       if (!decision.allowed) return [];
       const projected = projectApiRecord('ticket', ticket, decision.redactedFields);
-      return projected ? [projected as Record<string, any>] : [];
+      return projected ? [{ record: projected as Record<string, any>, redactedFields: decision.redactedFields }] : [];
     });
   }
 
   private async listAllAuthorizedTickets(
     apiRequest: AuthenticatedApiRequest,
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Record<string, any>[]> {
+  ): Promise<Array<{ record: Record<string, any>; redactedFields: string[] }>> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const authorizedTickets: Record<string, any>[] = [];
+    const authorizedTickets: Array<{ record: Record<string, any>; redactedFields: string[] }> = [];
     const pageSize = 100;
     let page = 1;
 
@@ -220,9 +229,7 @@ export class ApiTicketController extends ApiBaseController {
         break;
       }
 
-      authorizedTickets.push(
-        ...(await this.filterAuthorizedTickets(apiRequest, result.data as Record<string, any>[], resolvedKnex))
-      );
+      authorizedTickets.push(...(await this.authorizeTicketRows(apiRequest, result.data as Record<string, any>[], resolvedKnex)));
 
       if (page * pageSize >= result.total || result.data.length < pageSize) {
         break;
@@ -258,7 +265,9 @@ export class ApiTicketController extends ApiBaseController {
     return linkId;
   }
 
-  private buildTicketStatsFromAuthorizedRows(tickets: Record<string, any>[]) {
+  private buildTicketStatsFromAuthorizedRows(rows: Array<Record<string, any> | { record: Record<string, any>; redactedFields: string[] }>) {
+    const tickets = rows.map((row) => 'record' in row ? row.record : row);
+    const visible = (fields: string[]) => rows.every((row) => areApiRecordFieldsVisible('ticket', fields, 'record' in row ? row.redactedFields : []));
     const now = new Date();
     const startOfToday = new Date(now);
     startOfToday.setHours(0, 0, 0, 0);
@@ -269,48 +278,34 @@ export class ApiTicketController extends ApiBaseController {
     const startOfMonth = new Date(startOfToday);
     startOfMonth.setDate(startOfMonth.getDate() - 30);
 
-    const ticketsByStatus = tickets.reduce((acc: Record<string, number>, ticket) => {
-      const key = String(ticket.status_id ?? ticket.status_name ?? 'unknown');
+    const countBy = (field: string) => tickets.reduce((acc: Record<string, number>, ticket) => {
+      if (field === 'category_name' && !ticket[field]) return acc;
+      const key = String(ticket[field] ?? 'unknown');
       acc[key] = (acc[key] ?? 0) + 1;
       return acc;
     }, {});
-
-    const ticketsByPriority = tickets.reduce((acc: Record<string, number>, ticket) => {
-      const key = String(ticket.priority_name ?? 'unknown');
+    const stats: Record<string, unknown> = { total_tickets: tickets.length };
+    if (visible(['status_is_closed'])) {
+      stats.open_tickets = tickets.filter((ticket) => ticket.status_is_closed === false).length;
+      stats.closed_tickets = tickets.filter((ticket) => ticket.status_is_closed === true).length;
+    }
+    if (visible(['status_is_closed', 'due_date'])) stats.overdue_tickets = 0;
+    if (visible(['assigned_to', 'assigned_to_name'])) stats.unassigned_tickets = tickets.filter((ticket) => !ticket.assigned_to).length;
+    if (visible(['status_name'])) stats.tickets_by_status = tickets.reduce((acc: Record<string, number>, ticket) => {
+      const key = String(ticket.status_name ?? ticket.status_id ?? 'unknown');
       acc[key] = (acc[key] ?? 0) + 1;
       return acc;
     }, {});
-
-    const ticketsByCategory = tickets.reduce((acc: Record<string, number>, ticket) => {
-      if (!ticket.category_name) {
-        return acc;
-      }
-      const key = String(ticket.category_name);
-      acc[key] = (acc[key] ?? 0) + 1;
-      return acc;
-    }, {});
-
-    const ticketsByBoard = tickets.reduce((acc: Record<string, number>, ticket) => {
-      const key = String(ticket.board_name ?? 'unknown');
-      acc[key] = (acc[key] ?? 0) + 1;
-      return acc;
-    }, {});
-
-    return {
-      total_tickets: tickets.length,
-      open_tickets: tickets.filter((ticket) => ticket.status_is_closed === false).length,
-      closed_tickets: tickets.filter((ticket) => ticket.status_is_closed === true).length,
-      unassigned_tickets: tickets.filter((ticket) => !ticket.assigned_to).length,
-      overdue_tickets: 0,
-      tickets_by_status: ticketsByStatus,
-      tickets_by_priority: ticketsByPriority,
-      tickets_by_category: ticketsByCategory,
-      tickets_by_board: ticketsByBoard,
-      average_resolution_time: null,
-      tickets_created_today: tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfToday).length,
-      tickets_created_this_week: tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfWeek).length,
-      tickets_created_this_month: tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfMonth).length,
-    };
+    if (visible(['priority_name'])) stats.tickets_by_priority = countBy('priority_name');
+    if (visible(['category_name'])) stats.tickets_by_category = countBy('category_name');
+    if (visible(['board_name'])) stats.tickets_by_board = countBy('board_name');
+    if (visible(['status_is_closed', 'entered_at'])) stats.average_resolution_time = null;
+    if (visible(['entered_at'])) {
+      stats.tickets_created_today = tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfToday).length;
+      stats.tickets_created_this_week = tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfWeek).length;
+      stats.tickets_created_this_month = tickets.filter((ticket) => new Date(ticket.entered_at) >= startOfMonth).length;
+    }
+    return stats;
   }
 
   list() {
