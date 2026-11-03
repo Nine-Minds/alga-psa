@@ -10,8 +10,11 @@ import { getUserAvatarUrl } from '../lib/avatarUtils';
 import { hasPermission } from '../lib/permissions';
 import logger from '@alga-psa/core/logger';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
+import { getCurrentUser as getSanitizedCurrentUser } from './currentUserAction';
 
-export { getCurrentUser } from './currentUserAction';
+export async function getCurrentUser() {
+  return getSanitizedCurrentUser();
+}
 
 function isPermissionDeniedError(error: unknown): boolean {
   return error instanceof Error && error.message.includes('Permission denied:');

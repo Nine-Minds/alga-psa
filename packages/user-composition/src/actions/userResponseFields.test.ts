@@ -25,8 +25,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 vi.mock('../lib/permissions', () => ({ hasPermission: vi.fn(async () => true) }));
 
-import { getAllUsersBasic } from './userQueryActions';
-import { getCurrentUser } from './currentUserAction';
+import { getAllUsersBasic, getCurrentUser } from './userQueryActions';
 
 describe('browser-facing user response fields', () => {
   const fixture = {
