@@ -29,6 +29,8 @@ export interface CoManagedClosureContext {
   relationshipId: string;
   operationId: string;
   cutoffAt: Date;
+  /** Per-attachment failures from external byte reads; database and closure failures still throw. */
+  retentionFailures: Array<{ evidenceId: string; attachmentId: string; status: 'retention_failed'; reason: 'source_download_failed' | 'source_integrity_failed' }>;
 }
 export class CoManagedClosureError extends Error {
   constructor(public readonly code: 'INVALID_CLOSURE' | 'CLOSURE_CHANGED' | 'RELATIONSHIP_CLOSED') {
@@ -89,7 +91,8 @@ export async function closeCoManagedRelationship(db: Knex, inputActor: CoManaged
     if (relationship.state !== 'active' || owner.product_code !== 'co_managed' || home.product_code !== 'psa') throw new CoManagedSharedWorkError();
     if (relationship.revision !== request.expectedRevision) throw new CoManagedClosureError('CLOSURE_CHANGED');
     const cutoffAt = await dbNow(trx);
-    const context = { trx, sponsorTenant: found.sponsor_tenant, ...target, operationId: request.operationId, cutoffAt };
+    const context = { trx, sponsorTenant: found.sponsor_tenant, ...target, operationId: request.operationId, cutoffAt,
+      retentionFailures: [] as CoManagedClosureContext['retentionFailures'] };
     await finalizeEvidence({ ...context, cutoffAt: new Date(cutoffAt) });
     // The seal is part of the closure, not of the caller's finalizer: no closure without an archive manifest.
     await sealCoManagedArchive({ ...context, cutoffAt: new Date(cutoffAt) });

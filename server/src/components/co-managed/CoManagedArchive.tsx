@@ -41,6 +41,8 @@ export default function CoManagedArchive() {
     class_not_allowlisted: t('archive.reason.class', { defaultValue: 'Not part of the retained record' }),
     audience_not_allowlisted: t('archive.reason.audience', { defaultValue: 'Private to the customer' }),
     after_cutoff: t('archive.reason.afterCutoff', { defaultValue: 'After the relationship ended' }),
+    source_download_failed: t('archive.reason.downloadFailed', { defaultValue: 'Source attachment could not be downloaded' }),
+    source_integrity_failed: t('archive.reason.integrityFailed', { defaultValue: 'Source attachment failed integrity verification' }),
   }[reason] ?? reason);
 
   const columns: ColumnDefinition<CoManagedArchiveSummary>[] = [
@@ -80,6 +82,11 @@ export default function CoManagedArchive() {
         {open.files.map(file => <p key={file.archiveFileId}>
           <a className="text-[rgb(var(--color-primary-500))] underline" href={`/api/co-management/archive-files/${file.archiveFileId}`}>
             {file.fileName ?? t('archive.fileUnnamed', { defaultValue: 'Download file' })}</a></p>)}
+      </div>}
+      {(open.retentionFailures ?? []).length > 0 && <div id="co-managed-archive-retention-failures" className="space-y-1">
+        <h3 className="font-medium">{t('archive.retentionFailuresHeading', { defaultValue: 'Attachments not retained' })}</h3>
+        <ul className="list-disc pl-5 text-sm">{(open.retentionFailures ?? []).map(failure => <li key={failure.attachmentId}>
+          {t('archive.retentionFailed', { defaultValue: 'Attachment not retained: {{reason}}', reason: reasonLabel(failure.reason) })}</li>)}</ul>
       </div>}
       {open.exclusions.length > 0 && <div id="co-managed-archive-exclusions" className="space-y-1">
         <h3 className="font-medium">{t('archive.exclusionsHeading', { defaultValue: 'Not retained' })}</h3>

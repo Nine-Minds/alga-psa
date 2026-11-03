@@ -13,8 +13,8 @@ export const dynamic = 'force-dynamic';
  * same 404, so the route discloses nothing about which condition failed. Only files copied into the
  * sponsor-owned archive store before sealing can be returned.
  *
- * NOTE: the middleware owned by L0a must declare this path as a session-authenticated API route
- * (`/api/co-management/archive-files/*`); until it does, the middleware answers before this handler.
+ * Middleware has a narrowly scoped single-segment exemption for this session-authenticated route;
+ * all authorization remains here and within readCoManagedArchiveFile.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ archiveFileId: string }> }): Promise<Response> {
   const session = await getSession();

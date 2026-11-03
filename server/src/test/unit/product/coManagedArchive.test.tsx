@@ -33,13 +33,15 @@ describe('CoManagedArchive (A2)', () => {
       entries: [{ id: 'e1', kind: 'conversation', event: 'recorded', occurredAt: '2026-10-01T00:00:00.000Z', audience: 'shared_it', note: null, markdown: 'shared with IT', deleted: false,
         author: { tenant: 't', kind: 'user', id: null, name: 'Tech', organization: 'MSP' } }],
       files: [{ archiveFileId: '44444444-4444-4444-8444-444444444444', fileName: 'report.pdf', size: 5 }],
-      exclusions: [{ evidenceClass: 'conversation', reason: 'audience_not_allowlisted', count: 1 }, { evidenceClass: 'conversation', reason: 'after_cutoff', count: 1 }] } });
+      exclusions: [{ evidenceClass: 'conversation', reason: 'audience_not_allowlisted', count: 1 }, { evidenceClass: 'conversation', reason: 'after_cutoff', count: 1 }],
+      retentionFailures: [{ evidenceId: 'e1', attachmentId: '55555555-5555-4555-8555-555555555555', status: 'retention_failed', reason: 'source_download_failed' }] } });
     const { container } = render(<CoManagedArchive />);
     fireEvent.click(await screen.findByRole('button', { name: 'Open' }));
     expect(await screen.findByText('shared with IT')).toBeInTheDocument();
     expect(screen.getByText('report.pdf').getAttribute('href')).toBe('/api/co-management/archive-files/44444444-4444-4444-8444-444444444444');
     expect(screen.getByText(/Private to the customer/)).toBeInTheDocument();
     expect(screen.getByText(/After the relationship ended/)).toBeInTheDocument();
+    expect(screen.getByText(/Attachment not retained: Source attachment could not be downloaded/)).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/CUSTOMER-PRIVATE|POST-CUTOFF/);
     await waitFor(() => expect(actions.history).toHaveBeenCalledWith({ operationId: OP, page: 0 }));
   });

@@ -28,7 +28,9 @@ export interface CoManagedArchiveEntry {
 export interface CoManagedArchiveFile { archiveFileId: string; fileName: string | null; size: number }
 export interface CoManagedArchiveHistory {
   archive: CoManagedArchiveSummary; entries: CoManagedArchiveEntry[]; files: CoManagedArchiveFile[];
-  exclusions: Array<{ evidenceClass: string; reason: string; count: number }>; nextPage: number | null;
+  exclusions: Array<{ evidenceClass: string; reason: string; count: number }>;
+  retentionFailures: NonNullable<CoManagedArchiveManifest['retentionFailures']>;
+  nextPage: number | null;
 }
 
 const pageNumber = (value: number) => { if (!Number.isSafeInteger(value) || value < 0 || value > 1000000) throw new CoManagedSharedWorkError(); return value; };
@@ -121,6 +123,7 @@ export async function getCoManagedArchiveHistory(db: Knex, inputActor: CoManaged
     return { archive: summarize(row, manifest, await clientNameFor(trx, actor.tenant, row.customer_tenant, row.relationship_id)),
       entries, files,
       exclusions: (manifest.exclusions ?? []).map(([evidenceClass, reason, count]) => ({ evidenceClass, reason, count })),
+      retentionFailures: manifest.retentionFailures ?? [],
       nextPage: manifest.evidence.length > (page + 1) * ARCHIVE_EVIDENCE_PAGE ? page + 1 : null };
   });
 }

@@ -5,17 +5,22 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { closeCoManagedRelationship, CoManagedClosureError, finalizeCoManagedArchive, getCoManagedArchiveHistory, getCoManagedDepartureScreen,
+import { closeCoManagedRelationship, departCoManagedRelationship, CoManagedClosureError, finalizeCoManagedArchive, getCoManagedArchiveHistory, getCoManagedDepartureScreen,
   listCoManagedArchives, readCoManagedArchiveFile, retainCoManagedTimeParticipation, retainFile, storeCoManagedArchiveFiles } from '@alga-psa/co-managed';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { seedBoundaryFixture, type BoundaryFixture } from './coManagedArchiveBoundaryCases';
 
 const describeDb = await describeWithDb();
-const { retainedBytes } = vi.hoisted(() => ({ retainedBytes: new Uint8Array(Buffer.from('actual retained file')) }));
+const { retainedBytes, retentionFailure } = vi.hoisted(() => ({ retainedBytes: new Uint8Array(Buffer.from('actual retained file')),
+  retentionFailure: { mode: 'none' as 'none' | 'download' | 'integrity', attachmentId: null as string | null } }));
 vi.mock('@alga-psa/storage/StorageProviderFactory', () => ({
   StorageProviderFactory: { createProvider: async () => ({
-    download: async () => retainedBytes,
+    download: async (path: string) => {
+      if (path.endsWith(retentionFailure.attachmentId ?? '\u0000') && retentionFailure.mode === 'download') throw new Error('s3://private-bucket?secret=not-for-evidence');
+      if (path.endsWith(retentionFailure.attachmentId ?? '\u0000') && retentionFailure.mode === 'integrity') return new Uint8Array(Buffer.from('corrupt bytes'));
+      return retainedBytes;
+    },
     upload: async (bytes: Uint8Array, path: string) => ({ path, size: bytes.length }),
   }) },
 }));
@@ -85,7 +90,7 @@ describeDb('co-managed closure and archive on real Postgres', { shuffle: false }
       content_hash: contentHash, request_hash: 'c'.repeat(64), storage_path: `co-management/${f.customer}/${privateFileId}`, status: 'ready',
       ready_at: new Date(), draft_operation_id: null });
   }, 300_000);
-  afterAll(async () => { delete process.env.FORCE_CAPABILITIES; await db?.destroy(); });
+  afterAll(async () => { delete process.env.FORCE_CAPABILITIES; retentionFailure.mode = 'none'; retentionFailure.attachmentId = null; await db?.destroy(); });
 
   it('A1: an unauthorized party is refused and nothing is released', async () => {
     await expect(closeCoManagedRelationship(db, f.stranger, target(), request(), finalizeArchive)).rejects.toThrow();
@@ -98,6 +103,64 @@ describeDb('co-managed closure and archive on real Postgres', { shuffle: false }
       { side: 'sponsor', customerTenant: f.customer, relationshipId: f.relationshipId, sponsorTenant: f.msp });
     expect(review).toMatchObject({ departed: false, seatsToRelease: 3, revision: 1 });
   });
+
+  it('selects and closes the current open relationship while preserving older terminated history', async () => {
+    const g = await seedBoundaryFixture(db);
+    const historicalId = randomUUID(), historicalEnd = new Date(Date.now() - 86_400_000);
+    await db('co_management_relationships').insert({ tenant: g.customer, relationship_id: historicalId, sponsor_tenant: g.msp,
+      sponsor_client_id: g.sponsorClient, state: 'terminated', visibility_mode: 'board_scope', revision: 2,
+      accepted_by: g.customerAdmin.userId, accepted_at: historicalEnd, ended_at: historicalEnd, created_at: historicalEnd, updated_at: historicalEnd });
+    const review = await getCoManagedDepartureScreen(db, g.customerAdmin);
+    expect(review.relationshipId).toBe(g.relationshipId);
+    await departCoManagedRelationship(db, g.customerAdmin, { operationId: randomUUID(), expectedRevision: 1, relationshipId: g.relationshipId });
+    const [historical, current] = await Promise.all([
+      db('co_management_relationships').where({ tenant: g.customer, relationship_id: historicalId }).first(),
+      db('co_management_relationships').where({ tenant: g.customer, relationship_id: g.relationshipId }).first(),
+    ]);
+    expect(historical).toMatchObject({ state: 'terminated', ended_at: historicalEnd });
+    expect(current).toMatchObject({ state: 'terminated' });
+    expect(current.ended_at).toBeTruthy();
+  });
+
+  for (const mode of ['download', 'integrity'] as const) {
+    it(`closes and retries safely when attachment ${mode} fails`, async () => {
+      const g = await seedBoundaryFixture(db);
+      await seedTicketWithCurrentGrant(db, g);
+      await seedCurrentComment(db, g, 'shared_it', g.fileCommentId, g.fileThreadId);
+      const attachmentId = await seedCustomerAttachment(db, g, g.fileCommentId, g.fileThreadId, `${mode}.txt`);
+      const retainedAttachmentId = await seedCustomerAttachment(db, g, g.fileCommentId, g.fileThreadId, `also-retained-${mode}.txt`);
+      retentionFailure.mode = mode;
+      retentionFailure.attachmentId = attachmentId;
+      const operationId = randomUUID(), target = { customerTenant: g.customer, relationshipId: g.relationshipId };
+      const input = { operationId, expectedRevision: 1, reason: 'departure' as const };
+      try {
+        const receipt = await closeCoManagedRelationship(db, g.mspAdmin, target, input, finalizeArchive);
+        const relationship = await db('co_management_relationships').where({ tenant: g.customer, relationship_id: g.relationshipId }).first();
+        const allocation = await db('co_managed_allocations').where({ tenant: g.msp, relationship_id: g.relationshipId }).first();
+        const manifestRow = await db('co_managed_archive_manifests').where({ tenant: g.msp, operation_id: operationId }).first();
+        const manifest = typeof manifestRow.manifest === 'string' ? JSON.parse(manifestRow.manifest) : manifestRow.manifest;
+        expect(relationship).toMatchObject({ state: 'terminated' });
+        expect(relationship.ended_at).toBeTruthy();
+        expect(receipt.releasedSeats).toBe(g.seats);
+        expect(allocation).toMatchObject({ state: 'released' });
+        expect(manifest.retentionFailures).toHaveLength(2); // two retained evidence events point at this attachment
+        expect(manifest.retentionFailures.every((failure: any) => failure.attachmentId === attachmentId && failure.status === 'retention_failed' &&
+          failure.reason === (mode === 'download' ? 'source_download_failed' : 'source_integrity_failed'))).toBe(true);
+        expect(JSON.stringify(manifest.retentionFailures)).not.toContain('private-bucket');
+        expect(manifest.evidence.some(([id]: [string, string]) => id === g.evidence.sharedMessage)).toBe(true);
+        const retainedRow = await db('co_managed_archive_files').where({ tenant: g.msp, attachment_id: retainedAttachmentId }).first();
+        expect(manifest.files).toEqual([[retainedRow.archive_file_id, retainedRow.content_hash, retainedRow.file_size]]);
+        expect(await db('co_managed_archive_files').where({ tenant: g.msp, attachment_id: attachmentId })).toHaveLength(0);
+        const retry = await closeCoManagedRelationship(db, g.mspAdmin, target, input, finalizeArchive);
+        expect(retry).toEqual(receipt);
+        expect(await db('co_managed_relationship_closures').where({ tenant: g.msp, relationship_id: g.relationshipId })).toHaveLength(1);
+        expect(await db('co_managed_allocations').where({ tenant: g.msp, relationship_id: g.relationshipId, state: 'released' })).toHaveLength(1);
+      } finally {
+        retentionFailure.mode = 'none';
+        retentionFailure.attachmentId = null;
+      }
+    });
+  }
 
   it('A1: allocate then close releases the seats exactly once', async () => {
     const receipt = await closeCoManagedRelationship(db, f.mspAdmin, target(), request(), finalizeArchive);

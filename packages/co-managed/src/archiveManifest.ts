@@ -44,12 +44,17 @@ export interface CoManagedArchiveManifest {
   files: [id: string, hash: string, size: number][];
   /** Exclusions by evidence class and reason; never row content. */
   exclusions: [evidenceClass: string, reason: CoManagedArchiveExclusionReason, count: number][];
+  /** Attachment-level source failures. These are evidence of failed retention, never retained bytes. */
+  retentionFailures?: Array<{ evidenceId: string; attachmentId: string; status: 'retention_failed'; reason: 'source_download_failed' | 'source_integrity_failed' }>;
 }
 
 /** Hash a fixed ordered representation, independent of JSONB object-key order. */
 export function coManagedArchiveManifestHash(identity: { tenant: string; customer_tenant: string; relationship_id: string; operation_id: string; cutoff_at: Date | string }, manifest: CoManagedArchiveManifest): string {
-  return createHash('sha256').update(JSON.stringify([manifest.version, identity.tenant, identity.customer_tenant,
-    identity.relationship_id, identity.operation_id, new Date(identity.cutoff_at).toISOString(), manifest.evidence, manifest.files, manifest.exclusions])).digest('hex');
+  const canonical: unknown[] = [manifest.version, identity.tenant, identity.customer_tenant, identity.relationship_id,
+    identity.operation_id, new Date(identity.cutoff_at).toISOString(), manifest.evidence, manifest.files, manifest.exclusions];
+  // Omit this field for legacy manifests so their existing seal remains verifiable.
+  if (manifest.retentionFailures !== undefined) canonical.push(manifest.retentionFailures);
+  return createHash('sha256').update(JSON.stringify(canonical)).digest('hex');
 }
 
 export interface CoManagedArchiveCandidate { evidence_id: string; payload_hash: string; source_type: string; occurred_at: Date | string; payload: any }
@@ -121,7 +126,8 @@ export async function sealCoManagedArchive(context: CoManagedClosureContext): Pr
     const [evidenceClass, reason] = composite.split('\u0000');
     return [evidenceClass, reason as CoManagedArchiveExclusionReason, count] as CoManagedArchiveManifest['exclusions'][number];
   });
-  const manifest: CoManagedArchiveManifest = { version: 1, evidence, files, exclusions };
+  const retentionFailures = [...context.retentionFailures].sort((a, b) => a.attachmentId < b.attachmentId ? -1 : a.attachmentId > b.attachmentId ? 1 : 0);
+  const manifest: CoManagedArchiveManifest = { version: 1, evidence, files, exclusions, retentionFailures };
   // write-admission: exempt — sealed as part of the closure that ends the relationship; append-only.
   await owner.table('co_managed_archive_manifests').insert({ ...identity, sealed_at: trx.raw('clock_timestamp()'), manifest,
     content_hash: coManagedArchiveManifestHash(identity, manifest) });

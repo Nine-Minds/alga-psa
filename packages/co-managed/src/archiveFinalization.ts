@@ -5,7 +5,7 @@ import { CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity'
 import { retainCoManagedHistoricalWorkEvidence } from './historicalWorkEvidence';
 import { retainCoManagedSharedConversationBeforeReduction } from './conversationParticipationEvidence';
 import { classifyArchiveCandidate, registerCoManagedArchiveFileSource } from './archiveManifest';
-import { retainFile, retainedCoManagedArchiveFileSource } from './archiveFiles';
+import { CoManagedArchiveRetentionError, retainFile, retainedCoManagedArchiveFileSource } from './archiveFiles';
 import { coManagedAttachmentParent } from './attachmentParent';
 import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
 import { hasEffectiveSharedGrant } from './effectiveSharedGrant';
@@ -81,7 +81,7 @@ export async function finalizeCoManagedArchive(context: CoManagedClosureContext)
   if (!customerFileSourcesHidden) {
     const evidence = await sponsor.table('co_managed_participation_evidence').where({ customer_tenant: customerTenant,
       relationship_id: relationshipId, source_type: 'conversation' }).orderBy('evidence_id')
-      .select('resource_type', 'resource_id', 'occurred_at', 'payload');
+      .select('evidence_id', 'resource_type', 'resource_id', 'occurred_at', 'payload');
     for (const row of evidence) {
     // The current attachment surface supports ticket threads. Participation history
     // identifies where to look; it is not authorization for a newly uploaded file.
@@ -119,8 +119,16 @@ export async function finalizeCoManagedArchive(context: CoManagedClosureContext)
         .whereNull('discarded_at').whereNull('purged_at')
         .where(query => query.whereNull('draft_operation_id').orWhereExists(publishedDraft)).forShare();
       const files = await source.select('attachment_id', 'content_hash');
-      for (const file of files) await retainFile(trx, { tenant: sponsorTenant, sourceTenant: customerTenant, fileId: file.attachment_id,
-        hash: file.content_hash, relationshipId, clientId: relationship.sponsor_client_id, audience: currentComment.audience });
+      for (const file of files) {
+        try {
+          await retainFile(trx, { tenant: sponsorTenant, sourceTenant: customerTenant, fileId: file.attachment_id,
+            hash: file.content_hash, relationshipId, clientId: relationship.sponsor_client_id, audience: currentComment.audience });
+        } catch (error) {
+          if (!(error instanceof CoManagedArchiveRetentionError)) throw error;
+          context.retentionFailures.push({ evidenceId: String(row.evidence_id), attachmentId: String(file.attachment_id),
+            status: 'retention_failed', reason: error.reason });
+        }
+      }
     }
   }
 

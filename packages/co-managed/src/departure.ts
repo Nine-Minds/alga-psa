@@ -27,7 +27,10 @@ async function resolveDepartureTarget(db: Knex, actor: CoManagedSessionActor, pr
   const own = tenantDb(db, actor.tenant);
   const owner = await own.table('tenants').first('product_code');
   if (owner?.product_code === 'co_managed' && provisioningOperationId === undefined) {
-    const relationship = await own.table('co_management_relationships').whereIn('state', ['active', 'terminated'])
+    // The current relationship is the open one. Terminated rows are durable history,
+    // and a co-managed customer can have several of them after re-enrollment.
+    const relationship = await own.table('co_management_relationships').where('state', 'active').whereNull('ended_at')
+      .orderBy('created_at', 'desc').orderBy('relationship_id', 'desc')
       .first('relationship_id', 'sponsor_tenant');
     if (relationship) return { side: 'customer' as const, customerTenant: actor.tenant,
       relationshipId: relationship.relationship_id as string, sponsorTenant: relationship.sponsor_tenant as string };

@@ -22,6 +22,13 @@ import type { CoManagedArchiveFileSource } from './archiveManifest';
 const TABLE = 'co_managed_archive_files';
 const checksum = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 
+export class CoManagedArchiveRetentionError extends Error {
+  constructor(public readonly reason: 'source_download_failed' | 'source_integrity_failed') {
+    super(reason === 'source_download_failed' ? 'Source attachment download failed' : 'Source attachment integrity verification failed');
+    this.name = 'CoManagedArchiveRetentionError';
+  }
+}
+
 export function coManagedArchiveFilePath(tenant: string, archiveFileId: string): string {
   if (![tenant, archiveFileId].every(isCoManagedUuid)) throw new CoManagedSharedWorkError();
   return `co-management-archive/${tenant}/${archiveFileId}`;
@@ -56,8 +63,19 @@ export async function retainFile(trx: Knex.Transaction, input: RetainFileInput, 
     .where({ attachment_id: input.fileId, relationship_id: input.relationshipId, status: 'ready' }).whereNull('discarded_at').whereNull('purged_at').forShare().first();
   if (!file || file.content_hash !== input.hash) throw new CoManagedSharedWorkError();
   const path = assertCoManagedAttachmentPath(file);
-  const bytes = Buffer.from(await (read ?? (async p => (await coManagedArchiveStorageProvider()).download(p)))(path));
-  if (bytes.length !== file.file_size || checksum(bytes) !== file.content_hash) throw new Error('Archive source attachment failed integrity verification');
+  let sourceBytes: Uint8Array;
+  try {
+    sourceBytes = await (read ?? (async p => (await coManagedArchiveStorageProvider()).download(p)))(path);
+  } catch {
+    // Storage/provider errors can include credentials, bucket names or signed paths. Persist a
+    // stable reason code instead of leaking the provider's message into archive evidence.
+    throw new CoManagedArchiveRetentionError('source_download_failed');
+  }
+  if (!(sourceBytes instanceof Uint8Array)) throw new CoManagedArchiveRetentionError('source_integrity_failed');
+  const bytes = Buffer.from(sourceBytes);
+  if (bytes.length !== file.file_size || checksum(bytes) !== file.content_hash) {
+    throw new CoManagedArchiveRetentionError('source_integrity_failed');
+  }
   const archiveFileId = randomUUID();
   // write-admission: exempt — co-managed archive file ledger, written by the retainFile primitive
   await sponsor.table(TABLE).insert({ tenant: input.tenant, archive_file_id: archiveFileId, ...key, client_id: input.clientId,
