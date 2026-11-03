@@ -62,7 +62,8 @@ import {
   buildProjectTaskUpdatedPayload,
   buildProjectTaskAdditionalAgentAssignedPayload,
 } from '@alga-psa/workflow-streams';
-import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
+import { createProjectReadAuthorizer, createProjectReadDecider, type ProjectReadDecision } from '../lib/projectReadAuthorization';
+import { coManagedColumnHidden, coManagedProjectFamilyMask } from '@alga-psa/co-managed/projectFieldMask';
 import {
   actionError,
   actionErrorFromValidationIssue,
@@ -183,6 +184,39 @@ function tenantScopedTable(
     tenant: string,
 ): Knex.QueryBuilder {
     return tenantDb(conn, tenant).table(table);
+}
+
+function projectTaskTitleMask(decision: ProjectReadDecision): string | null {
+    const mask = coManagedProjectFamilyMask(decision.redactedFields, 'project_task');
+    return mask.title || coManagedColumnHidden(decision.redactedFields, 'project_tasks', 'task_name')
+        ? mask.neutralTitle
+        : null;
+}
+
+function maskTaskAndDependencyNames<T extends { task_name?: string | null }>(task: T, maskedTitle: string | null): T {
+    return maskedTitle === null ? task : { ...task, task_name: maskedTitle };
+}
+
+function maskTaskDependencyCollections(
+    dependencies: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>,
+    maskedTitle: string | null,
+) {
+    if (maskedTitle === null) return dependencies;
+    for (const pair of Object.values(dependencies)) {
+        for (const dependency of [...pair.predecessors, ...pair.successors]) {
+            const extended = dependency as IProjectTaskDependency & {
+                predecessor_task_name?: string | null;
+                successor_task_name?: string | null;
+                predecessor_task?: IProjectTask | null;
+                successor_task?: IProjectTask | null;
+            };
+            if (Object.hasOwn(extended, 'predecessor_task_name')) extended.predecessor_task_name = maskedTitle;
+            if (Object.hasOwn(extended, 'successor_task_name')) extended.successor_task_name = maskedTitle;
+            if (extended.predecessor_task) extended.predecessor_task = maskTaskAndDependencyNames(extended.predecessor_task, maskedTitle);
+            if (extended.successor_task) extended.successor_task = maskTaskAndDependencyNames(extended.successor_task, maskedTitle);
+        }
+    }
+    return dependencies;
 }
 
 // Local (not exported) because every export of a 'use server' module must be an
@@ -501,21 +535,32 @@ async function assertTicketReadAllowedById(
     }
 }
 
+async function decideProjectReadById(
+    trx: Knex.Transaction,
+    tenant: string,
+    user: IUserWithRoles,
+    projectId: string
+): Promise<ProjectReadDecision> {
+    const project = await ProjectModel.getById(trx, tenant, projectId);
+    if (!project) {
+        throw new Error('Project not found');
+    }
+
+    const decideProjectRead = await createProjectReadDecider(trx, tenant, user);
+    const decision = await decideProjectRead(project);
+    if (!decision.allowed) {
+        throw new Error('Permission denied: Cannot read project');
+    }
+    return decision;
+}
+
 async function assertProjectReadAllowedById(
     trx: Knex.Transaction,
     tenant: string,
     user: IUserWithRoles,
     projectId: string
 ): Promise<void> {
-    const project = await ProjectModel.getById(trx, tenant, projectId);
-    if (!project) {
-        throw new Error('Project not found');
-    }
-
-    const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user);
-    if (!await authorizeProjectRead(project)) {
-        throw new Error('Permission denied: Cannot read project');
-    }
+    await decideProjectReadById(trx, tenant, user, projectId);
 }
 
 async function resolveProjectIdForPhase(
@@ -1307,7 +1352,7 @@ export const getTasksForPhase = withAuth(async (
             if (!projectId) {
                 throw new Error('Project phase not found');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            const readDecision = await decideProjectReadById(trx, tenant, user as IUserWithRoles, projectId);
 
             // Get phase to get its WBS code
             const phase = await tenantScopedTable(trx, 'project_phases', tenant)
@@ -1440,7 +1485,13 @@ export const getTasksForPhase = withAuth(async (
                 }
             }
 
-            return { tasks, ticketLinks, taskResources, taskDependencies, checklistItems, taskTags };
+            const maskedTitle = projectTaskTitleMask(readDecision);
+            return {
+                tasks: (tasks as IProjectTask[]).map((task) => maskTaskAndDependencyNames(task, maskedTitle)),
+                ticketLinks, taskResources,
+                taskDependencies: maskTaskDependencyCollections(taskDependencies, maskedTitle),
+                checklistItems, taskTags,
+            };
         });
     } catch (error) {
         const expected = projectTaskActionErrorFrom(error);
@@ -2441,7 +2492,7 @@ export const getTaskWithDetails = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            const readDecision = await decideProjectReadById(trx, tenant, user as IUserWithRoles, projectId);
 
             // Example of proper tenant handling in JOINs:
             // Each JOIN includes an andOn clause to match tenants across tables,
@@ -2489,7 +2540,7 @@ export const getTaskWithDetails = withAuth(async (
             const authorizedTicketLinks = ticketLinks.map((link) => applyTicketLinkRestriction(link, allowedTicketIds));
 
             return {
-                ...task,
+                ...maskTaskAndDependencyNames(task, projectTaskTitleMask(readDecision)),
                 checklist_items: checklistItems,
                 ticket_links: authorizedTicketLinks,
                 resources: resources
@@ -2948,13 +2999,13 @@ export const getTaskById = withAuth(async (
             if (!projectId) {
                 throw new Error('Project not found for task');
             }
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            const readDecision = await decideProjectReadById(trx, tenant, user as IUserWithRoles, projectId);
 
             const task = await tenantScopedTable(trx, 'project_tasks', tenant)
                 .where('project_tasks.task_id', taskId)
                 .first();
 
-            return task || null;
+            return task ? maskTaskAndDependencyNames(task, projectTaskTitleMask(readDecision)) : null;
         });
     } catch (error) {
         const expected = projectTaskActionErrorFrom(error);
@@ -2985,7 +3036,7 @@ export const getAllProjectTasksForListView = withAuth(async (
 
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'read', trx);
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            const readDecision = await decideProjectReadById(trx, tenant, user as IUserWithRoles, projectId);
 
         // 1. Get all phases for this project
         const phases = await tenantScopedTable(trx, 'project_phases', tenant)
@@ -3108,7 +3159,13 @@ export const getAllProjectTasksForListView = withAuth(async (
             });
         }
 
-            return { phases, tasks, statuses, ticketLinks, taskResources, checklistItems, taskTags, taskDependencies };
+            const maskedTitle = projectTaskTitleMask(readDecision);
+            return {
+                phases,
+                tasks: (tasks as IProjectTask[]).map((task) => maskTaskAndDependencyNames(task, maskedTitle)),
+                statuses, ticketLinks, taskResources, checklistItems, taskTags,
+                taskDependencies: maskTaskDependencyCollections(taskDependencies, maskedTitle),
+            };
         });
     });
 });
@@ -3242,7 +3299,7 @@ export const getProjectTaskData = withAuth(async (
 
         return await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'read', trx);
-            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+            const projectReadDecision = await decideProjectReadById(trx, tenant, user as IUserWithRoles, projectId);
 
         // 1. Get all tasks across all phases for this project
         const phases = await tenantScopedTable(trx, 'project_phases', tenant)
@@ -3250,10 +3307,13 @@ export const getProjectTaskData = withAuth(async (
             .select('phase_id');
         const phaseIds = phases.map((p: { phase_id: string }) => p.phase_id);
 
+        const maskedDependencyName = projectTaskTitleMask(projectReadDecision);
+        const taskNameHidden = maskedDependencyName !== null;
+        const taskQuery = tenantScopedTable(trx, 'project_tasks', tenant).whereIn('phase_id', phaseIds);
         const tasks: IProjectTask[] = phaseIds.length > 0
-            ? await tenantScopedTable(trx, 'project_tasks', tenant)
-                .whereIn('phase_id', phaseIds)
-                .orderBy(['phase_id', 'order_key'])
+            ? await taskQuery.select('project_tasks.*', ...(taskNameHidden
+                ? [trx.raw('?::text as task_name', [maskedDependencyName])]
+                : [])).orderBy(['phase_id', 'order_key'])
             : [];
 
         const taskIds = tasks.map(t => t.task_id);
@@ -3274,12 +3334,12 @@ export const getProjectTaskData = withAuth(async (
             taskIds.length > 0
                 ? projectTaskDependencyTaskQuery(trx, tenant, 'predecessor_task_id')
                     .whereIn('ptd.successor_task_id', taskIds)
-                    .select('ptd.*', 'pt.task_name as predecessor_task_name', 'pt.wbs_code as predecessor_wbs_code')
+                    .select('ptd.*', taskNameHidden ? trx.raw('?::text as predecessor_task_name', [maskedDependencyName]) : 'pt.task_name as predecessor_task_name', 'pt.wbs_code as predecessor_wbs_code')
                 : [],
             taskIds.length > 0
                 ? projectTaskDependencyTaskQuery(trx, tenant, 'successor_task_id')
                     .whereIn('ptd.predecessor_task_id', taskIds)
-                    .select('ptd.*', 'pt.task_name as successor_task_name', 'pt.wbs_code as successor_wbs_code')
+                    .select('ptd.*', taskNameHidden ? trx.raw('?::text as successor_task_name', [maskedDependencyName]) : 'pt.task_name as successor_task_name', 'pt.wbs_code as successor_wbs_code')
                 : []
         ]);
         const safeTagsArray = isTagActionError(tagsArray) ? [] : tagsArray;
@@ -3316,7 +3376,7 @@ export const getProjectTaskData = withAuth(async (
                 ...dep,
                 predecessor_task: {
                     task_id: dep.predecessor_task_id,
-                    task_name: dep.predecessor_task_name,
+                    task_name: maskedDependencyName ?? dep.predecessor_task_name,
                     wbs_code: dep.predecessor_wbs_code
                 }
             });
@@ -3330,7 +3390,7 @@ export const getProjectTaskData = withAuth(async (
                 ...dep,
                 successor_task: {
                     task_id: dep.successor_task_id,
-                    task_name: dep.successor_task_name,
+                    task_name: maskedDependencyName ?? dep.successor_task_name,
                     wbs_code: dep.successor_wbs_code
                 }
             });
