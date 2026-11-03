@@ -453,6 +453,7 @@ describe('getOrImportCustomer ownership proof', () => {
     await db('stripe_customer_bindings').insert({ stripe_customer_external_id: mismatched.id, tenant: mismatchTenant });
     await db('stripe_customers').insert({ tenant: mismatchTenant, stripe_customer_external_id: mismatched.id, email: 'mismatch@simulator.test' });
     await expect(service.getOrImportCustomer(mismatchTenant)).rejects.toMatchObject({ code: 'not_owned' });
+    expect(service.importSubscription).not.toHaveBeenCalled();
 
     const deleted = await stripe.customers.create({ email: 'deleted@simulator.test', metadata: { tenant_id: deletedTenant } });
     await db('tenants').insert({ tenant: deletedTenant, email: 'deleted@simulator.test', plan: 'pro', product_code: 'psa' });
@@ -470,6 +471,7 @@ describe('getOrImportCustomer ownership proof', () => {
     await stripe.customers.del(deleted.id);
     await expect((service as any).createLicenseCheckoutSession(deletedTenant, 1)).rejects.toMatchObject({ code: 'not_owned' });
     expect(createCheckoutSession).toHaveBeenCalledTimes(1);
+    expect(service.importSubscription).not.toHaveBeenCalled();
 
     const incompatible = await stripe.customers.create({ email: 'binding@simulator.test', metadata: { tenant_id: TENANT_A } });
     await db('stripe_customer_bindings').insert({ stripe_customer_external_id: incompatible.id, tenant: incompatibleTenant });

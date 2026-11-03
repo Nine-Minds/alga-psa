@@ -34,3 +34,15 @@
 - EE production build: `NODE_OPTIONS=--max-old-space-size=14336 npm run build --workspace sebastian-ee` — passed. Next.js emitted existing webpack/dynamic-route warnings; the build completed page generation and trace collection with exit code 0. This ran `next build` only; no application server was started.
 - Hosted UI validation remains unverified because the explicit instruction prohibited starting the application server. Simulator-backed service tests are not UI evidence. Hosted license configuration was not validated in a running application.
 - No application server was started.
+
+## Mitigation round verification (2026-11-03)
+
+- Rechecked `alga_stripe_tenant_test` directly: PostgreSQL at `127.0.0.1:55472`, 1,292 applied migrations, latest `20261103090000_validate_stripe_customer_binding_owner_fk.cjs`; `stripe_customers_binding_owner_fk` is present and validated.
+- Re-ran the isolated manifest check against that database: 583 ordered tables, 1,081 foreign keys, no drift.
+- Re-ran the PostgreSQL ownership integration suite against `alga_stripe_owner_test`, with the live local Stripe emulator at `http://127.0.0.1:4050` supplied through `STRIPE_API_BASE_URL`: 27 passed. This includes matching remote ownership, mismatched remote metadata, deleted-customer checkout rejection, and independent-connection migration contention. Mismatched and deleted cases assert subscription import is not invoked.
+- Re-ran the Citus ownership suite against `alga_stripe_citus_test`: 26 passed, 1 simulator-only case skipped. Citus accepted the reference-table/FK mechanism; rollout concurrency coverage ran against Citus.
+- Re-ran the real tenant-deletion activity integration against `alga_stripe_tenant_test`: 1 passed, 1 unrelated query-budget case skipped. The activity removed target mappings before bindings and preserved the other tenant's records.
+- The private-schema integration setup targets only the configured isolated database and rejects `public` Stripe table fallback. No shared licensing state was changed.
+- UI validation remains outstanding because this work order prohibits starting the application server. Service-level and simulator-backed checks are not UI proof. No hosted-mode UI fixture was prepared or run; shared licensing state was not changed.
+- Relevant unit suite: `npx vitest run src/__tests__/unit/stripeCustomerOwnership.test.ts --reporter=dot` — 4 passed. Stripe emulator suite: `npm test --workspace @alga-psa/emulator-stripe` — 30 passed.
+- EE typecheck: `NODE_OPTIONS=--max-old-space-size=14336 npm run typecheck --workspace sebastian-ee` — passed. EE production build: `NODE_OPTIONS=--max-old-space-size=14336 npm run build --workspace sebastian-ee` — passed with existing webpack dependency, route export, and dynamic rendering warnings. This command ran `next build` only; no application server was started.
