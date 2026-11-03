@@ -2,9 +2,11 @@
 
 Use this runbook to connect a board-managed Alga PSA worktree and its built Temporal worker to a reachable local Temporal server. Keep the app and worker in board services. Do not launch a separate app server.
 
+The worker registers `invoice_email` by forwarding it over the event bus to the app's `MaintenanceJobSubscriber`. The app executes `InvoiceEmailHandler`, generates the PDF, and sends the email. Both processes must use the same database and Redis configuration. Worker health and Temporal workflow completion alone do not prove that the app executed the handler or delivered the message.
+
 ## Prerequisites
 
-- The card is on a workflow step whose prompt uses the `dev-server` service. The board automatically suspends services that the current step does not use. In the Alga Task Office workflow, `Smoke Test` uses the app; `Draft Implementation` does not.
+- The current workflow step declares the `dev-server` service in its `services` list. The board automatically suspends that service when the current step does not use it. In the Alga Task Office workflow, `Smoke Test` declares the app service; `Draft Implementation` does not.
 - The worktree's supporting database and GreenMail services are running, and the app's configured email provider routes outbound messages to that GreenMail instance.
 - `server/.env.local` and `secrets/alga_auth_key` exist in the worktree. Do not copy their contents into service commands, logs, or this document.
 - The chosen app, Temporal, and worker health ports are free on the board service host.
@@ -36,7 +38,7 @@ Use `alga-dev workflow-ensure-service --projectId=<card-id> --name=temporal-serv
 
 ## Start the built worker as a board service
 
-Use a free dedicated `HEALTH_CHECK_PORT`. Port 8080 collided with the app, and 18080 was already occupied on the host used for this verification; 28081 was available and returned healthy. From `ee/temporal-workflows`, the working command was:
+Use a free dedicated `HEALTH_CHECK_PORT`. Port 8080 belongs to the stack's GreenMail API, and 18080 belongs to another GreenMail instance on this host. Both caused worker health-server bind failures; 28081 was available and returned healthy. From `ee/temporal-workflows`, the working command was:
 
 ```sh
 set -a
@@ -75,6 +77,8 @@ NX_LOAD_DOT_ENV_FILES=false NODE_ENV=development NEXT_DIST_DIR=.next-dev npx tsx
 ```
 
 Run that command only as the board-managed `dev-server` service, with its configured readiness probe and after required workspace dependencies are built. Do not restart the service to work around an automatic suspension. Enter the workflow step whose prompt uses the app, then ensure the service through the board.
+
+If all previous `dev-server` records are concluded, supply `--command` and `--cwd` when ensuring the service. A concluded record does not provide a live service to resume. Use the command above rather than restoring an older launch that omits the reachable Temporal endpoint. Confirm the app logs `[MaintenanceJobSubscriber] Registered` before testing delivery.
 
 ## Verify delivery and authorization
 
