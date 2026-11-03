@@ -13,6 +13,7 @@ import { filterPermissionsByServedCapabilities } from '../lib/permissionCapabili
 import { hasPermission } from '../lib/rbac';
 import { isBuiltInRoleName } from '../lib/policy/builtInRoles';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import { assertMspRoleGrantsWithinActorPermissions } from '@alga-psa/users/lib/roleGrantAuthorization';
 
 const policyEngine = new PolicyEngine();
 
@@ -462,6 +463,8 @@ export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId:
         if (roleViolation === 'msp_role_on_portal_user') {
             return actionError('Cannot assign an MSP role to a client portal user.', 'msp/settings:errors.roles.mspRoleOnPortalUser');
         }
+
+        await assertMspRoleGrantsWithinActorPermissions(currentUser.user_id, tenant, trx, [roleId]);
 
         const [userRole] = await tenantScopedTable(trx, 'user_roles', tenant)
             .insert({ user_id: userId, role_id: roleId, tenant })

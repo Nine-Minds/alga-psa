@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const hasPermissionMock = vi.fn();
 const createTenantKnexMock = vi.fn(async () => ({ knex: {} as any }));
 const withTransactionMock = vi.fn();
+const grantGateMock = vi.fn();
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
@@ -29,6 +30,9 @@ vi.mock('../lib/withAuth', () => ({
 
 vi.mock('../lib/rbac', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
+}));
+vi.mock('@alga-psa/users/lib/roleGrantAuthorization', () => ({
+  assertMspRoleGrantsWithinActorPermissions: (...args: any[]) => grantGateMock(...args),
 }));
 
 function setPerms({ userUpdate = false, clientUpdate = false }: { userUpdate?: boolean; clientUpdate?: boolean }) {
@@ -71,6 +75,7 @@ function buildRemoveTrx(role: any, delSpy: (...args: any[]) => any) {
 describe('policyActions authorization', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    grantGateMock.mockResolvedValue(undefined);
   });
 
   describe('assignRoleToUser', () => {
@@ -101,6 +106,19 @@ describe('policyActions authorization', () => {
 
       await expect(assignRoleToUser('target-1', 'role-admin')).resolves.toMatchObject({ role_id: 'role-admin' });
       expect(insertSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not persist an MSP role when its grants exceed actor authority', async () => {
+      setPerms({ userUpdate: true });
+      grantGateMock.mockRejectedValue(new Error('Permission denied: Cannot assign an MSP role with permissions you do not hold'));
+      const insertSpy = vi.fn();
+      withTransactionMock.mockImplementation(async (_db: any, cb: (trx: any) => Promise<unknown>) =>
+        cb(buildAssignTrx(INTERNAL_USER, MSP_ADMIN_ROLE, insertSpy))
+      );
+
+      const { assignRoleToUser } = await import('./policyActions');
+      await expect(assignRoleToUser('target-1', 'role-admin')).resolves.toMatchObject({ permissionError: expect.stringContaining('permissions you do not hold') });
+      expect(insertSpy).not.toHaveBeenCalled();
     });
 
     it('allows client:update to assign a pure client-portal role', async () => {
