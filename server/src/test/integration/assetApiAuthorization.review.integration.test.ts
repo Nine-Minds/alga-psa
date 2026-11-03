@@ -241,6 +241,23 @@ describe('asset API-key authorization through public routes and migrated Postgre
     expect(await table('asset_associations').where({ asset_id: assetId, entity_id: ticketId, entity_type: 'ticket' })).toHaveLength(1);
   }, 180_000);
 
+  it('requires ticket:read for assignment and status routes, as specified by the asset API permission map', async () => {
+    const { a } = await clients();
+    const assetId = await createAsset(a, 'Ticket-read gated asset routes');
+    const caller = await createCaller(['read']);
+    const [{ GET: assignmentsGet }, { GET: statusesGet }] = await Promise.all([
+      import('../../app/api/v1/assets/[id]/assignments/route'),
+      import('../../app/api/v1/asset-statuses/route'),
+    ]);
+
+    expect((await invoke(assignmentsGet, request(caller, `/api/v1/assets/${assetId}/assignments`), { id: assetId })).status).toBe(403);
+    expect((await invoke(statusesGet, request(caller, '/api/v1/asset-statuses'))).status).toBe(403);
+
+    await grantPermission(caller, 'ticket', 'read');
+    expect((await invoke(assignmentsGet, request(caller, `/api/v1/assets/${assetId}/assignments`), { id: assetId })).status).toBe(200);
+    expect((await invoke(statusesGet, request(caller, '/api/v1/asset-statuses'))).status).toBe(200);
+  }, 180_000);
+
   it('requires coarse permissions across every public ApiAssetController action, including document and maintenance mutations', async () => {
     const caller = await createCaller([]);
     const id = randomUUID();
@@ -529,6 +546,30 @@ describe('asset API-key authorization through public routes and migrated Postgre
       expect(foreignDelete.status).toBe(404);
       expect(await tenantDb(connection.db!, foreignTenant).table('asset_document_associations').where({ tenant: foreignTenant, association_id: foreignAssociation })).toHaveLength(1);
     } finally { globalThis.__algaAuthorizationKernelSingleton = previousKernel; }
+  }, 180_000);
+
+  it('returns 404 for a tenant-scoped document association with a missing asset before coarse permission checks', async () => {
+    const caller = await createCaller([]);
+    const typeId = randomUUID();
+    const documentId = randomUUID();
+    const associationId = randomUUID();
+    const missingAssetId = randomUUID();
+    await table('document_types').insert({ tenant, type_id: typeId, type_name: `Orphan asset doc ${typeId}`, icon: 'file' });
+    await table('documents').insert({
+      tenant, document_id: documentId, document_name: 'Orphan asset association', type_id: typeId,
+      user_id: caller.userId, created_by: caller.userId, entered_at: db.fn.now(), updated_at: db.fn.now(),
+    });
+    await table('document_associations').insert({
+      tenant, association_id: associationId, entity_type: 'asset', entity_id: missingAssetId, document_id: documentId,
+    });
+
+    const response = await invoke(
+      documentAssociationDelete,
+      request(caller, `/api/v1/assets/documents/${associationId}`, 'DELETE'),
+      { associationId },
+    );
+    expect(response.status).toBe(404);
+    expect(await table('document_associations').where({ tenant, association_id: associationId })).toHaveLength(1);
   }, 180_000);
 
   it('rejects target-client moves and mixed-scope bulk updates without partial writes', async () => {

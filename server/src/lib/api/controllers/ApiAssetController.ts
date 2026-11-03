@@ -79,7 +79,7 @@ export class ApiAssetController {
     action: 'read' | 'update' | 'delete',
     proposedChanges?: AuthorizationRecord,
   ): Promise<NextResponse | null> {
-    const record = await this.assetService.getAuthorizationRecord(assetId, context);
+    const record = await this.resolveAuthorizationRecord(context, assetId);
     if (!record) return createErrorResponse('Asset not found', 404, 'NOT_FOUND');
     // A transition must be allowed at both ends. Retain relationships when
     // projecting changes so ownership/team rules still apply to the destination.
@@ -89,6 +89,13 @@ export class ApiAssetController {
       if (denied) return denied;
     }
     return null;
+  }
+
+  private async resolveAuthorizationRecord(
+    context: ApiContext,
+    assetId: string,
+  ): Promise<AuthorizationRecord | null> {
+    return this.assetService.getAuthorizationRecord(assetId, context);
   }
 
   private async authorizeRecordContext(
@@ -249,7 +256,7 @@ export class ApiAssetController {
    * cannot tell the difference between "no history" and "not yours".
    */
   async listAssignments(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const { context, denied: authDenied } = await this.authorize(req, ASSET_READ);
+    const { context, denied: authDenied } = await this.authorize(req, ASSET_TICKET_READ);
     if (authDenied) return authDenied;
     const recordDenied = await this.authorizeRecord(context, params.id, 'read');
     if (recordDenied) return recordDenied;
@@ -265,7 +272,7 @@ export class ApiAssetController {
 
   /** FR-B4: GET /api/v1/asset-statuses — the tenant's status registry. */
   async listStatuses(req: NextRequest): Promise<NextResponse> {
-    const { context, denied: authDenied } = await this.authorize(req, ASSET_READ);
+    const { context, denied: authDenied } = await this.authorize(req, ASSET_TICKET_READ);
     if (authDenied) return authDenied;
 
     const includeArchived = new URL(req.url).searchParams.get('include_archived') === 'true';
@@ -357,14 +364,20 @@ export class ApiAssetController {
     const { context, denied: authDenied, resolved: assetIds } = await this.authorize(
       req,
       ASSET_UPDATE_RELATED_READ,
-      (authorizationContext) => this.assetService.getRelationshipAssetIds(params.relationshipId, authorizationContext),
+      async (authorizationContext) => {
+        const ids = await this.assetService.getRelationshipAssetIds(params.relationshipId, authorizationContext);
+        if (!ids) return null;
+        const records = await Promise.all(ids.map((id) => this.resolveAuthorizationRecord(authorizationContext, id)));
+        if (records.some((record) => record === null)) return null;
+        return { records: records as AuthorizationRecord[] };
+      },
     );
     if (!assetIds) return createErrorResponse('Asset relationship not found', 404, 'NOT_FOUND');
     if (authDenied) return authDenied;
 
-    const targetDenied = await this.authorizeRecord(context, assetIds[0], 'update');
+    const targetDenied = await this.authorizeRecordContext(context, 'update', assetIds.records[0]);
     if (targetDenied) return targetDenied;
-    const relatedDenied = await this.authorizeRecord(context, assetIds[1], 'read');
+    const relatedDenied = await this.authorizeRecordContext(context, 'read', assetIds.records[1]);
     if (relatedDenied) return relatedDenied;
     await this.assetService.deleteRelationship(params.relationshipId, context);
 
@@ -413,12 +426,17 @@ export class ApiAssetController {
     const { context, denied: authDenied, resolved: assetId } = await this.authorize(
       req,
       ASSET_UPDATE,
-      (authorizationContext) => this.assetService.getDocumentAssociationAssetId(params.associationId, authorizationContext),
+      async (authorizationContext) => {
+        const id = await this.assetService.getDocumentAssociationAssetId(params.associationId, authorizationContext);
+        if (!id) return null;
+        const record = await this.resolveAuthorizationRecord(authorizationContext, id);
+        return record ? { id, record } : null;
+      },
     );
     if (!assetId) return createErrorResponse('Asset document association not found', 404, 'NOT_FOUND');
     if (authDenied) return authDenied;
 
-    const denied = await this.authorizeRecord(context, assetId, 'update');
+    const denied = await this.authorizeRecordContext(context, 'update', assetId.record);
     if (denied) return denied;
     await this.assetService.removeDocumentAssociation(params.associationId, context);
 
