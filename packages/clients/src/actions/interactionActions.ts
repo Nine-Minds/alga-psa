@@ -19,6 +19,7 @@ import {
   resolveScheduleAssignees,
   syncInteractionScheduleEntries,
 } from './interactionCreateHelper';
+import { getInteractionById as fetchInteractionById } from './queryActions';
 
 import { createTenantKnex } from '@alga-psa/db';
 import { assertMspPermission, hasPermissionAsync } from '../lib/authHelpers';
@@ -57,7 +58,10 @@ const durationRejectionError = (reason: InteractionDurationRejectionReason): Act
   actionError(DURATION_REJECTION_MESSAGES[reason]);
 
 export type { InteractionPageFilters, InteractionPageResult } from '../models/interactions';
-export { getInteractionById } from './queryActions';
+
+export async function getInteractionById(interactionId: string) {
+  return fetchInteractionById(interactionId);
+}
 
 function interactionActionErrorFrom(error: unknown): InteractionActionError | null {
   if (error instanceof Error) {
