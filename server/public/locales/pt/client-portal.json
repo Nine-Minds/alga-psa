@@ -59,12 +59,9 @@
       "network": "Rede",
       "unknown": "Outro"
     },
-    "statusWarnTitle": "Alguns dispositivos inativos",
-    "statusWarnBody": "{{active}} ativo · {{inactive}} inativo",
-    "status": {
-      "active": "Ativo",
-      "inactive": "Inativo"
-    },
+    "statusAttentionTitle": "Alguns dispositivos precisam de atenção",
+    "statusAttentionBody": "{{active}} de {{total}} dispositivos ativos",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Pesquise por nome, tag ou série",
     "filters": {
       "allTypes": "Todos os tipos",
@@ -169,10 +166,7 @@
       "viewAll": "Ver tudo",
       "countLabel": "{{count}} gerenciado",
       "emptyShort": "Nenhum dispositivo ainda",
-      "emptyBody": "Os dispositivos gerenciados pelo seu provedor aparecerão aqui.",
-      "healthy": "Saudável",
-      "inactive": "Inativo",
-      "active": "Ativo"
+      "emptyBody": "Os dispositivos gerenciados pelo seu provedor aparecerão aqui."
     },
     "quickActions": {
       "title": "Ações rápidas",
@@ -1004,14 +998,18 @@
   },
   "assets": {
     "columns": {
-      "name": "Nome",
-      "type": "Tipo",
-      "status": "Status",
-      "location": "Local",
-      "lastUpdated": "Última atualização"
+      "assignedTo": "Atribuído a"
     },
-    "notAvailable": "N/D",
-    "detailsTitle": "Detalhes do ativo"
+    "statuses": {
+      "active": "Ativo",
+      "in_stock": "Em estoque",
+      "maintenance": "Em manutenção",
+      "inactive": "Inativo",
+      "retired": "Desativado"
+    },
+    "unassigned": "Não atribuído",
+    "sharedWorkspace": "Espaço compartilhado: {{name}}",
+    "sharedWorkspaceLabel": "Espaço compartilhado"
   },
   "errors": {
     "account": {

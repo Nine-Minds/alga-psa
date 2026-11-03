@@ -167,6 +167,36 @@ export class ApiAssetController {
     return createApiResponse(relationships);
   }
 
+  /**
+   * FR-C8: GET /api/v1/assets/{id}/assignments — the asset's assignment
+   * history. An asset of another tenant is a 404, not an empty list, so a probe
+   * cannot tell the difference between "no history" and "not yours".
+   */
+  async listAssignments(req: NextRequest, params: { id: string }): Promise<NextResponse> {
+    const context = await this.requireAllowedContext(req);
+    const denied = await this.requireReadPermissions(context, ['asset']);
+    if (denied) return denied;
+
+    const asset = await this.assetService.getById(params.id, context);
+    if (!asset) {
+      return createErrorResponse('Asset not found', 404, 'NOT_FOUND');
+    }
+
+    const assignments = await this.assetService.getAssetAssignments(params.id, context);
+    return createApiResponse(assignments);
+  }
+
+  /** FR-B4: GET /api/v1/asset-statuses — the tenant's status registry. */
+  async listStatuses(req: NextRequest): Promise<NextResponse> {
+    const context = await this.requireAllowedContext(req);
+    const denied = await this.requireReadPermissions(context, ['asset']);
+    if (denied) return denied;
+
+    const includeArchived = new URL(req.url).searchParams.get('include_archived') === 'true';
+    const statuses = await this.assetService.listAssetStatuses(context, { includeArchived });
+    return createApiResponse(statuses);
+  }
+
   // Enforce read permission for each resource the caller's response exposes.
   // Returns a 403 error response on the first denial, or null when allowed.
   private async requireReadPermissions(

@@ -320,6 +320,27 @@ export async function setApplianceEntitlementPaymentState(
   return send<{ updated: boolean }>('PATCH', `/entitlements/${encodeURIComponent(stripeSubId)}/payment-state`, payment);
 }
 
+/** Mirrored Stripe subscription state; unix seconds (as Stripe sends them), null when unset. */
+export interface ApplianceSubscriptionState {
+  status: string;
+  cancel_at_period_end: boolean;
+  cancel_at: number | null;
+  canceled_at: number | null;
+  current_period_end: number | null;
+}
+
+/**
+ * Mirror the Stripe subscription's state onto the entitlement (display only —
+ * never changes `active`; that is revokeApplianceEntitlement). Idempotent; an
+ * unknown subscription is a no-op (`updated:false`).
+ */
+export async function syncApplianceSubscriptionState(
+  stripeSubId: string,
+  state: ApplianceSubscriptionState,
+): Promise<{ updated: boolean }> {
+  return send<{ updated: boolean }>('PATCH', `/entitlements/${encodeURIComponent(stripeSubId)}/subscription-state`, state);
+}
+
 /** Record a new seat count on the tenant's active entitlement (after Stripe changed). */
 export async function updateApplianceEntitlementSeats(
   tenantId: string,

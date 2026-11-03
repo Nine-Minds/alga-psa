@@ -97,6 +97,16 @@ const printerAssetSchema = z.object({
   supply_levels: z.record(z.unknown())
 });
 
+const assetGroupSummarySchema = z.object({
+  group_id: z.string().uuid(),
+  name: z.string(),
+  kind: z.enum(['bundle', 'shared_workspace']),
+  location_id: z.string().uuid().nullable().optional(),
+  location_name: z.string().nullable().optional(),
+  member_count: z.number().optional(),
+  user_count: z.number().optional(),
+});
+
 export const assetSchema = z.object({
   asset_id: z.string().uuid(),
   // Built-in slug or tenant asset_type_registry slug (custom types).
@@ -110,9 +120,21 @@ export const assetSchema = z.object({
   // Client contact the device is assigned to (portal contact-scoped visibility).
   contact_name_id: z.string().uuid().nullable().optional(),
   contact_name: z.string().nullable().optional(),
+  // The group this asset belongs to, when it has one (FR-E12).
+  group: assetGroupSummarySchema.nullable().optional(),
   location: z.string().optional(),
   purchase_date: z.string().optional(),
   warranty_end_date: z.string().optional(),
+  manufacturer: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+  vendor_id: z.string().uuid().nullable().optional(),
+  vendor_name: z.string().nullable().optional(),
+  // Minor units (cents); pg returns bigint as a string, so coerce.
+  purchase_cost: z.coerce.number().int().nullable().optional(),
+  purchase_cost_currency: z.string().nullable().optional(),
+  order_number: z.string().nullable().optional(),
+  billing_profile_id: z.string().uuid().nullable().optional(),
+  billing_profile_name: z.string().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
   tenant: z.string().uuid(),
@@ -212,6 +234,13 @@ export const createAssetSchema = z.object({
   serial_number: z.string().optional(),
   purchase_date: z.string().optional(),
   warranty_end_date: z.string().optional(),
+  manufacturer: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+  vendor_id: z.string().uuid().nullable().optional(),
+  purchase_cost: z.coerce.number().int().nullable().optional(),
+  purchase_cost_currency: z.string().min(3).max(3).nullable().optional(),
+  order_number: z.string().nullable().optional(),
+  billing_profile_id: z.string().uuid().nullable().optional(),
   workstation: workstationAssetSchema.omit({ tenant: true, asset_id: true }).optional(),
   network_device: network_device_asset_schema.omit({ tenant: true, asset_id: true }).optional(),
   server: serverAssetSchema.omit({ tenant: true, asset_id: true }).optional(),
@@ -269,6 +298,10 @@ export const assetQuerySchema = z.object({
   contact_name_id: z.string().uuid().optional(),
   asset_type: z.string().optional(),
   status: z.string().optional(),
+  vendor_id: z.string().uuid().optional(),
+  group_id: z.string().uuid().optional(),
+  /** Only assets that are not in any group (the group drawer's Add assets). */
+  ungrouped_only: z.boolean().optional(),
   page: z.number().int().positive().optional(),
   pageSize: z.number().int().positive().optional(),
   limit: z.number().int().positive().optional(),

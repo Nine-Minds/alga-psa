@@ -1,0 +1,11 @@
+-[ RECORD 1 ]-------------+-------------------------------------
+invoice_number            | SMOKE-ADJ-CURRENT-20260927
+invoice_id                | 5a1e0000-0000-4000-8000-202609270002
+subtotal                  | 390000
+tax                       | 0
+total_amount              | 390000
+draft_adjustment_revision | 4
+charge_count              | 5
+manual_count              | 2
+canonical_detail_count    | 3
+transaction_count         | 0

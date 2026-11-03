@@ -1,6 +1,7 @@
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { ContactBentoLayout } from '@alga-psa/clients';
+import { ContactAssetsSection } from '@alga-psa/assets/components/ContactAssetsSection';
 import type { IDocument } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
@@ -141,6 +142,9 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
                   }
                 : {}),
             })}
+            assetsSlot={
+              isAlgaDesk ? null : <ContactAssetsSection contactId={contact.contact_name_id} />
+            }
             userId={currentUser.user_id}
             userPermissions={permissions}
           />

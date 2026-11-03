@@ -245,7 +245,7 @@ it('generates immutable ticket presentation from approved source records', async
     const adjusted = await addManualItemsToInvoice(result.invoice_id, [
       { description: 'Synthetic line discount', quantity: 1, rate: -1000, is_discount: true, discount_type: 'fixed', applies_to_item_id: persistedCharges[0].item_id, is_taxable: false },
       { description: 'Synthetic negative credit', quantity: 1, rate: -500, is_taxable: false },
-      { description: 'Synthetic zero information', quantity: 1, rate: 0, is_taxable: false },
+      { description: 'Synthetic zero information', quantity: 1, rate: 0, is_taxable: false, service_id: persistedCharges[0].service_id },
     ] as any) as any;
     expect(adjusted.invoice_id, JSON.stringify(adjusted)).toBe(result.invoice_id);
     const adjustedVm = mapDbInvoiceToWasmViewModel(adjusted)!;

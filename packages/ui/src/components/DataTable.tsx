@@ -297,6 +297,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     sortDirection,
     onSortChange,
     rowClassName,
+    rowProps,
     initialSorting,
     onVisibleRowsChange,
     onItemsPerPageChange,
@@ -940,6 +941,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                 // Use the id property if it exists in the data, otherwise use row.id
                 const rowId = ('id' in row.original) ? (row.original as { id: string }).id : row.id;
                 const extraRowClass = typeof rowClassName === 'function' ? rowClassName(row.original as any) : '';
+                const extraRowProps = typeof rowProps === 'function' ? rowProps(row.original as any, rowIndex) : undefined;
                 const expanded = expandedRowRender
                   ? expandedRowRender(row.original as T, rowIndex)
                   : null;
@@ -947,6 +949,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                 return (
                   <React.Fragment key={`row_group_${rowId}`}>
                   <tr
+                    {...extraRowProps}
                     onClick={(e) => handleRowClick(e, row)}
                     className={`
                     bg-[rgb(var(--color-card))]

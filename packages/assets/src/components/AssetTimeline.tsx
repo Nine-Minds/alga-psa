@@ -9,6 +9,8 @@ import {
   Power,
   ShieldCheck,
   Ticket,
+  UserMinus,
+  UserPlus,
   Wrench,
   type LucideIcon,
 } from 'lucide-react';
@@ -28,6 +30,7 @@ import type {
 } from '@alga-psa/types';
 import { getAssetHistory, getAssetLinkedTickets, getAssetMaintenanceReport } from '../actions/assetActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
+import { calendarDateToLocalDate } from '../lib/calendarDate';
 
 type Lane = 'all' | 'service' | 'changes' | 'maintenance' | 'system';
 
@@ -56,6 +59,18 @@ export function formatEventAge(iso: string, now: number, locale?: string): strin
   return new Date(iso).toLocaleDateString(locale);
 }
 
+/**
+ * Milestones taken from a date column (`purchase_date`) rather than from an
+ * instant: the column holds UTC midnight for a calendar day, so feeding it
+ * straight to the formatter puts the event on the previous day west of UTC —
+ * the timeline read "Purchased May 22" while the Identity tile and the edit
+ * form both said May 23. Re-anchoring to local midnight keeps the three in
+ * agreement; instants (reboot, patch scan) are left alone.
+ */
+export function calendarMilestoneAt(value: string | null | undefined): string | undefined {
+  return calendarDateToLocalDate(value)?.toISOString();
+}
+
 /** "status_change" → "Status change". */
 function humanise(value: string): string {
   const spaced = value.replace(/[_-]+/g, ' ').trim();
@@ -68,6 +83,115 @@ function changeSummary(changes: Record<string, unknown> | undefined): string | u
   if (!keys.length) return undefined;
   if (keys.length <= 3) return keys.map(humanise).join(', ');
   return `${keys.slice(0, 3).map(humanise).join(', ')} +${keys.length - 3}`;
+}
+
+
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+/**
+ * Wording for the entries `setAssetAssignee` and the group model write
+ * (F035 / F078). Pure so it can be asserted without rendering the tile.
+ */
+export function describeAssetHistoryEntry(
+  entry: Pick<AssetHistory, 'change_type' | 'changes'>,
+  t: TranslateFn
+): { title: string; detail?: string; icon: LucideIcon; tone: BentoTone } | null {
+  const changes = (entry.changes ?? {}) as Record<string, unknown>;
+  const source = typeof changes.source === 'string' ? changes.source : undefined;
+  const contactName = typeof changes.contact_name === 'string' ? changes.contact_name : undefined;
+  const note = typeof changes.note === 'string' && changes.note ? changes.note : undefined;
+  const groupName = typeof changes.group_name === 'string' ? changes.group_name : undefined;
+
+  if (entry.change_type === 'assignee_changed') {
+    if (!changes.contact_name_id) {
+      return {
+        title: t('assetTimeline.events.unassigned', { defaultValue: 'Unassigned' }),
+        detail: note,
+        icon: UserMinus,
+        tone: 'neutral',
+      };
+    }
+    const person = contactName ?? t('assetTimeline.events.aContact', { defaultValue: 'a contact' });
+    if (source === 'rmm') {
+      const provider = typeof changes.provider === 'string' && changes.provider ? changes.provider : null;
+      return {
+        title: provider
+          ? t('assetTimeline.events.autoAssignedFrom', {
+              defaultValue: 'Auto-assigned to {{contact}} from {{provider}}',
+              contact: person,
+              provider,
+            })
+          : t('assetTimeline.events.autoAssigned', {
+              defaultValue: 'Auto-assigned to {{contact}} from the signed-in user',
+              contact: person,
+            }),
+        detail: note,
+        icon: UserPlus,
+        tone: 'info',
+      };
+    }
+    if (source === 'bundle') {
+      return {
+        title: t('assetTimeline.events.assignedViaBundle', {
+          defaultValue: 'Assigned to {{contact}} via bundle {{group}}',
+          contact: person,
+          group: note ?? groupName ?? '',
+        }),
+        icon: UserPlus,
+        tone: 'info',
+      };
+    }
+    return {
+      title: t('assetTimeline.events.assignedTo', { defaultValue: 'Assigned to {{contact}}', contact: person }),
+      detail: note,
+      icon: UserPlus,
+      tone: 'good',
+    };
+  }
+
+  if (entry.change_type === 'group_added') {
+    return {
+      title: t('assetTimeline.events.groupAdded', {
+        defaultValue: 'Added to {{group}}',
+        group: groupName ?? t('assetTimeline.events.aGroup', { defaultValue: 'a group' }),
+      }),
+      icon: Boxes,
+      tone: 'info',
+    };
+  }
+
+  if (entry.change_type === 'group_location_changed') {
+    const locationName = typeof changes.location_name === 'string' && changes.location_name
+      ? changes.location_name
+      : null;
+    return {
+      title: locationName
+        ? t('assetTimeline.events.groupLocationMoved', {
+            defaultValue: 'Moved to {{location}} with {{group}}',
+            location: locationName,
+            group: groupName ?? t('assetTimeline.events.aGroup', { defaultValue: 'a group' }),
+          })
+        : t('assetTimeline.events.groupLocationCleared', {
+            defaultValue: 'Location cleared with {{group}}',
+            group: groupName ?? t('assetTimeline.events.aGroup', { defaultValue: 'a group' }),
+          }),
+      icon: Boxes,
+      tone: 'info',
+    };
+  }
+
+  if (entry.change_type === 'group_removed') {
+    return {
+      title: t('assetTimeline.events.groupRemoved', {
+        defaultValue: 'Removed from {{group}}',
+        group: groupName ?? t('assetTimeline.events.aGroup', { defaultValue: 'a group' }),
+      }),
+      icon: Boxes,
+      tone: 'neutral',
+    };
+  }
+
+  return null;
 }
 
 /**
@@ -153,16 +277,19 @@ export function AssetTimeline({
     }
 
     for (const entry of history ?? []) {
+      // F035/F078: assignment and group entries get their own wording — the
+      // generic "Updated: Contact name id" told nobody anything.
+      const described = describeAssetHistoryEntry(entry, t);
       list.push({
         id: `history-${entry.history_id}`,
         lane: 'changes',
         at: entry.changed_at,
-        icon: Pencil,
-        tone: 'neutral',
-        title: t(`assetTimeline.changeTypes.${entry.change_type}`, {
+        icon: described?.icon ?? Pencil,
+        tone: described?.tone ?? 'neutral',
+        title: described?.title ?? t(`assetTimeline.changeTypes.${entry.change_type}`, {
           defaultValue: humanise(entry.change_type),
         }),
-        detail: changeSummary(entry.changes),
+        detail: described ? described.detail : changeSummary(entry.changes),
         actor: entry.changed_by_name,
       });
     }
@@ -207,11 +334,12 @@ export function AssetTimeline({
         }),
       });
     }
-    if (asset.purchase_date) {
+    const purchasedAt = calendarMilestoneAt(asset.purchase_date);
+    if (purchasedAt) {
       list.push({
         id: 'system-purchased',
         lane: 'system',
-        at: asset.purchase_date,
+        at: purchasedAt,
         icon: Boxes,
         tone: 'neutral',
         title: t('assetTimeline.events.purchased', { defaultValue: 'Purchased' }),

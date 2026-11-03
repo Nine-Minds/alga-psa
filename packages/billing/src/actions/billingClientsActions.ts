@@ -21,6 +21,7 @@ import {
   type PaginatedClientsResponse,
 } from '@alga-psa/shared/billingClients';
 import { withAuth } from '@alga-psa/auth';
+import { withSerializableAuth } from './serializableAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
@@ -145,6 +146,9 @@ export const getAllClientsForBilling = withAuth(async (
   return attachClientLogos(clients, tenant);
   });
 });
+
+/** Same read for the draft adjustment loader, with auth rejection kept serializable. */
+export const getAllClientsForBillingRecoverable = withSerializableAuth(getAllClientsForBilling);
 
 export const getAllClientsPaginatedForBilling = withAuth(async (
   user,

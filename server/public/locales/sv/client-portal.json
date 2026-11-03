@@ -65,12 +65,9 @@
       "network": "Nätverk",
       "unknown": "Annat"
     },
-    "statusWarnTitle": "Vissa enheter är inaktiva",
-    "statusWarnBody": "{{active}} aktiva · {{inactive}} inaktiva",
-    "status": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv"
-    },
+    "statusAttentionTitle": "Vissa enheter behöver åtgärdas",
+    "statusAttentionBody": "{{active}} av {{total}} enheter aktiva",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Sök efter namn, inventarienummer eller serienummer",
     "filters": {
       "allTypes": "Alla typer",
@@ -175,10 +172,7 @@
       "viewAll": "Visa alla",
       "countLabel": "Antal hanterade: {{count}}",
       "emptyShort": "Inga enheter ännu",
-      "emptyBody": "Enheter som din IT-leverantör hanterar visas här.",
-      "healthy": "Fungerar normalt",
-      "inactive": "Inaktiv",
-      "active": "Aktiv"
+      "emptyBody": "Enheter som din IT-leverantör hanterar visas här."
     },
     "quickActions": {
       "title": "Snabbåtgärder",
@@ -1010,14 +1004,18 @@
   },
   "assets": {
     "columns": {
-      "name": "Namn",
-      "type": "Typ",
-      "status": "Status",
-      "location": "Plats",
-      "lastUpdated": "Senast uppdaterad"
+      "assignedTo": "Tilldelad till"
     },
-    "notAvailable": "Saknas",
-    "detailsTitle": "Enhetsdetaljer"
+    "statuses": {
+      "active": "Aktiv",
+      "in_stock": "I lager",
+      "maintenance": "Under underhåll",
+      "inactive": "Inaktiv",
+      "retired": "Utfasad"
+    },
+    "unassigned": "Ej tilldelad",
+    "sharedWorkspace": "Delad arbetsplats: {{name}}",
+    "sharedWorkspaceLabel": "Delad arbetsplats"
   },
   "errors": {
     "account": {

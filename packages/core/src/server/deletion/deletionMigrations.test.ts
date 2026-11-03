@@ -75,6 +75,41 @@ describe('DELETION_CONFIGS completeness', () => {
   });
 });
 
+describe('contact deletion and the asset it holds', () => {
+  // FR-C5: deleting a leaver closes the open assignment and nulls the asset's
+  // contact. Counting that link as a blocker meant anyone holding a laptop
+  // could not be deleted at all, so the cleanup never ran.
+  it('an assigned asset is reported but does not block', async () => {
+    const { trx } = makeTrx(0, { assets: 1 });
+
+    const result = await validateDeletion(
+      trx,
+      DELETION_CONFIGS.contact,
+      'contact-1',
+      'tenant-1'
+    );
+
+    expect(result.canDelete).toBe(true);
+    const dependency = result.dependencies.find((d) => d.type === 'assigned_asset');
+    expect(dependency).toMatchObject({ count: 1, blocking: false });
+  });
+
+  it('a real blocker still blocks, and says so without the asset', async () => {
+    const { trx } = makeTrx(0, { assets: 2, tickets: 1 });
+
+    const result = await validateDeletion(
+      trx,
+      DELETION_CONFIGS.contact,
+      'contact-1',
+      'tenant-1'
+    );
+
+    expect(result.canDelete).toBe(false);
+    expect(result.message).toContain('1 ticket');
+    expect(result.message).not.toContain('assigned asset');
+  });
+});
+
 describe('ticket deletion blocks on time entries', () => {
   it('canDelete is false when ticket has time entries', async () => {
     const { trx } = makeTrx(0, { time_entries: 3 });

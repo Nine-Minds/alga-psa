@@ -41,6 +41,17 @@ describe('session utilities', () => {
     expect(withDevPortSuffix('authjs.pkce.code_verifier')).toBe('authjs.pkce.code_verifier.3001');
   });
 
+  it('isolates the canonical dev and production review services by cookie name', () => {
+    process.env.NEXTAUTH_URL = 'http://feature-contract-invoices-automatic-adjustments-and-disc.localhost:3185';
+    process.env.NODE_ENV = 'development';
+    expect(getSessionCookieConfig().name).toBe('authjs.session-token.3185');
+
+    process.env.NEXTAUTH_URL = 'http://feature-contract-invoices-automatic-adjustments-and-disc.localhost:23185';
+    process.env.NODE_ENV = 'production';
+    expect(getSessionCookieConfig().name).toBe('authjs.session-token');
+    expect(getSessionCookieConfig().options).toMatchObject({ httpOnly: true, sameSite: 'lax', path: '/', secure: false });
+  });
+
   it('uses secure cookie name in production without port suffix', () => {
     process.env.NODE_ENV = 'production';
     process.env.NEXTAUTH_URL = 'https://example.com';

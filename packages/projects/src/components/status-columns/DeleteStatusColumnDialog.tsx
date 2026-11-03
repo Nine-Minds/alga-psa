@@ -36,11 +36,20 @@ export function DeleteStatusColumnDialog({
   idPrefix = 'status-column',
 }: DeleteStatusColumnDialogProps): React.ReactElement | null {
   const { t } = useTranslation(['features/projects', 'common']);
-  const [moveToId, setMoveToId] = useState('');
+  const [pickedMoveToId, setPickedMoveToId] = useState('');
 
+  // Only a different column clears the pick. `moveTargets` is rebuilt on every
+  // parent render, so resetting whenever it changes would drop a destination
+  // the operator had already chosen.
   useEffect(() => {
-    setMoveToId(moveTargets[0]?.id ?? '');
-  }, [request?.id, moveTargets.length]);
+    setPickedMoveToId('');
+  }, [request?.id]);
+
+  // Destinations can still load in (or disappear) while the dialog is open, so
+  // fall back to the first one until the pick is a real option.
+  const moveToId = moveTargets.some((target) => target.id === pickedMoveToId)
+    ? pickedMoveToId
+    : moveTargets[0]?.id ?? '';
 
   if (!request) return null;
 
@@ -75,7 +84,7 @@ export function DeleteStatusColumnDialog({
             ) : (
               <CustomSelect
                 value={moveToId}
-                onValueChange={setMoveToId}
+                onValueChange={setPickedMoveToId}
                 options={moveTargets.map((target) => ({
                   value: target.id,
                   label: target.isClosed

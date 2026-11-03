@@ -81,6 +81,7 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   // Domain rows, children before parents.
   await tenantTable(tenantId, 'asset_history').del();
   await tenantTable(tenantId, 'assets').del();
+  await tenantTable(tenantId, 'asset_statuses').del();
   await tenantTable(tenantId, 'comments').del();
   await tenantTable(tenantId, 'comment_threads').del();
   await tenantTable(tenantId, 'tickets').del();
@@ -399,6 +400,14 @@ async function createFixture(): Promise<Fixture> {
     ...(hasColumn(statusColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
     ...(hasColumn(statusColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
+
+  // The asset applier resolves an imported status against this registry and
+  // falls back to `active`; a tenant built straight in SQL has no rows unless
+  // the fixture puts them there.
+  await tenantTable(tenantId, 'asset_statuses').insert([
+    { tenant: tenantId, slug: 'active', label: 'Active', kind: 'deployable', is_builtin: true, is_active: true, display_order: 0 },
+    { tenant: tenantId, slug: 'inactive', label: 'Inactive', kind: 'undeployable', is_builtin: true, is_active: true, display_order: 3 },
+  ]);
 
   return { tenantId, ownerUserId, clientId, boardId, statusOpenId, priorityId };
 }
@@ -761,9 +770,13 @@ describe('AMP migration pipeline integration', () => {
     expect(Number(completedAssets.applied_count)).toBe(2);
     expect(Number(completedAssets.failed_count)).toBe(0);
     const asset = await tenantTable(fixture.tenantId, 'assets').where({ name: 'Front Lobby' }).first();
-    expect(typeof asset.attributes === 'string' ? JSON.parse(asset.attributes) : asset.attributes).toEqual({ manufacturer: 'Acme', model: 'DoorBox', controller_id: 'C-2567', door_count: 4, installed_on: '2026-09-01', tier: 'Gold', monitored: true });
+    // FR-A4: manufacturer and model land in their own columns, so `attributes`
+    // only ever holds the mapped custom fields.
+    expect(typeof asset.attributes === 'string' ? JSON.parse(asset.attributes) : asset.attributes).toEqual({ controller_id: 'C-2567', door_count: 4, installed_on: '2026-09-01', tier: 'Gold', monitored: true });
+    expect({ manufacturer: asset.manufacturer, model: asset.model }).toEqual({ manufacturer: 'Acme', model: 'DoorBox' });
     const blankAsset = await tenantTable(fixture.tenantId, 'assets').where({ name: 'Blank Fields' }).first();
-    expect(typeof blankAsset.attributes === 'string' ? JSON.parse(blankAsset.attributes) : blankAsset.attributes).toEqual({ manufacturer: 'Acme', model: 'DoorBox' });
+    expect(typeof blankAsset.attributes === 'string' ? JSON.parse(blankAsset.attributes) : blankAsset.attributes).toEqual({});
+    expect({ manufacturer: blankAsset.manufacturer, model: blankAsset.model }).toEqual({ manufacturer: 'Acme', model: 'DoorBox' });
   }, HOOK_TIMEOUT);
 
   it('re-running the same job creates no duplicates', async () => {

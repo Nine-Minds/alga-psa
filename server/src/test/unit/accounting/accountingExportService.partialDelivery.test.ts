@@ -141,6 +141,22 @@ function makeHarness(lines: AccountingExportLine[], adapter: AccountingExportAda
 }
 
 describe('AccountingExportService partial delivery handling', () => {
+  it('releases a reservation when mapping preparation fails before transformation', async () => {
+    const line = makeLine('33333333-3333-4333-8333-333333333333', '44444444-4444-4444-8444-444444444444');
+    const adapter = new PartialFailureAdapter(new Set([line.document_id]));
+    const { batch, repository, adapterRegistry } = makeHarness([line], adapter);
+    const transformSpy = vi.spyOn(adapter, 'transform');
+    const validationSpy = vi.spyOn(AccountingExportValidation, 'ensureMappingsForBatch').mockRejectedValueOnce(new Error('mapping reload failed'));
+    try {
+      const service = new AccountingExportService(repository, adapterRegistry);
+      await expect(service.executeBatch(BATCH_ID)).rejects.toThrow('mapping reload failed');
+      expect(batch.status).toBe('failed');
+      expect(transformSpy).not.toHaveBeenCalled();
+    } finally {
+      validationSpy.mockRestore();
+    }
+  });
+
   it('rejects batches whose export_type is unsupported by the adapter', async () => {
     const line = makeLine(
       '33333333-3333-4333-8333-333333333333',

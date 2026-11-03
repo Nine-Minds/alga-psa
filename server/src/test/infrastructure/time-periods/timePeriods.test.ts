@@ -75,8 +75,10 @@ describe('Time Periods Infrastructure', () => {
     // Get tenant from context
     tenantId = context.tenantId;
 
-    // Set up mocks
-    setupCommonMocks({ tenantId });
+    // Set up mocks. The period actions are gated on `time_period:*` and the fixture
+    // user carries no roles, so grant the checks here; refusals have their own suites
+    // (packages/scheduling/tests/timePeriod*Actions.permissions.test.ts).
+    setupCommonMocks({ tenantId, permissionCheck: () => true });
     vi.spyOn(tenantModule, 'getTenantForCurrentRequest').mockResolvedValue(tenantId);
   });
 
@@ -499,7 +501,7 @@ describe('Time Periods Infrastructure', () => {
 
       const useUserTimeZone = async (timezone: string) => {
         await tenantTable(context, 'users').where({ user_id: context.userId }).update({ timezone });
-        setupCommonMocks({ tenantId, userId: context.userId, user: context.user });
+        setupCommonMocks({ tenantId, userId: context.userId, user: context.user, permissionCheck: () => true });
       };
 
       it('19. (a) mid-week save with no effective_from starts at the current week start', async () => {

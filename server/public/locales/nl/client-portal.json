@@ -140,10 +140,7 @@
       "viewAll": "Bekijk alles",
       "countLabel": "{{count}} beheerd",
       "emptyShort": "Nog geen apparaten",
-      "emptyBody": "De apparaten die uw provider beheert, verschijnen hier.",
-      "healthy": "Gezond",
-      "inactive": "Inactief",
-      "active": "Actief"
+      "emptyBody": "De apparaten die uw provider beheert, verschijnen hier."
     },
     "timeAgo": {
       "justNow": "zojuist",
@@ -861,12 +858,9 @@
       "network": "Netwerk",
       "unknown": "Overig"
     },
-    "statusWarnTitle": "Sommige apparaten inactief",
-    "statusWarnBody": "{{active}} actief · {{inactive}} inactief",
-    "status": {
-      "active": "Actief",
-      "inactive": "Inactief"
-    },
+    "statusAttentionTitle": "Sommige apparaten hebben aandacht nodig",
+    "statusAttentionBody": "{{active}} van {{total}} apparaten actief",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Zoek op naam, tag of serienummer",
     "filters": {
       "allTypes": "Alle types",
@@ -1004,14 +998,18 @@
   },
   "assets": {
     "columns": {
-      "name": "Naam",
-      "type": "Type",
-      "status": "Status",
-      "location": "Locatie",
-      "lastUpdated": "Laatst bijgewerkt"
+      "assignedTo": "Toegewezen aan"
     },
-    "notAvailable": "N.v.t.",
-    "detailsTitle": "Asset-details"
+    "statuses": {
+      "active": "Actief",
+      "in_stock": "Op voorraad",
+      "maintenance": "In onderhoud",
+      "inactive": "Inactief",
+      "retired": "Afgevoerd"
+    },
+    "unassigned": "Niet toegewezen",
+    "sharedWorkspace": "Gedeelde werkplek: {{name}}",
+    "sharedWorkspaceLabel": "Gedeelde werkplek"
   },
   "errors": {
     "account": {

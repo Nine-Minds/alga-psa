@@ -59,6 +59,8 @@ interface ContractSimulatorWorkspaceProps {
   /** Reserved for replay/prefill entry points; snapshot resolves the binding server-side. */
   clientId?: string | null;
   initialScenario?: ContractScenario | null;
+  /** A replacement `initialScenario` is being loaded: any projection on screen already describes an older draft. */
+  scenarioReloading?: boolean;
   readOnlyScenario?: boolean;
   forceProfile?: boolean;
 }
@@ -76,6 +78,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
   clientContractId = null,
   clientId = null,
   initialScenario = null,
+  scenarioReloading = false,
   readOnlyScenario = false,
   forceProfile = false,
 }) => {
@@ -84,6 +87,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
   const hasSimulatorAccess = useTierFeature(TIER_FEATURES.CONTRACT_SIMULATOR);
   const scenarioRevisionRef = useRef(0);
   const lastProjectedScenarioRef = useRef<string | null>(null);
+  const appliedScenarioRef = useRef<string | null>(null);
 
   const [pristine, setPristine] = useState<ContractScenario | null>(null);
   const [working, setWorking] = useState<ContractScenario | null>(null);
@@ -100,6 +104,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
     useState<ContractSimulationResult | null>(null);
   const [lastRunAt, setLastRunAt] = useState<Date | null>(null);
   const [isStale, setIsStale] = useState(false);
+  const [pendingScenarioRun, setPendingScenarioRun] = useState(false);
   const [isPrefilling, setIsPrefilling] = useState(false);
   const [prefillError, setPrefillError] = useState<string | null>(null);
   const [prefillFeedback, setPrefillFeedback] =
@@ -142,10 +147,28 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
       setLoadError(null);
       try {
         if (initialScenario) {
+          // A draft scenario is rebuilt by its owner on every edit, so compare
+          // content: an identical rebuild must not discard assumptions typed
+          // here, and a genuine replacement must not inherit the run bar's
+          // "current" verdict from a scenario it no longer describes.
+          const incoming = JSON.stringify(initialScenario);
+          if (appliedScenarioRef.current === incoming) return;
+          const replacesApplied = appliedScenarioRef.current !== null;
+          appliedScenarioRef.current = incoming;
           setPristine(structuredClone(initialScenario));
           setWorking(structuredClone(initialScenario));
           if (HORIZON_OPTIONS.includes(initialScenario.horizon.period_count)) {
             setHorizonCount(initialScenario.horizon.period_count);
+          }
+          if (replacesApplied) {
+            scenarioRevisionRef.current += 1;
+            const hasProjection = lastProjectedScenarioRef.current !== null;
+            lastProjectedScenarioRef.current = null;
+            setExplanationLine(null);
+            if (hasProjection) {
+              setIsStale(true);
+              setPendingScenarioRun(true);
+            }
           }
           return;
         }
@@ -463,6 +486,16 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
     }
   }, [working, pristine, horizonCount, compareEnabled]);
 
+  // A replacement scenario arrived while a projection was on screen: re-run it
+  // so the totals describe the scenario in hand instead of waiting for someone
+  // to notice the stale banner.
+  useEffect(() => {
+    if (!pendingScenarioRun) return;
+    if (!working || !pristine || isSimulating) return;
+    setPendingScenarioRun(false);
+    void handleSimulate();
+  }, [pendingScenarioRun, working, pristine, isSimulating, handleSimulate]);
+
   const pristineLineJsonByKey = useMemo(() => {
     const map = new Map<string, string>();
     for (const line of pristine?.lines ?? []) {
@@ -486,9 +519,13 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
     return JSON.stringify(working) !== JSON.stringify(pristine);
   }, [working, pristine]);
 
+  // What the operator is looking at: a projection is only current when nothing
+  // has changed under it, including the draft the scenario itself came from.
+  const projectionStale = isStale || scenarioReloading;
+
   const periodLabels = useMemo(() => {
     return Array.from({ length: horizonCount }, (_, index) => {
-      const fromResult = isStale ? null : result?.periods[index]?.label;
+      const fromResult = projectionStale ? null : result?.periods[index]?.label;
       return (
         fromResult ??
         prefillPeriodLabels[index] ??
@@ -498,7 +535,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
         })
       );
     });
-  }, [horizonCount, isStale, prefillPeriodLabels, result, t]);
+  }, [horizonCount, projectionStale, prefillPeriodLabels, result, t]);
 
   const horizonOptions = useMemo(
     () =>
@@ -637,7 +674,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                 ? t("contractSimulator.runBar.simulating", {
                     defaultValue: "Simulating…",
                   })
-                : isStale && result
+                : projectionStale && result
                   ? t("contractSimulator.runBar.updateSimulation", {
                       defaultValue: "Update simulation",
                     })
@@ -688,7 +725,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
               />
             )}
             <div className="ml-auto flex items-center gap-1.5 text-xs text-[rgb(var(--color-text-400))]">
-              {isStale ? (
+              {projectionStale ? (
                 <>
                   <Pencil className="h-3.5 w-3.5 text-[rgb(var(--color-primary-500))]" />
                   {t("contractSimulator.runBar.stale", {
@@ -720,7 +757,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
 
           {result ? (
             <>
-              {isStale && (
+              {projectionStale && (
                 <Alert variant="warning">
                   <Pencil className="h-4 w-4" />
                   <AlertDescription>

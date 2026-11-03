@@ -115,13 +115,15 @@ describe('ContractLines i18n wiring contract', () => {
       'common.actions.save',
       'common.actions.saving',
       'common.actions.cancel',
-      'contractLines.errors.cannotEditWithInvoices',
+      'contractLines.configuration.billedEditExplanation',
     ];
 
     for (const key of keyChecks) {
       expect(source).toContain(`t('${key}'`);
       expect(getLeaf(en, key)).toBeDefined();
     }
+    expect(getLeaf(en, 'contractLines.errors.protectedStartDate')).toBeDefined();
+    expect(getLeaf(en, 'contractLines.errors.protectedEndDate')).toBeDefined();
   });
 
   it('T022: ContractLines translation keys resolve to pseudo-locale values in xx', () => {

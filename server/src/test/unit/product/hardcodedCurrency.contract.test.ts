@@ -409,6 +409,14 @@ const KNOWN_HARDCODED_CURRENCY_ARGS: Record<
     count: 1,
     why: "deliberate: server log line (PO overage console.warn), not user-visible",
   },
+  // Mid-period contract-change line descriptions (automatic adjustments) are
+  // composed once at billing time and stored on the invoice line, so there is
+  // no viewer whose locale could be used; the amount is printed next to its
+  // ISO currency code, which the tenant's contract supplies.
+  "packages/billing/src/lib/billing/contractChangeDescription.ts": {
+    count: 1,
+    why: "persisted invoice-line text written at billing time; no viewer locale, ISO code printed alongside the amount",
+  },
   // Contract-simulator compute engine (landed 2026-07-31): formatCents in
   // each compute module renders calculation-trace/step strings. Correct
   // currency comes from the contract; locale threading through the engine is

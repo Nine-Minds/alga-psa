@@ -52,9 +52,53 @@ export interface ExternalMappingRemapChoice {
   apply: boolean;
 }
 
+/**
+ * FR-F5 / FR-G2: what happens to moving rows that have no billing profile of
+ * their own. `source_profile` (the default, and today's ticket/project
+ * behaviour) stamps them with the moved default so the merged site keeps
+ * billing separately; `target_default` leaves them null so they inherit the
+ * target's default. Rows with an explicit profile are untouched either way, and
+ * billing history tables always keep the moved profile — they are issued
+ * history, not moving work.
+ */
+export type ClientMergeBillingStrategy = 'source_profile' | 'target_default';
+
+export const CLIENT_MERGE_BILLING_STRATEGIES: readonly ClientMergeBillingStrategy[] = [
+  'source_profile',
+  'target_default',
+];
+
+export function isClientMergeBillingStrategy(value: unknown): value is ClientMergeBillingStrategy {
+  return typeof value === 'string' && (CLIENT_MERGE_BILLING_STRATEGIES as readonly string[]).includes(value);
+}
+
+export interface MergeRmmOrganizationPreview {
+  provider: string;
+  integrationId: string;
+  externalOrganizationId: string;
+  externalOrganizationName: string | null;
+  deviceCount: number;
+}
+
+export interface MergeAssetsPreview {
+  total: number;
+  byRmmOrganization: MergeRmmOrganizationPreview[];
+  groups: number;
+}
+
+/** Counts of moving rows the billing choice will decide the profile for. */
+export interface MergeBillingChoicePreview {
+  unstampedTickets: number;
+  unstampedProjects: number;
+  unstampedAssets: number;
+  unstampedRmmMappings: number;
+}
+
 export interface ClientMergeInput {
   sourceClientId: string;
   targetClientId: string;
+  /** FR-G2: defaults to `source_profile`. */
+  billingStrategy?: ClientMergeBillingStrategy;
   contactAssignments?: ContactProfileAssignment[];
   contractDecisions?: ContractDecision[];
   /** Defaults to true — see pinPortalGrants() for why. */
@@ -113,6 +157,9 @@ export interface ClientMergePreview {
   /** Portal users of the source that currently see every billing profile. */
   unrestrictedPortalUserIds: string[];
   externalMappings: MergeExternalMappingPreview[];
+  /** FR-G1: the devices and groups that move, and who they come from. */
+  assets: MergeAssetsPreview;
+  billingChoice: MergeBillingChoicePreview;
 }
 
 export interface ClientMergeResult {
@@ -124,6 +171,7 @@ export interface ClientMergeResult {
   counts: Record<string, number>;
   remappedExternalMappingIds: string[];
   skippedExternalMappingIds: string[];
+  billingStrategy: ClientMergeBillingStrategy;
 }
 
 const scoped = (trx: Knex.Transaction, tenant: string, table: string): Knex.QueryBuilder =>
@@ -223,10 +271,13 @@ async function moveClientOwnedRows(
   sourceClientId: string,
   targetClientId: string,
   movedDefaultProfileId: string | null,
+  billingStrategy: ClientMergeBillingStrategy = 'source_profile',
 ): Promise<number> {
   if (entry.editionOptional && !(await tableInstalled(trx, entry.table))) return 0;
 
-  if (entry.stampsBillingProfile && movedDefaultProfileId) {
+  // FR-F5: `target_default` deliberately leaves the NULLs alone so they inherit
+  // the parent's default profile.
+  if (entry.stampsBillingProfile && movedDefaultProfileId && billingStrategy === 'source_profile') {
     // Stamped *before* the move, while the rows are still identifiable, and
     // because leaving them NULL would re-attribute them to the parent's default
     // the next time the attribution chain ran.
@@ -378,6 +429,8 @@ export async function previewClientMerge(
       blockers,
       profiles: [],
       movedDefaultProfileId: null,
+      assets: { total: 0, byRmmOrganization: [], groups: 0 },
+      billingChoice: { unstampedTickets: 0, unstampedProjects: 0, unstampedAssets: 0, unstampedRmmMappings: 0 },
       counts: {},
       contacts: [],
       contracts: [],
@@ -429,6 +482,8 @@ export async function previewClientMerge(
   const unrestrictedPortalUserIds = await findUnrestrictedPortalUsers(trx, tenant, contactIds);
 
   const externalMappings = await readExternalMappings(trx, tenant, source.clientId, target.clientId);
+  const assets = await readMergeAssetsPreview(trx, tenant, source.clientId);
+  const billingChoice = await readBillingChoicePreview(trx, tenant, source.clientId);
 
   return {
     sourceClientId: source.clientId,
@@ -470,6 +525,8 @@ export async function previewClientMerge(
     ),
     unrestrictedPortalUserIds,
     externalMappings,
+    assets,
+    billingChoice,
   };
 }
 
@@ -575,6 +632,7 @@ export async function executeClientMerge(
   await ensureClientDefaultBillingProfile(trx, tenant, source.clientId, { clientName: source.clientName });
   await ensureClientDefaultBillingProfile(trx, tenant, target.clientId, { clientName: target.clientName });
 
+  const billingStrategy: ClientMergeBillingStrategy = input.billingStrategy ?? 'source_profile';
   const counts: Record<string, number> = {};
 
   // Captured before contacts move, because the portal-user lookup goes through
@@ -775,6 +833,7 @@ export async function executeClientMerge(
       source.clientId,
       target.clientId,
       movedDefaultProfileId,
+      billingStrategy,
     );
   }
 
@@ -878,6 +937,7 @@ export async function executeClientMerge(
       moved_counts: JSON.stringify(counts),
       contract_decisions: JSON.stringify(contractDecisions),
       strategy: 'merge_into_billing_profile',
+      billing_strategy: billingStrategy,
       merged_by: actorUserId,
       merged_at: mergedAt,
     },
@@ -893,6 +953,117 @@ export async function executeClientMerge(
     counts,
     remappedExternalMappingIds: remapped,
     skippedExternalMappingIds: skipped,
+    billingStrategy,
+  };
+}
+
+/** The source client's devices belonging to one RMM organization. */
+async function countAssetsOfRmmOrganization(
+  trx: Knex.Transaction,
+  tenant: string,
+  args: { clientId: string; provider: string; externalOrganizationId: string },
+): Promise<number> {
+  const mapped: string[] = await scoped(trx, tenant, 'tenant_external_entity_mappings')
+    .where({
+      integration_type: args.provider,
+      alga_entity_type: 'asset',
+      external_realm_id: args.externalOrganizationId,
+    })
+    .pluck('alga_entity_id');
+
+  const row = await scoped(trx, tenant, 'assets')
+    .where({ client_id: args.clientId })
+    .where((builder: Knex.QueryBuilder) => {
+      builder.where({
+        rmm_provider: args.provider,
+        rmm_organization_id: args.externalOrganizationId,
+      });
+      if (mapped.length > 0) builder.orWhereIn('asset_id', mapped);
+    })
+    .count<{ count: string }>('* as count')
+    .first();
+
+  return Number(row?.count ?? 0);
+}
+
+/**
+ * FR-G1: the devices that move and the RMM organizations they came from.
+ *
+ * The dialog said nothing about assets before this, even though the merge has
+ * always moved them — the operator could not see that 37 devices were about to
+ * change hands.
+ */
+async function readMergeAssetsPreview(
+  trx: Knex.Transaction,
+  tenant: string,
+  sourceClientId: string,
+): Promise<MergeAssetsPreview> {
+  const total = await countRows(trx, tenant, 'assets', { client_id: sourceClientId });
+  const groups = (await tableInstalled(trx, 'asset_groups'))
+    ? await countRows(trx, tenant, 'asset_groups', { client_id: sourceClientId })
+    : 0;
+
+  const mappings = await scoped(trx, tenant, 'rmm_organization_mappings')
+    .where({ client_id: sourceClientId })
+    .select('integration_id', 'external_organization_id', 'external_organization_name');
+
+  const byRmmOrganization: MergeRmmOrganizationPreview[] = [];
+  for (const mapping of mappings as Array<Record<string, any>>) {
+    const integration = await scoped(trx, tenant, 'rmm_integrations')
+      .where({ integration_id: mapping.integration_id })
+      .first('provider');
+    const provider = String(integration?.provider ?? '');
+    // Only this client's devices: FR-G5 lets a device be moved to another
+    // client by hand and keeps it there, so counting the organization's whole
+    // fleet promised to move machines that are not the source client's — and
+    // made the per-organization rows disagree with the total.
+    //
+    // Devices are found by column or by the external mapping row, the same
+    // two routes `moveRmmOrganizationAssets` uses: an older asset may predate
+    // `rmm_organization_id` being written.
+    const deviceCount = provider
+      ? await countAssetsOfRmmOrganization(trx, tenant, {
+          clientId: sourceClientId,
+          provider,
+          externalOrganizationId: String(mapping.external_organization_id),
+        })
+      : 0;
+
+    byRmmOrganization.push({
+      provider,
+      integrationId: String(mapping.integration_id),
+      externalOrganizationId: String(mapping.external_organization_id),
+      externalOrganizationName: mapping.external_organization_name ?? null,
+      deviceCount,
+    });
+  }
+
+  return { total, byRmmOrganization, groups };
+}
+
+/**
+ * FR-G1: how many moving rows the billing choice actually decides for. Rows
+ * with an explicit profile are untouched either way, so only the NULLs count.
+ */
+async function readBillingChoicePreview(
+  trx: Knex.Transaction,
+  tenant: string,
+  sourceClientId: string,
+): Promise<MergeBillingChoicePreview> {
+  const countUnstamped = async (table: string): Promise<number> => {
+    const row = await scoped(trx, tenant, table)
+      .where({ client_id: sourceClientId })
+      .whereNull('billing_profile_id')
+      .count<{ count: string }>('* as count')
+      .first();
+    return Number(row?.count ?? 0);
+  };
+
+  return {
+    unstampedTickets: await countUnstamped('tickets'),
+    unstampedProjects: await countUnstamped('projects'),
+    unstampedAssets: await countUnstamped('assets'),
+    unstampedRmmMappings: await countUnstamped('rmm_organization_mappings'),
   };
 }
 

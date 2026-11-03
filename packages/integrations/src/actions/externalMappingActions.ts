@@ -157,7 +157,7 @@ const MUTABLE_MAPPING_ENTITY_TYPES = new Set([...CATALOG_ENTITY_TYPES, 'invoice'
 const REALM_BASED_INTEGRATION_TYPES = new Set(['quickbooks_online', 'xero']);
 
 /** CSV providers export to a file, not a connected realm. */
-const CSV_INTEGRATION_TYPES = new Set(['quickbooks_csv', 'xero_csv']);
+const CSV_INTEGRATION_TYPES = new Set(['quickbooks_csv', 'xero_csv', 'quickbooks_desktop']);
 
 const KNOWN_INTEGRATION_TYPES = new Set([
   ...REALM_BASED_INTEGRATION_TYPES,

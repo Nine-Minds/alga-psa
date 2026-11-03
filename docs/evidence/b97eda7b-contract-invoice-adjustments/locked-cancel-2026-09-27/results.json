@@ -1,0 +1,40 @@
+{
+  "target": "http://localhost:3185",
+  "invoice_number": "LOCKED-CANCEL-20260927",
+  "cancel_path": "Drafts > Reverse Draft > confirm",
+  "cancellation_db_assertions": {
+    "invoice_deleted": true,
+    "charge_and_detail_deleted": true,
+    "claim_lifecycle_state": "locked",
+    "invoice_id": null,
+    "invoice_charge_id": null,
+    "invoice_charge_detail_id": null,
+    "invoice_linked_at": null
+  },
+  "editor_assertions": {
+    "safe_description_and_future_end_saved_and_reloaded": true,
+    "start_date_attempt": "2026-06-02",
+    "start_date_rejection": "Start date must be on or before 2026-06-01 to include protected service history.",
+    "end_date_attempt": "2026-06-30",
+    "end_date_rejection": "End date must be on or after 2026-07-01 to include protected service history.",
+    "persisted_state_unchanged_after_both_rejections": true,
+    "original_description_and_null_bounds_restored": true
+  },
+  "cleanup": {
+    "invoice": 0,
+    "charge": 0,
+    "detail": 0,
+    "claim": 0,
+    "line": 0,
+    "service_configuration": 0,
+    "assignment": 0,
+    "contract": 0,
+    "filtered_audit_rows": 0
+  },
+  "checks": {
+    "protected_history_database_tests": "5 passed",
+    "billing_package_build": "passed",
+    "server_typecheck": "passed with NODE_OPTIONS=--max-old-space-size=16384",
+    "server_typecheck_exit_code": 0
+  }
+}

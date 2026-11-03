@@ -590,6 +590,8 @@ export const createTicketFromAssetSchema = z.object({
   client_id: uuidSchema,
   description: z.string().optional(),
   contact_name_id: uuidSchema.optional(),
+  // FR-F2: an explicit pick wins; omitted means "inherit from the asset".
+  billing_profile_id: uuidSchema.nullable().optional(),
   category_id: uuidSchema.optional()
 });
 

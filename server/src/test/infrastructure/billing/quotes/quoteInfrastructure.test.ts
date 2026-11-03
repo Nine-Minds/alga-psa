@@ -61,6 +61,12 @@ describe('Quote infrastructure', () => {
     context = await resetContext();
     mockedTenantConnection.db = context.db;
     mockedTenantConnection.tenant = context.tenantId;
+    // The dev seeds ship grouped-layout quote fixtures (Q-0001 / Q-0002, see
+    // server/seeds/dev/90_quotes.cjs) into the very tenant this file reuses,
+    // and the listByTenant cases below assert tenant-wide counts and ordering.
+    // Drop them inside the test transaction — quote_items and quote_activities
+    // cascade — so each case sees only the rows it created.
+    await context.db('quotes').where({ tenant: context.tenantId }).del();
   }, 30000);
 
   afterEach(async () => {
@@ -940,7 +946,11 @@ describe('Quote infrastructure', () => {
   });
 
   it('T068: Versioning: revise creates new quote row with version+1 and parent_quote_id set', async () => {
-    const quote = await createFinancialQuote({ status: 'sent' });
+    const quote = await createFinancialQuote({
+      status: 'sent',
+      recurring_section_title: 'Monthly Retainer',
+      onetime_section_title: 'Implementation',
+    });
 
     await QuoteItem.create(context.db, context.tenantId, {
       quote_id: quote.quote_id,
@@ -956,6 +966,8 @@ describe('Quote infrastructure', () => {
     expect(revision.version).toBe(2);
     expect(revision.parent_quote_id).toBe(quote.quote_id);
     expect(revision.status).toBe('draft');
+    expect(revision.recurring_section_title).toBe('Monthly Retainer');
+    expect(revision.onetime_section_title).toBe('Implementation');
   });
 
   it('T069: Versioning: revise copies all quote_items to new version with new item_ids', async () => {

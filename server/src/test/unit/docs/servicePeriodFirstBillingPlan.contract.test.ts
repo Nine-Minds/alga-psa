@@ -327,13 +327,27 @@ const servicePeriodPostInventoryRefs = new Set([
   // service-period boundaries stamped on allocated fixed charges; it landed
   // after the pass-0 snapshot.
   'packages/billing/src/lib/billing/compute/computeFixedCharges.allocation.test.ts',
+  // Contract invoice adjustments (card b97eda7b) reconcile automatic discounts
+  // against the invoice's persisted service window and surface each generated
+  // charge's period in the draft editor; both readers landed after the
+  // pass-0 snapshot.
+  'packages/billing/src/services/invoiceAutomaticAdjustments.ts',
+  'packages/billing/src/components/billing-dashboard/ManualInvoices.tsx',
+  // The same card's line-window guard, protected-history check and partial-period
+  // descriptions read persisted charge periods; their tests assert them.
+  'packages/billing/src/actions/contractLineAction.ts',
+  'packages/billing/src/actions/invoiceActions.ts',
+  'packages/billing/src/lib/billing/compute/contractInvoiceAdjustments.ts',
+  'packages/billing/src/lib/billing/compute/contractInvoiceAdjustments.test.ts',
+  'packages/billing/src/services/contractInvoiceAdjustments.db.test.ts',
+  'packages/billing/tests/partialPeriodInvoiceDescription.test.ts',
+  'server/src/test/infrastructure/billing/contracts/contractLineProtectedHistory.test.ts',
   // Scheduled recurring quantity/price revisions (per-seat recurring services)
   // resolve their boundaries and true-up windows from persisted service periods.
   'packages/billing/src/components/billing-dashboard/contracts/RecurringUnitSchedulePanel.tsx',
   // Its discard-prompt acceptance suite stubs the effective-pricing reader,
   // which is keyed by the persisted service_period_start boundary.
   'packages/billing/tests/RecurringUnitSchedulePanel.discardDialog.test.tsx',
-  'packages/billing/src/lib/billing/reconcileAutomaticInvoiceDiscounts.ts',
   'packages/billing/src/lib/billing/recurringPricingIdentity.ts',
   'packages/billing/src/lib/billing/recurringPricingIdentity.test.ts',
   // Quote-converted first-invoice regression (alga0002168) asserts the contract

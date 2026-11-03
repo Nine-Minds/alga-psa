@@ -23,6 +23,21 @@ function requireEnvironmentValue(name: 'AI_GATEWAY_SERVICE_SECRET' | 'AI_GATEWAY
   return value;
 }
 
+/**
+ * True when the gateway request path has what it needs: the URL always, and the
+ * service secret unless this is a self-hosted install (which authenticates with
+ * the appliance credential instead; see `resolveGatewayAuthToken`).
+ */
+export async function isAiGatewayConfigured(): Promise<boolean> {
+  if (!process.env.AI_GATEWAY_URL?.trim()) {
+    return false;
+  }
+  if (await isSelfHostLicensing()) {
+    return true;
+  }
+  return !!process.env.AI_GATEWAY_SERVICE_SECRET?.trim();
+}
+
 function gatewayBaseUrl(): string {
   return requireEnvironmentValue('AI_GATEWAY_URL').replace(/\/+$/, '');
 }

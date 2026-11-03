@@ -977,11 +977,11 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
     // Send cancellation request received email (fire-and-forget, don't block the response)
     try {
       const tenant = await db.table('tenants')
-        .select('email', 'client_name', 'company_name')
+        .select('email', 'client_name')
         .first();
 
       if (tenant?.email) {
-        const tenantName = tenant.company_name || tenant.client_name || 'your organization';
+        const tenantName = tenant.client_name || 'your organization';
         await sendCancellationRequestEmail({
           tenantName,
           recipientName: tenant.client_name || tenantName,
@@ -991,10 +991,17 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
         logger.info(
           `[cancelSubscriptionAction][tenant=${session.user.tenant}] Cancellation request email sent to ${tenant.email}`
         );
+      } else {
+        logger.warn(
+          `[cancelSubscriptionAction][tenant=${session.user.tenant}] Tenant has no email on file; skipping cancellation request email`
+        );
       }
     } catch (emailError) {
       // Don't fail the cancellation if email fails
-      logger.warn('[cancelSubscriptionAction] Failed to send cancellation request email:', emailError);
+      logger.error(
+        `[cancelSubscriptionAction][tenant=${session.user.tenant}] Failed to send cancellation request email:`,
+        emailError
+      );
     }
 
     return {

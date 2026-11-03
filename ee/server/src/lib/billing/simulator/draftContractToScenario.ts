@@ -1,9 +1,11 @@
 import type { Knex } from "knex";
 import type {
   ContractDraftBucketOverlayInput,
+  ContractDraftDiscount,
   ContractDraftSimulationInput,
   ContractScenario,
   ScenarioCatalogService,
+  ScenarioDiscount,
   ScenarioLine,
   ScenarioLineService,
   ScenarioServiceConfig,
@@ -16,6 +18,46 @@ import { assumptionKey } from "./syntheticActivity";
 
 const midnight = (value: string): string =>
   `${toISODate(toPlainDate(value))}T00:00:00Z`;
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Wizard discounts are authored in percent units / decimal currency; the
+ * scenario model carries the evaluator's units — a fraction for a percentage,
+ * integer minor units for a fixed amount. An empty `contract_line_keys` is the
+ * contract-wide settlement: every eligible charge in the period.
+ */
+export function draftDiscountsToScenario(
+  discounts: ContractDraftDiscount[] | undefined,
+): ScenarioDiscount[] {
+  return (discounts ?? [])
+    .filter(
+      (discount) =>
+        discount &&
+        typeof discount.discount_name === "string" &&
+        discount.discount_name.trim().length > 0 &&
+        Number.isFinite(Number(discount.value)) &&
+        Number(discount.value) > 0 &&
+        DATE_ONLY.test(String(discount.start_date ?? "")),
+    )
+    .map((discount, index) => {
+      const value = Number(discount.value);
+      const endDate =
+        discount.end_date && DATE_ONLY.test(discount.end_date)
+          ? midnight(discount.end_date)
+          : null;
+      return {
+        discount_id: discount.draft_key || `draft-discount-${index + 1}`,
+        discount_name: discount.discount_name.trim(),
+        discount_type: discount.discount_type === "fixed" ? "fixed" : "percentage",
+        value:
+          discount.discount_type === "fixed" ? Math.round(value * 100) : value / 100,
+        start_date: midnight(discount.start_date),
+        end_date: endDate,
+        contract_line_keys: [],
+      };
+    });
+}
 
 export async function draftContractToScenario(
   knex: Knex,
@@ -293,7 +335,7 @@ export async function draftContractToScenario(
     available_services: availableServices,
     lines,
     pricing_schedules: [],
-    discounts: [],
+    discounts: draftDiscountsToScenario(draft.discounts),
     adjustments: [],
     assumptions,
     horizon: {

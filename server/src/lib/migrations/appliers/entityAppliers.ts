@@ -10,6 +10,7 @@ import {
   type AmpTicketCommentRecord,
   type AmpTicketRecord,
 } from '@alga-psa/migration-spec';
+import { tenantDb } from '@alga-psa/db';
 import { createLocation } from '@alga-psa/clients/models';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
@@ -23,6 +24,31 @@ export interface AppliedTarget {
   targetEntityType: string;
   targetEntityId: string;
   warnings?: string[];
+}
+
+/**
+ * FR-B2: an imported asset keeps its source lifecycle state when the tenant
+ * already has a status with that slug or label (case-insensitive, so "Retired"
+ * lands on `retired`); anything else falls back to `active` rather than
+ * creating statuses behind the operator's back.
+ */
+async function resolveImportedAssetStatus(
+  trx: Knex.Transaction,
+  tenant: string,
+  sourceStatus?: string | null
+): Promise<string> {
+  const raw = String(sourceStatus ?? '').trim();
+  if (!raw) return 'active';
+
+  const slugCandidate = raw.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const match = await tenantDb(trx, tenant).table('asset_statuses')
+    .where({ is_active: true })
+    .where((builder: Knex.QueryBuilder) => {
+      builder.whereRaw('lower(slug) = ?', [slugCandidate]).orWhereRaw('lower(label) = ?', [raw.toLowerCase()]);
+    })
+    .first<{ slug: string }>('slug');
+
+  return match?.slug ?? 'active';
 }
 
 export interface EntityApplier {
@@ -443,29 +469,67 @@ export class AssetMigrationApplier implements EntityApplier {
       customAttributes[targetKey] = coerced.value;
     }
 
+    // FR-C3: an imported assignee is recorded with source `import` by
+    // createAssetInTransaction, which routes it through setAssetAssignee.
+    //
+    // The contact is checked against the asset's client here rather than
+    // letting the helper throw: a source assignee who belongs to another
+    // client would otherwise fail the whole asset import. The device comes in
+    // unassigned, and the row says so.
+    const assigneeWarnings: string[] = [];
+    let assigneeContactId: string | null = null;
+    if (record.assignee_external_identifier) {
+      assigneeContactId = await context.resolveReference(
+        trx,
+        'contacts',
+        record.assignee_external_identifier
+      );
+
+      if (assigneeContactId) {
+        const contact = await tenantDb(trx, context.tenant).table('contacts')
+          .where({ contact_name_id: assigneeContactId, client_id: clientId })
+          .whereNot({ contact_kind: 'shared_mailbox' })
+          .first('contact_name_id');
+        if (!contact) {
+          assigneeWarnings.push(
+            `Assignee "${record.assignee_external_identifier}" is not a contact of this client; the asset was imported unassigned.`
+          );
+          assigneeContactId = null;
+        }
+      }
+    }
+
+    const assetInput = {
+      asset_type: assetTypeSlug,
+      client_id: clientId,
+      asset_tag: record.serial_number ?? record.source_record_id,
+      name: record.name,
+      // FR-B2: keep the source lifecycle state when the tenant has a status
+      // with that slug or label; otherwise fall back to `active`.
+      status: await resolveImportedAssetStatus(trx, context.tenant, record.status),
+      location_id: locationId,
+      contact_name_id: assigneeContactId,
+      serial_number: record.serial_number ?? undefined,
+      purchase_date: record.purchase_date ?? undefined,
+      // Manufacturer and model are first-class columns (FR-A4), not attributes.
+      manufacturer: record.manufacturer ?? null,
+      model: record.model ?? null,
+      attributes: customAttributes,
+    };
+
     const asset = await createAssetInTransaction(
       trx,
       context.tenant,
       context.actorUserId,
-      {
-        asset_type: assetTypeSlug,
-        client_id: clientId,
-        asset_tag: record.serial_number ?? record.source_record_id,
-        name: record.name,
-        status: 'active',
-        location_id: locationId,
-        serial_number: record.serial_number ?? undefined,
-        purchase_date: record.purchase_date ?? undefined,
-        attributes: {
-          ...(record.manufacturer ? { manufacturer: record.manufacturer } : {}),
-          ...(record.model ? { model: record.model } : {}),
-          ...customAttributes,
-        },
-      },
-      { requireCustomAttributes: false }
+      assetInput,
+      { requireCustomAttributes: false, assignmentSource: 'import' }
     );
 
-    return { targetEntityType: this.targetEntityType, targetEntityId: asset.asset_id };
+    return {
+      targetEntityType: this.targetEntityType,
+      targetEntityId: asset.asset_id,
+      ...(assigneeWarnings.length > 0 ? { warnings: assigneeWarnings } : {}),
+    };
   }
 }
 

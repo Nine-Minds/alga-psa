@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { cancelAccountingExportBatch, createAccountingExportBatch, executeAccountingExportBatch, getAccountingExportBatch, getAccountingExportConnections, listAccountingExportBatches } from '@alga-psa/billing/actions/accountingExportActions';
+import { cancelAccountingExportBatch, createAccountingExportBatch, downloadAccountingExportArtifact, executeAccountingExportBatch, getAccountingExportBatch, getAccountingExportConnections, listAccountingExportBatches } from '@alga-psa/billing/actions/accountingExportActions';
 import type { AccountingExportActionError } from '@alga-psa/billing/actions/accountingExportActions';
 import { useAccountingCapabilities } from '@alga-psa/auth/hooks/useAccountingCapabilities';
 
@@ -70,6 +70,7 @@ type BatchDetail = {
   batch: AccountingExportBatch | null;
   lines: AccountingExportLine[];
   errors: AccountingExportError[];
+  artifacts?: Array<{ artifact_id: string; filename: string; content_type: string; storage_fallback: boolean }>;
 };
 
 function isAccountingExportActionError(value: unknown): value is AccountingExportActionError {
@@ -438,6 +439,23 @@ export default function AccountingExportsTab(): React.JSX.Element {
       handleError(e, t('accountingExports.toast.cancelError', {
         defaultValue: 'Failed to cancel batch',
       }));
+    }
+  };
+
+  const onDownloadArtifact = async (batchId: string, artifactId: string) => {
+    try {
+      const result = await downloadAccountingExportArtifact(batchId, artifactId);
+      if (isActionPermissionError(result)) { denyAccess(); return; }
+      if (!('contentBase64' in result)) { handleError(result.message); return; }
+      const bytes = Uint8Array.from(atob(result.contentBase64), (char) => char.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: result.contentType }));
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = result.filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      handleError(error, t('accountingExports.toast.artifactDownloadError', { defaultValue: 'Unable to download this export file.' }));
     }
   };
 
@@ -816,6 +834,27 @@ export default function AccountingExportsTab(): React.JSX.Element {
                   </div>
                   <div className="text-sm whitespace-pre-wrap">{selectedBatch.notes}</div>
                 </div>
+              ) : null}
+
+              {(selectedDetail?.artifacts?.length ?? 0) > 0 ? (
+                <section aria-label={t('accountingExports.artifacts.title', { defaultValue: 'Delivered files' })}>
+                  <div className="mb-2 text-xs text-muted-foreground">{t('accountingExports.artifacts.title', { defaultValue: 'Delivered files' })}</div>
+                  <ul className="space-y-2">
+                    {selectedDetail!.artifacts!.map((artifact, index) => (
+                      <li key={artifact.artifact_id} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="truncate">
+                          {artifact.filename}
+                          {artifact.storage_fallback ? <span className="ml-2 text-amber-700 dark:text-amber-300">{t('accountingExports.artifacts.storageFallback', { defaultValue: 'Stored in database backup' })}</span> : null}
+                        </span>
+                        <Button id={`download-export-artifact-${index + 1}`} variant="outline" onClick={() => void onDownloadArtifact(selectedBatch.batch_id, artifact.artifact_id)}>
+                          {t('accountingExports.artifacts.download', { defaultValue: 'Download' })}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : selectedBatch.status === 'delivered' && ['quickbooks_csv', 'quickbooks_desktop', 'xero_csv'].includes(selectedBatch.adapter_type) ? (
+                <p className="text-sm text-muted-foreground">{t('accountingExports.artifacts.unavailable', { defaultValue: 'This historical batch has no saved file artifact. It cannot be recovered without running a new export.' })}</p>
               ) : null}
 
               {(selectedDetail?.errors?.length ?? 0) > 0 ? (

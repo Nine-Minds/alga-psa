@@ -47,6 +47,7 @@ export function projectFixedLinesForSubmission(
   return meaningfulFixedLines(lines).map((line) => ({
     line_key: line.line_key,
     source_contract_line_id: line.source_contract_line_id,
+    source_template_line_id: line.source_template_line_id,
     contract_line_name: line.contract_line_name?.trim() || undefined,
     description: line.description,
     location_id: line.location_id,

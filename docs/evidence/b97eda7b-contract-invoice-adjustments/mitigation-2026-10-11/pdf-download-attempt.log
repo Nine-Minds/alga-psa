@@ -1,0 +1,2 @@
+[downloadInvoicePDF] Filing the invoice PDF failed, falling back to an unfiled render (tenant=6d178771-ad9a-4d43-8809-83992745f8f9 invoice=7c0f201e-ada6-458f-8463-6b3d4ffbdc78 stage=store): Error: Failed to launch the browser process: Code: null
+[downloadInvoicePDF] Rendering the invoice PDF failed (tenant=6d178771-ad9a-4d43-8809-83992745f8f9 invoice=7c0f201e-ada6-458f-8463-6b3d4ffbdc78 stage=render): Error: Failed to launch the browser process: Code: null

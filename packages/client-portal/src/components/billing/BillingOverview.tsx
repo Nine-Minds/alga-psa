@@ -35,6 +35,7 @@ import type { InvoiceViewModel, IQuoteWithClient } from '@alga-psa/types';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { formatPortalCalendarDate } from './formatPortalCalendarDate';
 
 // Lazy load components that aren't immediately visible
 const InvoiceDetailsDialog = dynamic(() => import('./InvoiceDetailsDialog'), {
@@ -429,23 +430,7 @@ export default function BillingOverview() {
 
   // Safe date formatter that works consistently on both server and client
   const formatDate = useCallback((date: string | { toString(): string } | undefined | null) => {
-    if (!date) {
-      return 'N/A';
-    }
-    try {
-      const dateStr = typeof date === 'string' ? date : date.toString();
-      const dateObj = new Date(dateStr);
-      
-      // Use a more consistent date formatting approach
-      const year = dateObj.getFullYear();
-      const month = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(dateObj);
-      const day = dateObj.getDate();
-      
-      return `${month} ${day}, ${year}`;
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Invalid date';
-    }
+    return formatPortalCalendarDate(date);
   }, []);
 
   // Use useCallback for event handlers to prevent unnecessary re-renders

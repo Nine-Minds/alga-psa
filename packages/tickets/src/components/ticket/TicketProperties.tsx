@@ -31,6 +31,7 @@ import { getContactAvatarUrlAction, getUserAvatarUrlsBatchAction } from '@alga-p
 import { getUserContactId } from '@alga-psa/user-composition/actions';
 import { getUserTimeZone } from '@alga-psa/core';
 import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
+import { formatTicketLocationDisplay } from '../../lib/formatTicketLocation';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
 import type { TicketWatchListEntry } from '@shared/lib/tickets/watchList';
 import TicketMaterialsCard from './TicketMaterialsCard';
@@ -127,32 +128,8 @@ interface TicketPropertiesProps {
 // surfaces that live in packages which must not depend on one another.
 const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles(clientId);
 
-// Helper function to format location display
-const formatLocationDisplay = (location: IClientLocation, unnamedLocationLabel: string): string => {
-  const parts: string[] = [];
-  
-  if (location.location_name) {
-    parts.push(location.location_name);
-  }
-  
-  if (location.address_line1) {
-    parts.push(location.address_line1);
-  }
-  
-  if (location.city && location.state_province) {
-    parts.push(`${location.city}, ${location.state_province}`);
-  } else if (location.city) {
-    parts.push(location.city);
-  } else if (location.state_province) {
-    parts.push(location.state_province);
-  }
-  
-  if (location.postal_code) {
-    parts.push(location.postal_code);
-  }
-  
-  return parts.join(' - ') || unnamedLocationLabel;
-};
+// Shared with the grid layout's Location row so both views read alike.
+const formatLocationDisplay = formatTicketLocationDisplay;
 
 const TicketProperties: React.FC<TicketPropertiesProps> = ({
   id = 'ticket-properties',

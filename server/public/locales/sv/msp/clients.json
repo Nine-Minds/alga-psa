@@ -1596,7 +1596,8 @@
         "warrantyEnd": "Garantins slutdatum",
         "agent": "Agent",
         "patching": "Patchning",
-        "coverage": "Täckning"
+        "coverage": "Täckning",
+        "assignedTo": "Tilldelad till"
       },
       "details": {
         "local": "Lokal",
@@ -1643,7 +1644,28 @@
         "workstation": "Arbetsstation"
       },
       "loadError": "Det går inte att läsa in tillgångarna just nu.",
-      "retry": "Försök igen"
+      "retry": "Försök igen",
+      "views": {
+        "assets": "Tillgångar",
+        "groups": "Grupper"
+      },
+      "groups": {
+        "newGroup": "Ny grupp",
+        "drawerTitle": "Tillgångsgrupp",
+        "name": "Namn",
+        "kind": "Typ",
+        "kinds": {
+          "bundle": "Paket",
+          "shared_workspace": "Delad arbetsplats"
+        },
+        "columns": {
+          "name": "Namn",
+          "kind": "Typ",
+          "location": "Plats",
+          "members": "Medlemmar",
+          "people": "Personer"
+        }
+      }
     },
     "tickets": {
       "addTicket": "Lägg till ärende",
@@ -1982,7 +2004,15 @@
     "accountingApply": "Tillämpa markerade",
     "accountingSkip": "Hoppa över tills vidare",
     "accountingRemapped": "Bokföringsmappningarna har pekats om",
-    "accountingSkipped": "Mappningar som inte kunde pekas om och behöver kopplas om manuellt: {{count}}."
+    "accountingSkipped": "Mappningar som inte kunde pekas om och behöver kopplas om manuellt: {{count}}.",
+    "assetsDescription": "Dessa enheter och RMM-organisationer flyttas till målkunden. Synkroniseringen håller dem där.",
+    "assetsTotal": "Tillgångar",
+    "assetGroups": "Tillgångsgrupper",
+    "deviceCount": "{{count}} enheter",
+    "billingStrategyHeading": "Fakturera sammanslaget arbete och enheter under",
+    "billingStrategySource": "Faktureringsprofilen för {{source}}, behållen som en separat profil hos {{target}}",
+    "billingStrategyTarget": "Standardfaktureringsprofilen för {{target}}",
+    "billingStrategyHelp": "Gäller {{tickets}} ärende(n), {{projects}} projekt, {{assets}} tillgång(ar) och {{mappings}} RMM-enhetsgrupp(er) som saknar egen faktureringsprofil. Rader med en uttalad profil behåller den, och fakturor, faktureringscykler, betalningar och tillgodohavanden stannar alltid på den sammanslagna profilen."
   },
   "billingProfileContacts": {
     "title": "Profilens kontakter",

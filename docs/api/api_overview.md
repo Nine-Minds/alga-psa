@@ -219,6 +219,30 @@ After a merge, a target client may carry multiple billing profiles — one per a
 
 A contact designated as a profile manager with `can_view_profile_tickets: true` gains read access to tickets attributed to that billing profile. Clients that have only one billing profile do not require profile contact management and behave exactly as before.
 
+#### Time Periods
+
+Time periods are the billing or pay windows that time sheets are filed against. The REST API lets you list, create, and manage these windows programmatically.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `GET` | `/time-periods` | List all time periods for the tenant |
+| `GET` | `/time-periods/current` | Return the period currently in effect; pass `?date=YYYY-MM-DD` to resolve a specific date instead of today |
+| `GET` | `/time-periods/{id}` | Retrieve a single period |
+| `POST` | `/time-periods` | Create a new period |
+| `PUT` | `/time-periods/{id}` | Update a period's `start_date` or `end_date` |
+| `DELETE` | `/time-periods/{id}` | Delete a period (only when it is open) |
+| `POST` | `/time-periods/{id}/close` | Lock the period so no further time-sheet edits are accepted; subsequent `PUT` or `DELETE` return `409` |
+| `POST` | `/time-periods/{id}/reopen` | Unlock a closed period to allow corrections |
+
+**Key behaviors for `POST` and `PUT`:**
+- `is_current` is **derived and read-only**. The period whose window contains today is automatically flagged `is_current: true` in responses. Sending `is_current` in a write body is silently ignored.
+- Dates must be `YYYY-MM-DD`. Datetime strings (e.g. `2027-03-08T23:30:00Z`) are accepted and silently truncated to the calendar date as written (not converted to UTC). Invalid date strings and `start_date == end_date` return `400`.
+- A period whose date range overlaps an existing period returns `409 Conflict`. Periods that share only a boundary day (touching but not overlapping) are allowed.
+- `PUT` and `DELETE` on a closed period return `409` with the message `"Time period is closed; reopen it first"`.
+- Unknown period IDs return `404`; malformed (non-UUID) IDs return `400`. `close` is idempotent.
+
+**Permissions:** all time-period write endpoints require the `time_management` write permission.
+
 ### Enterprise Edition APIs
 - **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.
 - **Hudu Integration Status:** `GET /api/integrations/hudu` returns connection health for the tenant's Hudu integration: `status`, `baseUrl`, `connectedAt`, `lastSyncedAt`, and `passwordAccess` (whether the Hudu API key can reach the password endpoints). Connection setup, company mapping, and asset layout mapping are configured through the AlgaPSA UI at **Settings → Integrations → Hudu**, not via REST. Requires the `system_settings` read permission; available on EE deployments with the Hudu feature enabled. See [hudu.md](../integrations/hudu.md) for the full admin guide.

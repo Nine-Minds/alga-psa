@@ -315,7 +315,8 @@
     "errorWithMessage": "Errore: {{message}}",
     "billingProfileUpdated": "Profilo di fatturazione aggiornato",
     "updateBillingProfileFailed": "Impossibile aggiornare il profilo di fatturazione",
-    "scheduleOpenFailed": "Impossibile aprire il pianificatore"
+    "scheduleOpenFailed": "Impossibile aprire il pianificatore",
+    "sharedWorkspaceReadOnly": "Vedi questo ticket perché riguarda un dispositivo di una postazione condivisa. Solo chi lo ha aperto può aggiungere contenuti."
   },
   "conversation": {
     "comments": "Commenti",
@@ -1800,6 +1801,7 @@
       "setClientToAddContact": "Imposta prima un cliente per aggiungere un contatto",
       "logInteraction": "Registra chiamata o email",
       "changeClient": "Cambia cliente",
+      "changeLocation": "Cambia sede",
       "teamFallback": "Team",
       "teamSectionLabel": "Assegna un team",
       "addAgentsOrTeam": "Aggiungi agenti o un team…",

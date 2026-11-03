@@ -1961,6 +1961,8 @@
   "timeEntry": {
     "title": "Time Entry Settings",
     "description": "Manage your time entry settings and time periods",
+    "accessDenied": "Access Denied: You do not have permission to view time periods.",
+    "loading": "Loading time entry settings...",
     "timePeriods": {
       "title": "Time Period Settings",
       "description": "Configure billing time period settings",

@@ -124,6 +124,15 @@
           "paymentTerms": "Betalingsvoorwaarden",
           "discounts": "Kortingen"
         }
+      },
+      "adjustmentMappings": {
+        "desktopServices": "Desktop-dienstrekeningen",
+        "desktopDiscounts": "Desktop-kortingen",
+        "desktopAccount": "Naam Desktop-opbrengstrekening",
+        "description": "Koppel factuurkortingen en credits vóór export. De koppeling hoort bij dit boekhoudbedrijf.",
+        "add": "Koppeling toevoegen",
+        "remove": "Koppeling verwijderen",
+        "removeConfirm": "Deze boekhoudkoppeling verwijderen?"
       }
     },
     "calendar": {
@@ -2884,6 +2893,54 @@
         "errors": {
           "saveFailed": "Kan het schema voor apparaatsynchronisatie niet opslaan."
         }
+      },
+      "peopleMode": {
+        "label": "Personen",
+        "options": {
+          "off": "Uit",
+          "suggest": "Voorstellen",
+          "auto": "Automatisch toewijzen"
+        },
+        "updateFailed": "Kan de personenmodus niet bijwerken"
+      },
+      "signedInUsers": {
+        "title": "Aangemelde gebruikers",
+        "description": "De gebruikersnamen die de apparaten van deze organisatie rapporteren en het contact waarnaar elk wordt herleid.",
+        "empty": "Nog geen aangemelde gebruikers gerapporteerd.",
+        "noClient": "Koppel deze organisatie aan een klant voordat u haar gebruikers koppelt.",
+        "refresh": "Vernieuwen",
+        "selectContact": "Contact selecteren",
+        "loadFailed": "Kan aangemelde gebruikers niet laden.",
+        "saveFailed": "Kan de koppeling niet opslaan.",
+        "columns": {
+          "user": "Aangemelde gebruiker",
+          "devices": "Apparaten",
+          "method": "Gekoppeld via",
+          "contact": "Contact"
+        },
+        "methods": {
+          "mapped": "Opgeslagen koppeling",
+          "email": "E-mail",
+          "username": "Gebruikersnaam",
+          "name": "Volledige naam",
+          "none": "Geen overeenkomst"
+        }
+      },
+      "clientChange": {
+        "title": "Apparaten van deze organisatie verplaatsen?",
+        "message": "{{count}} asset(s) worden verplaatst naar {{client}}. Toewijzingen, groepen en factureringsprofielen van de vorige klant worden gewist.",
+        "confirm": "Apparaten verplaatsen"
+      },
+      "billingProfile": {
+        "label": "Factureringsprofiel",
+        "clientDefault": "Standaard van de klant",
+        "updateFailed": "Bijwerken van het factureringsprofiel is mislukt"
+      },
+      "errors": {
+        "invalidPeopleMode": "Dat is geen geldige personenmodus.",
+        "billingProfileUnavailable": "Dat facturatieprofiel is niet beschikbaar voor deze klant.",
+        "mappingNotFound": "Die koppeling bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+        "forbidden": "U hebt geen rechten om dit te wijzigen."
       }
     },
     "sso": {

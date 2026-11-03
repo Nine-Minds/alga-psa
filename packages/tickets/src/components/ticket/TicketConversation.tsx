@@ -108,6 +108,12 @@ interface TicketConversationProps {
   onDelete: (comment: IComment) => void;
   onContentChange: (content: PartialBlock[]) => void;
   hideInternalTab?: boolean; // Optional prop to hide the Internal tab
+  /**
+   * Read-only: the thread is shown without any way to add to it. The client
+   * portal uses this for a ticket a shared-workspace colleague can see but
+   * not act on (FR-E7b) — the write path would refuse them anyway.
+   */
+  readOnly?: boolean;
   isSubmitting?: boolean; // Flag to indicate if a submission is in progress
   overrides?: Record<string, { note?: string; updated_at?: string }>; // Optional local overrides by comment_id
   externalComments?: Array<IComment & { child_ticket_id?: string; child_ticket_number?: string; child_ticket_title?: string; child_client_name?: string }>;
@@ -159,6 +165,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   editorKey,
   onNewCommentContentChange,
   onAddNewComment,
+  readOnly = false,
   onAddReplyComment,
   onTabChange,
   onEdit,
@@ -572,9 +579,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           onContentChange={onContentChange}
           onSave={updates => { if (!existingCommentUploadSession.isUploading) onSave(updates); }}
           onClose={existingCommentUploadSession.requestDiscard}
-          onEdit={() => onEdit(mergedConversation)}
-          onDelete={onDelete}
-          onReply={() => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
+          onEdit={readOnly ? undefined : () => onEdit(mergedConversation)}
+          onDelete={readOnly ? undefined : onDelete}
+          onReply={readOnly ? undefined : () => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
           hideInternalTab={hideInternalTab}
           uploadFile={existingCommentUploadSession.uploadFile}
           reactions={reactionsMap[mergedConversation.comment_id || ''] || []}
@@ -972,7 +979,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       <div className="p-6">
         <div ref={headerAnchorRef} className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">{t('conversation.comments', 'Comments')}</h2>
-          {!showEditor && (
+          {!showEditor && !readOnly && (
             <Button
               id={`${compId}-show-comment-editor-btn`}
               onClick={() => handleAddCommentClick('top')}
@@ -984,7 +991,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         <StickyComposerDock
           id={`${compId}-composer-top`}
           side="top"
-          visible={showEditor && editorPlacement === 'top'}
+          visible={!readOnly && showEditor && editorPlacement === 'top'}
           expanded
         >
           <div className="p-3">{composerBlock}</div>
@@ -1009,7 +1016,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             composer right here rather than sending the reader back up. */}
         <StickyComposerDock
           id={`${compId}-composer-dock`}
-          visible={showEditor ? editorPlacement === 'bottom' : !headerAnchorVisible}
+          visible={!readOnly && (showEditor ? editorPlacement === 'bottom' : !headerAnchorVisible)}
           expanded={showEditor && editorPlacement === 'bottom'}
           placeholder={t('conversation.typeComment', 'Type your comment here...')}
           onExpand={() => handleAddCommentClick('bottom')}

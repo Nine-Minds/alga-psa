@@ -15,20 +15,34 @@ const harness = vi.hoisted(() => {
   const rows: Record<string, any[]> = {};
   const tableName = (expr: string) => expr.split(/\s+as\s+/i)[0].trim();
   const builder = (list: any[]) => {
+    let selected = list;
     const qb: any = {};
     for (const method of [
-      'select', 'where', 'whereIn', 'whereNull', 'whereNotNull', 'whereRaw',
+      'select', 'whereNull', 'whereNotNull', 'whereRaw',
       'andWhere', 'orderBy', 'limit', 'leftJoin', 'join', 'groupBy'
     ]) {
       qb[method] = () => qb;
     }
+    qb.where = (criteria: Record<string, unknown> | string, value?: unknown) => {
+      selected = selected.filter((row) => typeof criteria === 'string'
+        ? row[criteria.split('.').at(-1)!] === value
+        : Object.entries(criteria).every(([key, expected]) => row[key.split('.').at(-1)!] === expected));
+      return qb;
+    };
+    qb.whereIn = (column: string, values: unknown[]) => {
+      selected = selected.filter((row) => values.includes(row[column.split('.').at(-1)!]));
+      return qb;
+    };
     qb.modify = (cb: (q: any) => void) => { cb(qb); return qb; };
-    qb.first = async () => list[0] ?? null;
-    qb.then = (resolve: any, reject?: any) => Promise.resolve(list).then(resolve, reject);
+    qb.first = async () => selected[0] ?? null;
+    qb.then = (resolve: any, reject?: any) => Promise.resolve(selected).then(resolve, reject);
     return qb;
   };
   const knex: any = (expr: string) => builder(rows[tableName(expr)] ?? []);
   knex.table = knex;
+  // Charge expansion probes for the mid-period adjustments table before it
+  // projects contract-change descriptions; these fixtures carry none.
+  knex.schema = { hasTable: async () => false };
   const tenantDb = () => ({ table: (expr: string) => builder(rows[tableName(expr)] ?? []) });
   return { rows, knex, tenantDb };
 });
@@ -41,18 +55,20 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
 }));
 
 vi.mock('../../services/accountingMappingResolver', () => ({
-  AccountingMappingResolver: {
-    create: vi.fn(async () => ({
-      resolveServiceMapping: vi.fn(async () => ({
+  AccountingMappingResolver: class {
+    resolveServiceMapping = vi.fn(async () => ({
         external_entity_id: 'item-1',
         metadata: { name: 'Consulting', itemCode: 'CONS', accountCode: '200', taxType: 'OUTPUT' }
-      })),
-      resolveDiscountMapping: vi.fn(async () => null),
-      resolveTaxCodeMapping: vi.fn(async () => null),
-      resolvePaymentTermMapping: vi.fn(async () => null),
-      resolveClientMapping: vi.fn(async () => null),
-      ensureCompanyMapping: vi.fn(async () => null)
-    }))
+      }));
+    resolveDiscountMapping = vi.fn(async () => ({
+      external_entity_id: 'discount-1',
+      metadata: { name: 'Discount', accountCode: '200', taxType: 'NONE' }
+    }));
+    resolveTaxCodeMapping = vi.fn(async () => null);
+    resolvePaymentTermMapping = vi.fn(async () => null);
+    resolveClientMapping = vi.fn(async () => null);
+    ensureCompanyMapping = vi.fn(async () => null);
+    static create = vi.fn(async () => new this());
   }
 }));
 
@@ -189,6 +205,7 @@ function seedInvoice(currency: string, charges: ChargeFixture[]): AccountingExpo
 
 function seedVendorBill(currency: string, amount: number): AccountingExportLine[] {
   harness.rows.vendor_bills = [{
+    tenant: TENANT,
     bill_id: BILL,
     bill_number: 'VB-0001',
     vendor_id: 'vendor-1',
@@ -200,6 +217,7 @@ function seedVendorBill(currency: string, amount: number): AccountingExportLine[
     notes: null
   }];
   harness.rows.vendor_bill_lines = [{
+    tenant: TENANT,
     bill_line_id: 'bill-line-1',
     bill_id: BILL,
     service_id: 'svc-1',
@@ -305,6 +323,15 @@ describe('QuickBooks Desktop IIF adapter scales the AMOUNT column by line curren
   it('writes whole yen for JPY lines and dollars for USD lines', async () => {
     const { QuickBooksDesktopAdapter } = await import('./quickBooksDesktopAdapter');
     const adapter = await QuickBooksDesktopAdapter.create();
+    harness.rows.invoices = [
+      { invoice_id: 'inv-jpy', invoice_number: 'INV-JPY', invoice_date: '2026-01-05', total_amount: 10000, client_id: CLIENT, currency_code: 'JPY' },
+      { invoice_id: 'inv-usd', invoice_number: 'INV-USD', invoice_date: '2026-01-05', total_amount: 1050, client_id: CLIENT, currency_code: 'USD' },
+    ];
+    harness.rows.invoice_charges = [
+      { item_id: 'c1', invoice_id: 'inv-jpy', service_id: 'svc-1', description: 'JPY charge', quantity: 1, net_amount: 10000, tax_amount: 0, is_discount: false },
+      { item_id: 'c2', invoice_id: 'inv-usd', service_id: 'svc-1', description: 'USD charge', quantity: 1, net_amount: 1050, tax_amount: 0, is_discount: false },
+    ];
+    harness.rows.clients = [{ client_id: CLIENT, client_name: 'Acme KK', billing_email: null, payment_terms: null }];
 
     const result = await adapter.transform(
       context('invoice', adapter.type, [
@@ -316,7 +343,7 @@ describe('QuickBooks Desktop IIF adapter scales the AMOUNT column by line curren
     const amounts = content
       .split('\n')
       .filter((row) => row.startsWith('TRNS\t'))
-      .map((row) => row.split('\t')[5]);
-    expect(amounts).toEqual(['10000', '10.5']);
+      .map((row) => row.split('\t')[6]);
+    expect(amounts).toEqual(['10000', '10.50']);
   });
 });

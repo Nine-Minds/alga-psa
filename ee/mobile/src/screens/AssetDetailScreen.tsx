@@ -37,6 +37,11 @@ type BadgeTone = "neutral" | "info" | "success" | "warning" | "danger";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** A tenant's custom status slug reads as "In repair", not "in_repair". */
+function humanizeStatus(value: string): string {
+  return value.replace(/[_-]+/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+}
+
 function warrantyBadge(
   status: AssetWarrantyStatus | undefined,
   t: (key: string, fallback: string) => string,
@@ -238,13 +243,33 @@ export function AssetDetailScreen({ route, navigation }: Props) {
           <Text style={{ ...theme.typography.title, color: theme.colors.text }}>{asset.name ?? assetName}</Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
             <Badge label={warranty.label} tone={warranty.tone} />
-            {asset.status ? <Badge label={asset.status} /> : null}
+            {asset.status ? <Badge label={humanizeStatus(asset.status)} /> : null}
           </View>
           <View style={{ marginTop: theme.spacing.md }}>
             {asset.asset_tag ? <FieldRow label={t("identity.tag", "Tag")} value={asset.asset_tag} /> : null}
             {asset.serial_number ? <FieldRow label={t("identity.serial", "Serial")} value={asset.serial_number} /> : null}
             {asset.asset_type ? <FieldRow label={t("identity.type", "Type")} value={asset.asset_type} /> : null}
             {asset.client_name ? <FieldRow label={t("identity.client", "Client")} value={asset.client_name} /> : null}
+            {/* FR-C6: who has the device, read-only on mobile. A shared
+                workspace has users rather than one assignee, so it shows the
+                workspace instead. */}
+            {asset.group?.kind === "shared_workspace" ? (
+              <FieldRow
+                label={t("identity.sharedWorkspace", "Shared workspace")}
+                value={asset.group.name}
+              />
+            ) : (
+              <FieldRow
+                label={t("identity.assignedTo", "Assigned to")}
+                value={asset.contact_name || t("identity.unassigned", "Unassigned")}
+              />
+            )}
+            {asset.manufacturer ? <FieldRow label={t("identity.manufacturer", "Manufacturer")} value={asset.manufacturer} /> : null}
+            {asset.model ? <FieldRow label={t("identity.model", "Model")} value={asset.model} /> : null}
+            {asset.vendor_name ? <FieldRow label={t("identity.vendor", "Vendor")} value={asset.vendor_name} /> : null}
+            {asset.group?.kind === "bundle" ? (
+              <FieldRow label={t("identity.bundle", "Bundle")} value={asset.group.name} />
+            ) : null}
             {asset.location ? <FieldRow label={t("identity.location", "Location")} value={asset.location} /> : null}
             {asset.warranty_end_date ? (
               <FieldRow label={t("identity.warrantyEnds", "Warranty ends")} value={asset.warranty_end_date.slice(0, 10)} />

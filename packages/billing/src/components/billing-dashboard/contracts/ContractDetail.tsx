@@ -59,6 +59,7 @@ import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
 import ContractOverview from './ContractOverview';
 import PricingSchedules from './PricingSchedules';
+import ContractDiscounts from './ContractDiscounts';
 import InvoicePreviewPanel from '../invoicing/InvoicePreviewPanel';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '@alga-psa/core';
@@ -265,13 +266,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   });
   const contractId = (searchParams?.get('contractId') ?? resolvedContractId ?? null) as string | null;
   const clientContractId = searchParams?.get('clientContractId') ?? resolvedClientContractId ?? null;
+  const focusedContractLineId = searchParams?.get('contractLineId') ?? null;
   const tenant = useTenant()!;
   const { getDocumentsByContractId, renderDocuments } = useDocumentsCrossFeature();
 
   const [contract, setContract] = useState<IContract | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const validTabs = useMemo(() => new Set(['edit', 'lines', 'pricing', 'documents', 'invoices', 'simulator']), []);
+  const validTabs = useMemo(() => new Set(['edit', 'lines', 'pricing', 'discounts', 'documents', 'invoices', 'simulator']), []);
   const initialTab = useMemo(() => {
     const requested = searchParams?.get('contractView');
     if (!requested || !validTabs.has(requested)) {
@@ -1439,6 +1441,9 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           </TabsTrigger>
           <TabsTrigger value="pricing" disabled={isSystemManagedDefault}>
             {t('contractDetail.tabs.pricing', { defaultValue: 'Pricing Schedules' })}
+          </TabsTrigger>
+          <TabsTrigger value="discounts" disabled={isSystemManagedDefault}>
+            {t('contractDetail.tabs.discounts', { defaultValue: 'Discounts' })}
           </TabsTrigger>
           <TabsTrigger value="documents">
             {t('contractDetail.tabs.documents', { defaultValue: 'Documents' })}
@@ -2670,6 +2675,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           <ContractLines
             contract={contract}
             clientId={primaryAssignment?.client_id ?? contract.owner_client_id ?? null}
+            focusContractLineId={focusedContractLineId}
             onContractLinesChanged={handleContractLinesChanged}
             isReadOnly={isSystemManagedDefault}
           />
@@ -2679,6 +2685,14 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
           <PricingSchedules
             contractId={contract.contract_id}
             currencyCode={currencyMeta.currencyCode}
+            isReadOnly={isSystemManagedDefault}
+          />
+        </TabsContent>
+
+        <TabsContent value="discounts">
+          <ContractDiscounts
+            contractId={contract.contract_id}
+            clientContractId={clientContractId ?? assignments[0]?.client_contract_id ?? null}
             isReadOnly={isSystemManagedDefault}
           />
         </TabsContent>

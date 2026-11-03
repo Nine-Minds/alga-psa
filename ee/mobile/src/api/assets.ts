@@ -33,6 +33,21 @@ export type AssetDetail = {
   purchase_date?: string | null;
   warranty_end_date?: string | null;
   warranty_status?: AssetWarrantyStatus;
+  // alga-2026-0002672: read-only on mobile. The assignee, the hardware
+  // identity columns and the group the device belongs to.
+  contact_name_id?: string | null;
+  contact_name?: string | null;
+  manufacturer?: string | null;
+  model?: string | null;
+  vendor_name?: string | null;
+  group?: {
+    group_id: string;
+    name: string;
+    kind: "bundle" | "shared_workspace";
+    location_name?: string | null;
+    member_count?: number;
+    user_count?: number;
+  } | null;
   service_id?: string | null;
   stock_unit_id?: string | null;
   maintenance_schedules?: MaintenanceSchedule[];

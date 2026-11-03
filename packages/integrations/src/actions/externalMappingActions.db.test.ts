@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { AUTOMATIC_DISCOUNT_MAPPING_ID, DISCOUNT_MAPPING_ENTITY_TYPE } from '@alga-psa/types';
 import {
   createTestDbConnection,
   wireLocalTestDbEnv,
@@ -1200,5 +1201,44 @@ describe('createExternalEntityMappings — bulk create with per-row isolation', 
     // Same entity, different target: idx_unique_alga_mapping.
     const sameEntity = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, make(svc1, uuidv4()));
     expect(sameEntity.actionError).toMatch(/A mapping already exists for this entity/);
+  });
+});
+
+describe('invoice discount mapping configuration', () => {
+  it.each(['quickbooks_online', 'xero', 'quickbooks_csv', 'xero_csv', 'quickbooks_desktop'])('creates, reads, edits and removes the tenant-scoped %s mapping', async (provider) => {
+    const realm = provider === 'quickbooks_online' ? realmA : provider === 'xero' ? xeroRealm : null;
+    const external = provider === 'xero' ? '200' : 'Discount account';
+    const user = { user_id: 'u' };
+    const context = { tenant: tenantA };
+    const result = await (createExternalEntityMapping as any)(user, context, {
+      integration_type: provider, alga_entity_type: DISCOUNT_MAPPING_ENTITY_TYPE, alga_entity_id: AUTOMATIC_DISCOUNT_MAPPING_ID,
+      external_entity_id: external, external_realm_id: realm,
+      ...(provider === 'xero' ? { metadata: { xeroTargetKind: 'account' } } : {}),
+    });
+    expect(result.id).toBeTruthy();
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantB, alga_entity_type: 'discount' })).toHaveLength(0);
+    if (provider === 'quickbooks_online') expect(qboReadMock).toHaveBeenCalledWith('Item', external);
+    if (provider === 'xero') expect(xeroListAccountsMock).toHaveBeenCalled();
+    const read = await (getExternalEntityMappings as any)(user, context, { integrationType: provider, algaEntityType: 'discount', externalRealmId: realm });
+    expect(read).toHaveLength(1);
+    const updated = await (updateExternalEntityMapping as any)(user, context, result.id, { external_entity_id: external });
+    expect(updated.external_entity_id).toBe(external);
+    await (deleteExternalEntityMapping as any)(user, context, result.id);
+    expect(await (getExternalEntityMappings as any)(user, context, { integrationType: provider, algaEntityType: 'discount', externalRealmId: realm })).toHaveLength(0);
+  });
+
+  it('rejects forged discount identities and unmappable Xero accounts', async () => {
+    for (const input of [
+      { alga_entity_id: uuidv4(), external_entity_id: '200' },
+      { alga_entity_id: AUTOMATIC_DISCOUNT_MAPPING_ID, external_entity_id: '090' },
+      { alga_entity_id: AUTOMATIC_DISCOUNT_MAPPING_ID, external_entity_id: '299' },
+    ]) {
+      const result = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, {
+        integration_type: 'xero', alga_entity_type: DISCOUNT_MAPPING_ENTITY_TYPE, external_realm_id: xeroRealm,
+        metadata: { xeroTargetKind: 'account' }, ...input,
+      });
+      expect(result.actionError).toBeTruthy();
+    }
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA, alga_entity_type: 'discount' })).toHaveLength(0);
   });
 });

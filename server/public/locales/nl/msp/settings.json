@@ -1961,6 +1961,8 @@
   "timeEntry": {
     "title": "Tijdregistratie-instellingen",
     "description": "Beheer uw tijdregistratie-instellingen en tijdperiodes",
+    "accessDenied": "Toegang geweigerd: u hebt geen toestemming om perioden te bekijken.",
+    "loading": "Tijdregistratie-instellingen laden...",
     "timePeriods": {
       "title": "Instellingen voor factuurperioden",
       "description": "Configureer de factuurperioden",

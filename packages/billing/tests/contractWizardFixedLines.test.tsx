@@ -226,13 +226,16 @@ describe('ContractWizard fixed lines', () => {
     });
   };
 
-  it('submits one entry per fixed line, each with its own base rate', async () => {
+  it('submits each fixed line with its base rate and template identity for scoped discounts', async () => {
     create.mockResolvedValue({ contract_id: 'contract-1' });
     render(
       <ContractWizard
         open
         onOpenChange={vi.fn()}
-        editingContract={editing([line('a', 100000, [svc('s1')]), line('b', 250000, [svc('s2')])])}
+        editingContract={editing([
+          { ...line('a', 100000, [svc('s1')]), source_template_line_id: 'template-line-a' },
+          { ...line('b', 250000, [svc('s2')]), source_template_line_id: 'template-line-b' },
+        ])}
       />,
     );
     const user = userEvent.setup();
@@ -244,6 +247,9 @@ describe('ContractWizard fixed lines', () => {
     expect(submission.fixed_lines).toHaveLength(2);
     expect(submission.fixed_lines.map((l: any) => l.base_rate)).toEqual([100000, 250000]);
     expect(submission.fixed_lines.map((l: any) => l.services[0].service_id)).toEqual(['s1', 's2']);
+    expect(submission.fixed_lines.map((l: any) => l.source_template_line_id)).toEqual([
+      'template-line-a', 'template-line-b',
+    ]);
     expect(submission.fixed_services).toBeUndefined();
     expect(submission.fixed_base_rate).toBeUndefined();
   });

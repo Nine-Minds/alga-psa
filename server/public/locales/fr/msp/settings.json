@@ -1961,6 +1961,8 @@
   "timeEntry": {
     "title": "Paramètres de saisie du temps",
     "description": "Gérez vos paramètres de saisie du temps et les périodes de temps",
+    "accessDenied": "Accès refusé : vous n’avez pas l’autorisation de consulter les périodes.",
+    "loading": "Chargement des paramètres de saisie du temps...",
     "timePeriods": {
       "title": "Paramètres des périodes",
       "description": "Configurez les périodes de facturation",

@@ -31,6 +31,14 @@ export const createAssetSchema = z.object({
   serial_number: z.string().optional(),
   purchase_date: dateSchema.optional(),
   warranty_end_date: dateSchema.optional(),
+  manufacturer: z.string().max(255).nullable().optional(),
+  model: z.string().max(255).nullable().optional(),
+  vendor_id: uuidSchema.nullable().optional(),
+  /** Minor units (cents). */
+  purchase_cost: z.coerce.number().int().nullable().optional(),
+  purchase_cost_currency: z.string().length(3).nullable().optional(),
+  order_number: z.string().max(255).nullable().optional(),
+  billing_profile_id: uuidSchema.nullable().optional(),
   attributes: z.record(z.unknown()).optional()
 });
 
@@ -122,6 +130,10 @@ export const assetFilterSchema = baseFilterSchema.extend({
   asset_type: assetTypeSchema.optional(),
   status: z.string().optional(),
   location: z.string().optional(),
+  manufacturer: z.string().optional(),
+  model: z.string().optional(),
+  vendor_id: uuidSchema.optional(),
+  billing_profile_id: uuidSchema.optional(),
   client_name: z.string().optional(),
   has_warranty: booleanTransform.optional(),
   warranty_expired: booleanTransform.optional(),
@@ -149,13 +161,33 @@ export const assetResponseSchema = z.object({
   serial_number: z.string().nullable(),
   purchase_date: dateSchema.nullable(),
   warranty_end_date: dateSchema.nullable(),
+  manufacturer: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+  vendor_id: uuidSchema.nullable().optional(),
+  vendor_name: z.string().nullable().optional(),
+  purchase_cost: z.coerce.number().int().nullable().optional(),
+  purchase_cost_currency: z.string().nullable().optional(),
+  order_number: z.string().nullable().optional(),
+  billing_profile_id: uuidSchema.nullable().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,
   attributes: z.record(z.unknown()).nullable().optional(),
-  
+
   // Computed/joined fields
   client_name: z.string().optional(),
+  // FR-C6: the assignee's display name, joined from contacts.
+  contact_name: z.string().nullable().optional(),
+  // FR-E3: the group this asset belongs to, if any.
+  group: z.object({
+    group_id: uuidSchema,
+    name: z.string(),
+    kind: z.enum(['bundle', 'shared_workspace']),
+    location_id: uuidSchema.nullable(),
+    location_name: z.string().nullable(),
+    member_count: z.number().int(),
+    user_count: z.number().int()
+  }).nullable().optional(),
   warranty_status: z.string().optional(),
   maintenance_status: z.string().optional()
 });
@@ -361,6 +393,8 @@ export const bulkAssetStatusSchema = z.object({
 // Asset statistics schema
 export const assetStatsResponseSchema = z.object({
   total_assets: z.number(),
+  /** Assets whose status kind is `deployable` (FR-B5). */
+  deployed_assets: z.number().optional(),
   assets_by_type: z.record(z.number()),
   assets_by_status: z.record(z.number()),
   assets_by_client: z.record(z.number()),

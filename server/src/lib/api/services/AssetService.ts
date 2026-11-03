@@ -28,6 +28,10 @@ import { buildAssetCreatedPayload, buildAssetUpdatedPayload } from '@alga-psa/wo
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/apiMiddleware';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '@alga-psa/assets/lib/assetAttributeWrites';
 import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
+import { validateAssetStatusSlug } from '@alga-psa/assets/lib/assetStatusRegistry';
+import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
+import { getAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
+import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
   return issues.map((issue) => ({ path: ['attributes', issue.key], code: issue.code, message: issue.message }));
@@ -89,7 +93,7 @@ export class AssetService extends BaseService<any> {
         createdAt: 'created_at',
         updatedAt: 'updated_at'
       },
-      searchableFields: ['asset_tag', 'name', 'serial_number', 'location'],
+      searchableFields: ['asset_tag', 'name', 'serial_number', 'location', 'manufacturer', 'model'],
       defaultSort: 'created_at',
       defaultOrder: 'desc'
     });
@@ -115,6 +119,18 @@ export class AssetService extends BaseService<any> {
       }
       if (filters.contact_name_id) {
         query.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
+      }
+      if (filters.manufacturer) {
+        query.where(`${this.tableName}.manufacturer`, 'ilike', `%${filters.manufacturer}%`);
+      }
+      if (filters.model) {
+        query.where(`${this.tableName}.model`, 'ilike', `%${filters.model}%`);
+      }
+      if (filters.vendor_id) {
+        query.where(`${this.tableName}.vendor_id`, filters.vendor_id);
+      }
+      if (filters.billing_profile_id) {
+        query.where(`${this.tableName}.billing_profile_id`, filters.billing_profile_id);
       }
       if (filters.asset_type) {
         query.where(`${this.tableName}.asset_type`, filters.asset_type);
@@ -165,10 +181,14 @@ export class AssetService extends BaseService<any> {
     tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', {
       type: 'left',
     });
+    tenantDb(knex, context.tenant).tenantJoin(query, 'vendors', 'assets.vendor_id', 'vendors.vendor_id', {
+      type: 'left',
+    });
     query
       .select(
         `${this.tableName}.*`,
         'clients.client_name',
+        'vendors.vendor_name',
         knex.raw(`
           CASE 
             WHEN ${this.tableName}.warranty_end_date IS NULL THEN 'no_warranty'
@@ -244,12 +264,23 @@ export class AssetService extends BaseService<any> {
     tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', {
       type: 'left',
     });
-      
+    tenantDb(knex, context.tenant).tenantJoin(query, 'vendors', 'assets.vendor_id', 'vendors.vendor_id', {
+      type: 'left',
+    });
+    // FR-C6/FR-E3: mobile and the REST clients read the assignee and the group
+    // off this payload, so they travel with the asset rather than needing a
+    // second round trip.
+    tenantDb(knex, context.tenant).tenantJoin(query, 'contacts', 'assets.contact_name_id', 'contacts.contact_name_id', {
+      type: 'left',
+    });
+
     const asset = await query.select(
         `${this.tableName}.*`,
         'clients.client_name',
+        'vendors.vendor_name',
+        'contacts.full_name as contact_name',
         knex.raw(`
-          CASE 
+          CASE
             WHEN ${this.tableName}.warranty_end_date IS NULL THEN 'no_warranty'
             WHEN ${this.tableName}.warranty_end_date < NOW() THEN 'expired'
             WHEN ${this.tableName}.warranty_end_date < NOW() + INTERVAL '30 days' THEN 'expiring_soon'
@@ -259,7 +290,10 @@ export class AssetService extends BaseService<any> {
       )
       .first();
 
-    return asset || null;
+    if (!asset) return null;
+
+    asset.group = await getAssetGroupSummary(knex, context.tenant, id);
+    return asset;
   }
 
   async getWithDetails(id: string, context: ServiceContext): Promise<any | null> {
@@ -310,18 +344,42 @@ export class AssetService extends BaseService<any> {
     if (assetData.contact_name_id) {
       await this.assertContactBelongsToClient(knex, context.tenant, assetData.client_id, assetData.contact_name_id);
     }
-    
+    if (assetData.vendor_id) {
+      await this.assertVendorExists(knex, context.tenant, assetData.vendor_id);
+    }
+    await this.assertValidStatus(knex, context.tenant, assetData.status);
+    if (assetData.billing_profile_id) {
+      await this.assertBillingProfile(knex, context.tenant, assetData.client_id, assetData.billing_profile_id);
+    }
+    if (assetData.purchase_cost !== undefined && assetData.purchase_cost !== null && !assetData.purchase_cost_currency) {
+      assetData.purchase_cost_currency = await this.resolveTenantCurrency(knex, context.tenant);
+    }
+
+    // FR-C3: the assignee is applied through setAssetAssignee (source `api`)
+    // so the open asset_assignments row is written with it.
+    const { contact_name_id: requestedContactId, ...assetColumns } = assetData as Record<string, any>;
+
     const assetRecord = {
-      ...assetData,
+      ...assetColumns,
+      contact_name_id: null,
       ...(attributes !== undefined ? { attributes: serializeAttributesForInsert(attributes) } : {}),
       tenant: context.tenant,
       created_at: new Date(),
       updated_at: new Date()
     };
 
-    const [asset] = await scopedTable(knex, context.tenant, this.tableName)
-      .insert(assetRecord)
-      .returning('*');
+    // One transaction: a rejected assignee must not leave an asset behind
+    // without the contact the caller asked for.
+    const asset = await knex.transaction(async (trx) => {
+      const [created] = await scopedTable(trx, context.tenant, this.tableName)
+        .insert(assetRecord)
+        .returning('*');
+
+      if (requestedContactId) {
+        await this.applyAssignee(trx, context, created.asset_id, requestedContactId);
+      }
+      return created;
+    });
 
     // Handle extension data if provided
     if (extension_data && Object.keys(extension_data).length > 0) {
@@ -359,13 +417,14 @@ export class AssetService extends BaseService<any> {
     const needsCurrent =
       data.location_id !== undefined ||
       data.contact_name_id !== undefined ||
+      data.status !== undefined ||
       data.client_id !== undefined;
     const needsAssetContext = needsCurrent || data.attributes !== undefined || data.asset_type !== undefined;
 
     const current = needsAssetContext
       ? await scopedTable(knex, context.tenant, this.tableName)
           .where({ [this.primaryKey]: id })
-          .first('client_id', 'location_id', 'contact_name_id', 'asset_type')
+          .first('client_id', 'location_id', 'contact_name_id', 'asset_type', 'status', 'billing_profile_id')
       : null;
 
     if (needsAssetContext && !current) {
@@ -419,20 +478,72 @@ export class AssetService extends BaseService<any> {
       updateData.contact_name_id = null;
     }
 
+    if (data.vendor_id) {
+      await this.assertVendorExists(knex, context.tenant, data.vendor_id);
+    }
+    if (data.status !== undefined) {
+      await this.assertValidStatus(knex, context.tenant, data.status, current?.status);
+    }
+    if (data.billing_profile_id) {
+      const clientId = data.client_id || current?.client_id;
+      if (!clientId) throw new NotFoundError('Asset not found');
+      await this.assertBillingProfile(knex, context.tenant, clientId, data.billing_profile_id);
+    } else if (
+      data.client_id &&
+      current?.client_id &&
+      data.client_id !== current.client_id &&
+      data.billing_profile_id === undefined
+    ) {
+      // FR-F1: a profile belongs to one client, so the move clears it.
+      updateData.billing_profile_id = null;
+    }
+    if (data.purchase_cost !== undefined) {
+      if (data.purchase_cost === null) {
+        updateData.purchase_cost_currency = null;
+      } else if (!data.purchase_cost_currency) {
+        updateData.purchase_cost_currency = await this.resolveTenantCurrency(knex, context.tenant);
+      }
+    }
+
+    // FR-C3: the assignee leaves the column patch and goes through the helper.
+    const assigneeProvided = Object.prototype.hasOwnProperty.call(updateData, 'contact_name_id');
+    const nextContactId = assigneeProvided ? (updateData.contact_name_id as string | null) : undefined;
+    delete updateData.contact_name_id;
+
     updateData.updated_at = new Date();
 
     const before = await scopedTable(knex, context.tenant, this.tableName)
       .where({ [this.primaryKey]: id })
       .first();
 
-    const [after] = await scopedTable(knex, context.tenant, this.tableName)
-      .where({ [this.primaryKey]: id })
-      .update(updateData)
-      .returning('*');
+    // One transaction for the columns, the group removal and the assignee:
+    // separately, a failed assignment left the client move committed without
+    // its FR-E5 group removal, or the other way round.
+    const after = await knex.transaction(async (trx) => {
+      const [updated] = await scopedTable(trx, context.tenant, this.tableName)
+        .where({ [this.primaryKey]: id })
+        .update(updateData)
+        .returning('*');
 
-    if (!after) {
-      throw new NotFoundError('Asset not found');
-    }
+      if (!updated) {
+        throw new NotFoundError('Asset not found');
+      }
+
+      if (
+        data.client_id &&
+        current?.client_id &&
+        data.client_id !== current.client_id
+      ) {
+        // FR-E5: the group belongs to the old client.
+        await removeAssetFromAnyGroup(trx, context.tenant, id, { actorUserId: context.userId });
+      }
+
+      if (nextContactId !== undefined) {
+        await this.applyAssignee(trx, context, id, nextContactId);
+      }
+
+      return updated;
+    });
 
     // Publish event
     const updatePayload = buildAssetUpdatedPayload({
@@ -499,6 +610,81 @@ export class AssetService extends BaseService<any> {
     if (!contact) {
       throw new ValidationError('Selected contact is not available for this client');
     }
+  }
+
+  /**
+   * FR-C3 / T099: REST writes record their assignment with source `api`, and a
+   * shared-workspace member is rejected as a 400 rather than a 500.
+   */
+  private async applyAssignee(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    assetId: string,
+    contactId: string | null
+  ): Promise<void> {
+    try {
+      await setAssetAssignee(trx, context.tenant, assetId, contactId, {
+        actorUserId: context.userId,
+        source: 'api',
+      });
+    } catch (error) {
+      if (isAssetAssigneeError(error)) {
+        throw new ValidationError(error.message, { contact_name_id: [error.message] });
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * FR-B3: `status` must be an active tenant asset_statuses slug. An archived
+   * status is accepted only when it is the value already stored.
+   */
+  private async assertValidStatus(
+    knex: Knex,
+    tenant: string,
+    status: string | undefined,
+    storedStatus?: string | null
+  ): Promise<void> {
+    if (status === undefined) return;
+    const result = await validateAssetStatusSlug(knex, tenant, status, storedStatus);
+    if (!result.ok) {
+      const { error } = result as Extract<typeof result, { ok: false }>;
+      throw new ValidationError(error.message, { status: [error.message] });
+    }
+  }
+
+  /** FR-F1: the profile must belong to the row's client and be active. */
+  private async assertBillingProfile(
+    knex: Knex,
+    tenant: string,
+    clientId: string,
+    billingProfileId: string
+  ): Promise<void> {
+    try {
+      await assertBillingProfileForClient(knex, tenant, clientId, billingProfileId);
+    } catch (error) {
+      throw new ValidationError(
+        error instanceof Error ? error.message : 'Selected billing profile is not available for this client',
+        { billing_profile_id: ['Selected billing profile is not available for this client'] }
+      );
+    }
+  }
+
+  /** Suppliers come from the inventory `vendors` table (FR-A1). */
+  private async assertVendorExists(knex: Knex, tenant: string, vendorId: string): Promise<void> {
+    const vendor = await scopedTable(knex, tenant, 'vendors')
+      .where({ vendor_id: vendorId })
+      .first('vendor_id');
+
+    if (!vendor) {
+      throw new ValidationError('Selected vendor is not available');
+    }
+  }
+
+  private async resolveTenantCurrency(knex: Knex, tenant: string): Promise<string> {
+    const settings = await scopedTable(knex, tenant, 'default_billing_settings')
+      .first('default_currency_code');
+    return (settings?.default_currency_code as string | undefined) || 'USD';
   }
 
   private async assertAssetExists(
@@ -1139,6 +1325,41 @@ export class AssetService extends BaseService<any> {
     return assets;
   }
 
+  /** FR-C8: the asset's assignment history, newest first. */
+  async getAssetAssignments(assetId: string, context: ServiceContext): Promise<any[]> {
+    const knex = await this.getDbForContext(context);
+    const query = scopedTable(knex, context.tenant, 'asset_assignments as aa')
+      .where({ 'aa.asset_id': assetId })
+      .select(
+        'aa.assignment_id',
+        'aa.asset_id',
+        'aa.contact_name_id',
+        'aa.assigned_at',
+        'aa.assigned_by_user_id',
+        'aa.unassigned_at',
+        'aa.unassigned_by_user_id',
+        'aa.source',
+        'aa.note',
+        'contacts.full_name as contact_name',
+      );
+    tenantDb(knex, context.tenant).tenantJoin(query, 'contacts', 'contacts.contact_name_id', 'aa.contact_name_id', {
+      type: 'left',
+    });
+
+    return query.orderBy('aa.assigned_at', 'desc');
+  }
+
+  /** FR-B4: the tenant's asset statuses, in display order. */
+  async listAssetStatuses(
+    context: ServiceContext,
+    options?: { includeArchived?: boolean }
+  ): Promise<any[]> {
+    const knex = await this.getDbForContext(context);
+    const query = scopedTable(knex, context.tenant, 'asset_statuses').select('*');
+    if (!options?.includeArchived) query.where({ is_active: true });
+    return query.orderBy('display_order', 'asc').orderBy('label', 'asc');
+  }
+
   // Statistics
   async getStatistics(context: ServiceContext): Promise<any> {
     const [basicStats, typeStats, statusStats, clientStats, warrantyStats, maintenanceStats] = await Promise.all([
@@ -1237,8 +1458,20 @@ export class AssetService extends BaseService<any> {
       ])
       .first();
 
+    // FR-B5: "deployed" is every status whose kind is `deployable`, so a
+    // tenant's custom "In use" counts and the literal `active` slug does not
+    // have to be special.
+    const deployed = await scopedTable(knex, context.tenant, this.tableName)
+      .whereIn(
+        'status',
+        scopedTable(knex, context.tenant, 'asset_statuses').where({ kind: 'deployable' }).select('slug')
+      )
+      .count<{ count: string }>('asset_id as count')
+      .first();
+
     return {
       total_assets: parseInt(stats?.total_assets || '0'),
+      deployed_assets: parseInt(String(deployed?.count ?? '0')),
       assets_added_this_month: parseInt(stats?.assets_added_this_month || '0'),
       average_asset_age_days: stats?.average_asset_age_days ? Math.round(parseFloat(stats.average_asset_age_days)) : null,
       total_asset_value: parseFloat(stats?.total_asset_value || '0')

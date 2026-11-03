@@ -55,6 +55,7 @@ import {
 
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
+import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -628,6 +629,21 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         source: 'web_app',
         ticket_origin: TICKET_ORIGINS.INTERNAL,
       };
+
+      // FR-F3: a ticket raised against an asset inherits the asset's billing
+      // profile (or its location's default) when the caller picked none. This
+      // is the QuickAddTicket path used by the asset header, the asset list,
+      // service history and maintenance — `createTicketFromAsset` does the
+      // same for its own dialog.
+      if (asset_id && createTicketInput.client_id && !createTicketInput.billing_profile_id) {
+        createTicketInput.billing_profile_id =
+          (await resolveAssetBillingProfileIdForClient(
+            trx,
+            tenant,
+            asset_id as string,
+            createTicketInput.client_id
+          )) ?? undefined;
+      }
 
       // Duplicate path: authorize and load the source before creating anything,
       // so a refused duplicate rolls back with nothing written.

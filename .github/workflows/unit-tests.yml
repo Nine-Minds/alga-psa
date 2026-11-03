@@ -6,6 +6,8 @@ env:
   # Ownership repair tests operate only on mkdtemp fixtures and restore the
   # runner UID on exit. Fail if the capability is unavailable instead of skipping.
   ALGA_TEST_PRIVILEGED_CHOWN: '1'
+  # Keep CI off the production PostHog project (flag-request and event quotas).
+  ALGA_USAGE_STATS: 'false'
 
 jobs:
   skip-budget:

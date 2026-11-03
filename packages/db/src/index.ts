@@ -143,3 +143,5 @@ export async function withAdminTransaction<T>(
 
 // Re-export Knex types (for consumers that need type-only imports)
 export type { Knex as KnexInstance } from 'knex';
+
+export { ensureMiscellaneousService } from './lib/ensureMiscellaneousService';

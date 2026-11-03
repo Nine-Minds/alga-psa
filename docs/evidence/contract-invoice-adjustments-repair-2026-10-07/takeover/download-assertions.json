@@ -1,0 +1,20 @@
+[
+  {
+    "adapter": "quickbooks_csv",
+    "rows": 6,
+    "total": "3645.90",
+    "invoiceDate": "09/23/2026",
+    "dueDate": "10/23/2026",
+    "downloadSha256": "c7b1f9c957a2fe8a3f82987f035a56db6c9bd56a776bcd1e179aae0fc939bc3e",
+    "equalsDatabaseBytes": true
+  },
+  {
+    "adapter": "xero_csv",
+    "rows": 6,
+    "total": "3645.90",
+    "invoiceDate": "09/23/2026",
+    "dueDate": "10/23/2026",
+    "downloadSha256": "9fbb588220033efbbf42b3addb4031631882829ddb81e099f656a56886938355",
+    "equalsDatabaseBytes": true
+  }
+]

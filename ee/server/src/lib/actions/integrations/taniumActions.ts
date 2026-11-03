@@ -1,10 +1,15 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
+import type { Knex } from 'knex';
+import { moveRmmOrganizationAssets } from '@alga-psa/shared/rmm/moveRmmOrganizationAssets';
+import { resolveMappingBillingProfileId } from '@alga-psa/shared/rmm/mappingBillingProfile';
+import { isRmmContactAssignmentMode } from '@alga-psa/shared/rmm/userMatching';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@/lib/db';
 import {
   ingestNormalizedRmmDeviceSnapshot,
@@ -383,6 +388,8 @@ export const getTaniumOrganizationMappings = withAdvancedAssetsAccess(async (use
         'rom.auto_sync_assets',
         'rom.auto_create_tickets',
         'rom.default_contact_id',
+        'rom.contact_assignment_mode',
+        'rom.billing_profile_id',
         'rom.last_synced_at',
         'c.client_name as client_name',
       ])
@@ -407,6 +414,10 @@ export const updateTaniumOrganizationMapping = withAdvancedAssetsAccess(async (
     autoSyncAssets?: boolean;
     autoCreateTickets?: boolean;
     defaultContactId?: string | null;
+    /** FR-D3: off | suggest | auto. */
+    contactAssignmentMode?: string;
+    /** FR-F1: the organization's billing profile, or null. */
+    billingProfileId?: string | null;
   }
 ) => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
@@ -422,10 +433,44 @@ export const updateTaniumOrganizationMapping = withAdvancedAssetsAccess(async (
     if (typeof input.autoSyncAssets !== 'undefined') patch.auto_sync_assets = input.autoSyncAssets;
     if (typeof input.autoCreateTickets !== 'undefined') patch.auto_create_tickets = input.autoCreateTickets;
     if (typeof input.defaultContactId !== 'undefined') patch.default_contact_id = input.defaultContactId || null;
+    if (typeof input.contactAssignmentMode !== 'undefined') {
+      if (!isRmmContactAssignmentMode(input.contactAssignmentMode)) {
+        return { success: false, error: 'Invalid people mode' };
+      }
+      patch.contact_assignment_mode = input.contactAssignmentMode;
+    }
+    // FR-G4: a client change moves the organization's assets in the same
+    // transaction as the mapping update, so the two can never disagree.
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const trxDb = tenantDb(trx, tenant);
+      const existing = await trxDb.table('rmm_organization_mappings')
+        .where({ mapping_id: input.mappingId })
+        .first('client_id', 'integration_id', 'external_organization_id');
 
-    await db.table('rmm_organization_mappings')
-      .where({ mapping_id: input.mappingId })
-      .update(patch);
+      // FR-F1: validated against the client the mapping ends up on, and
+      // cleared by a client change whatever else the patch carries.
+      const billingProfileId = await resolveMappingBillingProfileId(trx, tenant, {
+        existingClientId: existing?.client_id ?? null,
+        nextClientId: input.clientId,
+        billingProfileId: input.billingProfileId,
+      });
+      if (typeof billingProfileId !== 'undefined') patch.billing_profile_id = billingProfileId;
+
+      await trxDb.table('rmm_organization_mappings')
+        .where({ mapping_id: input.mappingId })
+        .update(patch);
+
+      const nextClientId = patch.client_id as string | null | undefined;
+      if (nextClientId && existing && String(existing.client_id ?? '') !== String(nextClientId)) {
+        await moveRmmOrganizationAssets(trx, tenant, {
+          integrationId: String(existing.integration_id),
+          provider: 'tanium',
+          externalOrganizationId: String(existing.external_organization_id),
+          newClientId: String(nextClientId),
+          actorUserId: (user as { user_id?: string }).user_id ?? null,
+        });
+      }
+    });
 
     return { success: true };
   } catch (error) {

@@ -1,0 +1,2 @@
+    PID   RSS     ELAPSED COMMAND
+2057348 5545368     17:00 /home/robert/.config/nvm/versions/node/v22.22.3/bin/node --require /home/robert/alga-copies/feature-contract-invoices-automatic-adjustments-and-disc/node_modules/.pnpm/tsx@4.23.15/node_modules/tsx/dist/preflight.cjs --import file:///home/robert/alga-copies/feature-contract-invoices-automatic-adjustments-and-disc/node_modules/.pnpm/tsx@4.23.15/node_modules/tsx/dist/loader.mjs dev-server.ts

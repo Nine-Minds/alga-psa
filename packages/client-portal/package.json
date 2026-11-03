@@ -29,6 +29,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@alga-psa/assets": "*",
     "@alga-psa/client-portal-composition": "*",
     "@alga-psa/clients": "*",
     "@alga-psa/core": "*",

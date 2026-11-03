@@ -36,7 +36,7 @@ import {
     isMicrosoftSsoEmulatorEnabled,
 } from "./sso/microsoftSsoEmulator";
 import { mapCeOAuthProfileToExtendedUser } from "./sso/ceOAuthProfileMapper";
-import { cookies } from "next/headers.js";
+import { cookies, headers } from "next/headers.js";
 import {
     MSP_SSO_RESOLUTION_COOKIE,
     getMspSsoSigningSecret,
@@ -151,6 +151,16 @@ const SESSION_COOKIE = getSessionCookieConfig();
  */
 type TrackedSessionVerdict = 'live' | 'revoked' | 'unverified';
 
+async function logTrackedSessionRejection(reason: string): Promise<void> {
+    let requestId = 'unavailable';
+    try {
+        const requestHeaders = await headers();
+        const candidate = requestHeaders.get('x-request-id') || requestHeaders.get('x-correlation-id') || '';
+        if (/^[A-Za-z0-9._:-]{1,128}$/.test(candidate)) requestId = candidate;
+    } catch { /* Auth callbacks can also run outside a request context. */ }
+    console.warn('[auth] session_rejected', { reason, requestId });
+}
+
 async function checkTrackedSession(
     tenant: unknown,
     sessionId: unknown,
@@ -166,18 +176,22 @@ async function checkTrackedSession(
         || userId.length === 0
         || (userType !== 'internal' && userType !== 'client')
     ) {
-        console.error('[auth] Tracked session is missing required identity claims.');
+        await logTrackedSessionRejection('missing_identity_claims');
         return 'revoked';
     }
 
     try {
-        const revoked = await UserSession.isRevokedOrIdentityMismatch(tenant, sessionId, {
+        const rejectionReason = await UserSession.getRejectionReason(tenant, sessionId, {
             userId,
             userType,
         });
-        return revoked ? 'revoked' : 'live';
-    } catch (error) {
-        console.error('[auth] Session revocation check could not be completed:', error);
+        if (rejectionReason) {
+            await logTrackedSessionRejection(`durable_session_${rejectionReason}`);
+            return 'revoked';
+        }
+        return 'live';
+    } catch {
+        await logTrackedSessionRejection('durable_session_lookup_unavailable');
         return 'unverified';
     }
 }

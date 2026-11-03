@@ -370,6 +370,7 @@ export default defineConfig({
       { find: /^@alga-psa\/emulator-webhook-sink$/, replacement: path.resolve(__dirname, '../packages/emulators/webhook-sink/src/index.ts') },
       { find: /^@alga-psa\/emulator-xero$/, replacement: path.resolve(__dirname, '../packages/emulators/xero/src/index.ts') },
       { find: /^@alga-psa\/emulator-threecx$/, replacement: path.resolve(__dirname, '../packages/emulators/threecx/src/index.ts') },
+      { find: /^@alga-psa\/emulator-levelio$/, replacement: path.resolve(__dirname, '../packages/emulators/levelio/src/index.ts') },
 
       { find: /^@alga-psa\/media$/, replacement: path.resolve(__dirname, '../packages/media/src/index.ts') },
       { find: /^@alga-psa\/storage$/, replacement: path.resolve(__dirname, '../packages/storage/src/index.ts') },

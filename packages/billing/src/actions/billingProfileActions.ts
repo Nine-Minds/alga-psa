@@ -3,6 +3,8 @@
 import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { withSerializableAuth } from './serializableAuth';
+import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   listClientBillingProfiles,
   type ClientBillingProfileRow,
@@ -23,28 +25,30 @@ import {
 // which throws ReferenceError at module evaluation once the type is erased.
 export type { ClientBillingProfileRow } from '@alga-psa/shared/billingClients/billingProfiles';
 
-async function assertBillingRead(user: any): Promise<void> {
-  if (!(await hasPermission(user, 'billing', 'read'))) {
-    throw new Error('Permission denied: Cannot read billing profiles');
-  }
-}
-
 async function assertBillingUpdate(user: any): Promise<void> {
   if (!(await hasPermission(user, 'billing', 'update'))) {
     throw new Error('Permission denied: Cannot assign billing profiles');
   }
 }
 
-export const getClientBillingProfilesForBilling = withAuth(async (
+async function assertBillingRead(user: any): Promise<void> {
+  if (!(await hasPermission(user, 'billing', 'read'))) {
+    throw new Error('Permission denied: Cannot read billing profiles');
+  }
+}
+
+export const getClientBillingProfilesForBilling = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   clientId: string,
-): Promise<ClientBillingProfileRow[]> => {
-  await assertBillingRead(user);
+): Promise<ClientBillingProfileRow[] | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'billing', 'read'))) {
+    return permissionError('Permission denied: Cannot read billing profiles', 'msp/billing:errors.permissions.billingRead');
+  }
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx: Knex.Transaction) =>
     listClientBillingProfiles(trx, tenant, clientId));
-});
+}));
 
 /**
  * Assign a contract to a billing profile — step 3 of the resolution chain.

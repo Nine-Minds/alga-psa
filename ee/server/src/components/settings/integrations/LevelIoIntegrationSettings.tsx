@@ -1,6 +1,11 @@
 'use client';
 
+import { rmmMappingErrorMessage } from '@alga-psa/integrations/components/settings/integrations/rmmMappingErrors';
 import React, { useCallback, useEffect, useState, useTransition } from 'react';
+import { buildRmmPeopleModeOptions, RmmUserContactMappingPanel } from '@alga-psa/integrations/components/settings/integrations/RmmUserContactMappingPanel';
+import { RmmOrganizationClientChangeDialog } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationClientChangeDialog';
+import { RmmOrganizationBillingProfileSelect } from '@alga-psa/integrations/components/settings/integrations/RmmOrganizationBillingProfileSelect';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Copy, Eye, EyeOff } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -37,6 +42,7 @@ type MappingRow = {
   client_id?: string | null;
   client_name?: string | null;
   default_contact_id?: string | null;
+  contact_assignment_mode?: string | null;
   auto_sync_assets: boolean;
   metadata?: { path?: string } | null;
 };
@@ -152,7 +158,7 @@ export default function LevelIoIntegrationSettings() {
         setSuccess(t('integrations.rmm.levelio.success.configurationSaved', { defaultValue: 'Level configuration saved' }));
         await refresh(true);
       } else {
-        setError(result.error || t('integrations.rmm.levelio.errors.saveConfiguration', { defaultValue: 'Failed to save Level configuration' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.saveConfiguration', { defaultValue: 'Failed to save Level configuration' })));
       }
     });
   };
@@ -165,7 +171,7 @@ export default function LevelIoIntegrationSettings() {
       if (result.success) {
         setSuccess(t('integrations.rmm.levelio.success.connectionTestSucceeded', { defaultValue: 'Connection to Level succeeded' }));
       } else {
-        setError(result.error || t('integrations.rmm.levelio.errors.testConnectionFailed', { defaultValue: 'Connection test failed' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.testConnectionFailed', { defaultValue: 'Connection test failed' })));
       }
       await refresh(true);
     });
@@ -179,7 +185,7 @@ export default function LevelIoIntegrationSettings() {
       if (result.success) {
         setSuccess(t('integrations.rmm.levelio.success.disconnected', { defaultValue: 'Level integration disconnected' }));
       } else {
-        setError(result.error || t('integrations.rmm.levelio.errors.disconnectFailed', { defaultValue: 'Failed to disconnect Level integration' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.disconnectFailed', { defaultValue: 'Failed to disconnect Level integration' })));
       }
       await refresh(true);
     });
@@ -246,7 +252,10 @@ export default function LevelIoIntegrationSettings() {
     });
   };
 
-  const handleMappingClientChange = (mappingId: string, clientId: string | null) => {
+  // FR-G4: re-pointing an organization moves its devices, so confirm first.
+  const [pendingClientChange, setPendingClientChange] = useState<{ mappingId: string; clientId: string | null } | null>(null);
+
+  const handleMappingClientChangeConfirmed = (mappingId: string, clientId: string | null) => {
     void (async () => {
       const result = await updateLevelIoOrganizationMapping({
         mappingId,
@@ -254,7 +263,7 @@ export default function LevelIoIntegrationSettings() {
         defaultContactId: null,
       });
       if (!result.success) {
-        setError(result.error || t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' })));
         return;
       }
       await refresh(true);
@@ -268,7 +277,7 @@ export default function LevelIoIntegrationSettings() {
         defaultContactId: contactId || null,
       });
       if (!result.success) {
-        setError(result.error || t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' }));
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' })));
         return;
       }
       await refresh(true);
@@ -286,6 +295,40 @@ export default function LevelIoIntegrationSettings() {
     copiedField === field
       ? t('integrations.rmm.levelio.webhook.copied', { defaultValue: 'Copied' })
       : t('integrations.rmm.levelio.webhook.copy', { defaultValue: 'Copy' });
+
+  const handlePeopleModeChange = (mappingId: string, mode: string) => {
+    void (async () => {
+      const result = await updateLevelIoOrganizationMapping({ mappingId, contactAssignmentMode: mode });
+      if (!result.success) {
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.levelio.errors.updateMappingFailed', { defaultValue: 'Failed to update mapping' })));
+        return;
+      }
+      await refresh(true);
+    })();
+  };
+
+  // F090: the profile this organization's alert tickets are attributed to.
+  const handleBillingProfileChange = (mappingId: string, billingProfileId: string | null) => {
+    void (async () => {
+      const result = await updateLevelIoOrganizationMapping({ mappingId, billingProfileId });
+      if (!result.success) {
+        setError(rmmMappingErrorMessage(t, result.error, t('integrations.rmm.billingProfile.updateFailed', { defaultValue: 'Failed to update the billing profile' })));
+        return;
+      }
+      await refresh(true);
+    })();
+  };
+
+  const peopleModeOptions = buildRmmPeopleModeOptions(t);
+
+  const handleMappingClientChange = (mappingId: string, clientId: string | null) => {
+    const current = mappings.find((m) => m.mapping_id === mappingId);
+    if (clientId && current?.client_id && current.client_id !== clientId) {
+      setPendingClientChange({ mappingId, clientId });
+      return;
+    }
+    handleMappingClientChangeConfirmed(mappingId, clientId);
+  };
 
   const columns: ColumnDefinition<MappingRow>[] = [
     {
@@ -320,6 +363,35 @@ export default function LevelIoIntegrationSettings() {
       ),
     },
     {
+      // FR-D8: what sync does with the device's signed-in user.
+      title: t('integrations.rmm.peopleMode.label', { defaultValue: 'People' }),
+      dataIndex: 'contact_assignment_mode',
+      sortable: false,
+      render: (_v, mapping) => (
+        <CustomSelect
+          id={`rmm-org-people-mode-${mapping.mapping_id}`}
+          value={mapping.contact_assignment_mode ?? 'suggest'}
+          onValueChange={(mode) => handlePeopleModeChange(mapping.mapping_id, mode)}
+          options={peopleModeOptions}
+          className="min-w-[160px]"
+        />
+      ),
+    },
+    {
+      // F090: which profile this organization's alert tickets bill to.
+      title: t('integrations.rmm.billingProfile.label', { defaultValue: 'Billing profile' }),
+      dataIndex: 'billing_profile_id',
+      sortable: false,
+      render: (_v, mapping) => (
+        <RmmOrganizationBillingProfileSelect
+          mappingId={mapping.mapping_id}
+          clientId={mapping.client_id}
+          value={(mapping as { billing_profile_id?: string | null }).billing_profile_id}
+          onChange={(billingProfileId) => handleBillingProfileChange(mapping.mapping_id, billingProfileId)}
+        />
+      ),
+    },
+    {
       title: t('integrations.rmm.levelio.mappings.defaultContact', { defaultValue: 'Default Contact' }),
       dataIndex: 'default_contact_id',
       sortable: false,
@@ -350,6 +422,17 @@ export default function LevelIoIntegrationSettings() {
 
   return (
     <div className="space-y-6" id="levelio-integration-settings">
+      <RmmOrganizationClientChangeDialog
+        mappingId={pendingClientChange?.mappingId ?? null}
+        pendingClientName={clients.find((c) => c.client_id === pendingClientChange?.clientId)?.client_name ?? null}
+        isOpen={Boolean(pendingClientChange)}
+        onCancel={() => setPendingClientChange(null)}
+        onConfirm={() => {
+          const pending = pendingClientChange;
+          setPendingClientChange(null);
+          if (pending) handleMappingClientChangeConfirmed(pending.mappingId, pending.clientId);
+        }}
+      />
       {error ? (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -457,7 +540,25 @@ export default function LevelIoIntegrationSettings() {
           ) : null}
 
           <div className="overflow-x-auto rounded-md border">
-            <DataTable id="levelio-org-mappings" data={mappings} columns={columns} pagination />
+            <>
+              <DataTable id="levelio-org-mappings" data={mappings} columns={columns} pagination />
+              {/* FR-D8: one Signed-in users panel per mapped organization. */}
+              {mappings
+                .filter((m) => m.client_id)
+                .map((m) => (
+                  <div key={`signed-in-${m.mapping_id}`} className="mt-4 border-t pt-4">
+                    <div className="mb-2 text-sm font-medium">
+                      {m.external_organization_name || m.external_organization_id}
+                    </div>
+                    <RmmUserContactMappingPanel
+                      mappingId={m.mapping_id}
+                      clientId={m.client_id ?? null}
+                      contacts={contacts}
+                      idPrefix={`levelio-signed-in-${m.mapping_id}`}
+                    />
+                  </div>
+                ))}
+            </>
           </div>
         </CardContent>
       </Card>

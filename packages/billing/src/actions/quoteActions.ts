@@ -5,6 +5,7 @@ import Handlebars from 'handlebars';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
+import { withSerializableAuth } from './serializableAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { TenantEmailService } from '@alga-psa/email';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -14,6 +15,7 @@ import Quote, { type QuoteListOptions } from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
+import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate, formatQuoteDate } from '../lib/quote-email-templates';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { mapLoadedQuoteToViewModel } from '../lib/adapters/quoteAdapters';
@@ -432,6 +434,8 @@ const getQuoteRecipients = async (
   quote: IQuote,
   emailAddresses: string[] = []
 ): Promise<string[]> => {
+  // The client's address is whoever its invoices go to (billing contact,
+  // billing email, billing/default location), not the raw billing_email column.
   const [contactRecipient, clientRecipient] = await Promise.all([
     quote.contact_id
       ? tenantDb(knex, tenant).table('contacts')
@@ -440,10 +444,7 @@ const getQuoteRecipients = async (
         .first<{ email?: string | null }>()
       : Promise.resolve(null),
     quote.client_id
-      ? tenantDb(knex, tenant).table('clients')
-        .select('billing_email')
-        .where({ client_id: quote.client_id })
-        .first<{ billing_email?: string | null }>()
+      ? resolveInvoiceBillingRecipient({ knexOrTrx: knex, tenantId: tenant, clientId: quote.client_id })
       : Promise.resolve(null),
   ]);
 
@@ -452,7 +453,7 @@ const getQuoteRecipients = async (
       [
         ...emailAddresses,
         contactRecipient?.email ?? '',
-        clientRecipient?.billing_email ?? '',
+        clientRecipient?.recipientEmail ?? '',
       ]
         .map((email) => email.trim())
         .filter((email) => email.length > 0)
@@ -1144,6 +1145,12 @@ export const createQuoteFromTemplate = withAuth(async (
       quote_date: input.quote_date,
       valid_until: input.valid_until,
       po_number: input.po_number ?? null,
+      recurring_section_title: input.recurring_section_title !== undefined
+        ? input.recurring_section_title
+        : template.recurring_section_title ?? null,
+      onetime_section_title: input.onetime_section_title !== undefined
+        ? input.onetime_section_title
+        : template.onetime_section_title ?? null,
       opportunity_id: input.opportunity_id ?? null,
       internal_notes: input.internal_notes ?? template.internal_notes ?? null,
       client_notes: input.client_notes ?? template.client_notes ?? null,
@@ -1208,6 +1215,8 @@ export const duplicateQuote = withAuth(async (
       quote_date: sourceQuote.quote_date ?? null,
       valid_until: sourceQuote.valid_until ?? null,
       po_number: sourceQuote.po_number ?? null,
+      recurring_section_title: sourceQuote.recurring_section_title?.trim() || null,
+      onetime_section_title: sourceQuote.onetime_section_title?.trim() || null,
       internal_notes: sourceQuote.internal_notes ?? null,
       client_notes: sourceQuote.client_notes ?? null,
       terms_and_conditions: sourceQuote.terms_and_conditions ?? null,
@@ -1281,6 +1290,8 @@ export const saveQuoteAsTemplate = withAuth(async (
       quote_date: null,
       valid_until: null,
       po_number: null,
+      recurring_section_title: sourceQuote.recurring_section_title?.trim() || null,
+      onetime_section_title: sourceQuote.onetime_section_title?.trim() || null,
       internal_notes: sourceQuote.internal_notes ?? null,
       client_notes: sourceQuote.client_notes ?? null,
       terms_and_conditions: sourceQuote.terms_and_conditions ?? null,
@@ -2206,7 +2217,7 @@ export const getQuoteByConvertedContractId = withAuth(async (
   return applyQuoteRedactions(quote, decision.redactedFields);
 });
 
-export const getQuoteByConvertedInvoiceId = withAuth(async (
+export const getQuoteByConvertedInvoiceId = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   invoiceId: string,
@@ -2226,7 +2237,7 @@ export const getQuoteByConvertedInvoiceId = withAuth(async (
     return null;
   }
   return applyQuoteRedactions(quote, decision.redactedFields);
-});
+}));
 
 /**
  * Get the most recent stored PDF file_id for a quote.
