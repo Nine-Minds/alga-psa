@@ -111,18 +111,6 @@ export async function authorizeApiResource(input: {
   action: string;
   recordContext: AuthorizationRecord;
 }): Promise<boolean> {
-  return authorizeApiResource({ ...input, action: 'read' });
-}
-
-export async function authorizeApiResource(input: {
-  knex: Knex;
-  tenant: string;
-  user: any;
-  apiKeyId?: string;
-  resource: string;
-  action: string;
-  recordContext: AuthorizationRecord;
-}): Promise<boolean> {
   const kernel = await getAuthorizationKernel();
   const subject = await resolveAuthorizationSubjectForUser(
     input.knex,
@@ -151,8 +139,6 @@ export async function authorizeApiResource(input: {
   return decision.allowed;
 }
 
-// LEVERAGE: pattern read-authz-for-writes — ApiProjectController, ApiQuoteController, ApiInventoryController and assetReadGuard
-// likely authorize writes via this read wrapper too; migrate them to authorizeApiResource({ action }).
 export async function authorizeApiResourceRead(input: {
   knex: Knex;
   tenant: string;
