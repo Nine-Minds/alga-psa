@@ -201,10 +201,29 @@ export class ApiProjectController extends ApiBaseController {
     const statusNameById = new Map<string, string>(
       (statuses as any[]).map((row) => [String(row.status_id), String(row.name)] as [string, string])
     );
+    const clientIds = Array.from(new Set(
+      authorizedProjects
+        .map((project) => project.client_id)
+        .filter((clientId): clientId is string => typeof clientId === 'string' && clientId.length > 0),
+    ));
+    const clients = clientIds.length > 0
+      ? await tenantDb(resolvedKnex, apiRequest.context.tenant).table('clients')
+          .where('tenant', apiRequest.context.tenant)
+          .whereIn('client_id', clientIds)
+          .select('client_id', 'client_name')
+      : [];
+    const clientNameById = new Map<string, string>(
+      (clients as any[])
+        .filter((row) => typeof row.client_id === 'string' && typeof row.client_name === 'string')
+        .map((row) => [row.client_id, row.client_name] as [string, string]),
+    );
     // Enrichment is projected under each row's original decision before any aggregate reads it.
     const projects = authorizedProjects.flatMap((project) => {
       const enriched = reprojectUnderDecision<Record<string, any>>(project, {
         ...project,
+        client_name: typeof project.client_id === 'string'
+          ? clientNameById.get(project.client_id) ?? null
+          : null,
         status_name: statusNameById.get(project.status) ?? project.status ?? 'unknown',
       }, PROJECT_RECORD_SOURCE);
       return enriched ? [enriched] : [];

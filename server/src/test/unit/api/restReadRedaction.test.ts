@@ -45,6 +45,8 @@ const state = vi.hoisted(() => ({
   watchers: [] as Record<string, any>[],
   statuses: [] as Record<string, any>[],
   clients: [] as Record<string, any>[],
+  clientTenantFilters: [] as Array<[string, string]>,
+  clientIdLookups: [] as string[][],
 }));
 
 const authorizeResource = vi.hoisted(() =>
@@ -70,8 +72,14 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
     tenantDb: vi.fn(() => ({
       table: (name: string) => {
         const chain: any = {
-          whereIn: () => chain,
-          where: () => chain,
+          whereIn: (column: string, values: string[]) => {
+            if (name === 'clients' && column === 'client_id') state.clientIdLookups.push(values);
+            return chain;
+          },
+          where: (column: string, value: string) => {
+            if (name === 'clients') state.clientTenantFilters.push([column, value]);
+            return chain;
+          },
           select: async () => name === 'statuses' ? state.statuses : state.clients,
           first: async () => null,
         };
@@ -98,7 +106,11 @@ vi.mock('@/lib/api/rateLimit/enforce', () => ({
 vi.mock('../../../lib/api/services/ProjectService', () => ({
   ProjectService: class {
     getById = vi.fn(async (id: string) => state.projects.find((p) => p.project_id === id) ?? null);
-    list = vi.fn(async () => ({ data: state.projects, total: state.projects.length }));
+    // ProjectService.list returns project columns only; unlike getById it does not join clients.client_name.
+    list = vi.fn(async () => ({
+      data: state.projects.map(({ client_name: _joinedName, ...row }) => row),
+      total: state.projects.length,
+    }));
     searchProjects = vi.fn(async () => state.projects);
     exportProjects = vi.fn(async () => state.projects);
   },
@@ -219,6 +231,8 @@ beforeEach(() => {
   state.watchers = [];
   state.statuses = [{ status_id: 's-1', name: 'Active' }];
   state.clients = [{ client_id: 'c-1', client_name: 'Acme' }];
+  state.clientTenantFilters = [];
+  state.clientIdLookups = [];
   authorizeResource.mockClear();
   vi.spyOn(ApiBaseController.prototype as any, 'authenticate').mockImplementation(async (req: any) => {
     req.context = context;
@@ -297,6 +311,90 @@ describe('projects: REST reads serialize the projection', () => {
     const hidden = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
     expect(hidden.data.total_projects).toBe(2);
     expect(hidden.data.total_budgeted_hours).toBe(0);
+  });
+
+  it('stats enrich ProjectService.list rows with tenant-scoped client labels before aggregation', async () => {
+    state.projects = [
+      project(P1, { client_id: 'c-1' }),
+      project(P2, { client_id: 'c-2' }),
+      project(P3, { client_id: 'c-1' }),
+      project('22222222-2222-2222-2222-222222222224', { client_id: 'c-3' }),
+    ];
+    state.clients = [
+      { client_id: 'c-1', client_name: 'Emerald City' },
+      { client_id: 'c-2', client_name: 'White Rabbit' },
+      { client_id: 'c-3', client_name: 'Wonderland' },
+    ];
+
+    const response = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
+    expect(response.data.top_clients_by_project_count).toEqual([
+      { client_name: 'Emerald City', project_count: 2 },
+      { client_name: 'White Rabbit', project_count: 1 },
+      { client_name: 'Wonderland', project_count: 1 },
+    ]);
+    expect(state.clientTenantFilters).toContainEqual(['tenant', TENANT]);
+    expect(state.clientIdLookups).toEqual([['c-1', 'c-2', 'c-3']]);
+  });
+
+  it.each(['client_name', 'clients.client_name', 'client_id', 'clients.client_id'])(
+    'stats keep client labels redacted when the project decision hides %s', async (alias) => {
+      hideProjectFields(alias);
+      const response = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
+
+      if (alias === 'client_id') {
+        expect(response.data.top_clients_by_project_count).toEqual([]);
+        expect(state.clientIdLookups).toEqual([]);
+      } else {
+        expect(response.data.top_clients_by_project_count).toEqual([
+          { client_name: null, project_count: 3 },
+        ]);
+      }
+    },
+  );
+
+  it('stats exclude denied and identifier/resource-suppressed rows while mixing visible and redacted client labels', async () => {
+    const P4 = '22222222-2222-2222-2222-222222222224';
+    const P5 = '22222222-2222-2222-2222-222222222225';
+    const P6 = '22222222-2222-2222-2222-222222222226';
+    const P7 = '22222222-2222-2222-2222-222222222227';
+    state.projects = [
+      project(P1, { client_id: 'c-1' }),
+      project(P2, { client_id: 'c-1' }),
+      project(P3, { client_id: 'c-2' }),
+      project(P4, { client_id: 'c-3' }),
+      project(P5, { client_id: 'c-4' }),
+      project(P6, { client_id: 'c-5' }),
+      project(P7, { client_id: 'c-6' }),
+    ];
+    state.clients = [
+      { client_id: 'c-1', client_name: 'Emerald City' },
+      { client_id: 'c-2', client_name: 'White Rabbit' },
+      { client_id: 'c-3', client_name: 'Wonderland' },
+    ];
+    state.decisions.set(P2, { allowed: true, redactedFields: ['clients.client_name'] });
+    state.decisions.set(P3, { allowed: true, redactedFields: ['client_id'] });
+    state.decisions.set(P4, { allowed: true, redactedFields: ['values.project_id'] });
+    state.decisions.set(P5, { allowed: false, redactedFields: [] });
+    state.decisions.set(P6, { allowed: true, redactedFields: ['projects'] });
+    state.decisions.set(P7, { allowed: true, redactedFields: ['projects.project_id'] });
+
+    const response = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
+    expect(response.data.total_projects).toBe(3);
+    expect(response.data.top_clients_by_project_count).toEqual([
+      { client_name: 'Emerald City', project_count: 2 },
+    ]);
+  });
+
+  it('stats keep missing client labels nullable and query only under the request tenant', async () => {
+    state.projects = [project(P1, { client_id: 'missing-client' })];
+    state.clients = [];
+
+    const response = await (await controller().stats()(request('/api/v1/projects/stats'))).json();
+    expect(response.data.top_clients_by_project_count).toEqual([
+      { client_name: null, project_count: 1 },
+    ]);
+    expect(state.clientTenantFilters).toContainEqual(['tenant', TENANT]);
+    expect(state.clientIdLookups).toEqual([['missing-client']]);
   });
 
   it('stats preserve projected client-name redactions despite populated client lookup data', async () => {

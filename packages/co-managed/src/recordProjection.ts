@@ -90,7 +90,7 @@ export const PROJECT_RECORD_SOURCE: RedactableRecordSource = recordSourceFromCoM
   CO_MANAGED_PROJECT_FIELD_SOURCE, { title: 'project_name', description: 'description' }, {
     derived: {
       status_name: ids('status', 'statuses'),
-      client_name: ids('client_id', 'clients', 'clients.client_name'),
+      client_name: ids('client_id', 'clients', 'clients.client_id', 'clients.client_name'),
       contact_name: ids('contact_name_id', 'contacts', 'contacts.full_name'),
       assigned_user_name: [...CO_MANAGED_ASSIGNEE_NAME_ALIASES, 'assigned_to'],
     },
