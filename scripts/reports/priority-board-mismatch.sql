@@ -97,6 +97,21 @@ JOIN categories c ON c.tenant = d.tenant
 WHERE (COALESCE(b.category_type, 'custom') = 'itil') IS DISTINCT FROM COALESCE(c.is_from_itil_standard, false)
 GROUP BY d.tenant ORDER BY d.tenant;
 
+SELECT 'recurring_ticket_definition_clients: category_type (info, effective)' AS source, c.tenant,
+       count(*) AS mismatched,
+       count(*) FILTER (WHERE c.is_active AND d.is_active AND d.archived_at IS NULL) AS mismatched_active
+FROM recurring_ticket_definition_clients c
+JOIN recurring_ticket_definitions d ON d.tenant = c.tenant AND d.definition_id = c.definition_id
+JOIN ticket_templates t ON t.tenant = d.tenant AND t.template_id = d.ticket_template_id
+JOIN boards b     ON b.tenant = c.tenant
+                 AND b.board_id = COALESCE((c.overrides #>> '{board,board_id}')::uuid,
+                                           (d.overrides #>> '{board,board_id}')::uuid, t.board_id)
+JOIN categories cat ON cat.tenant = c.tenant
+                   AND cat.category_id = COALESCE((c.overrides #>> '{category,category_id}')::uuid,
+                                                  (d.overrides #>> '{category,category_id}')::uuid, t.category_id)
+WHERE (COALESCE(b.category_type, 'custom') = 'itil') IS DISTINCT FROM COALESCE(cat.is_from_itil_standard, false)
+GROUP BY c.tenant ORDER BY c.tenant;
+
 SELECT 'tickets (open): category_type (info)' AS source, k.tenant, count(*) AS mismatched, count(*) AS mismatched_active
 FROM tickets k
 JOIN boards b     ON b.tenant = k.tenant AND b.board_id = k.board_id
