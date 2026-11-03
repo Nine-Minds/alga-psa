@@ -28,7 +28,9 @@ describe('project authorization kernel contracts', () => {
 
   it('T038: narrows project tree/phase/detail/status mutation surfaces through shared project read authorization helpers', () => {
     expect(projectReadAuthorizationSource).toContain('export async function createProjectReadAuthorizer(');
-    expect(projectActionsSource).toContain("import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';");
+    expect(projectActionsSource).toContain("import { createClientReadDecider, createProjectReadAuthorizer, createProjectReadDecider } from '../lib/projectReadAuthorization';");
+    expect(projectReadAuthorizationSource).toContain('export async function createProjectReadDecider(');
+    expect(projectActionsSource).toContain('const decide = await createProjectReadDecider(trx, tenant, user);');
     expect(projectTaskActionsSource).toContain("import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';");
     expect(projectActionsSource).not.toContain('async function createProjectReadAuthorizer(');
     expect(projectTaskActionsSource).not.toContain('async function createProjectReadAuthorizer(');
@@ -36,7 +38,8 @@ describe('project authorization kernel contracts', () => {
     expect(projectActionsSource).toContain('async function assertProjectReadAllowed(');
     expect(projectActionsSource).toContain('async function resolveProjectIdForPhase(');
     expect(projectActionsSource).toContain('async function resolveProjectIdsForStatus(');
-    expect(projectActionsSource).toContain('return await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);');
+    expect(projectActionsSource).toContain('async function loadDecisionAwareProjectRows(');
+    expect(projectActionsSource).toContain('return loadDecisionAwareProjectRows(trx, tenant, user as IUserWithRoles, rows);');
     expect(projectActionsSource).toContain('const authorizedProjects = await filterAuthorizedProjects(');
     expect(projectActionsSource).toContain('await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);');
     expect(projectActionsSource).toContain('const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);');

@@ -18,7 +18,7 @@ describe('apply template client creation wiring contract', () => {
     expect(source).toContain(
       '(client) => client.client_id === newClient.client_id,',
     );
-    expect(source).toContain('nextClients[existingIndex] = newClient;');
+    expect(source).toContain('nextClients[existingIndex] = pickerClient;');
     expect(source).toContain(
       'setFormData((current) => ({ ...current, client_id: newClient.client_id }));',
     );
