@@ -508,8 +508,8 @@ describe('nextAuth session expiry sliding', () => {
     };
 
     expect((await signIn()).status).toBe(302);
-    expect(existingSessionCookie).toBeTruthy();
     expect(cookieJar.get('authjs.session-token')).toBeTruthy();
+    expect(cookieJar.get('authjs.session-token')).not.toBe(existingSessionCookie);
     expect(callbackInputs).toHaveLength(1);
     expect(callbackInputs[0]).not.toHaveProperty('session_id');
     expect(firstSession.revoked).toBe(true);
@@ -518,6 +518,20 @@ describe('nextAuth session expiry sliding', () => {
     const decoded = await request('session');
     expect(decoded.status).toBe(200);
     expect(await decoded.json()).toMatchObject({ user: { id: 'u-1', tenant: 'tenant-1' } });
+    const repeatedRead = await request('session');
+    expect(await repeatedRead.json()).toMatchObject({ user: { id: 'u-1', tenant: 'tenant-1' } });
+    expect(durableSessions.filter((row) => !row.revoked)).toHaveLength(5);
+
+    // Re-authentication grants a new session; it must not revive the old cookie.
+    const revokedReplay = await Auth(new Request('http://app.test/api/auth/session', {
+      headers: { cookie: `authjs.session-token=${existingSessionCookie}` },
+    }), authConfig);
+    expect(revokedReplay.status).toBe(200);
+    expect(await revokedReplay.json()).toBeNull();
+
+    const anonymousRead = await Auth(new Request('http://app.test/api/auth/session'), authConfig);
+    expect(anonymousRead.status).toBe(200);
+    expect(await anonymousRead.json()).toBeNull();
     expect(durableSessions.filter((row) => !row.revoked)).toHaveLength(5);
   });
 
