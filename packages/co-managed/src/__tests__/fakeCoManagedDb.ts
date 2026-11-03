@@ -71,9 +71,14 @@ function makeBuilder(store: FakeStore, table: string, tenant: string | undefined
   const grouped = (callback: Function) => {
     const terms: Array<{ or: boolean; predicate: (row: Row) => boolean }> = [];
     const condition: any = {};
-    for (const method of ['where', 'andWhere', 'orWhere']) condition[method] = (a: any, b?: any, c?: any) => {
-      terms.push({ or: method === 'orWhere', predicate: typeof a === 'function' ? grouped(a) : row => compare(row, a, b, c) }); return condition;
+    const addTerm = (method: string, predicate: (row: Row) => boolean) => {
+      terms.push({ or: method.startsWith('or'), predicate });
+      return condition;
     };
+    for (const method of ['where', 'andWhere', 'orWhere']) condition[method] = (a: any, b?: any, c?: any) =>
+      addTerm(method, typeof a === 'function' ? grouped(a) : row => compare(row, a, b, c));
+    for (const method of ['whereIn', 'andWhereIn', 'orWhereIn']) condition[method] = (column: string, values: unknown[]) =>
+      addTerm(method, row => values.includes(row[col(column)]));
     condition.orWhereRaw = () => { terms.push({ or: true, predicate: () => true }); return condition; };
     callback.call(condition, condition);
     return (row: Row) => terms.reduce((value, term, index) => index === 0 ? term.predicate(row) : term.or ? value || term.predicate(row) : value && term.predicate(row), false);

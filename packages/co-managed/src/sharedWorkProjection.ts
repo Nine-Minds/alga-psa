@@ -11,7 +11,7 @@ export const isCoManagedTaskResourceHidden = (redactedFields: readonly string[])
 });
 export const CO_MANAGED_TASK_NAME_ALIASES = ['task_name', 'values.task_name', 'project_tasks.task_name', ...CO_MANAGED_TASK_RESOURCE_ALIASES] as const;
 export const CO_MANAGED_PROJECT_NAME_ALIASES = ['project_name', 'projectName', 'values.project_name', 'projects.project_name', 'project', 'project_id', 'projects'] as const;
-export const CO_MANAGED_ORGANIZATION_NAME_ALIASES = ['client_name', 'organizationName', 'tenants'] as const;
+export const CO_MANAGED_ORGANIZATION_NAME_ALIASES = ['client_name', 'organization_name', 'organizationName', 'values.organization_name', 'tenants'] as const;
 /** The assignee display name; same aliases the ticket assignment surface uses for the assignee (users/teams are its sources). */
 export const CO_MANAGED_ASSIGNEE_NAME_ALIASES = ['assignee_name', 'values.assignee_name', 'assignee', 'users', 'teams'] as const;
 
