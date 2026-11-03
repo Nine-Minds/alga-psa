@@ -58,7 +58,7 @@ export const createBlockDocument = withAuth(async (
       const targetExists = await tenantDb(trx, tenant).table(associationTarget.table)
         .where(associationTarget.idColumn, input.entityId)
         .first(associationTarget.idColumn);
-      if (!targetExists || !await hasPermission(user, associationTarget.permission, 'read') ||
+      if (!targetExists || !await hasPermission(user, associationTarget.permission, 'read', trx) ||
         !await canAuthorizeDocumentAssociation(trx, tenant, user, input.entityId, input.entityType)) {
         return permissionError('Permission denied: Cannot associate documents with this record', 'documents:errors.permissions.create');
       }
