@@ -4,13 +4,13 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BentoTimelineTile } from './BentoTimelineTile';
-import { TicketDataSourceProvider } from '../TicketDataSourceContext';
-import { nativeTicketDataSource } from '../../../lib/nativeTicketDataSource';
-import { composeTicketDataSource } from '../../../lib/ticketDataSource';
-import { createAttachmentStaging } from '../../../../../../server/src/lib/co-managed/attachmentStaging';
+import { BentoTimelineTile } from '@alga-psa/tickets/components/ticket/bento/BentoTimelineTile';
+import { TicketDataSourceProvider } from '@alga-psa/tickets/components/ticket/TicketDataSourceContext';
+import { nativeTicketDataSource } from '@alga-psa/tickets/lib/nativeTicketDataSource';
+import { composeTicketDataSource } from '@alga-psa/tickets/lib/ticketDataSource';
+import { createAttachmentStaging } from '@/lib/co-managed/attachmentStaging';
 
-/** Exercise the rendered composer with the real upload-session discard path. */
+/** App composition coverage: the ticket composer drives server-owned attachment staging. */
 type BentoTimelineTileProps = React.ComponentProps<typeof BentoTimelineTile>;
 
 vi.mock('next/dynamic', () => ({
@@ -26,7 +26,7 @@ vi.mock('next/dynamic', () => ({
   ),
 }));
 
-vi.mock('../../../actions/clientLookupActions', () => ({ getContactsByClient: vi.fn(async () => []) }));
+vi.mock('@alga-psa/tickets/actions/clientLookupActions', () => ({ getContactsByClient: vi.fn(async () => []) }));
 vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({ getAllUsers: vi.fn(async () => []) }));
 
 vi.mock('@alga-psa/core', () => ({
@@ -168,30 +168,30 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   searchUsersForMentions: vi.fn(),
 }));
 
-vi.mock('../../../actions/ticketActivityActions', () => ({
+vi.mock('@alga-psa/tickets/actions/ticketActivityActions', () => ({
   getTicketTimelineEntries: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('../../../actions/ticketLayoutPreference', () => ({
+vi.mock('@alga-psa/tickets/actions/ticketLayoutPreference', () => ({
   setTicketLayoutPreference: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../../actions/comment-actions/commentReactionActions', () => ({
+vi.mock('@alga-psa/tickets/actions/comment-actions/commentReactionActions', () => ({
   getCommentsReactionsBatch: vi.fn().mockResolvedValue({ reactions: {}, userNames: {} }),
   toggleCommentReaction: vi.fn(),
 }));
 
-vi.mock('../CommentItem', () => ({
+vi.mock('@alga-psa/tickets/components/ticket/CommentItem', () => ({
   default: ({ conversation, onReply }: any) => (
     <button type="button" data-testid={`reply-${conversation.comment_id}`} onClick={onReply} />
   ),
 }));
 
-vi.mock('../TicketConversation', () => ({
+vi.mock('@alga-psa/tickets/components/ticket/TicketConversation', () => ({
   DEFAULT_BLOCK: [],
 }));
 
-vi.mock('../TicketNotificationSuppressionControl', () => ({
+vi.mock('@alga-psa/tickets/components/ticket/TicketNotificationSuppressionControl', () => ({
   default: () => null,
 }));
 
@@ -249,18 +249,24 @@ describe('BentoTimelineTile composer Cancel and screen.onComposerCancel', () => 
     expect(composerOpen()).toBe(false);
   });
 
-  it('clears Attach files staging on Cancel so the next message receives only newly selected files', async () => {
+  it('retains files after a failed send, then clears them on Cancel before the next message', async () => {
     let sequence = 0;
     const staging = createAttachmentStaging(() => `file-${++sequence}`);
     const abandoned = new File(['private note'], 'private.txt', { type: 'text/plain' });
     staging.add([abandoned]);
+    const submittedFiles: File[][] = [];
     const onAddNewComment = vi.fn(async () => {
-      const files = staging.getSnapshot().map(entry => entry.file);
+      submittedFiles.push(staging.getSnapshot().map(entry => entry.file));
+      if (submittedFiles.length === 1) return false;
       staging.clear();
-      return files;
+      return true;
     });
     // Both co-managed hosts install staging.clear as screen.onComposerCancel.
-    renderTimeline(true, { onAddNewComment: async () => { await onAddNewComment(); return true; } }, staging.clear);
+    renderTimeline(true, { onAddNewComment }, staging.clear);
+    fireEvent.click(screen.getByTestId('composer-editor'));
+    fireEvent.click(document.getElementById('ticket-timeline-composer-send')!);
+    await waitFor(() => expect(onAddNewComment).toHaveBeenCalledTimes(1));
+    expect(composerOpen()).toBe(true);
     expect(staging.getSnapshot().map(entry => entry.file)).toEqual([abandoned]);
     cancel();
     await waitFor(() => expect(composerOpen()).toBe(false));
@@ -271,8 +277,10 @@ describe('BentoTimelineTile composer Cancel and screen.onComposerCancel', () => 
     staging.add([selected]);
     fireEvent.click(screen.getByTestId('composer-editor'));
     fireEvent.click(document.getElementById('ticket-timeline-composer-send')!);
-    await waitFor(() => expect(onAddNewComment).toHaveBeenCalledTimes(1));
-    expect(await onAddNewComment.mock.results[0].value).toEqual([selected]);
+    await waitFor(() => expect(onAddNewComment).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(composerOpen()).toBe(false));
+    expect(submittedFiles).toEqual([[abandoned], [selected]]);
+    expect(staging.getSnapshot()).toEqual([]);
   });
 
   it('a native data source (no hook) cancels without throwing and closes the composer', async () => {
