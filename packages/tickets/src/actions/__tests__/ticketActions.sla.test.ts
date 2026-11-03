@@ -3,7 +3,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 // Static import keeps the (expensive) ticketActions module evaluation in the
 // collection phase instead of counting against the 5s test timeout. vi.mock
 // factories below are hoisted above this import by vitest.
-import { deleteTicket, registerSlaCancellation } from '../ticketActions';
+import { deleteTicket, deleteTickets, registerSlaCancellation } from '../ticketActions';
 
 const {
   withTransactionMock,
@@ -14,6 +14,7 @@ const {
   getBackendMock,
   revalidatePathMock,
   deleteEntityWithValidationMock,
+  authorizeTicketRecordAccessMock,
 } = vi.hoisted(() => ({
   withTransactionMock: vi.fn(),
   createTenantKnexMock: vi.fn(),
@@ -23,6 +24,7 @@ const {
   getBackendMock: vi.fn(),
   revalidatePathMock: vi.fn(),
   deleteEntityWithValidationMock: vi.fn(),
+  authorizeTicketRecordAccessMock: vi.fn(),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -30,6 +32,7 @@ vi.mock('@alga-psa/auth', () => ({
   withOptionalAuth: (fn: any) => fn,
   hasPermission: vi.fn(async () => true),
   getCurrentUser: vi.fn(async () => null),
+  localizeActionError: vi.fn(async () => ({ actionError: 'Ticket could not be deleted' })),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -47,6 +50,10 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 
 vi.mock('@alga-psa/tags/lib/tagCleanup', () => ({
   deleteEntityTags: deleteEntityTagsMock,
+}));
+
+vi.mock('../../lib/ticketRecordAuthorization', () => ({
+  authorizeTicketRecordAccessConcealed: (...args: unknown[]) => authorizeTicketRecordAccessMock(...args),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -104,6 +111,7 @@ function createMockTrx(ticket: Record<string, any>) {
 describe('ticketActions deleteTicket', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    authorizeTicketRecordAccessMock.mockResolvedValue({ ticket_id: 'ticket-1' });
   });
 
   it('cancels SLA tracking when deleting a ticket', async () => {
@@ -157,5 +165,51 @@ describe('ticketActions deleteTicket', () => {
     );
 
     expect(backend.cancelSla).toHaveBeenCalledWith('tenant-1', 'ticket-1');
+    expect(publishEventMock).toHaveBeenCalledTimes(1);
+    expect(publishEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      eventType: 'TICKET_DELETED',
+      payload: expect.objectContaining({ tenantId: 'tenant-1', ticketId: 'ticket-1' }),
+    }));
+  });
+
+  it('checks record authorization before dependency validation for single and bulk deletes', async () => {
+    const denied = new Error('Permission denied: Cannot access ticket');
+    createTenantKnexMock.mockResolvedValue({ knex: {} });
+    authorizeTicketRecordAccessMock.mockRejectedValue(denied);
+
+    const single = await (deleteTicket as any)(
+      { user_id: 'user-1', user_type: 'internal' }, { tenant: 'tenant-1' }, 'ticket-1'
+    );
+    const bulk = await (deleteTickets as any)(
+      { user_id: 'user-1', user_type: 'internal' }, { tenant: 'tenant-1' }, ['ticket-1']
+    );
+
+    expect(single.success).toBe(false);
+    expect(single.dependencies).toEqual([]);
+    expect(bulk.deletedIds).toEqual([]);
+    expect(bulk.failed).toHaveLength(1);
+    expect(deleteEntityWithValidationMock).not.toHaveBeenCalled();
+    expect(authorizeTicketRecordAccessMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('rechecks authorization inside the deletion transaction before deleting child rows', async () => {
+    createTenantKnexMock.mockResolvedValue({ knex: {} });
+    authorizeTicketRecordAccessMock
+      .mockResolvedValueOnce({ ticket_id: 'ticket-1' })
+      .mockRejectedValueOnce(new Error('Permission denied: Cannot access ticket'));
+    deleteEntityWithValidationMock.mockImplementation(
+      async (_type: string, _id: string, _knex: any, tenant: string, performDelete: (trx: any, tenant: string) => Promise<void>) => {
+        await performDelete(createMockTrx({ ticket_id: 'ticket-1' }), tenant);
+        return { canDelete: true, deleted: true, dependencies: [], alternatives: [] };
+      }
+    );
+
+    const result = await (deleteTicket as any)(
+      { user_id: 'user-1', user_type: 'internal' }, { tenant: 'tenant-1' }, 'ticket-1'
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.dependencies).toEqual([]);
+    expect(authorizeTicketRecordAccessMock).toHaveBeenCalledTimes(2);
   });
 });
