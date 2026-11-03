@@ -37,6 +37,8 @@ export type ApplianceLifecycleAction = 'revoke' | 'sync-seats' | 'mark-payment-f
 export interface ApplianceLifecycleDecision {
   action: ApplianceLifecycleAction;
   seats?: number;
+  /** Set for subscription.* events: the state to mirror to C4. */
+  state?: ApplianceSubscriptionState;
   /**
    * `revoke` only: the end followed failed payments (unpaid, or cancelled by
    * Stripe for non-payment). The handler records it, then revokes as before, so
