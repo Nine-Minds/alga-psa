@@ -259,6 +259,10 @@ export const reverseApprovalSchema = z.object({
   reversal_reason: z.string().min(1, 'Reversal reason is required')
 });
 
+export const rejectTimeSheetSchema = z.object({
+  notes: z.string().min(1, 'Rejection notes are required')
+}).strict();
+
 // Time sheet statistics
 export const timeSheetStatsResponseSchema = z.object({
   total_time_sheets: z.number(),

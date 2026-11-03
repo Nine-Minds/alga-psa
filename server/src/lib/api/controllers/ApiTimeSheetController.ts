@@ -20,6 +20,7 @@ import {
   requestChangesTimeSheetSchema,
   bulkApproveTimeSheetSchema,
   reverseApprovalSchema,
+  rejectTimeSheetSchema,
   timeSheetSearchSchema,
   timeSheetExportQuerySchema,
   createScheduleEntrySchema,
@@ -600,6 +601,39 @@ export class ApiTimeSheetController extends ApiBaseController {
       } catch (error) {
         return handleApiError(error);
       }
+    };
+  }
+
+  reject() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiKey = req.headers.get('x-api-key');
+        if (!apiKey) throw new UnauthorizedError('API key required');
+        let tenantId = req.headers.get('x-tenant-id');
+        const keyRecord = tenantId
+          ? await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId)
+          : await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+        if (!keyRecord) throw new UnauthorizedError('Invalid API key');
+        tenantId = tenantId ?? keyRecord.tenant;
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId);
+        assertInternalApiUser(user);
+        await this.assertManualProductAccess(req, keyRecord, user);
+        const db = await getConnection(tenantId);
+        if (!await hasPermission(user, 'time_sheet', 'approve', db)) {
+          throw new ForbiddenError('Permission denied: Cannot reject time sheets');
+        }
+        const id = (req.url.split('/').at(-2) ?? '');
+        let data;
+        try { data = rejectTimeSheetSchema.parse(await req.json()); }
+        catch (error) {
+          if (error instanceof ZodError) throw new ValidationError('Invalid rejection data', error.issues);
+          throw error;
+        }
+        const sheet = await runWithTenant(tenantId, () => this.timeSheetService.rejectTimeSheet(id, data.notes, {
+          userId: user.user_id, user, tenant: tenantId!,
+        }));
+        return createSuccessResponse(sheet);
+      } catch (error) { return handleApiError(error); }
     };
   }
 

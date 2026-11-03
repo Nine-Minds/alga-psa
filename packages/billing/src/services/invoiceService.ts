@@ -324,7 +324,7 @@ async function linkAndMarkSourceBillingRecord(params: {
 
     if (!alreadyLinkedHere) {
       const updatedCount = await tenantScopedTable(tx, tenant, 'time_entries')
-        .where({ entry_id: entryId, invoiced: false })
+        .where({ entry_id: entryId, invoiced: false, approval_status: 'APPROVED' })
         .update({ invoiced: true });
 
       if (updatedCount !== 1) {
@@ -415,7 +415,7 @@ async function linkAndMarkSourceBillingRecord(params: {
     const coveredEntryIds = (charge as { coveredEntryIds?: string[] }).coveredEntryIds ?? [];
     for (const entryId of coveredEntryIds) {
       const updatedCount = await tenantScopedTable(tx, tenant, 'time_entries')
-        .where({ entry_id: entryId, invoiced: false })
+        .where({ entry_id: entryId, invoiced: false, approval_status: 'APPROVED' })
         .update({ invoiced: true });
 
       if (updatedCount === 1) {
@@ -872,7 +872,7 @@ async function claimManualChargeSource(
 ): Promise<void> {
   if (sourceLink.kind === 'time_entry') {
     const updated = await tenantScopedTable(tx, tenant, 'time_entries')
-      .where({ entry_id: sourceLink.entryId, invoiced: false })
+      .where({ entry_id: sourceLink.entryId, invoiced: false, approval_status: 'APPROVED' })
       .update({ invoiced: true });
     if (updated !== 1) {
       throw new ManualInvoiceError(

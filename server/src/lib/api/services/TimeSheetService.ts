@@ -531,8 +531,10 @@ export class TimeSheetService extends BaseService<any> {
     target: 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED',
     data: SubmitTimeSheetData | ApproveTimeSheetData | RequestChangesTimeSheetData | ReverseApprovalData,
     context: ServiceContext,
-    reversing = false
+    operation?: 'reverse' | 'reject'
   ): Promise<any> {
+    const reversing = operation === 'reverse';
+    const rejecting = operation === 'reject';
     const { knex } = await this.getKnex();
     await withTransaction(knex, async (trx) => {
       // Lock the persisted row before inspecting state. All competing transitions serialize here.
@@ -542,13 +544,14 @@ export class TimeSheetService extends BaseService<any> {
       const permitted = target === 'SUBMITTED'
         ? await this.canSubmitTimeSheets(context, trx)
         : reversing
-          ? await this.canReverseTimeSheets(context, trx)
+          ? await this.canReverseTimeSheets(context, trx) && await this.canManageTimeSheets(context, trx)
           : await this.canApproveTimeSheets(context, trx);
       if (!permitted) {
         throw new ForbiddenError(`Permission denied: Cannot ${reversing ? 'reverse approval' : target.toLowerCase()} time sheets`);
       }
       try {
         if (target === 'APPROVED') {
+          if (sheet.user_id === context.userId) throw new ForbiddenError('Self approval is not permitted');
           await assertCanApproveSubject(context.user as any, context.tenant, sheet.user_id, trx);
         } else {
           await assertCanActOnBehalf(context.user as any, context.tenant, sheet.user_id, trx);
@@ -566,6 +569,16 @@ export class TimeSheetService extends BaseService<any> {
             : sheet.approval_status === 'SUBMITTED';
       if (!allowed) throw new ConflictError(`Cannot transition time sheet from ${sheet.approval_status} to ${target}`);
 
+      if (reversing) {
+        // Lock entries before checking their invoice links. Invoice generation claims these same
+        // entry rows, so reversal and invoicing serialize on the time-entry lifecycle.
+        await tenantDb(trx, context.tenant).table('time_entries')
+          .where({ time_sheet_id: id }).forUpdate().select('entry_id');
+        if (await this.isTimeSheetInvoiced(id, context, trx)) {
+          throw new ConflictError('Cannot reverse approval for invoiced time entries');
+        }
+      }
+
       if (target === 'SUBMITTED' && !await tenantDb(trx, context.tenant).table('time_entries').where({ time_sheet_id: id }).first()) {
         throw new ConflictError('Cannot submit time sheet without time entries');
       }
@@ -581,6 +594,9 @@ export class TimeSheetService extends BaseService<any> {
       } else if (reversing) {
         update.approved_at = null;
         update.approved_by = null;
+        update.reversal_reason = (data as ReverseApprovalData).reversal_reason;
+        update.reversed_at = now;
+        update.reversed_by = context.userId;
       }
       await tenantDb(trx, context.tenant).table('time_sheets').where({ id }).update(update);
       await tenantDb(trx, context.tenant).table('time_entries').where({ time_sheet_id: id }).update({ approval_status: target, updated_at: now });
@@ -590,7 +606,9 @@ export class TimeSheetService extends BaseService<any> {
         : target === 'CHANGES_REQUESTED'
           ? reversing
             ? `Approval reversed: ${(data as ReverseApprovalData).reversal_reason}`
-            : `Changes requested: ${(data as RequestChangesTimeSheetData).change_reason}${(data as RequestChangesTimeSheetData).detailed_feedback ? `\n\nDetails: ${(data as RequestChangesTimeSheetData).detailed_feedback}` : ''}`
+            : rejecting
+              ? `Rejected: ${(data as RequestChangesTimeSheetData).change_reason}`
+              : `Changes requested: ${(data as RequestChangesTimeSheetData).change_reason}${(data as RequestChangesTimeSheetData).detailed_feedback ? `\n\nDetails: ${(data as RequestChangesTimeSheetData).detailed_feedback}` : ''}`
           : (data as SubmitTimeSheetData).submission_notes
             ? `Submitted: ${(data as SubmitTimeSheetData).submission_notes}`
             : undefined;
@@ -631,6 +649,14 @@ export class TimeSheetService extends BaseService<any> {
     return result;
   }
 
+  async rejectTimeSheet(id: string, notes: string, context: ServiceContext): Promise<any> {
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'rejectTimeSheet', [id, notes, context]);
+    if (delegated.handled) return delegated.value;
+    const result = await this.transitionTimeSheet(id, 'CHANGES_REQUESTED', { change_reason: notes } as RequestChangesTimeSheetData, context, 'reject');
+    await publishUnregisteredEventType({ eventType: 'TIME_SHEET_REJECTED', payload: { tenantId: context.tenant, timeSheetId: id, rejectedBy: context.userId, notes, timestamp: new Date().toISOString() } });
+    return result;
+  }
+
 
   async bulkApprove(data: BulkApproveTimeSheetData, context: ServiceContext): Promise<any[]> {
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
@@ -655,7 +681,7 @@ export class TimeSheetService extends BaseService<any> {
   async reverseApproval(id: string, data: ReverseApprovalData, context: ServiceContext): Promise<any> {
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'reverseApproval', [id, data, context]);
     if (delegated.handled) return delegated.value;
-    const result = await this.transitionTimeSheet(id, 'CHANGES_REQUESTED', data, context, true);
+    const result = await this.transitionTimeSheet(id, 'CHANGES_REQUESTED', data, context, 'reverse');
     await publishUnregisteredEventType({ eventType: 'TIME_SHEET_APPROVAL_REVERSED', payload: { tenantId: context.tenant, timeSheetId: id, reversedBy: context.userId, reason: data.reversal_reason, timestamp: new Date().toISOString() } });
     return result;
   }
@@ -1479,9 +1505,13 @@ export class TimeSheetService extends BaseService<any> {
     }
 
 
-  private async isTimeSheetInvoiced(timeSheetId: string, context: ServiceContext): Promise<boolean> {
-    // Check if time sheet entries have been included in invoices
-    return false; // Simplified for now
+  private async isTimeSheetInvoiced(timeSheetId: string, context: ServiceContext, db?: Knex | Knex.Transaction): Promise<boolean> {
+    const connection = db ?? (await this.getKnex()).knex;
+    const entries = tenantDb(connection, context.tenant).table('time_entries').where({ time_sheet_id: timeSheetId });
+    if (await entries.clone().where({ invoiced: true }).first('entry_id')) return true;
+    const entryIds = entries.select('entry_id');
+    return !!await tenantDb(connection, context.tenant).table('invoice_time_entries')
+      .where({ tenant: context.tenant }).whereIn('entry_id', entryIds).first();
   }
 
   /** Add the shared owner/delegate/read_all scope to a time_sheets query before counting or paging. */
