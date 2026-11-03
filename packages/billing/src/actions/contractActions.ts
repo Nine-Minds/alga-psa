@@ -33,6 +33,7 @@ import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
@@ -131,9 +132,16 @@ function maybeUserActor(user: any) {
 
 const assertBillingPermission = async (
   user: unknown,
+  tenant: string,
   action: 'read' | 'create' | 'update' | 'delete',
   context: string,
 ): Promise<void> => {
+  const principal = user as { user_type?: unknown; tenant?: unknown } | null;
+  if (!principal || !isMspPrincipalUserType(typeof principal.user_type === 'string' ? principal.user_type : undefined)
+    || typeof principal.tenant !== 'string' || principal.tenant !== tenant) {
+    throw new ContractActionDomainError(`Permission denied: Cannot ${context}`);
+  }
+
   if (isBypassEnabled()) {
     return;
   }
@@ -142,6 +150,31 @@ const assertBillingPermission = async (
     throw new ContractActionDomainError(`Permission denied: Cannot ${context}`);
   }
 };
+
+/** Verify both records under the trusted tenant before a line mutation or its synchronizers run. */
+async function assertContractLineMutationScope(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractId: string,
+  contractLineId: string,
+): Promise<'contract' | 'template'> {
+  const template = await tenantScopedTable(trx, tenant, 'contract_templates')
+    .where({ template_id: contractId }).first('template_id');
+  if (template) {
+    const line = await tenantScopedTable(trx, tenant, 'contract_template_lines')
+      .where({ template_id: contractId, template_line_id: contractLineId }).first('template_line_id');
+    if (!line) throw new ContractActionDomainError('Template contract line not found for the selected contract.');
+    return 'template';
+  }
+
+  const contract = await tenantScopedTable(trx, tenant, 'contracts')
+    .where({ contract_id: contractId }).first('contract_id');
+  if (!contract) throw new ContractActionDomainError('Contract not found for the selected tenant.');
+  const line = await tenantScopedTable(trx, tenant, 'contract_lines')
+    .where({ contract_id: contractId, contract_line_id: contractLineId }).first('contract_line_id');
+  if (!line) throw new ContractActionDomainError('Contract line not found for the selected contract.');
+  return 'contract';
+}
 
 const assertNoSystemManagedIdentityMutation = (
   payload: Record<string, unknown>,
@@ -275,7 +308,7 @@ async function isTemplateContract(knex: TenantScopedKnex, tenant: string, contra
 
 export const getContracts = withAuth(async (user, { tenant }): Promise<IContract[] | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view billing contracts');
+    await assertBillingPermission(user, tenant, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     return await Contract.getAll(knex, tenant);
@@ -291,7 +324,7 @@ export const getContracts = withAuth(async (user, { tenant }): Promise<IContract
 
 export const getContractTemplates = withAuth(async (user, { tenant }): Promise<IContract[] | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view billing contracts');
+    await assertBillingPermission(user, tenant, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     const templates = await ContractTemplateModel.getAll(tenant);
@@ -308,7 +341,7 @@ export const getContractTemplates = withAuth(async (user, { tenant }): Promise<I
 
 export const getContractsWithClients = withAuth(async (user, { tenant }): Promise<IContractWithClient[] | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view billing contracts');
+    await assertBillingPermission(user, tenant, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     const rows = await Contract.getAllWithClients(knex, tenant);
@@ -325,7 +358,7 @@ export const getContractsWithClients = withAuth(async (user, { tenant }): Promis
 
 export const getDraftContracts = withAuth(async (user, { tenant }): Promise<IContractWithClient[] | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view billing contracts');
+    await assertBillingPermission(user, tenant, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     const facade = tenantDb(knex, tenant);
@@ -362,7 +395,7 @@ export const getDraftContracts = withAuth(async (user, { tenant }): Promise<ICon
 
 export const getContractById = withAuth(async (user, { tenant }, contractId: string): Promise<IContract | ContractActionError | null> => {
   try {
-    await assertBillingPermission(user, 'read', 'view billing contracts');
+    await assertBillingPermission(user, tenant, 'read', 'view billing contracts');
     const { knex } = await createTenantKnex();
 
     const contract = await Contract.getById(knex, tenant, contractId);
@@ -388,7 +421,7 @@ export const getContractById = withAuth(async (user, { tenant }, contractId: str
 
 export const getContractLineMappings = withAuth(async (user, { tenant }, contractId: string): Promise<IContractLineMapping[] | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view contract line mappings');
+    await assertBillingPermission(user, tenant, 'read', 'view contract line mappings');
     const { knex } = await createTenantKnex();
     return fetchContractLineMappings(knex, tenant, contractId);
   } catch (error) {
@@ -403,7 +436,7 @@ export const getContractLineMappings = withAuth(async (user, { tenant }, contrac
 
 export const getDetailedContractLines = withAuth(async (user, { tenant }, contractId: string): Promise<DetailedContractLine[] | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view detailed contract lines');
+    await assertBillingPermission(user, tenant, 'read', 'view detailed contract lines');
     const { knex } = await createTenantKnex();
     return fetchDetailedContractLines(knex, tenant, contractId);
   } catch (error) {
@@ -426,10 +459,7 @@ export const addContractLine = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    const canUpdate = await hasPermission(user, 'billing', 'create');
-    if (!canUpdate) {
-      return permissionError('Permission denied: Cannot modify contract lines', 'msp/contracts:errors.permissions.modifyLines');
-    }
+    await assertBillingPermission(user, tenant, 'create', 'modify contract lines');
 
     return knex.transaction((trx: Knex.Transaction) =>
       repoAddContractLine(trx, tenant, contractId, contractLineId, customRate).then(async (mapping) => {
@@ -457,10 +487,7 @@ export const removeContractLine = withAuth(async (user, { tenant }, contractId: 
   try {
     const { knex } = await createTenantKnex();
 
-    const canUpdate = await hasPermission(user, 'billing', 'update');
-    if (!canUpdate) {
-      return permissionError('Permission denied: Cannot modify contract lines', 'msp/contracts:errors.permissions.modifyLines');
-    }
+    await assertBillingPermission(user, tenant, 'update', 'modify contract lines');
 
     await repoRemoveContractLine(knex, tenant, contractId, contractLineId);
   } catch (error) {
@@ -483,10 +510,7 @@ export const updateContractLineAssociation = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    const canUpdate = await hasPermission(user, 'billing', 'update');
-    if (!canUpdate) {
-      return permissionError('Permission denied: Cannot modify contract lines', 'msp/contracts:errors.permissions.modifyLines');
-    }
+    await assertBillingPermission(user, tenant, 'update', 'modify contract lines');
 
     const updated = await repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
     await knex.transaction(async (trx) => {
@@ -525,12 +549,10 @@ export const updateContractLineRate = withAuth(async (
       return actionError('Rate must be zero or greater.');
     }
 
-    const canUpdate = await hasPermission(user, 'billing', 'update');
-    if (!canUpdate) {
-      return permissionError('Permission denied: Cannot modify contract lines', 'msp/contracts:errors.permissions.modifyLines');
-    }
+    await assertBillingPermission(user, tenant, 'update', 'modify contract lines');
 
     await knex.transaction(async (trx) => {
+      await assertContractLineMutationScope(trx, tenant, contractId, contractLineId);
       await repoUpdateContractLineRate(trx, tenant, contractId, contractLineId, rate, billingTiming, invoiceLineDescription);
       // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
       await syncRecurringServicePeriodsForContractLine(trx, {
@@ -552,7 +574,7 @@ export const updateContractLineRate = withAuth(async (
 
 export const isContractLineAttached = withAuth(async (user, { tenant }, contractId: string, contractLineId: string): Promise<boolean | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'check contract line associations');
+    await assertBillingPermission(user, tenant, 'read', 'check contract line associations');
     const { knex } = await createTenantKnex();
 
     return repoIsContractLineAttached(knex, tenant, contractId, contractLineId);
@@ -574,7 +596,7 @@ export const createContract = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
-    await assertBillingPermission(user, 'create', 'create billing contracts');
+    await assertBillingPermission(user, tenant, 'create', 'create billing contracts');
     assertNoSystemManagedIdentityMutation(contractData as Record<string, unknown>, 'create');
     const {
       tenant: _ignoredTenant,
@@ -619,7 +641,7 @@ export const updateContract = withAuth(async (
   const { knex } = await createTenantKnex();
 
   try {
-    await assertBillingPermission(user, 'update', 'update billing contracts');
+    await assertBillingPermission(user, tenant, 'update', 'update billing contracts');
     assertNoSystemManagedIdentityMutation(updateData as Record<string, unknown>, 'update');
 
     // Attempt to load standard contract first; fall back to template
@@ -751,6 +773,7 @@ export const updateContract = withAuth(async (
 });
 
 export const checkContractHasInvoices = withAuth(async (user, { tenant }, contractId: string): Promise<boolean> => {
+  await assertBillingPermission(user, tenant, 'read', 'check contract invoices');
   const { knex } = await createTenantKnex();
 
   return await Contract.hasInvoices(knex, tenant, contractId);
@@ -760,13 +783,7 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
   const { knex } = await createTenantKnex();
 
   try {
-    const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
-    if (!isBypass) {
-      const canDeleteBilling = await hasPermission(user, 'billing', 'delete');
-      if (!canDeleteBilling) {
-        return permissionError('Permission denied: Cannot delete billing contracts', 'msp/contracts:errors.permissions.deleteContracts');
-      }
-    }
+    await assertBillingPermission(user, tenant, 'delete', 'delete billing contracts');
 
     const templateExists = await isTemplateContract(knex, tenant, contractId);
     if (templateExists) {
@@ -846,7 +863,7 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
 
 export const getContractLinesForContract = withAuth(async (user, { tenant }, contractId: string): Promise<any[] | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view contract lines');
+    await assertBillingPermission(user, tenant, 'read', 'view contract lines');
     const { knex } = await createTenantKnex();
 
     return await Contract.getContractLines(knex, tenant, contractId);
@@ -872,7 +889,7 @@ export interface IContractSummary {
 
 export const getContractSummary = withAuth(async (user, { tenant }, contractId: string): Promise<IContractSummary | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view contract summary');
+    await assertBillingPermission(user, tenant, 'read', 'view contract summary');
     const { knex } = await createTenantKnex();
 
     const templateRecord = await tenantScopedTable(knex, tenant, 'contract_templates')
@@ -975,7 +992,7 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
 
 export const getContractAssignments = withAuth(async (user, { tenant }, contractId: string): Promise<IContractAssignmentSummary[] | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view contract assignments');
+    await assertBillingPermission(user, tenant, 'read', 'view contract assignments');
     const { knex } = await createTenantKnex();
 
     const selection = [
@@ -1183,7 +1200,7 @@ export interface IContractOverview {
  */
 export const getContractOverview = withAuth(async (user, { tenant }, contractId: string): Promise<IContractOverview | ContractActionError> => {
   try {
-    await assertBillingPermission(user, 'read', 'view contract overview');
+    await assertBillingPermission(user, tenant, 'read', 'view contract overview');
     const { knex } = await createTenantKnex();
 
     // Check if this is a template contract
