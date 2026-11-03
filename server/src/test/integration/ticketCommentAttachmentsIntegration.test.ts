@@ -1002,6 +1002,100 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     }
   });
 
+  it('production routing recovery reauthorizes changed sponsor identity and policy against the captured ledger row', async () => {
+    const { TenantEmailService } = await import('@alga-psa/email');
+    const { SMTPEmailProvider } = await import('@alga-psa/email/providers/SMTPEmailProvider');
+    const { createCoManagedDeliveryProvider } = await import('../../../../packages/co-managed/src/deliveryProvider');
+    const sponsor = tenant, customer = randomUUID(), sponsorUser = randomUUID(), customerUser = randomUUID();
+    const sponsorClient = randomUUID(), customerClient = randomUUID(), sponsorBoard = randomUUID(), customerBoard = randomUUID();
+    const relationship = randomUUID(), sourceId = randomUUID(), ticketId = randomUUID(), workId = randomUUID();
+    const roleId = randomUUID(), permissionId = randomUUID(), originalEmail = 'captured-route@example.test';
+    const currentEmail = 'current-sponsor-route@example.test';
+    await tenantDb(trx, customer).unscoped('tenants', 'create isolated routing-recovery fixture customer').insert({
+      tenant: customer, client_name: 'Routing Recovery Customer', email: 'customer@routing-recovery.test', product_code: 'co_managed' });
+    await tenantDb(trx, sponsor).table('clients').insert({ tenant: sponsor, client_id: sponsorClient, client_name: 'Routing Recovery Customer', client_type: 'company' });
+    await tenantDb(trx, customer).table('clients').insert({ tenant: customer, client_id: customerClient, client_name: 'Routing Recovery Customer', client_type: 'company' });
+    await tenantDb(trx, sponsor).table('boards').insert({ tenant: sponsor, board_id: sponsorBoard, board_name: 'Routing Recovery', is_inactive: false });
+    await tenantDb(trx, customer).table('boards').insert({ tenant: customer, board_id: customerBoard, board_name: 'Customer Routing', is_inactive: false });
+    await tenantDb(trx, sponsor).table('users').insert({ tenant: sponsor, user_id: sponsorUser, username: 'routing-recovery-sponsor',
+      email: originalEmail, hashed_password: 'unused', first_name: 'Fixture', last_name: 'Sponsor', user_type: 'internal', is_inactive: false });
+    await tenantDb(trx, customer).table('users').insert({ tenant: customer, user_id: customerUser, username: 'routing-recovery-customer',
+      email: 'customer@routing-recovery.test', hashed_password: 'unused', first_name: 'Fixture', last_name: 'Customer', user_type: 'internal', is_inactive: false });
+    await tenantDb(trx, sponsor).table('roles').insert({ tenant: sponsor, role_id: roleId, role_name: 'Routing recovery ticket reader', msp: true, client: false });
+    await tenantDb(trx, sponsor).table('permissions').insert({ tenant: sponsor, permission_id: permissionId, resource: 'ticket', action: 'read', msp: true, client: false });
+    await tenantDb(trx, sponsor).table('role_permissions').insert({ tenant: sponsor, role_id: roleId, permission_id: permissionId });
+    await tenantDb(trx, sponsor).table('user_roles').insert({ tenant: sponsor, user_id: sponsorUser, role_id: roleId });
+    const bundleId = randomUUID(), revisionId = randomUUID(), ruleId = randomUUID(), assignmentId = randomUUID();
+    await tenantDb(trx, sponsor).table('authorization_bundles').insert({ tenant: sponsor, bundle_id: bundleId, name: 'Routing recovery recipient policy',
+      status: 'active', published_revision_id: null });
+    await tenantDb(trx, sponsor).table('authorization_bundle_revisions').insert({ tenant: sponsor, revision_id: revisionId, bundle_id: bundleId,
+      revision_number: 1, lifecycle_state: 'published', published_at: new Date() });
+    await tenantDb(trx, sponsor).table('authorization_bundles').where({ bundle_id: bundleId }).update({ published_revision_id: revisionId });
+    await tenantDb(trx, sponsor).table('authorization_bundle_rules').insert({ tenant: sponsor, rule_id: ruleId, bundle_id: bundleId, revision_id: revisionId,
+      resource_type: 'ticket', action: 'read', template_key: 'selected_clients', constraint_key: null, effect: 'narrow',
+      config: { selectedClientIds: [sponsorClient], redactedFields: [] } });
+    await tenantDb(trx, sponsor).table('authorization_bundle_assignments').insert({ tenant: sponsor, assignment_id: assignmentId, bundle_id: bundleId,
+      target_type: 'user', target_id: sponsorUser, status: 'active' });
+    await tenantDb(trx, customer).table('co_management_relationships').insert({ tenant: customer, relationship_id: relationship, sponsor_tenant: sponsor,
+      sponsor_client_id: sponsorClient, state: 'active', visibility_mode: 'escalation_only', accepted_by: customerUser, accepted_at: new Date() });
+    await tenantDb(trx, sponsor).table('co_management_staff_assignments').insert({ tenant: sponsor, customer_tenant: customer, relationship_id: relationship,
+      principal_type: 'user', principal_id: sponsorUser, relationship_role: 'technician' });
+    await tenantDb(trx, customer).table('tickets').insert({ tenant: customer, ticket_id: ticketId, ticket_number: 'RECOVERY-41', title: 'Recovery private title',
+      client_id: customerClient, board_id: customerBoard, entered_by: customerUser, entered_at: new Date(), updated_at: new Date(), is_closed: false });
+    await tenantDb(trx, customer).table('co_management_ticket_work').insert({ tenant: customer, relationship_id: relationship, ticket_id: ticketId, work_id: workId,
+      revision: 1, responsibility: 'msp', can_collaborate: true, first_escalated_at: new Date(), last_transition_at: new Date() });
+    await tenantDb(trx, sponsor).table('co_managed_ticket_references').insert({ tenant: sponsor, reference_id: randomUUID(), customer_tenant: customer,
+      relationship_id: relationship, ticket_id: ticketId, work_id: workId, client_id: sponsorClient, board_id: sponsorBoard, assigned_to: sponsorUser,
+      created_at: new Date(), updated_at: new Date() });
+    const payload = { ticketId, principalId: sponsorUser, event: 'escalation_received', actorName: 'Policy Hidden Actor', actorOrganization: 'Policy Hidden Org',
+      sponsorTenant: sponsor, relationshipId: relationship };
+    await tenantDb(trx, customer).table('co_management_deliveries').insert({ tenant: customer, delivery_kind: 'routing_email', source_id: sourceId,
+      recipient: originalEmail, recipient_kind: 'msp_user', state: 'pending', attempts: 0, payload });
+    await table('tenant_email_templates').insert({ tenant: sponsor, name: 'co-managed-routing', language_code: 'en', subject: '{{routing.headline}}',
+      html_content: '{{routing.body}} {{ticket.id}}', text_content: '{{routing.body}} {{ticket.id}}' });
+
+    const messages: any[] = [], stream = nodemailer.createTransport({ streamTransport: true, buffer: true });
+    const emailProvider = new SMTPEmailProvider('production-routing-recovery');
+    (emailProvider as any).initialized = true; (emailProvider as any).config = { from: 'agent@example.test' };
+    (emailProvider as any).transporter = { sendMail: async (mail: any) => {
+      const sent = await stream.sendMail(mail); messages.push(await simpleParser(sent.message as Buffer)); return sent;
+    } };
+    const service = TenantEmailService.getInstance(sponsor);
+    const refresh = vi.spyOn(service as any, 'refreshProviderState').mockResolvedValue({ emailProvider, providerInitError: null, fromAddress: 'agent@example.test' });
+    const rate = vi.spyOn(service as any, 'checkRateLimits').mockResolvedValueOnce({ allowed: false, retryAfterMs: 1, reason: 'test initial failure' }).mockResolvedValue({ allowed: true });
+    const dbWrapper = vi.spyOn(dbModule, 'withAdminTransaction').mockImplementation(async (callback: any) => callback(trx));
+    const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(trx);
+    const tenantConnection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant: sponsor } as any);
+    const deliveryProvider = createCoManagedDeliveryProvider();
+    try {
+      const initial = await deliveryProvider.pendingRouting(customer);
+      expect(initial).toHaveLength(1);
+      expect(initial[0]).toMatchObject({ allowed: true, ledgerRecipient: originalEmail, recipient: { email: originalEmail } });
+      expect(await (await import('@/lib/notifications/coManagedRoutingDelivery')).deliverRouting(deliveryProvider, customer)).toMatchObject({ failed: 1 });
+      expect((await tenantDb(trx, customer).table('co_management_deliveries').where({ delivery_kind: 'routing_email', source_id: sourceId }).first()).state).toBe('failed');
+
+      await tenantDb(trx, sponsor).table('users').where({ user_id: sponsorUser }).update({ email: ` ${currentEmail.toUpperCase()} ` });
+      await tenantDb(trx, sponsor).table('authorization_bundle_rules').where({ rule_id: ruleId }).update({
+        config: { selectedClientIds: [sponsorClient], redactedFields: ['tickets.title', 'ticket_number', 'actor_display_name', 'actor_organization_name'] },
+      });
+      const retried = await deliveryProvider.pendingRouting(customer);
+      expect(retried[0]).toMatchObject({ allowed: true, ledgerRecipient: originalEmail, recipient: {
+        email: currentEmail, principalId: sponsorUser, redactedFields: ['tickets.title', 'ticket_number', 'actor_display_name', 'actor_organization_name'],
+      } });
+      expect(await (await import('@/lib/notifications/coManagedRoutingDelivery')).deliverRouting(deliveryProvider, customer)).toMatchObject({ sent: 1 });
+      expect(messages).toHaveLength(1);
+      expect(messages[0].to.value[0].address).toBe(currentEmail);
+      expect(messages[0].text).not.toContain('RECOVERY-41');
+      expect(messages[0].text).not.toContain('Recovery private title');
+      expect(messages[0].text).not.toContain('Policy Hidden Actor');
+      expect(messages[0].text).not.toContain('Policy Hidden Org');
+      const completed = await tenantDb(trx, customer).table('co_management_deliveries').where({ delivery_kind: 'routing_email', source_id: sourceId }).first();
+      expect(completed).toMatchObject({ recipient: originalEmail, state: 'sent', attempts: 2 });
+    } finally {
+      dbWrapper.mockRestore(); rate.mockRestore(); refresh.mockRestore(); connection.mockRestore(); tenantConnection.mockRestore();
+    }
+  });
+
   it('live PgBoss discovery reuses workers and recovers a committed publication to SMTP once', async () => {
     const { default: PgBoss } = await import('pg-boss');
     const { EmulatorHost } = await import('@alga-psa/emulator-host');
