@@ -71,16 +71,24 @@ async function handleMaintenanceJobRequested(event: unknown): Promise<void> {
       await runWithTenant(tenantId, async () => {
         const jobService = jobId && executionId ? await JobService.create() : undefined;
         if (jobService) {
-          const current = await jobService.getForwardedJobExecution(jobId!, tenantId);
-          if (current?.executionId !== executionId) {
-            logger.warn(`[MaintenanceJobSubscriber] Ignoring stale forwarded execution '${executionId}' for job '${jobId}'`);
+          const claim = await jobService.claimForwardedJobExecution(jobId!, tenantId, executionId!);
+          if (!claim.claimed) {
+            logger.info(`[MaintenanceJobSubscriber] Acknowledging duplicate forwarded execution '${executionId}' for job '${jobId}'`, {
+              status: claim.status ?? 'superseded',
+            });
             return;
           }
         }
         try {
           await executeJobHandler(jobName, jobId ?? `evt:${jobName}`, (data ?? {}) as any);
           if (jobService) {
-            await jobService.recordForwardedJobOutcome(jobId!, tenantId, executionId!, { status: 'completed' });
+            const recorded = await jobService.recordForwardedJobOutcome(jobId!, tenantId, executionId!, { status: 'completed' });
+            if (!recorded) {
+              logger.warn(`[MaintenanceJobSubscriber] Handler returned after forwarded execution '${executionId}' became terminal`, {
+                jobId,
+                jobName,
+              });
+            }
           }
         } catch (error) {
           if (jobService) {
@@ -92,7 +100,6 @@ async function handleMaintenanceJobRequested(event: unknown): Promise<void> {
           throw error;
         }
       });
-      logger.info(`[MaintenanceJobSubscriber] Forwarded job '${jobName}' complete`);
     }
   } catch (error) {
     logger.error(`[MaintenanceJobSubscriber] Job '${jobName}' failed`, { error });

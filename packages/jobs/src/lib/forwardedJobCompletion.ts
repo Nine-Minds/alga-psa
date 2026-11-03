@@ -1,4 +1,4 @@
-export type ForwardedJobStatus = 'queued' | 'processing' | 'completed' | 'failed' | string;
+export type ForwardedJobStatus = 'queued' | 'processing' | 'completed' | 'failed';
 export interface ForwardedJobExecutionOutcome {
   executionId: string;
   status: ForwardedJobStatus;
@@ -9,9 +9,39 @@ export function beginForwardedJobExecution(
   metadata: Record<string, unknown>,
   executionId: string,
 ): Record<string, unknown> & {
-  serverExecution: { executionId: string; status: 'queued' };
+  serverExecution: { executionId: string; status: ForwardedJobStatus; error?: string };
 } {
+  const current = metadata.serverExecution as { executionId?: unknown; status?: unknown } | undefined;
+  if (current?.executionId === executionId) {
+    return metadata as Record<string, unknown> & {
+      serverExecution: { executionId: string; status: ForwardedJobStatus; error?: string };
+    };
+  }
+  if (current?.status === 'processing') {
+    return metadata as Record<string, unknown> & {
+      serverExecution: { executionId: string; status: ForwardedJobStatus; error?: string };
+    };
+  }
   return { ...metadata, serverExecution: { executionId, status: 'queued' } };
+}
+
+/** Claim a queued execution exactly once. Processing executions are deliberately
+ * not lease-reclaimed: the handler may already have sent an email before a crash.
+ * A timed-out run stays indeterminate and requires a new explicit resend job. */
+export function claimForwardedJobExecution(
+  metadata: Record<string, unknown>,
+  executionId: string,
+): { metadata: Record<string, unknown>; claimed: boolean; status?: ForwardedJobStatus } {
+  const current = metadata.serverExecution as { executionId?: unknown; status?: unknown } | undefined;
+  if (current?.executionId !== executionId) return { metadata, claimed: false };
+  if (current.status !== 'queued') {
+    return { metadata, claimed: false, status: current.status as ForwardedJobStatus };
+  }
+  return {
+    metadata: { ...metadata, serverExecution: { executionId, status: 'processing' } },
+    claimed: true,
+    status: 'processing',
+  };
 }
 
 export function recordForwardedJobExecutionOutcome(
@@ -19,8 +49,13 @@ export function recordForwardedJobExecutionOutcome(
   executionId: string,
   outcome: { status: 'completed' | 'failed'; error?: string },
 ): { metadata: Record<string, unknown>; recorded: boolean } {
-  const activeExecution = metadata.serverExecution as { executionId?: unknown } | undefined;
-  if (activeExecution?.executionId !== executionId) return { metadata, recorded: false };
+  const activeExecution = metadata.serverExecution as { executionId?: unknown; status?: unknown } | undefined;
+  const canComplete = outcome.status === 'completed' && activeExecution?.status === 'processing';
+  const canFail = outcome.status === 'failed'
+    && (activeExecution?.status === 'queued' || activeExecution?.status === 'processing');
+  if (activeExecution?.executionId !== executionId || (!canComplete && !canFail)) {
+    return { metadata, recorded: false };
+  }
   return {
     recorded: true,
     metadata: {

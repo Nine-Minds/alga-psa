@@ -4,7 +4,11 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import { JobStatus } from '../types/job';
 import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
 import { getAdminConnection, tenantDb } from '@alga-psa/db';
-import { recordForwardedJobExecutionOutcome } from '@alga-psa/jobs/lib/forwardedJobCompletion';
+import {
+  claimForwardedJobExecution,
+  recordForwardedJobExecutionOutcome,
+  type ForwardedJobStatus,
+} from '@alga-psa/jobs/lib/forwardedJobCompletion';
 
 export interface JobStep {
   stepName: string;
@@ -207,9 +211,36 @@ export class JobService {
     });
   }
 
+  /** Atomically move a forwarded run from queued to processing. Only the event
+   * delivery that wins this row-locked transition may invoke the handler. */
+  async claimForwardedJobExecution(
+    jobId: string,
+    tenantId: string,
+    executionId: string,
+  ): Promise<{ claimed: boolean; status?: ForwardedJobStatus }> {
+    const db = await getAdminConnection();
+    return db.transaction(async (trx) => {
+      await trx.raw('SELECT set_config(\'app.current_tenant\', ?, true)', [tenantId]);
+      const table = tenantDb(trx, tenantId).table('jobs');
+      const job = await table.where({ job_id: jobId }).forUpdate().first('metadata');
+      if (!job) throw new Error(`Job with ID ${jobId} not found`);
+      const metadata = job.metadata
+        ? (typeof job.metadata === 'string' ? JSON.parse(job.metadata) : job.metadata)
+        : {};
+      const transition = claimForwardedJobExecution(metadata, executionId);
+      if (transition.claimed) {
+        await table.where({ job_id: jobId }).update({
+          metadata: JSON.stringify(transition.metadata),
+          updated_at: new Date(),
+        });
+      }
+      return { claimed: transition.claimed, status: transition.status };
+    });
+  }
+
   async getForwardedJobExecution(jobId: string, tenantId: string): Promise<{
     executionId: string;
-    status: 'queued' | 'completed' | 'failed';
+    status: ForwardedJobStatus;
     error?: string;
   } | undefined> {
     return runWithTenant(tenantId, async () => {

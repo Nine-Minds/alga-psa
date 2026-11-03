@@ -19,7 +19,11 @@ import {
   kbArticleImportHandler,
 } from '@alga-psa/jobs/handlers/kbArticleImportHandler';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
-import { beginForwardedJobExecution, waitForForwardedJobCompletion } from '@alga-psa/jobs/lib/forwardedJobCompletion';
+import {
+  beginForwardedJobExecution,
+  recordForwardedJobExecutionOutcome,
+  waitForForwardedJobCompletion,
+} from '@alga-psa/jobs/lib/forwardedJobCompletion';
 
 // rmm/huntress poll + accounting-sync-cycle handlers import src-consumed vertical
 // packages (@alga-psa/integrations, @alga-psa/billing) the plain-Node-ESM worker
@@ -135,17 +139,33 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
       const executionId = String(data?.jobExecutionId ?? '');
       if (!executionId) throw new Error(`Forwarded job '${jobName}' is missing its Temporal execution id`);
       const adminDb = await getAdminConnection();
+      let executionStatus: string | undefined;
+      let activeExecutionId: string | undefined;
       await adminDb.transaction(async (trx) => {
         await trx.raw('SELECT set_config(\'app.current_tenant\', ?, true)', [tenantId]);
         const job = await tenantDb(trx, tenantId).table('jobs')
           .where({ job_id: jobId }).forUpdate().first('metadata');
         if (!job) throw new Error(`Job ${jobId} not found before forwarding '${jobName}'`);
         const metadata = typeof job.metadata === 'string' ? JSON.parse(job.metadata) : (job.metadata ?? {});
+        const nextMetadata = beginForwardedJobExecution(metadata, executionId);
+        executionStatus = nextMetadata.serverExecution.status;
+        activeExecutionId = nextMetadata.serverExecution.executionId;
         await tenantDb(trx, tenantId).table('jobs').where({ job_id: jobId }).update({
-          metadata: JSON.stringify(beginForwardedJobExecution(metadata, executionId)),
+          metadata: JSON.stringify(nextMetadata),
           updated_at: new Date(),
         });
       });
+      // Temporal may retry an activity after its first attempt finished but its
+      // acknowledgement was lost. Reuse that durable result instead of sending
+      // another event. Failed outcomes are terminal for this run; an intentional
+      // resend creates a new job/run with a new execution id.
+      if (executionStatus === 'completed') return;
+      if (executionStatus === 'failed') {
+        throw new Error(`Forwarded job '${jobName}' already failed in execution ${executionId}`);
+      }
+      if (activeExecutionId !== executionId) {
+        throw new Error(`Forwarded job '${jobName}' is still processing execution ${activeExecutionId}`);
+      }
       await publishEvent({
         eventType: 'MAINTENANCE_JOB_REQUESTED',
         payload: {
@@ -160,28 +180,40 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
       // Redis publication is only a handoff. The server subscriber writes a
       // serverExecution outcome after its registered handler has actually
       // returned, so Temporal must wait for that durable completion signal.
-      await waitForForwardedJobCompletion(async () => runWithTenant(
-        tenantId,
-        async (trx) => {
-          const job = await tenantDb(trx, tenantId)
-            .table('jobs')
-            .where({ job_id: jobId })
-            .first<{ status: string; metadata?: Record<string, unknown> | string } | undefined>(
-              'status', 'metadata',
-            );
-          if (!job) return undefined;
-          const metadata = typeof job.metadata === 'string'
-            ? JSON.parse(job.metadata)
-            : job.metadata;
-          return {
-            executionId: metadata?.serverExecution?.executionId ?? '',
-            status: metadata?.serverExecution?.status ?? 'queued',
-            error: typeof metadata?.serverExecution?.error === 'string'
-              ? metadata.serverExecution.error
-              : typeof metadata?.error === 'string' ? metadata.error : undefined,
-          };
-        },
-      ), executionId);
+      try {
+        await waitForForwardedJobCompletion(async () => runWithTenant(
+          tenantId,
+          async (trx) => {
+            const job = await tenantDb(trx, tenantId)
+              .table('jobs')
+              .where({ job_id: jobId })
+              .first<{ status: string; metadata?: Record<string, unknown> | string } | undefined>(
+                'status', 'metadata',
+              );
+            if (!job) return undefined;
+            const metadata = typeof job.metadata === 'string'
+              ? JSON.parse(job.metadata)
+              : job.metadata;
+            return {
+              executionId: metadata?.serverExecution?.executionId ?? '',
+              status: metadata?.serverExecution?.status ?? 'queued',
+              error: typeof metadata?.serverExecution?.error === 'string'
+                ? metadata.serverExecution.error
+                : typeof metadata?.error === 'string' ? metadata.error : undefined,
+            };
+          },
+        ), executionId);
+      } catch (error) {
+        if (error instanceof Error && error.message.startsWith('Timed out waiting for the application server')) {
+          await failForwardedJobOnTimeout(
+            jobId,
+            tenantId,
+            executionId,
+            `${error.message}; delivery outcome is unknown`,
+          );
+        }
+        throw error;
+      }
     };
   const registerForwardedJobHandler = (jobName: string, options?: { strict: boolean }) => {
     forwardedJobHandlers.add(jobName);
@@ -259,6 +291,28 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
   logger.info('Initialized job handler registry for Temporal worker', {
     handlerCount: jobHandlers.size,
     handlers: Array.from(jobHandlers.keys()),
+  });
+}
+
+async function failForwardedJobOnTimeout(
+  jobId: string,
+  tenantId: string,
+  executionId: string,
+  error: string,
+): Promise<void> {
+  const adminDb = await getAdminConnection();
+  await adminDb.transaction(async (trx) => {
+    await trx.raw('SELECT set_config(\'app.current_tenant\', ?, true)', [tenantId]);
+    const table = tenantDb(trx, tenantId).table('jobs');
+    const job = await table.where({ job_id: jobId }).forUpdate().first('metadata');
+    if (!job) throw new Error(`Job ${jobId} not found while recording forwarded execution timeout`);
+    const metadata = typeof job.metadata === 'string' ? JSON.parse(job.metadata) : (job.metadata ?? {});
+    const transition = recordForwardedJobExecutionOutcome(metadata, executionId, { status: 'failed', error });
+    if (!transition.recorded) return;
+    await table.where({ job_id: jobId }).update({
+      metadata: JSON.stringify(transition.metadata),
+      updated_at: new Date(),
+    });
   });
 }
 

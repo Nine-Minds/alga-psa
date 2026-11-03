@@ -25,10 +25,10 @@ const mocks = vi.hoisted(() => {
   return { publish: vi.fn(), wait: vi.fn(async (..._args: any[]) => undefined), jobs, transaction, getPeak: () => peak };
 });
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: mocks.publish, publishWorkflowEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
-vi.mock('@alga-psa/jobs/lib/forwardedJobCompletion', () => ({
-  beginForwardedJobExecution: (metadata: Record<string, unknown>, executionId: string) => ({
-    ...metadata, serverExecution: { executionId, status: 'queued' },
-  }),
+vi.mock('@alga-psa/jobs/lib/forwardedJobCompletion', async () => ({
+  ...await vi.importActual<typeof import('@alga-psa/jobs/lib/forwardedJobCompletion')>(
+    '@alga-psa/jobs/lib/forwardedJobCompletion',
+  ),
   waitForForwardedJobCompletion: mocks.wait,
 }));
 vi.mock('@alga-psa/jobs/handlers/workflowScheduledRunHandlers', () => ({ workflowOneTimeScheduledRunHandler: vi.fn(), workflowRecurringScheduledRunHandler: vi.fn() }));
@@ -114,8 +114,30 @@ describe('recover-comment-publications worker forwarding', () => {
     });
     expect(JSON.parse(mocks.jobs.get(jobId)!.metadata).serverExecution).toMatchObject({
       executionId,
-      status: 'queued',
+      status: 'failed',
+      error: 'Timed out waiting for the application server to complete the forwarded job; delivery outcome is unknown',
     });
+  });
+
+  it('does not republish after the same Temporal execution already completed', async () => {
+    const { waitForForwardedJobCompletion } = await vi.importActual<
+      typeof import('@alga-psa/jobs/lib/forwardedJobCompletion')
+    >('@alga-psa/jobs/lib/forwardedJobCompletion');
+    await initializeJobHandlersForWorker();
+    const tenantId = randomUUID(), jobId = randomUUID(), executionId = randomUUID();
+    mocks.jobs.set(jobId, { metadata: '{}' });
+    mocks.publish.mockImplementation(async (event: any) => {
+      mocks.jobs.set(jobId, { metadata: JSON.stringify({
+        serverExecution: { executionId: event.payload.executionId, status: 'completed' },
+      }) });
+    });
+    mocks.wait.mockImplementation((readStatus: any, forwardedExecutionId: string) =>
+      waitForForwardedJobCompletion(readStatus, forwardedExecutionId, { pollIntervalMs: 1 }));
+
+    const input = { jobName: 'invoice_email', jobId, tenantId, jobExecutionId: executionId, data: {} };
+    expect(await executeJobHandler(input)).toMatchObject({ success: true });
+    expect(await executeJobHandler(input)).toMatchObject({ success: true });
+    expect(mocks.publish).toHaveBeenCalledOnce();
   });
 
   it('completes concurrent forwarded executions with a one-connection admin pool', async () => {
