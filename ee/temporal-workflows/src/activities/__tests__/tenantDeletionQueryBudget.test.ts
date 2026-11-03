@@ -45,6 +45,9 @@ describe.skipIf(!enabled)('tenant deletion query budget', () => {
       expect(await admin('stripe_customer_bindings').where({ tenant: other }).select('stripe_customer_external_id'))
         .toEqual([{ stripe_customer_external_id: otherCustomer }]);
     } finally {
+      await admin('stripe_customers').whereIn('tenant', [target, other]).del();
+      await admin('stripe_customer_bindings').whereIn('tenant', [target, other]).del();
+      await admin('tenants').whereIn('tenant', [target, other]).del();
       await admin.destroy();
     }
   }, 300_000);

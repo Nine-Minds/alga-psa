@@ -12,7 +12,7 @@
 
 - PostgreSQL ownership integration suite against the Stripe emulator:
   `STRIPE_API_BASE_URL=http://127.0.0.1:4051 STRIPE_SECRET_KEY=sk_test_algasim DB_HOST=localhost DB_PORT=55472 DB_NAME_SERVER=alga_stripe_owner_test DB_USER_SERVER=postgres DB_PASSWORD_SERVER=stripe_tenant_test npx vitest run src/__tests__/integration/stripeService.customerOwnership.integration.test.ts --reporter=dot`
-  — 27 passed. Includes matching remote ownership, mismatched metadata, deleted remote customer, incompatible binding, and concurrent migration writer contention.
+  — 27 passed. Includes matching remote ownership, mismatched metadata, incompatible binding, and concurrent migration writer contention. The deleted-customer fixture now has matching `deletedTenant` metadata and binding: the actual checkout service method succeeds before remote deletion, then rejects after deletion without making a second checkout-session call.
 - Citus ownership integration suite:
   `STRIPE_BINDING_CITUS_TEST=1 DB_HOST=localhost DB_PORT=55473 DB_NAME_SERVER=alga_stripe_citus_test DB_USER_SERVER=postgres DB_PASSWORD_SERVER=stripe_tenant_test npx vitest run src/__tests__/integration/stripeService.customerOwnership.integration.test.ts --reporter=dot`
   — 26 passed, 1 simulator-only case skipped. Exercises rollout contention and confirms the binding/FK mechanism is accepted by Citus.
@@ -23,11 +23,14 @@
 - Real tenant deletion activity integration:
   `HOTPATH_DB=1 DB_HOST=localhost DB_PORT=55472 DB_NAME_SERVER=alga_stripe_tenant_test DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=stripe_tenant_test DB_USER_SERVER=postgres DB_PASSWORD_SERVER=stripe_tenant_test npx vitest run src/activities/__tests__/tenantDeletionQueryBudget.test.ts -t 'deletes Stripe mappings' --reporter=dot`
   — passed. The real activity deleted the target tenant’s Stripe mapping before its binding and retained the other tenant’s mapping and binding. The broader file still has an existing query-budget assertion failure when run without the test filter; it expects no co-management/product-code lookup, unlike the current fully migrated schema path.
+- Query-budget baseline comparison: using `git show f1738f3737:ee/temporal-workflows/src/activities/__tests__/tenantDeletionQueryBudget.test.ts` as the test file and the same `alga_stripe_tenant_test` database, `HOTPATH_DB=1 DB_HOST=localhost DB_PORT=55472 DB_NAME_SERVER=alga_stripe_tenant_test DB_USER_ADMIN=postgres DB_PASSWORD_ADMIN=stripe_tenant_test DB_USER_SERVER=postgres DB_PASSWORD_SERVER=stripe_tenant_test npx vitest run src/activities/__tests__/tenantDeletionQueryBudget.test.ts -t 'deleteTenantData on a fixture tenant records a stable statement list' --reporter=dot` fails at the pre-existing assertion that the statement list contain no `/co_manag|product_code/` match. This reproduces the failure before the current repair; the assertion was not weakened or changed.
+- The new deletion isolation test now removes both tenants’ Stripe mappings and bindings and any surviving tenant rows in `finally`, including the preserved neighbor fixture. Its targeted rerun passed (1 passed, 1 unrelated test skipped).
 - Stripe emulator tests: `npm test --workspace @alga-psa/emulator-stripe` — 30 passed. The emulator build succeeded; its customer DELETE behavior now marks customers deleted and excludes them from searches.
 - Stripe emulator TypeScript check: `npm run typecheck --workspace @alga-psa/emulator-stripe` — passed.
 
-## Remaining verification
+## Build and outstanding verification
 
-- The full EE server TypeScript check (`NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit -p tsconfig.json`, from `ee/server`) failed with Node heap exhaustion at the 8 GB limit after 133 seconds. The Stripe emulator package typecheck passed, and Vitest compiled/executed the changed service integration test.
+- EE server TypeScript check: `NODE_OPTIONS=--max-old-space-size=14336 npm run typecheck --workspace sebastian-ee` — passed. The previous 8 GB heap attempt is superseded by this successful higher-memory run.
+- EE production build: `NODE_OPTIONS=--max-old-space-size=14336 npm run build --workspace sebastian-ee` — passed. Next.js emitted existing webpack/dynamic-route warnings; the build completed page generation and trace collection with exit code 0. This ran `next build` only; no application server was started.
 - Hosted UI validation remains unverified because the explicit instruction prohibited starting the application server. Simulator-backed service tests are not UI evidence. Hosted license configuration was not validated in a running application.
 - No application server was started.

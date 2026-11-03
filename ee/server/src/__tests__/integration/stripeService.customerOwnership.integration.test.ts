@@ -105,7 +105,7 @@ beforeAll(async () => {
   if (publicCollision.rows[0].present) {
     throw new Error('Stripe ownership integration test requires a dedicated database with no public Stripe tables; refusing search_path fallback.');
   }
-  await db.raw(`CREATE TABLE tenants (tenant uuid PRIMARY KEY, email text)`);
+  await db.raw(`CREATE TABLE tenants (tenant uuid PRIMARY KEY, email text, plan text, product_code text)`);
   await db.raw(`
     CREATE TABLE stripe_customers (
       tenant uuid NOT NULL, stripe_customer_id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -454,11 +454,22 @@ describe('getOrImportCustomer ownership proof', () => {
     await db('stripe_customers').insert({ tenant: mismatchTenant, stripe_customer_external_id: mismatched.id, email: 'mismatch@simulator.test' });
     await expect(service.getOrImportCustomer(mismatchTenant)).rejects.toMatchObject({ code: 'not_owned' });
 
-    const deleted = await stripe.customers.create({ email: 'deleted@simulator.test', metadata: { tenant_id: TENANT_A } });
+    const deleted = await stripe.customers.create({ email: 'deleted@simulator.test', metadata: { tenant_id: deletedTenant } });
+    await db('tenants').insert({ tenant: deletedTenant, email: 'deleted@simulator.test', plan: 'pro', product_code: 'psa' });
     await db('stripe_customer_bindings').insert({ stripe_customer_external_id: deleted.id, tenant: deletedTenant });
     await db('stripe_customers').insert({ tenant: deletedTenant, stripe_customer_external_id: deleted.id, email: 'deleted@simulator.test' });
+    await expect(service.getOrImportCustomer(deletedTenant)).resolves.toMatchObject({ stripe_customer_external_id: deleted.id });
+    service.buildSubscriptionLineItemsForTier = vi.fn(() => [{ price: 'price_simulator', quantity: 1 }]);
+    const createCheckoutSession = vi.spyOn(stripe.checkout.sessions, 'create').mockResolvedValue({
+      id: 'cs_deleted_customer_fast_path', client_secret: 'secret_simulator',
+    } as any);
+    await expect((service as any).createLicenseCheckoutSession(deletedTenant, 1)).resolves.toMatchObject({
+      sessionId: 'cs_deleted_customer_fast_path',
+    });
+    expect(createCheckoutSession).toHaveBeenCalledTimes(1);
     await stripe.customers.del(deleted.id);
-    await expect(service.getOrImportCustomer(deletedTenant)).rejects.toMatchObject({ code: 'not_owned' });
+    await expect((service as any).createLicenseCheckoutSession(deletedTenant, 1)).rejects.toMatchObject({ code: 'not_owned' });
+    expect(createCheckoutSession).toHaveBeenCalledTimes(1);
 
     const incompatible = await stripe.customers.create({ email: 'binding@simulator.test', metadata: { tenant_id: TENANT_A } });
     await db('stripe_customer_bindings').insert({ stripe_customer_external_id: incompatible.id, tenant: incompatibleTenant });
