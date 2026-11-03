@@ -6,6 +6,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { workedMinutes } from '@alga-psa/core';
+import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 
 function tenantScopedTable(
@@ -45,11 +46,6 @@ export interface TicketBillingRollup {
 
 type TicketBillingRollupTotals = Omit<TicketBillingRollup, 'contractName'>;
 
-interface TicketLookupRow {
-  ticket_id: string;
-  client_id: string | null;
-}
-
 interface TicketTimeEntryDurationRow {
   entry_id: string;
   start_time: string | Date | null;
@@ -69,22 +65,26 @@ async function assertCanReadTicket(
   trx: Knex.Transaction,
   tenant: string,
   ticketId: string,
-): Promise<TicketLookupRow> {
+): Promise<TicketRecordRow> {
   if (!(await hasPermission(user, 'ticket', 'read', trx))) {
     throw new Error('Permission denied: cannot read ticket');
   }
 
-  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-    .where({ ticket_id: ticketId })
-    .first(['ticket_id', 'client_id']) as TicketLookupRow | undefined;
-  if (!ticket) {
-    throw new Error('Ticket not found');
+  try {
+    return await authorizeTicketRecordAccess({
+      trx,
+      tenant,
+      user: user as any,
+      ticketId,
+      action: 'read',
+    });
+  } catch (error) {
+    // Bento reads intentionally conceal whether a ticket is absent or excluded.
+    if (error instanceof Error && error.message === 'Ticket not found') {
+      throw new Error('Permission denied: Cannot access ticket');
+    }
+    throw error;
   }
-
-  return {
-    ticket_id: ticket.ticket_id,
-    client_id: ticket.client_id ?? null,
-  };
 }
 
 function normalizeRequiredIso(value: unknown, fieldName: string): string {
@@ -171,13 +171,13 @@ export const getTicketScheduleEntries = withAuth(
 
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
-      await assertCanReadTicket(user, trx, tenant, ticketId);
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const ticket = await assertCanReadTicket(user, trx, tenant, ticketId);
 
       const now = new Date();
       const query = tenantScopedTable(trx, 'schedule_entries as se', tenant)
         .where({
-          'se.work_item_id': ticketId,
+          'se.work_item_id': ticket.ticket_id,
           'se.work_item_type': 'ticket',
         })
         .select(
@@ -244,11 +244,11 @@ export const getTicketInteractions = withAuth(
 
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
-      await assertCanReadTicket(user, trx, tenant, ticketId);
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const ticket = await assertCanReadTicket(user, trx, tenant, ticketId);
 
       const query = tenantScopedTable(trx, 'interactions as i', tenant)
-        .where('i.ticket_id', ticketId)
+        .where('i.ticket_id', ticket.ticket_id)
         .orderBy('i.interaction_date', 'desc')
         .limit(limit)
         .select(
@@ -304,12 +304,12 @@ export const getTicketBillingRollup = withAuth(
 
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const ticket = await assertCanReadTicket(user, trx, tenant, ticketId);
 
       const timeEntryRows = (await tenantScopedTable(trx, 'time_entries', tenant)
         .where({
-          work_item_id: ticketId,
+          work_item_id: ticket.ticket_id,
           work_item_type: 'ticket',
         })
         .select('entry_id', 'start_time', 'end_time', 'billable_duration', 'invoiced')) as TicketTimeEntryDurationRow[];
@@ -422,11 +422,11 @@ export const getTicketAppointmentRequests = withAuth(
 
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
-      await assertCanReadTicket(user, trx, tenant, ticketId);
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const ticket = await assertCanReadTicket(user, trx, tenant, ticketId);
 
       const query = tenantScopedTable(trx, 'appointment_requests as ar', tenant)
-        .where('ar.ticket_id', ticketId)
+        .where('ar.ticket_id', ticket.ticket_id)
         .orderBy('ar.created_at', 'desc')
         .select(
           'ar.appointment_request_id',
@@ -481,11 +481,11 @@ export const getTicketSlaPolicyName = withAuth(
 
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
-      await assertCanReadTicket(user, trx, tenant, ticketId);
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const ticket = await assertCanReadTicket(user, trx, tenant, ticketId);
 
       const row = await tenantScopedTable(trx, 'tickets as t', tenant)
-        .where({ 't.ticket_id': ticketId })
+        .where({ 't.ticket_id': ticket.ticket_id })
         .whereNotNull('t.sla_policy_id')
         .join('sla_policies as sp', function joinPolicies() {
           this.on('sp.sla_policy_id', 't.sla_policy_id').andOn('sp.tenant', 't.tenant');

@@ -168,13 +168,8 @@ export async function createTicketAuthorizationContext(
       relationshipRules,
     }),
     bundleProvider: new BundleAuthorizationKernelProvider({
-      resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input);
-        } catch {
-          return [];
-        }
-      },
+      resolveRules: (input) =>
+        resolveBundleNarrowingRulesForEvaluation(trx as Knex.Transaction, input),
     }),
     rbacEvaluator: async () => true,
   });

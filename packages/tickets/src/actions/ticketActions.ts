@@ -133,6 +133,7 @@ import {
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import { authorizeTicketRecordAccess } from '../lib/ticketRecordAuthorization';
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
 let _cancelSlaFn: ((tenantId: string, ticketId: string) => Promise<void>) | null = null;
 
@@ -2750,7 +2751,24 @@ export const getScheduledHoursForTicket = withAuth(async (user, { tenant }, tick
         throw new Error('Permission denied: Cannot view ticket schedule');
       }
 
-      // Query schedule entries for the ticket
+      let ticket;
+      try {
+        ticket = await authorizeTicketRecordAccess({
+          trx,
+          tenant,
+          user: user as IUserWithRoles,
+          ticketId,
+          action: 'read',
+        });
+      } catch (error) {
+        // Keep missing tickets indistinguishable from tickets excluded by the bundle.
+        if (error instanceof Error && error.message === 'Ticket not found') {
+          throw new Error('Permission denied: Cannot access ticket');
+        }
+        throw error;
+      }
+
+      // Query schedule entries only after per-ticket authorization.
       const tenantFacade = tenantDb(trx, tenant);
       const scheduleEntriesQuery = tenantFacade.table('schedule_entries as se')
       .select(
@@ -2758,7 +2776,7 @@ export const getScheduledHoursForTicket = withAuth(async (user, { tenant }, tick
         'sea.user_id'
       )
       .where({
-        'se.work_item_id': ticketId,
+        'se.work_item_id': ticket.ticket_id,
         'se.work_item_type': 'ticket'
       });
       tenantFacade.tenantJoin(
@@ -2962,6 +2980,23 @@ export const getTicketAppointmentRequests = withAuth(async (
         throw new Error('Permission denied');
       }
 
+      let ticket;
+      try {
+        ticket = await authorizeTicketRecordAccess({
+          trx,
+          tenant,
+          user: user as IUserWithRoles,
+          ticketId,
+          action: 'read',
+        });
+      } catch (error) {
+        // Keep missing tickets indistinguishable from tickets excluded by the bundle.
+        if (error instanceof Error && error.message === 'Ticket not found') {
+          throw new Error('Permission denied: Cannot access ticket');
+        }
+        throw error;
+      }
+
       const tenantFacade = tenantDb(trx, tenant);
       const appointmentQuery = tenantFacade.table('appointment_requests as ar');
       tenantFacade.tenantJoin(
@@ -2972,7 +3007,7 @@ export const getTicketAppointmentRequests = withAuth(async (
         { type: 'left' }
       );
       return await appointmentQuery
-        .where('ar.ticket_id', ticketId)
+        .where('ar.ticket_id', ticket.ticket_id)
         .select(
           'ar.*',
           'sc.service_name'
