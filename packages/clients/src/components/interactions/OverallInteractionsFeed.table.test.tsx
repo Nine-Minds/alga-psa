@@ -243,6 +243,12 @@ describe('OverallInteractionsFeed table', () => {
     })));
     expect(screen.getByTestId('interaction-data-table')).toBeTruthy();
     expect(screen.getByText('More interactions remain to search.')).toBeTruthy();
+    expect(mocks.tableProps).toMatchObject({
+      totalItemsExact: false,
+      hasMorePages: true,
+      currentPage: 1,
+    });
+    expect(screen.getByRole('button', { name: 'Next' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
 
     await waitFor(() => expect(mocks.getInteractionsPage).toHaveBeenCalledWith(expect.objectContaining({
@@ -254,6 +260,8 @@ describe('OverallInteractionsFeed table', () => {
     await waitFor(() => expect(mocks.getInteractionsPage).toHaveBeenCalledWith(expect.objectContaining({
       search: 'needle', page: 3, cursor: nextContinuation,
     })));
+    expect(screen.getByText('No interactions match these filters.')).toBeTruthy();
+    expect(screen.queryByText('More interactions remain to search.')).toBeNull();
     expect(await screen.findByRole('button', { name: 'Previous' })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
     await waitFor(() => expect(mocks.getInteractionsPage).toHaveBeenCalledWith(expect.objectContaining({
