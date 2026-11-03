@@ -1,31 +1,17 @@
 {
+  "observedAt": "2026-11-03T22:52:12Z",
   "productRevision": "5fb6d1ebd88fbb072e5cafb18ff2cb28e219b4ce",
   "projectId": "408b0ddd-de45-4ef6-bf35-b88251c8515c",
-  "routingRepairRevision": "f1627486d2440b5b82734a29c0782482630e17eb",
-  "checks": [
-    {
-      "command": "space-new-tab --type=browser --projectId=<card> --activate=false",
-      "status": "succeeded_after_transient_timeout",
-      "spaceId": "3c53a082-1674-4969-8cf0-780aef37daab",
-      "paneId": "f9b1c96a-95c0-46ea-b8af-e0deaa1b6039"
-    },
-    {
-      "command": "list-pane-tabs --paneId=<project-pane>",
-      "status": "succeeded",
-      "result": "one active browser tab; scopedTo ts:robert-Desktop-AMD-Ryzen-AI-Max-300-Series"
-    },
-    {
-      "command": "browser-get-url --paneId=<project-pane>",
-      "status": "succeeded",
-      "result": "about:blank"
-    },
-    {
-      "command": "browser-navigate --paneId=<project-pane> --url=https://example.com",
-      "status": "succeeded",
-      "result": "https://example.com"
-    }
-  ],
-  "unsupportedMethodCliRequest": false,
+  "historicalStatus": "time-bound; later checks showed pane f9b1c96a absent from current inventory and not reproducibly routable",
+  "historicalCommands": {
+    "space-new-tab": "succeeded after one timeout; createdSpace=false",
+    "paneIdReturnedThen": "f9b1c96a-95c0-46ea-b8af-e0deaa1b6039",
+    "list-pane-tabs": "succeeded then",
+    "browser-get-url": "succeeded then with about:blank",
+    "browser-navigate": "succeeded then to https://example.com",
+    "unsupportedMethodCliRequest": false
+  },
+  "currentCorrection": "See ../605341a1b06c379b4144e27dbb260beb77fef417-routing-diagnosis/routing-verification.json. Use the current pane returned by project-scoped inventory; the old pane ID is stale/foreign.",
   "featureUiAssertions": "not_run_app_unavailable",
-  "notes": "This is routing-only evidence. It does not demonstrate an authenticated card app session or any service-principal UI state."
+  "smokeWalkthrough": null
 }
