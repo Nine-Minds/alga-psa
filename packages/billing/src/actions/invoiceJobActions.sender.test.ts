@@ -123,8 +123,23 @@ describe('sendInvoiceEmailAction sender plumbing', () => {
 
   it('allows invoice:send to schedule the invoice email job', async () => {
     await expect(scheduleInvoiceEmailAction(['invoice-1'])).resolves.toMatchObject({ jobId: 'job-1' });
-    expect(mocks.enqueueImmediateJob).toHaveBeenCalledWith('invoice_email', expect.objectContaining({
-      invoiceIds: ['invoice-1'], tenantId: 'tenant-test',
-    }));
+    expect(mocks.enqueueImmediateJob).toHaveBeenCalledWith('invoice_email', {
+      invoiceIds: ['invoice-1'],
+      tenantId: 'tenant-test',
+      user_id: 'billing-user',
+      steps: [
+        {
+          stepName: 'PDF Generation for Invoice #INV-1 (Test Client)',
+          type: 'pdf_generation',
+          metadata: { invoiceId: 'invoice-1', tenantId: 'tenant-test' },
+        },
+        {
+          stepName: 'Email Sending for Invoice #INV-1 (Test Client)',
+          type: 'email_sending',
+          metadata: { invoiceId: 'invoice-1', tenantId: 'tenant-test' },
+        },
+      ],
+      metadata: { user_id: 'billing-user', invoice_count: 1, tenantId: 'tenant-test' },
+    });
   });
 });
