@@ -105,6 +105,7 @@ describe('getCurrentUser', () => {
       is_inactive: false,
       hashed_password: 'password-hash-secret',
       two_factor_secret: 'totp-seed-secret',
+      unexpected_credential: 'unexpected-secret',
       newly_added_database_column: 'must-not-escape',
       roles: [{ role_id: 'role-1', role_name: 'Technician', tenant: 'tenant-1' }],
     } as any);
@@ -123,9 +124,11 @@ describe('getCurrentUser', () => {
     });
     expect(user).not.toHaveProperty('hashed_password');
     expect(user).not.toHaveProperty('two_factor_secret');
+    expect(user).not.toHaveProperty('unexpected_credential');
     expect(user).not.toHaveProperty('newly_added_database_column');
     expect(serialized).not.toContain('password-hash-secret');
     expect(serialized).not.toContain('totp-seed-secret');
+    expect(serialized).not.toContain('unexpected-secret');
     expect(serialized).not.toContain('must-not-escape');
   });
 
@@ -141,6 +144,7 @@ describe('getCurrentUser', () => {
       is_inactive: false,
       hashed_password: 'revocation-password-hash',
       two_factor_secret: 'revocation-totp-seed',
+      unexpected_credential: 'revocation-unexpected-secret',
       newly_added_database_column: 'revocation-unknown',
       roles: [{ role_id: 'role-1' }],
     } as any);
@@ -151,9 +155,11 @@ describe('getCurrentUser', () => {
     expect(user?.phone_extension).toBe('204');
     expect(user).not.toHaveProperty('hashed_password');
     expect(user).not.toHaveProperty('two_factor_secret');
+    expect(user).not.toHaveProperty('unexpected_credential');
     expect(user).not.toHaveProperty('newly_added_database_column');
     expect(serialized).not.toContain('revocation-password-hash');
     expect(serialized).not.toContain('revocation-totp-seed');
+    expect(serialized).not.toContain('revocation-unexpected-secret');
     expect(serialized).not.toContain('revocation-unknown');
   });
 
