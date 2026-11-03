@@ -144,6 +144,7 @@
     "worksheet": {
       "ticketNumber": "Ticket-Nr.",
       "customer": "Kunde",
+      "assetTag": "Asset-Tag",
       "serial": "Seriennummer",
       "custodyLocation": "Aufbewahrungsort",
       "nextAction": "Nächste Aktion",

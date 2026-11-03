@@ -89,7 +89,7 @@ describe('Letter customer worksheet PDF', () => {
           specGap: gapAfterLabel('spec-cpu'),
         };
       });
-      expect(fields.assetTag).toBe('Asset tag: CFD-DC-2021');
+      expect(fields.assetTag).toBe('Asset Tag: CFD-DC-2021');
       expect(fields.serial).toContain('1234567');
       expect(fields.description).toBe(viewModel.ticketDescription);
       // Values sit next to their labels instead of being pushed to the far edge of the row.

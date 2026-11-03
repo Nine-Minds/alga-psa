@@ -273,7 +273,7 @@ const buildTicketCustomerWorksheet = (): TemplateAst => ({
             style: { inline: { minWidth: '0', flexGrow: 1, flexBasis: '0', display: 'flex', flexDirection: 'column', gap: '8px' } },
             children: [
               worksheetField('fld-name', 'clientName', { i18nKey: 'labels.worksheet.customer', defaultValue: 'Customer' }),
-              worksheetField('fld-asset', 'secondaryIdentifier', { i18nKey: 'labels.assetTag', defaultValue: 'Asset tag' }),
+              worksheetField('fld-asset', 'secondaryIdentifier', { i18nKey: 'labels.worksheet.assetTag', defaultValue: 'Asset Tag' }),
               worksheetField('fld-serial', 'assetSerialNumber', { i18nKey: 'labels.worksheet.serial', defaultValue: 'Serial' }),
             ],
           },
