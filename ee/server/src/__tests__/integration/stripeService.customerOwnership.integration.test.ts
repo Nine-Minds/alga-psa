@@ -92,12 +92,12 @@ beforeAll(async () => {
       database: process.env.DB_NAME_SERVER || process.env.DB_NAME || 'server',
       user: process.env.DB_USER_SERVER || 'postgres',
       password: String(process.env.DB_PASSWORD_SERVER || ''),
+      options: `-c search_path=${SCHEMA},public -c application_name=stripe_binding_test_main`,
     },
     pool: { min: 1, max: 1 },
   });
   dbHolder.db = db;
   await db.raw(`CREATE SCHEMA ${SCHEMA}`);
-  await db.raw(`SET search_path TO ${SCHEMA}, public`);
   await db.raw(`CREATE TABLE tenants (tenant uuid PRIMARY KEY, email text)`);
   await db.raw(`
     CREATE TABLE stripe_customers (
@@ -353,6 +353,14 @@ describe('migration: global uniqueness of stripe_customer_external_id', () => {
       expect(await db('stripe_customers').where({ stripe_customer_external_id: 'cus_rollout' })).toHaveLength(1);
       expect(await db('stripe_customer_bindings').where({ stripe_customer_external_id: 'cus_rollout' }).first())
         .toMatchObject({ tenant: TENANT_A });
+
+      // Matching ownership is accepted, while a later legacy update cannot
+      // move that mapping onto a customer owned by the other tenant.
+      await writer('stripe_customer_bindings').insert({ stripe_customer_external_id: 'cus_matching', tenant: TENANT_A });
+      await writer('stripe_customers').insert({ tenant: TENANT_A, stripe_customer_external_id: 'cus_matching', email: 'matching' });
+      await expect(writer('stripe_customers').where({ tenant: TENANT_B }).update({ stripe_customer_external_id: 'cus_rollout' }))
+        .rejects.toThrow(/foreign key|violates foreign key/i);
+      expect(await db('stripe_customers').where({ tenant: TENANT_B })).toHaveLength(0);
     } finally {
       if (writerTrx && !writerTrx.isCompleted()) await writerTrx.rollback().catch(() => undefined);
       await blocker.destroy(); await migrator.destroy(); await writer.destroy();
@@ -393,6 +401,16 @@ describe('getOrImportCustomer ownership proof', () => {
     await restoreOwnerConstraint();
     await expect(makeService([{ id: 'cus_existing', email: 'x', metadata: {} }]).getOrImportCustomer(TENANT_A))
       .rejects.toMatchObject({ code: 'not_owned' });
+  });
+
+  it('rejects a deleted remote customer on the existing-mapping fast path before subscription work', async () => {
+    await db('stripe_customer_bindings').insert({ stripe_customer_external_id: 'cus_deleted_existing', tenant: TENANT_A });
+    await db('stripe_customers').insert({ tenant: TENANT_A, stripe_customer_external_id: 'cus_deleted_existing', email: 'x' });
+    const service = makeService([{ id: 'cus_deleted_existing', email: 'x', metadata: { tenant_id: TENANT_A }, deleted: true }]);
+
+    await expect(service.getOrImportCustomer(TENANT_A)).rejects.toMatchObject({ code: 'not_owned' });
+    expect(service.stripe.subscriptions.list).not.toHaveBeenCalled();
+    expect(service.importSubscription).not.toHaveBeenCalled();
   });
 
   it('two tenants share an email: tenant A imports only the customer whose metadata names A', async () => {
