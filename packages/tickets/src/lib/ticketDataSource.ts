@@ -78,6 +78,7 @@ import type {
   applyChecklistTemplate,
   deleteChecklistItem,
   getChecklistTemplates,
+  getChecklistTemplatesForTicket,
   reorderChecklistItems,
   setChecklistItemCompleted,
   updateChecklistItem,
@@ -489,6 +490,7 @@ export interface TicketChecklistMethods {
   applyChecklistTemplate: typeof applyChecklistTemplate;
   deleteChecklistItem: typeof deleteChecklistItem;
   getChecklistTemplates: typeof getChecklistTemplates;
+  getChecklistTemplatesForTicket: typeof getChecklistTemplatesForTicket;
   reorderChecklistItems: typeof reorderChecklistItems;
   setChecklistItemCompleted: typeof setChecklistItemCompleted;
   updateChecklistItem: typeof updateChecklistItem;
