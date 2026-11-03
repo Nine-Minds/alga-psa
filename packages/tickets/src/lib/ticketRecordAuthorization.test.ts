@@ -14,8 +14,8 @@ const resolveBundleRulesMock = vi.hoisted(() => vi.fn<(...args: any[]) => Promis
 vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any) => ({ table: (t: string) => conn(t) }),
 }));
-vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: (...args: any[]) => hasPermissionMock(...args) }));
-vi.mock('./clientPortalVisibility.server', () => ({
+vi.mock('@alga-psa/authorization/rbac', () => ({ hasPermission: (...args: any[]) => hasPermissionMock(...args) }));
+vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
   getClientContactVisibilityContext: (...args: any[]) => getVisibilityMock(...args),
 }));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
@@ -113,7 +113,12 @@ describe('authorizeTicketRecordAccess (client principals)', () => {
     await expect(authorizeTicketRecordAccess({
       trx: fakeTrx(row()), tenant: 'tenant-1', user: client, ticketId: 't1', action: 'delete',
     })).rejects.toThrow('Permission denied: Cannot delete ticket');
-    expect(hasPermissionMock).toHaveBeenCalledWith(client, 'ticket', 'delete', expect.anything());
+    expect(hasPermissionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ ...client, tenant: 'tenant-1' }),
+      'ticket',
+      'delete',
+      expect.anything(),
+    );
   });
 
   it('conceals a retained UUID after client visibility is lost, matching a missing ticket', async () => {

@@ -50,6 +50,10 @@ vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: hasPermissionMock,
 }));
 
+vi.mock('@alga-psa/authorization/rbac', () => ({
+  hasPermission: hasPermissionMock,
+}));
+
 vi.mock('@alga-psa/tags/lib/tagCleanup', () => ({
   deleteEntityTags: deleteEntityTagsMock,
 }));

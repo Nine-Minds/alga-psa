@@ -6,10 +6,11 @@ const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
 const deleteTicketChildRecordsMock = vi.hoisted(() => vi.fn(async () => undefined));
 
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: (...args: unknown[]) => hasPermissionMock(...args) }));
+vi.mock('@alga-psa/authorization/rbac', () => ({ hasPermission: (...args: unknown[]) => hasPermissionMock(...args) }));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: (...args: unknown[]) => resolveBundleRulesMock(...args),
 }));
-vi.mock('@alga-psa/tickets/lib/clientPortalVisibility.server', () => ({
+vi.mock('@alga-psa/authorization/portal/visibility.server', () => ({
   getClientContactVisibilityContext: vi.fn(async () => ({
     effectiveTicketScope: 'contact', ticketScope: 'contact', contactId: 'contact-1', clientId: 'client-1',
     visibleBoardIds: ['board-1'], isClientAdmin: false, visibilityGroupId: null,
