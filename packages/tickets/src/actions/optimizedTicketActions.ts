@@ -109,7 +109,7 @@ import { compilePredicateFragment } from '@alga-psa/predicates/sql';
 import type { PredicateGroup } from '@alga-psa/predicates';
 import { resolveTicketTagIdsByText } from '../lib/ticketTagFilter';
 import { createTicketQuerySchema } from '../lib/ticketQuerySchema';
-import { hiddenTicketFields, interpretTicketRedactions, isTicketFieldHidden, projectTicketRow, TICKET_FIELD_PROJECTIONS } from '../lib/ticketFieldProjection';
+import { hiddenTicketFields, interpretTicketRedactions, isTicketFieldHidden, projectTicketRow, TICKET_FIELD_PROJECTIONS, type TicketRedactionInterpretation } from '../lib/ticketFieldProjection';
 import { ticketFiltersToPredicates, type TicketFilterCodecContext } from '../lib/ticketFilterPredicates';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
@@ -2085,7 +2085,8 @@ async function enrichTicketListItems(
   trx: Knex.Transaction,
   tenant: string,
   ticketListItems: ITicketListItem[],
-  redactions: ReadonlyMap<string, readonly string[]> = new Map()
+  redactions: ReadonlyMap<string, readonly string[]> = new Map(),
+  interpretations: ReadonlyMap<string, TicketRedactionInterpretation> = new Map()
 ): Promise<TicketListRowsWithMetadata> {
   // Fetch metadata in parallel: avatar URLs, team avatar URLs, ticket tags
   const ticketIds = ticketListItems
@@ -2174,7 +2175,8 @@ async function enrichTicketListItems(
   const projectedRows = ticketListItems.flatMap((ticket) => {
     const projected = projectTicketRow(
       ticket as unknown as Record<string, unknown>,
-      redactions.get(ticket.ticket_id!) ?? []
+      redactions.get(ticket.ticket_id!) ?? [],
+      interpretations.get(ticket.ticket_id!)
     );
     return projected ? [projected as unknown as ITicketListItem] : [];
   });
@@ -2428,9 +2430,11 @@ export const loadTicketListItemsByIds = withAuth(async (
       const scopedBaseQuery = scopedQuery.clone();
       const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
       const groups = new Map<string, { ids: string[]; hidden: Set<string>; hiddenAttributes: Set<string> }>();
+      const interpretationsById = new Map<string, TicketRedactionInterpretation>();
       for (const id of authorizedIds) {
         const fields = redactionsById.get(id)!;
         const interpreted = interpretTicketRedactions(fields, attributesById.get(id) as Record<string, unknown> | null | undefined);
+        interpretationsById.set(id, interpreted);
         const key = JSON.stringify({
           fields: [...interpreted.hiddenFields].sort(),
           attributes: [...interpreted.hiddenAttributes].sort(),
@@ -2462,7 +2466,7 @@ export const loadTicketListItemsByIds = withAuth(async (
         .map((id) => byId.get(id))
         .filter((row): row is any => Boolean(row));
 
-      return enrichTicketListItems(trx, tenant, mapTicketListItems(ordered), redactionsById);
+      return enrichTicketListItems(trx, tenant, mapTicketListItems(ordered), redactionsById, interpretationsById);
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
       if (expected) {

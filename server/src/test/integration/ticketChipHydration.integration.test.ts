@@ -116,8 +116,8 @@ async function seed() {
   });
   await db('tickets').insert([
     t(ids.M, 1, ids.k2, { assigned_to: actor }),
-    t(ids.A, 2, ids.k1, { title: 'DB-SECRET-TITLE', attributes: { description: 'DB-SECRET-DESCRIPTION', secret_alias: 'SMOKE4050-SECRET-ALIAS', SECRET_ALIAS: 'SMOKE4050-SECRET-ALIAS-UPPER', visible_alias: 'VISIBLE-CUSTOM-ATTRIBUTE' }, assigned_to: actor }),
-    t(ids.B, 3, ids.k2, { attributes: { Secret_Alias: 'SMOKE4050-SECRET-ALIAS-MIXED', visible_alias: 'VISIBLE-B-CUSTOM-ATTRIBUTE' }, assigned_to: actor }),
+    t(ids.A, 2, ids.k1, { title: 'DB-SECRET-TITLE', attributes: { description: 'DB-SECRET-DESCRIPTION', DESCRIPTION: 'SMOKE4050-ATTRIBUTE-DESCRIPTION', title: 'SMOKE4050-ATTRIBUTE-TITLE', status_id: 'SMOKE4050-ATTRIBUTE-STATUS', secret_alias: 'SMOKE4050-SECRET-ALIAS', SECRET_ALIAS: 'SMOKE4050-SECRET-ALIAS-UPPER', visible_alias: 'VISIBLE-CUSTOM-ATTRIBUTE' }, assigned_to: actor }),
+    t(ids.B, 3, ids.k2, { attributes: { DESCRIPTION: 'SMOKE4050-B-DESCRIPTION', title: 'SMOKE4050-B-ATTRIBUTE-TITLE', status_id: 'SMOKE4050-B-ATTRIBUTE-STATUS', Secret_Alias: 'SMOKE4050-SECRET-ALIAS-MIXED', visible_alias: 'VISIBLE-B-CUSTOM-ATTRIBUTE' }, assigned_to: actor }),
   ]);
   await db('tickets').insert(t(ids.CH, 4, ids.k1, { master_ticket_id: ids.M }));
   await db('tag_mappings').insert([
@@ -206,25 +206,36 @@ describeDb('ticket chip tag hydration (DB)', () => {
   });
 
   it('Smart Search hydration removes custom attribute redactions before returning rows and fails closed on unknown names', async () => {
+    const redactionUser = uuidv4();
+    await db('users').insert({
+      tenant: ids.tenant, user_id: redactionUser, username: `redaction-${redactionUser.slice(0, 8)}`,
+      email: `redaction-${redactionUser.slice(0, 8)}@example.com`, hashed_password: 'not-used',
+      first_name: 'Redaction', last_name: 'Reader', user_type: 'internal', is_inactive: false, timezone: 'UTC',
+    });
+    await db('tickets').where({ tenant: ids.tenant }).whereIn('ticket_id', [ids.A, ids.B]).update({ assigned_to: redactionUser });
     const bundle = await createAuthorizationBundle(db, { tenant: ids.tenant, name: `Smart Search redaction ${uuidv4()}`, actorUserId: ids.actor });
     await createBundleAssignment(db, {
-      tenant: ids.tenant, bundleId: bundle.bundleId, targetType: 'user', targetId: ids.actor, actorUserId: ids.actor,
+      tenant: ids.tenant, bundleId: bundle.bundleId, targetType: 'user', targetId: redactionUser, actorUserId: ids.actor,
     });
     await upsertBundleRule(db, {
       tenant: ids.tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId,
       resourceType: 'ticket', action: 'read', templateKey: 'own_or_assigned', constraintKey: 'hide_sensitive_fields',
-      config: { redactedFields: ['secret_alias'] }, position: 0, actorUserId: ids.actor,
+      config: { redactedFields: ['secret_alias', 'attributes.title', 'attributes.status_id', 'attributes.DESCRIPTION'] }, position: 0, actorUserId: ids.actor,
     });
     await publishBundleRevision(db, { tenant: ids.tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId, actorUserId: ids.actor });
+    const previousUser = authMocks.user;
+    authMocks.user = { user_id: redactionUser, user_type: 'internal', tenant: ids.tenant };
     try {
-      const result: any = await optimized.loadTicketListItemsByIds(base, [ids.A, ids.B], { [ids.A]: ['description'] });
+      const result: any = await optimized.loadTicketListItemsByIds(base, [ids.A, ids.B], { [ids.A]: ['description'], [ids.B]: ['description'] });
       const serialized = JSON.stringify(result);
-      for (const secret of ['SMOKE4050-SECRET-ALIAS', 'SMOKE4050-SECRET-ALIAS-UPPER', 'SMOKE4050-SECRET-ALIAS-MIXED']) {
+      for (const secret of ['SMOKE4050-SECRET-ALIAS', 'SMOKE4050-SECRET-ALIAS-UPPER', 'SMOKE4050-SECRET-ALIAS-MIXED', 'SMOKE4050-ATTRIBUTE-TITLE', 'SMOKE4050-ATTRIBUTE-STATUS', 'SMOKE4050-ATTRIBUTE-DESCRIPTION', 'SMOKE4050-B-ATTRIBUTE-TITLE', 'SMOKE4050-B-ATTRIBUTE-STATUS', 'SMOKE4050-B-DESCRIPTION']) {
         expect(serialized).not.toContain(secret);
       }
       expect(result.tickets).toHaveLength(2);
-      expect(result.tickets[0]).toMatchObject({ title: 'DB-SECRET-TITLE', ticket_number: 'CH-2' });
-      expect(result.tickets[0].attributes).toMatchObject({ description: null, visible_alias: 'VISIBLE-CUSTOM-ATTRIBUTE' });
+      expect(result.tickets[0]).toMatchObject({ title: 'DB-SECRET-TITLE', ticket_number: 'CH-2', status_name: 'Open' });
+      expect(result.tickets[0].attributes).toMatchObject({ visible_alias: 'VISIBLE-CUSTOM-ATTRIBUTE' });
+      expect(result.tickets[0].attributes).not.toHaveProperty('description');
+      expect(result.tickets[0].attributes).not.toHaveProperty('DESCRIPTION');
       expect(result.tickets[1].attributes).toMatchObject({ visible_alias: 'VISIBLE-B-CUSTOM-ATTRIBUTE' });
 
       const wildcard: any = await optimized.loadTicketListItemsByIds(base, [ids.A], { [ids.A]: ['attributes.*'] });
@@ -234,11 +245,14 @@ describeDb('ticket chip tag hydration (DB)', () => {
       await expect(optimized.loadTicketListItemsByIds(base, [ids.A], { [ids.A]: ['never_a_ticket_field'] }))
         .rejects.toThrow(/Unsupported ticket redaction/);
     } finally {
+      authMocks.user = previousUser;
       await db('authorization_bundle_assignments').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).del();
       await db('authorization_bundle_rules').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).del();
       await db('authorization_bundles').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).update({ published_revision_id: null });
       await db('authorization_bundle_revisions').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).del();
       await db('authorization_bundles').where({ tenant: ids.tenant, bundle_id: bundle.bundleId }).del();
+      await db('tickets').where({ tenant: ids.tenant }).whereIn('ticket_id', [ids.A, ids.B]).update({ assigned_to: ids.actor });
+      await db('users').where({ tenant: ids.tenant, user_id: redactionUser }).del();
     }
   });
 

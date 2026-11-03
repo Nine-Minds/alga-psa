@@ -6,6 +6,11 @@ export type TicketFieldProjection = {
   neutral?: string | null;
 };
 
+export type TicketRedactionInterpretation = {
+  hiddenFields: Set<string>;
+  hiddenAttributes: Set<string>;
+};
+
 export const TICKET_FIELD_PROJECTIONS: readonly TicketFieldProjection[] = [
   { field: 'ticket_id', sources: ['ticket_id'], aliases: ['ticket_id'] },
   { field: 'ticket_number', sources: ['ticket_number'], aliases: ['ticket_number', 'bundle_master_ticket_number'] },
@@ -104,7 +109,7 @@ export function hiddenTicketFields(redactions: readonly string[]): Set<string> {
 export function interpretTicketRedactions(
   redactions: readonly string[],
   attributes: Record<string, unknown> | null | undefined
-): { hiddenFields: Set<string>; hiddenAttributes: Set<string> } {
+): TicketRedactionInterpretation {
   const hiddenFields = hiddenTicketFields([]);
   const hiddenAttributes = new Set<string>();
   for (const raw of redactions) {
@@ -114,12 +119,28 @@ export function interpretTicketRedactions(
       hiddenFields.add('attributes');
       continue;
     }
-    const attributeName = name.replace(/^(?:tickets?|attributes)\./i, '').toLowerCase();
+    const qualifiedAttributePath = /^(?:tickets?\.)?attributes\.(.+)$/i.test(name);
+    const attributeName = name.replace(/^(?:tickets?\.)?attributes\./i, '').toLowerCase();
     const attributeKeys = Object.keys(attributes ?? {});
     const attributeMatches = attributeKeys.filter((key) => key.toLowerCase() === attributeName);
-    const customAttributePath = /^(?:tickets?\.)?attributes\./i.test(name) && attributeMatches.length > 0 && attributeName !== 'description';
+    if (qualifiedAttributePath && attributeMatches.length > 0) {
+      for (const key of attributeMatches) hiddenAttributes.add(key);
+      if (attributeName === 'description') {
+        for (const field of hiddenTicketFields(['description'])) hiddenFields.add(field);
+      }
+      continue;
+    }
+    if (qualifiedAttributePath && attributeName !== 'description') {
+      // A qualified JSON path must never fall through to a catalog field with
+      // the same suffix (for example attributes.title or attributes.status_id).
+      hiddenFields.add('attributes');
+      continue;
+    }
+    if (attributeName === 'description') {
+      for (const key of attributeMatches) hiddenAttributes.add(key);
+    }
     const fieldMatch = TICKET_FIELD_PROJECTIONS.some((projection) =>
-      !(customAttributePath && projection.field === 'attributes') && isTicketFieldHidden([name], projection));
+      isTicketFieldHidden([name], projection));
     if (fieldMatch) {
       for (const field of hiddenTicketFields([name])) hiddenFields.add(field);
     } else if (attributeMatches.length > 0) {
@@ -153,17 +174,28 @@ function setPathValue(target: Record<string, unknown>, path: string, value: unkn
 }
 
 /** Applies the same semantic projection after list enrichment has attached derived fields. */
-export function projectTicketRow<T extends Record<string, unknown>>(row: T, redactions: readonly string[]): T | null {
+export function projectTicketRow<T extends Record<string, unknown>>(
+  row: T,
+  redactions: readonly string[],
+  interpretation?: TicketRedactionInterpretation
+): T | null {
   const resourceWide = redactions.some((redaction) => ['ticket', 'tickets', 'ticket.*', 'tickets.*'].includes(redaction.toLowerCase()));
   const projected: Record<string, unknown> = { ...row };
   for (const projection of TICKET_FIELD_PROJECTIONS) {
-    if (!(resourceWide || isTicketFieldHidden(redactions, projection))) continue;
+    if (!(resourceWide || (interpretation
+      ? interpretation.hiddenFields.has(projection.field)
+      : isTicketFieldHidden(redactions, projection)))) continue;
     if (projection.field === 'ticket_id') return null;
     for (const alias of projection.aliases) {
       if (alias.includes('.')) setPathValue(projected, alias, projection.neutral ?? null);
       else projected[alias] = projection.neutral ?? null;
     }
     projected[projection.field] = projection.neutral ?? null;
+  }
+  if (interpretation && interpretation.hiddenAttributes.size > 0 && projected.attributes && typeof projected.attributes === 'object') {
+    const hiddenKeys = new Set([...interpretation.hiddenAttributes].map((key) => key.toLowerCase()));
+    projected.attributes = Object.fromEntries(Object.entries(projected.attributes as Record<string, unknown>)
+      .filter(([key]) => !hiddenKeys.has(key.toLowerCase())));
   }
   return projected as T;
 }
