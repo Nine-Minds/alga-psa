@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import React from 'react';
+import { createHash } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { ARCHIVE_ALLOWED_AUDIENCES, ARCHIVE_EVIDENCE_CLASSES, classifyArchiveCandidate } from '@alga-psa/co-managed';
+import { ARCHIVE_ALLOWED_AUDIENCES, ARCHIVE_EVIDENCE_CLASSES, classifyArchiveCandidate, coManagedArchiveManifestHash } from '@alga-psa/co-managed';
 
 const actions = vi.hoisted(() => ({ list: vi.fn(), history: vi.fn() }));
 vi.mock('@/lib/actions/coManagedArchiveActions', () => ({ listCoManagedArchiveSummaries: actions.list, getCoManagedArchive: actions.history }));
@@ -16,6 +17,8 @@ import CoManagedArchive from '@/components/co-managed/CoManagedArchive';
 
 const OP = '33333333-3333-4333-8333-333333333333';
 const summary = { operationId: OP, clientName: 'Acme Corp', sealedAt: '2026-10-31T00:00:00.000Z', cutoffAt: '2026-10-30T00:00:00.000Z', evidenceCount: 2, fileCount: 1, excludedCount: 2 };
+const archiveIdentity = { tenant: '11111111-1111-4111-8111-111111111111', customer_tenant: '22222222-2222-4222-8222-222222222222',
+  relationship_id: '33333333-3333-4333-8333-333333333333', operation_id: '44444444-4444-4444-8444-444444444444', cutoff_at: '2026-10-30T00:00:00.000Z' };
 beforeEach(() => { actions.list.mockReset(); actions.history.mockReset(); });
 afterEach(cleanup);
 
@@ -85,5 +88,21 @@ describe('archive allowlist classification, per row class', () => {
     expect(classifyArchiveCandidate({ ...at(before), source_type: 'conversation', payload: { audience: 'internal' } }, cutoff)).toEqual({ include: false, reason: 'audience_not_allowlisted' });
     expect(classifyArchiveCandidate({ ...at(after), source_type: 'conversation', payload: { audience: 'shared_it' } }, cutoff)).toEqual({ include: false, reason: 'after_cutoff' });
     expect(classifyArchiveCandidate({ ...at(before), source_type: 'customer_file', payload: {} }, cutoff)).toEqual({ include: false, reason: 'class_not_allowlisted' });
+  });
+});
+
+describe('archive manifest seals', () => {
+  it('keeps legacy seals and hashes persisted retention failures independently of object key order', () => {
+    const legacy = { version: 1 as const, evidence: [['e', 'h']] as [string, string][], files: [['f', 'c', 3]] as [string, string, number][],
+      exclusions: [['conversation', 'after_cutoff', 1]] as [string, 'after_cutoff', number][] };
+    const legacyRepresentation = [legacy.version, archiveIdentity.tenant, archiveIdentity.customer_tenant, archiveIdentity.relationship_id,
+      archiveIdentity.operation_id, new Date(archiveIdentity.cutoff_at).toISOString(), legacy.evidence, legacy.files, legacy.exclusions];
+    const legacySeal = createHash('sha256').update(JSON.stringify(legacyRepresentation)).digest('hex');
+    expect(coManagedArchiveManifestHash(archiveIdentity, legacy)).toBe(legacySeal);
+
+    const failure = { evidenceId: 'evidence-1', attachmentId: 'attachment-1', status: 'retention_failed' as const, reason: 'source_download_failed' as const };
+    const reordered = { reason: failure.reason, status: failure.status, attachmentId: failure.attachmentId, evidenceId: failure.evidenceId };
+    expect(coManagedArchiveManifestHash(archiveIdentity, { ...legacy, retentionFailures: [failure] }))
+      .toBe(coManagedArchiveManifestHash(archiveIdentity, { ...legacy, retentionFailures: [reordered] }));
   });
 });

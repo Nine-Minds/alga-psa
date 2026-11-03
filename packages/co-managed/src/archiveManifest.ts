@@ -53,7 +53,19 @@ export function coManagedArchiveManifestHash(identity: { tenant: string; custome
   const canonical: unknown[] = [manifest.version, identity.tenant, identity.customer_tenant, identity.relationship_id,
     identity.operation_id, new Date(identity.cutoff_at).toISOString(), manifest.evidence, manifest.files, manifest.exclusions];
   // Omit this field for legacy manifests so their existing seal remains verifiable.
-  if (manifest.retentionFailures !== undefined) canonical.push(manifest.retentionFailures);
+  if (manifest.retentionFailures !== undefined) {
+    // JSONB does not preserve object key order. Hash each failure as an explicit tuple so
+    // serializing the manifest before and after PostgreSQL produces the same seal.
+    const failures = manifest.retentionFailures.map(failure => [failure.evidenceId, failure.attachmentId,
+      failure.status, failure.reason] as const).sort((a, b) => {
+      for (let index = 0; index < a.length; index++) {
+        if (a[index] < b[index]) return -1;
+        if (a[index] > b[index]) return 1;
+      }
+      return 0;
+    });
+    canonical.push(failures);
+  }
   return createHash('sha256').update(JSON.stringify(canonical)).digest('hex');
 }
 

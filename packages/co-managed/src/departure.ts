@@ -17,7 +17,7 @@ export interface CoManagedDepartureQualifiedTarget {
 }
 
 async function resolveDepartureTarget(db: Knex, actor: CoManagedSessionActor, provisioningOperationId?: string,
-  qualified?: CoManagedDepartureQualifiedTarget) {
+  qualified?: CoManagedDepartureQualifiedTarget, replay?: { operationId: string; relationshipId: string }) {
   if (qualified) {
     if (![qualified.customerTenant, qualified.relationshipId, qualified.sponsorTenant].every(isCoManagedUuid) ||
         !['customer', 'sponsor'].includes(qualified.side)) throw new CoManagedSharedWorkError();
@@ -32,6 +32,21 @@ async function resolveDepartureTarget(db: Knex, actor: CoManagedSessionActor, pr
     const relationship = await own.table('co_management_relationships').where('state', 'active').whereNull('ended_at')
       .orderBy('created_at', 'desc').orderBy('relationship_id', 'desc')
       .first('relationship_id', 'sponsor_tenant');
+    if (relationship?.relationship_id === replay?.relationshipId) return { side: 'customer' as const, customerTenant: actor.tenant,
+      relationshipId: relationship.relationship_id as string, sponsorTenant: relationship.sponsor_tenant as string };
+    // A customer retries with the relationship and operation it submitted originally. Only
+    // discover a closed target from an existing closure receipt; closeCoManagedRelationship
+    // still performs the actor authorization and request-fingerprint check before replaying it.
+    if (replay && isCoManagedUuid(replay.operationId) && isCoManagedUuid(replay.relationshipId)) {
+      const submitted = await own.table('co_management_relationships').where({ relationship_id: replay.relationshipId,
+        state: 'terminated' }).whereNotNull('ended_at').first('sponsor_tenant');
+      if (submitted) {
+        const closure = await tenantDb(db, submitted.sponsor_tenant).table('co_managed_relationship_closures')
+          .where({ operation_id: replay.operationId, customer_tenant: actor.tenant, relationship_id: replay.relationshipId }).first('operation_id');
+        if (closure) return { side: 'customer' as const, customerTenant: actor.tenant,
+          relationshipId: replay.relationshipId, sponsorTenant: submitted.sponsor_tenant as string };
+      }
+    }
     if (relationship) return { side: 'customer' as const, customerTenant: actor.tenant,
       relationshipId: relationship.relationship_id as string, sponsorTenant: relationship.sponsor_tenant as string };
   }
@@ -111,7 +126,7 @@ export async function departCoManagedRelationship(db: Knex, inputActor: CoManage
   if (!input || !isCoManagedUuid(input.relationshipId)) throw new CoManagedSharedWorkError();
   const request = { provisioningOperationId: input.provisioningOperationId, operationId: input.operationId,
     expectedRevision: input.expectedRevision, relationshipId: input.relationshipId };
-  const target = await resolveDepartureTarget(db, actor, request.provisioningOperationId, qualified);
+  const target = await resolveDepartureTarget(db, actor, request.provisioningOperationId, qualified, request);
   if (target.relationshipId !== request.relationshipId) throw new CoManagedSharedWorkError();
   return closeCoManagedRelationship(db, actor, target, { operationId: request.operationId,
     expectedRevision: request.expectedRevision, reason: 'departure' }, finalizeCoManagedArchive);

@@ -112,14 +112,26 @@ describeDb('co-managed closure and archive on real Postgres', { shuffle: false }
       accepted_by: g.customerAdmin.userId, accepted_at: historicalEnd, ended_at: historicalEnd, created_at: historicalEnd, updated_at: historicalEnd });
     const review = await getCoManagedDepartureScreen(db, g.customerAdmin);
     expect(review.relationshipId).toBe(g.relationshipId);
-    await departCoManagedRelationship(db, g.customerAdmin, { operationId: randomUUID(), expectedRevision: 1, relationshipId: g.relationshipId });
+    const request = { operationId: randomUUID(), expectedRevision: 1, relationshipId: g.relationshipId };
+    const receipt = await departCoManagedRelationship(db, g.customerAdmin, request);
+    await expect(departCoManagedRelationship(db, g.customerAdmin, request)).resolves.toEqual(receipt);
+    await expect(departCoManagedRelationship(db, g.customerAdmin, { ...request, expectedRevision: 2 }))
+      .rejects.toMatchObject({ code: 'CLOSURE_CHANGED' });
     const [historical, current] = await Promise.all([
       db('co_management_relationships').where({ tenant: g.customer, relationship_id: historicalId }).first(),
       db('co_management_relationships').where({ tenant: g.customer, relationship_id: g.relationshipId }).first(),
     ]);
+    const [closures, released] = await Promise.all([
+      db('co_managed_relationship_closures').where({ tenant: g.msp, relationship_id: g.relationshipId }),
+      db('co_managed_allocations').where({ tenant: g.msp, relationship_id: g.relationshipId, state: 'released' }),
+    ]);
     expect(historical).toMatchObject({ state: 'terminated', ended_at: historicalEnd });
     expect(current).toMatchObject({ state: 'terminated' });
     expect(current.ended_at).toBeTruthy();
+    expect(receipt.releasedSeats).toBe(g.seats);
+    expect(closures).toHaveLength(1);
+    expect(closures[0].released_seats).toBe(g.seats);
+    expect(released).toHaveLength(1);
   });
 
   for (const mode of ['download', 'integrity'] as const) {
@@ -151,6 +163,14 @@ describeDb('co-managed closure and archive on real Postgres', { shuffle: false }
         const retainedRow = await db('co_managed_archive_files').where({ tenant: g.msp, attachment_id: retainedAttachmentId }).first();
         expect(manifest.files).toEqual([[retainedRow.archive_file_id, retainedRow.content_hash, retainedRow.file_size]]);
         expect(await db('co_managed_archive_files').where({ tenant: g.msp, attachment_id: attachmentId })).toHaveLength(0);
+        const listed = await listCoManagedArchives(db, g.mspAdmin);
+        expect(listed.items).toEqual(expect.arrayContaining([expect.objectContaining({ operationId })]));
+        const history = await getCoManagedArchiveHistory(db, g.mspAdmin, operationId);
+        expect(history.retentionFailures).toHaveLength(2);
+        expect(history.files).toEqual([expect.objectContaining({ archiveFileId: retainedRow.archive_file_id, size: retainedBytes.length })]);
+        const reopened = await readCoManagedArchiveFile(db, g.mspAdmin, retainedRow.archive_file_id);
+        expect(reopened?.fileName).toBe(`also-retained-${mode}.txt`);
+        expect(Buffer.from(reopened!.body as Uint8Array)).toEqual(Buffer.from(retainedBytes));
         const retry = await closeCoManagedRelationship(db, g.mspAdmin, target, input, finalizeArchive);
         expect(retry).toEqual(receipt);
         expect(await db('co_managed_relationship_closures').where({ tenant: g.msp, relationship_id: g.relationshipId })).toHaveLength(1);
