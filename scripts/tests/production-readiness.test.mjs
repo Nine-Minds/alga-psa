@@ -404,6 +404,29 @@ test('the committed quarantine registry is valid and every entry is still in dat
   assert.deepEqual(resolved.failures, [], 'committed quarantine entries must be owned, justified and unexpired');
 });
 
+test('the committed registry requires successful Teams evidence after its quarantine expires', async () => {
+  const { readFileSync } = await import('node:fs');
+  const quarantine = JSON.parse(readFileSync(new URL('../lib/quarantine.json', import.meta.url), 'utf8'));
+  // Reproduce the candidate date that exposed the expired Teams exemption.
+  const input = { ...fixture(), quarantine, now: '2026-11-03' };
+  const passing = evaluate(input);
+  assert.equal(passing.status, 'passed', passing.failures.join('\n'));
+  assert.equal(resultFor(passing, QUARANTINABLE).status, 'passed');
+
+  input.artifacts[QUARANTINABLE].status = 'failed';
+  input.artifacts[QUARANTINABLE].failures = ['Teams journey failed'];
+  const failing = evaluate(input);
+  assert.equal(failing.status, 'failed');
+  assert.equal(resultFor(failing, QUARANTINABLE).status, 'failed');
+  assert.ok(failing.failures.some(failure => failure.startsWith(`${QUARANTINABLE}:`)));
+
+  delete input.artifacts[QUARANTINABLE];
+  const missing = evaluate(input);
+  assert.equal(missing.status, 'failed');
+  assert.equal(resultFor(missing, QUARANTINABLE).status, 'failed');
+  assert.ok(missing.failures.some(failure => failure.startsWith(`${QUARANTINABLE}:`)));
+});
+
 test('a quarantined requirement that was not applicable does not read as passing', () => {
   const input = fixture();
   // Documentation-only selection: the suite legitimately did not run.
