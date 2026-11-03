@@ -5,6 +5,7 @@ import User from '@alga-psa/db/models/user';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
+import { authorizeTicketRecordAccess } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
 
 import type { AclMetadata, SearchObjectType } from '@alga-psa/types';
 
@@ -37,6 +38,8 @@ export interface SearchAclPrincipal {
   roles?: string[];
   isInternal?: boolean;
   clientAccess: ClientAccess;
+  /** Authenticated identity used by the shared ticket record policy. */
+  authorizationUser?: IUserWithRoles;
 }
 
 export interface SqlFragment {
@@ -128,7 +131,7 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
 
 export async function resolveSearchAclPrincipal(
   knex: Knex,
-  user: Pick<IUserWithRoles, 'user_id' | 'user_type' | 'tenant'>,
+  user: IUserWithRoles,
   clientAccess: ClientAccess = { mode: 'all' },
 ): Promise<SearchAclPrincipal> {
   const rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
@@ -157,6 +160,7 @@ export async function resolveSearchAclPrincipal(
     roles: [...roles],
     isInternal: !isClientPortal,
     clientAccess,
+    authorizationUser: user,
   };
 }
 
@@ -246,12 +250,25 @@ async function commentIsRequesterAudience(knex: Knex, user: SearchAclPrincipal, 
   return found?.audience === 'requester';
 }
 
-async function ticketExists(knex: Knex, user: SearchAclPrincipal, ticketId: string): Promise<boolean> {
-  const row = await tenantScopedRoot<{ ticket_id: string }>(knex, user, 'tickets')
-    .select('ticket_id')
-    .where('ticket_id', ticketId)
-    .first();
-  return Boolean(row);
+async function ticketIsAuthorizedForRead(
+  knex: Knex,
+  user: SearchAclPrincipal,
+  ticketId: string,
+): Promise<boolean> {
+  if (!user.tenant || !user.authorizationUser) return false;
+  try {
+    await authorizeTicketRecordAccess({
+      trx: knex,
+      tenant: user.tenant,
+      user: user.authorizationUser,
+      ticketId,
+      action: 'read',
+    });
+    return true;
+  } catch {
+    // Missing records, policy denials, and resolver failures all deny search visibility.
+    return false;
+  }
 }
 
 async function projectClientIdForProject(
@@ -267,7 +284,7 @@ async function projectClientIdForProject(
 }
 
 registerSearchVisibilityVerifier('ticket', async (knex, user, row) => {
-  return ticketExists(knex, user, row.id);
+  return ticketIsAuthorizedForRead(knex, user, row.id);
 });
 
 registerSearchVisibilityVerifier('ticket_comment', async (knex, user, row) => {
@@ -287,7 +304,7 @@ registerSearchVisibilityVerifier('ticket_comment', async (knex, user, row) => {
   // every audience stored there). It uses the same predicate as the indexer and portal reads, so
   // a public-flagged comment on a private thread cannot be reached through search.
   if (!user.isInternal && !(await commentIsRequesterAudience(knex, user, row.id))) return false;
-  return ticketExists(knex, user, comment.ticket_id);
+  return ticketIsAuthorizedForRead(knex, user, comment.ticket_id);
 });
 
 registerSearchVisibilityVerifier('project', async (knex, user, row) => {
