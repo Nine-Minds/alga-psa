@@ -1,51 +1,101 @@
 "use client";
 
 import React from 'react';
-import type { PredicateGroup, PredicateOperator } from '@alga-psa/predicates';
+import type { PredicateGroup, PredicateNode, PredicateOperator } from '@alga-psa/predicates';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 
-export const RMM_ALERT_FIELDS = [
-  { path: 'severity', label: 'Severity', operators: ['in', 'not_in', 'equals', 'not_equals'] },
-  { path: 'alertClass', label: 'Alert class', operators: ['contains_ci', 'not_contains_ci', 'equals', 'not_equals'] },
-  { path: 'activityType', label: 'Activity type', operators: ['contains_ci', 'not_contains_ci', 'equals', 'not_equals'] },
-  { path: 'sourceType', label: 'Source type', operators: ['contains_ci', 'not_contains_ci', 'equals', 'not_equals'] },
-  { path: 'organizationId', label: 'Organization ID', operators: ['in', 'not_in', 'equals', 'not_equals'] },
-  { path: 'text', label: 'Message and details', operators: ['contains_ci', 'not_contains_ci'] },
-  { path: 'deviceName', label: 'Device name', operators: ['contains_ci', 'not_contains_ci', 'equals', 'not_equals'] },
-  { path: 'externalDeviceId', label: 'External device ID', operators: ['in', 'not_in', 'equals', 'not_equals'] },
-] as const;
+export interface PredicateFieldDescriptor {
+  path: string;
+  labelKey: string;
+  label: string;
+  operators: readonly PredicateOperator[];
+}
 
-const OPS: PredicateOperator[] = ['equals','not_equals','in','not_in','contains','not_contains','contains_ci','not_contains_ci'];
-const EMPTY: PredicateGroup = { join: 'and', clauses: [] };
-type Clause = { path: string; operator: PredicateOperator; value?: string | string[] };
-
-export default function RmmAlertPredicateEditor({ value, onChange, disabled, t }: {
-  value: PredicateGroup; onChange: (next: PredicateGroup) => void; disabled?: boolean;
+type Clause = { path: string; operator: PredicateOperator; value?: unknown };
+type Props = {
+  value: PredicateGroup & { legacyMessagePattern?: string };
+  fields: readonly PredicateFieldDescriptor[];
+  onChange: (next: PredicateGroup & { legacyMessagePattern?: string }) => void;
+  disabled?: boolean;
   t: (key: string, fallback?: string, options?: Record<string, unknown>) => string;
-}) {
-  const clauses = value?.clauses ?? [];
-  const update = (index: number, patch: Partial<Clause>) => onChange({ ...value, clauses: clauses.map((c, i) => i === index && 'path' in c ? { ...c, ...patch } : c) });
-  const add = () => onChange({ ...value, clauses: [...clauses, { path: 'text', operator: 'contains_ci', value: '' }] });
-  const remove = (index: number) => onChange({ ...value, clauses: clauses.filter((_, i) => i !== index) });
-  return <div className="space-y-3">
-    <div className="flex items-center gap-2"><Label htmlFor="rmm-predicate-join">{t('integrations.rmm.alertAutomation.predicate.matchAll', 'Match')}</Label>
-      <CustomSelect id="rmm-predicate-join" value={value?.join ?? EMPTY.join} onValueChange={(join) => onChange({ ...value, join: join as PredicateGroup['join'] })} options={[{value:'and',label:t('integrations.rmm.alertAutomation.predicate.all','All conditions')},{value:'or',label:t('integrations.rmm.alertAutomation.predicate.any','Any condition')}]}/>
+};
+
+const listOps = new Set<PredicateOperator>(['in', 'not_in']);
+const noValueOps = new Set<PredicateOperator>(['is_empty', 'is_not_empty']);
+const valueForOperator = (operator: PredicateOperator, current: unknown): string | string[] | undefined =>
+  noValueOps.has(operator) ? undefined : listOps.has(operator)
+    ? Array.isArray(current) ? current.map(String) : current == null || current === '' ? [] : [String(current)]
+    : Array.isArray(current) ? String(current[0] ?? '') : String(current ?? '');
+
+function mapAt(group: PredicateGroup, path: number[], fn: (node: PredicateNode) => PredicateNode): PredicateGroup {
+  if (!path.length) return fn(group) as PredicateGroup;
+  const [index, ...tail] = path;
+  return { ...group, clauses: group.clauses.map((node, i) => {
+    if (i !== index) return node;
+    if (!tail.length) return fn(node);
+    return 'clauses' in node ? mapAt(node, tail, fn) : node;
+  }) };
+}
+function removeAt(group: PredicateGroup, path: number[]): PredicateGroup {
+  const index = path[0];
+  if (path.length === 1) return { ...group, clauses: group.clauses.filter((_, i) => i !== index) };
+  return { ...group, clauses: group.clauses.map((node, i) => i === index && 'clauses' in node ? removeAt(node, path.slice(1)) : node) };
+}
+
+export default function RmmAlertPredicateEditor({ value, fields, onChange, disabled, t }: Props) {
+  const root = value ?? { join: 'and', clauses: [] };
+  const updateAt = (path: number[], fn: (node: PredicateNode) => PredicateNode) => onChange({ ...root, ...mapAt(root, path, fn) });
+  const appendClause = (path: number[]) => {
+    const field = fields[0];
+    if (!field) return;
+    updateAt(path, node => ({ ...node as PredicateGroup, clauses: [...(node as PredicateGroup).clauses, { path: field.path, operator: field.operators[0], value: valueForOperator(field.operators[0], '') }] }));
+  };
+  const appendGroup = (path: number[]) => updateAt(path, node => ({ ...node as PredicateGroup, clauses: [...(node as PredicateGroup).clauses, { join: 'and', clauses: [] }] }));
+
+  const renderGroup = (group: PredicateGroup, path: number[], nested: boolean): React.ReactNode => <fieldset key={path.join('-') || 'root'} className={`space-y-3 rounded ${nested ? 'border p-3' : ''}`}>
+    <div className="flex flex-wrap items-center gap-2">
+      <Label htmlFor={`rmm-predicate-join-${path.join('-') || 'root'}`}>{t('integrations.rmm.alertAutomation.predicate.matchAll', 'Match')}</Label>
+      <CustomSelect id={`rmm-predicate-join-${path.join('-') || 'root'}`} value={group.join} disabled={disabled} onValueChange={join => updateAt(path, () => ({ ...group, join: join as PredicateGroup['join'] }))} options={[{value:'and',label:t('integrations.rmm.alertAutomation.predicate.all','All conditions')},{value:'or',label:t('integrations.rmm.alertAutomation.predicate.any','Any condition')}]}/>
+      {nested && <Button id={`rmm-predicate-remove-group-${path.join('-')}`} type="button" variant="outline" disabled={disabled} onClick={() => onChange({ ...root, ...removeAt(root, path) })}>{t('integrations.rmm.alertAutomation.predicate.removeGroup','Remove group')}</Button>}
     </div>
-    {clauses.map((clause, index) => {
-      if (!('path' in clause)) return <div key={index} className="rounded border p-2 text-sm">{`${t('integrations.rmm.alertAutomation.predicate.nestedGroup','Nested group')}: ${clause.join} (${clause.clauses.length})`}</div>;
-      if (clause.path === '__legacyMessagePattern') return <div key={index} className="flex items-center gap-2 rounded border p-2 text-sm"><span>{t('integrations.rmm.alertAutomation.predicate.legacyRegex','Legacy message regex')}: <code>{String(clause.value ?? '')}</code></span><Button id={`rmm-predicate-remove-${index}`} type="button" variant="outline" onClick={()=>remove(index)} disabled={disabled}>{t('integrations.rmm.alertAutomation.predicate.remove','Remove')}</Button></div>;
-      const field = RMM_ALERT_FIELDS.find(item => item.path === clause.path) ?? RMM_ALERT_FIELDS[5];
-      const operators = OPS.filter(operator => (field.operators as readonly string[]).includes(operator));
-      return <div key={index} className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
-        <CustomSelect id={`rmm-predicate-field-${index}`} value={field.path} onValueChange={(path) => { const next = RMM_ALERT_FIELDS.find(item => item.path === path)!; update(index, { path, operator: next.operators[0] as PredicateOperator }); }} options={RMM_ALERT_FIELDS.map(item => ({value:item.path,label:t(`integrations.rmm.alertAutomation.predicate.fields.${item.path}`,item.label)}))}/>
-        <CustomSelect id={`rmm-predicate-operator-${index}`} value={clause.operator} onValueChange={(operator) => update(index,{operator:operator as PredicateOperator})} options={operators.map(operator=>({value:operator,label:t(`integrations.rmm.alertAutomation.predicate.operators.${operator}`,operator.replaceAll('_',' '))}))}/>
-        <Input id={`rmm-predicate-value-${index}`} value={Array.isArray(clause.value) ? clause.value.join(', ') : String(clause.value ?? '')} onChange={(event)=>update(index,{value:['in','not_in'].includes(clause.operator) ? event.target.value.split(',').map(v=>v.trim()).filter(Boolean) : event.target.value})} disabled={disabled} aria-label={t('integrations.rmm.alertAutomation.predicate.value','Value')}/>
-        <Button id={`rmm-predicate-remove-${index}`} type="button" variant="outline" onClick={()=>remove(index)} disabled={disabled}>{t('integrations.rmm.alertAutomation.predicate.remove','Remove')}</Button>
+    {group.clauses.map((node, index) => {
+      const childPath = [...path, index];
+      if ('clauses' in node) return <div key={childPath.join('-')} className="space-y-2">
+        <div className="text-sm font-medium">{t('integrations.rmm.alertAutomation.predicate.nestedGroup','Nested group')}</div>
+        {renderGroup(node, childPath, true)}
+      </div>;
+      const clause = node as Clause;
+      if (clause.path === '__legacyMessagePattern') return <div key={childPath.join('-')} className="flex items-center gap-2 rounded border p-2 text-sm"><span>{t('integrations.rmm.alertAutomation.predicate.legacyRegex','Legacy message regex')}: <code>{String(clause.value ?? '')}</code></span><Button id={`rmm-predicate-remove-${childPath.join('-')}`} type="button" variant="outline" onClick={()=>onChange({ ...root, ...removeAt(root, childPath) })} disabled={disabled}>{t('integrations.rmm.alertAutomation.predicate.remove','Remove')}</Button></div>;
+      const field = fields.find(item => item.path === clause.path) ?? fields[0];
+      if (!field) return null;
+      const operators = field.operators;
+      return <div key={childPath.join('-')} className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+        <CustomSelect id={`rmm-predicate-field-${childPath.join('-')}`} value={field.path} disabled={disabled} onValueChange={pathValue => {
+          const next = fields.find(item => item.path === pathValue)!;
+          const operator = next.operators[0];
+          const replacement = { path: next.path, operator, value: valueForOperator(operator, clause.value) };
+          updateAt(childPath, () => replacement);
+        }} options={fields.map(item => ({value:item.path,label:t(item.labelKey,item.label)}))}/>
+        <CustomSelect id={`rmm-predicate-operator-${childPath.join('-')}`} value={clause.operator} disabled={disabled} onValueChange={operatorValue => {
+          const operator = operatorValue as PredicateOperator;
+          updateAt(childPath, () => ({ ...clause, operator, value: valueForOperator(operator, clause.value) }));
+        }} options={operators.map(operator=>({value:operator,label:t(`integrations.rmm.alertAutomation.predicate.operators.${operator}`,operator.replaceAll('_',' '))}))}/>
+        {!noValueOps.has(clause.operator) && <Input id={`rmm-predicate-value-${childPath.join('-')}`} value={Array.isArray(clause.value) ? clause.value.join(', ') : String(clause.value ?? '')} onChange={(event)=>updateAt(childPath, () => ({ ...clause, value:listOps.has(clause.operator) ? event.target.value.split(',').map(v=>v.trim()).filter(Boolean) : event.target.value }))} disabled={disabled} aria-label={t('integrations.rmm.alertAutomation.predicate.value','Value')}/>}
+        {noValueOps.has(clause.operator) && <div />}
+        <Button id={`rmm-predicate-remove-${childPath.join('-')}`} type="button" variant="outline" onClick={()=>onChange({ ...root, ...removeAt(root, childPath) })} disabled={disabled}>{t('integrations.rmm.alertAutomation.predicate.remove','Remove')}</Button>
       </div>;
     })}
-    <Button id="rmm-predicate-add" type="button" variant="outline" onClick={add} disabled={disabled}>{t('integrations.rmm.alertAutomation.predicate.add','Add condition')}</Button>
+    <div className="flex gap-2">
+      <Button id={`rmm-predicate-add-${path.join('-') || 'root'}`} type="button" variant="outline" onClick={()=>appendClause(path)} disabled={disabled}>{t('integrations.rmm.alertAutomation.predicate.add','Add condition')}</Button>
+      <Button id={`rmm-predicate-add-group-${path.join('-') || 'root'}`} type="button" variant="outline" onClick={()=>appendGroup(path)} disabled={disabled}>{t('integrations.rmm.alertAutomation.predicate.addGroup','Add group')}</Button>
+    </div>
+  </fieldset>;
+
+  return <div className="space-y-3">
+    {root.legacyMessagePattern !== undefined && <div className="rounded border p-2 text-sm">{t('integrations.rmm.alertAutomation.predicate.legacyRegex','Legacy message regex')}: <code>{root.legacyMessagePattern}</code><Button className="ml-2" id="rmm-predicate-remove-legacy-regex" type="button" variant="outline" disabled={disabled} onClick={() => { const { legacyMessagePattern: _, ...rest } = root; onChange(rest); }}>{t('integrations.rmm.alertAutomation.predicate.remove','Remove')}</Button></div>}
+    {renderGroup(root, [], false)}
   </div>;
 }

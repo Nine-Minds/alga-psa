@@ -2,8 +2,10 @@
 
 import React from "react";
 import type { PredicateGroup } from '@alga-psa/predicates';
-import { normalizeRmmAlertConditions } from '@alga-psa/shared/rmm/alerts';
+import { normalizeRmmAlertConditions } from '@alga-psa/shared/rmm/alerts/contracts';
 import RmmAlertPredicateEditor from './RmmAlertPredicateEditor';
+import { RMM_ALERT_PREDICATE_FIELDS } from './rmmAlertPredicateFields';
+import { formatPredicateSummary } from './predicateSummary';
 import {
   Card,
   CardContent,
@@ -91,7 +93,7 @@ interface RmmMaintenanceWindowRow {
 // Data shape types
 // ---------------------------------------------------------------------------
 
-type RuleConditions = PredicateGroup;
+type RuleConditions = PredicateGroup & { legacyMessagePattern?: string };
 
 interface RuleActions {
   createTicket: boolean;
@@ -189,15 +191,10 @@ function formatWindowScope(
 
 function ruleSummaryChips(rule: RmmAlertRuleRow, t: Translator): string[] {
   const chips: string[] = [];
-  const summarize = (node: PredicateGroup): string => node.clauses.map(clause => {
-    if ('clauses' in clause) return `(${summarize(clause)})`;
-    const field = clause.path.split('.').pop() ?? clause.path;
-    const op = clause.operator.replaceAll('_', ' ');
-    const value = Array.isArray(clause.value) ? clause.value.join(', ') : String(clause.value ?? '');
-    return `${field} ${op} ${value}`;
-  }).join(node.join === 'and' ? ` ${t('integrations.rmm.alertAutomation.predicate.and','and')} ` : ` ${t('integrations.rmm.alertAutomation.predicate.or','or')} `);
+  const localized = (key: string, fallback: string) => t(key, { defaultValue: fallback });
   const conditions = normalizeRmmAlertConditions(rule.conditions ?? {});
-  if (conditions.clauses.length) chips.push(summarize(conditions));
+  if (conditions.clauses.length) chips.push(formatPredicateSummary(conditions, RMM_ALERT_PREDICATE_FIELDS, localized));
+  if (conditions.legacyMessagePattern !== undefined) chips.push(`${localized('integrations.rmm.alertAutomation.predicate.legacyRegex','Legacy message regex')}: ${conditions.legacyMessagePattern}`);
   const a = rule.actions ?? ({} as RuleActions);
   if (a.createTicket)
     chips.push(t("integrations.rmm.alertAutomation.summary.createsTicket"));
@@ -214,7 +211,7 @@ interface RuleFormState {
   name: string;
   description: string;
   isActive: boolean;
-  conditions: PredicateGroup;
+  conditions: RuleConditions;
   // conditions
   // actions
   createTicket: boolean;
@@ -548,9 +545,10 @@ function RuleEditorDialog({
           )}
           <RmmAlertPredicateEditor
             value={f.conditions}
+            fields={RMM_ALERT_PREDICATE_FIELDS}
             onChange={(conditions) => setF((previous) => ({ ...previous, conditions }))}
             disabled={saving}
-            t={(key, fallback) => t(key, fallback)}
+            t={(key, fallback) => t(key, { defaultValue: fallback })}
           />
         </div>
 

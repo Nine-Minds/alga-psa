@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateAlertRules } from '@alga-psa/shared/rmm/alerts';
+import { evaluateAlertRules, normalizeRmmAlertConditions, rmmAlertRuleConditionsSchema } from '@alga-psa/shared/rmm/alerts';
 import type { NormalizedRmmAlertEvent, RmmAlertRuleRow } from '@alga-psa/shared/rmm/alerts';
 
 const TENANT = '00000000-0000-0000-0000-000000000001';
@@ -81,6 +81,29 @@ describe('evaluateAlertRules condition matrix', () => {
   it('messagePattern matches as a regex', () => {
     expect(evaluateAlertRules([rule({ messagePattern: 'at 9[0-9]% capacity' })], event()).rule).not.toBeNull();
     expect(evaluateAlertRules([rule({ messagePattern: '^Memory' })], event()).rule).toBeNull();
+  });
+
+  it('round-trips a legacy regex through editing and still evaluates it as a root condition', () => {
+    const loaded = rmmAlertRuleConditionsSchema.parse({ messagePattern: 'Sentinel.*' });
+    const edited = { ...loaded, clauses: [...loaded.clauses, { path: 'severity', operator: 'equals' as const, value: 'major' }] };
+    const saved = JSON.stringify(edited);
+    const reloaded = normalizeRmmAlertConditions(saved);
+    expect(reloaded.legacyMessagePattern).toBe('Sentinel.*');
+    const existing = rule(reloaded);
+    expect(evaluateAlertRules([existing], event({ message: 'Sentinel service stopped' })).rule).toBe(existing);
+    expect(evaluateAlertRules([existing], event({ message: 'Disk service stopped' })).rule).toBeNull();
+    expect(rmmAlertRuleConditionsSchema.parse(reloaded)).toEqual(reloaded);
+  });
+
+  it('keeps regex outside arbitrary OR group semantics', () => {
+    const edited = rmmAlertRuleConditionsSchema.parse({
+      messagePattern: 'Sentinel.*',
+      alertClasses: ['OTHER'],
+      keywords: ['disk'],
+    });
+    const existing = rule(edited);
+    expect(evaluateAlertRules([existing], event({ alertClass: 'OTHER', message: 'Sentinel service stopped' })).rule).toBeNull();
+    expect(evaluateAlertRules([existing], event({ alertClass: 'OTHER', message: 'Disk Sentinel service stopped' })).rule).toBe(existing);
   });
 
   it('matches text supplied only in details with the real Level event shape', () => {

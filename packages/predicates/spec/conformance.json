@@ -1261,6 +1261,42 @@
           "expected": false
         }
       ]
+    },
+    {
+      "id": "scalar-contains-ci-like-metacharacters",
+      "description": "contains_ci treats SQL LIKE metacharacters as literal text",
+      "covers": {
+        "operators": [
+          "contains_ci"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "contains_ci",
+        "value": "%_\\"
+      },
+      "rows": [
+        {
+          "id": "literal-match",
+          "record": {
+            "s": "prefix %_\\ suffix"
+          },
+          "expected": true
+        },
+        {
+          "id": "wildcard-only-miss",
+          "record": {
+            "s": "prefix xx suffix"
+          },
+          "expected": false
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
     }
   ]
 }

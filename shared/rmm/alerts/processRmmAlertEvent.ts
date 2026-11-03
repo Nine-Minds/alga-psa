@@ -11,6 +11,7 @@ import type {
 } from './contracts';
 import { rmmAlertRuleActionsSchema } from './contracts';
 import { computeDedupKey } from './dedupKey';
+import { persistRmmAlertMetadata } from './metadata';
 import { evaluateAlertRules } from './ruleEvaluator';
 import { findMatchingWindow } from './windowMatcher';
 import { addAlertInternalNote, createTicketForAlert, providerLabel } from './ticketCreator';
@@ -176,10 +177,7 @@ async function processTriggered(
       dedup_key: dedupKey,
       triggered_at: event.occurredAt,
       last_occurrence_at: event.occurredAt,
-      metadata: JSON.stringify({
-        ...event.raw,
-        _algaNormalized: { details: event.details ?? null },
-      }),
+      metadata: JSON.stringify(persistRmmAlertMetadata(event)),
       updated_at: new Date().toISOString(),
     };
 

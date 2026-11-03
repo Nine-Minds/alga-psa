@@ -2428,7 +2428,9 @@
             "organizationId": "Organization ID",
             "text": "Message and details",
             "deviceName": "Device name",
-            "externalDeviceId": "External device ID"
+            "externalDeviceId": "External device ID",
+            "message": "Message",
+            "details": "Détails"
           },
           "operators": {
             "equals": "is",
@@ -2439,7 +2441,9 @@
             "not_contains": "does not contain",
             "contains_ci": "contains, ignoring case",
             "not_contains_ci": "does not contain, ignoring case"
-          }
+          },
+          "addGroup": "Ajouter un groupe",
+          "removeGroup": "Supprimer le groupe"
         }
       },
       "ninjaOne": {

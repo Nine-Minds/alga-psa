@@ -27,19 +27,19 @@ export function evaluateAlertRules(rules: RmmAlertRuleRow[], event: NormalizedRm
   for (const rule of rules) {
     try {
       const conditions = normalizeRmmAlertConditions(typeof rule.conditions === 'string' ? JSON.parse(rule.conditions) : rule.conditions);
-      // Legacy regex is an isolated top-level AND escape hatch. It cannot be authored
-      // as a predicate path and never changes nested user group semantics.
-      const regexes = conditions.clauses.flatMap(clause => !('clauses' in clause) && clause.path === '__legacyMessagePattern' && typeof clause.value === 'string' ? [clause.value] : []);
-      for (const regex of regexes) {
+      // The legacy regex is persisted in a reserved sidecar property and ANDed
+      // with the predicate tree. It cannot enter a nested or user-authored group.
+      const regex = conditions.legacyMessagePattern;
+      if (regex !== undefined) {
         try { new RegExp(regex); } catch (error) {
           warnings.push(`Rule ${rule.rule_id} (${rule.name}) skipped: invalid legacy messagePattern: ${error instanceof Error ? error.message : String(error)}`);
           throw new InvalidLegacyRegex();
         }
       }
-      const predicate = { ...conditions, clauses: conditions.clauses.filter(clause => 'clauses' in clause || clause.path !== '__legacyMessagePattern') };
+      const predicate = { join: conditions.join, clauses: conditions.clauses };
       const validationErrors = validatePredicate(rmmAlertQuerySchema, predicate);
       if (validationErrors.length) throw new Error(validationErrors.map(issue => issue.message).join('; '));
-      if (evaluatePredicate(predicate, record) && regexes.every(pattern => new RegExp(pattern).test(record.text))) {
+      if (evaluatePredicate(predicate, record) && (regex === undefined || new RegExp(regex).test(record.text))) {
         return { rule, warnings };
       }
     } catch (error) {

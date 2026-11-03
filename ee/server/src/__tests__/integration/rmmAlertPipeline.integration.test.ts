@@ -6,10 +6,12 @@ import { createTestDbConnection } from '@main-test-utils/dbConfig';
 import {
   createTicketForAlert,
   createTicketForAlertId,
+  evaluateAlertRules,
   processRmmAlertEvent,
   registerRmmAlertFetcher,
   runRmmAlertReconciliation,
   type NormalizedRmmAlertEvent,
+  type RmmAlertRuleRow,
   type RmmAlertRuleActions,
 } from '@alga-psa/shared/rmm/alerts';
 
@@ -527,29 +529,42 @@ describe('processRmmAlertEvent (DB integration)', { shuffle: false }, () => {
       actions: JSON.stringify({ createTicket: false }),
       });
       const before = await ticketCount();
-      const sentinel = await processRmmAlertEvent({ knex: db }, event({
+      const sentinelEvent = event({
         provider: 'levelio', externalAlertId: 'level-sentinel-service-crash', externalDeviceId: 'level-device-7',
         alertClass: 'Critical Service Crashed', deviceName: 'GLICK-PC7',
         message: 'Critical Service Crashed: Event ID 7031 occured 5 times within 1 hour',
         details: 'The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)',
-      }));
+      });
+      const orderedRules = await tenantTable('rmm_alert_rules').where({ tenant: tenantId, integration_id: integrationId, is_active: true }).orderBy('priority_order', 'asc') as unknown as RmmAlertRuleRow[];
+      const directEvaluation = evaluateAlertRules(orderedRules, sentinelEvent);
+      expect(directEvaluation.rule?.rule_id, JSON.stringify({
+        warnings: directEvaluation.warnings,
+        orderedRules: orderedRules.map(({ rule_id, priority_order, conditions }) => ({ rule_id, priority_order, conditions })),
+      })).toBe(targetedRuleId);
+      const sentinel = await processRmmAlertEvent({ knex: db }, sentinelEvent);
       expect(sentinel.outcome).toBe('recorded_only');
       expect(sentinel.matchedRuleId).toBe(targetedRuleId);
       expect(await ticketCount()).toBe(before);
       const recordedSentinel = await tenantTable('rmm_alerts').where({ tenant: tenantId, alert_id: sentinel.alertId }).first();
-      expect(JSON.parse(recordedSentinel.metadata)._algaNormalized.details).toBe('The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)');
+      const recordedMetadata = typeof recordedSentinel.metadata === 'string' ? JSON.parse(recordedSentinel.metadata) : recordedSentinel.metadata;
+      expect(recordedMetadata._algaNormalized.details).toBe('The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)');
 
-      registerRmmAlertFetcher('levelio', { fetchActiveAlerts: async () => [event({
-        provider: 'levelio', externalAlertId: 'level-reconciliation-sentinel', externalDeviceId: 'level-device-7',
-        alertClass: 'Critical Service Crashed', deviceName: 'GLICK-PC7',
-        message: 'Critical Service Crashed: Event ID 7031 occured 5 times within 1 hour',
-        details: 'The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)',
-      })] });
-      const reconciliation = await runRmmAlertReconciliation({ knex: db }, { tenantId, integrationId, provider: 'levelio' });
+      // Reconciliation exercises a real Tactical provider mapper from a raw
+      // provider response; it must not inject a pre-normalized details field.
+      const { mapTacticalAlertToEvent } = await import('../../../../../packages/integrations/src/lib/rmm/tacticalrmm/alertFetcher');
+      await tenantTable('rmm_integrations').where({ tenant: tenantId, integration_id: integrationId }).update({ provider: 'tacticalrmm' });
+      registerRmmAlertFetcher('tacticalrmm', { fetchActiveAlerts: async () => [mapTacticalAlertToEvent({
+        id: 'tactical-reconciliation-sentinel', agent_id: 'level-device-7', alert_type: 'Critical Service Crashed',
+        hostname: 'GLICK-PC7', message: 'Critical Service Crashed: Event ID 7031 occured 5 times within 1 hour',
+        description: 'The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)',
+      }, tenantId, integrationId)!] });
+      const reconciliation = await runRmmAlertReconciliation({ knex: db }, { tenantId, integrationId, provider: 'tacticalrmm' });
       expect(reconciliation.ingested).toBe(1);
-      const reconciledSentinel = await tenantTable('rmm_alerts').where({ tenant: tenantId, external_alert_id: 'level-reconciliation-sentinel' }).first();
+      const reconciledSentinel = await tenantTable('rmm_alerts').where({ tenant: tenantId, external_alert_id: 'tactical-reconciliation-sentinel' }).first();
       expect(reconciledSentinel.matched_rule_id).toBe(targetedRuleId);
-      expect(JSON.parse(reconciledSentinel.metadata)._algaNormalized.details).toBe('The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)');
+      const reconciledMetadata = typeof reconciledSentinel.metadata === 'string' ? JSON.parse(reconciledSentinel.metadata) : reconciledSentinel.metadata;
+      expect(reconciledMetadata._algaNormalized.details).toBe('The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)');
+      await tenantTable('rmm_integrations').where({ tenant: tenantId, integration_id: integrationId }).update({ provider: 'levelio' });
 
       const otherService = await processRmmAlertEvent({ knex: db }, event({
         provider: 'levelio', externalAlertId: 'level-other-service-crash', externalDeviceId: 'level-device-7',

@@ -31,6 +31,15 @@ describe('rule conditions schema', () => {
     ] });
   });
 
+  it('persists and reloads legacy regex as an isolated sidecar', async () => {
+    const { normalizeRmmAlertConditions } = await import('@alga-psa/shared/rmm/alerts');
+    const original = rmmAlertRuleConditionsSchema.parse({ messagePattern: 'Sentinel.*' });
+    const stored = JSON.stringify(original);
+    const reloaded = normalizeRmmAlertConditions(stored);
+    expect(reloaded).toEqual(original);
+    expect(rmmAlertRuleConditionsSchema.parse(reloaded)).toEqual(original);
+  });
+
   it('normalizes string-encoded conditions returned by JSONB drivers', () => {
     const parsed = rmmAlertRuleConditionsSchema.parse(JSON.stringify({ keywords: ['Sentinel'] }));
     expect(parsed.clauses).toMatchObject([{ join: 'or', clauses: [{ operator: 'contains_ci', value: 'Sentinel' }] }]);

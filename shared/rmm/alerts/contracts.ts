@@ -148,38 +148,49 @@ export const rmmAlertQuerySchema: QuerySchema = {
   },
 };
 
+export type RmmAlertRuleConditions = PredicateGroup & { legacyMessagePattern?: string };
+
 export const rmmAlertRuleConditionsSchema = z.preprocess((value, ctx) => {
   if (typeof value === 'string') {
     try { value = JSON.parse(value); } catch { return value; }
   }
-  const parsed = predicateGroupSchema.safeParse(value);
+  const stored = value as (PredicateGroup & { legacyMessagePattern?: unknown }) | null;
+  const parsed = predicateGroupSchema.safeParse(stored && typeof stored === 'object' && 'legacyMessagePattern' in stored
+    ? { join: stored.join, clauses: stored.clauses } : value);
   if (parsed.success) {
     if (containsLegacyRegexPath(parsed.data)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Unknown RMM predicate field __legacyMessagePattern' });
       return z.NEVER;
     }
-    return parsed.data;
+    const pattern = stored && typeof stored.legacyMessagePattern === 'string' ? stored.legacyMessagePattern : undefined;
+    if (stored && 'legacyMessagePattern' in stored && (typeof stored.legacyMessagePattern !== 'string' || !isValidRegex(stored.legacyMessagePattern))) {
+      addInvalidRegexIssue(ctx);
+      return z.NEVER;
+    }
+    return { ...parsed.data, ...(pattern === undefined ? {} : { legacyMessagePattern: pattern }) };
   }
   const legacy = legacyRmmAlertConditionsSchema.safeParse(value ?? {});
   if (!legacy.success) {
     const pattern = (value as { messagePattern?: unknown } | null)?.messagePattern;
     if (typeof pattern === 'string') {
-      try { new RegExp(pattern); } catch {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'messagePattern is not a valid regular expression', params: { messageKey: 'msp/integrations:errors.rmm.validation.messagePatternInvalid' } });
+      if (!isValidRegex(pattern)) {
+        addInvalidRegexIssue(ctx);
         return z.NEVER;
       }
     }
     return value;
   }
   return normalizeRmmAlertConditions(value);
-}, predicateGroupSchema).superRefine((group, ctx) => {
-  const clauses = group.clauses.filter(clause => 'clauses' in clause || clause.path !== '__legacyMessagePattern');
-  for (const issue of validatePredicate(rmmAlertQuerySchema, { ...group, clauses })) {
+}, z.custom<RmmAlertRuleConditions>((value) => !!value && typeof value === 'object' && 'join' in value && 'clauses' in value)).superRefine((group, ctx) => {
+  for (const issue of validatePredicate(rmmAlertQuerySchema, group)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: [issue.path], message: issue.message });
   }
 });
 
-export type RmmAlertRuleConditions = PredicateGroup;
+function isValidRegex(pattern: string): boolean { try { new RegExp(pattern); return true; } catch { return false; } }
+function addInvalidRegexIssue(ctx: z.RefinementCtx) {
+  ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'messagePattern is not a valid regular expression', params: { messageKey: 'msp/integrations:errors.rmm.validation.messagePatternInvalid' } });
+}
 
 function containsLegacyRegexPath(group: PredicateGroup): boolean {
   return group.clauses.some(clause => 'clauses' in clause ? containsLegacyRegexPath(clause) : clause.path === '__legacyMessagePattern');
@@ -187,21 +198,26 @@ function containsLegacyRegexPath(group: PredicateGroup): boolean {
 
 /**
  * Convert pre-predicate rows at the read boundary; old rows remain editable.
- * Legacy messagePattern remains a root-only private compatibility clause ANDed
- * with the legacy group's remaining fields. New predicate groups cannot name
- * this path; new rules should use text contains_ci/not_contains_ci instead.
+ * Legacy messagePattern remains a root-only sidecar ANDed with the migrated
+ * predicate group. It is never represented as a predicate clause.
  */
-export function normalizeRmmAlertConditions(value: unknown): PredicateGroup {
+export function normalizeRmmAlertConditions(value: unknown): RmmAlertRuleConditions {
   if (typeof value === 'string') {
     try { value = JSON.parse(value); } catch { throw new Error('Invalid stored RMM alert conditions: JSON could not be parsed'); }
   }
-  const predicate = predicateGroupSchema.safeParse(value);
+  const stored = value as (PredicateGroup & { legacyMessagePattern?: unknown }) | null;
+  const predicate = predicateGroupSchema.safeParse(stored && typeof stored === 'object' && 'legacyMessagePattern' in stored
+    ? { join: stored.join, clauses: stored.clauses } : value);
   if (predicate.success) {
     if (containsLegacyRegexPath(predicate.data)) throw new Error('Invalid stored RMM alert conditions: reserved legacy regex field');
+    if (stored && 'legacyMessagePattern' in stored) {
+      if (typeof stored.legacyMessagePattern !== 'string' || !isValidRegex(stored.legacyMessagePattern)) throw new Error('Invalid stored RMM alert conditions: invalid legacy messagePattern regular expression');
+      return { ...predicate.data, legacyMessagePattern: stored.legacyMessagePattern };
+    }
     return predicate.data;
   }
   const legacy = legacyRmmAlertConditionsSchema.safeParse(value ?? {});
-  if (!legacy.success) throw new Error(`Invalid stored RMM alert conditions: ${legacy.error.message}`);
+  if (!legacy.success) throw new Error(`Invalid stored RMM alert conditions (predicate: ${predicate.error.message}; legacy: ${legacy.error.message})`);
   const old = legacy.data;
   const clauses: PredicateGroup['clauses'] = [];
   const lists: Array<[keyof typeof old, string]> = [
@@ -213,9 +229,8 @@ export function normalizeRmmAlertConditions(value: unknown): PredicateGroup {
     if (Array.isArray(values) && values.length) clauses.push({ path, operator: 'in', value: values });
   }
   if (old.keywords?.length) clauses.push({ join: 'or', clauses: old.keywords.map(value => ({ path: 'text', operator: 'contains_ci' as const, value })) });
-  // Regex is retained as a compatibility-only evaluator escape hatch in ruleEvaluator.
-  if (old.messagePattern) clauses.unshift({ path: '__legacyMessagePattern', operator: 'equals', value: old.messagePattern });
-  return { join: 'and', clauses };
+  // Persisted as a separate root sidecar so it survives reload without becoming an authorable predicate field.
+  return { join: 'and', clauses, ...(old.messagePattern ? { legacyMessagePattern: old.messagePattern } : {}) };
 }
 
 export const rmmAlertRuleActionsSchema = z
