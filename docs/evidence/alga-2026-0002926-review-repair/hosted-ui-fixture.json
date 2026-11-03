@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "database": {
+    "host": "127.0.0.1",
+    "port": 55472,
+    "name": "alga_stripe_tenant_test",
+    "latestMigration": "20261103090000_validate_stripe_customer_binding_owner_fk.cjs"
+  },
+  "runId": "sec2926-hosted-ui-v1",
+  "adminPasswordEnv": "STRIPE_UI_FIXTURE_PASSWORD",
+  "masterTenantId": "2a36f1e1-8215-57fb-917e-2435a3a7d557",
+  "productId": "prod_sec2926_sec2926hosteduiv1_pro",
+  "priceId": "price_sec2926_sec2926hosteduiv1_pro_monthly",
+  "scenarios": {
+    "matching": {
+      "tenantId": "cff60661-8cb7-5fd3-94b1-7f244feb5dd0",
+      "userId": "7bf85edd-8645-5c3f-b998-ca8faa1196da",
+      "email": "stripe-owner-matching-sec2926hosteduiv1@example.invalid",
+      "customerId": "cus_sec2926_sec2926hosteduiv1_matching",
+      "remoteMetadataTenantId": "cff60661-8cb7-5fd3-94b1-7f244feb5dd0",
+      "expectedRemoteDeleted": false
+    },
+    "mismatched": {
+      "tenantId": "eccb1778-f634-592e-8af1-ae920569c4df",
+      "userId": "2e4f5e10-3f14-50ff-9caf-e5192a182ab9",
+      "email": "stripe-owner-mismatched-sec2926hosteduiv1@example.invalid",
+      "customerId": "cus_sec2926_sec2926hosteduiv1_mismatched",
+      "remoteMetadataTenantId": "cff60661-8cb7-5fd3-94b1-7f244feb5dd0",
+      "expectedRemoteDeleted": false
+    },
+    "deleted": {
+      "tenantId": "e56dce66-3bad-5057-beaf-fb886946fdba",
+      "userId": "8826175f-deb4-5d2f-be4e-00ec2eeb7488",
+      "email": "stripe-owner-deleted-sec2926hosteduiv1@example.invalid",
+      "customerId": "cus_sec2926_sec2926hosteduiv1_deleted",
+      "remoteMetadataTenantId": "e56dce66-3bad-5057-beaf-fb886946fdba",
+      "expectedRemoteDeleted": true
+    }
+  }
+}
