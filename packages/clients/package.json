@@ -42,10 +42,6 @@
       "types": "./src/lib/contactEvents.ts",
       "import": "./src/lib/contactEvents.ts"
     },
-    "./lib/contactAvatarAuthorization": {
-      "types": "./src/lib/contactAvatarAuthorization.ts",
-      "import": "./src/lib/contactAvatarAuthorization.ts"
-    },
     "./lib/clientLocationEvents": {
       "types": "./src/lib/clientLocationEvents.ts",
       "import": "./src/lib/clientLocationEvents.ts"

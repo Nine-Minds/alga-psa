@@ -20,7 +20,7 @@ import { collectReportContactIds } from '@alga-psa/authorization/portal/visibili
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { isClientUserType } from '@alga-psa/types';
-import { canManageContactAvatar } from '@alga-psa/clients/lib/contactAvatarAuthorization';
+import { canManageContactAvatar } from '@alga-psa/user-composition/lib/contactAvatarAuthorization';
 
 export type ClientUserActionError =
   | { readonly actionError: string }

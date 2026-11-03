@@ -7,7 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { canManageContactAvatar } from '../lib/contactAvatarAuthorization';
+import { canManageContactAvatar } from '@alga-psa/user-composition/lib/contactAvatarAuthorization';
 
 /**
  * Upload a contact avatar image
