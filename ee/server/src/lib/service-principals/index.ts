@@ -3,8 +3,8 @@
 export {
   resolveServicePrincipalApiContext,
   servicePrincipalKeyGate,
-  mapServicePrincipalError,
 } from './boundary';
+export { mapServicePrincipalError } from './errors';
 export * from './entitlements';
 export * from './service';
 export { getServicePrincipalUsage } from './usage';
