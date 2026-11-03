@@ -34,6 +34,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveAllowSelfApprovalFlag } from '@alga-psa/authorization/quoteSelfApproval';
 import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
+import { projectApiRecord } from './apiRecordProjection';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import {
   ConflictError,
@@ -117,7 +118,7 @@ export class ApiQuoteController extends ApiBaseController {
       throw new NotFoundError('Quote not found');
     }
 
-    const { allowed } = await authorizeApiResourceRead({
+    const decision = await authorizeApiResourceRead({
       knex: resolvedKnex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
@@ -126,11 +127,13 @@ export class ApiQuoteController extends ApiBaseController {
       recordContext: this.buildQuoteRecordContext(quote as Record<string, any>),
     });
 
-    if (!allowed) {
+    if (!decision.allowed) {
       throw new ForbiddenError('Permission denied: Cannot read quote');
     }
 
-    return quote as Record<string, any>;
+    const projected = projectApiRecord('quote', quote as Record<string, any>, decision.redactedFields);
+    if (!projected) throw new NotFoundError('Quote not found');
+    return projected as Record<string, any>;
   }
 
   /**
@@ -290,15 +293,16 @@ export class ApiQuoteController extends ApiBaseController {
                 apiRequest.context,
                 filters
               ),
-            authorizeRecord: async (quote) =>
-              (await authorizeApiResourceRead({
+            authorizeRecord: (quote) =>
+              authorizeApiResourceRead({
                 knex,
                 tenant: apiRequest.context.tenant,
                 user: apiRequest.context.user,
                 apiKeyId: apiRequest.context.apiKeyId,
                 resource: 'billing',
                 recordContext: this.buildQuoteRecordContext(quote),
-              })).allowed,
+              }),
+            projectRecord: (quote, redactedFields) => projectApiRecord('quote', quote, redactedFields) as Record<string, any> | null,
             scanLimit: 100,
           });
 

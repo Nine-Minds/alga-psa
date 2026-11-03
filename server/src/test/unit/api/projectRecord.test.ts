@@ -23,8 +23,25 @@ describe('projectRecord REST projection', () => {
   });
 
   it('hides derived names when their source identifiers are hidden', () => {
-    expect(projectRecord(project, ['client_id'])).toEqual(expect.not.objectContaining({ client_id: expect.anything(), client_name: expect.anything() }));
+    for (const source of ['projects.client_id', 'values.client_id']) {
+      const result = projectRecord(project, [source]);
+      expect(result).not.toHaveProperty('client_id');
+      expect(result).not.toHaveProperty('client_name');
+    }
     expect(projectRecord(project, ['statuses.name'])).toEqual(expect.not.objectContaining({ status_name: expect.anything() }));
+    for (const source of ['projects.assigned_to', 'projects.contact_name_id']) {
+      const result = projectRecord({ ...project, assigned_to: 'u1', assigned_user_name: 'Alex', contact_name_id: 'c1', contact_name: 'Kim' }, [source]);
+      expect(result).not.toHaveProperty(source.endsWith('assigned_to') ? 'assigned_to' : 'contact_name_id');
+      expect(result).not.toHaveProperty(source.endsWith('assigned_to') ? 'assigned_user_name' : 'contact_name');
+    }
+    expect(projectRecord({ ...project, projectName: 'Derived project name' }, ['projectName'])).not.toHaveProperty('projectName');
+  });
+
+  it('suppresses records when an aliased identifier source is hidden', () => {
+    expect(projectRecord({ ...project, values: { project_id: 'project-1' } }, ['values.project_id'])).toBeNull();
+    expect(projectRecord({ ...project, projectName: 'Migration' }, ['project_name'])).not.toHaveProperty('projectName');
+    const nestedValues = projectRecord({ ...project, values: { client_id: 'client-1' } }, ['values.client_id']);
+    expect(nestedValues).not.toHaveProperty('values');
   });
 
   it('suppresses rows when the project resource or identifier is hidden', () => {

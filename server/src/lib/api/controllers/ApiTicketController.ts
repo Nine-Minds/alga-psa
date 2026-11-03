@@ -25,6 +25,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
+import { projectApiRecord } from './apiRecordProjection';
 import { buildTicketRecordContext } from './recordContexts';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { compileTenantScopedResourceReadAuthorizationSql, resolveDefaultBuiltinRelationshipRules } from '@alga-psa/authorization/kernel';
@@ -88,6 +89,9 @@ async function resolveTicketReadAuthorizationApplier(
     resource: { type: 'ticket', action: 'read' },
     knex,
   });
+  // SQL narrowing preserves row authorization but has no per-row redaction
+  // metadata. Use the kernel path whenever a policy carries field redactions.
+  if (bundleRules.some((rule: any) => (rule.redactedFields?.length ?? 0) > 0)) return null;
   const builtinRules = resolveDefaultBuiltinRelationshipRules({
     subject,
     resource: { type: 'ticket', action: 'read' },
@@ -152,7 +156,7 @@ export class ApiTicketController extends ApiBaseController {
     }
 
     const ticketRow = ticket as Record<string, any>;
-    const { allowed } = await authorizeApiResourceRead({
+    const decision = await authorizeApiResourceRead({
       knex: resolvedKnex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
@@ -161,11 +165,13 @@ export class ApiTicketController extends ApiBaseController {
       recordContext: this.buildTicketRecordContext(ticketRow),
     });
 
-    if (!allowed) {
+    if (!decision.allowed) {
       throw new ForbiddenError('Permission denied: Cannot read ticket');
     }
 
-    return ticket as Record<string, any>;
+    const projected = projectApiRecord('ticket', ticketRow, decision.redactedFields);
+    if (!projected) throw new NotFoundError('ticket not found');
+    return projected as Record<string, any>;
   }
 
   private async filterAuthorizedTickets(
@@ -191,7 +197,12 @@ export class ApiTicketController extends ApiBaseController {
       )
     );
 
-    return tickets.filter((_, index) => decisions[index].allowed);
+    return tickets.flatMap((ticket, index) => {
+      const decision = decisions[index];
+      if (!decision.allowed) return [];
+      const projected = projectApiRecord('ticket', ticket, decision.redactedFields);
+      return projected ? [projected as Record<string, any>] : [];
+    });
   }
 
   private async listAllAuthorizedTickets(
@@ -372,16 +383,16 @@ export class ApiTicketController extends ApiBaseController {
                 { page: sourcePage, limit: sourceLimit, filters, sort, order, fields: fields.length > 0 ? fields : undefined },
                 apiRequest.context
               ),
-            authorizeRecord: async (ticket) => {
-              return (await authorizeApiResourceRead({
+            authorizeRecord: (ticket) =>
+              authorizeApiResourceRead({
                 knex,
                 tenant: apiRequest.context.tenant,
                 user: apiRequest.context.user,
                 apiKeyId: apiRequest.context.apiKeyId,
                 resource: 'ticket',
                 recordContext: this.buildTicketRecordContext(ticket),
-              })).allowed;
-            },
+              }),
+            projectRecord: (ticket, redactedFields) => projectApiRecord('ticket', ticket, redactedFields) as Record<string, any> | null,
             scanLimit: 100,
           });
 

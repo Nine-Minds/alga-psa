@@ -34,6 +34,8 @@ import {
 } from '../../auth/rbac';
 import { authorizeApiResourceRead } from './authorizationKernel';
 import { projectRecord } from './projectRecord';
+import { projectApiRecord } from './apiRecordProjection';
+import { isCoManagedReadFieldHidden } from '@alga-psa/co-managed/sharedWorkRedaction';
 import { buildProjectRecordContext, buildTicketRecordContext } from './recordContexts';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { tenantDb } from '@alga-psa/db';
@@ -124,33 +126,37 @@ export class ApiProjectController extends ApiBaseController {
     }
 
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const decisions = await Promise.all(
-      projects.map((project) =>
-        authorizeApiResourceRead({
-          knex: resolvedKnex,
-          tenant: apiRequest.context.tenant,
-          user: apiRequest.context.user,
-          apiKeyId: apiRequest.context.apiKeyId,
-          resource: 'project',
-          recordContext: this.buildProjectRecordContext(project),
-        })
-      )
-    );
+    const rows = await this.authorizeProjectRows(apiRequest, projects, resolvedKnex);
+    return rows.map((row) => row.record);
+  }
 
+  private async authorizeProjectRows(
+    apiRequest: AuthenticatedApiRequest,
+    projects: Record<string, any>[],
+    knex: Awaited<ReturnType<typeof getConnection>>,
+  ): Promise<Array<{ record: Record<string, any>; redactedFields: string[] }>> {
+    const decisions = await Promise.all(projects.map((project) => authorizeApiResourceRead({
+      knex,
+      tenant: apiRequest.context.tenant,
+      user: apiRequest.context.user,
+      apiKeyId: apiRequest.context.apiKeyId,
+      resource: 'project',
+      recordContext: this.buildProjectRecordContext(project),
+    })));
     return projects.flatMap((project, index) => {
       const decision = decisions[index];
       if (!decision.allowed) return [];
-      const projected = projectRecord(project, decision.redactedFields);
-      return projected ? [projected as Record<string, any>] : [];
+      const record = projectRecord(project, decision.redactedFields);
+      return record ? [{ record: record as Record<string, any>, redactedFields: decision.redactedFields }] : [];
     });
   }
 
   private async listAllAuthorizedProjects(
     apiRequest: AuthenticatedApiRequest,
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Record<string, any>[]> {
+  ): Promise<Array<{ record: Record<string, any>; redactedFields: string[] }>> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const authorizedProjects: Record<string, any>[] = [];
+    const authorizedProjects: Array<{ record: Record<string, any>; redactedFields: string[] }> = [];
     const pageSize = 100;
     let page = 1;
 
@@ -160,9 +166,7 @@ export class ApiProjectController extends ApiBaseController {
         break;
       }
 
-      authorizedProjects.push(
-        ...(await this.filterAuthorizedProjects(apiRequest, result.data as Record<string, any>[], resolvedKnex))
-      );
+      authorizedProjects.push(...(await this.authorizeProjectRows(apiRequest, result.data as Record<string, any>[], resolvedKnex)));
 
       if (page * pageSize >= result.total || result.data.length < pageSize) {
         break;
@@ -176,12 +180,12 @@ export class ApiProjectController extends ApiBaseController {
 
   private async buildProjectStatsFromAuthorizedRows(
     apiRequest: AuthenticatedApiRequest,
-    projects: Record<string, any>[],
+    projects: Array<{ record: Record<string, any>; redactedFields: string[] }>,
     knex?: Awaited<ReturnType<typeof getConnection>>
   ) {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const statusIds = Array.from(new Set(projects.map((project) => project.status).filter(Boolean)));
-    const clientIds = Array.from(new Set(projects.map((project) => project.client_id).filter(Boolean)));
+    const statusIds = Array.from(new Set(projects.map(({ record }) => record.status).filter(Boolean)));
+    const clientIds = Array.from(new Set(projects.map(({ record }) => record.client_id).filter(Boolean)));
 
     const [statuses, clients] = await Promise.all([
       statusIds.length > 0
@@ -206,13 +210,23 @@ export class ApiProjectController extends ApiBaseController {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    const projectsByStatus = projects.reduce((acc: Record<string, number>, project) => {
-      const statusName = String(statusNameById.get(project.status) ?? project.status ?? 'unknown');
+    const visible = (fieldSources: readonly string[]) => projects.every(({ redactedFields }) => !isCoManagedReadFieldHidden(redactedFields, fieldSources));
+    const projectedProjects: Record<string, any>[] = projects.map(({ record, redactedFields }) => ({
+      ...record,
+      ...(record.status && !Object.hasOwn(record, 'status_name') && !isCoManagedReadFieldHidden(redactedFields, ['status_name', 'status', 'projects.status', 'statuses.name', 'project_status_mappings.custom_name'])
+        ? { status_name: statusNameById.get(record.status) }
+        : {}),
+      ...(record.client_id && !Object.hasOwn(record, 'client_name') && !isCoManagedReadFieldHidden(redactedFields, ['client_name', 'client_id', 'clients.client_name'])
+        ? { client_name: clientNameById.get(record.client_id) }
+        : {}),
+    }));
+    const projectsByStatus = projectedProjects.reduce((acc: Record<string, number>, project) => {
+      const statusName = String(project.status_name ?? project.status ?? 'unknown');
       acc[statusName] = (acc[statusName] ?? 0) + 1;
       return acc;
     }, {});
 
-    const clientCounts = projects.reduce((acc: Map<string, number>, project) => {
+    const clientCounts = projectedProjects.reduce((acc: Map<string, number>, project) => {
       if (!project.client_id) {
         return acc;
       }
@@ -232,39 +246,40 @@ export class ApiProjectController extends ApiBaseController {
       total_projects: projects.length,
     };
 
-    if (projects.every((project) => Object.hasOwn(project, 'status') && Object.hasOwn(project, 'status_name'))) {
-      stats.active_projects = projects.filter((project) => statusNameById.get(project.status) === 'Active').length;
-      stats.completed_projects = projects.filter((project) => statusNameById.get(project.status) === 'Completed').length;
-      stats.on_hold_projects = projects.filter((project) => statusNameById.get(project.status) === 'On Hold').length;
-      stats.cancelled_projects = projects.filter((project) => statusNameById.get(project.status) === 'Cancelled').length;
+    const statusSources = ['status', 'status_name', 'projects.status', 'statuses.name', 'project_status_mappings.custom_name'];
+    if (visible(statusSources)) {
+      stats.active_projects = projectedProjects.filter((project) => project.status_name === 'Active').length;
+      stats.completed_projects = projectedProjects.filter((project) => project.status_name === 'Completed').length;
+      stats.on_hold_projects = projectedProjects.filter((project) => project.status_name === 'On Hold').length;
+      stats.cancelled_projects = projectedProjects.filter((project) => project.status_name === 'Cancelled').length;
     }
-    if (projects.every((project) => Object.hasOwn(project, 'end_date') && Object.hasOwn(project, 'status') && Object.hasOwn(project, 'status_name'))) {
-      stats.overdue_projects = projects.filter((project) => {
+    if (visible([...statusSources, 'end_date', 'projects.end_date'])) {
+      stats.overdue_projects = projectedProjects.filter((project) => {
         if (!project.end_date) return false;
-        return new Date(project.end_date) < new Date() && statusNameById.get(project.status) !== 'Completed';
+        return new Date(project.end_date) < new Date() && project.status_name !== 'Completed';
       }).length;
     }
-    if (projects.every((project) => Object.hasOwn(project, 'created_at'))) {
-      stats.projects_created_this_month = projects.filter(
+    if (visible(['created_at', 'projects.created_at'])) {
+      stats.projects_created_this_month = projectedProjects.filter(
         (project) => project.created_at && new Date(project.created_at) >= monthStart,
       ).length;
     }
-    if (projects.every((project) => Object.hasOwn(project, 'updated_at') && Object.hasOwn(project, 'status') && Object.hasOwn(project, 'status_name'))) {
-      stats.projects_completed_this_month = projects.filter(
-        (project) => statusNameById.get(project.status) === 'Completed' && project.updated_at && new Date(project.updated_at) >= monthStart,
+    if (visible([...statusSources, 'updated_at', 'projects.updated_at'])) {
+      stats.projects_completed_this_month = projectedProjects.filter(
+        (project) => project.status_name === 'Completed' && project.updated_at && new Date(project.updated_at) >= monthStart,
       ).length;
     }
 
-    if (projects.every((project) => Object.hasOwn(project, 'budgeted_hours'))) {
-      stats.total_budgeted_hours = projects.reduce(
+    if (visible(['budgeted_hours', 'projects.budgeted_hours'])) {
+      stats.total_budgeted_hours = projectedProjects.reduce(
         (sum, project) => sum + Number(project.budgeted_hours ?? 0),
         0,
       );
     }
-    if (projects.every((project) => Object.hasOwn(project, 'status') && Object.hasOwn(project, 'status_name'))) {
+    if (visible(statusSources)) {
       stats.projects_by_status = projectsByStatus;
     }
-    if (projects.every((project) => Object.hasOwn(project, 'client_id') && Object.hasOwn(project, 'client_name'))) {
+    if (visible(['client_id', 'client_name', 'clients.client_name', 'projects.client_id'])) {
       stats.top_clients_by_project_count = topClientsByProjectCount;
     }
     return stats;
@@ -803,15 +818,16 @@ export class ApiProjectController extends ApiBaseController {
                 { page: sourcePage, limit: sourceLimit },
                 apiRequest.context!
               ),
-            authorizeRecord: async (ticket) =>
-              (await authorizeApiResourceRead({
+            authorizeRecord: (ticket) =>
+              authorizeApiResourceRead({
                 knex,
                 tenant: tenantId!,
                 user,
                 apiKeyId: keyRecord.api_key_id,
                 resource: 'ticket',
                 recordContext: this.buildTicketRecordContext(ticket),
-              })).allowed,
+              }),
+            projectRecord: (ticket, redactedFields) => projectApiRecord('ticket', ticket, redactedFields) as Record<string, any> | null,
             scanLimit: 100,
           });
           
@@ -857,7 +873,7 @@ export class ApiProjectController extends ApiBaseController {
           if (!ticket) {
             throw new NotFoundError('Ticket not found');
           }
-          const { allowed: ticketAllowed } = await authorizeApiResourceRead({
+          const ticketDecision = await authorizeApiResourceRead({
             knex,
             tenant,
             user,
@@ -865,9 +881,11 @@ export class ApiProjectController extends ApiBaseController {
             resource: 'ticket',
             recordContext: this.buildTicketRecordContext(ticket),
           });
-          if (!ticketAllowed) {
+          if (!ticketDecision.allowed) {
             throw new ForbiddenError('Permission denied: Cannot read ticket');
           }
+          const projectedTicket = projectApiRecord('ticket', ticket, ticketDecision.redactedFields);
+          if (!projectedTicket) throw new NotFoundError('Ticket not found');
 
           const links = await this.projectService.getTicketProjectLinks(ticketId, apiRequest.context);
           const projects = [...new Map(links.map((l) => [l.project_id, {
