@@ -128,7 +128,8 @@ describe('Reply Token Threading Logic', () => {
         template: 'ticket_notification',
         recipient_email: 'user@example.com',
         metadata: JSON.stringify({ subject: 'Test' }),
-        created_at: new Date()
+        created_at: new Date(),
+        expires_at: new Date(Date.now() + 60_000)
       });
       cleanup.push(async () => {
         await scopedDb().table('email_reply_tokens').where({ token: replyToken }).del();
@@ -142,6 +143,18 @@ describe('Reply Token Threading Logic', () => {
       expect(result!.ticketId).toBe(ticketId);
       expect(result!.commentId).toBeUndefined();
       expect(result!.projectId).toBeUndefined();
+    });
+
+    it('refuses legacy and expired reply tokens', async () => {
+      const replyToken = `token-${uuidv4()}`;
+      await scopedDb().table('email_reply_tokens').insert({
+        tenant: testTenant, token: replyToken, entity_type: 'ticket', created_at: new Date(), expires_at: null,
+      });
+      cleanup.push(async () => { await scopedDb().table('email_reply_tokens').where({ token: replyToken }).del(); });
+      expect(await findTicketByReplyToken(replyToken, testTenant)).toBeNull();
+
+      await scopedDb().table('email_reply_tokens').where({ token: replyToken }).update({ expires_at: new Date(Date.now() - 1) });
+      expect(await findTicketByReplyToken(replyToken, testTenant)).toBeNull();
     });
 
     it('should find comment ID when token is for a comment reply', async () => {
@@ -200,7 +213,8 @@ describe('Reply Token Threading Logic', () => {
         template: 'comment_notification',
         recipient_email: 'user@example.com',
         metadata: JSON.stringify({ commentId }),
-        created_at: new Date()
+        created_at: new Date(),
+        expires_at: new Date(Date.now() + 60_000)
       });
       cleanup.push(async () => {
         await scopedDb().table('email_reply_tokens').where({ token: replyToken }).del();
@@ -241,7 +255,8 @@ describe('Reply Token Threading Logic', () => {
         template: 'project_notification',
         recipient_email: 'user@example.com',
         metadata: JSON.stringify({ projectId }),
-        created_at: new Date()
+        created_at: new Date(),
+        expires_at: new Date(Date.now() + 60_000)
       });
       cleanup.push(async () => {
         await scopedDb().table('email_reply_tokens').where({ token: replyToken }).del();
@@ -383,7 +398,8 @@ describe('Reply Token Threading Logic', () => {
         template: 'ticket_notification',
         recipient_email: 'customer@example.com',
         metadata: JSON.stringify({}),
-        created_at: new Date()
+        created_at: new Date(),
+        expires_at: new Date(Date.now() + 60_000)
       });
       cleanup.push(async () => {
         await scopedDb().table('email_reply_tokens').where({ token: replyToken }).del();
@@ -489,7 +505,8 @@ describe('Reply Token Threading Logic', () => {
         template: 'comment_notification',
         recipient_email: 'customer@example.com',
         metadata: JSON.stringify({ originalCommentId: commentIdFromToken }),
-        created_at: new Date()
+        created_at: new Date(),
+        expires_at: new Date(Date.now() + 60_000)
       });
       cleanup.push(async () => {
         await scopedDb().table('email_reply_tokens').where({ token: replyToken }).del();
@@ -574,7 +591,8 @@ describe('Reply Token Threading Logic', () => {
           subject: 'Customer Support Request',
           ticketNumber: ticketNumber
         }),
-        created_at: new Date()
+        created_at: new Date(),
+        expires_at: new Date(Date.now() + 60_000)
       });
       cleanup.push(async () => {
         await scopedDb().table('email_reply_tokens').where({ token: replyToken }).del();

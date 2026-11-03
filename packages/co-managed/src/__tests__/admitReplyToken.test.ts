@@ -184,17 +184,17 @@ describe('admitReplyToken sender authentication', () => {
       expect(await admit(trusted('req@CUSTOMER.test'))).toMatchObject({ admitted: true, requesterContactId: 'k1' });
     });
     it('admits a requester cm2 token issued through outbound persistence, then refuses it at expiry', async () => {
-      const { persistReplyToken, EMAIL_REPLY_TOKEN_LIFETIME_MS } = await import('../../../../server/src/lib/notifications/replyTokenPersistence');
-      const issuedAt = Date.now();
+      const { persistReplyToken } = await import('../../../../server/src/lib/notifications/replyTokenPersistence');
+      const configuredExpiry = new Date(Date.now() + 6 * 60 * 60 * 1000);
       await persistReplyToken({ schema: { hasTable: async () => true } }, CUSTOMER, {
         token: 'cm2:issued-by-outbound', ticketId: 'tk', commentId: 'c1', threadId: 'thr',
         extraMetadata: { namespace: 'cm', version: 2, relationshipId: 'rel', grantGeneration: 0 },
-      }, { template: 'ticket-comment-added', subject: 'Re: ticket', recipient: 'req@customer.test' });
+      }, { template: 'ticket-comment-added', subject: 'Re: ticket', recipient: 'req@customer.test' }, configuredExpiry);
 
       const issued = store.tables.email_reply_tokens.find((row) => row.token === 'cm2:issued-by-outbound');
       expect(issued).toBeTruthy();
       if (!issued) throw new Error('Outbound token persistence did not produce a token record');
-      expect(new Date(issued.expires_at).getTime()).toBe(issuedAt + EMAIL_REPLY_TOKEN_LIFETIME_MS);
+      expect(new Date(issued.expires_at).getTime()).toBe(configuredExpiry.getTime());
       const provider = createCoManagedDeliveryProvider();
       const sender = { email: 'req@customer.test', internalAttributionTrusted: false, contactAttributionTrusted: true };
       const admitted = await provider.admitReplyToken(CUSTOMER, issued.token, JSON.parse(issued.metadata), sender);
@@ -204,6 +204,23 @@ describe('admitReplyToken sender authentication', () => {
       expect(await provider.admitReplyToken(CUSTOMER, issued.token, JSON.parse(issued.metadata), sender))
         .toEqual({ admitted: false, reason: 'sender_unauthenticated', acknowledge: false });
     });
+
+    it.each([undefined, null, 'not-a-timestamp', new Date('2000-01-01T00:00:00.000Z')])(
+      'refuses outbound token persistence for an absent or invalid expiry (%s)', async (expiresAt) => {
+        const { persistReplyToken } = await import('../../../../server/src/lib/notifications/replyTokenPersistence');
+        const logger = (await import('@alga-psa/core/logger')).default;
+        vi.mocked(logger.warn).mockClear();
+        const before = store.tables.email_reply_tokens.length;
+        await persistReplyToken({ schema: { hasTable: async () => true } }, CUSTOMER, {
+          token: `cm2:invalid-expiry-${String(expiresAt)}`, ticketId: 'tk', commentId: 'c1',
+        }, { template: 'ticket-comment-added', subject: 'Re: ticket', recipient: 'req@customer.test' }, expiresAt as any);
+        expect(store.tables.email_reply_tokens).toHaveLength(before);
+        expect(logger.warn).toHaveBeenCalledWith(
+          '[SendEventEmail] Failed to persist email reply token',
+          expect.objectContaining({ error: expect.stringContaining('valid future expiry') })
+        );
+      }
+    );
     it('continues refusing a legacy requester cm2 token with null expiry', async () => {
       store.tables.email_reply_tokens[0].expires_at = null;
       expect(await admit({ ...trusted('req@customer.test'), contactAttributionTrusted: true }))

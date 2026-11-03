@@ -20,6 +20,12 @@ import { persistReplyToken } from './replyTokenPersistence';
 
 const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
 const EMAIL_SERVICE_DISABLED_MESSAGE = 'Email service is disabled or not configured';
+const DEFAULT_REPLY_TOKEN_LIFETIME_DAYS = 30;
+
+function getReplyTokenExpiry(now = Date.now()): Date {
+  const configuredDays = Number(process.env.EMAIL_REPLY_TOKEN_LIFETIME_DAYS ?? DEFAULT_REPLY_TOKEN_LIFETIME_DAYS);
+  return new Date(now + configuredDays * 24 * 60 * 60 * 1000);
+}
 
 function isEmailServiceDisabledErrorMessage(message: unknown): boolean {
   if (typeof message !== 'string') return false;
@@ -640,7 +646,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         template: params.template,
         subject,
         recipient: params.to,
-      });
+      }, getReplyTokenExpiry());
     }
 
     // Store the outbound RFC Message-ID in the ticket's email_metadata references.

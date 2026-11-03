@@ -1,8 +1,6 @@
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 
-export const EMAIL_REPLY_TOKEN_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000;
-
 interface ReplyMarkerPayload {
   token: string;
   ticketId?: string;
@@ -16,9 +14,14 @@ export async function persistReplyToken(
   knex: any,
   tenantId: string,
   payload: ReplyMarkerPayload,
-  metadata: { template: string; subject: string; recipient: string }
+  metadata: { template: string; subject: string; recipient: string },
+  expiresAt: Date | string | null | undefined
 ): Promise<void> {
   try {
+    const expiry = expiresAt instanceof Date ? expiresAt : typeof expiresAt === 'string' ? new Date(expiresAt) : null;
+    if (!expiry || !Number.isFinite(expiry.getTime()) || expiry.getTime() <= Date.now()) {
+      throw new Error('Refusing to persist email reply token without a valid future expiry');
+    }
     const tableExists = await knex.schema.hasTable('email_reply_tokens');
     if (!tableExists) return;
 
@@ -32,7 +35,7 @@ export async function persistReplyToken(
       template: metadata.template,
       recipient_email: metadata.recipient,
       entity_type: payload.projectId ? 'project' : 'ticket',
-      expires_at: new Date(Date.now() + EMAIL_REPLY_TOKEN_LIFETIME_MS),
+      expires_at: expiry,
     };
 
     await tenantDb(knex, tenantId).table('email_reply_tokens')

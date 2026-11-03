@@ -1891,6 +1891,7 @@ export async function findTicketByReplyToken(
   return withAdminTransaction(async (trx: Knex.Transaction) => {
     const record = await tenantDb(trx, tenant).table('email_reply_tokens')
       .where({ token })
+      .where('expires_at', '>', trx.raw('clock_timestamp()'))
       .first();
 
     if (!record) {
