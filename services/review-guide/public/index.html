@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Review guide: Security: secrets in getTicketFormOptions (PR #4114)</title>
+  <style>
+    body { max-width: 960px; margin: 3rem auto; padding: 0 1.5rem; color: #17212b; font: 16px/1.6 system-ui, sans-serif; }
+    h1, h2 { line-height: 1.2; } h1 { font-size: 2rem; } h2 { margin-top: 2.4rem; border-bottom: 1px solid #ccd3d9; padding-bottom: .45rem; }
+    code { background: #edf1f4; padding: .12rem .3rem; border-radius: .25rem; } li { margin: .4rem 0; }
+    .summary { padding: 1rem 1.25rem; border-left: 4px solid #16836a; background: #f0f8f5; }
+  </style>
+</head>
+<body>
+  <h1>Security: secrets in getTicketFormOptions</h1>
+  <p>PR <a href="https://github.com/Nine-Minds/alga-psa/pull/4114">#4114</a> · review commit <code>@@HEAD@@</code></p>
+
+  <h2>A. Finding and protection</h2>
+  <p>The finding was that a caller with <code>ticket:read</code> could receive tenant users and clients through ticket form options, including credential columns. The current action checks <code>ticket:read</code>, then rejects principals outside <code>isMspPrincipalUserType</code> before reading option tables. User rows are selected with <code>USER_RESPONSE_FIELD_NAMES</code>, passed through <code>sanitizeUserForResponse</code>, and mapped to the seven-field ticket picker DTO. Client rows are projected to the five fields used by that picker.</p>
+  <p>Relevant code: <a href="https://github.com/Nine-Minds/alga-psa/blob/@@HEAD@@/packages/tickets/src/actions/optimizedTicketActions.ts#L2435">action and guards</a>, <a href="https://github.com/Nine-Minds/alga-psa/blob/@@HEAD@@/packages/tickets/src/lib/ticketFormOptions.ts">picker DTO mapping</a>, and <a href="https://github.com/Nine-Minds/alga-psa/blob/@@HEAD@@/packages/tickets/src/actions/optimizedTicketActions.sensitiveUsers.test.ts">behavioral regression</a>.</p>
+
+  <h2>B. Behavioral evidence</h2>
+  <p>The saved live smoke evidence is historical, captured on 2026-11-02 at the prior security-fix commit. It shows credential-bearing database rows, safe MSP action/cache DTOs, and denial for a client principal with <code>ticket:read</code>. It is not presented as a live rerun at this review commit. The 9/9 focused regression has been freshly rerun for this review commit; fresh package typechecks and ClientPicker tests are also recorded in the evidence README.</p>
+  <ul>
+    <li><a href="/evidence/assertions.json">Saved assertions</a></li>
+    <li><a href="/evidence/database-credential-presence-counts.json">Credential presence counts</a></li>
+    <li><a href="/evidence/msp-action-response.json">Historical MSP action response</a></li>
+    <li><a href="/evidence/msp-cache-initial.json">Historical sessionStorage cache</a></li>
+    <li><a href="/evidence/portal-action-response.json">Historical portal action denial</a></li>
+    <li><a href="/evidence/portal-ticket-read-permission.json">Portal ticket:read permission evidence</a></li>
+    <li><a href="/evidence/focused-vitest.log">Fresh focused security regression output (9/9)</a></li>
+    <li><a href="/evidence/README.md">Evidence notes and validation provenance</a></li>
+  </ul>
+  <p>Historical live walkthrough recording: <a href="/evidence/smoke-walkthrough.webm">video</a> · <a href="/evidence/smoke-walkthrough.vtt">captions</a> · <a href="/evidence/smoke-walkthrough.json">chapter marks</a>.</p>
+
+  <h2>C. Automated validation at this commit</h2>
+  <ul>
+    <li>UI package typecheck: passed after typing the behavioral-test fixture as <code>ClientPicker</code>'s actual <code>clients</code> prop.</li>
+    <li>Tickets package typecheck: passed.</li>
+    <li>ClientPicker behavioral tests: 13 passed.</li>
+    <li>Security regression: 9 passed, including MSP-only gate, permission ordering, and picker field exclusion.</li>
+  </ul>
+
+  <h2>D. Historical live smoke coverage and limits</h2>
+  <p>The 2026-11-02 smoke exercised the ticket dashboard and pickers for an MSP user, replayed the server action as a client principal with <code>ticket:read</code>, and confirmed the portal ticket list and create form still loaded. It did not submit a ticket and did not exercise a live no-ticket:read account matrix. Review-app on port <code>23453</code> is currently stopped; this guide does not claim that application surface is live. The review guide itself is served separately.</p>
+
+  <h2>E. Complete evidence set</h2>
+  <ul>
+    <li><a href="/evidence/01-ticket-dashboard.png">01 ticket dashboard screenshot</a></li>
+    <li><a href="/evidence/02-client-picker.png">02 client picker screenshot</a></li>
+    <li><a href="/evidence/03-agent-picker.png">03 agent picker screenshot</a></li>
+    <li><a href="/evidence/04-selected-agent.png">04 selected agent screenshot</a></li>
+    <li><a href="/evidence/05-safe-fields.png">05 safe fields screenshot</a></li>
+    <li><a href="/evidence/06-portal-denied.png">06 portal denial screenshot</a></li>
+    <li><a href="/evidence/07-portal-tickets.png">07 portal tickets screenshot</a></li>
+    <li><a href="/evidence/08-portal-create.png">08 portal create screenshot</a></li>
+    <li><a href="/evidence/assertions.json">assertions.json</a></li>
+    <li><a href="/evidence/database-credential-presence-counts.json">database-credential-presence-counts.json</a></li>
+    <li><a href="/evidence/dialog-dom.json">dialog-dom.json</a></li>
+    <li><a href="/evidence/focused-vitest.log">focused-vitest.log</a></li>
+    <li><a href="/evidence/msp-action-response.json">msp-action-response.json</a></li>
+    <li><a href="/evidence/msp-cache-initial.json">msp-cache-initial.json</a></li>
+    <li><a href="/evidence/msp-safe-fields-summary.json">msp-safe-fields-summary.json</a></li>
+    <li><a href="/evidence/plan.md">plan.md</a></li>
+    <li><a href="/evidence/portal-action-response.json">portal-action-response.json</a></li>
+    <li><a href="/evidence/portal-denial-assertion.json">portal-denial-assertion.json</a></li>
+    <li><a href="/evidence/portal-session.json">portal-session.json</a></li>
+    <li><a href="/evidence/portal-ticket-read-permission.json">portal-ticket-read-permission.json</a></li>
+    <li><a href="/evidence/README.md">README.md</a></li>
+    <li><a href="/evidence/smoke-walkthrough.json">smoke-walkthrough.json</a></li>
+    <li><a href="/evidence/smoke-walkthrough.vtt">smoke-walkthrough.vtt</a></li>
+    <li><a href="/evidence/smoke-walkthrough.webm">smoke-walkthrough.webm</a></li>
+  </ul>
+</body>
+</html>

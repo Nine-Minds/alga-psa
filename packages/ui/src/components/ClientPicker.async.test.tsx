@@ -243,7 +243,7 @@ describe('ClientPicker', () => {
   });
 
   it('preserves company and individual type filters for projected in-memory client options', async () => {
-    const clients = [
+    const clients: NonNullable<React.ComponentProps<typeof ClientPicker>['clients']> = [
       { client_id: 'company-1', client_name: 'Acme', client_type: 'company', is_inactive: false },
       { client_id: 'individual-1', client_name: 'Ada Lovelace', client_type: 'individual', is_inactive: false },
     ];
