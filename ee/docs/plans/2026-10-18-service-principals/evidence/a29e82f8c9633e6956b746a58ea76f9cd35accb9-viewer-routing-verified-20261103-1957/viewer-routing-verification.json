@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-11-03T19:57:39Z",
+  "productRevisionServed": "a29e82f8c9633e6956b746a58ea76f9cd35accb9+da39a3ee5e6b",
+  "reviewUrl": "http://feature-service-principals-c-4-ee-core-schema-service-en.localhost:23835/auth/msp/signin?callbackUrl=%2Fmsp%2Fsettings%2Fmcp-server",
+  "devUrl": "http://127.0.0.1:3835",
+  "devUrlStatus": "no listener; app was not started",
+  "targetPaneId": "be074bd7-84b1-4da7-a4bb-f32e23ef33df",
+  "viewerProbePaneId": "b3420e12-68c2-45c3-925b-48a00de8dbad",
+  "checks": {
+    "cliRequestBrowserInventory": "passed; browser inventory returned the target card pane",
+    "targetPaneInspection": "passed; target pane resolves to the review app but displays MSP sign-in",
+    "cliRequestNavigation": "passed; viewer probe navigated to a harmless data URL and DOM query returned routing-ok",
+    "qaAuthentication": "unavailable; target pane is unauthenticated and no secure QA sign-in fixture was available to this session",
+    "cardSmokeDatabase": "not queried; PostgreSQL port 5474 requires a database credential unavailable to this shell"
+  },
+  "screenshot": "target-signin.png",
+  "smokeWalkthrough": null,
+  "limitations": [
+    "No MCP Settings assertion was rerun.",
+    "No QA timesheet entry was created or edited during this check.",
+    "No fresh smoke-walkthrough.webm, smoke-walkthrough.vtt, or smoke-walkthrough.json was produced.",
+    "Prior authenticated UI evidence remains historical and is not represented as fresh."
+  ]
+}
