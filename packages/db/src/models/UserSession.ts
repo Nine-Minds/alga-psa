@@ -72,8 +72,16 @@ export type RevocationReason =
 const SESSION_LIFECYCLE_REASONS = new Set<string>([
   'user_logout', 'user_logout_all', 'admin_revoke', 'max_sessions',
   'security', 'scim', 'inactivity', 'expired', 'revoked', 'missing',
-  'user_missing', 'identity_mismatch', 'lookup_unavailable',
+  'user_missing', 'identity_mismatch', 'lookup_unavailable', 'missing_identity_claims',
 ]);
+
+const NORMALIZED_LIFECYCLE_REASONS: Record<string, string> = {
+  durable_session_missing: 'missing',
+  durable_session_revoked: 'revoked',
+  durable_session_user_missing: 'user_missing',
+  durable_session_identity_mismatch: 'identity_mismatch',
+  durable_session_lookup_unavailable: 'lookup_unavailable',
+};
 
 /** A stable, non-secret join key for server-side session lifecycle diagnostics. */
 export function sessionCorrelationId(sessionId: string): string {
@@ -88,7 +96,7 @@ export function logSessionLifecycle(
 ): void {
   if (typeof sessionId !== 'string' || sessionId.length === 0) return;
   const safeReason = reason
-    ? (SESSION_LIFECYCLE_REASONS.has(reason) ? reason : 'other')
+    ? (NORMALIZED_LIFECYCLE_REASONS[reason] ?? (SESSION_LIFECYCLE_REASONS.has(reason) ? reason : 'other'))
     : undefined;
   const meta = {
     event,
@@ -107,12 +115,15 @@ function sessions<Row extends object = IUserSession>(
 }
 
 function logRevokedRows(rows: unknown, reason: RevocationReason): void {
-  if (!Array.isArray(rows)) return;
-  for (const row of rows) {
-    if (row && typeof row === 'object' && typeof (row as { session_id?: unknown }).session_id === 'string') {
-      logSessionLifecycle('revoked', (row as { session_id: string }).session_id, reason);
-    }
-  }
+  for (const sessionId of sessionIdsFromRows(rows)) logSessionLifecycle('revoked', sessionId, reason);
+}
+
+function sessionIdsFromRows(rows: unknown): string[] {
+  if (!Array.isArray(rows)) return [];
+  return rows.flatMap((row) => row && typeof row === 'object'
+    && typeof (row as { session_id?: unknown }).session_id === 'string'
+    ? [(row as { session_id: string }).session_id]
+    : []);
 }
 
 export class UserSession {
@@ -300,13 +311,22 @@ export class UserSession {
 
     const session = await query.first();
 
-    if (!session) return 'missing';
+    if (!session) {
+      logSessionLifecycle('rejected', sessionId, 'missing');
+      return 'missing';
+    }
     if (session.revoked_at !== null) {
       logSessionLifecycle('rejected', sessionId, isRevocationReason(session.revoked_reason) ? session.revoked_reason : 'revoked');
       return 'revoked';
     }
-    if (session.actual_user_type == null) return 'user_missing';
-    if (session.session_user_id !== identity.userId || session.actual_user_type !== identity.userType) return 'identity_mismatch';
+    if (session.actual_user_type == null) {
+      logSessionLifecycle('rejected', sessionId, 'user_missing');
+      return 'user_missing';
+    }
+    if (session.session_user_id !== identity.userId || session.actual_user_type !== identity.userType) {
+      logSessionLifecycle('rejected', sessionId, 'identity_mismatch');
+      return 'identity_mismatch';
+    }
     return null;
   }
 
@@ -327,15 +347,15 @@ export class UserSession {
         const sessionsToRevoke = activeSessions.slice(0, toRevoke);
         const sessionIdsToRevoke = sessionsToRevoke.map((s: any) => s.session_id);
 
-        await sessions(trx, tenant)
+        const revokedRows = await sessions<Record<string, any>>(trx, tenant)
           .where({ user_id: userId })
           .whereIn('session_id', sessionIdsToRevoke)
           .update({
             revoked_at: trx.fn.now(),
             revoked_reason: 'max_sessions',
             updated_at: trx.fn.now(),
-          });
-        revokedSessionIds.push(...sessionIdsToRevoke);
+          }).returning('session_id');
+        revokedSessionIds.push(...sessionIdsFromRows(revokedRows));
       }
     });
 

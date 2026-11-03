@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const extendExpiryMock = vi.fn(async () => undefined);
 const isRevokedOrIdentityMismatchMock = vi.fn(async () => false);
 const getRejectionReasonMock = vi.fn(async () => null as string | null);
 const createMock = vi.fn(async () => 'sess-created');
+const logLifecycleMock = vi.fn();
 
 const tenantFirstMock = vi.fn();
 const subscriptionFirstMock = vi.fn();
@@ -107,6 +108,7 @@ vi.mock('@alga-psa/db/models/UserSession', () => ({
     getRejectionReason: (...args: unknown[]) => getRejectionReasonMock(...(args as [])),
     extendExpiry: (...args: unknown[]) => extendExpiryMock(...(args as [])),
     create: (...args: unknown[]) => createMock(...(args as [])),
+    logLifecycle: (...args: unknown[]) => logLifecycleMock(...(args as [])),
     updateLocation: vi.fn(),
   },
 }));
@@ -124,11 +126,14 @@ vi.mock('@alga-psa/core/logger', () => ({ default: { debug: vi.fn(), trace: vi.f
 const { getAuthOptions } = await import('./nextAuthOptions');
 
 describe('nextAuth session expiry sliding', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   beforeEach(() => {
     vi.clearAllMocks();
     isRevokedOrIdentityMismatchMock.mockResolvedValue(false);
     getRejectionReasonMock.mockResolvedValue(null);
     createMock.mockResolvedValue('sess-created');
+    logLifecycleMock.mockReset();
     extendExpiryMock.mockResolvedValue(undefined);
     // Keep plan refresh quiet/side-effect-free for these cases.
     tenantFirstMock.mockResolvedValue({ plan: 'pro', product_code: 'psa' });
@@ -226,6 +231,68 @@ describe('nextAuth session expiry sliding', () => {
       last_plan_check: Date.now(),
       last_session_extend: Date.now(),
     })).resolves.toBeNull();
+  });
+
+  it.each([
+    ['missing', 'durable_session_missing'],
+    ['user_missing', 'durable_session_user_missing'],
+    ['identity_mismatch', 'durable_session_identity_mismatch'],
+  ] as const)('correlates the JWT rejection for %s durable-session state', async (reason, loggedReason) => {
+    getRejectionReasonMock.mockResolvedValue(reason);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await expect(runJwt({
+      id: 'u-1', tenant: 'tenant-1', user_type: 'internal', session_id: 'sess-1',
+      last_plan_check: Date.now(), last_session_extend: Date.now(),
+    })).resolves.toBeNull();
+
+    expect(logLifecycleMock).toHaveBeenCalledWith('rejected', 'sess-1', loggedReason);
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('sess-1');
+    warn.mockRestore();
+  });
+
+  it('correlates an unreadable durable-session lookup while preserving its existing cookie behavior', async () => {
+    getRejectionReasonMock.mockRejectedValue(new Error('database unavailable'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await expect(runJwt({
+      id: 'u-1', tenant: 'tenant-1', user_type: 'internal', session_id: 'sess-lookup',
+      last_plan_check: 0, last_session_extend: 0,
+    })).resolves.toMatchObject({ id: 'u-1', session_id: 'sess-lookup' });
+
+    expect(logLifecycleMock).toHaveBeenCalledWith(
+      'rejected', 'sess-lookup', 'durable_session_lookup_unavailable',
+    );
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('sess-lookup');
+    warn.mockRestore();
+  });
+
+  it('correlates missing identity claims when a session identifier is available', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await expect(runJwt({
+      id: 'u-1', tenant: 'tenant-1', session_id: 'sess-claims',
+      last_plan_check: Date.now(), last_session_extend: Date.now(),
+    })).resolves.toBeNull();
+
+    expect(logLifecycleMock).toHaveBeenCalledWith('rejected', 'sess-claims', 'missing_identity_claims');
+    expect(getRejectionReasonMock).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('tests the Auth.js signOut event and passes only its session identifier to diagnostics', async () => {
+    const authOptions = await getAuthOptions();
+    const signOut = authOptions.events?.signOut;
+    expect(signOut).toBeTypeOf('function');
+
+    await signOut!({ token: {
+      session_id: 'sess-signout',
+      hashed_password: 'must-not-log',
+      two_factor_secret: 'must-not-log-either',
+    } } as any);
+
+    expect(logLifecycleMock).toHaveBeenCalledWith('signed_out', 'sess-signout');
+    expect(JSON.stringify(logLifecycleMock.mock.calls)).not.toContain('must-not-log');
   });
 
   it('T010: drops the cookie for a token whose user_type is service without consulting the sessions table', async () => {

@@ -3,13 +3,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const lifecycleLogger = vi.hoisted(() => ({ info: vi.fn(), warn: vi.fn() }));
 vi.mock('@alga-psa/core/logger', () => ({ default: lifecycleLogger }));
 
-const updateMock = vi.fn(async () => 1);
 const returningMock = vi.fn(async () => [{ session_id: 'created-session-secret' }]);
+const updateResult = {
+  returning: returningMock,
+  then: (resolve: (value: number) => unknown, reject?: (reason: unknown) => unknown) =>
+    Promise.resolve(1).then(resolve, reject),
+};
+const updateMock = vi.fn(() => updateResult);
+let activeSessionRows: Array<{ session_id: string }> = [];
+const forUpdateMock = vi.fn(async () => activeSessionRows);
 const firstMock = vi.fn(async () => ({ revoked_at: null }));
 const builder = {
   where: vi.fn(() => builder),
+  whereNot: vi.fn(() => builder),
+  whereIn: vi.fn(() => builder),
   whereNull: vi.fn(() => builder),
   select: vi.fn(() => builder),
+  orderBy: vi.fn(() => builder),
+  forUpdate: forUpdateMock,
   leftJoin: vi.fn(() => builder),
   first: firstMock,
   update: updateMock,
@@ -19,7 +30,10 @@ const builder = {
 
 const knexFn = Object.assign(
   vi.fn((_table: string) => builder),
-  { fn: { now: () => '__now__' } },
+  {
+    fn: { now: () => '__now__' },
+    transaction: vi.fn(async (callback: (trx: any) => Promise<unknown>) => callback(knexFn)),
+  },
 );
 
 const getConnectionMock = vi.fn(async () => knexFn);
@@ -102,7 +116,10 @@ describe('UserSession.extendExpiry', () => {
 });
 
 describe('session lifecycle diagnostics', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    activeSessionRows = [];
+  });
 
   it('correlates lifecycle events without logging the session id or credential data', () => {
     const sessionId = 'durable-session-id-secret';
@@ -168,6 +185,22 @@ describe('session lifecycle diagnostics', () => {
     expect(JSON.stringify(lifecycleLogger.info.mock.calls)).not.toContain('secret');
   });
 
+  it.each([
+    ['durable_session_missing', 'missing'],
+    ['durable_session_revoked', 'revoked'],
+    ['durable_session_user_missing', 'user_missing'],
+    ['durable_session_identity_mismatch', 'identity_mismatch'],
+    ['durable_session_lookup_unavailable', 'lookup_unavailable'],
+    ['missing_identity_claims', 'missing_identity_claims'],
+  ])('normalizes the bounded rejection category %s', (input, expected) => {
+    logSessionLifecycle('rejected', 'session-id', input);
+    expect(lifecycleLogger.warn).toHaveBeenCalledWith('[auth] session_lifecycle', {
+      event: 'rejected',
+      sessionCorrelationId: sessionCorrelationId('session-id'),
+      reason: expected,
+    });
+  });
+
   it('correlates a database rejection with its bounded durable revocation reason', async () => {
     const sessionId = 'durable-session-id-secret';
     firstMock.mockResolvedValueOnce({
@@ -191,7 +224,7 @@ describe('session lifecycle diagnostics', () => {
 
   it('records a successful direct revocation with the same correlation identifier', async () => {
     const sessionId = 'durable-session-id-secret';
-    updateMock.mockResolvedValueOnce(1);
+    updateMock.mockImplementationOnce(() => updateResult);
 
     await UserSession.revokeSession('tenant-1', sessionId, 'user_logout');
 
@@ -201,5 +234,60 @@ describe('session lifecycle diagnostics', () => {
       reason: 'user_logout',
     });
     expect(JSON.stringify(lifecycleLogger.info.mock.calls)).not.toContain(sessionId);
+  });
+
+  it('returns the bulk revoke count and correlates each successfully returned row', async () => {
+    const rows = [{ session_id: 'bulk-session-a' }, { session_id: 'bulk-session-b' }];
+    returningMock.mockResolvedValueOnce(rows);
+
+    await expect(UserSession.revokeAllExcept('tenant-1', 'user-1', 'current-session'))
+      .resolves.toBe(2);
+
+    expect(lifecycleLogger.info).toHaveBeenCalledTimes(2);
+    for (const row of rows) {
+      expect(lifecycleLogger.info).toHaveBeenCalledWith('[auth] session_lifecycle', {
+        event: 'revoked',
+        sessionCorrelationId: sessionCorrelationId(row.session_id),
+        reason: 'user_logout_all',
+      });
+    }
+    expect(JSON.stringify(lifecycleLogger.info.mock.calls)).not.toContain('bulk-session');
+  });
+
+  it('returns the admin bulk revoke count and correlates successful rows', async () => {
+    const rows = [{ session_id: 'admin-session-a' }, { session_id: 'admin-session-b' }];
+    returningMock.mockResolvedValueOnce(rows);
+
+    await expect(UserSession.revokeAllForUser('tenant-1', 'user-1')).resolves.toBe(2);
+
+    expect(lifecycleLogger.info).toHaveBeenCalledTimes(2);
+    for (const row of rows) {
+      expect(lifecycleLogger.info).toHaveBeenCalledWith('[auth] session_lifecycle', {
+        event: 'revoked',
+        sessionCorrelationId: sessionCorrelationId(row.session_id),
+        reason: 'admin_revoke',
+      });
+    }
+    expect(JSON.stringify(lifecycleLogger.info.mock.calls)).not.toContain('admin-session');
+  });
+
+  it('correlates only rows returned by a successful max-session update', async () => {
+    activeSessionRows = Array.from({ length: 6 }, (_, index) => ({ session_id: `max-session-${index}` }));
+    returningMock.mockResolvedValueOnce([
+      { session_id: 'max-session-0' },
+      { session_id: 'max-session-1' },
+    ]);
+
+    await UserSession.enforceMaxSessions('tenant-1', 'user-1', 5);
+
+    expect(knexFn.transaction).toHaveBeenCalledOnce();
+    expect(lifecycleLogger.info).toHaveBeenCalledTimes(2);
+    for (const sessionId of ['max-session-0', 'max-session-1']) {
+      expect(lifecycleLogger.info).toHaveBeenCalledWith('[auth] session_lifecycle', {
+        event: 'revoked',
+        sessionCorrelationId: sessionCorrelationId(sessionId),
+        reason: 'max_sessions',
+      });
+    }
   });
 });

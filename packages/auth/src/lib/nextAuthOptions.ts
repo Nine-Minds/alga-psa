@@ -154,7 +154,7 @@ const SESSION_COOKIE = getSessionCookieConfig();
  */
 type TrackedSessionVerdict = 'live' | 'revoked' | 'unverified';
 
-async function logTrackedSessionRejection(reason: string): Promise<void> {
+async function logTrackedSessionRejection(reason: string, sessionId?: string): Promise<void> {
     let requestId = 'unavailable';
     try {
         const requestHeaders = await headers();
@@ -162,6 +162,7 @@ async function logTrackedSessionRejection(reason: string): Promise<void> {
         if (/^[A-Za-z0-9._:-]{1,128}$/.test(candidate)) requestId = candidate;
     } catch { /* Auth callbacks can also run outside a request context. */ }
     console.warn('[auth] session_rejected', { reason, requestId });
+    if (sessionId) UserSession.logLifecycle?.('rejected', sessionId, reason);
 }
 
 async function checkTrackedSession(
@@ -180,7 +181,10 @@ async function checkTrackedSession(
         || typeof userType !== 'string'
         || !isInteractiveUserType(userType)
     ) {
-        await logTrackedSessionRejection('missing_identity_claims');
+        await logTrackedSessionRejection(
+            'missing_identity_claims',
+            typeof sessionId === 'string' && sessionId.length > 0 ? sessionId : undefined,
+        );
         return 'revoked';
     }
 
@@ -190,12 +194,12 @@ async function checkTrackedSession(
             userType,
         });
         if (rejectionReason) {
-            await logTrackedSessionRejection(`durable_session_${rejectionReason}`);
+            await logTrackedSessionRejection(`durable_session_${rejectionReason}`, sessionId);
             return 'revoked';
         }
         return 'live';
     } catch {
-        await logTrackedSessionRejection('durable_session_lookup_unavailable');
+        await logTrackedSessionRejection('durable_session_lookup_unavailable', sessionId);
         return 'unverified';
     }
 }
