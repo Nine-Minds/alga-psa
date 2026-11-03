@@ -6,7 +6,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { closeCoManagedRelationship, CoManagedClosureError, finalizeCoManagedArchive, getCoManagedArchiveHistory, getCoManagedDepartureScreen,
-  listCoManagedArchives, readCoManagedArchiveFile, retainCoManagedTimeParticipation, retainFile } from '@alga-psa/co-managed';
+  listCoManagedArchives, readCoManagedArchiveFile, retainCoManagedTimeParticipation, retainFile, storeCoManagedArchiveFiles } from '@alga-psa/co-managed';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { seedBoundaryFixture, type BoundaryFixture } from './coManagedArchiveBoundaryCases';
@@ -14,7 +14,10 @@ import { seedBoundaryFixture, type BoundaryFixture } from './coManagedArchiveBou
 const describeDb = await describeWithDb();
 const { retainedBytes } = vi.hoisted(() => ({ retainedBytes: new Uint8Array(Buffer.from('actual retained file')) }));
 vi.mock('@alga-psa/storage/StorageProviderFactory', () => ({
-  StorageProviderFactory: { createProvider: async () => ({ download: async () => retainedBytes }) },
+  StorageProviderFactory: { createProvider: async () => ({
+    download: async () => retainedBytes,
+    upload: async (bytes: Uint8Array, path: string) => ({ path, size: bytes.length }),
+  }) },
 }));
 
 async function seedTicketWithCurrentGrant(db: Knex, f: BoundaryFixture) {
@@ -144,6 +147,11 @@ describeDb('co-managed closure and archive on real Postgres', { shuffle: false }
     expect(await readCoManagedArchiveFile(db, f.mspAdmin, history.files[0].archiveFileId)).toMatchObject({ fileName: 'handoff.txt', size: retainedBytes.length });
     const opened = await readCoManagedArchiveFile(db, f.mspAdmin, history.files[0].archiveFileId);
     expect(Buffer.from(opened!.body as Uint8Array)).toEqual(Buffer.from(retainedBytes));
+    expect(await storeCoManagedArchiveFiles(db, f.msp)).toEqual({ stored: 1, failed: 0 });
+    expect(await db('co_managed_archive_files').where({ tenant: f.msp, archive_file_id: history.files[0].archiveFileId })
+      .first('status', 'staged_bytes')).toMatchObject({ status: 'ready', staged_bytes: null });
+    const fromObjectStorage = await readCoManagedArchiveFile(db, f.mspAdmin, history.files[0].archiveFileId);
+    expect(Buffer.from(fromObjectStorage!.body as Uint8Array)).toEqual(Buffer.from(retainedBytes));
   });
 
   it('A2: evidence guessed by id outside the sealed manifest is unreachable, and an unsourced file id is a 404', async () => {

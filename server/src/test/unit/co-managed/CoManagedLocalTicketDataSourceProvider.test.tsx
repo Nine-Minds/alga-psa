@@ -112,7 +112,10 @@ describe('CoManagedLocalTicketDataSourceProvider', () => {
 
   it('writable: screen and capabilities are identical to native', async () => {
     await mount(false);
-    expect(source.screen).toEqual({ backHref: '/msp/tickets' });
+    expect(source.screen).toMatchObject({ backHref: '/msp/tickets' });
+    expect(source.screen.readOnly).toBeUndefined();
+    expect(source.screen.onComposerCancel).toEqual(expect.any(Function));
+    expect(source.screen.subscribeCommentsChanged).toEqual(expect.any(Function));
     expect(source.capabilities).toEqual(NATIVE_TICKET_CAPABILITIES);
   });
 
