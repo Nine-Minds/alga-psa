@@ -14,6 +14,7 @@
     "communityEditionDescription": "La Community Edition con hosting autonomo offre utenti illimitati senza restrizioni di licenza o costi aggiuntivi."
   },
   "purchaseSuccess": {
+    "unlimitedLicenses": "Illimitate",
     "metaTitle": "Acquisto completato",
     "scheduledTitle": "Modifica pianificata con successo!",
     "updatedTitle": "Aggiornamento completato con successo!",

@@ -14,6 +14,7 @@
     "communityEditionDescription": "La Community Edition auto-hébergée permet un nombre illimité d’utilisateurs, sans restriction de licence ni coût supplémentaire."
   },
   "purchaseSuccess": {
+    "unlimitedLicenses": "Illimité",
     "metaTitle": "Achat réussi",
     "scheduledTitle": "Changement planifié avec succès !",
     "updatedTitle": "Mise à jour réussie !",
