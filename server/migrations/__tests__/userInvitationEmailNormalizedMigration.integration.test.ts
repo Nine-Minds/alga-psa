@@ -69,8 +69,9 @@ describe('20261103130000_add_normalized_email_to_user_invitations', () => {
     db = await createTestDbConnection({ databaseName, runSeeds: false });
     // Construct the original migration schema directly. Bootstrap templates
     // may carry columns that do not correspond to their migration ledger.
-    await db.raw('DROP TABLE IF EXISTS public.user_invitations CASCADE');
-    await db.schema.withSchema('public').createTable('user_invitations', (table) => {
+    const [{ schema }] = (await db.raw('SELECT current_schema() AS schema')).rows;
+    await db.schema.withSchema(schema).dropTableIfExists('user_invitations');
+    await db.schema.withSchema(schema).createTable('user_invitations', (table) => {
       table.uuid('tenant').notNullable().references('tenant').inTable('tenants');
       table.uuid('invitation_id').defaultTo(db!.raw('gen_random_uuid()')).notNullable();
       table.text('email').notNullable();

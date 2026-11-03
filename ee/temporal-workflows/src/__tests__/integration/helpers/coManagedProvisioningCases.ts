@@ -87,10 +87,12 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
     it('keeps PSA token verification and cleanup at the existing query budget with the co-managed switch off', async () => {
       const db = getDb(), operation = await prepare(), token = randomUUID(), expiredToken = randomUUID();
       const sponsor = tenantDb(db, operation.tenant);
+      const psaEmail = `${randomUUID()}@example.test`;
+      const expiredPsaEmail = `${randomUUID()}@example.test`;
       await sponsor.table('user_invitations').insert([
-        { tenant: operation.tenant, email: `${randomUUID()}@example.test`, first_name: 'PSA', last_name: 'Invite',
+        { tenant: operation.tenant, email: psaEmail, email_normalized: psaEmail.toLowerCase(), first_name: 'PSA', last_name: 'Invite',
           token, expires_at: new Date(Date.now() + 3600000) },
-        { tenant: operation.tenant, email: `${randomUUID()}@example.test`, first_name: 'Expired', last_name: 'Invite',
+        { tenant: operation.tenant, email: expiredPsaEmail, email_normalized: expiredPsaEmail.toLowerCase(), first_name: 'Expired', last_name: 'Invite',
           token: expiredToken, expires_at: new Date(Date.now() - 60000) },
       ]);
       const { verifyUserInvitationToken } = await import('../../../../../../packages/users/src/actions/user-actions/userInvitationActions');
@@ -121,7 +123,8 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       const invitation = await customer.table('user_invitations').first();
       const { completeUserInvitationSetup, sendUserInvitation, verifyUserInvitationToken } = await import('../../../../../../packages/users/src/actions/user-actions/userInvitationActions');
       const expiredToken = randomUUID();
-      await customer.table('user_invitations').insert({ tenant: operation.customer_tenant, email: `${randomUUID()}@example.test`,
+      const expiredEmail = `${randomUUID()}@example.test`;
+      await customer.table('user_invitations').insert({ tenant: operation.customer_tenant, email: expiredEmail, email_normalized: expiredEmail.toLowerCase(),
         first_name: 'Expired', last_name: 'Invite', token: expiredToken, expires_at: new Date(Date.now() - 60000) });
       const rolesBefore = await customer.table('user_roles');
       const invitationsBefore = await customer.table('user_invitations').orderBy('invitation_id');
@@ -265,7 +268,7 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       const other = randomUUID();
       await customer.table('users').insert({ tenant: actor.tenant, user_id: other, username: `${other}@example.test`,
         email: `${other}@example.test`, user_type: 'internal', is_inactive: false, hashed_password: 'test' });
-      await customer.table('user_invitations').insert({ tenant: actor.tenant, email: `pending-${other}@example.test`,
+      await customer.table('user_invitations').insert({ tenant: actor.tenant, email: `pending-${other}@example.test`, email_normalized: `pending-${other}@example.test`,
         first_name: 'Pending', last_name: 'User', token: randomUUID(), expires_at: new Date(Date.now() + 3600000) });
       const before = await customer.table('co_management_relationship_events').where('relationship_id', operation.relationship_id);
       await expect(acceptCoManagedRelationship(db, actor, acceptance)).rejects.toMatchObject({ code: 'CAPACITY_UNAVAILABLE' });
@@ -273,7 +276,7 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       expect(await tenantDb(db, operation.tenant).table('co_managed_allocations').first()).toMatchObject({ state: 'reserved' });
       expect(await customer.table('co_management_relationship_events').where('relationship_id', operation.relationship_id)).toEqual(before);
       await customer.table('users').where('user_id', other).delete();
-      await customer.table('user_invitations').insert({ tenant: actor.tenant, email: `PENDING-${other}@EXAMPLE.TEST`,
+      await customer.table('user_invitations').insert({ tenant: actor.tenant, email: `PENDING-${other}@EXAMPLE.TEST`, email_normalized: `pending-${other}@example.test`,
         first_name: 'Pending', last_name: 'User', token: randomUUID(), expires_at: new Date(Date.now() + 3600000) });
       await acceptCoManagedRelationship(db, actor, acceptance);
       expect(await customer.table('co_management_relationships').first()).toMatchObject({ state: 'active', revision: 2 });
@@ -287,8 +290,11 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       const writer = db.transaction(async trx => {
         await lockCoManagedSeatScope(trx, actor.tenant);
         const scoped = tenantDb(trx, actor.tenant);
-        for (let i = 0; i < 2; i++) await scoped.table('user_invitations').insert({ tenant: actor.tenant,
-          email: `${randomUUID()}@example.test`, first_name: 'Pending', last_name: 'User', token: randomUUID(), expires_at: new Date(Date.now() + 3600000) });
+        for (let i = 0; i < 2; i++) {
+          const email = `${randomUUID()}@example.test`;
+          await scoped.table('user_invitations').insert({ tenant: actor.tenant, email, email_normalized: email.toLowerCase(),
+            first_name: 'Pending', last_name: 'User', token: randomUUID(), expires_at: new Date(Date.now() + 3600000) });
+        }
         locked(); await releasePromise;
       });
       await lockedPromise;
@@ -323,6 +329,10 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       const row = await stored(operation);
       expect(row).toMatchObject({ state: 'pending_acceptance', step: 'administrator_invitation' });
       expect(await tenantDb(db, operation.customer_tenant).table('tenants').count({ n: '*' }).first()).toMatchObject({ n: '1' });
+      const invitation = await tenantDb(db, operation.customer_tenant).table('user_invitations')
+        .where('invitation_id', operation.administrator_invitation_id).first();
+      expect(invitation).toMatchObject({ email: operation.request.administrator.email,
+        email_normalized: operation.request.administrator.email.trim().toLowerCase() });
       expect(await invitations(operation)).toHaveLength(1);
       expect(row.invitation_sent_at).toBeNull(); // bootstrap never sends mail
       expect(order).toEqual([]); void original;
