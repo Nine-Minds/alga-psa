@@ -109,6 +109,9 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   const [scheduleCursor, setScheduleCursor] = useState<string | null>(null);
   const [scheduleHasMore, setScheduleHasMore] = useState(false);
   const [isLoadingMoreSchedules, setIsLoadingMoreSchedules] = useState(false);
+  const scheduleQueryGeneration = useRef(0);
+  const pageRequestInFlight = useRef(false);
+  const fetchEventsRef = useRef<() => Promise<void>>(async () => {});
   const [showEntryPopup, setShowEntryPopup] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<IScheduleEntry | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<any>(null);
@@ -492,7 +495,17 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     return Array.from(techIds);
   }, [focusedTechnicianId, comparisonTechnicianIds]);
 
+  const scheduleQueryKey = JSON.stringify([
+    date.getTime(), view, [...viewingTechnicianIds].sort(), [...selectedGroupCalendarIds].sort(),
+  ]);
+  const activeScheduleQueryKey = useRef(scheduleQueryKey);
+  activeScheduleQueryKey.current = scheduleQueryKey;
+
   const fetchEvents = useCallback(async () => {
+    const generation = ++scheduleQueryGeneration.current;
+    const queryKey = scheduleQueryKey;
+    pageRequestInFlight.current = false;
+    setIsLoadingMoreSchedules(false);
     if (viewingTechnicianIds.length === 0 && selectedGroupCalendarIds.length === 0) {
       setEvents([]);
       setScheduleCursor(null);
@@ -540,6 +553,8 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
       selectedGroupCalendarIds
     );
 
+    if (generation !== scheduleQueryGeneration.current || queryKey !== activeScheduleQueryKey.current) return;
+
     if (result.success) {
       console.log('Fetched entries:', {
         count: result.entries.length,
@@ -555,10 +570,13 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
       setScheduleHasMore(false);
     }
     setIsLoading(false);
-  }, [date, t, view, viewingTechnicianIds, selectedGroupCalendarIds]);
+  }, [date, t, view, viewingTechnicianIds, selectedGroupCalendarIds, scheduleQueryKey]);
+  fetchEventsRef.current = fetchEvents;
 
   const loadMoreSchedules = useCallback(async () => {
-    if (!scheduleHasMore || !scheduleCursor || isLoadingMoreSchedules) return;
+    if (!scheduleHasMore || !scheduleCursor || pageRequestInFlight.current) return;
+    const generation = scheduleQueryGeneration.current;
+    const queryKey = scheduleQueryKey;
     let rangeStart: Date, rangeEnd: Date;
     if (view === 'month') {
       const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -570,9 +588,11 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
       if (view === 'week') { rangeStart.setDate(date.getDate() - date.getDay()); rangeEnd.setDate(rangeStart.getDate() + 6); }
     }
     rangeStart.setHours(0, 0, 0, 0); rangeEnd.setHours(23, 59, 59, 999);
+    pageRequestInFlight.current = true;
     setIsLoadingMoreSchedules(true);
     try {
       const result = await getScheduleEntries(rangeStart, rangeEnd, viewingTechnicianIds, selectedGroupCalendarIds, scheduleCursor);
+      if (generation !== scheduleQueryGeneration.current || queryKey !== activeScheduleQueryKey.current) return;
       if (result.success) {
         setEvents(current => [...current, ...result.entries]);
         setScheduleCursor(result.nextCursor ?? null);
@@ -581,9 +601,12 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
         setError(result.error || t('calendar.errors.unknown', { defaultValue: 'An unknown error occurred' }));
       }
     } finally {
-      setIsLoadingMoreSchedules(false);
+      if (generation === scheduleQueryGeneration.current) {
+        pageRequestInFlight.current = false;
+        setIsLoadingMoreSchedules(false);
+      }
     }
-  }, [date, isLoadingMoreSchedules, scheduleCursor, scheduleHasMore, selectedGroupCalendarIds, t, view, viewingTechnicianIds]);
+  }, [date, scheduleCursor, scheduleHasMore, selectedGroupCalendarIds, t, view, viewingTechnicianIds, scheduleQueryKey]);
 
   useEffect(() => {
     fetchEvents();
@@ -895,7 +918,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
           if (!result.success) {
             console.error("Drop failed:", result.error);
           }
-          await fetchEvents();
+          await fetchEventsRef.current();
         }, 150);
         return;
       }

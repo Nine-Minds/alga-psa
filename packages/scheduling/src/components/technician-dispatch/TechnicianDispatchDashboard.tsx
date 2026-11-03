@@ -66,6 +66,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const [selectedPriority, setSelectedPriority] = useState('All');
   const [users, setUsers] = useState<Omit<IUser, 'tenant'>[]>([]); // Changed type here
   const [events, setEvents] = useState<Omit<IScheduleEntry, 'tenant'>[]>([]);
+  const [scheduleResultsTruncated, setScheduleResultsTruncated] = useState(false);
   const [workItems, setWorkItems] = useState<Omit<IExtendedWorkItem, "tenant">[]>([]);
   const [date, setDate] = useState(startOfDay(new Date()));
   
@@ -216,6 +217,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       const scheduleResult = await getScheduleEntries(start, end);
       if (scheduleResult.success && scheduleResult.entries) {
         setEvents(scheduleResult.entries);
+        setScheduleResultsTruncated(scheduleResult.hasMore === true);
       } else {
          const message = t('dashboard.errors.refreshScheduleEntries', { defaultValue: 'Failed to refresh schedule entries' });
          setError(message);
@@ -308,6 +310,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         const scheduleResult = await getScheduleEntries(start, end);
         if (scheduleResult.success && scheduleResult.entries) {
           setEvents(scheduleResult.entries);
+          setScheduleResultsTruncated(scheduleResult.hasMore === true);
         } else {
           setError(t('dashboard.errors.fetchScheduleEntries', { defaultValue: 'Failed to fetch schedule entries' }));
         }
@@ -962,6 +965,11 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           canEdit={canEdit ?? false}
         />
 
+        {scheduleResultsTruncated && (
+          <div role="status" className="mb-2 rounded border border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-[rgb(var(--color-text-700))]">
+            {t('dashboard.scheduleResultsTruncated', { defaultValue: 'Showing the first 500 schedule entries. Narrow the date range to see a smaller result set.' })}
+          </div>
+        )}
         <ScheduleViewPanel
           viewMode={viewMode}
           date={date}

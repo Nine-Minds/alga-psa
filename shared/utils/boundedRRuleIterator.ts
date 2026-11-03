@@ -78,26 +78,16 @@ export function iterateRRuleBounded(
     const hasCalendarFilters = [options.bymonth, options.bymonthday, options.bynmonthday, options.byweekno,
       options.byyearday, options.byeaster].some(value => Array.isArray(value) ? value.length > 0 : value != null);
     const weekdays = [...new Set<number>(Array.isArray(options.byweekday) ? options.byweekday : options.byweekday == null ? [] : [options.byweekday])];
-    const dailyCountSafe = freq === Frequency.DAILY && !hasCalendarFilters;
+    const dailyCountSafe = freq === Frequency.DAILY;
     const weeklyCountSafe = freq === Frequency.WEEKLY && !hasCalendarFilters &&
       (options.bysetpos == null || (Array.isArray(options.bysetpos) && options.bysetpos.length === 0));
     if (freq === Frequency.DAILY && (!count || dailyCountSafe)) {
       const days = Math.floor((utcMidnight(target.year, target.month, target.day) - utcMidnight(counterDate.year, counterDate.month, counterDate.day)) / 86400000);
       const periods = Math.max(0, Math.floor(days / interval));
-      const startWeekday = counterDate.getWeekday();
+      const start = DateTime.fromDate(dtstart);
+      const skippedMatches = count ? countDailyMatchesBefore(start, interval, periods, options) : 0;
       counterDate.addDaily(periods * interval);
-      if (count && dailyCountSafe) {
-        const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
-        const cycleLength = 7 / gcd(7, interval);
-        const cycleMatches = Array.from({ length: cycleLength }, (_, index) =>
-          weekdays.length === 0 || weekdays.includes((startWeekday + index * interval) % 7)).filter(Boolean).length;
-        const fullCycles = Math.floor(periods / cycleLength), remainder = periods % cycleLength;
-        let skippedMatches = fullCycles * cycleMatches;
-        for (let index = 0; index < remainder; index++) {
-          if (weekdays.length === 0 || weekdays.includes((startWeekday + index * interval) % 7)) skippedMatches++;
-        }
-        count = Math.max(0, count - skippedMatches);
-      }
+      if (count) count = Math.max(0, count - skippedMatches);
     } else if (freq === Frequency.WEEKLY && (!count || weeklyCountSafe)) {
       const weekStart = (value: DateTime) => {
         const back = ((value.getWeekday() - Number(options.wkst)) % 7 + 7) % 7;
@@ -168,6 +158,51 @@ export function iterateRRuleBounded(
     }
     return true;
   }
+}
+
+// A Gregorian calendar repeats every 400 years. Count daily rule matches over
+// that fixed cycle (at most 146,097 periods), then multiply complete cycles;
+// this preserves COUNT for calendar selectors without scanning old history.
+function countDailyMatchesBefore(
+  start: InstanceType<typeof DateTime>,
+  interval: number,
+  periods: number,
+  options: ParsedOptions
+): number {
+  if (periods <= 0) return 0;
+  const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
+  const cycleLength = 146097 / gcd(interval, 146097);
+  const fullCycles = Math.floor(periods / cycleLength);
+  const remainder = periods % cycleLength;
+  const ii = new Iterinfo(options);
+  const timeset = buildTimeset(options);
+  let matchesInCycle = 0;
+  let remainderMatches = 0;
+  const date = new DateTime(start.year, start.month, start.day, start.hour, start.minute, start.second, start.millisecond);
+  let rebuiltYear = -1;
+  let rebuiltMonth = -1;
+  const selectedTimesPerDay = notEmpty(options.bysetpos)
+    ? new Set(options.bysetpos.map(position => position > 0 ? position - 1 : timeset.length + position).filter(position => position >= 0 && position < timeset.length)).size
+    : timeset.length;
+  for (let index = 0; index < cycleLength; index++) {
+    if (date.year !== rebuiltYear || date.month !== rebuiltMonth) {
+      ii.rebuild(date.year, date.month);
+      rebuiltYear = date.year;
+      rebuiltMonth = date.month;
+    }
+    const dayDate = new Date(0);
+    dayDate.setUTCFullYear(date.year, date.month - 1, date.day);
+    dayDate.setUTCHours(0, 0, 0, 0);
+    const yearStart = new Date(0);
+    yearStart.setUTCFullYear(date.year, 0, 1);
+    yearStart.setUTCHours(0, 0, 0, 0);
+    const dayOrdinal = Math.floor((dayDate.getTime() - yearStart.getTime()) / 86400000);
+    const matched = isFiltered(ii, dayOrdinal, options) ? 0 : selectedTimesPerDay;
+    if (index < remainder) remainderMatches += matched;
+    matchesInCycle += matched;
+    date.addDaily(interval);
+  }
+  return fullCycles * matchesInCycle + remainderMatches;
 }
 
 function isFiltered(ii: InstanceType<typeof Iterinfo>, currentDay: number, options: ParsedOptions): boolean {

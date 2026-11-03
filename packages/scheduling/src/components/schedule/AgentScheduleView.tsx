@@ -84,6 +84,11 @@ interface AgentScheduleViewProps {
 const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItemContext }) => {
   const { t } = useTranslation('msp/schedule');
   const [events, setEvents] = useState<IScheduleEntry[]>([]);
+  const [scheduleCursor, setScheduleCursor] = useState<string | null>(null);
+  const [scheduleHasMore, setScheduleHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const pageInFlight = useRef(false);
+  const queryGeneration = useRef(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [date, setDate] = useState(new Date());
@@ -118,6 +123,9 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
     const end = moment(date).endOf(view === 'day' ? 'day' : view === 'week' ? 'week' : 'month').toDate();
     return { start, end };
   }, [date, view]);
+  const queryKey = JSON.stringify([agentId, dateRange.start.getTime(), dateRange.end.getTime(), refreshKey]);
+  const activeQueryKey = useRef(queryKey);
+  activeQueryKey.current = queryKey;
 
   useEffect(() => {
     if (viewer.error) setError(viewer.error);
@@ -125,9 +133,14 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
 
   useEffect(() => {
     let active = true;
+    queryGeneration.current++;
+    pageInFlight.current = false;
+    setLoadingMore(false);
     const loadEntries = async () => {
       setIsLoading(true);
       setError(null);
+      setScheduleCursor(null);
+      setScheduleHasMore(false);
 
       if (!currentUserId || !permissionsLoaded) {
         return;
@@ -146,6 +159,8 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
       if (!active) return;
       if (result.success) {
         setEvents(result.entries);
+        setScheduleCursor(result.nextCursor ?? null);
+        setScheduleHasMore(result.hasMore === true && !!result.nextCursor);
       } else {
         setEvents([]);
         setError(result.error);
@@ -157,8 +172,31 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
 
     return () => {
       active = false;
+      queryGeneration.current++;
     };
   }, [agentId, canViewAgent, currentUserId, permissionsLoaded, dateRange.end, dateRange.start, refreshKey, t]);
+
+  const loadMore = async () => {
+    if (!scheduleHasMore || !scheduleCursor || pageInFlight.current) return;
+    const generation = queryGeneration.current;
+    const requestQueryKey = queryKey;
+    pageInFlight.current = true;
+    setLoadingMore(true);
+    try {
+      const result = await getScheduleEntries(dateRange.start, dateRange.end, [agentId], undefined, scheduleCursor);
+      if (generation !== queryGeneration.current || requestQueryKey !== activeQueryKey.current) return;
+      if (result.success) {
+        setEvents(current => [...current, ...result.entries]);
+        setScheduleCursor(result.nextCursor ?? null);
+        setScheduleHasMore(result.hasMore === true && !!result.nextCursor);
+      } else setError(result.error);
+    } finally {
+      if (generation === queryGeneration.current) {
+        pageInFlight.current = false;
+        setLoadingMore(false);
+      }
+    }
+  };
 
   // First paint lands on this work item's first entry, or the working day
   // when it has none in view, so the dispatcher's target is at the top.
@@ -373,6 +411,13 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId, workItem
       <AgentScheduleDrawerStyles />
       {renderWorkItemHeader()}
       <div className="flex-1 min-h-0 relative" ref={calendarRef}>
+        {scheduleHasMore && (
+          <div className="absolute right-3 top-3 z-20">
+            <button id="agent-schedule-load-more" type="button" disabled={loadingMore || isLoading} onClick={loadMore} className="rounded border border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] px-3 py-1 text-sm">
+              {loadingMore ? t('agentView.loading', { defaultValue: 'Loading...' }) : t('calendar.loadMore', { defaultValue: 'Load more schedules' })}
+            </button>
+          </div>
+        )}
         {isLoading && (
           <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center z-10">
             {t('agentView.loading', { defaultValue: 'Loading...' })}

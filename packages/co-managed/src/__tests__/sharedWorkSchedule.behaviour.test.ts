@@ -255,6 +255,18 @@ describe('native calendar read work bounds', () => {
       Array.from({ length: 30 }, (_, day) => `2026-11-${String(day + 1).padStart(2, '0')}`));
   });
 
+  it.each([
+    ['month selector', { monthOfYear: 11 }, Array.from({ length: 30 }, (_, day) => `2026-11-${String(day + 1).padStart(2, '0')}`)],
+    ['day selector', { dayOfMonth: 1 }, ['2026-11-01']],
+  ])('seeks old daily COUNT masters with a %s using bounded calendar counting', async (_label, selector, expectedDays) => {
+    seedWorkspace();
+    const start = new Date('2018-01-01T09:00:00.000Z');
+    seedEntry({ is_recurring: true, scheduled_start: start, scheduled_end: new Date(start.getTime() + 30 * 60 * 1000),
+      recurrence_pattern: { frequency: 'daily', interval: 1, startDate: '2018-01-01T00:00:00.000Z', count: 100000, ...selector } });
+    const result = await readWindow('2026-11-01T00:00:00.000Z', '2026-12-01T00:00:00.000Z');
+    expect((result as any).entries.map((entry: any) => entry.scheduled_start.slice(0, 10))).toEqual(expectedDays);
+  });
+
   it('reads four old weekly series under the shared request work budget', async () => {
     seedWorkspace();
     for (let n = 0; n < 4; n++) {

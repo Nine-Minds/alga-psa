@@ -485,6 +485,8 @@ describe('bounded recurrence generation', () => {
     ['weekly COUNT beginning mid-week', makePattern({ frequency: 'weekly', startDate: new Date('2026-11-04T00:00:00Z'), daysOfWeek: [0, 3], count: 1 })],
     ['daily UNTIL', makePattern({ startDate: new Date('2020-01-01T00:00:00Z'), interval: 2, endDate: new Date('2026-11-20T00:00:00Z') })],
     ['daily COUNT ordinal', makePattern({ startDate: new Date('2020-01-01T00:00:00Z'), interval: 2, count: 2000 })],
+    ['daily COUNT with month selector', makePattern({ startDate: new Date('2018-01-01T00:00:00Z'), count: 100000, monthOfYear: 11 })],
+    ['daily COUNT with day selector', makePattern({ startDate: new Date('2018-01-01T00:00:00Z'), count: 100000, dayOfMonth: 1 })],
     ['exclusions', makePattern({ startDate: new Date('2020-01-01T00:00:00Z'), interval: 2, exceptions: [new Date('2026-11-03T00:00:00Z')] })],
     ['timezone boundary dates', makePattern({ frequency: 'weekly', startDate: new Date('2024-03-03T00:00:00Z'), daysOfWeek: [0] })],
   ])('matches rrule.between exactly for %s', (_name, pattern) => {

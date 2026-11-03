@@ -337,6 +337,9 @@ export function ActivityDetailViewerDrawer({
             scheduleResult.entries.find((e: any) => e.entry_id === activityId) : null;
 
           if (!scheduleEntry) {
+            if (scheduleResult.success && scheduleResult.hasMore) {
+              throw new Error(t('drawer.scheduleEntrySearchTruncated', { defaultValue: 'Schedule results were limited. Narrow the date range and try again.' }));
+            }
             throw new Error(t('drawer.scheduleEntryNotFound', { defaultValue: 'Schedule entry not found' }));
           }
 
