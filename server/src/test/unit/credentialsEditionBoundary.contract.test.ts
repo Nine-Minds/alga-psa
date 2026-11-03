@@ -52,6 +52,11 @@ const ALLOWED_FILES = new Set<string>([
   // Client merge: edition-optional table list (skipped when the table is absent in CE).
   'packages/clients/src/lib/clientMergePlan.ts',
   'packages/clients/src/lib/clientMergeEngine.test.ts',
+
+  // Behavioral test for an EE-only portable vault implementation. The test
+  // runs in the shared server unit suite but does not make this code reachable
+  // from CE runtime source.
+  'server/src/test/unit/product/coManagedPortableVault.test.ts',
 ]);
 
 // Shared lifecycle/admission catalogs describe the combined CE + EE schema.
