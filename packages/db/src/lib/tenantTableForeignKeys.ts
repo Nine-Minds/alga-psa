@@ -899,6 +899,7 @@ export const TENANT_TABLE_FOREIGN_KEYS: readonly TenantTableForeignKey[] = [
   { child: 'storage_providers', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'storage_providers_tenant_foreign' },
   { child: 'stripe_accounts', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'stripe_accounts_tenant_foreign' },
   { child: 'stripe_customers', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'stripe_customers_tenant_foreign' },
+  { child: 'stripe_customers', parent: 'stripe_customer_bindings', column: 'stripe_customer_external_id', deleteRule: 'NO ACTION', name: 'stripe_customers_binding_owner_fk' },
   { child: 'stripe_prices', parent: 'stripe_products', column: 'stripe_product_id', deleteRule: 'CASCADE', name: 'stripe_prices_tenant_stripe_product_id_foreign' },
   { child: 'stripe_prices', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'stripe_prices_tenant_foreign' },
   { child: 'stripe_products', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'stripe_products_tenant_foreign' },

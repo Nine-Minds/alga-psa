@@ -15,6 +15,7 @@ vi.mock('@/lib/db/db', () => ({ getConnection: async () => dbHolder.db }));
 
 import { StripeService } from '../../lib/stripe/StripeService';
 import { StripeOwnershipError } from '../../lib/stripe/stripeCustomerOwnership';
+import { tenantDeletionOrder } from '../../../../../packages/db/src/lib/tenantTableManifest';
 
 const require_ = createRequire(import.meta.url);
 const migration = require_('../../../migrations/20261031090000_create_stripe_customer_bindings.cjs');
@@ -130,6 +131,29 @@ beforeEach(async () => {
 });
 
 describe('migration: global uniqueness of stripe_customer_external_id', () => {
+  it('deletes customer mappings before bindings in manifest order and preserves other tenants', async () => {
+    await db('stripe_customer_bindings').insert([
+      { tenant: TENANT_A, stripe_customer_external_id: 'cus_delete_a' },
+      { tenant: TENANT_B, stripe_customer_external_id: 'cus_delete_b' },
+    ]);
+    await db('stripe_customers').insert([
+      { tenant: TENANT_A, stripe_customer_external_id: 'cus_delete_a', email: 'a' },
+      { tenant: TENANT_B, stripe_customer_external_id: 'cus_delete_b', email: 'b' },
+    ]);
+
+    const relevantTables = tenantDeletionOrder().filter((table) =>
+      table === 'stripe_customers' || table === 'stripe_customer_bindings');
+    expect(relevantTables).toEqual(['stripe_customers', 'stripe_customer_bindings']);
+    for (const table of relevantTables) await db(table).where({ tenant: TENANT_A }).del();
+
+    expect(await db('stripe_customers').where({ tenant: TENANT_A })).toHaveLength(0);
+    expect(await db('stripe_customer_bindings').where({ tenant: TENANT_A })).toHaveLength(0);
+    expect(await db('stripe_customers').where({ tenant: TENANT_B }).select('stripe_customer_external_id'))
+      .toEqual([{ stripe_customer_external_id: 'cus_delete_b' }]);
+    expect(await db('stripe_customer_bindings').where({ tenant: TENANT_B }).select('stripe_customer_external_id'))
+      .toEqual([{ stripe_customer_external_id: 'cus_delete_b' }]);
+  });
+
   it('pre-flight fails listing cross-tenant duplicates, changes nothing, and does not auto-resolve', async () => {
     await removeBindingEnforcement();
     await db('stripe_customers').insert([
