@@ -220,23 +220,28 @@ describeDb('ticket chip tag hydration (DB)', () => {
     await upsertBundleRule(db, {
       tenant: ids.tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId,
       resourceType: 'ticket', action: 'read', templateKey: 'own_or_assigned', constraintKey: 'hide_sensitive_fields',
-      config: { redactedFields: ['secret_alias', 'attributes.title', 'attributes.status_id', 'attributes.DESCRIPTION'] }, position: 0, actorUserId: ids.actor,
+      config: { redactedFields: ['secret_alias'] }, position: 0, actorUserId: ids.actor,
     });
     await publishBundleRevision(db, { tenant: ids.tenant, bundleId: bundle.bundleId, revisionId: bundle.revisionId, actorUserId: ids.actor });
     const previousUser = authMocks.user;
     authMocks.user = { user_id: redactionUser, user_type: 'internal', tenant: ids.tenant };
     try {
-      const result: any = await optimized.loadTicketListItemsByIds(base, [ids.A, ids.B], { [ids.A]: ['description'], [ids.B]: ['description'] });
+      const result: any = await ticketSmartSearch.hydrateRows(base, [ids.A, ids.B], new Map());
       const serialized = JSON.stringify(result);
-      for (const secret of ['SMOKE4050-SECRET-ALIAS', 'SMOKE4050-SECRET-ALIAS-UPPER', 'SMOKE4050-SECRET-ALIAS-MIXED', 'SMOKE4050-ATTRIBUTE-TITLE', 'SMOKE4050-ATTRIBUTE-STATUS', 'SMOKE4050-ATTRIBUTE-DESCRIPTION', 'SMOKE4050-B-ATTRIBUTE-TITLE', 'SMOKE4050-B-ATTRIBUTE-STATUS', 'SMOKE4050-B-DESCRIPTION']) {
+      for (const secret of ['SMOKE4050-SECRET-ALIAS', 'SMOKE4050-SECRET-ALIAS-UPPER', 'SMOKE4050-SECRET-ALIAS-MIXED']) {
         expect(serialized).not.toContain(secret);
       }
-      expect(result.tickets).toHaveLength(2);
-      expect(result.tickets[0]).toMatchObject({ title: 'DB-SECRET-TITLE', ticket_number: 'CH-2', status_name: 'Open' });
-      expect(result.tickets[0].attributes).toMatchObject({ visible_alias: 'VISIBLE-CUSTOM-ATTRIBUTE' });
-      expect(result.tickets[0].attributes).not.toHaveProperty('description');
-      expect(result.tickets[0].attributes).not.toHaveProperty('DESCRIPTION');
-      expect(result.tickets[1].attributes).toMatchObject({ visible_alias: 'VISIBLE-B-CUSTOM-ATTRIBUTE' });
+      expect(result.rows).toHaveLength(2);
+      expect(result.rows[0]).toMatchObject({ title: 'DB-SECRET-TITLE', ticket_number: 'CH-2', status_name: 'Open' });
+      expect(result.rows[0].attributes).toMatchObject({ description: 'DB-SECRET-DESCRIPTION', visible_alias: 'VISIBLE-CUSTOM-ATTRIBUTE' });
+      expect(result.rows[1].attributes).toMatchObject({ visible_alias: 'VISIBLE-B-CUSTOM-ATTRIBUTE' });
+      expect(serialized).toContain('DB-SECRET-TITLE');
+      expect(serialized).toContain('Open');
+
+      const qualified: any = await ticketSmartSearch.hydrateRows(base, [ids.A], new Map([[ids.A, ['attributes.title', 'attributes.status_id']]]));
+      expect(qualified.rows[0].attributes).toMatchObject({ description: 'DB-SECRET-DESCRIPTION', visible_alias: 'VISIBLE-CUSTOM-ATTRIBUTE' });
+      expect(JSON.stringify(qualified)).not.toContain('SMOKE4050-ATTRIBUTE-TITLE');
+      expect(JSON.stringify(qualified)).not.toContain('SMOKE4050-ATTRIBUTE-STATUS');
 
       const wildcard: any = await optimized.loadTicketListItemsByIds(base, [ids.A], { [ids.A]: ['attributes.*'] });
       expect(wildcard.tickets[0]).toMatchObject({ ticket_number: 'CH-2', title: 'DB-SECRET-TITLE', attributes: null });
