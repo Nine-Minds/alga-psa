@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer';
 import { fetchPublicBytes } from '@alga-psa/core/net/safeFetch';
+import { setSecureHtmlContent } from './secureHtmlPage';
 
 export interface RenderHtmlToPngOptions {
   width?: number;
@@ -61,7 +62,8 @@ async function replaceAsync(
   fn: (match: RegExpExecArray) => Promise<string>
 ): Promise<string> {
   const matches = [...input.matchAll(re)] as RegExpExecArray[];
-  const replacements = await Promise.all(matches.map(fn));
+  const replacements: string[] = [];
+  for (const match of matches) replacements.push(await fn(match));
   let out = '';
   let last = 0;
   matches.forEach((m, i) => {
@@ -112,15 +114,13 @@ export async function resolveRemoteAssets(
 
 /**
  * Renders HTML to a PNG using headless Chromium with the network closed:
- * JavaScript is disabled and every request except data:/blob:/about: is aborted, so
+ * JavaScript is disabled and every request except data: and about:blank is aborted, so
  * caller-controlled HTML cannot make the server issue requests (SSRF) or read responses back.
  * Remote images are fetched by us through safeFetch and inlined (see resolveRemoteAssets).
  */
 export async function renderHtmlToPng(html: string, opts: RenderHtmlToPngOptions = {}): Promise<Buffer> {
   const width = opts.width ?? 400;
   const height = opts.height ?? 300;
-  const safeHtml = await resolveRemoteAssets(html, opts);
-
   let browser;
   try {
     const puppeteerOptions: any = {
@@ -134,9 +134,7 @@ export async function renderHtmlToPng(html: string, opts: RenderHtmlToPngOptions
         '--disable-gpu',
         '--disable-features=IsolateOrigins',
         '--disable-site-isolation-trials',
-        // Defense in depth below request interception: route everything through a dead proxy
-        // (and do not bypass it for loopback) so no socket can be opened even by Chromium's own
-        // pre-connect logic for <iframe>/<object> navigations.
+        // Defense in depth: requests still fail closed if page interception fails.
         '--proxy-server=socks5://127.0.0.1:1',
         '--proxy-bypass-list=<-loopback>',
       ],
@@ -152,15 +150,8 @@ export async function renderHtmlToPng(html: string, opts: RenderHtmlToPngOptions
     await page.setViewport({ width, height });
 
     // Deny network by default.
-    await page.setJavaScriptEnabled(false);
-    await page.setRequestInterception(true);
-    page.on('request', (req) => {
-      const url = req.url();
-      if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('about:')) {
-        return void req.continue();
-      }
-      return void req.abort('blockedbyclient');
-    });
+    // Defense in depth: dead proxy closes sockets even if interception fails.
+    // Chromium is launched with the same proxy policy for both rendering paths.
 
     const styledHtml = `
         <style>
@@ -176,9 +167,12 @@ export async function renderHtmlToPng(html: string, opts: RenderHtmlToPngOptions
           .bn-editor table { width: 100%; border-collapse: collapse; }
           .bn-editor th, .bn-editor td { border: 1px solid #ddd; padding: 8px; }
         </style>
-        <div>${safeHtml}</div>
+        <div>${html}</div>
       `;
-    await page.setContent(styledHtml, { waitUntil: 'domcontentloaded' });
+    await setSecureHtmlContent(page, styledHtml, {
+      fetchAsset: opts.fetchAsset,
+      remoteAssets: opts.remoteAssets,
+    });
     const imageBuffer = await page.screenshot({ type: 'png' });
 
     return Buffer.from(imageBuffer);

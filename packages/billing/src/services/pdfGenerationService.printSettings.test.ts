@@ -13,7 +13,7 @@ vi.mock('./browserPoolService', () => ({
   },
 }));
 
-import { PDFGenerationService } from './pdfGenerationService';
+import { escapeHtmlText, PDFGenerationService } from './pdfGenerationService';
 
 const buildTemplateAst = ({
   paperPreset,
@@ -63,8 +63,15 @@ describe('billing PDFGenerationService print settings', () => {
     releaseBrowserMock.mockReset();
   });
 
+  it('escapes document metadata before it is interpolated into HTML', () => {
+    expect(escapeHtmlText(`name & <script>\"x\" 'y'`)).toBe('name &amp; &lt;script&gt;&quot;x&quot; &#39;y&#39;');
+  });
+
   it('passes resolved format and margin options to page.pdf(...)', async () => {
     const page = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
       setContent: vi.fn().mockResolvedValue(undefined),
       pdf: vi.fn().mockResolvedValue(Buffer.from('package-pdf')),
       close: vi.fn().mockResolvedValue(undefined),
@@ -86,6 +93,9 @@ describe('billing PDFGenerationService print settings', () => {
 
     await (service as any).generatePDFBuffer('<html><body>Invoice</body></html>', templateAst);
 
+    expect(page.setJavaScriptEnabled).toHaveBeenCalledWith(false);
+    expect(page.setRequestInterception).toHaveBeenCalledWith(true);
+    expect(page.setContent).toHaveBeenCalledWith('<html><body>Invoice</body></html>', { waitUntil: 'domcontentloaded' });
     expect(page.pdf).toHaveBeenCalledWith({
       format: 'Legal',
       printBackground: true,
@@ -100,6 +110,9 @@ describe('billing PDFGenerationService print settings', () => {
 
   it('generates a PDF successfully for a template with explicit paper preset and margin settings', async () => {
     const page = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
       setContent: vi.fn().mockResolvedValue(undefined),
       pdf: vi.fn().mockResolvedValue(Buffer.from('package-pdf')),
       close: vi.fn().mockResolvedValue(undefined),
@@ -143,6 +156,9 @@ describe('billing PDFGenerationService print settings', () => {
 
   it('preserves legacy templates without explicit print metadata by inferring fallback PDF options', async () => {
     const page = {
+      setJavaScriptEnabled: vi.fn().mockResolvedValue(undefined),
+      setRequestInterception: vi.fn().mockResolvedValue(undefined),
+      on: vi.fn(),
       setContent: vi.fn().mockResolvedValue(undefined),
       pdf: vi.fn().mockResolvedValue(Buffer.from('package-pdf')),
       close: vi.fn().mockResolvedValue(undefined),

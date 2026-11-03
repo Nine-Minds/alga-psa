@@ -1,5 +1,7 @@
 # Preview rendering must not be a network client
 
+> Scope extension: the same rendering boundary also covers document PDF downloads. `PDFGenerationService.generatePDFBuffer` consumes stored document HTML, so PNG and PDF rendering share one page policy.
+
 Card: `dad7e755-770e-5135-92e7-7eb1f8013edd` — Security: ssrf in `BaseDocumentHandler.renderHtmlToPng`
 Finding source: security review of PR #3993 (merge `dbf5978b864f`), review card `cfebdd89-cc5d-5695-8257-62dabbe7007e`
 Fingerprint: `packages/documents/src/handlers/BaseDocumentHandler.ts#renderHtmlToPng`
@@ -62,7 +64,7 @@ await page.setJavaScriptEnabled(false);            // no script-initiated reques
 await page.setRequestInterception(true);
 page.on('request', (req) => {
   const url = req.url();
-  if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('about:')) return req.continue();
+  if (url.startsWith('data:') || url === 'about:blank') return req.continue();
   return req.abort();
 });
 ```
@@ -144,6 +146,22 @@ New `packages/core/src/lib/net/safeFetch.test.ts`:
 
 Action-level regression: `getDocumentPreview` on a stored block document whose `block_data` contains a loopback
 image URL returns a preview while the loopback listener sees no connection.
+
+## `generatePDFBuffer` shared rendering boundary
+
+The document download route authorizes the PDF export, but its HTML body can still contain persisted
+BlockNote image URLs and its document name is metadata. Reuse the shared Chromium page policy for PDF
+rendering: disable JavaScript, intercept every request before `setContent`, deny by default, use a dead
+proxy as a browser-level fallback, resolve remote images only through `safeFetch`, and wait for
+`domcontentloaded`. Apply one aggregate remote-image budget per render. Escape the document name in both
+the visible heading and `<title>`. The policy belongs in the renderer; `convertBlockContentToHTML`
+validation remains defense in depth. Preserve print settings and close both page and pooled browser on
+render errors.
+
+Behavioral coverage must exercise blocked network requests, disabled scripts, metadata escaping, valid
+PDF/PNG output, and aggregate resource-budget exhaustion. The existing PNG regression suite covers actual
+Chromium output and loopback network denial; PDF tests verify `generatePDFBuffer` delegates to the same
+policy while retaining its print behavior.
 
 ## Deliberately not doing
 
