@@ -111,6 +111,7 @@ export class UserInvitationService {
         .insert({
           tenant,
           email: normalizedEmail,
+          email_normalized: normalizedEmail,
           first_name: params.firstName,
           last_name: params.lastName,
           role_id: params.roleId,
