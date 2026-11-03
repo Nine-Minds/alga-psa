@@ -16,12 +16,13 @@ export function buildHmrCaptureSource(bindingName = BINDING_NAME) {
     if (!NativeWebSocket) throw new Error('WebSocket is unavailable in this page');
     const capture = globalThis[${JSON.stringify(bindingName)}];
     if (typeof capture !== 'function') throw new Error('CDP capture binding is unavailable');
+    const observedSockets = new Map();
 
     class CapturedWebSocket extends NativeWebSocket {
       constructor(url, protocols) {
         super(url, protocols);
         const connectionUrl = String(url);
-        this.addEventListener('message', (event) => {
+        const observer = (event) => {
           if (typeof event.data !== 'string') return;
           let message;
           try { message = JSON.parse(event.data); } catch { return; }
@@ -34,12 +35,27 @@ export function buildHmrCaptureSource(bindingName = BINDING_NAME) {
             payload: message.data ?? null,
             rawMessage: event.data,
           }));
-        });
+        };
+        observedSockets.set(this, observer);
+        this.addEventListener('message', observer);
+        this.addEventListener('close', () => {
+          this.removeEventListener('message', observer);
+          observedSockets.delete(this);
+        }, { once: true });
       }
     }
 
     globalThis.WebSocket = CapturedWebSocket;
     globalThis.__codexNextHmrCaptureInstalled = true;
+    globalThis.__codexNextHmrCaptureCleanup = () => {
+      for (const [socket, observer] of observedSockets) {
+        socket.removeEventListener('message', observer);
+      }
+      observedSockets.clear();
+      if (globalThis.WebSocket === CapturedWebSocket) globalThis.WebSocket = NativeWebSocket;
+      delete globalThis.__codexNextHmrCaptureInstalled;
+      delete globalThis.__codexNextHmrCaptureCleanup;
+    };
   })();`;
 }
 
@@ -81,26 +97,76 @@ Options:
 Attach this before navigating/reloading the target. It does not start, stop, or navigate the app.`;
 }
 
-async function listPageTargets(cdpUrl) {
+async function listPageTargets(cdpUrl, fetchImpl = fetch) {
   const endpoint = new URL('/json/list', cdpUrl);
-  const response = await fetch(endpoint);
+  const response = await fetchImpl(endpoint);
   if (!response.ok) throw new Error(`DevTools target listing returned HTTP ${response.status}`);
   const targets = await response.json();
   return targets.filter((target) => target.type === 'page' && target.webSocketDebuggerUrl);
 }
 
-async function connectCdp(webSocketUrl) {
-  const socket = new WebSocket(webSocketUrl);
-  await once(socket, 'open');
+function waitForSocketOpen(socket, timeoutMs) {
+  return new Promise((resolvePromise, rejectPromise) => {
+    if (socket.readyState === 1) {
+      resolvePromise();
+      return;
+    }
+    const cleanup = () => {
+      clearTimeout(timer);
+      socket.removeEventListener('open', onOpen);
+      socket.removeEventListener('error', onError);
+      socket.removeEventListener('close', onClose);
+    };
+    const onOpen = () => { cleanup(); resolvePromise(); };
+    const onError = () => { cleanup(); rejectPromise(new Error('CDP WebSocket connection failed')); };
+    const onClose = () => { cleanup(); rejectPromise(new Error('CDP WebSocket closed before connecting')); };
+    const timer = setTimeout(() => {
+      cleanup();
+      rejectPromise(new Error(`CDP WebSocket connection timed out after ${timeoutMs} ms`));
+    }, timeoutMs);
+    socket.addEventListener('open', onOpen, { once: true });
+    socket.addEventListener('error', onError, { once: true });
+    socket.addEventListener('close', onClose, { once: true });
+  });
+}
+
+export async function connectCdp(
+  webSocketUrl,
+  { WebSocketImpl = WebSocket, connectTimeoutMs = 5_000, commandTimeoutMs = 5_000 } = {},
+) {
+  const socket = new WebSocketImpl(webSocketUrl);
+  try {
+    await waitForSocketOpen(socket, connectTimeoutMs);
+  } catch (error) {
+    socket.close();
+    throw error;
+  }
   let nextId = 0;
   const pending = new Map();
   const listeners = new Set();
+  let disconnectedError;
+  const rejectPending = (error) => {
+    if (disconnectedError) return;
+    disconnectedError = error;
+    for (const request of pending.values()) {
+      clearTimeout(request.timer);
+      request.reject(error);
+    }
+    pending.clear();
+  };
+  socket.addEventListener('close', () => {
+    rejectPending(new Error('CDP WebSocket disconnected'));
+  }, { once: true });
+  socket.addEventListener('error', () => {
+    rejectPending(new Error('CDP WebSocket errored'));
+  }, { once: true });
   socket.addEventListener('message', (event) => {
     let message;
     try { message = JSON.parse(event.data); } catch { return; }
     if (message.id && pending.has(message.id)) {
       const request = pending.get(message.id);
       pending.delete(message.id);
+      clearTimeout(request.timer);
       if (message.error) request.reject(new Error(message.error.message));
       else request.resolve(message.result);
       return;
@@ -110,19 +176,88 @@ async function connectCdp(webSocketUrl) {
   return {
     socket,
     onEvent(listener) { listeners.add(listener); },
+    isOpen() { return !disconnectedError && socket.readyState === 1; },
     send(method, params = {}) {
+      if (disconnectedError || socket.readyState !== 1) {
+        return Promise.reject(disconnectedError ?? new Error('CDP WebSocket is not open'));
+      }
       const id = ++nextId;
       const response = new Promise((resolvePromise, rejectPromise) => {
-        pending.set(id, { resolve: resolvePromise, reject: rejectPromise });
+        const timer = setTimeout(() => {
+          pending.delete(id);
+          rejectPromise(new Error(`CDP command ${method} timed out after ${commandTimeoutMs} ms`));
+        }, commandTimeoutMs);
+        pending.set(id, { resolve: resolvePromise, reject: rejectPromise, timer });
+        try {
+          socket.send(JSON.stringify({ id, method, params }));
+        } catch (error) {
+          clearTimeout(timer);
+          pending.delete(id);
+          rejectPromise(error);
+        }
       });
-      socket.send(JSON.stringify({ id, method, params }));
       return response;
     },
   };
 }
 
-export async function startCapture(options) {
-  const targets = await listPageTargets(options.cdpUrl);
+async function finishOutput(output, timeoutMs) {
+  if (output.closed || output.destroyed) return;
+  output.end();
+  if (output.closed) return;
+  if (timeoutMs <= 0) return;
+  await once(output, 'close').catch(() => undefined);
+}
+
+async function settleWithin(promise, timeoutMs) {
+  if (timeoutMs <= 0) return;
+  let timer;
+  try {
+    await Promise.race([
+      promise,
+      new Promise((resolvePromise) => { timer = setTimeout(resolvePromise, timeoutMs); }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function removeInjectedCapture(cdp, scriptIdentifier, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  if (!cdp.isOpen()) return;
+  if (scriptIdentifier) {
+    await settleWithin(
+      cdp.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: scriptIdentifier }).catch(() => undefined),
+      deadline - Date.now(),
+    );
+  }
+  if (cdp.isOpen()) {
+    await settleWithin(
+      cdp.send('Runtime.evaluate', { expression: 'globalThis.__codexNextHmrCaptureCleanup?.()' }).catch(() => undefined),
+      deadline - Date.now(),
+    );
+  }
+}
+
+export async function shutdownCapture({ cdp, output, scriptIdentifier, cleanupTimeoutMs = 1_000 }) {
+  const deadline = Date.now() + cleanupTimeoutMs;
+  try {
+    await removeInjectedCapture(cdp, scriptIdentifier, deadline - Date.now());
+  } finally {
+    cdp.socket.close();
+    await settleWithin(finishOutput(output, deadline - Date.now()), deadline - Date.now());
+    if (!output.closed && !output.destroyed) output.destroy();
+  }
+}
+
+export async function startCapture(options, {
+  fetchImpl = fetch,
+  WebSocketImpl = WebSocket,
+  connectTimeoutMs,
+  commandTimeoutMs,
+  outputFactory = createWriteStream,
+} = {}) {
+  const targets = await listPageTargets(options.cdpUrl, fetchImpl);
   const target = targets.find((candidate) =>
     options.targetId
       ? candidate.id === options.targetId
@@ -133,37 +268,47 @@ export async function startCapture(options) {
     throw new Error(`No matching page target. Available pages:\n${available || '(none)'}`);
   }
 
-  const output = createWriteStream(resolve(options.output), { flags: 'a' });
-  await once(output, 'open');
-  const cdp = await connectCdp(target.webSocketDebuggerUrl);
-  cdp.onEvent((message) => {
-    if (message.method !== 'Runtime.bindingCalled' || message.params.name !== BINDING_NAME) return;
-    try {
-      const record = JSON.parse(message.params.payload);
-      output.write(`${JSON.stringify({ targetId: target.id, ...record })}\n`);
-      process.stdout.write(`[next-hmr-capture] ${record.timestamp} reloadPage ${JSON.stringify(record.payload)}\n`);
-    } catch (error) {
-      process.stderr.write(`[next-hmr-capture] discarded malformed capture: ${String(error)}\n`);
-    }
+  const output = outputFactory(resolve(options.output), { flags: 'a' });
+  output.on('error', (error) => {
+    process.stderr.write(`[next-hmr-capture] output stream error: ${String(error)}\n`);
   });
+  let cdp;
+  let identifier;
+  try {
+    await once(output, 'open');
+    cdp = await connectCdp(target.webSocketDebuggerUrl, { WebSocketImpl, connectTimeoutMs, commandTimeoutMs });
+    cdp.onEvent((message) => {
+      if (message.method !== 'Runtime.bindingCalled' || message.params.name !== BINDING_NAME) return;
+      try {
+        const record = JSON.parse(message.params.payload);
+        output.write(`${JSON.stringify({ targetId: target.id, ...record })}\n`);
+        process.stdout.write(`[next-hmr-capture] ${record.timestamp} reloadPage ${JSON.stringify(record.payload)}\n`);
+      } catch (error) {
+        process.stderr.write(`[next-hmr-capture] discarded malformed capture: ${String(error)}\n`);
+      }
+    });
 
-  await cdp.send('Runtime.enable');
-  await cdp.send('Runtime.addBinding', { name: BINDING_NAME });
-  await cdp.send('Page.enable');
-  const { identifier } = await cdp.send('Page.addScriptToEvaluateOnNewDocument', {
-    source: buildHmrCaptureSource(),
-  });
-  await cdp.send('Runtime.evaluate', { expression: buildHmrCaptureSource() });
+    await cdp.send('Runtime.enable');
+    await cdp.send('Runtime.addBinding', { name: BINDING_NAME });
+    await cdp.send('Page.enable');
+    ({ identifier } = await cdp.send('Page.addScriptToEvaluateOnNewDocument', {
+      source: buildHmrCaptureSource(),
+    }));
+    await cdp.send('Runtime.evaluate', { expression: buildHmrCaptureSource() });
+  } catch (error) {
+    if (cdp) await removeInjectedCapture(cdp, identifier, 300);
+    if (cdp) cdp.socket.close();
+    if (!output.destroyed) output.destroy();
+    if (!output.closed) {
+      await settleWithin(once(output, 'close').catch(() => undefined), 500);
+    }
+    throw error;
+  }
 
   process.stdout.write(`[next-hmr-capture] attached to ${target.url} (${target.id})\n`);
   process.stdout.write(`[next-hmr-capture] writing JSONL to ${resolve(options.output)}; Ctrl-C to stop\n`);
 
-  const close = async () => {
-    await cdp.send('Page.removeScriptToEvaluateOnNewDocument', { identifier }).catch(() => undefined);
-    cdp.socket.close();
-    output.end();
-    await once(output, 'close').catch(() => undefined);
-  };
+  const close = () => shutdownCapture({ cdp, output, scriptIdentifier: identifier });
   return { close };
 }
 

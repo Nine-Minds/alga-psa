@@ -15,7 +15,7 @@ The browser's `beforeunload` stack identifies Next's `processMessage` reload bra
      --output /tmp/interactions-hmr-reloads.jsonl
    ```
 
-   `--target-id` can be used instead when the page target ID is known. The tool prints the selected URL and appends records to the output file. After it prints `attached`, navigate the tab manually to the existing app and reproduce the issue. Stop capture with Ctrl-C. The injected observer is removed from future document loads when the harness closes; it does not cancel or alter reload messages.
+   `--target-id` can be used instead when the page target ID is known. The tool prints the selected URL and appends records to the output file. After it prints `attached`, navigate the tab manually to the existing app and reproduce the issue. Stop capture with Ctrl-C. The harness removes the preload and current-page observers during shutdown; it does not cancel or alter reload messages.
 
 Each record contains the UTC timestamp, browser `performance.timeOrigin`, current page URL, full HMR connection URL, Next's `data` payload, raw JSON message, and CDP target ID. Treat the output as diagnostic material: HMR URLs can include session identifiers.
 
@@ -27,10 +27,18 @@ Next's development server does not consistently print the `RELOAD_PAGE.data` val
 
 ## Offline harness check
 
-Run the behavioral test without a browser or app server:
+Run the synthetic tests without an app server:
 
 ```sh
 node --test scripts/tests/capture-next-hmr-reloads.test.mjs
 ```
 
-The test dispatches synthetic WebSocket events and verifies the exact payload/URL/timestamps are captured before a later page message handler observes the reload, while non-reload messages continue to reach that handler.
+The tests dispatch synthetic WebSocket/CDP events, verify pending commands reject on disconnect, confirm shutdown and setup failure close their resources, and ensure non-reload messages continue to reach page handlers.
+
+To test the preload across full document navigations in a local Chrome fixture, run:
+
+```sh
+node --test scripts/tests/capture-next-hmr-reloads.browser.test.mjs
+```
+
+This starts only a temporary local HTTP/WebSocket fixture and a local Chrome process. It does not start the Alga app server.
