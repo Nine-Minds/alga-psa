@@ -8,17 +8,8 @@ import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 
 import {
-  resolveSearchAclPrincipal,
-  verifyResultVisibility,
-} from '@alga-psa/search/acl';
-import {
-  countSearchMatches,
-  runSearchTypeaheadQuery,
-} from '@alga-psa/search/query';
-import {
-  filterTypesByPermission,
   resolveAllowedTypes,
-  resolveClientAccess,
+  runAuthorizedSearchCandidates,
   runAppSearch,
   toSearchResultRow,
 } from '@alga-psa/search/runAppSearch';
@@ -129,19 +120,21 @@ export const searchAppTypeaheadAction = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
-    const { visibleHits, totalCount } = await withProjectSearchAccess(knex, tenant, user, () => coManagedSearchAuthentication(user, tenant), async (accessKnex, searchIndex) => {
+    const { visibleHits, groups } = await withProjectSearchAccess(knex, tenant, user, () => coManagedSearchAuthentication(user, tenant), async (accessKnex, searchIndex) => {
       const requestedTypes = resolveAllowedTypes(parsedInput.types);
-      const clientAccess = resolveClientAccess(user);
-      const acl = await resolveSearchAclPrincipal(accessKnex, user, clientAccess);
-      const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
-
-      // Typeahead and its count read the same admitted relation as the full search.
-      const [hits, count] = await Promise.all([
-        runSearchTypeaheadQuery({ knex: accessKnex, tenant, query: parsedInput.query, allowedTypes, cursor: parsedInput.cursor, acl, searchIndex }),
-        countSearchMatches({ knex: accessKnex, tenant, query: parsedInput.query, allowedTypes, acl, searchIndex }),
-      ]);
-      return { visibleHits: await verifyResultVisibility(accessKnex, acl, hits), totalCount: count };
+      return runAuthorizedSearchCandidates({
+        knex: accessKnex,
+        tenant,
+        user,
+        query: parsedInput.query,
+        requestedTypes,
+        pageSize: 5,
+        cursor: parsedInput.cursor,
+        includeSnippets: false,
+        searchIndex,
+      });
     });
+    const totalCount = Object.values(groups).reduce((sum, count) => sum + count, 0);
     const result: SearchTypeaheadResult = {
       results: visibleHits.slice(0, 5).map((hit) => ({
         ...toSearchResultRow(hit),

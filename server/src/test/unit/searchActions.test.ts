@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   createTenantKnex: vi.fn(),
+  withProjectSearchAccess: vi.fn(),
   resolveSearchAclPrincipal: vi.fn(),
   verifyResultVisibility: vi.fn(),
   runSearchQuery: vi.fn(),
@@ -11,6 +12,18 @@ const mocks = vi.hoisted(() => ({
   countSearchMatches: vi.fn(),
   countSearchMatchesByType: vi.fn(),
   encodeSearchCursor: vi.fn(),
+  decodeSearchCursor: vi.fn((cursor?: string) => {
+    if (!cursor) return undefined;
+    try {
+      const decoded = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+      if (typeof decoded?.score !== 'number' || typeof decoded?.updatedAt !== 'string' || typeof decoded?.objectId !== 'string') {
+        throw new Error('Invalid cursor payload');
+      }
+      return decoded;
+    } catch {
+      throw Object.assign(new Error('Search cursor is invalid'), { code: 'invalid_cursor' });
+    }
+  }),
   loggerInfo: vi.fn(),
 }));
 
@@ -20,6 +33,10 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
+}));
+
+vi.mock('@alga-psa/search/projectSearchAccess', () => ({
+  withProjectSearchAccess: (...args: any[]) => mocks.withProjectSearchAccess(...args),
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({
@@ -39,6 +56,7 @@ vi.mock('@alga-psa/search/query', () => ({
   countSearchMatches: mocks.countSearchMatches,
   countSearchMatchesByType: mocks.countSearchMatchesByType,
   encodeSearchCursor: mocks.encodeSearchCursor,
+  decodeSearchCursor: mocks.decodeSearchCursor,
 }));
 
 import {
@@ -54,6 +72,9 @@ import {
 describe('search actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.withProjectSearchAccess.mockImplementation(async (knex, _tenant, _user, _authenticate, work) => work(knex, undefined));
+    mocks.runSearchQuery.mockResolvedValue([]);
+    mocks.verifyResultVisibility.mockImplementation(async (_knex, _acl, rows) => rows);
     mocks.countSearchMatches.mockResolvedValue(0);
     mocks.countSearchMatchesByType.mockResolvedValue({});
   });
@@ -160,7 +181,7 @@ describe('search actions', () => {
 
     mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-rate-limit' });
     mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
-    mocks.runSearchTypeaheadQuery.mockResolvedValue([]);
+    mocks.runSearchQuery.mockResolvedValue([]);
     mocks.verifyResultVisibility.mockResolvedValue([]);
 
     for (let index = 0; index < 30; index += 1) {
@@ -575,9 +596,8 @@ describe('search actions', () => {
 
     mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
     mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
-    mocks.runSearchTypeaheadQuery.mockResolvedValue(hits);
+    mocks.runSearchQuery.mockResolvedValue(hits);
     mocks.verifyResultVisibility.mockResolvedValue(hits);
-    mocks.countSearchMatches.mockResolvedValue(6);
 
     const result = await searchAppTypeaheadAction(
       {
@@ -593,7 +613,11 @@ describe('search actions', () => {
     expect(result.results).toHaveLength(5);
     expect(result.totalCount).toBe(6);
     expect(result.results.every((row) => row.snippet === undefined)).toBe(true);
-    expect(mocks.runSearchTypeaheadQuery).toHaveBeenCalledWith(expect.objectContaining({ acl }));
+    expect(mocks.runSearchQuery).toHaveBeenCalledWith(expect.objectContaining({
+      acl,
+      limit: 100,
+      includeSnippets: false,
+    }));
   });
 
   it('T119 keeps mocked typeahead action overhead below 100ms', async () => {
@@ -608,7 +632,7 @@ describe('search actions', () => {
 
     mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
     mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
-    mocks.runSearchTypeaheadQuery.mockResolvedValue([]);
+    mocks.runSearchQuery.mockResolvedValue([]);
     mocks.verifyResultVisibility.mockResolvedValue([]);
 
     const startedAt = performance.now();
@@ -660,12 +684,33 @@ describe('search actions', () => {
     }).success).toBe(false);
   });
 
-  it('routes full search and typeahead through withProjectSearchAccess and passes the searchIndex on', () => {
-    const source = readFileSync(resolve(__dirname, '../../lib/actions/searchActions.ts'), 'utf8');
-    expect(source).toContain("from '@alga-psa/search/projectSearchAccess'");
-    expect(source.match(/withProjectSearchAccess\(knex, tenant, user/g)).toHaveLength(2);
-    expect(source).toContain('runAppSearch(accessKnex, tenant, user, parsedInput, searchIndex)');
-    expect(source).toMatch(/runSearchTypeaheadQuery\(\{[^}]*knex: accessKnex[^}]*searchIndex \}\)/);
-    expect(source).toMatch(/countSearchMatches\(\{[^}]*knex: accessKnex[^}]*searchIndex \}\)/);
+  it('passes the admitted search index through full search and typeahead candidate scans', async () => {
+    const knex = { tenant: 'knex' };
+    const searchIndex = { sql: '(SELECT * FROM admitted_index) s', bindings: [] };
+    const user = {
+      user_id: 'search-index-wiring-user',
+      tenant: 'tenant-search-index-wiring',
+      user_type: 'client',
+      clientId: 'client-1',
+    };
+    const acl = {
+      userId: user.user_id,
+      tenant: user.tenant,
+      permissions: ['client:read'],
+      isInternal: false,
+      clientAccess: { mode: 'scoped' as const, clientIds: ['client-1'] },
+    };
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: user.tenant });
+    mocks.withProjectSearchAccess.mockImplementation(async (...args: any[]) => args[4](args[0], searchIndex));
+    mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
+    mocks.runSearchQuery.mockResolvedValue([]);
+    mocks.verifyResultVisibility.mockResolvedValue([]);
+
+    await searchAppAction(user as any, { tenant: user.tenant }, { query: 'client' });
+    await searchAppTypeaheadAction(user as any, { tenant: user.tenant }, { query: 'client' });
+
+    expect(mocks.withProjectSearchAccess).toHaveBeenCalledTimes(2);
+    expect(mocks.runSearchQuery).toHaveBeenCalledTimes(2);
+    expect(mocks.runSearchQuery).toHaveBeenCalledWith(expect.objectContaining({ searchIndex }));
   });
 });

@@ -90,14 +90,34 @@ vi.mock('@alga-psa/search/projectSearchAccess', () => ({
 }));
 
 vi.mock('@alga-psa/search/query', () => ({
-  runSearchQuery: async () => state.candidateHits,
-  runSearchTypeaheadQuery: async () => state.candidateHits,
-  countSearchMatches: async () => state.candidateHits.length,
-  countSearchMatchesByType: async () => state.candidateHits.reduce((counts: Record<string, number>, hit) => {
-    counts[hit.type] = (counts[hit.type] ?? 0) + 1;
-    return counts;
-  }, {}),
-  encodeSearchCursor: () => 'next-cursor',
+  runSearchQuery: async ({ limit, cursor, sort }: { limit: number; cursor?: string; sort?: 'relevance' | 'recent' }) => {
+    const sorted = [...state.candidateHits].sort((left, right) => {
+      if (sort === 'recent') {
+        return right.updatedAt.getTime() - left.updatedAt.getTime() || left.id.localeCompare(right.id);
+      }
+      return right.score - left.score
+        || right.updatedAt.getTime() - left.updatedAt.getTime()
+        || left.id.localeCompare(right.id);
+    });
+    const decoded = cursor ? JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) : undefined;
+    const remaining = decoded
+      ? sorted.filter((candidate) => sort === 'recent'
+        ? candidate.updatedAt.toISOString() < decoded.updatedAt
+          || (candidate.updatedAt.toISOString() === decoded.updatedAt && candidate.id > decoded.objectId)
+        : candidate.score < decoded.score
+          || (candidate.score === decoded.score && candidate.updatedAt.toISOString() < decoded.updatedAt)
+          || (candidate.score === decoded.score && candidate.updatedAt.toISOString() === decoded.updatedAt && candidate.id > decoded.objectId))
+      : sorted;
+    return remaining.slice(0, limit);
+  },
+  decodeSearchCursor: (cursor?: string) => cursor
+    ? JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'))
+    : undefined,
+  encodeSearchCursor: (hit: any) => Buffer.from(JSON.stringify({
+    score: hit.score,
+    updatedAt: hit.updatedAt.toISOString(),
+    objectId: hit.id,
+  })).toString('base64url'),
 }));
 
 vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), warn: vi.fn() } }));
@@ -108,7 +128,7 @@ const tenant = 'tenant-current';
 const readableTicket = 'ticket-readable';
 const excludedTicket = 'ticket-excluded';
 
-function hit(type: 'ticket' | 'ticket_comment', id: string, title: string, parentId?: string) {
+function hit(type: 'ticket' | 'ticket_comment', id: string, title: string, parentId?: string, score = type === 'ticket' ? 1 : 0.9) {
   return {
     type,
     id,
@@ -117,7 +137,7 @@ function hit(type: 'ticket' | 'ticket_comment', id: string, title: string, paren
     subtitle: `${title} client and number metadata`,
     snippet: `${title} protected comment excerpt`,
     url: `/msp/tickets/${parentId ?? id}`,
-    score: 1,
+    score,
     updatedAt: new Date('2026-11-03T00:00:00.000Z'),
     metadata: { client: title, ticketNumber: title },
   };
@@ -193,6 +213,10 @@ describe('search record authorization regression', () => {
       expect(JSON.stringify(result)).not.toContain('Excluded private comment');
       expect(JSON.stringify(result)).not.toContain('Foreign tenant record');
     }
+    expect(full.totalCount).toBe(2);
+    expect(full.groups.ticket).toBe(1);
+    expect(full.groups.ticket_comment).toBe(1);
+    expect(typeahead.totalCount).toBe(2);
     expect(full.results[0]).toMatchObject({
       title: 'Emerald Remote Support',
       subtitle: 'Emerald Remote Support client and number metadata',
@@ -211,11 +235,60 @@ describe('search record authorization regression', () => {
     expect(full.results).toEqual([]);
     expect(typeahead.results).toEqual([]);
 
+    state.candidateHits = [hit('ticket', excludedTicket, 'Forbidden only result')];
+    [full, typeahead] = await runBothSearches();
+    expect(full.results).toEqual([]);
+    expect(full.totalCount).toBe(0);
+    expect(full.groups.ticket).toBe(0);
+    expect(typeahead.results).toEqual([]);
+    expect(typeahead.totalCount).toBe(0);
+
     state.candidateHits = [hit('ticket', readableTicket, 'Resolver failure candidate')];
     state.rejectBundleResolution = true;
     [full, typeahead] = await runBothSearches();
     expect(full.results).toEqual([]);
     expect(typeahead.results).toEqual([]);
+    expect(full.totalCount).toBe(0);
+    expect(full.groups.ticket).toBe(0);
+    expect(typeahead.totalCount).toBe(0);
+  });
+
+  it('returns later readable matches after an excluded first candidate window and counts only admitted rows', async () => {
+    state.candidateHits = Array.from({ length: 102 }, (_, index) =>
+      hit('ticket', `a-excluded-${String(index).padStart(3, '0')}`, `Excluded ${index}`, undefined, 1),
+    );
+    state.tickets.set(`${tenant}:z-readable-later`, ticket('z-readable-later', 'client-emerald'));
+    state.candidateHits.push(hit('ticket', 'z-readable-later', 'Readable after first window', undefined, 1));
+
+    const [full, typeahead] = await Promise.all([
+      searchAppAction({ query: 'support', limit: 10 }),
+      searchAppTypeaheadAction({ query: 'support' }),
+    ]);
+    expect(full.results.map(({ id }) => id)).toEqual(['z-readable-later']);
+    expect(full.totalCount).toBe(1);
+    expect(full.groups.ticket).toBe(1);
+    expect(typeahead.results.map(({ id }) => id)).toEqual(['z-readable-later']);
+    expect(typeahead.totalCount).toBe(1);
+  });
+
+  it('applies cursors to admitted results and preserves counts across readable pages', async () => {
+    state.candidateHits = [
+      hit('ticket', 'a-readable-first', 'Readable first', undefined, 1),
+      hit('ticket', 'b-excluded-middle', 'Excluded middle', undefined, 0.9),
+      hit('ticket', 'c-readable-next', 'Readable next', undefined, 0.8),
+    ];
+    state.tickets.set(`${tenant}:a-readable-first`, ticket('a-readable-first', 'client-emerald'));
+    state.tickets.set(`${tenant}:c-readable-next`, ticket('c-readable-next', 'client-emerald'));
+
+    const first = await searchAppAction({ query: 'support', limit: 1 });
+    expect(first.results.map(({ id }) => id)).toEqual(['a-readable-first']);
+    expect(first.totalCount).toBe(2);
+    expect(first.nextCursor).toBeTruthy();
+
+    const second = await searchAppAction({ query: 'support', limit: 1, cursor: first.nextCursor });
+    expect(second.results.map(({ id }) => id)).toEqual(['c-readable-next']);
+    expect(second.totalCount).toBe(2);
+    expect(second.nextCursor).toBeUndefined();
   });
 
   it('uses the authenticated tenant for ticket resolution and preserves client visibility policy', async () => {

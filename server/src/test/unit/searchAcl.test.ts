@@ -2,6 +2,78 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { aclPredicateSql, verifyResultVisibility } from '@alga-psa/search/acl';
 
+const authzState = vi.hoisted(() => ({
+  bundleRules: [{
+    id: 'rule-selected-client',
+    resource: 'ticket',
+    action: 'read',
+    templateKey: 'selected_clients',
+    selectedClientIds: ['client-1'],
+  }],
+}));
+
+vi.mock('@alga-psa/db', () => ({
+  tenantDb: (conn: any, tenant: string) => ({
+    table: (table: string) => {
+      const query = conn(table);
+      const alias = table.match(/\bas\s+(\w+)$/)?.[1] ?? table;
+      query.where?.(`${alias}.tenant`, tenant);
+      return query;
+    },
+    tenantJoin: (query: unknown) => query,
+  }),
+}));
+
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  resolveBundleNarrowingRulesForEvaluation: async () => authzState.bundleRules,
+}));
+
+vi.mock('@alga-psa/tickets/lib/clientPortalVisibility.server', () => ({
+  getClientContactVisibilityContext: async (_trx: unknown, _tenant: string, contactId: string) => ({
+    effectiveTicketScope: 'client',
+    ticketScope: 'client',
+    contactId,
+    clientId: 'client-1',
+    visibleBoardIds: null,
+    isClientAdmin: false,
+    visibilityGroupId: null,
+  }),
+}));
+
+const authIdentity = (userType: 'internal' | 'client' = 'internal') => ({
+  user_id: 'user-1',
+  user_type: userType,
+  tenant: 'tenant-1',
+  clientId: userType === 'client' ? 'client-1' : undefined,
+  contact_id: userType === 'client' ? 'contact-1' : undefined,
+  roles: [{ role_id: 'role-1' }],
+} as any);
+
+const authorizedTicketRow = (clientId = 'client-1') => ({
+  ticket_id: 'ticket-1',
+  assigned_to: null,
+  entered_by: null,
+  client_id: clientId,
+  board_id: 'board-1',
+  assigned_team_id: null,
+  contact_name_id: 'contact-1',
+  billing_profile_id: null,
+  attributes: {},
+});
+
+function emptyQuery() {
+  const query: any = {
+    select: () => query,
+    where: () => query,
+    whereNull: () => query,
+    first: () => query,
+    andWhere: () => query,
+    then: (resolve: (value: unknown[]) => unknown, reject: (reason?: unknown) => unknown) =>
+      Promise.resolve([]).then(resolve, reject),
+  };
+  return query;
+}
+
 describe('search ACL SQL predicate', () => {
   it('T105 filters required_permission through the user permission set', () => {
     const fragment = aclPredicateSql({
@@ -112,12 +184,13 @@ describe('search ACL SQL predicate', () => {
         tenant: 'tenant-1',
         permissions: ['ticket:read'],
         isInternal: true,
+        authorizationUser: authIdentity(),
       },
       [{ type: 'ticket', id: 'ticket-missing' }],
     );
 
     expect(query.where).toHaveBeenCalledWith('tickets.tenant', 'tenant-1');
-    expect(query.where).toHaveBeenCalledWith('ticket_id', 'ticket-missing');
+    expect(query.where).toHaveBeenCalledWith({ ticket_id: 'ticket-missing' });
     expect(visible).toEqual([]);
   });
 
@@ -145,6 +218,7 @@ describe('search ACL SQL predicate', () => {
           tenant: 'tenant-1',
           permissions: ['ticket:read'],
           isInternal: true,
+          authorizationUser: authIdentity(),
         },
         [{ type: 'ticket', id: 'ticket-missing' }],
       );
@@ -169,7 +243,7 @@ describe('search ACL SQL predicate', () => {
     const captureMessage = vi.fn();
     const previousSentry = (globalThis as { Sentry?: unknown }).Sentry;
     (globalThis as { Sentry?: unknown }).Sentry = { captureMessage };
-    const ticketRow = { ticket_id: 'ticket-1' };
+    const ticketRow = authorizedTicketRow();
     const query = {
       select: vi.fn(() => query),
       where: vi.fn(() => query),
@@ -180,7 +254,11 @@ describe('search ACL SQL predicate', () => {
         reject: (reason?: unknown) => unknown,
       ) => Promise.resolve(ticketRow).then(resolve, reject),
     };
-    const knex = vi.fn(() => query);
+    const knex = vi.fn((table: string) => {
+      if (table === 'tickets') return query;
+      if (table === 'team_members' || table === 'users') return emptyQuery();
+      throw new Error(`Unexpected table ${table}`);
+    });
     const rows = [{ type: 'ticket' as const, id: 'ticket-1' }];
 
     try {
@@ -191,6 +269,7 @@ describe('search ACL SQL predicate', () => {
           tenant: 'tenant-1',
           permissions: ['ticket:read'],
           isInternal: true,
+          authorizationUser: authIdentity(),
         },
         rows,
       )).resolves.toEqual(rows);
@@ -217,10 +296,11 @@ describe('search ACL SQL predicate', () => {
       return query;
     };
     const commentQuery = makeQuery({ ticket_id: 'ticket-1', is_internal: true });
-    const ticketQuery = makeQuery({ ticket_id: 'ticket-1' });
+    const ticketQuery = makeQuery(authorizedTicketRow());
     const knex = vi.fn((table: string) => {
       if (table === 'comments') return commentQuery;
       if (table === 'tickets') return ticketQuery;
+      if (table === 'team_members' || table === 'users') return emptyQuery();
       throw new Error(`Unexpected table ${table}`);
     });
     const rows = [{ type: 'ticket_comment' as const, id: 'comment-1' }];
@@ -232,12 +312,13 @@ describe('search ACL SQL predicate', () => {
         tenant: 'tenant-1',
         permissions: ['ticket:read'],
         isInternal: true,
+        authorizationUser: authIdentity(),
       },
       rows,
     )).resolves.toEqual(rows);
 
     expect(commentQuery.where).toHaveBeenCalledWith('comment_id', 'comment-1');
-    expect(ticketQuery.where).toHaveBeenCalledWith('ticket_id', 'ticket-1');
+    expect(ticketQuery.where).toHaveBeenCalledWith({ ticket_id: 'ticket-1' });
   });
 
   it('T166 drops internal ticket-comment hits for non-internal users', async () => {
@@ -286,12 +367,13 @@ describe('search ACL SQL predicate', () => {
       const knex: any = vi.fn((table: string) => {
         if (table === 'comments') return makeQuery(comment);
         if (table === 'comments as c') { commentCalls++; return makeQuery({ audience }); }
-        if (table === 'tickets') return makeQuery({ ticket_id: 'ticket-1' });
+        if (table === 'tickets') return makeQuery(authorizedTicketRow());
+        if (table === 'team_members' || table === 'users') return emptyQuery();
         throw new Error(`Unexpected table ${table}`);
       });
       knex.raw = vi.fn((sql: string) => ({ sql }));
       const result = await verifyResultVisibility(
-        knex, { userId: '00000000-0000-0000-0000-000000000002', tenant: 'tenant-1', permissions: ['ticket:read'], isInternal: false },
+        knex, { userId: '00000000-0000-0000-0000-000000000002', tenant: 'tenant-1', permissions: ['ticket:read'], isInternal: false, authorizationUser: authIdentity('client') },
         [{ type: 'ticket_comment' as const, id: 'comment-1' }],
       );
       return { result, commentCalls };
@@ -338,14 +420,16 @@ describe('search ACL SQL predicate', () => {
     tenant: 'tenant-1',
     permissions: ['ticket:read'],
     isInternal: true,
+    authorizationUser: authIdentity(),
   };
 
   it('C7 ticket_comment verifier denies soft-deleted and unpublished comments, allows published live ones', async () => {
-    const ticketQuery = fakeRowQuery({ ticket_id: 'ticket-1' });
+    const ticketQuery = fakeRowQuery(authorizedTicketRow());
     const run = (comment: Record<string, unknown>) => {
       const knex = vi.fn((table: string) => {
         if (table === 'comments') return fakeRowQuery({ comment_id: 'comment-1', ticket_id: 'ticket-1', is_internal: false, ...comment });
         if (table === 'tickets') return ticketQuery;
+        if (table === 'team_members' || table === 'users') return emptyQuery();
         throw new Error(`Unexpected table ${table}`);
       });
       return verifyResultVisibility(knex as never, internalUser, [{ type: 'ticket_comment' as const, id: 'comment-1' }]);
@@ -466,11 +550,12 @@ describe('search ACL SQL predicate', () => {
       };
       return query;
     };
-    const ticketQuery = makeQuery({ ticket_id: 'ticket-1' });
+    const ticketQuery = makeQuery(authorizedTicketRow());
     const documentQuery = makeQuery({ document_id: 'document-1' });
     const associationQuery = makeQuery({ entity_id: 'client-1' });
     const knex = vi.fn((table: string) => {
       if (table === 'tickets') return ticketQuery;
+      if (table === 'team_members' || table === 'users') return emptyQuery();
       if (table === 'documents') return documentQuery;
       if (table === 'document_associations') return associationQuery;
       throw new Error(`Unexpected table ${table}`);
@@ -489,6 +574,7 @@ describe('search ACL SQL predicate', () => {
           permissions: ['ticket:read', 'document:read'],
           isInternal: true,
           clientAccess: { mode: 'scoped', clientIds: ['client-1'] },
+          authorizationUser: authIdentity(),
         },
         rows,
       )).resolves.toEqual(rows);

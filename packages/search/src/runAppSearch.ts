@@ -10,9 +10,10 @@ import {
   type ClientAccess,
 } from './acl';
 import {
-  countSearchMatchesByType,
+  decodeSearchCursor,
   encodeSearchCursor,
   runSearchQuery,
+  type SearchIndexHit,
   type SearchQueryOptions,
 } from './query';
 import {
@@ -137,6 +138,91 @@ export function toSearchResultRow(
   };
 }
 
+const AUTHORIZED_SEARCH_SCAN_SIZE = 100;
+
+function isAfterSearchCursor(
+  hit: SearchIndexHit,
+  cursor: ReturnType<typeof decodeSearchCursor>,
+  sort: 'relevance' | 'recent',
+): boolean {
+  if (!cursor) return true;
+
+  const updatedAt = hit.updatedAt.toISOString();
+  if (sort === 'recent') {
+    return updatedAt < cursor.updatedAt
+      || (updatedAt === cursor.updatedAt && hit.id > cursor.objectId);
+  }
+
+  return hit.score < cursor.score
+    || (hit.score === cursor.score && updatedAt < cursor.updatedAt)
+    || (hit.score === cursor.score && updatedAt === cursor.updatedAt && hit.id > cursor.objectId);
+}
+
+/**
+ * Enumerate and authorize every candidate before deriving result rows, counts,
+ * or pagination. Applying authorization after SQL pagination lets denied rows
+ * consume a page and can leak through aggregate counts.
+ */
+export async function runAuthorizedSearchCandidates(input: {
+  knex: Knex;
+  tenant: string;
+  user: IUserWithRoles;
+  query: string;
+  requestedTypes: SearchObjectType[];
+  pageSize: number;
+  cursor?: string;
+  sort?: 'relevance' | 'recent';
+  includeSnippets?: boolean;
+  searchIndex?: SearchQueryOptions['searchIndex'];
+}): Promise<{ visibleHits: SearchIndexHit[]; groups: Record<SearchObjectType, number> }> {
+  const sort = input.sort ?? 'relevance';
+  // Validate at the action boundary even though this cursor is applied after
+  // authorization rather than to the raw candidate query.
+  const pageCursor = decodeSearchCursor(input.cursor);
+  const clientAccess = resolveClientAccess(input.user);
+  const acl = await resolveSearchAclPrincipal(input.knex, input.user, clientAccess);
+  const allowedTypes = filterTypesByPermission(input.requestedTypes, acl.permissions);
+  const visibleHits: SearchIndexHit[] = [];
+  const groups = emptyGroups();
+  let candidateCursor: string | undefined;
+
+  while (true) {
+    const batch = await runSearchQuery({
+      knex: input.knex,
+      tenant: input.tenant,
+      query: input.query,
+      allowedTypes,
+      limit: AUTHORIZED_SEARCH_SCAN_SIZE,
+      cursor: candidateCursor,
+      sort,
+      includeSnippets: input.includeSnippets,
+      acl,
+      searchIndex: input.searchIndex,
+    });
+    if (batch.length === 0) break;
+
+    const admitted = await verifyResultVisibility(input.knex, acl, batch);
+    for (const hit of admitted) {
+      groups[hit.type] += 1;
+      if (visibleHits.length <= input.pageSize && isAfterSearchCursor(hit, pageCursor, sort)) {
+        visibleHits.push(hit);
+      }
+    }
+
+    if (batch.length < AUTHORIZED_SEARCH_SCAN_SIZE) break;
+    const nextCursor = encodeSearchCursor(batch[batch.length - 1]);
+    if (nextCursor === candidateCursor) {
+      throw new Error('Search candidate scan did not advance its cursor');
+    }
+    candidateCursor = nextCursor;
+  }
+
+  return {
+    visibleHits,
+    groups,
+  };
+}
+
 /**
  * Core full-text search over `app_search_index`, shared by the in-app server
  * action (`searchAppAction`) and the public REST endpoint (`GET /api/v1/search`).
@@ -156,40 +242,20 @@ export async function runAppSearch(
 ): Promise<SearchAppResult> {
   const limit = normalizeLimit(input.limit);
   const requestedTypes = resolveAllowedTypes(input.types);
-  const clientAccess = resolveClientAccess(user);
-  const acl = await resolveSearchAclPrincipal(knex, user, clientAccess);
-  const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
-
-  const [hits, typeCounts] = await Promise.all([
-    runSearchQuery({
-      knex,
-      tenant,
-      query: input.query,
-      allowedTypes,
-      limit: limit + 1,
-      cursor: input.cursor,
-      sort: input.sort,
-      includeSnippets: true,
-      acl,
-      searchIndex,
-    }),
-    countSearchMatchesByType({
-      knex,
-      tenant,
-      query: input.query,
-      allowedTypes,
-      acl,
-      searchIndex,
-    }),
-  ]);
-
-  const visibleHits = await verifyResultVisibility(knex, acl, hits);
+  const { visibleHits, groups } = await runAuthorizedSearchCandidates({
+    knex,
+    tenant,
+    user,
+    query: input.query,
+    requestedTypes,
+    pageSize: limit,
+    cursor: input.cursor,
+    sort: input.sort,
+    includeSnippets: true,
+    searchIndex,
+  });
   const pageHits = visibleHits.slice(0, limit);
-  const groups = emptyGroups();
-  for (const [type, count] of Object.entries(typeCounts) as Array<[SearchObjectType, number]>) {
-    groups[type] = count;
-  }
-  const totalCount = Object.values(typeCounts).reduce((sum, value) => sum + value, 0);
+  const totalCount = Object.values(groups).reduce((sum, value) => sum + value, 0);
 
   const lastHit = pageHits[pageHits.length - 1];
   const result: SearchAppResult = {
