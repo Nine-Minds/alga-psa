@@ -6,6 +6,7 @@ import {
   attachNextUpgradeHandler,
   type NextUpgradeApp,
 } from './src/lib/http/upgradeHandling';
+import { installTurbopackHmrSubscriptionDiagnostics } from './hmr-subscription-diagnostics';
 
 // `import next from 'next'` trips Vitest's CJS interop ("Cannot set property
 // default of [object Module]"); the CJS export works identically under tsx.
@@ -73,6 +74,13 @@ export interface RunningDevServer {
 export async function startDevServer(
   options: DevServerOptions = {},
 ): Promise<RunningDevServer> {
+  if (process.env.NEXT_TURBOPACK_HMR_SUBSCRIPTION_DIAGNOSTICS === '1') {
+    const swc = require('next/dist/build/swc') as {
+      loadBindings: Parameters<typeof installTurbopackHmrSubscriptionDiagnostics>[0];
+    };
+    await installTurbopackHmrSubscriptionDiagnostics(swc.loadBindings);
+  }
+
   const port = options.port ?? Number.parseInt(process.env.PORT || '3000', 10);
   const hostname = options.hostname ?? process.env.HOSTNAME ?? '0.0.0.0';
   const dir = options.dir ?? import.meta.dirname;
