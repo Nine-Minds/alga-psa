@@ -2,18 +2,19 @@
 
 ## Revision and scope
 
-The implementation checks below ran against code revision `3d640890b7433ea8a09753b0aba06abc8ecccb09` on 2026-11-03. The branch contains the shared client-ticket projection, ownership-aware comment controls, document-association loading, and `ticket:update` authorization for own-comment deletion. No approved client-ticket plan was found under `docs/plans/` in this checkout.
+The implementation checks below ran against code revision `8d84e1fe7cab7afdcb06593420b33b1e7bcdbb92` on 2026-11-03. The branch contains the shared client-ticket projection, ownership-aware comment controls, document-association loading, and `ticket:update` authorization for own-comment deletion. No approved client-ticket plan was found under `docs/plans/` in this checkout.
 
 ## Local behavioral checks
 
-- `packages/client-portal`: `client-tickets.visibility.test.ts` and `TicketDetails.delete.test.tsx` — 37 tests passed. These exercise the allowlisted list/detail response projection and deletion UI behavior.
+- `packages/client-portal`: `client-tickets.visibility.test.ts` and `TicketDetails.delete.test.tsx` — 38 tests passed. These exercise the allowlisted list/detail/document response projections and deletion UI behavior.
 - `packages/tickets`: `CommentItem.portalOwnership.test.tsx` and `commentAuthorResolution.test.ts` — 17 tests passed.
+- A new `getClientTicketDocuments` action regression passed in `client-tickets.visibility.test.ts`. It supplies private user/contact/creator identity, storage path, and an unexpected field; only supported document fields remain. The action now selects explicit columns, takes `ticket_id` from tenant-scoped `document_associations`, inherits `client_id` from the authorized ticket row, filters readable attachments, then applies `projectClientTicketDocument`.
 - `npm run typecheck` passed in both `packages/client-portal` and `packages/tickets`.
 - `npx nx run @alga-psa/client-portal:build` and `npx nx run @alga-psa/tickets:build` passed, including dependency builds.
 - The direct client-portal `npm run build` script failed with `No input files`; its Nx build target is the configured workspace target.
 
 ## Live smoke status
 
-Not run. `alga-dev workflow-ensure-service --projectId=048ad00b-cb75-582b-a997-ac9f1fd2b202 --name=dev-server` failed with `state-unavailable: JetStream system temporarily unavailable`; retries returned `No hub command responder is available ... wf.cli.hub`. The supported service control path therefore could not establish the required board-managed server on port 3456. No standalone server was started.
+Not run. `alga-dev workflow-ensure-service --projectId=048ad00b-cb75-582b-a997-ac9f1fd2b202 --name=dev-server` recognized the existing board-managed registration (`card-service:048ad00b-cb75-582b-a997-ac9f1fd2b202:dev-server:3`, cwd this checkout's `server`, command `PORT=3456 npm run dev`) and queued its resume. The latest response reported 17 GB free, 9 GB reserved, an 8 GB floor, a 6 GB requirement, and queue position 34. Port 3456 remained closed. Subsequent state access also returned JetStream unavailable. No separate server was started and memory reservations were not bypassed.
 
 The requested Dorothy UI deletion, database row check, refreshed conversation, comment create/edit/denial checks, live action/RSC payload capture, and document visibility/read-only scenarios remain unverified. No fixtures were changed or removed. No conclusion about live behavior is claimed.
