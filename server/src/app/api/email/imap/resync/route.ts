@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { createTenantKnex } from '@/lib/db';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
+import { requireOutboundEmailAdmin } from '@alga-psa/integrations/actions/email-actions/mspOutboundEmailAccess';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +17,12 @@ export async function POST(request: NextRequest) {
       allowedProducts: ['psa', 'algadesk'],
     });
 
+    const { knex, tenant } = await createTenantKnex();
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) {
+      return NextResponse.json({ error: access.message }, { status: 403 });
+    }
+
     let body: { providerId?: unknown };
     try {
       body = await request.json();
@@ -28,7 +35,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'providerId is required' }, { status: 400 });
     }
 
-    const { knex, tenant } = await createTenantKnex();
     const db = tenantDb(knex, tenant);
     const provider = await db.table('email_providers')
       .where({ id: providerId, provider_type: 'imap' })

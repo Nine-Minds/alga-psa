@@ -236,6 +236,10 @@ const exactApiKeySkipPaths = [
   // x-api-key). The route re-checks the session itself, and
   // `/api/notifications` has no other route to exempt.
   '/api/notifications/live-token',
+  // IMAP maintenance routes authenticate the browser session in-handler and
+  // require ticket_settings:update. Header presence is never API-key auth.
+  '/api/email/imap/resync',
+  '/api/email/imap/reconnect',
 ];
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {

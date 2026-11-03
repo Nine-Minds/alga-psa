@@ -92,6 +92,12 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/email/refresh-watch')).toBe(true);
   });
 
+  it('lets IMAP maintenance routes authenticate their own browser session', () => {
+    expect(shouldSkipApiKeyAuth('/api/email/imap/resync')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/email/imap/reconnect')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/email/imap')).toBe(false);
+  });
+
   it('allows workflow run APIs to use MSP session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/workflow-runs')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/workflow-runs/run-123/audit/export')).toBe(true);
