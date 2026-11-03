@@ -1,4 +1,5 @@
 import { resolveCoManagedCommentStep, audienceRecipients } from '../../notifications/coManagedCommentDelivery';
+import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
 import { CO_MANAGED_LEDGER } from '@shared/lib/deliveryLedger';
 import { isInteractiveUserType } from '@alga-psa/types';
 
@@ -1919,6 +1920,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
       }
       for (const recipient of audienceRecipients(coManagedStep, { customerUsers, requester })) {
         const isSponsor = recipient.kind === 'msp_user' || recipient.kind === 'team';
+        const sponsorProjection = isSponsor ? projectCoManagedNotificationSnapshot(recipient.redactedFields ?? [], { commentPreview, authorName, ticketNumber: ticket.ticket_number }) : null;
+        const projectedAuthorName = sponsorProjection?.authorName ?? (isSponsor ? 'A team member' : authorName);
         // Sponsor users have their inbox in the MSP tenant, so their row (and its ledger claim) live there.
         const targetTenant = isSponsor ? coManagedStep.plan.sponsorTenant : tenantId;
         if (recipient.principalId === userId || (!isSponsor && notifiedUserIds.has(recipient.principalId))) continue;
@@ -1933,11 +1936,12 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
           type: 'info',
           category: 'tickets',
           link,
-          data: { authorName, ticketId: ticket.ticket_number || 'New Ticket', commentPreview },
+          data: { authorName: projectedAuthorName, ticketId: (sponsorProjection?.ticketNumber ?? ticket.ticket_number) || 'New Ticket', commentPreview: sponsorProjection?.conversationSuppressed ? '' : commentPreview },
           metadata: {
             ticketId: ticket.ticket_id,
-            ticketNumber: ticket.ticket_number || 'New Ticket',
-            comment: { id: comment?.id, text: commentPreview, author: authorName, ...(userId ? { authorId: userId } : {}), isInternal: false },
+            ticketNumber: (sponsorProjection?.ticketNumber ?? ticket.ticket_number) || 'New Ticket',
+            comment: { id: comment?.id, text: sponsorProjection?.conversationSuppressed ? '' : commentPreview, author: projectedAuthorName,
+              ...(userId && sponsorProjection?.authorName !== null ? { authorId: userId } : {}), isInternal: false },
           },
         }, { delivery: { ledger: CO_MANAGED_LEDGER, key: { delivery_kind: 'ticket_comment_in_app', source_id: comment!.id!, recipient: recipient.principalId }, extra: { recipient_kind: recipient.kind } } });
         if (!isSponsor) notifiedUserIds.add(recipient.principalId);

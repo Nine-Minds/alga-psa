@@ -1,6 +1,7 @@
 import logger from '@alga-psa/core/logger';
 import { CO_MANAGED_LEDGER, finishDelivery, claimDelivery } from '@shared/lib/deliveryLedger';
 import type { CoManagedDeliveryProvider, RoutingDelivery } from '@shared/lib/coManagedDelivery';
+import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
 import { getConnection } from '../db/db';
 import { sendEventEmail } from './sendEventEmail';
@@ -36,7 +37,14 @@ export async function deliverRoutingRow(d: RoutingDelivery): Promise<'sent' | 's
     }
     return 'skipped';
   }
-  const data = { actorName: d.actorName, actorOrganization: d.actorOrganization, ticketNumber: d.ticketNumber, ticketTitle: d.ticketTitle };
+  const projection = projectCoManagedNotificationSnapshot(d.recipient.redactedFields ?? [], {
+    ticketTitle: d.ticketTitle, ticketNumber: d.ticketNumber, actorName: d.actorName, actorOrganization: d.actorOrganization,
+  });
+  const ticketTitle = projection.ticketTitle ?? 'Shared ticket';
+  const ticketNumber = projection.ticketNumber ?? 'Shared ticket';
+  const actorName = projection.actorName ?? 'A team member';
+  const actorOrganization = projection.actorOrganization ?? '';
+  const data = { actorName, actorOrganization, ticketNumber, ticketTitle };
   const sponsorSide = d.recipient.kind === 'msp_user' || d.recipient.kind === 'team';
   const link = sponsorSide ? '/msp/co-managed' : `/msp/tickets/${d.ticketId}`;
   try {
@@ -49,9 +57,9 @@ export async function deliverRoutingRow(d: RoutingDelivery): Promise<'sent' | 's
     }
     await sendEventEmail({
       mailClass: 'ticket', tenantId: d.recipientTenant, to: d.recipient.email!, recipientUserId: d.recipient.principalId,
-      subject: HEADLINE[d.event](d), template: 'co-managed-routing', entityType: 'ticket', entityId: d.ticketId,
-      context: { routing: { headline: HEADLINE[d.event](d), body: `${d.actorName} (${d.actorOrganization}): ${d.ticketTitle}` },
-        ticket: { url: `${baseUrl()}${link}`, id: d.ticketNumber } },
+      subject: HEADLINE[d.event]({ ...d, actorName, ticketTitle, ticketNumber }), template: 'co-managed-routing', entityType: 'ticket', entityId: d.ticketId,
+      context: { routing: { headline: HEADLINE[d.event]({ ...d, actorName, ticketTitle, ticketNumber }), body: `${actorName}${actorOrganization ? ` (${actorOrganization})` : ''}: ${ticketTitle}` },
+        ticket: { url: `${baseUrl()}${link}`, id: ticketNumber } },
       delivery: { ledger: CO_MANAGED_LEDGER, key, extra: { recipient_kind: d.recipient.kind }, ledgerTenant: d.tenant },
     });
     return 'sent';

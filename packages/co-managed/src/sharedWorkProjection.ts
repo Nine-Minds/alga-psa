@@ -25,6 +25,35 @@ export const CO_MANAGED_ASSIGNEE_NAME_ALIASES = ['assignee_name', 'values.assign
 
 export const CO_MANAGED_PHASE_NAME_ALIASES = ['phase_name', 'values.phase_name', 'project_phases.phase_name', 'phaseName'] as const;
 
+const CO_MANAGED_NOTIFICATION_CONVERSATION_ALIASES = ['conversation', 'comments', 'comment', 'comment_content', 'comments.content', 'comment_threads', 'ticket_conversation'] as const;
+const CO_MANAGED_NOTIFICATION_SNAPSHOT_SPEC = {
+  ticketTitle: ['title', 'ticket_title', 'tickets.title', 'ticket.title', 'tickets'],
+  ticketNumber: ['ticket_number', 'tickets.ticket_number', 'tickets'],
+  requesterName: ['requester', 'requester_name', 'contact_name', 'contacts', 'tickets.contact_name_id'],
+  requesterEmail: ['requester', 'requester_email', 'contact_email', 'contacts', 'tickets.contact_name_id'],
+  requesterPhone: ['requester', 'requester_phone', 'contacts', 'tickets.contact_name_id'],
+  requesterContact: ['requester', 'requester_email', 'requester_phone', 'contacts', 'tickets.contact_name_id'],
+  requesterDetails: ['requester', 'requester_email', 'requester_phone', 'contacts', 'tickets.contact_name_id'],
+  assignedToName: ['assigned_to', 'assigned_to_name', 'tickets.assigned_to', 'tickets.assigned_team_id', ...CO_MANAGED_ASSIGNEE_NAME_ALIASES],
+  assignedToEmail: ['assignee', 'assigned_to', 'users', 'teams', 'tickets.assigned_to'],
+  assignedDetails: ['assignee', 'assigned_to', 'users', 'teams', 'tickets.assigned_to'],
+  clientName: CO_MANAGED_ORGANIZATION_NAME_ALIASES,
+  locationSummary: ['location', 'location_name', 'locations', ...CO_MANAGED_ORGANIZATION_NAME_ALIASES],
+  actorName: ['assigned_to', 'assigned_to_name', ...CO_MANAGED_ASSIGNEE_NAME_ALIASES],
+  authorName: ['author', 'author_name', 'users', 'assignee', 'assigned_to', 'comments.author'],
+  actorOrganization: CO_MANAGED_ORGANIZATION_NAME_ALIASES,
+  commentContent: CO_MANAGED_NOTIFICATION_CONVERSATION_ALIASES,
+  commentPreview: CO_MANAGED_NOTIFICATION_CONVERSATION_ALIASES,
+  commentHtml: CO_MANAGED_NOTIFICATION_CONVERSATION_ALIASES,
+  commentRawContent: CO_MANAGED_NOTIFICATION_CONVERSATION_ALIASES,
+} as const;
+
+/** Canonical notification projection shared by routing and comment delivery adapters. */
+export function projectCoManagedNotificationSnapshot<Row extends object>(redactedFields: readonly string[], row: Row) {
+  const snapshot = maskCoManagedSnapshot(redactedFields, row, CO_MANAGED_NOTIFICATION_SNAPSHOT_SPEC as any);
+  return { ...snapshot, conversationSuppressed: isCoManagedReadFieldHidden(redactedFields, CO_MANAGED_NOTIFICATION_CONVERSATION_ALIASES) };
+}
+
 /**
  * Where one searchable kind's fields come from: the aliases that hide the whole resource, its title, its description and the
  * identifiers that locate it. Project search masks from these, so search, queues and editors hide the same canonical value.

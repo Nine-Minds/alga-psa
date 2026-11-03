@@ -5,7 +5,7 @@ const h = vi.hoisted(() => ({
   data: {} as Record<string, any[]>,
   queries: [] as string[],
   authorize: vi.fn(async (_: any) => ({})),
-  sponsor: vi.fn(async () => undefined),
+  sponsor: vi.fn(async (_db: any, _user: any, _resource: any, deliver: any) => deliver({ redactedFields: ['tickets.title', 'comments.content'] })),
   rbac: vi.fn(async (..._a: any[]) => true),
 }));
 
@@ -51,7 +51,7 @@ function seed(over: { user?: any; assignedTo?: string | null } = {}) {
 const run = () => createCoManagedDeliveryProvider().pendingRouting(tenant);
 
 describe('pendingRouting re-authorizes customer recipients', () => {
-  beforeEach(() => { h.queries.length = 0; h.authorize.mockReset(); h.authorize.mockResolvedValue({}); h.sponsor.mockReset(); h.rbac.mockReset(); h.rbac.mockResolvedValue(true); });
+  beforeEach(() => { h.queries.length = 0; h.authorize.mockReset(); h.authorize.mockResolvedValue({}); h.sponsor.mockReset(); h.sponsor.mockImplementation(async (_db: any, _user: any, _resource: any, deliver: any) => deliver({ redactedFields: ['tickets.title', 'comments.content'] })); h.rbac.mockReset(); h.rbac.mockResolvedValue(true); });
 
   it('still-authorized assignee: both allowed, email goes to the CURRENT address, ledger key stays the stored recipient', async () => {
     seed();
@@ -107,14 +107,55 @@ describe('pendingRouting re-authorizes customer recipients', () => {
     expect(h.queries.filter((t) => t === 'users')).toHaveLength(1);
   });
 
-  it('sponsor rows keep the sponsor path: no customer user lookup, captured address, sponsor check only', async () => {
+  it('sponsor rows use the current active address and carry a fresh per-recipient projection while retaining the original ledger key', async () => {
     seed();
-    h.data.co_management_deliveries = [row('routing_email', 'msp@example.test', 'msp_user', 'm1')];
-    h.data.users = [];
+    h.data.co_management_deliveries = [row('routing_email', 'old-msp@example.test', 'msp_user', 'm1')];
+    h.data.users = [{ user_id: 'm1', email: ' Current-MSP@Example.test ', user_type: 'internal', is_inactive: false }];
     const [d] = await run();
     expect(h.sponsor).toHaveBeenCalledTimes(1);
     expect(h.authorize).not.toHaveBeenCalled();
-    expect(h.queries).not.toContain('users');
-    expect(d).toMatchObject({ allowed: true, recipient: { email: 'msp@example.test', principalId: 'm1' }, recipientTenant: 's1' });
+    expect(h.queries.filter((t) => t === 'users')).toHaveLength(1);
+    expect(d).toMatchObject({ allowed: true, ledgerRecipient: 'old-msp@example.test', recipient: { email: 'current-msp@example.test', principalId: 'm1', redactedFields: ['tickets.title', 'comments.content'] }, recipientTenant: 's1' });
+  });
+
+  it.each([
+    ['inactive', { is_inactive: true }],
+    ['missing address', { email: null }],
+  ])('sponsor %s identity cannot receive email', async (_case, userRow) => {
+    seed();
+    h.data.co_management_deliveries = [row('routing_email', 'old-msp@example.test', 'msp_user', 'm1')];
+    h.data.users = [{ user_id: 'm1', email: 'current@example.test', user_type: 'internal', is_inactive: false, ...userRow }];
+    const [d] = await run();
+    expect(d.allowed).toBe(false);
+    expect(d.ledgerRecipient).toBe('old-msp@example.test');
+  });
+
+  it('re-evaluates sponsor redactions independently on each recovery attempt', async () => {
+    seed();
+    h.data.co_management_deliveries = [row('routing_in_app', 'm1', 'msp_user', 'm1')];
+    h.data.users = [{ user_id: 'm1', email: 'msp@example.test', user_type: 'internal', is_inactive: false }];
+    h.sponsor.mockImplementationOnce(async (_db: any, _user: any, _resource: any, deliver: any) => deliver({ redactedFields: ['tickets.title'] }));
+    h.sponsor.mockImplementationOnce(async (_db: any, _user: any, _resource: any, deliver: any) => deliver({ redactedFields: ['comments.content'] }));
+    const [first] = await run();
+    const [retry] = await run();
+    expect(first.recipient.redactedFields).toEqual(['tickets.title']);
+    expect(retry.recipient.redactedFields).toEqual(['comments.content']);
+  });
+
+  it('projects different routing content for two sponsor principals on the same ticket', async () => {
+    seed();
+    h.data.co_management_deliveries = [
+      row('routing_in_app', 'm1', 'msp_user', 'm1'),
+      row('routing_in_app', 'm2', 'msp_user', 'm2'),
+    ];
+    h.data.users = [
+      { user_id: 'm1', email: 'one@example.test', user_type: 'internal', is_inactive: false },
+      { user_id: 'm2', email: 'two@example.test', user_type: 'internal', is_inactive: false },
+    ];
+    h.sponsor.mockImplementation(async (_db: any, input: any, _resource: any, deliver: any) => deliver({
+      redactedFields: input.userId === 'm1' ? ['tickets.title'] : ['assignee_name'],
+    }));
+    const deliveries = await run();
+    expect(deliveries.map((d) => d.recipient.redactedFields)).toEqual([['tickets.title'], ['assignee_name']]);
   });
 });

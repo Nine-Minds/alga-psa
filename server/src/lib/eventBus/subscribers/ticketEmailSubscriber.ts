@@ -12,6 +12,7 @@ import {
 } from '@alga-psa/event-schemas';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
 import { resolveCoManagedCommentStep, audienceRecipients, coManagedSendFields } from '../../notifications/coManagedCommentDelivery';
+import { projectCoManagedNotificationSnapshot } from '@alga-psa/co-managed/sharedWorkProjection';
 import { EventEmailRetryQueue } from '../../notifications/EventEmailRetryQueue';
 import logger from '@alga-psa/core/logger';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
@@ -3036,14 +3037,40 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         const internal = recipient.kind !== 'requester_contact';
         if (!shouldSendTicketCommentNotification(suppression, internal ? 'internal' : 'contact')) continue;
         const fields = coManagedSendFields(coManagedStep, 'ticket_comment_email', sourceId, recipient);
+        const sponsorRecipient = recipient.kind === 'msp_user' || recipient.kind === 'team';
+        const projectedContext = buildContext(internal ? internalUrl : portalUrl);
+        const projection = sponsorRecipient ? projectCoManagedNotificationSnapshot(recipient.redactedFields ?? [], {
+          ticketTitle: projectedContext.ticket.title,
+          ticketNumber: projectedContext.ticket.id,
+          requesterName: projectedContext.ticket.requesterName, requesterEmail: projectedContext.ticket.requesterEmail,
+          requesterPhone: projectedContext.ticket.requesterPhone, requesterContact: projectedContext.ticket.requesterContact,
+          requesterDetails: projectedContext.ticket.requesterDetails, assignedToName: projectedContext.ticket.assignedToName,
+          assignedToEmail: projectedContext.ticket.assignedToEmail, assignedDetails: projectedContext.ticket.assignedDetails,
+          clientName: projectedContext.ticket.clientName, locationSummary: projectedContext.ticket.locationSummary,
+          commentContent: projectedContext.comment.content, commentHtml: projectedContext.comment.html,
+          commentPreview: projectedContext.comment.text, commentRawContent: projectedContext.comment.rawContent,
+          authorName: projectedContext.comment.author,
+        }) : null;
+        if (projection) {
+          Object.assign(projectedContext.ticket, {
+            title: projection.ticketTitle ?? 'Shared ticket', id: projection.ticketNumber ?? 'Shared ticket', requesterName: projection.requesterName,
+            requesterEmail: projection.requesterEmail, requesterPhone: projection.requesterPhone,
+            requesterContact: projection.requesterContact, requesterDetails: projection.requesterDetails,
+            assignedToName: projection.assignedToName, assignedToEmail: projection.assignedToEmail,
+            assignedDetails: projection.assignedDetails, clientName: projection.clientName,
+            locationSummary: projection.locationSummary,
+          });
+          if (projection.authorName === null) projectedContext.comment.author = 'A team member';
+          if (projection.conversationSuppressed) Object.assign(projectedContext.comment, { content: '', html: '', text: '', plainText: '', rawContent: null });
+        }
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
           ...(recipient.kind === 'requester_contact' && primaryContactId ? { contactId: primaryContactId } : {}),
           to: recipient.email!,
-          subject: `New Comment on Ticket: ${ticket.title}`,
+          subject: `New Comment on Ticket: ${projectedContext.ticket.title}`,
           template: 'ticket-comment-added',
-          context: buildContext(internal ? internalUrl : portalUrl),
+          context: projectedContext,
           replyContext: {
             ticketId: ticket.ticket_id || payload.ticketId,
             commentId: payload.comment?.id,
@@ -3052,7 +3079,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             tokenMetadata: fields.tokenMetadata,
           },
           delivery: fields.delivery,
-          attachments: inlineCommentImageAttachments,
+          attachments: projection?.conversationSuppressed ? [] : inlineCommentImageAttachments,
           ...commentThreadHeaderParams,
         }, 'Ticket Comment Added', recipient.kind === 'customer_user' ? recipient.principalId : undefined);
       }

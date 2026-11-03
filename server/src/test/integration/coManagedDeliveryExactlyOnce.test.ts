@@ -148,9 +148,9 @@ describe('co-managed delivery: exactly once, query cost, kill switch (migrated P
       ledgerRecipient: kind === 'routing_email' ? 'old@example.test' : 'cu1',
       recipientTenant: tenant, ticketId: randomUUID(), ticketNumber: 'T-9', ticketTitle: 'Secret', actorName: 'Ann', actorOrganization: 'MSP', allowed: true, ...over,
     });
-    const seedStored = async (source: string) => {
+    const seedStored = async (source: string, recipientKind = 'customer_user') => {
       for (const [delivery_kind, recipient] of [['routing_in_app', 'cu1'], ['routing_email', 'old@example.test']])
-        await conn('co_management_deliveries').insert({ tenant, delivery_kind, source_id: source, recipient, recipient_kind: 'customer_user', state: 'pending', attempts: 0 });
+        await conn('co_management_deliveries').insert({ tenant, delivery_kind, source_id: source, recipient, recipient_kind: recipientKind, state: 'pending', attempts: 0 });
     };
 
     it('email goes to the CURRENT address and the ORIGINAL ledger row ends sent (not orphaned, not redelivered)', async () => {
@@ -161,6 +161,19 @@ describe('co-managed delivery: exactly once, query cost, kill switch (migrated P
       const rows = await rowsOf(source);
       expect(rows.map(r => r.recipient)).toEqual(['cu1', 'old@example.test']);
       expect(rows.find(r => r.delivery_kind === 'routing_email')).toMatchObject({ state: 'sent', attempts: 1 });
+    });
+
+    it('recovered sponsor email goes to the changed current address and closes the captured outbox row', async () => {
+      const source = randomUUID(); await seedStored(source, 'msp_user');
+      const row = customerRow(source, 'routing_email', {
+        recipient: { kind: 'msp_user', principalId: 'msp1', email: 'current@example.test' },
+        ledgerRecipient: 'old@example.test', recipientTenant: tenant,
+      });
+      expect(await deliverRoutingRow(row)).toBe('sent');
+      expect(await deliverRoutingRow(row)).toBe('sent');
+      expect(h.sent).toEqual(['email:current@example.test']);
+      const [stored] = await rowsOf(source).where({ delivery_kind: 'routing_email' });
+      expect(stored).toMatchObject({ recipient: 'old@example.test', state: 'sent', attempts: 1 });
     });
 
     it('disallowed rows finish as sent/recipient_not_permitted against the stored key; nothing is sent; in-app and email are independent', async () => {

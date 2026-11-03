@@ -3,6 +3,7 @@ import { maskCoManagedSnapshot, CO_MANAGED_TASK_NAME_ALIASES, CO_MANAGED_PROJECT
   CO_MANAGED_ORGANIZATION_NAME_ALIASES, CO_MANAGED_ORGANIZATION_NAME_FIELD_NAMES, CO_MANAGED_ASSIGNEE_NAME_ALIASES,
   CO_MANAGED_PROJECT_FIELD_SOURCE, CO_MANAGED_PHASE_FIELD_SOURCE, CO_MANAGED_TASK_FIELD_SOURCE } from '../sharedWorkProjection';
 import { isCoManagedReadFieldHidden } from '../sharedWorkRedaction';
+import { projectCoManagedNotificationSnapshot } from '../sharedWorkProjection';
 
 const row = { taskName: 'Fix', projectName: 'Rollout', revision: 3 };
 const spec = { taskName: CO_MANAGED_TASK_NAME_ALIASES, projectName: CO_MANAGED_PROJECT_NAME_ALIASES };
@@ -26,6 +27,22 @@ describe('maskCoManagedSnapshot', () => {
   it('does not mutate its input', () => {
     maskCoManagedSnapshot(['*'], row, spec);
     expect(row.taskName).toBe('Fix');
+  });
+});
+
+describe('projectCoManagedNotificationSnapshot', () => {
+  it('masks canonical email and routing fields and suppresses all conversation payload fields', () => {
+    const projected = projectCoManagedNotificationSnapshot(
+      ['tickets.title', 'ticket_number', 'requester_email', 'assigned_to', 'client_name', 'comments.content'],
+      { ticketTitle: 'Sensitive', ticketNumber: 'T-1', requesterEmail: 'person@example.test', assignedToName: 'Agent', clientName: 'Client',
+        commentContent: 'private body', commentPreview: 'private preview', commentHtml: '<p>private body</p>', commentRawContent: 'raw' });
+    expect(projected).toMatchObject({ ticketTitle: null, ticketNumber: null, requesterEmail: null, assignedToName: null, clientName: null,
+      commentContent: null, commentPreview: null, commentHtml: null, commentRawContent: null, conversationSuppressed: true });
+  });
+
+  it('keeps allowed fields and conversation content for an unrelated redaction', () => {
+    const projected = projectCoManagedNotificationSnapshot(['priority'], { ticketTitle: 'Visible', commentPreview: 'visible comment' });
+    expect(projected).toMatchObject({ ticketTitle: 'Visible', commentPreview: 'visible comment', conversationSuppressed: false });
   });
 });
 

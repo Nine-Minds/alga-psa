@@ -18,7 +18,10 @@ export interface DeliveryRecipient {
   principalId: string;
   /** Email address for email delivery; absent for in-app only recipients. */
   email?: string;
+  /** Ephemeral recipient-specific authorization projection; never stored in an outbox. */
+  redactedFields?: readonly string[];
 }
+
 
 export interface CommentDeliveryPlan {
   /** Audience of the comment's thread (L4a `resolveCommentAudience`), never `is_internal`. */
