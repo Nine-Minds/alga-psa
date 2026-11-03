@@ -19,6 +19,7 @@ import { isKnownMaintenanceJob } from '@alga-psa/jobs/fanout';
 import { executeJobHandler } from '../../jobs/jobHandlerRegistry';
 import { runWithTenant } from '@alga-psa/db';
 import { prepareMaintenanceRegistry, runMaintenanceJobExclusive } from '../../jobs/runMaintenanceJobExclusive';
+import { JobService } from '../../../services/job.service';
 
 let isRegistered = false;
 
@@ -67,9 +68,24 @@ async function handleMaintenanceJobRequested(event: unknown): Promise<void> {
       // execution because its handler imports src-consumed packages the worker
       // can't load. Run the registered handler directly for the tenant.
       logger.info(`[MaintenanceJobSubscriber] Running forwarded job '${jobName}' for tenant ${tenantId}`);
-      await runWithTenant(tenantId, () =>
-        executeJobHandler(jobName, jobId ?? `evt:${jobName}`, (data ?? {}) as any),
-      );
+      await runWithTenant(tenantId, async () => {
+        try {
+          await executeJobHandler(jobName, jobId ?? `evt:${jobName}`, (data ?? {}) as any);
+          if (jobId) {
+            const jobService = await JobService.create();
+            await jobService.recordForwardedJobOutcome(jobId, tenantId, { status: 'completed' });
+          }
+        } catch (error) {
+          if (jobId) {
+            const jobService = await JobService.create();
+            await jobService.recordForwardedJobOutcome(jobId, tenantId, {
+              status: 'failed',
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+          throw error;
+        }
+      });
       logger.info(`[MaintenanceJobSubscriber] Forwarded job '${jobName}' complete`);
     }
   } catch (error) {

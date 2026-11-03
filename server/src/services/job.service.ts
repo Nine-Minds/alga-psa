@@ -178,6 +178,39 @@ export class JobService {
     await this.updateJobRecord(jobId, updateData, updates.tenantId);
   }
 
+  /** Persist the server-side result of a Temporal-forwarded handler without
+   * changing workflow-owned job status. The Temporal workflow remains the
+   * authority for terminal/recurring status transitions. */
+  async recordForwardedJobOutcome(
+    jobId: string,
+    tenantId: string,
+    outcome: { status: 'completed' | 'failed'; error?: string },
+  ): Promise<void> {
+    await runWithTenant(tenantId, async () => {
+      const { knex } = await createTenantKnex();
+      const job = await tenantDb(knex, tenantId).table('jobs')
+        .where({ job_id: jobId })
+        .first('metadata');
+      if (!job) throw new Error(`Job with ID ${jobId} not found`);
+      const metadata = job.metadata
+        ? (typeof job.metadata === 'string' ? JSON.parse(job.metadata) : job.metadata)
+        : {};
+      await tenantDb(knex, tenantId).table('jobs')
+        .where({ job_id: jobId })
+        .update({
+          metadata: JSON.stringify({
+            ...metadata,
+            serverExecution: {
+              status: outcome.status,
+              ...(outcome.error ? { error: outcome.error } : {}),
+              completedAt: new Date().toISOString(),
+            },
+          }),
+          updated_at: new Date(),
+        });
+    });
+  }
+
   async getJobDetails(jobId: string, knexOrTrx?: Knex | Knex.Transaction): Promise<JobDetail[]> {
     const db = knexOrTrx || (await createTenantKnex()).knex;
     const job = await tenantDb(db, '__job_details_tenant_discovery__')

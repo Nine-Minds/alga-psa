@@ -5,6 +5,7 @@ const acquireLockMock = vi.fn();
 const releaseMock = vi.fn();
 const executeJobHandlerMock = vi.fn();
 const configureLauncherMock = vi.fn();
+const recordForwardedOutcomeMock = vi.fn();
 let subscribedHandler: ((event: unknown) => Promise<void>) | null = null;
 const registrationOrder: string[] = [];
 
@@ -34,6 +35,9 @@ vi.mock('../../../lib/jobs/registerServerMaintenanceJobs', () => ({
 vi.mock('../../../lib/jobs/registerCeMaintenanceJobs', () => ({ registerCeMaintenanceJobs: () => undefined }));
 vi.mock('../../../lib/jobs/jobHandlerRegistry', () => ({
   executeJobHandler: (...args: unknown[]) => executeJobHandlerMock(...args),
+}));
+vi.mock('../../../services/job.service', () => ({
+  JobService: { create: async () => ({ recordForwardedJobOutcome: (...args: unknown[]) => recordForwardedOutcomeMock(...args) }) },
 }));
 vi.mock('../../../lib/eventBus/subscribers/maintenanceJobLock', () => ({
   acquireMaintenanceJobLock: (...args: unknown[]) => acquireLockMock(...args),
@@ -68,6 +72,7 @@ describe('maintenanceJobSubscriber', () => {
     acquireLockMock.mockReset().mockResolvedValue({ release: releaseMock });
     releaseMock.mockReset().mockResolvedValue(undefined);
     executeJobHandlerMock.mockReset().mockResolvedValue(undefined);
+    recordForwardedOutcomeMock.mockReset().mockResolvedValue(undefined);
   });
 
   it('takes the job lock, runs the fan-out, and releases the lock', async () => {
@@ -112,6 +117,18 @@ describe('maintenanceJobSubscriber', () => {
     await subscribedHandler!(event('rmm-device-sync', { jobId: 'job-1', data: { tenantId: '11111111-1111-1111-1111-111111111111' } }));
     expect(acquireLockMock).not.toHaveBeenCalled();
     expect(executeJobHandlerMock).toHaveBeenCalledWith('rmm-device-sync', 'job-1', expect.any(Object));
+    expect(recordForwardedOutcomeMock).toHaveBeenCalledWith('job-1', expect.any(String), { status: 'completed' });
+  });
+
+  it('records a forwarded handler failure and rethrows it for observable failure', async () => {
+    executeJobHandlerMock.mockRejectedValueOnce(new Error('PDF generation failed'));
+    await expect(subscribedHandler!(event('invoice_email', {
+      jobId: 'invoice-job',
+      data: { tenantId: '11111111-1111-1111-1111-111111111111' },
+    }))).rejects.toThrow('PDF generation failed');
+    expect(recordForwardedOutcomeMock).toHaveBeenCalledWith('invoice-job', expect.any(String), {
+      status: 'failed', error: 'PDF generation failed',
+    });
   });
 
   it('runs a forwarded tick of a fan-out job for its tenant only', async () => {

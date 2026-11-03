@@ -20,6 +20,7 @@ export default defineConfig({
     'src/lib/jobs/jobHandlerRegistry.ts',
     'src/lib/jobRunnerAccessor.ts',
     'src/lib/jobSchedulerAccessor.ts',
+    'src/lib/forwardedJobCompletion.ts',
     'src/lib/jobService.ts',
     'src/types/job.ts',
     '!src/**/*.test.ts',

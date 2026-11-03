@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 
-const mocks = vi.hoisted(() => ({ publish: vi.fn() }));
+const mocks = vi.hoisted(() => ({ publish: vi.fn(), wait: vi.fn(async () => undefined) }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: mocks.publish, publishWorkflowEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
+vi.mock('@alga-psa/jobs/lib/forwardedJobCompletion', () => ({ waitForForwardedJobCompletion: mocks.wait }));
 vi.mock('@alga-psa/jobs/handlers/workflowScheduledRunHandlers', () => ({ workflowOneTimeScheduledRunHandler: vi.fn(), workflowRecurringScheduledRunHandler: vi.fn() }));
 vi.mock('@alga-psa/jobs/handlers/extensionScheduledInvocationHandler', () => ({ extensionScheduledInvocationHandler: vi.fn() }));
 vi.mock('@alga-psa/jobs/handlers/kbArticleImportHandler', () => ({ KB_ARTICLE_IMPORT_JOB: 'kb-article-import', kbArticleImportHandler: vi.fn() }));
@@ -25,6 +26,7 @@ describe('recover-comment-publications worker forwarding', () => {
     mocks.publish.mockResolvedValue(undefined);
     expect(await executeJobHandler({ jobName: 'recover-comment-publications', jobId, tenantId, jobExecutionId: randomUUID(), data: {} })).toEqual({ success: true });
     expect(mocks.publish).toHaveBeenCalledOnce();
+    expect(mocks.wait).toHaveBeenCalledOnce();
     const [event, options] = mocks.publish.mock.calls[0];
     expect(options).toEqual({ strict: true });
     const validated = EventSchemas.MAINTENANCE_JOB_REQUESTED.parse({ id: randomUUID(), timestamp: new Date().toISOString(), ...event });

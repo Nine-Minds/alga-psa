@@ -19,6 +19,7 @@ import {
   kbArticleImportHandler,
 } from '@alga-psa/jobs/handlers/kbArticleImportHandler';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { waitForForwardedJobCompletion } from '@alga-psa/jobs/lib/forwardedJobCompletion';
 
 // rmm/huntress poll + accounting-sync-cycle handlers import src-consumed vertical
 // packages (@alga-psa/integrations, @alga-psa/billing) the plain-Node-ESM worker
@@ -139,6 +140,30 @@ export async function initializeJobHandlersForWorker(): Promise<void> {
           data: data ?? {},
         },
       }, options);
+      // Redis publication is only a handoff. The server subscriber writes a
+      // serverExecution outcome after its registered handler has actually
+      // returned, so Temporal must wait for that durable completion signal.
+      await waitForForwardedJobCompletion(async () => runWithTenant(
+        (data?.tenantId as string) ?? SYSTEM_TENANT_ID,
+        async (trx) => {
+          const job = await tenantDb(trx, (data?.tenantId as string) ?? SYSTEM_TENANT_ID)
+            .table('jobs')
+            .where({ job_id: jobId })
+            .first<{ status: string; metadata?: Record<string, unknown> | string } | undefined>(
+              'status', 'metadata',
+            );
+          if (!job) return undefined;
+          const metadata = typeof job.metadata === 'string'
+            ? JSON.parse(job.metadata)
+            : job.metadata;
+          return {
+            status: metadata?.serverExecution?.status ?? 'queued',
+            error: typeof metadata?.serverExecution?.error === 'string'
+              ? metadata.serverExecution.error
+              : typeof metadata?.error === 'string' ? metadata.error : undefined,
+          };
+        },
+      ));
     };
   registerJobHandlerForActivities(RMM_ALERT_RECONCILIATION_JOB, forwardJobToServer(RMM_ALERT_RECONCILIATION_JOB));
   registerJobHandlerForActivities(HUNTRESS_INCIDENT_POLL_JOB, forwardJobToServer(HUNTRESS_INCIDENT_POLL_JOB));
