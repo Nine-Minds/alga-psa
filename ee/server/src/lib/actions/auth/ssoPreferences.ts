@@ -1,7 +1,7 @@
 "use server";
 
 import { getTenantSettings } from "@alga-psa/tenancy/actions";
-import { mergeTenantSettingsJson } from "@alga-psa/tenancy/server";
+import { mergeTenantSettingsJson } from "@alga-psa/tenancy/server/tenantSettingsStore";
 import { withAuth, hasPermission } from "@alga-psa/auth";
 import { TIER_FEATURES, isLicensedUserType } from "@alga-psa/types";
 import { createTenantKnex } from "@/lib/db";

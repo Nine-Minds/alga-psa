@@ -14,7 +14,7 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/tenancy/actions', () => ({
   getTenantSettings: async () => ({ settings: { unrelated: 'kept', sso: { autoLinkInternal: false } } }),
 }));
-vi.mock('@alga-psa/tenancy/server', () => ({ mergeTenantSettingsJson: state.merge }));
+vi.mock('@alga-psa/tenancy/server/tenantSettingsStore', () => ({ mergeTenantSettingsJson: state.merge }));
 vi.mock('@/lib/db', () => ({
   createTenantKnex: async () => ({
     knex: (table: string) => ({
