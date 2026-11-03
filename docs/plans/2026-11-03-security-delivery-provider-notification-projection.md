@@ -21,3 +21,11 @@ This spec records the mitigation already prescribed by the security review on PR
 ## Verification
 
 Behavioral regression coverage should exercise recipient-specific redactions, conversation suppression, fresh policy evaluation on retry, changed sponsor email recovery, unavailable or inactive sponsor identities, and correct completion of the original ledger row. Run the co-managed regression tests and typecheck/build applicable to changed packages.
+
+### Mitigation-round results (2026-11-03)
+
+- The workflow card records PSA ticket `alga-2026-0003078`, link state `linked-existing`, and ticket ID `cd315622-39a9-4ec1-92a6-62c7e2771dd2`. The exact `psa-ticket-linked` and `psa-ticket-id-recorded` template commands returned exit 0 when run with these current card values. The workflow board note records that these were rendered command reruns; its verifier cannot attach a new attempt to the earlier Link PSA Ticket step while Draft Implementation is current.
+- `packages/co-managed` focused regression tests passed: 52 tests across `admitReplyToken.test.ts`, `routingDeliveryReauth.test.ts`, and `sharedWorkProjection.test.ts`. Its `npm run typecheck` passed.
+- Four targeted cases in `server/src/test/integration/ticketCommentAttachmentsIntegration.test.ts` passed, covering delayed sponsor email retry after attachment reconstruction, independent per-recipient comment email, and routing email recovery. The persisted in-app payload suite `internalCommentMentionAudience.test.ts` passed all 6 tests.
+- Server typecheck passed with `NODE_OPTIONS=--max-old-space-size=12288`; the 8192 MiB attempt exhausted the heap.
+- No repository or workflow-template mechanism named `security-finding-resolved` was available on this card, so external finding acceptance remains unverified.
