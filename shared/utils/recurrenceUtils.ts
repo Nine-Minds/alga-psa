@@ -68,7 +68,7 @@ export interface GenerateOccurrencesOptions {
   includeMaster?: boolean;
   /** Maximum matching dates materialized for this recurrence. */
   maxOccurrences?: number;
-  /** Shared request budget charged for every candidate period, including periods with no matching dates. */
+  /** Shared request budget for candidate periods and historical calendar counting, including empty periods. */
   workBudget?: RecurrenceWorkBudget;
 }
 

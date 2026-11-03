@@ -63,10 +63,9 @@ export function iterateRRuleBounded(
   if (count === 0 || interval === 0) return result.getValue();
 
   const counterDate = DateTime.fromDate(dtstart);
-  // Daily and weekly rules can be sought while retaining COUNT when the
-  // occurrence ordinal has a closed form. Rules with additional calendar
-  // filters stay on the bounded iterator because counting those matches needs
-  // the full filter semantics.
+  // Seek daily/weekly periods in their original interval phase. COUNT needs
+  // the ordinal at that position: use weekday arithmetic or bounded calendar
+  // spans rather than replaying all preceding recurrence periods.
   if (seekDate && (freq === Frequency.DAILY || freq === Frequency.WEEKLY)) {
     const target = DateTime.fromDate(seekDate);
     const utcMidnight = (year: number, month: number, day: number) => {
@@ -78,14 +77,16 @@ export function iterateRRuleBounded(
     const hasCalendarFilters = [options.bymonth, options.bymonthday, options.bynmonthday, options.byweekno,
       options.byyearday, options.byeaster].some(value => Array.isArray(value) ? value.length > 0 : value != null);
     const weekdays = [...new Set<number>(Array.isArray(options.byweekday) ? options.byweekday : options.byweekday == null ? [] : [options.byweekday])];
-    const dailyCountSafe = freq === Frequency.DAILY;
+    const dailyCountSafe = freq === Frequency.DAILY &&
+      [options.byweekno, options.byyearday, options.bynweekday, options.bysetpos].every(value => !value?.length) &&
+      options.byeaster == null && buildTimeset(options).length === 1;
     const weeklyCountSafe = freq === Frequency.WEEKLY && !hasCalendarFilters &&
       (options.bysetpos == null || (Array.isArray(options.bysetpos) && options.bysetpos.length === 0));
     if (freq === Frequency.DAILY && (!count || dailyCountSafe)) {
       const days = Math.floor((utcMidnight(target.year, target.month, target.day) - utcMidnight(counterDate.year, counterDate.month, counterDate.day)) / 86400000);
       const periods = Math.max(0, Math.floor(days / interval));
       const start = DateTime.fromDate(dtstart);
-      const skippedMatches = count ? countDailyMatchesBefore(start, interval, periods, options) : 0;
+      const skippedMatches = count ? countDailyMatchesBefore(start, interval, periods, options, visitPeriod) : 0;
       counterDate.addDaily(periods * interval);
       if (count) count = Math.max(0, count - skippedMatches);
     } else if (freq === Frequency.WEEKLY && (!count || weeklyCountSafe)) {
@@ -160,49 +161,80 @@ export function iterateRRuleBounded(
   }
 }
 
-// A Gregorian calendar repeats every 400 years. Count daily rule matches over
-// that fixed cycle (at most 146,097 periods), then multiply complete cycles;
-// this preserves COUNT for calendar selectors without scanning old history.
+/** Count an arithmetic progression's weekday matches in at most seven steps. */
+function countWeekdayPeriods(startWeekday: number, interval: number, periods: number, weekdays: number[]): number {
+  if (periods <= 0) return 0;
+  if (!weekdays.length) return periods;
+  // A step divisible by seven always lands on the same weekday. Every other
+  // step visits all seven weekdays before repeating.
+  const cycle = interval % 7 === 0 ? 1 : 7;
+  const fullCycles = Math.floor(periods / cycle), remainder = periods % cycle;
+  let matches = 0;
+  for (let index = 0; index < cycle; index++) {
+    if (weekdays.includes((startWeekday + index * (interval % 7)) % 7)) {
+      matches += fullCycles + (index < remainder ? 1 : 0);
+    }
+  }
+  return matches;
+}
+
+// Calendar selectors partition the historical progression into month spans.
+// Count each span arithmetically, charging BEFORE examining it. There is no
+// uncharged per-day/Gregorian-cycle scan, even when COUNT expired long ago.
 function countDailyMatchesBefore(
   start: InstanceType<typeof DateTime>,
   interval: number,
   periods: number,
-  options: ParsedOptions
+  options: ParsedOptions,
+  visitPeriod: () => void
 ): number {
   if (periods <= 0) return 0;
-  const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
-  const cycleLength = 146097 / gcd(interval, 146097);
-  const fullCycles = Math.floor(periods / cycleLength);
-  const remainder = periods % cycleLength;
-  const ii = new Iterinfo(options);
-  const timeset = buildTimeset(options);
-  let matchesInCycle = 0;
-  let remainderMatches = 0;
-  const date = new DateTime(start.year, start.month, start.day, start.hour, start.minute, start.second, start.millisecond);
-  let rebuiltYear = -1;
-  let rebuiltMonth = -1;
-  const selectedTimesPerDay = notEmpty(options.bysetpos)
-    ? new Set(options.bysetpos.map(position => position > 0 ? position - 1 : timeset.length + position).filter(position => position >= 0 && position < timeset.length)).size
-    : timeset.length;
-  for (let index = 0; index < cycleLength; index++) {
-    if (date.year !== rebuiltYear || date.month !== rebuiltMonth) {
-      ii.rebuild(date.year, date.month);
-      rebuiltYear = date.year;
-      rebuiltMonth = date.month;
-    }
-    const dayDate = new Date(0);
-    dayDate.setUTCFullYear(date.year, date.month - 1, date.day);
-    dayDate.setUTCHours(0, 0, 0, 0);
-    const yearStart = new Date(0);
-    yearStart.setUTCFullYear(date.year, 0, 1);
-    yearStart.setUTCHours(0, 0, 0, 0);
-    const dayOrdinal = Math.floor((dayDate.getTime() - yearStart.getTime()) / 86400000);
-    const matched = isFiltered(ii, dayOrdinal, options) ? 0 : selectedTimesPerDay;
-    if (index < remainder) remainderMatches += matched;
-    matchesInCycle += matched;
-    date.addDaily(interval);
+  const weekdays = options.byweekday ?? [];
+  const startWeekday = start.getWeekday();
+  const hasMonthDays = notEmpty(options.bymonthday) || notEmpty(options.bynmonthday);
+  if (!notEmpty(options.bymonth) && !hasMonthDays) {
+    visitPeriod();
+    return countWeekdayPeriods(startWeekday, interval, periods, weekdays);
   }
-  return fullCycles * matchesInCycle + remainderMatches;
+  const ordinal = (year: number, month: number, day: number) => {
+    const date = new Date(0);
+    date.setUTCFullYear(year, month - 1, day);
+    date.setUTCHours(0, 0, 0, 0);
+    return date.getTime() / 86400000;
+  };
+  const startDay = ordinal(start.year, start.month, start.day);
+  const endDay = startDay + periods * interval;
+  const lastYear = new Date((endDay - 1) * 86400000).getUTCFullYear();
+  const months = Array.from({ length: 12 }, (_, index) => index + 1)
+    .filter(month => !notEmpty(options.bymonth) || options.bymonth.includes(month));
+  if (!months.length) return 0;
+  let matches = 0;
+  for (let year = start.year; year <= lastYear; year++) {
+    for (const month of months) {
+      const monthStart = ordinal(year, month, 1), monthEnd = ordinal(year, month + 1, 1);
+      if (monthEnd <= startDay || monthStart >= endDay) continue;
+      visitPeriod();
+      if (hasMonthDays) {
+        const daysInMonth = monthEnd - monthStart;
+        // At most 31 candidates, independent of the stored selector's size.
+        for (let day = 1; day <= daysInMonth; day++) {
+          if (!options.bymonthday.includes(day) && !options.bynmonthday.includes(day - daysInMonth - 1)) continue;
+          const delta = monthStart + day - 1 - startDay;
+          if (delta >= 0 && delta < periods * interval && delta % interval === 0 &&
+            (!weekdays.length || weekdays.includes((startWeekday + delta) % 7))) matches++;
+        }
+      } else {
+        const first = Math.max(0, Math.ceil((monthStart - startDay) / interval));
+        const end = Math.min(periods, Math.ceil((monthEnd - startDay) / interval));
+        matches += countWeekdayPeriods(startWeekday, interval, end, weekdays) -
+          countWeekdayPeriods(startWeekday, interval, first, weekdays);
+      }
+      // Once COUNT is exhausted, the exact remaining historical ordinal is
+      // irrelevant; the caller will return an empty series immediately.
+      if (matches >= options.count!) return matches;
+    }
+  }
+  return matches;
 }
 
 function isFiltered(ii: InstanceType<typeof Iterinfo>, currentDay: number, options: ParsedOptions): boolean {

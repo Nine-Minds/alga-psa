@@ -487,6 +487,12 @@ describe('bounded recurrence generation', () => {
     ['daily COUNT ordinal', makePattern({ startDate: new Date('2020-01-01T00:00:00Z'), interval: 2, count: 2000 })],
     ['daily COUNT with month selector', makePattern({ startDate: new Date('2018-01-01T00:00:00Z'), count: 100000, monthOfYear: 11 })],
     ['daily COUNT with day selector', makePattern({ startDate: new Date('2018-01-01T00:00:00Z'), count: 100000, dayOfMonth: 1 })],
+    ['daily COUNT ending within a selected month', makePattern({ startDate: new Date('2018-01-01T00:00:00Z'), count: 250, monthOfYear: 11 })],
+    ['daily COUNT exhausted before a selected day', makePattern({ startDate: new Date('2018-01-01T00:00:00Z'), count: 106, dayOfMonth: 1 })],
+    ['daily COUNT ending on a selected day', makePattern({ startDate: new Date('2018-01-01T00:00:00Z'), count: 107, dayOfMonth: 1 })],
+    ['negative month days and interval phase', makePattern({ startDate: new Date('2018-01-03T00:00:00Z'), count: 100000, interval: 3, dayOfMonth: -1 })],
+    ['calendar selectors with weekday and interval phase', makePattern({ startDate: new Date('2018-01-03T00:00:00Z'), count: 100000, interval: 3, monthOfYear: 11, daysOfWeek: [0, 2, 4] })],
+    ['leap-century COUNT exhaustion', makePattern({ startDate: new Date('1896-01-01T00:00:00Z'), count: 2, monthOfYear: 2, dayOfMonth: 29 })],
     ['exclusions', makePattern({ startDate: new Date('2020-01-01T00:00:00Z'), interval: 2, exceptions: [new Date('2026-11-03T00:00:00Z')] })],
     ['timezone boundary dates', makePattern({ frequency: 'weekly', startDate: new Date('2024-03-03T00:00:00Z'), daysOfWeek: [0] })],
   ])('matches rrule.between exactly for %s', (_name, pattern) => {
@@ -521,6 +527,28 @@ describe('bounded recurrence generation', () => {
     const days = dates.map(date => date.toISOString().slice(0, 10));
     expect(days).toEqual(expect.arrayContaining(['2026-11-01', '2026-11-02', '2026-11-03']));
     expect(budget.remaining).toBeGreaterThan(10);
+  });
+
+  it('charges calendar counting before discovering that an old COUNT series has ended', () => {
+    const entry = { ...endless, is_all_day: true, recurrence_pattern: makePattern({
+      startDate: new Date('2018-01-01T00:00:00Z'), dayOfMonth: 1, count: 10,
+    }) };
+    const workBudget = { remaining: 4 };
+    expect(() => generateOccurrences(entry, new Date('2026-11-01'), new Date('2026-11-02'), {
+      workBudget,
+    })).toThrow(RecurrenceOccurrenceLimitError);
+    expect(workBudget.remaining).toBe(0);
+  });
+
+  it('stops historical calendar counting as soon as COUNT is exhausted', () => {
+    const entry = { ...endless, is_all_day: true, recurrence_pattern: makePattern({
+      startDate: new Date('2018-01-01T00:00:00Z'), dayOfMonth: 1, count: 10,
+    }) };
+    const workBudget = { remaining: 10 };
+    expect(generateOccurrences(entry, new Date('2026-11-01'), new Date('2026-11-02'), {
+      workBudget,
+    })).toEqual([]);
+    expect(workBudget.remaining).toBe(0);
   });
 
   it('reads a 1970 daily master in a recent month with the default occurrence budget', () => {

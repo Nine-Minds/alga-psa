@@ -200,6 +200,17 @@ describe('native calendar read work bounds', () => {
     expect((result as any).entries.map((entry: any) => entry.entry_id)).toEqual([id(3000)]);
   });
 
+  it('reads a full candidate page of old daily COUNT series within the shared budget', async () => {
+    seedWorkspace();
+    for (let n = 0; n < 500; n++) seedEntry({ entry_id: id(6000 + n), is_recurring: true,
+      scheduled_start: new Date('2018-01-01T12:15:00.000Z'), scheduled_end: new Date('2018-01-01T12:45:00.000Z'),
+      recurrence_pattern: { frequency: 'daily', interval: 1, startDate: '2018-01-01T00:00:00.000Z', count: 100000 } });
+    const result = await readWindow('2026-11-03T12:00:00.000Z', '2026-11-03T13:00:00.000Z');
+    expect(result).toMatchObject({ handled: true, hasMore: false, nextCursor: null });
+    expect((result as any).entries).toHaveLength(500);
+    expect((result as any).entries.every((entry: any) => entry.scheduled_start === '2026-11-03T12:15:00.000Z')).toBe(true);
+  });
+
   it('continues the same calendar query after a page filtered to no authorized entries', async () => {
     seedWorkspace();
     gate.canUpdateOthers = false;
