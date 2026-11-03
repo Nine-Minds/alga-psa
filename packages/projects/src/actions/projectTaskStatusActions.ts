@@ -332,7 +332,7 @@ async function assertProjectReadAllowed(
     knex: trx,
   });
 
-  if (!decision.allowed) {
+  if (!decision.allowed || decision.redactedFields.length > 0) {
     throw new Error('Permission denied: Cannot read project');
   }
 }

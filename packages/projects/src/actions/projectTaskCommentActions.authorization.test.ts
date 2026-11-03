@@ -50,7 +50,10 @@ vi.mock('../models/project', () => ({
   default: { getById: async (_t: unknown, _n: string, id: string) => ({ project_id: id }) },
 }));
 vi.mock('../lib/projectReadAuthorization', () => ({
-  createProjectReadAuthorizer: async () => async (p: { project_id: string }) => state.allowedProjects.has(p.project_id),
+  createProjectReadAuthorizer: async () => async (p: { project_id: string }) => ({
+    allowed: state.allowedProjects.has(p.project_id),
+    redactedFields: [],
+  }),
 }));
 vi.mock('../lib/taskComments/taskCommentService', () => service);
 

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const state = vi.hoisted(() => ({
   perms: new Set<string>(),
   allowedProjects: new Set<string>(),
+  redactedProjects: new Set<string>(),
   tasks: [] as { task_id: string; project_id: string }[],
   comments: [] as { task_comment_id: string; task_id: string; user_id: string }[],
 }));
@@ -32,7 +33,10 @@ vi.mock('../../models/project', () => ({
   default: { getById: async (_t: unknown, _tenant: string, id: string) => ({ project_id: id }) },
 }));
 vi.mock('../projectReadAuthorization', () => ({
-  createProjectReadAuthorizer: async () => async (p: { project_id: string }) => state.allowedProjects.has(p.project_id),
+  createProjectReadAuthorizer: async () => async (p: { project_id: string }) => ({
+    allowed: state.allowedProjects.has(p.project_id),
+    redactedFields: state.redactedProjects.has(p.project_id) ? ['description'] : [],
+  }),
 }));
 
 import { withTaskCommentAccess, withTaskCommentBatchReadAccess } from './taskCommentAuthorization';
@@ -44,6 +48,7 @@ const run = (target: any, action: any, work = vi.fn(async () => 'ok')) =>
 beforeEach(() => {
   state.perms = new Set(['project_task:read', 'project_task:create', 'project_task:update', 'project_task:delete']);
   state.allowedProjects = new Set(['P1']);
+  state.redactedProjects = new Set();
   state.tasks = [{ task_id: 'T1', project_id: 'P1' }, { task_id: 'T2', project_id: 'P2' }];
   state.comments = [
     { task_comment_id: 'C1', task_id: 'T1', user_id: 'me' },
@@ -57,6 +62,15 @@ describe('withTaskCommentAccess', () => {
     const work = vi.fn(async () => 'bodies');
     await expect(run({ taskId: 'T2' }, 'read', work)).rejects.toThrow('Task not found');
     expect(work).not.toHaveBeenCalled();
+  });
+
+  it('redacted parent project fields deny child comment reads and writes before work runs', async () => {
+    state.redactedProjects.add('P1');
+    for (const [target, action] of [[{ taskId: 'T1' }, 'read'], [{ taskId: 'T1' }, 'create'], [{ taskCommentId: 'C1' }, 'update']] as const) {
+      const work = vi.fn(async () => 'should not run');
+      await expect(run(target, action, work)).rejects.toThrow('taskCommentId' in target ? 'Comment not found' : 'Task not found');
+      expect(work).not.toHaveBeenCalled();
+    }
   });
 
   it('probing: unknown and forbidden task ids produce the same error', async () => {

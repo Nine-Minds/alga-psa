@@ -37,7 +37,8 @@ export async function readAuthorizedStagingContainers(
   const authorize = await createProjectReadAuthorizer(knex, tenant, user);
   const allowed = new Set<string>();
   for (const project of projects) {
-    if (await authorize(project)) allowed.add(project.project_id);
+    const decision = await authorize(project);
+    if (decision.allowed && decision.redactedFields.length === 0) allowed.add(project.project_id);
   }
   return containers.map((c) => (c && allowed.has(c.project_id) ? c : null));
 }

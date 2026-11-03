@@ -93,7 +93,10 @@ function projectDecider(trx: Knex.Transaction, tenant: string, user: IUserWithRo
         const project = await ProjectModel.getById(trx, tenant, projectId);
         if (!project) return false;
         authorizer ??= createProjectReadAuthorizer(trx, tenant, user, recordAction);
-        return (await authorizer)(project);
+        const decision = await (await authorizer)(project);
+        // Parent-project redactions may hide the source fields behind comment bodies,
+        // author identities, or other child details. Fail closed for this child surface.
+        return decision.allowed && decision.redactedFields.length === 0;
       })();
       decisions.set(projectId, decision);
     }

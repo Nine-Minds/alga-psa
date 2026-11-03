@@ -513,7 +513,8 @@ async function assertProjectReadAllowedById(
     }
 
     const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user);
-    if (!await authorizeProjectRead(project)) {
+    const decision = await authorizeProjectRead(project);
+    if (!decision.allowed || decision.redactedFields.length > 0) {
         throw new Error('Permission denied: Cannot read project');
     }
 }
@@ -3440,7 +3441,8 @@ export const bulkAddTagsToTasks = withAuth(async (
         const cached = projectAllowed.get(projectId);
         if (cached !== undefined) return cached;
         const project = await ProjectModel.getById(trx, tenant, projectId);
-        const allowed = !!project && (await authorizeProjectRead(project));
+        const decision = project ? await authorizeProjectRead(project) : null;
+        const allowed = !!decision?.allowed && decision.redactedFields.length === 0;
         projectAllowed.set(projectId, allowed);
         return allowed;
       };

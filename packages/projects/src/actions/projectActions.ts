@@ -56,6 +56,7 @@ import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
 import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
+import { assertProjectFieldsWritable, authorizeAndProjectProjectRecords } from '../lib/projectReadProjection';
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
@@ -318,8 +319,7 @@ async function filterAuthorizedProjects<T extends Partial<IProject>>(
   }
 
   const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user);
-  const decisions = await Promise.all(projects.map((project) => authorizeProjectRead(project)));
-  return projects.filter((_, index) => decisions[index]);
+  return authorizeAndProjectProjectRecords(projects, authorizeProjectRead);
 }
 
 async function assertProjectReadAllowed(
@@ -334,8 +334,12 @@ async function assertProjectReadAllowed(
   }
 
   const authorizeProjectRead = await createProjectReadAuthorizer(trx, tenant, user);
-  if (!await authorizeProjectRead(project)) {
+  const decision = await authorizeProjectRead(project);
+  if (!decision.allowed) {
     throw new Error('Permission denied: Cannot read project');
+  }
+  if (decision.redactedFields.length > 0) {
+    throw new Error('Permission denied: Project fields are redacted');
   }
 
   return project;
@@ -393,8 +397,9 @@ export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]
         if (denied) return denied;
 
         const projects = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            const rows = await ProjectModel.getAll(trx, tenant, true);
-            return await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);
+            const rows = await ProjectModel.getAllRecords(trx, tenant, true);
+            const projected = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);
+            return ProjectModel.enrichDisplayData(trx, tenant, projected);
         });
 
         return withAssignedUsers(projects);
@@ -488,8 +493,9 @@ export const loadProjectListItemsByIds = withAuth(async (
     }
 
     return withTransaction(knex, async (trx: Knex.Transaction) => {
-        const rows = await ProjectModel.getByIds(trx, tenant, requestedIds);
-        const authorized = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);
+        const rows = await ProjectModel.getByIdsRecords(trx, tenant, requestedIds);
+        const projected = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);
+        const authorized = await ProjectModel.enrichDisplayData(trx, tenant, projected);
         const byId = new Map(authorized.map((project) => [project.project_id, project] as const));
         const ordered = requestedIds
             .map((projectId) => byId.get(projectId))
@@ -1356,13 +1362,14 @@ export const getProject = withAuth(async (user, { tenant }, projectId: string): 
         if (denied) return denied;
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            const project = await ProjectModel.getById(trx, tenant, projectId);
+            const project = await ProjectModel.getByIdRecord(trx, tenant, projectId);
             if (!project) {
                 return null;
             }
 
-            const authorizedProjects = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, [project]);
-            return authorizedProjects[0] ?? null;
+            const projected = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, [project]);
+            const enriched = await ProjectModel.enrichDisplayData(trx, tenant, projected);
+            return enriched[0] ?? null;
         });
     } catch (error) {
         console.error('Error fetching project:', error);
@@ -1687,6 +1694,12 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
         if (denied) return denied;
 
         const { beforeProject, updatedProject, billingCloseResult, activeStagingClaims } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            const currentProject = await ProjectModel.getById(trx, tenant, projectId);
+            if (!currentProject) throw new Error('Project not found');
+            const authorizeProjectUpdate = await createProjectReadAuthorizer(trx, tenant, user as IUserWithRoles, 'update');
+            const updateDecision = await authorizeProjectUpdate(currentProject);
+            if (!updateDecision.allowed) throw new Error('Permission denied: Cannot update project');
+            assertProjectFieldsWritable(updateDecision.redactedFields, Object.keys(validatedData));
             const beforeProject = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
             let project = await ProjectModel.update(trx, tenant, projectId, validatedData);
 

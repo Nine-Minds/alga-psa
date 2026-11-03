@@ -23,6 +23,7 @@ import {
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import type { ProjectReadDecision } from './projectReadProjection';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -104,7 +105,7 @@ export async function createProjectReadAuthorizer(
   tenant: string,
   user: IUserWithRoles,
   action: 'read' | 'update' = 'read'
-): Promise<(project: ProjectAuthorizationFields) => Promise<boolean>> {
+): Promise<(project: ProjectAuthorizationFields) => Promise<ProjectReadDecision>> {
   const subject = await resolveAuthorizationSubjectForUser(conn, tenant, user);
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
@@ -121,10 +122,10 @@ export async function createProjectReadAuthorizer(
   });
   const requestCache = new RequestLocalAuthorizationCache();
 
-  return async (project: ProjectAuthorizationFields): Promise<boolean> => {
+  return async (project: ProjectAuthorizationFields): Promise<ProjectReadDecision> => {
     const projectId = project.project_id;
     if (!projectId) {
-      return false;
+      return { allowed: false, redactedFields: [] };
     }
 
     const decision = await authorizationKernel.authorizeResource({
@@ -135,7 +136,7 @@ export async function createProjectReadAuthorizer(
       knex: conn,
     });
 
-    return decision.allowed;
+    return decision;
   };
 }
 
@@ -155,8 +156,13 @@ export async function assertProjectReadAllowed(
   }
 
   const authorize = await createProjectReadAuthorizer(conn, tenant, user);
-  if (!(await authorize(project))) {
+  const decision = await authorize(project);
+  if (!decision.allowed) {
     throw new Error('Permission denied: Cannot read project');
+  }
+
+  if (decision.redactedFields.length > 0) {
+    throw new Error('Permission denied: Project fields are redacted');
   }
 
   return project;

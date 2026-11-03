@@ -29,7 +29,7 @@ vi.mock('../src/models/project', () => ({
   default: { getById: async (_t: unknown, _tenant: string, id: string) => ({ project_id: id }) },
 }));
 vi.mock('../src/lib/projectReadAuthorization', () => ({
-  createProjectReadAuthorizer: async () => async () => true,
+  createProjectReadAuthorizer: async () => async () => ({ allowed: true, redactedFields: [] }),
 }));
 vi.mock('../src/lib/taskComments/taskCommentService', () => ({
   countTaskCommentsBatchWithDb: vi.fn(),

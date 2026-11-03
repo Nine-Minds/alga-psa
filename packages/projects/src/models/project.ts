@@ -82,6 +82,61 @@ export function buildStatusMappingCloneCorrespondence(
  * All methods require an explicit tenant parameter for multi-tenant safety.
  */
 const ProjectModel = {
+  /** Base project records without display joins; callers authorize and project before enrichment. */
+  getAllRecords: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, includeInactive = false): Promise<IProject[]> => {
+    if (!tenant) throw new Error('Tenant context is required for getting all projects');
+    let query = tenantScopedTable(knexOrTrx, 'projects', tenant).select<IProject[]>('projects.*');
+    if (!includeInactive) query = query.where('projects.is_inactive', false);
+    return await query.orderBy('projects.created_at', 'desc').orderBy('projects.project_number', 'desc') as IProject[];
+  },
+
+  getByIdsRecords: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, projectIds: string[]): Promise<IProject[]> => {
+    if (!tenant) throw new Error('Tenant context is required for getting projects by id');
+    if (projectIds.length === 0) return [];
+    return await tenantScopedTable(knexOrTrx, 'projects', tenant)
+      .select<IProject[]>('projects.*').whereIn('projects.project_id', projectIds) as IProject[];
+  },
+
+  getByIdRecord: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, projectId: string): Promise<IProject | null> => {
+    if (!tenant) throw new Error('Tenant context is required for getting project');
+    const row = await tenantScopedTable(knexOrTrx, 'projects', tenant)
+      .select<IProject[]>('projects.*').where('projects.project_id', projectId).first() as IProject | undefined;
+    return row ?? null;
+  },
+
+  /** Display lookups run only after callers have authorized and projected base records. */
+  enrichDisplayData: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, projects: IProject[]): Promise<IProject[]> => {
+    if (projects.length === 0) return [];
+    const clientIds = [...new Set(projects.map(project => project.client_id).filter((id): id is string => Boolean(id)))];
+    const userIds = [...new Set(projects.map(project => project.assigned_to).filter((id): id is string => Boolean(id)))];
+    const contactIds = [...new Set(projects.map(project => project.contact_name_id).filter((id): id is string => Boolean(id)))];
+    const statusIds = [...new Set(projects.map(project => project.status).filter((id): id is string => Boolean(id)))];
+    const [clients, users, contacts, statuses] = await Promise.all([
+      clientIds.length ? tenantScopedTable(knexOrTrx, 'clients', tenant).whereIn('client_id', clientIds).select('client_id', 'client_name') : [],
+      userIds.length ? tenantScopedTable(knexOrTrx, 'users', tenant).whereIn('user_id', userIds).select('user_id', 'first_name', 'last_name') : [],
+      contactIds.length ? tenantScopedTable(knexOrTrx, 'contacts', tenant).whereIn('contact_name_id', contactIds).select('contact_name_id', 'full_name') : [],
+      statusIds.length ? tenantScopedTable(knexOrTrx, 'statuses', tenant).whereIn('status_id', statusIds).select('status_id', 'name', 'is_closed') : [],
+    ]);
+    const clientsById = new Map(clients.map((row: any) => [row.client_id, row.client_name]));
+    const usersById = new Map(users.map((row: any) => [row.user_id, row]));
+    const contactsById = new Map(contacts.map((row: any) => [row.contact_name_id, row.full_name]));
+    const statusesById = new Map(statuses.map((row: any) => [row.status_id, row]));
+    return projects.map(project => {
+      const assigned = project.assigned_to ? usersById.get(project.assigned_to) : undefined;
+      const status = project.status ? statusesById.get(project.status) : undefined;
+      return {
+        ...project,
+        ...(Object.hasOwn(project, 'client_id') ? { client_name: project.client_id ? clientsById.get(project.client_id) ?? null : null } : {}),
+        ...(Object.hasOwn(project, 'assigned_to') ? {
+          assigned_to_first_name: assigned?.first_name ?? null,
+          assigned_to_last_name: assigned?.last_name ?? null,
+        } : {}),
+        ...(Object.hasOwn(project, 'contact_name_id') ? { contact_name: project.contact_name_id ? contactsById.get(project.contact_name_id) ?? null : null } : {}),
+        ...(Object.hasOwn(project, 'status') ? { status_name: status?.name ?? null, is_closed: status?.is_closed ?? false } : {}),
+      } as IProject;
+    });
+  },
+
   /**
    * Get all projects for a tenant.
    */

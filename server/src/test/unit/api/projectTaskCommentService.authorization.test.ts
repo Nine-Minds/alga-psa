@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const state = vi.hoisted(() => ({
   perms: new Set<string>(),
   allowedProjects: new Set<string>(),
+  redactedProjects: new Set<string>(),
 }));
 const svc = vi.hoisted(() => ({
   createTaskCommentWithDb: vi.fn(async () => 'C-new'),
@@ -42,7 +43,10 @@ vi.mock('../../../../../packages/projects/src/models/project', () => ({
   default: { getById: async (_t: unknown, _n: string, id: string) => ({ project_id: id }) },
 }));
 vi.mock('../../../../../packages/projects/src/lib/projectReadAuthorization', () => ({
-  createProjectReadAuthorizer: async () => async (p: { project_id: string }) => state.allowedProjects.has(p.project_id),
+  createProjectReadAuthorizer: async () => async (p: { project_id: string }) => ({
+    allowed: state.allowedProjects.has(p.project_id),
+    redactedFields: state.redactedProjects.has(p.project_id) ? ['description'] : [],
+  }),
 }));
 vi.mock('../../../../../packages/projects/src/lib/taskComments/taskCommentService', () => svc);
 
@@ -56,6 +60,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   state.perms = new Set(['project_task:read', 'project_task:create', 'project_task:update', 'project_task:delete']);
   state.allowedProjects = new Set(['P1']);
+  state.redactedProjects = new Set();
 });
 
 describe('ProjectTaskCommentService authorization', () => {

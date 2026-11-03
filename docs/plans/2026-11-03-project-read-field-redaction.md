@@ -14,14 +14,16 @@ No committed plan for this security finding exists in `docs/plans/` on this bran
 4. Mutations must enforce the effective update decision and reject or omit writes to fields redacted by the applicable policy. Parent-resource authorization does not grant access to unrelated or hidden child resources.
 5. Regression coverage exercises returned data and authorization outcomes, including redacted project fields, derived display fields, child-resource reads, and prohibited mutations.
 
-## Repository state observed for this mitigation
+## Implementation and coverage
 
-The reviewed tree does not yet satisfy the contract above. `packages/projects/src/lib/projectReadAuthorization.ts` currently returns `decision.allowed` as a boolean. `packages/projects/src/actions/projectActions.ts` filters projects using that boolean and returns the remaining project rows; no canonical `projectRecord` projection is applied there. `packages/projects/src/lib/taskComments/taskCommentAuthorization.ts` likewise consumes a boolean parent-project decision. Existing task-comment behavioral tests cover denied parent projects and write restrictions, but the reviewed tests do not exercise redacted-field projection or derived display-field removal.
+`createProjectReadAuthorizer` now returns the complete `{ allowed, redactedFields }` decision. List/detail actions authorize base project records, apply `projectRecord`, then enrich visible client, assignee, contact, and status display data. Redacting a source relation or one of its display aliases also removes related identifiers and derived values so enrichment cannot recreate hidden fields.
 
-This mitigation round repairs workflow linkage and records the design contract. It does not change authorization code or establish that the security finding is resolved. The implementation gap and missing redaction-specific behavioral regression coverage remain for the implementation step/reviewer to address.
+Task-comment access consumes the complete parent decision and denies reads and writes when it carries redactions, preventing comment bodies and author details from bypassing project field restrictions. The mutation guards reject project decisions with redactions; project update additionally evaluates the update decision and refuses changed fields related to redacted fields. These checks fail closed when broader project-associated data cannot be safely separated.
+
+Behavioral tests exercise the authorization/projection path for allowed-but-redacted list and detail records, source and derived-field removal, denied child-comment reads/writes, and prohibited writes. The focused tests do not invoke the full server-action/database stack; they exercise the shared runtime helpers used by those actions. The security finding is addressed in this draft subject to human review of the field-source map and mutation call sites.
 
 ## Verification expectations
 
 - Ticket `alga-2026-0003049` is linked to this repository spec using the workflow's GitHub external-reference convention, and its internal comment summarizes the spec.
 - Workflow state records this repository-relative path in `psaSpecPaths`.
-- The implementation must pass focused behavioral authorization tests and the affected package build/typecheck before this finding can be considered resolved.
+- Focused projects authorization tests, package typecheck, and package build pass for this draft; see `draftSummary` for the exact commands and results.
