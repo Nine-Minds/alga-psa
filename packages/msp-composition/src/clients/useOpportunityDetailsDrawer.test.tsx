@@ -18,8 +18,8 @@ vi.mock('@alga-psa/opportunities/components', () => ({
     <button onClick={() => open('interaction-1')}>Open citation</button>
   ),
 }));
-vi.mock('@alga-psa/clients/actions', () => ({ getInteractionById }));
-vi.mock('@alga-psa/clients/components', () => ({ InteractionDetails: ({ interaction }: any) => <div>Details: {interaction.name}</div> }));
+vi.mock('@alga-psa/clients/actions/interactionActions', () => ({ getInteractionById }));
+vi.mock('@alga-psa/clients/components/interactions/InteractionDetails', () => ({ default: ({ interaction }: any) => <div>Details: {interaction.name}</div> }));
 
 import { useOpportunityDetailsDrawer } from './useOpportunityDetailsDrawer';
 

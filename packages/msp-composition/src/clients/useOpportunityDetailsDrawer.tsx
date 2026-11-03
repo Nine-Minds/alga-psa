@@ -5,8 +5,8 @@ import { useDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { OpportunityDetailHost } from '@alga-psa/opportunities/components';
 import { getOpportunity } from '@alga-psa/opportunities/actions';
-import { InteractionDetails } from '@alga-psa/clients/components';
-import { getInteractionById } from '@alga-psa/clients/actions';
+import InteractionDetails from '@alga-psa/clients/components/interactions/InteractionDetails';
+import { getInteractionById } from '@alga-psa/clients/actions/interactionActions';
 
 /**
  * Open an opportunity in the shared drawer, keeping the current page

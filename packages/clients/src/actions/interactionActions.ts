@@ -57,6 +57,7 @@ const durationRejectionError = (reason: InteractionDurationRejectionReason): Act
   actionError(DURATION_REJECTION_MESSAGES[reason]);
 
 export type { InteractionPageFilters, InteractionPageResult } from '../models/interactions';
+export { getInteractionById } from './queryActions';
 
 function interactionActionErrorFrom(error: unknown): InteractionActionError | null {
   if (error instanceof Error) {
