@@ -725,6 +725,18 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     const entryBefore = await tenantTable(f.tenantId, 'time_entries').where({ entry_id: submittedEntryId }).first();
     const commentsBefore = await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: submittedId }).select('*');
 
+    vi.mocked(usersActions.findUserByIdForApi).mockResolvedValueOnce(null as any);
+    const missingPrincipal = await postRoute(rejectTimeSheetRoute as any, `/api/v1/time-sheets/${submittedId}/reject`, { notes: 'No principal' });
+    expect(missingPrincipal.status).toBe(401);
+    vi.mocked(usersActions.findUserByIdForApi).mockResolvedValueOnce({
+      user_id: f.actor, tenant: f.tenantId, user_type: 'client',
+    } as any);
+    const invalidPrincipal = await postRoute(rejectTimeSheetRoute as any, `/api/v1/time-sheets/${submittedId}/reject`, { notes: 'Client principal' });
+    expect(invalidPrincipal.status).toBe(401);
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: submittedId }).first()).toEqual(submittedBefore);
+    expect(await tenantTable(f.tenantId, 'time_entries').where({ entry_id: submittedEntryId }).first()).toEqual(entryBefore);
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: submittedId }).select('*')).toEqual(commentsBefore);
+
     grants.byUser.set(f.actor, new Set());
     const unauthorized = await postRoute(rejectTimeSheetRoute as any, `/api/v1/time-sheets/${submittedId}/reject`, { notes: 'No permission' });
     expect(unauthorized.status).toBe(403);
