@@ -8,7 +8,6 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import { isOptional, isQuoteItemIncluded } from '@alga-psa/core';
-import type { IQuoteItem } from '@alga-psa/types';
 import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
 import { I18nProvider, useTranslation, type PreloadedNamespaceResources } from '@alga-psa/ui/lib/i18n/client';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
@@ -53,7 +52,7 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
 
   // Optional-item selection is local until Accept commits it (same model as the portal).
   const initialSelectedIds = useMemo(
-    () => new Set(items.filter((i) => isOptional(i as IQuoteItem) && isQuoteItemIncluded(i as IQuoteItem)).map((i) => i.publicRef)),
+    () => new Set(items.filter((i) => isOptional(i) && isQuoteItemIncluded(i)).map((i) => i.publicRef)),
     [items],
   );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set(initialSelectedIds));
@@ -99,7 +98,7 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
       quote_item_id: i.publicRef,
       location_id: i.locationRef,
       is_selected: i.is_optional ? selectedIds.has(i.publicRef) : i.is_selected,
-    })) as IQuoteItem[],
+    })),
     [items, selectedIds],
   );
   // Same pure function the server uses; if any base row lacks its tax input, fall back to persisted totals.

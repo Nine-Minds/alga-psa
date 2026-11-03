@@ -53,7 +53,7 @@ export type LocationGroup = {
 
 export type QuoteDocumentItem = Pick<
   IQuoteItem,
-  'description' | 'quantity' | 'unit_price' | 'total_price' | 'display_order' | 'is_optional' | 'is_selected' | 'is_discount'
+  'description' | 'quantity' | 'unit_price' | 'total_price' | 'display_order' | 'is_optional' | 'is_selected' | 'is_discount' | 'tax_amount_if_included'
 > & {
   /** Database ID for authenticated portal interactions, when available. */
   quote_item_id?: string;

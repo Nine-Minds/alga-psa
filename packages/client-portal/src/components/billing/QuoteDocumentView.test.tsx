@@ -2,13 +2,16 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { cleanup, render, screen } from '@testing-library/react';
 import { createInstance } from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import enBilling from '../../../../../server/public/locales/en/features/billing.json';
-import deBilling from '../../../../../server/public/locales/de/features/billing.json';
+const localeRoot = path.resolve(__dirname, '../../../../../server/public/locales');
+const enBilling = JSON.parse(readFileSync(path.join(localeRoot, 'en/features/billing.json'), 'utf8'));
+const deBilling = JSON.parse(readFileSync(path.join(localeRoot, 'de/features/billing.json'), 'utf8'));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', async (importOriginal) => ({
   ...await importOriginal(),
