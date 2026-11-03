@@ -45,6 +45,25 @@ describe('projectCoManagedNotificationSnapshot', () => {
     expect(projected).toMatchObject({ ticketTitle: 'Visible', commentPreview: 'visible comment', conversationSuppressed: false });
   });
 
+  it.each(['contact_email', 'fields.contact_email'])('hides requester email composites for %s', alias => {
+    const row = { requesterName: 'Visible requester', requesterEmail: 'hidden@example.test',
+      requesterContact: 'hidden@example.test · 555-0100', requesterDetails: 'Visible requester · hidden@example.test' };
+    expect(projectCoManagedNotificationSnapshot([alias], row)).toMatchObject({ requesterName: 'Visible requester',
+      requesterEmail: null, requesterContact: null, requesterDetails: null });
+  });
+
+  it('hides the assignee composite for the canonical values alias', () => {
+    expect(projectCoManagedNotificationSnapshot(['values.assignee_name'], {
+      assignedToName: 'Hidden agent', assignedDetails: 'Hidden agent (agent@example.test)',
+    })).toMatchObject({ assignedToName: null, assignedDetails: null });
+  });
+
+  it.each(['actor_organization_name', 'actor_tenant', 'actor_display_name'])('hides routing actor references for canonical author source %s', alias => {
+    expect(projectCoManagedNotificationSnapshot([alias], {
+      actorName: 'Hidden actor', actorOrganization: 'Hidden organization', authorName: 'Hidden author', ticketTitle: 'Visible title',
+    })).toMatchObject({ actorName: null, actorOrganization: null, authorName: null, ticketTitle: 'Visible title' });
+  });
+
   it('masks persisted comment body aliases, canonical author sources, and derived ticket context', () => {
     const row = { commentContent: 'private', commentPreview: 'private preview', authorName: 'Morgan',
       priority: 'Urgent', status: 'Open', board: 'Service', categoryDetails: 'Hardware / Laptop',

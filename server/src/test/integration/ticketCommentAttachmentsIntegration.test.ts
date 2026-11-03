@@ -788,8 +788,8 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       ...JSON.parse(note(pdf.file)),
     ]) });
     await table('tenant_email_templates').insert({ tenant, name: 'ticket-comment-added', language_code: 'en',
-      subject: 'Update {{ticket.id}}', html_content: '{{{comment.content}}} {{ticket.metaLine}} {{ticket.requesterDetails}} {{ticket.assignedDetails}} {{ticket.categoryDetails}} {{ticket.subcategory}}',
-      text_content: '{{comment.text}} {{ticket.metaLine}} {{ticket.requesterDetails}} {{ticket.assignedDetails}} {{ticket.categoryDetails}} {{ticket.subcategory}}' });
+      subject: 'Update {{ticket.id}}', html_content: '{{{comment.content}}} {{ticket.metaLine}} {{ticket.requesterContact}} {{ticket.requesterDetails}} {{ticket.assignedDetails}} {{ticket.categoryDetails}} {{ticket.subcategory}}',
+      text_content: '{{comment.text}} {{ticket.metaLine}} {{ticket.requesterContact}} {{ticket.requesterDetails}} {{ticket.assignedDetails}} {{ticket.categoryDetails}} {{ticket.subcategory}}' });
     const messages: any[] = [];
     const stream = nodemailer.createTransport({ streamTransport: true, buffer: true });
     const provider = new SMTPEmailProvider('sponsor-retry');
@@ -812,7 +812,8 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     coManagedDeliverySeam.register(() => ({ reauthorizeCommentRecipient: async () => revoked ? null : ({ kind: 'msp_user', principalId: actor, email: currentEmail, redactedFields }) }) as any);
     const pending = { mailClass: 'ticket' as const, tenantId: tenant, to: currentEmail, subject: 'Update', template: 'ticket-comment-added', locale: 'en' as const,
       context: { ticket: { id: 'ATT-1', title: 'Attachment tests', priority: 'Urgent', status: 'Open', metaLine: 'Ticket #ATT-1 · Urgent Priority · Open',
-        requesterDetails: 'Hidden Requester · request@example.test', assignedDetails: 'Hidden Assignee (assignee@example.test)',
+        requesterEmail: 'request@example.test', requesterContact: 'request@example.test', requesterDetails: 'Hidden Requester · request@example.test',
+        assignedToName: 'Hidden Assignee', assignedDetails: 'Hidden Assignee (assignee@example.test)',
         categoryDetails: 'Hardware / Hidden Subcategory', subcategory: 'Hidden Subcategory' },
         comment: { content: 'Sponsor secret comment body', text: 'Sponsor secret comment body', author: 'Agent' } },
       replyContext: { ticketId: ticket, commentId: comment },
@@ -839,7 +840,7 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       await expect(sendEventEmail(pending)).rejects.toMatchObject({ isRetryable: true });
       expect([...scores.entries()].some(([key, z]) => key.includes('ratelimit') && z.size > 0)).toBe(false);
       rateLimit.mockRestore();
-      redactedFields = ['note', 'ticket_number', 'requester_name', 'assignee_name', 'subcategory_name'];
+      redactedFields = ['note', 'ticket_number', 'contact_email', 'values.assignee_name', 'subcategory_name'];
       currentEmail = 'sponsor-renamed@example.test';
       await retryQueue.enqueue(pending, { retryAfterMs: 1 });
       await new Promise(resolve => setTimeout(resolve, 5));
@@ -849,9 +850,11 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       expect(messages[0].text).not.toContain('Sponsor secret comment body');
       expect(messages[0].text).not.toContain('ATT-1');
       expect(messages[0].text).not.toContain('Hidden Requester');
+      expect(messages[0].text).not.toContain('request@example.test');
       expect(messages[0].text).not.toContain('Hidden Assignee');
       expect(messages[0].text).not.toContain('Hidden Subcategory');
       expect(messages[0].html).not.toContain('Hidden Requester');
+      expect(messages[0].html).not.toContain('request@example.test');
       expect(messages[0].html).not.toContain('Hidden Assignee');
       expect(messages[0].html).not.toContain('Hidden Subcategory');
       expect(messages[0].attachments).toEqual([]);
@@ -975,12 +978,15 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       expect(await deliverRoutingRow(route(originalEmail, []))).toBe('failed');
       expect((await table('co_management_deliveries').where({ delivery_kind: 'routing_email', source_id: sourceId }).first()).state).toBe('failed');
       expect([...scores.entries()].some(([key, z]) => key.includes('ratelimit') && z.size > 0)).toBe(false);
-      expect(await deliverRoutingRow(route(currentEmail, ['ticket_number', 'tickets.title', 'actor_display_name']))).toBe('sent');
+      expect(await deliverRoutingRow(route(currentEmail, ['ticket_number', 'tickets.title', 'actor_organization_name']))).toBe('sent');
       expect(messages).toHaveLength(1);
       expect(messages[0].to.value[0].address).toBe(currentEmail);
       expect(messages[0].text).not.toContain('R-41');
       expect(messages[0].text).not.toContain('Restricted routing title');
       expect(messages[0].text).not.toContain('Routing actor');
+      expect(messages[0].text).not.toContain('Sponsor Org');
+      expect(messages[0].html).not.toContain('Routing actor');
+      expect(messages[0].html).not.toContain('Sponsor Org');
       expect((await table('co_management_deliveries').where({ delivery_kind: 'routing_email', source_id: sourceId }).first())
         .recipient).toBe(originalEmail);
       expect((await table('co_management_deliveries').where({ delivery_kind: 'routing_email', source_id: sourceId }).first()).state).toBe('sent');

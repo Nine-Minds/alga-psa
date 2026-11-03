@@ -28,36 +28,41 @@ export const CO_MANAGED_PHASE_NAME_ALIASES = ['phase_name', 'values.phase_name',
 
 const CO_MANAGED_NOTIFICATION_CONVERSATION_ALIASES = [...coManagedConversationBodySources, 'comments', 'comment', 'comment_content', 'comments.content', 'comment_threads', 'ticket_conversation'] as const;
 const CO_MANAGED_NOTIFICATION_AUTHOR_ALIASES = [...coManagedConversationAuthorSources, 'author_name', 'comments.author'] as const;
-const CO_MANAGED_NOTIFICATION_SNAPSHOT_SPEC = {
+/** Source aliases belong to the value, so every composite inherits the same redactions. */
+const CO_MANAGED_NOTIFICATION_SOURCES = {
   ticketTitle: ['title', 'ticket_title', 'tickets.title', 'ticket.title', 'tickets'],
   ticketNumber: ['ticket_number', 'tickets.ticket_number', 'tickets'],
   requesterName: ['requester', 'requester_name', 'contact_name', 'contacts', 'tickets.contact_name_id'],
   requesterEmail: ['requester', 'requester_email', 'contact_email', 'contacts', 'tickets.contact_name_id'],
-  requesterPhone: ['requester', 'requester_phone', 'contacts', 'tickets.contact_name_id'],
-  requesterContact: ['requester', 'requester_email', 'requester_phone', 'requester_name', 'contact_name', 'contacts', 'tickets.contact_name_id'],
-  requesterDetails: ['requester', 'requester_email', 'requester_phone', 'requester_name', 'contact_name', 'contacts', 'tickets.contact_name_id'],
+  requesterPhone: ['requester', 'requester_phone', 'contact_phone', 'contacts', 'tickets.contact_name_id'],
   assignedToName: ['assigned_to', 'assigned_to_name', 'tickets.assigned_to', 'tickets.assigned_team_id', ...CO_MANAGED_ASSIGNEE_NAME_ALIASES],
-  assignedToEmail: ['assignee', 'assigned_to', 'users', 'teams', 'tickets.assigned_to', 'tickets.assigned_team_id'],
-  assignedDetails: ['assignee', 'assignee_name', 'assigned_to', 'assigned_to_name', 'users', 'teams', 'tickets.assigned_to', 'tickets.assigned_team_id'],
+  assignedToEmail: ['assigned_to_email', 'assignee_email', 'assignee', 'assigned_to', 'users', 'teams', 'tickets.assigned_to', 'tickets.assigned_team_id'],
   clientName: CO_MANAGED_ORGANIZATION_NAME_ALIASES,
-  locationSummary: ['location', 'location_name', 'locations', ...CO_MANAGED_ORGANIZATION_NAME_ALIASES],
-  actorName: ['actor', 'actor_display_name', 'actor_user_id', 'actor_reference_id', 'users', 'assigned_to', 'assigned_to_name', ...CO_MANAGED_ASSIGNEE_NAME_ALIASES],
+  locationSummary: ['location', 'location_name', 'locations', 'address_line1', 'address_line2', 'city', 'state_province', 'postal_code', 'country_code', ...CO_MANAGED_ORGANIZATION_NAME_ALIASES],
+  // Interactive conversation reads hide the whole author reference when any author source is hidden.
+  actorName: [...CO_MANAGED_NOTIFICATION_AUTHOR_ALIASES, 'assigned_to', 'assigned_to_name', ...CO_MANAGED_ASSIGNEE_NAME_ALIASES],
   authorName: CO_MANAGED_NOTIFICATION_AUTHOR_ALIASES,
-  actorOrganization: CO_MANAGED_ORGANIZATION_NAME_ALIASES,
+  actorOrganization: [...CO_MANAGED_NOTIFICATION_AUTHOR_ALIASES, ...CO_MANAGED_ORGANIZATION_NAME_ALIASES],
+  priority: ['priority', 'priority_id', 'priority_name', 'tickets.priority_id', 'priorities'],
+  status: ['status', 'status_id', 'status_name', 'tickets.status_id', 'statuses'],
+  board: ['board', 'board_id', 'board_name', 'tickets.board_id', 'boards'],
+  category: ['category', 'categories', 'category_id', 'category_name', 'tickets.category_id'],
+  subcategory: ['subcategory', 'subcategory_id', 'subcategory_name', 'tickets.subcategory_id', 'subcategories'],
+  ticketUrl: ['tickets', 'ticket_id', 'tickets.ticket_id'],
+  description: ['description', 'tickets.description', 'ticket_description', 'attributes.description', 'tickets.attributes.description'],
+} as const;
+const CO_MANAGED_NOTIFICATION_SNAPSHOT_SPEC = {
+  ...CO_MANAGED_NOTIFICATION_SOURCES,
+  requesterContact: [...CO_MANAGED_NOTIFICATION_SOURCES.requesterEmail, ...CO_MANAGED_NOTIFICATION_SOURCES.requesterPhone],
+  requesterDetails: [...CO_MANAGED_NOTIFICATION_SOURCES.requesterName, ...CO_MANAGED_NOTIFICATION_SOURCES.requesterEmail, ...CO_MANAGED_NOTIFICATION_SOURCES.requesterPhone],
+  assignedDetails: [...CO_MANAGED_NOTIFICATION_SOURCES.assignedToName, ...CO_MANAGED_NOTIFICATION_SOURCES.assignedToEmail],
+  categoryDetails: [...CO_MANAGED_NOTIFICATION_SOURCES.category, ...CO_MANAGED_NOTIFICATION_SOURCES.subcategory],
+  metaLine: [...CO_MANAGED_NOTIFICATION_SOURCES.ticketNumber, ...CO_MANAGED_NOTIFICATION_SOURCES.priority, ...CO_MANAGED_NOTIFICATION_SOURCES.status],
+  priorityColor: CO_MANAGED_NOTIFICATION_SOURCES.priority,
   commentContent: CO_MANAGED_NOTIFICATION_CONVERSATION_ALIASES,
   commentPreview: CO_MANAGED_NOTIFICATION_CONVERSATION_ALIASES,
   commentHtml: CO_MANAGED_NOTIFICATION_CONVERSATION_ALIASES,
   commentRawContent: CO_MANAGED_NOTIFICATION_CONVERSATION_ALIASES,
-  priority: ['priority', 'priority_id', 'priority_name', 'tickets.priority_id', 'priorities'],
-  status: ['status', 'status_id', 'status_name', 'tickets.status_id', 'statuses'],
-  board: ['board', 'board_id', 'board_name', 'tickets.board_id', 'boards'],
-  categoryDetails: ['category', 'categories', 'category_id', 'category_name', 'tickets.category_id', 'subcategory', 'subcategory_id', 'subcategory_name', 'tickets.subcategory_id', 'subcategories'],
-  category: ['category', 'categories', 'category_id', 'category_name', 'tickets.category_id'],
-  subcategory: ['subcategory', 'subcategory_id', 'subcategory_name', 'tickets.subcategory_id', 'subcategories'],
-  ticketUrl: ['tickets', 'ticket_id', 'tickets.ticket_id'],
-  metaLine: ['ticket_number', 'tickets.ticket_number', 'tickets', 'priority', 'priority_id', 'priority_name', 'tickets.priority_id', 'priorities', 'status', 'status_id', 'status_name', 'tickets.status_id', 'statuses'],
-  description: ['description', 'tickets.description', 'ticket_description'],
-  priorityColor: ['priority', 'priority_id', 'priority_name', 'tickets.priority_id', 'priorities'],
 } as const;
 
 /** Canonical notification projection shared by routing and comment delivery adapters. */
