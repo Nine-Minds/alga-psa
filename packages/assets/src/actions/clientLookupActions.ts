@@ -2,6 +2,7 @@
 
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import type { AuthorizationDecision } from '@alga-psa/authorization/kernel';
 import {
   isClientUserType,
   type IClient,
@@ -32,6 +33,29 @@ function withClientSinceDateString<T extends Record<string, any>>(row: T): T {
 
 type AssetClientReadAuthorizer = (clientId: string) => Promise<boolean>;
 
+function clientMatchesAssetReadScope(
+  clientId: string,
+  decision: AuthorizationDecision,
+): boolean {
+  // Kernel grants and row constraints are separate; client lookups must enforce
+  // the full conjunction because they do not pass through a scoped SQL adapter.
+  if (!decision.allowed || decision.scope.denied) return false;
+
+  return (decision.scope.constraints ?? []).every((constraint) => {
+    if (!constraint || typeof constraint !== 'object' || constraint.field !== 'client_id') return false;
+
+    if (constraint.operator === 'eq') {
+      return typeof constraint.value === 'string' && clientId === constraint.value;
+    }
+    if (constraint.operator === 'in') {
+      return Array.isArray(constraint.value) &&
+        constraint.value.every((value): value is string => typeof value === 'string') &&
+        constraint.value.includes(clientId);
+    }
+    return false;
+  });
+}
+
 async function createAssetClientReadAuthorizer(
   trx: Knex | Knex.Transaction,
   tenant: string,
@@ -46,7 +70,7 @@ async function createAssetClientReadAuthorizer(
       requestCache: context.requestCache,
       knex: trx,
     });
-    return decision.allowed;
+    return clientMatchesAssetReadScope(clientId, decision);
   };
 }
 
