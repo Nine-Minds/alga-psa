@@ -93,7 +93,10 @@ JOIN ticket_templates t ON t.tenant = d.tenant AND t.template_id = d.ticket_temp
 JOIN boards b     ON b.tenant = d.tenant
                  AND b.board_id = COALESCE((d.overrides #>> '{board,board_id}')::uuid, t.board_id)
 JOIN categories c ON c.tenant = d.tenant
-                 AND c.category_id = COALESCE((d.overrides #>> '{category,category_id}')::uuid, t.category_id)
+                 AND c.category_id = CASE
+                   WHEN d.overrides ? 'category' THEN (d.overrides #>> '{category,category_id}')::uuid
+                   ELSE t.category_id
+                 END
 WHERE (COALESCE(b.category_type, 'custom') = 'itil') IS DISTINCT FROM COALESCE(c.is_from_itil_standard, false)
 GROUP BY d.tenant ORDER BY d.tenant;
 
@@ -107,8 +110,11 @@ JOIN boards b     ON b.tenant = c.tenant
                  AND b.board_id = COALESCE((c.overrides #>> '{board,board_id}')::uuid,
                                            (d.overrides #>> '{board,board_id}')::uuid, t.board_id)
 JOIN categories cat ON cat.tenant = c.tenant
-                   AND cat.category_id = COALESCE((c.overrides #>> '{category,category_id}')::uuid,
-                                                  (d.overrides #>> '{category,category_id}')::uuid, t.category_id)
+                   AND cat.category_id = CASE
+                     WHEN c.overrides ? 'category' THEN (c.overrides #>> '{category,category_id}')::uuid
+                     WHEN d.overrides ? 'category' THEN (d.overrides #>> '{category,category_id}')::uuid
+                     ELSE t.category_id
+                   END
 WHERE (COALESCE(b.category_type, 'custom') = 'itil') IS DISTINCT FROM COALESCE(cat.is_from_itil_standard, false)
 GROUP BY c.tenant ORDER BY c.tenant;
 
