@@ -2431,7 +2431,10 @@ export const loadTicketListItemsByIds = withAuth(async (
       for (const id of authorizedIds) {
         const fields = redactionsById.get(id)!;
         const interpreted = interpretTicketRedactions(fields, attributesById.get(id) as Record<string, unknown> | null | undefined);
-        const key = JSON.stringify([...new Set(fields)].sort());
+        const key = JSON.stringify({
+          fields: [...interpreted.hiddenFields].sort(),
+          attributes: [...interpreted.hiddenAttributes].sort(),
+        });
         const group = groups.get(key) ?? { ids: [], hidden: interpreted.hiddenFields, hiddenAttributes: interpreted.hiddenAttributes };
         group.ids.push(id);
         groups.set(key, group);

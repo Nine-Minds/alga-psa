@@ -110,16 +110,20 @@ export function interpretTicketRedactions(
   for (const raw of redactions) {
     if (typeof raw !== 'string' || raw.trim() === '') throw new Error('Unsupported empty ticket redaction');
     const name = raw.trim();
+    if (/^(?:tickets?\.)?attributes\.\*$/i.test(name)) {
+      hiddenFields.add('attributes');
+      continue;
+    }
     const attributeName = name.replace(/^(?:tickets?|attributes)\./i, '').toLowerCase();
     const attributeKeys = Object.keys(attributes ?? {});
-    const attributeKey = attributeKeys.find((key) => key.toLowerCase() === attributeName);
-    const customAttributePath = /^(?:tickets?\.)?attributes\./i.test(name) && attributeKey !== undefined && attributeName !== 'description';
+    const attributeMatches = attributeKeys.filter((key) => key.toLowerCase() === attributeName);
+    const customAttributePath = /^(?:tickets?\.)?attributes\./i.test(name) && attributeMatches.length > 0 && attributeName !== 'description';
     const fieldMatch = TICKET_FIELD_PROJECTIONS.some((projection) =>
       !(customAttributePath && projection.field === 'attributes') && isTicketFieldHidden([name], projection));
     if (fieldMatch) {
       for (const field of hiddenTicketFields([name])) hiddenFields.add(field);
-    } else if (attributeKey) {
-      hiddenAttributes.add(attributeKey);
+    } else if (attributeMatches.length > 0) {
+      for (const key of attributeMatches) hiddenAttributes.add(key);
     } else {
       throw new Error(`Unsupported ticket redaction: ${name}`);
     }
