@@ -12,7 +12,7 @@ Review the shared allowlist and the NextAuth/internal authentication split first
 
 ## Verification
 
-- Full server TypeScript check passed with `NODE_OPTIONS=--max-old-space-size=16384 npm run typecheck --workspace=server`. The default Node heap was insufficient.
+- Full server TypeScript check fails with TS2769 at `packages/billing/src/actions/profitabilityReportActions.ts` lines 367, 690, 845, 926, 1013, and 1087, and `shared/lib/ticketChecklists/applyTemplates.ts` line 168. The current revision produces these diagnostics. The parent-revision comparison was attempted at `0deaba0067` but was invalid for classification: sharing `node_modules` via a symlink caused `@alga-psa/user-composition` to resolve to the current worktree source (confirmed by `realpath`), producing additional TS2305/TS2724 errors. The parent run exited 2 and showed the same seven billing/checklist TS2769 diagnostics, but because workspace source resolution was contaminated, this does not confirm baseline status. No introduced regression has been established; a clean comparison with parent-local workspace resolution remains outstanding.
 - Builds passed for `@alga-psa/types`, `@alga-psa/auth`, and `@alga-psa/db`.
 - 87 tests passed across the affected unit/contract suites, including the existing user-service sanitizer, user actions, authentication tenant scoping, revocation, development credentials, portal tenant scoping, and login win-back suites.
 - Four PostgreSQL regression tests passed for ID, email, and model projections, credential preservation in storage, tenant-scoped roles/contact joins, and missing-user/type/tenant guards.
