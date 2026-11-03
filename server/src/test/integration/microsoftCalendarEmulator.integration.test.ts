@@ -1,10 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmulatorHost } from '@alga-psa/emulator-host';
-import msgraph from '@alga-psa/emulator-msgraph';
+import msgraph, { registerTenantedClient, setSignedInUser, authorizeOverHttp, exchangeCodeOverHttp } from '@alga-psa/emulator-msgraph';
 import type { CalendarProviderConfig, ExternalCalendarEvent } from '@alga-psa/types';
 import { MicrosoftCalendarAdapter as SharedAdapter } from '@alga-psa/integrations/services/calendar/providers/MicrosoftCalendarAdapter';
 import { MicrosoftCalendarAdapter as EnterpriseAdapter } from '@alga-psa/ee-calendar/lib/services/calendar/providers/MicrosoftCalendarAdapter';
 import { generateMicrosoftCalendarAuthUrl as sharedAuthUrl } from '@alga-psa/integrations/utils/calendar/oauthHelpers';
+import { getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import { microsoftIssuerKindFromSource, resolveMicrosoftOAuthAuthority } from '@alga-psa/shared/services/email/microsoftAuthority';
 import { generateMicrosoftCalendarAuthUrl as enterpriseAuthUrl } from '@alga-psa/ee-calendar/lib/utils/calendar/oauthHelpers';
 
 const { persistTokens } = vi.hoisted(() => ({ persistTokens: vi.fn(async () => undefined) }));
@@ -16,12 +18,13 @@ vi.mock('@alga-psa/integrations/services/calendar/CalendarProviderService', () =
 vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService', () => ({
   CalendarProviderService: class { updateProvider = persistTokens; },
 }));
+const defaultProfile = {
+  status: 'ready', tenantId: 'calendar-tenant', consumerType: 'calendar',
+  clientId: 'calendar-client', clientSecret: 'synthetic-calendar-secret',
+  microsoftTenantId: 'common',
+} as Record<string, unknown>;
 vi.mock('@alga-psa/ee-calendar/lib/microsoftConsumerProfileResolution', () => ({
-  resolveMicrosoftConsumerProfileConfig: vi.fn(async () => ({
-    status: 'ready', tenantId: 'calendar-tenant', consumerType: 'calendar',
-    clientId: 'calendar-client', clientSecret: 'synthetic-calendar-secret',
-    microsoftTenantId: 'common',
-  })),
+  resolveMicrosoftConsumerProfileConfig: vi.fn(async () => defaultProfile),
 }));
 
 let host: EmulatorHost;
@@ -152,3 +155,72 @@ for (const { name, Adapter, authUrl } of [
     });
   });
 }
+
+// Authority selection: the profile's tenant for tenant-owned apps, `common` otherwise.
+// Authorize and code exchange go through the real URL builders / token URL and the
+// emulator, which enforces single-tenant audiences; refresh runs the real adapters.
+const DIRECTORY = '11111111-2222-3333-4444-555555555555';
+const authorityCases = [
+  { name: 'single-tenant BYO profile', source: 'binding', tenantId: DIRECTORY, expected: DIRECTORY, singleTenant: true },
+  { name: 'BYO profile without a tenant', source: 'binding', tenantId: '', expected: 'common', singleTenant: false },
+  { name: 'multitenant BYO profile', source: 'binding', tenantId: 'common', expected: 'common', singleTenant: false },
+  { name: 'platform-managed profile carrying a tenant id', source: 'app', tenantId: DIRECTORY, expected: 'common', singleTenant: false },
+];
+
+describe.each(authorityCases)('calendar OAuth authority: $name', ({ source, tenantId, expected, singleTenant }) => {
+  const clientId = 'calendar-client', clientSecret = 'synthetic-calendar-secret';
+  const redirectUri = 'http://localhost/calendar-callback';
+
+  async function seed() {
+    await registerTenantedClient(control, singleTenant
+      ? { clientId, clientSecret, signInAudience: 'AzureADMyOrg', homeTenantId: DIRECTORY }
+      : { clientId, clientSecret });
+    await setSignedInUser(control, { userPrincipalName: 'jamie@cedar.example', tenantId: DIRECTORY });
+  }
+  const authority = () => resolveMicrosoftOAuthAuthority({ issuerKind: microsoftIssuerKindFromSource(source), profileTenantId: tenantId });
+
+  it.each([['shared', sharedAuthUrl], ['enterprise', enterpriseAuthUrl]] as const)('%s authorize URL and token exchange use the resolved authority', async (_n, authUrl) => {
+    await seed();
+    expect(authority()).toBe(expected);
+    const url = new URL(await authUrl({ clientId, redirectUri, state: 'calendar-state', tenantId: authority() }));
+    expect(url.pathname).toBe(`/${expected}/oauth2/v2.0/authorize`);
+    expect(url.searchParams.get('scope')).not.toMatch(/Mail\.Read/);
+    const outcome = await authorizeOverHttp(base, expected, { clientId, redirectUri, scope: url.searchParams.get('scope')!, state: 'calendar-state' });
+    expect(outcome.error).toBeUndefined();
+    expect(outcome.code).toBeTruthy();
+    const tokenUrl = getMicrosoftTokenUrl(authority());
+    expect(new URL(tokenUrl).pathname).toBe(`/${expected}/oauth2/v2.0/token`);
+    const tokens = await exchangeCodeOverHttp(base, expected, { clientId, clientSecret, code: outcome.code!, redirectUri });
+    expect(tokens.status).toBe(200);
+    expect(tokens.body.access_token).toBeTruthy();
+  });
+
+  it.each([['shared', SharedAdapter], ['enterprise', EnterpriseAdapter]] as const)('%s adapter refresh uses the resolved authority', async (_n, Adapter) => {
+    await seed();
+    const outcome = await authorizeOverHttp(base, expected, { clientId, redirectUri, scope: 'Calendars.ReadWrite offline_access', state: 's' });
+    const tokens = await exchangeCodeOverHttp(base, expected, { clientId, clientSecret, code: outcome.code!, redirectUri });
+    Object.assign(defaultProfile, { credentialSource: source, microsoftTenantId: tenantId });
+    const config: CalendarProviderConfig = {
+      id: 'calendar-provider', tenant: 'calendar-tenant', user_id: 'calendar-user', name: 'Calendar',
+      provider_type: 'microsoft', calendar_id: 'calendar', active: true, sync_direction: 'bidirectional',
+      connection_status: 'connected', created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      provider_config: {
+        clientId, clientSecret, tenantId, accessToken: 'stale', refreshToken: tokens.body.refresh_token,
+        tokenExpiresAt: new Date(0).toISOString(),
+      },
+    };
+    try {
+      const adapter = new Adapter(config);
+      await adapter.connect();
+      expect(config.provider_config!.accessToken).not.toBe('stale');
+    } finally {
+      Object.assign(defaultProfile, { credentialSource: undefined, microsoftTenantId: 'common' });
+    }
+  });
+});
+
+it('a single-tenant calendar app is rejected on /common, which is why the profile tenant must be used', async () => {
+  await registerTenantedClient(control, { clientId: 'st-client', clientSecret: 's', signInAudience: 'AzureADMyOrg', homeTenantId: DIRECTORY });
+  const outcome = await authorizeOverHttp(base, 'common', { clientId: 'st-client', redirectUri: 'http://localhost/calendar-callback', scope: 'Calendars.ReadWrite offline_access' });
+  expect(outcome.code).toBeUndefined();
+});

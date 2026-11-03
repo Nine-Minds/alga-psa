@@ -535,6 +535,7 @@
         "renewal": "la fecha de decisión de renovación del contrato",
         "contractEnd": "la fecha de finalización del contrato",
         "warrantyEnd": "la fecha de fin de garantía del activo",
+        "maintenanceDue": "la fecha de vencimiento del mantenimiento del activo",
         "ticketStatusAge": "el día en que el ticket alcanza el número de días en el estado"
       }
     }
@@ -795,6 +796,7 @@
       "dateSourceRenewal": "Fecha de decisión de renovación del contrato",
       "dateSourceContractEnd": "Fecha de finalización del contrato",
       "dateSourceWarranty": "Fin de la garantía del activo",
+      "dateSourceMaintenanceDue": "Mantenimiento del activo pendiente",
       "dateOffset": "Días",
       "dateDirection": "Momento",
       "before": "Antes",
@@ -1065,6 +1067,26 @@
           "label": "Listar espacios de nombres de enlaces",
           "description": "Lista los espacios de nombres de enlaces de entidades usados por este inquilino."
         }
+      },
+      "assets.get_maintenance": {
+        "label": "Obtener mantenimiento del activo",
+        "description": "Buscar el plan y la ocurrencia por plan, ocurrencia o ticket vinculado."
+      },
+      "assets.create_maintenance_ticket": {
+        "label": "Crear ticket de mantenimiento",
+        "description": "Crear y vincular un ticket para una ocurrencia de mantenimiento abierta."
+      },
+      "assets.complete_maintenance": {
+        "label": "Completar mantenimiento del activo",
+        "description": "Registrar el mantenimiento y abrir la siguiente ocurrencia."
+      },
+      "assets.skip_maintenance": {
+        "label": "Omitir mantenimiento del activo",
+        "description": "Omitir una ocurrencia con un motivo y abrir la siguiente."
+      },
+      "assets.set_maintenance_paused": {
+        "label": "Pausar o reanudar mantenimiento",
+        "description": "Pausar o reanudar un plan de mantenimiento."
       }
     },
     "validation": {
@@ -1288,6 +1310,10 @@
         "data-store": {
           "label": "Almacén de datos",
           "description": "Leer y escribir el estado duradero del flujo de trabajo entre ejecuciones."
+        },
+        "maintenance": {
+          "label": "Mantenimiento",
+          "description": "Buscar mantenimiento, vincular tickets, completar u omitir ocurrencias y pausar o reanudar planes."
         }
       },
       "noMatches": {
@@ -1597,6 +1623,9 @@
         "client_id": "Elija primero un cliente fijo para cargar las opciones de ubicación."
       },
       "ticket-category": {
+        "board_id": "Elija primero un tablero fijo para cargar las opciones de categoría."
+      },
+      "ticket-category-any": {
         "board_id": "Elija primero un tablero fijo para cargar las opciones de categoría."
       },
       "ticket-status": {

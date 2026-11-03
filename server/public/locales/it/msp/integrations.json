@@ -36,6 +36,15 @@
         "suggested": "Suggerito",
         "toSave": "{{total}} da salvare"
       },
+      "customerMapping": {
+        "unlink": "Scollega",
+        "unlinkConfirm": {
+          "title": "Scollegare {{client}} da QuickBooks?",
+          "body": "{{client}} non viene più esportato verso il cliente QuickBooks {{customer}}. In QuickBooks non cambia nulla e puoi ricollegarlo da questo elenco in qualsiasi momento.",
+          "confirm": "Scollega",
+          "cancel": "Mantieni il collegamento"
+        }
+      },
       "dialog": {
         "cancel": "Annulla",
         "enterPlaceholder": "Inserisci {{field}}...",
@@ -844,7 +853,13 @@
             "expired": "Il tentativo di connessione è scaduto prima di completarsi. Non è stato salvato nulla: avvia di nuovo la connessione.",
             "generic": "Microsoft Entra non è stato connesso e non è stato salvato nulla. Riprova.",
             "validationFailed": "Microsoft ti ha autenticato, ma non è stato possibile leggere l'elenco dei tenant gestiti; non è stato salvato nulla. Le autorizzazioni sono state accettate — di solito il tenant partner non è integrato in Microsoft 365 Lighthouse o non ha relazioni GDAP attive.",
-            "tokenRejected": "Microsoft ha rifiutato il token di accesso della connessione; non è stato salvato nulla. Riavvia la connessione."
+            "tokenRejected": "Microsoft ha rifiutato il token di accesso della connessione; non è stato salvato nulla. Riavvia la connessione.",
+            "singleTenantApp": "Microsoft ha rifiutato l'accesso perché questa registrazione dell'app è a tenant singolo. Entra richiede un'app multi-tenant: apri la registrazione dell'app, vai su Autenticazione, imposta Tipi di account supportati su \"Account in qualsiasi directory organizzativa\" e riconnetti. Non è stato salvato nulla.",
+            "appNotInDirectory": "Microsoft non ha trovato questa app nella directory indicata dall'ID tenant del profilo Microsoft. Verifica che l'ID tenant sia l'ID directory (tenant) in cui l'app è registrata. Non è stato salvato nulla.",
+            "wrongDirectory": "L'account con cui hai effettuato l'accesso appartiene a una directory diversa da quella di questa app a tenant singolo. Rendi l'app multi-tenant (Account in qualsiasi directory organizzativa) e riconnetti. Non è stato salvato nulla.",
+            "redirectUriMismatch": "Microsoft ha rifiutato l'URI di reindirizzamento perché non è registrato nell'app. Aggiungi questo URI esatto in Autenticazione > URI di reindirizzamento Web, quindi riconnetti: {{redirectUri}}",
+            "invalidClientSecret": "Microsoft ha rifiutato il segreto client del profilo Microsoft. Verifica di aver salvato il Valore del segreto, non il suo ID segreto.",
+            "expiredClientSecret": "Il segreto client del profilo Microsoft è scaduto. Crea un nuovo segreto in Azure e aggiorna il profilo."
           },
           "connectingSuffix": " (Connessione...)",
           "details": "Dettagli della connessione",
@@ -1919,8 +1934,12 @@
           "calendarRedirect": "Redirect URI per la sincronizzazione del calendario",
           "calendarTitle": "Guida al calendario",
           "clientId": "ID client",
+          "copied": "Copiato",
+          "copy": "Copia",
+          "copyFailed": "Impossibile copiare",
           "currentProfileTitle": "Valori del profilo corrente",
           "emailRedirect": "Redirect URI per l'e-mail in arrivo",
+          "emailSetupRedirect": "URI di reindirizzamento per la configurazione e-mail",
           "emailTitle": "Guida all'e-mail",
           "entraConsent": "Requisito",
           "entraConsentValue": "Registra questa app come multi-tenant e concedi il consenso amministratore nel tenant partner.",
@@ -2074,11 +2093,18 @@
         "environment": "Ambiente Intuit",
         "environmentProduction": "Produzione",
         "environmentSandbox": "Ambiente sandbox",
+        "environmentHint": "La produzione si collega ad aziende QuickBooks reali. L’ambiente sandbox si collega a un’azienda di prova di Intuit, così puoi provare le esportazioni senza toccare la contabilità reale.",
+        "environmentLockedHint": "Disconnetti QuickBooks prima di cambiare ambiente. L’azienda collegata e i suoi token esistono solo nell’ambiente in cui sono stati autorizzati.",
+        "environmentSandboxKeysTitle": "L’ambiente sandbox richiede una tua app Intuit",
+        "environmentSandboxKeysDescription": "Le aziende sandbox di Intuit accettano solo le chiavi Development di un’app Intuit che controlli tu. L’app condivisa di questa installazione usa chiavi Production: registra una tua app e salva qui sotto le sue chiavi Development prima di collegarti.",
+        "environmentSavedSandbox": "QuickBooks si collegherà ora a un’azienda sandbox di Intuit. Collegati con le chiavi Development della tua app Intuit.",
+        "environmentSavedProduction": "QuickBooks si collegherà ora ad aziende QuickBooks reali.",
         "errors": {
           "automatedSalesTax": "Impossibile aggiornare la modalità Automated Sales Tax.",
           "disconnect": "Impossibile disconnettere QuickBooks.",
           "load": "Impossibile caricare le impostazioni QuickBooks.",
-          "saveCredentials": "Impossibile salvare le credenziali QuickBooks."
+          "saveCredentials": "Impossibile salvare le credenziali QuickBooks.",
+          "environment": "Impossibile cambiare l’ambiente Intuit."
         },
         "howItWorksDescription": "Collega la tua azienda QuickBooks accedendo a Intuit; AlgaPSA la userà come contesto live predefinito per esportazioni e mappature. La scheda «App Intuit» qui sotto indica se la tua installazione fornisce già l'app usata per quell'accesso o se devi prima registrarne una.",
         "howItWorksTitle": "Come funziona QuickBooks live in questa release",
@@ -2110,6 +2136,7 @@
         "credentialSource": {
           "app": "Questa installazione fornisce un'app Intuit condivisa, quindi puoi collegare QuickBooks senza registrarne una. Salta questa scheda e fai clic su «Collega QuickBooks» qui sotto.",
           "none": "Non è ancora disponibile alcuna app Intuit. Registrane una presso Intuit prima di poter collegare.",
+          "noneSandbox": "L’ambiente sandbox richiede una tua app Intuit. Registrane una e salva le sue chiavi Development prima di poter collegare.",
           "tenant": "Questo tenant si collega tramite la propria app Intuit, usando le credenziali salvate qui sotto. Per ruotare una chiave, incolla il nuovo valore e salva.",
           "appTitle": "Nessuna credenziale necessaria"
         },
