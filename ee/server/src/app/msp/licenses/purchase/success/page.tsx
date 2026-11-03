@@ -6,8 +6,7 @@ import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { CheckCircle, ArrowRight, Loader2, Calendar, Users } from 'lucide-react';
 import Link from 'next/link';
-import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
-import { getSubscriptionInfoAction } from '@ee/lib/actions/license-actions';
+import { getLicenseUsageAction, getSubscriptionInfoAction } from '@ee/lib/actions/license-actions';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function LicensePurchaseSuccessPage() {
