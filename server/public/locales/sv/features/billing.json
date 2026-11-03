@@ -203,6 +203,7 @@
       "exclude": "Uteslut",
       "excluded": "Utesluten",
       "fallbackTitle": "Offert {{id}}",
+      "unnumberedTitle": "Offert",
       "include": "Inkludera",
       "included": "Inkluderad",
       "lineItems": "Offertrader",

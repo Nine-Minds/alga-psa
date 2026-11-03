@@ -203,6 +203,7 @@
       "exclude": "Pomiń",
       "excluded": "Pominięta",
       "fallbackTitle": "Oferta {{id}}",
+      "unnumberedTitle": "Oferta",
       "include": "Uwzględnij",
       "included": "Uwzględniona",
       "lineItems": "Pozycje",

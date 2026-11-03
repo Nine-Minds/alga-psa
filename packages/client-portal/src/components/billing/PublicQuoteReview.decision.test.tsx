@@ -27,13 +27,13 @@ afterEach(cleanup);
 const TOKEN = 'T'.repeat(43);
 const agreement = { version: 'v1', text: 'I agree to this.', hash: 'abc' };
 const base = (extra: Record<string, unknown> = {}) => ({
-  quote_item_id: 'i1', description: 'Firewall', quantity: 1, unit_price: 1000, total_price: 1000,
-  display_order: 0, is_optional: false, is_selected: true, is_discount: false, location_id: null,
+  publicRef: 'item-0', description: 'Firewall', quantity: 1, unit_price: 1000, total_price: 1000,
+  display_order: 0, is_optional: false, is_selected: true, is_discount: false, locationRef: null,
   tax_amount_if_included: 100, ...extra,
 });
 const props = {
-  quote: { quote_id: 'q1', title: 'T', currency_code: 'EUR', status: 'sent', subtotal: 1000, discount_total: 0, tax: 100, total_amount: 1100 },
-  items: [base(), base({ quote_item_id: 'i2', description: 'Extra', is_optional: true, is_selected: false, display_order: 1 })],
+  quote: { title: 'T', currency_code: 'EUR', status: 'sent', subtotal: 1000, discount_total: 0, tax: 100, total_amount: 1100 },
+  items: [base(), base({ publicRef: 'item-1', description: 'Extra', is_optional: true, is_selected: false, display_order: 1 })],
   locations: [], locale: 'en', branding: { name: null, logoUrl: null }, pdfHref: '/p', decidedNotice: null,
   token: TOKEN, agreement, quoteFingerprint: 'fp-123',
 } as any;
@@ -60,7 +60,7 @@ describe('PublicQuoteReview decision panel', () => {
     expect(url).toBe(`/api/quote/${TOKEN}/decision`);
     const body = JSON.parse(init.body);
     expect(body).toMatchObject({ action: 'accept', signerName: 'Jane Doe', agreed: true, agreementVersion: 'v1', agreementTextHash: 'abc', quoteFingerprint: 'fp-123' });
-    expect(body.selectedOptionalQuoteItemIds).toEqual([]);
+    expect(body.selectedOptionalQuoteItemRefs).toEqual([]);
     expect(screen.getByText('Quote accepted')).toBeTruthy();
     expect(document.getElementById('quote-link-accept')).toBeNull();
   });
@@ -95,7 +95,7 @@ describe('PublicQuoteReview decision panel', () => {
     fill();
     fireEvent.click(document.getElementById('quote-link-accept')!);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body).selectedOptionalQuoteItemIds).toEqual(['i2']);
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).selectedOptionalQuoteItemRefs).toEqual(['item-1']);
   });
 
   it('renders no read-only notice while the decision form is active', () => {
@@ -143,7 +143,7 @@ describe('PublicQuoteReview decision panel', () => {
     // Preview with Extra on = 2000 + 200 tax -> 2200? (base 1000 + extra 1000 = 2000 + tax 200)
     const withOptional = () => ({
       ...props,
-      items: [base(), base({ quote_item_id: 'i2', description: 'Extra', is_optional: true, is_selected: false, display_order: 1 })],
+      items: [base(), base({ publicRef: 'item-1', description: 'Extra', is_optional: true, is_selected: false, display_order: 1 })],
     });
     const totalsText = () => document.body.textContent ?? '';
     // Every "Total" label (header card + totals block) with the amount beside it.
@@ -170,7 +170,7 @@ describe('PublicQuoteReview decision panel', () => {
       // Committed deliberately differs from the local preview-equivalent only by being the server's numbers.
       await settle({
         status: 'decided', decision: 'accepted', decidedAt: 'x',
-        committed: { subtotal: 2000, discount_total: 0, tax: 200, total_amount: 2200, selectedOptionalQuoteItemIds: ['i2'] },
+        committed: { subtotal: 2000, discount_total: 0, tax: 200, total_amount: 2200, selectedOptionalQuoteItemRefs: ['item-1'] },
       }, 'quote-link-decided');
       expect(headerTotal()).toContain('€22.00');
       expect(totalAmounts()).toHaveLength(2);
@@ -181,7 +181,7 @@ describe('PublicQuoteReview decision panel', () => {
     it('decided/accepted shows the server numbers even if they differ from the local preview', async () => {
       await settle({
         status: 'decided', decision: 'accepted', decidedAt: 'x',
-        committed: { subtotal: 2000, discount_total: 0, tax: 250, total_amount: 2250, selectedOptionalQuoteItemIds: ['i2'] },
+        committed: { subtotal: 2000, discount_total: 0, tax: 250, total_amount: 2250, selectedOptionalQuoteItemRefs: ['item-1'] },
       }, 'quote-link-decided');
       expect(headerTotal()).toContain('€22.50');
       expect(totalsText()).not.toContain('€22.00');
@@ -195,7 +195,7 @@ describe('PublicQuoteReview decision panel', () => {
     });
 
     it.each([
-      ['decided/rejected', { status: 'decided', decision: 'rejected', decidedAt: 'x', committed: { subtotal: 1000, discount_total: 0, tax: 100, total_amount: 1100, selectedOptionalQuoteItemIds: [] } }, 'quote-link-decided'],
+      ['decided/rejected', { status: 'decided', decision: 'rejected', decidedAt: 'x', committed: { subtotal: 1000, discount_total: 0, tax: 100, total_amount: 1100, selectedOptionalQuoteItemRefs: [] } }, 'quote-link-decided'],
       ['already_decided', { status: 'already_decided', decision: 'accepted', decidedAt: '2026-10-30' }, 'quote-link-decided'],
       ['changed', { status: 'changed' }, 'quote-link-changed'],
       ['invalid_link', { status: 'invalid_link' }, 'quote-link-invalid'],

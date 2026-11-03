@@ -30,7 +30,7 @@ export interface QuoteLinkCommittedSnapshot {
   discount_total: number;
   tax: number;
   total_amount: number;
-  selectedOptionalQuoteItemIds: string[];
+  selectedOptionalQuoteItemRefs: string[];
 }
 
 /** What the server said when the form was replaced by a result. */
@@ -101,7 +101,7 @@ const QuoteLinkDecisionPanel: React.FC<QuoteLinkDecisionPanelProps> = ({
           agreementVersion: agreement.version,
           agreementTextHash: agreement.hash,
           quoteFingerprint,
-          selectedOptionalQuoteItemIds: action === 'accept' ? [...selectedOptionalIds] : [],
+          selectedOptionalQuoteItemRefs: action === 'accept' ? [...selectedOptionalIds] : [],
           comment,
         }),
       });

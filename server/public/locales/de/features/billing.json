@@ -203,6 +203,7 @@
       "exclude": "Ausschließen",
       "excluded": "Nicht enthalten",
       "fallbackTitle": "Angebot {{id}}",
+      "unnumberedTitle": "Angebot",
       "include": "Aufnehmen",
       "included": "Enthalten",
       "lineItems": "Positionen",

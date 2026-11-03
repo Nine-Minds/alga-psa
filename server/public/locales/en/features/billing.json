@@ -203,6 +203,7 @@
       "exclude": "Exclude",
       "excluded": "Excluded",
       "fallbackTitle": "Quote {{id}}",
+      "unnumberedTitle": "Quote",
       "include": "Include",
       "included": "Included",
       "lineItems": "Line Items",

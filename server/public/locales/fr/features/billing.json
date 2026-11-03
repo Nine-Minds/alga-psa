@@ -203,6 +203,7 @@
       "exclude": "Exclure",
       "excluded": "Exclu",
       "fallbackTitle": "Devis {{id}}",
+      "unnumberedTitle": "Devis",
       "include": "Inclure",
       "included": "Inclus",
       "lineItems": "Lignes du devis",

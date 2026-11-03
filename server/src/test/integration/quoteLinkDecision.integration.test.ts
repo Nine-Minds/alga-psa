@@ -116,7 +116,7 @@ async function acceptInput(over: Record<string, unknown> = {}) {
     agreed: true,
     agreementVersion: a.version,
     agreementTextHash: a.hash,
-    selectedOptionalQuoteItemIds: [] as string[],
+    selectedOptionalQuoteItemRefs: [] as string[],
     ...over,
   };
 }
@@ -157,7 +157,7 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
   it('1. accept: quote accepted, full audit row, optional deselection applied, hook once', async () => {
     const s = await setup();
     const a = await agreement();
-    const out: any = await submit(s.token, await acceptInput({ selectedOptionalQuoteItemIds: [] }));
+    const out: any = await submit(s.token, await acceptInput({ selectedOptionalQuoteItemRefs: [] }));
 
     expect(out.status).toBe('decided');
     expect(out.decision).toBe('accepted');
@@ -214,19 +214,19 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
     for (const item of base) {
       expect(typeof item.tax_amount_if_included).toBe('number');
     }
-    expect(view!.items.find((i) => i.quote_item_id === s.required)!.tax_amount_if_included).toBe(Math.ceil((15000 * 8.875) / 100));
+    expect(view!.items.find((i) => i.publicRef === 'item-0')!.tax_amount_if_included).toBe(Math.ceil((15000 * 8.875) / 100));
 
     const previewFor = (selected: string[]) =>
       computePublicQuotePreview(
-        view!.items.map((i) => (i.is_optional ? { ...i, is_selected: selected.includes(i.quote_item_id) } : i)) as any,
+        view!.items.map((i) => (i.is_optional ? { ...i, is_selected: selected.includes(i.publicRef) } : i)) as any,
       );
-    expect(previewFor([s.optional])).not.toBeNull();
+    expect(previewFor(['item-1'])).not.toBeNull();
     const withoutOptional = previewFor([])!;
     expect(withoutOptional).not.toBeNull();
     expect(withoutOptional.subtotal).toBe(15000);
 
     // Commit with the optional item toggled off, using the fingerprint of the enriched view.
-    const out: any = await submit(s.token, await acceptInput({ selectedOptionalQuoteItemIds: [] }));
+    const out: any = await submit(s.token, await acceptInput({ selectedOptionalQuoteItemRefs: [] }));
     expect(out.status).toBe('decided');
     const q = await quoteRow(s.tenantId, s.quoteId);
     expect(Number(q.total_amount)).toBe(withoutOptional.totalAmount);
@@ -253,21 +253,21 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
     const rendered = await computePublicQuoteFingerprint(db, s.tenantId, s.quoteId);
     const inTrx = await db.transaction((trx) => computePublicQuoteFingerprint(trx, s.tenantId, s.quoteId));
     expect(inTrx).toBe(rendered);
-    const out: any = await submit(s.token, await acceptInput({ selectedOptionalQuoteItemIds: [s.optional], quoteFingerprint: rendered }));
+    const out: any = await submit(s.token, await acceptInput({ selectedOptionalQuoteItemRefs: ['item-1'], quoteFingerprint: rendered }));
     expect(out.status).toBe('decided');
     expect(Number((await quoteRow(s.tenantId, s.quoteId)).total_amount)).toBe(preview.totalAmount);
   });
 
   it('1b. accept keeping an optional item leaves it selected', async () => {
     const s = await setup();
-    const out: any = await submit(s.token, await acceptInput({ selectedOptionalQuoteItemIds: [s.optional] }));
+    const out: any = await submit(s.token, await acceptInput({ selectedOptionalQuoteItemRefs: ['item-1'] }));
     expect(out.status).toBe('decided');
     expect(Number((await quoteRow(s.tenantId, s.quoteId)).subtotal)).toBe(20000);
   });
 
   it('1e. decided outcome carries the committed snapshot equal to the persisted quote row (accept with optional change, and reject)', async () => {
     const s = await setup();
-    const out: any = await submit(s.token, await acceptInput({ selectedOptionalQuoteItemIds: [] }));
+    const out: any = await submit(s.token, await acceptInput({ selectedOptionalQuoteItemRefs: [] }));
     expect(out.status).toBe('decided');
     const row = await quoteRow(s.tenantId, s.quoteId);
     expect(out.committed).toEqual({
@@ -275,23 +275,23 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
       discount_total: Number(row.discount_total),
       tax: Number(row.tax),
       total_amount: Number(row.total_amount),
-      selectedOptionalQuoteItemIds: [],
+      selectedOptionalQuoteItemRefs: [],
     });
     expect(out.committed.subtotal).toBe(15000);
 
     const s2 = await setup();
-    const kept: any = await submit(s2.token, await acceptInput({ selectedOptionalQuoteItemIds: [s2.optional] }));
+    const kept: any = await submit(s2.token, await acceptInput({ selectedOptionalQuoteItemRefs: ['item-1'] }));
     const row2 = await quoteRow(s2.tenantId, s2.quoteId);
     expect(kept.committed.total_amount).toBe(Number(row2.total_amount));
     expect(kept.committed.subtotal).toBe(20000);
-    expect(kept.committed.selectedOptionalQuoteItemIds).toEqual([s2.optional]);
+    expect(kept.committed.selectedOptionalQuoteItemRefs).toEqual(['item-1']);
 
     const s3 = await setup();
     const rej: any = await submit(s3.token, { action: 'reject', comment: 'no' });
     const row3 = await quoteRow(s3.tenantId, s3.quoteId);
     expect(rej.status).toBe('decided');
     expect(rej.committed.total_amount).toBe(Number(row3.total_amount));
-    expect(rej.committed.selectedOptionalQuoteItemIds).toEqual([s3.optional]);
+    expect(rej.committed.selectedOptionalQuoteItemRefs).toEqual(['item-1']);
   });
 
   it('1c. signer email comes from the link, not the form', async () => {
@@ -332,8 +332,8 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
       [{ agreementTextHash: 'f'.repeat(64) }, 'agreement_outdated'],
       [{ agreementVersion: undefined }, 'agreement_outdated'],
       [{ signer: { name: 'x'.repeat(201) } }, 'too_long'],
-      [{ selectedOptionalQuoteItemIds: [uuidv4()] }, 'invalid_selection'],
-      [{ selectedOptionalQuoteItemIds: [s.required] }, 'invalid_selection'],
+      [{ selectedOptionalQuoteItemRefs: [uuidv4()] }, 'invalid_selection'],
+      [{ selectedOptionalQuoteItemRefs: ['item-0'] }, 'invalid_selection'],
     ];
     for (const [over, problem] of cases) {
       const out: any = await submit(s.token, await acceptInput(over));
@@ -454,7 +454,7 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
     }
     expect(await submit(s.token, { action: 'reject', comment: 'x', quoteFingerprint: undefined })).toEqual({ status: 'invalid_input', problem: 'fingerprint_required' });
     // Membership is checked after the fingerprint: a stale page with a bogus id is "changed".
-    expect(await submit(s.token, await acceptInput({ quoteFingerprint: 'f'.repeat(64), selectedOptionalQuoteItemIds: [uuidv4()] }))).toEqual({ status: 'changed' });
+    expect(await submit(s.token, await acceptInput({ quoteFingerprint: 'f'.repeat(64), selectedOptionalQuoteItemRefs: [uuidv4()] }))).toEqual({ status: 'changed' });
     expect((await quoteRow(s.tenantId, s.quoteId)).status).toBe('sent');
     expect(await decisionRows(s.tenantId, s.quoteId)).toHaveLength(0);
     expect(onQuoteAcceptedSpy).not.toHaveBeenCalled();

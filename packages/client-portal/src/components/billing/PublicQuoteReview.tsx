@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Public, read-only quote review (email-link page). Props are serializable view
+ * Public email-link quote review. Props are serializable view
  * data only: the server page strips tokens, link rows, tenant and contact ids
  * before anything reaches this client component.
  */
@@ -12,35 +12,26 @@ import type { IQuoteItem } from '@alga-psa/types';
 import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
 import { I18nProvider, useTranslation, type PreloadedNamespaceResources } from '@alga-psa/ui/lib/i18n/client';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
-import type { ClientPortalLocationSummary } from '@alga-psa/client-portal/actions';
-import { QuoteDocumentView, type QuoteDocumentQuote } from './QuoteDocumentView';
+import { QuoteDocumentView, type QuoteDocumentItem, type QuoteDocumentLocation, type QuoteDocumentQuote } from './QuoteDocumentView';
 import { computePublicQuotePreview } from './publicQuotePreview';
 import QuoteLinkDecisionPanel, { type QuoteLinkAgreement, type QuoteLinkCommittedSnapshot, type QuoteLinkSettledOutcome } from './QuoteLinkDecisionPanel';
 
-export type PublicQuoteReviewItem = Pick<
-  IQuoteItem,
-  | 'quote_item_id'
-  | 'description'
-  | 'quantity'
-  | 'unit_price'
-  | 'total_price'
-  | 'display_order'
-  | 'is_optional'
-  | 'is_selected'
-  | 'is_discount'
-  | 'location_id'
-  | 'tax_amount_if_included'
->;
+export type PublicQuoteReviewItem = Omit<QuoteDocumentItem, 'quote_item_id' | 'location_id' | 'publicRef' | 'locationRef'> & {
+  publicRef: string;
+  locationRef: string | null;
+};
+export type PublicQuoteReviewLocation = Omit<QuoteDocumentLocation, 'location_id' | 'publicRef'> & { publicRef: string };
+export type PublicQuoteReviewQuote = Omit<QuoteDocumentQuote, 'quote_id'> & {
+  subtotal: number;
+  discount_total: number;
+  tax: number;
+  total_amount: number;
+};
 
 export interface PublicQuoteReviewProps {
-  quote: QuoteDocumentQuote & {
-    subtotal: number;
-    discount_total: number;
-    tax: number;
-    total_amount: number;
-  };
+  quote: PublicQuoteReviewQuote;
   items: PublicQuoteReviewItem[];
-  locations: ClientPortalLocationSummary[];
+  locations: PublicQuoteReviewLocation[];
   locale: SupportedLocale;
   resources?: PreloadedNamespaceResources;
   branding: { name: string | null; logoUrl: string | null };
@@ -62,7 +53,7 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
 
   // Optional-item selection is local until Accept commits it (same model as the portal).
   const initialSelectedIds = useMemo(
-    () => new Set(items.filter((i) => isOptional(i as IQuoteItem) && isQuoteItemIncluded(i as IQuoteItem)).map((i) => i.quote_item_id)),
+    () => new Set(items.filter((i) => isOptional(i as IQuoteItem) && isQuoteItemIncluded(i as IQuoteItem)).map((i) => i.publicRef)),
     [items],
   );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set(initialSelectedIds));
@@ -81,7 +72,7 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
     if (outcome.kind === 'decided' && outcome.decision === 'accepted' && outcome.committed) {
       setCommitted(outcome.committed);
       setAcceptedWithoutSnapshot(false);
-      setSelectedIds(new Set(outcome.committed.selectedOptionalQuoteItemIds));
+      setSelectedIds(new Set(outcome.committed.selectedOptionalQuoteItemRefs));
     } else if (outcome.kind === 'decided' && outcome.decision === 'accepted') {
       setCommitted(null);
       setAcceptedWithoutSnapshot(true);
@@ -103,7 +94,12 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
   const canEditSelections = canDecide && hasOptionalItems;
 
   const previewItems = useMemo(
-    () => items.map((i) => (i.is_optional ? { ...i, is_selected: selectedIds.has(i.quote_item_id) } : i)) as IQuoteItem[],
+    () => items.map((i) => ({
+      ...i,
+      quote_item_id: i.publicRef,
+      location_id: i.locationRef,
+      is_selected: i.is_optional ? selectedIds.has(i.publicRef) : i.is_selected,
+    })) as IQuoteItem[],
     [items, selectedIds],
   );
   // Same pure function the server uses; if any base row lacks its tax input, fall back to persisted totals.
