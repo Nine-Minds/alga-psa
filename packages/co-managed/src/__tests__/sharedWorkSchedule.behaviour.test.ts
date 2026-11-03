@@ -185,12 +185,12 @@ describe('native calendar read work bounds', () => {
       .rejects.toBeInstanceOf(CoManagedSharedWorkError);
   });
 
-  it('accounts historical recurrence traversal across schedules even when overlay filtering removes every result', async () => {
+  it('accounts filtered recurrence periods across sparse schedules even when overlay filtering removes every result', async () => {
     seedWorkspace();
     const first = new Date('1900-01-01T09:00:00.000Z');
-    for (let n = 0; n < 20; n++) seedEntry({ entry_id: id(200 + n), is_recurring: true,
+    for (let n = 0; n < 2; n++) seedEntry({ entry_id: id(200 + n), is_recurring: true,
       scheduled_start: first, scheduled_end: new Date(first.getTime() + 60 * 60 * 1000),
-      recurrence_pattern: { frequency: 'yearly', interval: 1, startDate: '1900-01-01T00:00:00.000Z' } });
+      recurrence_pattern: { frequency: 'monthly', interval: 1, startDate: '1900-01-01T00:00:00.000Z', monthOfYear: 2, dayOfMonth: 29 } });
     await expect(readCoManagedNativeSchedules(db, TENANT, async () => calendarActor, { calendar: {
       start: '2025-01-01T00:00:00.000Z', end: '2025-01-02T00:00:00.000Z', technicianIds: [TECH],
     } })).rejects.toBeInstanceOf(CoManagedSharedWorkError);

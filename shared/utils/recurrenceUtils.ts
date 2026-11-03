@@ -2,6 +2,7 @@ import type { IScheduleEntry, IHoliday } from '@alga-psa/types';
 import * as rrulePkg from 'rrule';
 import type { Frequency, Weekday } from 'rrule';
 import { toCalendarDateString } from '@alga-psa/core';
+import { iterateRRuleBounded, RecurrencePeriodLimitError } from './boundedRRuleIterator';
 
 type RRuleConstructor = typeof import('rrule').RRule;
 
@@ -65,9 +66,9 @@ export interface GenerateOccurrencesOptions {
   holidays?: IHoliday[];
   /** Include the master date when the caller materializes the whole series virtually. */
   includeMaster?: boolean;
-  /** Maximum recurrence dates the rule engine may visit, including dates before the requested range. */
+  /** Maximum matching dates materialized for this recurrence. */
   maxOccurrences?: number;
-  /** Shared request budget. Visits before the requested range consume it too. */
+  /** Shared request budget charged for every candidate period, including periods with no matching dates. */
   workBudget?: RecurrenceWorkBudget;
 }
 
@@ -78,7 +79,7 @@ export const DEFAULT_MAX_RECURRENCE_OCCURRENCES = 10000;
 
 export class RecurrenceOccurrenceLimitError extends Error {
   constructor(readonly maxOccurrences: number, readonly occurrencesVisited: number) {
-    super('The recurrence produces too many occurrences for this request.');
+    super('The recurrence exceeds this request\'s work or result limit.');
     this.name = 'RecurrenceOccurrenceLimitError';
   }
 }
@@ -101,6 +102,7 @@ export function generateOccurrences(
       return [new Date(entry.scheduled_start)];
     }
     const pattern = entry.recurrence_pattern;
+    const recurrenceWork = workBudget ?? { remaining: maxOccurrences };
     const allDay = entry.is_all_day === true;
 
     // Validate and normalize start date
@@ -167,25 +169,37 @@ export function generateOccurrences(
     if (allDay) rangeEnd.setUTCHours(23, 59, 59, 999);
     else rangeEnd.setHours(23, 59, 59, 999);
 
-    // `between` filters dates before invoking its iterator, so its callback
-    // cannot bound work for old masters queried far in the future. `all`
-    // exposes each generated date. Keep historical dates inside the bounded
-    // rule result, collect only the requested range, and stop at the range end.
+    // The upstream callback is invoked only for dates surviving BY* filters.
+    // Iterate with a period charge so even empty/sparse rules stop within the
+    // request-wide work budget.
     const baseOccurrences: Date[] = [];
-    const visitLimit = Math.min(maxOccurrences, workBudget?.remaining ?? maxOccurrences);
-    if (visitLimit === 0) throw new RecurrenceOccurrenceLimitError(visitLimit, 0);
+    const visitLimit = maxOccurrences;
+    if (visitLimit === 0 || recurrenceWork.remaining === 0) throw new RecurrenceOccurrenceLimitError(visitLimit, 0);
     let occurrencesVisited = 0, traversalExceeded = false;
-    rrule.all(date => {
-      if (date > rangeEnd) return false;
-      occurrencesVisited++;
-      if (occurrencesVisited > visitLimit) {
-        traversalExceeded = true;
-        return false;
-      }
-      if (date >= rangeStart) baseOccurrences.push(date);
-      return true;
-    });
-    if (workBudget) workBudget.remaining -= Math.min(occurrencesVisited, visitLimit);
+    const result = {
+      accept(date: Date) {
+        if (date > rangeEnd) return false;
+        occurrencesVisited++;
+        if (occurrencesVisited > visitLimit) {
+          traversalExceeded = true;
+          return false;
+        }
+        if (date >= rangeStart) baseOccurrences.push(date);
+        return true;
+      },
+      getValue: () => baseOccurrences,
+    };
+    try {
+      iterateRRuleBounded(rrule.options, result, () => {
+        if (recurrenceWork.remaining <= 0) {
+          traversalExceeded = true;
+          throw new RecurrencePeriodLimitError();
+        }
+        recurrenceWork.remaining--;
+      });
+    } catch (error) {
+      if (!(error instanceof RecurrencePeriodLimitError)) throw error;
+    }
     if (traversalExceeded) throw new RecurrenceOccurrenceLimitError(visitLimit, occurrencesVisited);
 
     // Validate and get the original time

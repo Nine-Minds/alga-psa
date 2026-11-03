@@ -482,8 +482,33 @@ describe('bounded recurrence generation', () => {
       throw new Error('Expected recurrence traversal to exceed its work budget');
     } catch (error) {
       expect(error).toBeInstanceOf(RecurrenceOccurrenceLimitError);
-      expect((error as RecurrenceOccurrenceLimitError).occurrencesVisited).toBe(101);
+      expect((error as RecurrenceOccurrenceLimitError).occurrencesVisited).toBe(100);
     }
+  });
+
+  it('bounds empty rules whose date filters never produce a callback', () => {
+    const emptyRule = { ...endless, scheduled_start: new Date('2025-01-01T09:00:00Z'),
+      recurrence_pattern: makePattern({ startDate: new Date('2025-01-01'), monthOfYear: 2, dayOfMonth: 30 }) };
+    const workBudget = { remaining: 12 };
+    expect(() => generateOccurrences(emptyRule, new Date('2025-01-01'), new Date('2025-01-02'), {
+      maxOccurrences: 100, workBudget,
+    })).toThrow(RecurrenceOccurrenceLimitError);
+    expect(workBudget.remaining).toBe(0);
+  });
+
+  it('charges sparse recurrence periods while preserving matching leap-day results', () => {
+    const sparseRule = { ...endless, scheduled_start: new Date(2024, 1, 29, 9),
+      recurrence_pattern: makePattern({ startDate: new Date(2024, 1, 29), monthOfYear: 2, dayOfMonth: 29 }) };
+    const workBudget = { remaining: 3000 };
+    expect(generateOccurrences(sparseRule, new Date(2028, 1, 29), new Date(2028, 1, 29), {
+      maxOccurrences: 10, workBudget,
+    }).map(date => date.toISOString().slice(0, 10))).toEqual(['2028-02-29']);
+    expect(workBudget.remaining).toBeGreaterThan(0);
+    const shortBudget = { remaining: 12 };
+    expect(() => generateOccurrences(sparseRule, new Date('2025-01-01'), new Date('2025-01-02'), {
+      maxOccurrences: 100, workBudget: shortBudget,
+    })).toThrow(RecurrenceOccurrenceLimitError);
+    expect(shortBudget.remaining).toBe(0);
   });
 
   it('accepts an exact occurrence budget and rejects one occurrence beyond it', () => {
