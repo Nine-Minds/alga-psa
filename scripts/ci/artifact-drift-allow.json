@@ -598,5 +598,15 @@
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
     "pointer": "/components/schemas/InvoiceUpdateBody",
     "reason": "alga-2026-0002945: PUT /api/v1/invoices/{id} request body was narrowed to INVOICE_UPDATE_FIELDS (payment_method, billing_profile_id, due_date, invoice_date, items, tax_source) with additionalProperties:false. Lifecycle, identity and calculated monetary fields (status, client_id, subtotal, tax, total_amount, credit_applied, finalized_at, etc.) were removed because they let invoice:update bypass the finalize/send/payment/void commands and their permissions; the runtime now rejects them with 400."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceBulkStatusBody/properties/finalized_at",
+    "reason": "alga-2026-0002945: bulk invoice status no longer accepts finalized_at; finalization is owned by the finalize command (invoice:finalize). Requests that send it now get 400 instead of a raw write."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceBulkStatusBody/properties/finalized_at",
+    "reason": "alga-2026-0002945: bulk invoice status no longer accepts finalized_at; finalization is owned by the finalize command (invoice:finalize). Requests that send it now get 400 instead of a raw write."
   }
 ]
