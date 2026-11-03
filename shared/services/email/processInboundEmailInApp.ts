@@ -1312,7 +1312,27 @@ export async function processInboundEmailInApp(
     matchedBy: 'reply_token' | 'thread_headers';
     parentCommentId?: string | null;
     threadId?: string | null;
+    authorizedRequesterContactId?: string;
+    authorizedRequesterClientId?: string;
   }): Promise<ProcessInboundEmailInAppResult | null> => {
+    let matchedSenderContact = params.authorizedRequesterContactId
+      ? await resolveSenderContact({ ticketId: params.ticketId })
+      : undefined;
+    if (params.authorizedRequesterContactId && (
+      !matchedSenderContact
+      || matchedSenderContact.contact_id !== params.authorizedRequesterContactId
+      || matchedSenderContact.client_id !== params.authorizedRequesterClientId
+      || matchedSenderContact.user_type === 'internal'
+      || matchedSenderContact.is_inactive !== false
+    )) {
+      if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
+      return withDiagnostics({
+        outcome: 'quarantined',
+        reason: 'co_managed_token_refused',
+        ticketId: params.ticketId,
+        matchedBy: params.matchedBy,
+      }, diagnostics);
+    }
     const existingCommentId = await findExistingEmailComment({
       tenantId,
       ticketId: params.ticketId,
@@ -1341,9 +1361,10 @@ export async function processInboundEmailInApp(
       text: parsedText,
     });
     const serializedBlocks = JSON.stringify(blocks);
-    const matchedSenderContact = await resolveSenderContact({ ticketId: params.ticketId });
-    const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
-    const matchedSenderContactId = matchedSenderContact?.contact_id || undefined;
+    if (!matchedSenderContact) matchedSenderContact = await resolveSenderContact({ ticketId: params.ticketId });
+    const senderContact = matchedSenderContact;
+    const matchedSenderIsInternalUser = senderContact?.user_type === 'internal';
+    const matchedSenderContactId = senderContact?.contact_id || undefined;
     const senderKind = matchedSenderIsInternalUser ? 'internal' : 'client';
 
     let policyContext: InboundReplyReopenPolicyContext | null = null;
@@ -1364,10 +1385,10 @@ export async function processInboundEmailInApp(
 
     if (params.matchedBy === 'thread_headers') {
       const senderIsTicketClientContact = Boolean(
-        matchedSenderContact
+        senderContact
         && !matchedSenderIsInternalUser
         && policyContext?.clientId
-        && matchedSenderContact.client_id === policyContext.clientId
+        && senderContact?.client_id === policyContext.clientId
       );
       const senderIsActiveWatcher = Boolean(
         senderEmail && policyContext && getActiveWatchListEmails(policyContext.attributes).includes(senderEmail)
@@ -1553,7 +1574,7 @@ export async function processInboundEmailInApp(
           tenantId,
           ticketId: params.ticketId,
           statusId: reopenTarget.statusId,
-          updatedByUserId: matchedSenderIsInternalUser ? matchedSenderContact?.user_id : undefined,
+          updatedByUserId: matchedSenderIsInternalUser ? senderContact?.user_id : undefined,
           existingConnection: durableExecution?.trx,
           eventPublisher: durableExecution?.eventPublishers?.comment ?? durableExecution?.eventPublishers?.ticket,
         });
@@ -1611,12 +1632,12 @@ export async function processInboundEmailInApp(
         parent_comment_id: replyParentCommentId ?? undefined,
         source: 'email',
         author_type: matchedSenderIsInternalUser ? 'internal' : 'contact',
-        author_id: matchedSenderContact?.user_id,
+        author_id: senderContact?.user_id,
         contact_id: matchedSenderIsInternalUser ? undefined : matchedSenderContactId,
         metadata: {
           email: buildCommentEmailMetadata({
-            matchedSenderEmail: matchedSenderContact?.matched_email ?? senderEmail ?? null,
-            primaryContactEmail: matchedSenderContact?.email ?? null,
+            matchedSenderEmail: senderContact?.matched_email ?? senderEmail ?? null,
+            primaryContactEmail: senderContact?.email ?? null,
           }),
           parser: {
             confidence: parsedEmail?.confidence,
@@ -1659,9 +1680,9 @@ export async function processInboundEmailInApp(
         scopeLabel: 'reply',
         clientVisibleAttachments: Boolean(
           !matchedSenderIsInternalUser
-          && matchedSenderContact?.client_id
+          && senderContact?.client_id
           && policyContext?.clientId
-          && matchedSenderContact.client_id === policyContext.clientId
+          && senderContact?.client_id === policyContext.clientId
         ),
       });
       await applyEmbeddedImageUrlMappingsToStoredBodies({
@@ -1705,6 +1726,8 @@ export async function processInboundEmailInApp(
       // 0 extra statements. Only cm1:/cm2: tokens consult the delivery seam, and a refusal happens
       // before any comment write.
       let tokenInert = false;
+      let authorizedRequesterContactId: string | undefined;
+      let authorizedRequesterClientId: string | undefined;
       if (match?.ticketId && classifyReplyToken(String(token)) !== 'native') {
         // No provider registered in THIS process (as opposed to a provider that says "not served"):
         // admission cannot be evaluated, so the token must neither be treated as inert (native
@@ -1745,6 +1768,7 @@ export async function processInboundEmailInApp(
           ? await provider.admitReplyToken(tenantId, String(token), match.metadata, {
               email: senderEmail ?? null,
               internalAttributionTrusted: allowsInternalSenderAttribution(senderAuthResults),
+              contactAttributionTrusted: contactSenderTrusted,
             })
           : null;
         // Only "not served" (or no provider) leaves the token inert: thread headers decide. Every other
@@ -1799,6 +1823,16 @@ export async function processInboundEmailInApp(
             commentId: written.commentId,
           }, diagnostics);
         }
+        authorizedRequesterContactId = admission?.admitted === true && admission.audience === 'requester'
+          ? admission.requesterContactId
+          : undefined;
+        authorizedRequesterClientId = admission?.admitted === true && admission.audience === 'requester'
+          ? admission.requesterClientId
+          : undefined;
+        if (admission?.admitted === true && admission.audience === 'requester' && (!authorizedRequesterContactId || !authorizedRequesterClientId)) {
+          if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
+          return withDiagnostics({ outcome: 'quarantined', reason: 'co_managed_token_refused', ticketId: admission.ticketId, matchedBy: 'reply_token' }, diagnostics);
+        }
       }
       if (match?.ticketId && !tokenInert) {
         const replyTarget = match.commentId
@@ -1822,6 +1856,8 @@ export async function processInboundEmailInApp(
           matchedBy: 'reply_token',
           parentCommentId: replyTarget?.parentCommentId ?? null,
           threadId: replyTarget?.threadId ?? null,
+          authorizedRequesterContactId,
+          authorizedRequesterClientId,
         });
         if (handled) {
           return handled;

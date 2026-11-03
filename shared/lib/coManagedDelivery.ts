@@ -42,7 +42,11 @@ export interface InboundCommentActor {
 export type InboundAdmission =
   | { admitted: true; audience: CommentAudience; relationshipId: string; threadId: string | null; ticketId: string; parentCommentId: string | null;
       /** Set for shared_it / organization_private: the participant to write as. Absent = requester thread (native writer). */
-      actor?: InboundCommentActor }
+      actor?: InboundCommentActor;
+      /** Set for requester replies: the active contact authorized by admission. */
+      requesterContactId?: string;
+      /** Ticket client at admission, checked again at the native write boundary. */
+      requesterClientId?: string }
   | { admitted: false; reason: 'legacy_token' | 'stale_generation' | 'grant_revoked' | 'not_served' | 'not_participant' | 'audience_forbidden' | 'sender_unauthenticated'; acknowledge: boolean };
 
 /**
@@ -53,6 +57,7 @@ export type InboundAdmission =
 export interface InboundSender {
   email: string | null;
   internalAttributionTrusted: boolean;
+  contactAttributionTrusted: boolean;
 }
 
 export interface InboundCommentWrite {

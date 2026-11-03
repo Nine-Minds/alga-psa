@@ -225,15 +225,20 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
         const base = { admitted: true as const, audience, relationshipId: parsed.relationshipId, threadId: parsed.threadId, ticketId, parentCommentId: (record?.comment_id as string | null) ?? null };
         const sender = normalizeEmailAddress(inboundSender.email) ?? '';
         if (audience === 'requester') {
-          // Requester threads keep the native writer (its contact-auth rules still apply), but only an active
-          // contact of the ticket's own client, in this tenant, is admitted to it.
+          // The From address is only a claim until the existing contact-auth policy trusts its attribution.
+          // Refuse before looking up contacts so a forged active contact address cannot be admitted.
+          if (!inboundSender.contactAttributionTrusted) return { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
           if (!sender) return { admitted: false, reason: 'not_participant', acknowledge: true };
           const ticket = await tenantDb(trx, tenant).table('tickets').where({ ticket_id: ticketId }).first('client_id');
           const contact = ticket?.client_id
             ? await tenantDb(trx, tenant).table('contacts').where({ 'contacts.client_id': ticket.client_id, 'contacts.is_inactive': false })
               .andWhere(contactEmailMatch(tenantDb(trx, tenant), trx, sender)).first('contacts.contact_name_id')
             : null;
-          return contact ? base : { admitted: false, reason: 'not_participant', acknowledge: true };
+          return contact ? {
+            ...base,
+            requesterContactId: contact.contact_name_id as string,
+            requesterClientId: ticket.client_id as string,
+          } : { admitted: false, reason: 'not_participant', acknowledge: true };
         }
         // shared_it / organization_private resolve the sender to an internal user. An unauthenticated From is
         // only a claim: refuse BEFORE any user lookup, and never mail the unverified address.

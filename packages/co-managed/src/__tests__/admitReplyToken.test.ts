@@ -60,8 +60,8 @@ import { createCoManagedDeliveryProvider } from '../deliveryProvider';
 const CUSTOMER = 'tenant-c';
 const SPONSOR = 'tenant-s';
 const metadata = (threadId: string) => ({ namespace: 'cm', version: 2, relationshipId: 'rel', grantGeneration: 0, threadId });
-const trusted = (email: string | null) => ({ email, internalAttributionTrusted: true });
-const untrusted = (email: string | null) => ({ email, internalAttributionTrusted: false });
+const trusted = (email: string | null) => ({ email, internalAttributionTrusted: true, contactAttributionTrusted: true });
+const untrusted = (email: string | null) => ({ email, internalAttributionTrusted: false, contactAttributionTrusted: false });
 
 function seed(audience: 'shared_it' | 'organization_private' | 'requester') {
   store.lookups = [];
@@ -89,7 +89,7 @@ function seed(audience: 'shared_it' | 'organization_private' | 'requester') {
     ],
   };
 }
-const admit = (sender: { email: string | null; internalAttributionTrusted: boolean }) =>
+const admit = (sender: { email: string | null; internalAttributionTrusted: boolean; contactAttributionTrusted: boolean }) =>
   createCoManagedDeliveryProvider().admitReplyToken(CUSTOMER, 'cm2:t', metadata('thr'), sender);
 
 describe('admitReplyToken sender authentication', () => {
@@ -129,20 +129,29 @@ describe('admitReplyToken sender authentication', () => {
     beforeEach(() => seed('requester'));
     const refused = { admitted: false, reason: 'not_participant', acknowledge: true };
 
-    it('an active contact of the ticket client is admitted with no actor', async () => {
-      const result: any = await admit(untrusted('req@CUSTOMER.test'));
-      expect(result).toMatchObject({ admitted: true, audience: 'requester', ticketId: 'tk' });
+    it('an untrusted forged From is refused before requester contact lookup', async () => {
+      expect(await admit(untrusted('req@CUSTOMER.test'))).toEqual({ admitted: false, reason: 'sender_unauthenticated', acknowledge: false });
+      expect(store.lookups).not.toContain('contacts');
+    });
+    it('missing sender authentication fails closed before requester contact lookup', async () => {
+      expect(await admit({ email: 'req@CUSTOMER.test', internalAttributionTrusted: false, contactAttributionTrusted: false }))
+        .toEqual({ admitted: false, reason: 'sender_unauthenticated', acknowledge: false });
+      expect(store.lookups).not.toContain('contacts');
+    });
+    it('a trusted active contact of the ticket client is admitted with its identity', async () => {
+      const result: any = await admit({ ...trusted('req@CUSTOMER.test'), contactAttributionTrusted: true });
+      expect(result).toMatchObject({ admitted: true, audience: 'requester', ticketId: 'tk', requesterContactId: 'k1', requesterClientId: 'client-1' });
       expect(result.actor).toBeUndefined();
     });
-    it('a contact of another client is refused', async () => { expect(await admit(untrusted('other@elsewhere.test'))).toEqual(refused); });
-    it('the same email in another tenant is refused', async () => { expect(await admit(untrusted('foreign@customer.test'))).toEqual(refused); });
-    it('an inactive contact is refused', async () => { expect(await admit(untrusted('gone@customer.test'))).toEqual(refused); });
-    it('an additional address of an active contact of the ticket client is admitted', async () => {
-      expect(await admit(untrusted('Req.Alt@home.test'))).toMatchObject({ admitted: true, audience: 'requester' });
+    it('a contact of another client is refused', async () => { expect(await admit(trusted('other@elsewhere.test'))).toEqual(refused); });
+    it('the same email in another tenant is refused', async () => { expect(await admit(trusted('foreign@customer.test'))).toEqual(refused); });
+    it('an inactive contact is refused', async () => { expect(await admit(trusted('gone@customer.test'))).toEqual(refused); });
+    it('an additional address of an active contact of the ticket client is admitted when trusted', async () => {
+      expect(await admit({ ...trusted('Req.Alt@home.test'), contactAttributionTrusted: true })).toMatchObject({ admitted: true, audience: 'requester', requesterContactId: 'k1', requesterClientId: 'client-1' });
     });
-    it('an additional address of another client\'s contact is refused', async () => { expect(await admit(untrusted('other.alt@home.test'))).toEqual(refused); });
-    it('an additional address of an inactive contact is refused', async () => { expect(await admit(untrusted('gone.alt@home.test'))).toEqual(refused); });
-    it('no sender is refused', async () => { expect(await admit(untrusted(null))).toEqual(refused); });
+    it('an additional address of another client\'s contact is refused', async () => { expect(await admit(trusted('other.alt@home.test'))).toEqual(refused); });
+    it('an additional address of an inactive contact is refused', async () => { expect(await admit(trusted('gone.alt@home.test'))).toEqual(refused); });
+    it('no sender is refused', async () => { expect(await admit(trusted(null))).toEqual(refused); });
     it('an internal user address is not a requester contact', async () => { expect(await admit(trusted('agent@msp.test'))).toEqual(refused); });
   });
 });

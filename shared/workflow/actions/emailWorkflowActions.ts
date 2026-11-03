@@ -122,6 +122,7 @@ export interface FindContactByEmailOutput {
   email: string;
   matched_email?: string;
   client_id: string;
+  is_inactive: boolean;
   user_id?: string;
   user_type?: 'internal' | 'client';
   client_name: string;
@@ -274,6 +275,7 @@ export async function findContactByEmail(
           email: normalizeEmailAddress(internalUser.email) ?? normalizedEmail,
           matched_email: normalizedEmail,
           client_id: '',
+          is_inactive: false,
           user_id: internalUser.user_id,
           user_type: 'internal' as const,
           client_name: '',
@@ -287,6 +289,7 @@ export async function findContactByEmail(
           'contacts.full_name as name',
           'contacts.email',
           'contacts.client_id',
+          'contacts.is_inactive',
           db.subquery('users')
             .select('users.user_id')
             .whereRaw('users.contact_id = contacts.contact_name_id')
