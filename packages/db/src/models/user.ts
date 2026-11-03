@@ -5,9 +5,11 @@ import type {
   IRole,
   IUserRole,
   IUserWithRoles,
+  PublicUserWithRoles,
+  PublicUser,
   IRoleWithPermissions,
 } from '@alga-psa/types';
-import { INTERACTIVE_USER_TYPES } from '@alga-psa/types';
+import { INTERACTIVE_USER_TYPES, USER_RESPONSE_FIELD_NAMES } from '@alga-psa/types';
 import { getAdminConnection } from '../lib/admin';
 import { tenantDb } from '../lib/tenantDb';
 import { requireTenantId } from '../lib/tenantId';
@@ -297,11 +299,11 @@ const User = {
     }
   },
 
-  getUserWithRoles: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<IUserWithRoles | undefined> => {
+  getUserWithRoles: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<PublicUserWithRoles | undefined> => {
     const tenant = await requireTenantId(knexOrTrx);
     try {
-      const user = await tenantDb(knexOrTrx, tenant).table<IUser>('users')
-        .select('*')
+      const user = await tenantDb(knexOrTrx, tenant).table<PublicUser>('users')
+        .select(...USER_RESPONSE_FIELD_NAMES)
         .where('user_id', user_id)
         .first();
       if (user) {

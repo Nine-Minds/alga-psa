@@ -194,6 +194,8 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      // Server tests run outside Next's react-server module condition.
+      { find: 'server-only', replacement: path.resolve(__dirname, '../node_modules/server-only/empty.js') },
       { find: '@/empty', replacement: path.resolve(__dirname, '../packages/ee/src') },
       { find: '@', replacement: path.resolve(__dirname, './src') },
       // shared/services/email/inboundEmailRules/aiClassifier.ts dynamically imports this

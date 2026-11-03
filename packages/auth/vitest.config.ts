@@ -10,6 +10,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      'server-only': path.resolve(__dirname, '../../node_modules/server-only/empty.js'),
       // Resolve to source so tests see user-type predicates without a rebuilt dist.
       '@alga-psa/types': path.resolve(__dirname, '../types/src'),
       '@alga-psa/client-portal': path.resolve(__dirname, '../client-portal/src'),

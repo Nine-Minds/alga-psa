@@ -1,7 +1,8 @@
 'use server';
 
 import type { Knex } from 'knex';
-import type { IUser, IRole, IUserWithRoles } from '@alga-psa/types';
+import type { PublicUser, IRole, PublicUserWithRoles } from '@alga-psa/types';
+import { USER_RESPONSE_FIELD_NAMES } from '@alga-psa/types';
 import { createTenantKnex } from './tenant';
 import { withTransaction } from './tenant';
 import { tenantDb } from './tenantDb';
@@ -19,7 +20,7 @@ export async function getUserWithRoles(
   userId: string,
   tenantId: string,
   getAvatarUrl?: (userId: string, tenant: string) => Promise<string | null>
-): Promise<IUserWithRoles | null> {
+): Promise<PublicUserWithRoles | null> {
   const { knex, tenant } = await createTenantKnex(tenantId);
 
   // Verify tenant matches for security
@@ -31,8 +32,8 @@ export async function getUserWithRoles(
   const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenantId);
 
-    const user = await scopedDb.table<IUser>('users')
-      .select('*')
+    const user = await scopedDb.table<PublicUser>('users')
+      .select(...USER_RESPONSE_FIELD_NAMES)
       .where('user_id', userId)
       .first();
 
@@ -87,14 +88,14 @@ export async function getUserWithRolesByEmail(
   tenantId: string,
   userType?: string,
   getAvatarUrl?: (userId: string, tenant: string) => Promise<string | null>
-): Promise<IUserWithRoles | null> {
+): Promise<PublicUserWithRoles | null> {
   const { knex } = await createTenantKnex(tenantId);
 
   const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenantId);
 
-    let query = scopedDb.table<IUser>('users')
-      .select('*')
+    let query = scopedDb.table<PublicUser>('users')
+      .select(...USER_RESPONSE_FIELD_NAMES)
       .where('email', email.toLowerCase());
 
     if (userType) {

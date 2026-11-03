@@ -1659,7 +1659,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             async authorize(credentials, request): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("@alga-psa/db/admin");
                 const logger = (await import('@alga-psa/core/logger')).default;
-                const { authenticateUser } = await import('../actions/auth');
+                const { authenticateUserForAuth } = await import('./authenticateUserForAuth');
                 const {
                     enforceLoginProtection,
                     normalizeLoginEmail,
@@ -1720,7 +1720,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 
                     console.log('Attempting to authenticate user:', credentials.email);
                     console.log('user type', credentials.userType);
-                    const user = await authenticateUser(
+                    const user = await authenticateUserForAuth(
                         credentials.email as string,
                         credentials.password as string,
                         credentials.userType as string,

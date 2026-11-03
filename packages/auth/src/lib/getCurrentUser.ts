@@ -1,4 +1,5 @@
-import type { IUserWithRoles } from '@alga-psa/types';
+import { sanitizeUserForResponse } from '@alga-psa/types';
+import type { PublicUserWithRoles } from '@alga-psa/types';
 import { getUserWithRoles, getUserWithRolesByEmail, createTenantKnex, noteTenantProductCode } from '@alga-psa/db';
 import { getApiKeyUserOverride } from './apiKeyUserContext';
 import { getSession, getSessionWithRevocationCheck, logSessionRejection } from './getSession';
@@ -12,7 +13,7 @@ import type { Session } from 'next-auth';
  * request, not merely at the next sign-in, so an inactive user resolves to no
  * caller at all.
  */
-function activeUserOrNull(user: IUserWithRoles | null): IUserWithRoles | null {
+function activeUserOrNull(user: PublicUserWithRoles | null): PublicUserWithRoles | null {
   if (!user) {
     return null;
   }
@@ -22,20 +23,20 @@ function activeUserOrNull(user: IUserWithRoles | null): IUserWithRoles | null {
     return null;
   }
 
-  return user;
+  return sanitizeUserForResponse(user);
 }
 
 type SessionResolver = () => Promise<Session | null>;
 
 async function resolveCurrentUser(
   resolveSession: SessionResolver
-): Promise<IUserWithRoles | null> {
+): Promise<PublicUserWithRoles | null> {
   try {
     // API-key routes establish the caller's identity explicitly (see
     // apiKeyUserContext); it takes precedence over any ambient session.
     const apiKeyUser = getApiKeyUserOverride();
     if (apiKeyUser) {
-      return apiKeyUser;
+      return sanitizeUserForResponse(apiKeyUser);
     }
 
     const session = await resolveSession();
@@ -117,7 +118,7 @@ async function resolveCurrentUser(
   }
 }
 
-export async function getCurrentUser(): Promise<IUserWithRoles | null> {
+export async function getCurrentUser(): Promise<PublicUserWithRoles | null> {
   return resolveCurrentUser(getSession);
 }
 
@@ -129,6 +130,6 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
  * session gate both reject revoked or untracked sessions; the latter also
  * protects the development-only edge fallback.
  */
-export async function getCurrentUserWithRevocationCheck(): Promise<IUserWithRoles | null> {
+export async function getCurrentUserWithRevocationCheck(): Promise<PublicUserWithRoles | null> {
   return resolveCurrentUser(getSessionWithRevocationCheck);
 }

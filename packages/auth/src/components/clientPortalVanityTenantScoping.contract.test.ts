@@ -84,7 +84,7 @@ describe('Client portal vanity-domain tenant scoping contract', () => {
 
   it('unscoped client discovery reads every match instead of an arbitrary first row', () => {
     const modelSource = read('packages/db/src/models/user.ts');
-    const authSource = read('packages/auth/src/actions/auth.tsx');
+    const authSource = read('packages/auth/src/lib/authenticateUserForAuth.ts');
     const resolutionSource = read('packages/auth/src/lib/signInUserResolution.ts');
 
     expect(modelSource).toContain('findUsersByEmailAndType');

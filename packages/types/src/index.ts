@@ -238,3 +238,5 @@ export interface IEventPublisher {
     assignedByUserId?: string;
   }): Promise<void>;
 }
+
+export * from './lib/userResponse';
