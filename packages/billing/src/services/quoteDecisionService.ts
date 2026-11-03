@@ -17,7 +17,7 @@ import { onQuoteAccepted } from '@alga-psa/opportunities/lib/quoteLifecycleHooks
 import Quote from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 import { recalculateQuoteFinancials } from './quoteCalculationService';
-import { getClientIdFromPortalUser, hasClientBillingReadPermission } from '../lib/clientPortalAccess';
+import { getClientIdFromPortalUser, hasClientBillingReadPermission } from './clientPortalAccess';
 
 export type QuoteDecisionAction = 'accept' | 'reject';
 export type QuoteDecisionMethod = 'portal' | 'email_link' | 'msp_marked';

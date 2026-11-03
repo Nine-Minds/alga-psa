@@ -18,7 +18,7 @@ vi.mock('@alga-psa/db', () => {
   return { tenantDb: vi.fn(() => ({ table: () => chain })) };
 });
 
-vi.mock('../models/quoteActivity', () => ({
+vi.mock('../../src/models/quoteActivity', () => ({
   default: {
     create: vi.fn(async (_k: unknown, _t: string, input: any) => {
       state.created.push(input);
@@ -26,7 +26,7 @@ vi.mock('../models/quoteActivity', () => ({
     }),
   },
 }));
-vi.mock('../models/quote', () => ({ default: { getById: vi.fn() } }));
+vi.mock('../../src/models/quote', () => ({ default: { getById: vi.fn() } }));
 vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({
   resolveEmailLocale: vi.fn(async () => 'de'),
 }));
@@ -36,8 +36,8 @@ import {
   projectPublicQuote,
   projectPublicQuoteItems,
   recordQuoteViewedViaEmailLink,
-} from './publicQuoteView';
-import { QUOTE_ACTIVITY_TYPES } from '../lib/quoteActivityTypes';
+} from '../../src/services/publicQuoteView';
+import { QUOTE_ACTIVITY_TYPES } from '../../src/lib/quoteActivityTypes';
 
 const TOKEN = 'T'.repeat(43);
 

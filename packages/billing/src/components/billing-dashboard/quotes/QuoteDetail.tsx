@@ -1334,7 +1334,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                 <div key={activity.activity_id} className="rounded-md border border-border p-3">
                   <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                     <div className="font-medium text-foreground">
-<<<<<<< HEAD
                       {activity.activity_type === 'viewed_via_email_link'
                         ? (typeof activity.metadata?.recipient_email === 'string'
                           ? t('quoteDetail.activity.viewedViaEmailLink.descriptionWithRecipient', {
@@ -1342,13 +1341,10 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                             email: activity.metadata.recipient_email,
                           })
                           : t('quoteDetail.activity.viewedViaEmailLink.description', { defaultValue: 'Quote viewed via email link' }))
-                        : activity.description}
-=======
-                      {(() => {
-                        const linked = emailLinkDecisionForActivity(quote.decisions, activity);
-                        return linked ? <QuoteDecisionLine decision={linked} /> : activity.description;
-                      })()}
->>>>>>> 75b96beaaa (feat(quotes): accept/reject with typed e-signature via email link (alga-2026-0002820 4/6))
+                        : (() => {
+                          const linked = emailLinkDecisionForActivity(quote.decisions, activity);
+                          return linked ? <QuoteDecisionLine decision={linked} /> : activity.description;
+                        })()}
                     </div>
                     <div className="text-xs text-muted-foreground">{activity.created_at ? formatDate(activity.created_at) : '—'}</div>
                   </div>

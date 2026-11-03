@@ -13,9 +13,8 @@ export {
 export { ensureInvoiceEmailLinks } from './ensureInvoiceEmailLinks';
 export { BillingEngine } from '../lib/billing/billingEngine';
 export { recalculateQuoteFinancials, resolveQuoteItemTaxesIfIncluded } from './quoteCalculationService';
+export { getClientIdFromPortalUser, hasClientBillingReadPermission } from './clientPortalAccess';
 export {
-<<<<<<< HEAD
-=======
   decideQuote,
   listQuoteDecisions,
   authorizePortalUserForQuote,
@@ -31,7 +30,6 @@ export {
   type PortalQuoteAccessResult,
 } from './quoteDecisionService';
 export {
->>>>>>> 75b96beaaa (feat(quotes): accept/reject with typed e-signature via email link (alga-2026-0002820 4/6))
   PDFGenerationService,
   createPDFGenerationService,
   publishGeneratedDocumentsToClient,

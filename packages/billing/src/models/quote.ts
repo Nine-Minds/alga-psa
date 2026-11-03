@@ -325,6 +325,43 @@ const Quote = {
     });
   },
 
+  /** Atomically transition a sent quote once; concurrent decisions return null. */
+  async updateIfStatus(
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    quoteId: string,
+    expectedStatus: QuoteStatus,
+    updateData: Partial<IQuote> & { status: QuoteStatus },
+  ): Promise<IQuote | null> {
+    if (!tenant) throw new Error('Tenant context is required for updating quote');
+
+    return withTransaction(knexOrTrx, async (trx) => {
+      const existingQuote = await quoteTable<IQuote>(trx, tenant, 'quotes')
+        .where({ quote_id: quoteId, is_template: false })
+        .forUpdate()
+        .first();
+      if (!existingQuote || existingQuote.status !== expectedStatus) return null;
+
+      const [updatedQuote] = await quoteTable<IQuote>(trx, tenant, 'quotes')
+        .where({ quote_id: quoteId, status: expectedStatus, is_template: false })
+        .update({ ...prepareQuoteTermsForDb(updateData as Record<string, unknown>), updated_at: trx.fn.now() })
+        .returning('*');
+      if (!updatedQuote) return null;
+
+      const activity = await QuoteActivity.create(trx, tenant, {
+        quote_id: quoteId,
+        activity_type: 'status_changed',
+        description: `Quote status changed from ${expectedStatus} to ${updateData.status}`,
+        performed_by: updateData.updated_by ?? null,
+        metadata: { previous_status: expectedStatus, next_status: updateData.status },
+      });
+      await recalculateQuoteFinancials(trx, tenant, quoteId);
+      const finalQuote = (await quoteTable<IQuote>(trx, tenant, 'quotes').where({ quote_id: quoteId }).first() ?? updatedQuote) as IQuote;
+      await recordQuoteLifecycleTransition(trx, tenant, existingQuote as IQuote, finalQuote, activity);
+      return finalQuote;
+    });
+  },
+
   async delete(
     knexOrTrx: Knex,
     tenant: string,
