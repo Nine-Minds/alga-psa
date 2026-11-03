@@ -28,28 +28,11 @@ function isExpectedUserQueryError(error: unknown): boolean {
 
 function toIUserBasic(user: IUser): IUserBasic {
   const safeUser = sanitizeUserForResponse(user);
-  return {
-    user_id: safeUser.user_id,
-    username: safeUser.username,
-    first_name: safeUser.first_name,
-    last_name: safeUser.last_name,
-    email: safeUser.email,
-    phone: safeUser.phone,
-    timezone: safeUser.timezone,
-    user_type: safeUser.user_type,
-    contact_id: safeUser.contact_id,
-    icon: safeUser.icon,
-    created_at: safeUser.created_at,
-    updated_at: safeUser.updated_at,
-    two_factor_enabled: safeUser.two_factor_enabled,
-    two_factor_required_new_device: safeUser.two_factor_required_new_device,
-    is_google_user: safeUser.is_google_user,
-    is_inactive: safeUser.is_inactive,
-    tenant: safeUser.tenant,
-    reports_to: safeUser.reports_to,
-    last_login_at: safeUser.last_login_at,
-    last_login_method: safeUser.last_login_method,
-  };
+  return Object.fromEntries(
+    USER_RESPONSE_FIELD_NAMES
+      .filter((field) => field in safeUser)
+      .map((field) => [field, safeUser[field]])
+  ) as IUserBasic;
 }
 
 /**
@@ -588,7 +571,7 @@ export const getClientUsersForClient = withAuth(async (
   currentUser,
   { tenant },
   clientId: string
-): Promise<IUser[]> => {
+): Promise<IUserBasic[]> => {
   try {
     const { knex } = await createTenantKnex();
 
@@ -621,7 +604,7 @@ export const getClientUsersForClient = withAuth(async (
         if (!actorContact?.client_id || actorContact.client_id !== clientId) {
           throw new Error('Permission denied: Cannot read client users for another client');
         }
-        query = query.select<IUser[]>(
+        query = query.select<IUserBasic[]>(
           'users.user_id',
           'users.tenant',
           'users.username',
@@ -637,7 +620,7 @@ export const getClientUsersForClient = withAuth(async (
           'users.updated_at'
         );
       } else {
-        query = query.select<IUser[]>(...USER_RESPONSE_FIELD_NAMES.map((field) => `users.${field}`));
+        query = query.select<IUserBasic[]>(...USER_RESPONSE_FIELD_NAMES.map((field) => `users.${field}`));
       }
 
       return (await query).map((user) => toIUserBasic(user));
