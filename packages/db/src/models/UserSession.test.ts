@@ -185,6 +185,16 @@ describe('session lifecycle diagnostics', () => {
     expect(JSON.stringify(lifecycleLogger.info.mock.calls)).not.toContain('secret');
   });
 
+  it.each(['__proto__', 'constructor', 'toString'])('bounds inherited property name %s to a safe category', (reason) => {
+    logSessionLifecycle('rejected', 'session-id', reason);
+
+    expect(lifecycleLogger.warn).toHaveBeenCalledWith('[auth] session_lifecycle', {
+      event: 'rejected',
+      sessionCorrelationId: sessionCorrelationId('session-id'),
+      reason: 'other',
+    });
+  });
+
   it.each([
     ['durable_session_missing', 'missing'],
     ['durable_session_revoked', 'revoked'],
@@ -289,5 +299,37 @@ describe('session lifecycle diagnostics', () => {
         reason: 'max_sessions',
       });
     }
+  });
+
+  it.each([
+    ['cleanupExpired', 'expired'],
+    ['cleanupInactive', 'inactivity'],
+  ] as const)('%s reports only successfully revoked rows', async (method, reason) => {
+    returningMock.mockResolvedValueOnce([{ session_id: 'cleanup-session' }]);
+
+    await expect(UserSession[method]('tenant-1')).resolves.toBe(1);
+    expect(lifecycleLogger.info).toHaveBeenCalledExactlyOnceWith('[auth] session_lifecycle', {
+      event: 'revoked',
+      sessionCorrelationId: sessionCorrelationId('cleanup-session'),
+      reason,
+    });
+
+    lifecycleLogger.info.mockClear();
+    returningMock.mockResolvedValueOnce([]);
+    await expect(UserSession[method]('tenant-1')).resolves.toBe(0);
+    expect(lifecycleLogger.info).not.toHaveBeenCalled();
+  });
+
+  it('does not report max-session revocations when the transaction fails to commit', async () => {
+    activeSessionRows = [{ session_id: 'rolled-back-session' }];
+    returningMock.mockResolvedValueOnce(activeSessionRows);
+    knexFn.transaction.mockImplementationOnce(async (callback) => {
+      await callback(knexFn);
+      throw new Error('transaction commit failed');
+    });
+
+    await expect(UserSession.enforceMaxSessions('tenant-1', 'user-1', 1))
+      .rejects.toThrow('transaction commit failed');
+    expect(lifecycleLogger.info).not.toHaveBeenCalled();
   });
 });

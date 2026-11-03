@@ -75,13 +75,13 @@ const SESSION_LIFECYCLE_REASONS = new Set<string>([
   'user_missing', 'identity_mismatch', 'lookup_unavailable', 'missing_identity_claims',
 ]);
 
-const NORMALIZED_LIFECYCLE_REASONS: Record<string, string> = {
-  durable_session_missing: 'missing',
-  durable_session_revoked: 'revoked',
-  durable_session_user_missing: 'user_missing',
-  durable_session_identity_mismatch: 'identity_mismatch',
-  durable_session_lookup_unavailable: 'lookup_unavailable',
-};
+const NORMALIZED_LIFECYCLE_REASONS = new Map<string, string>([
+  ['durable_session_missing', 'missing'],
+  ['durable_session_revoked', 'revoked'],
+  ['durable_session_user_missing', 'user_missing'],
+  ['durable_session_identity_mismatch', 'identity_mismatch'],
+  ['durable_session_lookup_unavailable', 'lookup_unavailable'],
+]);
 
 /** A stable, non-secret join key for server-side session lifecycle diagnostics. */
 export function sessionCorrelationId(sessionId: string): string {
@@ -96,7 +96,7 @@ export function logSessionLifecycle(
 ): void {
   if (typeof sessionId !== 'string' || sessionId.length === 0) return;
   const safeReason = reason
-    ? (NORMALIZED_LIFECYCLE_REASONS[reason] ?? (SESSION_LIFECYCLE_REASONS.has(reason) ? reason : 'other'))
+    ? (NORMALIZED_LIFECYCLE_REASONS.get(reason) ?? (SESSION_LIFECYCLE_REASONS.has(reason) ? reason : 'other'))
     : undefined;
   const meta = {
     event,
