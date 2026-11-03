@@ -4,6 +4,7 @@
  */
 
 import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { deactivateClientScopedTicketTemplates } from '@alga-psa/shared/lib/ticketTemplates';
 import { Knex } from 'knex';
 import { locationAddressSql } from './locationAddressSql';
 import { getContactCountsByLocation } from '@alga-psa/shared/models/contactLocation';
@@ -506,6 +507,7 @@ export class ClientService extends BaseService<IClient> {
   ): Promise<void> {
     await this.cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);
     await deactivateClientScopedChecklistTemplates(trx, tenant, clientId);
+    await deactivateClientScopedTicketTemplates(trx, tenant, clientId);
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_settings', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_cycles', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });

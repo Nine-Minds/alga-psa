@@ -1,7 +1,13 @@
 /**
- * The pure quote discount allocation moved to `@alga-psa/shared` so the
- * workflow runtime's quote conversion and the billing package derive discount
- * shares from one implementation. This module re-exports it for existing
- * billing-internal imports.
+ * Quote discount allocation lives in `@alga-psa/core` (it backs the shared
+ * quote totals). This module only re-exports it for existing billing imports.
  */
-export * from '@alga-psa/shared/billingClients/quoteDiscountAllocation';
+export {
+  allocateQuoteDiscounts,
+  type DiscountBaseItemInput,
+  type QuoteDiscountAllocation,
+  type QuoteDiscountAllocationResult,
+  type QuoteDiscountInput,
+  type QuoteDiscountItemAllocation,
+  type QuoteDiscountType,
+} from '@alga-psa/core';

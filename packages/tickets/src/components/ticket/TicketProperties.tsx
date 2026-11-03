@@ -70,7 +70,6 @@ interface TicketPropertiesProps {
   userId: string;
   tenant: string;
   contacts: any[];
-  clients: IClient[];
   locations?: IClientLocation[];
   clientFilterState: 'all' | 'active' | 'inactive';
   clientTypeFilter: 'all' | 'company' | 'individual';
@@ -153,7 +152,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   userId,
   tenant,
   contacts,
-  clients,
   locations = [],
   clientFilterState,
   clientTypeFilter,
@@ -207,7 +205,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const { t } = useTranslation('features/tickets');
   const dataSource = useTicketDataSource();
   const { getScheduledHoursForTicket, getTicketAppointmentRequests } = dataSource.ticket;
-  const { getClientBillingProfiles } = dataSource.people;
+  const { getClientBillingProfiles, searchClientsForPicker } = dataSource.people;
   const { getTeamAvatarUrlsBatchAction, getContactAvatarUrlAction, getUserAvatarUrlsBatchAction } = dataSource.avatars;
   const { getUserContactId, getTicketingDisplaySettings } = dataSource.viewer;
   // These read 'en-US' outright, so they stayed American in every locale.
@@ -389,22 +387,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         return t('properties.notAvailable', 'N/A');
     }
   }, [client?.client_name, contactInfo?.full_name, locations, t, ticket.location]);
-
-  const uniqueClientsForPicker = React.useMemo(() => {
-    if (!clients) return [];
-    const seen = new Set<string>();
-    return clients.filter(client => {
-      // Ensure client and client_id are valid before processing
-      if (!client || typeof client.client_id === 'undefined') {
-        return false;
-      }
-      if (seen.has(client.client_id)) {
-        return false;
-      }
-      seen.add(client.client_id);
-      return true;
-    });
-  }, [clients]);
 
   const teamMembersOnTicket = React.useMemo(() => {
     return additionalAgents.filter(agent => agent.role === 'team_member');
@@ -782,7 +764,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               setIsQuickAddContactOpen(false);
               setShowContactPicker(true);
             },
-            clients,
             selectedClientId: ticket.client_id || client?.client_id,
           })}
           <div>
@@ -843,7 +824,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                     <div className="w-full">
                       <ClientPicker
                         {...withDataAutomationId({ id: `${id}-client-picker` })}
-                        clients={uniqueClientsForPicker}
+                        searchClients={searchClientsForPicker}
                         onSelect={setSelectedClientId}
                         selectedClientId={selectedClientId || client?.client_id || ''}
                         filterState={clientFilterState}

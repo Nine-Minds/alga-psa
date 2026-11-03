@@ -1,8 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import type { IService, IClient } from '@alga-psa/types';
-import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
+import type { IService } from '@alga-psa/types';
 import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { listInvoiceableSalesOrdersForBilling, type InvoiceableSalesOrderForBilling } from '@alga-psa/billing/actions/salesOrderInvoicingActions';
 import AutomaticInvoices from '../AutomaticInvoices';
@@ -40,14 +39,13 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
   const { enabled: billingEnabled } = useFeatureFlag('billing-enabled');
   const [error, setError] = useState<string | null>(null);
   const [salesOrderLoadFailed, setSalesOrderLoadFailed] = useState(false);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [services, setServices] = useState<IService[]>([]);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [internalRefreshTrigger, setInternalRefreshTrigger] = useState(0);
   const [invoiceableSalesOrders, setInvoiceableSalesOrders] = useState<InvoiceableSalesOrderForBilling[]>([]);
 
-  // Only load clients and services for manual/prepayment invoices
+  // Only load services for manual/prepayment invoices
   useEffect(() => {
     if (invoiceType !== 'automatic') {
       loadManualInvoiceData();
@@ -57,35 +55,23 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
   const loadManualInvoiceData = async () => {
     setError(null);
     setSalesOrderLoadFailed(false);
-    setClients([]);
     setServices([]);
     setInvoiceableSalesOrders([]);
     try {
-      const [clientsResult, servicesResult, salesOrdersResult] = await Promise.allSettled([
-        getAllClientsForBilling(),
+      const [servicesResult, salesOrdersResult] = await Promise.allSettled([
         getServices(1, 999, { item_kind: 'any' }),
         invoiceType === 'manual' ? listInvoiceableSalesOrdersForBilling() : Promise.resolve([])
       ]);
       // Sales order conversion is optional for a manual invoice. Its separate
       // read permission must not prevent Finance users from loading billing
       // clients/services that they are authorized to use.
-      if (clientsResult.status === 'rejected') throw clientsResult.reason;
       if (servicesResult.status === 'rejected') throw servicesResult.reason;
-      const clientsData = clientsResult.value;
       const servicesData = servicesResult.value;
       if (salesOrdersResult.status === 'fulfilled') {
         setInvoiceableSalesOrders(salesOrdersResult.value);
       } else {
         setSalesOrderLoadFailed(true);
       }
-
-      if (isActionMessageError(clientsData) || isActionPermissionError(clientsData)) {
-        setClients([]);
-        setError(getErrorMessage(clientsData));
-        return;
-      }
-
-      setClients(clientsData);
 
       if (isActionMessageError(servicesData) || isActionPermissionError(servicesData)) {
         setServices([]);
@@ -130,7 +116,6 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
       case 'manual':
         return (
           <ManualInvoices
-            clients={clients}
             services={services}
             onGenerateSuccess={handleGenerateSuccess}
             invoiceableSalesOrders={invoiceableSalesOrders}
@@ -143,7 +128,6 @@ const GenerateTab: React.FC<GenerateTabProps> = ({
         }
         return (
           <PrepaymentInvoices
-            clients={clients}
             onGenerateSuccess={handleGenerateSuccess}
           />
         );

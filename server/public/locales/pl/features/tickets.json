@@ -2618,12 +2618,15 @@
       "columns": {
         "name": "Nazwa",
         "title": "Tytuł zgłoszenia",
+        "client": "Klient",
         "board": "Tablica",
         "checklist": "Pozycje listy kontrolnej",
         "status": "Status",
         "schedules": "Harmonogramy"
       },
-      "deleteBlocked": "Używany przez {{count}} cykliczny(ch) harmonogram(ów). Najpierw wskaż im inny szablon lub zarchiwizuj je."
+      "deleteBlocked": "Używany przez {{count}} cykliczny(ch) harmonogram(ów). Najpierw wskaż im inny szablon lub zarchiwizuj je.",
+      "allClients": "Wszyscy klienci",
+      "clientFilter": "Wszyscy klienci"
     },
     "status": {
       "active": "Aktywny",
@@ -2651,6 +2654,9 @@
       "title": "Tytuł zgłoszenia",
       "description": "Opis",
       "descriptionPlaceholder": "Opis",
+      "client": "Klient",
+      "clientPlaceholder": "Wszyscy klienci",
+      "clientHelp": "Pozostaw puste, aby oferować szablon wszystkim klientom. Wybierz jednego, aby oferować go tylko w zgłoszeniach tego klienta.",
       "offerForManualUse": "Oferuj w selektorze nowego zgłoszenia",
       "offerForManualUseHelp": "Wyłącz dla szablonów używanych tylko przez harmonogramy cykliczne.",
       "titleTokens": "W tytule możesz użyć {{tokens}}; są wypełniane dla każdego zgłoszenia."

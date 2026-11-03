@@ -2618,12 +2618,15 @@
       "columns": {
         "name": "Nom",
         "title": "Titre du ticket",
+        "client": "Client",
         "board": "Tableau",
         "checklist": "Éléments de la liste",
         "status": "Statut",
         "schedules": "Planifications"
       },
-      "deleteBlocked": "Utilisée par {{count}} planification(s) récurrente(s). Associez-les à un autre modèle ou archivez-les d'abord."
+      "deleteBlocked": "Utilisée par {{count}} planification(s) récurrente(s). Associez-les à un autre modèle ou archivez-les d'abord.",
+      "allClients": "Tous les clients",
+      "clientFilter": "Tous les clients"
     },
     "status": {
       "active": "Actif",
@@ -2651,6 +2654,9 @@
       "title": "Titre du ticket",
       "description": "Description",
       "descriptionPlaceholder": "Description",
+      "client": "Client",
+      "clientPlaceholder": "Tous les clients",
+      "clientHelp": "Laissez vide pour proposer le modèle à tous les clients. Choisissez-en un pour ne le proposer que sur les tickets de ce client.",
       "offerForManualUse": "Proposer dans le sélecteur de nouveau ticket",
       "offerForManualUseHelp": "Désactivez pour les modèles utilisés uniquement par des planifications récurrentes.",
       "titleTokens": "Vous pouvez utiliser {{tokens}} dans le titre ; ils sont remplis pour chaque ticket."

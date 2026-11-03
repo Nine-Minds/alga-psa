@@ -2618,12 +2618,15 @@
       "columns": {
         "name": "Nome",
         "title": "Título do ticket",
+        "client": "Cliente",
         "board": "Quadro",
         "checklist": "Itens da checklist",
         "status": "Estado",
         "schedules": "Agendamentos"
       },
-      "deleteBlocked": "Usado por {{count}} agendamento(s) recorrente(s). Aponte-os para outro modelo ou arquive-os primeiro."
+      "deleteBlocked": "Usado por {{count}} agendamento(s) recorrente(s). Aponte-os para outro modelo ou arquive-os primeiro.",
+      "allClients": "Todos os clientes",
+      "clientFilter": "Todos os clientes"
     },
     "status": {
       "active": "Ativo",
@@ -2651,6 +2654,9 @@
       "title": "Título do ticket",
       "description": "Descrição",
       "descriptionPlaceholder": "Descrição",
+      "client": "Cliente",
+      "clientPlaceholder": "Todos os clientes",
+      "clientHelp": "Deixe vazio para oferecer o modelo a todos os clientes. Escolha um para o oferecer apenas nos tickets desse cliente.",
       "offerForManualUse": "Oferecer no seletor de novo ticket",
       "offerForManualUseHelp": "Desative para modelos usados apenas por agendamentos recorrentes.",
       "titleTokens": "Você pode usar {{tokens}} no título; eles são preenchidos por ticket."

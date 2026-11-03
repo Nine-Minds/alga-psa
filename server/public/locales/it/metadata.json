@@ -541,6 +541,9 @@
         "title": "Attività condivise",
         "taskTitle": "Attività condivisa",
         "projectTitle": "Progetto condiviso"
+      },
+      "export": {
+        "title": "Esporta area di lavoro"
       }
     }
   },

@@ -7,7 +7,6 @@ import type {
   ContactEmailAddressInput,
   ContactLocationInput,
   DeletionValidationResult,
-  IClient,
   IContact,
   ImportContactResult,
   ITag,
@@ -1189,7 +1188,6 @@ export const updateContactsForClient = withAuth(async (
 
 export async function exportContactsToCSV(
   contacts: IContact[],
-  clients: IClient[],
   contactTags: Record<string, ITag[]>
 ): Promise<string> {
   const fields = [
@@ -1208,7 +1206,6 @@ export async function exportContactsToCSV(
   ];
 
   const data = contacts.map((contact): Record<string, string> => {
-    const client = clients.find(c => c.client_id === contact.client_id);
     const tags = contactTags[contact.contact_name_id] || [];
     const tagText = tags.map((tag: ITag) => tag.tag_text).join(', ');
 
@@ -1218,7 +1215,8 @@ export async function exportContactsToCSV(
       primary_email_type: formatContactCsvPrimaryEmailType(contact),
       additional_email_addresses: formatContactCsvAdditionalEmailAddresses(contact.additional_email_addresses),
       phone_number: getDerivedDefaultPhone(contact),
-      client: client?.client_name || '',
+      // The list actions return client_name on every row, so no client list is needed here.
+      client: typeof contact.client_name === 'string' ? contact.client_name : '',
       role: contact.role || '',
       notes: contact.notes || '',
       tags: tagText,

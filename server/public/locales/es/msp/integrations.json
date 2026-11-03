@@ -36,6 +36,15 @@
         "suggested": "Sugerido",
         "toSave": "{{total}} por guardar"
       },
+      "customerMapping": {
+        "unlink": "Desvincular",
+        "unlinkConfirm": {
+          "title": "¿Desvincular {{client}} de QuickBooks?",
+          "body": "{{client}} deja de exportarse al cliente de QuickBooks {{customer}}. En QuickBooks no cambia nada y puede volver a vincularlo desde esta lista en cualquier momento.",
+          "confirm": "Desvincular",
+          "cancel": "Mantener el vínculo"
+        }
+      },
       "dialog": {
         "cancel": "Cancelar",
         "enterPlaceholder": "Introducir {{field}}...",
@@ -2084,11 +2093,18 @@
         "environment": "Entorno de Intuit",
         "environmentProduction": "Producción",
         "environmentSandbox": "Entorno de pruebas",
+        "environmentHint": "Producción se conecta a empresas reales de QuickBooks. El entorno de pruebas se conecta a una empresa de prueba de Intuit, para que pueda probar exportaciones sin afectar la contabilidad real.",
+        "environmentLockedHint": "Desconecte QuickBooks antes de cambiar de entorno. La empresa conectada y sus tokens solo existen en el entorno en el que se autorizaron.",
+        "environmentSandboxKeysTitle": "El entorno de pruebas requiere su propia aplicación de Intuit",
+        "environmentSandboxKeysDescription": "Las empresas del entorno de pruebas de Intuit solo aceptan las claves Development de una aplicación de Intuit que usted controle. La aplicación compartida de esta instalación usa claves Production, así que registre su propia aplicación y guarde sus claves Development a continuación antes de conectarse.",
+        "environmentSavedSandbox": "QuickBooks ahora se conectará a una empresa del entorno de pruebas de Intuit. Conéctese con las claves Development de su propia aplicación de Intuit.",
+        "environmentSavedProduction": "QuickBooks ahora se conectará a empresas reales de QuickBooks.",
         "errors": {
           "automatedSalesTax": "No se pudo actualizar el modo Automated Sales Tax.",
           "disconnect": "No se pudo desconectar QuickBooks.",
           "load": "No se pudo cargar la configuración de QuickBooks.",
-          "saveCredentials": "No se pudieron guardar las credenciales de QuickBooks."
+          "saveCredentials": "No se pudieron guardar las credenciales de QuickBooks.",
+          "environment": "No se pudo cambiar el entorno de Intuit."
         },
         "howItWorksDescription": "Conecte su empresa de QuickBooks iniciando sesión en Intuit y AlgaPSA la usará como contexto en vivo predeterminado para exportaciones y asignaciones. La tarjeta «Aplicación de Intuit» de abajo indica si su instalación ya proporciona la aplicación por la que pasa ese inicio de sesión o si primero debe registrar una.",
         "howItWorksTitle": "Cómo funciona QuickBooks en vivo en esta versión",
@@ -2120,6 +2136,7 @@
         "credentialSource": {
           "app": "Esta instalación proporciona una aplicación de Intuit compartida, por lo que puede conectar QuickBooks sin registrar una. Omita esta tarjeta y haga clic en «Conectar QuickBooks» más abajo.",
           "none": "Todavía no hay ninguna aplicación de Intuit disponible. Registre una en Intuit antes de poder conectar.",
+          "noneSandbox": "El entorno de pruebas necesita una aplicación de Intuit propia. Registre una y guarde sus claves Development antes de poder conectar.",
           "tenant": "Este inquilino se conecta a través de su propia aplicación de Intuit, usando las credenciales guardadas abajo. Para rotar una clave, pegue el nuevo valor y guarde.",
           "appTitle": "No se necesitan credenciales"
         },

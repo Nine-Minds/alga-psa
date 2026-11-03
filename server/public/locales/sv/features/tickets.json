@@ -2618,12 +2618,15 @@
       "columns": {
         "name": "Namn",
         "title": "Ärenderubrik",
+        "client": "Kund",
         "board": "Tavla",
         "checklist": "Checklistpunkter",
         "status": "Status",
         "schedules": "Scheman"
       },
-      "deleteBlocked": "Används av {{count}} återkommande schema(n). Peka dem på en annan mall eller arkivera dem först."
+      "deleteBlocked": "Används av {{count}} återkommande schema(n). Peka dem på en annan mall eller arkivera dem först.",
+      "allClients": "Alla kunder",
+      "clientFilter": "Alla kunder"
     },
     "status": {
       "active": "Aktiv",
@@ -2651,6 +2654,9 @@
       "title": "Ärenderubrik",
       "description": "Beskrivning",
       "descriptionPlaceholder": "Beskrivning",
+      "client": "Kund",
+      "clientPlaceholder": "Alla kunder",
+      "clientHelp": "Lämna tomt för att erbjuda mallen för alla kunder. Välj en för att bara erbjuda den på den kundens ärenden.",
       "offerForManualUse": "Erbjud i väljaren för nya ärenden",
       "offerForManualUseHelp": "Stäng av för mallar som bara återkommande scheman använder.",
       "titleTokens": "Du kan använda {{tokens}} i titeln; de fylls i per ärende."

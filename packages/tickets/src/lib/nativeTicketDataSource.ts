@@ -81,6 +81,7 @@ export const nativeTicketDataSource: TicketDataSource = Object.freeze({
     getClientLocations: lazy(() => import('../actions/clientLookupActions'), 'getClientLocations'),
     getClientBillingProfiles: lazy(() => import('../actions/clientLookupActions'), 'getClientBillingProfiles'),
     getContactEffectiveLocation: lazy(() => import('../actions/clientLookupActions'), 'getContactEffectiveLocation'),
+    searchClientsForPicker: lazy(() => import('../actions/clientLookupActions'), 'searchClientsForPicker'),
   }),
 
   resources: Object.freeze({
