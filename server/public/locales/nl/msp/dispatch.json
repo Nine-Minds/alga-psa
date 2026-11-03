@@ -77,7 +77,8 @@
       "failedToLoadAdHocEntryData": "Gegevens van ad-hoc item konden niet worden geladen",
       "failedToLoadInteractionData": "Interactiegegevens konden niet worden geladen",
       "failedToLoadAppointmentRequestData": "Gegevens van afspraakverzoek konden niet worden geladen",
-      "failedToLoadOpportunityStepData": "Kan de stapgegevens van de gelegenheid niet laden"
+      "failedToLoadOpportunityStepData": "Kan de stapgegevens van de gelegenheid niet laden",
+      "scheduleResultsTruncated": "De agendaresultaten zijn onvolledig. Open de agenda om dit item te vinden."
     },
     "errors": {
       "loadUsers": "Gebruikers konden niet worden geladen. Vernieuw de pagina en probeer het opnieuw.",
@@ -122,7 +123,8 @@
       "taskUpdated": "Taak succesvol bijgewerkt",
       "scheduleEntryUpdated": "Schema-item succesvol bijgewerkt",
       "scheduleEntryCreated": "Schema-item succesvol aangemaakt"
-    }
+    },
+    "scheduleResultsTruncated": "De agendaresultaten zijn onvolledig. Verklein het datumbereik om minder items weer te geven."
   },
   "events": {
     "actions": {

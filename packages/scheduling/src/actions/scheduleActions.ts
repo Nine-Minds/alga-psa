@@ -65,7 +65,7 @@ import {
 } from '../lib/calendarAccess';
 
 export type ScheduleActionResult<T> =
-  | { success: true; entries: T; error?: never }
+  | { success: true; entries: T; error?: never; hasMore?: boolean; nextCursor?: string | null }
   | { success: false; error: string; entries?: never }
 
 type ScheduleActionError = ActionMessageError | ActionPermissionError;
@@ -161,15 +161,16 @@ export const getScheduleEntries = withAuth(async (
   start: Date,
   end: Date,
   technicianIds?: string[],
-  calendarIds?: string[]
+  calendarIds?: string[],
+  afterEntryId?: string
 ): Promise<ScheduleActionResult<IScheduleEntry[]>> => {
   try {
     const { knex: db } = await createTenantKnex();
 
     const current = await scheduleSeam.delegate(tenant, p => p.readSchedules(db, tenant, () => resolveSharedWorkBrowserActor(user, tenant), {
-      calendar: { start: start.toISOString(), end: end.toISOString(), technicianIds },
+      calendar: { start: start.toISOString(), end: end.toISOString(), technicianIds, afterEntryId },
     }));
-    if (current.handled) return { success: true, entries: current.entries.map(nativeScheduleView) };
+    if (current.handled) return { success: true, entries: current.entries.map(nativeScheduleView), hasMore: current.hasMore, nextCursor: current.nextCursor };
 
     const canRead = await hasPermission(user, 'user_schedule', 'read', db);
     if (!canRead) {

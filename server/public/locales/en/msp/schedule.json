@@ -142,7 +142,8 @@
       "title": "Busy",
       "close": "Close",
       "timeRange": "{{start}} – {{end}}"
-    }
+    },
+    "loadMore": "Load more schedules"
   },
   "weeklyEvent": {
     "actions": {

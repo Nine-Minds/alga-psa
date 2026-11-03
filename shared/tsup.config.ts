@@ -169,6 +169,9 @@ export default defineConfig({
   ],
   noExternal: [
     /^@shared\//,
+    // The bounded recurrence iterator uses rrule's ESM internals, whose
+    // extensionless imports need bundling before native Node can load them.
+    /^rrule(?:\/|$)/,
     // Pure and sandbox-safe; bundled so the worker image needs no extra package dist.
     /^@alga-psa\/predicates/,
     ...SOURCE_ONLY_ALGA_IMPORTS,

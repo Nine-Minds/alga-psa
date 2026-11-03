@@ -157,7 +157,8 @@
     "contact": "Contacto",
     "linkedQuotes": "Cotizaciones vinculadas",
     "openOpportunity": "Abrir oportunidad",
-    "opportunityNotFound": "Oportunidad no encontrada."
+    "opportunityNotFound": "Oportunidad no encontrada.",
+    "scheduleEntrySearchTruncated": "Los resultados del calendario están incompletos. Abra el calendario para encontrar esta entrada."
   },
   "groupedView": {
     "addGroup": "Añadir grupo",

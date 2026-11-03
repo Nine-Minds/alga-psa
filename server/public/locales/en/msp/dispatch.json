@@ -77,7 +77,8 @@
       "failedToLoadAdHocEntryData": "Failed to load ad-hoc entry data",
       "failedToLoadInteractionData": "Failed to load interaction data",
       "failedToLoadAppointmentRequestData": "Failed to load appointment request data",
-      "failedToLoadOpportunityStepData": "Failed to load deal step data"
+      "failedToLoadOpportunityStepData": "Failed to load deal step data",
+      "scheduleResultsTruncated": "Schedule results are incomplete. Open the schedule to find this entry."
     },
     "errors": {
       "loadUsers": "Failed to load users. Please try refreshing the page.",
@@ -122,7 +123,8 @@
       "taskUpdated": "Task updated successfully",
       "scheduleEntryUpdated": "Schedule entry updated successfully",
       "scheduleEntryCreated": "Schedule entry created successfully"
-    }
+    },
+    "scheduleResultsTruncated": "Schedule results are incomplete. Narrow the date range to see fewer entries."
   },
   "events": {
     "actions": {

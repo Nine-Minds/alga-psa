@@ -106,6 +106,12 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   );
   
   const [events, setEvents] = useState<IScheduleEntry[]>([]);
+  const [scheduleCursor, setScheduleCursor] = useState<string | null>(null);
+  const [scheduleHasMore, setScheduleHasMore] = useState(false);
+  const [isLoadingMoreSchedules, setIsLoadingMoreSchedules] = useState(false);
+  const scheduleQueryGeneration = useRef(0);
+  const pageRequestInFlight = useRef(false);
+  const fetchEventsRef = useRef<() => Promise<void>>(async () => {});
   const [showEntryPopup, setShowEntryPopup] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<IScheduleEntry | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<any>(null);
@@ -489,15 +495,29 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     return Array.from(techIds);
   }, [focusedTechnicianId, comparisonTechnicianIds]);
 
+  const scheduleQueryKey = JSON.stringify([
+    date.getTime(), view, [...viewingTechnicianIds].sort(), [...selectedGroupCalendarIds].sort(),
+  ]);
+  const activeScheduleQueryKey = useRef(scheduleQueryKey);
+  activeScheduleQueryKey.current = scheduleQueryKey;
+
   const fetchEvents = useCallback(async () => {
+    const generation = ++scheduleQueryGeneration.current;
+    const queryKey = scheduleQueryKey;
+    pageRequestInFlight.current = false;
+    setIsLoadingMoreSchedules(false);
     if (viewingTechnicianIds.length === 0 && selectedGroupCalendarIds.length === 0) {
       setEvents([]);
+      setScheduleCursor(null);
+      setScheduleHasMore(false);
       setIsLoading(false);
       return;
     }
 
     setIsLoading(true);
     setError(null);
+    setScheduleCursor(null);
+    setScheduleHasMore(false);
 
     let rangeStart, rangeEnd;
     if (view === 'month') {
@@ -533,18 +553,60 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
       selectedGroupCalendarIds
     );
 
+    if (generation !== scheduleQueryGeneration.current || queryKey !== activeScheduleQueryKey.current) return;
+
     if (result.success) {
       console.log('Fetched entries:', {
         count: result.entries.length,
       });
       setEvents(result.entries);
+      setScheduleCursor(result.nextCursor ?? null);
+      setScheduleHasMore(result.hasMore === true && !!result.nextCursor);
     } else {
       console.error('Failed to fetch schedule entries:', result.error);
       setError(result.error || t('calendar.errors.unknown', { defaultValue: 'An unknown error occurred' }));
       setEvents([]);
+      setScheduleCursor(null);
+      setScheduleHasMore(false);
     }
     setIsLoading(false);
-  }, [date, t, view, viewingTechnicianIds, selectedGroupCalendarIds]);
+  }, [date, t, view, viewingTechnicianIds, selectedGroupCalendarIds, scheduleQueryKey]);
+  fetchEventsRef.current = fetchEvents;
+
+  const loadMoreSchedules = useCallback(async () => {
+    if (!scheduleHasMore || !scheduleCursor || pageRequestInFlight.current) return;
+    const generation = scheduleQueryGeneration.current;
+    const queryKey = scheduleQueryKey;
+    let rangeStart: Date, rangeEnd: Date;
+    if (view === 'month') {
+      const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+      const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+      rangeStart = new Date(firstDay); rangeStart.setDate(1 - firstDay.getDay());
+      rangeEnd = new Date(lastDay); rangeEnd.setDate(lastDay.getDate() + (6 - lastDay.getDay()));
+    } else {
+      rangeStart = new Date(date); rangeEnd = new Date(date);
+      if (view === 'week') { rangeStart.setDate(date.getDate() - date.getDay()); rangeEnd.setDate(rangeStart.getDate() + 6); }
+    }
+    rangeStart.setHours(0, 0, 0, 0); rangeEnd.setHours(23, 59, 59, 999);
+    pageRequestInFlight.current = true;
+    setIsLoadingMoreSchedules(true);
+    try {
+      const result = await getScheduleEntries(rangeStart, rangeEnd, viewingTechnicianIds, selectedGroupCalendarIds, scheduleCursor);
+      if (generation !== scheduleQueryGeneration.current || queryKey !== activeScheduleQueryKey.current) return;
+      if (result.success) {
+        setEvents(current => [...current, ...result.entries]);
+        setScheduleCursor(result.nextCursor ?? null);
+        setScheduleHasMore(result.hasMore === true && !!result.nextCursor);
+      } else {
+        setError(result.error || t('calendar.errors.unknown', { defaultValue: 'An unknown error occurred' }));
+      }
+    } finally {
+      if (generation === scheduleQueryGeneration.current) {
+        pageRequestInFlight.current = false;
+        setIsLoadingMoreSchedules(false);
+      }
+    }
+  }, [date, scheduleCursor, scheduleHasMore, selectedGroupCalendarIds, t, view, viewingTechnicianIds, scheduleQueryKey]);
 
   useEffect(() => {
     fetchEvents();
@@ -856,7 +918,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
           if (!result.success) {
             console.error("Drop failed:", result.error);
           }
-          await fetchEvents();
+          await fetchEventsRef.current();
         }, 150);
         return;
       }
@@ -1359,6 +1421,13 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
         
         {/* Calendar container */}
         <div className="flex-grow relative" ref={calendarRef}>
+          {scheduleHasMore && (
+            <div className="absolute right-3 top-3 z-20">
+              <Button id="schedule-load-more" size="sm" variant="outline" disabled={isLoading || isLoadingMoreSchedules} onClick={loadMoreSchedules}>
+                {isLoadingMoreSchedules ? t('calendar.loading.overlay', { defaultValue: 'Loading...' }) : t('calendar.loadMore', { defaultValue: 'Load more schedules' })}
+              </Button>
+            </div>
+          )}
           {isLoading && (
             <div className="absolute inset-0 bg-[rgb(var(--color-card))] bg-opacity-50 flex items-center justify-center z-10">
               {t('calendar.loading.overlay', { defaultValue: 'Loading...' })}

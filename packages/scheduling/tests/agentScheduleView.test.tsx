@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, render, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import AgentScheduleView from '../src/components/schedule/AgentScheduleView';
 import toast from 'react-hot-toast';
 import { createForWorkItem } from '../src/lib/scheduleEntryLauncher';
@@ -136,6 +136,18 @@ describe('AgentScheduleView', () => {
     expect(start).toBeInstanceOf(Date);
     expect(end).toBeInstanceOf(Date);
     expect((end as Date).getTime()).toBeGreaterThan((start as Date).getTime());
+  });
+
+  it('exposes bounded continuation and keeps the same agent window after an empty page', async () => {
+    getScheduleEntries
+      .mockResolvedValueOnce({ success: true, entries: [], hasMore: true, nextCursor: 'cursor-500' })
+      .mockResolvedValueOnce({ success: true, entries: [], hasMore: false, nextCursor: null });
+    render(<AgentScheduleView agentId="agent-1" />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Load more schedules' }));
+    await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(2));
+    expect(getScheduleEntries.mock.calls[1].slice(0, 3)).toEqual(getScheduleEntries.mock.calls[0].slice(0, 3));
+    expect(getScheduleEntries.mock.calls[1][4]).toBe('cursor-500');
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Load more schedules' })).toBeNull());
   });
 
   it('shows a loading state while fetching events', async () => {

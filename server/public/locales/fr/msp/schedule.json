@@ -142,7 +142,8 @@
       "title": "Occupé",
       "close": "Fermer",
       "timeRange": "{{start}} – {{end}}"
-    }
+    },
+    "loadMore": "Charger plus de rendez-vous"
   },
   "weeklyEvent": {
     "actions": {

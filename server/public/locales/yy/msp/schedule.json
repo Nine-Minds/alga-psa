@@ -142,7 +142,8 @@
       "title": "〖Ɓŭşẏ ··〗",
       "close": "〖Ƈŀȯşḗ ··〗",
       "timeRange": "〖{{start}} – {{end}} ········〗"
-    }
+    },
+    "loadMore": "〖Ŀȯȧḓ ḿȯřḗ şƈħḗḓŭŀḗş ········〗"
   },
   "weeklyEvent": {
     "actions": {

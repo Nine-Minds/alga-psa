@@ -86,6 +86,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "test:recurrence-build": "npm run build && node --test ../scripts/tests/recurrence-build-runtime.test.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test:recurrence-tz": "TZ=Pacific/Auckland vitest run lib/recurrence lib/businessHours"

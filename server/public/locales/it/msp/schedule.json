@@ -142,7 +142,8 @@
       "title": "Occupato",
       "close": "Chiudi",
       "timeRange": "{{start}} – {{end}}"
-    }
+    },
+    "loadMore": "Carica altri appuntamenti"
   },
   "weeklyEvent": {
     "actions": {

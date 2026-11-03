@@ -55,20 +55,39 @@ export function fakeDb(store: FakeStore): any {
 function makeBuilder(store: FakeStore, table: string, tenant: string | undefined) {
   const name = table.split(' as ')[0];
   const filters: Array<(row: Row) => boolean> = [];
+  let rowLimit: number | undefined;
+  let order: { key: string; direction: 'asc' | 'desc' } | undefined;
+  const compare = (row: Row, a: any, b?: any, c?: any) => {
+    const cmp: Record<string, (x: any, y: any) => boolean> = { '>': (x, y) => x > y, '<=': (x, y) => x <= y, '<': (x, y) => x < y, '>=': (x, y) => x >= y };
+    if (c !== undefined) return c && typeof c === 'object' && '__raw' in c ? true : !!cmp[b]?.(row[col(a)], c);
+    if (typeof a === 'object') return Object.entries(a).every(([k, v]) => row[col(k)] === v);
+    return row[col(a)] === b;
+  };
+  const ordered = () => {
+    const rows = selected();
+    if (order) rows.sort((a, b) => String(a[order!.key]).localeCompare(String(b[order!.key])) * (order!.direction === 'asc' ? 1 : -1));
+    return rowLimit === undefined ? rows : rows.slice(0, rowLimit);
+  };
+  const grouped = (callback: Function) => {
+    const terms: Array<{ or: boolean; predicate: (row: Row) => boolean }> = [];
+    const condition: any = {};
+    for (const method of ['where', 'andWhere', 'orWhere']) condition[method] = (a: any, b?: any, c?: any) => {
+      terms.push({ or: method === 'orWhere', predicate: typeof a === 'function' ? grouped(a) : row => compare(row, a, b, c) }); return condition;
+    };
+    condition.orWhereRaw = () => { terms.push({ or: true, predicate: () => true }); return condition; };
+    callback.call(condition, condition);
+    return (row: Row) => terms.reduce((value, term, index) => index === 0 ? term.predicate(row) : term.or ? value || term.predicate(row) : value && term.predicate(row), false);
+  };
   if (tenant) filters.push(row => row.tenant === tenant);
   const selected = () => store.rows(name).filter(row => filters.every(f => f(row)));
   const builder: any = {
     where(a: any, b?: any, c?: any) {
-      if (typeof a === 'function') return builder;
-      if (c !== undefined) {
-        const cmp: Record<string, (x: any, y: any) => boolean> = { '>': (x, y) => x > y, '<=': (x, y) => x <= y, '<': (x, y) => x < y, '>=': (x, y) => x >= y };
-        // A raw SQL operand (clock_timestamp() etc.) is not interpreted: treat the bound as already reached.
-        filters.push(row => c && typeof c === 'object' && '__raw' in c ? true : cmp[b](row[col(a)], c)); return builder;
-      }
-      if (typeof a === 'object') for (const [k, v] of Object.entries(a)) filters.push(row => row[col(k)] === v);
-      else filters.push(row => row[col(a)] === b);
+      if (typeof a === 'function') filters.push(grouped(a));
+      else filters.push(row => compare(row, a, b, c));
       return builder;
     },
+    andWhere(a: any, b?: any, c?: any) { return builder.where(a, b, c); },
+    orWhere(a: any, b?: any, c?: any) { filters.push(row => typeof a === 'function' ? grouped(a)(row) : compare(row, a, b, c)); return builder; },
     whereNot(a: string, b: unknown) { filters.push(row => row[col(a)] !== b); return builder; },
     whereNull(a: string) { filters.push(row => row[col(a)] == null); return builder; },
     whereNotNull(a: string) { filters.push(row => row[col(a)] != null); return builder; },
@@ -78,11 +97,10 @@ function makeBuilder(store: FakeStore, table: string, tenant: string | undefined
     forShare() { store.locks.push(`${tenant}:${name}:share`); return builder; },
     /** Raw SQL predicates are not interpreted; tests seed no rows that rely on them. */
     whereRaw() { return builder; },
-    orderBy() { return builder; },
-    /** Row limits are not applied: seed fewer rows than the page size. */
-    limit() { return builder; },
+    orderBy(key: string, direction: 'asc' | 'desc' = 'asc') { order = { key: col(key), direction }; return builder; },
+    limit(value: number) { rowLimit = value; return builder; },
     select() { return builder; },
-    async first() { const row = selected()[0]; return row ? { ...row } : undefined; },
+    async first() { const row = ordered()[0]; return row ? { ...row } : undefined; },
     /** Awaitable (row count) and `.returning()`-able, like knex. */
     update(patch: Row) {
       const rows = selected();
@@ -125,7 +143,7 @@ function makeBuilder(store: FakeStore, table: string, tenant: string | undefined
       };
       return op;
     },
-    then(resolve: any, reject: any) { return Promise.resolve(selected().map(row => ({ ...row }))).then(resolve, reject); },
+    then(resolve: any, reject: any) { return Promise.resolve(ordered().map(row => ({ ...row }))).then(resolve, reject); },
   };
   return builder;
 }

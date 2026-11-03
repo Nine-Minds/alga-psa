@@ -142,7 +142,8 @@
       "title": "Ocupado",
       "close": "Cerrar",
       "timeRange": "{{start}} – {{end}}"
-    }
+    },
+    "loadMore": "Cargar más citas"
   },
   "weeklyEvent": {
     "actions": {

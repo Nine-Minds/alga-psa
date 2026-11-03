@@ -157,7 +157,8 @@
     "contact": "Contact",
     "linkedQuotes": "Linked quotes",
     "openOpportunity": "Open Opportunity",
-    "opportunityNotFound": "Opportunity not found."
+    "opportunityNotFound": "Opportunity not found.",
+    "scheduleEntrySearchTruncated": "Schedule results are incomplete. Open the schedule to find this entry."
   },
   "groupedView": {
     "addGroup": "Add Group",

@@ -8,7 +8,7 @@ vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
 
 import React from 'react';
 import toast from 'react-hot-toast';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ScheduleCalendar from '../src/components/schedule/ScheduleCalendar';
@@ -348,7 +348,7 @@ vi.mock('../src/components/schedule/CalendarStyleProvider', () => ({
 }));
 
 vi.mock('../src/components/schedule/TechnicianSidebar', () => ({
-  default: () => null,
+  default: (props: any) => <button data-testid="test-calendar-filter" onClick={() => props.onSetFocus('tech-2')}>Filter</button>,
 }));
 
 vi.mock('../src/components/schedule/WeeklyScheduleEvent', () => ({
@@ -420,8 +420,23 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
   });
 
   afterEach(() => {
+    cleanup();
     vi.clearAllMocks();
   });
+
+  it('continues an empty authorization-filtered page with the same calendar filters and cursor', async () => {
+    getScheduleEntries
+      .mockResolvedValueOnce({ success: true, entries: [], hasMore: true, nextCursor: 'cursor-500' })
+      .mockResolvedValueOnce({ success: true, entries: [], hasMore: false, nextCursor: null });
+    render(<ScheduleCalendar />);
+    const loadMore = await screen.findByRole('button', { name: 'Load more schedules' });
+    fireEvent.click(loadMore);
+    await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(2));
+    expect(getScheduleEntries.mock.calls[1].slice(0, 4)).toEqual(getScheduleEntries.mock.calls[0].slice(0, 4));
+    expect(getScheduleEntries.mock.calls[1][4]).toBe('cursor-500');
+    expect(screen.queryByRole('button', { name: 'Load more schedules' })).toBeNull();
+  });
+
 
   it.each(['save', 'resize', 'drop'] as const)('surfaces a provider warning after a successful local %s without reverting it', async (gesture) => {
     const warning = 'Entry moved, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.';
@@ -657,4 +672,32 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
       }),
     ]);
   });
+  it.each(['navigation', 'filter', 'refresh'] as const)('discards a pending page after %s changes the query', async (change) => {
+    let resolveOldPage!: (value: any) => void;
+    const oldPage = new Promise<any>(resolve => { resolveOldPage = resolve; });
+    let pageCall = 0;
+    getScheduleEntries.mockImplementation(async (...args: any[]) => {
+      if (args[4]) return oldPage;
+      pageCall++;
+      return { success: true, entries: change === 'refresh' ? [baseEntry({ entry_id: 'refresh-trigger', is_recurring: true, recurrence_pattern: { frequency: 'daily', interval: 1, startDate: new Date('2026-09-04') } })] : [], hasMore: pageCall === 1, nextCursor: pageCall === 1 ? 'page-a' : null };
+    });
+    render(<ScheduleCalendar />);
+    const loadMore = await screen.findByRole('button', { name: 'Load more schedules' });
+    fireEvent.click(loadMore);
+    await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(2));
+
+    if (change === 'navigation') await act(async () => calendarSurface.props.onNavigate(new Date('2026-11-15T00:00:00Z'), calendarSurface.props.view, 'NEXT'));
+    else if (change === 'filter') fireEvent.click(screen.getByTestId('test-calendar-filter'));
+    else await act(async () => calendarSurface.props.onEventDrop({ event: calendarSurface.props.events[0], start: new Date('2026-09-04T15:00:00Z'), end: new Date('2026-09-04T16:00:00Z') }));
+
+    await waitFor(() => expect(getScheduleEntries).toHaveBeenCalledTimes(3));
+    await act(async () => {
+      resolveOldPage({ success: true, entries: [baseEntry({ entry_id: 'stale-page-a' })], hasMore: true, nextCursor: 'stale-cursor' });
+      await oldPage;
+    });
+    expect(screen.queryByTestId('calendar-event-stale-page-a')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Load more schedules' })).toBeNull();
+  });
+
+
 });

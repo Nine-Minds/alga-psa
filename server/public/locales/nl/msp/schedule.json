@@ -142,7 +142,8 @@
       "title": "Bezet",
       "close": "Sluiten",
       "timeRange": "{{start}} – {{end}}"
-    }
+    },
+    "loadMore": "Meer afspraken laden"
   },
   "weeklyEvent": {
     "actions": {

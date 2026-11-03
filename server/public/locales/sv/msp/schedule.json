@@ -142,7 +142,8 @@
       "title": "Upptagen",
       "close": "Stäng",
       "timeRange": "{{start}} – {{end}}"
-    }
+    },
+    "loadMore": "Läs in fler bokningar"
   },
   "weeklyEvent": {
     "actions": {

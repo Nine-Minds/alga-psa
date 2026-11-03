@@ -77,7 +77,8 @@
       "failedToLoadAdHocEntryData": "Nie udało się wczytać danych wpisu ad hoc",
       "failedToLoadInteractionData": "Nie udało się wczytać danych interakcji",
       "failedToLoadAppointmentRequestData": "Nie udało się wczytać danych prośby o wizytę",
-      "failedToLoadOpportunityStepData": "Nie udało się załadować danych kroku okazji"
+      "failedToLoadOpportunityStepData": "Nie udało się załadować danych kroku okazji",
+      "scheduleResultsTruncated": "Wyniki kalendarza są niepełne. Otwórz kalendarz, aby znaleźć ten wpis."
     },
     "errors": {
       "loadUsers": "Nie udało się wczytać użytkowników. Odśwież stronę i spróbuj ponownie.",
@@ -122,7 +123,8 @@
       "taskUpdated": "Zadanie zostało pomyślnie zaktualizowane",
       "scheduleEntryUpdated": "Wpis harmonogramu został pomyślnie zaktualizowany",
       "scheduleEntryCreated": "Wpis harmonogramu został pomyślnie utworzony"
-    }
+    },
+    "scheduleResultsTruncated": "Wyniki kalendarza są niepełne. Zawęź zakres dat, aby wyświetlić mniej wpisów."
   },
   "events": {
     "actions": {

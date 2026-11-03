@@ -2,6 +2,7 @@ import type { IScheduleEntry, IHoliday } from '@alga-psa/types';
 import * as rrulePkg from 'rrule';
 import type { Frequency, Weekday } from 'rrule';
 import { toCalendarDateString } from '@alga-psa/core';
+import { iterateRRuleBounded, RecurrencePeriodLimitError } from './boundedRRuleIterator';
 
 type RRuleConstructor = typeof import('rrule').RRule;
 
@@ -65,6 +66,22 @@ export interface GenerateOccurrencesOptions {
   holidays?: IHoliday[];
   /** Include the master date when the caller materializes the whole series virtually. */
   includeMaster?: boolean;
+  /** Maximum matching dates materialized for this recurrence. */
+  maxOccurrences?: number;
+  /** Shared request budget for candidate periods and historical calendar counting, including empty periods. */
+  workBudget?: RecurrenceWorkBudget;
+}
+
+export interface RecurrenceWorkBudget { remaining: number }
+
+export const MAX_CALENDAR_WINDOW_MS = 366 * 24 * 60 * 60 * 1000;
+export const DEFAULT_MAX_RECURRENCE_OCCURRENCES = 10000;
+
+export class RecurrenceOccurrenceLimitError extends Error {
+  constructor(readonly maxOccurrences: number, readonly occurrencesVisited: number) {
+    super('The recurrence exceeds this request\'s work or result limit.');
+    this.name = 'RecurrenceOccurrenceLimitError';
+  }
 }
 
 // LEVERAGE: pattern recurrence-engine — schedule entries should move onto shared/lib/recurrence
@@ -75,10 +92,17 @@ export function generateOccurrences(
   options?: GenerateOccurrencesOptions
 ): Date[] {
   try {
+    const maxOccurrences = options?.maxOccurrences ?? DEFAULT_MAX_RECURRENCE_OCCURRENCES;
+    const workBudget = options?.workBudget;
+    if (!Number.isSafeInteger(maxOccurrences) || maxOccurrences < 0 || (workBudget && (!Number.isSafeInteger(workBudget.remaining) || workBudget.remaining < 0))) {
+      throw new RecurrenceOccurrenceLimitError(maxOccurrences, 0);
+    }
     if (!entry.recurrence_pattern) {
+      if (maxOccurrences < 1) throw new RecurrenceOccurrenceLimitError(maxOccurrences, 0);
       return [new Date(entry.scheduled_start)];
     }
     const pattern = entry.recurrence_pattern;
+    const recurrenceWork = workBudget ?? { remaining: maxOccurrences };
     const allDay = entry.is_all_day === true;
 
     // Validate and normalize start date
@@ -145,8 +169,38 @@ export function generateOccurrences(
     if (allDay) rangeEnd.setUTCHours(23, 59, 59, 999);
     else rangeEnd.setHours(23, 59, 59, 999);
 
-    // Get the base occurrences using normalized dates
-    const baseOccurrences = rrule.between(rangeStart, rangeEnd);
+    // The upstream callback is invoked only for dates surviving BY* filters.
+    // Iterate with a period charge so even empty/sparse rules stop within the
+    // request-wide work budget.
+    const baseOccurrences: Date[] = [];
+    const visitLimit = maxOccurrences;
+    if (visitLimit === 0 || recurrenceWork.remaining === 0) throw new RecurrenceOccurrenceLimitError(visitLimit, 0);
+    let occurrencesVisited = 0, traversalExceeded = false;
+    const result = {
+      accept(date: Date) {
+        if (date > rangeEnd) return false;
+        occurrencesVisited++;
+        if (occurrencesVisited > visitLimit) {
+          traversalExceeded = true;
+          return false;
+        }
+        if (date >= rangeStart) baseOccurrences.push(date);
+        return true;
+      },
+      getValue: () => baseOccurrences,
+    };
+    try {
+      iterateRRuleBounded(rrule.options, result, () => {
+        if (recurrenceWork.remaining <= 0) {
+          traversalExceeded = true;
+          throw new RecurrencePeriodLimitError();
+        }
+        recurrenceWork.remaining--;
+      }, rangeStart);
+    } catch (error) {
+      if (!(error instanceof RecurrencePeriodLimitError)) throw error;
+    }
+    if (traversalExceeded) throw new RecurrenceOccurrenceLimitError(visitLimit, occurrencesVisited);
 
     // Validate and get the original time
     const originalTime = new Date(entry.scheduled_start);
@@ -203,6 +257,7 @@ export function generateOccurrences(
 
     return filteredOccurrences;
   } catch (error) {
+    if (error instanceof RecurrenceOccurrenceLimitError) throw error;
     console.error('[generateOccurrences] Unexpected error:', error);
     return [new Date(entry.scheduled_start)];
   }

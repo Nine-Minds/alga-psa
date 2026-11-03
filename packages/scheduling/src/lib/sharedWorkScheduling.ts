@@ -41,9 +41,9 @@ export type AppointmentMeetingProviderHandle = unknown;
 
 export interface SharedWorkSchedulingProvider {
   readSchedules(db: Knex, tenant: string, identify: SharedWorkIdentify, options: {
-    id?: string; start?: string; end?: string; userId?: string;
-    calendar?: { start: string; end: string; technicianIds?: string[] };
-  }): Promise<Hit<{ entries: any[] }>>;
+    id?: string; start?: string; end?: string; userId?: string; afterEntryId?: string;
+    calendar?: { start: string; end: string; technicianIds?: string[]; afterEntryId?: string };
+  }): Promise<Hit<{ entries: any[]; hasMore: boolean; nextCursor: string | null }>>;
   commandSchedule(db: Knex, tenant: string, input: ScheduleCommandInput, identify: SharedWorkIdentify,
     publish: ScheduleEventPublisher): Promise<Hit<{ entry: any | null }>>;
   readAppointmentRequests(db: Knex, tenant: string, identify: SharedWorkIdentify,

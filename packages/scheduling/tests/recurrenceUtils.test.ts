@@ -10,7 +10,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { generateOccurrences, applyTimeToDate } from '@alga-psa/shared/utils/recurrenceUtils';
+import { RRule } from 'rrule';
+import { generateOccurrences, applyTimeToDate, MAX_CALENDAR_WINDOW_MS, RecurrenceOccurrenceLimitError } from '@alga-psa/shared/utils/recurrenceUtils';
 import type { IScheduleEntry, IRecurrencePattern } from '@alga-psa/types';
 
 /**
@@ -469,5 +470,151 @@ describe('calendar master occurrence', () => {
     expect(generateOccurrences(entry, new Date('2024-01-14T00:00:00'), new Date('2024-01-19T00:00:00'), {
       includeMaster: true, holidays: [{ holiday_date: '2024-01-16', is_recurring: false } as any],
     }).map(date => date.getDate())).toEqual([17]);
+  });
+});
+
+describe('bounded recurrence generation', () => {
+  const endless = makeEntry({ is_recurring: true, scheduled_start: new Date('1970-01-01T09:00:00Z'),
+    scheduled_end: new Date('1970-01-01T10:00:00Z'), recurrence_pattern: makePattern({ startDate: new Date('1970-01-01T00:00:00Z') }) });
+
+  it.each([
+    ['daily interval alignment and large COUNT', makePattern({ startDate: new Date('2018-01-03T00:00:00Z'), interval: 3, count: 100000 })],
+    ['daily weekday filter and large COUNT', makePattern({ startDate: new Date('2018-01-03T00:00:00Z'), interval: 2, daysOfWeek: [0, 2, 4], count: 100000 })],
+    ['weekly interval and week boundary', makePattern({ frequency: 'weekly', startDate: new Date('2020-01-08T00:00:00Z'), interval: 2, daysOfWeek: [0, 3] })],
+    ['weekly COUNT across interval weeks', makePattern({ frequency: 'weekly', startDate: new Date('2020-01-08T00:00:00Z'), interval: 2, daysOfWeek: [0, 3], count: 100000 })],
+    ['weekly COUNT beginning mid-week', makePattern({ frequency: 'weekly', startDate: new Date('2026-11-04T00:00:00Z'), daysOfWeek: [0, 3], count: 1 })],
+    ['daily UNTIL', makePattern({ startDate: new Date('2020-01-01T00:00:00Z'), interval: 2, endDate: new Date('2026-11-20T00:00:00Z') })],
+    ['daily COUNT ordinal', makePattern({ startDate: new Date('2020-01-01T00:00:00Z'), interval: 2, count: 2000 })],
+    ['daily COUNT with month selector', makePattern({ startDate: new Date('2018-01-01T00:00:00Z'), count: 100000, monthOfYear: 11 })],
+    ['daily COUNT with day selector', makePattern({ startDate: new Date('2018-01-01T00:00:00Z'), count: 100000, dayOfMonth: 1 })],
+    ['daily COUNT ending within a selected month', makePattern({ startDate: new Date('2018-01-01T00:00:00Z'), count: 250, monthOfYear: 11 })],
+    ['daily COUNT exhausted before a selected day', makePattern({ startDate: new Date('2018-01-01T00:00:00Z'), count: 106, dayOfMonth: 1 })],
+    ['daily COUNT ending on a selected day', makePattern({ startDate: new Date('2018-01-01T00:00:00Z'), count: 107, dayOfMonth: 1 })],
+    ['negative month days and interval phase', makePattern({ startDate: new Date('2018-01-03T00:00:00Z'), count: 100000, interval: 3, dayOfMonth: -1 })],
+    ['calendar selectors with weekday and interval phase', makePattern({ startDate: new Date('2018-01-03T00:00:00Z'), count: 100000, interval: 3, monthOfYear: 11, daysOfWeek: [0, 2, 4] })],
+    ['leap-century COUNT exhaustion', makePattern({ startDate: new Date('1896-01-01T00:00:00Z'), count: 2, monthOfYear: 2, dayOfMonth: 29 })],
+    ['exclusions', makePattern({ startDate: new Date('2020-01-01T00:00:00Z'), interval: 2, exceptions: [new Date('2026-11-03T00:00:00Z')] })],
+    ['timezone boundary dates', makePattern({ frequency: 'weekly', startDate: new Date('2024-03-03T00:00:00Z'), daysOfWeek: [0] })],
+  ])('matches rrule.between exactly for %s', (_name, pattern) => {
+    const entry = { ...endless, scheduled_start: new Date(pattern.startDate),
+      scheduled_end: new Date(new Date(pattern.startDate).getTime() + 60 * 60 * 1000), recurrence_pattern: pattern };
+    const start = new Date('2026-11-01T00:00:00');
+    const end = new Date('2026-11-30T00:00:00');
+    const dtstart = new Date(pattern.startDate);
+    dtstart.setHours(0, 0, 0, 0);
+    let until: Date | undefined;
+    if (pattern.endDate) { until = new Date(pattern.endDate); until.setHours(23, 59, 59, 999); }
+    const rule = new RRule({
+      freq: RRule[pattern.frequency.toUpperCase() as 'DAILY' | 'WEEKLY'], interval: pattern.interval, dtstart, until, count: pattern.count,
+      byweekday: pattern.daysOfWeek?.map(day => [RRule.MO, RRule.TU, RRule.WE, RRule.TH, RRule.FR, RRule.SA, RRule.SU][day]),
+      bymonthday: pattern.dayOfMonth, bymonth: pattern.monthOfYear,
+    });
+    const rangeStart = new Date(start); rangeStart.setHours(0, 0, 0, 0); rangeStart.setSeconds(rangeStart.getSeconds() - 1);
+    const rangeEnd = new Date(end); rangeEnd.setHours(23, 59, 59, 999);
+    const expected = rule.between(rangeStart, rangeEnd, true)
+      .map(day => applyTimeToDate(day, entry.scheduled_start))
+      .filter(date => !pattern.exceptions?.some(exception => new Date(exception).toISOString().slice(0, 10) === date.toISOString().slice(0, 10)))
+      .map(date => date.toISOString());
+    const actual = generateOccurrences(entry, start, end, { includeMaster: true, maxOccurrences: 1000 }).map(date => date.toISOString());
+    expect(actual).toEqual(expected);
+  });
+
+  it('seeks old daily series without charging periods before the requested window', () => {
+    const old = { ...endless, scheduled_start: new Date('2018-01-01T09:00:00Z'),
+      recurrence_pattern: makePattern({ startDate: new Date('2018-01-01T00:00:00Z'), count: 100000 }) };
+    const budget = { remaining: 20 };
+    const dates = generateOccurrences(old, new Date('2026-11-01'), new Date('2026-11-04'), { includeMaster: true, workBudget: budget });
+    const days = dates.map(date => date.toISOString().slice(0, 10));
+    expect(days).toEqual(expect.arrayContaining(['2026-11-01', '2026-11-02', '2026-11-03']));
+    expect(budget.remaining).toBeGreaterThan(10);
+  });
+
+  it('charges calendar counting before discovering that an old COUNT series has ended', () => {
+    const entry = { ...endless, is_all_day: true, recurrence_pattern: makePattern({
+      startDate: new Date('2018-01-01T00:00:00Z'), dayOfMonth: 1, count: 10,
+    }) };
+    const workBudget = { remaining: 4 };
+    expect(() => generateOccurrences(entry, new Date('2026-11-01'), new Date('2026-11-02'), {
+      workBudget,
+    })).toThrow(RecurrenceOccurrenceLimitError);
+    expect(workBudget.remaining).toBe(0);
+  });
+
+  it('stops historical calendar counting as soon as COUNT is exhausted', () => {
+    const entry = { ...endless, is_all_day: true, recurrence_pattern: makePattern({
+      startDate: new Date('2018-01-01T00:00:00Z'), dayOfMonth: 1, count: 10,
+    }) };
+    const workBudget = { remaining: 10 };
+    expect(generateOccurrences(entry, new Date('2026-11-01'), new Date('2026-11-02'), {
+      workBudget,
+    })).toEqual([]);
+    expect(workBudget.remaining).toBe(0);
+  });
+
+  it('reads a 1970 daily master in a recent month with the default occurrence budget', () => {
+    const dates = generateOccurrences(endless, new Date('2026-11-01'), new Date('2026-12-01'), { includeMaster: true });
+    const days = dates.map(date => date.toISOString().slice(0, 10));
+    expect(days).toEqual(expect.arrayContaining(Array.from({ length: 30 }, (_, day) => `2026-11-${String(day + 1).padStart(2, '0')}`)));
+    expect(dates.length).toBeLessThanOrEqual(32);
+  });
+
+  it('seeks four old weekly series within one shared request budget', () => {
+    const budget = { remaining: 2000 };
+    const rows = Array.from({ length: 4 }, (_, index) => ({ ...endless, entry_id: `weekly-${index}`,
+      scheduled_start: new Date(`2020-01-0${index + 1}T09:00:00Z`), recurrence_pattern: makePattern({
+        frequency: 'weekly', startDate: new Date(`2020-01-0${index + 1}T00:00:00Z`), daysOfWeek: [index],
+      }) }));
+    const dates = rows.flatMap(row => generateOccurrences(row, new Date('2026-11-01'), new Date('2026-11-30'), { includeMaster: true, workBudget: budget }));
+    expect(dates.length).toBeGreaterThan(12);
+    expect(budget.remaining).toBeGreaterThan(0);
+  });
+
+  it('bounds empty rules whose date filters never produce a callback', () => {
+    const emptyRule = { ...endless, scheduled_start: new Date('2025-01-01T09:00:00Z'),
+      recurrence_pattern: makePattern({ startDate: new Date('2025-01-01'), monthOfYear: 2, dayOfMonth: 30 }) };
+    const workBudget = { remaining: 12 };
+    expect(() => generateOccurrences(emptyRule, new Date('2025-01-01'), new Date('2025-01-02'), {
+      maxOccurrences: 100, workBudget,
+    })).toThrow(RecurrenceOccurrenceLimitError);
+    expect(workBudget.remaining).toBe(0);
+  });
+
+  it('charges sparse recurrence periods while preserving matching leap-day results', () => {
+    const sparseRule = { ...endless, scheduled_start: new Date(2024, 1, 29, 9),
+      recurrence_pattern: makePattern({ startDate: new Date(2024, 1, 29), monthOfYear: 2, dayOfMonth: 29 }) };
+    const workBudget = { remaining: 3000 };
+    expect(generateOccurrences(sparseRule, new Date(2028, 1, 29), new Date(2028, 1, 29), {
+      maxOccurrences: 10, workBudget,
+    }).map(date => date.toISOString().slice(0, 10))).toEqual(['2028-02-29']);
+    expect(workBudget.remaining).toBeGreaterThan(0);
+    const shortBudget = { remaining: 12 };
+    expect(() => generateOccurrences(sparseRule, new Date('2025-01-01'), new Date('2025-01-02'), {
+      maxOccurrences: 100, workBudget: shortBudget,
+    })).toThrow(RecurrenceOccurrenceLimitError);
+    expect(shortBudget.remaining).toBe(0);
+  });
+
+  it('accepts an exact occurrence budget and rejects one occurrence beyond it', () => {
+    const entry = { ...endless, recurrence_pattern: makePattern({ startDate: new Date('2024-01-01'), count: 3 }),
+      scheduled_start: new Date('2024-01-01T09:00:00Z') };
+    expect(generateOccurrences(entry, new Date('2024-01-01'), new Date('2024-01-03'), { maxOccurrences: 3, includeMaster: true })).toHaveLength(3);
+    expect(() => generateOccurrences(entry, new Date('2024-01-01'), new Date('2024-01-03'), { maxOccurrences: 2, includeMaster: true }))
+      .toThrow(RecurrenceOccurrenceLimitError);
+  });
+
+  it('retains normal results and exports the shared one-year calendar window', () => {
+    const entry = { ...endless, recurrence_pattern: makePattern({ startDate: new Date('2024-01-01'), count: 3 }),
+      scheduled_start: new Date('2024-01-01T09:00:00Z') };
+    const results = generateOccurrences(entry, new Date('2024-01-01'), new Date('2024-01-03'), { maxOccurrences: 3, includeMaster: true });
+    expect(results).toHaveLength(3);
+    expect(results[1].getTime() - results[0].getTime()).toBe(24 * 60 * 60 * 1000);
+    expect(results[2].getTime() - results[1].getTime()).toBe(24 * 60 * 60 * 1000);
+    expect(MAX_CALENDAR_WINDOW_MS).toBe(366 * 24 * 60 * 60 * 1000);
+  });
+
+  it('preserves finite count and interval semantics when the requested window is after the series ended', () => {
+    const entry = { ...endless, recurrence_pattern: makePattern({ startDate: new Date('2024-01-01'), interval: 2, count: 3 }),
+      scheduled_start: new Date('2024-01-01T09:00:00Z') };
+    expect(generateOccurrences(entry, new Date('2024-02-01'), new Date('2024-02-02'), { maxOccurrences: 10 })).toEqual([]);
   });
 });
