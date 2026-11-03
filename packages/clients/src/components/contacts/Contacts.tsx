@@ -76,28 +76,29 @@ const CONTACTS_PAGE_SIZE_SETTING = 'contacts_page_size';
  *
  * The import returns bare contact rows, without the list-only fields
  * `getAllContacts` adds (`avatarUrl`, `client_name`). Merging rather than
- * replacing keeps the existing avatar; `client_name` is re-derived from the
- * loaded clients so a re-assigned or new contact stays searchable by client.
+ * replacing keeps the existing avatar. The import dialog adds resolved client
+ * names so re-assigned and new contacts stay searchable by client.
  */
 function mergeContactsById(
   current: IContact[],
   imported: IContact[],
-  clientNameById: ReadonlyMap<string, string>,
 ): IContact[] {
-  const withClientName = (contact: IContact): IContact => ({
-    ...contact,
-    client_name: contact.client_id
-      ? clientNameById.get(contact.client_id) ?? contact.client_name ?? null
-      : null,
-  });
   const importedById = new Map(imported.map((contact) => [contact.contact_name_id, contact]));
   const merged = current.map((contact) => {
     const replacement = importedById.get(contact.contact_name_id);
     if (!replacement) return contact;
     importedById.delete(contact.contact_name_id);
-    return withClientName({ ...contact, ...replacement });
+    const sameClient = contact.client_id === replacement.client_id;
+    return {
+      ...contact,
+      ...replacement,
+      client_name: replacement.client_id
+        ? replacement.client_name ?? (sameClient ? contact.client_name : null)
+        : null,
+      client_logo_url: sameClient ? contact.client_logo_url : null,
+    };
   });
-  return [...merged, ...Array.from(importedById.values(), withClientName)];
+  return [...merged, ...importedById.values()];
 }
 
 const isReturnedActionError = (value: unknown) =>
@@ -657,8 +658,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   };
 
   const handleImportComplete = (importedContacts: IContact[]) => {
-    const clientNameById = new Map(clients.map((client) => [client.client_id, client.client_name]));
-    setContacts(prev => mergeContactsById(prev, importedContacts, clientNameById));
+    setContacts(prev => mergeContactsById(prev, importedContacts));
     setIsImportDialogOpen(false);
   };
 

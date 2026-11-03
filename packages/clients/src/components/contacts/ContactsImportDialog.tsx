@@ -325,7 +325,10 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
       ...previous,
       ...resolvedClients.map(({ client_id, client_name }) => [client_id, client_name] as const),
     ]));
-    return buildContactCsvImportRows(data, columnMappings, resolvedClients);
+    return {
+      rows: buildContactCsvImportRows(data, columnMappings, resolvedClients),
+      clientNames: new Map(resolvedClients.map(({ client_id, client_name }) => [client_id, client_name])),
+    };
   };
 
   const processImport = async (data: ContactCsvRecord[]) => {
@@ -333,7 +336,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
     setProcessingDetails({ current: 0, total: data.length });
     
     try {
-      const transformedData = await transformDataForImport(data);
+      const { rows: transformedData, clientNames } = await transformDataForImport(data);
       const results = await importContactsFromCSV(
         transformedData,
         importOptions.updateExisting
@@ -358,7 +361,11 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         setStep('complete');
         const successfulContacts = results
           .filter(r => r.success && r.contact)
-          .map((r): IContact => r.contact!);
+          .map((r): IContact => {
+            const contact = r.contact!;
+            const clientName = contact.client_id ? clientNames.get(contact.client_id) : undefined;
+            return clientName === undefined ? contact : { ...contact, client_name: clientName };
+          });
         onImportComplete(successfulContacts);
       } else {
         setStep('results');

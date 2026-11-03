@@ -161,6 +161,22 @@ describe('ContactsImportDialog — Tags presence from the column mapping', () =>
     expect(rows[0]).toHaveProperty('tags', 'vip, board');
   });
 
+  it('passes resolved client names to the list after a successful import', async () => {
+    hoisted.importContactsFromCSV.mockImplementation(async (rows: any[]) =>
+      rows.map((row, index) => ({
+        success: true, originalData: row,
+        contact: { ...row, contact_name_id: `contact-${index}` },
+      })),
+    );
+    const { onImportComplete } = await importCsv(
+      'Name,Email,Client\nAda Lovelace,ada@example.com,Acme Corp\n',
+    );
+    await waitFor(() => expect(onImportComplete).toHaveBeenCalledWith([
+      expect.objectContaining({ client_id: 'client-acme', client_name: 'Acme Corp' }),
+    ]));
+    expect(hoisted.findClientsByNames).toHaveBeenCalledWith(['Acme Corp']);
+  });
+
   describe('failed-records download', () => {
     beforeEach(() => {
       hoisted.unparseCSV.mockClear();
