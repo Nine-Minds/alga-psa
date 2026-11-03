@@ -73,6 +73,10 @@ export interface JobStatusUpdate {
   pgBossJobId?: string;
   stepResult?: JobStepResult;
   details?: string;
+  /** Set by the server subscriber for a Temporal-forwarded handler. The
+   * workflow owns jobs.status for these executions; handlers may still append
+   * progress metadata, but cannot change the workflow's status. */
+  forwardedExecutionId?: string;
 }
 
 export class JobService {
@@ -164,6 +168,7 @@ export class JobService {
       status,
       scheduledJobId: updates.pgBossJobId
     };
+    updateData.forwardedExecutionId = updates.forwardedExecutionId;
 
     if (updates.error) {
       updateData.error = typeof updates.error === 'string' 
@@ -409,39 +414,33 @@ export class JobService {
       throw new Error('Tenant ID is required when updating a job record');
     }
 
-    await runWithTenant(resolvedTenant, async () => {
-      const { knex } = await createTenantKnex();
-      
-      const currentJob = await tenantDb(knex, resolvedTenant).table('jobs')
-        .where('job_id', id)
-        .first();
+    const db = await getAdminConnection();
+    await db.transaction(async (trx) => {
+      await trx.raw('SELECT set_config(\'app.current_tenant\', ?, true)', [resolvedTenant]);
+      const table = tenantDb(trx, resolvedTenant).table('jobs');
+      const currentJob = await table.where('job_id', id).forUpdate().first();
+      if (!currentJob) throw new Error(`Job with ID ${id} not found`);
 
-      if (!currentJob) {
-        throw new Error(`Job with ID ${id} not found`);
-      }
-
-      const currentMetadata = currentJob.metadata ?
-        (typeof currentJob.metadata === 'string' ? JSON.parse(currentJob.metadata) : currentJob.metadata)
+      const currentMetadata = currentJob.metadata
+        ? (typeof currentJob.metadata === 'string' ? JSON.parse(currentJob.metadata) : currentJob.metadata)
         : {};
-
-      // Add step results directly without modifying their structure
-      const stepResults = updates.stepResults || [];
-
+      // Serialize all metadata writers on the jobs row. In particular, a
+      // progress append must merge the latest serverExecution outcome rather
+      // than replace it with a stale snapshot.
       const updatedMetadata = {
         ...currentMetadata,
-        scheduledJobId: updates.scheduledJobId,
-        stepResults: [...(currentMetadata.stepResults || []), ...stepResults]
+        scheduledJobId: updates.scheduledJobId ?? currentMetadata.scheduledJobId,
+        stepResults: [...(currentMetadata.stepResults || []), ...(updates.stepResults || [])],
       };
-
       const updateData: Record<string, any> = {
-        status: updates.status,
         updated_at: new Date(),
-        metadata: JSON.stringify(updatedMetadata)
+        metadata: JSON.stringify(updatedMetadata),
       };
-
-      await tenantDb(knex, resolvedTenant).table('jobs')
-        .where('job_id', id)
-        .update(updateData);
+      const isForwardedHandler = Boolean(updates.forwardedExecutionId);
+      if (!isForwardedHandler) {
+        updateData.status = updates.status;
+      }
+      await table.where('job_id', id).update(updateData);
     });
   }
 }

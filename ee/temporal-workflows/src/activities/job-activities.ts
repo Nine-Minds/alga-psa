@@ -442,6 +442,7 @@ export async function updateJobStatus(input: {
     // Get current metadata
     const currentJob = await db.table('jobs')
       .where({ job_id: jobId })
+      .forUpdate()
       .first('metadata');
 
     const currentMetadata = currentJob?.metadata

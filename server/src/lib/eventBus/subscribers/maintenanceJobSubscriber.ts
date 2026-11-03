@@ -80,7 +80,12 @@ async function handleMaintenanceJobRequested(event: unknown): Promise<void> {
           }
         }
         try {
-          await executeJobHandler(jobName, jobId ?? `evt:${jobName}`, (data ?? {}) as any);
+          // Carry the execution identity into handler persistence so progress
+          // updates can be merged without taking ownership of workflow status.
+          await executeJobHandler(jobName, jobId ?? `evt:${jobName}`, {
+            ...(data ?? {}),
+            forwardedExecutionId: executionId,
+          } as any);
           if (jobService) {
             const recorded = await jobService.recordForwardedJobOutcome(jobId!, tenantId, executionId!, { status: 'completed' });
             if (!recorded) {
