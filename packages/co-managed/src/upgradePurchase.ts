@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { createRequire } from 'node:module';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { countCoManagedCommittedSeats } from '@alga-psa/licensing';
 import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, assertCoManagedSessionUnexpired,
@@ -6,11 +7,17 @@ import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, assertCoMa
 import { hasCoManagedLocalPermission } from './localPermission';
 import { coManagedUpgradeClosure } from './upgradeClosureWiring';
 
+const require = createRequire(import.meta.url);
+const purchaseStates = require('./coManagedUpgradePurchaseStates.cjs') as {
+  CO_MANAGED_UPGRADE_PURCHASE_STATES: readonly ['preparing', 'checkout', 'paid', 'expired', 'payment_failed'];
+  CO_MANAGED_UPGRADE_PENDING_STATES: readonly ['preparing', 'checkout', 'payment_failed'];
+};
+
 /** The ONE state list. The migration's CHECK is built from the same list (server/migrations/utils/coManagedUpgradePurchaseStates.cjs). */
-export const CO_MANAGED_UPGRADE_PURCHASE_STATES = ['preparing', 'checkout', 'paid', 'expired', 'payment_failed'] as const;
+export const CO_MANAGED_UPGRADE_PURCHASE_STATES = purchaseStates.CO_MANAGED_UPGRADE_PURCHASE_STATES;
 export type CoManagedUpgradePurchaseState = typeof CO_MANAGED_UPGRADE_PURCHASE_STATES[number];
 /** Purchases that block a second one: the user resumes (or retries) instead. */
-export const CO_MANAGED_UPGRADE_PENDING_STATES: readonly CoManagedUpgradePurchaseState[] = ['preparing', 'checkout', 'payment_failed'];
+export const CO_MANAGED_UPGRADE_PENDING_STATES: readonly CoManagedUpgradePurchaseState[] = purchaseStates.CO_MANAGED_UPGRADE_PENDING_STATES;
 
 export interface CoManagedUpgradePurchaseRequest { operationId: string; quantity: number; interval: 'month' | 'year' }
 export interface CoManagedUpgradePurchase {

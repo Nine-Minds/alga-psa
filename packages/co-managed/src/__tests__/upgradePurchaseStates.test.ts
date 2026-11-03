@@ -8,14 +8,14 @@ import knexFactory from 'knex';
 import { CO_MANAGED_UPGRADE_PENDING_STATES, CO_MANAGED_UPGRADE_PURCHASE_STATES } from '../upgradePurchase';
 
 const require = createRequire(import.meta.url);
-const migrationStates = require('../../../../server/migrations/utils/coManagedUpgradePurchaseStates.cjs') as {
+const sharedStates = require('../coManagedUpgradePurchaseStates.cjs') as {
   CO_MANAGED_UPGRADE_PURCHASE_STATES: string[]; CO_MANAGED_UPGRADE_PENDING_STATES: string[];
 };
 
 describe('independent-upgrade purchase states: one list for the CHECK, the index and the domain', () => {
-  it('the migration and the domain share the same lists', () => {
-    expect([...migrationStates.CO_MANAGED_UPGRADE_PURCHASE_STATES]).toEqual([...CO_MANAGED_UPGRADE_PURCHASE_STATES]);
-    expect([...migrationStates.CO_MANAGED_UPGRADE_PENDING_STATES]).toEqual([...CO_MANAGED_UPGRADE_PENDING_STATES]);
+  it('the migration source and the domain use the same shared lists', () => {
+    expect([...sharedStates.CO_MANAGED_UPGRADE_PURCHASE_STATES]).toEqual([...CO_MANAGED_UPGRADE_PURCHASE_STATES]);
+    expect([...sharedStates.CO_MANAGED_UPGRADE_PENDING_STATES]).toEqual([...CO_MANAGED_UPGRADE_PENDING_STATES]);
   });
   it('includes payment_failed (the reference CHECK omitted it)', () => {
     expect(CO_MANAGED_UPGRADE_PURCHASE_STATES).toContain('payment_failed');
