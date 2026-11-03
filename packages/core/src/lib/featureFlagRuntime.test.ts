@@ -22,7 +22,7 @@ describe('FeatureFlags runtime', () => {
     const runtime = new FeatureFlags();
 
     await expect(
-      runtime.isEnabledOrDefault('ai-assistant-activation', {
+      runtime.isEnabled('ai-assistant-activation', {
         tenantId: 'tenant-a',
         userId: 'user-a',
       })
@@ -46,7 +46,7 @@ describe('FeatureFlags runtime', () => {
     const runtime = new FeatureFlags();
 
     await expect(
-      runtime.isEnabledOrDefault('ai-assistant-activation', {
+      runtime.isEnabled('ai-assistant-activation', {
         tenantId: 'tenant-a',
         userId: 'user-a',
       })
@@ -93,8 +93,24 @@ describe('FeatureFlags runtime', () => {
       .resolves.toEqual({ status: 'unavailable', enabled: false });
     await expect(failedClient.evaluate('release-v2-0-feature', { tenantId: 'tenant-a' }))
       .resolves.toEqual({ status: 'unavailable', enabled: false });
-    await expect(failedClient.isEnabled('release-v2-0-feature', { tenantId: 'tenant-a' }))
-      .rejects.toMatchObject({ name: 'FeatureFlagUnavailableError' });
-    await expect(failedClient.isEnabledOrDefault('release-v2-0-feature', { tenantId: 'tenant-a' })).resolves.toBe(false);
+    await expect(failedClient.isEnabled('release-v2-0-feature', { tenantId: 'tenant-a' })).resolves.toBe(false);
+  });
+
+  it.each(['missing client', 'undefined result', 'client error'])('preserves boolean defaults without losing unavailable status on %s', async (failure) => {
+    const { FeatureFlags } = await import('./featureFlagRuntime');
+    const runtime = new FeatureFlags({ clientResolver: () => failure === 'missing client' ? null : ({
+      isFeatureEnabled: async () => {
+        if (failure === 'client error') throw new Error('PostHog unavailable');
+        return undefined;
+      },
+    } as any) });
+    const context = { tenantId: 'tenant-a' };
+
+    // Existing callers keep their flag-specific defaults, including defaults that enable a feature.
+    await expect(runtime.isEnabled('enable_time_tracking', context)).resolves.toBe(true);
+    await expect(runtime.isEnabled('release-v2-0-feature', context)).resolves.toBe(false);
+    // Gates receive the evaluation status independently of those fallback values.
+    await expect(runtime.evaluate('enable_time_tracking', context)).resolves.toEqual({ status: 'unavailable', enabled: true });
+    await expect(runtime.evaluate('release-v2-0-feature', context)).resolves.toEqual({ status: 'unavailable', enabled: false });
   });
 });

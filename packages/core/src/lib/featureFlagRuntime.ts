@@ -87,13 +87,6 @@ export interface FeatureFlagVariantAssignmentEvent {
   context: FeatureFlagContext;
 }
 
-export class FeatureFlagUnavailableError extends Error {
-  constructor(flagKey: string) {
-    super(`Feature flag evaluation is unavailable: ${flagKey}`);
-    this.name = 'FeatureFlagUnavailableError';
-  }
-}
-
 export interface FeatureFlagsOptions {
   clientResolver?: () => Promise<PostHog | null | undefined> | PostHog | null | undefined;
   enrichProperties?: (
@@ -125,14 +118,9 @@ export class FeatureFlags {
     this.anonymizeUserIds = process.env.ANALYTICS_ANONYMIZE_USER_IDS !== 'false';
   }
 
+  /** Existing boolean contract: use the flag's default when evaluation is unavailable.
+   * Admission gates use evaluate() so an unavailable result cannot masquerade as flag-off. */
   async isEnabled(flagKey: string, context: FeatureFlagContext = {}): Promise<boolean> {
-    const result = await this.evaluate(flagKey, context);
-    if (result.status === 'unavailable') throw new FeatureFlagUnavailableError(flagKey);
-    return result.enabled;
-  }
-
-  /** Boolean fallback for UI and legacy consumers that deliberately hide flags on outages. */
-  async isEnabledOrDefault(flagKey: string, context: FeatureFlagContext = {}): Promise<boolean> {
     return (await this.evaluate(flagKey, context)).enabled;
   }
 

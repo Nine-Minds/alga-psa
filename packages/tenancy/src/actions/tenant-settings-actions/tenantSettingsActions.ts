@@ -103,7 +103,7 @@ async function canTenantActivateAiAssistant(
   tenant: string,
   user?: Pick<IUserWithRoles, 'user_id' | 'user_type'>
 ): Promise<boolean> {
-  return featureFlags.isEnabledOrDefault(AI_ASSISTANT_ACTIVATION_FLAG, {
+  return featureFlags.isEnabled(AI_ASSISTANT_ACTIVATION_FLAG, {
     tenantId: tenant,
     userId: user?.user_id,
   });
