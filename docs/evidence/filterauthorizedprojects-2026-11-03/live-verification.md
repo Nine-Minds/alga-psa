@@ -63,6 +63,14 @@ Live verification remains blocked until the board admits and restores the existi
 - Recorded durable board fact `de29f017-574f-4ef3-8e47-5bbf28b4441f` at `2026-11-03T17:06:12.860Z`, step `Draft Implementation`, actor `agent:Draft Implementation`.
 - Final check at `2026-11-03T17:06:45Z` confirmed the app was still unavailable. The board returned a refreshed resume operation `87e7585a-a92d-4ea0-9984-6594a5b5737f`, expiry `17:08:45.816Z`, queue position 48, with reason `memory pressure on robert-X670E-Pro-RS: all tasks stalled 4.3% of the last minute`. Port 3397 remained without a listener and the card health URL refused the connection. The branch was pushed with evidence-only commit `3a263f8b51944ebb7e6aecfded5a1651f3a18163`; the tested application target remains `0f128fd0dae819996e055dae4cd5166331fcd4cd`.
 - Recorded refreshed queue state as durable board fact `8220e32d-2a93-4068-b8f3-fdbd31eb8727` at `2026-11-03T17:07:00.998Z`, step `Draft Implementation`, actor `agent:Draft Implementation`.
+
+## Reviewed recovery retry: 2026-11-03 17:07 UTC
+
+- Re-fetched origin: published branch and local `HEAD` both remain `a5f5638d62295fe7ec6574c43d01efb5ca7f25a8`; application target revision remains `0f128fd0dae819996e055dae4cd5166331fcd4cd`.
+- At `2026-11-03T17:07:56Z`, the existing board service remained suspended. Recovery operation `86da2deb-99c3-42d5-b026-2e8894f6f4b7` was pending until `17:09:56.721Z`; the board reported `Waiting for resource admission: state-unavailable: JetStream system temporarily unavailable`.
+- At the same check, port 3397 had no listener and the card hostname health check refused connection. The service record still specified `PORT=3397 npm run dev` and the expected worktree `server` cwd. No manual server was started and no memory-admission bypass was attempted.
+- All live PLAN.md cases remain awaiting service readiness: baseline task drawer and authenticated action response; each phase-name redaction alias; denied reader; missing/mismatched phase metadata; cross-project and cross-tenant isolation; and restored access after cleanup. No fixtures or permission changes were made.
+- Added board fact `9f77c3c3-d598-486a-bfed-e8a78f9095c2` at `2026-11-03T17:08:03.143Z`, step `Draft Implementation`, actor `agent:Draft Implementation`.
 - `security-finding-resolved` was not run: `alga-dev` exposes no command with that name or documented alias, and no callable acceptance-check invocation was available in the current tools. The existing offline behavioral results remain supplementary only.
 
 ### Disposition
