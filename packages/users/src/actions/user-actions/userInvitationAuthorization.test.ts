@@ -151,4 +151,30 @@ describe('sendUserInvitation authorization boundary', () => {
     expect(fixture.delivered).toHaveLength(1);
     expect(fixture.delivered[0]).toMatchObject({ email: 'eligible@example.test' });
   });
+
+  it('rejects an otherwise eligible role when the inviter lacks user:create', async () => {
+    fixture.hasPermission.mockImplementation(async (_user: unknown, _resource: string, action: string) => action !== 'create');
+
+    const result = await sendUserInvitation({
+      email: 'eligible@example.test', firstName: 'Eligible', lastName: 'User', roleId: 'eligible-role',
+    } as any);
+
+    expect(result).toMatchObject({ success: false, errorCode: 'PERMISSION_DENIED_INVITE' });
+    expect(result.error).toMatch(/Cannot create user accounts/);
+    expect(fixture.invitationRows).toHaveLength(0);
+    expect(fixture.delivered).toHaveLength(0);
+  });
+
+  it('rejects an otherwise eligible role when the inviter lacks user:update', async () => {
+    fixture.hasPermission.mockImplementation(async (_user: unknown, _resource: string, action: string) => action !== 'update');
+
+    const result = await sendUserInvitation({
+      email: 'eligible@example.test', firstName: 'Eligible', lastName: 'User', roleId: 'eligible-role',
+    } as any);
+
+    expect(result).toMatchObject({ success: false, errorCode: 'PERMISSION_DENIED_INVITE' });
+    expect(result.error).toMatch(/Cannot assign user roles/);
+    expect(fixture.invitationRows).toHaveLength(0);
+    expect(fixture.delivered).toHaveLength(0);
+  });
 });

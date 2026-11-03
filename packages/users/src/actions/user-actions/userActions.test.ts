@@ -407,6 +407,18 @@ describe('addUser', () => {
     expect(existingAssignments).toEqual(['existing-role']);
   });
 
+  it('updates roles when the nonempty target permission set is within the actor permission set', async () => {
+    assignedRolePermissions.push({ role_id: 'eligible-role', resource: 'ticket', action: 'read', msp: true });
+    createTenantKnexMock.mockResolvedValue({ knex: createRoleUpdateTenantDb() });
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => callback(createRoleUpdateTenantDb()));
+
+    const { updateUserRoles } = await import('./userActions');
+    const result = await (updateUserRoles as any)(actingUser, tenantContext, 'target-user', ['eligible-role']);
+
+    expect(result).toBeUndefined();
+    expect(existingAssignments).toEqual(['eligible-role']);
+  });
+
   it('rejects updating an email when another tenant already uses it', async () => {
     createTenantKnexMock.mockResolvedValue({
       knex: createUpdateTenantDb({ email: 'updated@example.com', user_type: 'internal' }),

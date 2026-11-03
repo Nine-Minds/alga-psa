@@ -19,11 +19,11 @@ function queryFor(table: string) {
         : fixture.users.find((user) => !q.criteria?.user_id || user.user_id === q.criteria.user_id) ?? { user_id: 'target-user' }
       : undefined,
     whereIn: (_column: string, ids: string[]) => { q.ids = ids; return q; },
-    insert: async (rows: Record<string, any> | Record<string, any>[]) => {
+    insert: (rows: Record<string, any> | Record<string, any>[]) => {
       const values = Array.isArray(rows) ? rows : [rows];
-      if (table === 'users') fixture.users.push(...values);
+      if (table === 'users') return { returning: async () => { fixture.users.push(...values); return values; } };
       if (table === 'user_roles') fixture.assignments.push(...values.map((value) => value.role_id));
-      return values;
+      return Promise.resolve(values);
     },
     del: async () => { fixture.assignments.splice(0); return 1; },
     update: async () => 1,
@@ -38,6 +38,7 @@ function queryFor(table: string) {
 }
 
 const db = vi.hoisted(() => ((table: string) => queryFor(table)) as any);
+db.raw = (value: string) => value === 'gen_random_uuid()' ? 'new-user-id' : new Date();
 
 vi.mock('@alga-psa/db', () => ({
   BaseService: class {
@@ -102,5 +103,34 @@ describe('UserService MSP role grant authorization', () => {
     await expect(service.assignRoles('target-user', ['admin-role'], context)).rejects.toThrow(/Cannot assign an MSP role/);
 
     expect(fixture.assignments).toEqual(['existing-role']);
+  });
+
+  it('creates a user and assigns an eligible role with nonempty permissions', async () => {
+    fixture.targetPermissions.splice(0, fixture.targetPermissions.length,
+      { role_id: 'eligible-role', resource: 'ticket', action: 'read', msp: true });
+    const service = new UserService();
+    (service as any).createDefaultUserPreferences = async () => undefined;
+    (service as any).logUserActivity = async () => undefined;
+    (service as any).enhanceUsersWithDetails = async (users: any[]) => users;
+
+    const created = await service.create({
+      username: 'new@example.test', email: 'new@example.test', password: 'secret', role_ids: ['eligible-role'], user_type: 'internal',
+    } as any, context);
+
+    expect(created).toMatchObject({ email: 'new@example.test' });
+    expect(fixture.users).toHaveLength(1);
+    expect(fixture.assignments).toEqual(['existing-role', 'eligible-role']);
+  });
+
+  it('assigns an eligible role with nonempty permissions through UserService.assignRoles', async () => {
+    fixture.targetPermissions.splice(0, fixture.targetPermissions.length,
+      { role_id: 'eligible-role', resource: 'ticket', action: 'read', msp: true });
+    const service = new UserService();
+    (service as any).logUserActivity = async () => undefined;
+
+    const result = await service.assignRoles('target-user', ['eligible-role'], context);
+
+    expect(result).toEqual({ success: true, message: 'Roles assigned successfully' });
+    expect(fixture.assignments).toEqual(['eligible-role']);
   });
 });
