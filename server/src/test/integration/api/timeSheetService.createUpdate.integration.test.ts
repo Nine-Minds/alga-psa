@@ -1,10 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { knex as knexFactory, type Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
-import { tenantDb } from '@alga-psa/db';
+import { runWithTenant, tenantDb } from '@alga-psa/db';
+import * as bundleService from '@alga-psa/authorization/bundles/service';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { TimeSheetService } from '@/lib/api/services/TimeSheetService';
 import { ConflictError, ForbiddenError } from '@/lib/api/middleware/apiMiddleware';
@@ -41,18 +42,6 @@ vi.mock('@/lib/auth/rbac', async (importOriginal) => ({
   hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
     grants.byUser.get(user.user_id)?.has(`${resource}:${action}`) ?? false),
 }));
-vi.mock('@alga-psa/scheduling/actions/timeEntryDelegationAuth', async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  assertCanApproveSubject: vi.fn(async (actor: { user_id: string }, _tenant: string, subjectUserId: string) => {
-    if (approvalBundleRules.rules.some((rule) =>
-      rule.constraintKey === 'not_self_approver' && actor.user_id === subjectUserId
-    )) {
-      throw new Error('Permission denied: Cannot approve your own time submissions');
-    }
-    return actor.user_id === subjectUserId ? 'self' : 'manager';
-  }),
-}));
-
 let db: Knex;
 const tenantsToCleanup = new Set<string>();
 
@@ -121,10 +110,18 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     db = await createTestDbConnection();
   });
 
+  beforeEach(() => {
+    // Keep the actual delegation helper and authorization kernel, while making the
+    // policy fixture deterministic instead of depending on seeded bundle assignments.
+    vi.spyOn(bundleService, 'resolveBundleNarrowingRulesForEvaluation')
+      .mockImplementation(async () => approvalBundleRules.rules as any);
+  });
+
   afterEach(async () => {
     vi.mocked(publishUnregisteredEventType).mockClear();
     grants.byUser.clear();
     approvalBundleRules.rules = [];
+    vi.restoreAllMocks();
     for (const tenantId of tenantsToCleanup) await cleanupTenant(tenantId);
     tenantsToCleanup.clear();
   });
@@ -210,7 +207,7 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     });
 
     grants.byUser.set(f.actor, new Set(['time_sheet:update']));
-    await expect(service.approveTimeSheet(sheet.id, {}, ctx)).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(runWithTenant(f.tenantId, () => service.approveTimeSheet(sheet.id, {}, ctx))).rejects.toBeInstanceOf(ForbiddenError);
     await expect(service.update(sheet.id, { approval_status: 'APPROVED' } as any, ctx)).resolves.toMatchObject({ approval_status: 'DRAFT' });
     expect((await tenantTable(f.tenantId, 'time_sheets').where({ id: sheet.id }).first()).approval_status).toBe('DRAFT');
     expect((await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first()).approval_status).toBe('DRAFT');
@@ -224,8 +221,8 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     grants.byUser.set(f.actor, new Set(['time_sheet:approve']));
     vi.mocked(publishUnregisteredEventType).mockRejectedValueOnce(new Error('event transport unavailable'));
     const concurrentApprovals = await Promise.allSettled([
-      service.approveTimeSheet(sheet.id, {}, ctx),
-      service.approveTimeSheet(sheet.id, {}, ctx),
+      runWithTenant(f.tenantId, () => service.approveTimeSheet(sheet.id, {}, ctx)),
+      runWithTenant(f.tenantId, () => service.approveTimeSheet(sheet.id, {}, ctx)),
     ]);
     expect(concurrentApprovals.filter((result) => result.status === 'fulfilled')).toHaveLength(0);
     const rejectionMessages = concurrentApprovals
@@ -278,9 +275,9 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     approvalBundleRules.rules = [{
       resource: 'time_entry', action: 'approve', constraintKey: 'not_self_approver',
     }];
-    await expect(service.approveTimeSheet(single.sheetId, { approval_notes: 'should not persist' }, ctx))
+    await expect(runWithTenant(f.tenantId, () => service.approveTimeSheet(single.sheetId, { approval_notes: 'should not persist' }, ctx)))
       .rejects.toBeInstanceOf(ForbiddenError);
-    const bulkResult = await service.bulkApprove({ time_sheet_ids: [bulk.sheetId], approval_notes: 'should not persist' } as any, ctx);
+    const bulkResult = await runWithTenant(f.tenantId, () => service.bulkApprove({ time_sheet_ids: [bulk.sheetId], approval_notes: 'should not persist' } as any, ctx));
     expect(bulkResult).toHaveLength(1);
     expect(bulkResult[0]).toMatchObject({ success: false, time_sheet_id: bulk.sheetId });
 
@@ -293,11 +290,11 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
 
     // Self approval remains allowed when no bundle restriction applies.
     approvalBundleRules.rules = [];
-    await expect(service.approveTimeSheet(permittedSingle.sheetId, { approval_notes: 'approved' }, ctx))
+    await expect(runWithTenant(f.tenantId, () => service.approveTimeSheet(permittedSingle.sheetId, { approval_notes: 'approved' }, ctx)))
       .resolves.toMatchObject({ id: permittedSingle.sheetId, approval_status: 'APPROVED', approved_by: f.actor });
-    const permittedBulkResult = await service.bulkApprove(
+    const permittedBulkResult = await runWithTenant(f.tenantId, () => service.bulkApprove(
       { time_sheet_ids: [permittedBulk.sheetId], approval_notes: 'bulk approved' } as any, ctx
-    );
+    ));
     expect(permittedBulkResult[0]).toMatchObject({ success: true, time_sheet_id: permittedBulk.sheetId });
     expect(await tenantTable(f.tenantId, 'time_entries').whereIn('time_sheet_id', [permittedSingle.sheetId, permittedBulk.sheetId]).where({ approval_status: 'APPROVED' }).count('* as count'))
       .toMatchObject([{ count: '2' }]);

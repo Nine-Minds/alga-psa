@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { tenantDb } from '@alga-psa/db';
+import { runWithTenant, tenantDb } from '@alga-psa/db';
+import * as bundleService from '@alga-psa/authorization/bundles/service';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createServiceUser } from '../../../test-utils/serviceUserFixtures';
 import { HumanWorkOwnerRequiredError } from '../../../../shared/lib/humanWork/HumanWorkOwnerRequiredError';
@@ -111,7 +112,12 @@ describe('T043 TimeSheetService.approveTimeSheet (F056)', () => {
   it('an internal approver approves the sheet and its entries', async () => {
     const { sheetId, entryId } = await submittedSheet();
     const { svc, context } = approverService(internalId);
-    await svc.approveTimeSheet(sheetId, { approval_notes: 'ok' } as any, context);
+    const rulesSpy = vi.spyOn(bundleService, 'resolveBundleNarrowingRulesForEvaluation').mockResolvedValue([]);
+    try {
+      await runWithTenant(tenant, () => svc.approveTimeSheet(sheetId, { approval_notes: 'ok' } as any, context));
+    } finally {
+      rulesSpy.mockRestore();
+    }
 
     const sheet = await tenantDb(db, tenant).table('time_sheets').where({ id: sheetId }).first();
     expect(sheet.approval_status).toBe('APPROVED');
@@ -126,7 +132,13 @@ describe('T043 TimeSheetService.approveTimeSheet (F056)', () => {
   it('a service-user approver is refused (HumanWorkOwnerRequiredError approved_by) and nothing changes', async () => {
     const { sheetId, entryId } = await submittedSheet();
     const { svc, context } = approverService(serviceUserId);
-    await expect(svc.approveTimeSheet(sheetId, {} as any, context)).rejects.toBeInstanceOf(HumanWorkOwnerRequiredError);
+    const rulesSpy = vi.spyOn(bundleService, 'resolveBundleNarrowingRulesForEvaluation').mockResolvedValue([]);
+    try {
+      await expect(runWithTenant(tenant, () => svc.approveTimeSheet(sheetId, {} as any, context)))
+        .rejects.toBeInstanceOf(HumanWorkOwnerRequiredError);
+    } finally {
+      rulesSpy.mockRestore();
+    }
     const sheet = await tenantDb(db, tenant).table('time_sheets').where({ id: sheetId }).first();
     expect(sheet.approval_status).toBe('SUBMITTED');
     const entry = await tenantDb(db, tenant).table('time_entries').where({ entry_id: entryId }).first();
