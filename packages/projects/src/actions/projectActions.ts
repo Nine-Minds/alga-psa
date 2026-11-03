@@ -56,7 +56,7 @@ import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
 import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
-import { assertProjectFieldsWritable, authorizeAndProjectProjectRecords } from '../lib/projectReadProjection';
+import { assertProjectFieldsWritable, authorizeAndProjectProjectRecords, authorizeProjectRecordsForDisplay } from '../lib/projectReadProjection';
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
@@ -398,8 +398,8 @@ export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]
 
         const projects = await withTransaction(knex, async (trx: Knex.Transaction) => {
             const rows = await ProjectModel.getAllRecords(trx, tenant, true);
-            const projected = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);
-            return ProjectModel.enrichDisplayData(trx, tenant, projected);
+            const authorize = await createProjectReadAuthorizer(trx, tenant, user as IUserWithRoles);
+            return authorizeProjectRecordsForDisplay(rows, authorize, (projected) => ProjectModel.enrichDisplayData(trx, tenant, projected));
         });
 
         return withAssignedUsers(projects);
@@ -1367,8 +1367,8 @@ export const getProject = withAuth(async (user, { tenant }, projectId: string): 
                 return null;
             }
 
-            const projected = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, [project]);
-            const enriched = await ProjectModel.enrichDisplayData(trx, tenant, projected);
+            const authorize = await createProjectReadAuthorizer(trx, tenant, user as IUserWithRoles);
+            const enriched = await authorizeProjectRecordsForDisplay([project], authorize, (projected) => ProjectModel.enrichDisplayData(trx, tenant, projected));
             return enriched[0] ?? null;
         });
     } catch (error) {

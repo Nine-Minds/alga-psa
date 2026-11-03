@@ -83,20 +83,27 @@ async function assertCoarse(
 }
 
 /** Per-project record decisions, memoised for the request. */
-function projectDecider(trx: Knex.Transaction, tenant: string, user: IUserWithRoles, recordAction: 'read' | 'update') {
+function projectDecider(trx: Knex.Transaction, tenant: string, user: IUserWithRoles, recordActions: readonly ('read' | 'update')[]) {
   const decisions = new Map<string, Promise<boolean>>();
-  let authorizer: ReturnType<typeof createProjectReadAuthorizer> | null = null;
+  const authorizers = new Map<'read' | 'update', ReturnType<typeof createProjectReadAuthorizer>>();
   return (projectId: string): Promise<boolean> => {
     let decision = decisions.get(projectId);
     if (!decision) {
       decision = (async () => {
         const project = await ProjectModel.getById(trx, tenant, projectId);
         if (!project) return false;
-        authorizer ??= createProjectReadAuthorizer(trx, tenant, user, recordAction);
-        const decision = await (await authorizer)(project);
-        // Parent-project redactions may hide the source fields behind comment bodies,
-        // author identities, or other child details. Fail closed for this child surface.
-        return decision.allowed && decision.redactedFields.length === 0;
+        for (const recordAction of recordActions) {
+          let authorizer = authorizers.get(recordAction);
+          if (!authorizer) {
+            authorizer = createProjectReadAuthorizer(trx, tenant, user, recordAction);
+            authorizers.set(recordAction, authorizer);
+          }
+          const decision = await (await authorizer)(project);
+          // Parent-project redactions may hide the source fields behind comment bodies,
+          // author identities, or other child details. Fail closed for this child surface.
+          if (!decision.allowed || decision.redactedFields.length > 0) return false;
+        }
+        return true;
       })();
       decisions.set(projectId, decision);
     }
@@ -132,7 +139,7 @@ export async function withTaskCommentAccess<T>(
     const [task] = await resolveTasks(trx, tenant, [taskId]);
     if (!task) throw new Error(notFound);
 
-    const decide = projectDecider(trx, tenant, user, writes ? 'update' : 'read');
+    const decide = projectDecider(trx, tenant, user, writes ? ['read', 'update'] : ['read']);
     if (!(await decide(task.project_id))) throw new Error(notFound);
 
     if (comment && (action === 'update' || action === 'delete') && comment.user_id !== user.user_id) {
@@ -159,7 +166,7 @@ export async function withTaskCommentBatchReadAccess<T>(
 ): Promise<T> {
   return withTransaction(db, async (trx: Knex.Transaction) => {
     await assertCoarse(trx, user, action);
-    const decide = projectDecider(trx, tenant, user, 'read');
+    const decide = projectDecider(trx, tenant, user, ['read']);
 
     let allowed: string[];
     if ('taskIds' in target) {
