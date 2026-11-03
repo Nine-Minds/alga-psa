@@ -76,12 +76,25 @@ describe('Letter customer worksheet PDF', () => {
     try {
       await page.setContent(html, { waitUntil: 'load' });
       await page.emulateMediaType('print');
-      const fields = await page.evaluate(() => ({
-        serial: document.querySelector('#fld-serial')?.textContent,
-        description: document.querySelector('#fld-details')?.textContent,
-      }));
+      const fields = await page.evaluate(() => {
+        const gapAfterLabel = (id: string) => {
+          const [label, value] = Array.from(document.querySelectorAll(`#${id} > span`));
+          return value.getBoundingClientRect().left - label.getBoundingClientRect().right;
+        };
+        return {
+          assetTag: document.querySelector('#fld-asset')?.textContent,
+          serial: document.querySelector('#fld-serial')?.textContent,
+          description: document.querySelector('#fld-details')?.textContent,
+          assetTagGap: gapAfterLabel('fld-asset'),
+          specGap: gapAfterLabel('spec-cpu'),
+        };
+      });
+      expect(fields.assetTag).toBe('Asset tag: CFD-DC-2021');
       expect(fields.serial).toContain('1234567');
       expect(fields.description).toBe(viewModel.ticketDescription);
+      // Values sit next to their labels instead of being pushed to the far edge of the row.
+      expect(fields.assetTagGap).toBeLessThan(16);
+      expect(fields.specGap).toBeLessThan(16);
       const qr = await page.$('#qr');
       if (!qr) throw new Error('The worksheet QR code was not rendered');
       const raster = PNG.sync.read(Buffer.from(await qr.screenshot({ type: 'png' })));
