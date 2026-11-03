@@ -975,7 +975,8 @@ export default function TaskForm({
         const taskData = {
           task_name: taskName,
           project_status_mapping_id: selectedStatusId,
-          wbs_code: `${phase.wbs_code}.0`,
+          // The server generates the authoritative WBS code; the phase value may be redacted.
+          wbs_code: '',
           ...serializeTaskDescriptions(descriptionContent),
           assigned_to: finalAssignedTo,
           assigned_team_id: assignedTeamId || null,

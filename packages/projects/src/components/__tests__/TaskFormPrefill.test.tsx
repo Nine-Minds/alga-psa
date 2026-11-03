@@ -249,6 +249,36 @@ describe('TaskForm prefillData', () => {
     expect(nameField.value).toBe('Prefilled Task');
   });
 
+  it('creates a task when the phase WBS value is redacted', async () => {
+    render(
+      <TicketIntegrationProvider value={mockCtx}>
+        <TaskForm
+          phase={{ ...phase, wbs_code: null } as unknown as IProjectPhase}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          projectStatuses={projectStatuses}
+          users={users}
+          mode="create"
+          onPhaseChange={() => undefined}
+          inDrawer
+          prefillData={{
+            task_name: 'Masked WBS task',
+            description: '',
+            assigned_to: null,
+            due_date: null,
+            estimated_hours: 0,
+          }}
+        />
+      </TicketIntegrationProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(addTaskToPhaseMock).toHaveBeenCalled());
+    expect(addTaskToPhaseMock.mock.calls.at(-1)?.[0]).toBe('phase-1');
+    expect(addTaskToPhaseMock.mock.calls.at(-1)?.[1]).toHaveProperty('wbs_code', '');
+  });
+
   it('initializes description from prefillData', () => {
     render(
       <TicketIntegrationProvider value={mockCtx}>

@@ -1407,15 +1407,6 @@ export const getTasksForPhase = withAuth(async (
             }
             const readDecision = await decideProjectReadById(trx, tenant, user as IUserWithRoles, projectId);
 
-            // Get phase to get its WBS code
-            const phase = await tenantScopedTable(trx, 'project_phases', tenant)
-                .where({ phase_id: phaseId })
-                .first();
-
-            if (!phase) {
-                throw new Error('Phase not found');
-            }
-
             // Get all tasks for this phase
             const tasks = (await loadAuthorizedProjectTasks(
                 trx, tenant, projectId, readDecision.redactedFields,
