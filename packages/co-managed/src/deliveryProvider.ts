@@ -201,6 +201,12 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
       });
     },
 
+    async reauthorizeCommentRecipient(input) {
+      const plan = await this.planTicketComment(input.tenant, input.ticketId, input.commentId);
+      if (!plan || plan.relationshipId !== input.relationshipId || plan.sponsorTenant !== input.sponsorTenant) return null;
+      return plan.sponsorRecipients.find((recipient) => recipient.principalId === input.principalId && recipient.kind === 'msp_user') ?? null;
+    },
+
     async planTaskComment(tenant, taskCommentId) {
       return withAdminTransaction(async (trx) => {
         const comment = await tenantDb(trx, tenant).table('project_task_comments').where({ task_comment_id: taskCommentId }).first('thread_id');

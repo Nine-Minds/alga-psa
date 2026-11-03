@@ -776,6 +776,65 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     } finally { await queue.shutdown(); connection.mockRestore();tenantConnection.mockRestore();storage.mockRestore();snapshot.mockRestore(); }
   });
 
+  it('rechecks sponsor policy after persisted attachment reconstruction on delayed email retry', async () => {
+    const { TenantEmailService } = await import('@alga-psa/email');
+    const { SMTPEmailProvider } = await import('@alga-psa/email/providers/SMTPEmailProvider');
+    const { coManagedDeliverySeam } = await import('@shared/lib/coManagedDelivery');
+    const { CO_MANAGED_LEDGER } = await import('@shared/lib/deliveryLedger');
+    const { sendEventEmail } = await import('@/lib/notifications/sendEventEmail');
+    const pdf = await upload('sponsor-private.pdf'); await attach(pdf.file);
+    await table('comments').where({ comment_id: comment }).update({ note: JSON.stringify([
+      { type: 'paragraph', content: [{ type: 'text', text: 'Sponsor secret comment body' }] },
+      ...JSON.parse(note(pdf.file)),
+    ]) });
+    await table('tenant_email_templates').insert({ tenant, name: 'ticket-comment-added', language_code: 'en',
+      subject: 'Update {{ticket.id}}', html_content: '{{{comment.content}}} {{ticket.metaLine}}', text_content: '{{comment.text}} {{ticket.metaLine}}' });
+    const messages: any[] = [];
+    const stream = nodemailer.createTransport({ streamTransport: true, buffer: true });
+    const provider = new SMTPEmailProvider('sponsor-retry');
+    (provider as any).initialized = true; (provider as any).config = { from: 'agent@example.test' };
+    (provider as any).transporter = { sendMail: async (mail: any) => {
+      const sent = await stream.sendMail(mail); messages.push(await simpleParser(sent.message as Buffer)); return sent;
+    } };
+    const service = TenantEmailService.getInstance(tenant);
+    const smtp = vi.spyOn(service as any, 'refreshProviderState').mockResolvedValue({ emailProvider: provider, providerInitError: null, fromAddress: 'agent@example.test' });
+    const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(trx);
+    const tenantConnection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant } as any);
+    vi.spyOn(StorageService, 'downloadFile').mockResolvedValue({ buffer: Buffer.from('%PDF-private') } as any);
+    let redactedFields: string[] = [];
+    let currentEmail = 'sponsor-current@example.test';
+    const sponsorTenant = randomUUID();
+    await tenantDb(trx, sponsorTenant).unscoped('tenants', 'create isolated sponsor tenant').insert({ tenant: sponsorTenant, client_name: 'Sponsor', email: 'sponsor@example.test', product_code: 'psa' });
+    process.env.FORCE_CAPABILITIES = 'co-managed:on';
+    coManagedDeliverySeam.reset();
+    coManagedDeliverySeam.register(() => ({ reauthorizeCommentRecipient: async () => ({ kind: 'msp_user', principalId: actor, email: currentEmail, redactedFields }) }) as any);
+    const pending = { mailClass: 'ticket' as const, tenantId: tenant, to: currentEmail, subject: 'Update', template: 'ticket-comment-added', locale: 'en' as const,
+      context: { ticket: { id: 'ATT-1', title: 'Attachment tests', priority: 'Urgent', status: 'Open', metaLine: 'Ticket #ATT-1 · Urgent Priority · Open' },
+        comment: { content: 'Sponsor secret comment body', text: 'Sponsor secret comment body', author: 'Agent' } },
+      replyContext: { ticketId: ticket, commentId: comment },
+      delivery: { ledger: CO_MANAGED_LEDGER, ledgerTenant: sponsorTenant,
+        key: { delivery_kind: 'ticket_comment_email', source_id: comment, recipient: 'sponsor-original@example.test' }, extra: { recipient_kind: 'msp_user' } },
+      coManagedRecipient: { tenant, ticketId: ticket, commentId: comment, relationshipId: randomUUID(), sponsorTenant, principalId: actor } };
+    const fail = vi.spyOn(service, 'sendEmail').mockResolvedValueOnce({ success: false, error: 'Rate limited', providerId: 'sponsor-retry', providerType: 'smtp',
+      metadata: { retryable: true, definitelyNotSent: true, status: 429 } } as any);
+    try {
+      await expect(sendEventEmail(pending)).rejects.toMatchObject({ isRetryable: true });
+      redactedFields = ['note', 'ticket_number'];
+      currentEmail = 'sponsor-renamed@example.test';
+      await sendEventEmail(pending);
+      expect(messages).toHaveLength(1);
+      expect(messages[0].to.value[0].address).toBe(currentEmail);
+      expect(messages[0].text).not.toContain('Sponsor secret comment body');
+      expect(messages[0].text).not.toContain('ATT-1');
+      expect(messages[0].attachments).toEqual([]);
+      expect(await tenantDb(trx, sponsorTenant).table('co_management_deliveries')
+        .where({ delivery_kind: 'ticket_comment_email', source_id: comment, recipient: 'sponsor-original@example.test' }).first()).toMatchObject({ state: 'sent' });
+    } finally {
+      fail.mockRestore(); smtp.mockRestore(); connection.mockRestore(); tenantConnection.mockRestore();
+      coManagedDeliverySeam.reset(); delete process.env.FORCE_CAPABILITIES;
+    }
+  });
+
   it('live PgBoss discovery reuses workers and recovers a committed publication to SMTP once', async () => {
     const { default: PgBoss } = await import('pg-boss');
     const { EmulatorHost } = await import('@alga-psa/emulator-host');

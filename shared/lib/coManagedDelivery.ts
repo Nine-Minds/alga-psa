@@ -114,6 +114,8 @@ export interface CoManagedDeliveryProvider {
   flagStaleRoutingSending(tenant: string, olderThanMs: number): Promise<number>;
   /** Null when the ticket is not shared (or its grant is revoked); the native recipient step then runs unchanged. */
   planTicketComment(tenant: string, ticketId: string, commentId: string): Promise<CommentDeliveryPlan | null>;
+  /** Rebuild sponsor authorization for one delayed comment send; projections are returned only in memory. */
+  reauthorizeCommentRecipient?(input: { tenant: string; ticketId: string; commentId: string; relationshipId: string; sponsorTenant: string; principalId: string }): Promise<DeliveryRecipient | null>;
   /**
    * Audience of a native project-task comment's thread (`projectTaskAudience`: only explicit, consistent
    * metadata makes a task comment shared; everything else is organization_private). Null when the tenant

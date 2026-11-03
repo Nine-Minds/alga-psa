@@ -1921,6 +1921,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
       for (const recipient of audienceRecipients(coManagedStep, { customerUsers, requester })) {
         const isSponsor = recipient.kind === 'msp_user' || recipient.kind === 'team';
         const sponsorProjection = isSponsor ? projectCoManagedNotificationSnapshot(recipient.redactedFields ?? [], { commentPreview, authorName, ticketNumber: ticket.ticket_number }) : null;
+        const projectedTicketNumber = sponsorProjection
+          ? (sponsorProjection.ticketNumber ?? 'Shared ticket')
+          : (ticket.ticket_number || 'New Ticket');
         const projectedAuthorName = sponsorProjection?.authorName ?? (isSponsor ? 'A team member' : authorName);
         // Sponsor users have their inbox in the MSP tenant, so their row (and its ledger claim) live there.
         const targetTenant = isSponsor ? coManagedStep.plan.sponsorTenant : tenantId;
@@ -1936,10 +1939,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
           type: 'info',
           category: 'tickets',
           link,
-          data: { authorName: projectedAuthorName, ticketId: (sponsorProjection?.ticketNumber ?? ticket.ticket_number) || 'New Ticket', commentPreview: sponsorProjection?.conversationSuppressed ? '' : commentPreview },
+          data: { authorName: projectedAuthorName, ticketId: projectedTicketNumber, commentPreview: sponsorProjection?.conversationSuppressed ? '' : commentPreview },
           metadata: {
             ticketId: ticket.ticket_id,
-            ticketNumber: (sponsorProjection?.ticketNumber ?? ticket.ticket_number) || 'New Ticket',
+            ticketNumber: projectedTicketNumber,
             comment: { id: comment?.id, text: sponsorProjection?.conversationSuppressed ? '' : commentPreview, author: projectedAuthorName,
               ...(userId && sponsorProjection?.authorName !== null ? { authorId: userId } : {}), isInternal: false },
           },

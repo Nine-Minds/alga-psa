@@ -2916,7 +2916,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         ...baseTicketContext,
         url
       },
-      comment: commentContext
+      comment: { ...commentContext }
     });
 
     // Determine primary email (contact first, then client)
@@ -3050,6 +3050,11 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           commentContent: projectedContext.comment.content, commentHtml: projectedContext.comment.html,
           commentPreview: projectedContext.comment.text, commentRawContent: projectedContext.comment.rawContent,
           authorName: projectedContext.comment.author,
+          priority: projectedContext.ticket.priority, priorityColor: projectedContext.ticket.priorityColor,
+          status: projectedContext.ticket.status, metaLine: projectedContext.ticket.metaLine,
+          board: projectedContext.ticket.board, categoryDetails: projectedContext.ticket.categoryDetails,
+          category: projectedContext.ticket.category, subcategory: projectedContext.ticket.subcategory,
+          ticketUrl: projectedContext.ticket.url, description: projectedContext.ticket.description,
         }) : null;
         if (projection) {
           Object.assign(projectedContext.ticket, {
@@ -3058,7 +3063,11 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             requesterContact: projection.requesterContact, requesterDetails: projection.requesterDetails,
             assignedToName: projection.assignedToName, assignedToEmail: projection.assignedToEmail,
             assignedDetails: projection.assignedDetails, clientName: projection.clientName,
-            locationSummary: projection.locationSummary,
+            locationSummary: projection.locationSummary, priority: projection.priority,
+            priorityColor: projection.priorityColor, status: projection.status,
+            metaLine: projection.metaLine, board: projection.board,
+            categoryDetails: projection.categoryDetails, category: projection.category,
+            subcategory: projection.subcategory, url: projection.ticketUrl, description: projection.description,
           });
           if (projection.authorName === null) projectedContext.comment.author = 'A team member';
           if (projection.conversationSuppressed) Object.assign(projectedContext.comment, { content: '', html: '', text: '', plainText: '', rawContent: null });
@@ -3070,7 +3079,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           to: recipient.email!,
           subject: `New Comment on Ticket: ${projectedContext.ticket.title}`,
           template: 'ticket-comment-added',
-          context: projectedContext,
+          // Keep canonical source content in the queued params; sendEventEmail reauthorizes and
+          // projects this context on every attempt, including after policy changes.
+          context: sponsorRecipient ? buildContext(internal ? internalUrl : portalUrl) : projectedContext,
           replyContext: {
             ticketId: ticket.ticket_id || payload.ticketId,
             commentId: payload.comment?.id,
@@ -3079,6 +3090,11 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             tokenMetadata: fields.tokenMetadata,
           },
           delivery: fields.delivery,
+          ...(sponsorRecipient ? { coManagedRecipient: {
+            tenant: tenantId, ticketId: payload.ticketId, commentId: sourceId,
+            relationshipId: coManagedStep.plan.relationshipId, sponsorTenant: coManagedStep.plan.sponsorTenant,
+            principalId: recipient.principalId,
+          } } : {}),
           attachments: projection?.conversationSuppressed ? [] : inlineCommentImageAttachments,
           ...commentThreadHeaderParams,
         }, 'Ticket Comment Added', recipient.kind === 'customer_user' ? recipient.principalId : undefined);

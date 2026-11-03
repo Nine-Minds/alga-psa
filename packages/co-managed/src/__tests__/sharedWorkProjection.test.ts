@@ -44,6 +44,19 @@ describe('projectCoManagedNotificationSnapshot', () => {
     const projected = projectCoManagedNotificationSnapshot(['priority'], { ticketTitle: 'Visible', commentPreview: 'visible comment' });
     expect(projected).toMatchObject({ ticketTitle: 'Visible', commentPreview: 'visible comment', conversationSuppressed: false });
   });
+
+  it('masks persisted comment body aliases, canonical author sources, and derived ticket context', () => {
+    const row = { commentContent: 'private', commentPreview: 'private preview', authorName: 'Morgan',
+      priority: 'Urgent', status: 'Open', board: 'Service', categoryDetails: 'Hardware / Laptop',
+      metaLine: 'Ticket #T-9 · Urgent Priority · Open' };
+    expect(projectCoManagedNotificationSnapshot(['note'], row).commentContent).toBeNull();
+    expect(projectCoManagedNotificationSnapshot(['markdown_content'], row).commentPreview).toBeNull();
+    expect(projectCoManagedNotificationSnapshot(['actor_display_name'], row).authorName).toBeNull();
+    expect(projectCoManagedNotificationSnapshot(['contact_id'], { authorName: 'Morgan' }).authorName).toBeNull();
+    expect(projectCoManagedNotificationSnapshot(['priority_id'], row)).toMatchObject({ priority: null, metaLine: null });
+    expect(projectCoManagedNotificationSnapshot(['ticket_number'], row).metaLine).toBeNull();
+    expect(projectCoManagedNotificationSnapshot(['*'], row)).toMatchObject({ priority: null, status: null, board: null, categoryDetails: null, metaLine: null });
+  });
 });
 
 describe('isCoManagedTaskResourceHidden', () => {
