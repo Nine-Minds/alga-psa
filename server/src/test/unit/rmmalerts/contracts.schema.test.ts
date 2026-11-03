@@ -23,6 +23,24 @@ describe('rule conditions schema', () => {
     expect(rmmAlertRuleConditionsSchema.safeParse({}).success).toBe(true);
   });
 
+  it('migrates legacy lists and keywords into a validated predicate group', () => {
+    const result = rmmAlertRuleConditionsSchema.parse({ severities: ['critical'], keywords: ['Sentinel Agent'] });
+    expect(result).toEqual({ join: 'and', clauses: [
+      { path: 'severity', operator: 'in', value: ['critical'] },
+      { join: 'or', clauses: [{ path: 'text', operator: 'contains_ci', value: 'Sentinel Agent' }] },
+    ] });
+  });
+
+  it('normalizes string-encoded conditions returned by JSONB drivers', () => {
+    const parsed = rmmAlertRuleConditionsSchema.parse(JSON.stringify({ keywords: ['Sentinel'] }));
+    expect(parsed.clauses).toMatchObject([{ join: 'or', clauses: [{ operator: 'contains_ci', value: 'Sentinel' }] }]);
+  });
+
+  it('rejects a predicate with an unknown field or field-incompatible operator', () => {
+    expect(rmmAlertRuleConditionsSchema.safeParse({ join: 'and', clauses: [{ path: 'assetId', operator: 'equals', value: 'x' }] }).success).toBe(false);
+    expect(rmmAlertRuleConditionsSchema.safeParse({ join: 'and', clauses: [{ path: 'severity', operator: 'contains_ci', value: 'critical' }] }).success).toBe(false);
+  });
+
   it('rejects an invalid regex in messagePattern', () => {
     const parsed = rmmAlertRuleConditionsSchema.safeParse({ messagePattern: '([invalid' });
     expect(parsed.success).toBe(false);

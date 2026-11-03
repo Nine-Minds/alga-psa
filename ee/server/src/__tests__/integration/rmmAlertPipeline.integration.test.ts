@@ -512,6 +512,66 @@ describe('processRmmAlertEvent (DB integration)', { shuffle: false }, () => {
     expect(await ticketCount()).toBe(before);
   });
 
+  it('records the Level Sentinel service only and lets unrelated alerts reach the ticket catch-all', async () => {
+    const targetedRuleId = uuidv4();
+    await tenantTable('rmm_integrations').where({ tenant: tenantId, integration_id: integrationId }).update({ provider: 'levelio' });
+    try {
+      await tenantTable('rmm_alert_rules').insert({
+      tenant: tenantId, rule_id: targetedRuleId, integration_id: integrationId,
+      name: 'Record Sentinel Service Crash', is_active: true, priority_order: -1,
+      conditions: JSON.stringify({ join: 'and', clauses: [
+        { path: 'alertClass', operator: 'equals', value: 'Critical Service Crashed' },
+        { path: 'text', operator: 'contains_ci', value: 'Sentinel Agent service terminated' },
+        { path: 'deviceName', operator: 'equals', value: 'GLICK-PC7' },
+      ] }),
+      actions: JSON.stringify({ createTicket: false }),
+      });
+      const before = await ticketCount();
+      const sentinel = await processRmmAlertEvent({ knex: db }, event({
+        provider: 'levelio', externalAlertId: 'level-sentinel-service-crash', externalDeviceId: 'level-device-7',
+        alertClass: 'Critical Service Crashed', deviceName: 'GLICK-PC7',
+        message: 'Critical Service Crashed: Event ID 7031 occured 5 times within 1 hour',
+        details: 'The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)',
+      }));
+      expect(sentinel.outcome).toBe('recorded_only');
+      expect(sentinel.matchedRuleId).toBe(targetedRuleId);
+      expect(await ticketCount()).toBe(before);
+      const recordedSentinel = await tenantTable('rmm_alerts').where({ tenant: tenantId, alert_id: sentinel.alertId }).first();
+      expect(JSON.parse(recordedSentinel.metadata)._algaNormalized.details).toBe('The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)');
+
+      registerRmmAlertFetcher('levelio', { fetchActiveAlerts: async () => [event({
+        provider: 'levelio', externalAlertId: 'level-reconciliation-sentinel', externalDeviceId: 'level-device-7',
+        alertClass: 'Critical Service Crashed', deviceName: 'GLICK-PC7',
+        message: 'Critical Service Crashed: Event ID 7031 occured 5 times within 1 hour',
+        details: 'The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)',
+      })] });
+      const reconciliation = await runRmmAlertReconciliation({ knex: db }, { tenantId, integrationId, provider: 'levelio' });
+      expect(reconciliation.ingested).toBe(1);
+      const reconciledSentinel = await tenantTable('rmm_alerts').where({ tenant: tenantId, external_alert_id: 'level-reconciliation-sentinel' }).first();
+      expect(reconciledSentinel.matched_rule_id).toBe(targetedRuleId);
+      expect(JSON.parse(reconciledSentinel.metadata)._algaNormalized.details).toBe('The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)');
+
+      const otherService = await processRmmAlertEvent({ knex: db }, event({
+        provider: 'levelio', externalAlertId: 'level-other-service-crash', externalDeviceId: 'level-device-7',
+        alertClass: 'Critical Service Crashed', deviceName: 'GLICK-PC7',
+        message: 'Critical Service Crashed: Event ID 7031 occured 5 times within 1 hour',
+        details: 'Other Service terminated unexpectedly.',
+      }));
+      expect(otherService.outcome).toBe('ticket_created');
+
+      const otherDevice = await processRmmAlertEvent({ knex: db }, event({
+        provider: 'levelio', externalAlertId: 'level-sentinel-other-device', externalDeviceId: 'level-device-8',
+        alertClass: 'Critical Service Crashed', deviceName: 'OTHER-PC',
+        message: 'Critical Service Crashed: Event ID 7031 occured 5 times within 1 hour',
+        details: 'The Sentinel Agent service terminated unexpectedly.',
+      }));
+      expect(otherDevice.outcome).toBe('ticket_created');
+    } finally {
+      await tenantTable('rmm_alert_rules').where({ tenant: tenantId, rule_id: targetedRuleId }).del();
+      await tenantTable('rmm_integrations').where({ tenant: tenantId, integration_id: integrationId }).update({ provider: 'ninjaone' });
+    }
+  });
+
   it('reset resolves the alert, comments, and auto-closes the untouched ticket', async () => {
     const result = await processRmmAlertEvent(
       { knex: db },

@@ -1,6 +1,9 @@
 "use client";
 
 import React from "react";
+import type { PredicateGroup } from '@alga-psa/predicates';
+import { normalizeRmmAlertConditions } from '@alga-psa/shared/rmm/alerts';
+import RmmAlertPredicateEditor from './RmmAlertPredicateEditor';
 import {
   Card,
   CardContent,
@@ -88,17 +91,7 @@ interface RmmMaintenanceWindowRow {
 // Data shape types
 // ---------------------------------------------------------------------------
 
-type Severity = "critical" | "major" | "moderate" | "minor" | "none";
-
-interface RuleConditions {
-  severities?: Severity[];
-  activityTypes?: string[];
-  alertClasses?: string[];
-  sourceTypes?: string[];
-  organizationIds?: string[];
-  messagePattern?: string;
-  keywords?: string[];
-}
+type RuleConditions = PredicateGroup;
 
 interface RuleActions {
   createTicket: boolean;
@@ -133,10 +126,6 @@ export interface RmmAlertAutomationSettingsProps {
 // Empty defaults
 // ---------------------------------------------------------------------------
 
-function emptyConditions(): RuleConditions {
-  return {};
-}
-
 function emptyActions(): RuleActions {
   return {
     createTicket: true,
@@ -145,14 +134,6 @@ function emptyActions(): RuleActions {
   };
 }
 
-const SEVERITIES: Severity[] = [
-  "critical",
-  "major",
-  "moderate",
-  "minor",
-  "none",
-];
-
 const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 
 type Translator = (key: string, options?: Record<string, unknown>) => string;
@@ -160,26 +141,6 @@ type Translator = (key: string, options?: Record<string, unknown>) => string;
 // ---------------------------------------------------------------------------
 // Small helpers
 // ---------------------------------------------------------------------------
-
-function splitCsv(s: string): string[] {
-  return s
-    .split(",")
-    .map((x) => x.trim())
-    .filter(Boolean);
-}
-
-function joinCsv(arr?: string[]): string {
-  return (arr ?? []).join(", ");
-}
-
-function isValidRegex(pattern: string): boolean {
-  try {
-    new RegExp(pattern);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 // Takes `unknown` on purpose: ee/server compiles with `strict: false`, where a
 // boolean `if (res.success)` does not narrow the ActionResult union, so the
@@ -228,16 +189,15 @@ function formatWindowScope(
 
 function ruleSummaryChips(rule: RmmAlertRuleRow, t: Translator): string[] {
   const chips: string[] = [];
-  const c = rule.conditions ?? {};
-  if (c.severities?.length) {
-    chips.push(
-      c.severities
-        .map((severity) =>
-          t(`integrations.rmm.alertAutomation.severities.${severity}`),
-        )
-        .join(", "),
-    );
-  }
+  const summarize = (node: PredicateGroup): string => node.clauses.map(clause => {
+    if ('clauses' in clause) return `(${summarize(clause)})`;
+    const field = clause.path.split('.').pop() ?? clause.path;
+    const op = clause.operator.replaceAll('_', ' ');
+    const value = Array.isArray(clause.value) ? clause.value.join(', ') : String(clause.value ?? '');
+    return `${field} ${op} ${value}`;
+  }).join(node.join === 'and' ? ` ${t('integrations.rmm.alertAutomation.predicate.and','and')} ` : ` ${t('integrations.rmm.alertAutomation.predicate.or','or')} `);
+  const conditions = normalizeRmmAlertConditions(rule.conditions ?? {});
+  if (conditions.clauses.length) chips.push(summarize(conditions));
   const a = rule.actions ?? ({} as RuleActions);
   if (a.createTicket)
     chips.push(t("integrations.rmm.alertAutomation.summary.createsTicket"));
@@ -254,14 +214,8 @@ interface RuleFormState {
   name: string;
   description: string;
   isActive: boolean;
+  conditions: PredicateGroup;
   // conditions
-  severities: Severity[];
-  activityTypes: string; // csv
-  alertClasses: string; // csv
-  sourceTypes: string; // csv
-  keywords: string; // csv
-  organizationIds: string[];
-  messagePattern: string;
   // actions
   createTicket: boolean;
   boardId: string;
@@ -276,19 +230,13 @@ interface RuleFormState {
 }
 
 function ruleToForm(rule: RmmAlertRuleRow): RuleFormState {
-  const c = rule.conditions ?? {};
+  const c = normalizeRmmAlertConditions(rule.conditions ?? {});
   const a = rule.actions ?? ({} as RuleActions);
   return {
     name: rule.name,
     description: rule.description ?? "",
     isActive: rule.is_active,
-    severities: c.severities ?? [],
-    activityTypes: joinCsv(c.activityTypes),
-    alertClasses: joinCsv(c.alertClasses),
-    sourceTypes: joinCsv(c.sourceTypes),
-    keywords: joinCsv(c.keywords),
-    organizationIds: c.organizationIds ?? [],
-    messagePattern: c.messagePattern ?? "",
+    conditions: c,
     createTicket: a.createTicket !== false,
     boardId: a.boardId ?? "",
     priorityOverride: a.priorityOverride ?? "",
@@ -306,20 +254,7 @@ function formToRuleInput(form: RuleFormState): {
   conditions: RuleConditions;
   actions: RuleActions;
 } {
-  const conditions: RuleConditions = {};
-  if (form.severities.length) conditions.severities = form.severities;
-  const at = splitCsv(form.activityTypes);
-  if (at.length) conditions.activityTypes = at;
-  const ac = splitCsv(form.alertClasses);
-  if (ac.length) conditions.alertClasses = ac;
-  const st = splitCsv(form.sourceTypes);
-  if (st.length) conditions.sourceTypes = st;
-  const kw = splitCsv(form.keywords);
-  if (kw.length) conditions.keywords = kw;
-  if (form.organizationIds.length)
-    conditions.organizationIds = form.organizationIds;
-  if (form.messagePattern.trim())
-    conditions.messagePattern = form.messagePattern.trim();
+  const conditions = form.conditions;
 
   const actions: RuleActions = {
     createTicket: form.createTicket,
@@ -349,13 +284,7 @@ function defaultRuleForm(): RuleFormState {
     name: "",
     description: "",
     isActive: true,
-    severities: [],
-    activityTypes: "",
-    alertClasses: "",
-    sourceTypes: "",
-    keywords: "",
-    organizationIds: [],
-    messagePattern: "",
+    conditions: { join: 'and', clauses: [] },
     createTicket: true,
     boardId: "",
     priorityOverride: "",
@@ -508,42 +437,6 @@ function RuleEditorDialog({
   formOptions,
 }: RuleEditorDialogProps) {
   const { t } = useTranslation("msp/integrations");
-  const [patternError, setPatternError] = React.useState("");
-
-  // The dialog stays mounted across open/close; clear session-local
-  // validation state so a cancelled edit can't block the next rule.
-  React.useEffect(() => {
-    if (isOpen) setPatternError("");
-  }, [isOpen]);
-
-  const validatePattern = (val: string) => {
-    if (val && !isValidRegex(val)) {
-      setPatternError(
-        t("integrations.rmm.alertAutomation.validation.invalidRegex"),
-      );
-    } else {
-      setPatternError("");
-    }
-  };
-
-  const toggleSeverity = (s: Severity) => {
-    setF((prev) => ({
-      ...prev,
-      severities: prev.severities.includes(s)
-        ? prev.severities.filter((x) => x !== s)
-        : [...prev.severities, s],
-    }));
-  };
-
-  const toggleOrgId = (id: string) => {
-    setF((prev) => ({
-      ...prev,
-      organizationIds: prev.organizationIds.includes(id)
-        ? prev.organizationIds.filter((x) => x !== id)
-        : [...prev.organizationIds, id],
-    }));
-  };
-
   const toggleNotifyUser = (id: string) => {
     setF((prev) => ({
       ...prev,
@@ -553,16 +446,9 @@ function RuleEditorDialog({
     }));
   };
 
-  const isCatchAll =
-    !f.severities.length &&
-    !f.activityTypes.trim() &&
-    !f.alertClasses.trim() &&
-    !f.sourceTypes.trim() &&
-    !f.keywords.trim() &&
-    !f.organizationIds.length &&
-    !f.messagePattern.trim();
+  const isCatchAll = f.conditions.clauses.length === 0;
 
-  const canSave = f.name.trim().length > 0 && !patternError && !saving;
+  const canSave = f.name.trim().length > 0 && !saving;
 
   const footer = (
     <div className="flex justify-end gap-2">
@@ -660,141 +546,12 @@ function RuleEditorDialog({
               {t("integrations.rmm.alertAutomation.rules.catchAllHelp")}
             </div>
           )}
-
-          <div className="space-y-1">
-            <Label>
-              {t("integrations.rmm.alertAutomation.rules.severities")}
-            </Label>
-            <div className="flex flex-wrap gap-2">
-              {SEVERITIES.map((s) => (
-                <Checkbox
-                  key={s}
-                  id={`rule-severity-${s}`}
-                  label={t(`integrations.rmm.alertAutomation.severities.${s}`)}
-                  checked={f.severities.includes(s)}
-                  onChange={() => toggleSeverity(s)}
-                  disabled={saving}
-                  containerClassName=""
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="rule-activity-types">
-                {t("integrations.rmm.alertAutomation.rules.activityTypes")}
-              </Label>
-              <Input
-                id="rule-activity-types"
-                value={f.activityTypes}
-                onChange={(e) =>
-                  setF((p) => ({ ...p, activityTypes: e.target.value }))
-                }
-                placeholder={t(
-                  "integrations.rmm.alertAutomation.rules.activityTypesPlaceholder",
-                )}
-                disabled={saving}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="rule-alert-classes">
-                {t("integrations.rmm.alertAutomation.rules.alertClasses")}
-              </Label>
-              <Input
-                id="rule-alert-classes"
-                value={f.alertClasses}
-                onChange={(e) =>
-                  setF((p) => ({ ...p, alertClasses: e.target.value }))
-                }
-                placeholder={t(
-                  "integrations.rmm.alertAutomation.fields.commaSeparated",
-                )}
-                disabled={saving}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="rule-source-types">
-                {t("integrations.rmm.alertAutomation.rules.sourceTypes")}
-              </Label>
-              <Input
-                id="rule-source-types"
-                value={f.sourceTypes}
-                onChange={(e) =>
-                  setF((p) => ({ ...p, sourceTypes: e.target.value }))
-                }
-                placeholder={t(
-                  "integrations.rmm.alertAutomation.fields.commaSeparated",
-                )}
-                disabled={saving}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="rule-keywords">
-                {t("integrations.rmm.alertAutomation.rules.keywords")}
-              </Label>
-              <Input
-                id="rule-keywords"
-                value={f.keywords}
-                onChange={(e) =>
-                  setF((p) => ({ ...p, keywords: e.target.value }))
-                }
-                placeholder={t(
-                  "integrations.rmm.alertAutomation.fields.commaSeparated",
-                )}
-                disabled={saving}
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="rule-message-pattern">
-              {t("integrations.rmm.alertAutomation.rules.messagePattern")}
-            </Label>
-            <Input
-              id="rule-message-pattern"
-              value={f.messagePattern}
-              onChange={(e) => {
-                setF((p) => ({ ...p, messagePattern: e.target.value }));
-                validatePattern(e.target.value);
-              }}
-              placeholder={t(
-                "integrations.rmm.alertAutomation.rules.messagePatternPlaceholder",
-              )}
-              disabled={saving}
-            />
-            {patternError && (
-              <div className="text-xs text-destructive">{patternError}</div>
-            )}
-          </div>
-
-          {formOptions?.organizations?.length ? (
-            <div className="space-y-1">
-              <Label>
-                {t(
-                  "integrations.rmm.alertAutomation.rules.organizationsFilter",
-                )}
-              </Label>
-              <div className="max-h-36 overflow-y-auto space-y-1 rounded border p-2">
-                {formOptions.organizations.map((org) => (
-                  <Checkbox
-                    key={org.external_organization_id}
-                    id={`rule-org-${org.external_organization_id}`}
-                    label={
-                      org.external_organization_name ||
-                      org.external_organization_id
-                    }
-                    checked={f.organizationIds.includes(
-                      org.external_organization_id,
-                    )}
-                    onChange={() => toggleOrgId(org.external_organization_id)}
-                    disabled={saving}
-                    containerClassName=""
-                  />
-                ))}
-              </div>
-            </div>
-          ) : null}
+          <RmmAlertPredicateEditor
+            value={f.conditions}
+            onChange={(conditions) => setF((previous) => ({ ...previous, conditions }))}
+            disabled={saving}
+            t={(key, fallback) => t(key, fallback)}
+          />
         </div>
 
         {/* Actions section */}

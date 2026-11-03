@@ -1,6 +1,6 @@
-import { evaluatePredicate } from '@alga-psa/predicates';
+import { evaluatePredicate, validatePredicate } from '@alga-psa/predicates';
 import type { PredicateGroup } from '@alga-psa/predicates';
-import { normalizeRmmAlertConditions } from './contracts';
+import { normalizeRmmAlertConditions, rmmAlertQuerySchema } from './contracts';
 import type { NormalizedRmmAlertEvent, RmmAlertRuleRow } from './contracts';
 
 export interface RuleEvaluationResult {
@@ -27,14 +27,18 @@ export function evaluateAlertRules(rules: RmmAlertRuleRow[], event: NormalizedRm
   for (const rule of rules) {
     try {
       const conditions = normalizeRmmAlertConditions(typeof rule.conditions === 'string' ? JSON.parse(rule.conditions) : rule.conditions);
-      const regexes = legacyRegexes(conditions);
+      // Legacy regex is an isolated top-level AND escape hatch. It cannot be authored
+      // as a predicate path and never changes nested user group semantics.
+      const regexes = conditions.clauses.flatMap(clause => !('clauses' in clause) && clause.path === '__legacyMessagePattern' && typeof clause.value === 'string' ? [clause.value] : []);
       for (const regex of regexes) {
         try { new RegExp(regex); } catch (error) {
           warnings.push(`Rule ${rule.rule_id} (${rule.name}) skipped: invalid legacy messagePattern: ${error instanceof Error ? error.message : String(error)}`);
           throw new InvalidLegacyRegex();
         }
       }
-      const predicate = removeLegacyRegex(conditions);
+      const predicate = { ...conditions, clauses: conditions.clauses.filter(clause => 'clauses' in clause || clause.path !== '__legacyMessagePattern') };
+      const validationErrors = validatePredicate(rmmAlertQuerySchema, predicate);
+      if (validationErrors.length) throw new Error(validationErrors.map(issue => issue.message).join('; '));
       if (evaluatePredicate(predicate, record) && regexes.every(pattern => new RegExp(pattern).test(record.text))) {
         return { rule, warnings };
       }
@@ -47,14 +51,3 @@ export function evaluateAlertRules(rules: RmmAlertRuleRow[], event: NormalizedRm
 }
 
 class InvalidLegacyRegex extends Error {}
-function legacyRegexes(group: PredicateGroup): string[] {
-  return group.clauses.flatMap(clause => 'clauses' in clause ? legacyRegexes(clause) : clause.path === '__legacyMessagePattern' && typeof clause.value === 'string' ? [clause.value] : []);
-}
-function removeLegacyRegex(group: PredicateGroup): PredicateGroup {
-  const clauses: PredicateGroup['clauses'] = [];
-  for (const clause of group.clauses) {
-    if ('clauses' in clause) clauses.push(removeLegacyRegex(clause));
-    else if (clause.path !== '__legacyMessagePattern') clauses.push(clause);
-  }
-  return { ...group, clauses };
-}

@@ -15,7 +15,7 @@ A change to an operator, a path kind or a value type starts here, then in the ta
 A clause is `{ path, operator, value? }`. A group is `{ join: 'and' | 'or', clauses }` and nests. An empty `and`
 group is true; an empty `or` group is false.
 
-Operators: `equals`, `not_equals`, `in`, `not_in`, `gt`, `gte`, `lt`, `lte`, `contains`, `starts_with`,
+Operators: `equals`, `not_equals`, `in`, `not_in`, `gt`, `gte`, `lt`, `lte`, `contains`, `not_contains`, `contains_ci`, `not_contains_ci`, `starts_with`,
 `ends_with`, `is_empty`, `is_not_empty`. `value` is a literal for single-value operators, a list for `in` and
 `not_in`, and absent for `is_empty` and `is_not_empty`.
 
@@ -38,7 +38,9 @@ through `EXISTS` / `NOT EXISTS`, so `NULL` never leaks into a `NOT`.
 
 ## Text
 
-`contains`, `starts_with`, `ends_with` are **case-sensitive** substring, prefix and suffix tests on strings.
+`contains`, `not_contains`, `starts_with`, `ends_with` are **case-sensitive** string tests. `contains_ci` and
+`not_contains_ci` perform substring tests after Unicode lowercase conversion. Negative contains operators require
+both operands to be present strings and test absence of the needle; missing/non-string values return false.
 `%`, `_` and `\` in the needle are literal. A non-string value never satisfies them.
 
 ## Ordering

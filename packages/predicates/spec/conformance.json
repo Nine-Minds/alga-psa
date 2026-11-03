@@ -1153,6 +1153,114 @@
       "skip": {
         "jsonata": "set-valued paths are not representable in the workflow condition adapter"
       }
+    },
+    {
+      "id": "scalar-not-contains",
+      "description": "not_contains follows the shared text matching contract",
+      "covers": {
+        "operators": [
+          "not_contains"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_contains",
+        "value": "ell"
+      },
+      "rows": [
+        {
+          "id": "present-match",
+          "record": {
+            "s": "hello"
+          },
+          "expected": false
+        },
+        {
+          "id": "present-miss",
+          "record": {
+            "s": "world"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-contains-ci",
+      "description": "contains_ci follows the shared text matching contract",
+      "covers": {
+        "operators": [
+          "contains_ci"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "contains_ci",
+        "value": "ELL"
+      },
+      "rows": [
+        {
+          "id": "present-match",
+          "record": {
+            "s": "hello"
+          },
+          "expected": true
+        },
+        {
+          "id": "present-miss",
+          "record": {
+            "s": "world"
+          },
+          "expected": false
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-contains-ci",
+      "description": "not_contains_ci follows the shared text matching contract",
+      "covers": {
+        "operators": [
+          "not_contains_ci"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_contains_ci",
+        "value": "ELL"
+      },
+      "rows": [
+        {
+          "id": "present-match",
+          "record": {
+            "s": "hello"
+          },
+          "expected": false
+        },
+        {
+          "id": "present-miss",
+          "record": {
+            "s": "world"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": false
+        }
+      ]
     }
   ]
 }

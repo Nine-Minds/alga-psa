@@ -83,6 +83,41 @@ describe('evaluateAlertRules condition matrix', () => {
     expect(evaluateAlertRules([rule({ messagePattern: '^Memory' })], event()).rule).toBeNull();
   });
 
+  it('matches text supplied only in details with the real Level event shape', () => {
+    const level = event({
+      provider: 'levelio', alertClass: 'Critical Service Crashed', deviceName: 'GLICK-PC7',
+      message: 'Critical Service Crashed: Event ID 7031 occured 5 times within 1 hour',
+      details: 'The Sentinel Agent service terminated unexpectedly. It has done this 532 time(s)',
+    });
+    const sentinel = rule({ join: 'and', clauses: [
+      { path: 'alertClass', operator: 'equals', value: 'Critical Service Crashed' },
+      { path: 'text', operator: 'contains_ci', value: 'Sentinel Agent service terminated' },
+      { path: 'deviceName', operator: 'equals', value: 'GLICK-PC7' },
+    ] });
+    expect(evaluateAlertRules([sentinel], level).rule).toBe(sentinel);
+    expect(evaluateAlertRules([sentinel], { ...level, details: null }).rule).toBeNull();
+  });
+
+  it('lets an exclusion veto its rule and falls through to the catch-all', () => {
+    const excluded = rule({ join: 'and', clauses: [
+      { path: 'alertClass', operator: 'equals', value: 'Critical Service Crashed' },
+      { path: 'text', operator: 'not_contains_ci', value: 'Sentinel Agent' },
+    ] });
+    const catchAll = rule({ join: 'and', clauses: [] });
+    const result = evaluateAlertRules([excluded, catchAll], event({ details: 'Sentinel Agent service terminated' }));
+    expect(result.rule).toBe(catchAll);
+    expect(catchAll.actions.createTicket).toBe(true);
+  });
+
+  it('scopes rules by device name and external device ID', () => {
+    const scoped = rule({ join: 'and', clauses: [
+      { path: 'deviceName', operator: 'equals', value: 'GLICK-PC7' },
+      { path: 'externalDeviceId', operator: 'equals', value: 'device-7' },
+    ] });
+    expect(evaluateAlertRules([scoped], event({ deviceName: 'GLICK-PC7', externalDeviceId: 'device-7' })).rule).toBe(scoped);
+    expect(evaluateAlertRules([scoped], event({ deviceName: 'OTHER-PC', externalDeviceId: 'device-7' })).rule).toBeNull();
+  });
+
   it('requires every present condition field to match', () => {
     const both = rule({ severities: ['major'], keywords: ['memory'] });
     expect(evaluateAlertRules([both], event()).rule).toBeNull();

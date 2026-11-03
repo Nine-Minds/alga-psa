@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import type { Knex } from 'knex';
 import type { RmmProvider } from '@alga-psa/types';
-import { predicateGroupSchema } from '@alga-psa/predicates';
+import { predicateGroupSchema, validatePredicate } from '@alga-psa/predicates';
 import type { PredicateGroup } from '@alga-psa/predicates';
+import type { QuerySchema } from '@alga-psa/predicates';
 
 /** Severity scale every provider normalizes into (matches rmm_alerts.severity). */
 export type NormalizedRmmAlertSeverity = 'critical' | 'major' | 'moderate' | 'minor' | 'none';
@@ -131,21 +132,74 @@ const legacyRmmAlertConditionsSchema = z
   })
   .strict();
 
-export const rmmAlertRuleConditionsSchema = z.preprocess(
-  (value) => {
-    const parsed = predicateGroupSchema.safeParse(value);
-    if (parsed.success) return parsed.data;
-    try { return normalizeRmmAlertConditions(value); } catch { return value; }
+export const rmmAlertQuerySchema: QuerySchema = {
+  table: 'rmm_alerts',
+  attributes: {
+    severity: { kind: 'column', column: 'severity', type: 'string', operators: ['in', 'not_in', 'equals', 'not_equals'] },
+    alertClass: { kind: 'column', column: 'alert_class', type: 'string', operators: ['in', 'not_in', 'contains_ci', 'not_contains_ci', 'equals', 'not_equals'] },
+    activityType: { kind: 'column', column: 'activity_type', type: 'string', operators: ['in', 'not_in', 'contains_ci', 'not_contains_ci', 'equals', 'not_equals'] },
+    sourceType: { kind: 'column', column: 'source_type', type: 'string', operators: ['in', 'not_in', 'contains_ci', 'not_contains_ci', 'equals', 'not_equals'] },
+    organizationId: { kind: 'column', column: 'external_organization_id', type: 'string', operators: ['in', 'not_in', 'equals', 'not_equals'] },
+    message: { kind: 'column', column: 'message', type: 'string', operators: ['contains_ci', 'not_contains_ci'] },
+    details: { kind: 'column', column: 'details', type: 'string', operators: ['contains_ci', 'not_contains_ci'] },
+    text: { kind: 'column', column: 'message', type: 'string', operators: ['contains_ci', 'not_contains_ci'] },
+    deviceName: { kind: 'column', column: 'device_name', type: 'string', operators: ['contains_ci', 'not_contains_ci', 'equals', 'not_equals'] },
+    externalDeviceId: { kind: 'column', column: 'external_device_id', type: 'string', operators: ['in', 'not_in', 'equals', 'not_equals'] },
   },
-  predicateGroupSchema,
-);
+};
+
+export const rmmAlertRuleConditionsSchema = z.preprocess((value, ctx) => {
+  if (typeof value === 'string') {
+    try { value = JSON.parse(value); } catch { return value; }
+  }
+  const parsed = predicateGroupSchema.safeParse(value);
+  if (parsed.success) {
+    if (containsLegacyRegexPath(parsed.data)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Unknown RMM predicate field __legacyMessagePattern' });
+      return z.NEVER;
+    }
+    return parsed.data;
+  }
+  const legacy = legacyRmmAlertConditionsSchema.safeParse(value ?? {});
+  if (!legacy.success) {
+    const pattern = (value as { messagePattern?: unknown } | null)?.messagePattern;
+    if (typeof pattern === 'string') {
+      try { new RegExp(pattern); } catch {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'messagePattern is not a valid regular expression', params: { messageKey: 'msp/integrations:errors.rmm.validation.messagePatternInvalid' } });
+        return z.NEVER;
+      }
+    }
+    return value;
+  }
+  return normalizeRmmAlertConditions(value);
+}, predicateGroupSchema).superRefine((group, ctx) => {
+  const clauses = group.clauses.filter(clause => 'clauses' in clause || clause.path !== '__legacyMessagePattern');
+  for (const issue of validatePredicate(rmmAlertQuerySchema, { ...group, clauses })) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: [issue.path], message: issue.message });
+  }
+});
 
 export type RmmAlertRuleConditions = PredicateGroup;
 
-/** Convert pre-predicate rows at the read boundary; old rows remain editable. */
+function containsLegacyRegexPath(group: PredicateGroup): boolean {
+  return group.clauses.some(clause => 'clauses' in clause ? containsLegacyRegexPath(clause) : clause.path === '__legacyMessagePattern');
+}
+
+/**
+ * Convert pre-predicate rows at the read boundary; old rows remain editable.
+ * Legacy messagePattern remains a root-only private compatibility clause ANDed
+ * with the legacy group's remaining fields. New predicate groups cannot name
+ * this path; new rules should use text contains_ci/not_contains_ci instead.
+ */
 export function normalizeRmmAlertConditions(value: unknown): PredicateGroup {
+  if (typeof value === 'string') {
+    try { value = JSON.parse(value); } catch { throw new Error('Invalid stored RMM alert conditions: JSON could not be parsed'); }
+  }
   const predicate = predicateGroupSchema.safeParse(value);
-  if (predicate.success) return predicate.data;
+  if (predicate.success) {
+    if (containsLegacyRegexPath(predicate.data)) throw new Error('Invalid stored RMM alert conditions: reserved legacy regex field');
+    return predicate.data;
+  }
   const legacy = legacyRmmAlertConditionsSchema.safeParse(value ?? {});
   if (!legacy.success) throw new Error(`Invalid stored RMM alert conditions: ${legacy.error.message}`);
   const old = legacy.data;
@@ -158,9 +212,9 @@ export function normalizeRmmAlertConditions(value: unknown): PredicateGroup {
     const values = old[key];
     if (Array.isArray(values) && values.length) clauses.push({ path, operator: 'in', value: values });
   }
-  if (old.keywords?.length) clauses.push({ join: 'or', clauses: old.keywords.map(value => ({ path: 'text', operator: 'contains' as const, value })) });
+  if (old.keywords?.length) clauses.push({ join: 'or', clauses: old.keywords.map(value => ({ path: 'text', operator: 'contains_ci' as const, value })) });
   // Regex is retained as a compatibility-only evaluator escape hatch in ruleEvaluator.
-  if (old.messagePattern) clauses.push({ path: '__legacyMessagePattern', operator: 'equals', value: old.messagePattern });
+  if (old.messagePattern) clauses.unshift({ path: '__legacyMessagePattern', operator: 'equals', value: old.messagePattern });
   return { join: 'and', clauses };
 }
 

@@ -108,6 +108,7 @@ export async function createTicketForAlertId(
     sourceType: alert.source_type,
     severity: alert.severity,
     message: alert.message,
+    details: persistedAlertDetails(alert.provider, metadataRecord),
     deviceName: alert.device_name,
     externalOrganizationId: externalOrgId,
     occurredAt: toIso(alert.triggered_at) ?? new Date().toISOString(),
@@ -139,6 +140,22 @@ export async function createTicketForAlertId(
   });
 
   return created;
+}
+
+function persistedAlertDetails(provider: NormalizedRmmAlertEvent['provider'], metadata: Record<string, unknown> | null): string | null {
+  if (!metadata) return null;
+  const normalized = metadata._algaNormalized && typeof metadata._algaNormalized === 'object'
+    ? metadata._algaNormalized as Record<string, unknown> : null;
+  if (typeof normalized?.details === 'string') return normalized.details;
+  const data = metadata.data && typeof metadata.data === 'object' ? metadata.data as Record<string, unknown> : null;
+  const candidate = provider === 'levelio'
+    ? (typeof data?.payload === 'string' ? data.payload : metadata.payload)
+    : provider === 'datto'
+      ? metadata.diagnostics
+      : provider === 'tacticalrmm'
+        ? metadata.description
+        : metadata.subject;
+  return typeof candidate === 'string' ? candidate : null;
 }
 
 function safeParse(value: string): unknown {

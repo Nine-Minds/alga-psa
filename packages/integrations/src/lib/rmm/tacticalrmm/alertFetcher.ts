@@ -67,6 +67,7 @@ export function mapTacticalAlertToEvent(
     sourceType: 'tacticalrmm_alert',
     severity: mapTacticalSeverity(alert?.severity ?? alert?.alert_severity),
     message: message || null,
+    details: typeof alert?.description === 'string' && alert.description !== message ? alert.description : null,
     deviceName: alert?.hostname ? String(alert.hostname) : alert?.agent_hostname ? String(alert.agent_hostname) : null,
     externalOrganizationId: alert?.client_id != null ? String(alert.client_id) : null,
     occurredAt: toIso(triggeredAt),

@@ -176,7 +176,10 @@ async function processTriggered(
       dedup_key: dedupKey,
       triggered_at: event.occurredAt,
       last_occurrence_at: event.occurredAt,
-      metadata: JSON.stringify(event.raw),
+      metadata: JSON.stringify({
+        ...event.raw,
+        _algaNormalized: { details: event.details ?? null },
+      }),
       updated_at: new Date().toISOString(),
     };
 
