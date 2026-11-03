@@ -3107,7 +3107,7 @@ export const getAllProjectTasksForListView = withAuth(async (
             const readDecision = await decideProjectReadById(trx, tenant, user as IUserWithRoles, projectId);
 
         // 1. Get all phases for this project
-        const phases = await loadAuthorizedProjectPhases(trx, tenant, projectId, readDecision.redactedFields);
+        const phases = await loadAuthorizedProjectPhases(trx, tenant, projectId, readDecision.redactedFields, 'order_key');
 
         const phaseIds = phases.map((p: { phase_id: string }) => p.phase_id);
 

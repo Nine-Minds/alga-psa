@@ -12,15 +12,21 @@ vi.mock('@alga-psa/db', () => {
   const raw = (sql: string, args?: any[]) => ({ sql, args });
   const query = (table: string) => {
     let selection: any[] = [];
+    let ordering: string | undefined;
     const filters: Array<{ kind: string; field: any; value: any }> = [];
     const q: any = new Proxy({}, { get(_target, prop) {
-      if (prop === 'then') return (resolve: any) => Promise.resolve(rows(table, selection, filters)).then(resolve);
+      if (prop === 'then') return (resolve: any) => {
+        const result = rows(table, selection, filters);
+        if (table === 'project_phases' && ordering) result.sort((a: any, b: any) => String(a[ordering]).localeCompare(String(b[ordering])));
+        return Promise.resolve(result).then(resolve);
+      };
       if (prop === 'select') return (...columns: any[]) => { selection = columns; return q; };
       if (prop === 'first') return async () => table === 'project_tasks'
         ? { phase_name: 'Phase', project_id: 'project1', status_id: 'status1', assigned_to_first_name: null, assigned_to_last_name: null }
         : rows(table, selection, filters)[0];
       if (prop === 'where') return (field: any, value?: any) => { filters.push({ kind: 'where', field, value }); return q; };
       if (prop === 'whereIn') return (field: any, value: any) => { filters.push({ kind: 'whereIn', field, value }); return q; };
+      if (prop === 'orderBy') return (field: string) => { ordering = field; return q; };
       return () => q;
     }});
     return q;
@@ -34,7 +40,10 @@ vi.mock('@alga-psa/db', () => {
       const nameMask = selection.flat().find((column) => column?.sql?.includes('as phase_name') || column?.args?.includes('phase_name'));
       const descriptionMask = selection.flat().some((column) => column?.sql?.includes('as description') || column?.args?.includes('description'));
       const wbsMask = selection.flat().some((column) => column?.sql?.includes('as wbs_code') || column?.args?.includes('wbs_code'));
-      return [{ phase_id: 'ph1', project_id: 'project1', phase_name: nameMask?.args?.[0] ?? 'Phase', description: descriptionMask ? null : 'Phase description', wbs_code: wbsMask ? null : '1' }];
+      return [
+        { phase_id: 'ph1', project_id: 'project1', phase_name: nameMask?.args?.[0] ?? 'Phase One', description: descriptionMask ? null : 'Phase one description', wbs_code: wbsMask ? null : '1', order_key: 'b' },
+        { phase_id: 'ph2', project_id: 'project1', phase_name: nameMask?.args?.[0] ?? 'Phase Two', description: descriptionMask ? null : 'Phase two description', wbs_code: wbsMask ? null : '2', order_key: 'a' },
+      ];
     }
     if (table === 'project_tasks') {
       const nameMask = selection.flat().find((column) => column?.sql?.includes('as task_name'));
@@ -242,12 +251,16 @@ describe('getProjectTaskData project redactions', () => {
     state.decision = { allowed: true, redactedFields: ['phase_name', 'description', 'wbs_code'] };
     const result: any = await getAllProjectTasksForListView('project1');
     expect(result.phases[0]).toMatchObject({ phase_name: 'Project phase', description: null, wbs_code: null });
-    expect(JSON.stringify(result.phases)).not.toContain('Phase description');
+    expect(JSON.stringify(result.phases)).not.toContain('Phase one description');
+    expect(JSON.stringify(result.phases)).not.toContain('Phase two description');
   });
 
   it('preserves populated phase fields and task phase membership for unrestricted list reads', async () => {
     const result: any = await getAllProjectTasksForListView('project1');
-    expect(result.phases[0]).toMatchObject({ phase_name: 'Phase', description: 'Phase description', wbs_code: '1' });
-    expect(result.tasks[0].phase_id).toBe(result.phases[0].phase_id);
+    expect(result.phases.map((phase: any) => phase.phase_id)).toEqual(['ph2', 'ph1']);
+    expect(result.phases.find((phase: any) => phase.phase_id === 'ph1')).toMatchObject({
+      phase_name: 'Phase One', description: 'Phase one description', wbs_code: '1',
+    });
+    expect(result.tasks[0].phase_id).toBe('ph1');
   });
 });

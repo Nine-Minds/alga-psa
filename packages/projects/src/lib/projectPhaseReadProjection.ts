@@ -28,11 +28,13 @@ export async function loadAuthorizedProjectPhases(
   tenant: string,
   projectId: string,
   redactedFields: string[],
+  orderBy: 'phase_id' | 'wbs_code' | 'order_key' = 'wbs_code',
 ): Promise<IProjectPhase[]> {
   const projection = authorizedProjectPhaseQuery(trx, tenant, redactedFields);
   if (!projection) return [];
   const { query, hidden } = projection;
-  query.where({ project_id: projectId }).orderBy(hidden.has('wbs_code') ? 'phase_id' : 'wbs_code');
+  query.where({ project_id: projectId })
+    .orderBy(orderBy === 'wbs_code' && hidden.has('wbs_code') ? 'phase_id' : orderBy);
   return await query as IProjectPhase[];
 }
 
