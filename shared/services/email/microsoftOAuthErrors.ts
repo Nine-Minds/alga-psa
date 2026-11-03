@@ -11,7 +11,8 @@ export type MicrosoftOAuthFailureKind =
   | 'user_wrong_directory' // AADSTS50020
   | 'redirect_uri_mismatch' // AADSTS50011
   | 'invalid_client_secret' // AADSTS7000215
-  | 'expired_client_secret'; // AADSTS7000222
+  | 'expired_client_secret' // AADSTS7000222
+  | 'admin_consent_required'; // error=consent_required, AADSTS65001, AADSTS90094
 
 export interface MicrosoftOAuthFailureInput {
   error?: string | null;
@@ -26,6 +27,8 @@ const CODE_TO_KIND: Record<number, MicrosoftOAuthFailureKind> = {
   50011: 'redirect_uri_mismatch',
   7000215: 'invalid_client_secret',
   7000222: 'expired_client_secret',
+  65001: 'admin_consent_required',
+  90094: 'admin_consent_required',
 };
 
 export function extractAadstsCode(input: MicrosoftOAuthFailureInput): number | null {
@@ -45,7 +48,10 @@ export function classifyMicrosoftOAuthFailure(
   input: MicrosoftOAuthFailureInput
 ): MicrosoftOAuthFailureKind | null {
   const code = extractAadstsCode(input);
-  return code ? CODE_TO_KIND[code] : null;
+  if (code) return CODE_TO_KIND[code];
+  // The authorize redirect reports a missing grant as a bare OAuth error.
+  if ((input.error || '').toLowerCase() === 'consent_required') return 'admin_consent_required';
+  return null;
 }
 
 /** Pulls the redirect URI Microsoft names in an AADSTS50011 description. */
@@ -66,6 +72,8 @@ export const MICROSOFT_OAUTH_FAILURE_ERROR_CODES: Record<MicrosoftOAuthFailureKi
   redirect_uri_mismatch: 'aadsts_50011_redirect_uri',
   invalid_client_secret: 'aadsts_7000215_invalid_secret',
   expired_client_secret: 'aadsts_7000222_expired_secret',
+  // Stable UI code the Outlook Calendar connect form keys its pending state on.
+  admin_consent_required: 'pending_admin_consent',
 };
 
 export function kindFromMicrosoftOAuthErrorCode(code: string | null | undefined): MicrosoftOAuthFailureKind | null {
@@ -103,6 +111,8 @@ export function describeMicrosoftOAuthFailureForMailboxFlow(
       return 'Microsoft rejected the client secret on the Microsoft profile. Make sure you saved the secret Value, not its Secret ID.';
     case 'expired_client_secret':
       return 'The client secret on the Microsoft profile has expired. Create a new secret in Azure and update the profile.';
+    case 'admin_consent_required':
+      return 'Microsoft needs a Microsoft 365 administrator to approve this app before anyone can connect. Ask an administrator to grant admin consent for the app\'s delegated permissions, then connect again.';
     case 'redirect_uri_mismatch':
       return context.redirectUri
         ? `Microsoft rejected the redirect URI because it is not registered on the app. Add this exact URI under Authentication > Web redirect URIs: ${context.redirectUri}`

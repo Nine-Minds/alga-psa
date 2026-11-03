@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const readActionSource = () => readFileSync(path.resolve(__dirname, 'assetActions.ts'), 'utf8');
+const readActionSource = () => readFileSync(path.resolve(__dirname, 'assetActions.ts'), 'utf8').replace(/\r\n/g, '\n');
 
 describe('asset authorization kernel contracts', () => {
   const source = readActionSource();
@@ -48,7 +48,8 @@ describe('asset authorization kernel contracts', () => {
   });
 
   it('T017: enforces asset-level authorization across update/delete, relationship, association, and maintenance mutations', () => {
-    expect(source).toContain('export const updateAsset = withAuth(async (\n    user,\n    { tenant },\n    asset_id: string,\n    data: UpdateAssetRequest,');
+    expect(source).toContain('export const updateAsset = withAuth(async (');
+    expect(source).toContain('asset_id: string,\n    data: UpdateAssetRequest,');
     expect(source).toContain('export const deleteAsset = withAuth(async (');
     expect(source).toContain('export const createAssetRelationship = withAuth(async (user, { tenant }, data: CreateAssetRelationshipRequest)');
     expect(source).toContain('export const deleteAssetRelationship = withAuth(async (user, { tenant }, parent_asset_id: string, child_asset_id: string)');
@@ -63,6 +64,36 @@ describe('asset authorization kernel contracts', () => {
     expect(source).toContain('if (!await hasPermission(user, \'asset\', \'delete\')) {');
     expect(source).toContain('await createAuthorizedAssetReadContextForUser(trx as Knex.Transaction, tenantId, user as AssetAuthUser, asset_id);');
     expect(source).toContain('if (schedule.asset_id !== validatedData.asset_id) {');
+  });
+
+  it('requires record-level update authorization for maintenance mutations', () => {
+    const updateGuard = source.slice(
+      source.indexOf('async function createAuthorizedAssetUpdateContextForUser('),
+      source.indexOf('async function getAuthorizedAssetIdsForClient(')
+    );
+    expect(updateGuard).toContain('isSharedAssetReadAllowed(trx, tenant, context, asset)');
+    expect(updateGuard).toContain("isSharedAssetActionAllowed(trx, tenant, context, asset, 'update')");
+
+    const occurrenceGuard = source.slice(
+      source.indexOf('async function getOccurrenceForMutation('),
+      source.indexOf('/** Tenant-wide work queue.')
+    );
+    expect(occurrenceGuard).toContain('createAuthorizedAssetUpdateContextForUser');
+
+    for (const action of [
+      'createMaintenanceSchedule',
+      'updateMaintenanceSchedule',
+      'deleteMaintenanceSchedule',
+      'setSchedulePaused',
+      'setOccurrenceTicketAssignee',
+      'recordMaintenanceHistory',
+    ]) {
+      const start = source.indexOf(`export const ${action} = withAuth(`);
+      expect(start, action).toBeGreaterThan(-1);
+      const end = source.indexOf('export const ', start + 1);
+      expect(source.slice(start, end === -1 ? undefined : end), action)
+        .toContain('createAuthorizedAssetUpdateContextForUser');
+    }
   });
 
   it('T018: enforces linked-child intersection semantics in asset detail bundles for linked ticket/document payloads', () => {

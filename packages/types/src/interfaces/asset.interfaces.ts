@@ -116,6 +116,8 @@ export interface Asset {
 export interface AssetClientInfo {
   client_id: string;
   client_name: string;
+  /** Attached per page by listAssets (D5); undefined on other read paths. */
+  client_logo_url?: string | null;
 }
 
 // Extension table interfaces

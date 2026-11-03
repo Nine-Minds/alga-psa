@@ -36,6 +36,15 @@
         "suggested": "Suggéré",
         "toSave": "{{total}} à enregistrer"
       },
+      "customerMapping": {
+        "unlink": "Dissocier",
+        "unlinkConfirm": {
+          "title": "Dissocier {{client}} de QuickBooks ?",
+          "body": "{{client}} cesse d’être exporté vers le client QuickBooks {{customer}}. Rien ne change dans QuickBooks et vous pouvez l’associer de nouveau depuis cette liste à tout moment.",
+          "confirm": "Dissocier",
+          "cancel": "Conserver l’association"
+        }
+      },
       "dialog": {
         "cancel": "Annuler",
         "enterPlaceholder": "Saisir {{field}}...",
@@ -2084,11 +2093,18 @@
         "environment": "Environnement Intuit",
         "environmentProduction": "Production",
         "environmentSandbox": "Bac à sable",
+        "environmentHint": "La production se connecte à de vraies entreprises QuickBooks. Le bac à sable se connecte à une entreprise de test Intuit, ce qui permet d’essayer les exports sans toucher à une comptabilité réelle.",
+        "environmentLockedHint": "Déconnectez QuickBooks avant de changer d’environnement. L’entreprise connectée et ses jetons n’existent que dans l’environnement où ils ont été autorisés.",
+        "environmentSandboxKeysTitle": "Le bac à sable exige votre propre application Intuit",
+        "environmentSandboxKeysDescription": "Les entreprises du bac à sable Intuit n’acceptent que les clés Development d’une application Intuit que vous contrôlez. L’application partagée de ce déploiement utilise des clés Production : enregistrez votre propre application et saisissez ses clés Development ci-dessous avant de vous connecter.",
+        "environmentSavedSandbox": "QuickBooks se connectera désormais à une entreprise du bac à sable Intuit. Connectez-vous avec les clés Development de votre propre application Intuit.",
+        "environmentSavedProduction": "QuickBooks se connectera désormais à de vraies entreprises QuickBooks.",
         "errors": {
           "automatedSalesTax": "Impossible de mettre à jour le mode Automated Sales Tax.",
           "disconnect": "Échec de la déconnexion de QuickBooks.",
           "load": "Échec du chargement des paramètres QuickBooks.",
-          "saveCredentials": "Échec de l'enregistrement des identifiants QuickBooks."
+          "saveCredentials": "Échec de l'enregistrement des identifiants QuickBooks.",
+          "environment": "Échec du changement d’environnement Intuit."
         },
         "howItWorksDescription": "Connectez votre entreprise QuickBooks en vous connectant à Intuit ; AlgaPSA l'utilisera comme contexte en direct par défaut pour les exports et les correspondances. La carte « Application Intuit » ci-dessous indique si votre déploiement fournit déjà l'application utilisée pour cette connexion ou si vous devez d'abord en enregistrer une.",
         "howItWorksTitle": "Comment fonctionne QuickBooks live dans cette version",
@@ -2120,6 +2136,7 @@
         "credentialSource": {
           "app": "Ce déploiement fournit une application Intuit partagée : vous pouvez donc connecter QuickBooks sans en enregistrer une. Ignorez cette carte et cliquez sur « Connecter QuickBooks » ci-dessous.",
           "none": "Aucune application Intuit n'est encore disponible. Enregistrez-en une auprès d'Intuit avant de pouvoir vous connecter.",
+          "noneSandbox": "Le bac à sable exige votre propre application Intuit. Enregistrez-en une et saisissez ses clés Development avant de pouvoir vous connecter.",
           "tenant": "Ce tenant se connecte via sa propre application Intuit, avec les identifiants enregistrés ci-dessous. Pour renouveler une clé, collez la nouvelle valeur et enregistrez.",
           "appTitle": "Aucun identifiant nécessaire"
         },
