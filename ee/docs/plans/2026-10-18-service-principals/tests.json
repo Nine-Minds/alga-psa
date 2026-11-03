@@ -55,7 +55,7 @@
   },
   {
     "id": "T006",
-    "description": "DB integration: deleting a principal referenced by a ticket and mcp_agent_audit archives it (audit kept, IdP binding cleared, hidden from list, subject rebindable to a new agent); deleting an unused principal hard-deletes it; the archived principal no longer counts toward the limit",
+    "description": "DB integration: deleting a principal referenced by a ticket and mcp_agent_audit archives it (audit kept, IdP binding cleared, hidden from normal MCP agent and principal lists, subject rebindable to a new agent); inactive non-archived agents remain in normal lists; deleting an unused principal hard-deletes it; the archived principal no longer counts toward the limit",
     "implemented": true,
     "featureIds": [
       "F027",
@@ -159,7 +159,7 @@
   },
   {
     "id": "T017",
-    "description": "DB integration: POST time entry as a service principal without act-as \u2192 422 ACT_AS_REQUIRED; with act-as \u2192 user_id and created_by are the human and created_via_principal_id is the principal",
+    "description": "DB integration: POST time entry as a service principal without act-as \u2192 422 ACT_AS_REQUIRED; with act-as the human owns the entry and created_via_principal_id is the principal; a later direct human update clears updated_via_principal_id while preserving creation attribution, and a delegated update by another principal replaces update attribution and persists edited values",
     "implemented": true,
     "featureIds": [
       "F055",

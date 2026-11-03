@@ -24,6 +24,15 @@ export async function servicePrincipalKeyGate(_owner: BoundaryKeyGateOwner): Pro
   return false;
 }
 
+/** CE has no principal attribution columns, so time-entry writes remain schema-compatible. */
+export async function stampTimeEntryAttribution(
+  _conn: unknown,
+  _tenant: string,
+  _entryId: string,
+  _operation: 'create' | 'update',
+  _viaPrincipalUserId: string | null | undefined,
+): Promise<void> {}
+
 export function mapServicePrincipalError<T>(error: T): T {
   return error;
 }

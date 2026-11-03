@@ -10,6 +10,7 @@ import {
   createServicePrincipalInTrx,
   setServicePrincipalActive,
 } from '../service-principals/service';
+import { servicePrincipalDb } from '../service-principals/tables';
 
 /**
  * MCP agent identity service. An agent is an IdP-bound service principal:
@@ -152,7 +153,15 @@ export async function createAgent(input: CreateAgentInput): Promise<AgentRecord>
 export async function listAgents(tenant: string): Promise<AgentRecord[]> {
   return runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
-    return tenantDb(knex, tenant).table('agents').orderBy('created_at', 'desc');
+    const db = servicePrincipalDb(knex, tenant);
+    return db.table('agents')
+      .leftJoin('service_principals as sp', function joinPrincipal() {
+        this.on(knex.raw('??::text = ??::text', ['sp.user_id', 'agents.service_user_id']))
+          .andOn(knex.raw('??::text = ??::text', ['sp.tenant', 'agents.tenant']));
+      })
+      .whereNull('sp.archived_at')
+      .select('agents.*')
+      .orderBy('agents.created_at', 'desc');
   });
 }
 

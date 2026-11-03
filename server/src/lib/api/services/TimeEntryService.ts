@@ -392,7 +392,7 @@ export class TimeEntryService extends BaseService<any> {
       tax_rate_id: data.tax_rate_id ?? undefined,
     });
 
-    const persisted = await this.persistViaWriteCore(knex, context, entry, contractLine, ['created_via_principal_id', 'updated_via_principal_id']);
+    const persisted = await this.persistViaWriteCore(knex, context, entry, contractLine);
     const timeEntry = persisted.entry;
 
     // Post-commit events (search event + ticket-time-entry-added workflow event),
@@ -1194,7 +1194,6 @@ export class TimeEntryService extends BaseService<any> {
     context: ServiceContext,
     entry: SaveTimeEntryParams,
     contractLine: { id: string | null; source: ContractLineSource | null },
-    viaColumns: readonly string[] = ['updated_via_principal_id'],
   ): Promise<PersistedTimeEntry> {
     if (!context.user) {
       throw new ForbiddenError('Permission denied: Missing user context');
@@ -1205,16 +1204,12 @@ export class TimeEntryService extends BaseService<any> {
           tenant: context.tenant,
           actor: context.user as IUser,
           entry,
+          viaPrincipalUserId: context.viaPrincipalUserId,
           contractLine,
           // The sheet was resolved from work_date (getOrCreateTimeSheetForWorkDate),
           // so the period is checked against the same date the bucketing used.
           sheetPeriodCheck: 'work_date',
         });
-        // The shared write core knows nothing of act-as; record the principal here.
-        const entryId = (persisted.entry as { entry_id?: string }).entry_id;
-        if (entryId) {
-          await stampViaPrincipalRow(trx, context, 'time_entries', { entry_id: entryId }, viaColumns);
-        }
         return persisted;
       });
     } catch (error) {

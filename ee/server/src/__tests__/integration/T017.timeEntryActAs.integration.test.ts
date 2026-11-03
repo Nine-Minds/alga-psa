@@ -20,7 +20,7 @@ import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
 import { TimeEntryService } from 'server/src/lib/api/services/TimeEntryService';
 
 beforeAll(async () => {
-  await boot('sp_t017_time_entry');
+  await boot('server_card_sp_c4');
   // The service resolves the entry's time sheet from a period covering its work date.
   await tenantDb(harness().db, harness().tenant).table('time_periods').insert({
     tenant: harness().tenant,
@@ -81,5 +81,36 @@ describe('T017 time entry create under a service principal', () => {
     expect(row.user_id).toBe(human);
     expect(row.created_by).toBe(human);
     expect(row.created_via_principal_id).toBe(principal.userId);
+  });
+
+  it('replaces update attribution across delegated and direct-human writes', async () => {
+    const { db, tenant } = harness();
+    const human = await createHuman();
+    const firstPrincipal = await createPrincipal({ allowActAs: true });
+    const created = await service().create(await payload(), await contextFor(firstPrincipal, human) as never);
+    const entryId = created.entry_id as string;
+
+    const humanUser = await tenantDb(db, tenant).table('users').where({ user_id: human }).first();
+    const humanContext = { tenant, userId: human, user: humanUser };
+    await service().update(entryId, { notes: 'edited by human' } as never, humanContext as never);
+    let row = await tenantDb(db, tenant).table('time_entries').where({ entry_id: entryId }).first();
+    expect(row).toMatchObject({
+      notes: 'edited by human',
+      created_via_principal_id: firstPrincipal.userId,
+      updated_via_principal_id: null,
+    });
+
+    const secondPrincipal = await createPrincipal({ allowActAs: true });
+    await service().update(
+      entryId,
+      { notes: 'edited by second principal' } as never,
+      await contextFor(secondPrincipal, human) as never,
+    );
+    row = await tenantDb(db, tenant).table('time_entries').where({ entry_id: entryId }).first();
+    expect(row).toMatchObject({
+      notes: 'edited by second principal',
+      created_via_principal_id: firstPrincipal.userId,
+      updated_via_principal_id: secondPrincipal.userId,
+    });
   });
 });

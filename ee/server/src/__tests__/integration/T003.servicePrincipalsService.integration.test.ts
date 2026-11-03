@@ -26,6 +26,11 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal() as Record<string, unknown>),
   getConnection: vi.fn(async () => conn.db),
 }));
+vi.mock('@/lib/db', async (importOriginal) => ({
+  ...(await importOriginal() as Record<string, unknown>),
+  createTenantKnex: vi.fn(async (tenant: string) => ({ knex: conn.db, tenant })),
+  runWithTenant: vi.fn(async (_tenant: string, fn: () => Promise<unknown>) => fn()),
+}));
 
 vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
   assertTenantTierAccess: vi.fn(async () => {
@@ -46,6 +51,7 @@ import {
   listServicePrincipals,
   setServicePrincipalActive,
 } from '../../lib/service-principals/service';
+import { listAgents } from '../../lib/mcp/agents';
 import { getServicePrincipalUsage } from '../../lib/service-principals/usage';
 import { servicePrincipalKeyGate } from '../../lib/service-principals/boundary';
 
@@ -81,7 +87,7 @@ const hash = (k: string) => crypto.createHash('sha256').update(k).digest('hex');
 
 beforeAll(async () => {
   mergedDir = buildMergedEeMigrationsDir();
-  db = await createTestDbConnection({ databaseName: 'sp_c4_service_test', migrationsDir: mergedDir });
+  db = await createTestDbConnection({ databaseName: 'server_card_sp_c4', migrationsDir: mergedDir });
   conn.db = db;
 }, 600_000);
 
@@ -169,6 +175,16 @@ describe('delete vs archive (T006)', () => {
     await tenantDb(db, tenant)
       .table('mcp_agent_audit')
       .insert({ tenant, agent_id: agent.agent_id, tool: 'call_api_endpoint', ok: true });
+    const inactivePrincipal = await createServicePrincipal(db, tenant, { kind: 'mcp_agent', name: 'inactive-agent' });
+    const [inactiveAgent] = await tenantDb(db, tenant).table('agents').insert({
+      tenant,
+      name: 'inactive-agent',
+      active: true,
+      service_user_id: inactivePrincipal.user_id,
+    }).returning('agent_id');
+    await tenantDb(db, tenant).table('users').where({ user_id: inactivePrincipal.user_id }).update({ is_inactive: true });
+    await tenantDb(db, tenant).table('agents').where({ agent_id: inactiveAgent.agent_id }).update({ active: false });
+    expect((await listAgents(tenant)).map(({ agent_id }) => agent_id)).toContain(inactiveAgent.agent_id);
     const usedBefore = (await getServicePrincipalUsage(db, tenant)).used;
 
     expect(await archiveOrDeleteServicePrincipal(db, tenant, sp.user_id)).toBe('archived');
@@ -176,6 +192,9 @@ describe('delete vs archive (T006)', () => {
     expect((await getServicePrincipalUsage(db, tenant)).used).toBe(usedBefore - 1);
     expect((await listServicePrincipals(db, tenant)).map((p) => p.user_id)).not.toContain(sp.user_id);
     expect(await tenantDb(db, tenant).table('mcp_agent_audit').where({ agent_id: agent.agent_id }).first()).toBeTruthy();
+    expect((await tenantDb(db, tenant).table('mcp_agent_audit').where({ agent_id: agent.agent_id })).length).toBe(1);
+    expect((await listAgents(tenant)).map(({ agent_id }) => agent_id)).not.toContain(agent.agent_id);
+    expect((await listAgents(tenant)).map(({ agent_id }) => agent_id)).toContain(inactiveAgent.agent_id);
     const archivedAgent = await tenantDb(db, tenant).table('agents').where({ agent_id: agent.agent_id }).first();
     expect(archivedAgent).toMatchObject({ idp_issuer: null, idp_subject: null, active: false });
     const user = await tenantDb(db, tenant).table('users').where({ user_id: sp.user_id }).first('is_inactive');

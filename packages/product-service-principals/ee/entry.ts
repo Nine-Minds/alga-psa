@@ -21,6 +21,17 @@ export async function servicePrincipalKeyGate(owner: BoundaryKeyGateOwner): Prom
   return boundary.servicePrincipalKeyGate(owner);
 }
 
+export async function stampTimeEntryAttribution(
+  conn: import('knex').Knex | import('knex').Knex.Transaction,
+  tenant: string,
+  entryId: string,
+  operation: 'create' | 'update',
+  viaPrincipalUserId: string | null | undefined,
+): Promise<void> {
+  const attribution = await import('@ee/lib/service-principals/timeEntryAttribution');
+  return attribution.stampTimeEntryAttribution(conn, tenant, entryId, operation, viaPrincipalUserId);
+}
+
 export { mapServicePrincipalError } from '@ee/lib/service-principals/errors';
 export type * from '../types';
 export { assertNoDelegationHeaders } from '../delegation';
