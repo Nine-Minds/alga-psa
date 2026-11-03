@@ -187,7 +187,11 @@ async function resolveVisibleTicket(
   const visibility = await getClientContactVisibilityContext(trx, tenant, userContactId);
 
   const ticket = await tenantDb(trx, tenant).table('tickets as t')
-    .select('t.*')
+    .select(
+      't.ticket_id', 't.client_id', 't.board_id', 't.contact_name_id', 't.billing_profile_id',
+      't.attributes', 't.is_closed', 't.category_id', 't.subcategory_id', 't.priority_id',
+      't.assigned_to', 't.status_id', 't.response_state', 't.tenant',
+    )
     .where({
       't.ticket_id': ticketId,
       't.client_id': visibility.clientId
