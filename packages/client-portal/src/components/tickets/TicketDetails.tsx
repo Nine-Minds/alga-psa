@@ -534,9 +534,21 @@ export function TicketDetails({
   const handleDelete = async (comment: IComment) => {
     try {
       if (!comment.comment_id) return;
-      
-      // Check if the comment belongs to the current user
-      if (comment.user_id !== currentUser?.id) {
+
+      // Portal comment projections intentionally omit private identity fields.
+      // Use the server-derived capability, while retaining the same interaction
+      // restrictions enforced by the conversation controls.
+      const projected = comment as IComment & {
+        portal_can_edit?: boolean;
+        portal_author?: { role?: string } | null;
+      };
+      if (
+        !canInteract ||
+        projected.portal_can_edit !== true ||
+        projected.portal_author?.role === 'collaborator' ||
+        comment.is_system_generated ||
+        comment.deleted_at
+      ) {
         setError(t('messages.deleteOwnCommentError', 'You can only delete your own comments'));
         toast.error(t('messages.deleteOwnCommentError', 'You can only delete your own comments'));
         return;
