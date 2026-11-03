@@ -121,12 +121,15 @@ describe('client billing actions', () => {
     expect(enqueueImmediateJobMock).not.toHaveBeenCalled();
   });
 
-  it('denies an internal user with a linked contact before enqueueing', async () => {
+  it('denies an internal MSP session with an owned linked-contact invoice and billing access before enqueueing', async () => {
     currentUser = { user_id: 'internal-1', user_type: 'internal', contact_id: 'contact-1', tenant: 'tenant-1', roles: [] };
+    // The invoice fixture belongs to client-1, and the test setup grants portal
+    // billing read access. Identity must still be rejected before either lookup.
     const { sendClientInvoiceEmail } = await import('./client-billing');
     const result = await sendClientInvoiceEmail('invoice-1');
 
     expect(result).toMatchObject({ permissionError: 'Unauthorized' });
+    expect(hasClientBillingReadPermissionMock).toHaveBeenCalledTimes(0);
     expect(getConnectionMock).not.toHaveBeenCalled();
     expect(enqueueImmediateJobMock).not.toHaveBeenCalled();
   });

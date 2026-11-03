@@ -87,20 +87,18 @@ If all previous `dev-server` records are concluded, supply `--command` and `--cw
 
 ## Verify delivery and authorization
 
-After Smoke Test is the active board step, provision the legitimate credential key and apply the same worktree-unique `REDIS_PREFIX` to the app and worker board services. Then complete these authenticated checks:
+Run these checks only when **Smoke Test** is the active board step and its board-managed `dev-server` is enabled. Provision the legitimate credential key and set the same worktree-unique `REDIS_PREFIX` on the app and worker board services before testing.
 
-1. Resend owned invoice `SMOKE-AUTHZ-1102` from the portal.
-2. Correlate its new job with `MAINTENANCE_JOB_REQUESTED` consumption and matching-execution `InvoiceEmailHandler` completion.
-3. Verify a new invoice sending log and an actual GreenMail message whose MIME attachment contains the invoice PDF.
-4. Rerun scheduler denial and allowance through authenticated entry points: deny an internal user with `billing:create` and `billing:read` but without `invoice:send`, then allow with `invoice:send`.
-5. Rerun immediate-send authorization parity and linked-internal portal resend rejection before enqueue or delivery.
-6. Reload the UI repeatedly and verify the invoice menu opens and accepts recorded interactions each time.
+1. Sign in as an internal MSP user with `billing:read` and `billing:create`, but without `invoice:send`. Open the invoice list, select the controlled finalized invoice, open **Send Invoice Email**, and click **Schedule**. Capture the authenticated UI action/network result showing the invoice-send permission denial. Confirm no `invoice_email` job was inserted or published for this invocation.
+2. Grant that user `invoice:send`, refresh/re-authenticate so the session reflects the permission change, and repeat the same UI path on the same invoice. Capture the successful scheduler response and its job ID. Do not use **Send** for this check: it is the separate immediate-send action.
+3. Correlate that job ID to the `MAINTENANCE_JOB_REQUESTED` event and matching forwarded execution ID. Capture the worker workflow/run ID, handler claim/start and terminal execution outcome, handler invoice-sending log, and GreenMail message ID. Inspect the received MIME message and verify its PDF attachment is the selected invoice (filename and valid PDF content). Workflow completion, a Redis event, or a temporal completion record alone is not delivery evidence.
+4. Authenticate through the portal as a persisted internal MSP user whose backing `users.user_type` and authenticated session both say `internal`, and whose real `contact_id` is linked to the controlled client's contact. Ensure that contact owns the invoice and the user has other billing permissions. Attempt portal resend and capture the unauthorized response plus evidence that no resend job was created/enqueued.
+5. As a positive control, authenticate as an actual client portal user for the invoice owner and resend `SMOKE-AUTHZ-1102`. Correlate its job through event consumption, matching handler execution, and GreenMail receipt with the invoice PDF as in step 3.
+6. Exercise immediate **Send** authorization parity through the MSP dialog: the user without `invoice:send` is denied; the authorized user may send. Record its separate job or send result and delivery evidence.
 
-Do not replace these checks with direct job enqueue calls or fixture-only tests. These authenticated checks and GreenMail PDF delivery remain unverified until Smoke Test.
+For each attempt, retain the authenticated principal/session identity, selected invoice ID, timestamp, server-action request/response (or equivalent server correlation), and job lookup showing either no job for denial or the created job ID for success. For delivery, retain the job ID, Temporal workflow/run and forwarded execution IDs, handler outcome, GreenMail message ID, and attachment inspection. Redact credentials and session tokens. Do not replace these checks with direct job enqueue calls or fixture-only tests. These authenticated checks and GreenMail PDF delivery remain unverified until Smoke Test.
 
-The scheduler has no separate page. Use the existing MSP invoice email dialog and its **Schedule** action, which calls the real `scheduleInvoiceEmailAction` server action through the authenticated Next.js session. This action is included in the running build through that caller; do not invoke a copied action ID or enqueue the job directly. Select the same controlled invoice for the denied and authorized sessions. Confirm denial returns the permission error and produces no job row; then repeat with `invoice:send` and correlate its new job to the delivered GreenMail message. The dialog's **Send** action remains the separate immediate-send path.
-
-For the portal rejection check, authenticate as an internal user whose session and backing user row both have `user_type = 'internal'` and a real linked `contact_id`. Call portal resend on an owned invoice and confirm unauthorized response before any job is created. Keep the ordinary client portal owned-invoice resend as a positive control.
+The MSP dialog's **Schedule** control imports the exported `scheduleInvoiceEmailAction` from the billing server-action module, letting Next bind it through its normal server-action reference in the rendered UI. If diagnosing the caller in the running build, read the action reference from that build; do not hardcode a reference, use a diagnostic endpoint, or enqueue directly.
 
 ## Local compile baseline
 
