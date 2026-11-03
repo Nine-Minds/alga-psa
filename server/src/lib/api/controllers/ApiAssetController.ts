@@ -31,13 +31,14 @@ import { authorizeApiResource } from './authorizationKernel';
 import type { AuthorizationRecord } from '@alga-psa/authorization/kernel';
 
 type AssetAction = { resource: 'asset' | 'ticket'; action: 'read' | 'create' | 'update' | 'delete' };
-const ASSET_READ: AssetAction[] = [{ resource: 'asset', action: 'read' }];
-const ASSET_CREATE: AssetAction[] = [{ resource: 'asset', action: 'create' }];
-const ASSET_UPDATE: AssetAction[] = [{ resource: 'asset', action: 'update' }];
-const ASSET_UPDATE_RELATED_READ: AssetAction[] = [...ASSET_UPDATE, ...ASSET_READ];
-const ASSET_DELETE: AssetAction[] = [{ resource: 'asset', action: 'delete' }];
-const ASSET_TICKET_READ: AssetAction[] = [...ASSET_READ, { resource: 'ticket', action: 'read' }];
-const ASSET_TICKET_LINK: AssetAction[] = [{ resource: 'asset', action: 'update' }, { resource: 'ticket', action: 'read' }];
+type AssetChecks = readonly [AssetAction, ...AssetAction[]];
+const ASSET_READ = [{ resource: 'asset', action: 'read' }] as const satisfies AssetChecks;
+const ASSET_CREATE = [{ resource: 'asset', action: 'create' }] as const satisfies AssetChecks;
+const ASSET_UPDATE = [{ resource: 'asset', action: 'update' }] as const satisfies AssetChecks;
+const ASSET_UPDATE_RELATED_READ = [...ASSET_UPDATE, ...ASSET_READ] as const satisfies AssetChecks;
+const ASSET_DELETE = [{ resource: 'asset', action: 'delete' }] as const satisfies AssetChecks;
+const ASSET_TICKET_READ = [...ASSET_READ, { resource: 'ticket', action: 'read' }] as const satisfies AssetChecks;
+const ASSET_TICKET_LINK = [{ resource: 'asset', action: 'update' }, { resource: 'ticket', action: 'read' }] as const satisfies AssetChecks;
 
 export class ApiAssetController {
   private assetService: AssetService;
@@ -46,7 +47,7 @@ export class ApiAssetController {
     this.assetService = new AssetService();
   }
 
-  private async authorize(req: NextRequest, checks: AssetAction[]): Promise<{ context: ApiContext; denied: NextResponse | null }> {
+  private async authorize(req: NextRequest, checks: AssetChecks): Promise<{ context: ApiContext; denied: NextResponse | null }> {
     const context = requireRequestContext(req);
     const pathname = new URL(req.url).pathname;
     const productCode = await getTenantProduct(context.tenant);
