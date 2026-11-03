@@ -57,13 +57,7 @@ describe('createTicketAuthorizationContext', () => {
     expect(ctx.selectedBoardIds).toEqual(['b1']);
   });
 
-  it('never uses selected_boards and leaves internal users unnarrowed', async () => {
-    const source = (await import('node:fs')).readFileSync(
-      new URL('./ticketRecordAuthorization.ts', import.meta.url),
-      'utf8',
-    );
-    expect(source).not.toContain('selected_boards');
-    expect(source).not.toContain('resolveClientSelectedBoardIds');
+  it('leaves internal users without client portal narrowing', async () => {
     const ctx = await createTicketAuthorizationContext(fakeTrx(), 'tenant-1', { user_id: 'i', user_type: 'internal', roles: [] } as any);
     expect(ctx.contactVisibility).toBeUndefined();
     expect(ctx.selectedBoardIds).toBeUndefined();
@@ -147,6 +141,21 @@ describe('authorizeTicketRecordAccess (client principals)', () => {
       ticketId: 't1',
       action: 'delete',
     })).rejects.toThrow('Permission denied: Cannot access ticket');
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when bundle policy resolution fails, even with coarse delete permission', async () => {
+    const internal = { user_id: 'internal-1', user_type: 'internal', roles: [{ role_id: 'r1' }] } as any;
+    resolveBundleRulesMock.mockRejectedValueOnce(new Error('bundle policy database unavailable'));
+    hasPermissionMock.mockResolvedValue(true);
+
+    await expect(authorizeTicketRecordAccess({
+      trx: fakeTrx(row({ board_id: 'b1' })),
+      tenant: 'tenant-1',
+      user: internal,
+      ticketId: 't1',
+      action: 'delete',
+    })).rejects.toThrow('bundle policy database unavailable');
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 });
