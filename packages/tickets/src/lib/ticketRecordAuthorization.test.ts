@@ -3,8 +3,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { authorizeTicketRecordAccess, createTicketAuthorizationContext } from './ticketRecordAuthorization';
 
-const getVisibilityMock = vi.fn();
-const getBundleRulesMock = vi.fn(async (..._args: any[]) => [] as Array<Record<string, unknown>>);
+const { getVisibilityMock, getBundleRulesMock } = vi.hoisted(() => ({
+  getVisibilityMock: vi.fn(),
+  getBundleRulesMock: vi.fn(async (..._args: any[]) => [] as Array<Record<string, unknown>>),
+}));
 
 vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any) => ({ table: (t: string) => conn(t) }),
@@ -13,7 +15,7 @@ vi.mock('./clientPortalVisibility.server', () => ({
   getClientContactVisibilityContext: (...args: any[]) => getVisibilityMock(...args),
 }));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
-  resolveBundleNarrowingRulesForEvaluation: (...args: any[]) => getBundleRulesMock(...args),
+  resolveBundleNarrowingRulesForEvaluation: getBundleRulesMock,
 }));
 
 function fakeTrx(ticket: Record<string, unknown> | null = null) {
@@ -121,5 +123,18 @@ describe('authorizeTicketRecordAccess (client principals)', () => {
       ticketId: 't1',
       action: 'read',
     })).rejects.toThrow('Permission denied: Cannot access ticket');
+  });
+
+  it('fails closed when bundle rules cannot be resolved', async () => {
+    getBundleRulesMock.mockRejectedValue(new Error('bundle resolver unavailable'));
+    const internal = { user_id: 'internal-1', user_type: 'internal', roles: [{ role_id: 'role-1' }] } as any;
+
+    await expect(authorizeTicketRecordAccess({
+      trx: fakeTrx(row()),
+      tenant: 'tenant-1',
+      user: internal,
+      ticketId: 't1',
+      action: 'read',
+    })).rejects.toThrow('bundle resolver unavailable');
   });
 });
