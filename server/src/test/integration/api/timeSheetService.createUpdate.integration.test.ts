@@ -30,6 +30,7 @@ vi.mock('server/src/lib/eventBus/publishers', () => ({
 
 // RBAC itself is not under test; the permissions each actor holds are set per test.
 const grants = vi.hoisted(() => ({ byUser: new Map<string, Set<string>>() }));
+const approvalBundleRules = vi.hoisted(() => ({ rules: [] as Array<Record<string, unknown>> }));
 vi.mock('@alga-psa/auth', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
@@ -39,6 +40,17 @@ vi.mock('@/lib/auth/rbac', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
     grants.byUser.get(user.user_id)?.has(`${resource}:${action}`) ?? false),
+}));
+vi.mock('@alga-psa/scheduling/actions/timeEntryDelegationAuth', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  assertCanApproveSubject: vi.fn(async (actor: { user_id: string }, _tenant: string, subjectUserId: string) => {
+    if (approvalBundleRules.rules.some((rule) =>
+      rule.constraintKey === 'not_self_approver' && actor.user_id === subjectUserId
+    )) {
+      throw new Error('Permission denied: Cannot approve your own time submissions');
+    }
+    return actor.user_id === subjectUserId ? 'self' : 'manager';
+  }),
 }));
 
 let db: Knex;
@@ -112,6 +124,7 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
   afterEach(async () => {
     vi.mocked(publishUnregisteredEventType).mockClear();
     grants.byUser.clear();
+    approvalBundleRules.rules = [];
     for (const tenantId of tenantsToCleanup) await cleanupTenant(tenantId);
     tenantsToCleanup.clear();
   });
@@ -227,6 +240,67 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     await service.reverseApproval(sheet.id, { reversal_reason: 'correction' } as any, ctx);
     expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: sheet.id }).first()).toMatchObject({ approval_status: 'CHANGES_REQUESTED', approved_at: null, approved_by: null });
     expect((await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first()).approval_status).toBe('CHANGES_REQUESTED');
+  });
+
+  it('enforces approval bundle rules through REST single and bulk approval without partial writes', async () => {
+    const f = await seed();
+    const service = serviceFor(f.tenantId);
+    const ctx = contextFor(f.tenantId, f.actor);
+    const makeSubmittedSheet = async () => {
+      const periodId = uuidv4();
+      await tenantTable(f.tenantId, 'time_periods').insert({
+        period_id: periodId, tenant: f.tenantId, start_date: '2026-02-02', end_date: '2026-02-09',
+      });
+      const sheet = await service.create({ period_id: periodId }, ctx);
+      const entryId = uuidv4();
+      await tenantTable(f.tenantId, 'time_entries').insert({
+        tenant: f.tenantId, entry_id: entryId, user_id: f.actor, time_sheet_id: sheet.id,
+        start_time: new Date().toISOString(), end_time: new Date().toISOString(), work_date: '2026-01-06',
+        work_timezone: 'UTC', approval_status: 'DRAFT', created_at: db.fn.now(), updated_at: db.fn.now(),
+      });
+      grants.byUser.set(f.actor, new Set(['time_sheet:submit']));
+      await service.submitTimeSheet(sheet.id, { submission_notes: 'Submitted for review' } as any, ctx);
+      return { sheetId: sheet.id, entryId };
+    };
+
+    const single = await makeSubmittedSheet();
+    const bulk = await makeSubmittedSheet();
+    const permittedSingle = await makeSubmittedSheet();
+    const permittedBulk = await makeSubmittedSheet();
+    grants.byUser.set(f.actor, new Set(['time_sheet:approve']));
+    const commentsBefore = await tenantTable(f.tenantId, 'time_sheet_comments')
+      .whereIn('time_sheet_id', [single.sheetId, bulk.sheetId]).orderBy('comment_id').select('*');
+    const metadataBefore = await tenantTable(f.tenantId, 'time_sheets')
+      .whereIn('id', [single.sheetId, bulk.sheetId]).orderBy('id').select('*');
+    const entriesBefore = await tenantTable(f.tenantId, 'time_entries')
+      .whereIn('time_sheet_id', [single.sheetId, bulk.sheetId]).orderBy('entry_id').select('*');
+
+    approvalBundleRules.rules = [{
+      resource: 'time_entry', action: 'approve', constraintKey: 'not_self_approver',
+    }];
+    await expect(service.approveTimeSheet(single.sheetId, { approval_notes: 'should not persist' }, ctx))
+      .rejects.toBeInstanceOf(ForbiddenError);
+    const bulkResult = await service.bulkApprove({ time_sheet_ids: [bulk.sheetId], approval_notes: 'should not persist' } as any, ctx);
+    expect(bulkResult).toHaveLength(1);
+    expect(bulkResult[0]).toMatchObject({ success: false, time_sheet_id: bulk.sheetId });
+
+    expect(await tenantTable(f.tenantId, 'time_sheets').whereIn('id', [single.sheetId, bulk.sheetId]).orderBy('id').select('*'))
+      .toEqual(metadataBefore);
+    expect(await tenantTable(f.tenantId, 'time_entries').whereIn('time_sheet_id', [single.sheetId, bulk.sheetId]).orderBy('entry_id').select('*'))
+      .toEqual(entriesBefore);
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').whereIn('time_sheet_id', [single.sheetId, bulk.sheetId]).orderBy('comment_id').select('*'))
+      .toEqual(commentsBefore);
+
+    // Self approval remains allowed when no bundle restriction applies.
+    approvalBundleRules.rules = [];
+    await expect(service.approveTimeSheet(permittedSingle.sheetId, { approval_notes: 'approved' }, ctx))
+      .resolves.toMatchObject({ id: permittedSingle.sheetId, approval_status: 'APPROVED', approved_by: f.actor });
+    const permittedBulkResult = await service.bulkApprove(
+      { time_sheet_ids: [permittedBulk.sheetId], approval_notes: 'bulk approved' } as any, ctx
+    );
+    expect(permittedBulkResult[0]).toMatchObject({ success: true, time_sheet_id: permittedBulk.sheetId });
+    expect(await tenantTable(f.tenantId, 'time_entries').whereIn('time_sheet_id', [permittedSingle.sheetId, permittedBulk.sheetId]).where({ approval_status: 'APPROVED' }).count('* as count'))
+      .toMatchObject([{ count: '2' }]);
   });
 
   it('creating a sheet for yourself by explicit user_id needs no delegation rights', async () => {

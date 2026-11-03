@@ -52,7 +52,7 @@ import {
   resolveCalendarAccess,
   type CalendarAccess,
 } from '@alga-psa/scheduling/lib/calendarAccess';
-import { assertCanActOnBehalf, resolveManagedSubjectUserIds } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
+import { assertCanActOnBehalf, assertCanApproveSubject, resolveManagedSubjectUserIds } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 import { loadVisibleCalendars } from '@alga-psa/scheduling/lib/visibleCalendars';
 import type { IVisibleCalendar } from '@alga-psa/types';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
@@ -548,7 +548,11 @@ export class TimeSheetService extends BaseService<any> {
         throw new ForbiddenError(`Permission denied: Cannot ${reversing ? 'reverse approval' : target.toLowerCase()} time sheets`);
       }
       try {
-        await assertCanActOnBehalf(context.user as any, context.tenant, sheet.user_id, trx);
+        if (target === 'APPROVED') {
+          await assertCanApproveSubject(context.user as any, context.tenant, sheet.user_id, trx);
+        } else {
+          await assertCanActOnBehalf(context.user as any, context.tenant, sheet.user_id, trx);
+        }
       } catch {
         throw new ForbiddenError('Permission denied: Cannot act on this time sheet');
       }
