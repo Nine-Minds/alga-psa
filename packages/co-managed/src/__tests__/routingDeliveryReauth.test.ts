@@ -124,6 +124,7 @@ describe('pendingRouting re-authorizes customer recipients', () => {
   it.each([
     ['inactive', { is_inactive: true }],
     ['missing address', { email: null }],
+    ['non-internal', { user_type: 'client' }],
   ])('sponsor %s identity cannot receive email', async (_case, userRow) => {
     seed();
     h.data.co_management_deliveries = [row('routing_email', 'old-msp@example.test', 'msp_user', 'm1')];
@@ -131,6 +132,15 @@ describe('pendingRouting re-authorizes customer recipients', () => {
     const [d] = await run();
     expect(d.allowed).toBe(false);
     expect(d.ledgerRecipient).toBe('old-msp@example.test');
+  });
+
+  it('does not email a missing sponsor identity and retains the captured routing ledger address', async () => {
+    seed();
+    h.data.co_management_deliveries = [row('routing_email', 'old-msp@example.test', 'msp_user', 'missing-msp')];
+    h.data.users = [];
+    const [d] = await run();
+    expect(d).toMatchObject({ allowed: false, ledgerRecipient: 'old-msp@example.test', recipient: { principalId: 'missing-msp' } });
+    expect(h.sponsor).not.toHaveBeenCalled();
   });
 
   it('re-evaluates sponsor redactions independently on each recovery attempt', async () => {
