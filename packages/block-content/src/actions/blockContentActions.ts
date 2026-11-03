@@ -132,6 +132,9 @@ export const getBlockContent = withAuth(async (
   if (!authorizedDocument) {
     return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
   }
+  if (!Object.prototype.hasOwnProperty.call(authorizedDocument, 'content')) {
+    return null;
+  }
 
   const content = await tenantDb(knex, tenant).table('document_block_content')
     .where({ document_id: documentId })

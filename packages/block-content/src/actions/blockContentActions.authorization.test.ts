@@ -6,7 +6,9 @@ const mocks = vi.hoisted(() => ({
   authorizeAssociation: vi.fn(),
   table: vi.fn(),
   writes: [] as Array<{ table: string; operation: string; value: unknown; tenant: string }>,
+  contentReads: 0,
   content: null as any,
+  redactedFields: [] as string[],
   targetExists: true,
 }));
 
@@ -32,7 +34,7 @@ vi.mock('@alga-psa/db', () => ({
         where: () => query,
         select: () => query,
         first: async () => tableName === 'document_block_content'
-          ? mocks.content
+          ? (mocks.contentReads++, mocks.content)
           : tableName === 'tickets' || tableName === 'clients' || tableName === 'contacts' || tableName === 'assets' || tableName === 'project_tasks' || tableName === 'client_contracts'
             ? (mocks.targetExists ? { exists: true } : undefined)
             : undefined,
@@ -67,10 +69,18 @@ describe('block content action authorization', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.writes.length = 0;
-    mocks.content = { content_id: 'content-1', block_data: '{"safe":true}' };
+    mocks.contentReads = 0;
+    mocks.redactedFields = [];
+    mocks.content = { content_id: 'content-1', block_data: '{"secret":"stored-payload"}' };
     mocks.targetExists = true;
     mocks.hasPermission.mockResolvedValue(true);
-    mocks.authorizedDocument.mockResolvedValue({ document_id: 'document-1', tenant: 'tenant-a' });
+    mocks.authorizedDocument.mockImplementation(async () => {
+      const authorizedDocument: Record<string, unknown> = {
+        document_id: 'document-1', tenant: 'tenant-a', content: 'document content',
+      };
+      for (const field of mocks.redactedFields) delete authorizedDocument[field];
+      return authorizedDocument;
+    });
     mocks.authorizeAssociation.mockResolvedValue(true);
   });
 
@@ -86,8 +96,17 @@ describe('block content action authorization', () => {
   it('returns block content after RBAC and document relationship authorization succeed', async () => {
     const result = await invoke(getBlockContent, internalUser, { tenant: 'tenant-a' }, 'document-1');
 
-    expect(result).toMatchObject({ content_id: 'content-1', block_data: '{"safe":true}' });
+    expect(result).toMatchObject({ content_id: 'content-1', block_data: '{"secret":"stored-payload"}' });
     expect(mocks.authorizedDocument).toHaveBeenCalledWith(expect.anything(), 'tenant-a', internalUser, 'document-1');
+  });
+
+  it('does not read or disclose stored block content when the authorizer redacts content', async () => {
+    mocks.redactedFields = ['content'];
+
+    const result = await invoke(getBlockContent, internalUser, { tenant: 'tenant-a' }, 'document-1');
+
+    expect(result).toBeNull();
+    expect(mocks.contentReads).toBe(0);
   });
 
   it('denies portal reads outside the user client boundary', async () => {
