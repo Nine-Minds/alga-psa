@@ -165,7 +165,18 @@ export async function matchingRuleTemplateIds(
     schema, readChecklistWhere(rule.where, rule.where_version), { rootAlias: 't' }
   ));
   const row = await db.table('tickets as t').where('t.ticket_id', ticketId)
-    .select(fragments.map((fragment, index) => trx.raw(`(${fragment.sql}) AS ??`, [...fragment.bindings, `r${index}`])))
+    .select(fragments.map((fragment, index) => {
+      // Predicate literals are string/number/boolean/null values and identifier
+      // bindings are strings. Narrow the compiler's opaque binding type before
+      // passing it to Knex; keep every value parameterized.
+      const bindings: Knex.RawBinding[] = fragment.bindings.map((binding) => {
+        if (binding === null || typeof binding === 'string' || typeof binding === 'number' || typeof binding === 'boolean') {
+          return binding;
+        }
+        throw new TypeError(`Unsupported checklist predicate SQL binding: ${typeof binding}`);
+      });
+      return trx.raw(`(${fragment.sql}) AS ??`, [...bindings, `r${index}`]);
+    }))
     .first() as Record<string, boolean> | undefined;
   return [...new Set(rules.filter((_rule, index) => row?.[`r${index}`] === true).map((rule) => rule.template_id))];
 }
