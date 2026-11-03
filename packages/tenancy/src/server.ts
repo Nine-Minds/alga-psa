@@ -5,12 +5,6 @@ export * from './lib/portalDomainStatus';
 export * from './lib/tenantPortalUrl';
 export * from './server/onboardingProgress';
 export * from './server/tenantAppBaseUrl';
-export {
-  getExperimentalFeaturesForTenant,
-  getTenantSettingsByTenantId,
-  getTenantTimezone,
-  initializeTenantSettings,
-} from './actions/tenant-settings-actions/tenantSettings.server';
 
 export async function getTenantForCurrentRequest(fallbackTenant?: string): Promise<string | null> {
   const contextTenant = getTenantContext() ?? null;

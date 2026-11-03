@@ -1,10 +1,12 @@
-import 'server-only';
-
 import { ensureMiscellaneousService, createTenantKnex, tenantDb } from '@alga-psa/db';
 import { featureFlags } from '@alga-psa/core/server';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { ExperimentalFeatures, TenantSettings } from './tenantSettingsActions';
+
+if (typeof window !== 'undefined') {
+  throw new Error('tenantSettings.server.ts can only be imported in a server runtime');
+}
 
 const AI_ASSISTANT_ACTIVATION_FLAG = 'ai-assistant-activation';
 const DEFAULT_EXPERIMENTAL_FEATURES: ExperimentalFeatures = { aiAssistant: false };

@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({ scoped: [] as string[], writes: [] as string[] }));
 
-vi.mock('server-only', () => ({}));
 vi.mock('@alga-psa/db', () => {
   const query = (tenant: string) => ({
     table: () => query(tenant),
@@ -28,6 +27,17 @@ import {
 
 describe('trusted tenant settings server operations', () => {
   beforeEach(() => { state.scoped.length = 0; state.writes.length = 0; });
+
+  it('rejects a browser runtime while allowing this Node test process to import the module', async () => {
+    vi.resetModules();
+    vi.stubGlobal('window', {});
+    try {
+      await expect(import('./tenantSettings.server')).rejects.toThrow('server runtime');
+    } finally {
+      vi.unstubAllGlobals();
+      vi.resetModules();
+    }
+  });
 
   it('retains explicit tenant selection for trusted reads, timezone lookup, and initialization', async () => {
     await expect(getTenantSettingsByTenantId('tenant-b')).resolves.toMatchObject({ tenant: 'tenant-b' });

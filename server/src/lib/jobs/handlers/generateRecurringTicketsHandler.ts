@@ -1,5 +1,5 @@
 import type { TenantSelector } from '@alga-psa/jobs/fanout';
-import { getTenantTimezone } from '@alga-psa/tenancy/server';
+import { getTenantTimezone } from '@alga-psa/tenancy/server/tenantSettings';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import {
   generateRecurringTicketsForTenant,
