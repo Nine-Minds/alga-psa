@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -30,7 +31,12 @@ describe('RmmAlertPredicateEditor', () => {
     };
     const onChange = vi.fn();
     render(<RmmAlertPredicateEditor value={nested} fields={RMM_ALERT_PREDICATE_FIELDS} onChange={onChange} t={(_key, fallback) => fallback ?? _key} />);
-    fireEvent.click(document.querySelector('#rmm-predicate-add-root')!);
+    // `<Button id=...>` registers the id with the UI reflection system rather than
+    // the DOM under jsdom (same observation as AccountingMappingDialog.targetKind.test.tsx),
+    // so address the control by role. The root group renders after its nested group,
+    // so its "Add condition" button is the last one.
+    const addCondition = screen.getAllByRole('button', { name: 'Add condition' });
+    fireEvent.click(addCondition[addCondition.length - 1]);
     expect(onChange).toHaveBeenCalledWith({
       ...nested,
       clauses: [...nested.clauses, { path: 'severity', operator: 'in', value: [] }],
