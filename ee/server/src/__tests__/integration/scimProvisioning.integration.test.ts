@@ -17,6 +17,117 @@ describe('SCIM provisioning database lifecycle', () => {
     await db.destroy();
   });
 
+  async function reactivationFixture(options: {
+    coManaged?: boolean;
+    deniedBy?: 'expired-entitlement' | 'ended-relationship' | 'full-allocation' | 'ordinary-license';
+  } = {}) {
+    const trx = await db.transaction();
+    const discovery = tenantDb(trx, '__scim_integration_discovery__');
+    const tenantRow = await discovery
+      .unscoped('tenants as t', 'SCIM integration test selects a tenant with no configured connection')
+      .whereNotExists(discovery.unscoped('scim_connections as c', 'SCIM reactivation test needs an unconfigured tenant')
+        .select(trx.raw('1')).whereRaw('c.tenant = t.tenant'))
+      .select('t.tenant').first();
+    if (!tenantRow?.tenant) throw new Error('SCIM integration test requires a tenant');
+
+    const tenant = tenantRow.tenant as string;
+    const customer = tenantDb(trx, tenant);
+    const userId = randomUUID();
+    const email = `scim-reactivate-${randomUUID()}@example.test`;
+    const connectionId = randomUUID();
+    const linkId = randomUUID();
+    const externalId = `entra-${randomUUID()}`;
+    await customer.table('tenants').where({ tenant }).update({
+      product_code: options.coManaged ? 'co_managed' : 'psa',
+      plan: 'pro',
+      licensed_user_count: options.deniedBy === 'ordinary-license' ? 1 : 20,
+    });
+    await customer.table('users').insert({ tenant, user_id: userId, username: email, email,
+      hashed_password: 'not-a-real-password-hash', user_type: 'internal', is_inactive: true });
+    const [connection] = await customer.table('scim_connections').insert({ tenant, connection_id: connectionId,
+      enabled: true, current_token_generation: 1 }).returning('*');
+    await customer.table('scim_user_links').insert({ tenant, link_id: linkId, connection_id: connectionId,
+      user_id: userId, external_id: externalId, observed_user_name: email, observed_primary_email: email,
+      upstream_active: false, link_state: 'active', scim_inactive_at: trx.fn.now() });
+
+    if (options.coManaged) {
+      const sponsorTenant = randomUUID();
+      const relationshipId = randomUUID();
+      const operationId = randomUUID();
+      const allocationId = randomUUID();
+      const allocationSeats = options.deniedBy === 'full-allocation' ? 1 : 100;
+      const sponsor = tenantDb(trx, sponsorTenant);
+      await sponsor.table('tenants').insert({ tenant: sponsorTenant, client_name: 'SCIM sponsor',
+        email: `sponsor-${sponsorTenant}@example.test`, plan: 'pro', product_code: 'psa' });
+      const expired = options.deniedBy === 'expired-entitlement';
+      await sponsor.table('co_managed_entitlements').insert({ tenant: sponsorTenant, source: 'hosted',
+        source_reference: randomUUID(), capacity: allocationSeats,
+        verified_at: expired ? new Date(Date.now() - 40 * 86400000) : new Date(),
+        valid_until: expired ? new Date(Date.now() - 40 * 86400000) : new Date(Date.now() + 3600000) });
+      await customer.table('co_management_relationships').insert({ tenant, relationship_id: relationshipId,
+        sponsor_tenant: sponsorTenant, sponsor_client_id: randomUUID(), state: options.deniedBy === 'ended-relationship' ? 'terminated' : 'active',
+        accepted_by: randomUUID(), accepted_at: trx.fn.now(), ended_at: options.deniedBy === 'ended-relationship' ? trx.fn.now() : null });
+      await sponsor.table('co_managed_provisioning_operations').insert({ tenant: sponsorTenant,
+        operation_id: operationId, allocation_id: allocationId, customer_tenant: tenant, relationship_id: relationshipId,
+        requested_by: randomUUID(), escalation_board_id: randomUUID(), customer_board_id: randomUUID(),
+        customer_client_id: randomUUID(), administrator_invitation_id: randomUUID(), request_fingerprint: 'a'.repeat(64),
+        request: {}, state: 'pending_acceptance' });
+      await sponsor.table('co_managed_allocations').insert({ tenant: sponsorTenant, allocation_id: allocationId,
+        operation_id: operationId, request_fingerprint: 'a'.repeat(64), customer_tenant: tenant,
+        relationship_id: relationshipId, seats: allocationSeats, state: 'active' });
+      if (options.deniedBy === 'full-allocation') {
+        const otherEmail = `existing-${randomUUID()}@example.test`;
+        await customer.table('users').insert({ tenant, user_id: randomUUID(), username: otherEmail, email: otherEmail,
+          hashed_password: 'not-a-real-password-hash', user_type: 'internal', is_inactive: false });
+      }
+    } else if (options.deniedBy === 'ordinary-license') {
+      const otherEmail = `existing-${randomUUID()}@example.test`;
+      await customer.table('users').insert({ tenant, user_id: randomUUID(), username: otherEmail, email: otherEmail,
+        hashed_password: 'not-a-real-password-hash', user_type: 'internal', is_inactive: false });
+    }
+
+    return { trx, tenant, userId, linkId, email, connection };
+  }
+
+  function serviceFor(fixture: Awaited<ReturnType<typeof reactivationFixture>>) {
+    return new ScimProvisioningService(fixture.trx, fixture.connection,
+      `https://example.test/api/scim/v2/${fixture.connection.connection_id}`);
+  }
+
+  const activePatch = [{ op: 'replace' as const, path: 'active', value: true }];
+
+  it.each([
+    ['expired sponsor entitlement', 'expired-entitlement'],
+    ['ended relationship', 'ended-relationship'],
+    ['exhausted live allocation', 'full-allocation'],
+  ] as const)('denies reactivation when co-managed admission fails: %s', async (_label, deniedBy) => {
+    const fixture = await reactivationFixture({ coManaged: true, deniedBy });
+    try {
+      await expect(serviceFor(fixture).patchUser(fixture.linkId, activePatch)).rejects.toMatchObject({ status: 409 });
+      expect(await tenantDb(fixture.trx, fixture.tenant).table('users').where({ user_id: fixture.userId }).first('is_inactive'))
+        .toMatchObject({ is_inactive: true });
+    } finally { await fixture.trx.rollback(); }
+  });
+
+  it('reactivates an eligible co-managed user and commits admission with the update', async () => {
+    const fixture = await reactivationFixture({ coManaged: true });
+    try {
+      const resource = await serviceFor(fixture).patchUser(fixture.linkId, activePatch);
+      expect(resource.active).toBe(true);
+      expect(await tenantDb(fixture.trx, fixture.tenant).table('users').where({ user_id: fixture.userId }).first('is_inactive'))
+        .toMatchObject({ is_inactive: false });
+    } finally { await fixture.trx.rollback(); }
+  });
+
+  it('keeps ordinary tenant license enforcement and rolls back the attempted activation', async () => {
+    const fixture = await reactivationFixture({ deniedBy: 'ordinary-license' });
+    try {
+      await expect(serviceFor(fixture).patchUser(fixture.linkId, activePatch)).rejects.toMatchObject({ status: 409 });
+      expect(await tenantDb(fixture.trx, fixture.tenant).table('users').where({ user_id: fixture.userId }).first('is_inactive'))
+        .toMatchObject({ is_inactive: true });
+    } finally { await fixture.trx.rollback(); }
+  });
+
   it('links one exact-email internal user and applies reversible lifecycle changes', async () => {
     const trx = await db.transaction();
     try {

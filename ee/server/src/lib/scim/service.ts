@@ -1,8 +1,9 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { CoManagedAdmissionError } from '@alga-psa/licensing';
 import {
+  admitInternalUserSeat,
   assertInternalUserSeatsWithinLimit,
-  checkInternalUserLicenseLimit,
   isInternalUserLicenseLimitRejected,
   lockInternalUserSeats,
 } from '@alga-psa/users/lib/internalUserLicenseGuard';
@@ -470,9 +471,20 @@ export class ScimProvisioningService {
         });
     } else if (link.scim_inactive_at) {
       if (user.is_inactive) {
-        const licenseCheck = await checkInternalUserLicenseLimit(trx, this.connection.tenant);
-        if (isInternalUserLicenseLimitRejected(licenseCheck)) {
-          throw new ScimError(409, licenseCheck.error);
+        try {
+          const admission = await admitInternalUserSeat(trx, this.connection.tenant, {
+            email: user.email ?? user.username,
+            existingUserId: user.user_id,
+          });
+          if (isInternalUserLicenseLimitRejected(admission)) {
+            throw new ScimError(409, admission.error);
+          }
+        } catch (error) {
+          if (error instanceof ScimError) throw error;
+          if (error instanceof CoManagedAdmissionError) {
+            throw new ScimError(409, error.message);
+          }
+          throw error;
         }
         await db.table('users').where('user_id', link.user_id).update({
           is_inactive: false,
