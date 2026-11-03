@@ -102,6 +102,7 @@ describe('sendInvoiceEmailAction sender plumbing', () => {
         contentType: 'application/pdf',
       })],
     }));
+    expect(mocks.hasPermission).toHaveBeenCalledWith(expect.anything(), 'invoice', 'send');
   });
 
   it.each([

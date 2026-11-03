@@ -108,6 +108,19 @@ describe('client billing actions', () => {
       metadata: expect.objectContaining({ invoice_count: 1 }),
     }));
     const payload = enqueueImmediateJobMock.mock.calls[0][1] as Record<string, unknown>;
+    expect(Object.keys(payload).sort()).toEqual(['invoiceIds', 'metadata', 'steps', 'tenantId', 'user_id']);
+    expect(payload.steps).toEqual([
+      {
+        stepName: 'PDF Generation for Invoice invoice-1',
+        type: 'pdf_generation',
+        metadata: { invoiceId: 'invoice-1', tenantId: 'tenant-1' },
+      },
+      {
+        stepName: 'Email Sending for Invoice invoice-1',
+        type: 'email_sending',
+        metadata: { invoiceId: 'invoice-1', tenantId: 'tenant-1' },
+      },
+    ]);
     expect(payload).not.toHaveProperty('senderId');
     expect(payload).not.toHaveProperty('customMessage');
   });
