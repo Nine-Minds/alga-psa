@@ -36,6 +36,15 @@
         "suggested": "Suggested",
         "toSave": "{{total}} to save"
       },
+      "customerMapping": {
+        "unlink": "Unlink",
+        "unlinkConfirm": {
+          "title": "Unlink {{client}} from QuickBooks?",
+          "body": "{{client}} stops exporting to QuickBooks customer {{customer}}. Nothing changes in QuickBooks, and you can link it again from this list at any time.",
+          "confirm": "Unlink",
+          "cancel": "Keep link"
+        }
+      },
       "dialog": {
         "cancel": "Cancel",
         "enterPlaceholder": "Enter {{field}}...",
@@ -2107,11 +2116,18 @@
         "environment": "Intuit Environment",
         "environmentProduction": "Production",
         "environmentSandbox": "Sandbox",
+        "environmentHint": "Production connects to real QuickBooks companies. Sandbox connects to an Intuit test company, so you can try exports without touching real books.",
+        "environmentLockedHint": "Disconnect QuickBooks before switching environments. The connected company and its tokens exist only in the environment they were authorized in.",
+        "environmentSandboxKeysTitle": "Sandbox needs your own Intuit app",
+        "environmentSandboxKeysDescription": "Intuit sandbox companies only accept the Development keys of an Intuit app you control. The shared app this deployment provides uses Production keys, so register your own app and save its Development keys below before connecting.",
+        "environmentSavedSandbox": "QuickBooks will now connect to an Intuit sandbox company. Connect with your own Intuit app's Development keys.",
+        "environmentSavedProduction": "QuickBooks will now connect to real QuickBooks companies.",
         "errors": {
           "automatedSalesTax": "Failed to update Automated Sales Tax mode.",
           "disconnect": "Failed to disconnect QuickBooks.",
           "load": "Failed to load QuickBooks settings.",
-          "saveCredentials": "Failed to save QuickBooks credentials."
+          "saveCredentials": "Failed to save QuickBooks credentials.",
+          "environment": "Failed to change the Intuit environment."
         },
         "howItWorksDescription": "Connect your QuickBooks company by signing in to Intuit, and AlgaPSA will use it as the default live context for exports and mappings. The Intuit App card below tells you whether your deployment already provides the app that sign-in goes through, or whether you need to register one first.",
         "howItWorksTitle": "How live QuickBooks works in this release",
@@ -2143,6 +2159,7 @@
         "credentialSource": {
           "app": "This deployment provides a shared Intuit app, so you can connect QuickBooks without registering one. Skip this card and click Connect QuickBooks below.",
           "none": "No Intuit app is available yet. Register one with Intuit before you can connect.",
+          "noneSandbox": "Sandbox needs an Intuit app of your own. Register one and save its Development keys before you can connect.",
           "tenant": "This tenant connects through its own Intuit app, using the credentials stored below. To rotate a key, paste the new value and save.",
           "appTitle": "No credentials needed"
         },

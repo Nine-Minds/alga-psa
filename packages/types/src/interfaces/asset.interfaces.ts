@@ -116,6 +116,8 @@ export interface Asset {
 export interface AssetClientInfo {
   client_id: string;
   client_name: string;
+  /** Attached per page by listAssets (D5); undefined on other read paths. */
+  client_logo_url?: string | null;
 }
 
 // Extension table interfaces
@@ -608,6 +610,8 @@ export interface AssetListResponse {
   total: number;
   page: number;
   limit: number;
+  /** Readable asset counts for the active filters, excluding asset_type and pagination. */
+  asset_type_counts: Record<string, number>;
   client_summary?: ClientSummary;
 }
 

@@ -351,6 +351,23 @@ describe("Contract simulator – migrated-schema integration", () => {
     );
   });
 
+  it("carries the live billing identity on a live scenario, and still simulates old JSON without it", async () => {
+    const scenario = fixture.scenario;
+
+    expect(scenario.billing_identity).toBeTruthy();
+    expect(scenario.billing_identity!.profiles).toHaveLength(1);
+    expect(scenario.billing_identity!.terms.days).toBeGreaterThan(-1);
+    expect(scenario.billing_identity!.fields.find((f) => f.key === "currency")).toBeDefined();
+
+    // Scenarios persisted before the field existed must load and price identically.
+    const { billing_identity: _omit, ...legacy } = scenario;
+    const legacyScenario = JSON.parse(JSON.stringify(legacy)) as ContractScenario;
+    expect("billing_identity" in legacyScenario).toBe(false);
+    const withField = await simulateContractScenario(context.db, context.tenantId, scenario);
+    const withoutField = await simulateContractScenario(context.db, context.tenantId, legacyScenario);
+    expect(withoutField.periods.map((p) => p.total)).toEqual(withField.periods.map((p) => p.total));
+  });
+
   it("snapshots and simulates a customer-shaped contract template for profile and client contexts", async () => {
     const { templateId, hourlyLineId, hourlyServices } =
       await seedCustomerShapedTemplate(context, fixture);

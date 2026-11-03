@@ -7,6 +7,7 @@ const getCurrentTenantProductMock = vi.fn();
 const getCurrentUserMock = vi.fn();
 const getContactByContactNameIdMock = vi.fn();
 const getAllClientsMock = vi.fn();
+const getClientByIdMock = vi.fn();
 const getContactPortalPermissionsMock = vi.fn();
 const getDocumentsByEntityMock = vi.fn();
 const getInteractionsForEntityMock = vi.fn();
@@ -31,6 +32,7 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
 vi.mock('@alga-psa/clients/actions', () => ({
   getContactByContactNameId: getContactByContactNameIdMock,
   getAllClients: getAllClientsMock,
+  getClientById: getClientByIdMock,
   getContactPortalSummary: getContactPortalSummaryMock,
   getContactRelatedWork: getContactRelatedWorkMock,
   getContactStats: getContactStatsMock,
@@ -103,7 +105,7 @@ describe('MSP contact detail page product composition', () => {
     vi.clearAllMocks();
     getCurrentUserMock.mockResolvedValue({ user_id: 'user-1' });
     getContactByContactNameIdMock.mockResolvedValue({ contact_name_id: 'contact-1', full_name: 'Test Contact' });
-    getAllClientsMock.mockResolvedValue([{ client_id: 'client-1' }]);
+    getClientByIdMock.mockResolvedValue({ client_id: 'client-1', client_name: 'Acme' });
     getContactPortalPermissionsMock.mockResolvedValue({ canInvite: true, canUpdateRoles: true, canRead: true });
     getDocumentsByEntityMock.mockResolvedValue([{ document_id: 'doc-1' }]);
     getInteractionsForEntityMock.mockResolvedValue([]);
@@ -125,6 +127,20 @@ describe('MSP contact detail page product composition', () => {
     expect(props.showRelatedWork).toBe(false);
     expect(props.relatedWork).toBeNull();
     expect(getContactRelatedWorkMock).not.toHaveBeenCalled();
+  });
+
+  it('loads only the contact\'s own client and never the full client list', async () => {
+    getCurrentTenantProductMock.mockResolvedValue('psa');
+    getContactByContactNameIdMock.mockResolvedValue({
+      contact_name_id: 'contact-1',
+      full_name: 'Test Contact',
+      client_id: 'client-1',
+    });
+
+    await getRenderedBentoLayoutProps();
+
+    expect(getClientByIdMock).toHaveBeenCalledWith('client-1');
+    expect(getAllClientsMock).not.toHaveBeenCalled();
   });
 
   it('keeps PSA contact detail composition for PSA tenants', async () => {
