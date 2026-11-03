@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import knexFactory, { type Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
@@ -15,12 +15,37 @@ let admin: Knex;
 let db: Knex;
 const tenantA = '00000000-0000-4000-8000-000000000001';
 const tenantB = '00000000-0000-4000-8000-000000000002';
+const sentinelTenant = '00000000-0000-4000-8000-000000000099';
+
+const quoteIdentifier = (identifier: string) => `"${identifier.replaceAll('"', '""')}"`;
+const fixtureTable = (name: string) => `${quoteIdentifier(schema)}.${quoteIdentifier(name)}`;
+
+async function expectPublicSentinelsIntact() {
+  const bindings = await admin.raw(`
+    SELECT stripe_customer_external_id, tenant
+    FROM public.stripe_customer_bindings
+    WHERE stripe_customer_external_id = 'cus_public_sentinel'`);
+  const customers = await admin.raw(`
+    SELECT stripe_customer_external_id, tenant
+    FROM public.stripe_customers
+    WHERE stripe_customer_external_id = 'cus_public_sentinel'`);
+  const constraint = await admin.raw(`
+    SELECT convalidated
+    FROM pg_constraint
+    WHERE conname = 'stripe_customer_sentinel_fk'
+      AND conrelid = 'public.stripe_customers'::regclass
+      AND contype = 'f'`);
+
+  expect(bindings.rows).toEqual([{ stripe_customer_external_id: 'cus_public_sentinel', tenant: sentinelTenant }]);
+  expect(customers.rows).toEqual([{ stripe_customer_external_id: 'cus_public_sentinel', tenant: sentinelTenant }]);
+  expect(constraint.rows).toEqual([{ convalidated: true }]);
+}
 
 async function createFixture(options: { nullableExternalId?: boolean } = {}) {
-  await db.raw('DROP TABLE IF EXISTS stripe_customers CASCADE');
-  await db.raw('DROP TABLE IF EXISTS stripe_customer_bindings CASCADE');
+  await db.raw(`DROP TABLE IF EXISTS ${fixtureTable('stripe_customers')} CASCADE`);
+  await db.raw(`DROP TABLE IF EXISTS ${fixtureTable('stripe_customer_bindings')} CASCADE`);
   await db.raw(`
-    CREATE TABLE stripe_customers (
+    CREATE TABLE ${fixtureTable('stripe_customers')} (
       tenant uuid NOT NULL,
       stripe_customer_id uuid NOT NULL DEFAULT gen_random_uuid(),
       stripe_customer_external_id text ${options.nullableExternalId ? '' : 'NOT NULL'},
@@ -28,7 +53,7 @@ async function createFixture(options: { nullableExternalId?: boolean } = {}) {
       UNIQUE (tenant, stripe_customer_external_id)
     )`);
   if (isCitus) {
-    await db.raw("SELECT create_distributed_table('stripe_customers', 'tenant')");
+    await db.raw(`SELECT create_distributed_table('${schema}.stripe_customers', 'tenant')`);
   }
 }
 
@@ -68,28 +93,63 @@ suite('Stripe customer binding migration ownership enforcement', () => {
   beforeAll(async () => {
     admin = knexFactory({ client: 'pg', connection: connectionString, pool: { min: 1, max: 4 } });
     await admin.raw(`CREATE SCHEMA "${schema}"`);
+    if (isCitus) await admin.raw('CREATE EXTENSION IF NOT EXISTS citus');
+    await admin.raw(`
+      CREATE TABLE public.stripe_customer_bindings (
+        stripe_customer_external_id text NOT NULL PRIMARY KEY,
+        tenant uuid NOT NULL,
+        UNIQUE (stripe_customer_external_id, tenant)
+      )`);
+    await admin.raw(`
+      CREATE TABLE public.stripe_customers (
+        tenant uuid NOT NULL,
+        stripe_customer_external_id text NOT NULL,
+        CONSTRAINT stripe_customer_sentinel_fk
+          FOREIGN KEY (stripe_customer_external_id, tenant)
+          REFERENCES public.stripe_customer_bindings (stripe_customer_external_id, tenant)
+      )`);
+    await admin.raw(
+      `INSERT INTO public.stripe_customer_bindings (stripe_customer_external_id, tenant) VALUES ('cus_public_sentinel', ?);`,
+      [sentinelTenant]
+    );
+    await admin.raw(
+      `INSERT INTO public.stripe_customers (stripe_customer_external_id, tenant) VALUES ('cus_public_sentinel', ?);`,
+      [sentinelTenant]
+    );
+    await expectPublicSentinelsIntact();
+
     db = knexFactory({
       client: 'pg',
       connection: {
         connectionString,
-        options: `-c search_path=${schema},public`,
+        options: `-c search_path=${schema}`,
         application_name: 'stripe-binding-migration-regression',
       },
       pool: { min: 1, max: 6 },
     });
-    if (isCitus) await db.raw('CREATE EXTENSION IF NOT EXISTS citus');
     await db.raw('SELECT 1');
   });
 
   afterAll(async () => {
     await db?.destroy();
     if (admin) {
-      await admin.raw(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
-      await admin.destroy();
+      try {
+        await admin.raw(`DROP SCHEMA IF EXISTS ${quoteIdentifier(schema)} CASCADE`);
+        await expectPublicSentinelsIntact();
+      } finally {
+        await admin.raw('DROP TABLE IF EXISTS public.stripe_customers CASCADE');
+        await admin.raw('DROP TABLE IF EXISTS public.stripe_customer_bindings CASCADE');
+        await admin.destroy();
+      }
     }
   });
 
-  beforeEach(async () => createFixture());
+  beforeEach(async () => {
+    await createFixture();
+    await expectPublicSentinelsIntact();
+  });
+
+  afterEach(async () => expectPublicSentinelsIntact());
 
   it('backfills valid mappings and enforces matching bindings for later writes', async () => {
     await db('stripe_customers').insert([
@@ -140,7 +200,7 @@ suite('Stripe customer binding migration ownership enforcement', () => {
 
   it('rejects stale conflicting bindings without leaving an FK or accepting an owner', async () => {
     await db('stripe_customers').insert({ tenant: tenantA, stripe_customer_external_id: 'cus_stale' });
-    await db.schema.createTable('stripe_customer_bindings', (table) => {
+    await db.schema.withSchema(schema).createTable('stripe_customer_bindings', (table) => {
       table.text('stripe_customer_external_id').notNullable().primary();
       table.uuid('tenant').notNullable();
       table.timestamp('bound_at', { useTz: true }).notNullable().defaultTo(db.fn.now());
@@ -159,7 +219,7 @@ suite('Stripe customer binding migration ownership enforcement', () => {
 
   it('upgrades an installation where the original binding migration is already recorded', async () => {
     await db('stripe_customers').insert({ tenant: tenantA, stripe_customer_external_id: 'cus_forward' });
-    await db.schema.createTable('stripe_customer_bindings', (table) => {
+    await db.schema.withSchema(schema).createTable('stripe_customer_bindings', (table) => {
       table.text('stripe_customer_external_id').notNullable().primary();
       table.uuid('tenant').notNullable();
       table.timestamp('bound_at', { useTz: true }).notNullable().defaultTo(db.fn.now());
@@ -210,13 +270,13 @@ suite('Stripe customer binding migration ownership enforcement', () => {
   });
 
   it('fences binding-first application writers in the same lock order they use', async () => {
-    await db.schema.createTable('stripe_customer_bindings', (table) => {
+    await db.schema.withSchema(schema).createTable('stripe_customer_bindings', (table) => {
       table.text('stripe_customer_external_id').notNullable().primary();
       table.uuid('tenant').notNullable();
       table.timestamp('bound_at', { useTz: true }).notNullable().defaultTo(db.fn.now());
       table.unique(['stripe_customer_external_id', 'tenant'], 'stripe_customer_bindings_owner_key');
     });
-    if (isCitus) await db.raw("SELECT create_reference_table('stripe_customer_bindings')");
+    if (isCitus) await db.raw(`SELECT create_reference_table('${schema}.stripe_customer_bindings')`);
 
     const writer = await db.transaction();
     await writer('stripe_customer_bindings').insert({ stripe_customer_external_id: 'cus_binding_race', tenant: tenantA });

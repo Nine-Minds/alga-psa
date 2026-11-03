@@ -35,17 +35,17 @@ async function ensureBindingTable(knex) {
   }
 
   const hasReferenceFunction = await knex.raw(
-    `SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'create_reference_table') AS present`
+    `SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_proc WHERE proname = 'create_reference_table') AS present`
   );
   if (hasReferenceFunction.rows?.[0]?.present) {
     const isDistributed = await knex.raw(
-      'SELECT EXISTS (SELECT 1 FROM pg_dist_partition WHERE logicalrelid = ?::regclass) AS present',
+      'SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_dist_partition WHERE logicalrelid = ?::regclass) AS present',
       [TABLE]
     );
     if (!isDistributed.rows?.[0]?.present) {
       // Citus requires reference-table conversion to finish before distributed
       // table foreign-key DDL, so this intentionally precedes the transaction.
-      await knex.raw('SELECT create_reference_table(?)', [TABLE]);
+      await knex.raw('SELECT pg_catalog.create_reference_table(?)', [TABLE]);
     }
   }
 }
@@ -57,11 +57,11 @@ async function enforceOwnership(knex) {
     await trx.raw("SELECT pg_advisory_xact_lock(hashtext('stripe_customer_bindings_migration'))");
 
     const citusCatalog = await trx.raw(
-      `SELECT to_regclass('pg_dist_partition') IS NOT NULL AS present`
+      `SELECT to_regclass('pg_catalog.pg_dist_partition') IS NOT NULL AS present`
     );
     if (citusCatalog.rows?.[0]?.present) {
       const isDistributed = await trx.raw(
-        "SELECT EXISTS (SELECT 1 FROM pg_dist_partition WHERE logicalrelid = 'stripe_customers'::regclass) AS present"
+        "SELECT EXISTS (SELECT 1 FROM pg_catalog.pg_dist_partition WHERE logicalrelid = 'stripe_customers'::regclass) AS present"
       );
       if (isDistributed.rows?.[0]?.present) {
         // Citus requires sequential shard modification for FK DDL involving a
