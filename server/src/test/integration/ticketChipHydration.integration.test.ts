@@ -7,6 +7,11 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { TICKET_STATUS_FILTER_ALL } from '@alga-psa/tickets/lib';
 import type { ITicketListFilters } from '@alga-psa/types';
+import { loadTicketCandidates, ticketSmartSearch } from '../../../../ee/server/src/services/smartSearch/entities/ticket';
+import { scoreBatch } from '../../../../ee/server/src/services/smartSearch/scoreBatch';
+import { hiddenTicketFields } from '@alga-psa/tickets/lib/ticketFieldProjection';
+import { runWithTenant } from '@alga-psa/db';
+import * as bundleService from '@alga-psa/authorization/bundles/service';
 
 /**
  * Chip tag hydration (T019, T020): list rows and expanded bundle children carry contact_tags and
@@ -108,9 +113,21 @@ async function seed() {
     board_id: board, status_id: status, priority_id: priority, entered_by: actor,
     entered_at: new Date(Date.UTC(2026, 0, 1, 0, 0, n)), ...extra,
   });
-  await db('tickets').insert([t(ids.M, 1, ids.k2), t(ids.A, 2, ids.k1), t(ids.B, 3, ids.k2)]);
+  await db('tickets').insert([
+    t(ids.M, 1, ids.k2, { assigned_to: actor }),
+    t(ids.A, 2, ids.k1, { title: 'DB-SECRET-TITLE', attributes: { description: 'DB-SECRET-DESCRIPTION' }, assigned_to: actor }),
+    t(ids.B, 3, ids.k2),
+  ]);
   await db('tickets').insert(t(ids.CH, 4, ids.k1, { master_ticket_id: ids.M }));
-  await db('tag_mappings').insert({ tenant, tag_id: defs.urgent, tagged_id: ids.CH, tagged_type: 'ticket' });
+  await db('tag_mappings').insert([
+    { tenant, tag_id: defs.urgent, tagged_id: ids.CH, tagged_type: 'ticket' },
+    { tenant, tag_id: defs.urgent, tagged_id: ids.M, tagged_type: 'ticket' },
+  ]);
+  await db('app_search_index').insert({
+    tenant, object_type: 'ticket_comment', object_id: uuidv4(), parent_type: 'ticket', parent_id: ids.A,
+    title: 'DB secret comment', body: 'DB-SECRET-COMMENT', url: `/tickets/${ids.A}`,
+    search_vector: db.raw("to_tsvector('english', ?)", ['DB-SECRET-COMMENT']), source_updated_at: new Date(),
+  });
 }
 
 describeDb('ticket chip tag hydration (DB)', () => {
@@ -194,7 +211,10 @@ describeDb('ticket chip tag hydration (DB)', () => {
     expect(reloaded.tickets).toEqual([ids.CH, ids.A].map(id =>
       listed.tickets.find((row: any) => row.ticket_id === id)
     ));
-    expect(reloaded.metadata).toEqual(listed.metadata);
+    expect(reloaded.metadata).toEqual({
+      ...listed.metadata,
+      ticketTags: Object.fromEntries(Object.entries(listed.metadata.ticketTags).filter(([id]) => [ids.CH, ids.A].includes(id))),
+    });
     expect(reloaded.metadata.ticketTags[ids.CH]).toEqual([
       expect.objectContaining({ tag_text: 'urgent', tagged_id: ids.CH, tagged_type: 'ticket' }),
     ]);
@@ -210,6 +230,56 @@ describeDb('ticket chip tag hydration (DB)', () => {
     } finally {
       authMocks.hasPermission.mockResolvedValue(true);
     }
+  });
+
+  it('projects real candidate SQL before scoring and reprojects derived hydration fields and metadata', async () => {
+    const scorerRedactions = ['client_id', 'assigned_to', 'attributes', 'title'];
+    const captured: { value?: unknown } = {};
+    const candidates = await runWithTenant(ids.tenant, () => db.transaction((trx) => loadTicketCandidates(
+      trx, ids.tenant, authMocks.user, [ids.A], new Map([[ids.A, scorerRedactions]])
+    )));
+    await scoreBatch({ systemOne: async (request: unknown) => {
+      captured.value = request;
+      return { model: 'db-test', answers: { c0: { type: 'noul', noul: 0.9 } }, usage: { input_tokens: 1 } } as never;
+    } } as never, ticketSmartSearch.relevance, 'incident', candidates, new AbortController().signal);
+    const scorerInput = JSON.stringify(captured.value);
+    for (const hidden of ['DB-SECRET-TITLE', 'DB-SECRET-DESCRIPTION', 'Client One', 'Actor Chips', 'DB-SECRET-COMMENT']) {
+      expect(scorerInput).not.toContain(hidden);
+    }
+    expect(scorerInput).toContain('Hidden ticket');
+    expect(scorerInput).toContain('comments":[]');
+
+    const freshRules = vi.spyOn(bundleService, 'resolveBundleNarrowingRulesForEvaluation').mockResolvedValue([
+      { id: 'fresh-redactions', resource: 'ticket', action: 'read', constraintKey: 'hide_sensitive_fields', redactedFields: ['title', 'master_ticket_id', 'latest_activity_at', 'latest_activity_actor', 'ticket_tags'] },
+    ] as never);
+    let hydrated: any;
+    try {
+      hydrated = await optimized.loadTicketListItemsByIds(base, [ids.M], {
+        [ids.M]: ['client_id', 'assigned_to'],
+      });
+    } finally {
+      freshRules.mockRestore();
+    }
+    expect(hydrated.tickets).toHaveLength(1);
+    const master = hydrated.tickets[0];
+    expect(master.client_id).toBeNull();
+    expect(master.assigned_to).toBeNull();
+    expect(master.title).toBe('Hidden ticket');
+    expect(master.client_logo_url).toBeNull();
+    expect(master.bundle_child_count).toBeNull();
+    expect(master.bundle_open_child_count).toBeNull();
+    expect(master.bundle_distinct_client_count).toBeNull();
+    expect(master.latest_activity_at).toBeNull();
+    expect(master.latest_activity_actor).toBeNull();
+    expect(hydrated.metadata.agentAvatarUrls).toEqual({});
+    expect(hydrated.metadata.ticketTags[ids.M]).toBeUndefined();
+  });
+
+  it('recognizes derived actor redaction without inventing a wildcard resource marker', () => {
+    const hidden = hiddenTicketFields(['latest_activity_actor']);
+    expect(hidden).toContain('latest_activity_actor');
+    expect(hidden).not.toContain('*');
+    expect(hidden).not.toContain('tickets');
   });
 
   it('projected tags follow rule order on list rows, reloaded rows and ticket details', async () => {

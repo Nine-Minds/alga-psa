@@ -109,7 +109,7 @@ import { compilePredicateFragment } from '@alga-psa/predicates/sql';
 import type { PredicateGroup } from '@alga-psa/predicates';
 import { resolveTicketTagIdsByText } from '../lib/ticketTagFilter';
 import { createTicketQuerySchema } from '../lib/ticketQuerySchema';
-import { hiddenTicketFields } from '../lib/ticketFieldProjection';
+import { hiddenTicketFields, isTicketFieldHidden, projectTicketRow, TICKET_FIELD_PROJECTIONS } from '../lib/ticketFieldProjection';
 import { ticketFiltersToPredicates, type TicketFilterCodecContext } from '../lib/ticketFilterPredicates';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
@@ -343,11 +343,11 @@ async function createTicketAuthorizationContext(
   };
 }
 
-async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?: string | null }>(
+async function authorizeTicketRowsWithRedactions<T extends Partial<ITicket> & { ticket_id?: string | null }>(
   trx: Knex.Transaction,
   context: Awaited<ReturnType<typeof createTicketAuthorizationContext>>,
   tickets: T[]
-): Promise<T[]> {
+): Promise<Array<{ ticket: T; redactedFields: string[] }>> {
 
   const decisions = await Promise.all(
     tickets.map((ticket) => {
@@ -371,7 +371,20 @@ async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?
     })
   );
 
-  return tickets.filter((_, index) => decisions[index]?.allowed);
+  return tickets.flatMap((ticket, index) => {
+    const decision = decisions[index] as (typeof decisions)[number] & { redactedFields?: string[] } | undefined;
+    return decision?.allowed
+      ? [{ ticket, redactedFields: decision.redactedFields ?? [] }]
+      : [];
+  });
+}
+
+async function filterAuthorizedTickets<T extends Partial<ITicket> & { ticket_id?: string | null }>(
+  trx: Knex.Transaction,
+  context: Awaited<ReturnType<typeof createTicketAuthorizationContext>>,
+  tickets: T[]
+): Promise<T[]> {
+  return (await authorizeTicketRowsWithRedactions(trx, context, tickets)).map(({ ticket }) => ticket);
 }
 
 type TicketAuthorizationContext = Awaited<ReturnType<typeof createTicketAuthorizationContext>>;
@@ -1855,7 +1868,7 @@ function buildTicketListItemsQuery(
       nullable('is_closed', 'boolean', 't.is_closed'),
       hiddenFields.has('attributes') ? trx.raw('NULL::jsonb as attributes')
         : hiddenFields.has('description') ? trx.raw("jsonb_set(COALESCE(t.attributes, '{}'::jsonb), '{description}', 'null'::jsonb) as attributes") : 't.attributes',
-      nullable('master_ticket_id', 'uuid', 't.master_ticket_id'), 't.tenant',
+      nullable('master_ticket_id', 'uuid', 't.master_ticket_id'), nullable('tenant', 'uuid', 't.tenant'),
       nullable('itil_impact', 'text', 't.itil_impact'), nullable('itil_urgency', 'text', 't.itil_urgency'), nullable('itil_priority_level', 'integer', 't.itil_priority_level'),
       nullable('response_state', 'text', 't.response_state'), nullable('ticket_origin', 'text', 't.ticket_origin'),
       nullable('sla_policy_id', 'uuid', 't.sla_policy_id'), nullable('sla_started_at', 'timestamptz', 't.sla_started_at'),
@@ -1863,9 +1876,9 @@ function buildTicketListItemsQuery(
       nullable('sla_resolution_due_at', 'timestamptz', 't.sla_resolution_due_at'), nullable('sla_resolution_at', 'timestamptz', 't.sla_resolution_at'), nullable('sla_resolution_met', 'boolean', 't.sla_resolution_met'),
       nullable('sla_paused_at', 'timestamptz', 't.sla_paused_at'), nullable('sla_total_pause_minutes', 'integer', 't.sla_total_pause_minutes'),
       // Bundle stats from pre-aggregated JOIN
-      trx.raw('COALESCE(bs.bundle_child_count, 0) as bundle_child_count'),
-      trx.raw('COALESCE(bs.bundle_open_child_count, 0) as bundle_open_child_count'),
-      trx.raw(`COALESCE(
+      hiddenFields.has('bundle_child_count') ? trx.raw('NULL::integer as bundle_child_count') : trx.raw('COALESCE(bs.bundle_child_count, 0) as bundle_child_count'),
+      hiddenFields.has('bundle_open_child_count') ? trx.raw('NULL::integer as bundle_open_child_count') : trx.raw('COALESCE(bs.bundle_open_child_count, 0) as bundle_open_child_count'),
+      hiddenFields.has('bundle_distinct_client_count') ? trx.raw('NULL::integer as bundle_distinct_client_count') : trx.raw(`COALESCE(
         (SELECT COUNT(DISTINCT cid) FROM unnest(
           array_append(COALESCE(bs.child_client_ids, ARRAY[]::uuid[]), t.client_id)
         ) AS cid WHERE cid IS NOT NULL),
@@ -1890,7 +1903,7 @@ function buildTicketListItemsQuery(
       hiddenFields.has('additional_agents') ? trx.raw("'[]'::json as additional_agents") : trx.raw("COALESCE(ags.additional_agents, '[]'::json) as additional_agents"),
       // Same expression the latest_activity_at sort orders by, so the column
       // renders exactly the value the ordering used.
-      trx.raw(`${latestActivity.sql} as latest_activity_at`, latestActivity.bindings),
+      hiddenFields.has('latest_activity_at') ? trx.raw('NULL::timestamptz as latest_activity_at') : trx.raw(`${latestActivity.sql} as latest_activity_at`, latestActivity.bindings),
     );
 }
 
@@ -1992,9 +2005,12 @@ async function attachLatestActivityActors(
   trx: Knex.Transaction,
   tenant: string,
   ticketListItems: ITicketListItem[],
-  ticketIds: string[]
+  ticketIds: string[],
+  redactions: ReadonlyMap<string, readonly string[]> = new Map()
 ): Promise<void> {
-  if (ticketIds.length === 0) {
+  const visibleItems = ticketListItems.filter((ticket) => !hiddenTicketFields(redactions.get(ticket.ticket_id!) ?? []).has('latest_activity_actor'));
+  const visibleIds = visibleItems.map((ticket) => ticket.ticket_id!).filter(Boolean);
+  if (visibleIds.length === 0) {
     return;
   }
 
@@ -2013,7 +2029,7 @@ async function attachLatestActivityActors(
       WHERE tenant = ? AND ticket_id = ANY(?)
         AND deleted_at IS NULL AND publish_state = 'published'
       ORDER BY ticket_id, created_at DESC`,
-    [tenant, ticketIds]
+    [tenant, visibleIds]
   )).rows;
 
   const latestCommentByTicket = new Map<string, (typeof commentRows)[number]>();
@@ -2024,7 +2040,7 @@ async function attachLatestActivityActors(
     if (comment.user_id) userIds.add(comment.user_id);
     if (comment.contact_id) contactIds.add(comment.contact_id);
   }
-  for (const ticket of ticketListItems) {
+  for (const ticket of visibleItems) {
     if (ticket.updated_by) userIds.add(ticket.updated_by);
     if (ticket.entered_by) userIds.add(ticket.entered_by);
   }
@@ -2053,7 +2069,7 @@ async function attachLatestActivityActors(
     names.contacts[contact.contact_name_id] = contact.full_name;
   }
 
-  for (const ticket of ticketListItems) {
+  for (const ticket of visibleItems) {
     ticket.latest_activity_actor = resolveLatestActivityActor(
       ticket,
       latestCommentByTicket.get(ticket.ticket_id as string) ?? null,
@@ -2065,7 +2081,8 @@ async function attachLatestActivityActors(
 async function enrichTicketListItems(
   trx: Knex.Transaction,
   tenant: string,
-  ticketListItems: ITicketListItem[]
+  ticketListItems: ITicketListItem[],
+  redactions: ReadonlyMap<string, readonly string[]> = new Map()
 ): Promise<TicketListRowsWithMetadata> {
   // Fetch metadata in parallel: avatar URLs, team avatar URLs, ticket tags
   const ticketIds = ticketListItems
@@ -2110,7 +2127,7 @@ async function enrichTicketListItems(
     teamIds.size > 0
       ? getEntityImageUrlsBatch('team', Array.from(teamIds), tenant)
       : Promise.resolve(new Map<string, string | null>()),
-    ticketIds.length > 0
+    ticketIds.filter((id) => !hiddenTicketFields(redactions.get(id) ?? []).has('ticket_tags')).length > 0
       ? tenantDb(trx, tenant)
           .tenantJoin(
             tenantScopedTable(trx, 'tag_mappings as tm', tenant),
@@ -2118,7 +2135,7 @@ async function enrichTicketListItems(
             'tm.tag_id',
             'td.tag_id'
           )
-          .whereIn('tm.tagged_id', ticketIds)
+          .whereIn('tm.tagged_id', ticketIds.filter((id) => !hiddenTicketFields(redactions.get(id) ?? []).has('ticket_tags')))
           .where('tm.tagged_type', 'ticket')
           .select(
             'tm.mapping_id',
@@ -2147,7 +2164,17 @@ async function enrichTicketListItems(
       : null;
   });
 
-  await attachLatestActivityActors(trx, tenant, ticketListItems, ticketIds);
+  await attachLatestActivityActors(trx, tenant, ticketListItems, ticketIds, redactions);
+
+  // Enrichment can add derived actor/avatar/tag values after SQL projection. Apply the same
+  // semantic projection to the final row before any value or metadata is returned.
+  const projectedRows = ticketListItems.flatMap((ticket) => {
+    const projected = projectTicketRow(
+      ticket as unknown as Record<string, unknown>,
+      redactions.get(ticket.ticket_id!) ?? []
+    );
+    return projected ? [projected as unknown as ITicketListItem] : [];
+  });
 
   // Convert Maps to Records for serialization
   const agentAvatarUrls: Record<string, string | null> = {};
@@ -2173,12 +2200,20 @@ async function enrichTicketListItems(
     }
     ticketTags[tag.tagged_id].push(tagObj);
   });
+  const finalIds = new Set(projectedRows.map((ticket) => ticket.ticket_id));
+  const finalAgents = new Set(projectedRows.flatMap((ticket) => [ticket.assigned_to, ...(ticket.additional_agents ?? []).map((agent) => agent.user_id)].filter((id): id is string => Boolean(id))));
+  const finalTeams = new Set(projectedRows.flatMap((ticket) => ticket.assigned_team_id ? [ticket.assigned_team_id] : []));
+  const finalTags = Object.fromEntries(Object.entries(ticketTags).filter(([id]) => {
+    const rowRedactions = redactions.get(id) ?? [];
+    const tagProjection = TICKET_FIELD_PROJECTIONS.find((projection) => projection.field === 'ticket_tags')!;
+    return finalIds.has(id) && !isTicketFieldHidden(rowRedactions, tagProjection);
+  }));
   return {
-    tickets: ticketListItems as ITicketListItem[],
+    tickets: projectedRows,
     metadata: {
-      agentAvatarUrls,
-      teamAvatarUrls,
-      ticketTags,
+      agentAvatarUrls: Object.fromEntries(Object.entries(agentAvatarUrls).filter(([id]) => finalAgents.has(id))),
+      teamAvatarUrls: Object.fromEntries(Object.entries(teamAvatarUrls).filter(([id]) => finalTeams.has(id))),
+      ticketTags: finalTags,
     },
   };
 }
@@ -2371,11 +2406,26 @@ export const loadTicketListItemsByIds = withAuth(async (
         user as IUserWithRoles
       );
 
+      // Evaluate the kernel against the unprojected authorization record first. The response
+      // projection must never influence access, and caller redactions may be stale by hydration.
+      const authorizationRecords = await tenantScopedTable(trx, 'tickets', tenant)
+        .whereIn('ticket_id', requestedIds)
+        .select('ticket_id', 'assigned_to', 'entered_by', 'client_id', 'board_id', 'assigned_team_id',
+          'contact_name_id', 'billing_profile_id', 'attributes');
+      const freshDecisions = await authorizeTicketRowsWithRedactions(trx, authorizationContext, authorizationRecords);
+      const freshById = new Map(freshDecisions.map(({ ticket, redactedFields }) => [ticket.ticket_id!, redactedFields] as const));
+      const redactionsById = new Map<string, string[]>();
+      for (const id of requestedIds) {
+        if (!freshById.has(id)) continue;
+        redactionsById.set(id, [...new Set([...(callerRedactions?.[id] ?? []), ...(freshById.get(id) ?? [])])]);
+      }
+      const authorizedIds = requestedIds.filter((id) => redactionsById.has(id));
+
       const scopedBaseQuery = scopedQuery.clone();
       const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
       const groups = new Map<string, { ids: string[]; hidden: Set<string> }>();
-      for (const id of requestedIds) {
-        const fields = callerRedactions?.[id] ?? [];
+      for (const id of authorizedIds) {
+        const fields = redactionsById.get(id)!;
         const key = JSON.stringify([...new Set(fields)].sort());
         const group = groups.get(key) ?? { ids: [], hidden: hiddenTicketFields(fields) };
         group.ids.push(id);
@@ -2390,7 +2440,7 @@ export const loadTicketListItemsByIds = withAuth(async (
         } else {
           const candidates = await buildTicketListItemsQuery(trx, tenant, baseQuery, displayAudienceForUser(user), hidden)
             .whereIn('t.ticket_id', ids).clearOrder();
-          rows.push(...await filterAuthorizedTickets(trx, authorizationContext, candidates));
+          rows.push(...candidates.filter((row: { ticket_id?: string }) => freshById.has(row.ticket_id ?? '')));
         }
       }
 
@@ -2404,7 +2454,7 @@ export const loadTicketListItemsByIds = withAuth(async (
         .map((id) => byId.get(id))
         .filter((row): row is any => Boolean(row));
 
-      return enrichTicketListItems(trx, tenant, mapTicketListItems(ordered));
+      return enrichTicketListItems(trx, tenant, mapTicketListItems(ordered), redactionsById);
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
       if (expected) {

@@ -12,8 +12,8 @@ export const TICKET_FIELD_PROJECTIONS: readonly TicketFieldProjection[] = [
   { field: 'title', sources: ['title', 'tickets.title'], aliases: ['title'], neutral: 'Hidden ticket' },
   { field: 'url', sources: ['url'], aliases: ['url'], neutral: null },
   { field: 'description', sources: ['attributes.description', 'description'], aliases: ['description'], neutral: null },
-  { field: 'client_id', sources: ['client_id', 'clients.client_name'], aliases: ['client_name', 'client_tags', 'bundle_distinct_client_count'], neutral: null },
-  { field: 'contact_name_id', sources: ['contact_name_id', 'contacts.full_name'], aliases: ['contact_name', 'contact_tags'], neutral: null },
+  { field: 'client_id', sources: ['client_id', 'clients.client_name'], aliases: ['client_name', 'client_tags', 'client_logo_url', 'bundle_distinct_client_count'], neutral: null },
+  { field: 'contact_name_id', sources: ['contact_name_id', 'contacts.full_name'], aliases: ['contact_name', 'contact_tags', 'contact_avatar_url'], neutral: null },
   { field: 'status_id', sources: ['status_id', 'statuses.name', 'statuses.is_closed'], aliases: ['status_name', 'is_closed'], neutral: null },
   { field: 'priority_id', sources: ['priority_id', 'priorities.priority_name', 'priorities.color'], aliases: ['priority_name', 'priority_color'], neutral: null },
   { field: 'board_id', sources: ['board_id', 'boards.board_name'], aliases: ['board_name'], neutral: null },
@@ -31,7 +31,7 @@ export const TICKET_FIELD_PROJECTIONS: readonly TicketFieldProjection[] = [
   { field: 'updated_at', sources: ['updated_at'], aliases: ['updated_at'], neutral: null },
   { field: 'closed_at', sources: ['closed_at'], aliases: ['closed_at'], neutral: null },
   { field: 'due_date', sources: ['due_date'], aliases: ['due_date'], neutral: null },
-  { field: 'master_ticket_id', sources: ['master_ticket_id'], aliases: ['master_ticket_id'], neutral: null },
+  { field: 'master_ticket_id', sources: ['master_ticket_id'], aliases: ['master_ticket_id', 'bundle_master_ticket_number'], neutral: null },
   { field: 'itil_impact', sources: ['itil_impact'], aliases: ['itil_impact'], neutral: null },
   { field: 'itil_urgency', sources: ['itil_urgency'], aliases: ['itil_urgency'], neutral: null },
   { field: 'itil_priority_level', sources: ['itil_priority_level'], aliases: ['itil_priority_level'], neutral: null },
@@ -47,7 +47,13 @@ export const TICKET_FIELD_PROJECTIONS: readonly TicketFieldProjection[] = [
   { field: 'sla_resolution_met', sources: ['sla_resolution_met'], aliases: ['sla_resolution_met'], neutral: null },
   { field: 'sla_paused_at', sources: ['sla_paused_at'], aliases: ['sla_paused_at'], neutral: null },
   { field: 'sla_total_pause_minutes', sources: ['sla_total_pause_minutes'], aliases: ['sla_total_pause_minutes'], neutral: null },
-  { field: 'tickets', sources: ['*'], aliases: ['*'], neutral: null },
+  { field: 'bundle_child_count', sources: ['master_ticket_id'], aliases: ['bundle_child_count'], neutral: null },
+  { field: 'bundle_open_child_count', sources: ['master_ticket_id', 'closed_at'], aliases: ['bundle_open_child_count'], neutral: null },
+  { field: 'bundle_distinct_client_count', sources: ['client_id', 'master_ticket_id'], aliases: ['bundle_distinct_client_count'], neutral: null },
+  { field: 'latest_activity_at', sources: ['updated_at', 'comments.created_at'], aliases: ['latest_activity_at'], neutral: null },
+  { field: 'latest_activity_actor', sources: ['updated_by', 'entered_by', 'comments.user_id', 'comments.contact_id', 'users.first_name', 'users.last_name', 'contacts.full_name'], aliases: ['latest_activity_actor'], neutral: null },
+  { field: 'ticket_tags', sources: ['tag_mappings'], aliases: ['ticketTags', 'ticket_tags'], neutral: null },
+  { field: 'tenant', sources: ['tenant'], aliases: ['tenant'], neutral: null },
 ];
 
 function paths(field: string): string[] {
@@ -80,7 +86,36 @@ export function isTicketFieldHidden(redactions: readonly string[], projection: T
 }
 
 export function hiddenTicketFields(redactions: readonly string[]): Set<string> {
-  return new Set(TICKET_FIELD_PROJECTIONS
-    .filter((projection) => isTicketFieldHidden(redactions, projection))
-    .flatMap(({ field, sources, aliases }) => [field, ...sources, ...aliases]));
+  const resourceWide = redactions.some((redaction) => ['ticket', 'tickets', 'ticket.*', 'tickets.*'].includes(redaction.toLowerCase()));
+  const matched = TICKET_FIELD_PROJECTIONS.filter((projection) => resourceWide || isTicketFieldHidden(redactions, projection));
+  const hidden = new Set(matched.flatMap(({ field, sources, aliases }) => [field, ...sources, ...aliases]));
+  if (resourceWide) hidden.add('ticket_id');
+  return hidden;
+}
+
+function setPathValue(target: Record<string, unknown>, path: string, value: unknown): void {
+  const parts = paths(path);
+  let current = target;
+  for (const part of parts.slice(0, -1)) {
+    const next = current[part];
+    if (!next || typeof next !== 'object') return;
+    current = next as Record<string, unknown>;
+  }
+  if (parts.length) current[parts.at(-1)!] = value;
+}
+
+/** Applies the same semantic projection after list enrichment has attached derived fields. */
+export function projectTicketRow<T extends Record<string, unknown>>(row: T, redactions: readonly string[]): T | null {
+  const resourceWide = redactions.some((redaction) => ['ticket', 'tickets', 'ticket.*', 'tickets.*'].includes(redaction.toLowerCase()));
+  const projected: Record<string, unknown> = { ...row };
+  for (const projection of TICKET_FIELD_PROJECTIONS) {
+    if (!(resourceWide || isTicketFieldHidden(redactions, projection))) continue;
+    if (projection.field === 'ticket_id') return null;
+    for (const alias of projection.aliases) {
+      if (alias.includes('.')) setPathValue(projected, alias, projection.neutral ?? null);
+      else projected[alias] = projection.neutral ?? null;
+    }
+    projected[projection.field] = projection.neutral ?? null;
+  }
+  return projected as T;
 }
