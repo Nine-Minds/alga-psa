@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest';
 import { createHash, randomUUID } from 'node:crypto';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
-import { getCoManagedEntitlementState, lockCoManagedSeatScope } from '@alga-psa/licensing';
+import { assertCoManagedSeatAdmission, assertCoManagedSeatCapacity, getCoManagedEntitlementState, lockCoManagedSeatScope } from '@alga-psa/licensing';
 import { acceptCoManagedRelationship, getCoManagedAcceptanceState } from '../../../../../../packages/co-managed/src/acceptance';
 import { prepareCoManagedProvisioning, runCoManagedProvisioningStep, recordCoManagedProvisioningFailure, requestCoManagedProvisioningCleanup,
   type CoManagedProvisioningOperation } from '../../../../../../packages/co-managed/src/provisioning';
@@ -87,10 +87,11 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
     it('keeps PSA token verification and cleanup at the existing query budget with the co-managed switch off', async () => {
       const db = getDb(), operation = await prepare(), token = randomUUID(), expiredToken = randomUUID();
       const sponsor = tenantDb(db, operation.tenant);
+      const email = `${randomUUID()}@example.test`, expiredEmail = `${randomUUID()}@example.test`;
       await sponsor.table('user_invitations').insert([
-        { tenant: operation.tenant, email: `${randomUUID()}@example.test`, first_name: 'PSA', last_name: 'Invite',
+        { tenant: operation.tenant, email, email_normalized: email, invited_user_id: null, first_name: 'PSA', last_name: 'Invite',
           token, expires_at: new Date(Date.now() + 3600000) },
-        { tenant: operation.tenant, email: `${randomUUID()}@example.test`, first_name: 'Expired', last_name: 'Invite',
+        { tenant: operation.tenant, email: expiredEmail, email_normalized: expiredEmail, invited_user_id: null, first_name: 'Expired', last_name: 'Invite',
           token: expiredToken, expires_at: new Date(Date.now() - 60000) },
       ]);
       const { verifyUserInvitationToken } = await import('../../../../../../packages/users/src/actions/user-actions/userInvitationActions');
@@ -121,7 +122,9 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       const invitation = await customer.table('user_invitations').first();
       const { completeUserInvitationSetup, sendUserInvitation, verifyUserInvitationToken } = await import('../../../../../../packages/users/src/actions/user-actions/userInvitationActions');
       const expiredToken = randomUUID();
-      await customer.table('user_invitations').insert({ tenant: operation.customer_tenant, email: `${randomUUID()}@example.test`,
+      const expiredEmail = `${randomUUID()}@example.test`;
+      await customer.table('user_invitations').insert({ tenant: operation.customer_tenant, email: expiredEmail,
+        email_normalized: expiredEmail, invited_user_id: null,
         first_name: 'Expired', last_name: 'Invite', token: expiredToken, expires_at: new Date(Date.now() - 60000) });
       const rolesBefore = await customer.table('user_roles');
       const invitationsBefore = await customer.table('user_invitations').orderBy('invitation_id');
@@ -260,12 +263,37 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       return { db, operation, customer, actor, input: { relationshipId: review.relationshipId, revision: review.revision, scopeFingerprint: review.scopeFingerprint } };
     }
 
+    it('rolls back a transaction when committed usage exceeds the allocation', async () => {
+      const { db, customer, actor } = await pendingCustomer();
+      const atLimitUser = randomUUID();
+      await customer.table('users').insert({ tenant: actor.tenant, user_id: atLimitUser, username: `${atLimitUser}@example.test`,
+        email: `${atLimitUser}@example.test`, user_type: 'internal', is_inactive: false, hashed_password: 'test' });
+      const rejectedUser = randomUUID();
+      await expect(db.transaction(async trx => {
+        await trx('users').insert({ tenant: actor.tenant, user_id: rejectedUser, username: `${rejectedUser}@example.test`,
+          email: `${rejectedUser}@example.test`, user_type: 'internal', is_inactive: false, hashed_password: 'test' });
+        await assertCoManagedSeatCapacity(trx, actor.tenant);
+      })).rejects.toMatchObject({ code: 'CO_MANAGED_SEAT_LIMIT' });
+      expect(await customer.table('users').where('user_id', rejectedUser)).toHaveLength(0);
+    });
+
+    it('does not let direct admission use a pending invite email to free its reservation', async () => {
+      const { db, customer, actor, input: acceptance } = await pendingCustomer();
+      await acceptCoManagedRelationship(db, actor, acceptance);
+      const invitedEmail = `${randomUUID()}@example.test`;
+      await customer.table('user_invitations').insert({ tenant: actor.tenant, email: invitedEmail,
+        email_normalized: invitedEmail, invited_user_id: null, first_name: 'Pending', last_name: 'User',
+        token: randomUUID(), expires_at: new Date(Date.now() + 3600000) });
+      await expect(db.transaction(trx => assertCoManagedSeatAdmission(trx, actor.tenant, { email: invitedEmail, kind: 'user' })))
+        .rejects.toMatchObject({ code: 'CO_MANAGED_SEAT_LIMIT' });
+    });
+
     it('rejects customer seat overflow without changing the relationship, allocation or receipts; exact capacity succeeds', async () => {
       const { db, operation, customer, actor, input: acceptance } = await pendingCustomer();
       const other = randomUUID();
       await customer.table('users').insert({ tenant: actor.tenant, user_id: other, username: `${other}@example.test`,
         email: `${other}@example.test`, user_type: 'internal', is_inactive: false, hashed_password: 'test' });
-      await customer.table('user_invitations').insert({ tenant: actor.tenant, email: `pending-${other}@example.test`,
+      await customer.table('user_invitations').insert({ tenant: actor.tenant, email: `pending-${other}@example.test`, email_normalized: `pending-${other}@example.test`, invited_user_id: null,
         first_name: 'Pending', last_name: 'User', token: randomUUID(), expires_at: new Date(Date.now() + 3600000) });
       const before = await customer.table('co_management_relationship_events').where('relationship_id', operation.relationship_id);
       await expect(acceptCoManagedRelationship(db, actor, acceptance)).rejects.toMatchObject({ code: 'CAPACITY_UNAVAILABLE' });
@@ -273,7 +301,7 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       expect(await tenantDb(db, operation.tenant).table('co_managed_allocations').first()).toMatchObject({ state: 'reserved' });
       expect(await customer.table('co_management_relationship_events').where('relationship_id', operation.relationship_id)).toEqual(before);
       await customer.table('users').where('user_id', other).delete();
-      await customer.table('user_invitations').insert({ tenant: actor.tenant, email: `PENDING-${other}@EXAMPLE.TEST`,
+      await customer.table('user_invitations').insert({ tenant: actor.tenant, email: `PENDING-${other}@EXAMPLE.TEST`, email_normalized: `pending-${other}@example.test`, invited_user_id: null,
         first_name: 'Pending', last_name: 'User', token: randomUUID(), expires_at: new Date(Date.now() + 3600000) });
       await acceptCoManagedRelationship(db, actor, acceptance);
       expect(await customer.table('co_management_relationships').first()).toMatchObject({ state: 'active', revision: 2 });
@@ -287,8 +315,12 @@ export function registerCoManagedProvisioningTests({ getDb, prepare, delivery, a
       const writer = db.transaction(async trx => {
         await lockCoManagedSeatScope(trx, actor.tenant);
         const scoped = tenantDb(trx, actor.tenant);
-        for (let i = 0; i < 2; i++) await scoped.table('user_invitations').insert({ tenant: actor.tenant,
-          email: `${randomUUID()}@example.test`, first_name: 'Pending', last_name: 'User', token: randomUUID(), expires_at: new Date(Date.now() + 3600000) });
+        for (let i = 0; i < 2; i++) {
+          const email = `${randomUUID()}@example.test`;
+          await scoped.table('user_invitations').insert({ tenant: actor.tenant,
+            email, email_normalized: email, invited_user_id: null,
+            first_name: 'Pending', last_name: 'User', token: randomUUID(), expires_at: new Date(Date.now() + 3600000) });
+        }
         locked(); await releasePromise;
       });
       await lockedPromise;

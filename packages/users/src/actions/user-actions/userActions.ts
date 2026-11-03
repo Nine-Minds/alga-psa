@@ -26,8 +26,8 @@ import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/
 import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import logger from '@alga-psa/core/logger';
 import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
-import { CoManagedAdmissionError } from '@alga-psa/licensing';
-import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
+import { assertCoManagedSeatCapacity, CoManagedAdmissionError } from '@alga-psa/licensing';
+import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected, lockInternalUserSeats } from '../../lib/internalUserLicenseGuard';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
 import { publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -1009,6 +1009,9 @@ export const updateUser = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     const result = await withTransaction(knex, async (trx): Promise<UpdateUserResult> => {
+      // Identity changes can affect reservation association; serialize them
+      // with invitation send/accept and allocation admission.
+      if (userData.email !== undefined) await lockInternalUserSeats(trx, tenant);
       // Permission Check: User can update their own profile OR have user:update permission
       const isOwnProfile = currentUser.user_id === userId;
 
@@ -1103,7 +1106,7 @@ export const updateUser = withAuth(async (
       const existing = (userData.email || timezoneProvided || 'is_inactive' in userData)
         ? await tenantDb(trx, tenant).table('users')
             .where({ user_id: userId })
-            .select('email', 'user_type', 'timezone', 'is_inactive')
+            .select('email', 'user_type', 'timezone', 'is_inactive', 'user_id')
             .first()
         : undefined;
 
@@ -1176,6 +1179,10 @@ export const updateUser = withAuth(async (
       }
 
       await User.update(trx, userId, normalizedUserData);
+      if (existing?.user_type === 'internal' && existing.is_inactive === false &&
+          normalizedUserData.email !== undefined && normalizedUserData.email !== existing.email) {
+        await assertCoManagedSeatCapacity(trx, tenant);
+      }
       if (
         existing?.user_type === 'internal'
         && existing.is_inactive === true

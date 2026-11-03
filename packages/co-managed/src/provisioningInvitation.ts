@@ -38,7 +38,7 @@ async function retainInvitation(trx: Knex.Transaction, sponsorTenant: string, op
 async function assertInvitationCapacity(trx: Knex.Transaction, context: NonNullable<Awaited<ReturnType<typeof retainInvitation>>>) {
   // An expired invitation stopped reserving capacity. Renewing it is safe only
   // if the same allocation can still accommodate its original administrator.
-  if (await countCoManagedCommittedSeats(trx, context.operation.customer_tenant, context.invitation.email) >= Number(context.allocation.seats))
+  if (await countCoManagedCommittedSeats(trx, context.operation.customer_tenant, context.invitation.email_normalized) >= Number(context.allocation.seats))
     throw new CoManagedAdmissionError('CO_MANAGED_SEAT_LIMIT');
 }
 

@@ -40,7 +40,8 @@ import User from '@alga-psa/db/models/user';
 import Team from '@alga-psa/teams/models/team';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { logger } from '@alga-psa/core';
-import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected } from '../lib/internalUserLicenseGuard';
+import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected, lockInternalUserSeats } from '../lib/internalUserLicenseGuard';
+import { assertCoManagedSeatCapacity } from '@alga-psa/licensing';
 import type { InternalUserLicenseLimitResult } from '../lib/internalUserLicenseGuard';
 import { sanitizeUserForResponse, USER_RESPONSE_COLUMNS, USER_RESPONSE_FIELD_NAMES } from './userResponseSanitizer';
 
@@ -266,7 +267,11 @@ export class UserService extends BaseService<IUser> {
       if (!admission.invitation || admission.invitation.role_id !== data.role_ids?.[0]) {
         throw new Error('Invalid or changed invitation');
       }
-      const updated = await tenantDb(trx, context.tenant).table('user_invitations')
+      const invitations = tenantDb(trx, context.tenant).table('user_invitations');
+      await invitations.where({ email_normalized: admission.invitation.email_normalized, used_at: null })
+        .whereNull('invited_user_id')
+        .update({ invited_user_id: user.user_id });
+      const updated = await invitations
         .where({ invitation_id: admission.invitation.invitation_id, token, used_at: null }).update({ used_at: trx.fn.now() });
       if (updated !== 1) throw new Error('Invitation already consumed');
     }
@@ -401,6 +406,7 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      if (data.email !== undefined) await lockInternalUserSeats(trx, context.tenant);
       // Verify user exists and belongs to tenant
       const existingUser = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
@@ -475,6 +481,10 @@ export class UserService extends BaseService<IUser> {
 
       if (takesNewSeat) {
         await assertInternalUserSeatsWithinLimit(trx, context.tenant);
+      }
+      if (existingUser.user_type === 'internal' && existingUser.is_inactive === false &&
+          data.email !== undefined && data.email.toLowerCase() !== existingUser.email) {
+        await assertCoManagedSeatCapacity(trx, context.tenant);
       }
 
       // Log user update activity
