@@ -21,7 +21,6 @@ export function MspClientIntegrationProvider({ children }: { children: ReactNode
         isOpen={props.isOpen}
         onClose={props.onClose}
         onContactAdded={props.onContactAdded}
-        clients={props.clients}
         selectedClientId={props.selectedClientId}
       />
     ),

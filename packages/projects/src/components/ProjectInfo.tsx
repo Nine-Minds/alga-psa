@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IClient, IProject, IProjectPhase, IUserWithRoles } from '@alga-psa/types';
+import { IProject, IProjectPhase, IUserWithRoles } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import HoursProgressBar from './HoursProgressBar';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
@@ -22,6 +22,7 @@ import { useTaskShareActions } from './TaskShareActionsContext';
 import { useTaskSelection } from './TaskSelectionContext';
 import { useTranslation } from 'react-i18next';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ClientPickerOption } from '@alga-psa/ui/components/ClientPicker';
 
 interface ProjectBilledSummary {
   invoicedCents: number;
@@ -39,7 +40,7 @@ interface ProjectInfoProps {
   };
   assignedUser?: IUserWithRoles;
   users: IUserWithRoles[];
-  clients: IClient[];
+  clients: ClientPickerOption[];
   onContactChange?: (contactId: string | null) => void;
   onAssignedUserChange?: (userId: string | null) => void;
   onProjectUpdate?: (project: IProject) => void;
@@ -82,10 +83,10 @@ export default function ProjectInfo({
   const [showStatusUpdateDialog, setShowStatusUpdateDialog] = useState(false);
   const [projectMetrics, setProjectMetrics] = useState<{
     taskCompletionPercentage: number;
-    hoursCompletionPercentage: number;
-    budgetedHours: number;
+    hoursCompletionPercentage: number | null;
+    budgetedHours: number | null;
     spentHours: number;
-    remainingHours: number;
+    remainingHours: number | null;
   } | null>(null);
   const [billedSummary, setBilledSummary] = useState<ProjectBilledSummary | null>(null);
 
@@ -109,9 +110,9 @@ export default function ProjectInfo({
         setProjectMetrics({
           taskCompletionPercentage: metrics.taskCompletionPercentage,
           hoursCompletionPercentage: metrics.hoursCompletionPercentage,
-          budgetedHours: metrics.budgetedHours || 0,
+          budgetedHours: metrics.budgetedHours,
           spentHours: metrics.spentHours || 0,
-          remainingHours: metrics.remainingHours || 0
+          remainingHours: metrics.remainingHours
         });
       } else {
         console.error('Error fetching project metrics:', metricsResult.reason);
@@ -296,7 +297,7 @@ export default function ProjectInfo({
         </div>
         
         {/* Project Budget Section - takes remaining space */}
-        {projectMetrics && (
+        {projectMetrics && projectMetrics.budgetedHours !== null && (
           <div className="flex items-center space-x-2 flex-1">
             <h5 className="font-bold text-gray-800 dark:text-gray-200">{t('projectInfo.budget', 'Budget:')}</h5>
             <div className="flex items-center space-x-3 flex-1">
@@ -305,7 +306,7 @@ export default function ProjectInfo({
               </span>
               <div className="flex-1">
                 <HoursProgressBar 
-                  percentage={projectMetrics.hoursCompletionPercentage}
+                  percentage={projectMetrics.hoursCompletionPercentage ?? 0}
                   width="100%"
                   height={8}
                   showTooltip={true}
@@ -313,7 +314,7 @@ export default function ProjectInfo({
                     <div className="p-2">
                       <p className="font-medium">{t('hoursUsage', 'Hours Usage')}</p>
                       <p className="text-sm">{t('hoursUsedDetail', '{{spent}} of {{budgeted}} hours used', { spent: projectMetrics.spentHours.toFixed(1), budgeted: projectMetrics.budgetedHours.toFixed(1) })}</p>
-                      <p className="text-sm">{t('hoursRemaining', '{{remaining}} hours remaining', { remaining: projectMetrics.remainingHours.toFixed(1) })}</p>
+                      {projectMetrics.remainingHours !== null && <p className="text-sm">{t('hoursRemaining', '{{remaining}} hours remaining', { remaining: projectMetrics.remainingHours.toFixed(1) })}</p>}
                       <p className="text-sm text-gray-300 mt-1">{t('projectInfo.hoursUsageDescription', 'Shows budget hours usage for the entire project')}</p>
                     </div>
                   }

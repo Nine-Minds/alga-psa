@@ -1,7 +1,7 @@
 import Projects from '@alga-psa/projects/components/Projects';
 import { getAllClientsForProjects, getProjects } from '@alga-psa/projects/actions/projectActions';
 import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
-import type { IClient, IProject, ITag } from '@alga-psa/types';
+import type { IProject, ITag } from '@alga-psa/types';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
@@ -9,6 +9,7 @@ import type { ProjectListFilters } from '@alga-psa/projects/components/Projects'
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 import CoManagedProjectTaskQueueLink from '@/components/co-managed/CoManagedProjectTaskQueueLink';
 import { getSmartSearchAvailability } from '@enterprise/lib/actions/smartSearchActions';
+import { projectClientListsForPage } from '@alga-psa/projects/lib/projectClientPresentation';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslation(undefined, 'metadata');
@@ -30,7 +31,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
   const [projectsResult, clientsData, params, smartSearchAvailable] = await Promise.all([
     getProjects(),
-    getAllClientsForProjects() as Promise<IClient[]>,
+    getAllClientsForProjects(),
     searchParams,
     // Decided on the server so the Smart search affordance is right on first
     // paint. The CE stub answers false; any failure hides it.
@@ -40,6 +41,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   ]);
 
   const projectsData: IProject[] = isActionPermissionError(projectsResult) ? [] : projectsResult;
+  const { pickerClients, tableMetadata } = projectClientListsForPage(projectsData, clientsData);
 
   // Fetch tags alongside projects so URL-based tag filters work on the first render.
   // Without this, `findTagsByEntityIds` runs in a client `useEffect` and the filter
@@ -132,7 +134,8 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     <CoManagedProjectTaskQueueLink />
     <Projects
       initialProjects={projectsData}
-      clients={clientsData}
+      clients={pickerClients}
+      projectClientMetadata={tableMetadata}
       initialFilters={initialFilters}
       initialProjectTags={initialProjectTags}
       initialAllUniqueTags={allProjectTags}

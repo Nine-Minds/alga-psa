@@ -29,6 +29,13 @@ type ButtonSize = VariantProps<typeof buttonVariants>['size'];
 type ClientFilterState = 'all' | 'active' | 'inactive';
 type ClientTypeFilter = 'all' | 'company' | 'individual';
 
+/** The complete, authorized fields the in-memory picker needs to render/select an option. */
+export type ClientPickerOption = Pick<IClient, 'client_id' | 'client_name' | 'client_type'> & {
+  is_inactive: boolean | null;
+  displayTags?: IClient['displayTags'];
+  logoUrl?: string | null;
+};
+
 /** In-memory mode only: skip the tag fetch (and hide the tag filter) for lists larger than this. */
 const IN_MEMORY_TAG_FETCH_LIMIT = 200;
 
@@ -40,7 +47,7 @@ interface ClientPickerProps {
    * Cards D, E and F are migrating the remaining callers off full lists. Still honoured
    * for small, pre-filtered lists. Ignored when `searchClients` is set.
    */
-  clients?: IClient[];
+  clients?: ClientPickerOption[];
   /**
    * Async mode: server-side search (pass `searchClientsForPicker`). The picker pages,
    * debounces and hydrates the selected value itself and never needs the full list.

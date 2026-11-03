@@ -71,7 +71,7 @@ import KanbanZoomControl, { calculateColumnWidth } from './KanbanZoomControl';
 import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
-import { IClient } from '@alga-psa/types';
+import type { ClientPickerOption } from '@alga-psa/ui/components/ClientPicker';
 import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus, EyeOff, Eye, Receipt, GanttChart } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -224,7 +224,7 @@ interface ProjectDetailProps {
   phases: IProjectPhase[];
   statuses: ProjectStatus[];
   users: IUserWithRoles[];
-  clients: IClient[];
+  clients: ClientPickerOption[];
   contact?: { full_name: string };
   assignedUser?: IUserWithRoles;
   onTagsUpdate?: (tags: ITag[], allTagTexts: string[]) => void;
@@ -380,10 +380,10 @@ export default function ProjectDetail({
   
   const [projectMetrics, setProjectMetrics] = useState<{
     taskCompletionPercentage: number;
-    hoursCompletionPercentage: number;
-    budgetedHours: number;
+    hoursCompletionPercentage: number | null;
+    budgetedHours: number | null;
     spentHours: number;
-    remainingHours: number;
+    remainingHours: number | null;
   } | null>(null);
 
   // Project billing (option 3 — "Billing" as a third view + ambient signals)

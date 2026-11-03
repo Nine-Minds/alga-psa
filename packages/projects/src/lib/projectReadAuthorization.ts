@@ -101,6 +101,38 @@ export interface ProjectReadDecision {
   redactedFields: string[];
 }
 
+export interface ClientReadFields { client_id?: string | null; client_name?: string | null }
+
+/** Client-record counterpart used by project client pickers; policy comes from the same authorization kernel. */
+export async function createClientReadDecider(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+): Promise<(client: ClientReadFields) => Promise<ProjectReadDecision>> {
+  const subject = await resolveAuthorizationSubjectForUser(conn, tenant, user);
+  const authorizationKernel = createAuthorizationKernel({
+    builtinProvider: new BuiltinAuthorizationKernelProvider(),
+    bundleProvider: new BundleAuthorizationKernelProvider({
+      resolveRules: async (input) => {
+        return await resolveBundleNarrowingRulesForEvaluation(conn, input);
+      },
+    }),
+    rbacEvaluator: async () => true,
+  });
+  const requestCache = new RequestLocalAuthorizationCache();
+  return async (client) => {
+    if (!client.client_id) return { allowed: false, redactedFields: [] };
+    const decision = await authorizationKernel.authorizeResource({
+      subject,
+      resource: { type: 'client', action: 'read', id: client.client_id },
+      record: { id: client.client_id, clientId: client.client_id },
+      requestCache,
+      knex: conn,
+    });
+    return { allowed: decision.allowed, redactedFields: [...(decision.redactedFields ?? [])] };
+  };
+}
+
 /**
  * The record-level project read decision for one user, reusable across many projects in one request
  * (subject and kernel are resolved once). Carries the kernel's redaction set with the verdict so a caller
@@ -117,11 +149,7 @@ export async function createProjectReadDecider(
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
     bundleProvider: new BundleAuthorizationKernelProvider({
       resolveRules: async (input) => {
-        try {
-          return await resolveBundleNarrowingRulesForEvaluation(conn, input);
-        } catch {
-          return [];
-        }
+        return await resolveBundleNarrowingRulesForEvaluation(conn, input);
       },
     }),
     rbacEvaluator: async () => true,

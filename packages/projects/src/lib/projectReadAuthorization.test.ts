@@ -1,26 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const kernel = vi.hoisted(() => ({ authorizeResource: vi.fn() }));
+const kernel = vi.hoisted(() => ({ authorizeResource: vi.fn(), bundleOptions: null as null | { resolveRules: (input: unknown) => Promise<unknown> }, resolveRules: vi.fn() }));
 
 vi.mock('@alga-psa/db', () => ({
   tenantDb: () => ({ table: () => ({ where: () => ({ select: async () => [] }) }) }),
 }));
 vi.mock('@alga-psa/authorization/kernel', () => ({
   BuiltinAuthorizationKernelProvider: class {},
-  BundleAuthorizationKernelProvider: class {},
+  BundleAuthorizationKernelProvider: class { constructor(options: typeof kernel.bundleOptions) { kernel.bundleOptions = options; } },
   RequestLocalAuthorizationCache: class {},
   createAuthorizationKernel: () => ({ authorizeResource: kernel.authorizeResource }),
 }));
-vi.mock('@alga-psa/authorization/bundles/service', () => ({ resolveBundleNarrowingRulesForEvaluation: vi.fn() }));
+vi.mock('@alga-psa/authorization/bundles/service', () => ({ resolveBundleNarrowingRulesForEvaluation: (...args: unknown[]) => kernel.resolveRules(...args) }));
 vi.mock('../models/project', () => ({ default: {} }));
 
-import { createProjectReadAuthorizer, createProjectReadDecider } from './projectReadAuthorization';
+import { createClientReadDecider, createProjectReadAuthorizer, createProjectReadDecider } from './projectReadAuthorization';
 
 const user = { user_id: 'u1', user_type: 'internal', roles: [{ role_id: 'r1' }] } as never;
 const conn = {} as never;
 
 beforeEach(() => {
   kernel.authorizeResource.mockReset();
+  kernel.resolveRules.mockReset().mockResolvedValue([]);
+  kernel.bundleOptions = null;
 });
 
 describe('project read authorization', () => {
@@ -55,5 +57,40 @@ describe('project read authorization', () => {
     const authorize = await createProjectReadAuthorizer(conn, 't1', user, 'update');
     await authorize({ project_id: 'p1' });
     expect(kernel.authorizeResource).toHaveBeenCalledWith(expect.objectContaining({ resource: { type: 'project', action: 'update', id: 'p1' } }));
+  });
+});
+
+describe('client read authorization', () => {
+  it('uses client:read record decisions and carries applicable field redactions', async () => {
+    kernel.authorizeResource.mockResolvedValue({ allowed: true, redactedFields: ['client_name'] });
+    const decide = await createClientReadDecider(conn, 't1', user);
+    await expect(decide({ client_id: 'c1', client_name: 'Acme' })).resolves.toEqual({
+      allowed: true,
+      redactedFields: ['client_name'],
+    });
+    expect(kernel.authorizeResource).toHaveBeenCalledWith(expect.objectContaining({
+      resource: { type: 'client', action: 'read', id: 'c1' },
+      record: { id: 'c1', clientId: 'c1' },
+    }));
+  });
+
+  it('denies rows without a client identity', async () => {
+    const decide = await createClientReadDecider(conn, 't1', user);
+    await expect(decide({})).resolves.toEqual({ allowed: false, redactedFields: [] });
+    expect(kernel.authorizeResource).not.toHaveBeenCalled();
+  });
+
+  it('propagates client policy lookup failures instead of treating them as unrestricted', async () => {
+    const failure = new Error('policy store unavailable');
+    kernel.resolveRules.mockRejectedValue(failure);
+    await createClientReadDecider(conn, 't1', user);
+    await expect(kernel.bundleOptions!.resolveRules({})).rejects.toBe(failure);
+  });
+
+  it('propagates project policy lookup failures used by the shared list loader', async () => {
+    const failure = new Error('policy store unavailable');
+    kernel.resolveRules.mockRejectedValue(failure);
+    await createProjectReadDecider(conn, 't1', user);
+    await expect(kernel.bundleOptions!.resolveRules({})).rejects.toBe(failure);
   });
 });
