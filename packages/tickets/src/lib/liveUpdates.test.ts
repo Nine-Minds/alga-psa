@@ -198,7 +198,10 @@ describe('live ticket update helpers', () => {
       ownerTenantId: tenantId, referenceId: actorReference.referenceId, tenantId: actorReference.tenantId,
       displayName: 'Morgan', organizationName: 'Partner',
     } });
+    expect(payload.updatedBy.actorReference).not.toHaveProperty('userId');
+    expect(payload.updatedBy.actorReference).not.toHaveProperty('actorUserId');
     expect(serialized).not.toContain(actorReference.userId);
+    expect(serialized).not.toContain('Ignored unqualified label');
     publishMock.mockClear();
     await expect(publishTicketUpdate({ ...params, updatedBy: { ...params.updatedBy, userId: actorReference.userId } } as any))
       .rejects.toThrow('Invalid ticket live update actor');
