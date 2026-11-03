@@ -145,6 +145,32 @@ export function registerCoManagedRequesterTaskCases() {
       expect(replyB.threadId).toBe(threadB.threadId);
     });
 
+    it('keeps staff-started requester threads open until a contact joins, then scopes them to that contact', async () => {
+      const { getRequesterTaskConversation, createRequesterTaskComment } = await requester();
+      const contactB = await addPortalUser(db, w);
+      const { mutateCoManagedProjectTaskComment } = await import('@alga-psa/co-managed/projectTaskConversation');
+      const staffRoot = await mutateCoManagedProjectTaskComment(db, w.techActor, w.resource, {
+        operationId: randomUUID(), kind: 'create', audience: 'requester',
+        document: [{ type: 'paragraph', content: [{ type: 'text', text: 'Staff started this requester thread', styles: {} }] }],
+      } as any);
+
+      // The L4c exception lets either otherwise-authorized portal contact see a staff-only thread.
+      expect((await getRequesterTaskConversation(db, actorOf(portal), target())).items.map(item => item.commentId))
+        .toContain(staffRoot.commentId);
+      expect((await getRequesterTaskConversation(db, actorOf(contactB), target())).items.map(item => item.commentId))
+        .toContain(staffRoot.commentId);
+
+      await createRequesterTaskComment(db, actorOf(portal), target(), {
+        operationId: randomUUID(), text: 'Contact A joined', parent: { threadId: staffRoot.threadId, commentId: staffRoot.commentId },
+      });
+      expect((await getRequesterTaskConversation(db, actorOf(portal), target())).items.map(item => item.commentId))
+        .toContain(staffRoot.commentId);
+      expect((await getRequesterTaskConversation(db, actorOf(contactB), target())).items).toEqual([]);
+      await expect(createRequesterTaskComment(db, actorOf(contactB), target(), {
+        operationId: randomUUID(), text: 'Contact B cannot join A thread', parent: { threadId: staffRoot.threadId, commentId: staffRoot.commentId },
+      })).rejects.toThrow();
+    });
+
     it('is idempotent on the operation id and refuses a changed payload under the same id', async () => {
       const { createRequesterTaskComment, RequesterTaskCommentConflict } = await requester();
       const operationId = randomUUID();
