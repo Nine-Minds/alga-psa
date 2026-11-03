@@ -54,7 +54,11 @@
     "reason": {
       "class": "Ne fait pas partie du dossier conservé",
       "audience": "Privé au client",
-      "afterCutoff": "Après la fin de la relation"
-    }
+      "afterCutoff": "Après la fin de la relation",
+      "downloadFailed": "La pièce jointe source n’a pas pu être téléchargée",
+      "integrityFailed": "La vérification de l’intégrité de la pièce jointe source a échoué"
+    },
+    "retentionFailuresHeading": "Pièces jointes non conservées",
+    "retentionFailed": "Pièce jointe non conservée : {{reason}}"
   }
 }

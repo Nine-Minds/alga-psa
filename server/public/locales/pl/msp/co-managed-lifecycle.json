@@ -58,7 +58,11 @@
     "reason": {
       "class": "Nie należy do zachowanego zapisu",
       "audience": "Prywatne dla klienta",
-      "afterCutoff": "Po zakończeniu relacji"
-    }
+      "afterCutoff": "Po zakończeniu relacji",
+      "downloadFailed": "Nie udało się pobrać oryginalnego załącznika",
+      "integrityFailed": "Weryfikacja integralności oryginalnego załącznika nie powiodła się"
+    },
+    "retentionFailuresHeading": "Niezachowane załączniki",
+    "retentionFailed": "Załącznik nie został zachowany: {{reason}}"
   }
 }

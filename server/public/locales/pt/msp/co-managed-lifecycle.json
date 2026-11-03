@@ -54,7 +54,11 @@
     "reason": {
       "class": "Não faz parte do registro mantido",
       "audience": "Privado do cliente",
-      "afterCutoff": "Depois do fim da relação"
-    }
+      "afterCutoff": "Depois do fim da relação",
+      "downloadFailed": "Não foi possível baixar o anexo original",
+      "integrityFailed": "O anexo original falhou na verificação de integridade"
+    },
+    "retentionFailuresHeading": "Anexos não retidos",
+    "retentionFailed": "Anexo não retido: {{reason}}"
   }
 }

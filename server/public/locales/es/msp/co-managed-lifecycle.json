@@ -54,7 +54,11 @@
     "reason": {
       "class": "No forma parte del registro conservado",
       "audience": "Privado del cliente",
-      "afterCutoff": "Después de que terminó la relación"
-    }
+      "afterCutoff": "Después de que terminó la relación",
+      "downloadFailed": "No se pudo descargar el adjunto original",
+      "integrityFailed": "El adjunto original no superó la verificación de integridad"
+    },
+    "retentionFailuresHeading": "Adjuntos no conservados",
+    "retentionFailed": "Adjunto no conservado: {{reason}}"
   }
 }

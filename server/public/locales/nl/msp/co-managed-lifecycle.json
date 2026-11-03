@@ -54,7 +54,11 @@
     "reason": {
       "class": "Geen onderdeel van het bewaarde dossier",
       "audience": "Privé voor de klant",
-      "afterCutoff": "Na het einde van de relatie"
-    }
+      "afterCutoff": "Na het einde van de relatie",
+      "downloadFailed": "De oorspronkelijke bijlage kon niet worden gedownload",
+      "integrityFailed": "De integriteitscontrole van de oorspronkelijke bijlage is mislukt"
+    },
+    "retentionFailuresHeading": "Niet bewaarde bijlagen",
+    "retentionFailed": "Bijlage niet bewaard: {{reason}}"
   }
 }

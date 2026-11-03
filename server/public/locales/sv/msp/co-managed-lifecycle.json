@@ -54,7 +54,11 @@
     "reason": {
       "class": "Ingår inte i den bevarade journalen",
       "audience": "Privat för kunden",
-      "afterCutoff": "Efter att relationen avslutats"
-    }
+      "afterCutoff": "Efter att relationen avslutats",
+      "downloadFailed": "Den ursprungliga bilagan kunde inte hämtas",
+      "integrityFailed": "Integritetskontrollen av den ursprungliga bilagan misslyckades"
+    },
+    "retentionFailuresHeading": "Bilagor som inte har sparats",
+    "retentionFailed": "Bilagan har inte sparats: {{reason}}"
   }
 }

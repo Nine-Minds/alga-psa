@@ -54,7 +54,11 @@
     "reason": {
       "class": "Not part of the retained record",
       "audience": "Private to the customer",
-      "afterCutoff": "After the relationship ended"
-    }
+      "afterCutoff": "After the relationship ended",
+      "downloadFailed": "Source attachment could not be downloaded",
+      "integrityFailed": "Source attachment failed integrity verification"
+    },
+    "retentionFailuresHeading": "Attachments not retained",
+    "retentionFailed": "Attachment not retained: {{reason}}"
   }
 }

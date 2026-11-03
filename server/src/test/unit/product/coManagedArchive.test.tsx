@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { createHash } from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { createInstance, type i18n } from 'i18next';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ARCHIVE_ALLOWED_AUDIENCES, ARCHIVE_EVIDENCE_CLASSES, classifyArchiveCandidate, coManagedArchiveManifestHash } from '@alga-psa/co-managed';
@@ -8,9 +11,8 @@ import { ARCHIVE_ALLOWED_AUDIENCES, ARCHIVE_EVIDENCE_CLASSES, classifyArchiveCan
 const actions = vi.hoisted(() => ({ list: vi.fn(), history: vi.fn() }));
 vi.mock('@/lib/actions/coManagedArchiveActions', () => ({ listCoManagedArchiveSummaries: actions.list, getCoManagedArchive: actions.history }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
-  const translation = { t: (k: string, o?: any) => (o?.defaultValue ?? k).replace(/\{\{(\w+)\}\}/g, (_m: string, key: string) => String(o?.[key])) };
   const formatters = { formatDate: (d: Date) => d.toISOString().slice(0, 10) };
-  return { useTranslation: () => translation, useFormatters: () => formatters };
+  return { useTranslation: (ns: string) => ({ t: translations.getFixedT(null, ns) }), useFormatters: () => formatters };
 });
 
 import CoManagedArchive from '@/components/co-managed/CoManagedArchive';
@@ -19,7 +21,27 @@ const OP = '33333333-3333-4333-8333-333333333333';
 const summary = { operationId: OP, clientName: 'Acme Corp', sealedAt: '2026-10-31T00:00:00.000Z', cutoffAt: '2026-10-30T00:00:00.000Z', evidenceCount: 2, fileCount: 1, excludedCount: 2 };
 const archiveIdentity = { tenant: '11111111-1111-4111-8111-111111111111', customer_tenant: '22222222-2222-4222-8222-222222222222',
   relationship_id: '33333333-3333-4333-8333-333333333333', operation_id: '44444444-4444-4444-8444-444444444444', cutoff_at: '2026-10-30T00:00:00.000Z' };
-beforeEach(() => { actions.list.mockReset(); actions.history.mockReset(); });
+const LOCALES = ['en', 'de', 'es', 'fr', 'it', 'nl', 'pl', 'pt', 'sv', 'xx', 'yy'];
+const packs = Object.fromEntries(LOCALES.map(locale => [locale, JSON.parse(fs.readFileSync(
+  path.resolve(__dirname, `../../../../public/locales/${locale}/msp/co-managed-lifecycle.json`), 'utf8',
+))]));
+let translations: i18n;
+const missingKeys: string[] = [];
+beforeEach(async () => {
+  actions.list.mockReset(); actions.history.mockReset();
+  missingKeys.length = 0;
+  translations = createInstance();
+  await translations.init({
+    lng: 'en', fallbackLng: false, defaultNS: 'msp/co-managed-lifecycle',
+    resources: Object.fromEntries(LOCALES.map(locale => [locale, {
+      'msp/co-managed-lifecycle': packs[locale],
+      common: JSON.parse(fs.readFileSync(path.resolve(__dirname, `../../../../public/locales/${locale}/common.json`), 'utf8')),
+    }])),
+    // Default English copy can conceal missing resources even in the English UI.
+    saveMissing: true, missingKeyHandler: (_languages, _namespace, key) => { missingKeys.push(key); },
+    interpolation: { escapeValue: false },
+  });
+});
 afterEach(cleanup);
 
 describe('CoManagedArchive (A2)', () => {
@@ -53,6 +75,27 @@ describe('CoManagedArchive (A2)', () => {
     actions.list.mockResolvedValue({ ok: false, reason: 'denied' });
     render(<CoManagedArchive />);
     expect(await screen.findByText(/do not have permission to view this archive/)).toBeInTheDocument();
+  });
+
+  it.each(LOCALES)('renders attachment retention failures from the %s locale without missing-key fallbacks', async locale => {
+    await translations.changeLanguage(locale);
+    actions.list.mockResolvedValue({ ok: true, items: [summary], nextPage: null });
+    actions.history.mockResolvedValue({ ok: true, history: {
+      archive: summary, nextPage: null, entries: [], files: [], exclusions: [],
+      retentionFailures: [
+        { evidenceId: 'e1', attachmentId: 'a1', status: 'retention_failed', reason: 'source_download_failed' },
+        { evidenceId: 'e2', attachmentId: 'a2', status: 'retention_failed', reason: 'source_integrity_failed' },
+      ],
+    } });
+    render(<CoManagedArchive />);
+    fireEvent.click(await screen.findByRole('button', { name: packs[locale].archive.open }));
+    await screen.findByRole('button', { name: packs[locale].archive.back });
+    expect(missingKeys).toEqual([]);
+    const archive = packs[locale].archive;
+    expect(screen.getByRole('heading', { name: archive.retentionFailuresHeading })).toBeInTheDocument();
+    for (const reason of [archive.reason.downloadFailed, archive.reason.integrityFailed]) {
+      expect(screen.getByText(archive.retentionFailed.replace('{{reason}}', reason))).toBeInTheDocument();
+    }
   });
 });
 

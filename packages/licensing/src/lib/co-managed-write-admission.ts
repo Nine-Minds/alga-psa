@@ -21,7 +21,7 @@
  * this subpath directly and must boot when the co-managed package does not resolve.
  */
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 import { invalidateWriteAdmission, registerWriteAdmissionResolver, type WriteAdmissionResolver } from '@alga-psa/db/writeAdmission';
 import { admits, forcedValue } from '@alga-psa/core/capability';
 import { resolveFlagTargeting } from '@alga-psa/core/features';

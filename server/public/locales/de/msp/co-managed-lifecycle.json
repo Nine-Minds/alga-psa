@@ -54,7 +54,11 @@
     "reason": {
       "class": "Nicht Teil der aufbewahrten Aufzeichnung",
       "audience": "Privat beim Kunden",
-      "afterCutoff": "Nach dem Ende der Beziehung"
-    }
+      "afterCutoff": "Nach dem Ende der Beziehung",
+      "downloadFailed": "Der ursprüngliche Anhang konnte nicht heruntergeladen werden",
+      "integrityFailed": "Die Integritätsprüfung des ursprünglichen Anhangs ist fehlgeschlagen"
+    },
+    "retentionFailuresHeading": "Nicht aufbewahrte Anhänge",
+    "retentionFailed": "Anhang nicht aufbewahrt: {{reason}}"
   }
 }
