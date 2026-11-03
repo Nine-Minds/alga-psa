@@ -1,0 +1,48 @@
+[
+  {
+    "path": "1ca.3.children.3.children.3.children.3.ticketData.availableAgents.25",
+    "keys": [
+      "tenant",
+      "user_id",
+      "username",
+      "hashed_password",
+      "first_name",
+      "last_name",
+      "date_of_birth",
+      "email",
+      "icon",
+      "auth_method",
+      "created_at",
+      "updated_at",
+      "two_factor_enabled",
+      "two_factor_secret",
+      "is_google_user",
+      "rate",
+      "is_inactive",
+      "user_type",
+      "contact_id",
+      "needs_contact_association",
+      "phone",
+      "timezone",
+      "last_login_at",
+      "last_login_method",
+      "two_factor_required_new_device",
+      "reports_to",
+      "client_portal_entra_metadata",
+      "phone_extension"
+    ],
+    "hasCredentials": true
+  },
+  {
+    "path": "1ca.3.children.3.children.3.children.3.ticketData.userMap.26ab452f-6227-45e9-abab-24c3e31ab183",
+    "keys": [
+      "user_id",
+      "first_name",
+      "last_name",
+      "email",
+      "user_type",
+      "avatarUrl"
+    ],
+    "hasCredentials": false
+  }
+]

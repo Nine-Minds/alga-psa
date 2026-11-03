@@ -1,0 +1,85 @@
+{
+  "scope": "getCurrentUser and sibling user-query actions",
+  "actionsPassed": true,
+  "knownSeparateTicketPageLeak": "getConsolidatedTicketData ticketData.availableAgents (card e3c2e9fc)",
+  "checks": [
+    {
+      "type": "internal",
+      "route": "/msp/tickets/a75fb3f6-ed8d-44b7-b87b-5944abd43f26",
+      "status": 200,
+      "kind": "page",
+      "passwordHashAbsent": false,
+      "totpSeedAbsent": false,
+      "credentialKeysAbsent": false
+    },
+    {
+      "type": "internal",
+      "kind": "server-action",
+      "name": "getUserWithRoles",
+      "status": 200,
+      "expectedIdentityPresent": true,
+      "passwordHashAbsent": true,
+      "totpSeedAbsent": true,
+      "credentialKeysAbsent": true
+    },
+    {
+      "type": "internal",
+      "kind": "server-action",
+      "name": "getAllUsers",
+      "status": 200,
+      "expectedIdentityPresent": true,
+      "passwordHashAbsent": true,
+      "totpSeedAbsent": true,
+      "credentialKeysAbsent": true
+    },
+    {
+      "type": "internal",
+      "kind": "server-action",
+      "name": "getCurrentUser",
+      "status": 200,
+      "expectedIdentityPresent": true,
+      "passwordHashAbsent": true,
+      "totpSeedAbsent": true,
+      "credentialKeysAbsent": true
+    },
+    {
+      "type": "internal",
+      "kind": "server-action",
+      "name": "findUserById",
+      "status": 200,
+      "expectedIdentityPresent": true,
+      "passwordHashAbsent": true,
+      "totpSeedAbsent": true,
+      "credentialKeysAbsent": true
+    },
+    {
+      "type": "internal",
+      "kind": "server-action",
+      "name": "getAllUsersBasic",
+      "status": 200,
+      "expectedIdentityPresent": true,
+      "passwordHashAbsent": true,
+      "totpSeedAbsent": true,
+      "credentialKeysAbsent": true
+    },
+    {
+      "type": "client",
+      "route": "/client-portal/dashboard",
+      "status": 200,
+      "kind": "page",
+      "passwordHashAbsent": true,
+      "totpSeedAbsent": true,
+      "credentialKeysAbsent": true
+    },
+    {
+      "type": "client",
+      "kind": "server-action",
+      "name": "getCurrentUser",
+      "status": 200,
+      "expectedIdentityPresent": true,
+      "passwordHashAbsent": true,
+      "totpSeedAbsent": true,
+      "credentialKeysAbsent": true
+    }
+  ]
+}
