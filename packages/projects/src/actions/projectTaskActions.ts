@@ -590,12 +590,24 @@ async function projectAuthorizedTaskDependencies(
         const successor = taskProjectionById.get(dependency.successor_task_id);
         // A hidden task row must not remain observable through a dependency edge.
         if (!predecessor || !successor) return [];
+        // Do not spread the dependency query row: board/list readers may have joined raw
+        // endpoint aliases onto it, bypassing the masked task projections below.
         return [{
-            ...dependency,
+            tenant: dependency.tenant,
+            dependency_id: dependency.dependency_id,
+            predecessor_task_id: dependency.predecessor_task_id,
+            successor_task_id: dependency.successor_task_id,
+            dependency_type: dependency.dependency_type,
+            lead_lag_days: dependency.lead_lag_days,
+            notes: dependency.notes,
+            created_at: dependency.created_at,
+            updated_at: dependency.updated_at,
             predecessor_task_name: predecessor.task_name,
+            predecessor_wbs_code: predecessor.wbs_code,
             predecessor_task_wbs_code: predecessor.wbs_code,
             predecessor_task_type_key: predecessor.task_type_key,
             successor_task_name: successor.task_name,
+            successor_wbs_code: successor.wbs_code,
             successor_task_wbs_code: successor.wbs_code,
             successor_task_type_key: successor.task_type_key,
             predecessor_task: {

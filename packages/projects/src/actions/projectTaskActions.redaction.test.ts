@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({
   decision: { allowed: true, redactedFields: [] as string[] },
+  decisionsByProject: {} as Record<string, { allowed: boolean; redactedFields: string[] }>,
   taskName: 'Map New Areas',
 }));
 
@@ -11,35 +12,56 @@ vi.mock('@alga-psa/db', () => {
   const raw = (sql: string, args?: any[]) => ({ sql, args });
   const query = (table: string) => {
     let selection: any[] = [];
+    const filters: Array<{ kind: string; field: any; value: any }> = [];
     const q: any = new Proxy({}, { get(_target, prop) {
-      if (prop === 'then') return (resolve: any) => Promise.resolve(rows(table, selection)).then(resolve);
+      if (prop === 'then') return (resolve: any) => Promise.resolve(rows(table, selection, filters)).then(resolve);
       if (prop === 'select') return (...columns: any[]) => { selection = columns; return q; };
       if (prop === 'first') return async () => table === 'project_tasks'
         ? { phase_name: 'Phase', project_id: 'project1', status_id: 'status1', assigned_to_first_name: null, assigned_to_last_name: null }
-        : rows(table, selection)[0];
+        : rows(table, selection, filters)[0];
+      if (prop === 'where') return (field: any, value?: any) => { filters.push({ kind: 'where', field, value }); return q; };
+      if (prop === 'whereIn') return (field: any, value: any) => { filters.push({ kind: 'whereIn', field, value }); return q; };
       return () => q;
     }});
     return q;
   };
-  const rows = (table: string, selection: any[]) => {
-    if (table === 'project_tasks as pt') return [{ project_id: 'project1' }];
+  const rows = (table: string, selection: any[], filters: Array<{ kind: string; field: any; value: any }>) => {
+    if (table === 'project_tasks as pt') {
+      const taskId = filters.find((filter) => filter.kind === 'where' && typeof filter.field === 'object')?.field?.['pt.task_id'];
+      return [{ project_id: ({ task1: 'project1', pred: 'project2', succ: 'project3' } as any)[taskId] ?? 'project1' }];
+    }
     if (table === 'project_phases') return [{ phase_id: 'ph1', project_id: 'project1', phase_name: 'Phase' }];
     if (table === 'project_tasks') {
       const nameMask = selection.flat().find((column) => column?.sql?.includes('as task_name'));
       const title = nameMask?.args?.[0] ?? state.taskName;
       const descriptionMask = selection.flat().find((column) => column?.args?.includes('description') || column?.sql?.includes('as description'));
-      return [
-        { tenant: 't1', task_id: 'task1', phase_id: 'ph1', task_name: title, description: descriptionMask ? null : 'Visible body', description_rich_text: descriptionMask ? null : 'Visible rich body', order_key: 'a', wbs_code: '1' },
-        { tenant: 't1', task_id: 'pred', phase_id: 'ph1', task_name: title, description: descriptionMask ? null : 'Visible body', description_rich_text: descriptionMask ? null : 'Visible rich body', order_key: 'b', wbs_code: '2' },
-        { tenant: 't1', task_id: 'succ', phase_id: 'ph1', task_name: title, description: descriptionMask ? null : 'Visible body', description_rich_text: descriptionMask ? null : 'Visible rich body', order_key: 'c', wbs_code: '3' },
+      const wbsMask = selection.flat().some((column) => column?.sql?.includes('NULL::') && column?.args?.includes('wbs_code'));
+      const all = [
+        { tenant: 't1', project_id: 'project1', task_id: 'task1', phase_id: 'ph1', task_name: title, description: descriptionMask ? null : 'Visible body', description_rich_text: descriptionMask ? null : 'Visible rich body', order_key: 'a', wbs_code: wbsMask ? null : '1' },
+        { tenant: 't1', project_id: 'project2', task_id: 'pred', phase_id: 'ph2', task_name: title, description: descriptionMask ? null : 'Visible body', description_rich_text: descriptionMask ? null : 'Visible rich body', order_key: 'b', wbs_code: wbsMask ? null : '2' },
+        { tenant: 't1', project_id: 'project3', task_id: 'succ', phase_id: 'ph3', task_name: title, description: descriptionMask ? null : 'Visible body', description_rich_text: descriptionMask ? null : 'Visible rich body', order_key: 'c', wbs_code: wbsMask ? null : '3' },
       ];
+      let filtered = all;
+      for (const filter of filters) {
+        if (filter.kind === 'whereIn' && String(filter.field).includes('task_id')) filtered = filtered.filter((row) => filter.value.includes(row.task_id));
+        if (filter.kind === 'where' && typeof filter.field === 'string' && filter.field.includes('project_id')) filtered = filtered.filter((row) => row.project_id === filter.value);
+        if (filter.kind === 'where' && typeof filter.field === 'object' && filter.field['project_tasks.task_id']) filtered = filtered.filter((row) => row.task_id === filter.field['project_tasks.task_id']);
+      }
+      return filtered;
     }
     if (table === 'project_task_dependencies as ptd') {
       const maskedPred = selection.flat().find((column) => column?.sql?.includes('as predecessor_task_name'));
       const maskedSucc = selection.flat().find((column) => column?.sql?.includes('as successor_task_name'));
-      return [{ dependency_id: 'dep1', predecessor_task_id: 'pred', successor_task_id: 'task1',
+      const all = [
+       { dependency_id: 'dep1', predecessor_task_id: 'pred', successor_task_id: 'task1',
         predecessor_task_name: maskedPred?.args?.[0] ?? 'Hidden Dependency', successor_task_name: maskedSucc?.args?.[0] ?? 'Hidden Successor',
-        predecessor_task_wbs_code: '1', successor_task_wbs_code: '2', predecessor_task_type_key: 'type', successor_task_type_key: 'type' }];
+        predecessor_task_wbs_code: '1', successor_task_wbs_code: '2', predecessor_task_type_key: 'type', successor_task_type_key: 'type', predecessor_wbs_code: 'RAW-PRED-WBS', successor_wbs_code: 'RAW-SUCC-WBS' },
+       { dependency_id: 'dep2', predecessor_task_id: 'task1', successor_task_id: 'succ',
+        predecessor_task_name: maskedPred?.args?.[0] ?? 'Hidden Dependency', successor_task_name: maskedSucc?.args?.[0] ?? 'Hidden Successor',
+        predecessor_task_wbs_code: '1', successor_task_wbs_code: '3', predecessor_task_type_key: 'type', successor_task_type_key: 'type', predecessor_wbs_code: 'RAW-PRED-WBS-2', successor_wbs_code: 'RAW-SUCC-WBS-2' },
+      ];
+      const endpointFilter = filters.find((filter) => filter.kind === 'whereIn' && String(filter.field).includes('task_id'));
+      return endpointFilter ? all.filter((edge) => endpointFilter.value.some((id: string) => edge.predecessor_task_id === id || edge.successor_task_id === id)) : all;
     }
     return [];
   };
@@ -50,7 +72,7 @@ vi.mock('@alga-psa/db', () => {
   };
 });
 vi.mock('../models/project', () => ({ default: { getById: async (_trx: any, _tenant: string, id: string) => ({ project_id: id }) } }));
-vi.mock('../lib/projectReadAuthorization', () => ({ createProjectReadDecider: async () => async () => state.decision }));
+vi.mock('../lib/projectReadAuthorization', () => ({ createProjectReadDecider: async () => async (project: any) => state.decisionsByProject[project.project_id] ?? state.decision }));
 vi.mock('../models/projectTask', () => ({ default: {
   getTaskResourcesForTasks: async () => [], getTaskTicketLinksForTasks: async () => [], getTaskChecklistItems: async () => ({}),
   getTaskTicketLinks: async () => [], getTaskResources: async () => [], getChecklistItems: async () => [],
@@ -68,6 +90,7 @@ import { getProjectTaskData, getTaskById, getTaskDependencies, getTasksForPhase,
 
 beforeEach(() => {
   state.decision = { allowed: true, redactedFields: [] };
+  state.decisionsByProject = {};
   state.taskName = 'Map New Areas';
 });
 
@@ -92,6 +115,61 @@ describe('getProjectTaskData project redactions', () => {
     expect(result.tasks[0].task_name).toBe('Map New Areas');
     expect(result.taskDependencies.task1.predecessors[0].predecessor_task_name).toBe('Map New Areas');
     expect(result.taskDependencies.task1.predecessors[0].predecessor_task.task_name).toBe('Map New Areas');
+  });
+
+  it('removes raw WBS aliases from both dependency directions in board, phase, and list responses', async () => {
+    state.decisionsByProject = {
+      project1: { allowed: true, redactedFields: ['wbs_code'] },
+      project2: { allowed: true, redactedFields: ['wbs_code'] },
+      project3: { allowed: true, redactedFields: ['wbs_code'] },
+    };
+    const results: any[] = await Promise.all([
+      getProjectTaskData('project1'), getTasksForPhase('ph1'), getAllProjectTasksForListView('project1'),
+    ]);
+    for (const result of results) {
+      const serialized = JSON.stringify(result);
+      expect(serialized).not.toContain('RAW-PRED-WBS');
+      expect(serialized).not.toContain('RAW-SUCC-WBS');
+      expect(serialized).not.toContain('"predecessor_wbs_code":"2"');
+      expect(serialized).not.toContain('"successor_wbs_code":"3"');
+    }
+
+    state.decisionsByProject = {};
+    const unrestrictedReaders: any[] = await Promise.all([
+      getProjectTaskData('project1'), getTasksForPhase('ph1'), getAllProjectTasksForListView('project1'),
+    ]);
+    for (const unrestricted of unrestrictedReaders) {
+      const predecessor = unrestricted.taskDependencies.task1.predecessors[0];
+      const successor = unrestricted.taskDependencies.task1.successors[0];
+      expect(predecessor.predecessor_wbs_code).toBe('2');
+      expect(successor.successor_wbs_code).toBe('3');
+    }
+  });
+
+  it('applies distinct endpoint redactions across projects', async () => {
+    state.decisionsByProject = {
+      project1: { allowed: true, redactedFields: [] },
+      project2: { allowed: true, redactedFields: ['wbs_code'] },
+      project3: { allowed: true, redactedFields: ['task_name'] },
+    };
+    const result: any = await getProjectTaskData('project1');
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain('RAW-PRED-WBS');
+    expect(serialized).not.toContain('RAW-SUCC-WBS');
+    expect(result.taskDependencies.task1.predecessors[0].predecessor_wbs_code).toBeNull();
+    expect(result.taskDependencies.task1.successors[0].successor_task_name).not.toBe('Map New Areas');
+  });
+
+  it('denies a dependency whose endpoint project is inaccessible', async () => {
+    state.decisionsByProject = {
+      project1: { allowed: true, redactedFields: [] },
+      project2: { allowed: true, redactedFields: ['wbs_code'] },
+      project3: { allowed: false, redactedFields: [] },
+    };
+    const denied: any = await getProjectTaskData('project1');
+    expect(denied).toHaveProperty('permissionError');
+    expect(JSON.stringify(denied)).not.toContain('RAW-PRED-WBS');
+    expect(JSON.stringify(denied)).not.toContain('RAW-SUCC-WBS');
   });
 
   it('keeps the drawer task reader masked when ProjectDetail reopens a task by id', async () => {
