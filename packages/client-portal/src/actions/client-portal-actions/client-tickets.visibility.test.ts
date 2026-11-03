@@ -973,15 +973,36 @@ describe('client portal ticket visibility enforcement', () => {
 describe('client portal own-comment deletion authorization', () => {
   const ownComment = { comment_id: 'own-comment', ticket_id: TICKET_1, user_id: 'portal-user', is_internal: false, is_system_generated: false, deleted_at: null, actor_display_name: null };
   let persistedComments: any[];
-  let deleted: boolean;
+  let deletedCount: number;
 
-  function query(row: any, onDelete?: () => void) {
+  function query(rows: any[], table?: string) {
     const q: any = {};
-    for (const method of ['select', 'where', 'whereNull', 'whereNotNull', 'modify']) q[method] = vi.fn(() => q);
+    const predicates: Array<(row: any) => boolean> = [];
+    const matches = (row: any) => predicates.every((predicate) => predicate(row));
+    q.select = vi.fn(() => q);
+    q.where = vi.fn((column: any, value?: any) => {
+      if (typeof column === 'function') column(q);
+      else if (typeof column === 'string') predicates.push((row) => row[column.split('.').pop()!] === value);
+      else if (column && typeof column === 'object') predicates.push((row) => Object.entries(column).every(([key, expected]) => row[key.split('.').pop()!] === expected));
+      return q;
+    });
+    q.whereNull = vi.fn((column: string) => {
+      predicates.push((row) => row[column.split('.').pop()!] == null);
+      return q;
+    });
+    q.whereNotNull = vi.fn((column: string) => {
+      predicates.push((row) => row[column.split('.').pop()!] != null);
+      return q;
+    });
     q.modify = vi.fn((callback: any) => { callback?.(q); return q; });
-    q.first = vi.fn(async () => row);
-    q.del = vi.fn(async () => { onDelete?.(); return 1; });
-    q.then = (resolve: any, reject?: any) => Promise.resolve(row ? [row] : []).then(resolve, reject);
+    q.first = vi.fn(async () => rows.find(matches));
+    q.del = vi.fn(async () => {
+      const matchedRows = rows.filter(matches);
+      for (const row of matchedRows) rows.splice(rows.indexOf(row), 1);
+      if (table === 'comments') deletedCount += matchedRows.length;
+      return matchedRows.length;
+    });
+    q.then = (resolve: any, reject?: any) => Promise.resolve(rows.filter(matches)).then(resolve, reject);
     return q;
   }
 
@@ -991,27 +1012,28 @@ describe('client portal own-comment deletion authorization', () => {
     getConnectionMock.mockResolvedValue({ raw: vi.fn() });
     hasPermissionMock.mockImplementation(async (_user: any, resource: string, action: string) => resource === 'ticket' && ['read', 'create', 'update'].includes(action));
     getVisibilityContextMock.mockResolvedValue({ ticketScope: 'client', effectiveTicketScope: 'client', isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: null, visibleBoardIds: null });
-    deleted = false;
+    deletedCount = 0;
     persistedComments = [ownComment];
     withTransactionMock.mockImplementation(async (_db: any, callback: any) => callback(Object.assign((table: string) => {
-      if (table === 'users') return query({ user_id: 'portal-user', contact_id: 'contact-1', first_name: 'Dorothy', last_name: 'User' });
-      if (table === 'comments') {
-        const row = persistedComments.find((comment) => comment.user_id === currentUser.user_id && !comment.is_internal && !comment.is_system_generated && !comment.deleted_at && !comment.actor_display_name);
-        return query(row, () => { persistedComments = []; deleted = true; });
-      }
-      if (table === 'tickets as t') return query({ ticket_id: TICKET_1, client_id: 'client-1', contact_name_id: 'contact-1', board_id: 'board-1' });
-      return query(undefined);
+      if (table === 'users') return query([{ user_id: 'portal-user', contact_id: 'contact-1', first_name: 'Dorothy', last_name: 'User' }]);
+      if (table === 'comments') return query(persistedComments, table);
+      if (table === 'tickets as t') return query([{ ticket_id: TICKET_1, client_id: 'client-1', contact_name_id: 'contact-1', board_id: 'board-1' }]);
+      return query([]);
     }, { raw: vi.fn() })));
   });
 
   it('deletes and persists an own comment with read/create/update and no ticket:delete', async () => {
     const { deleteClientTicketComment } = await import('./client-tickets');
-    const result = await deleteClientTicketComment('own-comment');
+    const requestedComment = { ...ownComment, comment_id: 'requested-own-comment' };
+    const otherOwnComment = { ...ownComment, comment_id: 'other-own-comment' };
+    const anotherAuthorsComment = { ...ownComment, comment_id: 'another-authors-comment', user_id: 'someone-else' };
+    persistedComments = [requestedComment, otherOwnComment, anotherAuthorsComment];
+    const result = await deleteClientTicketComment(requestedComment.comment_id);
     expect(result).toBeUndefined();
     expect(hasPermissionMock).toHaveBeenCalledWith(expect.anything(), 'ticket', 'update', expect.anything());
     expect(hasPermissionMock).not.toHaveBeenCalledWith(expect.anything(), 'ticket', 'delete', expect.anything());
-    expect(deleted).toBe(true);
-    expect(persistedComments).toEqual([]);
+    expect(deletedCount).toBe(1);
+    expect(persistedComments).toEqual([otherOwnComment, anotherAuthorsComment]);
   });
 
   it('denies another author and read-only callers without deleting persisted data', async () => {
@@ -1019,11 +1041,11 @@ describe('client portal own-comment deletion authorization', () => {
     persistedComments = [{ ...ownComment, user_id: 'someone-else' }];
     const anotherAuthor = await deleteClientTicketComment('own-comment');
     expect(anotherAuthor).toMatchObject({ actionError: 'Comment not found or not authorized to delete' });
-    expect(deleted).toBe(false);
+    expect(deletedCount).toBe(0);
     hasPermissionMock.mockImplementation(async (_user: any, resource: string, action: string) => resource === 'ticket' && ['read', 'create'].includes(action));
     const readOnly = await deleteClientTicketComment('own-comment');
     expect(readOnly).toMatchObject({ permissionError: expect.any(String) });
-    expect(deleted).toBe(false);
+    expect(deletedCount).toBe(0);
   });
 });
 
@@ -1126,6 +1148,7 @@ describe('client portal ticket response projection', () => {
     expect(detail.conversations[3].portal_author).toMatchObject({ name: 'Taylor Tech (Partner Co)', role: 'collaborator' });
     expect(detail.conversations[0].portal_can_edit).toBe(false);
     expect(detail.conversations[1].portal_can_edit).toBe(true);
+    expect(detail.conversations[1].portal_can_delete).toBe(true);
     expect(detail.conversations[2].portal_can_edit).toBe(false);
     expect(detail.conversations[3].portal_can_edit).toBe(false);
     expect(detail.conversations[4].portal_can_edit).toBe(false);
@@ -1141,11 +1164,17 @@ describe('client portal ticket response projection', () => {
     getVisibilityContextMock.mockResolvedValue({ ticketScope: 'contact', effectiveTicketScope: 'contact', isClientAdmin: false, contactId: 'different-contact', clientId: 'client-1', visibilityGroupId: null, visibleBoardIds: null, grantedProfileIds: [], includesUnattributed: false, watchGrant: false });
     const sharedWorkspaceDetail = await getClientTicketDetails(TICKET_1) as any;
     expect(sharedWorkspaceDetail.can_interact).toBe(false);
-    expect(sharedWorkspaceDetail.conversations.find((c: any) => c.comment_id === 'comment-own').portal_can_edit).toBe(false);
+    const sharedWorkspaceOwnComment = sharedWorkspaceDetail.conversations.find((c: any) => c.comment_id === 'comment-own');
+    expect(sharedWorkspaceOwnComment.portal_can_edit).toBe(false);
+    expect(sharedWorkspaceOwnComment.portal_can_delete).toBe(false);
 
+    getVisibilityContextMock.mockResolvedValue({ ticketScope: 'client', effectiveTicketScope: 'client', isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: null, visibleBoardIds: null });
     hasPermissionMock.mockImplementation(async (_user: any, _resource: string, action: string) => action !== 'update');
     const readOnlyDetail = await getClientTicketDetails(TICKET_1) as any;
-    expect(readOnlyDetail.conversations.find((c: any) => c.comment_id === 'comment-own')).toMatchObject({ portal_can_edit: false, portal_can_delete: false });
+    const readOnlyOwnComment = readOnlyDetail.conversations.find((c: any) => c.comment_id === 'comment-own');
+    expect(readOnlyDetail.can_interact).toBe(true);
+    expect(readOnlyOwnComment.portal_can_edit).toBe(false);
+    expect(readOnlyOwnComment.portal_can_delete).toBe(false);
   });
 });
 
