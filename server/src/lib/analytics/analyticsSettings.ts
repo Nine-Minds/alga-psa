@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { readTenantSettingsRow } from '@alga-psa/tenancy/server';
+import { readTenantSettingsRow } from '@alga-psa/tenancy/server/tenantSettingsStore';
 import { createTenantKnex } from '../db';
 import { getTenantForCurrentRequest } from '../tenant';
 import { tenantDb, withTransaction } from '@alga-psa/db';

@@ -5,7 +5,7 @@ import { withTransaction, createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { isEnterprise } from '@alga-psa/core/features';
-import { mergeTenantSettingsJson } from '@alga-psa/tenancy/server';
+import { mergeTenantSettingsJson } from '@alga-psa/tenancy/server/tenantSettingsStore';
 import { isLicensedUserType } from '@alga-psa/types';
 import {
   classifyTenantTemplate,

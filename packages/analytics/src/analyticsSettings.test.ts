@@ -12,6 +12,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/tenancy/server', () => ({
   getTenantForCurrentRequest: mocks.getTenantForCurrentRequest,
+}));
+// The full-row reader is a server-only module behind its own entry point; mocking
+// it here keeps the node test out of the server-only boundary.
+vi.mock('@alga-psa/tenancy/server/tenantSettingsStore', () => ({
   readTenantSettingsRow: mocks.readTenantSettingsRow,
 }));
 

@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { withAuth, hasPermission, type AuthContext } from '@alga-psa/auth';
 import { isLicensedUserType, type IUserWithRoles } from '@alga-psa/types';
 import { getTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
-import { mergeTenantSettingsJson } from '@alga-psa/tenancy/server';
+import { mergeTenantSettingsJson } from '@alga-psa/tenancy/server/tenantSettingsStore';
 import type { OnboardingStepId } from '../onboarding-progress';
 import type { OnboardingActionResult } from './onboardingActions';
 import {
