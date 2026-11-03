@@ -10,7 +10,16 @@ import { TIER_FEATURES, FEATURE_MINIMUM_TIER, TIER_LABELS, resolveTier, tierHasF
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getWebhookBaseUrl } from '../../../../../../lib/utils/email/webhookHelpers';
 import axios from 'axios';
-import { getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import { getMicrosoftTokenUrl, MICROSOFT_CALENDAR_OAUTH_SCOPES } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import { MICROSOFT_MULTI_TENANT_AUTHORITY, microsoftIssuerKindFromSource, resolveMicrosoftOAuthAuthority } from '@alga-psa/shared/services/email/microsoftAuthority';
+import {
+  classifyMicrosoftOAuthFailure,
+  classifySafeMicrosoftOAuthFailure,
+  describeMicrosoftOAuthFailureForMailboxFlow,
+  extractRedirectUriFromDescription,
+  MICROSOFT_OAUTH_FAILURE_ERROR_CODES,
+  toSafeMicrosoftOAuthFailure,
+} from '@alga-psa/shared/services/email/microsoftOAuthErrors';
 import { randomBytes } from 'crypto';
 import { resolveCalendarRedirectUri } from '../../../../../../lib/utils/calendar/redirectUri';
 
@@ -28,7 +37,13 @@ export async function GET(request: NextRequest) {
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
     let isPopup = searchParams.get('popup') === 'true';
-    
+
+    // Decode state once, before any early return. The connect form carries `isPopup`
+    // only inside the base64 state (Microsoft never echoes a `popup` query param), so
+    // error/missing-parameter branches need it to reach the opener via postMessage.
+    const decodedState = state ? decodeCalendarState(state) : null;
+    isPopup = isPopup || decodedState?.isPopup === true;
+
     // Helper: redirect to user profile calendar tab (for non-popup flows)
     const redirectToSettings = (success: boolean, error?: string) => {
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
@@ -97,17 +112,23 @@ export async function GET(request: NextRequest) {
     // Handle OAuth errors
     if (error) {
       console.error('Microsoft Calendar OAuth error:', error, errorDescription);
+      const redirectFailureKind = classifyMicrosoftOAuthFailure({ error, errorDescription });
+      const redirectFailureMessage = redirectFailureKind
+        ? describeMicrosoftOAuthFailureForMailboxFlow(redirectFailureKind, {
+            redirectUri: extractRedirectUriFromDescription(errorDescription),
+          })
+        : null;
       if (isPopup) {
         return respondWithPostMessage({
           type: 'oauth-callback',
           provider: 'microsoft',
           resource: 'calendar',
           success: false,
-          error,
-          errorDescription: errorDescription || ''
+          error: redirectFailureKind ? MICROSOFT_OAUTH_FAILURE_ERROR_CODES[redirectFailureKind] : error,
+          errorDescription: redirectFailureMessage || errorDescription || ''
         });
       }
-      return redirectToSettings(false, errorDescription || error);
+      return redirectToSettings(false, redirectFailureMessage || errorDescription || error);
     }
 
     // Validate required parameters
@@ -125,12 +146,7 @@ export async function GET(request: NextRequest) {
       return redirectToSettings(false, 'Authorization code or state parameter is missing');
     }
 
-    // Parse state to get tenant and other info
-    const decodedState = decodeCalendarState(state);
-    if (decodedState?.isPopup) {
-      isPopup = true;
-    }
-
+    // State was decoded (and isPopup resolved) at the top of the handler.
     if (!decodedState) {
       if (isPopup) {
         return respondWithPostMessage({
@@ -245,7 +261,13 @@ export async function GET(request: NextRequest) {
     let tenantId: string | null = null;
     const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(stateData.tenant, 'calendar');
 
+    let tokenAuthority: string = MICROSOFT_MULTI_TENANT_AUTHORITY;
+
     if (microsoftProfile.status === 'ready') {
+      tokenAuthority = resolveMicrosoftOAuthAuthority({
+        issuerKind: microsoftIssuerKindFromSource(microsoftProfile.credentialSource),
+        profileTenantId: microsoftProfile.microsoftTenantId,
+      });
       clientId = microsoftProfile.clientId || null;
       clientSecret = microsoftProfile.clientSecret || null;
       tenantId = microsoftProfile.microsoftTenantId || null;
@@ -275,15 +297,15 @@ export async function GET(request: NextRequest) {
 
     // Exchange authorization code for tokens
     try {
-      // Always use 'common' for multi-tenant Azure AD apps
-      const tokenUrl = getMicrosoftTokenUrl('common');
+      // Same authority the authorize step used (same profile, same resolver).
+      const tokenUrl = getMicrosoftTokenUrl(tokenAuthority);
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
         code: code,
         grant_type: 'authorization_code',
         redirect_uri: redirectUri,
-        scope: 'https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/MailboxSettings.ReadWrite offline_access'
+        scope: MICROSOFT_CALENDAR_OAUTH_SCOPES.join(' ')
       });
 
       const response = await axios.post(tokenUrl, params.toString(), {
@@ -434,15 +456,31 @@ export async function GET(request: NextRequest) {
       }
       return redirectToSettings(true);
     } catch (error: any) {
-      console.error('Microsoft Calendar OAuth token exchange error:', error);
-      const errorMessage = error.response?.data?.error_description || error.message || 'Failed to exchange authorization code';
+      // Never log the raw axios error: `config.data` is the urlencoded token
+      // request body and contains client_secret.
+      const safeFailure = toSafeMicrosoftOAuthFailure(error);
+      console.error('Microsoft Calendar OAuth token exchange error:', {
+        status: safeFailure.status,
+        error: safeFailure.error,
+        errorCodes: safeFailure.errorCodes,
+        errorDescription: safeFailure.errorDescription,
+        traceId: safeFailure.traceId,
+        correlationId: safeFailure.correlationId,
+        message: safeFailure.status ? undefined : (safeFailure.message ?? error?.message),
+      });
+      const failureKind = classifySafeMicrosoftOAuthFailure(safeFailure);
+      const errorMessage = failureKind
+        ? describeMicrosoftOAuthFailureForMailboxFlow(failureKind, {
+            redirectUri: extractRedirectUriFromDescription(safeFailure.errorDescription) ?? redirectUri,
+          })
+        : safeFailure.errorDescription || error.message || 'Failed to exchange authorization code';
       if (isPopup) {
         return respondWithPostMessage({
           type: 'oauth-callback',
           provider: 'microsoft',
           resource: 'calendar',
           success: false,
-          error: 'token_exchange_failed',
+          error: failureKind ? MICROSOFT_OAUTH_FAILURE_ERROR_CODES[failureKind] : 'token_exchange_failed',
           errorDescription: errorMessage
         });
       }
