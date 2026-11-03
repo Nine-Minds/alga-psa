@@ -439,11 +439,11 @@ describe('useTicketLive', () => {
     const { useTicketLive } = await loadHook();
     const tenantId = '00000000-0000-4000-8000-000000000001';
     const actorReference = { ownerTenantId: tenantId, referenceId: '00000000-0000-4000-8000-000000000002',
-      tenantId: '00000000-0000-4000-8000-000000000003', userId: '00000000-0000-4000-8000-000000000004',
+      tenantId: '00000000-0000-4000-8000-000000000003',
       displayName: 'Morgan', organizationName: 'Partner' };
     const onRemoteUpdate = vi.fn();
     renderHook(() => useTicketLive({ tenantId, ticketId: 'ticket-1',
-      currentUser: { userId: actorReference.userId, displayName: 'Different customer user with the same UUID' }, onRemoteUpdate }));
+      currentUser: { userId: '00000000-0000-4000-8000-000000000004', displayName: 'Customer' }, onRemoteUpdate }));
     await flushAsyncWork();
     const update = { updatedFields: ['title'], updatedAt: '2026-09-06T20:00:00.000Z',
       updatedBy: { userId: null, displayName: 'Forged local label', actorReference } };
@@ -451,7 +451,7 @@ describe('useTicketLive', () => {
     expect(onRemoteUpdate).toHaveBeenCalledWith({ ...update, updatedBy: { ...update.updatedBy, displayName: 'Morgan (Partner)' } });
     onRemoteUpdate.mockClear();
     for (const updatedBy of [
-      { ...update.updatedBy, userId: actorReference.userId },
+      { ...update.updatedBy, actorReference: { ...actorReference, userId: '00000000-0000-4000-8000-000000000004' } },
       { ...update.updatedBy, actorReference: { ...actorReference, ownerTenantId: actorReference.tenantId } },
       { userId: null, displayName: 'Missing reference' },
     ]) {

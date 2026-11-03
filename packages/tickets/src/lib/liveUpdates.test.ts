@@ -192,8 +192,13 @@ describe('live ticket update helpers', () => {
     const params = { tenantId, ticketId: 'ticket-1', updatedFields: ['title'], updatedAt: '2026-09-06T20:00:00.000Z',
       updatedBy: { userId: null, displayName: 'Ignored unqualified label', actorReference } };
     await publishTicketUpdate(params);
-    expect(JSON.parse(publishMock.mock.calls[0][1]).updatedBy)
-      .toEqual({ userId: null, displayName: 'Morgan (Partner)', actorReference });
+    const serialized = publishMock.mock.calls[0][1];
+    const payload = JSON.parse(serialized);
+    expect(payload.updatedBy).toEqual({ userId: null, displayName: 'Morgan (Partner)', actorReference: {
+      ownerTenantId: tenantId, referenceId: actorReference.referenceId, tenantId: actorReference.tenantId,
+      displayName: 'Morgan', organizationName: 'Partner',
+    } });
+    expect(serialized).not.toContain(actorReference.userId);
     publishMock.mockClear();
     await expect(publishTicketUpdate({ ...params, updatedBy: { ...params.updatedBy, userId: actorReference.userId } } as any))
       .rejects.toThrow('Invalid ticket live update actor');
