@@ -4,12 +4,13 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['services/**/*.test.ts', '**/__tests__/**/*.test.ts', 'workflow/runtime/utils/**/*.test.ts', 'workflow/runtime/__tests__/dateTriggerPayloadSchemas.test.ts'],
+    include: ['billingClients/*.test.ts', 'services/**/*.test.ts', '**/__tests__/**/*.test.ts', 'workflow/runtime/utils/**/*.test.ts', 'workflow/runtime/__tests__/dateTriggerPayloadSchemas.test.ts'],
   },
   resolve: {
     alias: [
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../packages/db/src/index.ts') },
       { find: /^@alga-psa\/db\/writeAdmission$/, replacement: path.resolve(__dirname, '../packages/db/src/writeAdmission.ts') },
+      { find: /^@alga-psa\/db\/tenantDb$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/tenantDb.ts') },
       { find: /^@alga-psa\/db\/commentEventRegistry$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/commentEventRegistry.ts') },
       { find: /^@alga-psa\/storage$/, replacement: path.resolve(__dirname, '../packages/storage/src/index.ts') },
       { find: /^@alga-psa\/storage\/(.*)$/, replacement: path.resolve(__dirname, '../packages/storage/src/$1') },
