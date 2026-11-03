@@ -21,6 +21,7 @@ import { buildMergedEeMigrationsDir } from '../../../../../server/test-utils/eeM
 
 const tier = vi.hoisted(() => ({ value: 'pro' as 'pro' | 'essentials' }));
 const conn = vi.hoisted(() => ({ db: null as unknown }));
+const mcpAdmin = vi.hoisted(() => ({ value: null as { tenant: string; userId: string | null } | null }));
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({
   ...(await importOriginal() as Record<string, unknown>),
@@ -42,6 +43,10 @@ vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
 vi.mock('@alga-psa/licensing', () => ({
   getLicenseStateRow: vi.fn(async () => null),
   verifyLicense: vi.fn(() => ({ valid: false })),
+}));
+vi.mock('@product/mcp/entry', async (importOriginal) => ({
+  ...(await importOriginal() as Record<string, unknown>),
+  authenticateMcpAdmin: vi.fn(async () => mcpAdmin.value),
 }));
 
 import {
@@ -191,8 +196,29 @@ describe('delete vs archive (T006)', () => {
 
     expect((await getServicePrincipalUsage(db, tenant)).used).toBe(usedBefore - 1);
     expect((await listServicePrincipals(db, tenant)).map((p) => p.user_id)).not.toContain(sp.user_id);
-    expect(await tenantDb(db, tenant).table('mcp_agent_audit').where({ agent_id: agent.agent_id }).first()).toBeTruthy();
-    expect((await tenantDb(db, tenant).table('mcp_agent_audit').where({ agent_id: agent.agent_id })).length).toBe(1);
+    const originalEdition = process.env.EDITION;
+    process.env.EDITION = 'ee';
+    try {
+      const { GET: exportAudit } = await import('server/src/app/api/v1/mcp/audit/route');
+      const request = () => ({
+        nextUrl: new URL(`http://localhost/api/v1/mcp/audit?agentId=${agent.agent_id}`),
+        headers: new Headers(),
+      }) as never;
+      const unauthorized = await exportAudit(request());
+      expect(unauthorized.status).toBe(401);
+
+      mcpAdmin.value = { tenant, userId: 'authorized-test-admin' };
+      const authorized = await exportAudit(request());
+      expect(authorized.status).toBe(200);
+      const auditPage = await authorized.json();
+      expect(auditPage.total).toBe(1);
+      expect(auditPage.data).toHaveLength(1);
+      expect(auditPage.data[0]).toMatchObject({ agent_id: agent.agent_id, tool: 'call_api_endpoint' });
+    } finally {
+      mcpAdmin.value = null;
+      if (originalEdition === undefined) delete process.env.EDITION;
+      else process.env.EDITION = originalEdition;
+    }
     expect((await listAgents(tenant)).map(({ agent_id }) => agent_id)).not.toContain(agent.agent_id);
     expect((await listAgents(tenant)).map(({ agent_id }) => agent_id)).toContain(inactiveAgent.agent_id);
     const archivedAgent = await tenantDb(db, tenant).table('agents').where({ agent_id: agent.agent_id }).first();

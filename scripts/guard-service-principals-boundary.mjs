@@ -41,6 +41,7 @@ export const SELF_EXEMPT_PATHS = [
 
 const SCANNED_EXTENSIONS = /\.(ts|tsx|js|jsx|mjs|cjs|json|sql|ya?ml|sh)$/;
 const SKIPPED_FILES = /(^|\/)(package-lock\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml)$/;
+const NEXT_BUILD_OUTPUT = /(^|\/)\.next(?:-[^/]+)?\//;
 
 // The 'service' key purpose is a quoted 'service' literal with the word
 // "purpose" on the same line or within PURPOSE_WINDOW lines of it (so a purpose
@@ -109,7 +110,7 @@ export function collectRepoFiles(root) {
   }
   const files = [];
   for (const path of result.stdout.split('\0')) {
-    if (!path || !SCANNED_EXTENSIONS.test(path) || SKIPPED_FILES.test(path) || isAllowedPath(path)) continue;
+    if (!path || !SCANNED_EXTENSIONS.test(path) || SKIPPED_FILES.test(path) || NEXT_BUILD_OUTPUT.test(path) || isAllowedPath(path)) continue;
     try {
       files.push({ path, content: readFileSync(join(root, path), 'utf8') });
     } catch {

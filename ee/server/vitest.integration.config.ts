@@ -9,6 +9,10 @@ import unitConfig from './vitest.unit.config';
 // entry to the EE implementation (the shared server alias points at the CE stub).
 const eeProductAliases = [
   {
+    find: '@product/mcp/entry',
+    replacement: path.resolve(__dirname, '../../packages/product-mcp/ee/entry.ts'),
+  },
+  {
     find: '@product/service-principals/entry',
     replacement: path.resolve(__dirname, '../../packages/product-service-principals/ee/entry.ts'),
   },
