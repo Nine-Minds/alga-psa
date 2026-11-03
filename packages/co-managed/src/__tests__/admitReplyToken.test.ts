@@ -66,7 +66,7 @@ const untrusted = (email: string | null) => ({ email, internalAttributionTrusted
 function seed(audience: 'shared_it' | 'organization_private' | 'requester') {
   store.lookups = [];
   store.tables = {
-    email_reply_tokens: [{ tenant: CUSTOMER, token: 'cm2:t', ticket_id: 'tk', comment_id: 'c1' }],
+    email_reply_tokens: [{ tenant: CUSTOMER, token: 'cm2:t', ticket_id: 'tk', comment_id: 'c1', expires_at: new Date('2099-01-01T00:00:00.000Z') }],
     co_management_ticket_work: [{ tenant: CUSTOMER, ticket_id: 'tk', relationship_id: 'rel', work_id: 'w', grant_revoked_at: null, first_escalated_at: new Date() }],
     co_management_relationships: [{ tenant: CUSTOMER, relationship_id: 'rel', state: 'active', ended_at: null, sponsor_tenant: SPONSOR, sponsor_client_id: 'sc' }],
     co_management_ticket_handoffs: [],
@@ -96,6 +96,11 @@ describe('admitReplyToken sender authentication', () => {
   describe('shared_it', () => {
     beforeEach(() => seed('shared_it'));
 
+    it('refuses an authenticated participant when the token has expired', async () => {
+      store.tables.email_reply_tokens[0].expires_at = '2000-01-01T00:00:00.000Z';
+      expect(await admit(trusted('agent@msp.test'))).toEqual({ admitted: false, reason: 'sender_unauthenticated', acknowledge: false });
+    });
+
     it('exploit regression: an unauthenticated From naming a sponsor user is refused before any user lookup, with no acknowledgement', async () => {
       expect(await admit(untrusted('agent@msp.test'))).toEqual({ admitted: false, reason: 'sender_unauthenticated', acknowledge: false });
       expect(store.lookups).not.toContain('users');
@@ -112,6 +117,11 @@ describe('admitReplyToken sender authentication', () => {
 
   describe('organization_private', () => {
     beforeEach(() => seed('organization_private'));
+
+    it('refuses an authenticated participant when the token has expired', async () => {
+      store.tables.email_reply_tokens[0].expires_at = new Date('2000-01-01T00:00:00.000Z');
+      expect(await admit(trusted('it@customer.test'))).toEqual({ admitted: false, reason: 'sender_unauthenticated', acknowledge: false });
+    });
 
     it('trusted auth + customer user is admitted', async () => {
       expect(await admit(trusted('it@customer.test'))).toMatchObject({ admitted: true, actor: { tenant: CUSTOMER, userId: 'customer-user' } });
@@ -142,6 +152,22 @@ describe('admitReplyToken sender authentication', () => {
       const result: any = await admit({ ...trusted('req@CUSTOMER.test'), contactAttributionTrusted: true });
       expect(result).toMatchObject({ admitted: true, audience: 'requester', ticketId: 'tk', requesterContactId: 'k1', requesterClientId: 'client-1' });
       expect(result.actor).toBeUndefined();
+    });
+    it.each([
+      ['expired', new Date('2000-01-01T00:00:00.000Z')],
+      ['missing', undefined],
+      ['malformed', 'not-a-timestamp'],
+    ])('refuses an authenticated requester with a valid grant when expiry is %s', async (_label, expiresAt) => {
+      store.tables.email_reply_tokens[0].expires_at = expiresAt;
+      const denied = await admit(untrusted('req@CUSTOMER.test'));
+      expect(await admit({ ...trusted('req@CUSTOMER.test'), contactAttributionTrusted: true }))
+        .toEqual(denied);
+      expect(denied).toEqual({ admitted: false, reason: 'sender_unauthenticated', acknowledge: false });
+      expect(store.lookups).not.toContain('contacts');
+    });
+    it('admits a valid requester with a future expiry', async () => {
+      store.tables.email_reply_tokens[0].expires_at = '2099-01-01T00:00:00.000Z';
+      expect(await admit(trusted('req@CUSTOMER.test'))).toMatchObject({ admitted: true, requesterContactId: 'k1' });
     });
     it('a contact of another client is refused', async () => { expect(await admit(trusted('other@elsewhere.test'))).toEqual(refused); });
     it('the same email in another tenant is refused', async () => { expect(await admit(trusted('foreign@customer.test'))).toEqual(refused); });

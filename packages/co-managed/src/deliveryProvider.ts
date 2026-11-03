@@ -19,6 +19,15 @@ import type { IUserWithRoles } from '@alga-psa/types';
 
 const normalize = (email: unknown) => String(email ?? '').trim().toLowerCase();
 
+function isReplyTokenExpired(expiresAt: unknown, now = Date.now()): boolean {
+  const expiration = expiresAt instanceof Date
+    ? expiresAt.getTime()
+    : typeof expiresAt === 'string' && expiresAt.trim() !== ''
+      ? Date.parse(expiresAt)
+      : Number.NaN;
+  return !Number.isFinite(expiration) || expiration <= now;
+}
+
 type CustomerUserRow = { user_id: string; email: string | null; is_inactive: boolean } & Record<string, unknown>;
 
 /**
@@ -211,13 +220,16 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
           : { admitted: false, reason: 'legacy_token', acknowledge: true };
       }
       return withAdminTransaction(async (trx): Promise<InboundAdmission> => {
-        const record = await tenantDb(trx, tenant).table('email_reply_tokens').where({ token }).first('ticket_id', 'comment_id');
+        const record = await tenantDb(trx, tenant).table('email_reply_tokens').where({ token }).first('ticket_id', 'comment_id', 'expires_at');
         const ticketId = record?.ticket_id as string | undefined;
         const shared = ticketId ? await loadSharedTicket(trx, tenant, ticketId) : null;
         if (!ticketId || !shared || shared.relationshipId !== parsed.relationshipId) return { admitted: false, reason: 'stale_generation', acknowledge: true };
         const decision = decideReplyToken(token, metadata, shared.grantGeneration);
         if (decision.action === 'refuse') return { admitted: false, reason: decision.reason, acknowledge: true };
         if (shared.work.grant_revoked_at) return { admitted: false, reason: 'grant_revoked', acknowledge: true };
+        // A missing or invalid expiry is indistinguishable from an expired credential.
+        // Use the unauthenticated admission denial before resolving any audience participant.
+        if (isReplyTokenExpired(record?.expires_at)) return { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
         const thread = parsed.threadId
           ? await tenantDb(trx, tenant).table('comment_threads').where({ thread_id: parsed.threadId }).first('collaboration_audience', 'is_internal')
           : null;
