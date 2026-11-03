@@ -52,7 +52,9 @@ async function lifecycleSponsor(db: Knex | Knex.Transaction, tenant: string): Pr
   const customer = tenantDb(db, tenant);
   const relationship = await customer.table('co_management_relationships').whereNull('ended_at').first('sponsor_tenant')
     ?? await customer.table('co_management_relationships').orderBy('ended_at', 'desc').first('sponsor_tenant');
-  if (!relationship?.sponsor_tenant || resolveFlagTargeting('release-v2-0-feature', relationship.sponsor_tenant) === false) return null;
+  const forced = forcedValue(typeof process !== 'undefined' ? process.env.FORCE_CAPABILITIES : undefined, 'co-managed');
+  if (!relationship?.sponsor_tenant || forced === 'off' || forced === 'malformed' ||
+      (forced !== 'on' && resolveFlagTargeting('release-v2-0-feature', relationship.sponsor_tenant) === false)) return null;
   const entitlement = await tenantDb(db, relationship.sponsor_tenant).table('co_managed_entitlements').first('tenant');
   if (!entitlement) return null;
   return relationship.sponsor_tenant;

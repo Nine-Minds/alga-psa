@@ -46,7 +46,7 @@ export async function perProfileInvoicingEnabled(
   tenant: string,
   userId?: string,
 ): Promise<boolean> {
-  return featureFlags.isEnabled(PER_PROFILE_INVOICING_FLAG, {
+  return featureFlags.isEnabledOrDefault(PER_PROFILE_INVOICING_FLAG, {
     tenantId: tenant,
     userId,
   });

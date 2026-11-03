@@ -333,7 +333,7 @@ export function buildDefaultTeamsNlGateDeps(params: {
     },
     posthogFlagEnabled: async () => {
       const { featureFlags } = await import('@alga-psa/core/server');
-      return featureFlags.isEnabled(params.flagKey ?? TEAMS_NL_BOT_FLAG, {
+      return featureFlags.isEnabledOrDefault(params.flagKey ?? TEAMS_NL_BOT_FLAG, {
         userId: params.user.user_id,
         tenantId: params.tenantId,
       });

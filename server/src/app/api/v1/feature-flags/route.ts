@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       
       await Promise.all(
         flags.map(async (flag) => {
-          const isEnabled = await featureFlags.isEnabled(flag, context);
+          const isEnabled = await featureFlags.isEnabledOrDefault(flag, context);
           const variant = await featureFlags.getVariant(flag, context);
           results[flag] = variant || isEnabled;
         })
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
       
       await Promise.all(
         validatedData.flags.map(async (flag) => {
-          const isEnabled = await featureFlags.isEnabled(flag, context);
+          const isEnabled = await featureFlags.isEnabledOrDefault(flag, context);
           const variant = await featureFlags.getVariant(flag, context);
           results[flag] = variant || isEnabled;
         })

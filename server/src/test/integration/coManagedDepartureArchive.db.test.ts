@@ -6,7 +6,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { closeCoManagedRelationship, CoManagedClosureError, finalizeCoManagedArchive, getCoManagedArchiveHistory, getCoManagedDepartureScreen,
-  listCoManagedArchives, readCoManagedArchiveFile, retainCoManagedTimeParticipation } from '@alga-psa/co-managed';
+  listCoManagedArchives, readCoManagedArchiveFile, retainCoManagedTimeParticipation, retainFile } from '@alga-psa/co-managed';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { describeWithDb } from '../../../test-utils/requireDb';
 import { seedBoundaryFixture, type BoundaryFixture } from './coManagedArchiveBoundaryCases';
@@ -181,6 +181,28 @@ describeDb('co-managed closure and archive on real Postgres', { shuffle: false }
       { operationId, expectedRevision: 1, reason: 'departure' }, finalizeArchive);
     expect((await getCoManagedArchiveHistory(db, g.mspAdmin, operationId)).files).toHaveLength(0);
     expect(await db('co_managed_archive_files').where({ tenant: g.msp, customer_tenant: g.customer, relationship_id: g.relationshipId })).toHaveLength(0);
+  });
+
+  it.each(['attachments', 'conversation'])('redaction of %s prevents new file retention but preserves bytes already retained by the sponsor', async (redaction) => {
+    const g = await seedBoundaryFixture(db);
+    await seedTicketWithCurrentGrant(db, g);
+    await seedCurrentComment(db, g, 'shared_it', g.fileCommentId, g.fileThreadId);
+    const previouslyRetainedId = await seedCustomerAttachment(db, g, g.fileCommentId, g.fileThreadId, 'previously-retained.txt');
+    await db.transaction(trx => retainFile(trx, { tenant: g.msp, sourceTenant: g.customer, fileId: previouslyRetainedId,
+      hash: createHash('sha256').update(retainedBytes).digest('hex'), relationshipId: g.relationshipId, clientId: g.sponsorClient, audience: 'shared_it' }));
+    await db('co_management_relationships').where({ tenant: g.customer, relationship_id: g.relationshipId }).update({ redacted_fields: [redaction] });
+    await seedCustomerAttachment(db, g, g.fileCommentId, g.fileThreadId, 'newly-redacted.txt');
+
+    const operationId = randomUUID();
+    await closeCoManagedRelationship(db, g.mspAdmin, { customerTenant: g.customer, relationshipId: g.relationshipId },
+      { operationId, expectedRevision: 1, reason: 'departure' }, finalizeArchive);
+    const history = await getCoManagedArchiveHistory(db, g.mspAdmin, operationId);
+    expect(history.files).toHaveLength(1);
+    const opened = await readCoManagedArchiveFile(db, g.mspAdmin, history.files[0].archiveFileId);
+    expect(opened?.fileName).toBe('previously-retained.txt');
+    expect(Buffer.from(opened!.body as Uint8Array)).toEqual(Buffer.from(retainedBytes));
+    expect(await db('co_managed_archive_files').where({ tenant: g.msp, customer_tenant: g.customer, relationship_id: g.relationshipId }))
+      .toHaveLength(1);
   });
 
   it('A1 (R1): concurrent replays and concurrent distinct operations release the seats exactly once', async () => {

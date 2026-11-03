@@ -10,6 +10,7 @@ import { OPERATIONAL_WRITE_TABLES, admitOperationalWrite, registerWriteAdmission
 import { admits, registerCapabilityEligibility } from '@alga-psa/core/capability';
 import { clearCapabilityCache } from '@alga-psa/core/capability/testing';
 import { flagTargetingEnvName, registerFeatureFlagChecker } from '@alga-psa/core/features';
+import { FeatureFlags } from '../../../../packages/core/src/lib/featureFlagRuntime';
 import { invalidateWriteAdmission } from '@alga-psa/db/writeAdmission';
 import { GRACE_MS, readCoManagedLifecycleLockFree } from '@alga-psa/licensing';
 import { createCoManagedWriteAdmissionResolver, installCoManagedWriteAdmission, readCoManagedLifecycleForServer } from '@alga-psa/licensing/co-managed-write-admission';
@@ -173,23 +174,25 @@ describeDb('co-managed lapse enforced through the write-admission choke point', 
     const originalFlag = process.env[flagEnv];
     const originalForce = process.env.FORCE_CAPABILITIES;
     let unavailable = false;
-    const checker = vi.fn(async () => {
+    const posthog = { isFeatureEnabled: vi.fn(async () => {
       if (unavailable) throw new Error('PostHog unavailable');
       return false;
-    });
+    }) };
+    const flags = new FeatureFlags({ clientResolver: () => posthog as any });
     try {
       delete process.env[flagEnv];
       delete process.env.FORCE_CAPABILITIES;
-      registerFeatureFlagChecker(checker);
+      registerFeatureFlagChecker((flag, context) => flags.evaluate(flag, context));
       installCoManagedWriteAdmission({ readState: readCoManagedLifecycleForServer });
       await db('co_management_relationships').where({ tenant: f.customer, relationship_id: f.relationshipId })
         .update({ state: 'terminated', ended_at: new Date() });
       await lapse(new Date(Date.now() - GRACE_MS - DAY));
       clearCapabilityCache();
       expect([...await outcomes()]).toEqual(['admitted']);
-      expect(checker).toHaveBeenCalled();
+      expect(posthog.isFeatureEnabled).toHaveBeenCalled();
 
       unavailable = true;
+      flags.clearCache();
       clearCapabilityCache();
       expect([...await outcomes()]).toEqual(['refused']);
     } finally {
@@ -197,6 +200,65 @@ describeDb('co-managed lapse enforced through the write-admission choke point', 
         .update({ state: 'active', ended_at: null });
       await lapse(null);
       if (originalChecker === undefined) delete registry[checkerKey]; else registry[checkerKey] = originalChecker;
+      if (originalFlag === undefined) delete process.env[flagEnv]; else process.env[flagEnv] = originalFlag;
+      if (originalForce === undefined) delete process.env.FORCE_CAPABILITIES; else process.env.FORCE_CAPABILITIES = originalForce;
+      clearCapabilityCache();
+      invalidateWriteAdmission(f.customer);
+    }
+  });
+
+  it.each(['throwing client', 'missing client', 'undefined result'])('server uses the real feature runtime and keeps an ended workspace read-only on %s', async (failure) => {
+    const flagEnv = flagTargetingEnvName('release-v2-0-feature');
+    const checkerKey = Symbol.for('alga.core.featureFlagChecker');
+    const registry = globalThis as typeof globalThis & Record<symbol, unknown>;
+    const originalChecker = registry[checkerKey];
+    const originalFlag = process.env[flagEnv];
+    const originalForce = process.env.FORCE_CAPABILITIES;
+    const clientResolver = failure === 'missing client' ? () => null : () => ({
+      isFeatureEnabled: async () => {
+        if (failure === 'throwing client') throw new Error('PostHog unavailable');
+        return undefined;
+      },
+    } as any);
+    const flags = new FeatureFlags({ clientResolver });
+    try {
+      delete process.env[flagEnv];
+      delete process.env.FORCE_CAPABILITIES;
+      delete process.env.DISABLE_FEATURE_FLAGS;
+      delete process.env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS;
+      registerFeatureFlagChecker((flag, context) => flags.evaluate(flag, context));
+      await db('co_management_relationships').where({ tenant: f.customer, relationship_id: f.relationshipId })
+        .update({ state: 'terminated', ended_at: new Date() });
+      installCoManagedWriteAdmission({ readState: readCoManagedLifecycleForServer });
+      clearCapabilityCache();
+      expect([...await outcomes()]).toEqual(['refused']);
+    } finally {
+      await db('co_management_relationships').where({ tenant: f.customer, relationship_id: f.relationshipId })
+        .update({ state: 'active', ended_at: null });
+      await lapse(null);
+      if (originalChecker === undefined) delete registry[checkerKey]; else registry[checkerKey] = originalChecker;
+      if (originalFlag === undefined) delete process.env[flagEnv]; else process.env[flagEnv] = originalFlag;
+      if (originalForce === undefined) delete process.env.FORCE_CAPABILITIES; else process.env.FORCE_CAPABILITIES = originalForce;
+      clearCapabilityCache();
+      invalidateWriteAdmission(f.customer);
+    }
+  });
+
+  it.each(['worker reader', 'server reader'])('forced-on overrides empty tenant targeting for the %s', async (readerKind) => {
+    const flagEnv = flagTargetingEnvName('release-v2-0-feature');
+    const originalFlag = process.env[flagEnv];
+    const originalForce = process.env.FORCE_CAPABILITIES;
+    try {
+      process.env.FORCE_CAPABILITIES = 'co-managed:on';
+      process.env[flagEnv] = '';
+      await db('co_management_relationships').where({ tenant: f.customer, relationship_id: f.relationshipId })
+        .update({ state: 'terminated', ended_at: new Date() });
+      clearCapabilityCache();
+      const result = await createCoManagedWriteAdmissionResolver(readerKind === 'server reader' ? readCoManagedLifecycleForServer : undefined)(db, f.customer);
+      expect(result.canWrite).toBe(false);
+    } finally {
+      await db('co_management_relationships').where({ tenant: f.customer, relationship_id: f.relationshipId })
+        .update({ state: 'active', ended_at: null });
       if (originalFlag === undefined) delete process.env[flagEnv]; else process.env[flagEnv] = originalFlag;
       if (originalForce === undefined) delete process.env.FORCE_CAPABILITIES; else process.env.FORCE_CAPABILITIES = originalForce;
       clearCapabilityCache();

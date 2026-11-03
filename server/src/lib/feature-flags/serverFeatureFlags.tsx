@@ -21,7 +21,7 @@ export const checkFeatureFlag = cache(async (
       ...context,
     };
 
-    return await featureFlags.isEnabled(flagKey, fullContext);
+    return await featureFlags.isEnabledOrDefault(flagKey, fullContext);
   } catch (error) {
     console.error(`Error checking feature flag ${flagKey}:`, error);
     return false;

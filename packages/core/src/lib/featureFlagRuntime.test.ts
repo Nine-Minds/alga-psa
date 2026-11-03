@@ -22,7 +22,7 @@ describe('FeatureFlags runtime', () => {
     const runtime = new FeatureFlags();
 
     await expect(
-      runtime.isEnabled('ai-assistant-activation', {
+      runtime.isEnabledOrDefault('ai-assistant-activation', {
         tenantId: 'tenant-a',
         userId: 'user-a',
       })
@@ -46,7 +46,7 @@ describe('FeatureFlags runtime', () => {
     const runtime = new FeatureFlags();
 
     await expect(
-      runtime.isEnabled('ai-assistant-activation', {
+      runtime.isEnabledOrDefault('ai-assistant-activation', {
         tenantId: 'tenant-a',
         userId: 'user-a',
       })
@@ -76,5 +76,25 @@ describe('FeatureFlags runtime', () => {
       })
     ).resolves.toBe(false);
     expect(posthogSpy).not.toHaveBeenCalled();
+  });
+
+  it('distinguishes deliberate false from missing clients, undefined results, and client errors', async () => {
+    const { FeatureFlags } = await import('./featureFlagRuntime');
+    const evaluatedFalse = new FeatureFlags({ clientResolver: () => ({ isFeatureEnabled: async () => false } as any) });
+    const missingClient = new FeatureFlags({ clientResolver: () => null });
+    const undefinedResult = new FeatureFlags({ clientResolver: () => ({ isFeatureEnabled: async () => undefined } as any) });
+    const failedClient = new FeatureFlags({ clientResolver: () => ({ isFeatureEnabled: async () => { throw new Error('PostHog unavailable'); } } as any) });
+
+    await expect(evaluatedFalse.evaluate('release-v2-0-feature', { tenantId: 'tenant-a' }))
+      .resolves.toEqual({ status: 'evaluated', enabled: false });
+    await expect(missingClient.evaluate('release-v2-0-feature', { tenantId: 'tenant-a' }))
+      .resolves.toEqual({ status: 'unavailable', enabled: false });
+    await expect(undefinedResult.evaluate('release-v2-0-feature', { tenantId: 'tenant-a' }))
+      .resolves.toEqual({ status: 'unavailable', enabled: false });
+    await expect(failedClient.evaluate('release-v2-0-feature', { tenantId: 'tenant-a' }))
+      .resolves.toEqual({ status: 'unavailable', enabled: false });
+    await expect(failedClient.isEnabled('release-v2-0-feature', { tenantId: 'tenant-a' }))
+      .rejects.toMatchObject({ name: 'FeatureFlagUnavailableError' });
+    await expect(failedClient.isEnabledOrDefault('release-v2-0-feature', { tenantId: 'tenant-a' })).resolves.toBe(false);
   });
 });

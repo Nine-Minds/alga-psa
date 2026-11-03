@@ -168,10 +168,10 @@ describe('capabilityGate', () => {
       expect(logger.warn).toHaveBeenCalledWith('capability_decision_failed', expect.objectContaining({ resolver: 'featureFlag', mode: 'admits' }));
     });
 
-    it('no PostHog client (no checker registered) is flag-off', async () => {
+    it('no PostHog client (no checker registered) is unavailable rather than evaluated flag-off', async () => {
       wire({ flag: null, eligible: true });
       const d = await admits(CAP, 't1');
-      expect(d).toMatchObject({ admitted: false, reasons: { admitted: 'flag-off' } });
+      expect(d).toMatchObject({ admitted: false, reasons: { admitted: 'flag-unavailable' } });
     });
 
     it('a throwing eligibility resolver fails closed with eligibility-error', async () => {

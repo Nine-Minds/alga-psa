@@ -34,7 +34,7 @@ function assertEnterpriseEdition(): void {
 }
 
 async function assertFeatureEnabled(user: IUserWithRoles, tenant: string): Promise<void> {
-  const enabled = await featureFlags.isEnabled(FEATURE_FLAG_KEY, {
+  const enabled = await featureFlags.isEnabledOrDefault(FEATURE_FLAG_KEY, {
     userId: user.user_id,
     tenantId: tenant
   });
