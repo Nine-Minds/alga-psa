@@ -77,7 +77,8 @@
       "failedToLoadAdHocEntryData": "Daten des Ad-hoc-Eintrags konnten nicht geladen werden",
       "failedToLoadInteractionData": "Interaktionsdaten konnten nicht geladen werden",
       "failedToLoadAppointmentRequestData": "Daten der Terminanfrage konnten nicht geladen werden",
-      "failedToLoadOpportunityStepData": "Schrittdaten der Gelegenheit konnten nicht geladen werden"
+      "failedToLoadOpportunityStepData": "Schrittdaten der Gelegenheit konnten nicht geladen werden",
+      "scheduleResultsTruncated": "Die Terminergebnisse sind unvollständig. Öffnen Sie den Kalender, um diesen Eintrag zu finden."
     },
     "errors": {
       "loadUsers": "Benutzer konnten nicht geladen werden. Bitte versuchen Sie, die Seite zu aktualisieren.",
@@ -122,7 +123,8 @@
       "taskUpdated": "Aufgabe erfolgreich aktualisiert",
       "scheduleEntryUpdated": "Termineintrag erfolgreich aktualisiert",
       "scheduleEntryCreated": "Termineintrag erfolgreich erstellt"
-    }
+    },
+    "scheduleResultsTruncated": "Die Terminergebnisse sind unvollständig. Schränken Sie den Zeitraum ein, um weniger Einträge anzuzeigen."
   },
   "events": {
     "actions": {

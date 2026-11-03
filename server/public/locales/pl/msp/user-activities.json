@@ -157,7 +157,8 @@
     "contact": "Kontakt",
     "linkedQuotes": "Powiązane oferty",
     "openOpportunity": "Otwórz szansę",
-    "opportunityNotFound": "Nie znaleziono szansy."
+    "opportunityNotFound": "Nie znaleziono szansy.",
+    "scheduleEntrySearchTruncated": "Wyniki kalendarza są niepełne. Otwórz kalendarz, aby znaleźć ten wpis."
   },
   "groupedView": {
     "addGroup": "Dodaj grupę",

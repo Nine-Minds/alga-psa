@@ -157,7 +157,8 @@
     "contact": "Kontakt",
     "linkedQuotes": "Länkade offerter",
     "openOpportunity": "Öppna affärsmöjlighet",
-    "opportunityNotFound": "Affärsmöjligheten hittades inte."
+    "opportunityNotFound": "Affärsmöjligheten hittades inte.",
+    "scheduleEntrySearchTruncated": "Kalenderresultaten är ofullständiga. Öppna kalendern för att hitta den här posten."
   },
   "groupedView": {
     "addGroup": "Lägg till grupp",

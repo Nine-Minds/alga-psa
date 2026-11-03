@@ -77,7 +77,8 @@
       "failedToLoadAdHocEntryData": "No se pudieron cargar los datos de la entrada ad hoc",
       "failedToLoadInteractionData": "No se pudieron cargar los datos de la interacción",
       "failedToLoadAppointmentRequestData": "No se pudieron cargar los datos de la solicitud de cita",
-      "failedToLoadOpportunityStepData": "No se pudieron cargar los datos del paso de la oportunidad"
+      "failedToLoadOpportunityStepData": "No se pudieron cargar los datos del paso de la oportunidad",
+      "scheduleResultsTruncated": "Los resultados del calendario están incompletos. Abra el calendario para encontrar esta entrada."
     },
     "errors": {
       "loadUsers": "No se pudieron cargar los usuarios. Intente refrescar la página.",
@@ -122,7 +123,8 @@
       "taskUpdated": "Tarea actualizada correctamente",
       "scheduleEntryUpdated": "Entrada del calendario actualizada correctamente",
       "scheduleEntryCreated": "Entrada del calendario creada correctamente"
-    }
+    },
+    "scheduleResultsTruncated": "Los resultados del calendario están incompletos. Reduzca el intervalo de fechas para ver menos entradas."
   },
   "events": {
     "actions": {

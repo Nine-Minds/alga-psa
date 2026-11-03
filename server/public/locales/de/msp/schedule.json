@@ -142,7 +142,8 @@
       "title": "Beschäftigt",
       "close": "Schließen",
       "timeRange": "{{start}} – {{end}}"
-    }
+    },
+    "loadMore": "Weitere Termine laden"
   },
   "weeklyEvent": {
     "actions": {

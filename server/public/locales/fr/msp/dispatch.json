@@ -77,7 +77,8 @@
       "failedToLoadAdHocEntryData": "Échec du chargement des données de l'entrée ad hoc",
       "failedToLoadInteractionData": "Échec du chargement des données de l'interaction",
       "failedToLoadAppointmentRequestData": "Échec du chargement des données de la demande de rendez-vous",
-      "failedToLoadOpportunityStepData": "Impossible de charger les données de l'étape de l'opportunité"
+      "failedToLoadOpportunityStepData": "Impossible de charger les données de l'étape de l'opportunité",
+      "scheduleResultsTruncated": "Les résultats du calendrier sont incomplets. Ouvrez le calendrier pour trouver cette entrée."
     },
     "errors": {
       "loadUsers": "Impossible de charger les utilisateurs. Veuillez essayer de rafraîchir la page.",
@@ -122,7 +123,8 @@
       "taskUpdated": "Tâche mise à jour avec succès",
       "scheduleEntryUpdated": "Entrée de planning mise à jour avec succès",
       "scheduleEntryCreated": "Entrée de planning créée avec succès"
-    }
+    },
+    "scheduleResultsTruncated": "Les résultats du calendrier sont incomplets. Réduisez la période pour afficher moins d’entrées."
   },
   "events": {
     "actions": {

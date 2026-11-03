@@ -77,7 +77,8 @@
       "failedToLoadAdHocEntryData": "Falha ao carregar dados de entrada ad hoc",
       "failedToLoadInteractionData": "Falha ao carregar dados de interação",
       "failedToLoadAppointmentRequestData": "Falha ao carregar os dados da solicitação de agendamento",
-      "failedToLoadOpportunityStepData": "Não foi possível carregar os dados da etapa da oportunidade"
+      "failedToLoadOpportunityStepData": "Não foi possível carregar os dados da etapa da oportunidade",
+      "scheduleResultsTruncated": "Os resultados do calendário estão incompletos. Abra o calendário para encontrar esta entrada."
     },
     "errors": {
       "loadUsers": "Falha ao carregar usuários. Por favor, tente atualizar a página.",
@@ -122,7 +123,8 @@
       "taskUpdated": "Tarefa atualizada com sucesso",
       "scheduleEntryUpdated": "Entrada de agendamento atualizada com sucesso",
       "scheduleEntryCreated": "Entrada de agendamento criada com sucesso"
-    }
+    },
+    "scheduleResultsTruncated": "Os resultados do calendário estão incompletos. Reduza o intervalo de datas para ver menos entradas."
   },
   "events": {
     "actions": {

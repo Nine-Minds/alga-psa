@@ -77,7 +77,8 @@
       "failedToLoadAdHocEntryData": "Impossibile caricare i dati della voce ad hoc",
       "failedToLoadInteractionData": "Impossibile caricare i dati dell'interazione",
       "failedToLoadAppointmentRequestData": "Impossibile caricare i dati della richiesta di appuntamento",
-      "failedToLoadOpportunityStepData": "Impossibile caricare i dati del passaggio dell'opportunità"
+      "failedToLoadOpportunityStepData": "Impossibile caricare i dati del passaggio dell'opportunità",
+      "scheduleResultsTruncated": "I risultati del calendario sono incompleti. Apri il calendario per trovare questa voce."
     },
     "errors": {
       "loadUsers": "Impossibile caricare gli utenti. Riprova aggiornando la pagina.",
@@ -122,7 +123,8 @@
       "taskUpdated": "Task aggiornata con successo",
       "scheduleEntryUpdated": "Voce del calendario aggiornata con successo",
       "scheduleEntryCreated": "Voce del calendario creata con successo"
-    }
+    },
+    "scheduleResultsTruncated": "I risultati del calendario sono incompleti. Riduci l’intervallo di date per visualizzare meno voci."
   },
   "events": {
     "actions": {

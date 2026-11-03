@@ -138,7 +138,7 @@ export function WorkItemDetailsDrawer({
                     const end = new Date(adHocData.scheduled_end || new Date());
                     const scheduleResult = await getScheduleEntries(start, end);
                     if (scheduleResult.success && scheduleResult.hasMore) {
-                        toast('Showing a bounded schedule result; narrow the date range to find this entry.', { icon: '⚠️' });
+                        toast(t('details.toasts.scheduleResultsTruncated', { defaultValue: 'Schedule results are incomplete. Open the schedule to find this entry.' }), { icon: '⚠️' });
                     }
                     const scheduleEntry = scheduleResult.success ? 
                         scheduleResult.entries.find((e: IScheduleEntry) => e.entry_id === adHocData.work_item_id) : null;

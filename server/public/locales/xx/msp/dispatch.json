@@ -77,7 +77,8 @@
       "failedToLoadAdHocEntryData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧḓ-ħȯƈ ḗƞŧřẏ ḓȧŧȧ⟧",
       "failedToLoadInteractionData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ īƞŧḗřȧƈŧīȯƞ ḓȧŧȧ⟧",
       "failedToLoadAppointmentRequestData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧƥƥȯīƞŧḿḗƞŧ řḗʠŭḗşŧ ḓȧŧȧ⟧",
-      "failedToLoadOpportunityStepData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓḗȧŀ şŧḗƥ ḓȧŧȧ⟧"
+      "failedToLoadOpportunityStepData": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓḗȧŀ şŧḗƥ ḓȧŧȧ⟧",
+      "scheduleResultsTruncated": "⟦Şƈħḗḓŭŀḗ řḗşŭŀŧş ȧřḗ īƞƈȯḿƥŀḗŧḗ. Ȯƥḗƞ ŧħḗ şƈħḗḓŭŀḗ ŧȯ ƒīƞḓ ŧħīş ḗƞŧřẏ.⟧"
     },
     "errors": {
       "loadUsers": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŭşḗřş. Ƥŀḗȧşḗ ŧřẏ řḗƒřḗşħīƞɠ ŧħḗ ƥȧɠḗ.⟧",
@@ -122,7 +123,8 @@
       "taskUpdated": "⟦Ŧȧşķ ŭƥḓȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
       "scheduleEntryUpdated": "⟦Şƈħḗḓŭŀḗ ḗƞŧřẏ ŭƥḓȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧",
       "scheduleEntryCreated": "⟦Şƈħḗḓŭŀḗ ḗƞŧřẏ ƈřḗȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ⟧"
-    }
+    },
+    "scheduleResultsTruncated": "⟦Şƈħḗḓŭŀḗ řḗşŭŀŧş ȧřḗ īƞƈȯḿƥŀḗŧḗ. Ƞȧřřȯẇ ŧħḗ ḓȧŧḗ řȧƞɠḗ ŧȯ şḗḗ ƒḗẇḗř ḗƞŧřīḗş.⟧"
   },
   "events": {
     "actions": {

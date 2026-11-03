@@ -157,7 +157,8 @@
     "contact": "Contact",
     "linkedQuotes": "Devis liés",
     "openOpportunity": "Ouvrir l'opportunité",
-    "opportunityNotFound": "Opportunité introuvable."
+    "opportunityNotFound": "Opportunité introuvable.",
+    "scheduleEntrySearchTruncated": "Les résultats du calendrier sont incomplets. Ouvrez le calendrier pour trouver cette entrée."
   },
   "groupedView": {
     "addGroup": "Ajouter un groupe",

@@ -142,7 +142,8 @@
       "title": "Zajęty",
       "close": "Zamknij",
       "timeRange": "{{start}} – {{end}}"
-    }
+    },
+    "loadMore": "Wczytaj więcej terminów"
   },
   "weeklyEvent": {
     "actions": {

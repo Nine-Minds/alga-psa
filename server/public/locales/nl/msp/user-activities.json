@@ -157,7 +157,8 @@
     "contact": "Contact",
     "linkedQuotes": "Gekoppelde offertes",
     "openOpportunity": "Opportunity openen",
-    "opportunityNotFound": "Opportunity niet gevonden."
+    "opportunityNotFound": "Opportunity niet gevonden.",
+    "scheduleEntrySearchTruncated": "De agendaresultaten zijn onvolledig. Open de agenda om dit item te vinden."
   },
   "groupedView": {
     "addGroup": "Groep toevoegen",

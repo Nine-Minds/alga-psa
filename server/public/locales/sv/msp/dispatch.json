@@ -77,7 +77,8 @@
       "failedToLoadAdHocEntryData": "Det gick inte att läsa in ad hoc-postens data",
       "failedToLoadInteractionData": "Det gick inte att läsa in interaktionens data",
       "failedToLoadAppointmentRequestData": "Det gick inte att läsa in bokningsförfrågans data",
-      "failedToLoadOpportunityStepData": "Det gick inte att läsa in affärsstegets data"
+      "failedToLoadOpportunityStepData": "Det gick inte att läsa in affärsstegets data",
+      "scheduleResultsTruncated": "Kalenderresultaten är ofullständiga. Öppna kalendern för att hitta den här posten."
     },
     "errors": {
       "loadUsers": "Det gick inte att läsa in användarna. Försök ladda om sidan.",
@@ -122,7 +123,8 @@
       "taskUpdated": "Uppgiften har uppdaterats",
       "scheduleEntryUpdated": "Schemaposten har uppdaterats",
       "scheduleEntryCreated": "Schemaposten har skapats"
-    }
+    },
+    "scheduleResultsTruncated": "Kalenderresultaten är ofullständiga. Begränsa datumintervallet för att visa färre poster."
   },
   "events": {
     "actions": {

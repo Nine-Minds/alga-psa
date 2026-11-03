@@ -967,7 +967,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
 
         {scheduleResultsTruncated && (
           <div role="status" className="mb-2 rounded border border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-[rgb(var(--color-text-700))]">
-            {t('dashboard.scheduleResultsTruncated', { defaultValue: 'Showing the first 500 schedule entries. Narrow the date range to see a smaller result set.' })}
+            {t('dashboard.scheduleResultsTruncated', { defaultValue: 'Schedule results are incomplete. Narrow the date range to see fewer entries.' })}
           </div>
         )}
         <ScheduleViewPanel
