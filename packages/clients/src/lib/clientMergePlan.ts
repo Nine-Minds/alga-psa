@@ -378,8 +378,9 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   { table: 'client_locations', label: 'location' },
   { table: 'client_inbound_email_domains', label: 'inbound email domain' },
   { table: 'client_name_aliases', label: 'name alias' },
-  // Client-scoped checklist templates keep applying to the surviving client's tickets.
+  // Client-scoped checklist and ticket templates keep applying to the surviving client's tickets.
   { table: 'checklist_templates', label: 'checklist template' },
+  { table: 'ticket_templates', label: 'ticket template' },
   { table: 'ticket_materials', label: 'ticket material' },
   { table: 'project_materials', label: 'project material' },
   { table: 'survey_invitations', label: 'survey invitation' },
@@ -521,6 +522,14 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
       + 'a merge here cannot re-stamp. Participation and queue lookups match the reference on that pair, so '
       + 'moving the row would detach it from its relationship. A live relationship already refuses the merge '
       + '(SOURCE_HAS_CO_MANAGEMENT); what remains afterwards is retained history pinned to the original client.',
+  },
+  {
+    table: 'co_managed_time_work_references',
+    reason:
+      'Billing provenance of one MSP time entry booked against shared customer work. Its client_id is '
+      + "the relationship's sponsor_client_id captured at booking, and co-managed effort totals match it "
+      + 'against that relationship; the merge does not re-point relationships, so moving the row would drop '
+      + 'the entry from the shared-work totals it describes.',
   },
   {
     table: 'co_managed_ticket_references',

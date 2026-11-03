@@ -36,6 +36,8 @@ export * from './lib/templateUtils';
 
 // Quote line inclusion rule (required always; optional only while selected)
 export * from './lib/quoteItemInclusion';
+export * from './lib/quoteDiscountAllocation';
+export * from './lib/quoteTotals';
 
 // Formatting utilities
 export * from './lib/formatters';
@@ -71,5 +73,5 @@ export * from './constants/currency';
 export * from './types/index';
 
 export { isInlineTextDocumentMimeType, isPreviewableDocumentMimeType } from './lib/documentMimeType';
-export { resolveDocumentServingPolicy, buildContentDisposition } from './lib/documentServingPolicy';
+export { resolveDocumentServingPolicy, buildContentDisposition, buildDocumentPreviewHeaders, isRasterImageMime, RASTER_IMAGE_MIME_TYPES } from './lib/documentServingPolicy';
 export type { DocumentServingPolicy, DocumentDisposition } from './lib/documentServingPolicy';

@@ -240,7 +240,6 @@ describe('ProjectQuickAdd default service', () => {
       <ProjectQuickAdd
         onClose={() => undefined}
         onProjectAdded={() => undefined}
-        clients={[]}
       />
     );
 

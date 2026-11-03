@@ -12,6 +12,8 @@ const m = vi.hoisted(() => ({
   }),
   serviceStart: vi.fn(async () => undefined),
   consumerStart: vi.fn(async () => undefined),
+  registered: vi.fn(),
+  registrationFails: false,
 }));
 
 vi.mock('dotenv', () => ({ default: { config: vi.fn() } }));
@@ -106,6 +108,15 @@ describe('email-service boot with a failing capability gate', () => {
     m.gate.mockClear();
     m.serviceStart.mockClear();
     m.consumerStart.mockClear();
+    m.registered.mockClear();
+    m.registrationFails = false;
+    // CM L5: the seam registration entry point (its real graph needs the database barrel mocked out above).
+    // doMock so each test's registry re-evaluates the factory after resetModules.
+    vi.doMock('@alga-psa/co-managed/deliveryRegistration', () => {
+      m.registered();
+      if (m.registrationFails) throw new Error('@alga-psa/co-managed cannot be resolved');
+      return {};
+    });
   });
 
   afterEach(async () => {
@@ -135,6 +146,26 @@ describe('email-service boot with a failing capability gate', () => {
       expect(m.consumerStart).toHaveBeenCalledTimes(1);
       expect(m.gate).not.toHaveBeenCalled();
       expect(m.error).not.toHaveBeenCalled();
+      expect(exitSpy).not.toHaveBeenCalled();
+      // CM L5: the process that runs processInboundEmailInApp registers the delivery + inbound writer seams.
+      expect(m.registered).toHaveBeenCalledTimes(1);
+    } finally {
+      onSpy.mockRestore();
+      exitSpy.mockRestore();
+    }
+  });
+
+  it('still boots when @alga-psa/co-managed cannot be resolved (the seams stay unregistered)', async () => {
+    m.registrationFails = true;
+    const onSpy = vi.spyOn(process, 'on').mockReturnValue(process);
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+    try {
+      await import('./index');
+      await vi.waitFor(() => expect(m.info).toHaveBeenCalledWith('[IMAP] IMAP service started'));
+      expect(m.registered).toHaveBeenCalledTimes(1);
+      expect(m.error).toHaveBeenCalledWith('Failed to register the co-managed delivery provider:', expect.any(Error));
+      expect(m.serviceStart).toHaveBeenCalledTimes(1);
+      expect(m.consumerStart).toHaveBeenCalledTimes(1);
       expect(exitSpy).not.toHaveBeenCalled();
     } finally {
       onSpy.mockRestore();

@@ -40,6 +40,7 @@ const mocks = vi.hoisted(() => {
 });
 
 vi.mock('../src/actions/timeEntryActions', () => ({
+  isServiceOptionalForWorkItem: vi.fn(async () => false),
   fetchServicesForTimeEntry: (...args: unknown[]) => mocks.fetchServicesForTimeEntry(...args),
   fetchTaxRegions: (...args: unknown[]) => mocks.fetchTaxRegions(...args),
   fetchClientTaxRateForWorkItem: vi.fn(async () => null),

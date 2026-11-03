@@ -9,8 +9,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
 import { IContract } from '@alga-psa/types';
 import { getContracts, getContractLinesForContract } from '@alga-psa/billing/actions/contractActions';
-import { getClientContractsForBilling, getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { IClient } from '@alga-psa/types';
+import { countActiveClientsByContract } from '@alga-psa/billing/actions/billingClientsActions';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -61,8 +60,13 @@ const ContractPerformance: React.FC = () => {
       setContracts(fetchedContracts);
       
       // Calculate metrics for all contracts
+      const counts = await countActiveClientsByContract(fetchedContracts.map(contract => contract.contract_id));
+      if (isReturnedActionError(counts)) {
+        throw new Error(getErrorMessage(counts));
+      }
+      const countByContract = new Map(counts.map(row => [row.contract_id, row.active_client_count]));
       const metrics = await Promise.all(
-        fetchedContracts.map(contract => calculateContractMetrics(contract))
+        fetchedContracts.map(contract => calculateContractMetrics(contract, countByContract.get(contract.contract_id) ?? 0))
       );
       
       setContractMetrics(metrics);
@@ -81,53 +85,35 @@ const ContractPerformance: React.FC = () => {
 
   const formatCents = (value: number) => formatCurrency(value / 100, tenantCurrency);
 
-  const calculateContractMetrics = async (contract: IContract): Promise<ContractMetrics> => {
+  const calculateContractMetrics = async (
+    contract: IContract,
+    activeClientCount: number,
+  ): Promise<ContractMetrics> => {
     try {
-      // Get all clients
-      const clients = await getAllClientsForBilling(false);
-      if (isReturnedActionError(clients)) {
-        throw new Error(getErrorMessage(clients));
-      }
-      
-      // Get all clients using this contract
-      const clientsWithContract: IClient[] = [];
-      let totalRevenue = 0;
-      
-      for (const client of clients) {
-        const clientContracts = await getClientContractsForBilling(client.client_id);
-        if (isReturnedActionError(clientContracts)) {
-          throw new Error(getErrorMessage(clientContracts));
-        }
-        const matchingContract = clientContracts.find(cc => 
-          cc.contract_id === contract.contract_id && cc.is_active
-        );
-        
-        if (matchingContract) {
-          clientsWithContract.push(client);
-          // In a real implementation, you would calculate actual revenue
-          // For now, we'll use a placeholder value
-          totalRevenue += 10000; // $100.00 per client
-        }
-      }
-      
+      // Active clients using this contract come from one grouped count for all contracts.
+      const clientCount = activeClientCount;
+      // In a real implementation, you would calculate actual revenue
+      // For now, we'll use a placeholder value ($100.00 per client)
+      const totalRevenue = clientCount * 10000;
+
       // Get all contract lines in the contract
       const contractLines = await getContractLinesForContract(contract.contract_id);
       if (isReturnedActionError(contractLines)) {
         throw new Error(getErrorMessage(contractLines));
       }
-      
+
       return {
         contractId: contract.contract_id,
         contractName: contract.contract_name,
-        totalClients: clientsWithContract.length,
-        activeClients: clientsWithContract.length,
+        totalClients: clientCount,
+        activeClients: clientCount,
         totalPlans: contractLines.length,
-        averagePlansPerClient: clientsWithContract.length > 0 
-          ? contractLines.length / clientsWithContract.length 
+        averagePlansPerClient: clientCount > 0
+          ? contractLines.length / clientCount
           : 0,
         totalRevenue: totalRevenue,
-        averageRevenuePerClient: clientsWithContract.length > 0 
-          ? totalRevenue / clientsWithContract.length 
+        averageRevenuePerClient: clientCount > 0
+          ? totalRevenue / clientCount
           : 0
       };
     } catch (error) {

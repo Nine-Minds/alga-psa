@@ -2612,12 +2612,15 @@
       "columns": {
         "name": "Name",
         "title": "Ticket title",
+        "client": "Client",
         "board": "Board",
         "checklist": "Checklist items",
         "status": "Status",
         "schedules": "Schedules"
       },
-      "deleteBlocked": "Used by {{count}} recurring schedule(s). Point them at another template or archive them first."
+      "deleteBlocked": "Used by {{count}} recurring schedule(s). Point them at another template or archive them first.",
+      "allClients": "All clients",
+      "clientFilter": "All clients"
     },
     "status": {
       "active": "Active",
@@ -2645,6 +2648,9 @@
       "title": "Ticket title",
       "description": "Description",
       "descriptionPlaceholder": "Description",
+      "client": "Client",
+      "clientPlaceholder": "All clients",
+      "clientHelp": "Leave empty to offer the template for every client. Pick one to offer it only on that client’s tickets.",
       "offerForManualUse": "Offer in the new ticket picker",
       "offerForManualUseHelp": "Turn off for templates that only recurring schedules use.",
       "titleTokens": "You can use {{tokens}} in the title; they are filled in per ticket."

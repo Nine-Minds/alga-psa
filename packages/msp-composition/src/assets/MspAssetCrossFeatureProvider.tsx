@@ -72,7 +72,6 @@ export function MspAssetCrossFeatureProvider({ children }: { children: ReactNode
             boardOptions={ticketData.options.board}
             priorityOptions={ticketData.options.priority}
             initialCategories={ticketData.categories}
-            initialClients={ticketData.clients}
             initialLocations={ticketData.locations}
           />,
           undefined,

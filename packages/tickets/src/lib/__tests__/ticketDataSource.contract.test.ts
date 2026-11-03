@@ -45,7 +45,7 @@ describe('native ticket data source contract', () => {
         methods += 1;
       }
     }
-    expect(methods).toBe(97);
+    expect(methods).toBe(98);
   });
 
   it('forwards arguments and results unchanged, resolving the action at call time', async () => {
