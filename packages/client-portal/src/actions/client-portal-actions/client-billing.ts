@@ -4,7 +4,7 @@
 
 import { recordQuoteLifecycleTransition } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
 import { getConnection, createTenantKnex, withTransaction, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
-import { toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
+import { enqueueImmediateJob, toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { buildDocumentFileName } from '@alga-psa/core/fileNames';
 import { Knex } from 'knex';
 import {
@@ -31,7 +31,6 @@ import Quote from '@alga-psa/billing/models/quote';
 import QuoteActivity from '@alga-psa/billing/models/quoteActivity';
 import { recalculateQuoteFinancials } from '@alga-psa/billing/services';
 import { withAuth } from '@alga-psa/auth';
-import { scheduleInvoiceEmailAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { JobStatus } from '@alga-psa/types';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { computeRemainingBlockValueMinor } from '@alga-psa/shared/billingClients/hourBlockService';
@@ -1076,19 +1075,27 @@ export const sendClientInvoiceEmail = withAuth(async (user, { tenant }, invoiceI
       return accessError;
     }
 
-    // Schedule email sending
-    const result = await scheduleInvoiceEmailAction([invoiceId]);
+    // Portal resend is deliberately narrow: the invoice and recipient are
+    // derived from the authenticated portal identity and server-side records.
+    // No sender or message controls are exposed to the client.
+    const jobData = {
+      invoiceIds: [invoiceId],
+      tenantId: tenant,
+      user_id: user.user_id,
+      steps: [
+        { stepName: `PDF Generation for Invoice ${invoiceId}`, type: 'pdf_generation', metadata: { invoiceId, tenantId: tenant } },
+        { stepName: `Email Sending for Invoice ${invoiceId}`, type: 'email_sending', metadata: { invoiceId, tenantId: tenant } },
+      ],
+      metadata: { user_id: user.user_id, invoice_count: 1, tenantId: tenant },
+    };
+    const { jobId, scheduledJobId } = await enqueueImmediateJob('invoice_email', jobData);
 
-    if (isClientBillingActionError(result)) {
-      return result;
-    }
-
-    if (!result?.jobId) {
+    if (!scheduledJobId || !jobId) {
       return actionError('Failed to start email sending', 'client-portal:errors.billing.emailSendFailed');
     }
 
     // Poll until job completes
-    const status = await pollJobUntilComplete(result.jobId, tenant);
+    const status = await pollJobUntilComplete(jobId, tenant);
 
     if (status.status === 'completed') {
       return { success: true };

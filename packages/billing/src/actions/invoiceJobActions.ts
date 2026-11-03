@@ -38,6 +38,7 @@ const INVOICE_ZIP_SCHEDULE_FAILURE = 'Failed to start invoice PDF generation. Pl
 const INVOICE_EMAIL_SCHEDULE_FAILURE = 'Failed to start invoice email sending. Please try again.';
 const INVOICE_EMAIL_RECIPIENT_FAILURE = 'Failed to load recipient information for this invoice.';
 const INVOICE_EMAIL_SEND_FAILURE = 'Failed to send invoice email. Please try again.';
+const INVOICE_SEND_CAPABILITY = { resource: 'invoice', action: 'send' } as const;
 
 export type InvoiceJobActionError =
   | { readonly actionError: string }
@@ -124,8 +125,8 @@ export const scheduleInvoiceEmailAction = withAuth(async (
   invoiceIds: string[],
   senderId?: string
 ): Promise<ScheduleInvoiceJobResult> => {
-  if (!await hasPermission(user, 'billing', 'create')) {
-    return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
+  if (!await hasPermission(user, INVOICE_SEND_CAPABILITY.resource, INVOICE_SEND_CAPABILITY.action)) {
+    return permissionError('Permission denied: invoice send required', 'msp/invoicing:errors.permissions.invoiceSend');
   }
 
   if (!invoiceIds || invoiceIds.length === 0) {
@@ -450,8 +451,8 @@ export const sendInvoiceEmailAction = withAuth(async (
   customMessage?: string,
   senderId?: string
 ): Promise<SendInvoiceEmailsResult | InvoiceJobActionError> => {
-  if (!await hasPermission(user, 'billing', 'create')) {
-    return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
+  if (!await hasPermission(user, INVOICE_SEND_CAPABILITY.resource, INVOICE_SEND_CAPABILITY.action)) {
+    return permissionError('Permission denied: invoice send required', 'msp/invoicing:errors.permissions.invoiceSend');
   }
   const { knex } = await createTenantKnex();
 
