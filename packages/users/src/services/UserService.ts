@@ -33,6 +33,7 @@ import {
 import { hashPassword, verifyPassword } from '@alga-psa/core/encryption';
 import { verifyAuthenticator } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/user-composition/lib/permissions';
+import { assertMspRoleGrantsWithinActorPermissions } from '../lib/roleGrantAuthorization';
 import { validateSystemContext } from '@alga-psa/db';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
@@ -328,6 +329,14 @@ export class UserService extends BaseService<IUser> {
 
         if (roles.length !== data.role_ids.length) {
           throw new Error('One or more invalid role IDs provided');
+        }
+
+        // Invitation acceptance was authorized by the inviter before the
+        // invitation row was created. All other direct service creation paths
+        // must authorize the actor who is assigning the role.
+        if (!admissionOptions.invitationToken && context.userId !== '00000000-0000-0000-0000-000000000000') {
+          await this.ensurePermission(context, 'user', 'update');
+          await assertMspRoleGrantsWithinActorPermissions(context.userId, context.tenant, trx, data.role_ids);
         }
       }
 
@@ -765,6 +774,9 @@ export class UserService extends BaseService<IUser> {
 
       if (roles.length !== roleIds.length) {
         throw new Error('One or more invalid role IDs provided');
+      }
+      if (context.userId !== '00000000-0000-0000-0000-000000000000') {
+        await assertMspRoleGrantsWithinActorPermissions(context.userId, context.tenant, trx, roleIds);
       }
 
       // Remove existing roles

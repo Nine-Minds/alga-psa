@@ -83,6 +83,10 @@ vi.mock('@alga-psa/user-composition/lib/permissions', () => ({
   throwPermissionError: vi.fn(),
 }));
 
+vi.mock('../../lib/roleGrantAuthorization', () => ({
+  assertMspRoleGrantsWithinActorPermissions: vi.fn(async () => undefined),
+}));
+
 vi.mock('next/cache', () => ({
   revalidatePath: revalidatePathMock,
 }));

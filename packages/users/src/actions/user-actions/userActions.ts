@@ -23,6 +23,7 @@ import { ListViewModel } from '@alga-psa/list-views/models/listViewModel';
 import { getUserAvatarUrl } from '@alga-psa/user-composition/lib/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/lib/permissions';
+import { assertMspRoleGrantsWithinActorPermissions } from '../../lib/roleGrantAuthorization';
 import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import logger from '@alga-psa/core/logger';
 import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
@@ -564,6 +565,13 @@ export const addUser = withAuth(async (
 
       if (!role) {
         return { success: false, code: 'INVALID_ROLE', error: 'Invalid role' };
+      }
+
+      if (role.msp) {
+        if (!await hasPermission(user, 'user', 'update', trx)) {
+          throwPermissionError('assign user roles');
+        }
+        await assertMspRoleGrantsWithinActorPermissions(user.user_id, tenant, trx, [userData.roleId]);
       }
 
       // Validate role matches user type
@@ -1567,6 +1575,7 @@ export const updateUserRoles = withAuth(async (
         throwPermissionError('update user roles');
       }
       await assertInteractiveUserTarget(tenant, trx, userId);
+      await assertMspRoleGrantsWithinActorPermissions(currentUser.user_id, tenant, trx, roleIds);
 
       // Delete existing roles
       await tenantDb(trx, tenant).table('user_roles')
