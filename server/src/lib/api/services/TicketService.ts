@@ -24,6 +24,9 @@ import { Knex } from 'knex';
 import {
   BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit } from '@alga-psa/db';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
+import { runAuthorizedTicketWatcherWrite, TicketWatcherPermissionError } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
+import { buildAuthorizationPrincipalSubject } from 'server/src/lib/api/controllers/authorizationKernel';
+import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { applyTicketVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
@@ -1129,7 +1132,16 @@ export class TicketService extends BaseService<ITicket> {
 
     let result: TicketWatcherWriteResult;
     try {
-      result = await withTransaction(knex, write);
+      const subject = buildAuthorizationPrincipalSubject(context.user ?? { user_id: context.userId, tenant: context.tenant }, context.apiKeyId);
+      const kernel = await getAuthorizationKernel();
+      result = await withTransaction(knex, (trx) =>
+        runAuthorizedTicketWatcherWrite({
+          trx,
+          tenant: context.tenant,
+          ticketId,
+          principal: { subject, kernel },
+          write,
+        }));
     } catch (error) {
       throw this.mapTicketWatcherError(error);
     }
@@ -1147,6 +1159,9 @@ export class TicketService extends BaseService<ITicket> {
   }
 
   private mapTicketWatcherError(error: unknown): unknown {
+    if (error instanceof TicketWatcherPermissionError) {
+      return new ForbiddenError(error.message);
+    }
     if (!(error instanceof TicketWatcherError)) {
       return error;
     }
@@ -1396,7 +1411,7 @@ export class TicketService extends BaseService<ITicket> {
     documentId: string,
     variant: TicketDocumentVariant,
     context: ServiceContext
-  ): Promise<{ buffer: Buffer; fileId: string; mimeType: string }> {
+  ): Promise<{ buffer: Buffer; fileId: string; mimeType: string | null }> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
@@ -1439,7 +1454,7 @@ export class TicketService extends BaseService<ITicket> {
     return {
       buffer: result.buffer,
       fileId,
-      mimeType: result.metadata.mime_type || 'image/jpeg',
+      mimeType: result.metadata.mime_type ?? null,
     };
   }
 

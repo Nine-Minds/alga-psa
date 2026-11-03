@@ -64,15 +64,29 @@ now remove that friction, mirroring how AlgaPSA's own Google/Microsoft SSO works
 **1. Provider presets (any edition).** In **Settings → MCP Server** the trusted-IdP form
 offers **Microsoft Entra**, **Google**, or **Custom** instead of free text:
 
-- **Google** — nothing to enter. Issuer is fixed (`https://accounts.google.com`), the JWKS
-  is fetched via OIDC discovery, and the subject claim defaults to `sub`.
+- **Google** — enter only the **audience**. Issuer is fixed (`https://accounts.google.com`),
+  the JWKS is fetched via OIDC discovery, and the subject claim defaults to `sub`. Service-account
+  ID tokens carry whatever `audience` the agent requested, so the form pre-fills this server's
+  canonical MCP URL (`<public base URL>/api/mcp`, from `GET /api/v1/mcp/idp-suggestions`) and
+  agents must request their ID token with exactly that audience.
 - **Microsoft Entra** — enter only the **Entra tenant id**. The issuer
   (`https://login.microsoftonline.com/{tid}/v2.0`) and JWKS are derived via discovery; the
   subject claim defaults to `azp` (app-only tokens). Use the concrete tenant id, **not**
   `common` — tokens are issued with the concrete `tid`, so `common` won't match on verify.
-- **Custom** — the original raw issuer / JWKS / audience / claim path, unchanged.
+  The **audience** is the **Application (client) ID** GUID of the app registration agents
+  request tokens for: v2.0 access tokens always carry the resource app's client ID as `aud`,
+  even when the agent requests the scope through its App ID URI (`api://<client-id>/.default`).
+  That app registration must issue v2 tokens (`accessTokenAcceptedVersion: 2`), otherwise the
+  token's issuer is `https://sts.windows.net/{tid}/` and won't match.
+- **Custom** — the original raw issuer / JWKS / audience / claim path. The audience is the
+  API/resource identifier configured in the provider (e.g. an Auth0 API identifier) and must
+  exactly match the `aud` claim in agent tokens.
 
-`POST /api/v1/mcp/idp-providers` accepts `{ kind: 'google'|'microsoft'|'custom', entraTenantId? }`
+The audience is **required for every provider**. Without it, any JWT the issuer minted for
+another application would authenticate here, so registration refuses a blank audience and
+token validation skips (fails closed on) any registration that lacks one.
+
+`POST /api/v1/mcp/idp-providers` accepts `{ kind: 'google'|'microsoft'|'custom', audience, entraTenantId? }`
 and resolves issuer + JWKS server-side.
 
 **2. Reuse an existing connection.** If the tenant already linked Microsoft (SSO / email /

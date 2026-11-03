@@ -35,6 +35,8 @@ export default defineConfig({
       { find: /^@alga-psa\/email\/(.*)$/, replacement: path.resolve(__dirname, '../packages/email/src/$1') },
       { find: /^@alga-psa\/workflows$/, replacement: path.resolve(__dirname, '../ee/packages/workflows/src/index.ts') },
       { find: /^@alga-psa\/workflows\/(.*)$/, replacement: path.resolve(__dirname, '../ee/packages/workflows/src/$1') },
+      // services/email-service tsconfig maps @alga-psa/tickets/* to src/*; the co-managed inbound writer deep-imports models/* and lib/* (not all in the package exports map).
+      { find: /^@alga-psa\/tickets\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tickets/src/$1') },
       { find: /^@alga-psa\/shared$/, replacement: path.resolve(__dirname, './index.ts') },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, './$1') },
       {

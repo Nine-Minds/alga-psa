@@ -144,7 +144,7 @@ Runner:
 - `SIGNING_TRUST_BUNDLE` — trust anchors for signature verification
 - `EXT_EGRESS_ALLOWLIST` — hostnames allowed for `alga.http.fetch`
 - `RUNNER_DEBUG_REDIS_URL`, `RUNNER_DEBUG_REDIS_MAXLEN`, `RUNNER_DEBUG_MAX_EVENT_BYTES` — enable Redis-backed debug streaming
-- `UI_PROXY_BASE_URL`, `UI_PROXY_AUTH_KEY`, `UI_PROXY_TIMEOUT_MS` — enable the UI proxy capability
+- `UI_PROXY_BASE_URL`, `UI_PROXY_TIMEOUT_MS` — enable the UI proxy capability (UI proxy calls authenticate with the extension's own `api_key` secret, not a shared runner key)
 - Memory/timeouts — enforced per invocation (configurable via execute request limits)
 
 Object Storage (S3/MinIO):

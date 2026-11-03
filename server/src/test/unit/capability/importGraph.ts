@@ -4,8 +4,21 @@ import ts from 'typescript';
 
 export const REPO = resolve(__dirname, '../../../../..');
 
+// Every closure walks a large shared subgraph; parsing each file once per run (not once per entry) keeps the walk cheap
+// enough to stay inside the test timeout on loaded CI runners. Keyed on the exact source so injected sources still win.
+const parsedImports = new Map<string, { source: string; imports: string[] }>();
+
 export function importsOf(file: string, source?: string): string[] {
-  const sf = ts.createSourceFile(file, source ?? readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
+  const text = source ?? readFileSync(file, 'utf8');
+  const hit = parsedImports.get(file);
+  if (hit && hit.source === text) return hit.imports;
+  const imports = parseImports(file, text);
+  parsedImports.set(file, { source: text, imports });
+  return imports;
+}
+
+function parseImports(file: string, text: string): string[] {
+  const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const out: string[] = [];
   const visit = (n: ts.Node) => {
     if (
@@ -32,8 +45,16 @@ function tryFile(base: string): string | null {
   return null;
 }
 
+const resolved = new Map<string, string | null>();
+
 /** Resolve a specifier to a repo source file, or null for third-party/unresolvable. */
 export function resolveSpecifier(from: string, spec: string): string | null {
+  const key = `${dirname(from)}\0${spec}`;
+  if (!resolved.has(key)) resolved.set(key, resolveUncached(from, spec));
+  return resolved.get(key)!;
+}
+
+function resolveUncached(from: string, spec: string): string | null {
   if (spec.startsWith('.')) return tryFile(resolve(dirname(from), spec));
   const m = /^@alga-psa\/([^/]+)(?:\/(.+))?$/.exec(spec);
   if (!m) return null;

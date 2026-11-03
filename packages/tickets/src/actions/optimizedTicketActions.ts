@@ -1,7 +1,13 @@
 'use server';
 
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
-import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
+import {
+  isClientUserType,
+  isMspPrincipalUserType,
+  USER_RESPONSE_FIELD_NAMES,
+  sanitizeUserForResponse,
+  type SafeApiUser,
+} from '@alga-psa/types';
 import { resolveTicketMutationCollaborator, type TicketMutationCollaborationContext } from '../lib/ticketMutationActor';
 import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaboration';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
@@ -22,7 +28,6 @@ import type {
   ITicketListFilters,
   IAgentSchedule,
   IComment,
-  IClient,
   IContact,
   IBoard,
   ITicketCategory,
@@ -460,6 +465,12 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
 }
 
 /**
+ * A `users` row as this bundle may expose it: allow-listed columns only
+ * (never hashed_password, two_factor_secret, ...), see USER_RESPONSE_FIELD_NAMES.
+ */
+type SafeConsolidatedUser = SafeApiUser; // Pick<IUserWithRoles, AllowlistedUserField> & { roles, avatarUrl?, clientId? }
+
+/**
  * Consolidated function to get all ticket data for the ticket details page
  * This reduces multiple network calls by fetching all related data in a single server action
  */
@@ -470,6 +481,12 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     return await withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'read', trx)) {
       throw new Error('Permission denied: Cannot view ticket');
+    }
+
+    // This bundle is an MSP view (tenant-wide client list, raw comments, agent pickers);
+    // every caller is MSP composition. Client-portal principals never receive it.
+    if (user.user_type === 'client') {
+      throw new Error('Permission denied: consolidated ticket data is an MSP view');
     }
 
     try {
@@ -527,9 +544,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     const [
       comments,
       documentRows,
-      clients,
       resources,
-      users,
+      rawUsers,
       statuses,
       boards,
       priorities,
@@ -554,21 +570,6 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           'da.entity_type': 'ticket'
         }),
       
-      tenantLeftJoin(
-        trx,
-        tenant,
-        tenantScopedTable(trx, 'clients as c', tenant)
-        .select(
-          'c.*',
-          'da.document_id'
-        ),
-        'document_associations as da',
-        'c.client_id',
-        'da.entity_id',
-        { on: (join) => join.andOnVal('da.entity_type', '=', 'client') }
-      )
-        .orderBy('c.client_name', 'asc'),
-
       tenantScopedTable(trx, 'ticket_resources', tenant)
         .where({
           ticket_id: ticketId
@@ -576,7 +577,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       
       // Users - removed document joins that were causing duplicates
       // Avatar URLs are fetched later using getUserAvatarUrl()
+      // LEVERAGE: pattern users-star-projection — every ticket loader's users fetch should route through USER_RESPONSE_FIELD_NAMES (users.* carries hashed_password / two_factor_secret)
       tenantScopedTable(trx, 'users', tenant)
+        .select(...USER_RESPONSE_FIELD_NAMES)
         .where('user_type', 'internal')
         .where('is_inactive', false)
         .orderBy('first_name', 'asc'),
@@ -646,47 +649,17 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       })()
     ]);
 
+    // Projection is the fix; this is the guarantee that a future edit to the query
+    // above cannot silently re-widen what leaves this action.
+    const users: SafeConsolidatedUser[] = (rawUsers as Array<Record<string, unknown>>).map(
+      (row) => sanitizeUserForResponse(row)
+    );
+
     // Use the same document policy as subsequent fetches before returning rows
     // or deriving counts. This also annotates effective comment visibility.
     const documents = await hasPermission(user, 'document', 'read', trx)
       ? await authorizeAndRedactDocuments(trx, tenant, user, documentRows as IDocument[])
       : [];
-
-    // --- Add Logo URL Processing for the fetched 'clients' list ---
-    const clientsData = clients as (IClient & { document_id?: string })[];
-    const documentIds = clientsData
-      .map((c: any) => c.document_id)
-      .filter((id: any): id is string => !!id);
-
-    let fileIdMap: Record<string, string> = {};
-    if (documentIds.length > 0) {
-      const fileRecords = await tenantScopedTable(trx, 'documents', tenant)
-        .select('document_id', 'file_id')
-        .whereIn('document_id', documentIds);
-
-      fileIdMap = fileRecords.reduce((acc: Record<string, string>, record: { document_id: string; file_id?: string | null }) => {
-        if (record.file_id) {
-          acc[record.document_id] = record.file_id;
-        }
-        return acc;
-      }, {} as Record<string, string>);
-    }
-
-    // Process the full clients list to add logoUrl using batch loading
-    const clientIds = clientsData.map(c => c.client_id);
-    const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
-    
-    const clientsWithLogos = clientsData.map((clientData) => {
-      const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
-      const { document_id, ...clientResult } = clientData;
-      return {
-        ...clientResult,
-        properties: clientData.properties || {},
-        logoUrl,
-      };
-    });
-    // --- End Logo URL Processing for 'clients' list ---
-
 
     // Fetch specific client and contact data if available
     let client: any = null;
@@ -773,20 +746,31 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     };
 
     // Fetch created by user
-    const createdByUser = ticket.entered_by ? 
+    // LEVERAGE: pattern users-star-projection — see availableAgents query above
+    const createdByUserRow = ticket.entered_by ? 
       await tenantScopedTable(trx, 'users', tenant)
+        .select(...USER_RESPONSE_FIELD_NAMES)
         .where({
           user_id: ticket.entered_by
         })
         .first() : null;
 
     // Fetch last updated by user
-    const updatedByUser = ticket.updated_by ?
+    // LEVERAGE: pattern users-star-projection — see availableAgents query above
+    const updatedByUserRow = ticket.updated_by ?
       await tenantScopedTable(trx, 'users', tenant)
+        .select(...USER_RESPONSE_FIELD_NAMES)
         .where({
           user_id: ticket.updated_by
         })
         .first() : null;
+
+    const createdByUser: SafeConsolidatedUser | null = createdByUserRow
+      ? sanitizeUserForResponse(createdByUserRow)
+      : null;
+    const updatedByUser: SafeConsolidatedUser | null = updatedByUserRow
+      ? sanitizeUserForResponse(updatedByUserRow)
+      : null;
 
     // Fetch board
     const board = ticket.board_id ?
@@ -815,7 +799,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     const extraCommentAuthors: Array<{ user_id: string; user_type?: string | null; contact_id?: string | null }> =
       extraAuthorIds.length > 0
+        // LEVERAGE: pattern users-star-projection — see availableAgents query above
         ? await tenantScopedTable(trx, 'users', tenant).whereIn('user_id', extraAuthorIds)
+          .select(...USER_RESPONSE_FIELD_NAMES)
         : [];
 
     // Client-portal authors carry their avatar on the linked contact, not the user
@@ -1183,7 +1169,6 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
         priority: priorityOptions
       },
       categories,
-      clients: clientsWithLogos,
       locations,
       agentSchedules: agentSchedulesList
     };
@@ -2413,7 +2398,6 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         priorities,
         boards,
         categories,
-        clients,
         users,
         tags
       ] = await Promise.all([
@@ -2438,10 +2422,6 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc'),
       
-      tenantScopedTable(trx, 'clients as c', tenant)
-        .select('c.*')
-        .orderBy('c.client_name', 'asc'),
-
       tenantScopedTable(trx, 'users', tenant)
         .orderBy('first_name', 'asc'),
 
@@ -2515,27 +2495,6 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         label: `${user.first_name} ${user.last_name}`
       }));
 
-      // --- Add Logo URL Processing ---
-      const clientsData = clients as IClient[];
-
-      // Process clients to add logoUrl using batch loading
-      const clientIds = clientsData.map((c: IClient) => c.client_id);
-      const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
-    
-      const clientChipTags = await loadDisplayTagsForEntities(trx, tenant, displayAudienceForUser(user), [
-        { taggedType: 'client', ids: clientIds },
-      ]);
-      const clientsWithLogos = clientsData.map((clientData: IClient) => {
-        const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
-        return {
-          ...clientData,
-          properties: clientData.properties || {},
-          logoUrl,
-          displayTags: clientChipTags.get(displayTagKey('client', clientData.client_id)) ?? [],
-        };
-      });
-      // --- End Logo URL Processing ---
-
       // Use tenant categories directly (includes ITIL ones if copied)
 
       return {
@@ -2544,7 +2503,6 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         boardOptions,
         agentOptions,
         categories,
-        clients: clientsWithLogos, // Return clients with logos
         users,
         contactTagDefinitions,
         clientTagDefinitions,

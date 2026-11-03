@@ -9,7 +9,6 @@ import { Knex } from 'knex';
 import { marked } from 'marked';
 import { PDFDocument } from 'pdf-lib';
 import { fromPath } from 'pdf2pic';
-import puppeteer from 'puppeteer';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { CacheFactory } from '../cache/CacheFactory';
@@ -1241,44 +1240,6 @@ export const removeDocumentFromContract = withAuth(async (user, { tenant }, asso
     throw error;
   }
 });
-
-// Get document preview
-async function renderHtmlToPng(htmlContent: string, width: number = 400, height: number = 300): Promise<Buffer> {
-  let browser;
-  try {
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
-    const page = await browser.newPage();
-    await page.setViewport({ width, height });
-    const styledHtml = `
-      <style>
-        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"; font-size: 14px; line-height: 1.4; padding: 15px; border: 1px solid #e0e0e0; box-sizing: border-box; overflow: hidden; height: ${height}px; background-color: #ffffff; }
-        pre { white-space: pre-wrap; word-wrap: break-word; font-family: monospace; }
-        h1, h2, h3, h4, h5, h6 { margin-top: 0; margin-bottom: 0.5em; }
-        p { margin-top: 0; margin-bottom: 1em; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        ul, ol { padding-left: 20px; margin-top: 0; margin-bottom: 1em; }
-        img { max-width: 100%; height: auto; }
-        /* Basic styling for BlockNote generated HTML */
-        .bn-editor table { width: 100%; border-collapse: collapse; }
-        .bn-editor th, .bn-editor td { border: 1px solid #ddd; padding: 8px; }
-      </style>
-      <div>${htmlContent}</div>
-    `;
-    await page.setContent(styledHtml, { waitUntil: 'domcontentloaded' });
-    const imageBuffer = await page.screenshot({ type: 'png' });
-
-    
-    return Buffer.from(imageBuffer);
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
-  }
-}
 
 const IN_APP_TEXT_TYPE_NAMES = ['text', 'text document', 'plain text'];
 const IN_APP_MARKDOWN_TYPE_NAMES = ['markdown', 'markdown document'];

@@ -56,6 +56,7 @@ import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { revalidatePath } from 'next/cache';
 import { createProjectReadAuthorizer } from '../lib/projectReadAuthorization';
+import { createProjectReadDecider } from '../lib/projectReadAuthorization';
 import { countActiveStockClaims } from '@alga-psa/inventory/lib/staging';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
@@ -307,6 +308,24 @@ async function getContactFullNameByContactNameId(params: {
     return row?.full_name ?? null;
 }
 
+/** The projects the caller may read, each with the redaction set the kernel decided for it. */
+async function decideAuthorizedProjects<T extends Partial<IProject>>(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  projects: T[]
+): Promise<Array<{ project: T; redactedFields: string[] }>> {
+  if (projects.length === 0) {
+    return [];
+  }
+
+  const decide = await createProjectReadDecider(trx, tenant, user);
+  const decisions = await Promise.all(projects.map((project) => decide(project)));
+  return projects.flatMap((project, index) =>
+    decisions[index].allowed ? [{ project, redactedFields: decisions[index].redactedFields }] : []
+  );
+}
+
 async function filterAuthorizedProjects<T extends Partial<IProject>>(
   trx: Knex.Transaction,
   tenant: string,
@@ -440,6 +459,31 @@ export const authorizeProjectIds = withAuth(async (
   { tenant },
   projectIds: string[]
 ): Promise<string[] | ActionPermissionError> => {
+    const decided = await decideProjectIds(user as IUserWithRoles, tenant, projectIds);
+    return Array.isArray(decided) ? decided.map((entry) => entry.projectId) : decided;
+});
+
+export interface AuthorizedProjectId {
+    projectId: string;
+    /** Fields this caller may not see for the project; empty when nothing is hidden. */
+    redactedFields: string[];
+}
+
+/**
+ * `authorizeProjectIds` that also carries each project's redaction set, for callers that forward project
+ * data somewhere other than the Projects list (smart search) and must mask it the way the list does.
+ */
+export const authorizeProjectIdsWithRedactions = withAuth(async (
+  user,
+  { tenant },
+  projectIds: string[]
+): Promise<AuthorizedProjectId[] | ActionPermissionError> => decideProjectIds(user as IUserWithRoles, tenant, projectIds));
+
+async function decideProjectIds(
+    user: IUserWithRoles,
+    tenant: string,
+    projectIds: string[]
+): Promise<AuthorizedProjectId[] | ActionPermissionError> {
     const { knex } = await createTenantKnex();
     const denied = await checkPermission(user, 'project', 'read', knex);
     if (denied) return denied;
@@ -453,11 +497,13 @@ export const authorizeProjectIds = withAuth(async (
         const rows = await tenantScopedTable(trx, 'projects', tenant)
             .whereIn('project_id', requestedIds)
             .select<IProject[]>('project_id', 'assigned_to', 'client_id');
-        const authorized = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);
-        const allowed = new Set(authorized.map((project) => project.project_id));
-        return requestedIds.filter((projectId) => allowed.has(projectId));
+        const authorized = await decideAuthorizedProjects(trx, tenant, user, rows);
+        const byId = new Map(authorized.map((entry) => [entry.project.project_id, entry.redactedFields] as const));
+        return requestedIds.flatMap((projectId) =>
+            byId.has(projectId) ? [{ projectId, redactedFields: byId.get(projectId) ?? [] }] : []
+        );
     });
-});
+}
 
 export interface ProjectListRowsWithMetadata {
     projects: IProject[];
@@ -476,7 +522,8 @@ export interface ProjectListRowsWithMetadata {
 export const loadProjectListItemsByIds = withAuth(async (
   user,
   { tenant },
-  projectIds: string[]
+  projectIds: string[],
+  callerRedactions?: Record<string, string[]>
 ): Promise<ProjectListRowsWithMetadata | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
     const denied = await checkPermission(user, 'project', 'read', knex);
@@ -488,8 +535,26 @@ export const loadProjectListItemsByIds = withAuth(async (
     }
 
     return withTransaction(knex, async (trx: Knex.Transaction) => {
-        const rows = await ProjectModel.getByIds(trx, tenant, requestedIds);
-        const authorized = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, rows);
+        // Authorize on the identity columns, then read each redaction group with its hidden columns NULL in
+        // the query. A caller's own redaction set is unioned with the kernel's, so a hint can only hide more.
+        const identityRows = await tenantScopedTable(trx, 'projects', tenant)
+            .whereIn('project_id', requestedIds)
+            .select<IProject[]>('project_id', 'assigned_to', 'client_id');
+        const authorizedIdentities = await decideAuthorizedProjects(trx, tenant, user as IUserWithRoles, identityRows);
+        const groups = new Map<string, { redactedFields: string[]; ids: string[] }>();
+        for (const { project, redactedFields } of authorizedIdentities) {
+            const fields = Array.from(new Set([...redactedFields, ...(callerRedactions?.[project.project_id] ?? [])])).sort();
+            const key = JSON.stringify(fields);
+            const group = groups.get(key) ?? { redactedFields: fields, ids: [] };
+            group.ids.push(project.project_id);
+            groups.set(key, group);
+        }
+        const authorized: IProject[] = [];
+        for (const group of groups.values()) {
+            authorized.push(...(group.redactedFields.length === 0
+                ? await ProjectModel.getByIds(trx, tenant, group.ids)
+                : await ProjectModel.getMaskedByIds(trx, tenant, group.ids, group.redactedFields)));
+        }
         const byId = new Map(authorized.map((project) => [project.project_id, project] as const));
         const ordered = requestedIds
             .map((projectId) => byId.get(projectId))
