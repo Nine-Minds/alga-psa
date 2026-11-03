@@ -50,6 +50,23 @@ describe('getCoManagedTicketHandoffHistory author projection', () => {
     expect(JSON.stringify(result)).not.toContain(userId);
   });
 
+  it.each([
+    { label: 'customer viewer', viewer: customer, source: sponsor, userId: sponsorUser },
+    { label: 'sponsor viewer', viewer: sponsor, source: customer, userId: customerUser },
+  ])('suppresses a stored UUID display-name fallback for a $label, including old rows', async ({ viewer, source, userId }) => {
+    state.rows = [{ tenant: customer, operation_id: 'legacy-op', revision: 1, transition: 'handed_back',
+      occurred_at: '2026-11-01T00:00:00.000Z', note: 'done', actor_tenant: source, actor_user_id: userId,
+      actor_name: userId, actor_organization: 'Other Org', relationship_id: resource.relationshipId,
+      ticket_id: resource.id, audience: 'shared_it' }];
+    state.redactedFields = [];
+
+    const result = await getCoManagedTicketHandoffHistory({} as any,
+      { tenant: viewer, userId: viewer === customer ? customerUser : sponsorUser } as any, resource);
+
+    expect(JSON.stringify(result)).not.toContain(userId);
+    expect(result.items[0].author).toMatchObject({ tenant: source, name: '', organization: 'Other Org' });
+  });
+
   it('preserves own-tenant userId under the established contract', async () => {
     state.rows = [{ tenant: customer, relationship_id: resource.relationshipId, ticket_id: resource.id, audience: 'shared_it', operation_id: 'op',
       revision: 1, transition: 'escalated', occurred_at: '2026-11-01T00:00:00.000Z', note: 'n', actor_tenant: customer,
