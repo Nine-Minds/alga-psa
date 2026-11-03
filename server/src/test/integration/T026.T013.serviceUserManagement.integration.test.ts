@@ -189,11 +189,9 @@ describe('Service principals A/4 user management (T026, T013, F085, F086)', () =
         expect(listed).toMatchObject({ user_id: f.internalId, email: staff.email, first_name: staff.first_name, user_type: 'internal' });
         expect(listed).not.toHaveProperty('hashed_password');
         expect(listed).not.toHaveProperty('two_factor_secret');
-        expect(Object.keys(listed).every((key) => [
-          'user_id', 'username', 'first_name', 'last_name', 'email', 'phone', 'timezone', 'user_type',
-          'contact_id', 'icon', 'created_at', 'updated_at', 'two_factor_enabled', 'two_factor_required_new_device',
-          'is_google_user', 'is_inactive', 'tenant', 'reports_to', 'last_login_at', 'last_login_method',
-        ].includes(key))).toBe(true);
+        const { USER_RESPONSE_FIELD_NAMES } = await import('@alga-psa/types');
+        const allowedFields = new Set<string>(USER_RESPONSE_FIELD_NAMES);
+        expect(Object.keys(listed).every((key) => allowedFields.has(key))).toBe(true);
 
         const { findUserById, getUserWithRoles, getMultipleUsersWithRoles } = await import('@alga-psa/user-composition/actions/userQueryActions');
         for (const detailResult of [

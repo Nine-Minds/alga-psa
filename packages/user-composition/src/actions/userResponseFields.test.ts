@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   getAll: vi.fn(),
-  getAuthenticatedCurrentUser: vi.fn(),
+  getSanitizedCurrentUser: vi.fn(),
 }));
 
 vi.mock('@alga-psa/db/models/user', () => ({ default: { getAll: mocks.getAll } }));
@@ -10,8 +10,10 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
   withTransaction: vi.fn(async (_knex, callback) => callback({})),
 }));
+vi.mock('./currentUserAction', () => ({
+  getCurrentUser: mocks.getSanitizedCurrentUser,
+}));
 vi.mock('@alga-psa/auth', () => ({
-  getCurrentUser: mocks.getAuthenticatedCurrentUser,
   withAuth: (action: (...args: any[]) => unknown) => (...args: any[]) => action(
     { user_id: 'actor-1', tenant: 'tenant-1', user_type: 'internal' },
     { tenant: 'tenant-1' },
@@ -46,15 +48,17 @@ describe('browser-facing user response fields', () => {
 
   beforeEach(() => {
     mocks.getAll.mockReset();
-    mocks.getAuthenticatedCurrentUser.mockReset();
+    mocks.getSanitizedCurrentUser.mockReset();
   });
 
   it('preserves profile fields in directory and current-user responses while excluding credentials', async () => {
     mocks.getAll.mockResolvedValue([fixture]);
-    mocks.getAuthenticatedCurrentUser.mockResolvedValue(fixture);
+    const { hashed_password: _hash, two_factor_secret: _totp, ...sanitizedCurrentUser } = fixture;
+    mocks.getSanitizedCurrentUser.mockResolvedValue(sanitizedCurrentUser);
 
     const directory = await getAllUsersBasic();
     const currentUser = await getCurrentUser();
+    expect(mocks.getSanitizedCurrentUser).toHaveBeenCalledOnce();
 
     for (const response of [directory[0], currentUser]) {
       expect(response).toMatchObject({
