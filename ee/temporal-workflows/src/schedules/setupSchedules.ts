@@ -363,16 +363,21 @@ export async function setupSchedules() {
     // extension itself after a restore has created journal data, before its
     // durable schedules are converged. Keep dark installations neutral and
     // avoid loading any co-managed package into the worker.
-    let portableRestoreScheduleRegistered = false;
-    const forced = forcedValue(process.env.FORCE_CAPABILITIES, 'co-managed');
-    if (forced !== 'off' && forced !== 'malformed') {
-      const db = await getAdminConnection();
-      if (await db.schema.hasTable('portable_workspace_restore_uploads')) {
-        const hasAttempts = await db('portable_workspace_restore_uploads').select(db.raw('1')).first();
+    let portableRestoreScheduleState: 'enabled' | 'disabled' | 'unknown' = 'unknown';
+    try {
+      const forced = forcedValue(process.env.FORCE_CAPABILITIES, 'co-managed');
+      if (forced === 'off' || forced === 'malformed') {
+        portableRestoreScheduleState = 'disabled';
+      } else {
+        const db = await getAdminConnection();
+        const hasJournal = await db.schema.hasTable('portable_workspace_restore_uploads');
+        const hasAttempts = hasJournal
+          ? await db('portable_workspace_restore_uploads').select(db.raw('1')).first()
+          : undefined;
+        portableRestoreScheduleState = hasAttempts ? 'enabled' : 'disabled';
         const alreadyRegistered = listExtensionMaintenanceSchedules('ee').some(
           (row) => row.jobName === PORTABLE_RESTORE_UPLOAD_CLEANUP_SCHEDULE.jobName,
         );
-        portableRestoreScheduleRegistered = Boolean(hasAttempts);
         if (hasAttempts && !alreadyRegistered) {
           registerMaintenanceSchedule(
             { ...PORTABLE_RESTORE_UPLOAD_CLEANUP_SCHEDULE, edition: 'ee' },
@@ -380,6 +385,13 @@ export async function setupSchedules() {
           );
         }
       }
+    } catch (error) {
+      // This optional probe must not prevent native Temporal schedules from converging.
+      // Unknown keeps a previously persisted recovery schedule in place until a later successful probe.
+      portableRestoreScheduleState = 'unknown';
+      logger.warn('Portable restore schedule registration failed; continuing native schedule setup', {
+        error: error instanceof Error ? error.message : 'unknown registration failure',
+      });
     }
 
     const scheduleId = 'email-webhook-maintenance-schedule';
@@ -541,7 +553,7 @@ export async function setupSchedules() {
         },
       });
     }
-    if (!portableRestoreScheduleRegistered) {
+    if (portableRestoreScheduleState === 'disabled') {
       await deleteScheduleIfExists(client, `maintenance-fanout:${PORTABLE_RESTORE_UPLOAD_CLEANUP_SCHEDULE.jobName}`);
     }
 

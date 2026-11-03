@@ -4,12 +4,13 @@ import {
   resetMaintenanceScheduleExtensions,
 } from '@alga-psa/types';
 
-const { scheduleCreate, scheduleUpdate, scheduleDelete, hasTable, firstAttempt, existing } = vi.hoisted(() => ({
+const { scheduleCreate, scheduleUpdate, scheduleDelete, hasTable, firstAttempt, adminConnection, existing } = vi.hoisted(() => ({
   scheduleCreate: vi.fn(),
   scheduleUpdate: vi.fn(),
   scheduleDelete: vi.fn(),
   hasTable: vi.fn(),
   firstAttempt: vi.fn(),
+  adminConnection: vi.fn(),
   existing: new Map<string, unknown>(),
 }));
 
@@ -26,10 +27,7 @@ vi.mock('@temporalio/client', () => ({
   ScheduleOverlapPolicy: { SKIP: 'SKIP' },
 }));
 vi.mock('@alga-psa/db/admin.js', () => ({
-  getAdminConnection: vi.fn(async () => Object.assign(
-    () => ({ select: () => ({ first: firstAttempt }) }),
-    { schema: { hasTable }, raw: vi.fn(() => '1') },
-  )),
+  getAdminConnection: adminConnection,
 }));
 vi.mock('@alga-psa/db', () => ({ tenantDb: vi.fn(() => ({
   unscoped: vi.fn(() => ({ where: vi.fn().mockReturnThis(), join: vi.fn().mockReturnThis(), whereNull: vi.fn().mockReturnThis(), select: vi.fn(async () => []) })),
@@ -47,6 +45,10 @@ describe('portable restore EE scheduler convergence', () => {
     delete process.env.FORCE_CAPABILITIES;
     hasTable.mockResolvedValue(true);
     firstAttempt.mockResolvedValue({ attempt_id: 'attempt' });
+    adminConnection.mockResolvedValue(Object.assign(
+      () => ({ select: () => ({ first: firstAttempt }) }),
+      { schema: { hasTable }, raw: vi.fn(() => '1') },
+    ));
     scheduleCreate.mockImplementation(async (input: { scheduleId: string }) => {
       if (existing.has(input.scheduleId)) throw { code: 6 };
       existing.set(input.scheduleId, input);
@@ -100,5 +102,16 @@ describe('portable restore EE scheduler convergence', () => {
     expect(hasTable).not.toHaveBeenCalled();
     expect(scheduleCreate.mock.calls.some(([input]) => input.scheduleId === 'maintenance-fanout:portable-restore-upload-cleanup')).toBe(false);
     expect(scheduleDelete).toHaveBeenCalledWith('maintenance-fanout:portable-restore-upload-cleanup');
+  });
+
+  it('continues native schedule convergence when the optional restore journal probe fails', async () => {
+    const { setupSchedules } = await import('../setupSchedules');
+    adminConnection.mockRejectedValueOnce(new Error('restore probe unavailable'));
+
+    await setupSchedules();
+
+    expect(scheduleCreate.mock.calls.some(([input]) => input.scheduleId === 'maintenance-fanout:expired-credits')).toBe(true);
+    expect(scheduleCreate.mock.calls.some(([input]) => input.scheduleId === 'maintenance-fanout:portable-restore-upload-cleanup')).toBe(false);
+    expect(scheduleDelete).not.toHaveBeenCalledWith('maintenance-fanout:portable-restore-upload-cleanup');
   });
 });

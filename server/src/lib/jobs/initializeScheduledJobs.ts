@@ -30,10 +30,16 @@ export async function initializeScheduledJobs(): Promise<void> {
     // Load the production descriptor before either edition builds its durable
     // recurring schedules. Keep the import guarded so FORCE_CAPABILITIES off
     // does not load co-managed restore code during scheduler boot.
-    const forced = forcedValue(process.env.FORCE_CAPABILITIES, 'co-managed');
-    if (forced !== 'off' && forced !== 'malformed') {
-      const { registerPortableRestoreJobs } = await import('./portableRestoreJobs');
-      await registerPortableRestoreJobs(isEnterpriseWorkflowEdition() ? 'ee' : 'ce');
+    try {
+      const forced = forcedValue(process.env.FORCE_CAPABILITIES, 'co-managed');
+      if (forced !== 'off' && forced !== 'malformed') {
+        const { registerPortableRestoreJobs } = await import('./portableRestoreJobs');
+        await registerPortableRestoreJobs(isEnterpriseWorkflowEdition() ? 'ee' : 'ce');
+      }
+    } catch (error) {
+      logger.warn('Portable restore maintenance registration failed; continuing native scheduler setup', {
+        error: error instanceof Error ? error.message : 'unknown registration failure',
+      });
     }
 
     if (isEnterpriseWorkflowEdition()) {
