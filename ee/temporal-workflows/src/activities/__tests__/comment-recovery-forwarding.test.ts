@@ -86,6 +86,38 @@ describe('recover-comment-publications worker forwarding', () => {
     expect(await executeJobHandler({ jobName: 'recover-comment-publications', jobId, tenantId, jobExecutionId: randomUUID(), data: {} })).toEqual({ success: false, error: 'Redis unavailable' });
   });
 
+  it('does not report invoice email success when the event is published but no app consumer executes it', async () => {
+    const { waitForForwardedJobCompletion } = await vi.importActual<
+      typeof import('@alga-psa/jobs/lib/forwardedJobCompletion')
+    >('@alga-psa/jobs/lib/forwardedJobCompletion');
+    await initializeJobHandlersForWorker();
+    const tenantId = randomUUID(), jobId = randomUUID();
+    const executionId = randomUUID();
+    mocks.jobs.set(jobId, { metadata: '{}' });
+    mocks.publish.mockResolvedValue(undefined);
+    mocks.wait.mockImplementation((readStatus: any, forwardedExecutionId: string) =>
+      waitForForwardedJobCompletion(readStatus, forwardedExecutionId, {
+        timeoutMs: 2,
+        pollIntervalMs: 1,
+        sleep: async () => undefined,
+      }));
+
+    const result = await executeJobHandler({
+      jobName: 'invoice_email', jobId, tenantId, jobExecutionId: executionId, data: {},
+    });
+
+    expect(mocks.publish).toHaveBeenCalledOnce();
+    expect(mocks.wait).toHaveBeenCalledOnce();
+    expect(result).toEqual({
+      success: false,
+      error: 'Timed out waiting for the application server to complete the forwarded job',
+    });
+    expect(JSON.parse(mocks.jobs.get(jobId)!.metadata).serverExecution).toMatchObject({
+      executionId,
+      status: 'queued',
+    });
+  });
+
   it('completes concurrent forwarded executions with a one-connection admin pool', async () => {
     const { waitForForwardedJobCompletion } = await vi.importActual<
       typeof import('@alga-psa/jobs/lib/forwardedJobCompletion')
