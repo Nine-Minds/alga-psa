@@ -164,7 +164,16 @@ describe('co-managed fixtures', () => {
   });
 
   it('applies effective internal ticket permissions and verification detects authorization regressions', async () => {
-    const db = memoryStore();
+    const db = memoryStore({
+      roles: [{ tenant: NOTIFICATION_CUSTOMER, role_id: id('role/notification-customer-admin'),
+        role_name: 'Stale notification role', msp: false, client: true }],
+      permissions: [
+        { tenant: NOTIFICATION_CUSTOMER, permission_id: id('permission/notification-customer-ticket-read'),
+          resource: 'ticket', action: 'read', msp: false, client: true },
+        { tenant: NOTIFICATION_CUSTOMER, permission_id: id('permission/notification-customer-ticket-update'),
+          resource: 'ticket', action: 'update', msp: false, client: true },
+      ],
+    });
     const engines = {
       hashPassword: async (password: string) => `hash:${password}`,
       verifyPassword: async (password: string, stored: string) => stored === `hash:${password}`,
@@ -188,9 +197,24 @@ describe('co-managed fixtures', () => {
     expect(await import('@alga-psa/auth/rbac').then(({ hasPermission }) => hasPermission(author, 'ticket', 'read', db))).toBe(true);
     const { hasPermission } = await import('@alga-psa/auth/rbac');
     expect(await hasPermission(author, 'ticket', 'update', db)).toBe(true);
+    const customerRole = db.rows.roles.find((row: any) => row.tenant === NOTIFICATION_CUSTOMER && row.role_id === id('role/notification-customer-admin'));
+    const customerPermissions = db.rows.permissions.filter((row: any) => row.tenant === NOTIFICATION_CUSTOMER);
+    expect(customerRole).toMatchObject({ msp: true, client: false });
+    expect(customerPermissions).toHaveLength(2);
+    expect(customerPermissions.every((permission: any) => permission.msp && !permission.client)).toBe(true);
     const report = async (detail: string) => (await notificationModule.verify(db, engines)).find(item => item.detail === detail)?.ok;
     expect(await report('fixture customer admin passes runtime ticket:read authorization')).toBe(true);
     expect(await report('fixture customer admin passes runtime ticket authorization for Shared IT comments')).toBe(true);
+
+    // Reapplication must repair rows damaged by a prior fixture version or manual drift.
+    customerRole.msp = false;
+    customerRole.client = true;
+    customerPermissions.forEach((permission: any) => { permission.msp = false; permission.client = true; });
+    await notificationModule.apply(db, engines);
+    expect(customerRole).toMatchObject({ msp: true, client: false });
+    expect(customerPermissions.every((permission: any) => permission.msp && !permission.client)).toBe(true);
+    expect(await hasPermission(author, 'ticket', 'read', db)).toBe(true);
+    expect(await hasPermission(author, 'ticket', 'update', db)).toBe(true);
 
     const role = db.rows.roles.find((row: any) => row.tenant === NOTIFICATION_CUSTOMER && row.role_id === id('role/notification-customer-admin'));
     const permissions = db.rows.permissions.filter((row: any) => row.tenant === NOTIFICATION_CUSTOMER);
