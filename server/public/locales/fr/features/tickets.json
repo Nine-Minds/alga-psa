@@ -116,7 +116,9 @@
     "clientTags": "Étiquettes du client",
     "tagModeAny": "Au moins une parmi",
     "tagModeNone": "Aucune parmi",
-    "droppedFromLink": "Certains filtres de ce lien ne sont pas valides et ont été ignorés."
+    "droppedFromLink": "Certains filtres de ce lien ne sont pas valides et ont été ignorés.",
+    "location": "Site",
+    "requesterLocation": "Site du demandeur"
   },
   "create": {
     "title": "Créer un ticket d'assistance",
@@ -185,7 +187,7 @@
     "additionalAgents": "Agents supplémentaires",
     "createdBy": "Créé par",
     "lastActivity": "Dernière activité",
-    "location": "Emplacement",
+    "location": "Site",
     "contactPhone": "Téléphone du contact",
     "clientPhone": "Téléphone du client",
     "contactEmail": "E-mail du contact",
@@ -1023,7 +1025,9 @@
       "heading": "Observateurs",
       "placeholder": "Ajouter des observateurs..."
     },
-    "attachmentsPartialFailure": "Ticket créé, mais ces fichiers n’ont pas pu être joints : {{files}}. Ajoutez-les depuis le ticket."
+    "attachmentsPartialFailure": "Ticket créé, mais ces fichiers n’ont pas pu être joints : {{files}}. Ajoutez-les depuis le ticket.",
+    "contactLocationSuffix": "(site du contact)",
+    "contactPrimaryLocationSuffix": "(site principal du contact)"
   },
   "itil": {
     "calculatedPriority": "Priorité (calculée)",
@@ -2057,7 +2061,9 @@
       "changeLocation": "Changer d'emplacement",
       "addDescriptionPrompt": "Ajoutez une description — quel est le problème et de quoi le client a-t-il besoin ?",
       "projectTasks": "Tâches de projet",
-      "timeAndBilling": "Temps et facturation"
+      "timeAndBilling": "Temps et facturation",
+      "useContactLocation": "Utiliser le site du contact",
+      "remote": "À distance"
     },
     "timeline": {
       "subtitle": "Réponses, temps et changements système au même endroit",

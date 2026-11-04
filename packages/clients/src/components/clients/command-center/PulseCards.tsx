@@ -625,6 +625,15 @@ export function LocationsCard({ id, locations, onManage, className, t }: {
                 </div>
               )}
               <div className="mt-1 flex gap-1">
+                {location.contact_count > 0 && (
+                  <BentoChip id={`${id}-contact-count-${location.location_id}`}>
+                    {t('clientCommandCenter.locations.contactCount', {
+                      defaultValue_one: '1 contact',
+                      defaultValue_other: '{{count}} contacts',
+                      count: location.contact_count,
+                    })}
+                  </BentoChip>
+                )}
                 {location.is_billing && (
                   <BentoChip tone="info">
                     {t('clientCommandCenter.locations.billing', { defaultValue: 'Billing' })}

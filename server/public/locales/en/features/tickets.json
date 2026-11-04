@@ -124,7 +124,9 @@
     "clientTags": "Client tags",
     "tagModeAny": "Any of",
     "tagModeNone": "None of",
-    "droppedFromLink": "Some filters in this link are not valid and were ignored."
+    "droppedFromLink": "Some filters in this link are not valid and were ignored.",
+    "location": "Location",
+    "requesterLocation": "Requester location"
   },
   "create": {
     "title": "Create Support Ticket",
@@ -1031,7 +1033,9 @@
       "heading": "Watchers",
       "placeholder": "Add watchers..."
     },
-    "attachmentsPartialFailure": "Ticket created, but these files could not be attached: {{files}}. Add them from the ticket."
+    "attachmentsPartialFailure": "Ticket created, but these files could not be attached: {{files}}. Add them from the ticket.",
+    "contactLocationSuffix": "(contact's location)",
+    "contactPrimaryLocationSuffix": "(contact's primary)"
   },
   "itil": {
     "calculatedPriority": "Priority (Calculated)",
@@ -2065,7 +2069,9 @@
       "changeLocation": "Change location",
       "addDescriptionPrompt": "Add a description — what is the problem, and what does the customer need?",
       "projectTasks": "Project tasks",
-      "timeAndBilling": "Time & billing"
+      "timeAndBilling": "Time & billing",
+      "useContactLocation": "Use contact's location",
+      "remote": "Remote"
     },
     "timeline": {
       "subtitle": "Replies, time, and system changes in one place",

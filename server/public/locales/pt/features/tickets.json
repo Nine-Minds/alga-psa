@@ -116,7 +116,9 @@
     "clientTags": "Tags do cliente",
     "tagModeAny": "Qualquer um de",
     "tagModeNone": "Nenhum de",
-    "droppedFromLink": "Alguns filtros deste link não são válidos e foram ignorados."
+    "droppedFromLink": "Alguns filtros deste link não são válidos e foram ignorados.",
+    "location": "Localização",
+    "requesterLocation": "Localização do solicitante"
   },
   "create": {
     "title": "Criar ticket de suporte",
@@ -1023,7 +1025,9 @@
       "heading": "Observadores",
       "placeholder": "Adicionar observadores..."
     },
-    "attachmentsPartialFailure": "Ticket criado, mas não foi possível anexar estes ficheiros: {{files}}. Adicione-os a partir do ticket."
+    "attachmentsPartialFailure": "Ticket criado, mas não foi possível anexar estes ficheiros: {{files}}. Adicione-os a partir do ticket.",
+    "contactLocationSuffix": "(localização do contato)",
+    "contactPrimaryLocationSuffix": "(localização principal do contato)"
   },
   "itil": {
     "calculatedPriority": "Prioridade (calculada)",
@@ -2057,7 +2061,9 @@
       "changeLocation": "Alterar localização",
       "addDescriptionPrompt": "Adicione uma descrição — qual é o problema e do que o cliente precisa?",
       "projectTasks": "Tarefas do projeto",
-      "timeAndBilling": "Tempo e faturamento"
+      "timeAndBilling": "Tempo e faturamento",
+      "useContactLocation": "Usar a localização do contato",
+      "remote": "Remoto"
     },
     "timeline": {
       "subtitle": "Respostas, tempo e alterações do sistema em um só lugar",

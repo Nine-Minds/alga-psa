@@ -11054,7 +11054,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/clients/{id}/contacts",
     "displayName": "List contacts for client",
     "summary": "List contacts for client",
-    "description": "Returns paginated contacts filtered by client_id after client existence check.",
+    "description": "Returns paginated contacts filtered by client_id after client existence check. Each row carries work_arrangement and locations[]; accepts the same location_id and work_arrangement filters as /api/v1/contacts (a client_id in the query is ignored — the path wins).",
     "tags": [
       "Clients"
     ],
@@ -11067,6 +11067,183 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "format": "uuid"
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "sort",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "order",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ]
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "created_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "created_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "updated_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "updated_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      {
+        "name": "full_name",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "email",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "phone_number",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "role",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "is_inactive",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "has_client",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "client_name",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "description": "Contacts linked to this client location in any role, primary or not.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Contacts linked to this client location in any role, primary or not."
+        }
+      },
+      {
+        "name": "work_arrangement",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "on_site",
+            "hybrid",
+            "remote"
+          ]
         }
       }
     ],
@@ -11276,6 +11453,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               },
               "is_active": {
                 "type": "boolean"
+              },
+              "contact_count": {
+                "type": "integer",
+                "minimum": 0
               },
               "created_at": {
                 "type": "string",
@@ -11539,6 +11720,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             "is_active": {
               "type": "boolean"
+            },
+            "contact_count": {
+              "type": "integer",
+              "minimum": 0
             },
             "created_at": {
               "type": "string",
@@ -12266,6 +12451,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "is_active": {
               "type": "boolean"
             },
+            "contact_count": {
+              "type": "integer",
+              "minimum": 0
+            },
             "created_at": {
               "type": "string",
               "format": "date-time"
@@ -12353,7 +12542,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts",
     "displayName": "List Contacts",
     "summary": "Fetch contacts",
-    "description": "Paginated list of contacts. Filter by client_id to retrieve contacts for a specific client when preparing a ticket.",
+    "description": "Paginated list of contacts. Filter by client_id to retrieve contacts for a specific client when preparing a ticket, or by location_id / work_arrangement to find who works at a client location. Every row carries work_arrangement and locations[].",
     "tags": [
       "Contacts"
     ],
@@ -12376,6 +12565,30 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "description": "Search text to match against contact names or emails.",
         "schema": {
           "type": "string"
+        }
+      },
+      {
+        "name": "location_id",
+        "in": "query",
+        "required": false,
+        "description": "Contacts who work at this client location, primary or not. Discover location ids from /api/v1/clients/{id}/locations.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "work_arrangement",
+        "in": "query",
+        "required": false,
+        "description": "Where the person works: on_site, hybrid or remote.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "on_site",
+            "hybrid",
+            "remote"
+          ]
         }
       },
       {
@@ -12460,6 +12673,15 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           }
         },
         "notes": "Use the client_id discovered from the clients endpoint to retrieve matching contacts and resolve contact_name_id."
+      },
+      {
+        "name": "Who works at a location",
+        "request": {
+          "query": {
+            "location_id": "33333333-3333-3333-3333-333333333333"
+          }
+        },
+        "notes": "The location ids come from /api/v1/clients/{id}/locations; the same filter works on /api/v1/clients/{id}/contacts."
       }
     ]
   },
@@ -12469,7 +12691,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts",
     "displayName": "Create contact",
     "summary": "Create contact",
-    "description": "Inherited ApiBaseController create route for contacts.",
+    "description": "Inherited ApiBaseController create route for contacts. Accepts work_arrangement and locations[{location_id, is_primary}]; every location must belong to the contact's client (a location of another client returns 400 contact_location_client_mismatch) and at most one may be primary. A single link is made primary automatically.",
     "tags": [
       "Contacts"
     ],
@@ -12728,6 +12950,36 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "boolean",
           "default": false
         },
+        "work_arrangement": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "on_site",
+            "hybrid",
+            "remote",
+            null
+          ]
+        },
+        "locations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "location_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_primary": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "location_id"
+            ]
+          }
+        },
         "tags": {
           "type": "array",
           "items": {
@@ -12763,7 +13015,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/{id}",
     "displayName": "Get contact",
     "summary": "Get contact",
-    "description": "Inherited ApiBaseController get route for one contact_name_id.",
+    "description": "Inherited ApiBaseController get route for one contact_name_id. Carries work_arrangement and locations[] (location_id, location_name, is_primary, is_active and the address fields); an unlinked contact returns an empty array.",
     "tags": [
       "Contacts"
     ],
@@ -12801,7 +13053,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/{id}",
     "displayName": "Update contact",
     "summary": "Update contact",
-    "description": "Inherited ApiBaseController update route for one contact_name_id.",
+    "description": "Inherited ApiBaseController update route for one contact_name_id. work_arrangement and locations[] behave as on create; locations omitted leaves the links untouched, an empty array removes them all, and changing client_id removes them (a location never crosses clients).",
     "tags": [
       "Contacts"
     ],
@@ -13060,6 +13312,36 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "is_inactive": {
           "type": "boolean"
         },
+        "work_arrangement": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "on_site",
+            "hybrid",
+            "remote",
+            null
+          ]
+        },
+        "locations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "location_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "is_primary": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "location_id"
+            ]
+          }
+        },
         "tags": {
           "type": "array",
           "items": {
@@ -13230,7 +13512,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/search",
     "displayName": "Search contacts",
     "summary": "Search contacts",
-    "description": "Runs advanced contact search with explicit API-key auth and contact:read permission check.",
+    "description": "Runs advanced contact search with explicit API-key auth and contact:read permission check. Rows carry work_arrangement and locations[] like the list response.",
     "tags": [
       "Contacts"
     ],
@@ -13310,7 +13592,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/contacts/export",
     "displayName": "Export contacts",
     "summary": "Export contacts",
-    "description": "Exports contacts as CSV or JSON using explicit API-key auth and contact:read permission.",
+    "description": "Exports contacts as CSV or JSON using explicit API-key auth and contact:read permission. CSV gains Work Arrangement, Locations (\"Warehouse; Head office\") and Primary Location columns; JSON rows carry work_arrangement and locations[].",
     "tags": [
       "Contacts"
     ],
