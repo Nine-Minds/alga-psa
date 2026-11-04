@@ -32,6 +32,7 @@ type ConditionRow = {
   pending_since: string | Date | null;
   current_outage_id: string | null;
   current_external_alert_id: string | null;
+  transition_sequence: number | string | null;
   event_payload: Record<string, unknown> | string | null;
 };
 
@@ -105,7 +106,7 @@ export async function reconcileConditionObservations(args: {
           return {
             stale: false,
             event: null,
-            held: row.state === 'firing' ? row.current_external_alert_id : null,
+            held: ['firing', 'unmanaged'].includes(row.state) ? row.current_external_alert_id : null,
           };
         }
         // Conflicting payloads with the same provider ordering time have no
@@ -126,7 +127,7 @@ export async function reconcileConditionObservations(args: {
         return {
           stale: false,
           event: null,
-          held: row.state === 'firing' ? row.current_external_alert_id : null,
+          held: ['firing', 'unmanaged'].includes(row.state) ? row.current_external_alert_id : null,
         };
       }
 
@@ -154,7 +155,23 @@ export async function reconcileConditionObservations(args: {
         const gap = observedAt.getTime() - priorAt;
         const evidenceGap = priorAt !== -Infinity && gap > args.maxEvidenceGapMs;
         if (state === 'unmanaged' && outageId && row.current_external_alert_id) state = 'firing';
-        if (state !== 'firing') {
+        if (state === 'firing' && outageId && row.current_external_alert_id) {
+          const pendingRecheck = await scoped.table('rmm_condition_transitions').where({
+            integration_id: args.integrationId, scope_key: observation.scopeKey,
+            subject_key: observation.subjectKey, condition_key: observation.conditionKey,
+            outage_id: outageId, transition_kind: 'recheck', status: 'pending',
+          }).first('transition_id');
+          if (!pendingRecheck) {
+            transition = {
+              ...base,
+              kind: 'triggered',
+              externalAlertId: row.current_external_alert_id,
+              occurredAt: observedAt.toISOString(),
+              raw: { ...base.raw, ...metadata, outageId, transition: 'firing',
+                __alga_condition_lifecycle: true, __alga_condition_recheck: true },
+            };
+          }
+        } else {
           if (state !== 'pending' || evidenceGap) {
             // An old provider timestamp cannot bridge a gap in observations.
             // Restart grace at this fresh observation when continuity was lost.
@@ -202,6 +219,7 @@ export async function reconcileConditionObservations(args: {
         outageId = null;
       }
 
+      const transitionSequence = Number(row.transition_sequence ?? 0) + (transition ? 1 : 0);
       await scoped
         .table('rmm_condition_states')
         .where({
@@ -219,8 +237,9 @@ export async function reconcileConditionObservations(args: {
             observation.evidence === 'uncertain' ? row.last_trusted_evidence_at : observedAt.toISOString(),
           pending_since: pendingSince,
           current_outage_id: outageId,
+          transition_sequence: transitionSequence,
           current_external_alert_id:
-            state === 'firing'
+            state === 'firing' || state === 'unmanaged'
               ? transition?.kind === 'triggered'
                 ? transition.externalAlertId
                 : (row.current_external_alert_id ?? `condition:${outageId}`)
@@ -240,7 +259,8 @@ export async function reconcileConditionObservations(args: {
           subject_key: observation.subjectKey,
           condition_key: observation.conditionKey,
           outage_id: transition.raw.outageId,
-          transition_kind: transition.kind,
+          transition_kind: transition.raw.__alga_condition_recheck === true ? 'recheck' : transition.kind,
+          condition_sequence: transitionSequence,
           external_alert_id: transition.externalAlertId,
           event_payload: JSON.stringify(transition),
           status: 'pending',
@@ -250,14 +270,13 @@ export async function reconcileConditionObservations(args: {
         stale: false,
         event: transition,
         held:
-          state === 'firing' && !transition
+          (state === 'firing' || state === 'unmanaged') && !transition
             ? (row.current_external_alert_id ?? (outageId ? `condition:${outageId}` : null))
             : null,
       };
     });
 
     if (result.stale) staleObservations += 1;
-    if (result.event) events.push(result.event);
     if (result.held) heldExternalAlertIds.push(result.held);
   }
 
@@ -367,9 +386,14 @@ export async function reconcileConditionObservations(args: {
   const pending = await db
     .table('rmm_condition_transitions')
     .where({ integration_id: args.integrationId, status: 'pending' })
-    .select('transition_id', 'scope_key', 'subject_key', 'condition_key', 'outage_id', 'event_payload');
-  const known = new Set(events.map((event) => `${event.kind}:${event.externalAlertId}`));
+    .select('transition_id', 'scope_key', 'subject_key', 'condition_key', 'outage_id', 'condition_sequence', 'event_payload')
+    .orderBy('scope_key').orderBy('subject_key').orderBy('condition_key').orderBy('condition_sequence');
+  const known = new Set(events.filter((event) => event.raw.__alga_condition_recheck !== true)
+    .map((event) => `${event.kind}:${event.externalAlertId}`));
+  const firstPendingByCondition = new Set<string>();
   for (const row of pending) {
+    const identity = `${row.scope_key}\0${row.subject_key}\0${row.condition_key}`;
+    if (firstPendingByCondition.has(identity)) continue;
     const event = (
       typeof row.event_payload === 'string' ? JSON.parse(row.event_payload) : row.event_payload
     ) as NormalizedRmmAlertEvent;
@@ -393,6 +417,7 @@ export async function reconcileConditionObservations(args: {
         continue;
       }
     }
+    firstPendingByCondition.add(identity);
     const key = `${event.kind}:${event.externalAlertId}`;
     if (!known.has(key)) {
       events.push(event);

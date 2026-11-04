@@ -336,6 +336,7 @@ async function processReset(
         integration_id: event.integrationId,
         external_alert_id: event.externalAlertId,
       })
+      .forUpdate()
       .first('alert_id', 'status', 'ticket_id', 'matched_rule_id', 'asset_id');
 
     if (!existing || existing.status === 'resolved' || existing.status === 'auto_resolved') {

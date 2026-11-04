@@ -97,7 +97,7 @@ export function wireLocalTestDbEnv(): void {
     }
   };
   process.env.DB_HOST = '127.0.0.1';
-  process.env.DB_PORT = '5472';
+  process.env.DB_PORT = process.env.TEST_DB_PORT || '5472';
   process.env.DB_USER_ADMIN = 'postgres';
   process.env.DB_USER_SERVER = 'app_user';
   process.env.DB_PASSWORD_ADMIN = readSecret('postgres_password') || 'postpass123';
