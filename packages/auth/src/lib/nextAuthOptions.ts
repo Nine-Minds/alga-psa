@@ -2433,8 +2433,16 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 user.tenant = token.tenant as string;
                 user.tenantSlug = token.tenantSlug as string | undefined;
                 user.user_type = token.user_type as string;
-                user.clientId = token.clientId as string;
-                user.contactId = token.contactId as string;
+                if (typeof token.clientId === 'string' && token.clientId.length > 0) {
+                    user.clientId = token.clientId;
+                } else {
+                    delete user.clientId;
+                }
+                if (typeof token.contactId === 'string' && token.contactId.length > 0) {
+                    user.contactId = token.contactId;
+                } else {
+                    delete user.contactId;
+                }
                 user.plan = token.plan as string | undefined;
                 user.product_code = (token.product_code as ProductCode | undefined) ?? 'psa';
                 (user as any).addons = (token.addons as string[] | undefined) ?? [];

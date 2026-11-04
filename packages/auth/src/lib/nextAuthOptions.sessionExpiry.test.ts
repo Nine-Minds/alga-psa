@@ -113,7 +113,12 @@ vi.mock('@alga-psa/db/models/UserSession', () => ({
 vi.mock('./ipAddress', () => ({ getClientIp: vi.fn() }));
 vi.mock('./deviceFingerprint', () => ({ generateDeviceFingerprint: vi.fn(), getDeviceInfo: vi.fn() }));
 vi.mock('./geolocation', () => ({ getLocationFromIp: vi.fn(async () => null) }));
-vi.mock('@alga-psa/db', () => ({ getConnection: vi.fn() }));
+vi.mock('@alga-psa/db', () => ({
+  getConnection: vi.fn(),
+  tenantDb: (_knex: unknown, _tenant: string) => ({
+    table: (table: string) => makeTableQuery(table),
+  }),
+}));
 vi.mock('./PortalDomainModel', () => ({ getPortalDomain: vi.fn(), getPortalDomainByHostname: vi.fn() }));
 vi.mock('@alga-psa/db/models/user', () => ({ default: { updateLastLogin: vi.fn() } }));
 vi.mock('@alga-psa/db/admin', () => ({
@@ -142,6 +147,53 @@ describe('nextAuth session expiry sliding', () => {
     expect(jwt).toBeTypeOf('function');
     return jwt!({ token, trigger: undefined } as any);
   }
+
+  async function buildFreshUserSession(user: Record<string, unknown>) {
+    const options = await getAuthOptions();
+    const token = await options.callbacks!.jwt!({ token: {}, user, trigger: 'signIn' } as any);
+    const session = await options.callbacks!.session!({ session: { user: {} }, token } as any);
+    return { token, session: session as { user: Record<string, unknown> } };
+  }
+
+  it('constructs a fresh internal session without client identity even when sign-in carries a linked contact', async () => {
+    const { token, session } = await buildFreshUserSession({
+      id: 'internal-linked-1',
+      email: 'internal@example.test',
+      name: 'Linked Internal',
+      tenant: 'tenant-1',
+      user_type: 'internal',
+      // Models the linked-contact DB field copied by credentials authorization.
+      contactId: 'linked-contact-1',
+    });
+
+    expect(token).toMatchObject({ id: 'internal-linked-1', tenant: 'tenant-1', user_type: 'internal' });
+    expect(token).not.toHaveProperty('contactId');
+    expect(token).not.toHaveProperty('clientId');
+    expect(session.user).toMatchObject({ id: 'internal-linked-1', tenant: 'tenant-1', user_type: 'internal' });
+    expect(session.user).not.toHaveProperty('contactId');
+    expect(session.user).not.toHaveProperty('clientId');
+  });
+
+  it('preserves both contact and client identity for a fresh client session', async () => {
+    const { token, session } = await buildFreshUserSession({
+      id: 'client-1',
+      email: 'client@example.test',
+      name: 'Portal Client',
+      tenant: 'tenant-1',
+      user_type: 'client',
+      clientId: 'client-account-1',
+      contactId: 'client-contact-1',
+    });
+
+    expect(token).toMatchObject({
+      id: 'client-1', tenant: 'tenant-1', user_type: 'client',
+      clientId: 'client-account-1', contactId: 'client-contact-1',
+    });
+    expect(session.user).toMatchObject({
+      id: 'client-1', tenant: 'tenant-1', user_type: 'client',
+      clientId: 'client-account-1', contactId: 'client-contact-1',
+    });
+  });
 
   it('slides expires_at on an active session whose last extend is stale', async () => {
     const before = Date.now();
