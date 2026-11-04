@@ -68,7 +68,7 @@ export class ApiAssetAuditController {
 
     const validation = createAssetAuditSchema.safeParse(await req.json());
     if (!validation.success) {
-      return createErrorResponse('Invalid request body', 400, 'VALIDATION_ERROR', validation.error.errors);
+      return createErrorResponse('Invalid request body', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
     const audit = await this.auditService.start(validation.data, this.serviceContext(context));
@@ -84,7 +84,7 @@ export class ApiAssetAuditController {
     const query = Object.fromEntries(new URL(req.url).searchParams.entries());
     const validation = assetAuditListQuerySchema.safeParse(query);
     if (!validation.success) {
-      return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.errors);
+      return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
     const { page = 1, limit = 25, client_id } = validation.data;
@@ -110,7 +110,7 @@ export class ApiAssetAuditController {
 
     const validation = markAssetAuditItemSchema.safeParse(await req.json());
     if (!validation.success) {
-      return createErrorResponse('Invalid request body', 400, 'VALIDATION_ERROR', validation.error.errors);
+      return createErrorResponse('Invalid request body', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
     const audit = await this.auditService.markItem(params.id, validation.data, this.serviceContext(context));
