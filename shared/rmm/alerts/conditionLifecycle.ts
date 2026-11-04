@@ -156,20 +156,33 @@ export async function reconcileConditionObservations(args: {
         const evidenceGap = priorAt !== -Infinity && gap > args.maxEvidenceGapMs;
         if (state === 'unmanaged' && outageId && row.current_external_alert_id) state = 'firing';
         if (state === 'firing' && outageId && row.current_external_alert_id) {
-          const pendingRecheck = await scoped.table('rmm_condition_transitions').where({
-            integration_id: args.integrationId, scope_key: observation.scopeKey,
-            subject_key: observation.subjectKey, condition_key: observation.conditionKey,
-            outage_id: outageId, transition_kind: 'recheck', status: 'pending',
-          }).first('transition_id');
-          if (!pendingRecheck) {
-            transition = {
-              ...base,
-              kind: 'triggered',
-              externalAlertId: row.current_external_alert_id,
-              occurredAt: observedAt.toISOString(),
-              raw: { ...base.raw, ...metadata, outageId, transition: 'firing',
-                __alga_condition_lifecycle: true, __alga_condition_recheck: true },
-            };
+          const suppressedAlert = await scoped.table('rmm_alerts').where({
+            integration_id: args.integrationId,
+            external_alert_id: row.current_external_alert_id,
+            status: 'suppressed',
+          }).first('alert_id');
+          if (suppressedAlert) {
+            const pendingRecheck = await scoped.table('rmm_condition_transitions').where({
+              integration_id: args.integrationId, scope_key: observation.scopeKey,
+              subject_key: observation.subjectKey, condition_key: observation.conditionKey,
+              outage_id: outageId, transition_kind: 'recheck', status: 'pending',
+            }).first('transition_id');
+            if (!pendingRecheck) {
+              transition = {
+                ...base,
+                kind: 'triggered',
+                externalAlertId: row.current_external_alert_id,
+                occurredAt: observedAt.toISOString(),
+                raw: {
+                  ...base.raw,
+                  ...metadata,
+                  outageId,
+                  transition: 'firing',
+                  __alga_condition_lifecycle: true,
+                  __alga_condition_recheck: true,
+                },
+              };
+            }
           }
         } else {
           if (state !== 'pending' || evidenceGap) {

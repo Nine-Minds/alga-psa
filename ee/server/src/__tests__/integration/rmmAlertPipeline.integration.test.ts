@@ -964,7 +964,7 @@ describe('observation lifecycle through the RMM ticket pipeline (DB integration)
       scopeKey: lifecycleScope, subjectKey, conditionKey: 'device_offline', evidence, observedAt,
       event: {
         tenantId, integrationId: lifecycleIntegrationId, provider: 'unifi' as const,
-        externalDeviceId: subject, conditionIdentity: 'device_offline', activityType: 'DEVICE_OFFLINE',
+        externalDeviceId: subjectKey, conditionIdentity: 'device_offline', activityType: 'DEVICE_OFFLINE',
         alertClass: 'switch', sourceType: 'unifi_device_state', severity: evidence === 'healthy' ? 'none' as const : 'major' as const,
         message: 'Core switch offline', deviceName: 'Core switch', externalOrganizationId: lifecycleScope,
         raw: { scopeKey: lifecycleScope, subjectKey: subject, conditionKey: 'device_offline' },
@@ -1007,10 +1007,11 @@ describe('observation lifecycle through the RMM ticket pipeline (DB integration)
     expect(firstTicketId).toBeTruthy();
 
     const repeated = await run([observation('failing', '2026-11-03T12:01:30.000Z')], '2026-11-03T12:01:30.000Z');
-    expect(repeated.events).toHaveLength(1);
-    expect(repeated.events[0].raw.__alga_condition_recheck).toBe(true);
+    expect(repeated.events).toHaveLength(0);
     expect(repeated.heldExternalAlertIds).toContain(firstTrigger.events[0].externalAlertId);
-    expect((await deliver(repeated.events[0])).outcome).toBe('skipped');
+    expect(await tenantTable('rmm_condition_transitions').where({ tenant: tenantId,
+      integration_id: lifecycleIntegrationId,
+      external_alert_id: firstTrigger.events[0].externalAlertId }).select('transition_id')).toHaveLength(1);
     expect((await tenantTable('rmm_alerts').where({ tenant: tenantId, integration_id: lifecycleIntegrationId, external_alert_id: firstTrigger.events[0].externalAlertId }).first()).ticket_id).toBe(firstTicketId);
 
     const recovery = await run([observation('healthy', '2026-11-03T12:02:00.000Z')], '2026-11-03T12:02:00.000Z');
@@ -1056,8 +1057,8 @@ describe('observation lifecycle through the RMM ticket pipeline (DB integration)
     });
     await olderFetchStarted;
     const newerEvidence = await run([observation('failing', '2026-11-03T12:04:30.000Z')], '2026-11-03T12:04:30.000Z');
-    expect(newerEvidence.events[0].raw.__alga_condition_recheck).toBe(true);
-    await deliver(newerEvidence.events[0]);
+    expect(newerEvidence.events).toHaveLength(0);
+    expect(newerEvidence.heldExternalAlertIds).toContain(secondTrigger.events[0].externalAlertId);
     releaseOlderFetch();
     await delayedOlderReconciliation;
     const afterStaleSnapshot = await tenantTable('rmm_alerts').where({
@@ -1129,25 +1130,41 @@ describe('observation lifecycle through the RMM ticket pipeline (DB integration)
     // Natural expiry follows the same fresh-evidence recheck path.
     const expiryWindowId = uuidv4();
     const expirySubject = `expiry-${uuidv4()}`;
+    const expiryWindowStartsAt = '2026-11-03T12:00:00.000Z';
+    const expiryWindowEndsAt = '2026-11-03T12:02:00.000Z';
+    const expiryFirstFailureAt = '2026-11-03T12:00:00.000Z';
+    const expiryTriggerAt = '2026-11-03T12:01:01.000Z';
+    const expiryPostWindowFailureAt = '2026-11-03T12:02:30.000Z';
     await tenantTable('rmm_maintenance_windows').insert({
       tenant: tenantId, window_id: expiryWindowId, integration_id: lifecycleIntegrationId,
       name: 'Expiring lifecycle maintenance', is_active: true,
-      starts_at: new Date(Date.now() - 60_000).toISOString(),
-      ends_at: new Date(Date.now() + 60_000).toISOString(), recurrence: null,
+      starts_at: expiryWindowStartsAt,
+      ends_at: expiryWindowEndsAt, recurrence: null,
     });
-    const expiryFirstFailureAt = new Date(Date.now() - 90_000).toISOString();
-    const expiryTriggerAt = new Date(Date.now() - 20_000).toISOString();
     await run([observation('failing', expiryFirstFailureAt, expirySubject)], expiryFirstFailureAt);
     const expiryTrigger = await run([observation('failing', expiryTriggerAt, expirySubject)], expiryTriggerAt);
     await reconcileThroughPipeline(expiryTrigger.events);
-    await tenantTable('rmm_maintenance_windows').where({ tenant: tenantId, window_id: expiryWindowId })
-      .update({ ends_at: new Date(Date.now() - 1_000).toISOString() });
-    const expiryRecheck = await run([observation('failing', '2026-11-03T12:08:30.000Z', expirySubject)], '2026-11-03T12:08:30.000Z');
+    const expirySuppressedAlert = await tenantTable('rmm_alerts').where({ tenant: tenantId,
+      integration_id: lifecycleIntegrationId, external_alert_id: expiryTrigger.events[0].externalAlertId }).first();
+    expect(expirySuppressedAlert.status).toBe('suppressed');
+    expect(expirySuppressedAlert.ticket_id).toBeNull();
+    const outageBeforeExpiry = await tenantTable('rmm_condition_states').where({ tenant: tenantId,
+      integration_id: lifecycleIntegrationId, scope_key: lifecycleScope, subject_key: expirySubject,
+      condition_key: 'device_offline' }).first();
+    // The fixed observation timeline advances past ends_at while the window
+    // stays active, exercising natural expiry rather than deactivation.
+    const expiryRecheck = await run([observation('failing', expiryPostWindowFailureAt, expirySubject)], expiryPostWindowFailureAt);
+    expect(expiryRecheck.events).toHaveLength(1);
+    expect(expiryRecheck.events[0].externalAlertId).toBe(expiryTrigger.events[0].externalAlertId);
+    expect(expiryRecheck.events[0].raw.__alga_condition_recheck).toBe(true);
     await reconcileThroughPipeline(expiryRecheck.events);
     const activeAfterExpiry = await tenantTable('rmm_alerts').where({ tenant: tenantId,
       integration_id: lifecycleIntegrationId, external_alert_id: expiryTrigger.events[0].externalAlertId }).first();
     expect(activeAfterExpiry.status).toBe('active');
     expect(activeAfterExpiry.ticket_id).toBeTruthy();
+    expect((await tenantTable('rmm_condition_states').where({ tenant: tenantId,
+      integration_id: lifecycleIntegrationId, scope_key: lifecycleScope, subject_key: expirySubject,
+      condition_key: 'device_offline' }).first()).current_outage_id).toBe(outageBeforeExpiry.current_outage_id);
 
     // Exercise the real UniFi adapter's per-site results through reconciliation
     // and ticket delivery: healthy responses, empty inventories, uncertainty,
@@ -1255,14 +1272,12 @@ describe('observation lifecycle through the RMM ticket pipeline (DB integration)
     expect(remappedUncertain.current_outage_id).toBe(unmanaged.current_outage_id);
     adapterPhase = 'remapped_failure';
     const undeliveredRemappedFailure = await adapter.fetchActiveAlertSnapshot!({ tenantId, integrationId: lifecycleIntegrationId });
-    expect(undeliveredRemappedFailure.events[0].raw.__alga_condition_recheck).toBe(true);
+    expect(undeliveredRemappedFailure.events).toHaveLength(0);
+    expect(undeliveredRemappedFailure.heldExternalAlertIds).toContain(unmanagedAlertId);
     expect((await tenantTable('rmm_condition_states').where({ tenant: tenantId,
       integration_id: lifecycleIntegrationId, scope_key: adapterScopeA, subject_key: 'adapter-unmanaged',
       condition_key: 'device_offline' }).first()).current_external_alert_id).toBe(unmanagedAlertId);
     adapterPhase = 'remapped_healthy';
-    await adapterPoll();
-    // The stale recheck is rejected after healthy state commits; the next
-    // drain delivers the explicit recovery without recreating the outage.
     await adapterPoll();
     expect((await tenantTable('rmm_alerts').where({ tenant: tenantId, integration_id: lifecycleIntegrationId,
       external_alert_id: unmanagedAlertId }).first()).status).toBe('auto_resolved');
@@ -1271,5 +1286,107 @@ describe('observation lifecycle through the RMM ticket pipeline (DB integration)
     await adapterPoll();
     expect((await tenantTable('rmm_alerts').where({ tenant: tenantId, integration_id: lifecycleIntegrationId,
       external_alert_id: adapterBAlertId }).first()).status).toBe('auto_resolved');
+  });
+
+  it('rejects an in-flight maintenance recheck after scope removal without consuming later ticket eligibility', async () => {
+    const integration = uuidv4();
+    const scope = `recheck-${uuidv4()}`;
+    const subject = `device-${uuidv4()}`;
+    const rule = uuidv4();
+    const window = uuidv4();
+    await tenantTable('rmm_integrations').insert({ tenant: tenantId, integration_id: integration,
+      provider: `recheck-${integration}`, is_active: true, settings: JSON.stringify({}) });
+    await tenantTable('rmm_organization_mappings').insert({ tenant: tenantId, mapping_id: uuidv4(),
+      integration_id: integration, external_organization_id: scope, client_id: orgOnlyClientId,
+      auto_sync_assets: false, auto_create_tickets: false });
+    await tenantTable('rmm_alert_rules').insert({ tenant: tenantId, rule_id: rule,
+      integration_id: integration, name: 'Maintenance recheck race', is_active: true,
+      priority_order: 0, conditions: JSON.stringify({ activityTypes: ['DEVICE_OFFLINE'] }),
+      actions: JSON.stringify({ createTicket: true, boardId, priorityOverride: priorityHighId, autoResolveTicket: true }) });
+    await tenantTable('rmm_maintenance_windows').insert({ tenant: tenantId, window_id: window,
+      integration_id: integration, name: 'Maintenance recheck race', is_active: true,
+      starts_at: '2026-11-03T00:00:00.000Z', ends_at: '2026-11-03T00:03:00.000Z', recurrence: null });
+
+    const makeObservation = (observedAt: string) => ({
+      scopeKey: scope, subjectKey: subject, conditionKey: 'device_offline' as const,
+      evidence: 'failing' as const, observedAt,
+      event: {
+        tenantId, integrationId: integration, provider: 'unifi' as const,
+        externalDeviceId: subject, conditionIdentity: 'device_offline', activityType: 'DEVICE_OFFLINE',
+        alertClass: 'switch', sourceType: 'unifi_device_state', severity: 'major' as const,
+        message: 'Review device offline', deviceName: 'Review device', externalOrganizationId: scope,
+        raw: { scopeKey: scope, subjectKey: subject, conditionKey: 'device_offline' },
+      },
+    });
+    const observe = (observedAt: string) => reconcileConditionObservations({
+      knex: db, tenantId, integrationId: integration, observations: [makeObservation(observedAt)],
+      successfulScopes: [scope], graceMs: 0, maxEvidenceGapMs: 300_000, now: new Date(observedAt),
+    });
+    const deliver = async (events: NormalizedRmmAlertEvent[]) => {
+      registerRmmAlertFetcher('unifi', {
+        fetchActiveAlerts: async () => events,
+        fetchActiveAlertSnapshot: async () => ({ events, heldExternalAlertIds: [] }),
+      });
+      return runRmmAlertReconciliation({ knex: db }, { tenantId, integrationId: integration, provider: 'unifi' });
+    };
+
+    const first = await observe('2026-11-03T00:01:00.000Z');
+    expect(first.events).toHaveLength(1);
+    const stateBeforeDelivery = await tenantTable('rmm_condition_states').where({ tenant: tenantId,
+      integration_id: integration, scope_key: scope, subject_key: subject, condition_key: 'device_offline' }).first();
+    expect(stateBeforeDelivery).toMatchObject({
+      state: 'firing', current_outage_id: first.events[0].raw.outageId,
+      current_external_alert_id: first.events[0].externalAlertId,
+    });
+    const firstDelivery = await deliver(first.events);
+    expect(firstDelivery.ingested).toBe(1);
+    expect(firstDelivery.warnings).toEqual([]);
+    const outageId = first.events[0].raw.outageId;
+    const alertId = first.events[0].externalAlertId;
+    const beforeRecheck = await tenantTable('rmm_alerts').where({ tenant: tenantId,
+      integration_id: integration, external_alert_id: alertId }).first();
+    expect(beforeRecheck.status).toBe('suppressed');
+    expect(beforeRecheck.ticket_id).toBeNull();
+
+    await tenantTable('rmm_maintenance_windows').where({ tenant: tenantId, window_id: window })
+      .update({ is_active: false });
+    const capturedRecheck = await observe('2026-11-03T00:02:00.000Z');
+    expect(capturedRecheck.events[0].raw.__alga_condition_recheck).toBe(true);
+    const captured = capturedRecheck.events[0];
+
+    // This is the successful outer precheck immediately before a concurrent
+    // unmapping wins the condition lock.
+    expect(await tenantTable('rmm_condition_states').where({ tenant: tenantId,
+      integration_id: integration, scope_key: scope, subject_key: subject,
+      condition_key: 'device_offline', current_outage_id: outageId, state: 'firing' }).first('state')).toBeTruthy();
+    await tenantTable('rmm_organization_mappings').where({ tenant: tenantId, integration_id: integration,
+      external_organization_id: scope }).delete();
+    await reconcileConditionObservations({ knex: db, tenantId, integrationId: integration, observations: [],
+      successfulScopes: [], unmanagedScopes: [scope], unmanagedObservedAt: '2026-11-03T00:03:00.000Z',
+      graceMs: 0, maxEvidenceGapMs: 300_000, now: new Date('2026-11-03T00:03:00.000Z') });
+
+    // Simulate the event that already passed reconciliation's outer check;
+    // the transactional condition lock must reject it after unmapping.
+    const stalePipelineResult = await processRmmAlertEvent({ knex: db }, captured, { reprocessSuppressed: true });
+    expect(stalePipelineResult.outcome).toBe('skipped');
+    await deliver([captured]);
+    const stillSuppressed = await tenantTable('rmm_alerts').where({ tenant: tenantId,
+      integration_id: integration, external_alert_id: alertId }).first();
+    expect(stillSuppressed.status).toBe('suppressed');
+    expect(stillSuppressed.ticket_id).toBeNull();
+
+    await tenantTable('rmm_organization_mappings').insert({ tenant: tenantId, mapping_id: uuidv4(),
+      integration_id: integration, external_organization_id: scope, client_id: orgOnlyClientId,
+      auto_sync_assets: false, auto_create_tickets: false });
+    const remappedFailure = await observe('2026-11-03T00:04:00.000Z');
+    expect(remappedFailure.events).toHaveLength(1);
+    expect(remappedFailure.events[0].externalAlertId).toBe(alertId);
+    expect(remappedFailure.events[0].raw.outageId).toBe(outageId);
+    expect(remappedFailure.events[0].raw.__alga_condition_recheck).toBe(true);
+    await deliver(remappedFailure.events);
+    const ticketed = await tenantTable('rmm_alerts').where({ tenant: tenantId,
+      integration_id: integration, external_alert_id: alertId }).first();
+    expect(ticketed.status).toBe('active');
+    expect(ticketed.ticket_id).toBeTruthy();
   });
 });

@@ -96,8 +96,7 @@ export async function runRmmAlertReconciliation(
           subject_key: String(stamped.raw.subjectKey ?? ''),
           condition_key: String(stamped.raw.conditionKey ?? ''),
           current_outage_id: String(stamped.raw.outageId ?? ''),
-        }).whereIn('state', stamped.raw.__alga_condition_recheck === true ? ['firing', 'unmanaged'] : ['firing'])
-          .first('state');
+        }).where({ state: 'firing' }).first('state');
         if (!current) {
           if (stamped.raw.transitionId) {
             await acknowledgeConditionTransition(ctx, {
@@ -129,19 +128,25 @@ export async function runRmmAlertReconciliation(
     .where({ integration_id: args.integrationId })
     .whereIn('status', ['active', 'acknowledged', 'suppressed'])
     .select('external_alert_id', 'metadata');
+  const candidates = locals.filter((row: { external_alert_id: string }) => !remoteIds.has(row.external_alert_id));
+  const candidateIds = candidates.map((row: { external_alert_id: string }) => row.external_alert_id);
   const lifecycleOwned = new Set<string>();
-  const lifecycleCurrent = await db.table('rmm_condition_states')
-    .where({ integration_id: args.integrationId }).whereNotNull('current_external_alert_id')
-    .select('current_external_alert_id');
-  const lifecycleHistory = await db.table('rmm_condition_transitions')
-    .where({ integration_id: args.integrationId }).select('external_alert_id');
-  for (const row of lifecycleCurrent) lifecycleOwned.add(row.current_external_alert_id);
-  for (const row of lifecycleHistory) lifecycleOwned.add(row.external_alert_id);
+  if (candidateIds.length > 0) {
+    const lifecycleCurrent = await db.table('rmm_condition_states')
+      .where({ integration_id: args.integrationId })
+      .whereIn('current_external_alert_id', candidateIds)
+      .select('current_external_alert_id');
+    const lifecycleHistory = await db.table('rmm_condition_transitions')
+      .where({ integration_id: args.integrationId, status: 'pending' })
+      .whereIn('external_alert_id', candidateIds)
+      .select('external_alert_id');
+    for (const row of lifecycleCurrent) lifecycleOwned.add(row.current_external_alert_id);
+    for (const row of lifecycleHistory) lifecycleOwned.add(row.external_alert_id);
+  }
 
   let resetsSynthesized = 0;
   const now = new Date().toISOString();
-  for (const row of locals) {
-    if (remoteIds.has(row.external_alert_id)) continue;
+  for (const row of candidates) {
     // Condition outages are closed only by the durable, explicit healthy
     // transition. An omission from a delayed or partial snapshot is not
     // recovery evidence for a lifecycle-owned alert.

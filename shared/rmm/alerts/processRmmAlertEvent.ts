@@ -123,7 +123,7 @@ async function processTriggered(
         subject_key: String(event.raw.subjectKey ?? ''),
         condition_key: String(event.raw.conditionKey ?? ''),
         current_outage_id: String(event.raw.outageId ?? ''),
-      }).whereIn('state', ['firing', 'unmanaged']).forUpdate().first('state');
+      }).where({ state: 'firing' }).forUpdate().first('state');
       if (!current) return { outcome: 'skipped', ticketId: null, warnings };
     }
 

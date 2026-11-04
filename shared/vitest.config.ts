@@ -4,7 +4,13 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['services/**/*.test.ts', '**/__tests__/**/*.test.ts', 'workflow/runtime/utils/**/*.test.ts', 'workflow/runtime/__tests__/dateTriggerPayloadSchemas.test.ts'],
+    include: [
+      'services/**/*.test.ts',
+      '**/__tests__/**/*.test.ts',
+      'rmm/alerts/reconciliation.test.ts',
+      'workflow/runtime/utils/**/*.test.ts',
+      'workflow/runtime/__tests__/dateTriggerPayloadSchemas.test.ts',
+    ],
   },
   resolve: {
     alias: [
