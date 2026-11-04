@@ -326,7 +326,7 @@ export async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob
   return { provider, googleConfig, config };
 }
 
-function mapParsedMimeToEmailMessageDetails(params: {
+export function mapParsedMimeToEmailMessageDetails(params: {
   provider: 'microsoft' | 'imap';
   providerId: string;
   tenant: string;
@@ -356,9 +356,8 @@ function mapParsedMimeToEmailMessageDetails(params: {
   const fromEmail = listRewrite ? listRewrite.sender.email : (from?.address || '');
   const fromName = listRewrite ? (listRewrite.sender.name || from?.name || undefined) : (from?.name || undefined);
   const resolvedHeaders: Record<string, string> = {};
-  // Preserve Authentication-Results from raw MIME for the sender-auth gate.
-  // mailparser normalizes header names in its Map, while Gmail already supplies
-  // a record via GmailAdapter.
+  // Preserve duplicate raw headers in wire order for downstream diagnostics;
+  // these values do not establish provider authentication provenance.
   const parsedHeaders = params.parsed.headers;
   if (parsedHeaders?.forEach) {
     parsedHeaders.forEach((value: unknown, key: string) => {
@@ -371,8 +370,8 @@ function mapParsedMimeToEmailMessageDetails(params: {
       if (typeof value === 'string') {
         resolvedHeaders[headerName] = value;
       } else if (Array.isArray(value)) {
-        // Header order is wire order: the first Authentication-Results block is
-        // our receiving MTA's topmost result. Preserve each block for the gate.
+        // Keep repeated fields ordered instead of silently retaining only the
+        // last Authentication-Results or Exchange metadata header.
         resolvedHeaders[headerName] = value.filter((item): item is string => typeof item === 'string').join('\n');
       }
     });
@@ -438,6 +437,13 @@ function mapParsedMimeToEmailMessageDetails(params: {
     inReplyTo: inReplyTo || undefined,
     rawMimeBase64: params.rawMimeBuffer.toString('base64'),
     headers: Object.keys(resolvedHeaders).length ? resolvedHeaders : undefined,
+    // Graph returns stored MIME headers, not a separately authenticated
+    // Exchange provenance claim. Header Firewall normally removes external
+    // organization headers, but connector permissions can preserve them; this
+    // path cannot inspect that mailbox configuration, so fail closed.
+    senderAuthentication: params.provider === 'microsoft'
+      ? { provider: 'microsoft', internalAttributionTrusted: false, contactAttributionTrusted: false }
+      : undefined,
   };
 }
 

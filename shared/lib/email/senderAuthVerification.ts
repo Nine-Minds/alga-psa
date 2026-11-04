@@ -7,6 +7,14 @@ export interface SenderAuthResults {
   aligned: { spf: boolean; dkim: boolean; dmarc: boolean };
 }
 
+/** Keep repeated provider header fields in their original order. */
+export function orderedAuthenticationResults(headers: Array<{ name?: unknown; value?: unknown }>): string[] {
+  return headers
+    .filter((header) => String(header?.name ?? '').toLowerCase() === 'authentication-results')
+    .map((header) => header.value)
+    .filter((value): value is string => typeof value === 'string');
+}
+
 const RESULT = /\b(spf|dkim|dmarc)\s*=\s*(pass|fail|neutral|none|temperror|permerror)\b([^;]*)/gi;
 
 /**
@@ -111,25 +119,38 @@ export function allowsInternalSenderAttribution(results: SenderAuthResults | nul
   return Boolean(results?.aligned.dmarc || (results?.aligned.spf && results?.aligned.dkim));
 }
 
-export function allowsContactSenderAttribution(results: SenderAuthResults | null): boolean {
-  return Boolean(results?.aligned.spf || results?.aligned.dkim);
+export function isInternalAttributionTrusted(
+  decision: { provider: 'google' | 'microsoft'; internalAttributionTrusted: boolean } | null | undefined
+): boolean {
+  return decision?.provider === 'google' && decision.internalAttributionTrusted === true;
 }
 
 /**
- * Exchange Online stamps `X-MS-Exchange-Organization-AuthAs: Internal` on mail that
- * was authenticated inside the receiving Microsoft 365 organization, and strips every
- * `X-MS-Exchange-Organization-*` header from mail arriving from outside it. Such mail
- * carries no Authentication-Results header (SPF/DKIM are never evaluated for
- * intra-tenant delivery), so it would otherwise fail the contact gate closed.
- * Only trust this for Microsoft providers: other MTAs do not strip the header.
+ * Parse provider ingestion's ordered Authentication-Results values. This is
+ * only safe for providers whose receiving boundary guarantees its assertion is
+ * prepended after removing sender-supplied copies of the receiver authserv-id.
+ * Raw `headers` are intentionally not accepted by the authorization consumer.
  */
-export function isMicrosoftIntraOrgSender(
-  provider: string | null | undefined,
-  headers: Record<string, string> | null | undefined
-): boolean {
-  if (provider !== 'microsoft' || !headers) return false;
-  const authAs = Object.entries(headers).find(
-    ([name]) => name.toLowerCase() === 'x-ms-exchange-organization-authas'
-  )?.[1];
-  return typeof authAs === 'string' && authAs.trim().toLowerCase() === 'internal';
+export function verifyProviderSenderAuthentication(
+  evidence: { provider: 'google' | 'microsoft'; authenticationResults: string[]; receivingAuthservId?: string; receivingAuthservIds?: string[] } | null | undefined,
+  fromEmail: string | null | undefined
+): SenderAuthResults | null {
+  if (!evidence || !Array.isArray(evidence.authenticationResults) || evidence.authenticationResults.length === 0) return null;
+  // RFC 8601 requires receivers to remove incoming fields claiming their own
+  // authserv-id, then prepend the receiver's result. Trust only that first
+  // ordered Authentication-Results field; never search transit results below.
+  const assertion = evidence.authenticationResults[0];
+  if (typeof assertion !== 'string' || !assertion.trim()) return null;
+  const firstSegment = assertion.split(';', 1)[0]?.trim().toLowerCase() ?? '';
+  const authservId = /^(?:spf|dkim|dmarc|arc|compauth)\s*=/.test(firstSegment) ? '' : firstSegment.split(/\s+/, 1)[0];
+  // Gmail has a receiver identifier with a documented Authentication-Results
+  // boundary. Microsoft MIME exposes AuthSource as a message header, whose
+  // preservation depends on connector configuration this worker cannot prove.
+  const trusted = evidence.provider === 'google' && authservId === 'mx.google.com';
+  if (!trusted) return null;
+  return verifySenderAuthentication(assertion, fromEmail);
+}
+
+export function allowsContactSenderAttribution(results: SenderAuthResults | null): boolean {
+  return Boolean(results?.aligned.spf || results?.aligned.dkim);
 }

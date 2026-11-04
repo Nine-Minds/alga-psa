@@ -1,6 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { BaseEmailAdapter, type AdapterConnectionTestResult } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/inbound-email.interfaces';
+import { allowsContactSenderAttribution, allowsInternalSenderAttribution, orderedAuthenticationResults, verifyProviderSenderAuthentication } from '../../../lib/email/senderAuthVerification';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
@@ -739,6 +740,20 @@ This indicates a problem with the OAuth token saving process.`;
           contentId: att.contentId,
           isInline: att.isInline
         })),
+        senderAuthentication: (() => {
+          // Gmail API returns the mailbox's stored RFC 5322 headers. The
+          // receiver assertion is accepted only at index 0 and only when
+          // stamped with Google's documented receiver identifier.
+          const results = verifyProviderSenderAuthentication({
+            provider: 'google',
+            authenticationResults: orderedAuthenticationResults(headers),
+          }, parsedFrom?.email || fromEmail.trim());
+          return {
+            provider: 'google' as const,
+            internalAttributionTrusted: allowsInternalSenderAttribution(results),
+            contactAttributionTrusted: allowsContactSenderAttribution(results),
+          };
+        })(),
         headers: headers.reduce((acc: any, header: any) => {
           const headerName = String(header?.name || '');
           const normalizedHeaderName = headerName.toLowerCase();
@@ -748,7 +763,9 @@ This indicates a problem with the OAuth token saving process.`;
           if (normalizedHeaderName.startsWith('x-resolved-') || normalizedHeaderName.startsWith('x-list-')) {
             return acc;
           }
-          acc[headerName] = header.value;
+          const priorKey = Object.keys(acc).find((key) => key.toLowerCase() === normalizedHeaderName);
+          if (priorKey) acc[priorKey] = `${acc[priorKey]}\n${header.value}`;
+          else acc[headerName] = header.value;
           return acc;
         }, {})
       };

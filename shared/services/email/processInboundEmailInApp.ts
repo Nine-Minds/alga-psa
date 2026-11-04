@@ -44,12 +44,7 @@ import {
   detectOutboundNotificationLoop,
   type NotificationLoopDetectionResult,
 } from './notificationLoopDetection';
-import {
-  allowsContactSenderAttribution,
-  isMicrosoftIntraOrgSender,
-  allowsInternalSenderAttribution,
-  verifySenderAuthentication,
-} from '../../lib/email/senderAuthVerification';
+import { isInternalAttributionTrusted } from '../../lib/email/senderAuthVerification';
 
 export interface ProcessInboundEmailInAppInput {
   tenantId: string;
@@ -960,15 +955,10 @@ export async function processInboundEmailInApp(
   const emailData = input.emailData;
   const dedupeKey = buildDedupeKey(input);
   const senderEmail = normalizeEmailAddress(emailData.from?.email);
-  const authenticationResultsHeader = Object.entries(emailData.headers ?? {}).find(
-    ([name]) => name.toLowerCase() === 'authentication-results'
-  )?.[1];
-  const senderAuthResults = verifySenderAuthentication(authenticationResultsHeader, senderEmail);
+  const internalSenderTrusted = isInternalAttributionTrusted(emailData.senderAuthentication);
   const isVerifiedListRewrite = Boolean(emailData.headers?.['x-resolved-original-sender']);
-  // Same-M365-tenant mail has no Authentication-Results; Exchange's internal-auth stamp
-  // stands in for aligned SPF/DKIM for contact (never internal-user) attribution.
-  const isTrustedIntraOrgSender = isMicrosoftIntraOrgSender(emailData.provider, emailData.headers);
-  const contactSenderTrusted = allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite || isTrustedIntraOrgSender;
+  const contactSenderTrusted = (emailData.senderAuthentication?.provider === 'google'
+    && emailData.senderAuthentication.contactAttributionTrusted === true) || isVerifiedListRewrite;
   const durableExecution = options.durableExecution ?? null;
 
   const helperExecutionOptions = (kind: 'ticket' | 'comment'): InboundEmailExecutionOptions | undefined => {
@@ -1060,15 +1050,15 @@ export async function processInboundEmailInApp(
     if (!matched) return null;
 
     if (matched.user_type === 'internal') {
-      if (allowsInternalSenderAttribution(senderAuthResults)) return matched;
+      if (internalSenderTrusted) return matched;
       // A list rewrite may be trusted for contact matching, but never grants an
       // internal identity: only authentication aligned to the original From can.
       console.warn('SECURITY_EVENT inbound_email_internal_sender_auth_failed', {
         tenantId, providerId, emailId: emailData.id, senderEmail,
-        authResults: senderAuthResults,
+        authResults: emailData.senderAuthentication ?? null,
       });
       await logInboundSenderAuthFailure({
-        tenantId, providerId, emailId: emailData.id, senderEmail, authResults: senderAuthResults,
+        tenantId, providerId, emailId: emailData.id, senderEmail, authResults: emailData.senderAuthentication ?? null,
       });
       return null;
     }
@@ -1077,7 +1067,7 @@ export async function processInboundEmailInApp(
       tenantId, providerId, emailId: emailData.id, senderEmail,
       contactId: matched.contact_id ?? null,
       contactClientId: matched.client_id ?? null,
-      authResults: senderAuthResults,
+      authResults: emailData.senderAuthentication ?? null,
     });
     return null;
   };
@@ -1233,7 +1223,7 @@ export async function processInboundEmailInApp(
     to: emailData.to,
     subject: emailData.subject,
     receivedAt: emailData.receivedAt,
-    authResults: senderAuthResults,
+    authResults: emailData.senderAuthentication ?? null,
   });
 
   const buildUnmatchedSenderWatchListRecipients = (
@@ -1744,7 +1734,7 @@ export async function processInboundEmailInApp(
         const admission = provider
           ? await provider.admitReplyToken(tenantId, String(token), match.metadata, {
               email: senderEmail ?? null,
-              internalAttributionTrusted: allowsInternalSenderAttribution(senderAuthResults),
+              internalAttributionTrusted: internalSenderTrusted,
             })
           : null;
         // Only "not served" (or no provider) leaves the token inert: thread headers decide. Every other
@@ -2224,7 +2214,7 @@ export async function processInboundEmailInApp(
         inReplyTo: normalizeStoredMessageId(emailData.inReplyTo),
         references: (emailData.references ?? []).map((reference) => normalizeStoredMessageId(reference)),
         providerId,
-        authResults: senderAuthResults,
+        authResults: emailData.senderAuthentication ?? null,
         clientMatchSource,
         ...(autoCreatedContactId ? { autoCreatedContactId } : {}),
         ...(appliedRule
