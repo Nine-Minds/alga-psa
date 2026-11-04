@@ -65,3 +65,34 @@ These results establish local regression and build status only. They do not esta
 ## Review first
 
 Inspect the tracked evidence validator, its behavioral tests, and the two-phase runner first. Then read the private fixture handoff for the exact provisioning and API contract. The reviewer should withhold closure until controlled public endpoints and recipient-side logs are available and the required UI/service scenarios are captured. The security finding check remains unobserved.
+
+## Evidence runner repair at `e7b5a066f5a7edb6d4fd8bc2e30f2e8627f58ad5`
+
+The runner and validator repair was committed at the revision above. It addresses the remaining evidence-integrity defects:
+
+- Recipient events now span fixture reset, real UI work, service execution, and export. OAuth authorization-code exchange is allowed during the UI phase, while worker IMAP authentication and OAuth refresh must occur during the bounded service phase.
+- Runner timestamps retain ISO millisecond precision around process start and shutdown. The validator accepts an event at the exact shutdown boundary and rejects an event one millisecond later.
+- Scope-change validation rejects prior credentials in both IMAP authentication and OAuth token exchanges. OAuth events must identify the expected logical IMAP host and port and persisted OAuth client.
+- Scope-change evidence requires a successful old-scope positive control, persisted before/after generation and scope fingerprints captured from the database, a fail-closed worker result, and the configured minimum observation interval.
+- The runner checks that the registered UI server and built email service share the isolated database and external filesystem secret store. It captures the actual provider row before and after UI edits and fails closed when the process binding differs.
+
+Behavioral and local validation at `e7b5a066f5a7edb6d4fd8bc2e30f2e8627f58ad5`:
+
+- `node --test scripts/tests/public-email-service-evidence.test.mjs` — passed, 15 tests.
+- `npm test --workspace=@alga-psa/integrations -- src/actions/email-actions/emailProviderActions.security.test.ts` — passed, 60 tests.
+- `npm test --workspace=email-service -- src/emailService.credentialGeneration.test.ts` — passed, 51 tests across 9 files.
+- `cd server && NODE_OPTIONS=--max-old-space-size=4096 SKIP_DB_TESTS=1 VITEST_RECYCLE_FORKS=1 ../node_modules/.bin/vitest run src/test/unit/email/imapOAuthCallback.scope.test.ts src/test/unit/email/imapOAuthInitiate.policy.test.ts src/test/unit/email/imapOAuthTokenHttp.redirect.test.ts src/test/unit/email/imapOauthToken.scope.test.ts src/test/unit/unifiedInboundEmailQueueJobProcessor.fetch.test.ts --coverage.enabled=false --maxWorkers=1` — passed, 26 tests across 5 files.
+- `npm run build --workspace=email-service` — passed.
+- `npm run typecheck --workspace=@alga-psa/integrations` — passed.
+- `npm run lint:migrations` — passed with zero violations, undecided rules, or stale annotations.
+- `bash -n scripts/security/run-public-email-service-evidence.sh`, TypeScript no-emit check for `scripts/security/capture-imap-provider-state.ts`, and `git diff --check` — passed.
+
+These checks validate the runner and application behavior locally. They do not substitute for public-recipient evidence.
+
+## Remaining public fixture and runtime blockers
+
+The registered `dev-server` remains at the required worktree path and port. Its live process has `PORT=3948`, and the card-origin `/msp/settings/email` route responds with HTTP 307. The same process currently lacks `DB_NAME_SERVER`, `SECRET_FS_BASE_PATH`, `SECRET_READ_CHAIN`, and `SECRET_WRITE_PROVIDER`. The protected runner therefore cannot establish that UI edits and the built service share an isolated database and external secret store; it now rejects this setup before fixture reset.
+
+No controlled public IMAPS endpoints, trusted fixture DNS/certificates, HTTPS OAuth fixture, fixture admin API/token, isolated `smoke_imap_public_*` database, or external secret filesystem were available. The available GreenMail service is private and remains unsuitable as public-recipient evidence. No public evidence run was attempted, and no credential was sent to a fixture. The exact provisioning contract and access gap are recorded in the private handoff at `/home/robert/alga-review-private/3276c089/public-fixture-setup.md`.
+
+Password replacement, OAuth reconnect/refresh against a public recipient, old-credential non-delivery after UI scope changes, and the complete scope-change matrix remain unproven. Do not mark `security-finding-resolved` successful based on this local validation. Review the updated runner and validator first; close the finding only after the required runtime bindings and recipient fixtures produce correlated evidence at the published revision.
