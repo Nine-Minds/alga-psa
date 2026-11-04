@@ -442,9 +442,6 @@ const nextConfig = {
       '@product/mcp/entry': isEE
         ? '@product/mcp/ee/entry'
         : '@product/mcp/oss/entry',
-      '@product/service-principals/entry': isEE
-        ? '@product/service-principals/ee/entry'
-        : '@product/service-principals/oss/entry',
       '@product/ext-proxy/handler': isEE
         ? '@product/ext-proxy/ee/handler'
         : '@product/ext-proxy/oss/handler',

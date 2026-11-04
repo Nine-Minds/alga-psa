@@ -8,3 +8,6 @@ No unrelated workload was stopped; scheduler admission was not bypassed.
 
 Recheck: 2026-11-04T19:05Z
 Result: port 3594 remains unavailable. Scheduler still has the existing recovery queued, now at position 20. Admission reports 19 GiB free, 1.5 GiB reserved, 8 GiB floor, and 13 queued starts claiming 26 GiB ahead of this 6 GiB service. This step did not stop those workloads or alter scheduler admission.
+
+Recheck: 2026-11-04T19:10Z
+Result: port 3594 remains unavailable. Supported ensure-service recovery remains queued at position 17; scheduler reports 18 GiB free, 2.3 GiB reserved, 8 GiB floor, and 10 starts ahead claiming 20 GiB. No alternate server was launched and admission was not bypassed.

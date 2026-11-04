@@ -63,7 +63,9 @@
     "focusedRouteAndMiddlewareSuites": "39/39 passed",
     "serverTypecheck": "passed with NODE_OPTIONS=--max-old-space-size=8192",
     "rootBuild": "Completed controlled root production build, exit 1 (not interrupted): Nx dependencies succeeded, Next/Turbopack failed on three unresolved @product/service-principals/entry imports; details in build-constrained.log and build-constrained-run.txt. Peak RSS about 17.4 GiB; scheduler-managed dev-server:6 exited during the run and recovery is subject to scheduler heavy-work admission.",
-    "securityFindingAcceptance": "Pending external Security Review owner: canonical security-finding-resolved runner/check unavailable. Disposition requested in annotation c30cdb59-e4a8-409c-adef-27abc6ceea60; no response as of 19:04Z.",
-    "schedulerRecovery": "workflow-ensure-service requested for existing dev-server:6; at 19:04Z scheduler reports recovery queued #21 while host heavy-work admission is closed; port 3594 unavailable, so post-build health is not verified."
+    "securityFindingAcceptance": "Pending external Security Review owner: canonical security-finding-resolved runner/check unavailable. No disposition or acceptance pass is claimed.",
+    "schedulerRecovery": "At 19:10Z workflow-ensure-service still shows existing dev-server:6 queued #17 under memory admission; port 3594 unavailable, so final post-repair /api/health not verified.",
+    "productionBuild": "The previously completed controlled build failed with three @product/service-principals/entry resolution errors. Cause was traced to duplicate turbopack.resolveAlias keys introduced in commit 299f5236bb59d2699256343c187a32efab60ffde; later package-specifier mapping overrode earlier absolute source mapping. Removed duplicate; community/enterprise config contract cases pass. Full build not rerun due prior ~17.4 GiB peak and managed-service exit; post-repair full build remains unverified. See build-alias-repair.txt.",
+    "focusedValidation": "41/41 passed: refresh-watch route, middleware API-key, and service-principals config alias contract suites; service-principal edition boundary guard passed."
   }
 }
