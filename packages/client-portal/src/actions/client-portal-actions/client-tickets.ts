@@ -23,7 +23,13 @@ import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import { ServerEventPublisher } from '@alga-psa/event-bus';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 import { createTenantKnex, getConnection, tenantDb, withTransaction } from '@alga-psa/db';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishStoredWorkflowEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildPortalTicketReopenedPayload,
+  buildTicketClosedPayload,
+  buildTicketCommentAddedPayload,
+  buildTicketUpdatedPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { actionError, actionErrorFromValidationIssue, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionMessageParams, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { enforceTicketCloseRules } from '@alga-psa/tickets/lib/validateTicketClosure';
@@ -698,20 +704,19 @@ export const addClientTicketComment = withAuth(async (
       // Publish comment added event
       await persistCommentPublication(trx, {
         eventType: 'TICKET_COMMENT_ADDED',
-        payload: {
+        payload: buildTicketCommentAddedPayload({
           tenantId: tenant,
           occurredAt: newComment.created_at ?? new Date().toISOString(),
           ticketId: ticketId,
           commentId: newComment.comment_id,
           userId,
           comment: {
-            id: newComment.comment_id,
             content: content,
             author: `${userRecord.first_name} ${userRecord.last_name}`,
             isInternal
           }
-        }
-      }, publishEvent);
+        })
+      }, publishStoredWorkflowEvent);
 
       await publishTicketUpdate({
         tenantId: tenant,
@@ -1078,13 +1083,13 @@ export const updateTicketStatus = withAuth(async (
       if (isClosing) {
         await publishWorkflowEvent({
           eventType: 'TICKET_CLOSED',
-          payload: {
+          payload: buildTicketClosedPayload({
             ticketId: ticketId,
             userId,
             closedByUserId: userId,
             closedAt: occurredAt,
             changes: statusChanges,
-          },
+          }),
           ctx: {
             tenantId: tenant,
             actor: { actorType: 'USER' as const, actorUserId: userId },
@@ -1097,12 +1102,14 @@ export const updateTicketStatus = withAuth(async (
       } else if (isReopening) {
         await publishWorkflowEvent({
           eventType: 'TICKET_REOPENED',
-          payload: {
+          payload: buildPortalTicketReopenedPayload({
             ticketId: ticketId,
             userId,
-            reopenedByUserId: userId,
+            previousStatusId: oldStatusId,
+            newStatusId,
+            reopenedAt: occurredAt,
             changes: statusChanges,
-          },
+          }),
           ctx: {
             tenantId: tenant,
             actor: { actorType: 'USER' as const, actorUserId: userId },
@@ -1114,15 +1121,18 @@ export const updateTicketStatus = withAuth(async (
         });
       } else {
         // Publish ticket updated event
-        await publishEvent({
+        await publishWorkflowEvent({
           eventType: 'TICKET_UPDATED',
-          payload: {
-            tenantId: tenant,
-            occurredAt,
+          payload: buildTicketUpdatedPayload({
             ticketId: ticketId,
             userId,
-            changes: statusChanges
-          }
+            changes: statusChanges,
+          }),
+          ctx: {
+            tenantId: tenant,
+            actor: { actorType: 'USER' as const, actorUserId: userId },
+            occurredAt,
+          },
         });
       }
 
