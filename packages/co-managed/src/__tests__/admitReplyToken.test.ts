@@ -230,6 +230,21 @@ describe('admitReplyToken sender authentication', () => {
         .toEqual({ admitted: false, reason: 'sender_unauthenticated', acknowledge: false });
       expect(store.lookups).not.toContain('contacts');
     });
+    it('internal-user authentication cannot substitute for contact attribution trust', async () => {
+      expect(await admit({ ...trusted('req@customer.test'), contactAttributionTrusted: false }))
+        .toEqual({ admitted: false, reason: 'sender_unauthenticated', acknowledge: false });
+      expect(store.lookups).not.toContain('contacts');
+    });
+    it('contact attribution trust admits a requester without internal-user authentication', async () => {
+      expect(await admit({ ...untrusted('req@customer.test'), contactAttributionTrusted: true }))
+        .toMatchObject({ admitted: true, requesterContactId: 'k1', requesterClientId: 'client-1' });
+    });
+    it('a requester token cannot target another ticket in the same relationship', async () => {
+      store.tables.email_reply_tokens[0].ticket_id = 'other-ticket';
+      store.tables.co_management_ticket_work.push({ ...store.tables.co_management_ticket_work[0], ticket_id: 'other-ticket' });
+      expect(await admit(trusted('req@customer.test'))).toMatchObject({ admitted: false });
+      expect(store.lookups).not.toContain('contacts');
+    });
     it('a trusted active contact of the ticket client is admitted with its identity', async () => {
       const result: any = await admit({ ...trusted('req@CUSTOMER.test'), contactAttributionTrusted: true });
       expect(result).toMatchObject({ admitted: true, audience: 'requester', ticketId: 'tk', requesterContactId: 'k1', requesterClientId: 'client-1' });

@@ -118,6 +118,18 @@ describe('inbound reply token matrix (CM L5)', () => {
     expect(writes).toHaveLength(0);
   });
 
+  it('a forged From cannot become an anonymous comment even if admission returned a contact identity', async () => {
+    admission = { admitted: true, audience: 'requester', relationshipId: 'rel', threadId: 'thr', ticketId: 'ticket-1', parentCommentId: null, requesterContactId: 'contact-1', requesterClientId: 'client-1' };
+    findContactByEmailMock.mockResolvedValue({ contact_id: 'contact-1', user_type: 'contact', is_inactive: false, client_id: 'client-1' });
+    findTicketByEmailThreadMock.mockResolvedValue({ ticketId: 'fallback-ticket' });
+    const result = await inbound('cm2:abc', { headers: {} });
+    expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_token_refused' });
+    expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+    expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
+    expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+    expect(writes).toHaveLength(0);
+  });
+
   it('requester admission completes through the native writer only for the same trusted active contact', async () => {
     admission = { admitted: true, audience: 'requester', relationshipId: 'rel', threadId: 'thr', ticketId: 'ticket-1', parentCommentId: null, requesterContactId: 'contact-1', requesterClientId: 'client-1' };
     findContactByEmailMock.mockResolvedValue({ contact_id: 'contact-1', user_type: 'contact', is_inactive: false, client_id: 'client-1' });

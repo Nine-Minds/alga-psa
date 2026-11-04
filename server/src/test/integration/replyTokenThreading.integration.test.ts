@@ -145,10 +145,10 @@ describe('Reply Token Threading Logic', () => {
       expect(result!.projectId).toBeUndefined();
     });
 
-    it('refuses legacy and expired reply tokens', async () => {
+    it('refuses migrated legacy and expired reply tokens', async () => {
       const replyToken = `token-${uuidv4()}`;
       await scopedDb().table('email_reply_tokens').insert({
-        tenant: testTenant, token: replyToken, entity_type: 'ticket', created_at: new Date(), expires_at: null,
+        tenant: testTenant, token: replyToken, entity_type: 'ticket', created_at: new Date(), expires_at: new Date(0),
       });
       cleanup.push(async () => { await scopedDb().table('email_reply_tokens').where({ token: replyToken }).del(); });
       expect(await findTicketByReplyToken(replyToken, testTenant)).toBeNull();
@@ -355,7 +355,8 @@ describe('Reply Token Threading Logic', () => {
         template: 'ticket_notification',
         recipient_email: 'user@example.com',
         metadata: JSON.stringify({}),
-        created_at: new Date()
+        created_at: new Date(),
+        expires_at: new Date(Date.now() + 60_000)
       });
       cleanup.push(async () => {
         await otherTenantDb.table('email_reply_tokens').where({ token: replyToken }).del();
