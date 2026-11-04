@@ -2888,7 +2888,7 @@
       "assignee": "Responsável",
       "team": "Equipe",
       "additionalAgents": "Agentes adicionais",
-      "tags": "Tags",
+      "tags": "Etiquetas",
       "checklist": "Lista de verificação",
       "checklistCopy_one": "Copiar {{count}} item (desmarcado)",
       "checklistCopy_other": "Copiar {{count}} itens (desmarcados)",

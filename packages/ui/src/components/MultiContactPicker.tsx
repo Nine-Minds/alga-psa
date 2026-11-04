@@ -9,7 +9,7 @@ import { Checkbox } from './Checkbox';
 import { Button } from './Button';
 import { Popover, PopoverAnchor, PopoverContent } from './Popover';
 import type { AutomationProps } from '../ui-reflection/types';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTranslation } from '../lib/i18n/client';
 
 interface MultiContactPickerProps {
   id?: string;

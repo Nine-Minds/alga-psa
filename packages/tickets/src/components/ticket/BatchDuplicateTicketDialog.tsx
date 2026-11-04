@@ -19,12 +19,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import type { IContact } from '@alga-psa/types';
-import {
-  duplicateTicketBatch,
-  getTicketDuplicateSource,
-  type TicketDuplicateBatchResult,
-} from '../../actions/ticketActions';
-import { getContactsByClient } from '../../actions/clientLookupActions';
+import { useBatchDuplicateTicketActions, type TicketDuplicateBatchResult } from '../../hooks/useBatchDuplicateTicketActions';
 import type { TicketDuplicateSource } from '../../lib/ticketDuplicate';
 import {
   DUPLICATE_TITLE_TOKENS,
@@ -68,6 +63,7 @@ export default function BatchDuplicateTicketDialog({
   onCompleted,
 }: BatchDuplicateTicketDialogProps) {
   const { t } = useTranslation('features/tickets');
+  const duplicateActions = useBatchDuplicateTicketActions();
   const idPrefix = 'batch-duplicate';
 
   const [isLoading, setIsLoading] = useState(false);
@@ -114,7 +110,7 @@ export default function BatchDuplicateTicketDialog({
 
     (async () => {
       try {
-        const result = await getTicketDuplicateSource(sourceTicketId);
+        const result = await duplicateActions.getSource(sourceTicketId);
         if (cancelled) return;
         if (isActionMessageError(result) || isActionPermissionError(result)) {
           setLoadError(getErrorMessage(result));
@@ -123,7 +119,7 @@ export default function BatchDuplicateTicketDialog({
         setSource(result);
         setTemplate(result.title);
 
-        const contactList = await getContactsByClient(result.client.id, 'active');
+        const contactList = await duplicateActions.getContacts(result.client.id, 'active');
         if (cancelled) return;
         if (isActionMessageError(contactList) || isActionPermissionError(contactList)) {
           setLoadError(getErrorMessage(contactList));
@@ -295,7 +291,7 @@ export default function BatchDuplicateTicketDialog({
     setPendingCount(entries.length);
     setRequestError(null);
     try {
-      const result = await duplicateTicketBatch(
+      const result = await duplicateActions.duplicate(
         source.ticket_id,
         entries.map((entry) => ({ key: entry.row.key, contactId: entry.row.contactId, title: entry.title })),
         { copyChecklist: source.checklist.length > 0 ? copyChecklist : false }

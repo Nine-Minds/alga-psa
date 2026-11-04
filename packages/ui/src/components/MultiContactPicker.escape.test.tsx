@@ -7,7 +7,16 @@ import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { Dialog } from './Dialog';
 import MultiContactPicker from './MultiContactPicker';
-import common from '../../../../server/public/locales/en/common.json';
+
+const common = {
+  multiContactPicker: {
+    fields: { contacts: { placeholder: 'Select contacts...' }, search: { placeholder: 'Search contacts...' } },
+    noResults: 'No results found',
+    noContacts: 'No contacts available',
+    noEmail: 'no email',
+    actions: { clearAll: 'Clear all' },
+  },
+};
 
 beforeAll(async () => {
   if (!i18next.isInitialized) {
