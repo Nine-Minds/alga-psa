@@ -255,6 +255,7 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/asset-statuses',
       '/api/v1/asset-custody',
       '/api/v1/time-entries',
+      '/api/v1/time-period-settings',
       '/api/v1/stopwatch',
       '/api/v1/workflows',
       '/api/v1/extensions',

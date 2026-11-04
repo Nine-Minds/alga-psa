@@ -1621,7 +1621,7 @@ export class ApiTimeSheetController extends ApiBaseController {
       try {
         // Authenticate
         const apiKey = req.headers.get('x-api-key');
-        
+
         if (!apiKey) {
           throw new UnauthorizedError('API key required');
         }
@@ -1638,7 +1638,7 @@ export class ApiTimeSheetController extends ApiBaseController {
             tenantId = keyRecord.tenant;
           }
         }
-        
+
         if (!keyRecord) {
           throw new UnauthorizedError('Invalid API key');
         }
@@ -1722,18 +1722,17 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
+        const hasPermissionForAction = await hasPermission(
           user,
           'time_period',
           'read',
           db
         );
 
-        if (!hasReadPermission) {
+        if (!hasPermissionForAction) {
           throw new ForbiddenError('Permission denied: Cannot read time period settings');
         }
 
-        // Get settings within tenant context
         const settings = await runWithTenant(tenantId!, async () => {
           return await this.timeSheetService.getTimePeriodSettings({
             userId: user.user_id,
@@ -1750,7 +1749,75 @@ export class ApiTimeSheetController extends ApiBaseController {
   }
 
   /**
-   * Create time period settings
+   * Get time period settings by ID
+   */
+  getTimePeriodSettingsById() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Get user
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        assertApiPrincipal(user);
+
+        await this.assertManualProductAccess(req, keyRecord, user);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasPermissionForAction = await hasPermission(
+          user,
+          'time_period',
+          'read',
+          db
+        );
+
+        if (!hasPermissionForAction) {
+          throw new ForbiddenError('Permission denied: Cannot read time period settings');
+        }
+
+        // Extract ID from path
+        const id = new URL(req.url).pathname.split('/').pop()!;
+
+        const settings = await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.getTimePeriodSettingsById(id, {
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          });
+        });
+
+        return createSuccessResponse(settings);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Create time period settings (409 when it overlaps an active setting)
    */
   createTimePeriodSettings() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -1788,14 +1855,14 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasManagePermission = await hasPermission(
+        const hasPermissionForAction = await hasPermission(
           user,
           'time_period',
           'manage',
           db
         );
 
-        if (!hasManagePermission) {
+        if (!hasPermissionForAction) {
           throw new ForbiddenError('Permission denied: Cannot manage time period settings');
         }
 
@@ -1828,7 +1895,7 @@ export class ApiTimeSheetController extends ApiBaseController {
   }
 
   /**
-   * Update time period settings
+   * Update time period settings (409 when the result overlaps an active setting)
    */
   updateTimePeriodSettings() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -1866,20 +1933,19 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasManagePermission = await hasPermission(
+        const hasPermissionForAction = await hasPermission(
           user,
           'time_period',
           'manage',
           db
         );
 
-        if (!hasManagePermission) {
+        if (!hasPermissionForAction) {
           throw new ForbiddenError('Permission denied: Cannot manage time period settings');
         }
 
         // Extract ID from path
-        const pathParts = req.url.split('/');
-        const id = pathParts[pathParts.length - 1];
+        const id = new URL(req.url).pathname.split('/').pop()!;
 
         // Parse and validate request body
         const body = await req.json();
@@ -1909,7 +1975,73 @@ export class ApiTimeSheetController extends ApiBaseController {
     };
   }
 
-  // Schedule Management
+  /**
+   * Delete time period settings
+   */
+  deleteTimePeriodSettings() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // Extract tenant ID
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        // Get user
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        assertApiPrincipal(user);
+
+        await this.assertManualProductAccess(req, keyRecord, user);
+
+        // Check permissions
+        const db = await getConnection(tenantId!);
+        const hasPermissionForAction = await hasPermission(
+          user,
+          'time_period',
+          'manage',
+          db
+        );
+
+        if (!hasPermissionForAction) {
+          throw new ForbiddenError('Permission denied: Cannot manage time period settings');
+        }
+
+        // Extract ID from path
+        const id = new URL(req.url).pathname.split('/').pop()!;
+
+        await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.deleteTimePeriodSettings(id, {
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          });
+        });
+
+        return new NextResponse(null, { status: 204 });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
 
   /**
    * Search schedule entries (GET /api/v1/schedules/search): same auth,

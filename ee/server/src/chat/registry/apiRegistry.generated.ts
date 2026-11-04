@@ -55487,6 +55487,295 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_timeperiodsettings",
+    "method": "get",
+    "path": "/api/v1/time-period-settings",
+    "displayName": "List time period settings",
+    "summary": "List time period settings",
+    "description": "Returns every time period setting for the tenant, active or not, newest effective_from first. Settings drive time period generation.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_timeperiodsettings",
+    "method": "post",
+    "path": "/api/v1/time-period-settings",
+    "displayName": "Create time period settings",
+    "summary": "Create time period settings",
+    "description": "Creates an active time period setting. When effective_from is omitted it defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, the new setting starts the day after it ended (the default may then be in the future). An explicit effective_from is used as given. Returns 409 when the setting overlaps an active setting.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "frequency": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Number of frequency_unit units per period (e.g. 1 with week = weekly)."
+        },
+        "frequency_unit": {
+          "type": "string",
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "year"
+          ]
+        },
+        "start_day": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "description": "week: first weekday (1=Monday … 7=Sunday); month: first day of the month. Defaults to 1."
+        },
+        "end_day": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31,
+          "description": "month: last day of the period, or 0 for the end of the month. Defaults to 0."
+        },
+        "start_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "year: first month. Defaults to 1."
+        },
+        "start_day_of_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "description": "year: first day of start_month. Defaults to 1."
+        },
+        "end_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "year: last month. Defaults to 12."
+        },
+        "end_day_of_month": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31,
+          "description": "year: last day of end_month, or 0 for the end of the month. Defaults to 0."
+        },
+        "effective_from": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "First day the setting is in force. When omitted, defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, it starts the day after that setting ended."
+        },
+        "effective_to": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Last day the setting is in force (inclusive). Omit for open-ended."
+        }
+      },
+      "required": [
+        "frequency",
+        "frequency_unit"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_timeperiodsettings_id",
+    "method": "get",
+    "path": "/api/v1/time-period-settings/{id}",
+    "displayName": "Get time period settings",
+    "summary": "Get time period settings",
+    "description": "Gets one time period setting by time_period_settings_id.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_timeperiodsettings_id",
+    "method": "put",
+    "path": "/api/v1/time-period-settings/{id}",
+    "displayName": "Update time period settings",
+    "summary": "Update time period settings",
+    "description": "Applies a partial update. The merged setting is validated like a create and returns 409 when it overlaps another active setting. effective_to: null clears the end date; is_active: false takes the setting out of period generation and overlap checks.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "frequency": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "Number of frequency_unit units per period (e.g. 1 with week = weekly)."
+        },
+        "frequency_unit": {
+          "type": "string",
+          "enum": [
+            "day",
+            "week",
+            "month",
+            "year"
+          ]
+        },
+        "start_day": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "description": "week: first weekday (1=Monday … 7=Sunday); month: first day of the month. Defaults to 1."
+        },
+        "end_day": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31,
+          "description": "month: last day of the period, or 0 for the end of the month. Defaults to 0."
+        },
+        "start_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "year: first month. Defaults to 1."
+        },
+        "start_day_of_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31,
+          "description": "year: first day of start_month. Defaults to 1."
+        },
+        "end_month": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12,
+          "description": "year: last month. Defaults to 12."
+        },
+        "end_day_of_month": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 31,
+          "description": "year: last day of end_month, or 0 for the end of the month. Defaults to 0."
+        },
+        "effective_from": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "First day the setting is in force. When omitted, defaults to the start of the period containing today in the caller's timezone; if an earlier setting ended on or after that day, it starts the day after that setting ended."
+        },
+        "effective_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Last day the setting is in force (inclusive); null clears it."
+        },
+        "is_active": {
+          "type": "boolean",
+          "description": "Inactive settings are ignored by period generation and overlap checks."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/WorkV1TimePeriodSettings"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_timeperiodsettings_id",
+    "method": "delete",
+    "path": "/api/v1/time-period-settings/{id}",
+    "displayName": "Delete time period settings",
+    "summary": "Delete time period settings",
+    "description": "Deletes a time period setting. Time periods it already generated are kept.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "UUID path identifier from underlying resource tables.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID path identifier from underlying resource tables."
+        }
+      }
+    ]
+  },
+  {
     "id": "get-_api_v1_quotes",
     "method": "get",
     "path": "/api/v1/quotes",
