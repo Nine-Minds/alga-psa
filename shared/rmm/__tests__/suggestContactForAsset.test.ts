@@ -115,7 +115,7 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 
-const { suggestContactForAsset } = await import('../signedInUserMappings');
+const { suggestContactForAsset, RmmUserMappingAuthorizationError } = await import('../signedInUserMappings');
 
 const TENANT = 'tenant-1';
 const CLIENT = 'client-1';
@@ -221,6 +221,20 @@ describe('suggestContactForAsset', () => {
       integrationId: 'int-ninja',
       contactId: 'c-jane',
     });
+  });
+
+  it.each(['asset', 'contact'])('does not return a suggestion when the %s is denied', async (denied) => {
+    h.dbState.rmm_integrations.push({ tenant: TENANT, integration_id: 'int-ninja', provider: 'ninjaone' });
+    h.dbState.rmm_organization_mappings.push({
+      tenant: TENANT, integration_id: 'int-ninja', external_organization_id: ORG,
+      client_id: CLIENT, contact_assignment_mode: 'suggest',
+    });
+
+    await expect(suggestContactForAsset(h.knexMock, TENANT, ASSET, async ({ assetIds, contactId }) => {
+      if ((denied === 'asset' && assetIds.includes(ASSET)) || (denied === 'contact' && contactId)) {
+        throw new RmmUserMappingAuthorizationError();
+      }
+    })).rejects.toThrow('Permission denied');
   });
 
   it('returns nothing when no mapping points this organization at the asset client', async () => {

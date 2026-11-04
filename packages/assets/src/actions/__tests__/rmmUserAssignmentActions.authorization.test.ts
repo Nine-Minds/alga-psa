@@ -9,6 +9,7 @@ const h = vi.hoisted(() => {
     rows: {} as Record<string, Row[]>,
     mappingWrites: 0,
     assignments: [] as string[],
+    scopedResources: [] as string[],
   };
 
   const reset = () => {
@@ -39,6 +40,7 @@ const h = vi.hoisted(() => {
     };
     state.mappingWrites = 0;
     state.assignments = [];
+    state.scopedResources = [];
   };
 
   const query = (tableName: string) => {
@@ -69,26 +71,26 @@ const h = vi.hoisted(() => {
   };
 
   const knex: any = (tableName: string) => query(tableName);
+  class RmmUserMappingAuthorizationError extends Error {
+    constructor() { super('Permission denied: Cannot access this RMM user mapping'); }
+  }
   const shared = {
-    suggestContactForAsset: vi.fn(async (_conn: unknown, _tenant: string, assetId: string, check: (request: any) => Promise<boolean>) => {
-      const allowed = await check({
-        assetIds: [assetId], contactId: null, integrationId: 'integration-1', provider: 'ninjaone', action: 'read',
+    RmmUserMappingAuthorizationError,
+    suggestContactForAsset: vi.fn(async (_conn: unknown, _tenant: string, assetId: string, check?: (request: any) => Promise<void>) => {
+      await check?.({
+        assetIds: [assetId], contactId: null, integrationId: 'integration-1',
       });
-      if (!allowed) throw new Error('Permission denied: Cannot read this asset RMM identity');
       return {
         rawUser: 'CORP\\jdoe', key: 'jdoe', contactId: null, contactName: null,
         method: null, integrationId: 'integration-1', provider: 'ninjaone',
       };
     }),
     mapSignedInUserToContact: vi.fn(async (_trx: unknown, _tenant: string, args: any) => {
-      const initialAllowed = await args.authorize({
+      await args.authorize?.({
         assetIds: args.assignAssetId ? [args.assignAssetId] : [],
         contactId: args.contactId,
         integrationId: args.integrationId,
-        provider: args.provider,
-        action: 'update',
       });
-      if (!initialAllowed) throw new Error('Permission denied: Cannot map this RMM user');
       state.mappingWrites += 1;
       if (args.assignAssetId) state.assignments.push(args.assignAssetId);
       for (const candidate of [
@@ -97,11 +99,16 @@ const h = vi.hoisted(() => {
         'asset-out-of-scope',
         'asset-updatable-not-readable',
       ]) {
-        const allowed = await args.authorize({
-          assetIds: [candidate], contactId: args.contactId,
-          integrationId: args.integrationId, provider: args.provider, action: 'update',
-        });
-        if (allowed) state.assignments.push(candidate);
+        try {
+          await args.authorize?.({
+            assetIds: [candidate], contactId: args.contactId,
+            integrationId: args.integrationId,
+          });
+        } catch (error) {
+          if (error instanceof RmmUserMappingAuthorizationError) continue;
+          throw error;
+        }
+        state.assignments.push(candidate);
       }
       return { key: 'jdoe', assignedAssetIds: [...state.assignments] };
     }),
@@ -141,7 +148,9 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
         { id: 'asset-update-same-team', resource: 'asset', action: 'update', templateKey: 'same_team' },
       ];
     }
-    return [];
+    return h.state.scopedResources.includes(input.resource.type)
+      ? [selectedClientRule(input.resource.type, 'read'), selectedClientRule(input.resource.type, 'update')]
+      : [];
   }),
 }));
 
@@ -166,21 +175,54 @@ describe('RMM user mapping record authorization', () => {
     );
   });
 
-  it('rejects caller-supplied integration/provider and contact scope before mapping writes', async () => {
+  it('rejects an unavailable integration before mapping writes', async () => {
     const integrationMismatch = await mapRmmUserToContact({
       integrationId: 'integration-out-of-scope', provider: 'ninjaone', rawUser: 'CORP\\jdoe',
       contactId: 'contact-in-scope',
     });
     expect(integrationMismatch).toMatchObject({ permissionError: expect.any(String) });
     expect(h.state.mappingWrites).toBe(0);
+  });
 
-    const providerMismatch = await mapRmmUserToContact({
-      integrationId: 'integration-1', provider: 'tacticalrmm', rawUser: 'CORP\\jdoe',
-      contactId: 'contact-in-scope',
+  it('rejects a contact outside contact record scope before writing', async () => {
+    h.state.scopedResources = ['contact'];
+    const result = await mapRmmUserToContact({
+      integrationId: 'integration-1', provider: 'ninjaone', rawUser: 'CORP\\jdoe',
+      contactId: 'contact-out-of-scope',
     });
-    expect(providerMismatch).toMatchObject({ permissionError: expect.any(String) });
+    expect(result).toMatchObject({ permissionError: expect.any(String) });
     expect(h.state.mappingWrites).toBe(0);
+    expect(h.state.assignments).toEqual([]);
+  });
 
+  it('rejects integration access in an excluded client scope before writing', async () => {
+    h.state.scopedResources = ['rmm_integration'];
+    h.state.rows.rmm_organization_mappings = [
+      { integration_id: 'integration-1', client_id: 'client-out-of-scope' },
+    ];
+    const result = await mapRmmUserToContact({
+      integrationId: 'integration-1', provider: 'ninjaone', rawUser: 'CORP\\jdoe',
+      contactId: null,
+    });
+    expect(result).toMatchObject({ permissionError: expect.any(String) });
+    expect(h.state.mappingWrites).toBe(0);
+    expect(h.state.assignments).toEqual([]);
+  });
+
+  it('writes the mapping and assignments when every asset is in scope', async () => {
+    for (const asset of h.state.rows.assets) asset.client_id = 'client-in-scope';
+    h.state.rows.asset_associations = h.state.rows.assets.map((asset) => ({
+      asset_id: asset.asset_id, entity_type: 'team', entity_id: 'team-ops',
+    }));
+    const result = await mapRmmUserToContact({
+      integrationId: 'integration-1', provider: 'ninjaone', rawUser: 'CORP\\jdoe',
+      contactId: 'contact-in-scope', assignAssetId: 'asset-update-authorized',
+    });
+    expect(result).toMatchObject({ key: 'jdoe', assignedAssetIds: [
+      'asset-update-authorized', 'asset-update-authorized-candidate',
+      'asset-readable-not-updatable', 'asset-out-of-scope', 'asset-updatable-not-readable',
+    ] });
+    expect(h.state.mappingWrites).toBe(1);
   });
 
   it('rejects a readable but non-updatable explicit target before writing the mapping', async () => {

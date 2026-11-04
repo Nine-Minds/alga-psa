@@ -153,7 +153,7 @@ vi.mock('../../models/assetAssignmentModel', () => ({
     error instanceof Error && error.name === 'AssetAssigneeError',
 }));
 
-const { mapSignedInUserToContact } = await import('../signedInUserMappings');
+const { mapSignedInUserToContact, RmmUserMappingAuthorizationError } = await import('../signedInUserMappings');
 
 const TENANT = 'tenant-1';
 const INTEGRATION = 'int-1';
@@ -253,7 +253,7 @@ describe('mapSignedInUserToContact', () => {
       rawUser: 'CORP\\jdoe',
       contactId: 'c-jane',
       assignAssetId: 'asset-ours',
-      authorize: async () => false,
+      authorize: async () => { throw new RmmUserMappingAuthorizationError(); },
     })).rejects.toThrow('Permission denied');
 
     expect(h.dbState.tenant_external_entity_mappings).toHaveLength(0);
@@ -276,7 +276,9 @@ describe('mapSignedInUserToContact', () => {
       provider: 'ninjaone',
       rawUser: 'CORP\\jdoe',
       contactId: 'c-jane',
-      authorize: async ({ contactId }) => contactId !== 'c-hidden',
+      authorize: async ({ contactId }) => {
+        if (contactId === 'c-hidden') throw new RmmUserMappingAuthorizationError();
+      },
     })).rejects.toThrow('Permission denied');
 
     expect(h.dbState.tenant_external_entity_mappings).toEqual([expect.objectContaining({
@@ -296,7 +298,7 @@ describe('mapSignedInUserToContact', () => {
       contactId: 'c-jane',
       authorize: async ({ assetIds }) => {
         checked.push(...assetIds);
-        return !assetIds.includes('asset-ours-2');
+        if (assetIds.includes('asset-ours-2')) throw new RmmUserMappingAuthorizationError();
       },
     });
 
@@ -304,6 +306,30 @@ describe('mapSignedInUserToContact', () => {
     expect(checked).toContain('asset-ours-2');
     expect(result.assignedAssetIds).toEqual(['asset-ours']);
     expect(h.dbState.tenant_external_entity_mappings).toHaveLength(1);
+  });
+
+  it('rejects an integration/provider mismatch before any writes', async () => {
+    await expect(mapSignedInUserToContact(h.knexMock, TENANT, {
+      integrationId: INTEGRATION,
+      provider: 'tacticalrmm',
+      rawUser: 'CORP\\jdoe',
+      contactId: 'c-jane',
+    })).rejects.toThrow('Permission denied');
+    expect(h.dbState.tenant_external_entity_mappings).toHaveLength(0);
+    expect(h.setAssetAssignee).not.toHaveBeenCalled();
+  });
+
+  it('propagates an unexpected authorization failure for an automatic candidate', async () => {
+    await expect(mapSignedInUserToContact(h.knexMock, TENANT, {
+      integrationId: INTEGRATION,
+      provider: 'ninjaone',
+      rawUser: 'CORP\\jdoe',
+      contactId: 'c-jane',
+      authorize: async ({ assetIds }) => {
+        if (assetIds.length) throw new Error('authorization database unavailable');
+      },
+    })).rejects.toThrow('authorization database unavailable');
+    expect(h.setAssetAssignee).not.toHaveBeenCalled();
   });
 
   it('lets a real failure out rather than swallowing it', async () => {

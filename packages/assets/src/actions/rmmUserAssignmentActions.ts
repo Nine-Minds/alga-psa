@@ -4,6 +4,7 @@ import type { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import {
+  RmmUserMappingAuthorizationError,
   mapSignedInUserToContact,
   suggestContactForAsset,
   type RmmUserMappingAuthorizationRequest,
@@ -27,13 +28,14 @@ function createRmmMappingAuthorizer(
   conn: Knex | Knex.Transaction,
   tenant: string,
   user: MappingActionUser,
+  action: 'read' | 'update',
 ) {
-  const authorizationContextPromise = createAssetReadContext(conn, tenant, user);
-  return async ({ assetIds, contactId, integrationId, provider, action }: RmmUserMappingAuthorizationRequest) => {
+  let authorizationContextPromise: ReturnType<typeof createAssetReadContext> | undefined;
+  return async ({ assetIds, contactId, integrationId }: RmmUserMappingAuthorizationRequest) => {
     const db = tenantDb(conn, tenant);
     const [integration, assetRows, contact] = await Promise.all([
       db.table('rmm_integrations')
-        .where({ integration_id: integrationId, provider })
+        .where({ integration_id: integrationId })
         .first<{ integration_id: string }>('integration_id'),
       assetIds.length > 0
         ? db.table('assets')
@@ -49,10 +51,10 @@ function createRmmMappingAuthorizer(
     ]);
 
     if (!integration || assetRows.length !== new Set(assetIds).size ||
-      (contactId && (!contact?.contact_name_id || !contact.client_id))) return false;
-    if (contactId && !await hasPermission(user as any, 'contact', 'read', conn as Knex)) return false;
+      (contactId && (!contact?.contact_name_id || !contact.client_id))) throw new RmmUserMappingAuthorizationError();
+    if (contactId && !await hasPermission(user as any, 'contact', 'read', conn as Knex)) throw new RmmUserMappingAuthorizationError();
 
-    const authorizationContext = await authorizationContextPromise;
+    const authorizationContext = await (authorizationContextPromise ??= createAssetReadContext(conn, tenant, user));
     const allowedAssets = await Promise.all(assetRows.map(async (asset) => {
       const readAllowed = await isAssetReadAllowed(conn, tenant, authorizationContext, asset);
       const actionAllowed = action === 'read'
@@ -60,7 +62,7 @@ function createRmmMappingAuthorizer(
         : await isAssetActionAllowed(conn, tenant, authorizationContext, asset, action);
       return readAllowed && actionAllowed;
     }));
-    if (allowedAssets.some((allowed) => !allowed)) return false;
+    if (allowedAssets.some((allowed) => !allowed)) throw new RmmUserMappingAuthorizationError();
 
     if (contactId && contact) {
       const contactDecision = await authorizationContext.authorizationKernel.authorizeResource({
@@ -70,7 +72,7 @@ function createRmmMappingAuthorizer(
         requestCache: authorizationContext.requestCache,
         knex: conn as Knex,
       });
-      if (!contactDecision.allowed) return false;
+      if (!contactDecision.allowed) throw new RmmUserMappingAuthorizationError();
     }
 
     // Integrations can span several client organizations. Evaluate the RMM
@@ -94,10 +96,8 @@ function createRmmMappingAuthorizer(
         requestCache: authorizationContext.requestCache,
         knex: conn as Knex,
       });
-      if (!decision.allowed) return false;
+      if (!decision.allowed) throw new RmmUserMappingAuthorizationError();
     }
-
-    return true;
   };
 }
 
@@ -122,8 +122,10 @@ export const suggestAssigneeFromRmmUser = withAuth(async (
 
   const { knex } = await createTenantKnex();
   try {
-    const authorize = createRmmMappingAuthorizer(knex, tenant, user as MappingActionUser);
-    return await suggestContactForAsset(knex, tenant, assetId, authorize);
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const authorize = createRmmMappingAuthorizer(trx, tenant, user as MappingActionUser, 'read');
+      return suggestContactForAsset(trx, tenant, assetId, authorize);
+    });
   } catch (error) {
     const expected = assetActionErrorFrom(error);
     if (expected) return expected as ActionPermissionError;
@@ -152,7 +154,7 @@ export const mapRmmUserToContact = withAuth(async (
   const { knex } = await createTenantKnex();
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const authorize = createRmmMappingAuthorizer(trx, tenant, user as MappingActionUser);
+      const authorize = createRmmMappingAuthorizer(trx, tenant, user as MappingActionUser, 'update');
       return mapSignedInUserToContact(trx, tenant, { ...input, actorUserId: user.user_id, authorize });
     });
   } catch (error) {

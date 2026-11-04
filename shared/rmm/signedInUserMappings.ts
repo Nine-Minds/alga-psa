@@ -47,11 +47,17 @@ export interface RmmUserMappingAuthorizationRequest {
   assetIds: string[];
   contactId: string | null;
   integrationId: string;
-  provider: string;
-  action: 'read' | 'update';
 }
 
-export type AuthorizeRmmUserMapping = (request: RmmUserMappingAuthorizationRequest) => Promise<boolean>;
+/** A policy denial; unexpected failures must still abort the transaction. */
+export class RmmUserMappingAuthorizationError extends Error {
+  constructor() {
+    super('Permission denied: Cannot access this RMM user mapping');
+    this.name = 'RmmUserMappingAuthorizationError';
+  }
+}
+
+export type AuthorizeRmmUserMapping = (request: RmmUserMappingAuthorizationRequest) => Promise<void>;
 
 function table(conn: Knex | Knex.Transaction, tenant: string, name: string): Knex.QueryBuilder<any, any> {
   return tenantDb(conn, tenant).table(name) as Knex.QueryBuilder<any, any>;
@@ -156,14 +162,11 @@ export async function suggestContactForAsset(
   }
 
   // Authorize the asset and integration before reading the signed-in identity.
-  const assetAuthorized = await authorize?.({
+  await authorize?.({
     assetIds: [assetId],
     contactId: null,
     integrationId: mapping.integration_id,
-    provider: asset.rmm_provider,
-    action: 'read',
   });
-  if (assetAuthorized === false) throw new Error('Permission denied: Cannot read this asset RMM identity');
 
   const rawUser = await getAssetSignedInUser(conn, tenant, assetId);
   const normalized = normalizeRmmUsername(rawUser);
@@ -178,14 +181,11 @@ export async function suggestContactForAsset(
     normalized
   );
 
-  const authorized = await authorize?.({
+  await authorize?.({
     assetIds: [assetId],
     contactId: match?.contactId ?? null,
     integrationId: mapping.integration_id,
-    provider: asset.rmm_provider,
-    action: 'read',
   });
-  if (authorized === false) throw new Error('Permission denied: Cannot read this asset RMM identity');
 
   const contactName = match
     ? (await table(conn, tenant, 'contacts')
@@ -280,25 +280,17 @@ export async function mapSignedInUserToContact(
   const existing = await mappings.where(mappingKey)
     .first<{ id: string; alga_entity_id: string }>('id', 'alga_entity_id');
 
-  const authorized = await args.authorize?.({
+  await args.authorize?.({
     assetIds: target ? [String(target.asset_id)] : [],
     contactId: args.contactId,
     integrationId: args.integrationId,
-    provider: args.provider,
-    action: 'update',
   });
-  if (authorized === false) throw new Error('Permission denied: Cannot map this RMM user');
   if (existing?.alga_entity_id && existing.alga_entity_id !== args.contactId) {
-    const previousContactAuthorized = await args.authorize?.({
+    await args.authorize?.({
       assetIds: target ? [String(target.asset_id)] : [],
       contactId: existing.alga_entity_id,
       integrationId: args.integrationId,
-      provider: args.provider,
-      action: 'update',
     });
-    if (previousContactAuthorized === false) {
-      throw new Error('Permission denied: Cannot change this RMM user mapping');
-    }
   }
 
   if (args.contactId) {
@@ -371,13 +363,16 @@ export async function mapSignedInUserToContact(
       const reported = normalizeRmmUsername(signedIn.get(assetId));
       if (!reported || reported.key !== normalized.key) continue;
 
-      if (args.authorize && !await args.authorize({
-        assetIds: [assetId],
-        contactId: args.contactId,
-        integrationId: args.integrationId,
-        provider: args.provider,
-        action: 'update',
-      })) continue;
+      try {
+        await args.authorize?.({
+          assetIds: [assetId],
+          contactId: args.contactId,
+          integrationId: args.integrationId,
+        });
+      } catch (error) {
+        if (error instanceof RmmUserMappingAuthorizationError) continue;
+        throw error;
+      }
 
       const open = await getOpenAssetAssignment(trx, tenant, assetId);
       if (open && open.source !== 'rmm') continue;
