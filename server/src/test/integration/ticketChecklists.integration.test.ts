@@ -12,7 +12,7 @@ const userRef = vi.hoisted(() => ({
   user: null as any,
 }));
 
-const hasPermissionMock = vi.hoisted(() => vi.fn(async () => true));
+const hasPermissionMock = vi.hoisted(() => vi.fn(async (_user: unknown, _resource: string, _action: string) => true));
 const publishEventMock = vi.hoisted(() => vi.fn(async () => undefined));
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn(async () => undefined));
 
@@ -80,6 +80,10 @@ import {
   updateChecklistTemplate,
   getChecklistTemplates,
   getChecklistTemplatesForTicket,
+  getChecklistTemplateOptionsForEditor,
+  getChecklistRuleClientNames,
+  getChecklistRuleServiceRequestDefinitions,
+  reorderChecklistTemplateItems,
   getChecklistTemplateApplyRules,
   deleteChecklistTemplateApplyRule,
   deleteChecklistTemplate,
@@ -145,7 +149,7 @@ function expectActionSuccess<T>(result: T | ActionMessageError | ActionPermissio
 async function createTemplateWithItems(
   names: Array<{ name: string; required?: boolean }>
 ): Promise<string> {
-  const template = expectActionSuccess(await createChecklistTemplate({ name: `Template ${uuidv4().slice(0, 8)}` }));
+  const template = expectActionSuccess(await createChecklistTemplate({ client_id: null, name: `Template ${uuidv4().slice(0, 8)}` }));
   for (const item of names) {
     expectActionSuccess(
       await addChecklistTemplateItem(template.template_id, {
@@ -277,7 +281,7 @@ describe('ticket checklists', () => {
     );
 
     const before = await scopedDbFor(fixture.tenantId).table('checklist_templates').count('* as count').first();
-    expect(await createChecklistTemplate({ name: 'Technician tenant-wide template' })).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+    expect(await createChecklistTemplate({ client_id: null, name: 'Technician tenant-wide template' })).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
     expect(await addChecklistTemplateItem(templateId, { item_name: 'Tenant-wide required step' })).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
     expect(await createChecklistTemplateApplyRule(templateId, { where: { join: 'and', clauses: [] } })).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
     const after = await scopedDbFor(fixture.tenantId).table('checklist_templates').count('* as count').first();
@@ -290,7 +294,7 @@ describe('ticket checklists', () => {
   it('refuses client principals even if their role permission resolver reports ticket settings access', async () => {
     userRef.user = { ...userRef.user, user_type: 'client', clientId: fixture.clientId, contact_id: fixture.contactId };
     const before = await scopedDbFor(fixture.tenantId).table('checklist_templates').count('* as count').first();
-    expect(await createChecklistTemplate({ name: 'Client tenant-wide template' })).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+    expect(await createChecklistTemplate({ client_id: null, name: 'Client tenant-wide template' })).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
     await expect(getChecklistTemplates()).rejects.toThrow(/Permission denied/);
     const after = await scopedDbFor(fixture.tenantId).table('checklist_templates').count('* as count').first();
     expect(Number(after?.count)).toBe(Number(before?.count));
@@ -299,7 +303,7 @@ describe('ticket checklists', () => {
 
   it('allows an MSP administrator to create tenant-wide templates and requires ticket_settings:read for administration lists', async () => {
     expect(hasPermissionMock).toHaveBeenCalledTimes(0);
-    const template = expectActionSuccess(await createChecklistTemplate({ name: 'Admin tenant-wide template' }));
+    const template = expectActionSuccess(await createChecklistTemplate({ client_id: null, name: 'Admin tenant-wide template' }));
     expect(template.client_id).toBeNull();
     hasPermissionMock.mockImplementation(async (_user, resource, action) =>
       resource === 'ticket_settings' && action === 'update'
@@ -322,6 +326,91 @@ describe('ticket checklists', () => {
       messageKey: 'features/tickets:errors.checklist.predicateInvalid',
     });
     expect((await getChecklistTemplateApplyRules(templateId)).map((row) => row.apply_rule_id)).toEqual([rule.apply_rule_id]);
+  });
+
+  it.each(['internal', 'client'])('denies every settings mutation to an unauthorized %s principal without changing stored data', async (userType) => {
+    const templateId = await createTemplateWithItems([{ name: 'Protected item' }]);
+    const item = await scopedDbFor(fixture.tenantId).table('checklist_template_items').where({ template_id: templateId }).first();
+    const rule = expectActionSuccess(await createPredicateRule(templateId, {
+      where: { join: 'and', clauses: [{ path: 'board_id', operator: 'equals', value: fixture.boardId }] },
+    }));
+    const snapshot = async () => Promise.all([
+      scopedDbFor(fixture.tenantId).table('checklist_templates').orderBy('template_id'),
+      scopedDbFor(fixture.tenantId).table('checklist_template_items').where({ template_id: templateId }).orderBy('template_item_id'),
+      scopedDbFor(fixture.tenantId).table('checklist_template_apply_rules').where({ template_id: templateId }).orderBy('apply_rule_id'),
+    ]);
+    const before = await snapshot();
+    userRef.user = { ...userRef.user, user_type: userType };
+    // A client with a misconfigured role is still not an MSP administrator.
+    hasPermissionMock.mockImplementation(async (_user, resource, action) =>
+      userType === 'client' || (resource === 'ticket' && action === 'update')
+    );
+    const mutations = [
+      () => createChecklistTemplate({ name: 'Unauthorized', client_id: null }),
+      () => updateChecklistTemplate(templateId, { name: 'Unauthorized' }),
+      () => duplicateChecklistTemplateToClient(templateId, fixture.clientId),
+      () => deleteChecklistTemplate(templateId),
+      () => addChecklistTemplateItem(templateId, { item_name: 'Unauthorized' }),
+      () => updateChecklistTemplateItem(item.template_item_id, { item_name: 'Unauthorized' }),
+      () => deleteChecklistTemplateItem(item.template_item_id),
+      () => reorderChecklistTemplateItems(templateId, [item.template_item_id]),
+      () => createPredicateRule(templateId, { where: rule.where }),
+      () => updatePredicateRule(rule.apply_rule_id, { where: rule.where, is_enabled: false }),
+      () => deleteChecklistTemplateApplyRule(rule.apply_rule_id),
+    ];
+    for (const mutate of mutations) {
+      expect(await mutate()).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+    }
+    expect(await snapshot()).toEqual(before);
+  });
+
+  it.each(['internal', 'client'])('denies administrative reads to a %s without MSP settings update authority', async (userType) => {
+    userRef.user = { ...userRef.user, user_type: userType };
+    hasPermissionMock.mockImplementation(async (_user, _resource, action) => userType === 'client' || action === 'read');
+    await expect(getChecklistTemplates()).rejects.toThrow(/Permission denied/);
+    await expect(getChecklistTemplateApplyRules()).rejects.toThrow(/Permission denied/);
+    expect(await getChecklistRuleClientNames([fixture.clientId])).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+    expect(await getChecklistRuleServiceRequestDefinitions()).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+  });
+
+  it.each(['internal', 'client'])('denies manual application to a %s without MSP settings authority', async (userType) => {
+    const templateId = await createTemplateWithItems([{ name: 'Protected apply' }]);
+    const ticketId = await insertTicket(db, fixture);
+    userRef.user = { ...userRef.user, user_type: userType, clientId: fixture.clientId, contact_id: fixture.contactId };
+    hasPermissionMock.mockImplementation(async (_user, resource) => userType === 'client' || resource === 'ticket');
+    expect(await applyChecklistTemplate(ticketId, templateId)).toMatchObject({ permissionError: expect.stringMatching(/Permission denied/) });
+    expect(await appliedTemplateIds(ticketId)).toEqual([]);
+  });
+
+  it('requires explicit creation scope, allowing null only as an intentional tenant-wide choice', async () => {
+    // @ts-expect-error Server actions must reject malformed runtime callers too.
+    expect(await createChecklistTemplate({ name: 'Missing scope' })).toMatchObject({ messageKey: 'features/tickets:errors.checklist.templateClientInvalid' });
+    expect(await createChecklistTemplate({ name: 'Empty scope', client_id: '' })).toMatchObject({ messageKey: 'features/tickets:errors.checklist.templateClientInvalid' });
+    expect(expectActionSuccess(await createChecklistTemplate({ name: 'Explicit scope', client_id: null })).client_id).toBeNull();
+  });
+
+  it.each(['recurring_ticket', 'ticket_template'] as const)('provides scoped options under %s permissions without settings access', async (resource) => {
+    const other = await createCloseRulesFixture(db, fixture.tenantId, fixture.userId);
+    const wide = expectActionSuccess(await createChecklistTemplate({ name: 'Wide choice', client_id: null }));
+    const mine = expectActionSuccess(await createChecklistTemplate({ name: 'Client choice', client_id: fixture.clientId }));
+    const theirs = expectActionSuccess(await createChecklistTemplate({ name: 'Other choice', client_id: other.clientId }));
+    const inactive = expectActionSuccess(await createChecklistTemplate({ name: 'Inactive choice', client_id: fixture.clientId, is_active: false }));
+    hasPermissionMock.mockImplementation(async (_user, requestedResource) => requestedResource === resource);
+    await expect(getChecklistTemplates()).rejects.toThrow(/Permission denied/);
+    const options = await getChecklistTemplateOptionsForEditor({ resource, clientId: fixture.clientId });
+    expect(options.map((option) => option.template_id)).toEqual(expect.arrayContaining([wide.template_id, mine.template_id]));
+    expect(options.map((option) => option.template_id)).not.toContain(theirs.template_id);
+    expect(options.map((option) => option.template_id)).not.toContain(inactive.template_id);
+    expect(options.find((option) => option.template_id === mine.template_id)).toEqual({
+      template_id: mine.template_id, name: mine.name, client_id: fixture.clientId, client_name: expect.any(String),
+    });
+    expect((await getChecklistTemplateOptionsForEditor({ resource, clientId: null })).every((option) => option.client_id === null)).toBe(true);
+    await expect(getChecklistTemplateOptionsForEditor({ resource, clientId: uuidv4() })).rejects.toThrow();
+    hasPermissionMock.mockResolvedValue(false);
+    await expect(getChecklistTemplateOptionsForEditor({ resource, clientId: null })).rejects.toThrow(/Permission denied/);
+    userRef.user = { ...userRef.user, user_type: 'client' };
+    hasPermissionMock.mockResolvedValue(true);
+    await expect(getChecklistTemplateOptionsForEditor({ resource, clientId: fixture.clientId })).rejects.toThrow(/Permission denied/);
   });
 
   it('T022: checklist item lifecycle with persistent ordering and tenant scoping', async () => {
@@ -543,7 +632,7 @@ describe('ticket checklists', () => {
     expect(await setChecklistItemCompleted(item.checklist_item_id, true)).toMatchObject({
       permissionError: expect.stringMatching(/Permission denied/),
     });
-    expect(await createChecklistTemplate({ name: 'x' })).toMatchObject({
+    expect(await createChecklistTemplate({ client_id: null, name: 'x' })).toMatchObject({
       permissionError: expect.stringMatching(/Permission denied/),
     });
     expect(await createChecklistTemplateApplyRule(uuidv4(), {})).toMatchObject({

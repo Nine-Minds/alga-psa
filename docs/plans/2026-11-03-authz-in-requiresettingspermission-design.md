@@ -14,3 +14,9 @@ packages/tickets/src/actions/checklists/checklistTemplateActions.ts:82-85 gates 
 
 ## Hand-off
 This file is the spec the Link Spec step links to this card's PSA ticket; record it in state.psaSpecPaths.
+
+## Implementation interpretation
+
+The design's stricter administration policy takes precedence over the finding's suggested minimum: administrative reads require both `ticket_settings:read` and `ticket_settings:update`; writes require `ticket_settings:update`. Manual template application also requires an MSP principal and `ticket_settings:update`, in addition to per-ticket update authorization. Creation must explicitly supply `client_id`; `null` deliberately selects tenant-wide scope.
+
+Operational picker reads are separate from administration. Existing-ticket reads authorize the ticket and filter by its client. Editors without a ticket use MSP `ticket_template:read` or `recurring_ticket:read`, matching the editor being loaded, and return only active option IDs/names in the selected tenant/client scope. A null client exposes only tenant-wide choices. These options do not grant template/rule mutation or manual application privileges.

@@ -3,6 +3,7 @@
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_SOURCE,
@@ -14,11 +15,13 @@ import {
 import { checklistActionErrorFrom, TEMPLATE_CLIENT_MISMATCH, type ChecklistActionError } from './checklistActionErrors';
 import { authorizeTicketRecordAccessConcealed } from '../../lib/ticketRecordAuthorization';
 
-/** UI entry point: a tech applies a checklist template to a ticket by hand. */
+/** UI entry point: an MSP administrator applies a checklist template to an authorized ticket. */
 export const applyChecklistTemplate = withAuth(
   async (user, { tenant }, ticketId: string, templateId: string): Promise<ApplyChecklistTemplateResult | ChecklistActionError> => {
     try {
-      if (!(await hasPermission(user, 'ticket', 'update'))) {
+      if (!isMspPrincipalUserType(user.user_type)
+        || !(await hasPermission(user, 'ticket_settings', 'update'))
+        || !(await hasPermission(user, 'ticket', 'update'))) {
         throw new Error('Permission denied: Cannot update ticket checklist');
       }
 

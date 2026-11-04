@@ -114,7 +114,6 @@ export function RecurringClientOverridesDialog({
   isOpen, onClose, definitionId, definitionClientId, onSaved,
 }: RecurringClientOverridesDialogProps) {
   const { t } = useTranslation('features/tickets');
-  const reference = useTicketFieldReferenceData();
   const { renderAssetPicker } = useRecurringTicketsCrossFeature();
   const [detail, setDetail] = useState<RecurringDefinitionDetail | null>(null);
   const [contacts, setContacts] = useState<IContact[]>([]);
@@ -125,6 +124,7 @@ export function RecurringClientOverridesDialog({
   const [saving, setSaving] = useState(false);
 
   const client = detail?.clients.find((candidate) => candidate.definition_client_id === definitionClientId) ?? null;
+  const reference = useTicketFieldReferenceData('recurring_ticket', client?.client_id ?? null);
   const idPrefix = 'recurring-client-overrides';
 
   useEffect(() => {

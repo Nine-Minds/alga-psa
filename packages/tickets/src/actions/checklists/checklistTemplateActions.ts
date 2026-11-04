@@ -51,8 +51,8 @@ export interface ChecklistTemplateInput {
   name: string;
   description?: string | null;
   is_active?: boolean;
-  /** Optional client scope; null/undefined on create = tenant-wide. */
-  client_id?: string | null;
+  /** Explicit scope: null means tenant-wide. Omission is rejected on create. */
+  client_id: string | null;
 }
 
 export interface ChecklistTemplateItemInput {
@@ -98,7 +98,8 @@ async function requireSettingsPermission(user: IUserWithRoles) {
 }
 
 async function requireSettingsReadPermission(user: IUserWithRoles) {
-  if (!isMspPrincipalUserType(user.user_type) || !(await hasPermission(user, 'ticket_settings', 'read'))) {
+  await requireSettingsPermission(user);
+  if (!(await hasPermission(user, 'ticket_settings', 'read'))) {
     throw new Error('Permission denied: Cannot view checklist template settings');
   }
 }
@@ -149,6 +150,7 @@ async function loadChecklistTemplates(
   const templates = await tenantScopedTable(db, 'checklist_templates', tenant)
       .modify((qb) => {
         if (!options.includeInactive) qb.where('is_active', true);
+        // LEVERAGE: pattern checklist-template-client-scope — full lists and editor options share this scope predicate.
         if (options.ticketClientId !== undefined) {
           qb.where((scope) => {
             scope.whereNull('client_id');
@@ -210,14 +212,54 @@ export const getChecklistTemplatesForTicket = withAuth(
   }
 );
 
+export interface ChecklistTemplateOption {
+  template_id: string;
+  name: string;
+  client_id: string | null;
+  client_name: string | null;
+}
+
+const editorScopeSchema = z.object({
+  resource: z.enum(['ticket_template', 'recurring_ticket']),
+  clientId: z.string().uuid().nullable(),
+}).strict();
+
+/** Reference choices for editors without a ticket yet; never exposes settings or rule data. */
+export const getChecklistTemplateOptionsForEditor = withAuth(
+  async (user, { tenant }, input: z.infer<typeof editorScopeSchema>): Promise<ChecklistTemplateOption[]> => {
+    const { resource, clientId } = editorScopeSchema.parse(input);
+    if (!isMspPrincipalUserType(user.user_type) || !(await hasPermission(user, resource, 'read'))) {
+      throw new Error('Permission denied: Cannot read checklist template options');
+    }
+    const { knex: db } = await createTenantKnex();
+    if (clientId !== null) await assertClientBelongsToTenant(db, tenant, clientId);
+    const templates = await tenantScopedTable(db, 'checklist_templates', tenant)
+      .where('is_active', true)
+      // LEVERAGE: pattern checklist-template-client-scope — full lists and editor options share this scope predicate.
+      .where((scope) => {
+        scope.whereNull('client_id');
+        if (clientId !== null) scope.orWhere('client_id', clientId);
+      })
+      .select('template_id', 'name', 'client_id')
+      .orderBy('name', 'asc') as Array<Omit<ChecklistTemplateOption, 'client_name'>>;
+    const client = clientId === null ? null : await tenantScopedTable(db, 'clients', tenant)
+      .where('client_id', clientId).first('client_name');
+    return templates.map((template) => ({
+      ...template,
+      client_name: template.client_id ? client?.client_name ?? null : null,
+    }));
+  }
+);
+
 export const createChecklistTemplate = withAuth(
   async (user, { tenant }, input: ChecklistTemplateInput): Promise<IChecklistTemplate | ChecklistActionError> => {
     try {
       await requireSettingsPermission(user);
       if (!input.name?.trim()) throw new Error('Template name is required');
 
+      if (input.client_id === undefined || input.client_id === '') throw new Error(TEMPLATE_CLIENT_INVALID);
       const { knex: db } = await createTenantKnex();
-      if (input.client_id) await assertClientBelongsToTenant(db, tenant, input.client_id);
+      if (input.client_id !== null) await assertClientBelongsToTenant(db, tenant, input.client_id);
       const [row] = await tenantScopedTable(db, 'checklist_templates', tenant)
         .insert({
           tenant,
