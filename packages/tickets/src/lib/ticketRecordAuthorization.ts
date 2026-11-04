@@ -48,7 +48,7 @@ export async function runAuthorizedTicketWatcherWrite<T>(input: {
 }): Promise<T> {
   const { trx, tenant, ticketId, principal } = input;
   const ticket = UUID_PATTERN.test(ticketId)
-    ? ((await tenantScopedTable(trx, tenant, 'tickets')
+    ? ((await (tenantDb(trx, tenant).table('tickets') as Knex.QueryBuilder)
         .where({ ticket_id: ticketId })
         .forUpdate()
         .first()) as (Partial<ITicket> & { ticket_id: string }) | undefined)
