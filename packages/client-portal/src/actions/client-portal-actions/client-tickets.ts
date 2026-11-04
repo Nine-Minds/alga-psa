@@ -1325,6 +1325,11 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
       await resolveVisibleTicket(trx, tenant, userRecord.contact_id, comment.ticket_id);
 
       await withdrawCommentAttachments(trx, tenant, commentId);
+      // email_reply_tokens has a non-cascading FK to comments. Preserve valid
+      // reply tokens while detaching them from a comment the client removed.
+      await tenantDb(trx, tenant).table('email_reply_tokens')
+        .where({ comment_id: commentId })
+        .update({ comment_id: null });
       await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId

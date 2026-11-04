@@ -1024,6 +1024,7 @@ describe('client portal ticket visibility enforcement', () => {
 describe('client portal own-comment deletion authorization', () => {
   const ownComment = { comment_id: 'own-comment', ticket_id: TICKET_1, user_id: 'portal-user', is_internal: false, is_system_generated: false, deleted_at: null, actor_display_name: null };
   let persistedComments: any[];
+  let persistedReplyTokens: any[];
   let deletedCount: number;
 
   function query(rows: any[], table?: string) {
@@ -1049,8 +1050,16 @@ describe('client portal own-comment deletion authorization', () => {
     q.first = vi.fn(async () => rows.find(matches));
     q.del = vi.fn(async () => {
       const matchedRows = rows.filter(matches);
+      if (table === 'comments' && matchedRows.some((comment) => persistedReplyTokens.some((token) => token.comment_id === comment.comment_id))) {
+        throw new Error('email_reply_tokens_tenant_comment_id_foreign');
+      }
       for (const row of matchedRows) rows.splice(rows.indexOf(row), 1);
       if (table === 'comments') deletedCount += matchedRows.length;
+      return matchedRows.length;
+    });
+    q.update = vi.fn(async (changes: any) => {
+      const matchedRows = rows.filter(matches);
+      for (const row of matchedRows) Object.assign(row, changes);
       return matchedRows.length;
     });
     q.then = (resolve: any, reject?: any) => Promise.resolve(rows.filter(matches)).then(resolve, reject);
@@ -1065,9 +1074,11 @@ describe('client portal own-comment deletion authorization', () => {
     getVisibilityContextMock.mockResolvedValue({ ticketScope: 'client', effectiveTicketScope: 'client', isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: null, visibleBoardIds: null });
     deletedCount = 0;
     persistedComments = [ownComment];
+    persistedReplyTokens = [];
     withTransactionMock.mockImplementation(async (_db: any, callback: any) => callback(Object.assign((table: string) => {
       if (table === 'users') return query([{ user_id: 'portal-user', contact_id: 'contact-1', first_name: 'Dorothy', last_name: 'User' }]);
       if (table === 'comments') return query(persistedComments, table);
+      if (table === 'email_reply_tokens') return query(persistedReplyTokens, table);
       if (table === 'tickets as t') return query([{ ticket_id: TICKET_1, client_id: 'client-1', contact_name_id: 'contact-1', board_id: 'board-1' }]);
       return query([]);
     }, { raw: vi.fn() })));
@@ -1085,6 +1096,20 @@ describe('client portal own-comment deletion authorization', () => {
     expect(hasPermissionMock).not.toHaveBeenCalledWith(expect.anything(), 'ticket', 'delete', expect.anything());
     expect(deletedCount).toBe(1);
     expect(persistedComments).toEqual([otherOwnComment, anotherAuthorsComment]);
+  });
+
+  it('detaches retained email reply tokens before deleting an owned comment', async () => {
+    const { deleteClientTicketComment } = await import('./client-tickets');
+    const requestedComment = { ...ownComment, comment_id: 'requested-own-comment' };
+    const anotherAuthorsComment = { ...ownComment, comment_id: 'another-authors-comment', user_id: 'someone-else' };
+    const replyToken = { tenant: 'tenant-1', token: 'reply-token', ticket_id: TICKET_1, comment_id: requestedComment.comment_id };
+    persistedComments = [requestedComment, anotherAuthorsComment];
+    persistedReplyTokens = [replyToken];
+
+    await expect(deleteClientTicketComment(requestedComment.comment_id)).resolves.toBeUndefined();
+
+    expect(persistedComments).toEqual([anotherAuthorsComment]);
+    expect(persistedReplyTokens).toEqual([{ ...replyToken, comment_id: null }]);
   });
 
   it('denies another author and read-only callers without deleting persisted data', async () => {
