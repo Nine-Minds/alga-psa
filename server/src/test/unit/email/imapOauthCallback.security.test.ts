@@ -9,7 +9,8 @@ const mocks = vi.hoisted(() => ({
   getTenantSecret: vi.fn(),
   setTenantSecret: vi.fn(),
   postSafeOutboundForm: vi.fn(),
-  assertSafeOutboundUrl: vi.fn(),
+  assertPublicHttpsUrl: vi.fn(),
+  hasPermission: vi.fn(),
   currentUser: null as any,
 }));
 
@@ -23,10 +24,11 @@ vi.mock('@alga-psa/core/secrets', () => ({
     setTenantSecret: mocks.setTenantSecret,
   })),
 }));
-vi.mock('@alga-psa/integrations/lib/outboundUrlPolicy', () => ({
-  assertSafeOutboundUrl: mocks.assertSafeOutboundUrl,
+vi.mock('@alga-psa/core/net/safeFetch', () => ({
+  assertPublicHttpsUrl: mocks.assertPublicHttpsUrl,
   postSafeOutboundForm: mocks.postSafeOutboundForm,
 }));
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
 vi.mock('@/lib/productAccess', () => ({
   assertTenantProductAccess: vi.fn(async () => undefined),
   isProductAccessError: vi.fn(() => false),
@@ -87,7 +89,8 @@ describe('IMAP OAuth callback security', () => {
     mocks.getTenantSecret.mockResolvedValue('client-secret');
     mocks.setTenantSecret.mockResolvedValue(undefined);
     mocks.postSafeOutboundForm.mockResolvedValue({ data: { access_token: 'access-token', refresh_token: 'refresh-token', expires_in: 3600 } });
-    mocks.assertSafeOutboundUrl.mockResolvedValue(undefined);
+    mocks.assertPublicHttpsUrl.mockResolvedValue(undefined);
+    mocks.hasPermission.mockResolvedValue(false);
     configureDb();
   });
 
@@ -99,6 +102,27 @@ describe('IMAP OAuth callback security', () => {
     }));
     expect(response.status).toBe(401);
     expect(mocks.createTenantKnex).not.toHaveBeenCalled();
+  });
+
+  it('denies client-portal users before permission lookup or state persistence', async () => {
+    mocks.currentUser = { user_id: 'client-user', user_type: 'client', tenant: 'tenant-a' };
+    const response = await POST(new NextRequest('https://app.example.com/api/email/oauth/imap/initiate', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ providerId: 'provider-a' }),
+    }));
+    expect(response.status).toBe(403);
+    expect(mocks.hasPermission).not.toHaveBeenCalled();
+    expect(mocks.tenantDb).not.toHaveBeenCalled();
+  });
+
+  it('denies an MSP user without email-management permission before state persistence', async () => {
+    mocks.currentUser = { user_id: 'msp-user', user_type: 'internal', tenant: 'tenant-a' };
+    mocks.hasPermission.mockResolvedValue(false);
+    const response = await POST(new NextRequest('https://app.example.com/api/email/oauth/imap/initiate', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ providerId: 'provider-a' }),
+    }));
+    expect(response.status).toBe(403);
+    expect(mocks.hasPermission).toHaveBeenCalledWith(mocks.currentUser, 'ticket_settings', 'update', expect.anything());
+    expect(mocks.tenantDb).not.toHaveBeenCalled();
   });
 
   it('rejects forged or tampered state before database or secret access', async () => {
@@ -173,7 +197,7 @@ describe('IMAP OAuth callback security', () => {
   it('rejects an unsafe legacy token URL before retrieving credentials', async () => {
     const token = await signedAttempt();
     config.oauth_token_url = 'http://127.0.0.1/token';
-    mocks.assertSafeOutboundUrl.mockRejectedValue(new Error('unsafe URL'));
+    mocks.assertPublicHttpsUrl.mockRejectedValue(new Error('unsafe URL'));
     const response = await GET(request(token));
     expect(response.status).toBe(400);
     expect(await response.text()).not.toContain('127.0.0.1');

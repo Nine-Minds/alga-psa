@@ -10,6 +10,7 @@
  *   6. body size and total time are capped
  *   7. only allowed content types (default image/*) are returned
  */
+// LEVERAGE: pattern outbound-url-policy — server/src/lib/net/safeFetch.ts and server/src/lib/webhooks/ssrf.ts still duplicate address ranges; consolidate when server imports can safely depend on core.
 import dns from 'node:dns';
 import { isIP } from 'node:net';
 import { Agent, request as undiciRequest } from 'undici';
@@ -43,7 +44,7 @@ function isPublicIPv4Octets([a, b, c]: number[]): boolean {
   if (a === 127) return false; // loopback
   if (a === 169 && b === 254) return false; // link-local / cloud metadata
   if (a === 172 && b >= 16 && b <= 31) return false; // RFC1918
-  if (a === 192 && b === 0 && (c === 0 || c === 2)) return false; // IETF protocol / TEST-NET-1
+  if (a === 192 && b === 0) return false; // IETF protocol assignments / TEST-NET-1
   if (a === 192 && b === 168) return false; // RFC1918
   if (a === 198 && (b === 18 || b === 19)) return false; // benchmarking
   if (a === 198 && b === 51 && c === 100) return false; // TEST-NET-2
@@ -202,6 +203,9 @@ export interface SafeRequestInit {
   address: string;
   family: number;
   signal: AbortSignal;
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string | Uint8Array;
 }
 export interface SafeResponse {
   status: number;
@@ -212,7 +216,7 @@ export interface SafeResponse {
 export type SafeRequestFn = (init: SafeRequestInit) => Promise<SafeResponse>;
 
 /** Default transport: undici with the connection pinned to the validated address. */
-const defaultRequest: SafeRequestFn = async ({ url, address, family, signal }) => {
+const defaultRequest: SafeRequestFn = async ({ url, address, family, signal, method = 'GET', headers, body: requestBody }) => {
   const dispatcher = new Agent({
     connect: {
       // Ignore the hostname: always connect to the address we validated.
@@ -224,15 +228,16 @@ const defaultRequest: SafeRequestFn = async ({ url, address, family, signal }) =
     },
   });
   const res = await undiciRequest(url, {
-    method: 'GET',
+    method,
     dispatcher,
     signal,
-    headers: { accept: 'image/*', 'user-agent': 'alga-psa-safe-fetch' },
+    headers: { accept: 'image/*', 'user-agent': 'alga-psa-safe-fetch', ...headers },
+    body: requestBody,
   });
   const closeAgent = () => {
     void dispatcher.close().catch(() => undefined);
   };
-  async function* body() {
+  async function* readBody() {
     try {
       for await (const chunk of res.body) yield chunk as Uint8Array;
     } finally {
@@ -242,13 +247,102 @@ const defaultRequest: SafeRequestFn = async ({ url, address, family, signal }) =
   return {
     status: res.statusCode,
     headers: res.headers,
-    body: body(),
+    body: readBody(),
     destroy: () => {
       res.body.destroy();
       closeAgent();
     },
   };
 };
+
+export interface SafeOutboundFormOptions extends SafeFetchDeps {
+  /** Injected transport is primarily useful for exercising the security boundary without networking. */
+  request?: SafeRequestFn;
+  timeoutMs?: number;
+  maxResponseBytes?: number;
+}
+
+const DEFAULT_FORM_TIMEOUT_MS = 15_000;
+const DEFAULT_FORM_RESPONSE_BYTES = 1024 * 1024;
+
+/** Validate a token endpoint as HTTPS and pin the connection to a public DNS answer. */
+export async function assertPublicHttpsUrl(
+  rawUrl: string,
+  deps: SafeFetchDeps = {},
+): Promise<{ url: URL; address: string; family: number }> {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    throw new UnsafeUrlError('Invalid URL');
+  }
+  if (url.protocol !== 'https:') throw new UnsafeUrlError('HTTPS is required');
+  const hostname = url.hostname.replace(/^\[|\]$/g, '').replace(/\.$/, '').toLowerCase();
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+    throw new UnsafeUrlError('Localhost destinations are not allowed');
+  }
+  return assertPublicUrl(url.toString(), deps);
+}
+
+/**
+ * POST OAuth form credentials to one validated HTTPS destination. The
+ * transport is pinned to the validated DNS address and deliberately does not
+ * follow redirects. Error messages never contain form data or response bodies.
+ */
+export async function postSafeOutboundForm<T = unknown>(
+  rawUrl: string,
+  form: URLSearchParams,
+  options: SafeOutboundFormOptions = {},
+): Promise<{ status: number; data: T }> {
+  const target = await assertPublicHttpsUrl(rawUrl, options);
+  const request = options.request ?? defaultRequest;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? DEFAULT_FORM_TIMEOUT_MS);
+  let response: SafeResponse | undefined;
+
+  try {
+    response = await request({
+      ...target,
+      signal: controller.signal,
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
+      body: form.toString(),
+    });
+
+    if (response.status >= 300 && response.status < 400) {
+      response.destroy?.();
+      throw new UnsafeUrlError('Outbound token endpoint redirects are not allowed');
+    }
+    if (response.status < 200 || response.status >= 300) {
+      response.destroy?.();
+      throw new Error(`Outbound token request failed with HTTP ${response.status}`);
+    }
+
+    const maxBytes = options.maxResponseBytes ?? DEFAULT_FORM_RESPONSE_BYTES;
+    const chunks: Buffer[] = [];
+    let byteLength = 0;
+    for await (const chunk of response.body) {
+      byteLength += chunk.byteLength;
+      if (byteLength > maxBytes) {
+        response.destroy?.();
+        throw new Error('Outbound token response exceeded the size limit');
+      }
+      chunks.push(Buffer.from(chunk));
+    }
+
+    try {
+      return { status: response.status, data: JSON.parse(Buffer.concat(chunks).toString('utf8')) as T };
+    } catch {
+      throw new Error('Outbound token endpoint returned an invalid response');
+    }
+  } catch (error) {
+    if (error instanceof UnsafeUrlError) throw error;
+    if (error instanceof Error && /^Outbound token/.test(error.message)) throw error;
+    throw new Error('Outbound token request failed');
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export interface FetchPublicBytesOptions extends SafeFetchDeps {
   maxBytes?: number;

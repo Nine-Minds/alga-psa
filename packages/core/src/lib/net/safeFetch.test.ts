@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   UnsafeUrlError,
+  assertPublicHttpsUrl,
   assertPublicUrl,
   fetchPublicBytes,
   isPublicAddress,
+  postSafeOutboundForm,
   type SafeRequestFn,
   type SafeResponse,
 } from './safeFetch';
@@ -183,5 +185,78 @@ describe('fetchPublicBytes', () => {
     expect(lookup).toHaveBeenCalledTimes(1);
     expect(request).toHaveBeenCalledTimes(1);
     expect(request.mock.calls[0][0].address).toBe('93.184.216.34');
+  });
+});
+
+describe('postSafeOutboundForm', () => {
+  const body = new URLSearchParams({ refresh_token: 'refresh-secret', client_secret: 'client-secret' });
+
+  it('posts a form only to the validated, pinned HTTPS destination', async () => {
+    const request = vi.fn<SafeRequestFn>(async () => response({
+      chunks: [Buffer.from(JSON.stringify({ access_token: 'fresh-token', expires_in: 3600 }))],
+    }));
+    const result = await postSafeOutboundForm<{ access_token: string }>(
+      'https://idp.example.test/oauth/token',
+      body,
+      { lookup: publicLookup, request },
+    );
+
+    expect(result.data.access_token).toBe('fresh-token');
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(request.mock.calls[0][0]).toMatchObject({
+      address: '93.184.216.34', family: 4, method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+  });
+
+  it.each([
+    'http://idp.example.test/token',
+    'https://127.0.0.1/token',
+    'https://169.254.169.254/latest/token',
+    'https://192.0.0.8/token',
+  ])('refuses unsafe destinations before sending credentials to %s', async (url) => {
+    const request = vi.fn<SafeRequestFn>(async () => response());
+    await expect(postSafeOutboundForm(url, body, { lookup: publicLookup, request }))
+      .rejects.toBeInstanceOf(UnsafeUrlError);
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('rejects private DNS answers before sending credentials', async () => {
+    const request = vi.fn<SafeRequestFn>(async () => response());
+    const lookup = async () => [
+      { address: '93.184.216.34', family: 4 },
+      { address: '10.0.0.7', family: 4 },
+    ];
+    await expect(postSafeOutboundForm('https://idp.example.test/token', body, { lookup, request }))
+      .rejects.toBeInstanceOf(UnsafeUrlError);
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('does not follow redirects and does not leak response details through errors', async () => {
+    const destroy = vi.fn();
+    const request = vi.fn<SafeRequestFn>(async () => response({
+      status: 302,
+      headers: { location: 'https://127.0.0.1/steal' },
+      destroy,
+    }));
+    await expect(postSafeOutboundForm('https://idp.example.test/token', body, { lookup: publicLookup, request }))
+      .rejects.toBeInstanceOf(UnsafeUrlError);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it('sanitizes unsuccessful token responses', async () => {
+    const request = vi.fn<SafeRequestFn>(async () => response({
+      status: 400,
+      chunks: [Buffer.from('client_secret=do-not-surface')],
+    }));
+    await expect(postSafeOutboundForm('https://idp.example.test/token', body, { lookup: publicLookup, request }))
+      .rejects.toThrow('Outbound token request failed with HTTP 400');
+  });
+
+  it('requires a publicly resolvable HTTPS URL before reading any form response', async () => {
+    await expect(assertPublicHttpsUrl('http://idp.example.test/token', { lookup: publicLookup }))
+      .rejects.toBeInstanceOf(UnsafeUrlError);
   });
 });

@@ -3,7 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { verifyImapOAuthState } from '@/utils/email/imapOAuthState';
 import { createTenantKnex } from '@/lib/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { assertSafeOutboundUrl, postSafeOutboundForm } from '@alga-psa/integrations/lib/outboundUrlPolicy';
+import { assertPublicHttpsUrl, postSafeOutboundForm } from '@alga-psa/core/net/safeFetch';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
 
 export async function GET(request: NextRequest) {
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     // Validate old stored URLs at use time; earlier validation only ran while
     // saving settings and cannot protect configurations that predate that check.
     try {
-      await assertSafeOutboundUrl(imapConfig.oauth_token_url);
+      await assertPublicHttpsUrl(imapConfig.oauth_token_url);
     } catch {
       return NextResponse.json({ error: 'IMAP OAuth token URL is not allowed' }, { status: 400 });
     }
@@ -91,7 +91,11 @@ export async function GET(request: NextRequest) {
 
     let tokenResponse;
     try {
-      tokenResponse = await postSafeOutboundForm(imapConfig.oauth_token_url, params);
+      tokenResponse = await postSafeOutboundForm<{
+        access_token?: string;
+        refresh_token?: string;
+        expires_in?: number;
+      }>(imapConfig.oauth_token_url, params);
     } catch {
       // Do not log request objects: HTTP clients may include form data with the
       // client secret in their error details.

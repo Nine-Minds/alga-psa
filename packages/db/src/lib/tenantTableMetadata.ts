@@ -297,6 +297,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   import_job_items: { scope: 'tenant' },
   import_sources: { scope: 'tenant' },
   imap_email_provider_config: { scope: 'tenant' },
+  imap_oauth_states: { scope: 'tenant' },
   inbound_email_rules: { scope: 'tenant' },
   inbound_webhook_deliveries: { scope: 'tenant' },
   inbound_webhooks: { scope: 'tenant' },

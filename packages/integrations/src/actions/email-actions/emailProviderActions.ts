@@ -12,7 +12,8 @@ import type {
 } from '../../components/email/types';
 import { toPublicProvider } from './toPublicProvider';
 import { requireOutboundEmailAdmin, requireOutboundEmailReader } from './mspOutboundEmailAccess';
-import { assertSafeOutboundUrl, postSafeOutboundForm, UnsafeOutboundUrlError } from '../../lib/outboundUrlPolicy';
+import { assertSafeOutboundUrl, UnsafeOutboundUrlError } from '../../lib/outboundUrlPolicy';
+import { assertPublicHttpsUrl, postSafeOutboundForm } from '@alga-psa/core/net/safeFetch';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { setupPubSub } from './setupPubSub';
 import { ImapFlow } from 'imapflow';
@@ -1540,7 +1541,7 @@ export const testEmailProviderConnection = withAuth(async (
           // Legacy rows may predate URL validation at save time. Reject them
           // before reading tenant credentials, then pin fresh DNS at send time.
           try {
-            await assertSafeOutboundUrl(config.oauth_token_url);
+            await assertPublicHttpsUrl(config.oauth_token_url);
           } catch {
             console.warn('IMAP OAuth token URL rejected by outbound policy');
             return emailProviderOperationError(

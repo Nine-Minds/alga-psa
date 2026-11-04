@@ -5,6 +5,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createImapOAuthState } from '@/utils/email/imapOAuthState';
 import { createTenantKnex } from '@/lib/db';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
+import { requireOutboundEmailAdmin } from '@alga-psa/integrations/lib/mspOutboundEmailAccess';
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,6 +28,10 @@ export async function POST(request: NextRequest) {
     const { knex, tenant } = await createTenantKnex(user.tenant);
     if (!tenant || tenant !== user.tenant) {
       return NextResponse.json({ error: 'Authenticated tenant is unavailable' }, { status: 403 });
+    }
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) {
+      return NextResponse.json({ error: access.message }, { status: 403 });
     }
     const db = tenantDb(knex, tenant);
     const provider = await db.table('email_providers')

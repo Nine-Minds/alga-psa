@@ -593,6 +593,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'policies',
   'google_email_provider_config',
   'microsoft_email_provider_config',
+  'imap_oauth_states',
   'imap_email_provider_config',
   'email_provider_health',
   'email_provider_configs',

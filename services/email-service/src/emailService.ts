@@ -19,6 +19,7 @@ import {
 } from '@alga-psa/shared/services/email/inboundEmailAuthOutcomeRecorder';
 import { resolveImapSyncStartUid } from '@alga-psa/shared/services/email/imapSyncCursor';
 import { classifyInboundAuthFailure } from '@alga-psa/shared/services/email/InboundEmailAuthFailurePolicy';
+import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
 import {
   recordImapListenerError,
   recordImapWebhookDispatchRetry,
@@ -685,58 +686,15 @@ class ImapFolderListener {
     return (await secretProvider.getTenantSecret(this.provider.tenant, `imap_password_${this.provider.id}`)) ?? null;
   }
 
-  private async getOauthSecrets(): Promise<{ clientSecret?: string | null; refreshToken?: string | null }> {
-    const secretProvider = await getSecretProviderInstance();
-    const clientSecret = (await secretProvider.getTenantSecret(this.provider.tenant, `imap_oauth_client_secret_${this.provider.id}`)) ?? null;
-    const refreshToken = (await secretProvider.getTenantSecret(this.provider.tenant, `imap_refresh_token_${this.provider.id}`)) ?? null;
-    return { clientSecret, refreshToken };
-  }
-
   private async refreshAccessToken(): Promise<void> {
-    if (!this.provider.oauth_token_url || !this.provider.oauth_client_id) {
-      throw new Error('IMAP OAuth token URL or client ID missing');
-    }
-
-    const { clientSecret, refreshToken } = await this.getOauthSecrets();
-    const effectiveRefreshToken = refreshToken || this.provider.refresh_token;
-    if (!effectiveRefreshToken) {
-      throw new Error('IMAP OAuth refresh token missing');
-    }
-
-    const params = new URLSearchParams();
-    params.append('grant_type', 'refresh_token');
-    params.append('refresh_token', effectiveRefreshToken);
-    params.append('client_id', this.provider.oauth_client_id);
-    if (clientSecret) {
-      params.append('client_secret', clientSecret);
-    }
-
-    let response;
-    try {
-      response = await axios.post(this.provider.oauth_token_url, params, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-      });
-    } catch (error: any) {
-      const msg = error?.response?.data?.error || error?.message || 'OAuth token refresh failed';
-      await this.updateProviderStatus('error', msg);
-      throw error;
-    }
-
-    const accessToken = response.data.access_token;
-    const expiresIn = Number(response.data.expires_in || 3600);
-    const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
-
     const db = await getAdminConnection();
-    await tenantDb(db, this.provider.tenant).table('imap_email_provider_config')
-      .where({ email_provider_id: this.provider.id })
-      .update({
-        access_token: accessToken,
-        token_expires_at: expiresAt,
-        updated_at: db.fn.now(),
-      });
-
-    this.provider.access_token = accessToken;
-    this.provider.token_expires_at = expiresAt;
+    try {
+      await refreshImapAccessToken({ provider: this.provider, db });
+    } catch {
+      // Transport/IdP errors can include form data or response bodies.
+      await this.updateProviderStatus('error', 'OAuth token refresh failed');
+      throw new Error('OAuth token refresh failed');
+    }
 
     logger.info('[IMAP] Refreshed OAuth access token', {
       providerId: this.provider.id,
@@ -748,7 +706,7 @@ class ImapFolderListener {
       tenant: this.provider.tenant,
       folder: this.folder,
       listenerId: this.listenerId,
-      expiresAt,
+      expiresAt: this.provider.token_expires_at,
     });
   }
 

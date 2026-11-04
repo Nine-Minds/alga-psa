@@ -70,6 +70,10 @@ export default defineConfig({
         replacement: path.resolve(__dirname, '../packages/core/src/lib/secrets/index.ts'),
       },
       {
+        find: /^@alga-psa\/core\/net\/safeFetch$/,
+        replacement: path.resolve(__dirname, '../packages/core/src/lib/net/safeFetch.ts'),
+      },
+      {
         find: /^@alga-psa\/core\/(.*)$/,
         replacement: path.resolve(__dirname, '../packages/core/src/$1'),
       },

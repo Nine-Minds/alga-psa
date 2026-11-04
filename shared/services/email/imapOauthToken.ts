@@ -4,10 +4,10 @@
  * secret resolution and persistence behavior without import cycles.
  */
 
-import axios from 'axios';
 import { tenantDb } from '@alga-psa/db';
 import type { getAdminConnection } from '@alga-psa/db/admin';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { assertPublicHttpsUrl, postSafeOutboundForm } from '@alga-psa/core/net/safeFetch';
 
 function asNonEmptyString(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -45,6 +45,10 @@ export async function refreshImapAccessToken(params: {
     throw new Error('IMAP OAuth token URL or client ID missing');
   }
 
+  // Reject legacy unsafe URLs before reading tenant credentials. The POST
+  // resolves again immediately before sending and pins the selected address.
+  await assertPublicHttpsUrl(provider.oauth_token_url);
+
   const { clientSecret, refreshToken } = await getImapOauthSecrets({
     id: provider.id,
     tenant: provider.tenant,
@@ -63,9 +67,12 @@ export async function refreshImapAccessToken(params: {
     paramsBody.append('client_secret', effectiveClientSecret);
   }
 
-  const response = await axios.post(provider.oauth_token_url, paramsBody, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-  });
+  let response;
+  try {
+    response = await postSafeOutboundForm<{ access_token?: string; expires_in?: number }>(provider.oauth_token_url, paramsBody);
+  } catch {
+    throw new Error('IMAP OAuth token refresh failed');
+  }
   const accessToken = asNonEmptyString(response?.data?.access_token);
   if (!accessToken) {
     throw new Error('IMAP OAuth refresh returned no access token');

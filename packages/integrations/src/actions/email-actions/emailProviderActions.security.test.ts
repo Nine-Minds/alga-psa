@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 type TableSeed = { rows?: any[]; first?: any; returned?: any };
 
 const mocks = vi.hoisted(() => ({
+  UnsafeUrlError: class UnsafeUrlError extends Error {},
   hasPermission: vi.fn(),
   tables: {} as Record<string, { rows?: any[]; first?: any; returned?: any }>,
   tableCalls: [] as string[],
@@ -14,6 +15,8 @@ const mocks = vi.hoisted(() => ({
   renewWebhooks: vi.fn(),
   recoverAuthPaused: vi.fn(),
   axiosPost: vi.fn(),
+  postSafeOutboundForm: vi.fn(),
+  assertPublicHttpsUrl: vi.fn(),
   imapConnect: vi.fn(),
   lookup: vi.fn(),
   secrets: {
@@ -73,6 +76,11 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
 vi.mock('@alga-psa/core/secrets', () => ({ getSecretProviderInstance: async () => mocks.secrets }));
+vi.mock('@alga-psa/core/net/safeFetch', () => ({
+  UnsafeUrlError: mocks.UnsafeUrlError,
+  assertPublicHttpsUrl: mocks.assertPublicHttpsUrl,
+  postSafeOutboundForm: mocks.postSafeOutboundForm,
+}));
 vi.mock('axios', () => ({ default: { post: mocks.axiosPost } }));
 vi.mock('imapflow', () => ({
   ImapFlow: class {
@@ -167,10 +175,22 @@ beforeEach(() => {
   mocks.sessionUser.user_type = 'internal';
   grant('ticket_settings:read', 'ticket_settings:update');
   mocks.lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+  mocks.assertPublicHttpsUrl.mockImplementation(async (raw: string) => {
+    const url = new URL(raw);
+    if (url.protocol !== 'https:' || url.username || url.password || url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' || url.hostname === '169.254.169.254' || url.hostname.startsWith('10.') ||
+      url.hostname.startsWith('[')) throw new mocks.UnsafeUrlError('Unsafe URL');
+    const answers = await mocks.lookup(url.hostname);
+    if (answers.some((answer: any) => answer.address.startsWith('192.168.') || answer.address.startsWith('127.'))) {
+      throw new mocks.UnsafeUrlError('Unsafe URL');
+    }
+    return { url, address: answers[0].address, family: answers[0].family };
+  });
   mocks.secrets.getTenantSecret.mockResolvedValue(undefined);
   mocks.secrets.setTenantSecret.mockResolvedValue(undefined);
   mocks.secrets.deleteTenantSecret.mockResolvedValue(undefined);
   mocks.axiosPost.mockResolvedValue({ data: { access_token: 'at', expires_in: 3600 } });
+  mocks.postSafeOutboundForm.mockResolvedValue({ status: 200, data: { access_token: 'at', expires_in: 3600 } });
   mocks.imapConnect.mockResolvedValue(undefined);
   mocks.renewWebhooks.mockResolvedValue([]);
 });
@@ -204,7 +224,7 @@ describe.each<Actor>(['client user', 'MSP user without ticket_settings:update'])
       expect(mocks.initializeProviderWebhook).not.toHaveBeenCalled();
       expect(mocks.renewWebhooks).not.toHaveBeenCalled();
       expect(mocks.recoverAuthPaused).not.toHaveBeenCalled();
-      expect(mocks.axiosPost).not.toHaveBeenCalled();
+      expect(mocks.postSafeOutboundForm).not.toHaveBeenCalled();
       expect(mocks.secrets.setTenantSecret).not.toHaveBeenCalled();
       expect(mocks.secrets.deleteTenantSecret).not.toHaveBeenCalled();
       expect(mocks.updates).toEqual([]);
@@ -522,7 +542,7 @@ describe('testEmailProviderConnection re-validates stored token URLs', () => {
     const { testEmailProviderConnection } = await import('./emailProviderActions');
     const result = await testEmailProviderConnection('prov-1');
     expect(result.success).toBe(false);
-    expect(mocks.axiosPost).not.toHaveBeenCalled();
+    expect(mocks.postSafeOutboundForm).not.toHaveBeenCalled();
     expect(mocks.imapConnect).not.toHaveBeenCalled();
   });
 
@@ -530,8 +550,8 @@ describe('testEmailProviderConnection re-validates stored token URLs', () => {
     seedOauthImap('https://idp.example.test/token');
     const { testEmailProviderConnection } = await import('./emailProviderActions');
     const result = await testEmailProviderConnection('prov-1');
-    expect(mocks.axiosPost).toHaveBeenCalledTimes(1);
-    expect(mocks.axiosPost.mock.calls[0][0]).toBe('https://idp.example.test/token');
+    expect(mocks.postSafeOutboundForm).toHaveBeenCalledTimes(1);
+    expect(mocks.postSafeOutboundForm.mock.calls[0][0]).toBe('https://idp.example.test/token');
     expect(result.success).toBe(true);
   });
 });
