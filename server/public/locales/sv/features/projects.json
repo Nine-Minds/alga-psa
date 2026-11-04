@@ -1510,7 +1510,9 @@
     "addFailed": "Det gick inte att lägga till kommentaren",
     "submitting": "Skickar in…",
     "loading": "Läser in…",
-    "empty": "Inga kommentarer ännu. Skriv den första kommentaren."
+    "empty": "Inga kommentarer ännu. Skriv den första kommentaren.",
+    "loadError": "Det gick inte att läsa in kommentarerna.",
+    "retry": "Försök igen"
   },
   "taskStatusSelect": {
     "ariaLabel": "Uppgiftsstatus",

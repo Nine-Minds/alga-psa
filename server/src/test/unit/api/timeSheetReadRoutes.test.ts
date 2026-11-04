@@ -158,9 +158,12 @@ describe('time sheet read controllers', () => {
   it('search response schema describes the real row, not timeSheetResponseSchema', () => {
     const row = {
       tenant: userId, id: sheetA, user_id: userId, period_id: sheetB, approval_status: 'DRAFT',
-      submitted_at: null, approved_at: null, approved_by: null, user_name: 'Alice Zebra',
+      submitted_at: null, approved_at: null, approved_by: null, notes: null, user_name: 'Alice Zebra',
     };
     expect(timeSheetSearchRowSchema.strict().safeParse(row).success).toBe(true);
+    expect(timeSheetSearchRowSchema.strict().safeParse({ ...row, notes: 'Covered on-call' }).success).toBe(true);
+    // time_sheets.notes (20261028135300) is selected via time_sheets.*, so the row always carries it.
+    expect(timeSheetSearchRowSchema.safeParse({ ...row, notes: undefined }).success).toBe(false);
     expect(timeSheetSearchRowSchema.safeParse({ ...row, user_name: undefined }).success).toBe(false);
   });
 

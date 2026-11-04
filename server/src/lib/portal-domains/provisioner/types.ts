@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import type { PortalDomain } from '@/models/PortalDomainModel';
+import type { PortalDomainSurface } from '@alga-psa/shared/core/portalDomainSurface';
 
 /**
  * A PortalDomainProvisioner owns the *status transitions and side effects* of
@@ -24,6 +25,8 @@ export interface RegisterInput {
   existing: PortalDomain | null;
   /** True when this register call changes an existing domain to a different value. */
   domainChanged: boolean;
+  /** Which app(s) the domain serves (alga-2026-0002799). */
+  surface: PortalDomainSurface;
 }
 
 export interface ReconcileInput {

@@ -31,7 +31,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import {
-  assertInternalApiUser,
+  assertApiPrincipal,
   ApiRequest,
   AuthenticatedApiRequest,
   UnauthorizedError,
@@ -100,7 +100,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -124,7 +124,7 @@ export class ApiTeamController extends ApiBaseController {
           filters = advancedTeamSearchSchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid search parameters', error.errors);
+            throw new ValidationError('Invalid search parameters', error.issues);
           }
           throw error;
         }
@@ -200,7 +200,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -264,7 +264,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -336,7 +336,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -403,7 +403,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -428,7 +428,7 @@ export class ApiTeamController extends ApiBaseController {
           memberData = addTeamMemberSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid member data', error.errors);
+            throw new ValidationError('Invalid member data', error.issues);
           }
           throw error;
         }
@@ -482,7 +482,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Extract IDs from path
         const url = new URL(req.url);
@@ -554,7 +554,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -579,7 +579,7 @@ export class ApiTeamController extends ApiBaseController {
           membersData = bulkAddTeamMembersSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid members data', error.errors);
+            throw new ValidationError('Invalid members data', error.issues);
           }
           throw error;
         }
@@ -633,7 +633,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -658,7 +658,7 @@ export class ApiTeamController extends ApiBaseController {
           managerData = assignManagerSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid manager data', error.errors);
+            throw new ValidationError('Invalid manager data', error.issues);
           }
           throw error;
         }
@@ -712,7 +712,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -739,7 +739,7 @@ export class ApiTeamController extends ApiBaseController {
           filters = teamAnalyticsQuerySchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid analytics parameters', error.errors);
+            throw new ValidationError('Invalid analytics parameters', error.issues);
           }
           throw error;
         }
@@ -793,7 +793,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -860,7 +860,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -936,7 +936,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -1003,7 +1003,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Extract permission ID from path
         const url = new URL(req.url);
@@ -1078,7 +1078,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -1152,7 +1152,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Extract team ID from path
         const teamId = await this.extractIdFromPath(req);
@@ -1219,7 +1219,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1294,7 +1294,7 @@ export class ApiTeamController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Check permissions
         const db = await getConnection(tenantId!);

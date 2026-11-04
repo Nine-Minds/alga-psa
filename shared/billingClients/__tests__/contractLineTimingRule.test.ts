@@ -3,10 +3,13 @@ import { describe, expect, it } from 'vitest';
 import {
   ARREARS_ONLY_CONTRACT_LINE_TYPES,
   ContractLineTimingNotAllowedError,
+  contractLineOwnStream,
+  contractLineRecurringStreams,
   isAdvanceTimingAllowedForLineType,
   isContractLineTimingNotAllowedError,
   resolveEffectiveBillingTiming,
   resolveRecurringChargeFamily,
+  streamForChargeFamily,
 } from '../contractLineTimingRule';
 import { normalizeRecurringStorageForLineType } from '../recurrenceStorageModel';
 
@@ -80,5 +83,40 @@ describe('normalizeRecurringStorageForLineType', () => {
       billing_timing: 'arrears',
       cadence_owner: 'contract',
     });
+  });
+});
+
+describe('contractLineRecurringStreams', () => {
+  it('yields the line stream with the line family and effective due position', () => {
+    expect(contractLineRecurringStreams({ contract_line_type: 'Fixed', billing_timing: 'advance' })).toEqual([
+      { stream: 'line', family: 'fixed', duePosition: 'advance' },
+    ]);
+    expect(contractLineRecurringStreams({ contract_line_type: 'Hourly', billing_timing: 'advance' })).toEqual([
+      { stream: 'line', family: 'hourly', duePosition: 'arrears' },
+    ]);
+    expect(contractLineRecurringStreams({ contract_line_type: null })).toEqual([
+      { stream: 'line', family: 'fixed', duePosition: 'arrears' },
+    ]);
+  });
+
+  it('adds no stream for a consumption-mode or absent block config', () => {
+    const line = { contract_line_type: 'Hourly', billing_timing: 'arrears' };
+    expect(contractLineRecurringStreams(line, null)).toEqual(contractLineRecurringStreams(line));
+    expect(contractLineRecurringStreams(line, { issue_mode: 'consumption' })).toHaveLength(1);
+  });
+
+  it('adds an advance prepaid_block stream for a cadence block config on an arrears line', () => {
+    expect(
+      contractLineRecurringStreams({ contract_line_type: 'Hourly', billing_timing: 'arrears' }, { issue_mode: 'cadence' }),
+    ).toEqual([
+      { stream: 'line', family: 'hourly', duePosition: 'arrears' },
+      { stream: 'prepaid_block', family: 'prepaid_block', duePosition: 'advance' },
+    ]);
+  });
+
+  it('exposes the line stream and maps persisted families to streams', () => {
+    expect(contractLineOwnStream({ contract_line_type: 'Usage' })).toMatchObject({ stream: 'line', family: 'usage' });
+    expect(streamForChargeFamily('fixed')).toBe('line');
+    expect(streamForChargeFamily('prepaid_block')).toBe('prepaid_block');
   });
 });

@@ -4,6 +4,7 @@ import knexLib from 'knex';
 import type { Knex } from 'knex';
 import { BillingEngine } from '../src/lib/billing/billingEngine';
 import { persistInvoiceCharges } from '../src/services/invoiceService';
+import { applyPrepaidCoverage } from '../src/lib/billing/chargeResolution/prepaidBlockRules';
 
 // Guarded DB lifecycle tests for Prepaid Block contract blocks (plan sections 4
 // and 9): finalize activation + expiry scheduling, replenishment-deferral
@@ -267,6 +268,69 @@ describe.runIf(enabled)('Prepaid Block lifecycle: finalize', () => {
 });
 
 describe.runIf(enabled)('Prepaid Block lifecycle: unfinalize', () => {
+  it.each(['void', 'unfinalize'] as const)('%s of an unused expired block removes paid coverage', async (action) => {
+    const w = await setup();
+    const { invoiceId, blockId } = await generateDraft(w);
+    await finalize(invoiceId);
+    await db('hour_blocks').where({ tenant, block_id: blockId }).update({ status: 'expired' });
+    if (action === 'void') {
+      const { voidInvoice } = await import('../src/actions/voidInvoiceActions');
+      expect(await voidInvoice(invoiceId, 'test')).toEqual({ success: true });
+    } else {
+      const { unfinalizeInvoice } = await import('../src/actions/invoiceModification');
+      expect(await unfinalizeInvoice(invoiceId)).toEqual({ success: true });
+    }
+    const block = await db('hour_blocks').where({ tenant, block_id: blockId }).first();
+    expect(block.status).toBe(action === 'void' ? 'voided' : 'pending');
+    const entryId = await insertEntry(w, 60, 0);
+    const { reconcileLineAllocations } = await import('@alga-psa/shared/billingClients/hourBlockService');
+    await db.transaction((trx) => reconcileLineAllocations(trx, tenant, w.lineId));
+    const allocations = await allocationsFor(entryId);
+    if (action === 'void') {
+      expect(allocations).toHaveLength(0);
+    } else {
+      expect(allocations).toHaveLength(1);
+      // Pending draws are held by the shared coverage rule, not paid coverage.
+      expect(applyPrepaidCoverage([{ sourceId: entryId, billableMinutes: 60 }], [{ entryId, blockStatus: block.status, minutes: 60 }])).toEqual([]);
+    }
+  });
+
+  it.each(['void', 'unfinalize'] as const)('%s refuses an expired block already used by invoiced work', async (action) => {
+    const w = await setup();
+    const { invoiceId, blockId } = await generateDraft(w);
+    await finalize(invoiceId);
+    const entryId = await insertEntry(w, 60, 0);
+    const { reconcileLineAllocations } = await import('@alga-psa/shared/billingClients/hourBlockService');
+    await db.transaction((trx) => reconcileLineAllocations(trx, tenant, w.lineId));
+    await db('time_entries').where({ tenant, entry_id: entryId }).update({ invoiced: true });
+    await db('hour_blocks').where({ tenant, block_id: blockId }).update({ status: 'expired' });
+    const result: any = action === 'void'
+      ? await (await import('../src/actions/voidInvoiceActions')).voidInvoice(invoiceId, 'test')
+      : await (await import('../src/actions/invoiceModification')).unfinalizeInvoice(invoiceId);
+    expect(action === 'void' ? result.error : result.actionError).toMatch(/already been used/);
+    expect((await db('hour_blocks').where({ tenant, block_id: blockId }).first()).status).toBe('expired');
+    expect((await allocationsFor(entryId)).map((row) => [row.block_id, Number(row.minutes)])).toEqual([[blockId, 60]]);
+    expect((await db('invoices').where({ tenant, invoice_id: invoiceId }).first()).status).not.toBe('cancelled');
+  });
+
+  it.each(['void', 'unfinalize'] as const)('does not spend a legacy expired block whose invoice was %s', async (action) => {
+    const w = await setup();
+    const { invoiceId, blockId } = await generateDraft(w);
+    await finalize(invoiceId);
+    await db('hour_blocks').where({ tenant, block_id: blockId }).update({ status: 'expired' });
+    if (action === 'void') {
+      expect(await (await import('../src/actions/voidInvoiceActions')).voidInvoice(invoiceId, 'test')).toEqual({ success: true });
+    } else {
+      expect(await (await import('../src/actions/invoiceModification')).unfinalizeInvoice(invoiceId)).toEqual({ success: true });
+    }
+    // Reproduce the stale state left by the previous reversal hooks.
+    await db('hour_blocks').where({ tenant, block_id: blockId }).update({ status: 'expired' });
+    const entryId = await insertEntry(w, 60, 0);
+    const { reconcileLineAllocations } = await import('@alga-psa/shared/billingClients/hourBlockService');
+    await db.transaction((trx) => reconcileLineAllocations(trx, tenant, w.lineId));
+    expect(await allocationsFor(entryId)).toHaveLength(0);
+  });
+
   it('unused active block returns to pending and its expiry issuance is superseded; used block refuses', async () => {
     const w = await setup();
     const { invoiceId, blockId } = await generateDraft(w);
@@ -294,6 +358,7 @@ describe.runIf(enabled)('Prepaid Block lifecycle: unfinalize', () => {
     expect((await allocationsFor(entry))).toHaveLength(1);
     const refused = await unfinalizeInvoice(invoiceId);
     expect(refused).toHaveProperty('actionError');
+    expect(refused).toHaveProperty('messageKey', 'msp/invoicing:errors.invoice.usedHourBlockUnfinalize');
     expect((await db('hour_blocks').where({ tenant, block_id: blockId }).first()).status).toBe('active');
   });
 });
@@ -318,10 +383,13 @@ describe.runIf(enabled)('Prepaid Block lifecycle: draft delete and void', () => 
     const issuance = await db('contract_line_block_issuances').where({ tenant, issuance_id: w.issuanceId }).first();
     expect(issuance).toMatchObject({ status: 'scheduled', block_id: null, invoice_id: null, invoice_charge_id: null });
 
-    // The released minutes are no longer held: the engine prices them in full as overage.
+    // The released minutes are no longer held: the engine supplies no coverage
+    // rows for the entry and the resolver prices it in full as overage.
     const engine = BillingEngine.forTransaction(db as any, tenant);
-    const priced = await (engine as any).applyPrepaidBlockCoverageToTimeEntries(w.lineId, [{ entry_id: gap, billable_duration: 90 }]);
-    expect(priced.map((e: any) => [e.entry_id, e.billable_duration])).toEqual([[gap, 90]]);
+    const rows = await (engine as any).loadPrepaidCoverageRows(w.lineId, [gap]);
+    expect(rows).toEqual([]);
+    const priced = applyPrepaidCoverage([{ sourceId: gap, billableMinutes: 90 }], rows);
+    expect(priced.map((e) => [e.sourceId, e.billableMinutes])).toEqual([[gap, 90]]);
   });
 
   it.each(['exhaustion', 'manual'])('delete cancels a %s issuance instead of re-dueing it', async (kind) => {

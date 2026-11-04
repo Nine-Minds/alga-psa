@@ -224,7 +224,7 @@ describe('status slug never reaches the screen (F021)', () => {
   it('T030: the asset list Coverage cell reads the status through the registry', () => {
     const text = source('packages/assets/src/components/assetListCells.tsx');
 
-    expect(text).toMatch(/resolveAssetStatusLabel\(t, asset\.status, statuses\)/);
+    expect(text).toMatch(/assetStatusLabel\(t, asset\.status, statuses\)/);
     // The cell cannot fetch per row, so both lists hand it the registry they
     // already hold.
     expect(source('packages/assets/src/components/AssetDashboardClient.tsx'))
@@ -235,9 +235,9 @@ describe('status slug never reaches the screen (F021)', () => {
 
   it('T030: the contact Assets tile and the printable header resolve the label too', () => {
     expect(source('packages/assets/src/components/ContactAssetsSection.tsx'))
-      .toMatch(/resolveAssetStatusLabel\(t, row\.asset_status, assetStatuses\)/);
+      .toMatch(/assetStatusLabel\(t, row\.asset_status, assetStatuses\)/);
     expect(source('packages/assets/src/components/AssetDetailView.tsx'))
-      .toMatch(/resolveAssetStatusLabel\(t, asset\.status, assetStatuses\)/);
+      .toMatch(/assetStatusLabel\(t, asset\.status, assetStatuses\)/);
   });
 
   it('T030: the drawer summary grid shows the same label as its badge', () => {

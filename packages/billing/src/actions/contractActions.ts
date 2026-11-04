@@ -16,6 +16,8 @@ import {
   IContractWithClient,
   IContractLineMapping,
 } from '@alga-psa/types';
+import type { ContractBillingTrace } from '@alga-psa/types';
+import { loadContractBillingTrace } from '@alga-psa/shared/billingClients/contractBillingTrace';
 import {
   IContractTemplate,
   IContractTemplateWithLines,
@@ -1176,6 +1178,11 @@ export interface IContractOverview {
   currencyCode: string;  // ISO currency code (e.g., 'USD', 'AUD')
   /** Owning client for contract-backed overviews (null for templates); lets usage deep links prefill the client filter. */
   clientId: string | null;
+  /**
+   * Which billing profile(s) bill this contract, its payment terms, and where
+   * each value comes from. Resolved live (never stored); null for templates.
+   */
+  billingTrace: ContractBillingTrace | null;
 }
 
 /**
@@ -1540,12 +1547,16 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
     // show the fixed portion; hourly/usage revenue is variable).
     let totalEstimatedMonthlyValue: number | null = null;
 
-    if (hasFixedServices && !isTemplate) {
+    // A cadence Prepaid Block lives on an Hourly line but bills a fixed fee every period, so a
+    // contract with only such lines still has a fixed monthly value.
+    const contractValues = !isTemplate && (hasFixedServices || hasHourlyServices)
+      ? await getContractMonthlyFixedValuesByContract(knex, tenant, [contractId])
+      : null;
+    if (contractValues && (hasFixedServices || contractValues.get(contractId)?.hasCadencePrepaidBlock)) {
       // Real contracts use the canonical shared valuation so the overview,
       // contract reports, and the summary MRR cannot disagree: unit-priced
       // lines are quantity × unit rate (revision-aware), bundles keep their
       // line rate, and every line is cadence-normalized.
-      const contractValues = await getContractMonthlyFixedValuesByContract(knex, tenant, [contractId]);
       totalEstimatedMonthlyValue = contractValues.get(contractId)?.monthlyValueCents ?? 0;
       // A Fixed line holding product members is billed quantity x rate, so
       // its header amount comes from the same valuation as the total (a line
@@ -1588,7 +1599,13 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
       hasHourlyServices,
       hasUsageServices,
       currencyCode,
-      clientId
+      clientId,
+      // Same engine functions the invoice uses; a template has no client to bill.
+      billingTrace: isTemplate
+        ? null
+        : await loadContractBillingTrace(knex, tenant, {
+            contractId,
+          }),
     };
   } catch (error) {
     console.error(`Error fetching contract overview for ${contractId}:`, error);

@@ -26,6 +26,7 @@ exports.up = async function up(knex) {
   const tenants = await knex('client_locations').distinct('tenant').pluck('tenant');
   for (const tenant of tenants) {
     for (const column of OPTIONAL_COLUMNS) {
+      // migration-lint: allow 5 - retroactive: backfill is already chunked or bounded by tenant/id lists in the surrounding loop; the lint cannot see the bound through the builder
       await knex('client_locations')
         .where({ tenant })
         .whereRaw('?? IS NOT NULL AND TRIM(??) = \'\'', [column, column])

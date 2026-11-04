@@ -21,28 +21,28 @@ const lines: PrintableLine[] = [
 describe('planStagingPrint (C6 bulk print order)', () => {
   it('box label, then its unit and asset labels, box by box; unboxed staged items last; quantity lines get none', () => {
     const plan = planStagingPrint(boxes, lines, { canReadInventory: true });
-    expect(plan.items).toEqual([
-      { labelClass: 'staging-container', id: 'b1' },
-      { labelClass: 'stock-unit-identity', id: 'u1' },
-      { labelClass: 'stock-unit-identity', id: 'u2' },
-      { labelClass: 'staging-container', id: 'b2' },
-      { labelClass: 'asset-identity', id: 'a1' },
-      { labelClass: 'stock-unit-identity', id: 'u3' },
-      { labelClass: 'asset-identity', id: 'a2' },
+    expect(plan.labels).toEqual([
+      { labelClass: 'staging-container', recordId: 'b1' },
+      { labelClass: 'stock-unit-identity', recordId: 'u1' },
+      { labelClass: 'stock-unit-identity', recordId: 'u2' },
+      { labelClass: 'staging-container', recordId: 'b2' },
+      { labelClass: 'asset-identity', recordId: 'a1' },
+      { labelClass: 'stock-unit-identity', recordId: 'u3' },
+      { labelClass: 'asset-identity', recordId: 'a2' },
     ]);
     expect(plan).toMatchObject({ droppedUnitLabels: 0, overCap: false });
   });
 
   it('leaves unit labels out, and counts them, without inventory:read', () => {
     const plan = planStagingPrint(boxes, lines, { canReadInventory: false });
-    expect(plan.items.some((i) => i.labelClass === 'stock-unit-identity')).toBe(false);
+    expect(plan.labels.some((i) => i.labelClass === 'stock-unit-identity')).toBe(false);
     expect(plan.droppedUnitLabels).toBe(3);
   });
 
   it('prints only the chosen boxes, and flags plans over the request cap', () => {
-    expect(planStagingPrint(boxes, lines, { canReadInventory: true, boxIds: ['b2'], includeUnboxed: false }).items).toEqual([
-      { labelClass: 'staging-container', id: 'b2' },
-      { labelClass: 'asset-identity', id: 'a1' },
+    expect(planStagingPrint(boxes, lines, { canReadInventory: true, boxIds: ['b2'], includeUnboxed: false }).labels).toEqual([
+      { labelClass: 'staging-container', recordId: 'b2' },
+      { labelClass: 'asset-identity', recordId: 'a1' },
     ]);
     const big: PrintableBox[] = [{ container_id: 'big', sequence: 1, members: Array.from({ length: MAX_LABELS_PER_REQUEST }, (_, i) => unit(100 + i)) }];
     expect(planStagingPrint(big, [], { canReadInventory: true }).overCap).toBe(true);

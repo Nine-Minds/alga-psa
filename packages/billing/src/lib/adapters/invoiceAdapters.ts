@@ -576,11 +576,31 @@ function attachTicketPresentation(
 }
 
 /**
+ * Derives `discountTotal` (positive magnitude of all `isDiscount` lines, minor units)
+ * and `grossSubtotal` (`subtotal + discountTotal`) on the view model. `subtotal` is
+ * left untouched (net, before tax), so `grossSubtotal - discountTotal === subtotal`
+ * always holds. Idempotent, and safe on legacy payloads: with no `isDiscount` item the
+ * result is `discountTotal = 0` and `grossSubtotal = subtotal`.
+ */
+export function applyInvoiceDiscountSummary(vm: WasmInvoiceViewModel): WasmInvoiceViewModel {
+  const discountSum = (vm.items ?? []).reduce(
+    (sum, item) => (item.isDiscount === true ? sum + toFiniteNumber(item.total) : sum),
+    0
+  );
+  // `0 - 0` normalises -0 to 0.
+  const discountTotal = 0 - discountSum;
+  vm.discountTotal = discountTotal;
+  vm.grossSubtotal = toFiniteNumber(vm.subtotal) + discountTotal;
+  return vm;
+}
+
+/**
  * Enriches a WasmInvoiceViewModel with recurring/one-time grouped item
  * collections and their separate subtotals, tax, and totals.
  * Derives grouping from existing timing fields — no database migration needed.
  */
 export function enrichWithGroupedItems(vm: WasmInvoiceViewModel): WasmInvoiceViewModel {
+  applyInvoiceDiscountSummary(vm);
   if (!vm.ticketPresentationRows) attachTicketPresentation(vm, []);
   const recurringItems = vm.items.filter(isRecurringItem);
   const onetimeItems = vm.items.filter((item) => !isRecurringItem(item));

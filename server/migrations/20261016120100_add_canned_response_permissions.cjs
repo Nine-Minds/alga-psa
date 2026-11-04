@@ -10,6 +10,7 @@
 const { reconcileAllTenants } = require('./utils/permissions/reconcileTenants.cjs');
 
 exports.up = async function up(knex) {
+  // migration-lint: allow 8 - retroactive: reconcileAllTenants is the repo-standard permission seeding helper, idempotent per tenant; merged before the lint existed
   await reconcileAllTenants(knex, { label: 'add_canned_response_permissions' });
 };
 

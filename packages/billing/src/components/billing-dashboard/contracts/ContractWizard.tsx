@@ -35,6 +35,7 @@ import { UsageBasedServicesStep } from "./wizard-steps/UsageBasedServicesStep";
 import { ReviewContractStep } from "./wizard-steps/ReviewContractStep";
 import { ContractDiscountsPanel } from "./wizard-steps/ContractDiscountsPanel";
 import { ContractCreatedConfirmation } from "./wizard-steps/ContractCreatedConfirmation";
+import { hasFirstInvoiceLines } from "./wizard-steps/firstInvoiceLines";
 import {
   TemplateLinesStep,
   TemplateLinesReview,
@@ -203,16 +204,16 @@ export interface ContractWizardData {
   fixed_lines: ContractWizardFixedLine[];
   /** Server monthly fixed value of the saved draft being resumed; acknowledged on finalize if it changes. */
   recurring_baseline?: { monthly_cents: number };
+  /** The products line's own billing timing; undefined inherits `billing_timing`. */
+  product_billing_timing?: "arrears" | "advance";
   product_services: Array<{
     service_id: string;
     service_name?: string;
     quantity: number;
     /** Optional per-unit override in cents (contract currency). */
     custom_rate?: number;
-    /** Catalog price in the contract currency (cents); null when the catalog has none. Display-only, never persisted. */
-    currency_rate?: number | null;
-    /** Legacy currency-untagged catalog default rate (cents). Display-only, never persisted. */
-    default_rate?: number | null;
+    // No catalog price here: it is derived per (contract currency, service id) by
+    // useProductCatalogRates, so a currency change or a resumed draft cannot carry a stale one.
   }>;
   enable_proration: boolean;
   hourly_services: Array<{
@@ -396,7 +397,7 @@ export function ContractWizard({
   // Set when Save as Draft is pressed while wizard discounts are authored.
   const [showDraftDiscountsDialog, setShowDraftDiscountsDialog] =
     useState(false);
-  // Set once a contract with fixed-fee lines is created; the wizard then shows
+  // Set once a contract with fixed-fee or product lines is created; the wizard then shows
   // when it first invoices and only reports completion when that is dismissed.
   const [createdContract, setCreatedContract] =
     useState<ContractWizardData | null>(null);
@@ -754,6 +755,7 @@ export function ContractWizard({
         // In template mode the template's lines are cloned server-side.
         fixed_lines: wizardData.template_id ? [] : projectFixedLinesForSubmission(wizardData.fixed_lines ?? []),
         product_services: wizardData.product_services ?? [],
+        product_billing_timing: wizardData.product_billing_timing,
         usage_services: (wizardData.usage_services ?? []).map(withoutLegacyBucketOverlay),
         usage_billing_frequency: wizardData.usage_billing_frequency,
         minimum_billable_time: wizardData.minimum_billable_time,
@@ -807,7 +809,7 @@ export function ContractWizard({
         ? getUnsupportedRecurringAuthoringCombination({
             lineType: "Product",
             cadenceOwner: wizardData.cadence_owner,
-            billingTiming: wizardData.billing_timing,
+            billingTiming: wizardData.product_billing_timing ?? wizardData.billing_timing,
             billingFrequency: wizardData.billing_frequency,
           })
         : null,
@@ -1281,7 +1283,7 @@ export function ContractWizard({
       };
 
       setWizardData(completedData);
-      if (meaningfulFixedLines(completedData.fixed_lines).length > 0) {
+      if (hasFirstInvoiceLines(completedData)) {
         setCreatedContract(completedData);
         return;
       }

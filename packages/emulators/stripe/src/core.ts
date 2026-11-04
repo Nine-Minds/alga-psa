@@ -44,6 +44,7 @@ export interface StripeCustomer {
 }
 
 export interface StripeLineItemInput {
+  price?: string;
   price_data?: {
     currency?: string;
     unit_amount?: number;
@@ -56,7 +57,7 @@ export interface StripeLineItemInput {
 export interface StripeCheckoutSession {
   id: string;
   object: 'checkout.session';
-  mode: 'payment';
+  mode: 'payment' | 'subscription';
   customer: string;
   line_items: Array<{ price: { currency: string; unit_amount: number; product: { name: string } }; quantity: number }>;
   amount_total: number;
@@ -66,9 +67,14 @@ export interface StripeCheckoutSession {
   expires_at: number;
   /** Null until confirmation, mirroring Stripe apiVersion 2024-12-18.acacia. */
   payment_intent: string | null;
+  /** Subscription created on completion for a subscription-mode session. */
+  subscription?: string | null;
+  ui_mode?: string;
+  return_url?: string;
+  client_secret?: string;
   url: string;
   status: 'open' | 'complete' | 'expired';
-  payment_status: 'unpaid' | 'paid';
+  payment_status: 'unpaid' | 'paid' | 'no_payment_required';
   metadata: Record<string, string>;
   created: number;
   livemode: false;
@@ -89,6 +95,65 @@ export interface StripePaymentIntent {
   [key: string]: unknown;
 }
 
+export interface StripeProduct {
+  id: string;
+  object: 'product';
+  name: string;
+  description: string | null;
+  active: boolean;
+  metadata: Record<string, string>;
+  created: number;
+  livemode: false;
+}
+
+export interface StripePrice {
+  id: string;
+  object: 'price';
+  unit_amount: number;
+  currency: string;
+  recurring: { interval: 'month' | 'year'; interval_count: number; usage_type: 'licensed' } | null;
+  product: string;
+  active: boolean;
+  livemode: false;
+  [key: string]: unknown;
+}
+
+export interface StripeSubscriptionItem {
+  id: string;
+  object: 'subscription_item';
+  price: StripePrice;
+  quantity: number;
+}
+
+export interface StripeSubscription {
+  id: string;
+  object: 'subscription';
+  customer: string;
+  status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete' | 'incomplete_expired';
+  items: { object: 'list'; data: StripeSubscriptionItem[] };
+  metadata: Record<string, string>;
+  cancel_at_period_end: boolean;
+  current_period_end: number;
+  created: number;
+  started_at: number;
+  /** Expanded on retrieve; a paid invoice so a co-managed subscription verifies as active. */
+  latest_invoice?: StripeInvoice;
+  ended_at?: number | null;
+  livemode: false;
+  [key: string]: unknown;
+}
+
+export interface StripeInvoice {
+  id: string;
+  object: 'invoice';
+  customer: string;
+  subscription: string | null;
+  amount_due: number;
+  currency: string;
+  status: 'draft' | 'open' | 'paid';
+  [key: string]: unknown;
+}
+
 export interface StripeEvent {
   id: string;
   object: 'event';
@@ -96,7 +161,7 @@ export interface StripeEvent {
   created: number;
   livemode: false;
   pending_webhooks: number;
-  data: { object: StripeCheckoutSession | StripePaymentIntent };
+  data: { object: StripeCheckoutSession | StripePaymentIntent | StripeSubscription | StripeInvoice };
   [key: string]: unknown;
 }
 
@@ -146,7 +211,12 @@ export class StripeEmulatorCore implements EmulatorCore {
   readonly customers = new Map<string, StripeCustomer>();
   readonly sessions = new Map<string, StripeCheckoutSession>();
   readonly paymentIntents = new Map<string, StripePaymentIntent>();
+  readonly products = new Map<string, StripeProduct>();
+  readonly prices = new Map<string, StripePrice>();
+  readonly subscriptions = new Map<string, StripeSubscription>();
   readonly events = new Map<string, StripeEvent>();
+  /** Subscription-mode checkout inputs retained until completion creates the subscription. */
+  private readonly checkoutSubscriptions = new Map<string, { priceId: string; quantity: number }>();
   readonly deliveries: WebhookDelivery[] = [];
   readonly operationFaults = new Map<string, OperationFault>();
 
@@ -160,7 +230,11 @@ export class StripeEmulatorCore implements EmulatorCore {
     this.customers.clear();
     this.sessions.clear();
     this.paymentIntents.clear();
+    this.products.clear();
+    this.prices.clear();
+    this.subscriptions.clear();
     this.events.clear();
+    this.checkoutSubscriptions.clear();
     this.deliveries.length = 0;
     this.operationFaults.clear();
     this.secretKey = DEFAULT_SECRET_KEY;
@@ -217,8 +291,8 @@ export class StripeEmulatorCore implements EmulatorCore {
     return { object: 'list', url: '/v1/customers', has_more: false, data };
   }
 
-  createCustomer(input: { email: string; name?: string; metadata?: Record<string, string> }): StripeCustomer {
-    const id = this.newId('cus');
+  createCustomer(input: { id?: string; email: string; name?: string; metadata?: Record<string, string> }): StripeCustomer {
+    const id = input.id ?? this.newId('cus');
     const customer: StripeCustomer = {
       id,
       object: 'customer',
@@ -240,16 +314,168 @@ export class StripeEmulatorCore implements EmulatorCore {
     return customer;
   }
 
+  // ── Products ──────────────────────────────────────────────────────────────
+
+  /** Creates (or, for an existing id, updates) a product. Every price references one, as in Stripe. */
+  createProduct(input: { id?: string; name?: string; description?: string | null; metadata?: Record<string, string> }): StripeProduct {
+    const id = input.id ?? this.newId('prod');
+    const existing = this.products.get(id);
+    const product: StripeProduct = {
+      id,
+      object: 'product',
+      name: input.name ?? existing?.name ?? id,
+      description: input.description ?? existing?.description ?? null,
+      active: true,
+      metadata: input.metadata ?? existing?.metadata ?? {},
+      created: existing?.created ?? Math.floor(Date.now() / 1000),
+      livemode: false,
+    };
+    this.products.set(id, product);
+    return product;
+  }
+
+  getProduct(id: string): StripeProduct {
+    const product = this.products.get(id);
+    if (!product) throw new StripeWireError(404, `No such product: ${id}`);
+    return product;
+  }
+
+  // ── Prices ────────────────────────────────────────────────────────────────
+
+  listPrices(): StripeList<StripePrice> {
+    return { object: 'list', url: '/v1/prices', has_more: false, data: [...this.prices.values()] };
+  }
+
+  createPrice(input: { id?: string; unitAmount: number; currency?: string; interval?: 'month' | 'year'; product?: string }): StripePrice {
+    const id = input.id ?? this.newId('price');
+    // A price's product is retrievable, so callers that resolve `price.product` by id work.
+    const product = input.product && this.products.has(input.product)
+      ? this.getProduct(input.product)
+      : this.createProduct({ id: input.product });
+    const price: StripePrice = {
+      id,
+      object: 'price',
+      unit_amount: Math.round(input.unitAmount),
+      currency: (input.currency ?? 'usd').toLowerCase(),
+      type: input.interval ? 'recurring' : 'one_time',
+      billing_scheme: 'per_unit',
+      recurring: input.interval ? { interval: input.interval, interval_count: 1, usage_type: 'licensed' } : null,
+      product: product.id,
+      active: true,
+      livemode: false,
+    };
+    this.prices.set(id, price);
+    return price;
+  }
+
+  getPrice(id: string): StripePrice {
+    const price = this.prices.get(id);
+    if (!price) throw new StripeWireError(404, `No such price: ${id}`);
+    return price;
+  }
+
+  // ── Subscriptions ─────────────────────────────────────────────────────────
+
+  listSubscriptions(customer?: string, status?: string): StripeList<StripeSubscription> {
+    const data = [...this.subscriptions.values()].filter((subscription) => {
+      if (customer && subscription.customer !== customer) return false;
+      if (status && status !== 'all' && subscription.status !== status) return false;
+      return true;
+    });
+    return { object: 'list', url: '/v1/subscriptions', has_more: false, data };
+  }
+
+  getSubscription(id: string): StripeSubscription {
+    const subscription = this.subscriptions.get(id);
+    if (!subscription) throw new StripeWireError(404, `No such subscription: ${id}`);
+    return subscription;
+  }
+
+  createSubscription(input: {
+    customer: string; priceId: string; quantity: number; metadata?: Record<string, string>;
+    status?: StripeSubscription['status']; cancelAtPeriodEnd?: boolean; invoiceStatus?: StripeInvoice['status'];
+  }): StripeSubscription {
+    const price = this.getPrice(input.priceId);
+    const now = this.nowUnix();
+    const periodEnd = price.recurring?.interval === 'year' ? now + 365 * 24 * 60 * 60 : now + 30 * 24 * 60 * 60;
+    const subscription: StripeSubscription = {
+      id: this.newId('sub'),
+      object: 'subscription',
+      customer: input.customer,
+      status: input.status ?? 'active',
+      items: { object: 'list', data: [{ id: this.newId('si'), object: 'subscription_item', price, quantity: input.quantity }] },
+      metadata: { ...(input.metadata ?? {}) },
+      cancel_at_period_end: input.cancelAtPeriodEnd ?? false,
+      current_period_end: periodEnd,
+      created: now,
+      started_at: now,
+      latest_invoice: this.buildInvoice({ customer: input.customer, price, quantity: input.quantity,
+        metadata: input.metadata ?? {}, status: input.invoiceStatus ?? 'paid' }),
+      livemode: false,
+    };
+    if (subscription.latest_invoice) subscription.latest_invoice.subscription = subscription.id;
+    this.subscriptions.set(subscription.id, subscription);
+    return subscription;
+  }
+
+  /** Invoice amount and currency come from the price object; nothing is a constant of the emulator. */
+  private buildInvoice(input: { customer: string; price: StripePrice; quantity: number;
+    metadata: Record<string, string>; status: StripeInvoice['status'] }): StripeInvoice {
+    return { id: this.newId('in'), object: 'invoice', customer: input.customer, subscription: null,
+      amount_due: input.price.unit_amount * input.quantity, currency: input.price.currency, status: input.status,
+      subscription_details: { metadata: { ...input.metadata } },
+      lines: { object: 'list', data: [{ price: { id: input.price.id }, quantity: input.quantity }] } };
+  }
+
+  updateSubscription(id: string, input: {
+    itemId?: string; quantity?: number; cancelAtPeriodEnd?: boolean; metadata?: Record<string, string>;
+  }): StripeSubscription {
+    const subscription = this.getSubscription(id);
+    const item = subscription.items.data[0];
+    if (!item) throw new StripeWireError(400, `Subscription ${id} has no items.`);
+    if (input.quantity !== undefined) item.quantity = input.quantity;
+    if (input.cancelAtPeriodEnd !== undefined) subscription.cancel_at_period_end = input.cancelAtPeriodEnd;
+    if (input.metadata !== undefined) subscription.metadata = { ...subscription.metadata, ...input.metadata };
+    return subscription;
+  }
+
+  cancelSubscription(id: string): StripeSubscription {
+    const subscription = this.getSubscription(id);
+    subscription.status = 'canceled';
+    return subscription;
+  }
+
+  /** Proration preview: the difference between the current and requested item quantity. */
+  createInvoicePreview(input: { customer: string; subscription?: string; quantity?: number; cancelAt?: number }): StripeInvoice {
+    let amountDue = 0;
+    let currency = 'usd';
+    if (input.subscription) {
+      const subscription = this.getSubscription(input.subscription);
+      const item = subscription.items.data[0];
+      if (item) {
+        currency = item.price.currency;
+        if (!input.cancelAt && input.quantity !== undefined) {
+          amountDue = Math.max(0, (input.quantity - item.quantity) * item.price.unit_amount);
+        }
+      }
+    }
+    return { id: this.newId('in'), object: 'invoice', customer: input.customer, subscription: input.subscription ?? null,
+      amount_due: Math.round(amountDue), currency, status: 'draft' };
+  }
+
   // ── Checkout sessions ─────────────────────────────────────────────────────
 
   createCheckoutSession(
     input: {
-      mode: 'payment';
+      mode: 'payment' | 'subscription';
       customer?: string;
       line_items: StripeLineItemInput[];
-      success_url: string;
+      success_url?: string;
       cancel_url?: string;
+      return_url?: string;
+      ui_mode?: string;
       metadata: Record<string, string>;
+      subscription_data?: { metadata?: Record<string, string> };
       expires_at?: number;
       currency?: string;
       amount?: number;
@@ -259,11 +485,12 @@ export class StripeEmulatorCore implements EmulatorCore {
     const sessionId = this.newId('cs');
 
     const firstItem = input.line_items[0] ?? {};
-    const currency = (input.currency ?? firstItem.price_data?.currency ?? 'usd').toLowerCase();
-    const unitAmount = input.amount ?? firstItem.price_data?.unit_amount ?? 0;
+    const subscriptionPrice = input.mode === 'subscription' && firstItem.price ? this.getPrice(String(firstItem.price)) : null;
+    const currency = (subscriptionPrice?.currency ?? input.currency ?? firstItem.price_data?.currency ?? 'usd').toLowerCase();
+    const unitAmount = subscriptionPrice?.unit_amount ?? input.amount ?? firstItem.price_data?.unit_amount ?? 0;
     const quantity = Number(firstItem.quantity ?? 1);
     const amountTotal = Math.round(unitAmount * quantity);
-    const productName = firstItem.price_data?.product_data?.name ?? 'Invoice payment';
+    const productName = subscriptionPrice?.product ?? firstItem.price_data?.product_data?.name ?? 'Invoice payment';
 
     const defaultExpiry = this.nowUnix() + 24 * 60 * 60;
     const expiresAt = input.expires_at ?? defaultExpiry;
@@ -271,7 +498,7 @@ export class StripeEmulatorCore implements EmulatorCore {
     const session: StripeCheckoutSession = {
       id: sessionId,
       object: 'checkout.session',
-      mode: 'payment',
+      mode: input.mode,
       customer: input.customer ?? '',
       line_items: [
         {
@@ -281,20 +508,25 @@ export class StripeEmulatorCore implements EmulatorCore {
       ],
       amount_total: amountTotal,
       currency,
-      success_url: input.success_url,
+      success_url: input.success_url ?? input.return_url ?? '',
       cancel_url: input.cancel_url ?? '',
       expires_at: expiresAt,
       // Mirrors Stripe apiVersion 2024-12-18.acacia: payment-mode Checkout
       // Sessions defer PaymentIntent creation until confirmation, so an open
       // session carries no payment_intent yet.
       payment_intent: null,
+      subscription: null,
+      ui_mode: input.ui_mode,
+      return_url: input.return_url,
+      client_secret: `${sessionId}_secret_${this.newId('cs')}`,
       url: `${hostedBaseUrl}/checkout/sessions/${sessionId}`,
       status: 'open',
-      payment_status: 'unpaid',
-      metadata: { ...input.metadata },
+      payment_status: input.mode === 'subscription' ? 'no_payment_required' : 'unpaid',
+      metadata: { ...input.metadata, ...(input.subscription_data?.metadata ?? {}) },
       created: this.nowUnix(),
       livemode: false,
     };
+    if (subscriptionPrice) this.checkoutSubscriptions.set(sessionId, { priceId: subscriptionPrice.id, quantity });
     this.sessions.set(sessionId, session);
     return session;
   }
@@ -305,6 +537,11 @@ export class StripeEmulatorCore implements EmulatorCore {
       throw new StripeWireError(404, `No such checkout session: ${id}`);
     }
     return session;
+  }
+
+  listCheckoutSessions(customer?: string): StripeList<StripeCheckoutSession> {
+    const data = [...this.sessions.values()].filter((session) => !customer || session.customer === customer);
+    return { object: 'list', url: '/v1/checkout/sessions', has_more: false, data };
   }
 
   /**
@@ -344,11 +581,28 @@ export class StripeEmulatorCore implements EmulatorCore {
       throw new StripeWireError(400, 'This Checkout Session has expired and cannot be completed.');
     }
     session.status = 'complete';
-    session.payment_status = 'paid';
+    session.payment_status = session.mode === 'subscription' ? 'no_payment_required' : 'paid';
 
-    const intent = this.ensurePaymentIntent(session);
-    intent.status = 'succeeded';
-    intent.payment_method = 'pm_simulated';
+    if (session.mode === 'subscription') {
+      // Subscription-mode Checkout creates the subscription on completion and
+      // stamps the session's metadata (including subscription_data metadata).
+      const input = this.checkoutSubscriptions.get(sessionId);
+      if (input && !session.subscription) {
+        const subscription = this.createSubscription({
+          customer: session.customer,
+          priceId: input.priceId,
+          quantity: input.quantity,
+          metadata: { ...session.metadata },
+        });
+        session.subscription = subscription.id;
+        this.emitEvent('customer.subscription.created', subscription);
+        if (subscription.latest_invoice) this.emitEvent('invoice.paid', subscription.latest_invoice);
+      }
+    } else {
+      const intent = this.ensurePaymentIntent(session);
+      intent.status = 'succeeded';
+      intent.payment_method = 'pm_simulated';
+    }
 
     return this.emitEvent('checkout.session.completed', session);
   }
@@ -393,7 +647,7 @@ export class StripeEmulatorCore implements EmulatorCore {
 
   // ── Events & webhook deliveries ───────────────────────────────────────────
 
-  emitEvent(type: string, object: StripeCheckoutSession | StripePaymentIntent): StripeEvent {
+  emitEvent(type: string, object: StripeCheckoutSession | StripePaymentIntent | StripeSubscription | StripeInvoice): StripeEvent {
     const event: StripeEvent = {
       id: this.newId('evt'),
       object: 'event',

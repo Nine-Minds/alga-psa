@@ -118,6 +118,7 @@ describe('route registry filesystem inventory', () => {
     '/api/calendar': 'calendar OAuth/sync',
     '/api/chat': 'AI chat completions',
     '/api/client-portal': 'portal session/domain endpoints',
+    '/api/portal-domain': 'custom-domain surface lookup for the Edge middleware',
     '/api/clients': 'client endpoints (non-v1)',
     '/api/documents': 'document endpoints (non-v1)',
     '/api/email': 'email endpoints outside ruled oauth/imap prefixes',

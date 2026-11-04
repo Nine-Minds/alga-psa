@@ -25,6 +25,7 @@ import {
   resolvePaymentBillingProfileId,
 } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { auditLog } from '../../logging/auditLog';
+import { describeStatusChangeBlock } from '../../invoices/invoiceStatusPolicy';
 import { TaxService, normalizeTaxCapAmount } from '@alga-psa/billing/services/taxService';
 import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
 import { v4 as uuidv4 } from 'uuid';
@@ -1602,24 +1603,31 @@ export class FinancialService extends BaseService<ITransaction> {
           
           switch (operation.operation) {
             case 'finalize':
-              result = await tenantDb(trx, context.tenant).table('invoices')
+            case 'cancel': {
+              // Status / finalized_at are owned by the finalize and void commands
+              // (credit reversal, hour blocks, provider propagation, ...). This
+              // route only holds invoice:update, so it never writes them; the
+              // shared policy decides which message the caller gets.
+              const target = operation.operation === 'finalize' ? 'sent' : 'cancelled';
+              const current = await tenantDb(trx, context.tenant).table('invoices')
                 .where('invoice_id', invoiceId)
-                .update({
-                  status: 'sent',
-                  finalized_at: new Date().toISOString()
-                })
-                .returning('*');
-              break;
-              
-            case 'cancel':
-              result = await tenantDb(trx, context.tenant).table('invoices')
-                .where('invoice_id', invoiceId)
-                .update({
-                  status: 'cancelled'
-                })
-                .returning('*');
-              break;
-              
+                .first('status');
+              if (!current) {
+                throw new NotFoundError('Invoice not found');
+              }
+              const blocked = describeStatusChangeBlock(current.status, target);
+              if (blocked) {
+                throw new ConflictError(blocked);
+              }
+              // Policy-plain or no-op (e.g. pending -> sent): still no inline write.
+              const owner = operation.operation === 'finalize'
+                ? 'finalizeInvoice (requires invoice:finalize)'
+                : 'void (requires invoice:void)';
+              throw new ConflictError(
+                `Bulk ${operation.operation} is not available here; use the ${owner} command`
+              );
+            }
+
             case 'apply_credit':
               // This would need additional parameters in the operation
               const creditAmount = operation.parameters?.credit_amount || 0;

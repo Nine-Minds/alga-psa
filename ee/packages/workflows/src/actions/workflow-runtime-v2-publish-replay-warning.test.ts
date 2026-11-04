@@ -131,7 +131,7 @@ vi.mock('@alga-psa/workflows/persistence', () => {
 });
 
 vi.mock('@alga-psa/workflows/runtime', async () => ({
-  workflowDefinitionSchema: z.record(z.any()),
+  workflowDefinitionSchema: z.record(z.string(), z.any()),
   initializeWorkflowRuntimeV2: vi.fn(),
   getActionRegistryV2: vi.fn(() => ({ list: () => [] })),
   getNodeTypeRegistry: vi.fn(() => ({ list: () => [] })),

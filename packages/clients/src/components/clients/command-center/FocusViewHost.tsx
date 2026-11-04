@@ -27,6 +27,7 @@ const RAIL_GROUP_BY_TAB: Record<string, string> = {
   tickets: 'service',
   'recurring-tickets': 'service',
   interactions: 'service',
+  'co-managed': 'service',
   billing: 'money',
   'billing-dashboard': 'money',
   'tax-settings': 'money',

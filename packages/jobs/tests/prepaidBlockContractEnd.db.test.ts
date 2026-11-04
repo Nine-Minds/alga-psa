@@ -97,7 +97,7 @@ async function insertContractBlock(w: W, opts: { total: number; remaining: numbe
     block_id: blockId, tenant, client_id: w.clientId, service_id: w.serviceId,
     total_minutes: opts.total, remaining_minutes: opts.remaining, hourly_rate: 10000, purchase_amount: 100000,
     currency_code: 'EUR', status: 'active', purchased_at: opts.purchasedAt, source_type: 'contract',
-    expiration_date: opts.expiration, contract_line_id: w.lineId, client_contract_id: w.clientContractId,
+    expiration_date: opts.expiration, contract_line_id: w.lineId, client_contract_id: w.clientContractId, service_period_record_id: uuidv4(),
   });
   return blockId;
 }
@@ -130,6 +130,7 @@ async function insertBlock(w: W, opts: {
     source_type: opts.sourceType ?? 'contract', expiration_date: opts.expiration === undefined ? shiftDays(200) : opts.expiration,
     contract_line_id: contractOwned ? (opts.lineId ?? w.lineId) : null,
     client_contract_id: contractOwned ? (opts.clientContractId ?? w.clientContractId) : null,
+    service_period_record_id: contractOwned ? uuidv4() : null,
   });
   return blockId;
 }
@@ -162,7 +163,214 @@ async function addRunningContract(w: W) {
   return { contractId, lineId, clientContractId };
 }
 
+async function insertWork(w: W, date: string) {
+  const work = {
+    entry_id: uuidv4(), service_id: w.serviceId, billable_duration: 60, contract_line_id: w.lineId,
+    work_item_id: w.ticketId, work_item_type: 'ticket', work_date: date, start_time: `${date}T09:00:00Z`,
+  };
+  await db('time_entries').insert({
+    ...work, tenant, user_id: w.userId, end_time: `${date}T10:00:00Z`, work_timezone: 'UTC',
+    approval_status: 'APPROVED', invoiced: false,
+  });
+  return work;
+}
+
 describe.runIf(enabled)('Prepaid Block contract-end forfeiture', () => {
+  it.each([false, true])('keeps renewing blocks usable through their own expiry (renewal draft: %s)', async (hasDraft) => {
+    const w = await setup();
+    const renewalContractId = hasDraft ? uuidv4() : null;
+    if (renewalContractId) {
+      await db('contracts').insert({ tenant, contract_id: renewalContractId, contract_name: 'Renewal', currency_code: 'EUR', status: 'draft' });
+    }
+    await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId })
+      .update({ status: 'renewing', created_draft_contract_id: renewalContractId });
+    const blockId = await insertBlock(w, { remaining: 180, expiration: shiftDays(2) });
+    await expiredHourBlocksHandler({ tenantId: tenant });
+    expect((await blockRow(blockId)).status).toBe('active');
+
+    const { allocateTimeEntry, reconcileLineAllocations } = await import('@alga-psa/shared/billingClients/hourBlockService');
+    const work = await insertWork(w, today());
+    const afterExpiry = await insertWork(w, shiftDays(3));
+    await db.transaction(async (trx) => {
+      expect(await allocateTimeEntry(trx, tenant, w.clientId, work)).toEqual([{ block_id: blockId, minutes: 60 }]);
+      expect(await allocateTimeEntry(trx, tenant, w.clientId, afterExpiry)).toEqual([]);
+    });
+    await db.transaction((trx) => reconcileLineAllocations(trx, tenant, w.lineId));
+    expect((await db('hour_block_time_allocations').where({ tenant, block_id: blockId })).map((row) => [row.time_entry_id, Number(row.minutes)]))
+      .toEqual([[work.entry_id, 60]]);
+    expect(Number((await blockRow(blockId)).remaining_minutes)).toBe(120);
+  });
+
+  it('covers late renewal-interval work after the block expired, within its original validity', async () => {
+    const w = await setup();
+    await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId })
+      .update({ status: 'renewing', end_date: shiftDays(-10) });
+    const blockId = await insertBlock(w, { remaining: 180, expiration: shiftDays(-2) });
+    await expiredHourBlocksHandler({ tenantId: tenant });
+    expect((await blockRow(blockId)).status).toBe('expired');
+    const { allocateTimeEntry } = await import('@alga-psa/shared/billingClients/hourBlockService');
+    const work = await insertWork(w, shiftDays(-3));
+    const afterExpiry = await insertWork(w, shiftDays(-1));
+    await db.transaction(async (trx) => {
+      expect(await allocateTimeEntry(trx, tenant, w.clientId, work)).toEqual([{ block_id: blockId, minutes: 60 }]);
+      expect(await allocateTimeEntry(trx, tenant, w.clientId, afterExpiry)).toEqual([]);
+    });
+    expect(Number((await blockRow(blockId)).remaining_minutes)).toBe(120);
+  });
+
+  it('preserves historical renewal work on termination and refuses work after termination', async () => {
+    const w = await setup();
+    await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId })
+      .update({ status: 'renewing', end_date: shiftDays(-10) });
+    const blockId = await insertBlock(w, { remaining: 180 });
+    await expiredHourBlocksHandler({ tenantId: tenant });
+    await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId }).update({ is_active: false });
+    await expiredHourBlocksHandler({ tenantId: tenant });
+    expect((await blockRow(blockId)).status).toBe('expired');
+
+    const { allocateTimeEntry, reconcileLineAllocations } = await import('@alga-psa/shared/billingClients/hourBlockService');
+    const work = await insertWork(w, shiftDays(-1));
+    const afterTermination = await insertWork(w, shiftDays(1));
+    await db.transaction(async (trx) => {
+      expect(await allocateTimeEntry(trx, tenant, w.clientId, work)).toEqual([{ block_id: blockId, minutes: 60 }]);
+      expect(await allocateTimeEntry(trx, tenant, w.clientId, afterTermination)).toEqual([]);
+    });
+    await db.transaction((trx) => reconcileLineAllocations(trx, tenant, w.lineId));
+    expect((await db('hour_block_time_allocations').where({ tenant, block_id: blockId })).map((row) => [row.time_entry_id, Number(row.minutes)]))
+      .toEqual([[work.entry_id, 60]]);
+    expect(Number((await blockRow(blockId)).remaining_minutes)).toBe(120);
+  });
+
+  it('covers late work through the assignment end but never work after it', async () => {
+    const w = await setup();
+    const blockId = await insertBlock(w, { remaining: 180 });
+    await expiredHourBlocksHandler({ tenantId: tenant });
+    const { allocateTimeEntry, reconcileLineAllocations } = await import('@alga-psa/shared/billingClients/hourBlockService');
+    const addWork = async (date: string) => {
+      const entryId = uuidv4();
+      const start = `${date}T09:00:00.000Z`;
+      await db('time_entries').insert({
+        tenant, entry_id: entryId, user_id: w.userId, service_id: w.serviceId,
+        work_item_id: w.ticketId, work_item_type: 'ticket', contract_line_id: w.lineId,
+        start_time: start, end_time: `${date}T10:00:00.000Z`, work_date: date,
+        work_timezone: 'UTC', billable_duration: 60, approval_status: 'APPROVED', invoiced: false,
+      });
+      return { entry_id: entryId, service_id: w.serviceId, billable_duration: 60, contract_line_id: w.lineId,
+        work_item_id: w.ticketId, work_item_type: 'ticket', work_date: date, start_time: start };
+    };
+    const during = await addWork(shiftDays(-1));
+    const after = await addWork(today());
+    await db.transaction(async (trx) => {
+      expect(await allocateTimeEntry(trx, tenant, w.clientId, during)).toEqual([{ block_id: blockId, minutes: 60 }]);
+      expect(await allocateTimeEntry(trx, tenant, w.clientId, after)).toEqual([]);
+    });
+    await db.transaction((trx) => reconcileLineAllocations(trx, tenant, w.lineId));
+    expect((await db('hour_block_time_allocations').where({ tenant, block_id: blockId })).map((row) => [row.time_entry_id, Number(row.minutes)]))
+      .toEqual([[during.entry_id, 60]]);
+    expect(Number((await blockRow(blockId)).remaining_minutes)).toBe(120);
+  });
+
+  it('uses the termination date when the configured assignment end is later', async () => {
+    const w = await setup();
+    await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId }).update({ end_date: shiftDays(60), is_active: false });
+    const blockId = await insertBlock(w, { remaining: 180 });
+    await expiredHourBlocksHandler({ tenantId: tenant });
+    const audit = await db('hour_block_audit').where({ tenant, block_id: blockId, type: 'contract_end_expiration' }).first();
+    expect(audit.metadata.effective_end_date).toBe(today());
+    const { allocateTimeEntry } = await import('@alga-psa/shared/billingClients/hourBlockService');
+    const date = shiftDays(1);
+    const entryId = uuidv4();
+    await db('time_entries').insert({ tenant, entry_id: entryId, user_id: w.userId, service_id: w.serviceId,
+      work_item_id: w.ticketId, work_item_type: 'ticket', contract_line_id: w.lineId,
+      start_time: `${date}T09:00:00Z`, end_time: `${date}T10:00:00Z`, work_date: date,
+      work_timezone: 'UTC', billable_duration: 60, approval_status: 'APPROVED', invoiced: false });
+    await db.transaction(async (trx) => expect(await allocateTimeEntry(trx, tenant, w.clientId, {
+      entry_id: entryId, service_id: w.serviceId, billable_duration: 60, contract_line_id: w.lineId,
+      work_item_id: w.ticketId, work_item_type: 'ticket', work_date: date, start_time: `${date}T09:00:00Z`,
+    })).toEqual([]));
+    expect(Number((await blockRow(blockId)).remaining_minutes)).toBe(180);
+  });
+
+  it('reads legacy termination timestamps in the tenant business time zone', async () => {
+    const w = await setup();
+    await db('tenant_settings').where({ tenant }).update({ settings: JSON.stringify({ timezone: 'Pacific/Honolulu' }) });
+    await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId }).update({ end_date: '2026-12-31', is_active: false });
+    const blockId = await insertBlock(w, { remaining: 180, status: 'expired', expiration: '2026-12-31' });
+    await db('hour_block_audit').insert({ tenant, block_id: blockId, type: 'contract_end_expiration',
+      created_at: '2026-08-11T02:00:00Z', metadata: { assignment_status: 'terminated', assignment_end_date: '2026-12-31' } });
+    const { allocateTimeEntry } = await import('@alga-psa/shared/billingClients/hourBlockService');
+    for (const [date, expected] of [['2026-08-10', 60], ['2026-08-11', 0]] as const) {
+      const entryId = uuidv4();
+      await db('time_entries').insert({ tenant, entry_id: entryId, user_id: w.userId, service_id: w.serviceId,
+        work_item_id: w.ticketId, work_item_type: 'ticket', contract_line_id: w.lineId,
+        start_time: `${date}T09:00:00Z`, end_time: `${date}T10:00:00Z`, work_date: date,
+        work_timezone: 'UTC', billable_duration: 60, approval_status: 'APPROVED', invoiced: false });
+      await db.transaction(async (trx) => {
+        const allocations = await allocateTimeEntry(trx, tenant, w.clientId, { entry_id: entryId, service_id: w.serviceId,
+          billable_duration: 60, contract_line_id: w.lineId, work_item_id: w.ticketId, work_item_type: 'ticket',
+          work_date: date, start_time: `${date}T09:00:00Z` });
+        expect(allocations).toEqual(expected ? [{ block_id: blockId, minutes: expected }] : []);
+      });
+    }
+  });
+
+  it('sees an early-termination audit committed while allocation waits for the block lock', async () => {
+    const w = await setup();
+    await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId }).update({ end_date: shiftDays(60), is_active: false });
+    const blockId = await insertBlock(w, { remaining: 180 });
+    const date = today();
+    const entryId = uuidv4();
+    await db('time_entries').insert({ tenant, entry_id: entryId, user_id: w.userId, service_id: w.serviceId,
+      work_item_id: w.ticketId, work_item_type: 'ticket', contract_line_id: w.lineId,
+      start_time: `${date}T09:00:00Z`, end_time: `${date}T10:00:00Z`, work_date: date,
+      work_timezone: 'UTC', billable_duration: 60, approval_status: 'APPROVED', invoiced: false });
+    const holder = await db.transaction();
+    try {
+      await holder('hour_blocks').where({ tenant, block_id: blockId }).forUpdate().first();
+      await holder('hour_blocks').where({ tenant, block_id: blockId }).update({ status: 'expired' });
+      await holder('hour_block_audit').insert({ tenant, block_id: blockId, type: 'contract_end_expiration',
+        metadata: { assignment_status: 'terminated', effective_end_date: shiftDays(-1) } });
+      const { allocateTimeEntry } = await import('@alga-psa/shared/billingClients/hourBlockService');
+      let finished = false;
+      const allocation = db.transaction((trx) => allocateTimeEntry(trx, tenant, w.clientId, {
+        entry_id: entryId, service_id: w.serviceId, billable_duration: 60, contract_line_id: w.lineId,
+        work_item_id: w.ticketId, work_item_type: 'ticket', work_date: date, start_time: `${date}T09:00:00Z`,
+      })).finally(() => { finished = true; });
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      expect(finished).toBe(false);
+      await holder.commit();
+      expect(await allocation).toEqual([]);
+      expect(Number((await blockRow(blockId)).remaining_minutes)).toBe(180);
+    } finally {
+      if (!holder.isCompleted()) await holder.rollback();
+    }
+  });
+
+  it('rechecks uninvoiced allocations on expiry without changing invoiced allocations', async () => {
+    const w = await setup();
+    await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId }).update({ end_date: shiftDays(60) });
+    const blockId = await insertBlock(w, { remaining: 300 });
+    const { allocateTimeEntry } = await import('@alga-psa/shared/billingClients/hourBlockService');
+    const date = today();
+    const ids = [uuidv4(), uuidv4()];
+    for (const entryId of ids) {
+      await db('time_entries').insert({ tenant, entry_id: entryId, user_id: w.userId, service_id: w.serviceId,
+        work_item_id: w.ticketId, work_item_type: 'ticket', contract_line_id: w.lineId,
+        start_time: `${date}T09:00:00Z`, end_time: `${date}T10:00:00Z`, work_date: date,
+        work_timezone: 'UTC', billable_duration: 60, approval_status: 'APPROVED', invoiced: false });
+      await db.transaction(async (trx) => expect(await allocateTimeEntry(trx, tenant, w.clientId, {
+        entry_id: entryId, service_id: w.serviceId, billable_duration: 60, contract_line_id: w.lineId,
+        work_item_id: w.ticketId, work_item_type: 'ticket', work_date: date, start_time: `${date}T09:00:00Z`,
+      })).toEqual([{ block_id: blockId, minutes: 60 }]));
+    }
+    await db('time_entries').where({ tenant, entry_id: ids[0] }).update({ invoiced: true });
+    await db('client_contracts').where({ tenant, client_contract_id: w.clientContractId }).update({ end_date: shiftDays(-1) });
+    await expiredHourBlocksHandler({ tenantId: tenant });
+    expect((await db('hour_block_time_allocations').where({ tenant, block_id: blockId })).map((row) => [row.time_entry_id, Number(row.minutes)]))
+      .toEqual([[ids[0], 60]]);
+    expect(Number((await blockRow(blockId)).remaining_minutes)).toBe(240);
+  });
+
   it('expires active blocks of an ended assignment keeping the minutes, audits it, and cancels the line\'s scheduled issuances', async () => {
     const w = await setup();
     const forfeited = await insertBlock(w, { remaining: 90 });

@@ -100,6 +100,12 @@ describe('describeCustodyHistory', () => {
 });
 
 describe('custodyEventToHistoryEntry', () => {
+  it('preserves the photos on their custody event', async () => {
+    const { custodyEventToHistoryEntry } = await import('./custodyDisplay');
+    expect(custodyEventToHistoryEntry({ event_type: 'received', document_ids: ['photo-1', 'photo-2'] }).documentIds)
+      .toEqual(['photo-1', 'photo-2']);
+    expect(custodyEventToHistoryEntry({ event_type: 'moved' }).documentIds).toEqual([]);
+  });
   it('feeds the same sentences as history rows', async () => {
     const { custodyEventToHistoryEntry } = await import('./custodyDisplay');
     const moved = custodyEventToHistoryEntry({

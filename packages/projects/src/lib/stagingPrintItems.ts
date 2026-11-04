@@ -1,7 +1,7 @@
 import { MAX_LABELS_PER_REQUEST, type LabelClass } from '@alga-psa/types';
 
 /**
- * The staging page's bulk print order (C6 D11), as one mixed POST /api/labels/pdf request: for each box in
+ * The staging page's bulk print order (C6 D11), as one POST /api/labels/pdf label-subject list: for each box in
  * box order, the box label, then that box's unit labels (stock-unit-identity) and client-asset labels
  * (asset-identity); then staged items that are in no box. Quantity lines get no per-item label (they are
  * on the manifest). Unit labels are left out, and counted, when the user cannot read inventory, instead of
@@ -27,16 +27,16 @@ export interface PrintableLine extends PrintableMember {
 }
 
 export interface StagingPrintPlan {
-  items: Array<{ labelClass: LabelClass; id: string }>;
+  labels: Array<{ labelClass: LabelClass; recordId: string }>;
   /** Unit labels left out because the user lacks inventory:read. */
   droppedUnitLabels: number;
   /** True when the plan exceeds one print request: the user must choose fewer boxes. */
   overCap: boolean;
 }
 
-function memberLabel(member: PrintableMember): { labelClass: LabelClass; id: string } | null {
-  if (member.kind === 'stock' && member.unit_id) return { labelClass: 'stock-unit-identity', id: member.unit_id };
-  if (member.kind === 'client_asset' && member.asset_id) return { labelClass: 'asset-identity', id: member.asset_id };
+function memberLabel(member: PrintableMember): { labelClass: LabelClass; recordId: string } | null {
+  if (member.kind === 'stock' && member.unit_id) return { labelClass: 'stock-unit-identity', recordId: member.unit_id };
+  if (member.kind === 'client_asset' && member.asset_id) return { labelClass: 'asset-identity', recordId: member.asset_id };
   return null;
 }
 
@@ -46,7 +46,7 @@ export function planStagingPrint(
   options: { canReadInventory: boolean; boxIds?: readonly string[] | null; includeUnboxed?: boolean },
 ): StagingPrintPlan {
   const chosen = options.boxIds ? new Set(options.boxIds) : null;
-  const items: StagingPrintPlan['items'] = [];
+  const labels: StagingPrintPlan['labels'] = [];
   let droppedUnitLabels = 0;
   const push = (member: PrintableMember) => {
     const label = memberLabel(member);
@@ -55,12 +55,12 @@ export function planStagingPrint(
       droppedUnitLabels += 1;
       return;
     }
-    items.push(label);
+    labels.push(label);
   };
 
   for (const box of [...boxes].sort((a, b) => a.sequence - b.sequence)) {
     if (chosen && !chosen.has(box.container_id)) continue;
-    items.push({ labelClass: 'staging-container', id: box.container_id });
+    labels.push({ labelClass: 'staging-container', recordId: box.container_id });
     for (const member of box.members) push(member);
   }
   if (options.includeUnboxed !== false) {
@@ -68,5 +68,5 @@ export function planStagingPrint(
       if (line.status === 'staged' && line.container_ids.length === 0) push(line);
     }
   }
-  return { items, droppedUnitLabels, overCap: items.length > MAX_LABELS_PER_REQUEST };
+  return { labels, droppedUnitLabels, overCap: labels.length > MAX_LABELS_PER_REQUEST };
 }

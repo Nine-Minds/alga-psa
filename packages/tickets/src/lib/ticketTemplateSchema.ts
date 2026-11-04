@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import { findUnknownTitleTokens, TICKET_TITLE_TOKENS } from './ticketTitleTokens';
 
-const uuid = z.string().uuid();
+const uuid = z.string().guid();
 
 /** Template title with `{{token}}` placeholders; an unknown token is a save error (R8). */
 export const ticketTitleSchema = z
@@ -31,6 +31,8 @@ export const ticketTemplateInputSchema = z
     title: ticketTitleSchema,
     /** Same format as `tickets.attributes.description` (serialized BlockNote JSON or plain text). */
     description: z.string().nullable().default(null),
+    /** Client the template belongs to; null = available to every client (tenant-wide). */
+    client_id: uuid.nullable().default(null),
     board_id: uuid.nullable().default(null),
     category_id: uuid.nullable().default(null),
     subcategory_id: uuid.nullable().default(null),

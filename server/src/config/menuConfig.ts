@@ -61,6 +61,7 @@ import {
   Target,
   Repeat,
   Ticket,
+  Tags,
   BadgeCheck,
   Wrench,
   PackageOpen
@@ -91,6 +92,8 @@ export interface MenuItem {
 }
 
 export interface NavigationSection {
+  /** Stable React key for sections that have no title (the main group and slot-contributed groups). */
+  id?: string;
   title: string;
   translationKey?: string;
   items: MenuItem[];
@@ -98,6 +101,7 @@ export interface NavigationSection {
 
 export const navigationSections: NavigationSection[] = [
   {
+    id: 'main',
     title: '',
     items: [
       {
@@ -345,6 +349,7 @@ export const settingsNavigationSections: NavigationSection[] = [
     translationKey: 'settings.sections.workManagement',
     items: [
       { name: 'Ticketing', translationKey: 'settings.tabs.ticketing', icon: Ticket, href: '/msp/settings?tab=ticketing' },
+      { name: 'Tags', translationKey: 'settings.tabs.tags', icon: Tags, href: '/msp/settings/tags' },
       { name: 'SLA', translationKey: 'settings.tabs.sla', icon: Timer, href: '/msp/settings/sla' },
       { name: 'Projects', translationKey: 'settings.tabs.projects', icon: ListTodo, href: '/msp/settings/projects' },
       { name: 'Assets', translationKey: 'settings.tabs.assets', icon: Monitor, href: '/msp/settings/assets' },

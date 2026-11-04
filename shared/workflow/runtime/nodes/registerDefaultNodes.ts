@@ -35,7 +35,7 @@ const stateSetSchema = z.object({
 }).strict();
 
 const transformAssignSchema = z.object({
-  assign: z.record(exprSchema)
+  assign: z.record(z.string(), exprSchema)
 }).strict();
 
 const actionCallSchema = z.object({
@@ -48,7 +48,7 @@ const actionCallSchema = z.object({
   designerTileKind: z.enum(['core-object', 'transform', 'app', 'ai']).optional(),
   designerAppKey: z.string().min(1).optional(),
   aiOutputSchemaMode: z.enum(['simple', 'advanced']).optional(),
-  aiOutputSchema: z.record(z.unknown()).optional(),
+  aiOutputSchema: z.record(z.string(), z.unknown()).optional(),
   aiOutputSchemaText: z.string().optional(),
   onError: z.object({
     policy: z.enum(['fail', 'continue'])
@@ -89,8 +89,8 @@ const humanTaskSchema = z.object({
   taskType: z.string().min(1),
   title: exprSchema,
   description: exprSchema.optional(),
-  contextData: z.record(exprSchema).optional(),
-  assign: z.record(exprSchema).optional()
+  contextData: z.record(z.string(), exprSchema).optional(),
+  assign: z.record(z.string(), exprSchema).optional()
 }).strict();
 
 export function registerDefaultNodes(): void {

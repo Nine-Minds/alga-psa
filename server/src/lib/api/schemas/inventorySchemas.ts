@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const uuidSchema = z.string().uuid();
+const uuidSchema = z.string().guid();
 const nullableDateSchema = z.union([z.string(), z.date()]).nullable().optional();
 
 export const stockUnitStatusSchema = z.enum([

@@ -34,10 +34,15 @@ import {
   resolvePoolForService,
   type ConfiguredService,
   type ContractChargeSource,
+  type CadencePrepaidBlockSupply,
+  type HourBlockDrawSupply,
+  type PrepaidCoverageRow,
   type PoolDefinition,
   type PoolPeriodState,
   type ResolutionDiagnostics,
   type PooledTimeExclusion,
+  type PrepaidBlockIssuanceSupply,
+  type StreamTimings,
   type SuppliedCharge,
   type TaxContextDemand,
   type TimingRequest,
@@ -56,14 +61,17 @@ import {
   syntheticConfigId,
 } from "./syntheticActivity";
 import { simulationRefusal } from "./simulationRefusal";
+import type { PrepaidBlockLedger } from "./prepaidBlockLedger";
 
 /** State a simulation run threads across periods (pool rollover, in memory). */
 export interface ScenarioRunState {
   poolStates: Map<string, ReturnType<typeof calculateContractBucketPeriodState>>;
+  /** Prepaid Block lines' block timelines, by line key (see prepaidBlockLedger.ts). */
+  prepaidLedgers: Map<string, PrepaidBlockLedger>;
 }
 
 export function createScenarioRunState(): ScenarioRunState {
-  return { poolStates: new Map() };
+  return { poolStates: new Map(), prepaidLedgers: new Map() };
 }
 
 export interface ScenarioChargeSourceInput {
@@ -72,19 +80,18 @@ export interface ScenarioChargeSourceInput {
   lineFacts: ResolvedContractLineFacts;
   client: { client_id: string; is_tax_exempt?: boolean | null };
   billingPeriod: IBillingPeriod;
-  /** The line's covered service period for this invoice window. */
-  timing: ResolvedBillingTiming;
+  /**
+   * The line's covered service period per stream for this invoice window; a
+   * stream with no entry is not due here. Empty when the source answers only
+   * for the window itself (the window-driven prepaid-block families).
+   */
+  timings: StreamTimings;
   periodIndex: number;
   taxPorts: ChargeComputeTaxContext;
   currencyCode: string;
   lineCycle: string;
   diagnostics: SimulationDiagnostic[];
   run: ScenarioRunState;
-  /**
-   * Prepaid Block lines: share of this period's assumed hours that blocks
-   * absorb (0-1). Only the remainder bills at the hourly (overage) rate.
-   */
-  coveredByBlock?: number | null;
 }
 
 /** A pool as the scenario describes it, whichever way it was declared. */
@@ -111,14 +118,10 @@ export class ScenarioChargeSource implements ContractChargeSource {
   }
 
   async resolveTiming(request: TimingRequest): Promise<TimingResolution> {
-    if (request.duePosition !== "line") {
-      throw new Error(
-        `Scenario charge source cannot resolve a "${request.duePosition}" due position; only the line's own position is supported`,
-      );
-    }
-    // The caller only builds a source for a service period that is inside the
-    // contract's active window, so the line is always due here.
-    return { status: "due", timing: this.input.timing };
+    // The caller only puts a stream in `timings` for a service period that is
+    // inside the contract's active window, so a stream present here is due.
+    const timing = this.input.timings[request.stream];
+    return timing ? { status: "due", timing } : { status: "not-due" };
   }
 
   async taxContext(_demand: TaxContextDemand): Promise<ChargeComputeTaxContext> {
@@ -373,6 +376,129 @@ export class ScenarioChargeSource implements ContractChargeSource {
   }
 
   /* -------------------------------------------------------------- */
+  /* Prepaid blocks                                                 */
+  /* -------------------------------------------------------------- */
+
+  private ledger(): PrepaidBlockLedger | undefined {
+    return this.input.run.prepaidLedgers.get(this.input.line.key);
+  }
+
+  async prepaidBlockIssuances(): Promise<PrepaidBlockIssuanceSupply[]> {
+    const ledger = this.ledger();
+    if (!ledger) return [];
+    const { scenario, line, lineFacts, billingPeriod, currencyCode, periodIndex } =
+      this.input;
+    const { config, soldAs } = ledger;
+    return (ledger.issuesByPeriod.get(periodIndex) ?? []).map((issue) => ({
+      issuanceId: `sim-issuance:${line.key}:${issue.blockOrdinal}`,
+      contractLineId: line.key,
+      clientContractLineId: line.key,
+      clientContractId: scenario.contract_id,
+      contractName: scenario.name,
+      tenant: lineFacts.tenantId,
+      blockMinutes: config.block_minutes,
+      blockPrice: config.block_price,
+      expiryMonths: config.expiry_months,
+      scopeServiceIds: line.services.map((service) => service.service_id),
+      soldAsServiceId: soldAs.service_id,
+      // The engine names the issuance by the sold-as service; the invoice-line wording is added by
+      // prepaidBlockFeeDescription at presentation, so both sides read the same.
+      serviceName: soldAs.service_name,
+      soldAsTaxRateId: soldAs.tax_rate_id,
+      currencyCode,
+      taxDate: issue.issueDate,
+      servicePeriodStart: issue.issueDate,
+      servicePeriodEnd: billingPeriod.endDate,
+      // Simulated issues are dated, scheduled and ready by construction.
+      status: "scheduled",
+      dueDate: issue.issueDate,
+      readyAsOf: issue.issueDate,
+      billingProfile: null,
+    }));
+  }
+
+  /**
+   * The line's cadence block terms. Which periods are due, their dates and the
+   * price are the resolver's; the scenario only says what the block is.
+   */
+  async cadencePrepaidBlock(): Promise<CadencePrepaidBlockSupply | null> {
+    const config = this.input.line.prepaid_block;
+    const ledger = this.ledger();
+    if (!config || config.issue_mode !== "cadence" || !ledger?.cadenceRule) {
+      return null;
+    }
+    const { line } = this.input;
+    const { soldAs } = ledger;
+    return {
+      contractLineId: line.key,
+      blockMinutes: config.block_minutes,
+      blockPrice: config.block_price,
+      rolloverPeriods: config.rollover_periods ?? 0,
+      scopeServiceIds: line.services.map((service) => service.service_id),
+      soldAsServiceId: soldAs.service_id,
+      serviceName: soldAs.service_name,
+      soldAsTaxRateId: soldAs.tax_rate_id,
+      cadence: ledger.cadenceRule,
+    };
+  }
+
+  /** Billable minutes of each synthetic entry the hourly charge was built from. */
+  private readonly syntheticMinutes = new Map<string, number>();
+
+  /**
+   * The simulated draw as per-entry rows: the minutes of the period's demand
+   * that blocks absorbed, allocated to the synthetic entries in order as active
+   * block draws. The resolver applies the same subtraction it applies to the
+   * engine's real allocation rows.
+   */
+  async prepaidCoverage(entryIds: string[]): Promise<PrepaidCoverageRow[]> {
+    const share = Math.min(
+      1,
+      Math.max(0, this.ledger()?.demandCoverage.get(this.input.periodIndex) ?? 0),
+    );
+    if (!(share > 0)) return [];
+    // The engine allocates entry by entry in order (each entry draws from the
+    // earliest-expiring block with minutes left), so the period's covered
+    // minutes fill entries first-to-last rather than spreading one ratio over
+    // all of them.
+    const entries = entryIds.flatMap((entryId) => {
+      const minutes = this.syntheticMinutes.get(entryId);
+      return minutes === undefined ? [] : [{ entryId, minutes }];
+    });
+    let remaining = entries.reduce((sum, entry) => sum + entry.minutes, 0) * share;
+    const rows: PrepaidCoverageRow[] = [];
+    for (const { entryId, minutes } of entries) {
+      if (!(remaining > 0)) break;
+      const drawn = Math.min(minutes, remaining);
+      rows.push({ entryId, blockStatus: "active", minutes: drawn });
+      remaining -= drawn;
+    }
+    return rows;
+  }
+
+  async hourBlockDraws(): Promise<HourBlockDrawSupply | null> {
+    const ledger = this.ledger();
+    const draws = ledger?.drawsByPeriod.get(this.input.periodIndex) ?? [];
+    if (!ledger || draws.length === 0) return null;
+    const { line, billingPeriod } = this.input;
+    const { soldAs } = ledger;
+    return {
+      period: { startDate: billingPeriod.startDate, endDate: billingPeriod.endDate },
+      allocations: draws.map((draw) => ({
+        block_id: `sim-block:${line.key}:${draw.blockOrdinal}`,
+        block_status: "active",
+        service_id: soldAs.service_id,
+        service_name: `${soldAs.service_name} - block draw (block ${draw.blockOrdinal})`,
+        remaining_minutes: draw.remainingMinutes,
+        // A simulated draw is not attributable to a time entry.
+        time_entry_id: null,
+        minutes: draw.minutes,
+        billable_duration: 0,
+      })),
+    };
+  }
+
+  /* -------------------------------------------------------------- */
   /* Families                                                       */
   /* -------------------------------------------------------------- */
 
@@ -466,14 +592,14 @@ export class ScenarioChargeSource implements ContractChargeSource {
     const timeEntries = [] as Array<ReturnType<typeof buildSyntheticTimeEntry>>;
 
     for (const service of hourlyServices) {
-      const assumedHours =
-        resolveAssumedQuantity(
-          scenario.assumptions,
-          line.key,
-          service.service_id,
-          periodIndex,
-        ) *
-        (1 - Math.min(1, Math.max(0, this.input.coveredByBlock ?? 0)));
+      // The full assumed demand: what the blocks cover is subtracted by the
+      // resolver from prepaidCoverage(), the same rule the engine's draws use.
+      const assumedHours = resolveAssumedQuantity(
+        scenario.assumptions,
+        line.key,
+        service.service_id,
+        periodIndex,
+      );
       if (!(assumedHours > 0)) continue;
 
       if (!hasResolvableHourlyRate(service)) {
@@ -495,15 +621,15 @@ export class ScenarioChargeSource implements ContractChargeSource {
         continue;
       }
 
-      timeEntries.push(
-        buildSyntheticTimeEntry({
-          line,
-          service,
-          periodIndex,
-          assumedHours,
-          servicePeriodStart: timing.servicePeriodStart,
-        }),
-      );
+      const entry = buildSyntheticTimeEntry({
+        line,
+        service,
+        periodIndex,
+        assumedHours,
+        servicePeriodStart: timing.servicePeriodStart,
+      });
+      this.syntheticMinutes.set(entry.entry_id, Number(entry.billable_duration));
+      timeEntries.push(entry);
     }
 
     if (timeEntries.length === 0) return null;

@@ -37,6 +37,8 @@ const SILENT_WRITERS: Record<string, string> = {
   'shared/services/emailService.ts': 'not called by any production path (test-only helper); the inbound-email path publishes through emailWorkflowActions',
   'ee/temporal-workflows/src/activities/customer-tracking-activities.ts': 'tenant provisioning creates the first contact of a brand-new tenant; no webhook subscription can exist yet',
   'ee/temporal-workflows/src/activities/tenant-deletion-activities.ts': 'tenant deletion removes every row of the tenant, including its webhooks',
+  'ee/temporal-workflows/src/db/co-managed-provisioning-operations.ts': 'co-managed provisioning creates the first contact of a brand-new customer tenant; no webhook subscription can exist yet',
+  'ee/temporal-workflows/src/db/co-managed-provisioning-cleanup.ts': 'abandoned co-managed provisioning removes every row of the never-activated customer tenant, including its webhooks',
   'packages/clients/src/actions/contact-actions/contactNoteActions.ts': 'only sets notes_document_id (internal document link), not a contact attribute exposed by the webhook contract',
   'packages/documents/src/actions/documentActions.ts': 'clears notes_document_id when the notes document is deleted (internal link)',
   'packages/client-portal/src/actions/client-portal-actions/visibilityGroupActions.ts': 'portal_visibility_group_id is portal access configuration, not a contact attribute',

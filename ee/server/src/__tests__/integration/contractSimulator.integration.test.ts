@@ -287,6 +287,8 @@ describe("Contract simulator – migrated-schema integration", () => {
         day_of_week: null,
         reference_date: null,
       },
+      // No cycle rows exist for this client: the snapshot carries an empty history.
+      history: [],
     });
 
     const fixed = scenario.lines.find(
@@ -347,6 +349,23 @@ describe("Contract simulator – migrated-schema integration", () => {
         }),
       ]),
     );
+  });
+
+  it("carries the live billing identity on a live scenario, and still simulates old JSON without it", async () => {
+    const scenario = fixture.scenario;
+
+    expect(scenario.billing_identity).toBeTruthy();
+    expect(scenario.billing_identity!.profiles).toHaveLength(1);
+    expect(scenario.billing_identity!.terms.days).toBeGreaterThan(-1);
+    expect(scenario.billing_identity!.fields.find((f) => f.key === "currency")).toBeDefined();
+
+    // Scenarios persisted before the field existed must load and price identically.
+    const { billing_identity: _omit, ...legacy } = scenario;
+    const legacyScenario = JSON.parse(JSON.stringify(legacy)) as ContractScenario;
+    expect("billing_identity" in legacyScenario).toBe(false);
+    const withField = await simulateContractScenario(context.db, context.tenantId, scenario);
+    const withoutField = await simulateContractScenario(context.db, context.tenantId, legacyScenario);
+    expect(withoutField.periods.map((p) => p.total)).toEqual(withField.periods.map((p) => p.total));
   });
 
   it("snapshots and simulates a customer-shaped contract template for profile and client contexts", async () => {
@@ -854,7 +873,7 @@ describe("Contract simulator – migrated-schema integration", () => {
     );
   });
 
-  it("prefills recent averages and replay overrides from actual contract activity", async () => {
+  it("prefills recent averages and replay overrides (indexed by the invoice that bills the activity) from actual contract activity", async () => {
     await seedHistoricalActivity(context, fixture);
 
     const recentScenario = structuredClone(fixture.scenario);
@@ -876,6 +895,8 @@ describe("Contract simulator – migrated-schema integration", () => {
       ]?.flat,
     ).toBeCloseTo(4);
 
+    // Replay overrides are indexed by the invoice that BILLS the activity (the
+    // billing period index), not by the period the work happened in.
     const replay = await loadReplayAssumptions(
       context.db,
       context.tenantId,
@@ -891,12 +912,14 @@ describe("Contract simulator – migrated-schema integration", () => {
       replay.assumptions[
         assumptionKey(fixture.lines.hourly, fixture.services.hourly)
       ]?.overrides,
-    ).toEqual({ 0: 1, 1: 2, 2: 0 });
+    ).toEqual({ 0: 0, 1: 1, 2: 2 });
     expect(
       replay.assumptions[
         assumptionKey(fixture.lines.usage, fixture.services.usage)
       ]?.overrides,
-    ).toEqual({ 0: 3, 1: 0, 2: 9 });
+    ).toEqual({ 0: 0, 1: 3, 2: 0 });
+    // (The 9 units used on 21 Mar are billed by the fourth invoice, beyond the
+    // three-invoice replay, so they appear in no override.)
   });
 
   it("returns seeded issued invoices beside replay assumptions with normalized lines", async () => {

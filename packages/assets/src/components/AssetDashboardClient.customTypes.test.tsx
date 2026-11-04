@@ -9,11 +9,11 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import AssetDashboardClient from './AssetDashboardClient';
-import type { AssetListResponse } from '@alga-psa/types';
+import type { AssetListResponse, AssetQueryParams } from '@alga-psa/types';
 
 const mockListAssets = vi.fn();
 const mockGetClientMaintenanceSummaries = vi.fn();
@@ -21,6 +21,7 @@ const mockGetAssetTypes = vi.fn();
 const mockGetAssetCountsByType = vi.fn();
 
 vi.mock('./custody/CustodyBadge', () => ({ useCustodyBadges: () => new Map(), CustodyBadge: () => null }));
+vi.mock('./warranty/RmaBadge', () => ({ useRmaBadges: () => new Map(), RmaBadge: () => null }));
 vi.mock('../actions/assetActions', () => ({
   listAssets: (...args: unknown[]) => mockListAssets(...args),
   bulkUpdateAssets: vi.fn(),
@@ -41,8 +42,8 @@ vi.mock('../actions/assetDrawerActions', () => ({
 
 vi.mock('../actions/clientLookupActions', () => ({
   getVendorOptionsForAssets: vi.fn(async () => []),
-  getAllClientsForAssets: vi.fn(async () => []),
   getClientLocationsForAssets: vi.fn(async () => []),
+  getClientByIdForAssets: vi.fn(async () => null),
 }));
 
 vi.mock('../actions/assetTypeRegistryActions', () => ({
@@ -67,7 +68,7 @@ vi.mock('../context/AssetCrossFeatureContext', () => ({
 // Named views have their own tests; here they only need to stay out of the way
 // (the real hook reaches the server actions and the auth stack).
 vi.mock('@alga-psa/list-views/hooks', () => ({
-  useListViews: () => ({}),
+  useListViews: () => ({ isLoading: false, views: [] }),
 }));
 vi.mock('@alga-psa/list-views/components', () => ({ ListViewPicker: () => null }));
 vi.mock('./QuickAddAsset', () => ({ QuickAddAsset: () => null }));
@@ -279,17 +280,37 @@ const workstationEntry = {
 };
 
 function initialAssets(): AssetListResponse {
-  return { assets: allAssets, total: allAssets.length, page: 1, limit: 10 } as AssetListResponse;
+  return {
+    assets: allAssets,
+    total: allAssets.length,
+    page: 1,
+    limit: 10,
+    asset_type_counts: { workstation: 1, door_access: 1, mystery_thing: 1 },
+  };
 }
 
 describe('AssetDashboardClient custom types (T314)', () => {
   beforeEach(() => {
     mockListAssets.mockReset();
-    mockListAssets.mockImplementation(async (params: any) => {
-      const filtered = params?.asset_type
-        ? allAssets.filter((item) => item.asset_type === params.asset_type)
+    mockListAssets.mockImplementation(async (params: AssetQueryParams) => {
+      const search = params.search?.toLowerCase();
+      const matching = search
+        ? allAssets.filter((item) => item.name.toLowerCase().includes(search))
         : allAssets;
-      return { assets: filtered, total: filtered.length, page: params?.page ?? 1, limit: params?.limit ?? 10 };
+      const filtered = params?.asset_type
+        ? matching.filter((item) => item.asset_type === params.asset_type)
+        : matching;
+      const asset_type_counts: Record<string, number> = {};
+      for (const item of matching) {
+        asset_type_counts[item.asset_type] = (asset_type_counts[item.asset_type] ?? 0) + 1;
+      }
+      return {
+        assets: filtered,
+        total: filtered.length,
+        page: params?.page ?? 1,
+        limit: params?.limit ?? 10,
+        asset_type_counts,
+      };
     });
     mockGetClientMaintenanceSummaries.mockReset();
     mockGetClientMaintenanceSummaries.mockResolvedValue({});
@@ -360,5 +381,63 @@ describe('AssetDashboardClient custom types (T314)', () => {
       expect(chip).toBeTruthy();
       expect(chip!.textContent).toContain('Door Access System');
     });
+  });
+
+  it('updates the list and facet together from one action when search changes', async () => {
+    render(<AssetDashboardClient initialAssets={initialAssets()} />);
+    await waitFor(() => expect(mockListAssets).toHaveBeenCalled());
+    mockListAssets.mockClear();
+
+    fireEvent.change(screen.getByLabelText('asset-search-input'), { target: { value: 'Door' } });
+
+    await waitFor(() => {
+      expect(mockListAssets).toHaveBeenCalledWith(expect.objectContaining({ search: 'Door' }));
+      expect(document.getElementById('asset-table')?.textContent).toContain('Door 42');
+      expect(document.getElementById('asset-table')?.textContent).not.toContain('WS-1');
+      expect(document.getElementById('asset-type-breakdown-door_access')?.textContent).toContain('1');
+      expect(document.getElementById('asset-type-breakdown-workstation')).toBeNull();
+    });
+    expect(mockListAssets).toHaveBeenCalledTimes(1);
+    expect(mockGetAssetCountsByType).not.toHaveBeenCalled();
+  });
+
+  it('ignores a stale list response for both rows and type counts', async () => {
+    render(<AssetDashboardClient initialAssets={initialAssets()} />);
+    await waitFor(() => expect(mockListAssets).toHaveBeenCalled());
+
+    let resolveSlow: (response: AssetListResponse) => void = () => {
+      throw new Error('Slow request was not started');
+    };
+    let resolveFast: (response: AssetListResponse) => void = () => {
+      throw new Error('Fast request was not started');
+    };
+    mockListAssets.mockImplementation((params: AssetQueryParams) => {
+      if (params.search === 'slow') {
+        return new Promise<AssetListResponse>((resolve) => { resolveSlow = resolve; });
+      }
+      if (params.search === 'fast') {
+        return new Promise<AssetListResponse>((resolve) => { resolveFast = resolve; });
+      }
+      throw new Error(`Unexpected asset search: ${params.search}`);
+    });
+
+    const search = screen.getByLabelText('asset-search-input');
+    fireEvent.change(search, { target: { value: 'slow' } });
+    await waitFor(() => expect(mockListAssets).toHaveBeenCalledWith(expect.objectContaining({ search: 'slow' })));
+    fireEvent.change(search, { target: { value: 'fast' } });
+    await waitFor(() => expect(mockListAssets).toHaveBeenCalledWith(expect.objectContaining({ search: 'fast' })));
+
+    await act(async () => resolveFast({
+      assets: [allAssets[0]], total: 1, page: 1, limit: 10, asset_type_counts: { workstation: 1 },
+    }));
+    await act(async () => resolveSlow({
+      assets: [allAssets[1]], total: 1, page: 1, limit: 10, asset_type_counts: { door_access: 99 },
+    }));
+
+    expect(document.getElementById('asset-table')?.textContent).toContain('WS-1');
+    expect(document.getElementById('asset-table')?.textContent).not.toContain('Door 42');
+    expect(document.getElementById('asset-type-breakdown-workstation')?.textContent).toContain('1');
+    expect(document.getElementById('asset-type-breakdown-door_access')).toBeNull();
+    expect(mockGetAssetCountsByType).not.toHaveBeenCalled();
   });
 });

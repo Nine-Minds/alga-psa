@@ -59,7 +59,10 @@ describe('C2 label integration (real providers, real storage)', () => {
   describe('T-asset-link', () => {
     const parts = async (user: LabelWorld['tech'], ticketIds: string[], chosen: Record<string, string> = {}) => {
       const { getTicketLinkedAssetLabelParts } = await import('@alga-psa/assets/lib/ticketLinkedAssetLabels');
-      return asRequest(world.tenant, () => getTicketLinkedAssetLabelParts(ctx(user), ticketIds, chosen));
+      // Keyed by ticket for readability: one subject per ticket, carrying that ticket's pick.
+      const subjects = ticketIds.map((id) => ({ recordId: id, ...(chosen[id] ? { linkedAssetId: chosen[id] } : {}) }));
+      const list = await asRequest(world.tenant, () => getTicketLinkedAssetLabelParts(ctx(user), subjects));
+      return Object.fromEntries(ticketIds.map((id, i) => [id, list[i]]));
     };
 
     it('one readable linked asset gives its tag and the last four of the serial', async () => {
@@ -118,7 +121,7 @@ describe('C2 label integration (real providers, real storage)', () => {
       });
       const { printLabels } = await import('../../lib/labels/printLabels');
       const result = await asRequest(world.tenant, () =>
-        printLabels(deps, ctx(world.tech), { labelClass: 'ticket-work-tag', ids: [world.tickets.withOneAsset] })
+        printLabels(deps, ctx(world.tech), { labelClass: 'ticket-work-tag', labels: [{ recordId: world.tickets.withOneAsset }] })
       );
       expect(result).toMatchObject({ ok: true, skipped: 0 });
       expect(items[0].viewModel).toMatchObject({ secondaryIdentifier: 'TAG-A1', serialSuffix: '5678' });
@@ -185,7 +188,7 @@ describe('C2 label integration (real providers, real storage)', () => {
       const deps = await buildRealLabelDeps({ renderPdf: async () => ({ pdf: Buffer.from('%PDF'), labels: 1, sheets: 1 }) });
       const { printLabels } = await import('../../lib/labels/printLabels');
       const result = await asRequest(world.tenant, () =>
-        printLabels(deps, ctx(world.tech), { labelClass: 'ticket-work-tag', ids: [world.tickets.a1], templateId: assetCustom })
+        printLabels(deps, ctx(world.tech), { labelClass: 'ticket-work-tag', labels: [{ recordId: world.tickets.a1 }], templateId: assetCustom })
       );
       expect(result).toMatchObject({ ok: false, status: 400 });
     });
@@ -231,7 +234,7 @@ describe('C2 label integration (real providers, real storage)', () => {
     const run = async (user: LabelWorld['tech'], labelClass: string, ids: string[]) => {
       const { deps, printed } = await capture();
       const { printLabels } = await import('../../lib/labels/printLabels');
-      const result = await asRequest(world.tenant, () => printLabels(deps, ctx(user), { labelClass, ids }));
+      const result = await asRequest(world.tenant, () => printLabels(deps, ctx(user), { labelClass, labels: ids.map((recordId) => ({ recordId })) }));
       return { result, printed };
     };
 
@@ -256,6 +259,25 @@ describe('C2 label integration (real providers, real storage)', () => {
       for (const secret of ['TAG-B1', 'TAG-F1', a.b1, a.foreign]) {
         expect(body).not.toContain(secret);
       }
+    });
+
+    it('mixed classes in one request: order kept, skips counted per subject, templateId is a 400', async () => {
+      const t = world.tickets;
+      const a = world.assets;
+      const { deps, printed } = await capture();
+      const { printLabels } = await import('../../lib/labels/printLabels');
+      const labels = [
+        { labelClass: 'ticket-work-tag', recordId: t.a2 },
+        { labelClass: 'asset-identity', recordId: a.a3 },
+        { labelClass: 'ticket-work-tag', recordId: t.foreign },
+        { labelClass: 'asset-identity', recordId: a.foreign },
+        { labelClass: 'ticket-work-tag', recordId: t.a1 },
+      ];
+      const result = await asRequest(world.tenant, () => printLabels(deps, ctx(world.tech), { labels }));
+      expect(result).toMatchObject({ ok: true, labels: 3, skipped: 2 });
+      expect(printed).toEqual([t.a2, a.a3, t.a1]);
+      const refused = await asRequest(world.tenant, () => printLabels(deps, ctx(world.tech), { labels, templateId: 'standard-ticket-work-tag' }));
+      expect(refused).toMatchObject({ ok: false, status: 400 });
     });
 
     it('a user who can read 2 of 3 gets 2 labels and skipped 1', async () => {

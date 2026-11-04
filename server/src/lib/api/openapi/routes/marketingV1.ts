@@ -24,35 +24,35 @@ export function registerMarketingV1Routes(registry: ApiOpenApiRegistry) {
 
   const CampaignIdParam = registry.registerSchema(
     'MarketingCampaignIdParamV1',
-    zOpenApi.object({ id: zOpenApi.string().uuid().describe('Campaign UUID from marketing_campaigns.campaign_id.') }),
+    zOpenApi.object({ id: zOpenApi.string().guid().describe('Campaign UUID from marketing_campaigns.campaign_id.') }),
   );
   const ContentIdParam = registry.registerSchema(
     'MarketingContentIdParamV1',
-    zOpenApi.object({ id: zOpenApi.string().uuid().describe('Content UUID from marketing_content.content_id.') }),
+    zOpenApi.object({ id: zOpenApi.string().guid().describe('Content UUID from marketing_content.content_id.') }),
   );
   const ChannelIdParam = registry.registerSchema(
     'MarketingChannelIdParamV1',
-    zOpenApi.object({ id: zOpenApi.string().uuid().describe('Channel UUID from marketing_channels.channel_id.') }),
+    zOpenApi.object({ id: zOpenApi.string().guid().describe('Channel UUID from marketing_channels.channel_id.') }),
   );
   const FormIdParam = registry.registerSchema(
     'MarketingFormIdParamV1',
-    zOpenApi.object({ id: zOpenApi.string().uuid().describe('Capture form UUID from marketing_capture_forms.form_id.') }),
+    zOpenApi.object({ id: zOpenApi.string().guid().describe('Capture form UUID from marketing_capture_forms.form_id.') }),
   );
   const PostIdParam = registry.registerSchema(
     'MarketingPostIdParamV1',
-    zOpenApi.object({ id: zOpenApi.string().uuid().describe('Social post UUID from social_posts.post_id.') }),
+    zOpenApi.object({ id: zOpenApi.string().guid().describe('Social post UUID from social_posts.post_id.') }),
   );
   const TargetIdParam = registry.registerSchema(
     'MarketingTargetIdParamV1',
-    zOpenApi.object({ targetId: zOpenApi.string().uuid().describe('Post target UUID from social_post_targets.target_id.') }),
+    zOpenApi.object({ targetId: zOpenApi.string().guid().describe('Post target UUID from social_post_targets.target_id.') }),
   );
   const SequenceIdParam = registry.registerSchema(
     'MarketingSequenceIdParamV1',
-    zOpenApi.object({ id: zOpenApi.string().uuid().describe('Sequence UUID from marketing_sequences.sequence_id.') }),
+    zOpenApi.object({ id: zOpenApi.string().guid().describe('Sequence UUID from marketing_sequences.sequence_id.') }),
   );
   const EnrollmentIdParam = registry.registerSchema(
     'MarketingEnrollmentIdParamV1',
-    zOpenApi.object({ enrollmentId: zOpenApi.string().uuid().describe('Enrollment UUID from marketing_sequence_enrollments.enrollment_id.') }),
+    zOpenApi.object({ enrollmentId: zOpenApi.string().guid().describe('Enrollment UUID from marketing_sequence_enrollments.enrollment_id.') }),
   );
 
   const ContentListQuery = registry.registerSchema('MarketingContentListQueryV1', contentListQuerySchema);
@@ -95,15 +95,15 @@ export function registerMarketingV1Routes(registry: ApiOpenApiRegistry) {
   const ApiSuccess = registry.registerSchema(
     'MarketingApiSuccessV1',
     zOpenApi.object({
-      data: zOpenApi.record(zOpenApi.unknown()),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      data: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
   const ApiArraySuccess = registry.registerSchema(
     'MarketingApiArraySuccessV1',
     zOpenApi.object({
-      data: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      data: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 

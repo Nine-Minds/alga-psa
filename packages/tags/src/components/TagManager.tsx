@@ -9,6 +9,7 @@ import { toast } from 'react-hot-toast';
 import { useTags } from '../context/TagContext';
 import { handleError } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { isProvisionalTagId, useReconciledTags, type PendingTagOp } from './useReconciledTags';
 
 interface TagManagerProps {
   id?: string;
@@ -29,6 +30,8 @@ interface TagManagerProps {
     canDelete: boolean;
     canDeleteAll: boolean;
   };
+  /** Display the entity's tags with no add, remove, or edit affordance. */
+  readOnly?: boolean;
 }
 
 export const TagManager: React.FC<TagManagerProps> = ({
@@ -42,12 +45,13 @@ export const TagManager: React.FC<TagManagerProps> = ({
   allowTextEdit = true,
   useInlineInput = false,
   size = 'md',
-  permissions: passedPermissions
+  permissions: passedPermissions,
+  readOnly = false
 }) => {
   const { t } = useTranslation('common');
   // Always call useTags to avoid conditional hooks
   const tagContext = useTags();
-  const [tags, setTags] = useState<ITag[]>(initialTags);
+  const { tags, commitBase, getBase, runPendingOp, newProvisionalTagId } = useReconciledTags(initialTags);
   const [localAllTags, setLocalAllTags] = useState<ITag[]>([]);
   const [permissions, setPermissions] = useState(
     passedPermissions || {
@@ -79,14 +83,6 @@ export const TagManager: React.FC<TagManagerProps> = ({
       console.error('Error fetching tags:', error);
     }
   });
-  // Remove unused variables
-
-  // Initialize tags only once, then let optimistic updates take over
-  useEffect(() => {
-    if (initialTags.length > 0 || tags.length === 0) {
-      setTags(initialTags);
-    }
-  }, [initialTags.length]); // Only depend on length to avoid overriding optimistic updates
 
   // Sync with global TagContext for tag updates from other components of the SAME TYPE
   useEffect(() => {
@@ -102,7 +98,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
           }
         });
 
-      const updatedTags = tags.map(localTag => {
+      const syncWithGlobal = (localTag: ITag): ITag => {
         // First try to find by exact tag_id match (for the tag that was just edited)
         const exactMatch = tagContext.tags.find(globalT => globalT.tag_id === localTag.tag_id);
         if (exactMatch) {
@@ -127,7 +123,8 @@ export const TagManager: React.FC<TagManagerProps> = ({
         }
 
         return localTag;
-      });
+      };
+      const updatedTags = tags.map(syncWithGlobal);
 
       // Only update if there are actual changes
       const hasChanges = updatedTags.some((tag, index) => {
@@ -138,8 +135,9 @@ export const TagManager: React.FC<TagManagerProps> = ({
       });
 
       if (hasChanges) {
-        setTags(updatedTags);
-        onTagsChange?.(updatedTags);
+        // Apply to the reconciled base (not the displayed list) so a later
+        // initialTags refresh or settling op does not undo the sync.
+        onTagsChange?.(commitBase(getBase().map(syncWithGlobal)));
       }
     }
   }, [tagContext?.tags, entityType]); // Include entityType to ensure we only sync same-type tags
@@ -198,21 +196,28 @@ export const TagManager: React.FC<TagManagerProps> = ({
       return;
     }
 
-    try {
-      console.log('Adding tag:', { tagText, entityId, entityType });
-      const newTag = await createTag({
-        tag_text: tagText,
-        tagged_id: entityId,
-        tagged_type: entityType,
-      });
-      if (isTagActionError(newTag)) {
-        handleError(newTag);
-        return;
-      }
-      console.log('Tag created successfully:', newTag);
+    const provisionalTag: ITag = {
+      tag_id: newProvisionalTagId(),
+      tag_text: tagText,
+      tagged_id: entityId,
+      tagged_type: entityType,
+    };
 
-      const updatedTags = [...tags, newTag];
-      setTags(updatedTags);
+    try {
+      const updatedTags = await runPendingOp({ kind: 'add', tag: provisionalTag }, async () => {
+        const newTag = await createTag({
+          tag_text: tagText,
+          tagged_id: entityId,
+          tagged_type: entityType,
+        });
+        if (isTagActionError(newTag)) {
+          handleError(newTag);
+          return null;
+        }
+        return { kind: 'add', tag: newTag };
+      });
+      if (!updatedTags) return;
+
       onTagsChange?.(updatedTags);
 
       // Skip TagContext updates to prevent circular updates
@@ -224,7 +229,27 @@ export const TagManager: React.FC<TagManagerProps> = ({
     }
   };
 
+  /** Hide the tag until deleteTag settles; restore it if the delete fails. */
+  const removeTagOptimistically = async (tagId: string, deleteDefinition?: boolean) => {
+    const op: PendingTagOp = { kind: 'remove', tagId };
+    const updatedTags = await runPendingOp(op, async () => {
+      const result = deleteDefinition === undefined
+        ? await deleteTag(tagId)
+        : await deleteTag(tagId, deleteDefinition);
+      if (isTagActionError(result)) {
+        handleError(result);
+        return null;
+      }
+      return op;
+    });
+    if (updatedTags) {
+      onTagsChange?.(updatedTags);
+    }
+  };
+
   const handleRemoveTag = async (tagId: string) => {
+    // A provisional chip has no server row yet; it settles on its own.
+    if (isProvisionalTagId(tagId)) return;
     try {
       // Check if this is the last usage of the tag definition
       const usage = await getTagMappingUsageCount(tagId);
@@ -240,14 +265,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
         return;
       }
 
-      const result = await deleteTag(tagId);
-      if (isTagActionError(result)) {
-        handleError(result);
-        return;
-      }
-      const updatedTags = tags.filter(tag => tag.tag_id !== tagId);
-      setTags(updatedTags);
-      onTagsChange?.(updatedTags);
+      await removeTagOptimistically(tagId);
     } catch (error) {
       handleError(error);
     }
@@ -256,14 +274,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
   const handleConfirmRemoveAndDeleteDefinition = async () => {
     if (!pendingRemoveTagId) return;
     try {
-      const result = await deleteTag(pendingRemoveTagId, true);
-      if (isTagActionError(result)) {
-        handleError(result);
-        return;
-      }
-      const updatedTags = tags.filter(tag => tag.tag_id !== pendingRemoveTagId);
-      setTags(updatedTags);
-      onTagsChange?.(updatedTags);
+      await removeTagOptimistically(pendingRemoveTagId, true);
     } catch (error) {
       handleError(error);
     } finally {
@@ -276,14 +287,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
   const handleRemoveAndKeepDefinition = async () => {
     if (!pendingRemoveTagId) return;
     try {
-      const result = await deleteTag(pendingRemoveTagId, false);
-      if (isTagActionError(result)) {
-        handleError(result);
-        return;
-      }
-      const updatedTags = tags.filter(tag => tag.tag_id !== pendingRemoveTagId);
-      setTags(updatedTags);
-      onTagsChange?.(updatedTags);
+      await removeTagOptimistically(pendingRemoveTagId, false);
     } catch (error) {
       handleError(error);
     } finally {
@@ -294,6 +298,9 @@ export const TagManager: React.FC<TagManagerProps> = ({
   };
 
   const handleTagUpdate = async (tagId: string, updates: { text?: string; backgroundColor?: string | null; textColor?: string | null }) => {
+    if (isProvisionalTagId(tagId)) return;
+    const previousBase = getBase();
+    let optimisticBase: ITag[] | null = null;
 
     try {
       // Store original text for syncing other tags with same text
@@ -301,7 +308,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
       const originalText = originalTag?.tag_text;
 
       // For text updates, update ALL local tags with the same original text immediately
-      const updatedTags = tags.map(tag => {
+      const applyUpdate = (tag: ITag): ITag => {
         if (updates.text !== undefined && tag.tag_text === originalText && tag.tagged_type === entityType) {
           // Update all tags with the same original text
           return {
@@ -319,10 +326,10 @@ export const TagManager: React.FC<TagManagerProps> = ({
           };
         }
         return tag;
-      });
+      };
 
-      setTags(updatedTags);
-      onTagsChange?.(updatedTags);
+      optimisticBase = previousBase.map(applyUpdate);
+      onTagsChange?.(commitBase(optimisticBase));
 
       // Perform actual API updates through TagContext for global syncing
       // Only update TagContext if the API call is successful
@@ -343,9 +350,11 @@ export const TagManager: React.FC<TagManagerProps> = ({
     } catch (error) {
       console.error('TagManager update error:', error);
       handleError(error);
-      // Revert optimistic update on error
-      setTags(tags);
-      onTagsChange?.(tags);
+      // Revert optimistic update on error, unless an initialTags refresh has
+      // since replaced the base: that refresh is authoritative.
+      if (getBase() === optimisticBase) {
+        onTagsChange?.(commitBase(previousBase));
+      }
     }
   };
 
@@ -357,6 +366,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
         <div className={`flex flex-wrap ${gapClass}`}>
           <TagList
             tags={tags}
+            readOnly={readOnly}
             onRemoveTag={handleRemoveTag}
             allowColorEdit={allowColorEdit && permissions.canEditColors}
             allowTextEdit={allowTextEdit && permissions.canEditText}
@@ -365,7 +375,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
             size={size}
           />
         </div>
-        {(permissions.canAddExisting || permissions.canCreateNew) && (
+        {!readOnly && (permissions.canAddExisting || permissions.canCreateNew) && (
           <div className="flex-shrink-0 overflow-visible">
             {useInlineInput ? (
               <TagInputInline

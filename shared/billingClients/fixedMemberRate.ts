@@ -74,3 +74,98 @@ export function allocateCentsByWeights(
     proportions: members.map((member) => member.weight / weightSum),
   };
 }
+
+/**
+ * The persisted rate pair of a fixed member. The DB enforces
+ * `(base_rate IS NULL) = (base_rate_basis IS NULL)`: a stored number always
+ * states its meaning, and a NULL rate (catalog-priced / inherited) has none.
+ */
+export type FixedMemberRatePair =
+  | { base_rate: null; base_rate_basis: null }
+  | { base_rate: number; base_rate_basis: FixedRateBasis };
+
+/**
+ * A rate write that cannot be persisted (a basis with no rate, a seat priced
+ * as a share, a rate with no meaning). Thrown before the DB CHECK so the
+ * failure names the writer's mistake; `statusCode` makes the API answer 400.
+ */
+export class FixedMemberRatePairError extends Error {
+  readonly code = 'VALIDATION_ERROR';
+  readonly statusCode = 400;
+  constructor(message: string) {
+    super(message);
+    this.name = 'FixedMemberRatePairError';
+  }
+}
+
+/**
+ * The single normaliser for a fixed member's `base_rate` / `base_rate_basis`
+ * write. Every writer of `contract_line_service_fixed_config` (model, raw
+ * inserts, patches) goes through it, so no path can persist a split pair.
+ *
+ * - A NULL rate drops any stated basis: "use the catalog price" has no basis.
+ * - A number keeps the stated basis, else the row's stored one; a seat
+ *   (`pricing_basis='unit'`) is per-unit by definition and never a share.
+ */
+export function resolveFixedMemberRatePair(input: {
+  base_rate?: number | null;
+  base_rate_basis?: FixedRateBasis | null;
+  pricing_basis?: string | null;
+  /** The row's stored basis, for patches that keep it (update paths). */
+  storedBasis?: FixedRateBasis | null;
+}): FixedMemberRatePair {
+  if (input.base_rate === null || input.base_rate === undefined) {
+    return { base_rate: null, base_rate_basis: null };
+  }
+  const isSeat = input.pricing_basis === 'unit';
+  const basis = input.base_rate_basis ?? (isSeat ? 'per_unit' : input.storedBasis ?? null);
+  if (basis === null) {
+    throw new FixedMemberRatePairError('A fixed member base_rate requires base_rate_basis (per_unit or share).');
+  }
+  if (isSeat && basis === 'share') {
+    throw new FixedMemberRatePairError("A seat (pricing_basis 'unit') member cannot carry a 'share' base_rate.");
+  }
+  return { base_rate: input.base_rate, base_rate_basis: basis };
+}
+
+/**
+ * `contract_line_service_fixed_config.base_rate` is `numeric`, which the pg
+ * driver returns as a string (`'1500.00'`). Every reader hands clients a
+ * `number | null` through this one rule: null/undefined → null, else Number().
+ */
+export function coerceFixedMemberRate(value: number | string | null | undefined): number | null {
+  return value === null || value === undefined ? null : Number(value);
+}
+
+/**
+ * Resolve a patch against the stored row. A patch that states only a basis
+ * re-states it for the stored rate (a legitimate per_unit ↔ share change) and
+ * is refused on a NULL-rate row, where a basis has nothing to describe.
+ * Returns `undefined` when the patch touches neither column. Clearing the
+ * basis alone never drops a stored rate: the rate keeps its stored meaning.
+ */
+export function resolveFixedMemberRatePatch(
+  patch: { base_rate?: number | null; base_rate_basis?: FixedRateBasis | null; pricing_basis?: string | null },
+  stored: { base_rate?: number | string | null; base_rate_basis?: FixedRateBasis | null; pricing_basis?: string | null } | null | undefined,
+): FixedMemberRatePair | undefined {
+  const statesRate = patch.base_rate !== undefined;
+  const statesBasis = patch.base_rate_basis !== undefined;
+  if (!statesRate && !statesBasis) return undefined;
+
+  const storedRate = coerceFixedMemberRate(stored?.base_rate);
+  const rate = statesRate ? patch.base_rate ?? null : storedRate;
+  if (!statesRate && rate === null && patch.base_rate_basis !== null) {
+    throw new FixedMemberRatePairError('A fixed member base_rate_basis requires base_rate');
+  }
+  return resolveFixedMemberRatePair({
+    base_rate: rate,
+    base_rate_basis: patch.base_rate_basis,
+    pricing_basis: patch.pricing_basis ?? stored?.pricing_basis ?? null,
+    storedBasis: stored?.base_rate_basis ?? null,
+  });
+}
+
+/** Who owns a freshly written rate: a stored number is `custom`, NULL follows the catalog. */
+export function fixedMemberRateProvenance(pair: FixedMemberRatePair): 'custom' | 'inherited' {
+  return pair.base_rate === null ? 'inherited' : 'custom';
+}

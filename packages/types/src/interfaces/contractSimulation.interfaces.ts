@@ -3,6 +3,7 @@ import type { CadenceOwner } from "./recurringTiming.interfaces";
 import type { ChargeExplanation } from "./billingCompute.interfaces";
 import type { BillingCycleType } from "./billing.interfaces";
 import type { FixedPricingBasis } from "./contractLineServiceConfiguration.interfaces";
+import type { ContractBillingTrace } from "./contract.interfaces";
 import type { WasmInvoiceViewModel } from "../lib/invoice-renderer/types";
 
 /**
@@ -180,6 +181,10 @@ export interface ScenarioPrepaidBlockConfig {
   /** Carried for display; renewal issuance is not simulated. */
   trigger_on_renewal: boolean;
   replenishment_tier: "draft" | "auto_issue";
+  /** Defaults to 'consumption'. 'cadence' issues one block per service period, billed in advance. */
+  issue_mode?: "consumption" | "cadence";
+  /** Cadence mode: further periods an unused block stays valid (0..12). Defaults to 0. */
+  rollover_periods?: number;
 }
 
 export interface ScenarioLine {
@@ -254,6 +259,41 @@ export interface SimulationHorizon {
   period_count: number;
 }
 
+/**
+ * Hard upper bound on the invoice periods one simulation may span. Scenarios
+ * over it are rejected (never clamped) at the action boundary and again in the
+ * EE simulator.
+ */
+export const MAX_SIMULATION_PERIODS = 120;
+
+/** Thrown when a simulation horizon exceeds MAX_SIMULATION_PERIODS. */
+export class ContractSimulationBoundsError extends Error {
+  public readonly code = "CONTRACT_SIMULATION_HORIZON_TOO_LONG";
+  public readonly maxPeriods = MAX_SIMULATION_PERIODS;
+  public readonly requestedPeriods: unknown;
+
+  constructor(requestedPeriods: unknown) {
+    super(
+      Number.isInteger(requestedPeriods)
+        ? `A simulation can span at most ${MAX_SIMULATION_PERIODS} billing periods; got ${requestedPeriods}. Choose a shorter horizon.`
+        : `A simulation horizon must be a whole number of billing periods (at most ${MAX_SIMULATION_PERIODS}). Choose a valid horizon.`,
+    );
+    this.name = "ContractSimulationBoundsError";
+    this.requestedPeriods = requestedPeriods;
+  }
+}
+
+/**
+ * Throws ContractSimulationBoundsError unless `periodCount` is an integer no
+ * greater than the limit. Values below 1 are left to the simulator's own
+ * "positive integer" refusal.
+ */
+export function assertSimulationPeriodCountWithinBounds(periodCount: unknown): void {
+  if (!Number.isInteger(periodCount) || (periodCount as number) > MAX_SIMULATION_PERIODS) {
+    throw new ContractSimulationBoundsError(periodCount);
+  }
+}
+
 export interface ScenarioAssumptionPrefill {
   assumptions: Record<string, ScenarioAssumption>;
   horizon?: SimulationHorizon;
@@ -282,6 +322,17 @@ export interface ScenarioBillingSchedule {
     day_of_week: number | null;
     reference_date: ISO8601String | null;
   };
+  /**
+   * The client's persisted (active) billing-cycle windows, [start, end). A
+   * client that changed billing cycle was billed under the old cycle for these
+   * windows; the simulator takes them verbatim and applies `billing_cycle` /
+   * `anchor` (the current schedule) only outside them. Absent for a schedule
+   * with no client (template contracts).
+   */
+  history?: Array<{
+    start_date: ISO8601String;
+    end_date: ISO8601String;
+  }>;
 }
 
 export interface ContractScenario {
@@ -290,6 +341,13 @@ export interface ContractScenario {
   contract_id: string | null;
   is_system_managed_default: boolean;
   client_binding: ScenarioClientBinding;
+  /**
+   * Which billing profile(s) and terms the live contract resolved to when the
+   * scenario was snapshotted. Display only: simulated pricing does not read it
+   * (tax still uses the client-level exemption). Absent on scenarios persisted
+   * before this field existed; null for drafts and template-only scenarios.
+   */
+  billing_identity?: ContractBillingTrace | null;
   invoice_schedule: ScenarioBillingSchedule;
   billing_frequency: string;
   contract_start_date: ISO8601String | null;
@@ -404,6 +462,8 @@ export interface ContractDraftPrepaidBlockLine {
     trigger_on_expiry?: boolean;
     trigger_on_renewal?: boolean;
     replenishment_tier?: "draft" | "auto_issue";
+    issue_mode?: "consumption" | "cadence";
+    rollover_periods?: number;
   };
 }
 
@@ -419,6 +479,8 @@ export interface ContractDraftSimulationInput {
   billing_timing?: "arrears" | "advance";
   enable_proration: boolean;
   fixed_lines: ContractWizardFixedLine[];
+  /** Products line's own timing; undefined inherits `billing_timing`. */
+  product_billing_timing?: "arrears" | "advance";
   product_services: Array<{
     service_id: string;
     service_name?: string;
@@ -461,6 +523,14 @@ export type SimulatedPeriodMarker =
 
 export interface SimulatedInvoiceLine {
   line_key: string;
+  /**
+   * The saved contract line this charge came from. Issued and simulated lines
+   * both carry it, so past-invoice comparison pairs on (origin line, charge
+   * type, service) instead of on resolver keys or description text. Null for
+   * lines with no saved origin (draft contracts, actual lines that are not
+   * contract charges).
+   */
+  origin_contract_line_id?: string | null;
   service_id: string | null;
   service_name: string;
   charge_type: string;

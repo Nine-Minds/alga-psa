@@ -519,6 +519,32 @@
     },
     "layout": {
       "defaultTitle": "Pulpit | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Współzarządzane IT"
+    },
+    "coManagement": {
+      "title": "Dostęp do współzarządzania",
+      "administration": {
+        "title": "Administracja współzarządzana"
+      },
+      "customerTickets": {
+        "title": "Zgłoszenia klientów"
+      },
+      "sharedTicket": {
+        "title": "Udostępnione zgłoszenie"
+      },
+      "providers": {
+        "title": "Dostawcy poczty e-mail i tożsamości"
+      },
+      "sharedTasks": {
+        "title": "Udostępnione zadania",
+        "taskTitle": "Udostępnione zadanie",
+        "projectTitle": "Udostępniony projekt"
+      },
+      "export": {
+        "title": "Eksportuj obszar roboczy"
+      }
     }
   },
   "auth": {

@@ -30,7 +30,6 @@ vi.mock('@alga-psa/ui/components', () => ({
 }));
 vi.mock('@alga-psa/ui/components/Drawer', () => ({ default: () => null }));
 vi.mock('./shared/useAssetStatusOptions', () => ({
-  resolveAssetStatusLabel: () => 'Active',
   useAssetStatusRegistry: () => ({ statuses: [] }),
 }));
 vi.mock('./AssetAssigneeRow', () => ({ AssetAssigneeRow: () => null }));
@@ -51,6 +50,10 @@ vi.mock('./custody/CustodyCard', () => ({
   CustodyCard: ({ id, assetId }: { id: string; assetId: string }) => (
     <div id={id} data-asset-id={assetId} />
   ),
+}));
+
+vi.mock('./warranty/WarrantyCard', () => ({
+  WarrantyCard: ({ id, assetId }: { id: string; assetId: string }) => <div id={id} data-asset-id={assetId} />,
 }));
 
 import { AssetBentoLayout } from './AssetBentoLayout';

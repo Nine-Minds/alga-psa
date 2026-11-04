@@ -7892,6 +7892,20 @@
   },
   {
     "edition": "CE",
+    "route_path": "/api/v1/tickets/{id}/watchers",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PATCH",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/tickets/[id]/watchers/route.ts",
+    "controller": "ApiTicketController",
+    "controller_import": "server/src/lib/api/controllers/ApiTicketController",
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts"
+  },
+  {
+    "edition": "CE",
     "route_path": "/api/v1/time-entries",
     "methods": [
       "GET",

@@ -291,6 +291,14 @@ export interface QboTenantCredentials {
   realmId: string;
   accessTokenExpiresAt?: string; // ISO 8601 format timestamp
   refreshTokenExpiresAt?: string; // ISO 8601 format timestamp
+  /**
+   * The Intuit environment this realm was authorized in, stamped at callback
+   * time. A realm and its tokens only exist in one environment, so this — not
+   * the current tenant setting — decides which API host to call. Absent on
+   * connections made before the setting existed; those fall back to the tenant
+   * setting and then the deployment default.
+   */
+  environment?: 'sandbox' | 'production';
 }
 
 /**

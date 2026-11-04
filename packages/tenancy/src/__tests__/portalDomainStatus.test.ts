@@ -16,7 +16,10 @@ vi.mock('@alga-psa/db', () => ({
       let filter: Record<string, unknown> | null = null;
       const builder = {
         where(condition: Record<string, unknown>) {
-          filter = condition;
+          filter = { ...(filter ?? {}), ...condition };
+          return builder;
+        },
+        orderBy() {
           return builder;
         },
         async first() {

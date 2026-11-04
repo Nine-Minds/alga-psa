@@ -28,13 +28,14 @@ import { toISODate, toPlainDate } from "@alga-psa/core";
 import { tenantDb } from "@alga-psa/db";
 import { resolveCadenceOwner } from "@alga-psa/shared/billingClients/recurringTiming";
 import { resolveEffectiveBillingTiming } from "@alga-psa/shared/billingClients/contractLineTimingRule";
-import { getClientBillingCycleAnchor } from "@alga-psa/shared/billingClients/billingSchedule";
+import { loadClientInvoiceSchedule } from "./clientInvoiceSchedule";
 import { simulationRefusal } from "./simulationRefusal";
 import { normalizeAnchorSettingsForCycle } from "@alga-psa/shared/billingClients/billingCycleAnchors";
 import {
   ClientContractServiceConfigurationService,
   type ClientContractServiceConfigDetails,
 } from "@alga-psa/billing/services/clientContractServiceConfigurationService";
+import { loadContractBillingTrace } from "@alga-psa/shared/billingClients/contractBillingTrace";
 import { assumptionKey } from "./syntheticActivity";
 
 const DEFAULT_HORIZON_PERIOD_COUNT = 6;
@@ -154,6 +155,8 @@ interface PrepaidBlockRow {
   trigger_on_expiry: boolean | null;
   trigger_on_renewal: boolean | null;
   replenishment_tier: string | null;
+  issue_mode?: string | null;
+  rollover_periods?: number | string | null;
 }
 
 /**
@@ -174,6 +177,8 @@ function toScenarioPrepaidBlock(row: PrepaidBlockRow | undefined): ScenarioPrepa
     trigger_on_expiry: Boolean(row.trigger_on_expiry),
     trigger_on_renewal: Boolean(row.trigger_on_renewal),
     replenishment_tier: row.replenishment_tier === "auto_issue" ? "auto_issue" : "draft",
+    issue_mode: row.issue_mode === "cadence" ? "cadence" : "consumption",
+    rollover_periods: row.rollover_periods != null ? Number(row.rollover_periods) : 0,
   };
 }
 
@@ -534,7 +539,7 @@ export async function snapshotContractToScenario(
     ? []
     : await loadScenarioDiscounts(db, params.contractId);
 
-  const { clientBinding, contractStartDate, contractEndDate, invoiceSchedule } =
+  const { clientBinding, contractStartDate, contractEndDate, invoiceSchedule, billingIdentitySource } =
     await resolveClientBinding(
       knex,
       db,
@@ -566,6 +571,14 @@ export async function snapshotContractToScenario(
     contract_id: contract.contract_id,
     is_system_managed_default: Boolean(contract.is_system_managed_default),
     client_binding: clientBinding,
+    // Display only: names the profile and terms the live binding resolves to.
+    // Pricing below does not read it.
+    billing_identity: billingIdentitySource
+      ? await loadContractBillingTrace(knex, tenant, {
+          contractId: params.contractId,
+          clientContractId: billingIdentitySource.clientContractId,
+        })
+      : null,
     invoice_schedule: invoiceSchedule,
     billing_frequency: contract.billing_frequency,
     contract_start_date: contractStartDate,
@@ -1233,6 +1246,8 @@ async function resolveClientBinding(
   contractStartDate: ISO8601String | null;
   contractEndDate: ISO8601String | null;
   invoiceSchedule: ScenarioBillingSchedule;
+  /** Which live binding the billing trace describes; null when no live assignment was resolved. */
+  billingIdentitySource: { clientContractId?: string } | null;
 }> {
   if (params.clientContractId) {
     const clientContract = await db
@@ -1286,6 +1301,7 @@ async function resolveClientBinding(
         tenant,
         client.client_id,
       ),
+      billingIdentitySource: { clientContractId: params.clientContractId },
     };
   }
 
@@ -1313,6 +1329,7 @@ async function resolveClientBinding(
         tenant,
         client.client_id,
       ),
+      billingIdentitySource: null,
     };
   }
 
@@ -1326,6 +1343,7 @@ async function resolveClientBinding(
       contractStartDate: null,
       contractEndDate: null,
       invoiceSchedule: buildDefaultInvoiceSchedule(contract.billing_frequency),
+      billingIdentitySource: null,
     };
   }
 
@@ -1354,6 +1372,7 @@ async function resolveClientBinding(
         tenant,
         client.client_id,
       ),
+      billingIdentitySource: {},
     };
   }
 
@@ -1368,23 +1387,7 @@ async function resolveClientBinding(
     contractStartDate: null,
     contractEndDate: null,
     invoiceSchedule: buildDefaultInvoiceSchedule(contract.billing_frequency),
-  };
-}
-
-async function loadClientInvoiceSchedule(
-  knex: Knex,
-  tenant: string,
-  clientId: string,
-): Promise<ScenarioBillingSchedule> {
-  const schedule = await getClientBillingCycleAnchor(knex, tenant, clientId);
-  return {
-    billing_cycle: schedule.billingCycle,
-    anchor: {
-      day_of_month: schedule.anchor.dayOfMonth,
-      month_of_year: schedule.anchor.monthOfYear,
-      day_of_week: schedule.anchor.dayOfWeek,
-      reference_date: schedule.anchor.referenceDate,
-    },
+    billingIdentitySource: null,
   };
 }
 

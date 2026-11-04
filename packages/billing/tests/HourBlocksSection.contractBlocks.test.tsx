@@ -10,6 +10,7 @@ vi.mock('@alga-psa/billing/actions/hourBlockActions', () => ({
   listHourBlocks: (...args: unknown[]) => listHourBlocksMock(...args),
 }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useFormatters: () => ({ locale: 'en' }),
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, any>) => {
       const template: string = opts?.defaultValue ?? key;
@@ -101,5 +102,15 @@ describe('HourBlocksSection contract blocks', () => {
     // Ad-hoc block keeps the Void action.
     expect(document.getElementById('hb-void-adhoc-1')).not.toBeNull();
     expect(document.getElementById('hb-source-contract-adhoc-1')).toBeNull();
+  });
+
+  it('shows a valid-from line only for blocks that have a lower bound', async () => {
+    listHourBlocksMock.mockResolvedValue([
+      { ...base, block_id: 'cad-1', source_type: 'contract', contract_line_id: 'L', contract_name: 'Acme MSP', valid_from: '2026-11-01' },
+      { ...base, block_id: 'plain-1', source_type: 'purchase', contract_line_id: null, valid_from: null },
+    ]);
+    render(<HourBlocksSection clientId="c" currencyCode="EUR" />);
+    await waitFor(() => expect(document.getElementById('hb-valid-from-cad-1')).not.toBeNull());
+    expect(document.getElementById('hb-valid-from-plain-1')).toBeNull();
   });
 });

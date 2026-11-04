@@ -150,7 +150,11 @@
       "title": "Affectation client",
       "useTenantRenewalDefaults": "Utiliser les valeurs par défaut de renouvellement du locataire",
       "usingCustomSettings": "Utilisation de paramètres d'affectation personnalisés",
-      "usingTenantDefaults": "Utilisation des valeurs par défaut du locataire"
+      "usingTenantDefaults": "Utilisation des valeurs par défaut du locataire",
+      "billingProfileUseDefault": "Utiliser {{name}} (par défaut du client)",
+      "billingProfileAssigned": "Profil de facturation attribué",
+      "billingProfileUnavailable": "Aucun profil — attribution en attente",
+      "billingProfileLoading": "Chargement du profil de facturation…"
     },
     "clientOwnership": {
       "assignmentStatus": "Statut d'affectation",
@@ -375,6 +379,82 @@
         "failed": "Impossible de modifier la façon dont ce service est mesuré."
       },
       "effectiveFrom": "Changement de mesure applicable à partir du"
+    },
+    "billing": {
+      "title": "Profil de facturation et conditions de paiement",
+      "asOf": "au {{date}}",
+      "profileLabel": "Profil de facturation",
+      "inactive": "Inactif",
+      "lineCountOne": "{{count}} ligne",
+      "lineCountOther": "{{count}} lignes",
+      "termsLabel": "Conditions de paiement",
+      "terms": {
+        "net_30": "Net à 30 jours",
+        "net_15": "Net à 15 jours",
+        "net_14": "Net à 14 jours",
+        "net_7": "Net à 7 jours",
+        "due_on_receipt": "Dû à réception"
+      },
+      "termsSource": {
+        "profile": "du profil de facturation",
+        "client": "du client",
+        "tenant": "de la valeur par défaut du locataire",
+        "default": "par défaut : aucune condition définie"
+      },
+      "profileSource": {
+        "client_default": "par défaut du client",
+        "contract": "attribué au contrat",
+        "contract_line": "défini sur la ligne",
+        "work_item": "défini sur le ticket ou le projet"
+      },
+      "valueSource": {
+        "profile": "Profil",
+        "client": "Client",
+        "contract": "Contrat",
+        "default": "Par défaut"
+      },
+      "dueSentence": "Une facture du {{invoiceDate}} est due le {{dueDate}} — {{terms}} {{source}}",
+      "detailsToggle": "Autres détails de facturation",
+      "fieldNone": "Aucun",
+      "taxRegionChain": "Région du service, puis lieu de la ligne de contrat, puis valeur par défaut du client",
+      "taxExempt": "Exonéré de taxes",
+      "taxable": "Imposable",
+      "templateCustom": "Modèle personnalisé",
+      "templateDefault": "Modèle par défaut",
+      "paymentMethod": {
+        "credit_card": "Carte de crédit",
+        "bank_transfer": "Virement bancaire",
+        "check": "Chèque"
+      },
+      "fieldLabel": {
+        "bill_to": "Facturer à",
+        "payment_method": "Mode de paiement",
+        "tax_exemption": "Exonération fiscale",
+        "tax_region": "Région fiscale",
+        "delivery": "Envoi des factures",
+        "template": "Modèle de facture",
+        "po_number": "Numéro de bon de commande",
+        "currency": "Devise",
+        "cadence": "Fréquence de facturation",
+        "profile_billing_cycle": "Cycle de facturation du profil",
+        "profile_billing_cycle_unapplied": "Cycle de facturation du profil (pas encore appliqué)"
+      },
+      "warnings": {
+        "inactiveProfile": "{{name}} est inactif. Les frais lui restent attribués, mais ils sont facturés sur le profil par défaut, avec ses conditions de paiement.",
+        "mixedProfiles": "Ce contrat est facturé via {{count}} profils différents ; aucun profil unique ne le couvre. Chaque facture applique les conditions de paiement du profil sur lequel elle est émise.",
+        "lineOverride": "La ligne « {{line}} » est facturée via {{name}} au lieu du profil du contrat.",
+        "workItemOverride": "Le temps saisi sur un ticket ou un projet est facturé via le profil de cet élément de travail s'il en a un. Sinon, c'est le profil par défaut du client qui s'applique.",
+        "workItemOverrideWithProfiles": "Le temps saisi sur un ticket ou un projet est facturé via le profil de cet élément de travail s'il en a un ({{names}}). Sinon, c'est le profil par défaut du client qui s'applique.",
+        "mixedProfilesSameInvoice": "Les frais de ce contrat sont attribués à {{count}} profils différents, mais ils figurent tous sur la facture de {{invoice}} ; un seul jeu de conditions de paiement s'applique.",
+        "bucketCoverageNote": "Sur les lignes avec un forfait prépayé ou un bloc d'heures, le temps couvert par le forfait ou le bloc ne suit pas l'élément de travail ; seul le reste du temps horaire le suit."
+      },
+      "simulationNote": "La tarification simulée utilise l'exonération fiscale au niveau du client. L'exonération propre à un profil n'est pas appliquée dans cette simulation.",
+      "dueSentenceWorkItem": "Une facture du {{invoiceDate}} est due le {{dueDate}} — {{terms}} {{source}}, sauf si le ticket ou le projet est facturé via un autre profil",
+      "workItemProfileLine": "Si le ticket ou le projet est facturé via {{name}} :",
+      "invoiceLanding": {
+        "notBilledSeparately": "Attribué à {{attributed}} ; facturé sur {{invoice}} ({{attributed}} ne facture pas séparément) — {{terms}}, échéance le {{dueDate}}",
+        "inactiveProfile": "Attribué à {{attributed}} ; facturé sur {{invoice}} ({{attributed}} est inactif et n'a donc pas de facture propre) — {{terms}}, échéance le {{dueDate}}"
+      }
     }
   },
   "contractDialog": {
@@ -588,7 +668,8 @@
       "failedToResetRate": "Échec de la réinitialisation du tarif de la ligne",
       "protectedStartDate": "La date de début doit être le {{boundary}} ou antérieure pour inclure l’historique protégé.",
       "protectedEndDate": "La date de fin doit être le {{boundary}} ou postérieure pour inclure l’historique protégé.",
-      "cannotEditWithInvoices": "Impossible de modifier la ligne de contrat : ce contrat comporte des factures associées. Les lignes de contrat ne peuvent plus être modifiées une fois les factures générées."
+      "cannotEditWithInvoices": "Impossible de modifier la ligne de contrat : ce contrat comporte des factures associées. Les lignes de contrat ne peuvent plus être modifiées une fois les factures générées.",
+      "reloadLatest": "Recharger la dernière version"
     },
     "loading": {
       "contractLines": "Chargement des lignes de contrat",
@@ -698,6 +779,13 @@
       "statusSuperseded": "Remplacé",
       "supersededHistory": "Modifications en attente remplacées ({{count}})",
       "supersededBy": "Remplacé par"
+    },
+    "pricing": {
+      "catalog": "catalogue",
+      "override": "remplacé",
+      "cost": "Coût : {{cost}}",
+      "costInCurrency": "Coût en {{currency}} : {{cost}}",
+      "margin": "Marge : {{margin}} par unité"
     }
   },
   "contractLineEdit": {
@@ -1695,6 +1783,9 @@
       "label": "Profil de facturation",
       "none": "Utiliser le profil par défaut du client",
       "hint": "Les charges de ce contrat sont facturées à ce profil, sauf si une ligne le remplace."
+    },
+    "billingTiming": {
+      "label": "Moment de facturation"
     }
   },
   "wizardFixed": {
@@ -1745,10 +1836,7 @@
       "allocationQuantityLabel": "Quantité d’allocation",
       "noCurrencyPrice": "Aucun prix en {{currency}} dans le catalogue. Saisissez un tarif unitaire."
     },
-    "advanceSuggestion": {
-      "message": "Facturée à terme échu, cette ligne ne peut pas être facturée avant la fin de sa première période de service. Avec une facturation par avance selon le rythme du contrat, elle est facturée à la date de début.",
-      "action": "Facturer par avance selon le rythme du contrat"
-    }
+    "billingTimingLabel": "Moment de facturation"
   },
   "wizardProducts": {
     "actions": {
@@ -1771,7 +1859,8 @@
       "productMissingPrice": "Ce produit n'a ni prix par défaut ni prix de remplacement. Il ne peut pas être facturé tant que vous n'avez pas saisi de prix unitaire.",
       "noCurrencyPriceEnterUnitPrice": "Aucun prix en {{currency}} dans le catalogue. Saisissez un prix unitaire.",
       "noCurrencyPriceWithLegacyHint": "Aucun prix en {{currency}} dans le catalogue. Tarif par défaut hérité : {{rate}}. Saisissez un prix unitaire en {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Moment de facturation"
   },
   "wizardHourly": {
     "actions": {
@@ -1829,7 +1918,8 @@
         "rolloverDisabled": "Désactivé",
         "rolloverEnabled": "Activé"
       }
-    }
+    },
+    "billingTimingLabel": "Moment de facturation"
   },
   "wizardUsage": {
     "actions": {
@@ -1867,7 +1957,8 @@
     },
     "values": {
       "defaultUnit": "unité"
-    }
+    },
+    "billingTimingLabel": "Moment de facturation"
   },
   "wizardReview": {
     "heading": "Vérifier le contrat",
@@ -1976,7 +2067,10 @@
         "one": "{{count}} produit",
         "other": "{{count}} produits"
       },
-      "overrideRate": "- remplacement {{rate}}/{{currencyCode}}"
+      "overrideRate": "- remplacement {{rate}}/{{currencyCode}}",
+      "cost": "Coût : {{cost}}",
+      "costInCurrency": "Coût en {{currency}} : {{cost}}",
+      "margin": "Marge : {{margin}} par unité"
     },
     "hourly": {
       "badgeCount": {
@@ -1999,8 +2093,12 @@
     "total": {
       "title": "Total mensuel estimé",
       "description": "Les produits et les frais fixes sont inclus dans ce total. Les services horaires et à l'usage sont facturés selon le réel.",
-      "perMonth": "par mois",
-      "savedDraftValue": "Valeur du brouillon enregistré : {{amount}}"
+      "savedDraftValue": "Valeur du brouillon enregistré : {{amount}}",
+      "titleCadence": "Total estimé",
+      "mixedFrequencyTitle": "Total estimé par fréquence de facturation",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "environ {{amount}} par mois",
+      "savedDraftValueMonthly": "Valeur du brouillon enregistré : {{amount}} par mois"
     },
     "finalChecklist": {
       "title": "Avant de terminer :",
@@ -2015,7 +2113,16 @@
       "blockSummary": "{{hours}} heures pour {{price}}",
       "expiresAfter_one": "expire après {{count}} mois",
       "expiresAfter_other": "expire après {{count}} mois",
-      "neverExpires": "n'expire jamais"
+      "neverExpires": "n'expire jamais",
+      "cadenceSummary": "{{hours}} h par période de facturation pour {{price}}",
+      "overageRate": "dépassement {{rate}}/h"
+    },
+    "billingTiming": {
+      "label": "Moment de facturation :",
+      "advance": "À l'avance",
+      "arrears": "À terme échu",
+      "advanceInherited": "À l'avance (valeur par défaut du contrat)",
+      "arrearsInherited": "À terme échu (valeur par défaut du contrat)"
     }
   },
   "wizardTemplateLines": {
@@ -2317,7 +2424,8 @@
       "period": "Période : {{period}}"
     },
     "prepaid": {
-      "blockSummaryNeutral": "{{hours}} heures pour {{price}} (dans la devise du client)"
+      "blockSummaryNeutral": "{{hours}} heures pour {{price}} (dans la devise du client)",
+      "cadenceSummaryNeutral": "{{hours}} h par période de facturation pour {{price}} (dans la devise du client)"
     }
   },
   "templatePreview": {
@@ -2760,6 +2868,7 @@
   "wizardFirstInvoice": {
     "loading": "Vérification du calendrier de facturation du client…",
     "arrearsPreviewNote": "D'ici là, un aperçu des factures de ce client n'a rien à facturer pour cette ligne.",
+    "arrearsPreviewNoteMany": "D'ici là, un aperçu des factures de ce client n'a rien à facturer pour ces lignes.",
     "unavailable": {
       "missingStartDate": "Choisissez une date de début pour voir quand ce contrat sera facturé pour la première fois.",
       "unsupportedFrequency": "Aucune date de première facture n'est affichée, car la facturation selon le rythme du contrat ne prend pas en charge cette fréquence. Choisissez une fréquence prise en charge ou facturez selon le calendrier du client.",
@@ -2770,7 +2879,8 @@
       "advance": "Facturée par avance selon le rythme du contrat : la première facture est disponible à partir du {{date}}, la date de début du contrat."
     },
     "client": {
-      "arrears": "Facturée à terme échu selon le calendrier de facturation du client : la première facture sera disponible le {{date}}, à la fin de la période de facturation en cours du client.",
+      "arrears": "Facturée à terme échu selon le calendrier de facturation du client : la première facture sera disponible le {{date}}, à la fin de la période de facturation du client qui contient la date de début.",
+      "arrearsPartial": "Facturée à terme échu selon le calendrier de facturation du client : la première facture sera disponible le {{date}}, à la fin de la période de facturation du client qui contient la date de début. La date de début tombant en cours de période, elle couvre {{periodStart}} – {{periodEnd}}.",
       "advance": "Facturée par avance selon le calendrier de facturation du client : la première facture est disponible à partir du {{date}}, le début de la période de facturation du client qui contient la date de début du contrat."
     }
   },
@@ -2781,7 +2891,7 @@
     "done": "Terminé"
   },
   "sellHourBlockNote": {
-    "text": "Un forfait d'heures de contrat ne facture que le dépassement. Pour facturer d'avance un bloc d'heures, ajoutez une ligne Bloc prépayé à ce contrat."
+    "text": "Un forfait d'heures de contrat ne facture que le dépassement. Pour facturer un bloc d'heures d'avance, ajoutez une ligne Bloc prépayé au contrat et émettez-la à chaque période de facturation."
   },
   "review": {
     "saveTemplateRates": "Enregistrer ces tarifs en {{currency}} dans le modèle",
@@ -2795,7 +2905,11 @@
     "options": {
       "advance": "À l’avance (facturer au début de la période)",
       "arrears": "À terme échu (facturer à la fin de la période)"
-    }
+    },
+    "inheritWithValue": "Utiliser la valeur par défaut du contrat — {{timing}}",
+    "inheritedAdvance": "à l'avance",
+    "inheritedArrears": "à terme échu",
+    "contractDefaultHelp": "Valeur par défaut pour les lignes forfaitaires, qui peuvent être facturées à l'avance. Les lignes horaires et d'utilisation sont toujours facturées à terme échu, quel que soit votre choix ici."
   },
   "contractDiscounts": {
     "title": "Remises",
@@ -2963,7 +3077,17 @@
       "tier": "Facture suivante",
       "tierDraft": "Créer un brouillon à vérifier",
       "tierAutoIssue": "Finaliser et envoyer automatiquement",
-      "blockPriceNeutral": "Prix du bloc (dans la devise du client)"
+      "blockPriceNeutral": "Prix du bloc (dans la devise du client)",
+      "ratePerHour": "Soit {{rate}} par heure du bloc.",
+      "issueMode": "Émettre les blocs",
+      "issueModeCadence": "Chaque période de facturation",
+      "blockFeeInAdvance": "La ligne est facturée à terme échu ; les frais du bloc sont facturés d’avance.",
+      "issueModeConsumption": "Quand le bloc en cours est épuisé ou expiré",
+      "rolloverPeriods": "Heures non utilisées",
+      "rolloverNone": "Expirent à la fin de la période",
+      "cadenceNote": "Facturé d'avance à chaque période. Les heures au-delà du bloc sont facturées au taux horaire de la ligne sur la facture suivante.",
+      "rolloverCarry_one": "Reporter {{count}} période",
+      "rolloverCarry_other": "Reporter {{count}} périodes"
     },
     "status": {
       "pending": "En attente",
@@ -2988,5 +3112,9 @@
       "invalidBlock": "Renseignez la taille, le prix et les déclencheurs de chaque ligne de bloc prépayé avant de terminer.",
       "rateRequired": "Le service de bloc prépayé « {{serviceName}} » nécessite un taux horaire supérieur à zéro (les heures au-delà du bloc sont facturées à ce taux)."
     }
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "Première facture : la facture du {{invoiceDate}} couvre {{periodStart}} – {{periodEnd}} (facturée à terme échu). Choisissez « À l'avance » pour la facturer sur la facture de la période commençant le {{advanceInvoiceDate}}.",
+    "billInAdvance": "Facturer à l'avance"
   }
 }

@@ -262,3 +262,30 @@ describe('toSnakeFieldPath', () => {
     expect(toSnakeFieldPath('email')).toBe('email');
   });
 });
+
+describe('quote webhooks', () => {
+  it('matches quote IDs as well as client IDs', async () => {
+    const { quoteWebhookSubscriber } = await import('../entityWebhookSubscribers');
+    state.listForEventType.mockResolvedValue([sub({ eventFilter: { entity_ids: [LOCATION] } })]);
+    await quoteWebhookSubscriber.handle(busEvent('QUOTE_SENT', { quoteId: LOCATION, clientId: CLIENT }));
+    expect(state.enqueue).toHaveBeenCalledTimes(1);
+    expect(state.enqueue).toHaveBeenCalledWith(expect.objectContaining({ payload: { quote_id: LOCATION, client_id: CLIENT } }));
+  });
+
+  it('filters by client and projects carried fields while retaining the quote ID', async () => {
+    const { quoteWebhookSubscriber } = await import('../entityWebhookSubscribers');
+    state.listForEventType.mockResolvedValue([
+      sub({ eventFilter: { entity_ids: [CLIENT] }, payloadFields: { quote: ['selected_optional_item_ids'] } }),
+      sub({ webhookId: 'other', eventFilter: { entity_ids: [OTHER_CLIENT] } }),
+    ]);
+    await quoteWebhookSubscriber.handle(busEvent('QUOTE_ACCEPTED', {
+      quoteId: LOCATION, clientId: CLIENT, acceptedByName: 'A', selectedOptionalItemIds: [CONTACT],
+    }));
+    expect(state.listForEventType).toHaveBeenCalledWith(TENANT, 'quote.accepted');
+    expect(state.enqueue).toHaveBeenCalledTimes(1);
+    expect(state.enqueue).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: TENANT, webhookId: 'w1', eventType: 'quote.accepted',
+      payload: { quote_id: LOCATION, selected_optional_item_ids: [CONTACT] },
+    }));
+  });
+});

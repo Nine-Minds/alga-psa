@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
-import type { IAssetCustodyDetail } from '@alga-psa/types';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import type { CustodyEventType, IAssetCustodyDetail } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -18,6 +18,9 @@ import {
   shipCustody,
   updateCustody,
 } from '../../actions/assetCustodyActions';
+import { useAssetCrossFeature } from '../../context/AssetCrossFeatureContext';
+import { CustodyPhotoField } from './CustodyPhotoField';
+import { custodyPhotosWithinLimit } from '../../lib/custody/photoLimits';
 import { custodyOutcome, useCustodyLocations, useCustodyUsers } from './custodyClient';
 import {
   CUSTODY_NOTE_MAX,
@@ -43,6 +46,9 @@ interface StepDialogProps {
   onDone: () => void;
 }
 
+/** A refusal from a dialog's `onSubmit`; `fieldId` names the control to focus and mark `aria-invalid`. */
+export type DialogSubmitError = string | { message: string; fieldId?: string };
+
 export function DialogShell({
   id,
   title,
@@ -60,14 +66,15 @@ export function DialogShell({
   submitLabel: string;
   isOpen: boolean;
   onClose: () => void;
-  /** Resolve to an error message to keep the dialog open, or null on success. */
-  onSubmit: () => Promise<string | null>;
+  /** Resolve to an error (message, or message + the id of the offending field) to keep the dialog open, or null on success. */
+  onSubmit: () => Promise<DialogSubmitError | null>;
   canSubmit?: boolean;
   children: React.ReactNode;
 }) {
   const { t } = useTranslation('msp/assets');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; fieldId?: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const alertRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -76,14 +83,45 @@ export function DialogShell({
     }
   }, [isOpen]);
 
+  // The error sits in a sticky region at the top of the body, so it is in view whatever the scroll
+  // position. Announce it by moving focus: to the offending field when the caller named one, else to the alert.
+  useEffect(() => {
+    if (!error) return;
+    const alert = alertRef.current;
+    const field = error.fieldId ? document.getElementById(error.fieldId) : null;
+    if (!field) {
+      alert?.scrollIntoView?.({ block: 'nearest' });
+      alert?.focus();
+      return;
+    }
+    field.setAttribute('aria-invalid', 'true');
+    // The sticky alert would otherwise sit on top of the field. Focus without scrolling, then scroll the
+    // field into view with a scroll-margin equal to the alert's measured height (plus padding).
+    const previousMargin = field.style.scrollMarginTop;
+    field.style.scrollMarginTop = `${(alert?.getBoundingClientRect().height ?? 0) + 16}px`;
+    field.focus({ preventScroll: true });
+    field.scrollIntoView?.({ block: 'nearest' });
+    const clear = () => field.removeAttribute('aria-invalid');
+    field.addEventListener('input', clear);
+    field.addEventListener('change', clear);
+    return () => {
+      clear();
+      field.style.scrollMarginTop = previousMargin;
+      field.removeEventListener('input', clear);
+      field.removeEventListener('change', clear);
+    };
+  }, [error]);
+
   const submit = async () => {
     setBusy(true);
     setError(null);
     try {
-      const message = await onSubmit();
-      if (message) setError(message);
+      const failure = await onSubmit();
+      if (failure) setError(typeof failure === 'string' ? { message: failure } : failure);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t('custody.errors.generic', { defaultValue: 'Something went wrong.' }));
+      setError({
+        message: cause instanceof Error ? cause.message : t('custody.errors.generic', { defaultValue: 'Something went wrong.' }),
+      });
     } finally {
       setBusy(false);
     }
@@ -109,13 +147,19 @@ export function DialogShell({
     >
       <DialogContent>
         <div className="space-y-4">
+          {error ? (
+            <div
+              id={`${id}-error`}
+              ref={alertRef}
+              role="alert"
+              tabIndex={-1}
+              className="sticky top-0 z-10 rounded-md border border-destructive bg-alert-destructive-bg px-3 py-2 text-sm text-[rgb(var(--color-text-800))] outline-none"
+            >
+              {error.message}
+            </div>
+          ) : null}
           {description ? <p className="text-sm text-[rgb(var(--color-text-600))]">{description}</p> : null}
           {children}
-          {error ? (
-            <p role="alert" className="text-sm text-[rgb(var(--badge-danger-text))]">
-              {error}
-            </p>
-          ) : null}
         </div>
       </DialogContent>
     </Dialog>
@@ -141,8 +185,29 @@ export async function finish(result: unknown, onDone: () => void, onClose: () =>
   return null;
 }
 
+/** One upload path for every step; file selection stays local until the step is submitted. */
+function useCustodyPhotoSubmission(isOpen: boolean, custodyId: string, step: string) {
+  const { recordCustodyEventWithPhotos } = useAssetCrossFeature();
+  const [photos, setPhotos] = useState<File[]>([]);
+  useEffect(() => { setPhotos([]); }, [isOpen, custodyId]);
+  return {
+    valid: custodyPhotosWithinLimit(photos),
+    field: recordCustodyEventWithPhotos
+      ? <CustodyPhotoField id={`custody-${step}-${custodyId}-photos`} photos={photos} onChange={setPhotos} />
+      : null,
+    async submit<T extends object>(eventType: CustodyEventType, input: T, withoutPhotos: (id: string, input: T) => Promise<unknown>) {
+      if (!photos.length) return withoutPhotos(custodyId, input);
+      if (!recordCustodyEventWithPhotos) throw new Error('Custody photo uploads are unavailable');
+      const form = new FormData();
+      photos.forEach(file => form.append('photos', file));
+      return recordCustodyEventWithPhotos(custodyId, { ...input, event_type: eventType }, form);
+    },
+  };
+}
+
 export function MoveCustodyDialog({ isOpen, onClose, custody, onDone }: StepDialogProps) {
   const { t } = useTranslation('msp/assets');
+  const photo = useCustodyPhotoSubmission(isOpen, custody.custody_id, 'move');
   const { locations } = useCustodyLocations(isOpen);
   const [locationId, setLocationId] = useState('');
   const [bin, setBin] = useState('');
@@ -164,14 +229,14 @@ export function MoveCustodyDialog({ isOpen, onClose, custody, onDone }: StepDial
       submitLabel={t('custody.move.submit', { defaultValue: 'Move' })}
       isOpen={isOpen}
       onClose={onClose}
-      canSubmit={changed}
+      canSubmit={changed && photo.valid}
       onSubmit={async () =>
         finish(
-          await moveCustody(custody.custody_id, {
+          await photo.submit('moved', {
             location_id: locationId || undefined,
             bin: bin.trim() || null,
             note: note.trim() || undefined,
-          }),
+          }, moveCustody),
           onDone,
           onClose
         )
@@ -187,6 +252,7 @@ export function MoveCustodyDialog({ isOpen, onClose, custody, onDone }: StepDial
         locationLabel={t('custody.move.toLocation', { defaultValue: 'Move to' })}
       />
       <NoteField id={`custody-move-${custody.custody_id}-note`} value={note} onChange={setNote} />
+      {photo.field}
     </DialogShell>
   );
 }
@@ -224,6 +290,7 @@ export function HolderPicker({
 
 export function HandOffCustodyDialog({ isOpen, onClose, custody, onDone }: StepDialogProps) {
   const { t } = useTranslation('msp/assets');
+  const photo = useCustodyPhotoSubmission(isOpen, custody.custody_id, 'handoff');
   const [holder, setHolder] = useState('');
   const [note, setNote] = useState('');
   useEffect(() => {
@@ -240,10 +307,10 @@ export function HandOffCustodyDialog({ isOpen, onClose, custody, onDone }: StepD
       submitLabel={t('custody.handOff.submit', { defaultValue: 'Hand off' })}
       isOpen={isOpen}
       onClose={onClose}
-      canSubmit={Boolean(holder)}
+      canSubmit={Boolean(holder) && photo.valid}
       onSubmit={async () =>
         finish(
-          await handOffCustody(custody.custody_id, { to_holder_user_id: holder, note: note.trim() || undefined }),
+          await photo.submit('handed_off', { to_holder_user_id: holder, note: note.trim() || undefined }, handOffCustody),
           onDone,
           onClose
         )
@@ -257,12 +324,14 @@ export function HandOffCustodyDialog({ isOpen, onClose, custody, onDone }: StepD
         placeholder={t('custody.handOff.selectHolder', { defaultValue: 'Select a person' })}
       />
       <NoteField id={`custody-handoff-${custody.custody_id}-note`} value={note} onChange={setNote} />
+      {photo.field}
     </DialogShell>
   );
 }
 
 export function ShipCustodyDialog({ isOpen, onClose, custody, onDone }: StepDialogProps) {
   const { t } = useTranslation('msp/assets');
+  const photo = useCustodyPhotoSubmission(isOpen, custody.custody_id, 'ship');
   const [counterparty, setCounterparty] = useState('');
   const [note, setNote] = useState('');
   useEffect(() => {
@@ -282,10 +351,10 @@ export function ShipCustodyDialog({ isOpen, onClose, custody, onDone }: StepDial
       submitLabel={t('custody.ship.submit', { defaultValue: 'Ship' })}
       isOpen={isOpen}
       onClose={onClose}
-      canSubmit={counterparty.trim().length > 0}
+      canSubmit={counterparty.trim().length > 0 && photo.valid}
       onSubmit={async () =>
         finish(
-          await shipCustody(custody.custody_id, { counterparty: counterparty.trim(), note: note.trim() || undefined }),
+          await photo.submit('shipped', { counterparty: counterparty.trim(), note: note.trim() || undefined }, shipCustody),
           onDone,
           onClose
         )
@@ -304,12 +373,14 @@ export function ShipCustodyDialog({ isOpen, onClose, custody, onDone }: StepDial
         />
       </div>
       <NoteField id={`custody-ship-${custody.custody_id}-note`} value={note} onChange={setNote} />
+      {photo.field}
     </DialogShell>
   );
 }
 
 export function ReceiveBackCustodyDialog({ isOpen, onClose, custody, onDone }: StepDialogProps) {
   const { t } = useTranslation('msp/assets');
+  const photo = useCustodyPhotoSubmission(isOpen, custody.custody_id, 'receive-back');
   const { locations } = useCustodyLocations(isOpen);
   const [locationId, setLocationId] = useState('');
   const [bin, setBin] = useState('');
@@ -338,15 +409,15 @@ export function ReceiveBackCustodyDialog({ isOpen, onClose, custody, onDone }: S
       submitLabel={t('custody.receiveBack.submit', { defaultValue: 'Receive back' })}
       isOpen={isOpen}
       onClose={onClose}
-      canSubmit={Boolean(locationId)}
+      canSubmit={Boolean(locationId) && photo.valid}
       onSubmit={async () =>
         finish(
-          await receiveBackCustody(custody.custody_id, {
+          await photo.submit('received', {
             location_id: locationId,
             bin: bin.trim() || null,
             holder_user_id: holder || undefined,
             note: note.trim() || undefined,
-          }),
+          }, receiveBackCustody),
           onDone,
           onClose
         )
@@ -368,12 +439,14 @@ export function ReceiveBackCustodyDialog({ isOpen, onClose, custody, onDone }: S
         placeholder={t('custody.receiveBack.me', { defaultValue: 'Me' })}
       />
       <NoteField id={`custody-receive-back-${custody.custody_id}-note`} value={note} onChange={setNote} />
+      {photo.field}
     </DialogShell>
   );
 }
 
 export function ReturnCustodyDialog({ isOpen, onClose, custody, onDone }: StepDialogProps) {
   const { t } = useTranslation('msp/assets');
+  const photo = useCustodyPhotoSubmission(isOpen, custody.custody_id, 'return');
   const [counterparty, setCounterparty] = useState('');
   const [note, setNote] = useState('');
   useEffect(() => {
@@ -393,12 +466,13 @@ export function ReturnCustodyDialog({ isOpen, onClose, custody, onDone }: StepDi
       submitLabel={t('custody.return.submit', { defaultValue: 'Return to client' })}
       isOpen={isOpen}
       onClose={onClose}
+      canSubmit={photo.valid}
       onSubmit={async () =>
         finish(
-          await returnCustodyToClient(custody.custody_id, {
+          await photo.submit('returned', {
             counterparty: counterparty.trim() || undefined,
             note: note.trim() || undefined,
-          }),
+          }, returnCustodyToClient),
           onDone,
           onClose
         )
@@ -416,6 +490,7 @@ export function ReturnCustodyDialog({ isOpen, onClose, custody, onDone }: StepDi
         />
       </div>
       <NoteField id={`custody-return-${custody.custody_id}-note`} value={note} onChange={setNote} />
+      {photo.field}
     </DialogShell>
   );
 }

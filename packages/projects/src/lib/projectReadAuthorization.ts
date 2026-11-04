@@ -81,7 +81,7 @@ async function resolveAuthorizationSubjectForUser(
   };
 }
 
-type ProjectAuthorizationFields = { project_id?: string | null; client_id?: string | null; assigned_to?: string | null };
+export type ProjectAuthorizationFields = { project_id?: string | null; client_id?: string | null; assigned_to?: string | null };
 
 function toProjectAuthorizationRecord(project: ProjectAuthorizationFields): AuthorizationRecord {
   const assignedUserIds =
@@ -95,15 +95,23 @@ function toProjectAuthorizationRecord(project: ProjectAuthorizationFields): Auth
   };
 }
 
+export interface ProjectReadDecision {
+  allowed: boolean;
+  /** Fields the reader may not see for this project (co-managed redactions); empty when nothing is hidden. */
+  redactedFields: string[];
+}
+
 /**
  * The record-level project read decision for one user, reusable across many projects in one request
- * (subject and kernel are resolved once). Returns false for a row without a project id.
+ * (subject and kernel are resolved once). Carries the kernel's redaction set with the verdict so a caller
+ * that renders or forwards project data can mask it. A row without a project id is not allowed.
  */
-export async function createProjectReadAuthorizer(
+export async function createProjectReadDecider(
   conn: Knex | Knex.Transaction,
   tenant: string,
-  user: IUserWithRoles
-): Promise<(project: ProjectAuthorizationFields) => Promise<boolean>> {
+  user: IUserWithRoles,
+  action: 'read' | 'update' = 'read'
+): Promise<(project: ProjectAuthorizationFields) => Promise<ProjectReadDecision>> {
   const subject = await resolveAuthorizationSubjectForUser(conn, tenant, user);
   const authorizationKernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
@@ -120,22 +128,36 @@ export async function createProjectReadAuthorizer(
   });
   const requestCache = new RequestLocalAuthorizationCache();
 
-  return async (project: ProjectAuthorizationFields): Promise<boolean> => {
+  return async (project: ProjectAuthorizationFields): Promise<ProjectReadDecision> => {
     const projectId = project.project_id;
     if (!projectId) {
-      return false;
+      return { allowed: false, redactedFields: [] };
     }
 
     const decision = await authorizationKernel.authorizeResource({
       subject,
-      resource: { type: 'project', action: 'read', id: projectId },
+      resource: { type: 'project', action, id: projectId },
       record: toProjectAuthorizationRecord(project),
       requestCache,
       knex: conn,
     });
 
-    return decision.allowed;
+    return { allowed: decision.allowed, redactedFields: [...(decision.redactedFields ?? [])] };
   };
+}
+
+/**
+ * The boolean form of `createProjectReadDecider`, for callers that only need allow/deny.
+ * Returns false for a row without a project id.
+ */
+export async function createProjectReadAuthorizer(
+  conn: Knex | Knex.Transaction,
+  tenant: string,
+  user: IUserWithRoles,
+  action: 'read' | 'update' = 'read'
+): Promise<(project: ProjectAuthorizationFields) => Promise<boolean>> {
+  const decide = await createProjectReadDecider(conn, tenant, user, action);
+  return async (project) => (await decide(project)).allowed;
 }
 
 /**

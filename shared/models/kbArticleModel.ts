@@ -67,6 +67,96 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+export interface KbArticleVisibilityState {
+  status: string;
+  audience: string;
+}
+
+/**
+ * The single rule for KB client visibility (D2): a KB document is visible to
+ * clients iff its article is published AND aimed at clients or the public.
+ * documents.is_client_visible on a KB document is derived from this, never set
+ * independently.
+ */
+export function isKbArticleClientVisible(article: KbArticleVisibilityState): boolean {
+  return article.status === 'published' && (article.audience === 'client' || article.audience === 'public');
+}
+
+/**
+ * Re-derives documents.is_client_visible from the post-write article state.
+ * Callers must hold a row lock on the kb_articles row (select ... for update)
+ * inside the same transaction. Writes only when the value differs.
+ */
+export async function syncKbArticleClientVisibility(
+  trx: Knex.Transaction,
+  tenant: string,
+  article: KbArticleVisibilityState & { document_id: string },
+): Promise<boolean> {
+  const visible = isKbArticleClientVisible(article);
+  const updated = await tenantScopedTable(trx, 'documents', tenant)
+    .where({ document_id: article.document_id })
+    .whereRaw('is_client_visible is distinct from ?', [visible])
+    .update({ is_client_visible: visible, updated_at: trx.fn.now() });
+  return updated > 0;
+}
+
+function textParagraph(text: string): Record<string, any> {
+  return { type: 'paragraph', content: [{ type: 'text', text, styles: {} }] };
+}
+
+function heading(text: string): Record<string, any> {
+  return { type: 'heading', props: { level: 2 }, content: [{ type: 'text', text, styles: {} }] };
+}
+
+export const KB_TICKET_PROBLEM_PLACEHOLDER = 'No description provided.';
+export const KB_TICKET_RESOLUTION_PLACEHOLDER = 'Enter resolution details here.';
+
+function descriptionToBlocks(raw: unknown): Record<string, any>[] {
+  if (Array.isArray(raw)) {
+    return raw.filter((b) => b && typeof b === 'object' && typeof (b as any).type === 'string');
+  }
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (!trimmed) return [];
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) return descriptionToBlocks(parsed);
+      } catch {
+        // not JSON: fall through to plain text
+      }
+    }
+    return [textParagraph(raw)];
+  }
+  return [];
+}
+
+/**
+ * Builds the BlockNote body for an article created from a ticket. The ticket's
+ * real description lives in tickets.attributes.description (BlockNote JSON or
+ * plain text) and is spliced under "Problem" with its formatting kept.
+ */
+export function buildKbArticleContentFromTicket(ticket: {
+  attributes?: Record<string, any> | string | null;
+}): Record<string, any>[] {
+  let attributes: any = ticket.attributes;
+  if (typeof attributes === 'string') {
+    try {
+      attributes = JSON.parse(attributes);
+    } catch {
+      attributes = null;
+    }
+  }
+  const problem = descriptionToBlocks(attributes?.description);
+
+  return [
+    heading('Problem'),
+    ...(problem.length > 0 ? problem : [textParagraph(KB_TICKET_PROBLEM_PLACEHOLDER)]),
+    heading('Resolution'),
+    textParagraph(KB_TICKET_RESOLUTION_PLACEHOLDER),
+  ];
+}
+
 export function generateKbArticleSlug(title: string): string {
   return title
     .toLowerCase()
@@ -107,7 +197,8 @@ export async function publishKbArticleCreated(
 /**
  * Creates a KB article and its underlying document. Callers are responsible for
  * authorization — this runs with whatever connection/tenant it is handed — and
- * for calling publishKbArticleCreated once their transaction has committed.
+ * for running it inside a transaction (a failed article insert must roll back the
+ * document and block rows) and for calling publishKbArticleCreated once their transaction has committed.
  */
 export async function createKbArticle(
   knex: Knex | Knex.Transaction,
@@ -160,6 +251,7 @@ export async function createKbArticle(
     created_by: userId,
     order_number: 0,
     folder_path: '/Knowledge Base',
+    is_client_visible: false,
     entered_at: now,
     updated_at: now,
   });
@@ -180,35 +272,26 @@ export async function createKbArticle(
     .where({ document_id: documentId })
     .first() as IDocument;
 
-  // Create the KB article record — clean up document on failure
+  // Callers own the transaction, so a failed insert here rolls the document back too.
   const articleId = randomUUID();
   const nextReviewDue = input.reviewCycleDays
     ? new Date(Date.now() + input.reviewCycleDays * 24 * 60 * 60 * 1000)
     : null;
 
-  try {
-    await tenantScopedTable(knex, 'kb_articles', tenant).insert({
-      tenant,
-      article_id: articleId,
-      document_id: document.document_id,
-      slug,
-      article_type: articleType,
-      audience,
-      status: 'draft',
-      review_cycle_days: input.reviewCycleDays || null,
-      next_review_due: nextReviewDue,
-      category_id: input.categoryId || null,
-      created_by: userId,
-      updated_by: userId,
-    });
-  } catch (err) {
-    // Clean up orphaned document if kb_articles insert fails
-    await tenantScopedTable(knex, 'documents', tenant)
-      .where({ document_id: document.document_id })
-      .del()
-      .catch(() => {}); // best effort cleanup
-    throw err;
-  }
+  await tenantScopedTable(knex, 'kb_articles', tenant).insert({
+    tenant,
+    article_id: articleId,
+    document_id: document.document_id,
+    slug,
+    article_type: articleType,
+    audience,
+    status: 'draft',
+    review_cycle_days: input.reviewCycleDays || null,
+    next_review_due: nextReviewDue,
+    category_id: input.categoryId || null,
+    created_by: userId,
+    updated_by: userId,
+  });
 
   const article = await tenantScopedTable(knex, 'kb_articles', tenant)
     .select(KB_ARTICLE_SELECT_COLUMNS)

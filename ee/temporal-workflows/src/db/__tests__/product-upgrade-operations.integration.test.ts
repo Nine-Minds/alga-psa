@@ -395,6 +395,7 @@ describe.sequential("AlgaDesk to PSA product upgrade engine (real DB)", () => {
         "09_asset_type_registry.cjs",
         "10_opportunity_workflows.cjs",
         "11_asset_statuses.cjs",
+        "12_vip_tags.cjs",
       ]);
       await expect(
         db

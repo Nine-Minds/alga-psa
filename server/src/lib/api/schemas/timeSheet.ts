@@ -13,7 +13,8 @@ import {
   baseFilterSchema,
   booleanTransform,
   dateSchema,
-  isoDateSchema
+  isoDateSchema,
+  paginationQuerySchema
 } from './common';
 import { approvalStatusSchema, timeEntryResponseSchema, workItemTypeSchema } from './timeEntry';
 
@@ -139,8 +140,8 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
     total_hours: z.number(),
     billable_hours: z.number(),
     non_billable_hours: z.number(),
-    entries_by_type: z.record(z.number()),
-    entries_by_day: z.record(z.number()),
+    entries_by_type: z.record(z.string(), z.number()),
+    entries_by_day: z.record(z.string(), z.number()),
     approval_ready: z.boolean()
   }).optional()
 });
@@ -267,8 +268,8 @@ export const timeSheetStatsResponseSchema = z.object({
   changes_requested: z.number(),
   total_hours_this_period: z.number(),
   billable_hours_this_period: z.number(),
-  time_sheets_by_status: z.record(z.number()),
-  time_sheets_by_user: z.record(z.number()),
+  time_sheets_by_status: z.record(z.string(), z.number()),
+  time_sheets_by_user: z.record(z.string(), z.number()),
   average_hours_per_sheet: z.number(),
   approval_rate: z.number(),
   on_time_submission_rate: z.number(),
@@ -327,10 +328,12 @@ export const timeSheetEntryRowSchema = z.object({
   contract_line_unresolved_reason: z.enum(['ambiguous', 'no_match', 'error']).nullable(),
   catalog_pricing_acknowledged_at: z.string().datetime().nullable(),
   catalog_pricing_acknowledged_by: uuidSchema.nullable(),
+  // NOT NULL DEFAULT 'commercial' (20261028135000); CHECK limits it to these values.
+  billing_mode: z.enum(['commercial', 'operational']),
 });
 
 // One row of GET /time-sheets/search: exactly time_sheets.* plus the joined user_name.
-// (time_sheets has no notes/created_at/updated_at columns, so this is not timeSheetResponseSchema.)
+// (time_sheets has no created_at/updated_at columns, so this is not timeSheetResponseSchema.)
 export const timeSheetSearchRowSchema = z.object({
   tenant: uuidSchema,
   id: uuidSchema,
@@ -340,6 +343,7 @@ export const timeSheetSearchRowSchema = z.object({
   submitted_at: z.string().datetime().nullable(),
   approved_at: z.string().datetime().nullable(),
   approved_by: uuidSchema.nullable(),
+  notes: z.string().nullable(),
   user_name: z.string(),
   time_entries: z.array(timeSheetEntryRowSchema).optional(),
 });
@@ -354,8 +358,8 @@ export const timeSheetSearchSchema = z.object({
   // YYYY-MM-DD, compared against time_periods.start_date / end_date
   date_from: isoDateSchema.optional(),
   date_to: isoDateSchema.optional(),
-  include_entries: booleanTransform.optional().default("false"),
-  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
+  include_entries: booleanTransform.prefault("false"),
+  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).prefault('25')
 });
 
 // Time sheet summary response (GET /time-sheets/{id}/summary)
@@ -363,16 +367,16 @@ export const timeSheetSummaryResponseSchema = z.object({
   total_hours: z.number(),
   billable_hours: z.number(),
   non_billable_hours: z.number(),
-  entries_by_type: z.record(z.number()),
-  entries_by_day: z.record(z.number()),
+  entries_by_type: z.record(z.string(), z.number()),
+  entries_by_day: z.record(z.string(), z.number()),
   approval_ready: z.boolean()
 });
 
 // Time sheet export schema
 export const timeSheetExportQuerySchema = z.object({
   format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_time_entries: booleanTransform.optional().default("false"),
-  include_comments: booleanTransform.optional().default("false"),
+  include_time_entries: booleanTransform.prefault("false"),
+  include_comments: booleanTransform.prefault("false"),
   group_by: z.enum(['user', 'period', 'status', 'none']).optional().default('none'),
   approval_statuses: z.array(approvalStatusSchema).optional(),
   user_ids: z.array(uuidSchema).optional(),
@@ -504,3 +508,74 @@ export type CalendarResponse = z.infer<typeof calendarResponseSchema>;
 export type CreateScheduleEntryData = z.infer<typeof createScheduleEntrySchema>;
 export type UpdateScheduleEntryData = z.infer<typeof updateScheduleEntrySchema>;
 export type ScheduleEntryResponse = z.infer<typeof scheduleEntryResponseSchema>;
+
+
+// Schedule entry list/search query: ISO 8601 date (YYYY-MM-DD) or date-time.
+// A date-only value names a whole UTC day: start_date=D means "starting at or
+// after D 00:00Z" and end_date=D means "ending on or before D", i.e. strictly
+// before (D+1) 00:00Z. Date-time values are exact, inclusive instants.
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+const scheduleQueryDateSchema = z.union([
+  isoDateSchema.refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) && new Date(`${v}T00:00:00Z`).toISOString().startsWith(v), 'Invalid date'),
+  z.string().datetime({ offset: true }),
+], { error: () => 'Expected ISO 8601 date or date-time' });
+
+const scheduleEntryFilterShape = {
+  start_date: scheduleQueryDateSchema.optional(),
+  end_date: scheduleQueryDateSchema.optional(),
+  user_id: uuidSchema.optional(),
+};
+
+
+/**
+ * Filters handed to TimeSheetService schedule-entry queries. Exactly one of
+ * end_date (inclusive instant) / end_before (exclusive instant) is set when the
+ * caller bounded the end.
+ */
+export interface ScheduleEntryFilters {
+  start_date?: string;
+  end_date?: string;
+  end_before?: string;
+  user_id?: string;
+}
+
+// Checked on the normalized bounds, so start_date=2026-11-04T12:00Z with
+// end_date=2026-11-04 (the whole day) is a valid range.
+const startNotAfterEnd = ({ filters: f }: { filters: ScheduleEntryFilters }) =>
+  !f.start_date
+  || (!f.end_date || Date.parse(f.start_date) <= Date.parse(f.end_date))
+  && (!f.end_before || Date.parse(f.start_date) < Date.parse(f.end_before));
+const startNotAfterEndIssue = { message: 'start_date must not be after end_date', path: ['start_date'] };
+
+function toScheduleEntryFilters(q: { start_date?: string; end_date?: string; user_id?: string }): ScheduleEntryFilters {
+  const filters: ScheduleEntryFilters = {};
+  if (q.start_date) {
+    filters.start_date = DATE_ONLY.test(q.start_date) ? `${q.start_date}T00:00:00.000Z` : q.start_date;
+  }
+  if (q.end_date) {
+    if (DATE_ONLY.test(q.end_date)) {
+      const nextDay = new Date(`${q.end_date}T00:00:00.000Z`);
+      nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+      filters.end_before = nextDay.toISOString();
+    } else {
+      filters.end_date = q.end_date;
+    }
+  }
+  if (q.user_id) {
+    filters.user_id = q.user_id;
+  }
+  return filters;
+}
+
+// GET /api/v1/schedules: filters only. Deliberately unpaginated (returns every
+// visible entry); page/limit are ignored for backwards compatibility.
+export const scheduleEntryListQuerySchema = z.object(scheduleEntryFilterShape)
+  .transform((q) => ({ filters: toScheduleEntryFilters(q) }))
+  .refine(startNotAfterEnd, startNotAfterEndIssue);
+
+// GET /api/v1/schedules/search: same filters plus page/limit.
+export const scheduleEntrySearchQuerySchema = paginationQuerySchema
+  .pick({ page: true, limit: true })
+  .extend(scheduleEntryFilterShape)
+  .transform(({ page, limit, ...q }) => ({ page, limit, filters: toScheduleEntryFilters(q) }))
+  .refine(startNotAfterEnd, startNotAfterEndIssue);

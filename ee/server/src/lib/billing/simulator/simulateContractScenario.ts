@@ -65,7 +65,6 @@ async function priceContractScenario(
         },
       },
       obligations: period.obligations,
-      supplementalCharges: period.supplementalCharges,
       taxContexts: period.taxContexts,
       discountsAndAdjustments: {
         billingPeriod: {

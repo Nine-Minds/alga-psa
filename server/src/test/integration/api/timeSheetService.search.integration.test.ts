@@ -75,8 +75,16 @@ async function seed() {
     start_date: '2026-01-05',
     end_date: '2026-01-11',
   });
+  // One sheet per (user, period): Alice's approved sheet lives in a later period.
+  const laterPeriodId = uuidv4();
+  await tenantTable(tenantId, 'time_periods').insert({
+    period_id: laterPeriodId,
+    tenant: tenantId,
+    start_date: '2026-01-12',
+    end_date: '2026-01-18',
+  });
   const aliceDraft = await seedSheet(tenantId, alice, periodId, 'DRAFT');
-  const aliceApproved = await seedSheet(tenantId, alice, periodId, 'APPROVED');
+  const aliceApproved = await seedSheet(tenantId, alice, laterPeriodId, 'APPROVED');
   const bobDraft = await seedSheet(tenantId, bob, periodId, 'DRAFT');
   return { tenantId, alice, bob, aliceDraft, aliceApproved, bobDraft };
 }
@@ -156,7 +164,7 @@ describe('TimeSheetService.search (real Postgres)', () => {
         // strict(): an undocumented extra column in the payload fails, as does a missing documented one
         expect(() => timeSheetSearchRowSchema.strict().parse(row)).not.toThrow();
         expect(Object.keys(row).sort()).toEqual(
-          ['tenant', 'id', 'user_id', 'period_id', 'approval_status', 'submitted_at', 'approved_at', 'approved_by', 'user_name',
+          ['tenant', 'id', 'user_id', 'period_id', 'approval_status', 'submitted_at', 'approved_at', 'approved_by', 'notes', 'user_name',
             ...(include_entries === 'true' ? ['time_entries'] : [])].sort(),
         );
       }

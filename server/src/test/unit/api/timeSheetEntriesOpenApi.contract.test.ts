@@ -33,6 +33,7 @@ const pgRow = vi.hoisted(() => ({
   contract_line_unresolved_reason: null,
   catalog_pricing_acknowledged_at: null,
   catalog_pricing_acknowledged_by: null,
+  billing_mode: 'commercial',
 }));
 
 vi.mock('@alga-psa/db', async (importOriginal) => {
@@ -88,6 +89,7 @@ describe.each(SPECS)('published time sheet schemas validate real rows (%s)', (sp
       submitted_at: null,
       approved_at: null,
       approved_by: null,
+      notes: null,
       user_name: 'Erin Entries',
       time_entries: rows,
     };

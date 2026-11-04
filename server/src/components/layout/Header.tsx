@@ -32,6 +32,7 @@ import { NotificationBell } from '@alga-psa/notifications/components/Notificatio
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isLicensedUserType, type IUserWithRoles } from '@alga-psa/types';
 import { menuItems, bottomMenuItems, settingsNavigationSections, MenuItem } from '@/config/menuConfig';
+import { CO_MANAGED_MENU_GROUP } from '@/config/coManagedMenu';
 import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { useUserAvatar, useContactAvatar } from '@alga-psa/user-composition/hooks';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions/permission-actions';
@@ -168,6 +169,8 @@ export const getMenuItemNameByPath = (
     ...menuItems,
     ...bottomMenuItems,
     ...settingsNavigationSections.flatMap((section) => section.items),
+    // Contributed through the UI slot rather than menuConfig, but still a titled route.
+    ...CO_MANAGED_MENU_GROUP.items,
   ];
 
   const segments = path.split('/');

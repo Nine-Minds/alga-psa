@@ -35,6 +35,7 @@ async function colocationOf(knex, tableName) {
 
 exports.up = async function up(knex) {
   await knex.raw(`ALTER TABLE ${TABLE} ADD COLUMN IF NOT EXISTS client_id uuid NULL`);
+  // migration-lint: allow 1 - retroactive: index on checklist_templates added in the same migration that adds the nullable client_id column; merged before the lint existed
   await knex.raw(`CREATE INDEX IF NOT EXISTS ${INDEX_NAME} ON ${TABLE} (tenant, client_id)`);
 
   const existing = await knex.raw(
@@ -47,6 +48,7 @@ exports.up = async function up(knex) {
   const bothColocated = !templates.citus || (templates.colocationId !== null && templates.colocationId === clients.colocationId);
   if (bothColocated) {
     // MATCH SIMPLE: rows with a NULL client_id are not checked.
+    // migration-lint: allow 2 - retroactive: FK on the just-added all-NULL client_id column, so validating it scans no referencing values; guarded by a pg_constraint probe
     await knex.raw(
       `ALTER TABLE ${TABLE} ADD CONSTRAINT ${FK_NAME}
        FOREIGN KEY (tenant, client_id) REFERENCES clients (tenant, client_id)`

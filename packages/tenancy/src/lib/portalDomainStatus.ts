@@ -28,6 +28,7 @@ function formatResponse(record: PortalDomain | null, canonicalHost: string): Por
   return {
     domain: record?.domain ?? null,
     canonicalHost,
+    surface: record?.surface ?? 'client_portal',
     status: record?.status ?? 'disabled',
     statusMessage: record?.statusMessage ?? 'No custom domain registered yet.',
     lastCheckedAt: toIsoString(record?.lastCheckedAt),

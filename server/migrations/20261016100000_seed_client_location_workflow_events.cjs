@@ -21,6 +21,7 @@ exports.up = async function up(knex) {
   const now = new Date().toISOString();
 
   for (const [eventType, name, description, category, payloadSchemaRef] of EVENTS) {
+    // migration-lint: allow 5 - retroactive: seeds a fixed handful of event-catalog rows via upsert; row count is bounded by the literal EVENTS list, not by table size
     await knex.raw(
       `
       INSERT INTO system_event_catalog (event_id, event_type, name, description, category, payload_schema_ref, created_at, updated_at)
