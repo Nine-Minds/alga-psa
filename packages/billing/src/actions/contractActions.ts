@@ -32,8 +32,11 @@ import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
-import { hasPermission } from '@alga-psa/auth/rbac';
-import { isMspPrincipalUserType } from '@alga-psa/types';
+import {
+  assertMspContractBillingPermission as assertBillingPermission,
+  assertContractLineMutationAuthorized,
+  ContractScopeError,
+} from '../lib/billing/contractAuthorization';
 import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
@@ -65,7 +68,7 @@ function contractActionErrorFrom(error: unknown): ContractActionError | null {
     return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
   }
 
-  if (error instanceof ContractActionDomainError) {
+  if (error instanceof ContractActionDomainError || error instanceof ContractScopeError) {
     if (error.message.startsWith('Permission denied:')) {
       return permissionError(error.message);
     }
@@ -114,8 +117,6 @@ function contractActionErrorFrom(error: unknown): ContractActionError | null {
   return null;
 }
 
-const isBypassEnabled = (): boolean => process.env.E2E_AUTH_BYPASS === 'true';
-
 function tenantScopedTable(
   conn: TenantScopedKnex,
   tenant: string,
@@ -128,52 +129,6 @@ function maybeUserActor(user: any) {
   const userId = user?.user_id;
   if (typeof userId !== 'string' || userId.length === 0) return undefined;
   return { actorType: 'USER' as const, actorUserId: userId };
-}
-
-const assertBillingPermission = async (
-  user: unknown,
-  tenant: string,
-  action: 'read' | 'create' | 'update' | 'delete',
-  context: string,
-): Promise<void> => {
-  const principal = user as { user_type?: unknown; tenant?: unknown } | null;
-  if (!principal || !isMspPrincipalUserType(typeof principal.user_type === 'string' ? principal.user_type : undefined)
-    || typeof principal.tenant !== 'string' || principal.tenant !== tenant) {
-    throw new ContractActionDomainError(`Permission denied: Cannot ${context}`);
-  }
-
-  if (isBypassEnabled()) {
-    return;
-  }
-
-  if (!await hasPermission(user as any, 'billing', action)) {
-    throw new ContractActionDomainError(`Permission denied: Cannot ${context}`);
-  }
-};
-
-/** Verify both records under the trusted tenant before a line mutation or its synchronizers run. */
-async function assertContractLineMutationScope(
-  trx: Knex.Transaction,
-  tenant: string,
-  contractId: string,
-  contractLineId: string,
-): Promise<'contract' | 'template'> {
-  const template = await tenantScopedTable(trx, tenant, 'contract_templates')
-    .where({ template_id: contractId }).first('template_id');
-  if (template) {
-    const line = await tenantScopedTable(trx, tenant, 'contract_template_lines')
-      .where({ template_id: contractId, template_line_id: contractLineId }).first('template_line_id');
-    if (!line) throw new ContractActionDomainError('Template contract line not found for the selected contract.');
-    return 'template';
-  }
-
-  const contract = await tenantScopedTable(trx, tenant, 'contracts')
-    .where({ contract_id: contractId }).first('contract_id');
-  if (!contract) throw new ContractActionDomainError('Contract not found for the selected tenant.');
-  const line = await tenantScopedTable(trx, tenant, 'contract_lines')
-    .where({ contract_id: contractId, contract_line_id: contractLineId }).first('contract_line_id');
-  if (!line) throw new ContractActionDomainError('Contract line not found for the selected contract.');
-  return 'contract';
 }
 
 const assertNoSystemManagedIdentityMutation = (
@@ -510,10 +465,9 @@ export const updateContractLineAssociation = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    await assertBillingPermission(user, tenant, 'update', 'modify contract lines');
-
-    const updated = await repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
-    await knex.transaction(async (trx) => {
+    return await knex.transaction(async (trx) => {
+      await assertContractLineMutationAuthorized(trx, user, tenant, contractId, contractLineId);
+      const updated = await repoUpdateContractLine(trx, tenant, contractId, contractLineId, updateData);
       // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
       await syncRecurringServicePeriodsForContractLine(trx, {
         tenant,
@@ -521,8 +475,8 @@ export const updateContractLineAssociation = withAuth(async (
         sourceRunPrefix: 'contract_line_association_update',
       });
       await syncPrepaidBlockIssuancesForContractLine(trx, tenant, contractLineId);
+      return updated;
     });
-    return updated;
   } catch (error) {
     console.error(`Error updating contract line ${contractLineId} for contract ${contractId}:`, error);
     const expected = contractActionErrorFrom(error);
@@ -549,10 +503,8 @@ export const updateContractLineRate = withAuth(async (
       return actionError('Rate must be zero or greater.');
     }
 
-    await assertBillingPermission(user, tenant, 'update', 'modify contract lines');
-
     await knex.transaction(async (trx) => {
-      await assertContractLineMutationScope(trx, tenant, contractId, contractLineId);
+      await assertContractLineMutationAuthorized(trx, user, tenant, contractId, contractLineId);
       await repoUpdateContractLineRate(trx, tenant, contractId, contractLineId, rate, billingTiming, invoiceLineDescription);
       // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
       await syncRecurringServicePeriodsForContractLine(trx, {
