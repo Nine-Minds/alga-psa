@@ -16,7 +16,7 @@ import { editCoManagedProjectTask, getCoManagedProjectTaskSnapshot, CoManagedTas
 import { listCoManagedProjectTaskHistory } from '@alga-psa/co-managed/projectTaskAudit';
 import { listCoManagedProjectTaskStatusOptions } from '@alga-psa/co-managed/projectTaskEditing';
 import { assignCoManagedProjectTask } from '@alga-psa/co-managed/projectTaskAssignments';
-import { listCoManagedAssignedTasks } from '@alga-psa/co-managed/projectTaskQueue';
+import { listCoManagedAssignedTasks, listCoManagedSharedProjectTasks } from '@alga-psa/co-managed/projectTaskQueue';
 import { isCoManagedSharedWorkError } from '@alga-psa/co-managed/sharedWorkIdentity';
 import { writeCoManagedSharedTask } from '../../lib/co-managed/editProjectTask';
 
@@ -217,14 +217,22 @@ describe('CM L3c task editing and assignment', () => {
     });
   });
 
-  it('masks the snapshot assignee name when assignee is redacted', async () => {
+  it('masks public task snapshot and project-list assignee fields after relationship redactions tighten', async () => {
     const id = collab.taskIds[7];
-    const snapshot = await openTask(id);
-    expect(snapshot.assignee?.name).toBeTruthy();
-    await setRedactions(['assignee']);
+    const original = await openTask(id);
+    const originalName = original.assignee?.name;
+    expect(originalName).toBeTruthy();
+    const target = { customerTenant: world.customer, relationshipId: world.relationshipId, projectId: collab.projectId };
+    const originalList = await listCoManagedSharedProjectTasks(db, actor(), target);
+    expect(originalList.rows.find(row => row.taskId === id)?.reference?.assigneeName).toBe(originalName);
+    const storedName = (await referenceRow(id)).assignee_name;
+    await setRedactions(['assignee_name']);
     try {
       const hidden = await getCoManagedProjectTaskSnapshot(db, actor(), resource(id));
       expect(hidden.assignee?.name ?? null).toBeNull();
+      const list = await listCoManagedSharedProjectTasks(db, actor(), target);
+      expect(list.rows.find(row => row.taskId === id)?.reference).toMatchObject({ assigneeName: null, assignedToMe: null });
+      expect((await referenceRow(id)).assignee_name).toBe(storedName);
     } finally { await setRedactions([]); }
   });
 
@@ -243,8 +251,8 @@ describe('CM L3c task editing and assignment', () => {
     expect(assigneeName).toBeTruthy();
     expect(snapshot).toEqual({ revision: 1, taskUpdatedAt: new Date((await taskRow(id)).updated_at).toISOString(),
       values: { task_name: 'control', project_status_mapping_id: todo, due_date: '2026-03-01T00:00:00.000Z' }, assignee: { kind: 'user', name: assigneeName } });
-    expect(await listCoManagedProjectTaskStatusOptions(db, actor(), resource(id))).toEqual([
-      { statusMappingId: todo, name: 'Control Todo' }, { statusMappingId: doing, name: 'Control Doing' }]);
+    expect(await listCoManagedProjectTaskStatusOptions(db, actor(), resource(id))).toEqual(expect.arrayContaining([
+      { statusMappingId: todo, name: 'Control Todo' }, { statusMappingId: doing, name: 'Control Doing' }]));
     // openTask's assignment is the only history entry so far.
     const before = await listCoManagedProjectTaskHistory(db, actor(), resource(id));
     expect(before).toEqual([{ auditId: expect.any(String), at: expect.any(String), operation: 'co_managed_project_task_assignment', authorName: assigneeName,

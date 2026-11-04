@@ -346,4 +346,95 @@ describeDb('co-managed ticket queue and handoffs on real Postgres', { shuffle: f
       expect(events.map(event => event.revision)).toEqual(events.map((_, index) => index + 1));
     }
   }, 120_000);
+
+  it('applies bundle and relationship assignment aliases per relationship across membership, both signals, counts and export', async () => {
+    const a = A.tickets.a4, b = B.tickets.b1;
+    const aTicket = await db('tickets').where({ tenant: A.tenant, ticket_id: a }).first();
+    const aWork = await db('co_management_ticket_work').where({ tenant: A.tenant, relationship_id: A.relationshipId, ticket_id: a }).first();
+    let aReferenceAtAssignment: any;
+    const bTicket = await db('tickets').where({ tenant: B.tenant, ticket_id: b }).first();
+    const bWork = await db('co_management_ticket_work').where({ tenant: B.tenant, relationship_id: B.relationshipId, ticket_id: b }).first();
+    const bReference = await db('co_managed_ticket_references').where({ tenant: msp, customer_tenant: B.tenant, relationship_id: B.relationshipId, ticket_id: b }).first();
+    const previousPolicies = await Promise.all([A, B].map(c => db('co_management_relationships').where({ tenant: c.tenant, relationship_id: c.relationshipId }).first('redacted_fields')));
+    const openStatus = await db('statuses').where({ tenant: A.tenant, is_closed: false }).first('status_id');
+    const bundleId = randomUUID(), revisionId = randomUUID();
+    try {
+      await db('tickets').where({ tenant: A.tenant, ticket_id: a }).update({ status_id: openStatus.status_id, is_closed: false });
+      if (!aWork) await escalate(A, 'a4', 0);
+      else throw new Error('Expected an untouched A:a4 work row for this isolated policy regression');
+      aReferenceAtAssignment = await db('co_managed_ticket_references').where({ tenant: msp, customer_tenant: A.tenant, relationship_id: A.relationshipId, ticket_id: a }).first();
+      if (!bWork || !bReference) throw new Error('Expected B:b1 work and reference from the preceding queue fixtures');
+      await db('co_management_ticket_work').where({ tenant: B.tenant, relationship_id: B.relationshipId, ticket_id: b }).update({ responsibility: 'customer', grant_revoked_at: null });
+      await db('co_managed_ticket_references').where({ tenant: msp, customer_tenant: B.tenant, relationship_id: B.relationshipId, ticket_id: b })
+        .update({ assigned_to: tech.userId, assigned_team_id: null });
+      await db('tickets').where({ tenant: B.tenant, ticket_id: b }).update({ response_state: 'awaiting_internal' });
+
+      const plainWorking = await rq('working', { state: 'all' });
+      expect(tag(plainWorking)).toContain('A:1004');
+      expect(tag(plainWorking)).toContain('B:1001');
+      expect(plainWorking.signals).toEqual({ escalatedUnassigned: 1, awaitingReply: 1 });
+      expect((await rq('working', { signal: 'escalated_unassigned' })).items.map(row => row.ticketId)).toContain(a);
+      expect((await rq('working', { signal: 'awaiting_reply' })).items.map(row => row.ticketId)).toContain(b);
+      const plainOversight = await rq('oversight', { state: 'all' });
+
+      // A published user bundle contributes redactions to both authorized relationship projections.
+      await db('authorization_bundles').insert({ tenant: msp, bundle_id: bundleId, bundle_key: `queue-redact-${bundleId.slice(0, 8)}`, name: 'Queue redaction regression', is_system: false, status: 'active' });
+      await db('authorization_bundle_revisions').insert({ tenant: msp, revision_id: revisionId, bundle_id: bundleId, revision_number: 1, lifecycle_state: 'published' });
+      await db('authorization_bundles').where({ tenant: msp, bundle_id: bundleId }).update({ published_revision_id: revisionId });
+      await db('authorization_bundle_rules').insert({ tenant: msp, bundle_id: bundleId, revision_id: revisionId, resource_type: 'ticket', action: 'read',
+        template_key: 'selected_boards', constraint_key: 'hide_sensitive_fields', effect: 'narrow',
+        config: JSON.stringify({ redactedFields: ['tickets.assignee_name', 'values.organization_name'], selectedBoardIds: [mspBoard] }), position: 0 });
+      await db('authorization_bundle_assignments').insert({ tenant: msp, bundle_id: bundleId, target_type: 'user', target_id: tech.userId, status: 'active' });
+      const bundledWorking = await rq('working', { state: 'all' });
+      expect(tag(bundledWorking)).toContain('A:1004');
+      expect(tag(bundledWorking)).not.toContain('B:1001');
+      expect(bundledWorking.items.find(row => row.ticketId === a)?.fields.has_msp_assignment).toBeUndefined();
+      expect(bundledWorking.signals).toEqual({ escalatedUnassigned: 0, awaitingReply: 0 });
+      expect((await rq('working', { signal: 'escalated_unassigned' })).items).toEqual([]);
+      expect((await rq('working', { signal: 'awaiting_reply' })).items).toEqual([]);
+      const bundledOversight = await rq('oversight', { state: 'all' });
+      expect(bundledOversight.totalCount).toBe(plainOversight.totalCount);
+      expect((await exportCoManagedTicketQueue(db, tech, { view: 'oversight', state: 'all' })).find(row => row.ticketId === a)?.fields.has_msp_assignment).toBeUndefined();
+      await db('authorization_bundle_assignments').where({ tenant: msp, bundle_id: bundleId }).delete();
+      await db('authorization_bundle_rules').where({ tenant: msp, bundle_id: bundleId }).delete();
+      await db('authorization_bundles').where({ tenant: msp, bundle_id: bundleId }).update({ published_revision_id: null });
+      await db('authorization_bundle_revisions').where({ tenant: msp, bundle_id: bundleId }).delete();
+      await db('authorization_bundles').where({ tenant: msp, bundle_id: bundleId }).delete();
+
+      // Tighten two distinct customer policies after assignment. The retained assignment rows stay byte-for-byte intact.
+      await db('co_management_relationships').where({ tenant: A.tenant, relationship_id: A.relationshipId }).update({ redacted_fields: ['tickets.assignee_name'] });
+      await db('co_management_relationships').where({ tenant: B.tenant, relationship_id: B.relationshipId }).update({ redacted_fields: ['values.organization_name'] });
+      const aReferenceAfter = await db('co_managed_ticket_references').where({ tenant: msp, customer_tenant: A.tenant, relationship_id: A.relationshipId, ticket_id: a }).first();
+      const bReferenceAfter = await db('co_managed_ticket_references').where({ tenant: msp, customer_tenant: B.tenant, relationship_id: B.relationshipId, ticket_id: b }).first();
+      expect(aReferenceAfter).toEqual(aReferenceAtAssignment);
+      expect(bReferenceAfter).toEqual({ ...bReference, assigned_to: tech.userId, assigned_team_id: null });
+      const tightenedWorking = await rq('working', { state: 'all' });
+      expect(tag(tightenedWorking)).toContain('A:1004');
+      expect(tag(tightenedWorking)).not.toContain('B:1001');
+      expect(tightenedWorking.signals).toEqual({ escalatedUnassigned: 0, awaitingReply: 0 });
+      expect(tightenedWorking.totalCount).toBe(1);
+      const tightenedOversight = await rq('oversight', { state: 'all' });
+      expect(tightenedOversight.totalCount).toBe(plainOversight.totalCount);
+      expect(tightenedOversight.openCount).toBe(plainOversight.openCount);
+      const exported = await exportCoManagedTicketQueue(db, tech, { view: 'oversight', state: 'all' });
+      expect(exported.map(row => row.ticketId)).toContain(a);
+      expect(exported.find(row => row.ticketId === a)?.fields.has_msp_assignment).toBeUndefined();
+      expect(exported.find(row => row.ticketId === b)?.fields.has_msp_assignment).toBeUndefined();
+    } finally {
+      await db('authorization_bundle_assignments').where({ tenant: msp, bundle_id: bundleId }).delete();
+      await db('authorization_bundle_rules').where({ tenant: msp, bundle_id: bundleId }).delete();
+      await db('authorization_bundles').where({ tenant: msp, bundle_id: bundleId }).update({ published_revision_id: null });
+      await db('authorization_bundle_revisions').where({ tenant: msp, bundle_id: bundleId }).delete();
+      await db('authorization_bundles').where({ tenant: msp, bundle_id: bundleId }).delete();
+      await Promise.all([A, B].map((c, index) => db('co_management_relationships').where({ tenant: c.tenant, relationship_id: c.relationshipId })
+        .update({ redacted_fields: previousPolicies[index].redacted_fields ?? [] })));
+      await db('co_managed_ticket_references').where({ tenant: msp, customer_tenant: A.tenant, relationship_id: A.relationshipId, ticket_id: a }).delete();
+      await db('co_management_ticket_handoffs').where({ tenant: A.tenant, relationship_id: A.relationshipId, ticket_id: a }).delete();
+      await db('co_management_ticket_work').where({ tenant: A.tenant, relationship_id: A.relationshipId, ticket_id: a }).delete();
+      await db('tickets').where({ tenant: A.tenant, ticket_id: a }).update({ status_id: aTicket.status_id, is_closed: aTicket.is_closed });
+      if (bWork) await db('co_management_ticket_work').where({ tenant: B.tenant, relationship_id: B.relationshipId, ticket_id: b }).update(bWork);
+      if (bReference) await db('co_managed_ticket_references').where({ tenant: msp, customer_tenant: B.tenant, relationship_id: B.relationshipId, ticket_id: b }).update(bReference);
+      await db('tickets').where({ tenant: B.tenant, ticket_id: b }).update({ response_state: bTicket.response_state });
+    }
+  }, 120_000);
 });

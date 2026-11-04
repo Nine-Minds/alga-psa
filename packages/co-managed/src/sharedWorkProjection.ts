@@ -16,6 +16,10 @@ export const CO_MANAGED_ORGANIZATION_NAME_ALIASES = ['client_name', 'organizatio
 export const CO_MANAGED_ASSIGNEE_NAME_ALIASES = ['assignee_name', 'assigneeName', 'values.assignee_name', 'values.assigneeName', 'assignee', 'users', 'teams'] as const;
 /** Presence, identity and names derived from a co-managed assignment share one disclosure dependency. */
 export const CO_MANAGED_ASSIGNMENT_ALIASES = [...CO_MANAGED_ASSIGNEE_NAME_ALIASES, 'assigned_to', 'assigned_team_id', 'msp_assignment', 'mspAssignment', 'work', 'co_management_ticket_work', 'co_managed_ticket_references'] as const;
+/** Match canonical field aliases consistently for bundle payloads and resource-qualified ticket reads. */
+export function expandCoManagedPolicyAliases(aliases: readonly string[], namespaces: readonly string[] = ['values', 'tickets']): string[] {
+  return [...new Set(aliases.flatMap(alias => [alias, ...namespaces.filter(namespace => !alias.startsWith(`${namespace}.`)).map(namespace => `${namespace}.${alias}`)]))];
+}
 /** Names attached to history entries are derived from the acting staff user, not from the changed task field. */
 export const CO_MANAGED_ACTOR_NAME_ALIASES = ['actor_display_name', 'actorDisplayName', 'author_name', 'authorName', 'user_name', 'users'] as const;
 /** History organization labels are cached from the acting staff member's organization. */

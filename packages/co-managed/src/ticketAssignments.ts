@@ -8,7 +8,7 @@ import { snapshotCoManagedSessionActor, CoManagedSharedWorkError, isCoManagedUui
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { coManagedAssigneeOption, type CoManagedAssignee, type CoManagedAssigneeOption } from './sharedWorkAssignees';
 import { recordCoManagedWorkAudit } from './sharedWorkAudit';
-import { CO_MANAGED_ASSIGNMENT_ALIASES, CO_MANAGED_ORGANIZATION_NAME_ALIASES } from './sharedWorkProjection';
+import { CO_MANAGED_ASSIGNMENT_ALIASES, CO_MANAGED_ORGANIZATION_NAME_ALIASES, expandCoManagedPolicyAliases } from './sharedWorkProjection';
 
 export interface CoManagedTicketAssignee extends CoManagedAssignee {}
 export interface CoManagedTicketAssignmentRequest { operationId: string; expectedRevision: number; assignee: CoManagedTicketAssignee | null }
@@ -16,7 +16,7 @@ export class CoManagedTicketAssignmentError extends Error {
   constructor(readonly code: 'INVALID_TICKET_ASSIGNMENT' | 'TICKET_ASSIGNMENT_CONFLICT' | 'TICKET_ASSIGNMENT_OPERATION_CONFLICT') { super(code); }
 }
 const denied = (): never => { throw new CoManagedSharedWorkError(); };
-const hidden = (fields: readonly string[]) => isCoManagedReadFieldHidden(fields, [...CO_MANAGED_ASSIGNMENT_ALIASES, ...CO_MANAGED_ORGANIZATION_NAME_ALIASES, 'work_revision', 'revision'].flatMap(name => [name, `values.${name}`, `tickets.${name}`]));
+const hidden = (fields: readonly string[]) => isCoManagedReadFieldHidden(fields, expandCoManagedPolicyAliases([...CO_MANAGED_ASSIGNMENT_ALIASES, ...CO_MANAGED_ORGANIZATION_NAME_ALIASES, 'work_revision', 'revision']));
 const boundary = (actor: CoManagedSessionActor, resource: CoManagedSharedResource) => actor.tenant === resource.tenant ? withCoManagedCustomerTicket : withCoManagedSharedWork;
 function snapshot(input: CoManagedSharedResource): CoManagedSharedResource {
   if (!input || input.kind !== 'ticket' || ![input.tenant, input.relationshipId, input.id].every(isCoManagedUuid)) denied();

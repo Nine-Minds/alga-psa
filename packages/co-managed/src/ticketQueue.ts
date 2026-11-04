@@ -5,7 +5,7 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
 import { getCoManagedOperationalState } from '@alga-psa/licensing/lifecycle';
 import { hasCoManagedLocalPermission } from './localPermission';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
-import { CO_MANAGED_ASSIGNMENT_ALIASES, CO_MANAGED_ORGANIZATION_NAME_ALIASES } from './sharedWorkProjection';
+import { CO_MANAGED_ASSIGNMENT_ALIASES, CO_MANAGED_ORGANIZATION_NAME_ALIASES, expandCoManagedPolicyAliases } from './sharedWorkProjection';
 import { assertCoManagedSessionUnexpired, CoManagedSharedWorkError, isCoManagedUuid, lockCoManagedSessionIdentity, snapshotCoManagedSessionActor, type CoManagedSessionActor } from './sharedWorkIdentity';
 
 /**
@@ -87,8 +87,7 @@ const sources = {
   work_revision: ['work_revision', 'values.work_revision', 'tickets.work_revision', 'revision', 'work', 'co_management_ticket_work', 'co_management_ticket_work.revision'],
   entered_at: ['entered_at', 'tickets.entered_at'], updated_at: ['updated_at', 'tickets.updated_at'],
   has_msp_assignment: [
-    ...CO_MANAGED_ASSIGNMENT_ALIASES,
-    ...CO_MANAGED_ORGANIZATION_NAME_ALIASES,
+    ...expandCoManagedPolicyAliases([...CO_MANAGED_ASSIGNMENT_ALIASES, ...CO_MANAGED_ORGANIZATION_NAME_ALIASES]),
     'mspAssignment', 'values.mspAssignment', 'tickets.mspAssignment',
     'msp_assignment', 'values.msp_assignment', 'tickets.msp_assignment',
     'assigned_to', 'values.assigned_to', 'tickets.assigned_to',
@@ -202,7 +201,9 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
           : trx.raw('false'),
         ...policyColumns });
       const authorized = trx.from(base.as('q'));
-      applyCoManagedQueuePolicy(authorized, subject, rules, { resourceType: 'ticket', shared: true });
+      // hide_sensitive_fields contributes field policy only; retain its row template while keeping the redaction out of the SQL constraint compiler.
+      const sqlRules = rules.map(rule => rule.constraintKey === 'hide_sensitive_fields' ? { ...rule, constraintKey: null } : rule);
+      applyCoManagedQueuePolicy(authorized, subject, sqlRules, { resourceType: 'ticket', shared: true });
       authorized.select('q.tenant', 'q.ticket_id', 'q.relationship_id', 'q.workspace_name', 'q.client_id', 'q.sig_escalated', 'q.sig_awaiting');
       authorized.select(trx.raw('?::text[] as policy_visible_fields', [visibleFields]));
       for (const field of Object.keys(sources)) authorized.select(visible[field as keyof typeof sources] ? `q.${field}` : trx.raw(`NULL::${['is_closed', 'has_msp_assignment'].includes(field) ? 'boolean' : field === 'work_revision' ? 'integer' : ['entered_at', 'updated_at'].includes(field) ? 'timestamptz' : 'text'} as ??`, [field]));

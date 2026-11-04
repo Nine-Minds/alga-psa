@@ -19,7 +19,7 @@ vi.mock('../sharedWork', () => ({ withCoManagedSharedWork: async (_db: any, _act
   work({ trx: {}, redactedFields: state.redactedFields }) }));
 
 import { listCoManagedProjectTaskHistory } from '../projectTaskAudit';
-import { coManagedAuditFieldAliases, projectCoManagedActorAttribution, projectCoManagedChanges } from '../sharedWorkProjection';
+import { coManagedAuditFieldAliases, expandCoManagedPolicyAliases, projectCoManagedActorAttribution, projectCoManagedChanges } from '../sharedWorkProjection';
 
 const U = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const actor: any = { tenant: U(1), userId: U(2) };
@@ -28,6 +28,10 @@ const assignee = { from: U(90), to: U(91), kind: 'user', name: 'Alex MSP' };
 const changed = { msp_assignee: assignee, task_name: { from: 'a', to: 'b' } };
 
 describe('projectCoManagedChanges', () => {
+  it('expands shared assignment and organization dependencies into ticket and values paths', () => {
+    const aliases = expandCoManagedPolicyAliases(['assignee_name', 'organization_name']);
+    expect(aliases).toEqual(expect.arrayContaining(['assignee_name', 'values.assignee_name', 'tickets.assignee_name', 'organization_name', 'values.organization_name', 'tickets.organization_name']));
+  });
   it('derives the assignee-name aliases for msp_assignee only', () => {
     expect(coManagedAuditFieldAliases('msp_assignee')).toEqual(expect.arrayContaining(['msp_assignee', 'values.msp_assignee', 'assignee_name', 'users', 'teams', 'assignee']));
     expect(coManagedAuditFieldAliases('task_name')).toEqual(['task_name', 'values.task_name', 'project_tasks.task_name']);
