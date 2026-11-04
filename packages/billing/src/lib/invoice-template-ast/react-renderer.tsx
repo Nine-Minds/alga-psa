@@ -402,7 +402,7 @@ const resolveTableStyle = (style: React.CSSProperties | undefined): React.CSSPro
 const buildAstCss = (ast: TemplateAst): string => {
   const baseCss = `
 .invoice-template-root {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 14px;
   line-height: 1.35;
   color: #111827;
