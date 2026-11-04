@@ -1,24 +1,31 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { IUserWithRoles } from '@alga-psa/types';
+import { createAssetReadContext, isAssetActionAllowed, isAssetReadAllowed } from '../../lib/assetReadAuthorization';
 
 type Row = Record<string, any>;
 
 const h = vi.hoisted(() => {
   const state = {
-    allowedAssetIds: new Set<string>(['asset-in-scope']),
-    deniedClientIds: new Set<string>(),
     rows: {} as Record<string, Row[]>,
     mappingWrites: 0,
     assignments: [] as string[],
   };
 
   const reset = () => {
-    state.allowedAssetIds = new Set(['asset-in-scope']);
-    state.deniedClientIds.clear();
     state.rows = {
       assets: [
-        { asset_id: 'asset-in-scope', client_id: 'client-in-scope' },
+        { asset_id: 'asset-readable-not-updatable', client_id: 'client-in-scope' },
+        { asset_id: 'asset-update-authorized', client_id: 'client-in-scope' },
+        { asset_id: 'asset-update-authorized-candidate', client_id: 'client-in-scope' },
         { asset_id: 'asset-out-of-scope', client_id: 'client-out-of-scope' },
       ],
+      asset_associations: [
+        { asset_id: 'asset-update-authorized', entity_type: 'team', entity_id: 'team-ops' },
+        { asset_id: 'asset-update-authorized-candidate', entity_type: 'team', entity_id: 'team-ops' },
+      ],
+      user_roles: [],
+      team_members: [{ user_id: 'user-1', team_id: 'team-ops' }],
+      users: [],
       contacts: [
         { contact_name_id: 'contact-in-scope', client_id: 'client-in-scope', contact_kind: 'person' },
         { contact_name_id: 'contact-out-of-scope', client_id: 'client-out-of-scope', contact_kind: 'person' },
@@ -52,22 +59,14 @@ const h = vi.hoisted(() => {
       then(resolve: (rows: Row[]) => unknown, reject?: (error: unknown) => unknown) {
         return Promise.resolve(rows).then(resolve, reject);
       },
+      catch(reject: (error: unknown) => unknown) {
+        return Promise.resolve(rows).catch(reject);
+      },
     };
     return qb;
   };
 
   const knex: any = (tableName: string) => query(tableName);
-  const context = {
-    subject: { tenant: 'tenant-1', userId: 'user-1', userType: 'internal' },
-    requestCache: {},
-    authorizationKernel: {
-      authorizeResource: vi.fn(async ({ resource, record }: any) => ({
-        allowed: !state.deniedClientIds.has(record?.clientId),
-        scope: { allowAll: true, denied: false, constraints: [] },
-        redactedFields: [], reasons: [],
-      })),
-    },
-  };
   const shared = {
     suggestContactForAsset: vi.fn(async (_conn: unknown, _tenant: string, assetId: string, check: (request: any) => Promise<boolean>) => {
       const allowed = await check({
@@ -89,7 +88,11 @@ const h = vi.hoisted(() => {
       });
       if (!initialAllowed) throw new Error('Permission denied: Cannot map this RMM user');
       state.mappingWrites += 1;
-      for (const candidate of ['asset-in-scope', 'asset-out-of-scope']) {
+      for (const candidate of [
+        'asset-update-authorized-candidate',
+        'asset-readable-not-updatable',
+        'asset-out-of-scope',
+      ]) {
         const allowed = await args.authorize({
           assetIds: [candidate], contactId: args.contactId,
           integrationId: args.integrationId, provider: args.provider, action: 'update',
@@ -100,7 +103,15 @@ const h = vi.hoisted(() => {
     }),
   };
 
-  return { state, reset, knex, context, shared };
+  return { state, reset, knex, shared };
+});
+
+const selectedClientRule = (resource: string, action: string) => ({
+  id: `${resource}-${action}-selected-clients`,
+  resource,
+  action,
+  templateKey: 'selected_clients' as const,
+  selectedClientIds: ['client-in-scope'],
 });
 
 vi.mock('@alga-psa/auth', () => ({
@@ -118,13 +129,25 @@ vi.mock('@alga-psa/db', () => ({
   withTransaction: vi.fn(async (_knex: unknown, callback: (trx: unknown) => unknown) => callback(h.knex)),
 }));
 
-vi.mock('@alga-psa/shared/rmm/signedInUserMappings', () => h.shared);
-vi.mock('../../lib/assetReadAuthorization', () => ({
-  createAssetReadContext: vi.fn(async () => h.context),
-  isAssetReadAllowed: vi.fn(async (_conn: unknown, _tenant: unknown, _context: unknown, asset: { asset_id: string }) =>
-    h.state.allowedAssetIds.has(asset.asset_id)
-  ),
+vi.mock('@alga-psa/authorization/bundles/service', () => ({
+  resolveBundleNarrowingRulesForEvaluation: vi.fn(async (_conn: unknown, input: { resource: { type: string } }) => {
+    if (input.resource.type === 'asset') {
+      return [
+        selectedClientRule('asset', 'read'),
+        { id: 'asset-update-same-team', resource: 'asset', action: 'update', templateKey: 'same_team' },
+      ];
+    }
+    if (input.resource.type === 'contact' || input.resource.type === 'rmm_integration') {
+      return [
+        selectedClientRule(input.resource.type, 'read'),
+        selectedClientRule(input.resource.type, 'update'),
+      ];
+    }
+    return [];
+  }),
 }));
+
+vi.mock('@alga-psa/shared/rmm/signedInUserMappings', () => h.shared);
 
 const { mapRmmUserToContact, suggestAssigneeFromRmmUser } = await import('../rmmUserAssignmentActions');
 
@@ -132,7 +155,6 @@ beforeEach(() => {
   h.reset();
   h.shared.suggestContactForAsset.mockClear();
   h.shared.mapSignedInUserToContact.mockClear();
-  h.context.authorizationKernel.authorizeResource.mockClear();
 });
 
 describe('RMM user mapping record authorization', () => {
@@ -161,7 +183,6 @@ describe('RMM user mapping record authorization', () => {
     expect(providerMismatch).toMatchObject({ permissionError: expect.any(String) });
     expect(h.state.mappingWrites).toBe(0);
 
-    h.state.deniedClientIds.add('client-out-of-scope');
     const contactMismatch = await mapRmmUserToContact({
       integrationId: 'integration-1', provider: 'ninjaone', rawUser: 'CORP\\jdoe',
       contactId: 'contact-out-of-scope',
@@ -170,10 +191,19 @@ describe('RMM user mapping record authorization', () => {
     expect(h.state.mappingWrites).toBe(0);
   });
 
-  it('rejects an explicit out-of-scope assignment before writing the mapping', async () => {
+  it('rejects a readable but non-updatable explicit target before writing the mapping', async () => {
+    const authUser = {
+      user_id: 'user-1', user_type: 'internal', roles: [],
+    } as unknown as IUserWithRoles;
+    const context = await createAssetReadContext(h.knex, 'tenant-1', authUser);
+    const readableAsset = { asset_id: 'asset-readable-not-updatable', client_id: 'client-in-scope' };
+
+    expect(await isAssetReadAllowed(h.knex, 'tenant-1', context, readableAsset)).toBe(true);
+    expect(await isAssetActionAllowed(h.knex, 'tenant-1', context, readableAsset, 'update')).toBe(false);
+
     const result = await mapRmmUserToContact({
       integrationId: 'integration-1', provider: 'ninjaone', rawUser: 'CORP\\jdoe',
-      contactId: 'contact-in-scope', assignAssetId: 'asset-out-of-scope',
+      contactId: 'contact-in-scope', assignAssetId: readableAsset.asset_id,
     });
 
     expect(result).toMatchObject({ permissionError: expect.any(String) });
@@ -181,14 +211,22 @@ describe('RMM user mapping record authorization', () => {
     expect(h.state.assignments).toEqual([]);
   });
 
-  it('keeps the mapping and assignments for authorized candidates while filtering excluded candidates', async () => {
+  it('filters readable but non-updatable auto candidates and assigns updatable candidates', async () => {
     const result = await mapRmmUserToContact({
       integrationId: 'integration-1', provider: 'ninjaone', rawUser: 'CORP\\jdoe',
-      contactId: 'contact-in-scope', assignAssetId: 'asset-in-scope',
+      contactId: 'contact-in-scope', assignAssetId: 'asset-update-authorized',
     });
 
-    expect(result).toMatchObject({ key: 'jdoe', assignedAssetIds: ['asset-in-scope'] });
+    expect(result).toMatchObject({
+      key: 'jdoe', assignedAssetIds: ['asset-update-authorized-candidate'],
+    });
     expect(h.state.mappingWrites).toBe(1);
-    expect(h.state.assignments).toEqual(['asset-in-scope']);
+    expect(h.state.assignments).toEqual(['asset-update-authorized-candidate']);
+
+    const authUser = { user_id: 'user-1', user_type: 'internal', roles: [] } as unknown as IUserWithRoles;
+    const context = await createAssetReadContext(h.knex, 'tenant-1', authUser);
+    const readableAsset = { asset_id: 'asset-readable-not-updatable', client_id: 'client-in-scope' };
+    expect(await isAssetReadAllowed(h.knex, 'tenant-1', context, readableAsset)).toBe(true);
+    expect(await isAssetActionAllowed(h.knex, 'tenant-1', context, readableAsset, 'update')).toBe(false);
   });
 });

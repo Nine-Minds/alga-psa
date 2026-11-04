@@ -14,7 +14,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { assetActionErrorFrom, type AssetActionError } from './assetActionErrors';
-import { createAssetReadContext, isAssetReadAllowed } from '../lib/assetReadAuthorization';
+import { createAssetReadContext, isAssetActionAllowed, isAssetReadAllowed } from '../lib/assetReadAuthorization';
 
 type MappingActionUser = {
   user_id: string;
@@ -53,10 +53,12 @@ function createRmmMappingAuthorizer(
     if (contactId && !await hasPermission(user as any, 'contact', 'read', conn as Knex)) return false;
 
     const authorizationContext = await authorizationContextPromise;
-    const readable = await Promise.all(assetRows.map((asset) =>
-      isAssetReadAllowed(conn, tenant, authorizationContext, asset)
+    const allowedAssets = await Promise.all(assetRows.map((asset) =>
+      action === 'read'
+        ? isAssetReadAllowed(conn, tenant, authorizationContext, asset)
+        : isAssetActionAllowed(conn, tenant, authorizationContext, asset, action)
     ));
-    if (readable.some((allowed) => !allowed)) return false;
+    if (allowedAssets.some((allowed) => !allowed)) return false;
 
     if (contactId && contact) {
       const contactDecision = await authorizationContext.authorizationKernel.authorizeResource({
