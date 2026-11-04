@@ -32,6 +32,7 @@ const fake = vi.hoisted(() => {
     store.tickets = [];
     store.statuses = [
       { status_id: 'status-1', name: 'Open', status_type: 'ticket', board_id: 'board-1', is_default: true, is_closed: false },
+      { status_id: 'status-closed', name: 'Closed', status_type: 'ticket', board_id: 'board-1', is_default: false, is_closed: true, order_number: 100 },
     ];
     store.priorities = [
       { priority_id: 'priority-1', priority_name: 'Low', item_type: 'ticket', order_number: 1 },
@@ -268,10 +269,21 @@ describe('importTickets historical dates for closed rows', () => {
 
   it('keeps an explicit entered_at on a closed row', async () => {
     await run([{ title: 'Both', is_closed: true, entered_at: '2024-04-01T10:00:00Z', closed_at: '2024-05-01T10:00:00Z' }]);
+    expect(createTicketMock.mock.calls[0][0].status_id).toBe('status-closed');
     expect(createTicketMock.mock.calls[0][0].historical).toMatchObject({
       entered_at: '2024-04-01T10:00:00Z',
       closed_at: '2024-05-01T10:00:00Z',
     });
+  });
+
+  it('returns a board-specific setup error when a closed row has no closed status', async () => {
+    fake.store.statuses = [fake.store.statuses[0]];
+    const result = await run([{ title: 'Closed without destination status', is_closed: true }]);
+
+    expect(result.ticketsCreated).toBe(0);
+    expect(result.ticketsSkipped).toBe(1);
+    expect(result.errors[0]).toContain('board-1 has no closed ticket status');
+    expect(createTicketMock).not.toHaveBeenCalled();
   });
 
   it('imports a closed row with neither date, using now for both', async () => {

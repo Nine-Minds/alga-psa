@@ -592,13 +592,27 @@ export const importTickets = withAuth(async (
       throw new Error('No ticket priorities found. Please configure priorities first.');
     }
 
-    // Pre-load all status is_closed flags to avoid per-ticket queries
+    // Pre-load statuses to avoid per-ticket queries and resolve a closed
+    // historical row to a status that belongs to its destination board.
     const allStatuses = await tenantScopedTable('statuses')
       .where({ status_type: 'ticket' })
-      .select('status_id', 'is_closed');
-    const statusClosedMap = new Map<string, boolean>();
+      .select('status_id', 'board_id', 'is_closed', 'is_default', 'order_number')
+      .orderBy('order_number');
+    const statusById = new Map<string, { status_id: string; board_id: string | null; is_closed: boolean; is_default: boolean }>();
+    const closedStatusesByBoard = new Map<string, Array<{ status_id: string; board_id: string | null; is_closed: boolean; is_default: boolean }>>();
     for (const s of allStatuses) {
-      statusClosedMap.set(s.status_id, Boolean(s.is_closed));
+      const status = {
+        status_id: s.status_id,
+        board_id: s.board_id ?? null,
+        is_closed: Boolean(s.is_closed),
+        is_default: Boolean(s.is_default),
+      };
+      statusById.set(status.status_id, status);
+      if (status.is_closed && status.board_id) {
+        const boardStatuses = closedStatusesByBoard.get(status.board_id) ?? [];
+        boardStatuses.push(status);
+        closedStatusesByBoard.set(status.board_id, boardStatuses);
+      }
     }
 
     // Pre-load contact → client_id mapping for cross-client validation
@@ -666,10 +680,25 @@ export const importTickets = withAuth(async (
         }
       }
 
-      const finalStatusId = resolvedStatusId || resolvedFallbackStatusId;
-      let isClosed = ticket.is_closed;
-      if (finalStatusId && statusClosedMap.get(finalStatusId)) {
-        isClosed = true;
+      const destinationBoardId = ticket.board_id || defaultBoardId;
+      let finalStatusId = resolvedStatusId || resolvedFallbackStatusId;
+      const requestedStatus = resolvedStatusId ? statusById.get(resolvedStatusId) : undefined;
+      let isClosed = ticket.is_closed || (
+        requestedStatus?.board_id === destinationBoardId && requestedStatus.is_closed
+      );
+
+      const finalStatus = statusById.get(finalStatusId);
+      if (isClosed && (finalStatus?.board_id !== destinationBoardId || !finalStatus.is_closed)) {
+        const destinationClosedStatuses = closedStatusesByBoard.get(destinationBoardId) ?? [];
+        const closedStatus = destinationClosedStatuses.find((status) => status.is_default) ?? destinationClosedStatuses[0];
+        if (!closedStatus) {
+          errors.push(
+            `Row ${ticket.rowNumber}: Cannot import "${ticket.title}" as closed because destination board ${destinationBoardId} has no closed ticket status. Add a closed status to that board or choose a board with one.`,
+          );
+          ticketsSkipped++;
+          continue;
+        }
+        finalStatusId = closedStatus.status_id;
       }
 
       resolvedTickets.push({

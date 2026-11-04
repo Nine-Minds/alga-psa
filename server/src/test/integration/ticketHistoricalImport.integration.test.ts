@@ -217,7 +217,54 @@ describe('historical ticket import via TicketService (integration)', () => {
     expect(new Date(reply.created_at).toISOString()).toBe('2025-03-21T10:00:00.000Z');
     const thread = await table('comment_threads').where({ thread_id: parent.thread_id }).first();
     expect(new Date(thread.last_activity_at).toISOString()).toBe('2025-03-21T10:00:00.000Z');
+
+    const olderReply = await service.addComment(
+      ticket.ticket_id,
+      { comment_text: 'older imported reply', is_internal: false, parent_comment_id: parent.comment_id, created_at: '2025-03-20T15:00:00Z' } as any,
+      ctx(),
+    );
+    expect(new Date(olderReply.created_at).toISOString()).toBe('2025-03-20T15:00:00.000Z');
+    const threadAfterOlderReply = await table('comment_threads').where({ thread_id: parent.thread_id }).first();
+    expect(new Date(threadAfterOlderReply.last_activity_at).toISOString()).toBe('2025-03-21T10:00:00.000Z');
     expect(eventTypes()).not.toContain('TICKET_COMMENT_ADDED');
+  });
+
+  it('keeps a closed bundle master closed after importing a historical child reply', async () => {
+    const master = await service.create(
+      body({ status_id: closedStatusId, entered_at: '2025-03-01T09:00:00Z', closed_at: '2025-03-05T09:00:00Z' }),
+      ctx(),
+    );
+    const child = await service.create(body({ entered_at: '2025-03-10T09:00:00Z' }), ctx());
+    await table('tickets').where({ ticket_id: child.ticket_id }).update({ master_ticket_id: master.ticket_id });
+    await table('ticket_bundle_settings').insert({
+      tenant: tenantId,
+      master_ticket_id: master.ticket_id,
+      mode: 'sync_updates',
+      reopen_on_child_reply: true,
+    });
+
+    const parent = await service.addComment(
+      child.ticket_id,
+      { comment_text: 'historical child note', is_internal: false, created_at: '2025-03-11T10:00:00Z' } as any,
+      ctx(),
+    );
+    // Establish the closed state after creating the root note so this assertion
+    // isolates whether the subsequent historical reply reopens the master.
+    await table('tickets').where({ ticket_id: master.ticket_id }).update({
+      status_id: closedStatusId,
+      is_closed: true,
+      closed_at: '2025-03-05T09:00:00Z',
+      closed_by: userId,
+    });
+
+    await service.addComment(
+      child.ticket_id,
+      { comment_text: 'historical child reply', is_internal: false, parent_comment_id: parent.comment_id, created_at: '2025-03-12T10:00:00Z' } as any,
+      ctx(),
+    );
+
+    const masterAfterReply = await table('tickets').where({ ticket_id: master.ticket_id }).first();
+    expect(masterAfterReply).toMatchObject({ status_id: closedStatusId, is_closed: true });
   });
 
   it('status endpoint honors a supplied closed_at on an open->closed crossing, and still emits TICKET_CLOSED', async () => {
