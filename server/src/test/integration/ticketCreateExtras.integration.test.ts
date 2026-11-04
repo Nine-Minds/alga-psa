@@ -206,6 +206,9 @@ describe('addTicket create extras (integration)', () => {
 
   it('creates primary and additional staffing atomically when later ticket updates are denied', async () => {
     const before = await countTickets();
+    const ticketUpdatePermissions = await tt('permissions')
+      .where({ resource: 'ticket', action: 'update', msp: true }).select('permission_id');
+    await tt('role_permissions').whereIn('permission_id', ticketUpdatePermissions.map((p: any) => p.permission_id)).delete();
     vi.spyOn(dbModule, 'createTenantKnex').mockImplementationOnce(async () => ({
       knex: poolLikeForActionTransactions(), tenant: tenantId,
     }) as any);
@@ -215,11 +218,8 @@ describe('addTicket create extras (integration)', () => {
     }));
     expect(created?.ticket_id).toBeTruthy();
 
-    // The creator retains create permission but loses the permission required by the
+    // The creator has create but not update permission for both creation and the
     // follow-up resource action. The assignment inserted during creation stays available.
-    const ticketUpdatePermissions = await tt('permissions')
-      .where({ resource: 'ticket', action: 'update', msp: true }).select('permission_id');
-    await tt('role_permissions').whereIn('permission_id', ticketUpdatePermissions.map((p: any) => p.permission_id)).delete();
     const beforeDeniedAssignments = await tt('ticket_resources').where({ ticket_id: created.ticket_id }).select('*');
     const beforeDeniedAudit = await tt('ticket_audit_logs').where({ ticket_id: created.ticket_id }).select('*');
     const denied = await ticketResourceActions.addTicketResource(created.ticket_id, secondAdditionalAgentId, 'support');
