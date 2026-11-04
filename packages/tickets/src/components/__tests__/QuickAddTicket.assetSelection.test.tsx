@@ -57,6 +57,8 @@ vi.mock('../../actions/ticketFormActions', () => ({
 vi.mock('../../actions/clientLookupActions', () => ({
   getContactsByClient: vi.fn().mockResolvedValue([]),
   getClientLocations: vi.fn().mockResolvedValue([]),
+  searchClientsForPicker: vi.fn().mockResolvedValue({ clients: [], total: 0 }),
+  getClientById: vi.fn(async (id: string) => ({ client_id: id, client_name: id, client_type: 'company' })),
 }));
 
 vi.mock('@alga-psa/reference-data/actions', () => ({
@@ -195,15 +197,20 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
 }));
 
+// The async picker searches on its own; the fake just offers the two clients the tests choose between.
+const PICKER_CLIENTS = [
+  { client_id: 'client-1', client_name: 'Acme' },
+  { client_id: 'client-2', client_name: 'Globex' },
+];
+
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
-  ClientPicker: ({ clients, onSelect, selectedClientId }: {
-    clients: Array<{ client_id: string; client_name: string }>;
+  ClientPicker: ({ onSelect, selectedClientId }: {
     onSelect: (clientId: string | null) => void;
     selectedClientId: string | null;
   }) => (
     <div>
       <div data-testid="client-picker-value">{selectedClientId || ''}</div>
-      {clients.map((client) => (
+      {PICKER_CLIENTS.map((client) => (
         <button key={client.client_id} type="button" onClick={() => onSelect(client.client_id)}>
           {`Choose ${client.client_name}`}
         </button>
