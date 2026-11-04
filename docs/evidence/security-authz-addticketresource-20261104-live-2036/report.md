@@ -20,3 +20,5 @@ The origin initially refused connections and no process listened on 3751. Starte
 - `security-finding-resolved` was unavailable in the local environment; no acceptance verdict is claimed.
 
 No source repair was demonstrated as necessary by this run. Evidence contains no browser storage state or credential material. Historical evidence in neighboring folders was not used as a current live pass.
+
+Additional allowed-path recovery attempt: queried existing Mountain Dental tickets (the visible client named by the active ticket-write scope) and opened QA-assigned ticket `TIC001252` (`093e09d4-29e1-4e41-b233-c4b34912a3cd`) in the same authenticated browser. The record policy still returned `Permission denied: Cannot view ticket`, so this principal had no policy-visible record available for allowed resource operations or Team UI remove/re-add during this run. I did not disable or bypass active restrictions to make the UI succeed.
