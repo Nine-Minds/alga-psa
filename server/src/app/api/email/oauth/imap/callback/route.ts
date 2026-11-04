@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { tenantDb } from '@alga-psa/db';
-import { decodeState, validateState } from '@/utils/email/oauthHelpers';
+import { verifyImapOAuthState } from '@/utils/email/imapOAuthState';
 import { createTenantKnex } from '@/lib/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import axios from 'axios';
+import { assertSafeOutboundUrl, postSafeOutboundForm } from '@alga-psa/integrations/lib/outboundUrlPolicy';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
 
 export async function GET(request: NextRequest) {
@@ -16,9 +16,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing code/state' }, { status: 400 });
     }
 
-    const state = decodeState(stateParam);
-    if (!state || !validateState(state)) {
+    const state = await verifyImapOAuthState(stateParam);
+    if (!state) {
       return NextResponse.json({ error: 'Invalid OAuth state' }, { status: 400 });
+    }
+    // State signature authenticates the tenant/provider bindings. Consume the
+    // nonce atomically before looking up provider data or retrieving secrets.
+    const { knex, tenant } = await createTenantKnex(state.tenant);
+    if (tenant !== state.tenant) {
+      return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
+    }
+    const db = tenantDb(knex, tenant);
+    const consumed = await db.table('imap_oauth_states')
+      .where({ tenant: state.tenant, nonce: state.nonce })
+      .where('expires_at', '>', new Date().toISOString())
+      .delete()
+      .returning('state');
+    const persistedState = consumed?.[0]?.state;
+    if (!persistedState || persistedState.purpose !== state.purpose ||
+      persistedState.tenant !== state.tenant || persistedState.providerId !== state.providerId ||
+      persistedState.userId !== state.userId || persistedState.redirectUri !== state.redirectUri ||
+      persistedState.expiresAt !== state.expiresAt) {
+      return NextResponse.json({ error: 'OAuth state expired or already used' }, { status: 400 });
     }
     await assertTenantProductAccess({
       tenantId: state.tenant,
@@ -29,12 +48,6 @@ export async function GET(request: NextRequest) {
     if (!state.providerId) {
       return NextResponse.json({ error: 'Missing providerId' }, { status: 400 });
     }
-
-    const { knex, tenant } = await createTenantKnex();
-    if (tenant !== state.tenant) {
-      return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
-    }
-    const db = tenantDb(knex, tenant);
 
     const provider = await db.table('email_providers')
       .where({ id: state.providerId, provider_type: 'imap' })
@@ -56,6 +69,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'IMAP OAuth token configuration missing' }, { status: 400 });
     }
 
+    // Validate old stored URLs at use time; earlier validation only ran while
+    // saving settings and cannot protect configurations that predate that check.
+    try {
+      await assertSafeOutboundUrl(imapConfig.oauth_token_url);
+    } catch {
+      return NextResponse.json({ error: 'IMAP OAuth token URL is not allowed' }, { status: 400 });
+    }
+
     const secretProvider = await getSecretProviderInstance();
     const clientSecret = await secretProvider.getTenantSecret(tenant, `imap_oauth_client_secret_${state.providerId}`);
 
@@ -70,11 +91,11 @@ export async function GET(request: NextRequest) {
 
     let tokenResponse;
     try {
-      tokenResponse = await axios.post(imapConfig.oauth_token_url, params, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-      });
-    } catch (tokenError) {
-      console.warn('IMAP OAuth token exchange failed:', tokenError);
+      tokenResponse = await postSafeOutboundForm(imapConfig.oauth_token_url, params);
+    } catch {
+      // Do not log request objects: HTTP clients may include form data with the
+      // client secret in their error details.
+      console.warn('IMAP OAuth token exchange failed');
       return NextResponse.json(
         { error: 'IMAP OAuth token exchange failed. Start the reconnect flow again.' },
         { status: 400 }
@@ -167,7 +188,9 @@ export async function GET(request: NextRequest) {
     if (isProductAccessError(error)) {
       return toProductAccessDeniedResponse(error);
     }
-    console.error('IMAP OAuth callback error:', error);
+    // Provider, database, or HTTP client errors can carry sensitive request
+    // details. Keep callback failures observable without logging their payload.
+    console.error('IMAP OAuth callback failed');
     return NextResponse.json({ error: 'Failed to finalize IMAP OAuth. Please try again.' }, { status: 500 });
   }
 }

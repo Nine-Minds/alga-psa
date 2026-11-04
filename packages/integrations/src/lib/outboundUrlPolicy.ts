@@ -13,6 +13,8 @@
 
 import dns from 'node:dns/promises';
 import { BlockList, isIP } from 'node:net';
+import https from 'node:https';
+import axios, { type AxiosResponse } from 'axios';
 
 export class UnsafeOutboundUrlError extends Error {
   constructor(message: string) {
@@ -74,7 +76,7 @@ export function isBlockedOutboundAddress(address: string): boolean {
  * Throws UnsafeOutboundUrlError unless `rawUrl` satisfies the outbound policy.
  * Message never includes the path or query.
  */
-export async function assertSafeOutboundUrl(rawUrl: string): Promise<void> {
+export async function resolveSafeOutboundUrl(rawUrl: string): Promise<{ url: URL; addresses: string[] }> {
   let url: URL;
   try {
     url = new URL(rawUrl);
@@ -109,4 +111,37 @@ export async function assertSafeOutboundUrl(rawUrl: string): Promise<void> {
   if (addresses.some(isBlockedOutboundAddress)) {
     throw new UnsafeOutboundUrlError('URL host resolves to a non-public address');
   }
+  return { url, addresses };
+}
+
+/** Validate immediately before sending, pin DNS answers to the validated public
+ * addresses, and refuse redirects so credentials cannot be forwarded elsewhere. */
+export async function postSafeOutboundForm<T = unknown>(rawUrl: string, body: URLSearchParams): Promise<AxiosResponse<T>> {
+  const { url, addresses } = await resolveSafeOutboundUrl(rawUrl);
+  let nextAddress = 0;
+  const lookup = (_hostname: string, options: any, callback: (...args: any[]) => void) => {
+    if (options?.all) {
+      callback(null, addresses.map((address) => ({ address, family: isIP(address) })));
+      return;
+    }
+    const address = addresses[nextAddress++ % addresses.length]!;
+    callback(null, address, isIP(address));
+  };
+  const agent = new https.Agent({ lookup: lookup as any, keepAlive: false });
+  try {
+    return await axios.post<T>(url.toString(), body, {
+      httpsAgent: agent,
+      // A configured proxy would resolve the destination independently and
+      // bypass the validated address pinning above.
+      proxy: false,
+      maxRedirects: 0,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    });
+  } finally {
+    agent.destroy();
+  }
+}
+
+export async function assertSafeOutboundUrl(rawUrl: string): Promise<void> {
+  await resolveSafeOutboundUrl(rawUrl);
 }
