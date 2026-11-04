@@ -58,11 +58,13 @@ vi.mock('@alga-psa/db', () => ({
 // Keep bundle assignment loading at the database boundary while exercising the
 // production asset resolver, bundle provider, relationship templates, and kernel.
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
-  resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => h.rules),
+  resolveBundleNarrowingRulesForEvaluation: vi.fn(async (_trx: unknown, input: any) =>
+    h.rules.filter((rule) => !rule.apiKeyId || rule.apiKeyId === input.subject.apiKeyId)),
 }));
 
 import { isAssetGroupOperationAllowed } from './assetGroupAuthorization';
 import { getAuthorizedAssetGroupSummariesForAssets, getAuthorizedAssetGroupSummary } from './assetGroups';
+import { assetMatchesVisibility } from '@alga-psa/authorization/portal/visibility';
 
 describe('asset group authorization with the production asset resolver and kernel', () => {
   beforeEach(() => {
@@ -98,6 +100,38 @@ describe('asset group authorization with the production asset resolver and kerne
 
     await expect(getAuthorizedAssetGroupSummary({} as any, TENANT, user, ASSET)).resolves.toBeNull();
     await expect(getAuthorizedAssetGroupSummariesForAssets({} as any, TENANT, user, [ASSET])).resolves.toEqual(new Map());
+  });
+
+  it('preserves API-key identity so key-targeted same-team narrowing applies to every member', async () => {
+    h.tables.asset_groups[0].name = 'Restricted workspace';
+    h.tables.asset_groups[0].kind = 'bundle';
+    h.tables.asset_group_members.push({ tenant: TENANT, group_id: GROUP, asset_id: '44444444-4444-4444-8444-444444444444' });
+    h.tables.assets.push({ tenant: TENANT, asset_id: '44444444-4444-4444-8444-444444444444', client_id: CLIENT });
+    h.rules = [{
+      id: 'api-key-same-team', apiKeyId: 'restricted-key', resource: 'asset', action: 'read', templateKey: 'same_team',
+    }];
+    const user = { user_id: 'u1', user_type: 'internal', roles: ['r1'], apiKeyId: 'restricted-key' } as any;
+
+    await expect(getAuthorizedAssetGroupSummary({} as any, TENANT, user, ASSET)).resolves.toBeNull();
+    await expect(getAuthorizedAssetGroupSummariesForAssets({} as any, TENANT, user, [ASSET])).resolves.toEqual(new Map());
+  });
+
+  it('composes an additional caller visibility policy across all group members', async () => {
+    const hiddenMemberId = '44444444-4444-4444-8444-444444444444';
+    h.tables.asset_group_members.push({ tenant: TENANT, group_id: GROUP, asset_id: hiddenMemberId });
+    h.tables.assets[0].contact_name_id = 'contact-a';
+    h.tables.assets.push({ tenant: TENANT, asset_id: hiddenMemberId, client_id: CLIENT, contact_name_id: 'contact-b' });
+    const visibility = { contactId: 'contact-a', clientId: CLIENT, effectiveAssetScope: 'contact' as const, visibleContactIds: [] as string[] };
+    const portalVisibility = async (_trx: unknown, assetId: string) => {
+      const asset = h.tables.assets.find((row) => row.asset_id === assetId);
+      return assetMatchesVisibility({ clientId: asset?.client_id, contactId: asset?.contact_name_id }, visibility);
+    };
+    const user = { user_id: 'u1', user_type: 'internal', roles: ['r1'] } as any;
+
+    await expect(getAuthorizedAssetGroupSummary({} as any, TENANT, user, ASSET, portalVisibility)).resolves.toBeNull();
+    await expect(getAuthorizedAssetGroupSummariesForAssets({} as any, TENANT, user, [ASSET], portalVisibility)).resolves.toEqual(new Map());
+    visibility.visibleContactIds = ['contact-a', 'contact-b'];
+    await expect(getAuthorizedAssetGroupSummary({} as any, TENANT, user, ASSET, portalVisibility)).resolves.toMatchObject({ group_id: GROUP });
   });
 
   it('retains summaries for fully authorized groups and filters denied groups in a mixed batch', async () => {

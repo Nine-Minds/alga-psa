@@ -81,7 +81,7 @@ describe('client-assets server action contract', () => {
     // and "Shared workspace" rows need the join and the summaries.
     expect(source).toContain("'contacts.full_name as contact_name'");
     expect(source).toContain('getAuthorizedAssetGroupSummariesForAssets');
-    expect(source).toContain('await getAuthorizedAssetGroupSummary(trx, tenant, assetGroupAuthUser(user), assetId)');
+    expect(source).toContain('getAuthorizedAssetGroupSummary(\n          trx,\n          tenant,\n          assetGroupAuthUser(user),\n          assetId,\n          portalAssetReadCheck(tenant, visibility),');
     expect(source).toContain('withAssigneeName(trx, tenant, baseQuery())');
     expect(
       source.match(/withAssigneeName\(trx, tenant, scopedAssets\(trx, tenant, visibility\)\)/g),

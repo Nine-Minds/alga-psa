@@ -144,7 +144,7 @@ describe('client portal asset surfaces (FR-E7)', () => {
     // renders every device as "Unassigned".
     expect(text).toMatch(/'contacts\.full_name as contact_name'/);
     expect(text).toMatch(/getAuthorizedAssetGroupSummariesForAssets\(\s*trx,\s*tenant,\s*assetGroupAuthUser\(user\),/);
-    expect(text).toContain('await getAuthorizedAssetGroupSummary(trx, tenant, assetGroupAuthUser(user), assetId)');
+    expect(text).toMatch(/getAuthorizedAssetGroupSummary\(\s*trx,\s*tenant,\s*assetGroupAuthUser\(user\),\s*assetId,\s*portalAssetReadCheck\(tenant, visibility\),/);
     // Every row read goes through the joining helper.
     expect(text).toMatch(/withAssigneeName\(trx, tenant, baseQuery\(\)\)/);
     expect(

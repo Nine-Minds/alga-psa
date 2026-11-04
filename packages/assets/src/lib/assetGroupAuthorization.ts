@@ -15,6 +15,8 @@ type AssetGroupOperation = {
   groupId?: string;
   clientId?: string;
   assetIds?: readonly string[];
+  /** Additional caller policy composed with normal asset authorization for every member. */
+  additionalReadCheck?: (trx: Knex | Knex.Transaction, assetId: string) => Promise<boolean>;
 };
 
 const SCOPE_DENIED = { assetGroupScopeDenied: true } as const;
@@ -88,6 +90,11 @@ export async function isAssetGroupOperationAllowed(
 
   for (const asset of assets) {
     if (!(await canRead(asset)) || (input.action !== 'read' && !(await can(asset)))) return false;
+    if (
+      input.action === 'read' &&
+      input.additionalReadCheck &&
+      !(await input.additionalReadCheck(trx, asset.asset_id))
+    ) return false;
   }
   return true;
 }

@@ -341,6 +341,7 @@ export class AssetService extends BaseService<any> {
                 ? 'service'
                 : 'internal',
             clientId: requestUser.clientId,
+            apiKeyId: context.apiKeyId ?? null,
             roles: requestUser.roles,
           }
         : null;

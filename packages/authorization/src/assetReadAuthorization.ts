@@ -24,6 +24,8 @@ export type AssetAuthUser = {
   user_id: string;
   user_type: AuthorizationSubject['userType'];
   clientId?: string | null;
+  /** Verified API-key principal used by bundle target narrowing. */
+  apiKeyId?: string | null;
   roles?: Array<{ role_id?: string } | string>;
 };
 
@@ -79,6 +81,7 @@ export async function resolveAuthorizationSubjectForUser(
     managedUserIds: managedRows.map((row) => row.user_id),
     clientId: user.clientId ?? null,
     portfolioClientIds: user.clientId ? [user.clientId] : [],
+    apiKeyId: user.apiKeyId ?? null,
   };
 }
 

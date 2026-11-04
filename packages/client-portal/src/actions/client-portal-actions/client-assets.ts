@@ -127,7 +127,7 @@ function assetGroupAuthUser(user: IUserWithRoles): AssetAuthUser {
 
 /** Assets of the user's client, narrowed by their asset scope. The only way this module reads `assets`. */
 function scopedAssets(
-  trx: Knex.Transaction,
+  trx: Knex | Knex.Transaction,
   tenant: string,
   visibility: ContactVisibilityContext,
 ): Knex.QueryBuilder {
@@ -137,6 +137,18 @@ function scopedAssets(
     // FR-E7 / FR-E7b: a shared-workspace member is visible to its users.
     sharedWorkspace: { assetIdColumn: 'assets.asset_id', tenantColumn: 'assets.tenant' },
   });
+}
+
+/** Re-evaluate the same resolved portal visibility policy for every group member. */
+function portalAssetReadCheck(
+  tenant: string,
+  visibility: ContactVisibilityContext,
+): (trx: Knex | Knex.Transaction, assetId: string) => Promise<boolean> {
+  return async (trx, assetId) => Boolean(
+    await scopedAssets(trx, tenant, visibility)
+      .where('assets.asset_id', assetId)
+      .first('assets.asset_id'),
+  );
 }
 
 /**
@@ -192,6 +204,7 @@ async function serializeWithGroups(
   trx: Knex.Transaction,
   tenant: string,
   user: IUserWithRoles,
+  visibility: ContactVisibilityContext,
   rows: Array<Asset & Record<string, unknown>>,
 ): Promise<Asset[]> {
   const summaries = await getAuthorizedAssetGroupSummariesForAssets(
@@ -199,6 +212,7 @@ async function serializeWithGroups(
     tenant,
     assetGroupAuthUser(user),
     rows.map((row) => row.asset_id),
+    portalAssetReadCheck(tenant, visibility),
   );
   return rows.map((row) => ({
     ...serializeAsset(row),
@@ -325,7 +339,7 @@ export const listClientAssets = withAuth(async (
       .offset(offset);
 
       return {
-        assets: await serializeWithGroups(trx, tenant, user, rows),
+        assets: await serializeWithGroups(trx, tenant, user, visibility, rows),
         total: Number(filteredCount?.count ?? 0),
         by_status: buildStatusSummary(statusRows, statusCounts),
         by_type: byType,
@@ -353,7 +367,7 @@ export const getClientAssets = withAuth(async (
       const visibility = await resolveAssetVisibility(trx, user, tenant);
       const assets = await withAssigneeName(trx, tenant, scopedAssets(trx, tenant, visibility))
         .orderBy('assets.updated_at', 'desc');
-      return serializeWithGroups(trx, tenant, user, assets);
+      return serializeWithGroups(trx, tenant, user, visibility, assets);
     });
   } catch (error) {
     const expected = clientPortalActionErrorFrom(error);
@@ -385,7 +399,13 @@ export const getClientAssetById = withAuth(async (
       if (!row) return null;
       return {
         ...serializeAsset(row),
-        group: await getAuthorizedAssetGroupSummary(trx, tenant, assetGroupAuthUser(user), assetId),
+        group: await getAuthorizedAssetGroupSummary(
+          trx,
+          tenant,
+          assetGroupAuthUser(user),
+          assetId,
+          portalAssetReadCheck(tenant, visibility),
+        ),
       };
     });
   } catch (error) {

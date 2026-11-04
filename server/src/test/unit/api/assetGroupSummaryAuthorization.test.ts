@@ -80,6 +80,20 @@ describe('AssetService group summaries', () => {
     expect(getAuthorizedAssetGroupSummary).toHaveBeenCalledWith(h.trx, TENANT, expect.objectContaining({ user_id: USER.user_id, user_type: USER.user_type }), ASSET);
   });
 
+  it('carries the verified API-key identity into group authorization', async () => {
+    h.inScopeAssets.add(HIDDEN_MEMBER);
+    const service = new AssetService();
+    const apiKeyId = 'restricted-key-1';
+    await service.getById(ASSET, { tenant: TENANT, userId: USER.user_id, user: USER, apiKeyId } as any);
+
+    expect(getAuthorizedAssetGroupSummary).toHaveBeenCalledWith(
+      h.trx,
+      TENANT,
+      expect.objectContaining({ user_id: USER.user_id, apiKeyId }),
+      ASSET,
+    );
+  });
+
   it('preserves the summary when every group member is authorized', async () => {
     h.inScopeAssets.add(HIDDEN_MEMBER);
     const service = new AssetService();

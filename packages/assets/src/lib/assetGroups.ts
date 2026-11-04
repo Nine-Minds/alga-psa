@@ -681,14 +681,15 @@ export async function getAuthorizedAssetGroupSummary(
   trx: Knex | Knex.Transaction,
   tenant: string,
   user: AssetAuthUser,
-  assetId: string
+  assetId: string,
+  additionalReadCheck?: (trx: Knex | Knex.Transaction, assetId: string) => Promise<boolean>
 ): Promise<AssetGroupSummary | null> {
   const member = await table(trx, tenant, 'asset_group_members')
     .where({ asset_id: assetId })
     .first<{ group_id: string }>('group_id');
   if (!member) return null;
 
-  if (!await isAssetGroupOperationAllowed(trx, tenant, user, { action: 'read', groupId: member.group_id })) {
+  if (!await isAssetGroupOperationAllowed(trx, tenant, user, { action: 'read', groupId: member.group_id, additionalReadCheck })) {
     return null;
   }
   return getAssetGroupSummary(trx, tenant, assetId);
@@ -766,7 +767,8 @@ export async function getAuthorizedAssetGroupSummariesForAssets(
   trx: Knex | Knex.Transaction,
   tenant: string,
   user: AssetAuthUser,
-  assetIds: string[]
+  assetIds: string[],
+  additionalReadCheck?: (trx: Knex | Knex.Transaction, assetId: string) => Promise<boolean>
 ): Promise<Map<string, AssetGroupSummary>> {
   const byAsset = new Map<string, AssetGroupSummary>();
   if (assetIds.length === 0) return byAsset;
@@ -783,7 +785,7 @@ export async function getAuthorizedAssetGroupSummariesForAssets(
 
   const allowedAssetIds = new Set<string>();
   for (const [groupId, memberAssetIds] of groupAssets) {
-    if (await isAssetGroupOperationAllowed(trx, tenant, user, { action: 'read', groupId })) {
+    if (await isAssetGroupOperationAllowed(trx, tenant, user, { action: 'read', groupId, additionalReadCheck })) {
       for (const memberAssetId of memberAssetIds) allowedAssetIds.add(memberAssetId);
     }
   }
