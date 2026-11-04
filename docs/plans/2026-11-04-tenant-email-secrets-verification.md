@@ -126,11 +126,36 @@ field labels. No secret values are included in this report.
 
 ## Remaining verification
 
-Once resource admission starts the registered app on port 3590, rerun the
-authenticated settings response and browser save flows: legacy-secret redaction,
-save followed by SMTP delivery, non-secret edit preservation, missing-secret
-recovery, and sending from the running process after backfill. The runtime
-results above do not replace those checks.
+### 2026-11-04 board wake follow-up
+
+At 2026-11-04 11:12 UTC, `alga-dev workflow-ensure-service` was run with only
+`--projectId` and `--name=dev-server`. It succeeded without `--command`, reused
+the registered `PORT=3590 npm run dev` launch in the worktree's `server`
+directory, and reported the service live on `ts:robert-X670E-Pro-RS`. The
+card-origin URL
+`http://feature-move-tenant-smtp-resend-secrets-out-of-plaintext.localhost:3590`
+returned HTTP 307 to the MSP sign-in route. This verifies registration recovery;
+the earlier 6 GiB admission queue is no longer blocking the service. The
+supervisor release recorded above is `202611040722-g518a7e9`; this follow-up
+verified service behavior but did not independently query the supervisor's
+current release identifier.
+
+The QA fixture was inspected with its redacted `show` action and reset to `legacy`
+using the documented fixture script. GreenMail readiness returned HTTP 200 on
+the dedicated simulator's REST port. No SMTP password or Resend key was emitted.
+The browser reached the MSP sign-in form. Authenticated settings/API and browser
+save flows could not be rerun because this worktree's local configuration has no
+development login credential and the board server's earlier generated startup
+credential was no longer present in the accessible terminal history. No user
+password or server startup configuration was changed to bypass this gap. The
+fixture remains seeded for the authenticated continuation.
+
+The direct authenticated checks still outstanding are: legacy-secret redaction
+in settings responses and rendered fields; save into tenant secret storage with
+SMTP delivery; preservation on a non-secret edit; missing-reference failure and
+replacement recovery; and send from the running process after backfill. The
+prior direct runtime helper and operator-script checks documented above remain
+valid but do not substitute for these authenticated flows.
 
 Vault access from every production mail-sending process and CE shared-secret
 volume behavior remain deployment checks from the approved plan. They were not
