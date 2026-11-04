@@ -30,11 +30,28 @@ describe('shared secure Chromium HTML policy', () => {
     expect(page.contentOptions).toEqual({ waitUntil: 'domcontentloaded' });
     const abort = vi.fn();
     const proceed = vi.fn();
-    page.handlers.request({ url: () => 'http://127.0.0.1/', abort, continue: proceed });
+    page.handlers.request({ url: () => 'http://127.0.0.1/', resourceType: () => 'document', abort, continue: proceed });
     expect(abort).toHaveBeenCalledWith('blockedbyclient');
     expect(proceed).not.toHaveBeenCalled();
-    page.handlers.request({ url: () => 'data:image/png;base64,AA==', abort, continue: proceed });
+    page.handlers.request({ url: () => 'data:image/png;base64,AA==', resourceType: () => 'image', abort, continue: proceed });
     expect(proceed).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ['file:///etc/passwd', 'document'],
+    ['data:text/html,<h1>payload</h1>', 'document'],
+    ['data:text/javascript,alert(1)', 'script'],
+    ['data:image/png;base64,AA==', 'document'],
+    ['data:image/svg+xml,<svg/>', 'document'],
+    ['data:application/octet-stream;base64,AA==', 'image'],
+  ])('refuses %s in a %s request', async (url, type) => {
+    const page = fakePage();
+    await setSecureHtmlContent(page as any, '<p>Document</p>');
+    const abort = vi.fn();
+    const proceed = vi.fn();
+    page.handlers.request({ url: () => url, resourceType: () => type, abort, continue: proceed });
+    expect(abort).toHaveBeenCalledWith('blockedbyclient');
+    expect(proceed).not.toHaveBeenCalled();
   });
 
   it('passes the remaining byte allowance and never fetches later images after exhaustion', async () => {

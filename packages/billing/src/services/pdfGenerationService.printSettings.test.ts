@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TemplateAst } from '@alga-psa/types';
+import http from 'node:http';
+import type { AddressInfo } from 'node:net';
+import * as safeFetch from '@alga-psa/core/net/safeFetch';
 
 const { getBrowserMock, releaseBrowserMock } = vi.hoisted(() => ({
   getBrowserMock: vi.fn(),
@@ -85,7 +88,7 @@ describe('billing PDFGenerationService print settings', () => {
         expect(page.setJavaScriptEnabled).toHaveBeenCalledWith(false);
         expect(page.setRequestInterception).toHaveBeenCalledWith(true);
         expect(requestHandler).toBeTypeOf('function');
-        requestHandler!({ url: () => url, abort, continue: proceed });
+        requestHandler!({ url: () => url, resourceType: () => 'document', abort, continue: proceed });
       }),
       pdf: vi.fn(async () => {
         expect(abort).toHaveBeenCalledWith('blockedbyclient');
@@ -105,6 +108,59 @@ describe('billing PDFGenerationService print settings', () => {
     expect(page.close).toHaveBeenCalledOnce();
     expect(releaseBrowserMock).toHaveBeenCalledWith(browser);
   });
+
+  it('renders a legitimate image in a real PDF without contacting an internal image server', async () => {
+    let connections = 0;
+    const server = http.createServer((_request, response) => response.end('internal secret'));
+    server.on('connection', () => { connections += 1; });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    let browser: import('puppeteer').Browser | undefined;
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
+    const fetchPublicBytes = safeFetch.fetchPublicBytes;
+    // Deterministic public CDN transport; retain the real DNS/IP and MIME validation.
+    const fetchSpy = vi.spyOn(safeFetch, 'fetchPublicBytes').mockImplementation((url, options) =>
+      fetchPublicBytes(url, {
+        ...options,
+        lookup: async () => [{ address: '93.184.216.34', family: 4 }],
+        request: async () => ({
+          status: 200,
+          headers: { 'content-type': 'image/png' },
+          body: (async function* () { yield png; })(),
+        }),
+      }),
+    );
+    try {
+      const { BrowserPoolService } = await vi.importActual<typeof import('./browserPoolService')>('./browserPoolService');
+      browser = await new BrowserPoolService(1).getBrowser();
+      const page = await browser.newPage();
+      getBrowserMock.mockResolvedValue({ newPage: async () => page });
+      releaseBrowserMock.mockResolvedValue(undefined);
+      const print = page.pdf.bind(page);
+      vi.spyOn(page, 'pdf').mockImplementation(async (options) => {
+        await page.waitForFunction(() => {
+          const logo = document.querySelector<HTMLImageElement>('#logo');
+          return logo?.complete && logo.naturalWidth === 1;
+        }, { polling: 50, timeout: 5000 });
+        expect(await page.evaluate(() => document.querySelector('#script-ran'))).toBeNull();
+        return print(options);
+      });
+      const port = (server.address() as AddressInfo).port;
+      const service = new PDFGenerationService('tenant-1');
+      const buffer = await (service as any).generatePDFBuffer(`
+        <h1>Customer document</h1><img id="logo" src="https://cdn.example.com/customer-logo.png">
+        <img src="http://127.0.0.1:${port}/private.png">
+        <iframe src="http://127.0.0.1:${port}/private"></iframe>
+        <script>document.body.id = 'script-ran'; fetch('http://127.0.0.1:${port}/script')</script>
+      `);
+      expect(buffer.subarray(0, 5).toString()).toBe('%PDF-');
+      expect(page.pdf).toHaveBeenCalledOnce();
+      expect(connections).toBe(0);
+    } finally {
+      fetchSpy.mockRestore();
+      await browser?.close();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  }, 30000);
 
   it('passes resolved format and margin options to page.pdf(...)', async () => {
     const page = {

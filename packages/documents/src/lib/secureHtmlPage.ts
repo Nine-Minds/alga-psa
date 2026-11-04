@@ -27,7 +27,11 @@ export async function setSecureHtmlContent(
   await page.setRequestInterception(true);
   page.on('request', (request) => {
     const url = request.url();
-    if (url.startsWith('data:') || url === 'about:blank') {
+    // Data documents, scripts, fonts and other payloads have no role in a render.
+    // Keep SVG in the image context only: Chromium disables its active content there.
+    const inlineImage = request.resourceType() === 'image' &&
+      /^data:image\/(?:png|jpeg|gif|webp|avif|bmp|x-icon|vnd\.microsoft\.icon|svg\+xml)(?:;[^,]*)?,/i.test(url);
+    if (inlineImage || url === 'about:blank') {
       void request.continue();
     } else {
       void request.abort('blockedbyclient');
