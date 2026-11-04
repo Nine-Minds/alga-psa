@@ -294,7 +294,7 @@ describe('time authorization delegation and approval contracts', () => {
     );
   });
 
-  it('T019: self-approval is denied by default, allowed for a sole approver, and denied by not-self-approver bundle rules', async () => {
+  it('T019: self-approval is denied for multiple and sole approvers, including with not-self-approver bundle rules', async () => {
     const actor: TestUser = { user_id: 'u-1', user_type: 'internal' };
     const tenantUsers = ['u-1', 'u-2'];
 
@@ -304,8 +304,7 @@ describe('time authorization delegation and approval contracts', () => {
         return (holders[user?.user_id] ?? []).includes(action);
       });
 
-    // Default deny: another tenant user holds time_sheet:approve, so the actor is not
-    // the sole approver and the shared self-approval guard must refuse.
+    // Self-approval is denied when other tenant approvers exist.
     grantTo({
       'u-1': ['approve', 'read_all'],
       'u-2': ['approve', 'read_all'],
@@ -314,9 +313,11 @@ describe('time authorization delegation and approval contracts', () => {
       'Permission denied: Cannot approve your own time submissions'
     );
 
-    // Sole approver: nobody else in the tenant holds time_sheet:approve.
+    // Being the sole tenant approver does not bypass the time-sheet guard.
     grantTo({ 'u-1': ['approve', 'read_all'] });
-    await expect(assertCanApproveSubject(actor as any, 'tenant-1', 'u-1', buildDb([], tenantUsers))).resolves.toBe('self');
+    await expect(assertCanApproveSubject(actor as any, 'tenant-1', 'u-1', buildDb([], tenantUsers))).rejects.toThrow(
+      'Permission denied: Cannot approve your own time submissions'
+    );
 
     // A configured not-self-approver bundle rule denies even the sole approver.
     resolveBundleRulesMock.mockResolvedValueOnce([
