@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 
 const reporter = fileURLToPath(new URL('../lib/vitest-flaky-reporter.mjs', import.meta.url));
-const runners = ['../../server/node_modules/vitest/vitest.mjs', '../../node_modules/vitest/vitest.mjs'];
+const runners = ['../../node_modules/vitest/vitest.mjs'];
 
 // A fail-then-pass only exists inside the runner: the JSON report records the
 // final pass. The reporter is the sole record of the retry, so it is driven

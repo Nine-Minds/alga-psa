@@ -185,6 +185,7 @@ export function ServiceConfigurationPanel({
           configuration={fixedConfig}
           planFixedConfig={planFixedConfig}
           quantity={configuration.quantity ?? null}
+          isProduct={service?.item_kind === 'product'}
           onConfigurationChange={handleFixedConfigChange}
           onPlanFixedConfigChange={onPlanFixedConfigChange}
           disabled={disabled}

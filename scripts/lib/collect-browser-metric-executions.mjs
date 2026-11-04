@@ -64,6 +64,8 @@ export async function collectBrowserMetricExecutions({ repository, runId, revisi
       require(run.created_at === undefined || (typeof run.created_at === 'string' && !Number.isNaN(Date.parse(run.created_at))), 'invalid-run-created-at');
       require(['queued', 'in_progress', 'completed', 'waiting', 'requested', 'pending'].includes(run.status), 'invalid-run-status');
       require(typeof run.event === 'string' && run.event.length > 0, 'invalid-run-event');
+      require(run.head_repository === undefined || run.head_repository === null
+        || typeof run.head_repository.full_name === 'string', 'invalid-run-head-repository');
     };
     phase = 'run';
     const run = await get(runUrl, githubToken);
@@ -102,6 +104,12 @@ export async function collectBrowserMetricExecutions({ repository, runId, revisi
       if (jobs.length === expectedCount) break;
       require(response.jobs.length === 100, 'truncated-job-page', { page });
     }
+    // GitHub withholds repository secrets from pull_request runs whose head
+    // lives in a fork, so the recorder on such a run has no Sheets credentials
+    // and exits green without exporting. Record that so reconciliation can tell
+    // "could not export" from "should have exported and did not".
+    const forkPullRequest = run.event === 'pull_request' && typeof run.head_repository?.full_name === 'string'
+      && run.head_repository.full_name.toLowerCase() !== repository;
     const expectedExecutions = ['community', 'enterprise'].map(edition => {
       const matching = jobs.filter(job => job.name === `browser / Production browser (${edition})`);
       require(matching.length <= 1, 'duplicate-browser-job');
@@ -127,6 +135,7 @@ export async function collectBrowserMetricExecutions({ repository, runId, revisi
         && recorder?.status === 'completed' && recorder.conclusion === 'skipped';
       return { repository, ...(artifactRevisions ? artifactRevisions[edition] : { revision }), runId: String(runId), runAttempt: run.run_attempt, edition,
         ...(notSelected ? { executionRequired: false, selectionEvidence: 'changes-filter' } : {}),
+        ...(forkPullRequest ? { credentialsAvailable: false, credentialsEvidence: 'fork-pull-request' } : {}),
         eventName: run.event, runStatus: job?.status ?? (run.status === 'completed' ? 'completed' : 'pending'),
         conclusion: job ? job.conclusion : (run.conclusion === 'cancelled' ? 'cancelled' : null),
         recorderStatus: recorder?.status ?? null, recorderConclusion: recorder?.conclusion ?? null };

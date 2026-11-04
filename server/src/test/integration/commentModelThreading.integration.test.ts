@@ -630,4 +630,36 @@ describe('ticket comment threading model', () => {
       }
     }
   });
+  // Behavioural contract only: psa update/delete must not depend on comments.actor_reference_id.
+  // Deliberately schema-agnostic — a later expand-only migration may add the column, and the
+  // upgrade-order smoke replays this test against that newer schema.
+  it('psa comment update and delete do not depend on comments.actor_reference_id', async () => {
+    const context = await ticketUserContext();
+    expect(context).toBeTruthy();
+    // L4a adds the column, so schema-absent neutrality is proven inside a rolled-back
+    // transaction that drops it (and its CHECK/FK) first.
+    const rollback = new Error('rollback');
+    await expect(knex.transaction(async (trx) => {
+      await trx.raw('ALTER TABLE comments DROP COLUMN actor_reference_id CASCADE');
+      expect(await trx.schema.hasColumn('comments', 'actor_reference_id')).toBe(false);
+
+      const commentId = await Comment.insert(trx, context.tenant, {
+        ticket_id: context.ticket_id,
+        user_id: context.user_id,
+        author_type: 'internal',
+        note: 'before',
+        markdown_content: 'before',
+        is_internal: false,
+        is_resolution: false,
+      });
+      await Comment.update(trx, context.tenant, commentId, { note: 'after', markdown_content: 'after' });
+      const updated = await tenantDb(trx, context.tenant).table('comments').select('note').where({ comment_id: commentId }).first();
+      expect(updated?.note).toBe('after');
+
+      await Comment.delete(trx, context.tenant, commentId);
+      const gone = await tenantDb(trx, context.tenant).table('comments').where({ comment_id: commentId }).first();
+      expect(gone).toBeUndefined();
+      throw rollback;
+    })).rejects.toBe(rollback);
+  });
 });

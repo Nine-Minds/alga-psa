@@ -7,7 +7,13 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { IContact, IUser } from '@alga-psa/types';
 import TicketWatchListCard from '../TicketWatchListCard';
-import { setTicketWatchListOnAttributes, type TicketWatchListEntry } from '@shared/lib/tickets/watchList';
+import {
+  mergeTicketWatchListRecipients,
+  parseTicketWatchListAttributes,
+  setTicketWatchListOnAttributes,
+  type TicketWatchListEntry,
+  type TicketWatchListRecipientInput,
+} from '@shared/lib/tickets/watchList';
 
 // The server-suite setup stubs this hook with empty automationIdProps, which
 // strips data-automation-id off controls — these tests locate the quick-add
@@ -117,11 +123,51 @@ function renderWatchListCard(args?: {
           const loaded = await args.onLoadAllContacts();
           setAllContacts(loaded);
         }}
-        onUpdateWatchList={async (watchList) => {
-          const ok = await onPersist(watchList);
-          if (ok) {
-            setAttributes(setTicketWatchListOnAttributes(attributes, watchList));
-          }
+        // The card sends write intents ({email} | {user_id} | {contact_id}); the real server
+        // resolves them in TicketWatcherService. This fake server does the same resolution
+        // against the pickers' data and hands the resulting list to `onPersist`.
+        onAddWatchers={async (inputs) => {
+          const everyContact = [...(args?.clientContacts ?? []), ...allContacts];
+          const recipients: TicketWatchListRecipientInput[] = inputs.map((input) => {
+            if (input.user_id) {
+              const user = (args?.internalUsers ?? []).find((candidate) => candidate.user_id === input.user_id);
+              return {
+                email: user?.email,
+                source: 'manual',
+                name: `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() || undefined,
+                entity_type: 'user',
+                entity_id: input.user_id,
+              };
+            }
+            if (input.contact_id) {
+              const contact = everyContact.find((candidate) => candidate.contact_name_id === input.contact_id);
+              return {
+                email: contact?.email,
+                source: 'manual',
+                name: contact?.full_name || undefined,
+                entity_type: 'contact',
+                entity_id: input.contact_id,
+              };
+            }
+            return { email: input.email, source: 'manual' };
+          });
+          const next = mergeTicketWatchListRecipients(parseTicketWatchListAttributes(attributes), recipients);
+          const ok = await onPersist(next);
+          if (ok) setAttributes(setTicketWatchListOnAttributes(attributes, next));
+          return ok;
+        }}
+        onSetWatcherActive={async (email, active) => {
+          const next = parseTicketWatchListAttributes(attributes).map((entry) =>
+            entry.email === email.toLowerCase() ? { ...entry, active } : entry
+          );
+          const ok = await onPersist(next);
+          if (ok) setAttributes(setTicketWatchListOnAttributes(attributes, next));
+          return ok;
+        }}
+        onRemoveWatcher={async (email) => {
+          const next = parseTicketWatchListAttributes(attributes).filter((entry) => entry.email !== email.toLowerCase());
+          const ok = await onPersist(next);
+          if (ok) setAttributes(setTicketWatchListOnAttributes(attributes, next));
           return ok;
         }}
       />

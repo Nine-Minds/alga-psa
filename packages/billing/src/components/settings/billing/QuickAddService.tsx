@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert'
 import { createServiceWithPricing, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from '@alga-psa/billing/actions/serviceActions'
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions'
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core'
+import { minorUnitsToRateText, rateTextToMinorUnits } from '@alga-psa/billing/lib/currency/rateInput'
 // Import getTaxRates and ITaxRate instead
 import { getTaxRates } from '@alga-psa/billing/actions/taxRateActions'; // Removed getActiveTaxRegions
 import { getTenantTaxSettings } from '@alga-psa/billing/actions/taxSettingsActions';
@@ -254,10 +255,9 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
             return null
           }
 
-          const dollars = parseFloat(rawInput)
-          const cents = Math.round((Number.isFinite(dollars) ? dollars : 0) * 100)
-
-          return { ...price, rate: cents }
+          // Minor units are the currency's own, so a rate typed as 50 on a JPY price is
+          // ¥50 — a fixed ×100 stored 5000 and the invoice billed ¥5,000.
+          return { ...price, rate: rateTextToMinorUnits(rawInput, price.currency_code) }
         })
         .filter((p): p is { currency_code: string; rate: number } => p !== null)
 
@@ -630,16 +630,17 @@ if (isActionMessageError(createdService)) {
                           }
                         }}
                         onBlur={() => {
-                          // Convert to cents and update prices array on blur
+                          // Convert to the currency's minor units and update prices on blur
                           const inputValue = priceInputs[index] ?? '';
-                          const dollars = parseFloat(inputValue) || 0;
-                          const cents = Math.round(dollars * 100);
+                          const minorUnits = rateTextToMinorUnits(inputValue, price.currency_code);
                           const newPrices = [...prices];
-                          newPrices[index] = { ...newPrices[index], rate: cents };
+                          newPrices[index] = { ...newPrices[index], rate: minorUnits };
                           setPrices(newPrices);
                           // Format the display value
                           const newInputs = [...priceInputs];
-                          newInputs[index] = inputValue.trim() !== '' ? (cents / 100).toFixed(2) : '';
+                          newInputs[index] = inputValue.trim() !== ''
+                            ? minorUnitsToRateText(minorUnits, price.currency_code)
+                            : '';
                           setPriceInputs(newInputs);
                         }}
                         placeholder={t('quickAddService.fields.pricing.placeholders.rate', {

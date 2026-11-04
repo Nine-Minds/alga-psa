@@ -41,6 +41,11 @@ const testContext = vi.hoisted(() => ({
 // The global test setup mocks `@alga-psa/auth` and resolves the authenticated
 // tenant through server/src/lib/db's getCurrentTenantId; point that at the test
 // tenant so the real `updateEmailProvider` action runs in our workspace.
+// Opt in to the allow-by-default '@alga-psa/auth/rbac' mock (not global on purpose;
+// see ../helpers/allowAllRbac.ts). Fixture tenants here don't seed role_permissions.
+vi.mock('@alga-psa/auth/rbac', async (importOriginal) =>
+  (await import('../helpers/allowAllRbac')).allowAllRbac(importOriginal as any));
+
 vi.mock('../../lib/db', () => ({
   getCurrentTenantId: () => testContext.tenant,
   createTenantKnex: vi.fn(async () => ({ knex: testDb, tenant: testContext.tenant })),
@@ -383,5 +388,23 @@ describe('Microsoft same-app Update Provider webhook persistence (DB-backed)', (
          AND column_name = 'subscriptionId'`
     );
     expect(columns.rows).toHaveLength(0);
+  });
+
+  it('packages createProvider rolls back the email_providers row when the vendor config insert fails', async () => {
+    const mailbox = `rollback-${uuidv4().slice(0, 8)}@client.com`;
+
+    await expect(
+      new EmailProviderService().createProvider({
+        tenant: testTenant,
+        providerType: 'microsoft',
+        providerName: 'Rollback Mailbox',
+        mailbox,
+        isActive: true,
+        vendorConfig: { client_id: PROFILE_CLIENT_ID, not_a_column: 'x' },
+      })
+    ).rejects.toThrow(/Failed to create email provider/);
+
+    const rows = await tenantTable('email_providers').where({ mailbox });
+    expect(rows).toHaveLength(0);
   });
 });

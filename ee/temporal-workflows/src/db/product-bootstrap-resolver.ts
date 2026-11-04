@@ -1,14 +1,24 @@
 import * as path from 'path';
 import * as fs from 'fs/promises';
 
-export type ProductCode = 'psa' | 'algadesk';
+import { PRODUCT_CODES, type ProductCode } from '@alga-psa/types';
+
+export type { ProductCode };
 
 export interface ProductBootstrapPlan {
   productCode: ProductCode;
   seedDirectoryName: ProductCode;
 }
 
-const SUPPORTED_PRODUCT_CODES: ProductCode[] = ['psa', 'algadesk'];
+const SUPPORTED_PRODUCT_CODES: readonly ProductCode[] = PRODUCT_CODES;
+
+/** Products anyone may sign up for. Every other product is created only for a
+ * reserved operation that the caller proves (see TenantBootstrapContext.reservation). */
+export const SELF_SERVE_PRODUCT_CODES: readonly ProductCode[] = ['psa', 'algadesk'];
+
+export function isSelfServeProductCode(productCode: ProductCode): boolean {
+  return SELF_SERVE_PRODUCT_CODES.includes(productCode);
+}
 
 export function normalizeProductCode(productCode?: string | null): ProductCode {
   if (!productCode) {

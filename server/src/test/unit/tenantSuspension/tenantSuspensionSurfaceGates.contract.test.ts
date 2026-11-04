@@ -30,6 +30,12 @@ describe('tenant suspension surface gates', () => {
     expect(source).toContain("reason: 'tenant_suspended' }, { status: 200 })");
   });
 
+  it('Datto RMM webhook acks and drops for suspended tenants', () => {
+    const source = read('ee/server/src/app/api/webhooks/datto/route.ts');
+    expect(source).toContain('await isTenantSuspended(knex, tenant)');
+    expect(source).toContain("reason: 'tenant_suspended' }, { status: 200 })");
+  });
+
   it('T030/T032: workflow-worker skips suspended tenants before ingesting events, fail-open', () => {
     const source = read('services/workflow-worker/src/v2/WorkflowRuntimeV2EventStreamWorker.ts');
     const gateIdx = source.indexOf('await isTenantSuspended(knex, event.tenant)');
@@ -44,7 +50,9 @@ describe('tenant suspension surface gates', () => {
   it('T036: server API key validation variants gate on owner-inactive and tenant-suspended', () => {
     const source = read('server/src/lib/services/apiKeyServiceForApi.ts');
     expect(source.match(/getKeyGateReason\(/g)!.length).toBeGreaterThanOrEqual(3);
-    expect(source).toContain("'user_inactive' | 'client_owner' | 'tenant_suspended'");
+    expect(source).toContain(
+      "'user_inactive' | 'client_owner' | 'owner_type_rejected' | 'tenant_suspended'"
+    );
     expect(source).toContain('isTenantSuspended(knex, tenant)');
   });
 

@@ -12,9 +12,10 @@ services:
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
     build:
       context: .
-      dockerfile: Dockerfile.build
-      args:
-        NEXT_BUILD_MAX_OLD_SPACE_SIZE: ${NEXT_BUILD_MAX_OLD_SPACE_SIZE:-12288}
+      # The one runtime image definition. It packages prebuilt artifacts, so run
+      # scripts/build-production-server.sh community (host Node toolchain) or
+      # scripts/export-production-artifacts.sh community (Docker only) first.
+      dockerfile: Dockerfile
 
   setup:
     environment:

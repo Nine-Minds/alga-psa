@@ -7,7 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { UnsavedChangesContext } from '@alga-psa/ui/context/UnsavedChangesContext';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCatalogShortcut } from '@alga-psa/ui/keyboard-shortcuts';
-import { getAdjacentTicketIds } from '../../actions/optimizedTicketActions';
+import { useTicketDataSource } from './TicketDataSourceContext';
 import { parseReturnFilters, DEFAULT_TICKET_LIST_FILTERS } from '../../lib/ticketFilterUtils';
 
 export interface AdjacentTicketData {
@@ -27,6 +27,7 @@ interface TicketNavigationProps {
 
 export default function TicketNavigation({ currentTicketId, initialAdjacent }: TicketNavigationProps) {
   const { t } = useTranslation('features/tickets');
+  const { getAdjacentTicketIds } = useTicketDataSource().ticket;
   const searchParams = useSearchParams();
   const unsavedChangesContext = useContext(UnsavedChangesContext);
 
@@ -95,7 +96,7 @@ export default function TicketNavigation({ currentTicketId, initialAdjacent }: T
       });
 
     return () => { cancelled = true; };
-  }, [currentTicketId, returnFilters, applyAdjacentData]);
+  }, [currentTicketId, returnFilters, applyAdjacentData, getAdjacentTicketIds]);
 
   const navigateToTicket = useCallback((ticketId: string) => {
     // `returnFilters` is itself a query string, and useSearchParams() already

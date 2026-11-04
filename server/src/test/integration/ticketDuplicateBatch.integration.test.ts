@@ -327,6 +327,7 @@ describe('Batch duplicate ticket (integration)', () => {
       const before = await countTickets();
       const result: any = await ticketActions.duplicateTicketBatch(sourceTicketId, copies, { copyChecklist: true });
 
+      expect(result).toHaveProperty('created');
       expect(result.created.map((c: any) => c.key)).toEqual(['ok1', 'ok2']);
       expect(result.failed.map((f: any) => f.key)).toEqual(['foreign', 'token', 'blank']);
       expect(result.failed[0].message).toMatch(/contact does not belong/i);
@@ -357,6 +358,8 @@ describe('Batch duplicate ticket (integration)', () => {
       const savepointDb = new Proxy(base as any, {
         get: (target, prop) => (prop === 'commit' || prop === 'rollback' ? undefined : Reflect.get(target, prop, target)),
       });
+      // Preserve TestContext's transaction binding; mockRestore would remove its outer spy.
+      const previousConnection = vi.mocked(pkgDb.createTenantKnex).getMockImplementation()!;
       const spy = vi.spyOn(pkgDb, 'createTenantKnex').mockImplementation(async () => ({ knex: savepointDb, tenant: tenantId }) as any);
       try {
         const copies = [
@@ -377,7 +380,7 @@ describe('Batch duplicate ticket (integration)', () => {
           await tt('ticket_audit_logs').where({ ticket_id: sourceTicketId, event_type: TICKET_ACTIVITY_EVENT.DUPLICATED_TO })
         ).toHaveLength(3);
       } finally {
-        spy.mockRestore();
+        spy.mockImplementation(previousConnection);
         await context.db.raw(`DROP TRIGGER IF EXISTS ${fn} ON ticket_audit_logs`);
         await context.db.raw(`DROP FUNCTION IF EXISTS ${fn}()`);
       }
@@ -399,6 +402,8 @@ describe('Batch duplicate ticket (integration)', () => {
       const savepointDb = new Proxy(base as any, {
         get: (target, prop) => (prop === 'commit' || prop === 'rollback' ? undefined : Reflect.get(target, prop, target)),
       });
+      // Preserve TestContext's transaction binding; mockRestore would remove its outer spy.
+      const previousConnection = vi.mocked(pkgDb.createTenantKnex).getMockImplementation()!;
       const spy = vi.spyOn(pkgDb, 'createTenantKnex').mockImplementation(async () => ({ knex: savepointDb, tenant: tenantId }) as any);
       duplicateHook.calls = 0;
       duplicateHook.afterCall = 2;
@@ -419,7 +424,7 @@ describe('Batch duplicate ticket (integration)', () => {
       } finally {
         duplicateHook.afterCall = null;
         duplicateHook.run = null;
-        spy.mockRestore();
+        spy.mockImplementation(previousConnection);
       }
     });
 

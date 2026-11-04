@@ -22,7 +22,7 @@ append after an uncertain response could duplicate rows. This follows Google's
 | `integration-tier1` | `integration-tests.yml` | Selected integration lane on push |
 | `integration-full` | `integration-tests.yml` | Selected full integration lane |
 | `infrastructure-full` | `integration-tests.yml` | Selected full infrastructure lane |
-| Browser readiness | `e2e-fresh-install-tests.yaml` | After successful installation setup, including failed browser execution; excluded under ACT |
+| Browser readiness | `e2e-fresh-install-tests.yaml` | In each edition's `browser-evidence` job (`Production browser (<edition>)`), once every browser shard's installation setup succeeded, including failed or partial browser execution; excluded under ACT |
 
 Credentials must be available for an external write; fork PRs generally cannot
 access them. Unit and integration recording use `always()` so failed or incomplete
@@ -49,8 +49,12 @@ deployed artifacts or release readiness. Native runs without a configured manife
 retain null; a configured missing or invalid manifest makes metrics incomplete.
 
 `scripts/record-browser-metrics.mjs` consumes this artifact through
-`TEST_METRICS_BROWSER`. The browser workflow invokes it after diagnostics and
-before API execution. With the existing Google metrics credentials it appends
+`TEST_METRICS_BROWSER`. Each browser shard writes metrics for its own share of
+the journeys; the per-edition `browser-evidence` job recomputes the metrics
+from every shard's raw report (`scripts/merge-browser-shards.mjs`) and
+invokes the recorder on that merged document, so one `run` row and one set of
+`journey` rows per edition reach the tab, as before the journeys were sharded.
+With the existing Google metrics credentials it appends
 to `browser_readiness`; without them it still writes a job summary. Live tab
 creation and readback must be verified on the next candidate.
 
@@ -193,7 +197,18 @@ incomplete journey identities cannot satisfy export completeness.
 
 For an already collected JSON snapshot, run
 `node scripts/reconcile-browser-metric-executions.mjs input.json report.json`.
-Non-green results retain their report and exit unsuccessfully. The automatic
+Non-green results retain their report. The exit code follows the overall status:
+`passed` and `not-required` exit 0; `lane-unsuccessful` also exits 0, since it
+means the browser job itself failed, was skipped or was cancelled, which the
+regression gate and the `gate_runs` tab already report, and its missing export
+is expected rather than a reporting gap; `incomplete` exits 1. Each record
+carries `blocking`: a record on an unsuccessful lane blocks only for export
+anomalies (`export-attempted-but-missing`, `recorder-unsuccessful`,
+`recorder-not-completed`, `duplicate-run-export`, `conflicting-export-identity`,
+`invalid-row-kind`). A green lane with an unknown tested revision still blocks.
+Before this policy (2026-10-09) every red browser lane also produced a failed
+reconcile and a `workflow_health` row, which was 109 rows in nine days, nearly
+all `tested-revision-unknown, artifact-missing, export-not-attempted`. The automatic
 trigger requires this workflow and its scripts on the default branch; its live
 credentialed execution has not yet been verified. Scorecard publication and
 detection of workflows that were never created remain rollout work. This
@@ -361,7 +376,9 @@ step): `timestamp_utc`, `workflow`, `conclusion`, `run_url`, `run_attempt`,
 `phase` and `code` from `browser-metric-collection.json`, `status` and the
 distinct per-record `issues` from `browser-metric-reconciliation.json`. A green
 run writes nothing, so the most recent row is the last failure and a gap after it
-means the workflow recovered.
+means the workflow recovered. A reconcile of a run whose browser lane failed or
+was cancelled is `lane-unsuccessful`, which is green here; those failures belong
+to `gate_runs`.
 
 `flaky_tests` gets the weekly `Flaky test report` (`scripts/record-flaky-tests.mjs`):
 one row per test per report with `reported_at_utc`, the ISO `week`, `window_days`,
@@ -401,11 +418,12 @@ appended by `scripts/record-gate-metrics.mjs` from the last step of the
 aggregate is missing. A cancelled run never reaches this step and writes no row,
 the same as every other recorder here.
 
-Chart it as a weekly red rate for `run_kind = main`, for example
-`=COUNTIFS(gate_runs!B:B,"main",gate_runs!H:H,"<>passed",gate_runs!A:A,">="&week)`
-over `=COUNTIFS(gate_runs!B:B,"main",gate_runs!A:A,">="&week)`. Formulas are
-added by hand on the `charts` tab after the first rows land; scripts never write
-them. The step also writes a one-line table to the run's job summary, so the
+The `charts` tab carries a "Main gate" block (rows 8-14) with the weekly main
+push count, red count and distinct red lanes for the last six ISO weeks. The
+timestamps are ISO text, which `COUNTIFS` will not compare with `>=`, so the
+counters use `SUMPRODUCT` with `TEXT(week,"yyyy-mm-dd")` bounds, for example
+`=SUMPRODUCT((gate_runs!$B$2:$B="main")*(gate_runs!$A$2:$A>=TEXT(B9,"yyyy-mm-dd"))*(gate_runs!$A$2:$A<TEXT(B9+7,"yyyy-mm-dd"))*(gate_runs!$H$2:$H<>"passed"))`.
+Formulas live only in the sheet; scripts never write them. The step also writes a one-line table to the run's job summary, so the
 verdict and red lanes are visible without the sheet.
 
 ## One-time setup

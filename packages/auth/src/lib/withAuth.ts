@@ -22,9 +22,32 @@
  */
 
 import type { IUserWithRoles } from '@alga-psa/types';
-import { runWithTenant } from '@alga-psa/db';
+import { getAdminConnection, runWithTenant } from '@alga-psa/db';
+import {
+  coManagedAcceptancePendingError,
+  isCoManagedAwaitingAcceptanceLazily,
+} from '@alga-psa/licensing/lifecycle';
 import { getCurrentUserWithRevocationCheck } from './getCurrentUser';
+import { actionError } from '@alga-psa/ui/lib/errorHandling';
+import { coManagedRefusalMessageKey, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import { localizeActionError } from './localizeActionError';
+
+/**
+ * A co-managed lifecycle refusal (write admission) is an expected outcome, not a
+ * fault. Next.js strips thrown messages at the serialization boundary, so it is
+ * RETURNED as an action error, from inside runWithTenant so localizeActionError
+ * can translate its messageKey. Anything else is rethrown untouched.
+ */
+async function runLocalized<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    return await localizeActionError(await run());
+  } catch (error) {
+    if (isCoManagedLifecycleError(error)) {
+      return (await localizeActionError(actionError(error.message, coManagedRefusalMessageKey(error)))) as unknown as T;
+    }
+    throw error;
+  }
+}
 
 /**
  * Context provided to authenticated actions
@@ -53,6 +76,51 @@ export interface WithAuthOptions {
    * Useful for actions that have different behavior for authenticated vs anonymous users.
    */
   allowUnauthenticated?: boolean;
+  /**
+   * The action is part of reviewing and accepting a co-managed relationship
+   * (or a personal preference the review screen reads), so it runs while the
+   * workspace awaits acceptance. Every other browser-invoked action is refused
+   * until then.
+   */
+  allowBeforeCoManagedAcceptance?: boolean;
+}
+
+/**
+ * A browser-invoked server action or an API request, as opposed to a direct
+ * call while a page renders. The middleware stamps x-pathname on every request
+ * it forwards, overwriting any client value.
+ */
+async function isActionOrApiRequest(): Promise<boolean> {
+  try {
+    const { headers } = await import('next/headers.js');
+    const requestHeaders = await headers();
+    const contentType = requestHeaders.get('content-type') ?? '';
+    const isMultipartSubmission = /^multipart\/form-data(?:\s*;|$)/i.test(contentType);
+    return (
+      Boolean(requestHeaders.get('next-action')) ||
+      isMultipartSubmission ||
+      (requestHeaders.get('x-pathname') ?? '').startsWith('/api/')
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Until the customer accepts, a co-managed workspace is the MSP's proposal:
+ * only the review and acceptance screen may be used. The screen and layout
+ * render server-side, so direct calls while rendering are unaffected; any
+ * other action invoked from the browser or through the API is refused.
+ *
+ * Steady state costs no statement for any tenant: the answer is a per-process
+ * cache, and the admin connection (whose acquisition runs a probe query) is
+ * requested lazily, only on a cache miss.
+ */
+async function assertCoManagedWorkspaceUsable(tenant: string, options?: WithAuthOptions): Promise<void> {
+  if (options?.allowBeforeCoManagedAcceptance || !(await isActionOrApiRequest())) return;
+  if (await isCoManagedAwaitingAcceptanceLazily(() => getAdminConnection(), tenant)) {
+    throw coManagedAcceptancePendingError();
+  }
 }
 
 /**
@@ -100,13 +168,13 @@ export function withAuth<TArgs extends unknown[], TResult>(
       tenant: user.tenant,
     };
 
+    await assertCoManagedWorkspaceUsable(user.tenant, options);
+
     // Use runWithTenant to set AsyncLocalStorage context
     // This ensures createTenantKnex() works without explicit tenant argument.
     // localizeActionError runs inside it because resolving the caller's locale
     // reads tenant_settings; it is a no-op unless the payload carries a messageKey.
-    return runWithTenant(user.tenant, async () =>
-      localizeActionError(await action(user, ctx, ...args)),
-    );
+    return runWithTenant(user.tenant, () => runLocalized(() => action(user, ctx, ...args)));
   };
 }
 
@@ -126,7 +194,8 @@ export function withAuth<TArgs extends unknown[], TResult>(
  * ```
  */
 export function withOptionalAuth<TArgs extends unknown[], TResult>(
-  action: (user: IUserWithRoles | null, ctx: AuthContext | null, ...args: TArgs) => Promise<TResult>
+  action: (user: IUserWithRoles | null, ctx: AuthContext | null, ...args: TArgs) => Promise<TResult>,
+  options?: WithAuthOptions
 ): (...args: TArgs) => Promise<TResult> {
   return async (...args: TArgs): Promise<TResult> => {
     const user = await getCurrentUserWithRevocationCheck();
@@ -141,9 +210,9 @@ export function withOptionalAuth<TArgs extends unknown[], TResult>(
       tenant: user.tenant,
     };
 
-    return runWithTenant(user.tenant, async () =>
-      localizeActionError(await action(user, ctx, ...args)),
-    );
+    await assertCoManagedWorkspaceUsable(user.tenant, options);
+
+    return runWithTenant(user.tenant, () => runLocalized(() => action(user, ctx, ...args)));
   };
 }
 
@@ -162,7 +231,8 @@ export function withOptionalAuth<TArgs extends unknown[], TResult>(
  * ```
  */
 export function withAuthCheck<TArgs extends unknown[], TResult>(
-  action: (user: IUserWithRoles, ...args: TArgs) => Promise<TResult>
+  action: (user: IUserWithRoles, ...args: TArgs) => Promise<TResult>,
+  options?: WithAuthOptions
 ): (...args: TArgs) => Promise<TResult> {
   return async (...args: TArgs): Promise<TResult> => {
     const user = await getCurrentUserWithRevocationCheck();
@@ -170,6 +240,8 @@ export function withAuthCheck<TArgs extends unknown[], TResult>(
     if (!user) {
       throw new AuthenticationError();
     }
+
+    await assertCoManagedWorkspaceUsable(user.tenant, options);
 
     return action(user, ...args);
   };

@@ -1,0 +1,72 @@
+'use client';
+
+import type { IComment } from '@alga-psa/types';
+import type { CommentAudience } from '@alga-psa/shared/lib/commentAudience';
+import type { CoManagedSharedResource } from '@alga-psa/co-managed';
+import { getCoManagedTicketConversationScreenAction } from '@/lib/actions/coManagedTicketConversationActions';
+import { loadSharedConversation, type SharedConversationSnapshot } from '@/lib/co-managed/loadSharedConversation';
+import { mapConversation } from '@/lib/co-managed/sharedConversationMapping';
+import { createTicketCommentWriter, PLAIN_TEXT_WRITER, TicketCommentWriteError } from './ticketCommentWriter';
+
+export type SharedConversationTranslate = (key: string, defaultValue: string) => string;
+
+/** User-facing text for a refused or unconfirmed write; every writer code has one, nothing else leaks through. */
+export function sharedWriteFailureText(t: SharedConversationTranslate, code: string): string {
+  switch (code) {
+    case 'forbidden': return t('conversation.shared.errors.forbidden', 'You are not allowed to post to this audience.');
+    case 'invalid': return t('conversation.shared.errors.invalid', 'This comment cannot be posted.');
+    case 'readOnly': return t('conversation.shared.errors.readOnly', 'This workspace is read-only right now.');
+    case 'operationConflict': return t('conversation.shared.errors.operationConflict', 'This comment conflicts with an earlier attempt. Reload and try again.');
+    case 'audienceUnresolved': return t('conversation.shared.errors.audienceUnresolved', 'Choose who can see this comment before posting it.');
+    default: return t('conversation.shared.errors.unknownOutcome', 'We could not confirm the comment was posted. Check the conversation before sending it again.');
+  }
+}
+
+/**
+ * One loaded shared conversation plus the writer that posts to it. The writer is resolved
+ * through the registry (`kind`, default plain text), so a feature layer can register a richer
+ * writer without this session changing. Reads and writes go only through the admitted
+ * co-managed commands; this adds no authority.
+ */
+export function createSharedConversationSession(resource: CoManagedSharedResource, options: { t: SharedConversationTranslate; kind?: string }) {
+  let snapshot: SharedConversationSnapshot | null = null;
+  const writer = createTicketCommentWriter({
+    kind: options.kind ?? PLAIN_TEXT_WRITER,
+    resource,
+    context: () => ({ canWrite: (snapshot?.writeAudiences.length ?? 0) > 0, actorTenant: snapshot?.actor.tenant ?? '', writeAudiences: snapshot?.writeAudiences ?? [] }),
+    parent: commentId => {
+      const item = snapshot?.items.find(candidate => candidate.commentId === commentId);
+      return item ? { storeTenant: item.storeTenant, threadId: item.threadId, commentId: item.commentId } : null;
+    },
+  });
+  const comments = () => snapshot ? mapConversation(snapshot.items, resource.id, snapshot.actor) : [];
+  const load = async () => {
+    snapshot = await loadSharedConversation(before => getCoManagedTicketConversationScreenAction(resource, before));
+    return snapshot;
+  };
+  return {
+    load,
+    snapshot: () => snapshot,
+    /** Audiences the signed-in viewer may write to (server-resolved; empty until loaded). */
+    writeAudiences: (): readonly CommentAudience[] => snapshot?.writeAudiences ?? [],
+    comments,
+    /** Audience of an existing comment (a reply inherits its thread's audience). */
+    audienceOf: (commentId: string): CommentAudience | undefined =>
+      snapshot?.items.find(item => item.commentId === commentId)?.audience as CommentAudience | undefined,
+    /** Post one message, reload, and return the stored comment. Throws a localized Error on any refusal. */
+    async write(message: { content: string; audience: CommentAudience; parentCommentId?: string }): Promise<IComment> {
+      let commentId: string;
+      try {
+        commentId = (await writer(message)).commentId;
+      } catch (error) {
+        throw new Error(sharedWriteFailureText(options.t, error instanceof TicketCommentWriteError ? error.code : 'unknownOutcome'));
+      }
+      // The write is durable; a failed refresh must not read as a failed post.
+      try { await load(); } catch { /* the next screen load shows it */ }
+      const stored = comments().find(comment => comment.comment_id === commentId);
+      if (!stored) throw new Error(sharedWriteFailureText(options.t, 'unknownOutcome'));
+      return stored;
+    },
+  };
+}
+export type SharedConversationSession = ReturnType<typeof createSharedConversationSession>;

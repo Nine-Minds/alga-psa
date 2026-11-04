@@ -1,13 +1,14 @@
 import { z } from 'zod';
 import { tenantSchema } from '@alga-psa/validation';
 import { clientPortalConfigSchema } from './project.schemas';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 export const projectTemplateSchema = tenantSchema.extend({
-  template_id: z.string().uuid(),
+  template_id: z.string().guid(),
   template_name: z.string().min(1).max(255),
   description: z.string().nullable().optional(),
   category: z.string().max(100).nullable().optional(),
-  created_by: z.string().uuid(),
+  created_by: z.string().guid(),
   created_at: z.date(),
   updated_at: z.date().nullable().optional(),
   use_count: z.number().int().min(0),
@@ -16,8 +17,8 @@ export const projectTemplateSchema = tenantSchema.extend({
 });
 
 export const projectTemplatePhaseSchema = tenantSchema.extend({
-  template_phase_id: z.string().uuid(),
-  template_id: z.string().uuid(),
+  template_phase_id: z.string().guid(),
+  template_id: z.string().guid(),
   phase_name: z.string().min(1).max(255),
   description: z.string().nullable().optional(),
   duration_days: z.number().int().positive().nullable().optional(),
@@ -26,40 +27,40 @@ export const projectTemplatePhaseSchema = tenantSchema.extend({
 });
 
 export const projectTemplateTaskSchema = tenantSchema.extend({
-  template_task_id: z.string().uuid(),
-  template_phase_id: z.string().uuid(),
+  template_task_id: z.string().guid(),
+  template_phase_id: z.string().guid(),
   task_name: z.string().min(1).max(255),
   description: z.string().nullable().optional(),
   description_rich_text: z.string().nullable().optional(),
   estimated_hours: z.number().positive().nullable().optional(),
   duration_days: z.number().int().positive().nullable().optional(),
   task_type_key: z.string().max(50).nullable().optional(),
-  priority_id: z.string().uuid().nullable().optional(),
+  priority_id: z.string().guid().nullable().optional(),
   order_key: z.string().nullable().optional()
 });
 
 export const projectTemplateDependencySchema = tenantSchema.extend({
-  template_dependency_id: z.string().uuid(),
-  template_id: z.string().uuid(),
-  predecessor_task_id: z.string().uuid(),
-  successor_task_id: z.string().uuid(),
+  template_dependency_id: z.string().guid(),
+  template_id: z.string().guid(),
+  predecessor_task_id: z.string().guid(),
+  successor_task_id: z.string().guid(),
   dependency_type: z.enum(['blocks', 'blocked_by', 'related_to']),
   lead_lag_days: z.number().int().default(0),
   notes: z.string().nullable().optional()
 });
 
 export const projectTemplateChecklistItemSchema = tenantSchema.extend({
-  template_checklist_id: z.string().uuid(),
-  template_task_id: z.string().uuid(),
+  template_checklist_id: z.string().guid(),
+  template_task_id: z.string().guid(),
   item_name: z.string().min(1).max(255),
   description: z.string().nullable().optional(),
   order_number: z.number().int().min(1)
 });
 
 export const projectTemplateStatusMappingSchema = tenantSchema.extend({
-  template_status_mapping_id: z.string().uuid(),
-  template_id: z.string().uuid(),
-  status_id: z.string().uuid().nullable().optional(),
+  template_status_mapping_id: z.string().guid(),
+  template_id: z.string().guid(),
+  status_id: z.string().guid().nullable().optional(),
   custom_status_name: z.string().max(100).nullable().optional(),
   display_order: z.number().int().min(1)
 });
@@ -75,12 +76,12 @@ export const createTemplateSchema = projectTemplateSchema.omit({
   created_by: true
 });
 
-export const updateTemplateSchema = createTemplateSchema.partial();
+export const updateTemplateSchema = partialWithoutDefaults(createTemplateSchema);
 
 export const applyTemplateSchema = z.object({
-  template_id: z.string().uuid(),
+  template_id: z.string().guid(),
   project_name: z.string().min(1).max(255),
-  client_id: z.string().uuid(),
+  client_id: z.string().guid(),
   start_date: z.preprocess(
     (val) => {
       if (val === '' || val === null || val === undefined) return undefined;
@@ -94,11 +95,11 @@ export const applyTemplateSchema = z.object({
   ),
   assigned_to: z.preprocess(
     (val) => val === '' || val === null || val === undefined ? undefined : val,
-    z.string().uuid().optional()
+    z.string().guid().optional()
   ),
   status_id: z.preprocess(
     (val) => val === '' || val === null || val === undefined ? undefined : val,
-    z.string().uuid().optional()
+    z.string().guid().optional()
   ),
   options: z.object({
     copyPhases: z.boolean().default(true),

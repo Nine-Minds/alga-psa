@@ -100,6 +100,7 @@ export function MaintenanceCompletionDialog({
           performedDate,
           occurrence.frequency || "monthly",
           occurrence.frequency_interval || 1,
+          occurrence.schedule_config,
         ),
         "MMM d, yyyy",
       );

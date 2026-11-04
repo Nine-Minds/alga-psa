@@ -126,7 +126,9 @@ export async function signInPortal(page: Page, credentials: Credentials, tenantI
 
 /** Uses the browser context's cookies; does not manufacture session state. */
 export async function readSession(request: APIRequestContext): Promise<SessionIdentity | undefined> {
-  const response = await request.get('/api/auth/session');
+  // A keep-alive socket reaped as the request goes out is a transport fault, not
+  // a session answer. maxRetries resends only on ECONNRESET, never on a status.
+  const response = await request.get('/api/auth/session', { maxRetries: 2 });
   expect(response.ok(), 'Session endpoint must respond successfully').toBe(true);
   const session = await response.json();
   if (!session.user) return undefined;

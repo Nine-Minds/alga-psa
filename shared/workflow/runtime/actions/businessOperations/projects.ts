@@ -15,6 +15,7 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { withWorkflowPicker, withWorkflowNotFoundPolicy } from '@alga-psa/event-schemas';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
+import { assertHumanWorkAssignee } from '../../../../lib/humanWork/assertHumanWorkAssignee';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -1075,7 +1076,7 @@ async function resolveActorAuthorizationSubject(tx: TenantTxContext): Promise<Au
     : [];
 
   const clientId = parseNullableUuid(actor?.client_id ?? actor?.clientId);
-  const userType = actor?.user_type === 'internal' || actor?.user_type === 'client' ? actor.user_type : 'internal';
+  const userType = actor?.user_type === 'internal' || actor?.user_type === 'client' || actor?.user_type === 'service' ? actor.user_type : 'internal';
   return {
     tenant: tx.tenantId,
     userId: tx.actorUserId,
@@ -1258,6 +1259,8 @@ export function registerProjectActions(): void {
       if (assignedTo) {
         const user = await tenantScopedTable(tx, 'users').where('user_id', assignedTo).first();
         if (!user) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Assignee user not found' });
+        // Human-work guard (R5.3): task assignees (incl. a team manager) must be active internal users.
+        await assertHumanWorkAssignee(tx.trx, tx.tenantId, [assignedTo]);
       }
 
       const taskColumns = await getTableColumns(tx, 'project_tasks');
@@ -2434,6 +2437,8 @@ export function registerProjectActions(): void {
         const assignedTo = input.copy_primary_assignee
           ? parseNullableUuid(sourceTaskRow.assigned_to)
           : null;
+        // Human-work guard (R5.3): a copied primary assignee must still be an active internal user.
+        await assertHumanWorkAssignee(tx.trx, tx.tenantId, [assignedTo]);
         const copiedTaskRow: Record<string, unknown> = {
           ...sourceTaskRow,
           task_id: copiedTaskId,
@@ -2487,6 +2492,11 @@ export function registerProjectActions(): void {
               .whereNotNull('additional_user_id')
               .select('*');
             if (sourceResources.length > 0) {
+              await assertHumanWorkAssignee(
+                tx.trx,
+                tx.tenantId,
+                sourceResources.map((row: Record<string, unknown>) => String(row.additional_user_id))
+              );
               const resourceColumns = await getTableColumns(tx, 'task_resources');
               const inserts = sourceResources.map((row: Record<string, unknown>) => ({
                 ...row,

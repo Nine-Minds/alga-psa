@@ -61,9 +61,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Find the admin user to bind the OTT to.
+    // Find the (oldest active internal) admin user to bind the OTT to; never a client or non-interactive user.
     const admin = await tenantDb(knex, sub.tenant).table('users')
-      .where({ user_type: 'internal' })
+      .where({ user_type: 'internal', is_inactive: false })
       .orderBy('created_at', 'asc')
       .first<{ user_id: string }>('user_id');
 
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     });
   } catch (error) {
     if (error instanceof ZodError) {
-      return handleApiError(new ValidationError('Validation failed', error.errors));
+      return handleApiError(new ValidationError('Validation failed', error.issues));
     }
     return handleApiError(error);
   }

@@ -202,6 +202,27 @@
         "save": "Impossibile salvare le impostazioni",
         "range": "Inserisci un numero intero da 1 a 365."
       }
+    },
+    "paymentTerms": {
+      "title": "Termini di pagamento predefiniti",
+      "description": "Imposta i termini di pagamento usati dalle nuove fatture quando né il cliente né il suo profilo di fatturazione ne definiscono uno.",
+      "fields": {
+        "terms": {
+          "label": "Termini di pagamento",
+          "help": "Si applica solo alle nuove fatture. Le fatture esistenti e i clienti con termini propri li mantengono."
+        }
+      },
+      "actions": {
+        "save": "Salva"
+      },
+      "toast": {
+        "updated": "I termini di pagamento predefiniti sono stati aggiornati."
+      },
+      "errors": {
+        "load": "Impossibile caricare le impostazioni",
+        "save": "Impossibile salvare le impostazioni",
+        "invalid": "Scegli un termine di pagamento valido."
+      }
     }
   },
   "quoting": {
@@ -215,8 +236,56 @@
     }
   },
   "tax": {
-    "defaultRate": { "title": "Aliquota fiscale predefinita", "tooltip": "Scegli l'aliquota ereditata da nuovi clienti, prodotti e servizi.", "description": "Imposta l'aliquota assegnata a nuovi clienti e voci di catalogo. I record esistenti non cambiano.", "loading": "Caricamento aliquota predefinita...", "empty": "Crea un'aliquota attiva prima di scegliere quella predefinita.", "invalid": "L'aliquota configurata non è più attiva o valida. Scegline un'altra.", "field": { "label": "Aliquota fiscale predefinita" }, "options": { "none": "Nessun valore predefinito del tenant" }, "help": "Se non impostata, le nuove voci restano non imponibili e i clienti usano l'aliquota attiva meno recente, se presente.", "actions": { "save": "Salva predefinita", "saving": "Salvataggio..." }, "toast": { "saved": "Aliquota predefinita salvata." }, "errors": { "load": "Impossibile caricare l'aliquota predefinita.", "save": "Impossibile salvare l'aliquota predefinita." } },
-    "backfill": { "title": "Applica l'aliquota predefinita al catalogo esistente", "description": "Visualizza prodotti e servizi senza aliquota fiscale.", "warning": "Questo modifica l'imponibilità futura e non riscrive le fatture emesse.", "loading": "Caricamento anteprima...", "empty": "Nessun prodotto o servizio idoneo.", "target": "Aliquota di destinazione: {{rate}}", "count": "{{count}} voci idonee", "dialog": { "title": "Applica aliquota predefinita" }, "actions": { "preview": "Visualizza voci esistenti", "apply": "Applica selezionate", "applying": "Applicazione..." }, "toast": { "applied": "Aliquota predefinita applicata alle voci selezionate." }, "errors": { "preview": "Impossibile visualizzare il catalogo.", "apply": "Impossibile applicare l'aliquota predefinita." } },
+    "defaultRate": {
+      "title": "Aliquota fiscale predefinita",
+      "tooltip": "Scegli l'aliquota ereditata da nuovi clienti, prodotti e servizi.",
+      "description": "Imposta l'aliquota assegnata a nuovi clienti e voci di catalogo. I record esistenti non cambiano.",
+      "loading": "Caricamento aliquota predefinita...",
+      "empty": "Crea un'aliquota attiva prima di scegliere quella predefinita.",
+      "invalid": "L'aliquota configurata non è più attiva o valida. Scegline un'altra.",
+      "field": {
+        "label": "Aliquota fiscale predefinita"
+      },
+      "options": {
+        "none": "Nessun valore predefinito del tenant"
+      },
+      "help": "Se non impostata, le nuove voci restano non imponibili e i clienti usano l'aliquota attiva meno recente, se presente.",
+      "actions": {
+        "save": "Salva predefinita",
+        "saving": "Salvataggio..."
+      },
+      "toast": {
+        "saved": "Aliquota predefinita salvata."
+      },
+      "errors": {
+        "load": "Impossibile caricare l'aliquota predefinita.",
+        "save": "Impossibile salvare l'aliquota predefinita."
+      }
+    },
+    "backfill": {
+      "title": "Applica l'aliquota predefinita al catalogo esistente",
+      "description": "Visualizza prodotti e servizi senza aliquota fiscale.",
+      "warning": "Questo modifica l'imponibilità futura e non riscrive le fatture emesse.",
+      "loading": "Caricamento anteprima...",
+      "empty": "Nessun prodotto o servizio idoneo.",
+      "target": "Aliquota di destinazione: {{rate}}",
+      "count": "{{count}} voci idonee",
+      "dialog": {
+        "title": "Applica aliquota predefinita"
+      },
+      "actions": {
+        "preview": "Visualizza voci esistenti",
+        "apply": "Applica selezionate",
+        "applying": "Applicazione..."
+      },
+      "toast": {
+        "applied": "Aliquota predefinita applicata alle voci selezionate."
+      },
+      "errors": {
+        "preview": "Impossibile visualizzare il catalogo.",
+        "apply": "Impossibile applicare l'aliquota predefinita."
+      }
+    },
     "taxRegions": {
       "title": "Regioni fiscali",
       "description": "Gestisci le regioni fiscali e le relative impostazioni."
@@ -998,7 +1067,10 @@
       "taxRate": {
         "label": "Aliquota fiscale (facoltativa)",
         "placeholder": "Seleziona aliquota fiscale (facoltativo)",
-        "loading": "Caricamento aliquote fiscali...", "inherit": "Usa predefinita del tenant", "inheritNamed": "Usa predefinita del tenant ({{rate}})", "nonTaxable": "Non imponibile"
+        "loading": "Caricamento aliquote fiscali...",
+        "inherit": "Usa predefinita del tenant",
+        "inheritNamed": "Usa predefinita del tenant ({{rate}})",
+        "nonTaxable": "Non imponibile"
       },
       "sku": {
         "label": "SKU",
@@ -1094,7 +1166,10 @@
       "taxRate": {
         "label": "Aliquota fiscale",
         "placeholder": "Non imponibile",
-        "loading": "Caricamento...", "inherit": "Usa predefinita del tenant", "inheritNamed": "Usa predefinita del tenant ({{rate}})", "nonTaxable": "Non imponibile"
+        "loading": "Caricamento...",
+        "inherit": "Usa predefinita del tenant",
+        "inheritNamed": "Usa predefinita del tenant ({{rate}})",
+        "nonTaxable": "Non imponibile"
       },
       "active": {
         "label": "Attivo"
@@ -1420,6 +1495,103 @@
     }
   },
   "payment": {
+    "import": {
+      "title": "Importa i clienti Stripe esistenti",
+      "description": "Importa clienti Stripe e carte salvate da un altro sistema. L'importazione non iscrive mai un cliente al pagamento automatico; lo confermi per ogni riga.",
+      "open": "Avvia importazione",
+      "preview": "Anteprima",
+      "execute": "Importa",
+      "reset": "Ricomincia",
+      "default": "predefinita",
+      "done": "Importazione completata",
+      "attest": "Il cliente ha autorizzato addebiti ricorrenti su questa carta",
+      "alreadyEnrolled": "Già iscritto",
+      "scaRisk": "Rischio SCA: nessuna prova che la carta sia stata salvata per l'uso off-session",
+      "cardsImported": "{{count}} carta/e importata/e",
+      "csv": {
+        "label": "Righe (cliente, profilo di fatturazione, ID cliente Stripe)",
+        "upload": "Carica CSV"
+      },
+      "assisted": {
+        "run": "Abbina per e-mail, poi per nome",
+        "summary": "{{matched}} proposti, {{ambiguous}} ambigui (non proposti){{truncated}}",
+        "truncated": "; elenco troncato",
+        "ambiguousTitle": "Corrispondenze ambigue (non proposte)",
+        "addRow": "Aggiungi come riga",
+        "matchedBy": "Corrispondenza per {{by}}",
+        "by": {
+          "email": "e-mail",
+          "name": "nome"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Corrisponde a più profili di fatturazione",
+          "multiple-customers": "Corrisponde a più clienti Stripe"
+        }
+      },
+      "errors": {
+        "preview": "Anteprima non riuscita",
+        "noRows": "Aggiungi almeno una riga",
+        "match": "Abbinamento non riuscito",
+        "execute": "Importazione non riuscita"
+      },
+      "table": {
+        "customer": "Cliente Stripe",
+        "plan": "Piano",
+        "cards": "Carte",
+        "enroll": "Iscrivi al pagamento automatico",
+        "clientProfile": "Cliente / profilo di fatturazione",
+        "include": "Includi"
+      },
+      "actions": {
+        "adopt": "Adotta",
+        "already-imported": "Già importato",
+        "conflict": "Conflitto",
+        "skip": "Salta"
+      },
+      "cardActions": {
+        "import": "Importa",
+        "already-imported": "Già importata",
+        "conflict": "Conflitto",
+        "skip": "Salta"
+      },
+      "cardReasons": {
+        "unsupported-method": "metodo non supportato",
+        "expired-card": "carta scaduta",
+        "card-claimed-elsewhere": "la carta appartiene a un altro cliente"
+      },
+      "reasons": {
+        "invalid-customer-id": "ID cliente Stripe non valido",
+        "customer-not-found": "Cliente non trovato in Stripe",
+        "customer-deleted": "Il cliente è eliminato in Stripe",
+        "profile-not-found": "Cliente o profilo di fatturazione non trovato",
+        "profile-inactive": "Il profilo di fatturazione non è attivo",
+        "currency-not-configured": "Nessuna valuta di fatturazione configurata per questo cliente",
+        "currency-unsupported": "La valuta di fatturazione non è supportata dal pagamento automatico Stripe",
+        "duplicate-customer-in-input": "Lo stesso cliente Stripe compare in più di una riga",
+        "duplicate-profile-in-input": "Lo stesso profilo di fatturazione compare con più di un cliente Stripe",
+        "customer-claimed-by-other": "Il cliente Stripe è già associato a un altro cliente o profilo di fatturazione",
+        "customer-metadata-owned-by-other": "I metadati del cliente Stripe indicano un altro tenant, cliente o profilo di fatturazione",
+        "profile-mapped-to-other-customer": "Questo profilo di fatturazione usa già un cliente Stripe diverso"
+      },
+      "warnings": {
+        "no-cards": "Il cliente non ha metodi di pagamento",
+        "customer-currency-mismatch": "La valuta del cliente Stripe è diversa dalla valuta di fatturazione",
+        "no-importable-card": "Nessuna carta può essere importata"
+      },
+      "resultStatus": {
+        "imported": "Importato",
+        "unchanged": "Niente da fare",
+        "skipped": "Saltato",
+        "conflict": "Conflitto",
+        "failed": "Non riuscito"
+      },
+      "enrollment": {
+        "enrolled": "iscritto al pagamento automatico",
+        "not-eligible": "non idoneo all'iscrizione",
+        "already-enrolled": "già iscritto",
+        "failed": "iscrizione non riuscita"
+      }
+    },
     "messages": {
       "loadConfigFailed": "Impossibile caricare la configurazione di pagamento",
       "keysRequired": "Inserisci sia la chiave segreta che la chiave pubblicabile",
@@ -1446,7 +1618,7 @@
       "daysPlural": "{{count}} giorni",
       "daysDecimal": "{{count}} giorni",
       "hoursUnit": "ore ({{formatted}})",
-      "willExpireAfter": "I link di pagamento scadranno dopo {{duration}}"
+      "willExpireAfter": "Il link di pagamento inviato via email funzionerà per {{duration}}"
     },
     "notConnected": {
       "title": "Stripe non connesso",
@@ -1464,7 +1636,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Scadenza dei link di pagamento",
-        "description": "Per quanto tempo i link di pagamento restano validi prima di scadere"
+        "description": "Per quanto tempo funziona il link di pagamento nelle email delle fatture (da 1 ora a 30 giorni). Ogni clic apre un nuovo pagamento sicuro finché la fattura non è pagata."
       },
       "actions": {
         "save": "Salva impostazioni",

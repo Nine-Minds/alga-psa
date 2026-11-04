@@ -735,16 +735,24 @@ async function sendQuoteEmailBestEffort(params: {
   }
 
   try {
-    const { TenantEmailService, StaticTemplateProcessor } = getWorkflowEmailProvider();
+    const emailProvider = getWorkflowEmailProvider();
+    const { TenantEmailService, StaticTemplateProcessor } = emailProvider;
     const service = TenantEmailService.getInstance(params.tenantId);
 
-    const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
+    // Deep link on the tenant's portal origin (active custom domain, else the
+    // public base URL). Without an origin the email carries no link.
+    const portalLink = (await emailProvider.buildTenantPortalUrl?.(
+      params.tenantId,
+      `/client-portal/billing/quotes/${encodeURIComponent(String(params.quote.quote_id))}`,
+    )) ?? null;
     const defaultSubject = `Quote ${String(params.quote.quote_number ?? params.quote.quote_id)} is ready`;
-    const defaultText = params.message?.trim()
-      ? `${params.message.trim()}\n\nView quote: ${portalLink}`
-      : `Your quote is available in the client portal.\n\nView quote: ${portalLink}`;
-    const defaultHtml = `<p>${params.message?.trim() || 'Your quote is available in the client portal.'}</p><p><a href=\"${portalLink}\">View quote</a></p>`;
+    const intro = params.message?.trim() || 'Your quote is available in the client portal.';
+    const defaultText = portalLink
+      ? `${intro}\n\nView quote: ${portalLink}`
+      : intro;
+    const defaultHtml = portalLink
+      ? `<p>${intro}</p><p><a href="${portalLink}">View quote</a></p>`
+      : `<p>${intro}</p>`;
 
     const templateProcessor = new StaticTemplateProcessor(
       params.subject?.trim() || defaultSubject,
@@ -966,7 +974,7 @@ async function resolveQuoteAuthorizationSubject(
   return {
     tenant: tenantId,
     userId: actorUserId,
-    userType: userRow?.user_type === 'client' ? 'client' : 'internal',
+    userType: userRow?.user_type === 'client' ? 'client' : userRow?.user_type === 'service' ? 'service' : 'internal',
     roleIds: roleRows.map((row) => row.role_id),
     teamIds: teamRows.map((row) => row.team_id),
     managedUserIds: managedRows.map((row) => row.user_id),
@@ -1823,7 +1831,7 @@ export function registerCrmActions(): void {
         const updatedQuote = await Quote.update(tx.trx, tx.tenantId, input.quote_id, {
           status: 'pending_approval' as any,
           updated_by: tx.actorUserId,
-        });
+        }, { workflowRunId: ctx.runId, workflowLineage: [...tx.lineage, tx.workflowId] });
 
         const comment = input.comment?.trim() || input.reason?.trim() || null;
         if (comment) {
@@ -1914,7 +1922,7 @@ export function registerCrmActions(): void {
 
         try {
           if (input.target === 'contract') {
-            const result = await convertQuoteToDraftContract(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId);
+            const result = await convertQuoteToDraftContract(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId, { workflowRunId: ctx.runId, workflowLineage: [...tx.lineage, tx.workflowId] });
             await writeRunAudit(ctx, tx, {
               operation: 'workflow_action:crm.convert_quote',
               changedData: {
@@ -1937,7 +1945,7 @@ export function registerCrmActions(): void {
           }
 
           if (input.target === 'invoice') {
-            const result = await convertQuoteToDraftInvoice(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId);
+            const result = await convertQuoteToDraftInvoice(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId, { workflowRunId: ctx.runId, workflowLineage: [...tx.lineage, tx.workflowId] });
             await writeRunAudit(ctx, tx, {
               operation: 'workflow_action:crm.convert_quote',
               changedData: {
@@ -1959,7 +1967,7 @@ export function registerCrmActions(): void {
             };
           }
 
-          const result = await convertQuoteToDraftContractAndInvoice(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId);
+          const result = await convertQuoteToDraftContractAndInvoice(tx.trx, tx.tenantId, input.quote_id, tx.actorUserId, { workflowRunId: ctx.runId, workflowLineage: [...tx.lineage, tx.workflowId] });
           await writeRunAudit(ctx, tx, {
             operation: 'workflow_action:crm.convert_quote',
             changedData: {
@@ -2186,7 +2194,7 @@ export function registerCrmActions(): void {
       created_at: isoDateTimeSchema,
       target_type: z.string(),
       target_id: uuidSchema,
-      target_summary: z.record(z.unknown()).nullable()
+      target_summary: z.record(z.string(), z.unknown()).nullable()
     }),
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
@@ -2288,7 +2296,7 @@ export function registerCrmActions(): void {
     outputSchema: z.object({
       activities: z.array(activitySummarySchema),
       count: z.number().int(),
-      matched_filters: z.record(z.unknown()),
+      matched_filters: z.record(z.string(), z.unknown()),
     }),
     sideEffectful: false,
     idempotency: { mode: 'engineProvided' },
@@ -2807,14 +2815,9 @@ export function registerCrmActions(): void {
         }
 
         const sentAt = new Date().toISOString();
-        await tenantScopedTable(tx, 'quotes')
-          .where({ quote_id: input.quote_id })
-          .update({
-            status: 'sent',
-            sent_at: sentAt,
-            updated_by: tx.actorUserId,
-            updated_at: sentAt,
-          });
+        await Quote.update(tx.trx, tx.tenantId, input.quote_id, {
+          status: 'sent', sent_at: sentAt, updated_by: tx.actorUserId,
+        }, { workflowRunId: ctx.runId, workflowLineage: [...tx.lineage, tx.workflowId] });
 
         const updatedQuote = await tenantScopedTable(tx, 'quotes').where({ quote_id: input.quote_id }).first();
         if (!updatedQuote) {

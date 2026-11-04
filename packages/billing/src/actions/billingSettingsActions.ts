@@ -13,6 +13,8 @@ import {
   assertValidTenantDefaultTimeEntryService,
   InvalidDefaultTimeEntryServiceError,
 } from '@shared/billingClients/defaultTimeEntryServiceValidation';
+import { isPaymentTerms, type PaymentTerms } from '@shared/billingClients/paymentPreferences';
+import { readTenantDefaultPaymentTerms } from '@shared/billingClients/tenantPaymentTerms';
 import type { CadenceOwner } from '@alga-psa/types';
 import { DEFAULT_QUOTE_VALIDITY_DAYS, isValidQuoteValidityDays } from '../constants/billing';
 
@@ -77,6 +79,8 @@ export interface BillingSettings {
   defaultRenewalMode?: RenewalMode;
   defaultNoticePeriodDays?: number;
   defaultQuoteValidityDays?: number;
+  /** undefined = leave unchanged; a known term = tenant default; null = clear (not set, resolves to Net 30). */
+  defaultPaymentTerms?: PaymentTerms | null;
   renewalDueDateActionPolicy?: RenewalDueDateActionPolicy;
   renewalTicketBoardId?: string;
   renewalTicketStatusId?: string;
@@ -106,9 +110,12 @@ export const getDefaultBillingSettings = withAuth(async (
   }
   const { knex } = await createTenantKnex();
 
-  const settings = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantScopedTable(trx, tenant, 'default_billing_settings')
-      .first();
+  const { settings, defaultPaymentTerms } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return {
+      settings: await tenantScopedTable(trx, tenant, 'default_billing_settings').first(),
+      // Normalized read: null when unset or unrecognised (resolves to Net 30).
+      defaultPaymentTerms: await readTenantDefaultPaymentTerms(trx, tenant),
+    };
   });
 
   if (!settings) {
@@ -123,6 +130,7 @@ export const getDefaultBillingSettings = withAuth(async (
       defaultRenewalMode: DEFAULT_RENEWAL_MODE,
       defaultNoticePeriodDays: DEFAULT_NOTICE_PERIOD_DAYS,
       defaultQuoteValidityDays: DEFAULT_QUOTE_VALIDITY_DAYS,
+      defaultPaymentTerms: null,
       renewalDueDateActionPolicy: DEFAULT_RENEWAL_DUE_DATE_ACTION_POLICY,
       renewalTicketBoardId: undefined,
       renewalTicketStatusId: undefined,
@@ -158,6 +166,7 @@ export const getDefaultBillingSettings = withAuth(async (
       defaultRenewalMode: renewalMode,
       defaultNoticePeriodDays: settings.default_notice_period_days ?? DEFAULT_NOTICE_PERIOD_DAYS,
       defaultQuoteValidityDays: settings.default_quote_validity_days ?? DEFAULT_QUOTE_VALIDITY_DAYS,
+      defaultPaymentTerms,
       renewalDueDateActionPolicy,
       renewalTicketBoardId: settings.renewal_ticket_board_id ?? undefined,
       renewalTicketStatusId: settings.renewal_ticket_status_id ?? undefined,
@@ -201,6 +210,10 @@ export const updateDefaultBillingSettings = withAuth(async (
 
   if (has('defaultQuoteValidityDays') && !isValidQuoteValidityDays(data.defaultQuoteValidityDays)) {
     return actionError('Default quote validity must be between 1 and 365 days', 'msp/billing-settings:general.quotes.errors.range');
+  }
+
+  if (has('defaultPaymentTerms') && data.defaultPaymentTerms != null && !isPaymentTerms(data.defaultPaymentTerms)) {
+    return actionError('Default payment terms must be a recognised term', 'msp/billing-settings:general.paymentTerms.errors.invalid');
   }
 
   try {
@@ -281,6 +294,7 @@ export const updateDefaultBillingSettings = withAuth(async (
       if (has('defaultRenewalMode')) columnValues.default_renewal_mode = renewalMode;
       if (has('defaultNoticePeriodDays')) columnValues.default_notice_period_days = noticePeriodDays;
       if (has('defaultQuoteValidityDays')) columnValues.default_quote_validity_days = data.defaultQuoteValidityDays;
+      if (has('defaultPaymentTerms')) columnValues.default_payment_terms = data.defaultPaymentTerms ?? null;
       if (has('renewalDueDateActionPolicy')) columnValues.renewal_due_date_action_policy = renewalDueDateActionPolicy;
       if (has('renewalTicketBoardId')) columnValues.renewal_ticket_board_id = data.renewalTicketBoardId ?? null;
       if (has('renewalTicketStatusId')) columnValues.renewal_ticket_status_id = data.renewalTicketStatusId ?? null;
@@ -340,6 +354,7 @@ export const updateDefaultBillingSettings = withAuth(async (
           default_renewal_mode: renewalMode,
           default_notice_period_days: noticePeriodDays,
           default_quote_validity_days: data.defaultQuoteValidityDays ?? DEFAULT_QUOTE_VALIDITY_DAYS,
+          default_payment_terms: data.defaultPaymentTerms ?? null,
           renewal_due_date_action_policy: renewalDueDateActionPolicy,
           renewal_ticket_board_id: data.renewalTicketBoardId ?? null,
           renewal_ticket_status_id: data.renewalTicketStatusId ?? null,

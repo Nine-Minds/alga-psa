@@ -7,8 +7,8 @@ import { getInvoiceForRendering } from './invoiceQueries';
 import { createPDFGenerationService, publishGeneratedDocumentsToClient } from '../services/pdfGenerationService';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { StaticTemplateProcessor, TenantEmailService } from '@alga-psa/email';
-import { formatCurrency, isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
-import { resolveEmailLocale, getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
+import { formatCurrency, formatLocalizedCalendarDate, isValidEmail, enqueueImmediateJob } from '@alga-psa/core';
+import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import Handlebars from 'handlebars';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -17,7 +17,6 @@ import { getClientById } from '@alga-psa/shared/billingClients/clients';
 import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
 import { ensureInvoiceEmailLinks } from '../services/ensureInvoiceEmailLinks';
 import { getInvoiceEmailLinkContext } from './invoiceEmailLinkContext';
-import { formatInvoiceCalendarDate } from './invoiceCalendarDate';
 import type { Knex } from 'knex';
 
 interface InitialJobData {
@@ -298,16 +297,23 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
       let recipientSource: InvoiceEmailRecipientInfo['recipientSource'] = resolved.recipientSource;
 
       const currencyCode = (invoice as any).currencyCode || 'USD';
-      const amountLocale = await getTenantDefaultLocale(tenant, 'client');
+      // Currency decision: amounts follow the RECIPIENT's locale (as quote emails
+      // do), so only separators/symbol placement change. The currency code stays
+      // the invoice's, keeping the amount unambiguous. Dates use the same locale.
+      const recipientLocale = await resolveEmailLocale(tenant, {
+        email: recipientEmail,
+        userType: 'client',
+        clientId: client.client_id,
+      });
       // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up) (also 1 more identical site(s) in this file)
-      const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, amountLocale, currencyCode);
+      const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, recipientLocale, currencyCode);
 
       const invoiceDate = invoice.invoice_date
-        ? formatInvoiceCalendarDate(invoice.invoice_date, amountLocale)
+        ? formatLocalizedCalendarDate(invoice.invoice_date, recipientLocale)
         : null;
 
       const dueDate = invoice.due_date
-        ? formatInvoiceCalendarDate(invoice.due_date, amountLocale)
+        ? formatLocalizedCalendarDate(invoice.due_date, recipientLocale)
         : null;
 
       recipients.push({
@@ -527,22 +533,23 @@ export const sendInvoiceEmailAction = withAuth(async (
       const { buffer } = await StorageService.downloadFile(file_id);
 
       const currencyCode = (invoice as any).currencyCode || 'USD';
-      const amountLocale = await getTenantDefaultLocale(tenant, 'client');
-      const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, amountLocale, currencyCode);
-
-      const invoiceDate = invoice.invoice_date
-        ? formatInvoiceCalendarDate(invoice.invoice_date, amountLocale)
-        : 'N/A';
-
-      const dueDate = invoice.due_date
-        ? formatInvoiceCalendarDate(invoice.due_date, amountLocale)
-        : 'N/A';
-
+      // Currency decision: amounts follow the RECIPIENT's locale (as quote emails
+      // do), so only separators/symbol placement change. The currency code stays
+      // the invoice's, keeping the amount unambiguous. Dates use the same locale.
       const recipientLocale = await resolveEmailLocale(tenant, {
         email: recipientEmail,
         userType: 'client',
         clientId: client.client_id,
       });
+      const totalAmount = formatCurrency((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100, recipientLocale, currencyCode);
+
+      const invoiceDate = invoice.invoice_date
+        ? formatLocalizedCalendarDate(invoice.invoice_date, recipientLocale)
+        : 'N/A';
+
+      const dueDate = invoice.due_date
+        ? formatLocalizedCalendarDate(invoice.due_date, recipientLocale)
+        : 'N/A';
 
       const linkContext = await getInvoiceEmailLinkContext(tenant, {
         invoice_id: invoice.invoice_id,

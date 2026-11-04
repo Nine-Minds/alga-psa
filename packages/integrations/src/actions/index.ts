@@ -14,6 +14,7 @@ export {
   getQboTaxCodes,
   getQboAutomatedSalesTaxMode,
   setQboAutomatedSalesTaxMode,
+  setQboEnvironment,
   getQboCompanyCountryInfo,
   getQboTerms,
   getQboCustomers,
@@ -45,6 +46,15 @@ export {
   getMicrosoftAuthUrl,
   retryMicrosoftCalendarSubscriptionRenewal
 } from './calendarActions';
+export {
+  getIntegrationHealthAlerts
+} from './integrationHealthActions';
+export type {
+  IntegrationHealthAlert,
+  IntegrationHealthIntegration,
+  IntegrationHealthReason,
+  IntegrationHealthSeverity
+} from './integrationHealthActions';
 export {
   getExternalEntityMappings,
   createExternalEntityMapping,

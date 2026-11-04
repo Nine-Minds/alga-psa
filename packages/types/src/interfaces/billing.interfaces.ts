@@ -168,6 +168,12 @@ export interface ITimeBasedCharge extends IBillingCharge, TenantEntity {
    */
   timeSegment?: 'regular' | 'overtime';
   /**
+   * Set when the line carries a cadence Prepaid Block: this is the time the
+   * block did not cover, billed at the line's hourly rate in arrears. Drives
+   * the "(over prepaid block)" suffix on the invoice line.
+   */
+  overPrepaidBlock?: boolean;
+  /**
    * Work-item snapshot persisted to `invoice_time_entries.work_item_snapshot`
    * when this charge is invoiced. Renderer-only metadata: it must never feed
    * the canonical charge description or accounting exports.
@@ -195,7 +201,7 @@ export interface IUsageBasedCharge extends IBillingCharge, TenantEntity {
   usagePeriodTotalRevision?: number;
 }
 
-type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license' | 'project_milestone' | 'project_deposit' | 'hour_block';
+type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license' | 'project_milestone' | 'project_deposit' | 'hour_block' | 'prepaid_block';
 export interface IRecurringChargeDetailPeriod {
   servicePeriodStart?: ISO8601String | null;
   servicePeriodEnd?: ISO8601String | null;
@@ -255,6 +261,45 @@ export interface IBillingCharge extends TenantEntity {
    * instead of duplicating on regeneration.
    */
   contractChangeAdjustment?: IContractChangeAdjustmentSource | null;
+  /**
+   * Set when the charge's source evidence (approved time) is dated inside a
+   * service period that an issued invoice already closed. The charge bills on
+   * this invoice and reports the period of the invoice that closed it; it never
+   * claims this invoice's recurring service period.
+   */
+  lateForServicePeriod?: ILateServicePeriodSource | null;
+}
+
+/**
+ * Approved, uninvoiced hourly time dated inside a service period an issued
+ * invoice already closed. `next_invoice`: bills on the line's next invoice.
+ * `outside_lookback`: older than the lookback; listed for the operator but not billed.
+ */
+export interface ILateHourlyTimeNotice {
+  entryId: string;
+  clientId: string;
+  clientName: string | null;
+  contractLineId: string;
+  contractLineName: string | null;
+  serviceName: string | null;
+  workItemLabel: string | null;
+  technicianName: string | null;
+  workDate: ISO8601String;
+  billableMinutes: number;
+  closedPeriodStart: ISO8601String;
+  closedPeriodEnd: ISO8601String;
+  closedByInvoiceNumber: string | null;
+  closedByInvoiceStatus: string | null;
+  disposition: 'next_invoice' | 'outside_lookback';
+}
+
+export interface ILateServicePeriodSource {
+  /** Inclusive start of the closed service period the evidence is dated in. */
+  servicePeriodStart: ISO8601String;
+  /** Inclusive end of that period. */
+  servicePeriodEnd: ISO8601String;
+  /** The invoice that closed that period. */
+  closedByInvoiceId: string | null;
 }
 
 export interface IContractChangeAdjustmentSource {
@@ -296,6 +341,22 @@ export interface IDiscount extends TenantEntity {
   discount_type: 'percentage' | 'fixed';
   value: number;
   amount?: number;
+  /**
+   * Explicit eligible scope. Null preserves the legacy invoice-wide behavior
+   * (a contract-line link stays an eligibility trigger, not an implicit
+   * narrowing). Set by configured automatic discounts that opt into a scope.
+   */
+  scope?: 'invoice' | 'contract' | 'service' | 'item' | null;
+  /** Contract assignment a `contract`-scoped discount resolves against. */
+  client_contract_id?: string | null;
+  /** Contract line a legacy/eligibility-linked discount is associated with. */
+  contract_line_id?: string | null;
+  /** Service a `service`-scoped discount resolves against. */
+  scope_service_id?: string | null;
+  /** Charge item an `item`-scoped discount resolves against. */
+  applies_to_item_id?: string | null;
+  /** Persisted evaluation order; lower runs first. */
+  priority?: number | null;
 }
 
 export interface IAdjustment extends TenantEntity {
@@ -474,6 +535,50 @@ export interface IProductCharge extends IBillingCharge, TenantEntity {
   material_source_id?: string;
 }
 
+/**
+ * Up-front Prepaid Block invoice line, produced from a scheduled
+ * `contract_line_block_issuances` row (plan D2). `total` is authoritative at
+ * `block_price`; `quantity` is the block size in hours and `rate` is the price
+ * per hour rounded to whole minor units, so quantity x rate may differ from
+ * `total` by rounding (invoice_charges.quantity is numeric(14,6), unit_price a
+ * bigint; downstream export reconciles the pair against the amount).
+ * Persisting the charge also creates the pending contract hour block.
+ */
+export interface IPrepaidBlockCharge extends IBillingCharge, TenantEntity {
+  type: 'prepaid_block';
+  /**
+   * The scheduled consumption-mode issuance this charge bills. Null for a
+   * cadence block, which has no issuance: the recurring service period
+   * (`servicePeriodRecordId`) it bills is its identity.
+   */
+  issuance_id: string | null;
+  /** Cadence blocks only: first day the issued block may be drawn (period start). */
+  valid_from?: ISO8601String;
+  /** Cadence blocks only: last day the issued block may be drawn (inclusive). */
+  expiration_date?: ISO8601String;
+  /** Cadence blocks only: cadence periods the block's hours stay usable after its own. */
+  rollover_periods?: number;
+  /** The Hourly line carrying the block config; also `client_contract_line_id`. */
+  contract_line_id: string;
+  /** Catalog service the invoice line is sold as (config.sold_as_service_id). */
+  serviceId: string;
+  serviceName: string;
+  /** Block size in minutes (quantity is this in hours). */
+  block_minutes: number;
+  /** Block price in minor units of `currency_code`. */
+  block_price: number;
+  /** contracts.currency_code, passed explicitly to the hour block. */
+  currency_code: string;
+  /** Null = never expires. */
+  expiry_months: number | null;
+  /** Covered services for the block's scope rows. */
+  scope_service_ids: string[];
+  quantity: number;
+  rate: number;
+  total: number;
+  billingTiming: 'advance';
+}
+
 export interface ILicenseCharge extends IBillingCharge, TenantEntity {
   serviceId: string;
   serviceName: string;
@@ -583,6 +688,10 @@ export interface IContractLine extends TenantEntity {
   location_id?: string | null;
   is_custom?: boolean; // Whether this is a custom contract line (not from preset)
   is_active?: boolean;
+  /** Authored line start (inclusive); null inherits the contract assignment start. */
+  start_date?: ISO8601String | null;
+  /** Authored line end (exclusive, half-open); null inherits the contract assignment end. */
+  end_date?: ISO8601String | null;
   // Hourly contract line fields (contract-line-level, same for all services)
   hourly_rate?: number | null; // Deprecated: Use service-level hourly_rate instead
   minimum_billable_time?: number | null; // Minimum time to bill for hourly services

@@ -37,7 +37,7 @@ function props(value: any, update: any): any {
   return { id: 'entry', entry: value, index: 0, isEditable: true, services: [], timeInputs: {}, totalDuration: 60,
     onUpdateEntry: update, onUpdateTimeInputs: vi.fn(), onDelete: vi.fn() };
 }
-it('late contract defaults preserve duration and notes edited during lookup', async () => {
+it('a late lookup never auto-fills a contract line (server resolver owns auto-picks)', async () => {
   let resolve!: (value: any) => void;
   mocks.plans.mockReturnValue(new Promise(done => { resolve = done; }));
   const update = vi.fn();
@@ -46,7 +46,7 @@ it('late contract defaults preserve duration and notes edited during lookup', as
   const edited = { ...entry, end_time: '2026-08-10T10:00:00Z', billable_duration: 120, notes: 'Two hours worked' };
   view.rerender(<TimeEntryEditForm {...props(edited, update)} />);
   await act(async () => resolve([plan]));
-  expect(update).toHaveBeenLastCalledWith(0, { ...edited, contract_line_id: 'line-1' });
+  expect(update).not.toHaveBeenCalled();
 });
 it('ignores a lookup for a service the user has replaced', async () => {
   let resolveOld!: (value: any) => void;
@@ -58,21 +58,22 @@ it('ignores a lookup for a service the user has replaced', async () => {
   const update = vi.fn();
   const view = render(<TimeEntryEditForm {...props(entry, update)} />);
   await waitFor(() => expect(resolveOld).toBeDefined());
-  const changed = { ...entry, service_id: 'service-2' };
+  const changed = { ...entry, service_id: 'service-2', contract_line_id: 'line-1', contract_line_source: 'explicit' };
   view.rerender(<TimeEntryEditForm {...props(changed, update)} />);
   await waitFor(() => expect(resolveNew).toBeDefined());
   await act(async () => resolveOld([plan]));
   expect(update).not.toHaveBeenCalled();
   await act(async () => resolveNew([{ ...plan, client_contract_line_id: 'line-2' }]));
-  expect(update).toHaveBeenLastCalledWith(0, { ...changed, contract_line_id: 'line-2' });
+  // The earlier choice (line-1) isn't eligible for the new service: cleared, not replaced.
+  expect(update).toHaveBeenLastCalledWith(0, { ...changed, contract_line_id: null, contract_line_source: undefined, isDirty: true });
 });
-it('does not replace a contract line selected while defaults were loading', async () => {
+it('keeps a contract line selected while the lookup was loading when still eligible', async () => {
   let resolve!: (value: any) => void;
   mocks.plans.mockReturnValue(new Promise(done => { resolve = done; }));
   const update = vi.fn();
   const view = render(<TimeEntryEditForm {...props(entry, update)} />);
   await waitFor(() => expect(mocks.plans).toHaveBeenCalled());
-  view.rerender(<TimeEntryEditForm {...props({ ...entry, contract_line_id: 'chosen-line' }, update)} />);
+  view.rerender(<TimeEntryEditForm {...props({ ...entry, contract_line_id: 'line-1' }, update)} />);
   await act(async () => resolve([plan]));
   expect(update).not.toHaveBeenCalled();
 });

@@ -67,6 +67,7 @@
     "taxBreakdown": "Ventilation des taxes",
     "manualInvoice": "Facture manuelle",
     "credits": "Crédits",
+    "currency": "Devise",
     "financialArtifactSummary": "Facture financière uniquement. Les périodes de service récurrentes n'apparaissent que sur les lignes de détail récurrentes.",
     "servicePeriod": "Période de service",
     "servicePeriods": "Périodes de service",
@@ -212,6 +213,7 @@
       "optionalLockedHint": "La sélection des éléments optionnels est verrouillée dès que le devis n'attend plus votre réponse.",
       "optionalToggleHint": "Activez ou désactivez les éléments optionnels pour prévisualiser le total souhaité avant de répondre.",
       "poNumber": "Bon de commande",
+      "previewUnavailable": "Aucun aperçu en direct n'est disponible pour ce devis ; les totaux affichés sont les totaux actuellement enregistrés. Votre sélection sera tout de même envoyée lors de l'acceptation.",
       "quoteDate": "Date du devis",
       "readyToRespond": "Prêt à répondre ?",
       "reject": "Refuser",
@@ -221,7 +223,6 @@
       "rejectQuote": "Refuser le devis",
       "rejectedBanner": "Devis refusé.",
       "rejectedBannerWithReason": "Devis refusé : {{reason}}",
-      "savingSelections": "Enregistrement de la sélection des éléments optionnels...",
       "scopeOfWork": "Périmètre des travaux",
       "submitting": "Envoi...",
       "subtotal": "Sous-total",
@@ -241,7 +242,8 @@
     "contractLineType": {
       "Fixed": "Forfait",
       "Hourly": "Horaire",
-      "Usage": "À l'usage"
+      "Usage": "À l'usage",
+      "PrepaidBlock": "Bloc prépayé"
     },
     "quoteStatus": {
       "draft": "Brouillon",
@@ -288,6 +290,13 @@
       "pending": "Factures en attente d'approbation ou de traitement",
       "prepayment": "Factures d'acompte ou de dépôt",
       "partially_applied": "Factures avec paiements partiels appliqués"
+    },
+    "billingPeriod": {
+      "weekly": "par semaine",
+      "monthly": "par mois",
+      "quarterly": "par trimestre",
+      "semi-annually": "par semestre",
+      "annually": "par an"
     }
   },
   "quoteForm": {
@@ -442,6 +451,35 @@
     "hoursLeft": "{{hours}} h restantes",
     "expires": "Expire le {{date}}",
     "recentBurn": "Consommation récente",
-    "timeEntry": "Entrée de temps"
+    "timeEntry": "Entrée de temps",
+    "contractLabel": "Contrat : {{contract}}",
+    "hoursLeftValue": "{{hours}} h restantes · {{value}}",
+    "validFrom": "Valide à partir du {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — bloc prépayé, {{hours}} h",
+    "overPrepaidBlock": "{{name}} (au-delà du bloc prépayé)"
+  },
+  "bucketUsage": {
+    "contractLine": "Ligne de contrat de forfait d’heures",
+    "usage": "Utilisation",
+    "hoursUsed": "{{hours}} heures utilisées",
+    "hoursTotal": "{{hours}} heures au total",
+    "rolloverHours": "Comprend {{hours}} heures reportées"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Exigible à réception",
+      "net14": "Net à 14 jours",
+      "net15": "Net à 15 jours",
+      "net30": "Net à 30 jours",
+      "net7": "Net à 7 jours"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Virement bancaire",
+      "check": "Chèque",
+      "creditCard": "Carte de crédit"
+    },
+    "tenantDefault": "Valeur par défaut du locataire ({{value}})"
   }
 }

@@ -40,7 +40,7 @@ describe('KB article lifecycle tenant-scoped query contract', () => {
 
   it('delegates article creation to the session-free shared model', () => {
     expect(source).toContain("from '@alga-psa/shared/models/kbArticleModel'");
-    expect(source).toContain('createKbArticle(knex, { tenant, userId: user.user_id }');
+    expect(source).toContain('createKbArticle(trx, { tenant, userId: user.user_id }');
     expect(source).not.toContain('_createArticleInternal');
   });
 

@@ -48,6 +48,7 @@ interface Fixture {
   otherBoardId: string;
   priorityId: string;
   categoryId: string;
+  templateId: string;
 }
 
 const weekly = { frequency: 'weekly', interval: 1, weekdays: ['mon'], end: { type: 'never' } };
@@ -73,14 +74,33 @@ async function createFixture(): Promise<Fixture> {
   const categoryId = uuidv4();
   await scoped.table('categories').insert({ tenant, category_id: categoryId, category_name: 'Maintenance', board_id: otherBoardId, created_by: userId });
   await scoped.table('tenant_settings').insert({ tenant, settings: JSON.stringify({ timezone: 'America/New_York' }) }).onConflict('tenant').merge();
-  return { tenant, clientId, otherClientId, userId, boardId, otherBoardId, priorityId, categoryId };
+  const fixture = { tenant, clientId, otherClientId, userId, boardId, otherBoardId, priorityId, categoryId, templateId: '' };
+  fixture.templateId = await createTemplate(fixture);
+  return fixture;
+}
+
+/** Content fields now live on the ticket template (R1); a test that wants one seeds its own template. */
+const TEMPLATE_FIELDS = ['title_template', 'board_id', 'priority_id', 'category_id', 'tags'] as const;
+
+async function createTemplate(f: Fixture, fields: Record<string, unknown> = {}): Promise<string> {
+  const templateId = uuidv4();
+  await tenantDb(testDb, f.tenant).table('ticket_templates').insert({
+    tenant: f.tenant,
+    template_id: templateId,
+    name: `Template ${templateId.slice(0, 8)}`,
+    title: (fields.title_template as string) ?? '{{client}} patching {{month}} {{year}}',
+    board_id: (fields.board_id as string) ?? f.boardId,
+    priority_id: (fields.priority_id as string) ?? f.priorityId,
+    category_id: (fields.category_id as string) ?? null,
+    tags: JSON.stringify((fields.tags as string[]) ?? []),
+    offer_for_manual_use: false,
+  });
+  return templateId;
 }
 
 const definitionInput = (f: Fixture, overrides: Record<string, unknown> = {}) => ({
   name: 'Monthly patching',
-  title_template: '{{client}} patching {{month}} {{year}}',
-  board_id: f.boardId,
-  priority_id: f.priorityId,
+  ticket_template_id: f.templateId,
   recurrence: weekly,
   start_date: '2026-01-05',
   ...overrides,
@@ -91,7 +111,17 @@ const isError = (value: unknown): value is { actionError: string; messageKey?: s
 const isPermissionError = (value: unknown) => typeof value === 'object' && value !== null && 'permissionError' in value;
 
 async function createDefinition(f: Fixture, overrides: Record<string, unknown> = {}): Promise<string> {
-  const result = await actions.createRecurringTicketDefinition(definitionInput(f, overrides) as any);
+  // Template-owned fields in `overrides` get their own template; everything else is definition input.
+  const templateFields: Record<string, unknown> = {};
+  const input: Record<string, unknown> = { ...overrides };
+  for (const key of TEMPLATE_FIELDS) {
+    if (key in input) {
+      templateFields[key] = input[key];
+      delete input[key];
+    }
+  }
+  if (Object.keys(templateFields).length > 0) input.ticket_template_id = await createTemplate(f, templateFields);
+  const result = await actions.createRecurringTicketDefinition(definitionInput(f, input) as any);
   if (isError(result) || isPermissionError(result)) throw new Error(`fixture definition failed: ${JSON.stringify(result)}`);
   return (result as { definition_id: string }).definition_id;
 }
@@ -161,11 +191,17 @@ describe('recurring ticket actions (integration)', () => {
   });
 
   describe('create and update validation', () => {
-    it('rejects an unknown title token with a localizable error that names it', async () => {
-      const result = await actions.createRecurringTicketDefinition(definitionInput(f, { title_template: '{{client}} {{quarter}}' }) as any);
-      expect(isError(result)).toBe(true);
-      expect((result as any).actionError).toContain('{{quarter}}');
-      expect((result as any).messageKey).toBe('features/tickets:recurring.errors.unknownTitleTokens');
+    it('rejects the removed content fields, a missing template and a dangling template', async () => {
+      // Title tokens are validated where the title now lives: on the ticket template (ticketTemplates suite).
+      const content = await actions.createRecurringTicketDefinition(definitionInput(f, { title_template: '{{client}}' }) as any);
+      expect(isError(content)).toBe(true);
+      const { ticket_template_id: _omit, ...withoutTemplate } = definitionInput(f);
+      const missing = await actions.createRecurringTicketDefinition(withoutTemplate as any);
+      expect(isError(missing)).toBe(true);
+      const dangling: any = await actions.createRecurringTicketDefinition(definitionInput(f, { ticket_template_id: uuidv4() }) as any);
+      expect(dangling.messageKey).toBe('features/tickets:recurring.errors.invalidReferences');
+      expect(dangling.actionError).toContain('no longer exists');
+      expect((await tenantDb(testDb, f.tenant).table('recurring_ticket_definitions')).length).toBe(0);
     });
 
     it('rejects an inactive board, a status from another board and a category from another board', async () => {
@@ -174,14 +210,18 @@ describe('recurring ticket actions (integration)', () => {
       expect((inactive as any).actionError).toContain('inactive');
 
       await tenantDb(testDb, f.tenant).table('boards').where({ board_id: f.boardId }).update({ is_inactive: false });
-      const wrongCategory = await actions.createRecurringTicketDefinition(definitionInput(f, { category_id: f.categoryId }) as any);
+      // The category belongs to "Projects"; the template's board is "Patching".
+      const wrongCategory = await actions.createRecurringTicketDefinition(
+        definitionInput(f, { overrides: { category: { category_id: f.categoryId, subcategory_id: null } } }) as any
+      );
       expect((wrongCategory as any).actionError).toContain('does not belong to the selected board');
       expect((await tenantDb(testDb, f.tenant).table('recurring_ticket_definitions')).length).toBe(0);
     });
 
     it('rejects a subcategory without a category and an out-of-range lead time', async () => {
-      const noCategory = await actions.createRecurringTicketDefinition(definitionInput(f, { subcategory_id: uuidv4() }) as any);
-      expect((noCategory as any).messageKey).toBe('features/tickets:recurring.errors.subcategoryNeedsCategory');
+      const noCategory = await actions.createRecurringTicketDefinition(definitionInput(f, { overrides: { category: { category_id: null, subcategory_id: uuidv4() } } }) as any);
+      expect(isError(noCategory)).toBe(true);
+      expect((noCategory as any).actionError).toContain('overrides.category.subcategory_id');
       const badLead = await actions.createRecurringTicketDefinition(definitionInput(f, { lead_days: 400 }) as any);
       expect(isError(badLead)).toBe(true);
     });
@@ -200,9 +240,12 @@ describe('recurring ticket actions (integration)', () => {
         non_business_day_policy: 'keep',
         open_previous_policy: 'always_create',
         notify_client_on_create: false,
-        tags: ['patching'],
-        board_id: f.boardId,
+        ticket_template_id: expect.any(String),
+        overrides: {},
       });
+      // Content is the template's, read live; the definition no longer carries it.
+      expect(detail.definition).not.toHaveProperty('title_template');
+      expect(detail.definition.template).toMatchObject({ board_id: f.boardId, priority_id: f.priorityId });
       expect(detail.next_due_at).toBeTruthy();
 
       await actions.updateRecurringTicketDefinition(definitionId, definitionInput(f, { name: 'Renamed', lead_days: 2 }) as any);

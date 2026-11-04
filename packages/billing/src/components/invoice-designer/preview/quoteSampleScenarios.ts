@@ -121,6 +121,10 @@ const createBaseQuote = (): QuoteViewModel => ({
   status: 'sent',
   version: 1,
   po_number: null,
+  // Unset like po_number: the designer samples a quote with no custom section
+  // titles, so the grouped cadence bands keep their vocabulary names.
+  recurring_section_title: null,
+  onetime_section_title: null,
   currency_code: 'USD',
   subtotal: 0,
   discount_total: 0,

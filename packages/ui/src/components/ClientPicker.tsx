@@ -12,10 +12,13 @@ import { Input } from './Input';
 import CustomSelect from './CustomSelect';
 import { Button, buttonVariants } from './Button';
 import ClientAvatar from './ClientAvatar';
+import { EntityTagBadges } from './EntityChip';
 import { TagFilter } from './tags/TagFilter';
 import { useClientTags } from '../context/ClientTagsContext';
+import { useClientPickerSearch } from '../context/ClientPickerSearchContext';
 import type { EntityAvatarProps } from './EntityAvatar';
 import { useTranslation } from '../lib/i18n/client';
+import { AsyncClientPicker, type ClientPickerSearchFn } from './AsyncClientPicker';
 
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
@@ -27,9 +30,27 @@ type ButtonSize = VariantProps<typeof buttonVariants>['size'];
 type ClientFilterState = 'all' | 'active' | 'inactive';
 type ClientTypeFilter = 'all' | 'company' | 'individual';
 
+/** In-memory mode only: skip the tag fetch (and hide the tag filter) for lists larger than this. */
+const IN_MEMORY_TAG_FETCH_LIMIT = 200;
+
 interface ClientPickerProps {
   id?: string;
+  /**
+   * @deprecated Full in-memory client lists don't scale (5k+ tenants). Omit this prop: the
+   * picker is async by default and searches on the server through the searcher from
+   * `ClientPickerSearchProvider` (or the `searchClients` prop). Passing `clients` opts in to the
+   * in-memory picker, which is only intended for small, pre-filtered lists.
+   * Ignored when `searchClients` is set.
+   */
   clients?: IClient[];
+  /**
+   * Async mode: server-side search override (e.g. `searchClientsForPicker`). Optional; the
+   * MSP shells supply it through `ClientPickerSearchProvider`. The picker pages,
+   * debounces and hydrates the selected value itself and never needs the full list.
+   */
+  searchClients?: ClientPickerSearchFn;
+  /** Async mode only: ids removed from results on the server (not the same as disabledClientIds). */
+  excludeIds?: string[];
   onSelect: (clientId: string | null) => void;
   selectedClientId: string | null;
   filterState?: ClientFilterState;
@@ -95,7 +116,44 @@ const OptionButton: React.FC<OptionButtonProps> = ({ id, label, onSelect, disabl
   );
 };
 
-export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
+export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = (props) => {
+  const { searchClients: contextSearchClients } = useClientPickerSearch();
+  const searchClients = props.searchClients ?? contextSearchClients;
+  // Async is the default: the in-memory list is opt-in by passing `clients`.
+  if (props.searchClients || props.clients === undefined) {
+    if (!searchClients) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error(
+          '[ClientPicker] No client searcher: pass `searchClients` or mount ClientPickerSearchProvider. Rendering an empty picker.'
+        );
+      }
+      return <InMemoryClientPicker {...props} clients={[]} />;
+    }
+    return (
+      <AsyncClientPicker
+        id={props.id}
+        searchClients={searchClients}
+        onSelect={props.onSelect}
+        selectedClientId={props.selectedClientId}
+        filterState={props.filterState}
+        onFilterStateChange={props.onFilterStateChange}
+        clientTypeFilter={props.clientTypeFilter}
+        onClientTypeFilterChange={props.onClientTypeFilterChange}
+        disabledClientIds={props.disabledClientIds}
+        disabledTooltip={props.disabledTooltip}
+        excludeIds={props.excludeIds}
+        className={props.className}
+        placeholder={props.placeholder}
+        modal={props.modal}
+        onAddNew={props.onAddNew}
+        disabled={props.disabled}
+      />
+    );
+  }
+  return <InMemoryClientPicker {...props} />;
+};
+
+const InMemoryClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   id = 'client-picker',
   clients = [],
   onSelect,
@@ -144,7 +202,8 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   );
 
   useEffect(() => {
-    if (!isOpen || !fetchClientTags || clients.length === 0) return;
+    // Scoped to the ids we were given; a list too large to be "small by definition" gets no tag filter.
+    if (!isOpen || !fetchClientTags || clients.length === 0 || clients.length > IN_MEMORY_TAG_FETCH_LIMIT) return;
     let cancelled = false;
     fetchClientTags(clients.map((client) => client.client_id))
       .then((tags) => {
@@ -512,7 +571,10 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
                 >
                   <ClientAvatar clientId={client.client_id} clientName={client.client_name} logoUrl={(client as any).logoUrl} size="sm" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 truncate">{client.client_name}</div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-medium text-gray-900 truncate">{client.client_name}</span>
+                      <EntityTagBadges tags={client.displayTags} maxBadges={2} />
+                    </div>
                     <div className="text-xs text-gray-500 truncate">
                       {client.client_type ? client.client_type : '—'}
                       {client.is_inactive ? ' • Inactive' : ''}
@@ -585,6 +647,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
                     size={size === 'xs' ? 'xs' : 'sm'}
                   />
                   <span className="truncate">{selectedClient.client_name}</span>
+                  <EntityTagBadges tags={selectedClient.displayTags} maxBadges={2} />
                 </>
               ) : (
                 <span className="text-gray-500">{placeholder}</span>

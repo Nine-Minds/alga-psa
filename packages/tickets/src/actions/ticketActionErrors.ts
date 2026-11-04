@@ -55,8 +55,6 @@ export const TICKET_NOT_FOUND_MESSAGE_KEY = TICKET_CODE_MESSAGE_KEYS.TICKET_NOT_
  * can shrink rather than grow.
  */
 const EXPECTED_TICKET_MESSAGE_PREFIXES = [
-  'Client user cannot access this ticket',
-  'Client user is not associated with a client',
   'Client users can only create their own comments',
   'Contact does not belong to',
   'Client users cannot create internal comments',
@@ -67,7 +65,10 @@ const EXPECTED_TICKET_MESSAGE_PREFIXES = [
   'Comment with id',
   'Changing the board requires selecting a status for the destination board',
   'Child ticket not found',
+  'Invalid asset:',
   'Invalid category combination',
+  'Invalid ticket create payload:',
+  'Invalid watcher:',
   'Invalid destination status',
   'Invalid location',
   'Invalid status',
@@ -91,6 +92,8 @@ const EXPECTED_TICKET_MESSAGE_PREFIXES = [
   'Reply visibility must match the thread root visibility',
   'Select at least one child ticket different from the master',
   'Source ticket not found',
+  'A ticket cannot be created from a template and a duplicate at once',
+  'Ticket template not found',
   'Status not valid for this board',
   'Tenant required',
   'Tenant is required to delete comment',
@@ -141,6 +144,16 @@ function ticketErrorCodeOf(error: unknown): TicketErrorCode | undefined {
 export function ticketActionErrorFrom(error: unknown): TicketActionError | null {
   if (isAuthorizationThrow(error)) {
     return permissionError(error instanceof Error ? error.message : String(error));
+  }
+
+  const audienceCode = (error as { code?: unknown } | null)?.code;
+  if (audienceCode === 'CO_MANAGED_AUDIENCE_REQUIRED' || audienceCode === 'COMMENT_AUDIENCE_INVALID') {
+    return actionError(
+      (error as Error).message,
+      audienceCode === 'CO_MANAGED_AUDIENCE_REQUIRED'
+        ? 'features/tickets:errors.comment.audienceRequired'
+        : 'features/tickets:errors.comment.audienceInvalid',
+    );
   }
 
   const ticketCode = ticketErrorCodeOf(error);

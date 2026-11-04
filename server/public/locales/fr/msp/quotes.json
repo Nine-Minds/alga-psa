@@ -378,6 +378,14 @@
       "customLayout": "Personnalisé",
       "tenantDefault": "Valeur par défaut du locataire",
       "changeLayout": "Modifier"
+    },
+    "sectionTitles": {
+      "title": "Titres des sections du devis groupé",
+      "description": "Titres facultatifs utilisés par la mise en page de devis standard groupé.",
+      "monthlyLabel": "Titre de la section mensuelle",
+      "oneTimeLabel": "Titre de la section ponctuelle",
+      "monthlyPlaceholder": "Mensuel",
+      "oneTimePlaceholder": "Unique"
     }
   },
   "quoteDetail": {
@@ -622,6 +630,7 @@
       }
     },
     "sections": {
+      "carriedDiscounts": "Rabais reportés sur les lignes contractuelles",
       "contractItems": "Articles du contrat",
       "conversionMode": "Mode de conversion",
       "excludedFromConversion": "Exclus de la conversion",
@@ -647,6 +656,7 @@
       "converted": "Converti",
       "discount": "Rabais",
       "fixed": "fixé",
+      "monthlyTotal": "Total mensuel après rabais",
       "notConverted": "Non converti"
     },
     "partial": {

@@ -1,13 +1,15 @@
 # Schema Coverage Snapshot
 
-- Total routes: 729
-- Routes with canonical schemas: 376 (51%)
-- Routes missing canonical schemas: 353
-- Routes handled without controllers (likely Next.js handlers): 339
+- Total routes: 929
+- Routes with canonical schemas: 453 (48%)
+- Routes missing canonical schemas: 476
+- Routes handled without controllers (likely Next.js handlers): 460
 
 ## Controllers Missing Canonical Schemas
 - `server/src/lib/api/controllers/ApiAccountingExportController.ts` (8 routes)
 - `server/src/lib/api/controllers/ApiCSVAccountingController.ts` (5 routes)
+- `server/src/lib/api/controllers/ApiCountryController.ts` (1 routes)
+- `server/src/lib/api/controllers/ApiMobileCapabilitiesController.ts` (1 routes)
 - `server/src/lib/api/controllers/ApiSearchController.ts` (1 routes)
 
 ## Routes Lacking Canonical Schemas
@@ -24,6 +26,9 @@
 - `POST` /api/accounting/exports/{batchId}/errors (CE)
 - `POST` /api/accounting/exports/{batchId}/execute (CE)
 - `POST` /api/accounting/exports/{batchId}/lines (CE)
+- `GET` /api/auth/captcha-config (CE)
+- `POST` /api/auth/client-portal/sso/discover (CE)
+- `POST` /api/auth/client-portal/sso/resolve (CE)
 - `GET` /api/auth/e2e/google/authorize (CE)
 - `GET` /api/auth/e2e/google/complete (CE)
 - `POST` /api/auth/e2e/google/token (CE)
@@ -34,6 +39,7 @@
 - `GET` /api/auth/microsoft/calendar/callback (CE)
 - `GET` /api/auth/microsoft/calendar/callback (EE)
 - `GET` /api/auth/microsoft/callback (CE)
+- `GET` /api/auth/microsoft/email-setup/callback (CE)
 - `GET` /api/auth/microsoft/entra/callback (CE)
 - `GET` /api/auth/microsoft/entra/callback (EE)
 - `POST` /api/auth/msp/remember-email (CE)
@@ -47,18 +53,14 @@
 - `POST` /api/auth/validate-token (CE)
 - `GET/POST` /api/auth/{nextauth} (CE)
 - `GET` /api/billing/check-tenant (CE)
+- `GET` /api/billing/check-tenant (EE)
+- `POST` /api/billing/complete-reactivation (CE)
+- `POST` /api/billing/complete-reactivation (EE)
 - `GET/POST` /api/billing/licence-count (CE)
-- `GET` /api/calendar/appointment/{id} (CE)
-- `GET/OPTIONS/POST` /api/calendar/webhooks/google (CE)
-- `GET/OPTIONS/POST` /api/calendar/webhooks/google (EE)
-- `GET/OPTIONS/POST` /api/calendar/webhooks/microsoft (CE)
-- `GET/OPTIONS/POST` /api/calendar/webhooks/microsoft (EE)
-- `POST` /api/chat/stream/title (CE)
-- `GET/POST` /api/chat/stream/{slug} (CE)
-- `POST` /api/chat/v1/completions (CE)
-- `POST` /api/chat/v1/completions/stream (CE)
-- `POST` /api/chat/v1/execute (CE)
-- `OPTIONS/POST` /api/client-portal/domain-session (CE)
-- `GET` /api/clients (CE)
-- `GET` /api/documents/download/{fileId} (CE)
-- ...and 305 more
+- `POST` /api/billing/reactivation-password-reset (CE)
+- `POST` /api/billing/reactivation-password-reset (EE)
+- `POST` /api/billing/reactivation-token (CE)
+- `POST` /api/billing/reactivation-token (EE)
+- `POST` /api/billing/reactivation-token/session (CE)
+- `POST` /api/billing/reactivation-token/session (EE)
+- ...and 426 more

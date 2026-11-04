@@ -5,15 +5,18 @@
  * P0 behavioral-matrix rows exercised here:
  *
  *  1. Direct Send Invoice Email with links: a finalized, unpaid invoice sent
- *     through the real `sendInvoiceEmailAction` carries a working emulator
- *     Checkout URL and an authenticated portal URL; the Stripe customer is
- *     created with the billing-contact email; the invoice PDF stays attached.
+ *     through the real `sendInvoiceEmailAction` carries a durable signed
+ *     `/pay/<token>` URL (never a provider session URL) and an authenticated
+ *     portal URL; no Checkout session exists until the link is clicked, and
+ *     the click (`resolvePayLink`) mints one in the emulator, creating the
+ *     Stripe customer with the billing-contact email; the PDF stays attached.
  *  2. Billing contact with a blank email falls through to `clients.billing_email`
  *     for BOTH delivery and Stripe customer creation; two direct sends reuse one
- *     active `invoice_payment_links` row and one emulator Checkout session.
- *  3. `checkout.sessions.create` operation fault: the email still sends with a
- *     portal CTA and no payment CTA, and the logged error retains the emulator
- *     message.
+ *     active `invoice_payment_links` row and one emulator Checkout session
+ *     once the emailed link is clicked.
+ *  3. `checkout.sessions.create` operation fault: the email still carries the
+ *     pay link; the click falls back (reason `unavailable`) and the logged
+ *     error retains the emulator message.
  *  6. Tenant/ownership boundary: a portal user whose contact belongs to another
  *     client cannot obtain a payment link and the provider receives no request.
  *
@@ -113,6 +116,24 @@ vi.mock('@alga-psa/auth/getCurrentUser', async () => {
 function setActiveActor(user: any): void {
   activeActor = user;
   vi.mocked(getCurrentUser).mockImplementation(async () => user);
+}
+
+/**
+ * Invoice emails carry a durable signed `/pay/<token>` URL, not a Checkout
+ * session URL. This simulates the customer clicking the link in captured email
+ * `emailIndex` by running the same decision logic the public /pay page runs.
+ */
+function extractPayLinkToken(emailIndex: number): string | null {
+  const text = String(capturedEmails[emailIndex]?.message?.text ?? '');
+  const match = text.match(/\/pay\/([A-Za-z0-9_-]+)/);
+  return match ? match[1] : null;
+}
+
+async function clickEmailedPayLink(emailIndex: number) {
+  const token = extractPayLinkToken(emailIndex);
+  if (!token) throw new Error(`Email ${emailIndex} carries no /pay link`);
+  const { resolvePayLink } = await import('@alga-psa/billing/actions/payLinkResolver');
+  return resolvePayLink(token);
 }
 
 // The billing payment-action layer dynamically imports the enterprise module;
@@ -336,7 +357,7 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       expect(Buffer.isBuffer(attachment.content)).toBe(true);
       expect(attachment.content.toString('utf8')).toContain('%PDF-');
 
-      // The email renders both CTAs: the emulator Checkout URL and the portal
+      // The email renders both CTAs: the durable /pay link and the portal
       // URL. Handlebars HTML-escapes attribute values, so the portal URL's
       // `&`/`=` render as entities; the plain-text form is unescaped.
       const html = String(message.html);
@@ -350,27 +371,35 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       expect(html).toContain('Pay now');
       expect(html).toContain('View invoice in client portal');
 
-      // A Stripe customer was created for the billing contact email and a single
-      // Checkout session exists with this invoice's metadata.
+      // The payment CTA is the durable signed link, never a provider session URL.
+      const payUrl = text.match(/http:\/\/localhost:3000\/pay\/[A-Za-z0-9_-]+/)?.[0];
+      expect(payUrl).toBeDefined();
+      expect(html).toContain(payUrl);
+      expect(html).not.toContain(stripeBase);
+      expect(text).not.toContain(stripeBase);
+      expect(html).not.toContain('/checkout/sessions/');
+
+      // Sending the email creates NO provider state: the session is minted on click.
+      expect(await emulatorState('checkout-sessions')).toHaveLength(0);
+      expect(await emulatorState('customers')).toHaveLength(0);
+
+      // Clicking the durable link mints one Checkout session for this invoice
+      // and redirects to its hosted URL; the customer uses the billing contact email.
+      const resolution = await clickEmailedPayLink(0);
       const customers = await emulatorState('customers');
       expect(customers).toHaveLength(1);
       expect(customers[0].email).toBe(contactEmail);
       const sessions = await emulatorState('checkout-sessions');
       expect(sessions).toHaveLength(1);
       expect(sessions[0].metadata.invoice_id).toBe(invoiceId);
+      expect(resolution).toEqual({ kind: 'redirect', url: sessions[0].url });
+      expect(sessions[0].url).toContain(stripeBase);
 
-      // The captured email carries that session's hosted Checkout URL.
-      const sessionUrl = sessions[0].url;
-      expect(sessionUrl).toContain(stripeBase);
-      expect(html).toContain(sessionUrl);
-      expect(text).toContain(sessionUrl);
-
-      // The compatibility renderer must not duplicate the CTAs: the session
-      // URL appears exactly once in the decoded HTML (the system template's
-      // primary action) and once in the decoded text.
+      // The compatibility renderer must not duplicate the CTAs: the pay URL
+      // appears exactly once in the decoded HTML and once in the decoded text.
       const decodedHtml = html.replace(/&#x3D;/gi, '=').replace(/&amp;/g, '&');
-      expect(decodedHtml.split(sessionUrl).length - 1).toBe(1);
-      expect(text.split(sessionUrl).length - 1).toBe(1);
+      expect(decodedHtml.split(payUrl!).length - 1).toBe(1);
+      expect(text.split(payUrl!).length - 1).toBe(1);
 
       // The mapping table records the emulator customer for the client.
       const mappings = await tenantTable(db, tenantId, 'client_payment_customers')
@@ -386,7 +415,7 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       expect(links[0].external_link_id).toBe(sessions[0].id);
     }, HOOK_TIMEOUT);
 
-    it('falls through a blank billing-contact email to clients.billing_email and reuses one link across two sends', async () => {
+    it('falls through a blank billing-contact email to clients.billing_email and reuses one link across two sends and clicks', async () => {
       await resetSharedState();
       const clientId = uuidv4();
       const invoiceId = uuidv4();
@@ -420,8 +449,14 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       expect(capturedEmails[0].message.to[0].email).toBe(billingEmail);
       expect(capturedEmails[1].message.to[0].email).toBe(billingEmail);
 
+      // Both emails carry a /pay link and neither send touched the provider;
+      // clicking each in turn reuses the one active session.
+      expect(await emulatorState('checkout-sessions')).toHaveLength(0);
+      await clickEmailedPayLink(0);
+      await clickEmailedPayLink(1);
+
       // Sequential idempotency: exactly one active link row and exactly one
-      // emulator session were created across both sends.
+      // emulator session were created across both clicks.
       const links = await tenantTable(db, tenantId, 'invoice_payment_links')
         .where({ invoice_id: invoiceId, status: 'active' });
       expect(links).toHaveLength(1);
@@ -494,9 +529,20 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       expect(result.results[0].recipientEmail).toBe(chosenBillingEmail);
       expect(capturedEmails[0].message.to).toEqual([{ email: chosenBillingEmail, name: expect.any(String) }]);
 
+      // Sending creates no provider state: the Stripe customer and Checkout
+      // session are created when the emailed /pay link is clicked.
+      expect(capturedEmails).toHaveLength(1);
+      expect(await emulatorState('customers')).toHaveLength(0);
+      expect(await emulatorState('checkout-sessions')).toHaveLength(0);
+
+      const resolution = await clickEmailedPayLink(0);
+      expect(resolution.kind).toBe('redirect');
+
+      // The customer created at click time carries the chosen billing email.
       const customers = await emulatorState('customers');
       expect(customers).toHaveLength(1);
       expect(customers[0].email).toBe(chosenBillingEmail);
+      expect(await emulatorState('checkout-sessions')).toHaveLength(1);
     }, HOOK_TIMEOUT);
 
     it('expires and replaces an active Checkout session when credits and prior payments reduce the balance', async () => {
@@ -517,6 +563,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const first = await sendInvoiceEmailAction([invoiceId], '');
       expect(first.successCount).toBe(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [originalSession] = await emulatorState('checkout-sessions');
       expect(originalSession.amount_total).toBe(32000);
       expect(originalSession.status).toBe('open');
@@ -539,6 +587,7 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
 
       const second = await sendInvoiceEmailAction([invoiceId], '');
       expect(second.successCount).toBe(1);
+      const secondClick = await clickEmailedPayLink(1);
 
       const sessions = await emulatorState('checkout-sessions');
       expect(sessions).toHaveLength(2);
@@ -562,12 +611,16 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       expect(replacementLink?.status).toBe('active');
       expect(Number(replacementLink?.amount)).toBe(24000);
 
+      // Emails carry the same durable /pay link shape and never a session URL; the
+      // click on the second email lands on the replacement session, not the stale one.
       const secondEmailHtml = String(capturedEmails[1].message.html);
-      expect(secondEmailHtml).toContain(replacementSession?.url);
+      expect(secondEmailHtml).toContain('/pay/');
       expect(secondEmailHtml).not.toContain(originalSession.url);
+      expect(secondEmailHtml).not.toContain(replacementSession?.url);
+      expect(secondClick).toEqual({ kind: 'redirect', url: replacementSession?.url });
     }, HOOK_TIMEOUT);
 
-    it('degrades to a portal-only email with the cause retained when Checkout creation fails', async () => {
+    it('still emails the durable link when Checkout creation fails; the click degrades to the portal fallback with the cause retained', async () => {
       await resetSharedState();
       const clientId = uuidv4();
       const invoiceId = uuidv4();
@@ -597,28 +650,30 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const result = await sendInvoiceEmailAction([invoiceId], '');
       expect(result.successCount).toBe(1);
 
-      // No Checkout session survived the retried failures.
-      expect(await emulatorState('checkout-sessions')).toHaveLength(0);
-
-      // The email still sends with a portal CTA and no payment CTA.
+      // The email no longer depends on the provider: it carries the durable
+      // link plus the portal CTA, and the outage cannot leak a broken session URL.
       expect(capturedEmails).toHaveLength(1);
       const { message } = capturedEmails[capturedEmails.length - 1];
       const html = String(message.html);
       expect(html).toContain('client-portal/billing');
       expect(html).toContain(invoiceId);
+      expect(html).toContain('/pay/');
       expect(html).not.toContain(stripeBase);
-      // No broken CTA: neither a "Pay now" primary button nor a checkout URL.
-      expect(html).not.toMatch(/Pay now[^<]*<\/a>/);
       expect(html).not.toContain('/checkout/sessions/');
 
-      // No payment link row was persisted for the failed creation.
+      // The click hits the outage: friendly fallback pointing at the portal, no
+      // session survived the retried failures, and no link row was persisted.
+      const resolution = await clickEmailedPayLink(0);
+      expect(resolution).toMatchObject({ kind: 'fallback', reason: 'unavailable' });
+      expect((resolution as { portalUrl: string | null }).portalUrl).toContain('client-portal/billing');
+      expect(await emulatorState('checkout-sessions')).toHaveLength(0);
       const links = await tenantTable(db, tenantId, 'invoice_payment_links')
         .where({ invoice_id: invoiceId });
       expect(links).toHaveLength(0);
 
       // The server-side failure retained the emulator's message.
       expect(loggerError).toHaveBeenCalled();
-      const paymentCall = loggerError.mock.calls.find((call) => String(call[0]).includes('Failed to create payment link'));
+      const paymentCall = loggerError.mock.calls.find((call) => String(call[0]).includes('Failed to resolve payment link'));
       expect(paymentCall).toBeDefined();
       const logged = paymentCall![1];
       const errorField = (logged as any).error;
@@ -750,6 +805,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const first = await sendInvoiceEmailAction([invoiceId], '');
       expect(first.successCount).toBe(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [session] = await emulatorState('checkout-sessions');
       expect(session.status).toBe('open');
 
@@ -809,6 +866,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const first = await sendInvoiceEmailAction([invoiceId], '');
       expect(first.successCount).toBe(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [session] = await emulatorState('checkout-sessions');
       expect(session.status).toBe('open');
 
@@ -855,6 +914,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const first = await sendInvoiceEmailAction([invoiceId], '');
       expect(first.successCount).toBe(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [originalSession] = await emulatorState('checkout-sessions');
       expect(originalSession.status).toBe('open');
 
@@ -947,7 +1008,7 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       expect(causeMessage).toContain('Simulated Stripe outage');
     }, HOOK_TIMEOUT);
 
-    it('sends a portal-only email with the cause logged and no replacement session when provider expiration fails', async () => {
+    it('falls back at click time with the cause logged and no replacement session when provider expiration fails', async () => {
       await resetSharedState();
       const clientId = uuidv4();
       const invoiceId = uuidv4();
@@ -965,6 +1026,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const first = await sendInvoiceEmailAction([invoiceId], '');
       expect(first.successCount).toBe(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [originalSession] = await emulatorState('checkout-sessions');
       expect(originalSession.status).toBe('open');
 
@@ -995,15 +1058,16 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       loggerError.mockClear();
       const second = await sendInvoiceEmailAction([invoiceId], '');
       expect(second.successCount).toBe(1);
+      const secondClick = await clickEmailedPayLink(1);
 
-      // The email still sends with a portal CTA and no payment CTA, exactly
-      // like the Checkout-creation failure degradation.
+      // The second email still sends (durable link + portal CTA, never a
+      // session URL); the click degrades to the portal fallback.
       expect(capturedEmails).toHaveLength(2);
       const html = String(capturedEmails[capturedEmails.length - 1].message.html);
       expect(html).toContain('client-portal/billing');
       expect(html).toContain(invoiceId);
       expect(html).not.toContain('/checkout/sessions/');
-      expect(html).not.toMatch(/Pay now[^<]*<\/a>/);
+      expect(secondClick).toMatchObject({ kind: 'fallback', reason: 'unavailable' });
 
       // No replacement session was created; the stale one stays open at the
       // provider because the expiration failed.
@@ -1045,6 +1109,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const first = await sendInvoiceEmailAction([invoiceId], '');
       expect(first.successCount).toBe(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [session] = await emulatorState('checkout-sessions');
       expect(session.status).toBe('open');
 
@@ -1119,6 +1185,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const first = await sendInvoiceEmailAction([invoiceId], '');
       expect(first.successCount).toBe(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [session] = await emulatorState('checkout-sessions');
       expect(session.status).toBe('open');
 
@@ -1178,6 +1246,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       expect(first.successCount).toBe(1);
       expect(capturedEmails).toHaveLength(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [session] = await emulatorState('checkout-sessions');
       expect(session.status).toBe('open');
 
@@ -1239,6 +1309,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const first = await sendInvoiceEmailAction([invoiceId], '');
       expect(first.successCount).toBe(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [originalSession] = await emulatorState('checkout-sessions');
       expect(originalSession.status).toBe('open');
 
@@ -1347,6 +1419,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const first = await sendInvoiceEmailAction([invoiceId], '');
       expect(first.successCount).toBe(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [originalSession] = await emulatorState('checkout-sessions');
       expect(originalSession.status).toBe('open');
 
@@ -1377,9 +1451,10 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
 
       const second = await sendInvoiceEmailAction([invoiceId], '');
       expect(second.successCount).toBe(1);
+      const blockedClick = await clickEmailedPayLink(1);
 
       // Still blocked: no replacement session, the stale one stays open at the
-      // provider, the row is `expire_pending`, and the email is portal-only.
+      // provider, the row is `expire_pending`, and the click falls back to the portal.
       let sessions = await emulatorState('checkout-sessions');
       expect(sessions).toHaveLength(1);
       expect(sessions[0].status).toBe('open');
@@ -1393,13 +1468,15 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const blockedHtml = String(capturedEmails[1].message.html);
       expect(blockedHtml).not.toContain('/checkout/sessions/');
       expect(blockedHtml).toContain('client-portal/billing');
+      expect(blockedClick).toMatchObject({ kind: 'fallback', reason: 'unavailable' });
 
       // Clear the fault; the next send must retry the provider expiration first
-      // and only then create a replacement whose URL the email carries.
+      // and only then create a replacement whose URL the click redirects to.
       await controlPost('faults/operation-fault/disarm', {});
 
       const third = await sendInvoiceEmailAction([invoiceId], '');
       expect(third.successCount).toBe(1);
+      const thirdClick = await clickEmailedPayLink(2);
 
       sessions = await emulatorState('checkout-sessions');
       expect(sessions).toHaveLength(2);
@@ -1423,10 +1500,10 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       expect(replacementLink?.status).toBe('active');
       expect(Number(replacementLink?.amount)).toBe(24000);
 
-      // The third email carries the replacement session's URL and never the stale one's.
+      // The click on the third email redirects to the replacement session, never the stale one.
       const thirdHtml = String(capturedEmails[2].message.html);
-      expect(thirdHtml).toContain(replacementSession?.url);
       expect(thirdHtml).not.toContain(originalSession.url);
+      expect(thirdClick).toEqual({ kind: 'redirect', url: replacementSession?.url });
     }, HOOK_TIMEOUT);
 
     it('expires only the non-settled link when a webhook transition pays the invoice', async () => {
@@ -1446,6 +1523,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const first = await sendInvoiceEmailAction([invoiceId], '');
       expect(first.successCount).toBe(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [settlingSession] = await emulatorState('checkout-sessions');
       expect(settlingSession.status).toBe('open');
 
@@ -1569,6 +1648,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const first = await sendInvoiceEmailAction([invoiceId], '');
       expect(first.successCount).toBe(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [session] = await emulatorState('checkout-sessions');
       expect(session.status).toBe('open');
 
@@ -1649,6 +1730,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const first = await sendInvoiceEmailAction([invoiceId], '');
       expect(first.successCount).toBe(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [session] = await emulatorState('checkout-sessions');
       expect(session.status).toBe('open');
       expect(session.amount_total).toBe(32000);
@@ -1700,6 +1783,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const first = await sendInvoiceEmailAction([invoiceId], '');
       expect(first.successCount).toBe(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [session] = await emulatorState('checkout-sessions');
       expect(session.status).toBe('open');
 
@@ -1782,6 +1867,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const first = await sendInvoiceEmailAction([invoiceId], '');
       expect(first.successCount).toBe(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [originalSession] = await emulatorState('checkout-sessions');
       expect(originalSession.status).toBe('open');
 
@@ -1803,6 +1890,7 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
 
       const second = await sendInvoiceEmailAction([invoiceId], '');
       expect(second.successCount).toBe(1);
+      await clickEmailedPayLink(1);
 
       const sessions = await emulatorState('checkout-sessions');
       expect(sessions).toHaveLength(2);
@@ -1955,6 +2043,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const send = await sendInvoiceEmailAction([invoiceId], '');
       expect(send.successCount).toBe(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [session] = await emulatorState('checkout-sessions');
       expect(session.status).toBe('open');
       const linksBefore = await tenantTable(db, tenantId, 'invoice_payment_links')
@@ -2009,6 +2099,8 @@ describe('journey: invoice email payment links against the Stripe emulator', () 
       const send = await sendInvoiceEmailAction([invoiceId], '');
       expect(send.successCount).toBe(1);
 
+      // The email carries a durable /pay link; the Checkout session is minted on click.
+      await clickEmailedPayLink(0);
       const [session] = await emulatorState('checkout-sessions');
       expect(session.status).toBe('open');
 

@@ -7,16 +7,19 @@ import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { Dialog } from './Dialog';
 import MultiContactPicker from './MultiContactPicker';
+import common from '../../../../server/public/locales/en/common.json';
 
 beforeAll(async () => {
   if (!i18next.isInitialized) {
     await i18next.use(initReactI18next).init({
       lng: 'en',
       fallbackLng: 'en',
-      resources: { en: { common: {} } },
+      resources: { en: { common } },
       interpolation: { escapeValue: false },
     });
   }
+  i18next.addResourceBundle('en', 'common', common, true, true);
+  await i18next.changeLanguage('en');
 });
 
 afterEach(() => cleanup());

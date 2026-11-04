@@ -6,6 +6,7 @@
  * Hook:            @alga-psa/list-views/hooks
  */
 export * from './lib/registry';
+export * from './lib/ticketFilterMigration';
 export * from './lib/settingsSchema';
 export * from './lib/definitions/tickets';
 export * from './lib/definitions/projects';

@@ -3,6 +3,7 @@
 // Auth-owned admin API key management UI.
 
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -448,9 +449,9 @@ export default function AdminApiKeysSetup() {
       dataIndex: 'active',
       width: '10%',
       render: (value: boolean) => (
-        <span className={`px-2 py-1 rounded text-sm ${value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+        <Badge variant={value ? 'success' : 'error'}>
           {value ? t('security.apiKeys.list.status.active') : t('security.apiKeys.list.status.inactive')}
-        </span>
+        </Badge>
       ),
     },
     {

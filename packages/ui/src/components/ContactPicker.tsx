@@ -8,6 +8,7 @@ import { Input } from './Input';
 import { Button } from './Button';
 import { ChevronDown, Plus, Search } from 'lucide-react';
 import ContactAvatar from './ContactAvatar';
+import { EntityTagBadges } from './EntityChip';
 import type { IContact } from '@alga-psa/types';
 import { useTranslation } from '../lib/i18n/client';
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
@@ -325,7 +326,10 @@ export const ContactPicker = ({
                       size="sm"
                     />
                     <div className="flex-1">
-                      <div>{contact.full_name}</div>
+                      <div className="flex items-center gap-2">
+                        <span>{contact.full_name}</span>
+                        <EntityTagBadges tags={contact.displayTags} maxBadges={2} />
+                      </div>
                       <div className={`text-xs ${contact.is_inactive ? 'text-gray-400' : 'text-gray-500'}`}>{contact.email}</div>
                     </div>
                   </div>
@@ -470,6 +474,7 @@ export const ContactPicker = ({
                 />
               )}
               <span className={!selectedContact ? 'text-gray-400' : ''}>{selectedContact ? selectedContact.full_name : placeholder}</span>
+              {selectedContact && <EntityTagBadges tags={selectedContact.displayTags} maxBadges={2} />}
             </div>
             <div className="flex items-center">
               <ChevronDown className={`h-4 w-4 ${disabled ? 'text-gray-400' : ''}`} />

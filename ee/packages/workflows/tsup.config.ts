@@ -1,4 +1,5 @@
 import { defineConfig } from 'tsup';
+import { SOURCE_ONLY_ALGA_IMPORTS } from '../../../shared/tsup.sourceOnlyImports';
 
 export default defineConfig({
   entry: [
@@ -27,6 +28,9 @@ export default defineConfig({
     /^@alga-psa\//,
     /^@shared\//,
   ],
+  // The runtime bundles shared/workflow source by relative path, so it must
+  // inline the same source-only imports shared/dist does.
+  noExternal: SOURCE_ONLY_ALGA_IMPORTS,
   esbuildOptions(options) {
     options.jsx = 'automatic';
   },

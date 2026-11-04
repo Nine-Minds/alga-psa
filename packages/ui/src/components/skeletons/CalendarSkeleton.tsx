@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface CalendarSkeletonProps {
@@ -12,6 +15,7 @@ const CalendarSkeleton = ({
   view = "week", 
   showSidebar = true 
 }: CalendarSkeletonProps) => {
+  const { t } = useTranslation('common');
   const generateTimeSlots = () => {
     const slots: React.JSX.Element[] = [];
     for (let hour = 8; hour < 18; hour++) {
@@ -185,7 +189,7 @@ const CalendarSkeleton = ({
           <div className="absolute inset-0 bg-[rgb(var(--color-card))]/50 dark:bg-black/50 flex items-center justify-center">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-              <p className="text-gray-500">Loading calendar...</p>
+              <p className="text-gray-500">{t('skeletons.calendar.loading')}</p>
             </div>
           </div>
         </div>

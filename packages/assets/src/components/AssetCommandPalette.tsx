@@ -131,6 +131,8 @@ export function AssetCommandPalette({
           return (
             asset.name.toLowerCase().includes(query) ||
             asset.asset_tag?.toLowerCase().includes(query) ||
+            asset.manufacturer?.toLowerCase().includes(query) ||
+            asset.model?.toLowerCase().includes(query) ||
             asset.client?.client_name?.toLowerCase().includes(query || '')
           );
         })

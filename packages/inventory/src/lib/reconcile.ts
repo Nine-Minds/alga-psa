@@ -11,8 +11,10 @@ import { ensureStockLevel } from './levels';
  * - Serialized products: on-hand = count of in_stock units per location.
  * - Non-serialized products: on-hand = sum of signed movement deltas per location.
  * - reserved/held counters: sum of open sales-order lines' quantity_reserved grouped
- *   by reserved_location_id and the SO's allocation_mode. (Serialized claims live on
- *   stock_units.allocated_so_line_id, so their counters recompute to 0.)
+ *   by reserved_location_id and the SO's allocation_mode, plus project staging lines'
+ *   claims (reserved = soft, staged = hard) at their reserved_location_id. (Serialized
+ *   claims live on stock_units.allocated_so_line_id / allocated_staging_line_id, so their
+ *   counters recompute to 0.)
  */
 export interface ReconciledOnHand {
   location_id: string;
@@ -25,9 +27,11 @@ export interface ReconciledLevel extends ReconciledOnHand {
 }
 
 /**
- * Recompute the reserved/held allocation counters per location from live open SO
- * lines (F027). Lines on draft/cancelled/closed/fulfilled orders count as zero, so
- * any drift on them is cleared by the write-back.
+ * Recompute the reserved/held allocation counters per location from the two claim
+ * sources (F027, C6 D5): live open SO lines, and project staging lines that still hold
+ * stock (`reserved` soft, `staged` hard; installed and released lines hold nothing).
+ * Lines on draft/cancelled/closed/fulfilled orders count as zero, so any drift on them
+ * is cleared by the write-back.
  */
 export async function computeAllocationsFromTruth(
   trx: Knex.Transaction,
@@ -54,6 +58,24 @@ export async function computeAllocationsFromTruth(
   for (const r of rows) {
     const cur = totals.get(r.location_id) ?? { reserved: 0, held: 0 };
     if (r.allocation_mode === 'hard') cur.held += Number(r.q);
+    else cur.reserved += Number(r.q);
+    totals.set(r.location_id, cur);
+  }
+
+  // Project staging claims. Only non-serialized tracked lines have a counter claim, and the
+  // caller has already established this product is non-serialized; untracked lines carry no
+  // location, so the reserved_location_id filter excludes them.
+  const staging = (await trx('project_staging_lines')
+    .where({ tenant, service_id: serviceId, kind: 'stock' })
+    .whereIn('status', ['reserved', 'staged'])
+    .whereNull('unit_id')
+    .whereNotNull('reserved_location_id')
+    .groupBy('reserved_location_id', 'status')
+    .select('reserved_location_id as location_id', 'status')
+    .sum({ q: 'quantity' })) as Array<{ location_id: string; status: string; q: string }>;
+  for (const r of staging) {
+    const cur = totals.get(r.location_id) ?? { reserved: 0, held: 0 };
+    if (r.status === 'staged') cur.held += Number(r.q);
     else cur.reserved += Number(r.q);
     totals.set(r.location_id, cur);
   }

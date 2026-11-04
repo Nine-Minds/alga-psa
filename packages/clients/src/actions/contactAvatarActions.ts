@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import { hasMspPermission } from '../lib/authHelpers';
 
 async function canManageContactAvatar(
@@ -19,7 +20,7 @@ async function canManageContactAvatar(
     return hasMspPermission(currentUser, 'contact', 'update', knex);
   }
 
-  if (currentUser.user_type !== 'client') {
+  if (!isClientUserType(currentUser.user_type)) {
     return false;
   }
 

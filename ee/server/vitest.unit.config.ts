@@ -35,7 +35,6 @@ export default defineConfig({
     coverage: { enabled: false },
     fileParallelism: false,
     maxWorkers: 1,
-    poolOptions: { forks: { singleFork: false } },
     sequence: { concurrent: false, shuffle: false },
   },
 });

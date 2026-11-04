@@ -1,0 +1,29 @@
+name: Prepare apt
+description: >-
+  Make apt usable on the hosted runners before any step that shells out to
+  apt-get (playwright install --with-deps / install-deps, apt-get install).
+  The runners' primary mirror, azure.archive.ubuntu.com, intermittently serves
+  .deb downloads at ~50 KB/s (25 MB of Playwright deps took 8.5 minutes on
+  2026-10-22) or stops sending mid-file, and apt's defaults have no socket
+  timeout, so the step either crawls past the job budget or hangs until its
+  timeout. This puts archive.ubuntu.com first in the runner's mirror list,
+  keeping the others as fallbacks, and bounds each fetch so a stalled
+  connection fails in seconds and apt moves to the next mirror.
+runs:
+  using: composite
+  steps:
+    - name: Prefer archive.ubuntu.com and bound apt fetches
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Same entries and format the runner image writes (tab-separated
+        # "<uri>\tpriority:N"), with the Azure mirror demoted.
+        if [ -f /etc/apt/apt-mirrors.txt ]; then
+          printf 'https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttp://azure.archive.ubuntu.com/ubuntu/\tpriority:2\nhttps://security.ubuntu.com/ubuntu/\tpriority:3\n' \
+            | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+        fi
+        sudo tee /etc/apt/apt.conf.d/99-ci-fetch-timeouts >/dev/null <<'EOF'
+        Acquire::http::Timeout "20";
+        Acquire::https::Timeout "20";
+        Acquire::Retries "3";
+        EOF

@@ -93,6 +93,36 @@
         "checkbox": "pole wyboru",
         "date": "data",
         "file-upload": "przesyłanie pliku"
+      },
+      "visibility": {
+        "title": "Pokaż, gdy…",
+        "none": "Zawsze widoczne",
+        "addRule": "Dodaj warunek",
+        "removeRule": "Usuń warunek",
+        "source": "Pole",
+        "selectSource": "Wybierz pole",
+        "operator": "Warunek",
+        "value": "Wartość",
+        "valueTrue": "Zaznaczone",
+        "valueFalse": "Niezaznaczone",
+        "selectValue": "Wybierz wartość",
+        "legacyBooleanWarning": "Ta reguła porównuje z tekstem, ale pole wyboru przechowuje prawda/fałsz, więc nigdy nie będzie pasować. Wybierz wartość ponownie, aby to naprawić.",
+        "saveFailed": "Nie udało się zapisać reguł widoczności.",
+        "contextSources": {
+          "requesterUserId": "Użytkownik zgłaszający",
+          "clientId": "Klient zgłaszający",
+          "contactId": "Kontakt zgłaszający"
+        },
+        "operators": {
+          "equals": "jest równe",
+          "not-equals": "nie jest równe",
+          "is-true": "jest zaznaczone / prawda",
+          "is-false": "jest niezaznaczone / fałsz",
+          "has-value": "ma wartość",
+          "is-empty": "jest puste"
+        },
+        "advancedJson": "Zaawansowane (JSON)",
+        "advancedJsonHelp": "Pełna zapisana konfiguracja, w tym wartości domyślne kontekstu. Reguły widoczności łatwiej zmieniać w edytorze „Pokaż, gdy…” przy każdym polu. Niezapisane zmiany w tym miejscu zostaną odrzucone, jeśli zmienisz tam regułę."
       }
     },
     "execution": {
@@ -144,7 +174,50 @@
       "visibility": {
         "title": "Konfiguracja widoczności",
         "config": "Konfiguracja widoczności (obiekt JSON)",
-        "save": "Zapisz konfigurację widoczności"
+        "save": "Zapisz konfigurację widoczności",
+        "audience": {
+          "removedReferences": "Niedostępne pozycje odbiorców zostały usunięte. Sprawdź i zapisz odbiorców.",
+          "reference_client_id": "Klient",
+          "reference_client_tags": "Tag klienta",
+          "reference_contact_id": "Kontakt",
+          "reference_contact_tags": "Tag kontaktu",
+          "reference_contact_group_id": "Grupa klienta",
+          "chooseTags": "Wybierz tagi",
+          "loadError": "Nie można wczytać opcji odbiorców.",
+          "saveError": "Nie można zapisać odbiorców.",
+          "saved": "Zapisano odbiorców",
+          "convertedReadOnly": "Ta przeniesiona grupa odbiorców jest tylko do odczytu.",
+          "replace": "Zastąp nową grupą odbiorców",
+          "clientTags": "Tagi klienta",
+          "contactTags": "Tagi kontaktu",
+          "allUsers": "Wszyscy użytkownicy tego klienta",
+          "missingClient": "Klient niedostępny",
+          "missingContact": "Kontakt niedostępny",
+          "narrowTags": "Tylko kontakty z tagiem",
+          "remove": "Usuń",
+          "allPortalUsers": "Wszyscy użytkownicy portalu klienta",
+          "reach": "Widoczne dla {{count}} kontaktów u {{clients}} klientów",
+          "reachUnavailable": "Zasięg niedostępny",
+          "title": "Kto może zobaczyć ten formularz",
+          "everyone": "Wszyscy",
+          "everyoneHelp": "Wszyscy uwierzytelnieni użytkownicy klienta mogą zobaczyć i wysłać ten formularz.",
+          "scoped": "Wybrani klienci i kontakty",
+          "scopedHelp": "Tylko użytkownicy wybranych klientów lub członkowie wybranych grup mogą zobaczyć i wysłać ten formularz.",
+          "addClient": "Dodaj klienta",
+          "clientPlaceholder": "Szukaj klientów...",
+          "noClients": "Nie wybrano jeszcze klientów.",
+          "selectedClients": "Wybrani klienci",
+          "removeClient": "Usuń {{name}}",
+          "groupsOf": "Grupy użytkowników klienta {{name}}",
+          "groupLabel": "{{group}} ({{client}})",
+          "loadingGroups": "Ładowanie grup...",
+          "noGroups": "Ten klient nie ma grup użytkowników.",
+          "groupsHelp": "Każdy klient oznacza albo wszystkich jego użytkowników, albo tylko członków wybranych grup. Grupa daje dostęp tylko członkom własnego klienta. Klient nie może mieć ustawionych wszystkich użytkowników i jednocześnie wybranych grup.",
+          "emptyWarning": "Nikt nie widzi tego formularza, dopóki nie dodasz odbiorców.",
+          "save": "Zapisz odbiorców",
+          "allUsersOf": "Wszyscy użytkownicy klienta {{name}}",
+          "onlyGroups": "Tylko członkowie wybranych grup"
+        }
       },
       "fields": {
         "executionProvider": "Dostawca wykonania",
@@ -389,7 +462,8 @@
       "ticketRoutingUpdated": "Zaktualizowano konfigurację routingu zgłoszeń",
       "workflowConfigurationUpdated": "Zaktualizowano konfigurację workflow",
       "formBehaviorConfigUpdated": "Zaktualizowano konfigurację zachowania formularza",
-      "visibilityConfigUpdated": "Zaktualizowano konfigurację widoczności"
+      "visibilityConfigUpdated": "Zaktualizowano konfigurację widoczności",
+      "audienceUpdated": "Odbiorcy zaktualizowani"
     },
     "error": {
       "loadFailed": "Nie udało się wczytać zgłoszeń serwisowych",
@@ -412,7 +486,8 @@
       "formBehaviorInvalid": "Nieprawidłowy JSON zachowania formularza",
       "visibilityNotObject": "Konfiguracja widoczności musi być obiektem JSON",
       "visibilityInvalid": "Nieprawidłowy JSON widoczności",
-      "saveAllPartial": "Nie udało się zapisać niektórych sekcji: {{sections}}"
+      "saveAllPartial": "Nie udało się zapisać niektórych sekcji: {{sections}}",
+      "audienceSaveFailed": "Nie udało się zaktualizować odbiorców"
     }
   }
 }

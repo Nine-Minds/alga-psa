@@ -66,7 +66,8 @@
       "createTicket": "Ticket erstellen",
       "requestAppointment": "Termin anfragen",
       "viewLatestInvoice": "Neueste Rechnung anzeigen",
-      "newServiceRequest": "Neue Service-Anfrage"
+      "newServiceRequest": "Neue Service-Anfrage",
+      "createSupportTicket": "Support-Ticket erstellen"
     },
     "appointments": {
       "title": "Anstehende Termine",
@@ -140,10 +141,7 @@
       "viewAll": "Alle anzeigen",
       "countLabel": "{{count}} verwaltet",
       "emptyShort": "Noch keine Geräte",
-      "emptyBody": "Vom Anbieter verwaltete Geräte erscheinen hier.",
-      "healthy": "Fehlerfrei",
-      "inactive": "Inaktiv",
-      "active": "Aktiv"
+      "emptyBody": "Vom Anbieter verwaltete Geräte erscheinen hier."
     },
     "timeAgo": {
       "justNow": "gerade eben",
@@ -329,10 +327,29 @@
       "missing_email": "Ihr Identitätsanbieter hat keine E-Mail-Adresse zurückgegeben, daher konnte kein Kundenportal-Konto zugeordnet werden. Melden Sie sich mit Ihrem Passwort an oder wenden Sie sich an Ihren Dienstleister.",
       "inactive_user": "Das Kundenportal-Konto für {{providerEmail}} ist inaktiv. Wenden Sie sich an Ihren Dienstleister, um es zu reaktivieren.",
       "user_type_mismatch": "{{providerEmail}} ist kein Kundenportal-Konto. Wenden Sie sich an Ihren Dienstleister.",
-      "tenant_mismatch": "{{providerEmail}} gehört zum Portal einer anderen Organisation. Melden Sie sich mit Ihrem Passwort an oder wenden Sie sich an Ihren Dienstleister."
+      "tenant_mismatch": "{{providerEmail}} gehört zum Portal einer anderen Organisation. Melden Sie sich mit Ihrem Passwort an oder wenden Sie sich an Ihren Dienstleister.",
+      "tenant_required": "{{providerEmail}} wird in mehr als einer Organisation verwendet. Wenden Sie sich an Ihren Dienstleister."
     },
     "configurationTitle": "Anmeldung fehlgeschlagen",
-    "configurationMessage": "Die Anmeldung ist fehlgeschlagen. Bitte versuchen Sie es erneut oder wenden Sie sich an Ihren Dienstleister."
+    "configurationMessage": "Die Anmeldung ist fehlgeschlagen. Bitte versuchen Sie es erneut oder wenden Sie sich an Ihren Dienstleister.",
+    "registration": {
+      "messages": {
+        "verified": "Benutzer erfolgreich verifiziert und registriert"
+      },
+      "errors": {
+        "verifyFailed": "Benutzer konnte nicht verifiziert und registriert werden",
+        "invalidToken": "Ungültiges Token",
+        "tokenExpired": "Token abgelaufen",
+        "tokenNotActive": "Token ist noch nicht aktiv",
+        "unknown": "Unbekannter Fehler"
+      },
+      "user": "Benutzer",
+      "clientPortalUser": "Kundenportal-Benutzer",
+      "mspUser": "MSP-Benutzer",
+      "resetExpiration": "1 Stunde",
+      "verificationExpiration": "24 Stunden",
+      "superadminRole": "Superadministratorrolle"
+    }
   },
   "account": {
     "title": "Konto",
@@ -462,6 +479,15 @@
         "failed": "Ihre Karte konnte nicht gespeichert werden",
         "savedDescription": "Ihre Karte ist für zukünftige Zahlungen bereit.",
         "failedDescription": "Die Einrichtung konnte nicht bestätigt werden. Bitte fordern Sie bei Ihrem Rechnungssteller einen neuen Link an."
+      },
+      "payLink": {
+        "heading": "Dieser Zahlungslink kann nicht verwendet werden",
+        "expired": "Dieser Zahlungslink ist abgelaufen.",
+        "invalid": "Dieser Zahlungslink ist ungültig.",
+        "notPayable": "Diese Rechnung kann mit diesem Link nicht mehr bezahlt werden. Möglicherweise ist sie bereits bezahlt oder nicht mehr für die Online-Zahlung freigegeben.",
+        "unavailable": "Die Zahlungsseite konnte gerade nicht geöffnet werden. Bitte versuchen Sie es in einigen Minuten erneut.",
+        "viewInPortal": "Rechnung im Kundenportal ansehen",
+        "contactProvider": "Bitte wenden Sie sich an Ihren Rechnungssteller, um einen neuen Link zu erhalten."
       }
     }
   },
@@ -558,7 +584,9 @@
       "invoices": "Rechnungsbenachrichtigungen",
       "announcements": "Systemankündigungen",
       "emailPreferences": "E-Mail",
-      "internalPreferences": "Intern"
+      "internalPreferences": "Intern",
+      "unreadCount_few": "{{count}} ungelesene Benachrichtigungen",
+      "unreadCount_many": "{{count}} ungelesene Benachrichtigungen"
     },
     "actions": {
       "save": "Änderungen speichern",
@@ -836,7 +864,9 @@
     "card": {
       "unread": "Ungelesen",
       "noMessage": "Keine Nachricht"
-    }
+    },
+    "unreadCount_few": "{{count}} ungelesene Benachrichtigungen",
+    "unreadCount_many": "{{count}} ungelesene Benachrichtigungen"
   },
   "sidebar": {
     "goToDashboard": "Zum Dashboard",
@@ -861,12 +891,9 @@
       "network": "Netzwerk",
       "unknown": "Sonstiges"
     },
-    "statusWarnTitle": "Einige Geräte inaktiv",
-    "statusWarnBody": "{{active}} aktiv · {{inactive}} inaktiv",
-    "status": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv"
-    },
+    "statusAttentionTitle": "Einige Geräte brauchen Aufmerksamkeit",
+    "statusAttentionBody": "{{active}} von {{total}} Geräten aktiv",
+    "statusCount": "{{count}} {{status}}",
     "searchPlaceholder": "Suche nach Name, Tag oder Seriennummer",
     "filters": {
       "allTypes": "Alle Typen",
@@ -1004,14 +1031,18 @@
   },
   "assets": {
     "columns": {
-      "name": "Name",
-      "type": "Typ",
-      "status": "Status",
-      "location": "Standort",
-      "lastUpdated": "Zuletzt aktualisiert"
+      "assignedTo": "Zugewiesen an"
     },
-    "notAvailable": "N/V",
-    "detailsTitle": "Asset-Details"
+    "statuses": {
+      "active": "Aktiv",
+      "in_stock": "Auf Lager",
+      "maintenance": "In Wartung",
+      "inactive": "Inaktiv",
+      "retired": "Ausgemustert"
+    },
+    "unassigned": "Nicht zugewiesen",
+    "sharedWorkspace": "Gemeinsamer Arbeitsplatz: {{name}}",
+    "sharedWorkspaceLabel": "Gemeinsamer Arbeitsplatz"
   },
   "errors": {
     "account": {

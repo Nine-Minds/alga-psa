@@ -106,18 +106,12 @@ export const AssetInfoPanel: React.FC<AssetInfoPanelProps> = ({
     }
   };
 
+  // FR-A5: model is a first-class column; the system_info fallback is gone.
   const getModelName = () => {
-    // Try to get model from system_info if available
-    const workstationModel = (asset.workstation?.system_info as any)?.model || (asset.workstation?.system_info as any)?.systemModel;
-    const serverModel = (asset.server?.system_info as any)?.model || (asset.server?.system_info as any)?.systemModel;
-
-    return workstationModel || 
-           serverModel || 
-           asset.mobile_device?.model || 
-           asset.printer?.model || 
-           asset.network_device?.device_type || 
-           asset.workstation?.cpu_model || // Fallback to CPU if model unknown
-           asset.server?.cpu_model ||
+    return asset.model ||
+           asset.mobile_device?.model ||
+           asset.printer?.model ||
+           asset.network_device?.device_type ||
            t('assetInfoPanel.values.unknownModel', { defaultValue: 'Unknown Model' });
   };
 

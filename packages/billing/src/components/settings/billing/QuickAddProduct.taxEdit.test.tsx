@@ -64,7 +64,10 @@ vi.mock('@alga-psa/inventory/actions/vendorProductActions', () => ({
 vi.mock('@alga-psa/ui/lib', () => ({
   useCurrencyFormat: () => ({ money: (cents: number) => `$${(cents / 100).toFixed(2)}` }),
 }));
-vi.mock('@alga-psa/core', () => ({
+// Partial: the price/cost editors read and write minor units through
+// lib/currency/rateInput, which needs core's real currency-exponent helpers.
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/core')>()),
   CURRENCY_OPTIONS: [{ value: 'USD', label: 'USD' }],
   getCurrencySymbol: () => '$',
 }));

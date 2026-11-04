@@ -1,9 +1,10 @@
 'use client';
 
-import React, { InputHTMLAttributes, useEffect, useRef, useCallback } from 'react';
+import React, { InputHTMLAttributes, useEffect, useId, useRef, useCallback } from 'react';
 import { FormFieldComponent, AutomationProps } from '../ui-reflection/types';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
 import { CommonActions } from '../ui-reflection/actionBuilders';
+import { useTranslation } from '../lib/i18n/client';
 
 type InputSize = 'sm' | 'md' | 'lg';
 
@@ -58,9 +59,11 @@ export function Input({
   "data-automation-id": dataAutomationId,
   ...props
 }: InputProps & AutomationProps) {
+  const { t } = useTranslation('common');
   const inputRef = useRef<HTMLInputElement | null>(null);
   const cursorPositionRef = useRef<number | null>(null);
   const isComposing = useRef(false);
+  const generatedId = useId();
 
   const mergedRef = useCallback(
     (element: HTMLInputElement | null) => {
@@ -85,13 +88,18 @@ export function Input({
     disabled,
     required
   }, () => [
-    CommonActions.type(label ? `Type text into ${label} field` : 'Type text into this field'),
-    CommonActions.focus('Focus this input field'),
-    CommonActions.clear('Clear the current text')
+    CommonActions.type(label ? t('input.actions.typeIntoLabel', { label }) : t('input.actions.type')),
+    CommonActions.focus(t('input.actions.focus')),
+    CommonActions.clear(t('input.actions.clear'))
   ], dataAutomationId);
 
   // Always use the generated automation props (which include our override ID if provided)
   const finalAutomationProps = textProps;
+
+  // One id for both sides of the label association: the caller's id, else a
+  // React-generated one. Not the automation id: that may be a static
+  // data-automation-id shared by repeated rows, which would duplicate DOM ids.
+  const fieldId = id || generatedId;
 
   // Update metadata when field props change
   useEffect(() => {
@@ -148,7 +156,7 @@ export function Input({
   return (
     <div className={containerClassName !== undefined ? containerClassName : "mb-0"}>
       {label && (
-        <label className={`block text-sm font-medium mb-1 ${hasErrorState ? 'text-destructive' : 'text-[rgb(var(--color-text-700))]'}`}>
+        <label htmlFor={fieldId} className={`block text-sm font-medium mb-1 ${hasErrorState ? 'text-destructive' : 'text-[rgb(var(--color-text-700))]'}`}>
           {label}
           {required && <span className="text-[rgb(var(--color-text-500))] ml-0.5" aria-hidden="true">*</span>}
         </label>
@@ -161,7 +169,7 @@ export function Input({
         )}
         <input
           {...finalAutomationProps}
-          id={id}
+          id={fieldId}
           ref={mergedRef}
           className={`w-full ${inputSizeClasses[size]} border rounded-lg shadow-sm focus:outline-none focus:ring-2 bg-white dark:bg-[rgb(var(--color-card))] text-[rgb(var(--color-text-900))] placeholder:text-[rgb(var(--color-text-400))] ${leadingAdornment ? 'pl-8' : ''} ${
           hasErrorState

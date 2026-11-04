@@ -14,6 +14,8 @@ const getTicketFormDataMock = vi.fn();
 const getTicketStatusesMock = vi.fn();
 const getContactsByClientMock = vi.fn();
 const getClientLocationsMock = vi.fn();
+const getClientByIdMock = vi.fn();
+const searchClientsForPickerMock = vi.fn();
 const pushMock = vi.fn();
 
 vi.mock('next/server', () => ({
@@ -65,8 +67,11 @@ vi.mock('../../actions/ticketFormActions', () => ({
 
 vi.mock('../../actions/clientLookupActions', () => ({
   getContactsByClient: (...args: unknown[]) => getContactsByClientMock(...args),
-  getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args)
+  getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args),
+  getClientById: (...args: unknown[]) => getClientByIdMock(...args),
+  searchClientsForPicker: (...args: unknown[]) => searchClientsForPickerMock(...args)
 }));
+
 
 // Lightweight non-modal Dialog: the real radix-based Dialog aria-hides sibling
 // content (the QuickAddContact/QuickAddClient mocks render as siblings), which
@@ -88,7 +93,7 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   __esModule: true,
-  ClientPicker: function ClientPickerMock({ onSelect, selectedClientId, onAddNew, clients }: any) {
+  ClientPicker: function ClientPickerMock({ onSelect, selectedClientId, onAddNew, searchClients, clients }: any) {
     useEffect(() => {
       if (!selectedClientId) {
         onSelect('client-1');
@@ -97,7 +102,11 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
     return (
       <div data-testid="client-picker">
         <div data-testid="client-picker-value">{selectedClientId}</div>
-        <div data-testid="client-picker-count">{clients.length}</div>
+        <div data-testid="client-picker-async">{String(searchClients === searchClientsForPickerMock || typeof searchClients === 'function')}</div>
+        <div data-testid="client-picker-full-list">{String(clients !== undefined)}</div>
+        <button type="button" onClick={() => onSelect('client-2')}>
+          Pick other client
+        </button>
         {onAddNew ? (
           <button type="button" onClick={onAddNew}>
             + Add new client
@@ -660,13 +669,13 @@ describe('QuickAddTicket prefills', () => {
     uploadDocumentMock.mockReset();
     getContactsByClientMock.mockResolvedValue([]);
     getClientLocationsMock.mockResolvedValue([]);
+    getClientByIdMock.mockImplementation(async (id: string) => ({ client_id: id, client_name: id, client_type: 'company' }));
     getTicketFormDataMock.mockResolvedValue({
       users: [],
       boards: [{ board_id: 'board-1', board_name: 'Support' }],
       priorities: [{ priority_id: 'priority-1', priority_name: 'High' }],
-      clients: [{ client_id: 'client-1', client_name: 'Acme', client_type: 'company' }],
       statuses: [{ status_id: 'status-1', name: 'Open' }],
-      selectedClient: { client_id: 'client-1', client_type: 'company' }
+      selectedClient: { client_id: 'client-1', client_name: 'Acme', client_type: 'company' }
     });
     getTicketStatusesMock.mockResolvedValue([
       { status_id: 'status-1', name: 'Open', is_default: true, is_closed: false },
@@ -818,7 +827,6 @@ describe('QuickAddTicket prefills', () => {
       users: [],
       boards: [{ board_id: 'board-1', board_name: 'Support' }],
       priorities: [{ priority_id: 'priority-1', priority_name: 'High' }],
-      clients: [{ client_id: 'client-1', client_name: 'Acme', client_type: 'company' }],
       statuses: [{ status_id: 'status-1', name: 'Open' }],
     });
 
@@ -831,13 +839,14 @@ describe('QuickAddTicket prefills', () => {
     );
 
     await screen.findByRole('button', { name: /\+ add new client/i }, { timeout: 5000 });
-    expect(screen.getByTestId('client-picker-count')).toHaveTextContent('1');
+    // Async mode: the picker is server-searched and never receives a full client list.
+    expect(screen.getByTestId('client-picker-async')).toHaveTextContent('true');
+    expect(screen.getByTestId('client-picker-full-list')).toHaveTextContent('false');
 
     fireEvent.click(screen.getByRole('button', { name: /\+ add new client/i }));
     fireEvent.click(screen.getByRole('button', { name: /create client/i }));
 
     await waitFor(() => expect(screen.queryByTestId('quick-add-client-dialog')).not.toBeInTheDocument());
-    await waitFor(() => expect(screen.getByTestId('client-picker-count')).toHaveTextContent('2'));
     expect(screen.getByTestId('client-picker-value')).toHaveTextContent('client-new');
   });
 
@@ -991,6 +1000,36 @@ describe('QuickAddTicket prefills', () => {
     await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
     const algadeskFormData = addTicketMock.mock.calls[0][0] as FormData;
     expect(algadeskFormData.get('asset_id')).toBeNull();
+  });
+
+  it('honours a client change when the dialog opened with one prefilled', async () => {
+    getTicketFormDataMock.mockResolvedValue({
+      users: [],
+      boards: [{ board_id: 'board-1', board_name: 'Support' }],
+      priorities: [{ priority_id: 'priority-1', priority_name: 'High' }],
+      statuses: [{ status_id: 'status-1', name: 'Open' }],
+      selectedClient: { client_id: 'client-1', client_name: 'Acme', client_type: 'company' },
+    });
+
+    render(
+      <QuickAddTicket
+        open={true}
+        onOpenChange={() => undefined}
+        onTicketAdded={() => undefined}
+        assetId="asset-123"
+        assetName="Router A"
+      />
+    );
+
+    await waitFor(() => expect(screen.getByTestId('client-picker-value')).toHaveTextContent('client-1'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pick other client' }));
+
+    // The picker is enabled, so the choice sticks instead of snapping back,
+    // and the newly chosen client's contacts are fetched (the prefilled
+    // branch skips that fetch).
+    await waitFor(() => expect(screen.getByTestId('client-picker-value')).toHaveTextContent('client-2'));
+    await waitFor(() => expect(getContactsByClientMock).toHaveBeenCalledWith('client-2', 'all'));
   });
 
 });

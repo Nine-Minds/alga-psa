@@ -85,7 +85,9 @@
     "noService": "No service",
     "servicePlaceholder": "Select default service",
     "serviceHelp": "Used for time entries on this phase's tasks when the task itself sets no service.",
-    "serviceDisplayLabel": "Service"
+    "serviceDisplayLabel": "Service",
+    "taskCount_few": "{{count}} tasks",
+    "taskCount_many": "{{count}} tasks"
   },
   "projectList": {
     "addProject": "Add Project",
@@ -314,7 +316,9 @@
     "confirmMoveTasksMessage": "Are you sure you want to move {{count}} selected tasks to phase \"{{targetPhase}}\"?",
     "taskTypeFallback": "Task",
     "timeline": "Timeline",
-    "loadingTimeline": "Loading timeline..."
+    "loadingTimeline": "Loading timeline...",
+    "bulkTagsSuccess_few": "Tags added to {{count}} tasks",
+    "bulkTagsSuccess_many": "Tags added to {{count}} tasks"
   },
   "taskForm": {
     "addTitle": "Add New Task",
@@ -433,7 +437,15 @@
     "serviceInheritedFromProject": "Inherits {{service}} from the project.",
     "startDateLabel": "Start Date",
     "taskStartDateLabel": "Task Start Date",
-    "startDatePlaceholder": "Select start date"
+    "startDatePlaceholder": "Select start date",
+    "createdTicketsIntro_few": "You created {{count}} tickets during this session:",
+    "createdTicketsIntro_many": "You created {{count}} tickets during this session:",
+    "documentCleanupFailure_few": "{{count}} documents could not be deleted and will remain in Documents",
+    "documentCleanupFailure_many": "{{count}} documents could not be deleted and will remain in Documents",
+    "documentsCleanupIntro_few": "You have {{count}} documents that were {{cleanupType}}:",
+    "documentsCleanupIntro_many": "You have {{count}} documents that were {{cleanupType}}:",
+    "ticketCleanupFailure_few": "{{count}} tickets could not be deleted",
+    "ticketCleanupFailure_many": "{{count}} tickets could not be deleted"
   },
   "taskDependencies": {
     "title": "Dependencies",
@@ -605,7 +617,16 @@
     "invoiceLinksHelp": "Draft invoices were created. Open each currency group to review it.",
     "currencyDraftLink": "{{currency}} draft invoice",
     "productCount": "{{count}} products",
-    "productsMovedToHoldOnClose": "{{count}} linked product(s) moved to On hold because their billing event was canceled."
+    "productsMovedToHoldOnClose": "{{count}} linked product(s) moved to On hold because their billing event was canceled.",
+    "availableBadge": "Available: {{available}}",
+    "availableByLocation": "Free stock by location",
+    "freeOfOnHand": "{{free}} free of {{onHand}}",
+    "stockHeld": "Only {{free}} available. {{held}} on hand is on hard hold for sales orders or projects and can't be used here.",
+    "stockInsufficient": "Only {{onHand}} on hand, {{requested}} requested.",
+    "reservedStockTitle": "Stock is reserved for a sales order or project",
+    "reservedStockMessage": "Only {{free}} of this product is free. {{reserved}} on hand is reserved for sales orders or projects, and you asked for {{requested}}. Adding it anyway takes stock a sales order or project is counting on and may leave it short.",
+    "reservedStockConfirm": "Add anyway",
+    "fromStaging": "From staging"
   },
   "export": {
     "title": "Export Project Tasks",
@@ -644,7 +665,13 @@
     },
     "exportSelected": "Export {{count}} Selected",
     "selectedTasksNotice_one": "Exporting {{count}} selected task.",
-    "selectedTasksNotice_other": "Exporting {{count}} selected tasks."
+    "selectedTasksNotice_other": "Exporting {{count}} selected tasks.",
+    "phasesSelected_few": "{{selected}} of {{total}} phases selected",
+    "phasesSelected_many": "{{selected}} of {{total}} phases selected",
+    "selectedTasksNotice_few": "Exporting {{count}} selected tasks.",
+    "selectedTasksNotice_many": "Exporting {{count}} selected tasks.",
+    "success_few": "Successfully exported {{count}} tasks to CSV.",
+    "success_many": "Successfully exported {{count}} tasks to CSV."
   },
   "import": {
     "title": "Import Phases & Tasks",
@@ -765,7 +792,9 @@
     "statusUnmatchedTooltip": "Status does not match any existing status for this phase. Resolve in the mapping steps before import.",
     "statusFallbackSuffix": "Default",
     "statusFallbackTooltip": "Using the default fallback status for this phase.",
-    "inPhaseBadge": "in {{phase}}"
+    "inPhaseBadge": "in {{phase}}",
+    "taskCountLabel_few": "({{count}} tasks)",
+    "taskCountLabel_many": "({{count}} tasks)"
   },
   "dialogs": {
     "moveTask": {
@@ -839,7 +868,9 @@
       "restrictedTooltip": "Limited details — you are not assigned to this task",
       "badgeCount_one": "{{count}} Task",
       "billsToProject": "Time bills as project time",
-      "billsToClient": "Time bills at the client level"
+      "billsToClient": "Time bills at the client level",
+      "badgeCount_few": "{{count}} Tasks",
+      "badgeCount_many": "{{count}} Tasks"
     },
     "bulkMoveTask": {
       "title": "Move Tasks",
@@ -943,7 +974,7 @@
       "choose_status": "Choose a status",
       "no_statuses_available": "No statuses available",
       "no_statuses_available_hint": "Create statuses in Settings → Projects → Statuses first.",
-      "task_status_library_title": "Project Task Status Library",
+      "task_status_library_title": "Task Status Library",
       "task_status_library_description": "Manage your organization's project task statuses. These statuses can be used across all projects.",
       "task_status_library_empty": "No project task statuses found",
       "task_status_library_empty_hint": "Create your first status to get started",
@@ -983,12 +1014,33 @@
       "last_closed_error": "At least one status must remain marked as closed",
       "last_closed_delete_error": "Cannot delete the last closed status for this type.",
       "addStatus": "Add new status",
-      "add_from_library": "Add Status"
+      "add_from_library": "Add Status",
+      "closed_badge": "(Closed)",
+      "drag_to_reorder": "Drag to reorder",
+      "refresh_library": "Refresh status library",
+      "all_library_statuses_used": "Every library status is already a column here. Use Create New to add another one.",
+      "delete_no_move_target": "There is no other status column to move these tasks into. Add another column first.",
+      "delete_scope_help": "This removes the column from this scope only. The status stays in your Task Status Library.",
+      "fork_title": "Use custom status columns for this phase?",
+      "fork_message": "This phase will stop inheriting the project default columns. Status columns you add to Project Defaults later will not appear here until you switch the phase back.",
+      "fork_confirm": "Use custom statuses",
+      "phase_uses_custom": "This phase has its own status columns and no longer inherits project defaults.",
+      "pending_title": "Unsaved status column changes",
+      "pending_apply_hint": "Nothing changes until you save.",
+      "pending_fork": "{{phase}} will switch to its own status columns.",
+      "pending_revert": "{{phase}} will go back to the project default columns.",
+      "pending_order": "New column order for {{scope}}.",
+      "pending_preview_hint": "Showing the project default columns as a preview. Save to apply this switch, then add or remove columns here.",
+      "rename_impact_title": "Where this rename lands",
+      "rename_impact_following": "Follows this rename immediately: {{columns}} column(s) in {{projects}}.",
+      "rename_impact_keeping": "Keeps the name \"{{name}}\": {{columns}} column(s) in {{projects}}. These columns are not linked to this status in your Task Status Library, so those projects keep reporting the old name until you rename the column there.",
+      "rename_impact_more": "and {{remaining}} more",
+      "rename_impact_none": "This status is not used as a column in any project yet."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Manage Status Columns",
+      "manage_title": "Task Status Columns",
       "manage_description": "Define the status columns for tasks in this template. Drag to reorder.",
       "template_defaults": "Template Defaults",
       "added": "Status column added",
@@ -1014,7 +1066,8 @@
       "replaced": "Status column replaced",
       "replace_failed": "Failed to replace status column",
       "repair_status_columns": "Repair status columns",
-      "unresolved_apply_guard": "Status columns need repair ({{count}})"
+      "unresolved_apply_guard": "Status columns need repair ({{count}})",
+      "pending_row_hint": "Fill in the empty status column before adding another one."
     },
     "list": {
       "title": "Project Templates",
@@ -1193,7 +1246,9 @@
       "taskCount_other": "{{count}} tasks",
       "unknownUser": "Unknown",
       "unknownTask": "Unknown task",
-      "checklistCountTitle": "{{count}} checklist item"
+      "checklistCountTitle": "{{count}} checklist item",
+      "taskCount_few": "{{count}} tasks",
+      "taskCount_many": "{{count}} tasks"
     },
     "taskForm": {
       "addTitle": "Add Task",
@@ -1442,7 +1497,8 @@
     "materials": "Materials",
     "hoursUsageDescription": "Shows budget hours usage for the entire project",
     "templateCreatedSuccess": "Template created successfully",
-    "shareTooltip": "Print, import and export"
+    "shareTooltip": "Print, import and export",
+    "staging": "Staging"
   },
   "comments": {
     "title": "Comments",
@@ -1454,19 +1510,9 @@
     "addFailed": "Failed to add comment",
     "submitting": "Submitting...",
     "loading": "Loading...",
-    "empty": "No comments yet. Be the first to comment!"
-  },
-  "addStatusDialog": {
-    "phaseTitle": "Add Phase Status from Library",
-    "projectTitle": "Add Status from Library",
-    "selectLabel": "Select from Status Library",
-    "placeholder": "Choose a status",
-    "helpText": "Select a status from your tenant's status library to add to this project.",
-    "noStatusesTitle": "No statuses available",
-    "noStatusesDescription": "Create statuses in Settings → Projects → Statuses first.",
-    "adding": "Adding...",
-    "addStatus": "Add Status",
-    "addFailed": "Failed to add status. Please try again."
+    "empty": "No comments yet. Be the first to comment!",
+    "loadError": "Failed to load comments.",
+    "retry": "Retry"
   },
   "taskStatusSelect": {
     "ariaLabel": "Task status",
@@ -1554,7 +1600,7 @@
     "statusColor": "Status Color",
     "changeColor": "Change color",
     "markClosed": "Mark as closed status",
-    "markClosedDescription": "Tasks in closed statuses are considered complete",
+    "markClosedDescription": "Tasks with this status will be considered complete",
     "creating": "Creating...",
     "createButton": "Create Status",
     "nameRequired": "Status name is required",
@@ -1615,7 +1661,9 @@
       "submitting": "Adding tags...",
       "confirm_one": "Add Tags to {{count}} Task",
       "confirm_other": "Add Tags to {{count}} Tasks",
-      "failedHeading": "Tags could not be added to the following tasks:"
+      "failedHeading": "Tags could not be added to the following tasks:",
+      "confirm_few": "Add Tags to {{count}} Tasks",
+      "confirm_many": "Add Tags to {{count}} Tasks"
     }
   },
   "common:actions": {
@@ -1678,7 +1726,9 @@
       "lockedSummary_other": "{{count}} entries totaling {{amount}} are locked and will not change.",
       "edit": "Edit terms",
       "saved": "Billing terms updated",
-      "dialogTitle": "Edit billing terms"
+      "dialogTitle": "Edit billing terms",
+      "lockedSummary_few": "{{count}} entries totaling {{amount}} are locked and will not change.",
+      "lockedSummary_many": "{{count}} entries totaling {{amount}} are locked and will not change."
     },
     "setup": {
       "title": "Bill this project",
@@ -2027,5 +2077,202 @@
     "question": "Dependencies are not enforced, so you can continue. Do you want to?",
     "proceed": "Continue anyway",
     "cancel": "Cancel"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Compact"
+    },
+    "spacious": {
+      "label": "Spacious"
+    },
+    "decrease": {
+      "title": "Decrease column width"
+    },
+    "increase": {
+      "title": "Increase column width"
+    },
+    "reset": {
+      "title": "Reset to default"
+    }
+  },
+  "staging": {
+    "status": {
+      "reserved": "Reserved",
+      "staged": "Staged",
+      "installed": "Installed",
+      "released": "Released",
+      "received": "Received"
+    },
+    "kind": {
+      "stock": "Stock",
+      "untracked": "Not stock-tracked",
+      "client": "Client-provided"
+    },
+    "actionFailed": "That did not work. Please try again.",
+    "installed": "{{count}} item(s) installed. They are now project materials.",
+    "installFailed": "Install failed.",
+    "backToProject": "← Back to project",
+    "title": "Staging",
+    "heading": "Staging",
+    "intro": "Reserve and stage equipment ahead of installation, pack it into labelled boxes, then install it. Stock is used, and becomes billable, only when an item is installed.",
+    "reserveStock": "Reserve stock",
+    "addClientItem": "Add client item",
+    "newBox": "New box",
+    "printLabels": "Print labels",
+    "summary": {
+      "reserved": "{{count}} reserved",
+      "staged": "{{count}} staged",
+      "client": "{{count}} client-provided",
+      "installed": "{{count}} installed",
+      "boxes": "{{count}} box(es)"
+    },
+    "loading": "Loading staging...",
+    "linesHeading": "Items",
+    "showReleased": "Show released",
+    "selected": "{{count}} selected",
+    "stagedToast": "Staged. The stock is now held for this project.",
+    "stage": "Stage",
+    "install": "Install",
+    "release": "Release",
+    "packInto": "Pack into {{identifier}}",
+    "packIntoPlaceholder": "Pack into box...",
+    "empty": "Nothing is staged for this project yet. Reserve stock or add a client-provided item to start.",
+    "col": {
+      "item": "Item",
+      "qty": "Qty",
+      "packed": "Packed",
+      "where": "From / task",
+      "status": "Status"
+    },
+    "selectLine": "Select {{item}}",
+    "shortfall": "{{count}} short: claims at this location exceed what is on hand (stock was taken by an override).",
+    "changeQuantity": "Change quantity",
+    "undoneToast": "Install undone. The item is staged again.",
+    "undoInstall": "Undo install",
+    "boxesHeading": "Boxes",
+    "noBoxes": "No boxes yet. Create a box, pack items into it, then print its label and manifest.",
+    "boxPosition": "Box {{n}} of {{total}}",
+    "boxSealed": "Sealed",
+    "boxOpen": "Open",
+    "boxEmpty": "Empty",
+    "unpack": "Unpack",
+    "boxLabel": "Label",
+    "boxAllLabels": "All labels",
+    "manifest": "Manifest",
+    "reopen": "Reopen",
+    "seal": "Seal",
+    "editBox": "Edit box",
+    "boxDeleted": "Box deleted.",
+    "deleteBox": "Delete box",
+    "reprintHint": "\"Box n of m\" on a printed label is fixed when it is printed. Reprint the labels after adding or deleting boxes.",
+    "reservedToast": "Reserved. The stock is held for this project; nothing has been used yet.",
+    "releasedToast": "Released. The stock is free again.",
+    "releaseTitle": "Release items?",
+    "releaseMessage": "Released items give their stock back and leave their boxes. This cannot be undone; reserve them again if you still need them.",
+    "overrideTitle": "Use stock reserved for others?",
+    "overrideMessage": "{{message}} Installing anyway uses stock that is soft-reserved for a sales order or another project.",
+    "installAnyway": "Install anyway",
+    "changeQuantityHint": "More reserves more stock (if it is free); less gives the difference back. It cannot go below what is packed.",
+    "reserve": {
+      "anyLocation": "Any location (oldest units first)",
+      "locationOption": "{{name}}: {{free}} free",
+      "selectProduct": "Choose a product.",
+      "quantityMin": "Quantity must be at least 1.",
+      "failed": "Could not reserve the stock.",
+      "conflictOnHand": "Only {{onHand}} on hand, {{requested}} requested. Nothing was reserved.",
+      "conflictFree": "Only {{free}} free: {{reserved}} reserved and {{held}} on hard hold for sales orders or projects. You asked for {{requested}}. Nothing was reserved.",
+      "title": "Reserve stock",
+      "intro": "Reserving holds stock for this project without using it up. Stock is used, and billed, only when you install it.",
+      "product": "Product",
+      "productPlaceholder": "Select a product...",
+      "productSearch": "Search products...",
+      "noProducts": "No products found",
+      "untracked": "This product is not stock-tracked. It is added as a planning line and claims no stock.",
+      "location": "Reserve from",
+      "locationPlaceholder": "Choose a location",
+      "locationDetail": "{{onHand}} on hand, {{reserved}} reserved, {{held}} on hard hold.",
+      "units": "Units (optional: leave empty to take the oldest)",
+      "noUnitPicker": "You cannot see stock units, so the oldest units are taken.",
+      "quantity": "Quantity",
+      "task": "Task",
+      "noTask": "No task",
+      "currency": "Currency",
+      "currencyPlaceholder": "Tenant default",
+      "rate": "Planned rate (per unit)",
+      "submit": "Reserve"
+    },
+    "clientItems": {
+      "chooseAsset": "Choose an asset.",
+      "describeItem": "Describe the item.",
+      "failed": "Could not add the item.",
+      "title": "Add client-provided item",
+      "intro": "Track equipment the client provides through staging and boxes. It never becomes stock and is never billed.",
+      "kind": "What is it?",
+      "kindAsset": "One of the client's assets",
+      "kindItem": "Another item (describe it)",
+      "asset": "Asset",
+      "assetPlaceholder": "Select an asset...",
+      "assetSearch": "Search by name, tag or serial...",
+      "noAssets": "No assets of this client are available",
+      "description": "Description",
+      "quantity": "Quantity",
+      "task": "Task",
+      "noTask": "No task",
+      "submit": "Add"
+    },
+    "boxForm": {
+      "failed": "Could not save the box.",
+      "editTitle": "Edit box {{identifier}}",
+      "createTitle": "New box",
+      "numbering": "Boxes are numbered in order on this project; a number is never reused.",
+      "name": "Name (optional)",
+      "task": "Task",
+      "noTask": "No task",
+      "location": "Where the box is",
+      "noLocation": "Not set",
+      "locationNote": "Shelf / bay",
+      "notes": "Notes (printed on the manifest)",
+      "create": "Create box"
+    },
+    "pack": {
+      "nothingChosen": "Choose something to pack.",
+      "failed": "Could not pack the box.",
+      "title": "Pack box {{identifier}}",
+      "intro": "Reserved items you pack are staged: their stock is held for this project and can no longer be taken for anything else.",
+      "nothingToPack": "Everything in staging is already packed or installed.",
+      "quantityFor": "Quantity of {{item}}",
+      "submit": "Pack"
+    },
+    "print": {
+      "failed": "The labels could not be printed.",
+      "skipped": "{{count}} label(s) you cannot view were left out.",
+      "popupBlocked": "Your browser blocked the PDF window; allow pop-ups and try again.",
+      "title": "Print staging labels",
+      "boxes": "Boxes",
+      "noBoxes": "No boxes yet.",
+      "boxOption": "{{identifier}} (box {{n}} of {{total}}){{name}}",
+      "includeUnboxed": "Also print staged items that are not in a box",
+      "layout": "Layout",
+      "count": "{{count}} label(s) in one PDF.",
+      "noInventory": "{{count}} stock unit label(s) are not included because you cannot view inventory.",
+      "overCap": "One print holds at most {{max}} labels. Choose fewer boxes and print the rest separately.",
+      "submit": "Print"
+    },
+    "closeWarning": "{{count}} reserved or staged item(s) still hold stock for this project.",
+    "releasedAll": "Released {{count}} item(s). The stock is free again.",
+    "releaseAll": "Release all reserved and staged",
+    "keepClaims": "Keep them",
+    "packAction": "Pack",
+    "errors": {
+      "notFound": "Project not found",
+      "permission": {
+        "read": "You do not have permission to view projects.",
+        "update": "You do not have permission to change projects.",
+        "inventory": "You need inventory access to choose stock units.",
+        "billing": "You need billing access to install items into a project.",
+        "asset": "You need asset access to link client assets.",
+        "inventoryStock": "You need inventory access to see stock levels."
+      }
+    }
   }
 }

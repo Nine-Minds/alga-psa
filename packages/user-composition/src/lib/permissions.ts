@@ -1,6 +1,7 @@
 // TODO: Consolidate with @alga-psa/auth after circular dependency is resolved
 // This is a temporary duplication to break the auth <-> users cycle
 
+import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import type { IUser, IRoleWithPermissions } from '@alga-psa/types';
 import User from '@alga-psa/db/models/user';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
@@ -38,15 +39,17 @@ export async function hasPermission(user: IUser, resource: string, action: strin
       rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
     }
 
-    const isClientPortal = user.user_type === 'client';
+    const isClientPortal = isClientUserType(user.user_type);
+
+    const isMspPrincipal = isMspPrincipalUserType(user.user_type);
 
     for (const role of rolesWithPermissions) {
       if (isClientPortal && !role.client) continue;
-      if (!isClientPortal && !role.msp) continue;
+      if (!isClientPortal && !(isMspPrincipal && role.msp)) continue;
 
       for (const permission of role.permissions) {
         if (isClientPortal && !permission.client) continue;
-        if (!isClientPortal && !permission.msp) continue;
+        if (!isClientPortal && !(isMspPrincipal && permission.msp)) continue;
 
         if (permission.resource === resource && permission.action === action) {
           return true;

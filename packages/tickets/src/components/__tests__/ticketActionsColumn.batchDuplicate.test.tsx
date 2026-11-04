@@ -35,6 +35,33 @@ describe('ticket row actions: batch duplicate item', () => {
     expect(document.getElementById('batch-duplicate-ticket-menu-item')).toBeInTheDocument();
   });
 
+  it('keeps batch duplication and permission-gated template creation independently usable', () => {
+    const onDuplicate = vi.fn();
+    const onBatchDuplicate = vi.fn();
+    const onCreateTemplate = vi.fn();
+    const onRowClick = vi.fn();
+    const column = createTicketActionsColumn({
+      t, onDuplicate, onBatchDuplicate, onCreateTemplate, canCreateTemplate: true,
+    });
+    const { rerender } = render(<div onClick={onRowClick}>{column.render!(null, record, 0)}</div>);
+
+    fireEvent.click(screen.getByText('Duplicate for contacts…'));
+    expect(onBatchDuplicate).toHaveBeenCalledExactlyOnceWith('ticket-1');
+    expect(onCreateTemplate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('Create template from ticket'));
+    expect(onCreateTemplate).toHaveBeenCalledExactlyOnceWith('ticket-1');
+    fireEvent.click(screen.getByText('Duplicate'));
+    expect(onDuplicate).toHaveBeenCalledExactlyOnceWith('ticket-1');
+    expect(onRowClick).not.toHaveBeenCalled();
+
+    const restricted = createTicketActionsColumn({
+      t, onDuplicate, onBatchDuplicate, onCreateTemplate, canCreateTemplate: false,
+    });
+    rerender(<div>{restricted.render!(null, record, 0)}</div>);
+    expect(screen.queryByText('Create template from ticket')).toBeNull();
+    expect(screen.getByText('Duplicate for contacts…')).toBeTruthy();
+  });
+
   it('keeps the single Duplicate item and omits the batch item when no handler is given', () => {
     const column = createTicketActionsColumn({ t, onDuplicate: vi.fn() });
     render(<div>{column.render!(null, record, 0)}</div>);

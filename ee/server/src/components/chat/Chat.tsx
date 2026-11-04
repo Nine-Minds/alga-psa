@@ -808,7 +808,11 @@ export const Chat: React.FC<ChatProps> = ({
     streamAbortControllerRef.current = null;
     if (reason === 'out_of_credits') {
       getAiAccountSummary()
-        .then((summary) => {
+        .then((result) => {
+          if (result.status !== 'ok') {
+            return;
+          }
+          const summary = result.data;
           setAiBlocked((prev) =>
             prev && prev.reason === 'out_of_credits'
               ? { ...prev, balanceCredits: summary.totalBalanceCredits }

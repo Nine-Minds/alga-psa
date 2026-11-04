@@ -63,7 +63,8 @@ export type ItemResolutionFlag =
   | 'unmapped_tax'
   | 'sku_conflict'
   | 'name_collision'
-  | 'category_skipped';
+  | 'category_skipped'
+  | 'shared_item_mapping';
 
 export interface ItemFieldChange {
   field: QboAuthoritativeField;
@@ -204,7 +205,13 @@ export function resolveQboItems(
   /** Company home currency: QBO item UnitPrice/PurchaseCost are quoted in it. */
   currencyCode: string
 ): ItemResolution[] {
-  const mappingByExternalId = new Map(existingMappings.map((m) => [m.external_entity_id, m]));
+  // Several services may share one QBO item, so group instead of letting the
+  // last row win. Callers pass LIVE mappings only (tombstones are filtered at
+  // the read), so a group of one is unambiguous.
+  const mappingsByExternalId = new Map<string, ExistingItemMappingRow[]>();
+  for (const m of existingMappings) {
+    mappingsByExternalId.set(m.external_entity_id, [...(mappingsByExternalId.get(m.external_entity_id) ?? []), m]);
+  }
   const mappedServiceToExternal = new Map(existingMappings.map((m) => [m.alga_entity_id, m.external_entity_id]));
   const serviceById = new Map(existingServices.map((s) => [s.service_id, s]));
   const serviceByName = new Map(existingServices.map((s) => [normalizedName(s.service_name), s]));
@@ -235,7 +242,22 @@ export function resolveQboItems(
     const skuKey = normalizedSku(fields.sku);
 
     // 1. Existing ledger mapping wins.
-    const mapping = mappingByExternalId.get(item.Id);
+    const itemMappings = mappingsByExternalId.get(item.Id) ?? [];
+    if (itemMappings.length > 1) {
+      // An item shared by several services has no single catalog owner, so
+      // QBO's (usually generic) name/price must not overwrite any of them. It
+      // also must not fall through to SKU/name matching, which could attach it
+      // to yet another service.
+      resolutions.push({
+        qboItem: item,
+        action: 'skip',
+        flags: [...flags, 'shared_item_mapping'],
+        reason: `This QBO item is mapped to ${itemMappings.length} services, so it cannot be imported without overwriting one of them. Manage it in the mapping manager.`
+      });
+      if (skuKey) claimedSkus.add(skuKey);
+      continue;
+    }
+    const mapping = itemMappings[0];
     if (mapping) {
       const existing = serviceById.get(mapping.alga_entity_id);
       if (!existing) {

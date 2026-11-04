@@ -43,6 +43,11 @@ function collectCatalogErrors(entries = ACTIVE_PERMISSIONS) {
       continue;
     }
 
+    if (entry.capabilities !== undefined && (!Array.isArray(entry.capabilities) || entry.capabilities.length === 0
+      || entry.capabilities.some((capability) => !isNonEmptyString(capability)))) {
+      errors.push(`${identity}: capabilities must be a non-empty array of capability names`);
+    }
+
     for (const product of entry.products) {
       if (!PRODUCTS.includes(product)) {
         errors.push(`${identity}: unknown product "${product}"`);

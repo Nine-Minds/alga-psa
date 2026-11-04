@@ -841,7 +841,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         'dynamic-table',
         'image',
         'logo',
-        'qr',
+        'barcode',
         'signature',
         'attachment-list',
         'action-button',
@@ -882,7 +882,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         'dynamic-table',
         'image',
         'logo',
-        'qr',
+        'barcode',
         'field',
         'label',
         'subtotal',
@@ -916,7 +916,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         'dynamic-table',
         'image',
         'logo',
-        'qr',
+        'barcode',
         'field',
         'label',
         'subtotal',
@@ -1108,6 +1108,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         variant: 'subtotal',
         label: 'Subtotal',
         bindingKey: 'invoice.subtotal',
+        format: 'currency',
       },
     },
     hierarchy: {
@@ -1127,6 +1128,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         variant: 'tax',
         label: 'Tax',
         bindingKey: 'invoice.tax',
+        format: 'currency',
       },
     },
     hierarchy: {
@@ -1138,14 +1140,17 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
   discount: {
     type: 'discount',
     label: 'Discount Row',
-    description: 'Displays discount amount.',
+    description: 'Displays the total of discounts and credits.',
     category: 'Content',
     defaults: {
       size: { width: 320, height: 56 },
       metadata: {
         variant: 'discount',
-        label: 'Discount',
-        bindingKey: 'invoice.discount',
+        label: 'Discounts',
+        // Positive magnitude of discount and credit lines. The legacy `invoice.discount` key
+        // was never bound; saved nodes that still carry it stay blank (alga0002295).
+        bindingKey: 'invoice.discountTotal',
+        format: 'currency',
       },
     },
     hierarchy: {
@@ -1165,6 +1170,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         variant: 'custom',
         label: 'Total',
         bindingKey: 'invoice.total',
+        format: 'currency',
       },
     },
     hierarchy: {
@@ -1214,18 +1220,19 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
     },
     inspector: COMMON_INSPECTOR,
   },
-  qr: {
-    type: 'qr',
-    label: 'QR Code',
-    description: 'Auto-generated QR for payment links.',
+  // The one machine-readable-code concept: exports to the AST `barcode` node (QR or Code 128),
+  // rendered by the server prepass. It replaces the earlier decorative `qr` image block.
+  barcode: {
+    type: 'barcode',
+    label: 'Barcode / QR code',
+    description: 'A scannable QR code or Code 128 barcode generated from a value.',
     category: 'Media',
     defaults: {
       size: { width: 140, height: 140 },
       style: {
-        objectFit: 'contain',
         aspectRatio: '1 / 1',
       },
-      metadata: {},
+      metadata: { symbology: 'qr' },
     },
     hierarchy: {
       allowedChildren: [],
@@ -1345,7 +1352,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
         'dynamic-table',
         'image',
         'logo',
-        'qr',
+        'barcode',
         'field',
         'label',
         'subtotal',

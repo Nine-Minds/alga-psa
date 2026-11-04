@@ -13,6 +13,7 @@ const { getStatus } = vi.hoisted(() => ({ getStatus: vi.fn() }));
 
 vi.mock('@/lib/actions/tenant-actions/portalDomainActions', () => ({
   getPortalDomainStatusAction: getStatus,
+  confirmPortalDomainRedirectUrisAction: vi.fn(),
   disablePortalDomainAction: vi.fn(),
   refreshPortalDomainStatusAction: vi.fn(),
   requestPortalDomainRegistrationAction: vi.fn(),

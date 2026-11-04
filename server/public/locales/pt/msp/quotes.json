@@ -378,6 +378,14 @@
       "customLayout": "Personalizado",
       "tenantDefault": "Padrão do locatário",
       "changeLayout": "Mudar"
+    },
+    "sectionTitles": {
+      "title": "Títulos das seções da cotação agrupada",
+      "description": "Cabeçalhos opcionais do layout padrão de cotação agrupada.",
+      "monthlyLabel": "Título da seção mensal",
+      "oneTimeLabel": "Título da seção avulsa",
+      "monthlyPlaceholder": "Mensal",
+      "oneTimePlaceholder": "Único"
     }
   },
   "quoteDetail": {
@@ -622,6 +630,7 @@
       }
     },
     "sections": {
+      "carriedDiscounts": "Descontos transferidos para as linhas de contrato",
       "contractItems": "Itens do contrato",
       "conversionMode": "Modo de conversão",
       "excludedFromConversion": "Excluído da conversão",
@@ -647,6 +656,7 @@
       "converted": "Convertido",
       "discount": "Desconto",
       "fixed": "fixo",
+      "monthlyTotal": "Total mensal após descontos",
       "notConverted": "Não convertido"
     },
     "partial": {

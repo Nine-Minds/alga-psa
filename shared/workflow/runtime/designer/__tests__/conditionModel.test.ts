@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   parseConditionExpression,
+  serializeConditionClause,
   serializeConditionGroup,
   type WorkflowConditionGroup,
 } from '../conditionModel';
@@ -31,6 +32,9 @@ describe('workflow condition model', () => {
         { path: 'payload.title', operator: 'contains', value: 'outage "major"' },
         { path: 'payload.title', operator: 'starts_with', value: 'RE:' },
         { path: 'payload.title', operator: 'ends_with', value: '!' },
+        { path: 'payload.details', operator: 'not_contains', value: 'Sentinel Agent' },
+        { path: 'payload.title', operator: 'not_starts_with', value: 'RE:' },
+        { path: 'payload.title', operator: 'not_ends_with', value: '!' },
         { path: 'payload.note', operator: 'is_empty' },
         { path: 'payload.note', operator: 'is_not_empty' },
         { path: 'payload.flag', operator: 'equals', value: true },
@@ -42,6 +46,22 @@ describe('workflow condition model', () => {
     expect(() => validateExpressionSource(expression)).not.toThrow();
     expect(parseConditionExpression(expression)).toEqual(group);
   });
+
+  it.each(['not_contains', 'not_starts_with', 'not_ends_with'] as const)(
+    'writes the %s needle literally, even when it looks like an operator or a call',
+    async (operator) => {
+      // The engine rewrites `==` and `name(` across the whole source, string literals included.
+      for (const needle of ['a==b', 'contains(', 'say "hi" \\ 100%_', '(x)']) {
+        const clause = { path: 'payload.t', operator, value: needle } as const;
+        const expression = serializeConditionClause(clause);
+        expect(parseConditionExpression(expression)).toEqual({ join: 'and', clauses: [clause] });
+        // Not satisfied exactly when the text carries the needle at the tested position.
+        const carrier = operator === 'not_contains' ? `x${needle}y` : operator === 'not_starts_with' ? `${needle}y` : `x${needle}`;
+        await expect(evaluateExpressionSource(expression, { payload: { t: carrier } })).resolves.toBe(false);
+        await expect(evaluateExpressionSource(expression, { payload: { t: 'plain' } })).resolves.toBe(true);
+      }
+    },
+  );
 
   it('round-trips an or group', () => {
     const group: WorkflowConditionGroup = {

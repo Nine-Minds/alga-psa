@@ -9,8 +9,13 @@ import CreateTaskFromTicketDialog from '@alga-psa/projects/components/CreateTask
 import LinkTicketToTaskDialog from '@alga-psa/projects/components/LinkTicketToTaskDialog';
 import TicketLinkedTasksBadge from '@alga-psa/projects/components/TicketLinkedTasksBadge';
 import QuickInvoiceTicketDialog from '@alga-psa/billing/components/ticket/QuickInvoiceTicketDialog';
+import { ReceiveEquipmentDialog } from './ReceiveEquipmentDialog';
 import { TicketIntegrationProvider } from '@alga-psa/projects/context/TicketIntegrationContext';
 import { useTicketIntegrationValue } from '../projects/useTicketIntegrationValue';
+import {
+  CreateWorkflowFromTicketDialog,
+  createWorkflowFromTicketEnabled,
+} from '@alga-psa/workflows/ticket-actions';
 import TicketSurveySummaryCard from '@alga-psa/surveys/components/TicketSurveySummaryCard';
 import { MspClientCrossFeatureProvider } from '../clients/MspClientCrossFeatureProvider';
 import {
@@ -21,7 +26,7 @@ import { resolveTicketAttachmentViewUrl } from './ticketAttachmentViewUrl';
 
 type MspTicketDetailsContainerClientProps = Omit<
   React.ComponentProps<typeof TicketDetailsContainer>,
-  'renderContactDetails' | 'renderClientDetails' | 'surveySummaryCard' | 'renderQuickInvoice'
+  'renderContactDetails' | 'renderClientDetails' | 'surveySummaryCard' | 'renderQuickInvoice' | 'renderReceiveEquipment' | 'renderCreateWorkflowFromTicket'
 > & {
   surveySummary?: SurveyTicketSatisfactionSummary | null;
   isAlgaDeskMode?: boolean;
@@ -76,6 +81,20 @@ export default function MspTicketDetailsContainerClient({
     []
   );
 
+  const renderReceiveEquipment = useCallback(
+    ({ ticket }: { ticket: { ticket_id?: string; ticket_number?: string | null; title?: string | null; client_id?: string | null } }) => (
+      <ReceiveEquipmentDialog ticket={ticket} />
+    ),
+    []
+  );
+
+  const renderCreateWorkflowFromTicket = useCallback(
+    (args: React.ComponentProps<typeof CreateWorkflowFromTicketDialog>) => (
+      <CreateWorkflowFromTicketDialog {...args} />
+    ),
+    []
+  );
+
   const renderClientDetails = useCallback(
     ({ id, client }: { id: string; client: IClient }) => {
       return (
@@ -99,6 +118,10 @@ export default function MspTicketDetailsContainerClient({
         renderContactDetails={renderContactDetails}
         renderCreateProjectTask={isAlgaDeskMode ? undefined : renderCreateProjectTask}
         renderQuickInvoice={isAlgaDeskMode ? undefined : renderQuickInvoice}
+        renderReceiveEquipment={isAlgaDeskMode ? undefined : renderReceiveEquipment}
+        renderCreateWorkflowFromTicket={
+          createWorkflowFromTicketEnabled && !isAlgaDeskMode ? renderCreateWorkflowFromTicket : undefined
+        }
         renderClientDetails={renderClientDetails}
         isAlgaDeskMode={isAlgaDeskMode}
         hideSlaStatus={isAlgaDeskMode}

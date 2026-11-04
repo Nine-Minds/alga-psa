@@ -535,6 +535,7 @@
         "renewal": "la date de décision de renouvellement du contrat",
         "contractEnd": "la date de fin du contrat",
         "warrantyEnd": "la date de fin de garantie de l’actif",
+        "maintenanceDue": "la date d’échéance de maintenance de l’actif",
         "ticketStatusAge": "le jour où le ticket atteint le nombre de jours dans le statut"
       }
     }
@@ -565,7 +566,8 @@
       "exportCsv": "Exporter en CSV",
       "exportJson": "Exporter en JSON",
       "close": "Fermer",
-      "viewRunDetails": "Voir les détails de l’exécution"
+      "viewRunDetails": "Voir les détails de l’exécution",
+      "backToEvents": "Retour aux événements"
     },
     "table": {
       "schemaConflict": "catalogue ≠ soumission",
@@ -627,7 +629,8 @@
     },
     "actions": {
       "refresh": "Actualiser",
-      "loadMore": "Charger plus"
+      "loadMore": "Charger plus",
+      "backToList": "Retour aux messages en échec"
     },
     "table": {
       "columns": {
@@ -793,6 +796,7 @@
       "dateSourceRenewal": "Date de décision de renouvellement du contrat",
       "dateSourceContractEnd": "Date de fin du contrat",
       "dateSourceWarranty": "Fin de garantie de l’actif",
+      "dateSourceMaintenanceDue": "Maintenance de l’actif due",
       "dateOffset": "Jours",
       "dateDirection": "Moment",
       "before": "Avant",
@@ -879,6 +883,7 @@
       "add": "Ajouter",
       "remove": "Supprimer",
       "empty": "Aucun mappage pour l’instant.",
+      "nameRequired": "Saisissez un nom pour ce mappage.",
       "expressionLabel": "Expression"
     },
     "schemaForm": {
@@ -1062,6 +1067,26 @@
           "label": "Lister les espaces de noms de liens",
           "description": "Lister les espaces de noms de liens d'entité utilisés par ce locataire."
         }
+      },
+      "assets.get_maintenance": {
+        "label": "Obtenir la maintenance d’un actif",
+        "description": "Rechercher le plan et l’occurrence par plan, occurrence ou ticket lié."
+      },
+      "assets.create_maintenance_ticket": {
+        "label": "Créer un ticket de maintenance",
+        "description": "Créer et lier un ticket pour une occurrence de maintenance ouverte."
+      },
+      "assets.complete_maintenance": {
+        "label": "Terminer la maintenance d’un actif",
+        "description": "Enregistrer la maintenance et ouvrir l’occurrence suivante."
+      },
+      "assets.skip_maintenance": {
+        "label": "Ignorer la maintenance d’un actif",
+        "description": "Ignorer une occurrence avec un motif et ouvrir la suivante."
+      },
+      "assets.set_maintenance_paused": {
+        "label": "Suspendre ou reprendre la maintenance",
+        "description": "Suspendre ou reprendre un plan de maintenance."
       }
     },
     "validation": {
@@ -1285,6 +1310,10 @@
         "data-store": {
           "label": "Magasin de données",
           "description": "Lire et écrire un état de workflow durable d'une exécution à l'autre."
+        },
+        "maintenance": {
+          "label": "Entretien",
+          "description": "Rechercher la maintenance, lier des tickets, terminer ou ignorer des occurrences et suspendre ou reprendre des plans."
         }
       },
       "noMatches": {
@@ -1476,6 +1505,9 @@
         "contains": "contient",
         "starts_with": "commence par",
         "ends_with": "se termine par",
+        "not_contains": "ne contient pas",
+        "not_starts_with": "ne commence pas par",
+        "not_ends_with": "ne se termine pas par",
         "is_empty": "est vide",
         "is_not_empty": "n’est pas vide"
       },
@@ -1517,7 +1549,9 @@
         "summary_one": "{{count}} événement ignoré au cours des {{days}} derniers jours — {{reasons}}",
         "summary_other": "{{count}} événements ignorés au cours des {{days}} derniers jours — {{reasons}}",
         "lastSkipped": "Dernier ignoré {{when}}",
-        "view": "Voir les événements ignorés"
+        "view": "Voir les événements ignorés",
+        "summary_few": "{{count}} événements ignorés au cours des {{days}} derniers jours — {{reasons}}",
+        "summary_many": "{{count}} événements ignorés au cours des {{days}} derniers jours — {{reasons}}"
       },
       "drawer": {
         "title": "Événements ignorés",
@@ -1589,6 +1623,9 @@
         "client_id": "Choisissez d’abord un client fixe pour charger les options d’emplacement."
       },
       "ticket-category": {
+        "board_id": "Choisissez d’abord un tableau fixe pour charger les options de catégorie."
+      },
+      "ticket-category-any": {
         "board_id": "Choisissez d’abord un tableau fixe pour charger les options de catégorie."
       },
       "ticket-status": {
@@ -1860,7 +1897,9 @@
     "insertionPointLabel": "Les nouvelles étapes vont ici",
     "emptyBranchPrompt": "Ajoutez une étape à cette branche",
     "emptyActivePrompt": "Les nouvelles étapes vont ici. Choisissez-en une dans la palette.",
-    "stepCount": "({{count}} étapes)"
+    "stepCount": "({{count}} étapes)",
+    "stepCount_few": "({{count}} étapes)",
+    "stepCount_many": "({{count}} étapes)"
   },
   "expressionEditor": {
     "ariaLabel": "Éditeur d’expression",
@@ -2373,7 +2412,12 @@
       "currentRun": "Exécution {{id}}",
       "backToWorkflow": "Retour au workflow"
     },
-    "title": "Studio d'exécution de workflow"
+    "title": "Studio d'exécution de workflow",
+    "communityEdition": {
+      "title": "Fonctionnalité Pro",
+      "description": "Le studio d’exécution des workflows est disponible uniquement dans Pro.",
+      "runId": "ID d’exécution : {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3146,6 +3190,10 @@
         "selectBoard": "Sélectionnez ou saisissez un tableau",
         "selectPriority": "Sélectionnez ou saisissez une priorité"
       }
+    },
+    "proFeature": {
+      "title": "Fonctionnalité Pro",
+      "description": "Le système de workflows est uniquement disponible dans Pro. Veuillez mettre à niveau votre installation pour accéder à cette fonctionnalité."
     }
   },
   "toggle": {
@@ -3284,5 +3332,29 @@
       "label": "Profondeur de causalité dépassée",
       "hint": "La chaîne d'événements provoqués a dépassé la profondeur maximale ; ignoré pour éviter les boucles incontrôlées."
     }
+  },
+  "createFromTicket": {
+    "title": "Créer un workflow à partir du ticket",
+    "description": "Crée un workflow brouillon dont la première étape crée un ticket comme #{{number}}. Rien n’est publié.",
+    "cancel": "Annuler",
+    "creating": "Création…",
+    "submit": "Créer le brouillon et ouvrir le concepteur",
+    "nameLabel": "Nom du workflow",
+    "triggerLabel": "Déclencheur",
+    "triggerManual": "Manuel (exécuter à la demande)",
+    "ticketCreatedWarning": "Ce workflow crée un ticket, et un nouveau ticket déclenche à nouveau ce déclencheur. Ajoutez une condition avant la publication pour éviter une boucle.",
+    "includeLegend": "Inclure depuis le ticket",
+    "propertiesAlways": "Le titre, la description, le client, le contact, le tableau, la catégorie et la priorité sont toujours inclus.",
+    "includeAssignment": "Affectation",
+    "includeTags": "Étiquettes",
+    "includeCustomFields": "Champs personnalisés",
+    "includeChecklist": "Liste de contrôle",
+    "errors": {
+      "nameRequired": "Le nom du workflow est obligatoire",
+      "generic": "Échec de la création du brouillon du workflow"
+    },
+    "includeCustomFieldsCount": "Champs personnalisés ({{n}})",
+    "includeChecklistCount": "Liste de contrôle ({{total}} éléments : {{templates}} issus de modèles / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Les éléments issus de modèles sont réappliqués depuis le modèle actuel ; les modifications faites sur ce ticket ne sont donc pas reprises."
   }
 }

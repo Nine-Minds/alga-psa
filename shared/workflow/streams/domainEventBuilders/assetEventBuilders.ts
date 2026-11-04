@@ -181,3 +181,37 @@ export function buildAssetWarrantyExpiringPayload(params: {
   });
 }
 
+
+export function buildAssetCustodyChangedPayload(params: {
+  assetId: string;
+  custodyId: string;
+  clientId?: string | null;
+  ticketId?: string | null;
+  eventType: 'received' | 'moved' | 'handed_off' | 'shipped' | 'returned' | 'updated';
+  state: 'in_office' | 'with_vendor' | 'closed';
+  purpose: 'repair' | 'warranty_evaluation' | 'loaner_prep' | 'staging';
+  nextActionParty: 'msp' | 'client' | 'vendor';
+  followUpOn?: string | null;
+  locationId?: string | null;
+  bin?: string | null;
+  holderUserId?: string | null;
+  actorUserId?: string | null;
+  occurredAt: Date | string;
+}): Record<string, unknown> & BuiltWorkflowPayload<'ASSET_CUSTODY_CHANGED'> {
+  return builtWorkflowPayload('ASSET_CUSTODY_CHANGED', {
+    assetId: params.assetId,
+    custodyId: params.custodyId,
+    ...(params.clientId ? { clientId: params.clientId } : {}),
+    ...(params.ticketId ? { ticketId: params.ticketId } : {}),
+    eventType: params.eventType,
+    state: params.state,
+    purpose: params.purpose,
+    nextActionParty: params.nextActionParty,
+    ...(params.followUpOn ? { followUpOn: params.followUpOn } : {}),
+    ...(params.locationId ? { locationId: params.locationId } : {}),
+    ...(params.bin ? { bin: params.bin } : {}),
+    ...(params.holderUserId ? { holderUserId: params.holderUserId } : {}),
+    ...(params.actorUserId ? { actorUserId: params.actorUserId } : {}),
+    occurredAt: normalizeChangeValue(params.occurredAt),
+  });
+}

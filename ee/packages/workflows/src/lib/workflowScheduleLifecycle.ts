@@ -243,7 +243,7 @@ async function restorePreviousScheduleRegistration(
     enabled: true,
     status: desired.status,
     next_fire_at: computeNextFireAtForDesired(desired)
-  });
+  }, existing.tenant);
 }
 
 // Ensure an enabled recurring schedule is registered on the currently active
@@ -335,7 +335,7 @@ async function persistScheduleUpdate(
     runner_schedule_id: params.scheduled?.externalId ?? null,
     next_fire_at: computeNextFireAtForDesired(params.record.desired),
     last_error: null
-  });
+  }, params.existing.tenant);
 }
 
 export function buildDesiredWorkflowSchedule(
@@ -407,7 +407,7 @@ export async function updateExternalWorkflowScheduleState(
     record: PersistedWorkflowScheduleFields;
   }
 ): Promise<WorkflowScheduleStateRecord> {
-  const existing = await WorkflowScheduleStateModel.getById(knex, params.scheduleId);
+  const existing = await WorkflowScheduleStateModel.getById(knex, params.scheduleId, params.tenantId);
   if (!existing) {
     throw new Error('Workflow schedule not found');
   }
@@ -469,7 +469,7 @@ export async function updateExternalWorkflowScheduleState(
           job_id: null,
           runner_schedule_id: null,
           last_error: 'Failed to restore workflow schedule after persistence failure'
-        }).catch(() => undefined);
+        }, existing.tenant).catch(() => undefined);
       });
     }
     throw error;
@@ -484,7 +484,7 @@ export async function setExternalWorkflowScheduleEnabled(
     enabled: boolean;
   }
 ): Promise<WorkflowScheduleStateRecord> {
-  const existing = await WorkflowScheduleStateModel.getById(knex, params.scheduleId);
+  const existing = await WorkflowScheduleStateModel.getById(knex, params.scheduleId, params.tenantId);
   if (!existing) {
     throw new Error('Workflow schedule not found');
   }
@@ -513,11 +513,11 @@ export async function deleteWorkflowScheduleStateById(
     scheduleId: string;
   }
 ): Promise<void> {
-  const existing = await WorkflowScheduleStateModel.getById(knex, params.scheduleId);
+  const existing = await WorkflowScheduleStateModel.getById(knex, params.scheduleId, params.tenantId);
   if (!existing) return;
 
   await cancelScheduledWorkflow(params.tenantId, existing);
-  await WorkflowScheduleStateModel.deleteById(knex, params.scheduleId);
+  await WorkflowScheduleStateModel.deleteById(knex, params.scheduleId, params.tenantId);
 }
 
 export async function revalidateExternalWorkflowSchedulesForPublishedVersion(
@@ -534,7 +534,7 @@ export async function revalidateExternalWorkflowSchedulesForPublishedVersion(
   validScheduleIds: string[];
   invalidScheduleIds: string[];
 }> {
-  const schedules = await WorkflowScheduleStateModel.listByWorkflowId(knex, params.workflowId);
+  const schedules = await WorkflowScheduleStateModel.listByWorkflowId(knex, params.workflowId, params.tenantId);
   const validScheduleIds: string[] = [];
   const invalidScheduleIds: string[] = [];
 
@@ -550,7 +550,7 @@ export async function revalidateExternalWorkflowSchedulesForPublishedVersion(
         job_id: null,
         runner_schedule_id: null,
         last_error: validation.message
-      });
+      }, schedule.tenant);
       invalidScheduleIds.push(schedule.id);
       continue;
     }
@@ -564,7 +564,7 @@ export async function revalidateExternalWorkflowSchedulesForPublishedVersion(
         job_id: null,
         runner_schedule_id: null,
         last_error: 'Workflow schedule is missing required timing details'
-      });
+      }, schedule.tenant);
       invalidScheduleIds.push(schedule.id);
       continue;
     }
@@ -593,7 +593,7 @@ export async function syncWorkflowScheduleState(
     desired: DesiredWorkflowSchedule | null;
   }
 ): Promise<WorkflowScheduleStateRecord | null> {
-  const existing = await WorkflowScheduleStateModel.getByWorkflowId(knex, params.workflowId);
+  const existing = await WorkflowScheduleStateModel.getByWorkflowId(knex, params.workflowId, params.tenantId);
 
   if (!params.desired) {
     if (!existing) return null;
@@ -607,7 +607,7 @@ export async function syncWorkflowScheduleState(
         job_id: null,
         runner_schedule_id: null,
         next_fire_at: null
-      });
+      }, existing.tenant);
     } catch (error) {
       await restorePreviousScheduleRegistration(knex, existing).catch(() => undefined);
       throw error;
@@ -675,7 +675,7 @@ export async function syncWorkflowScheduleState(
       business_hours_schedule_id: params.desired.businessHoursScheduleId ?? null,
       status: params.desired.status,
       next_fire_at: computeNextFireAtForDesired(params.desired)
-    });
+    }, existing.tenant);
   }
 
   const existingSnapshot = { ...existing };
@@ -717,7 +717,7 @@ export async function syncWorkflowScheduleState(
       runner_schedule_id: scheduledReplacement?.externalId ?? null,
       next_fire_at: computeNextFireAtForDesired(params.desired),
       last_error: null
-    });
+    }, existing.tenant);
   } catch (error) {
     if (scheduledReplacement?.jobId) {
       await cancelScheduledWorkflow(params.tenantId, { job_id: scheduledReplacement.jobId }).catch(() => undefined);
@@ -730,7 +730,7 @@ export async function syncWorkflowScheduleState(
           job_id: null,
           runner_schedule_id: null,
           last_error: 'Failed to restore workflow schedule after persistence failure'
-        }).catch(() => undefined);
+        }, existing.tenant).catch(() => undefined);
       });
     }
     throw error;
@@ -741,11 +741,11 @@ export async function deleteWorkflowScheduleState(
   knex: Knex,
   params: { tenantId: string; workflowId: string }
 ): Promise<void> {
-  const existing = await WorkflowScheduleStateModel.listByWorkflowId(knex, params.workflowId);
+  const existing = await WorkflowScheduleStateModel.listByWorkflowId(knex, params.workflowId, params.tenantId);
   if (!existing.length) return;
 
   for (const schedule of existing) {
     await cancelScheduledWorkflow(params.tenantId, schedule);
   }
-  await WorkflowScheduleStateModel.deleteByWorkflowId(knex, params.workflowId);
+  await WorkflowScheduleStateModel.deleteByWorkflowId(knex, params.workflowId, params.tenantId);
 }

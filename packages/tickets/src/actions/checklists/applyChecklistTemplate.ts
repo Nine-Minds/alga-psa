@@ -11,7 +11,7 @@ import {
   applyChecklistTemplateToTicket,
   type ApplyChecklistTemplateResult,
 } from '@alga-psa/shared/lib/ticketChecklists';
-import { checklistActionErrorFrom, type ChecklistActionError } from './checklistActionErrors';
+import { checklistActionErrorFrom, TEMPLATE_CLIENT_MISMATCH, type ChecklistActionError } from './checklistActionErrors';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -31,10 +31,11 @@ export const applyChecklistTemplate = withAuth(
 
       const { knex: db } = await createTenantKnex();
       return await withTransaction(db, async (trx: Knex.Transaction) => {
+        // LEVERAGE: friction checklist-record-authz -- only the coarse ticket:update check guards this; same per-ticket gap as ticketChecklistActions (fixed there via authorizeTicketRecordAccessConcealed), out of scope for alga-2026-0002974.
         const ticket = await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id: ticketId }).first();
         if (!ticket) throw new Error('Ticket not found');
 
-        return applyChecklistTemplateToTicket(trx, tenant, ticketId, templateId, 'template', {
+        const result = await applyChecklistTemplateToTicket(trx, tenant, ticketId, templateId, 'template', {
           actor: {
             actorType: TICKET_ACTIVITY_ACTOR.USER,
             userId: user.user_id,
@@ -43,6 +44,11 @@ export const applyChecklistTemplate = withAuth(
           },
           source: TICKET_ACTIVITY_SOURCE.UI,
         });
+        // Manual apply of a template scoped to another client is an error, not a silent no-op.
+        if (result.reason === 'template-client-mismatch') {
+          throw new Error(TEMPLATE_CLIENT_MISMATCH);
+        }
+        return result;
       });
     } catch (error) {
       const expected = checklistActionErrorFrom(error);

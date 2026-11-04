@@ -9,15 +9,22 @@ import type { Knex } from 'knex';
  * before the update, so the clock only moves when the status really changes (a re-save of the same
  * status keeps it) and no prior read is needed. New rows get `now()` from the column default.
  *
+ * The timestamp is bound as a parameter, not written as `now()`: Citus rejects non-IMMUTABLE functions
+ * inside CASE/COALESCE in UPDATEs on distributed tables.
+ *
  * Use as: `.update({ ...data, ...ticketStatusClockPatch(db, data.status_id) })`.
  */
 export function ticketStatusClockPatch(
   db: Pick<Knex, 'raw'>,
-  newStatusId: string | null | undefined
+  newStatusId: string | null | undefined,
+  at: Date | string = new Date()
 ): { status_changed_at?: Knex.Raw } {
   if (newStatusId === undefined) return {};
   return {
-    status_changed_at: db.raw('CASE WHEN status_id IS DISTINCT FROM ?::uuid THEN now() ELSE status_changed_at END', [newStatusId]),
+    status_changed_at: db.raw(
+      'CASE WHEN status_id IS DISTINCT FROM ?::uuid THEN ?::timestamptz ELSE status_changed_at END',
+      [newStatusId, toIso(at)]
+    ),
   };
 }
 
@@ -28,9 +35,17 @@ export function ticketStatusClockPatch(
 export function ticketStatusClockPatchFromSql(
   db: Pick<Knex, 'raw'>,
   statusIdSql: string,
-  bindings: readonly unknown[] = []
+  bindings: readonly unknown[] = [],
+  at: Date | string = new Date()
 ): { status_changed_at: Knex.Raw } {
   return {
-    status_changed_at: db.raw(`CASE WHEN status_id IS DISTINCT FROM (${statusIdSql}) THEN now() ELSE status_changed_at END`, [...bindings] as Knex.RawBinding[]),
+    status_changed_at: db.raw(
+      `CASE WHEN status_id IS DISTINCT FROM (${statusIdSql}) THEN ?::timestamptz ELSE status_changed_at END`,
+      [...bindings, toIso(at)] as Knex.RawBinding[]
+    ),
   };
+}
+
+function toIso(at: Date | string): string {
+  return at instanceof Date ? at.toISOString() : at;
 }
