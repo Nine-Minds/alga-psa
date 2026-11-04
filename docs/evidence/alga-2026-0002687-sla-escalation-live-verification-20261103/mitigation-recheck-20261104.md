@@ -40,3 +40,11 @@ The corrected discovery was recorded successfully as board fact `2592e8ba-06cb-4
 ## First reviewer actions
 
 Expose a supported saved-service registration recovery path for the existing concluded :4 record, then use command-free `workflow-ensure-service` and repeat the live scenario through the named origin. The card/project record exists; only the dev-server registration is concluded. Existing plan and automated checks remain the implementation baseline; do not treat them as live application proof.
+
+## Lead takeover verification
+
+At `2026-11-04T03:59:47Z`, command-free ensure against the correct project again returned `--command is required to start a new service`. The named port-3122 health request failed with curl exit 7 and HTTP 000. The worker's `/ready` endpoint returned `ready`, with `alga-jobs` and `sla-workflows` both `RUNNING`.
+
+Source inspection independently confirmed the recovery limitation: `WorkflowCardServiceService.ensureService` reads only a live registration before requiring a new command; `restartService` likewise rejects a concluded registration. Registration :4 retains the required saved command and cwd, but these operations cannot reuse it. Restoring a concluded service from that saved definition requires a supported board recovery operation, or an explicit exception allowing board-managed creation with the saved command. Neither is available under the current command-free constraint. Changing raw lifecycle records or launching an unmanaged process would bypass that constraint.
+
+The project-ID correction is committed in `1cc5e8cb8a6c56344ecb74f811657c9de45c8ac7`. No application changes were made during takeover. The prior automated results remain historical evidence at application revision `95c743d54b762a47b4356fdd8f85e59096a6c938`; they were not rerun for this documentation-only update. Live escalation, retry/idempotency, distinct/existing-resource regression, feature screenshots, and walkthrough video remain incomplete. Service recovery is the prerequisite; Temporal readiness alone does not satisfy them.
