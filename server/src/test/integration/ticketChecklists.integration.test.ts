@@ -288,6 +288,18 @@ describe('ticket checklists', () => {
     });
   });
 
+  it('requires ticket read permission when the caller can otherwise access the ticket record', async () => {
+    const ticketId = await insertTicket(db, fixture);
+    await addChecklistItem(ticketId, { item_name: 'Visible checklist step' });
+
+    expect(await getTicketChecklistItems(ticketId)).toHaveLength(1);
+
+    hasPermissionMock.mockResolvedValue(false);
+    await expect(getTicketChecklistItems(ticketId)).rejects.toThrow(
+      'Permission denied: Cannot read ticket checklist'
+    );
+  });
+
   it('T023: completion stamps accountability and audit rows preserve prior signoff', async () => {
     const ticketId = await insertTicket(db, fixture);
     const item = expectActionSuccess(await addChecklistItem(ticketId, { item_name: 'Verify backups' }));

@@ -65,6 +65,10 @@ async function runChecklistMutation<T>(
 
 export const getTicketChecklistItems = withAuth(
   async (user, { tenant }, ticketId: string): Promise<ITicketChecklistItem[]> => {
+    if (!(await hasPermission(user, 'ticket', 'read'))) {
+      throw new Error('Permission denied: Cannot read ticket checklist');
+    }
+
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
       await authorizeTicketRecordAccessConcealed({ trx, tenant, user, ticketId, action: 'read' });
