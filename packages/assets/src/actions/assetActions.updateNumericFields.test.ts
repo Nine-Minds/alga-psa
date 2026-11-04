@@ -41,6 +41,8 @@ const h = vi.hoisted(() => {
     for (const key of Object.keys(dbState)) delete dbState[key];
     for (const table of [
       'assets', 'asset_type_registry', 'asset_history', 'asset_relationships', 'asset_associations',
+      'asset_groups', 'asset_group_members', 'asset_group_contacts', 'asset_maintenance_schedules',
+      'asset_maintenance_history', 'asset_maintenance_notifications', 'asset_documents',
       'team_members', 'users', 'user_roles', 'clients', 'workstation_assets', 'network_device_assets',
       'server_assets', 'mobile_device_assets', 'printer_assets',
     ]) {
@@ -95,6 +97,9 @@ const h = vi.hoisted(() => {
     join(_table: any, _fn: any) { return this; }
     leftJoin(_table: any, _fn: any) { return this; }
     orderBy() { return this; }
+    modify(callback: (query: any) => void) { callback(this); return this; }
+    limit() { return this; }
+    offset() { return this; }
 
     private filtered(): Row[] {
       let rows = [...this.rows];
@@ -115,6 +120,19 @@ const h = vi.hoisted(() => {
     }
 
     first() { return Promise.resolve(this.detached()[0]); }
+    count(expression: string) {
+      const key = expression.split(' as ')[1] ?? 'count';
+      const result: any = Promise.resolve([{ [key]: String(this.filtered().length) }]);
+      result.first = () => Promise.resolve({ [key]: String(this.filtered().length) });
+      return result;
+    }
+    sum(expression: string) {
+      const key = expression.split(' as ')[1] ?? 'sum';
+      const value = this.filtered().reduce((total, row) => total + Number(row[expression.split(' as ')[0]] || 0), 0);
+      const result: any = Promise.resolve([{ [key]: String(value) }]);
+      result.first = () => Promise.resolve({ [key]: String(value) });
+      return result;
+    }
 
     insert(data: Row | Row[]) {
       const incoming = (Array.isArray(data) ? data : [data]).map((row) => {
@@ -188,7 +206,12 @@ const h = vi.hoisted(() => {
     roles: [{ role_id: 'role-1' }],
   };
 
-  return { TENANT, dbState, knexMock, mockUser, resetDb };
+  return {
+    TENANT, dbState, knexMock, mockUser, resetDb,
+    privateGroupSummary: null as Row | null,
+    authorizedGroupSummary: vi.fn(async (..._args: unknown[]) => null),
+    authorizedGroupSummaries: vi.fn(async (..._args: unknown[]) => new Map()),
+  };
 });
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
@@ -242,10 +265,25 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
   resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),
 }));
 
-vi.mock('@alga-psa/authorization/pagination', () => ({ buildAuthorizationAwarePage: vi.fn() }));
+vi.mock('@alga-psa/authorization/pagination', () => ({
+  buildAuthorizationAwarePage: async ({ page, limit, fetchPage, authorizeRecord }: any) => {
+    const result = await fetchPage(page, limit);
+    const data = [];
+    for (const record of result.data) if (await authorizeRecord(record)) data.push(record);
+    return { data, total: result.total };
+  },
+}));
 vi.mock('../lib/assetFactsService', () => ({ listAvailableAssetFactsForAsset: vi.fn(async () => []) }));
+vi.mock('../lib/assetGroups', async (importOriginal) => ({
+  ...((await importOriginal()) as any),
+  getAssetGroupSummary: async () => h.privateGroupSummary,
+  getAssetGroupSummariesForAssets: async (_trx: unknown, _tenant: string, assetIds: string[]) =>
+    new Map(assetIds.filter((assetId) => h.privateGroupSummary).map((assetId) => [assetId, h.privateGroupSummary])),
+  getAuthorizedAssetGroupSummary: (...args: unknown[]) => h.authorizedGroupSummary(...args),
+  getAuthorizedAssetGroupSummariesForAssets: (...args: unknown[]) => h.authorizedGroupSummaries(...args),
+}));
 
-import { bulkUpdateAssets, createAsset, getAsset, updateAsset } from './assetActions';
+import { bulkUpdateAssets, createAsset, getAsset, getAssetDetailBundle, listAssets, updateAsset } from './assetActions';
 
 function seedAsset(overrides: Row = {}): Row {
   const row: Row = {
@@ -357,6 +395,7 @@ function workstationFormPayload() {
 
 beforeEach(() => {
   h.resetDb();
+  h.privateGroupSummary = null;
   vi.clearAllMocks();
 });
 
@@ -381,6 +420,39 @@ describe('getAsset returns the normalised Asset (alga0002283 root cause)', () =>
 
     expect(asset.network_device.power_draw_watts).toBe(0);
     expect(typeof asset.network_device.power_draw_watts).toBe('number');
+  });
+
+  it('keeps an authorized asset visible when its group summary is denied', async () => {
+    seedAsset();
+    seedNetworkDevice();
+    h.privateGroupSummary = { group_id: 'secret-group', name: 'Forbidden group', member_count: 2 };
+
+    const asset = (await getAsset(ASSET_ID)) as any;
+
+    expect(asset.asset_id).toBe(ASSET_ID);
+    expect(asset.group).toBeNull();
+    expect(h.authorizedGroupSummary).toHaveBeenCalledWith(h.knexMock, TENANT, h.mockUser, ASSET_ID);
+  });
+
+  it('keeps the asset detail bundle visible while suppressing a denied group summary', async () => {
+    seedAsset({ asset_type: 'unknown' });
+    h.privateGroupSummary = { group_id: 'secret-group', name: 'Forbidden group', member_count: 2 };
+    const result = (await getAssetDetailBundle(ASSET_ID)) as any;
+
+    expect(result.asset.asset_id).toBe(ASSET_ID);
+    expect(result.asset.group).toBeNull();
+    expect(h.authorizedGroupSummary).toHaveBeenCalledWith(h.knexMock, TENANT, h.mockUser, ASSET_ID);
+  });
+
+  it('keeps listed assets visible while suppressing denied batch group summaries', async () => {
+    seedAsset();
+    h.privateGroupSummary = { group_id: 'secret-group', name: 'Forbidden group', member_count: 2 };
+
+    const result = (await listAssets({ page: 1, limit: 10 } as any)) as any;
+
+    expect(result.assets.map((asset: any) => asset.asset_id)).toContain(ASSET_ID);
+    expect(result.assets.find((asset: any) => asset.asset_id === ASSET_ID).group).toBeNull();
+    expect(h.authorizedGroupSummaries).toHaveBeenCalledWith(h.knexMock, TENANT, h.mockUser, [ASSET_ID]);
   });
 });
 

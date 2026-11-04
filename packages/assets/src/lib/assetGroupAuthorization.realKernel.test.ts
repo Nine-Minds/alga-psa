@@ -31,9 +31,24 @@ vi.mock('@alga-psa/db', () => ({
           rows = rows.filter((row) => values.includes(row[key]));
           return query;
         },
-        select() { return Promise.resolve(rows); },
+        select() { return query; },
         first() { return Promise.resolve(rows[0]); },
         pluck(key: string) { return Promise.resolve(rows.map((row) => row[key])); },
+        count(expression: string) {
+          const key = expression.split(' as ')[1] ?? 'count';
+          const result: any = Promise.resolve([{ [key]: String(rows.length) }]);
+          result.first = () => Promise.resolve({ [key]: String(rows.length) });
+          result.groupBy = (groupKey: string) => {
+            const counts = new Map<string, number>();
+            for (const row of rows) counts.set(row[groupKey], (counts.get(row[groupKey]) ?? 0) + 1);
+            return Promise.resolve(Array.from(counts, ([group, count]) => ({ [groupKey]: group, [key]: String(count) })));
+          };
+          return result;
+        },
+        then(resolve: (value: Row[]) => void, reject?: (reason: unknown) => void) {
+          return Promise.resolve(rows).then(resolve, reject);
+        },
+        catch(reject: (reason: unknown) => void) { return Promise.resolve(rows).catch(reject); },
       };
       return query;
     },
@@ -47,6 +62,7 @@ vi.mock('@alga-psa/authorization/bundles/service', () => ({
 }));
 
 import { isAssetGroupOperationAllowed } from './assetGroupAuthorization';
+import { getAuthorizedAssetGroupSummariesForAssets, getAuthorizedAssetGroupSummary } from './assetGroups';
 
 describe('asset group authorization with the production asset resolver and kernel', () => {
   beforeEach(() => {
@@ -55,8 +71,10 @@ describe('asset group authorization with the production asset resolver and kerne
     h.tables = {
       clients: [{ tenant: TENANT, client_id: CLIENT }],
       asset_groups: [{ tenant: TENANT, group_id: GROUP, client_id: CLIENT }],
+      asset_group_contacts: [],
       asset_group_members: [{ tenant: TENANT, group_id: GROUP, asset_id: ASSET }],
       assets: [{ tenant: TENANT, asset_id: ASSET, client_id: CLIENT }],
+      client_locations: [],
       asset_associations: [],
       team_members: [],
       users: [],
@@ -66,6 +84,40 @@ describe('asset group authorization with the production asset resolver and kerne
   it('allows unrestricted member access without resolving a fabricated client asset id', async () => {
     await expect(isAssetGroupOperationAllowed({} as any, TENANT, { user_id: 'u1', user_type: 'internal', roles: ['r1'] }, { action: 'read', groupId: GROUP })).resolves.toBe(true);
     expect(h.associationIds).toEqual([[ASSET]]);
+  });
+
+  it('returns an allowed single summary and suppresses the entire mixed-scope group', async () => {
+    h.tables.asset_groups[0].name = 'Private group name';
+    h.tables.asset_groups[0].kind = 'bundle';
+    h.tables.asset_group_members.push({ tenant: TENANT, group_id: GROUP, asset_id: '44444444-4444-4444-8444-444444444444' });
+    h.tables.assets.push({ tenant: TENANT, asset_id: '44444444-4444-4444-8444-444444444444', client_id: CLIENT });
+    h.tables.team_members = [{ tenant: TENANT, user_id: 'u1', team_id: 'team-1' }];
+    h.tables.asset_associations = [{ tenant: TENANT, asset_id: ASSET, entity_type: 'team', entity_id: 'team-1' }];
+    h.rules = [{ id: 'same-team-read', resource: 'asset', action: 'read', templateKey: 'same_team' }];
+    const user = { user_id: 'u1', user_type: 'internal', roles: ['r1'] } as any;
+
+    await expect(getAuthorizedAssetGroupSummary({} as any, TENANT, user, ASSET)).resolves.toBeNull();
+    await expect(getAuthorizedAssetGroupSummariesForAssets({} as any, TENANT, user, [ASSET])).resolves.toEqual(new Map());
+  });
+
+  it('retains summaries for fully authorized groups and filters denied groups in a mixed batch', async () => {
+    const allowedGroup = '55555555-5555-4555-8555-555555555555';
+    const allowedAsset = '66666666-6666-4666-8666-666666666666';
+    h.tables.asset_groups.push({ tenant: TENANT, group_id: allowedGroup, client_id: CLIENT, name: 'Allowed group', kind: 'bundle' });
+    h.tables.asset_group_members.push({ tenant: TENANT, group_id: allowedGroup, asset_id: allowedAsset });
+    h.tables.assets.push({ tenant: TENANT, asset_id: allowedAsset, client_id: CLIENT });
+    h.tables.team_members = [{ tenant: TENANT, user_id: 'u1', team_id: 'team-1' }];
+    h.tables.asset_associations = [{ tenant: TENANT, asset_id: allowedAsset, entity_type: 'team', entity_id: 'team-1' }];
+    h.tables.asset_groups[0].name = 'Denied group';
+    h.tables.asset_groups[0].kind = 'bundle';
+    h.tables.asset_group_members.push({ tenant: TENANT, group_id: GROUP, asset_id: '77777777-7777-4777-8777-777777777777' });
+    h.tables.assets.push({ tenant: TENANT, asset_id: '77777777-7777-4777-8777-777777777777', client_id: CLIENT });
+    h.rules = [{ id: 'same-team-read', resource: 'asset', action: 'read', templateKey: 'same_team' }];
+    const user = { user_id: 'u1', user_type: 'internal', roles: ['r1'] } as any;
+
+    await expect(getAuthorizedAssetGroupSummary({} as any, TENANT, user, allowedAsset)).resolves.toMatchObject({ group_id: allowedGroup, name: 'Allowed group', member_count: 1 });
+    const result = await getAuthorizedAssetGroupSummariesForAssets({} as any, TENANT, user, [ASSET, allowedAsset]);
+    expect(result).toEqual(new Map([[allowedAsset, expect.objectContaining({ group_id: allowedGroup, name: 'Allowed group', member_count: 1 })]]));
   });
 
   it('denies a selected-client restriction before resolving member relationships', async () => {
