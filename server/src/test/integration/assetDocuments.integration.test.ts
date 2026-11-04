@@ -42,7 +42,8 @@ vi.mock('@alga-psa/auth', async (importOriginal) => {
 // through the authorization package; grant it like the action-level check.
 vi.mock('@alga-psa/authorization/rbac', async (importOriginal) => ({
   ...await importOriginal<typeof import('@alga-psa/authorization/rbac')>(),
-  hasPermission: vi.fn().mockResolvedValue(true),
+  hasPermission: vi.fn(async (_user: unknown, resource: string, action: string) =>
+    actionAuth.permissions[`${resource}:${action}`] ?? true),
 }));
 vi.mock('@alga-psa/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/db')>();
@@ -326,6 +327,43 @@ describe('getAssetDocuments (integration)', () => {
 
     await removeDocumentFromAsset((created as any).association_id);
     expect(await table(fx.tenantId, 'document_associations').where({ association_id: (created as any).association_id }).first()).toBeUndefined();
+  });
+
+  it('requires coarse asset read permission before associating a document', async () => {
+    const fx = await seedFixture();
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.userId;
+    actionAuth.userType = 'internal';
+    actionAuth.permissions = {
+      'asset:read': false,
+      'asset:update': true,
+      'document:read': true,
+    };
+    const documentId = await fx.seedDocument('Unlinked document denied by coarse asset read.md');
+    const countBefore = await table(fx.tenantId, 'document_associations').count('* as count').first();
+
+    const result = await associateDocumentWithAsset({ entity_id: fx.assetId, document_id: documentId });
+
+    expect(result).toHaveProperty('permissionError');
+    expect(await table(fx.tenantId, 'document_associations').where({ entity_id: fx.assetId, document_id: documentId }).first()).toBeUndefined();
+    expect(await table(fx.tenantId, 'document_associations').count('* as count').first()).toEqual(countBefore);
+  });
+
+  it('requires coarse asset read permission before removing an association', async () => {
+    const fx = await seedFixture();
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.userId;
+    actionAuth.userType = 'internal';
+    actionAuth.permissions = {
+      'asset:read': false,
+      'asset:delete': true,
+      'document:read': true,
+    };
+
+    const result = await removeDocumentFromAsset(fx.associationId);
+
+    expect(result).toHaveProperty('permissionError');
+    expect(await table(fx.tenantId, 'document_associations').where({ association_id: fx.associationId }).first()).toBeDefined();
   });
 
   it('denies a coarse-permitted client user excluded from the target asset client', async () => {
