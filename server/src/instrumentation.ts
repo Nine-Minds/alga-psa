@@ -14,12 +14,8 @@ export async function register() {
       console.error('Failed to initialize observability:', error);
     }
 
-    try {
-      const { initializeApp } = await import('./lib/initializeApp');
-      await initializeApp();
-    } catch (error) {
-      console.error('Failed to initialize application:', error);
-    }
+    const { initializeApp } = await import('./lib/initializeApp');
+    await initializeApp();
 
     // Registering the co-managed capability resolvers is a side effect of this import. A failure
     // leaves the gate unregistered, which fails closed (admits/serves are false).
