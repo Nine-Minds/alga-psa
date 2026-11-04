@@ -247,16 +247,6 @@ describe.sequential('addTicket create extras (integration)', () => {
   });
 
   it('keeps create-time staffing when creator has ticket:update but the real record policy denies later updates', async () => {
-    vi.spyOn(dbModule, 'createTenantKnex').mockImplementationOnce(async () => ({
-      knex: poolLikeForActionTransactions(), tenant: tenantId,
-    }) as any);
-    const created: any = await ticketActions.addTicket(createForm({
-      assigned_to: primaryAgentId,
-      additional_agent_ids: JSON.stringify([additionalAgentId]),
-    }));
-    expect(created?.ticket_id).toBeTruthy();
-    expect(await auth.hasPermission(creator, 'ticket', 'update', context.db)).toBe(true);
-
     const bundle = await createAuthorizationBundle(context.db, {
       tenant: tenantId,
       name: `assigned-only-ticket-updates-${uuidv4()}`,
@@ -286,11 +276,29 @@ describe.sequential('addTicket create extras (integration)', () => {
       actorUserId: creator.user_id,
     });
 
+    expect(await auth.hasPermission(creator, 'ticket', 'update', context.db)).toBe(true);
+    vi.spyOn(dbModule, 'createTenantKnex').mockImplementationOnce(async () => ({
+      knex: poolLikeForActionTransactions(), tenant: tenantId,
+    }) as any);
+    const created: any = await ticketActions.addTicket(createForm({
+      assigned_to: primaryAgentId,
+      additional_agent_ids: JSON.stringify([additionalAgentId]),
+    }));
+    expect(created?.ticket_id).toBeTruthy();
+    expect(await tt('tickets').where({ ticket_id: created.ticket_id }).first())
+      .toMatchObject({ assigned_to: primaryAgentId });
+    expect(await tt('ticket_resources').where({ ticket_id: created.ticket_id }).select('*'))
+      .toEqual([expect.objectContaining({ additional_user_id: additionalAgentId })]);
+
+    const beforeDeniedAssignments = await tt('ticket_resources').where({ ticket_id: created.ticket_id }).select('*');
+    const beforeDeniedAudit = await tt('ticket_audit_logs').where({ ticket_id: created.ticket_id }).select('*');
     const denied = await ticketResourceActions.addTicketResource(created.ticket_id, secondAdditionalAgentId, 'support');
     expect(denied).toMatchObject({ permissionError: expect.stringMatching(/Cannot access ticket|record/i) });
     expect((await tt('tickets').where({ ticket_id: created.ticket_id }).first()).assigned_to).toBe(primaryAgentId);
     expect(await tt('ticket_resources').where({ ticket_id: created.ticket_id }).select('*'))
-      .toEqual([expect.objectContaining({ additional_user_id: additionalAgentId })]);
+      .toEqual(beforeDeniedAssignments);
+    expect(await tt('ticket_audit_logs').where({ ticket_id: created.ticket_id }).select('*'))
+      .toEqual(beforeDeniedAudit);
   });
 
   it('rolls back ticket and valid staffing when a later additional agent is invalid', async () => {
