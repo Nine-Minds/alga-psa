@@ -13,11 +13,14 @@ import { publishUnregisteredEventType } from 'server/src/lib/eventBus/publishers
 import { updateTimeSheetSchema } from '@/lib/api/schemas/timeSheet';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import * as usersActions from '@alga-psa/users/actions';
+import { runWithApiKeyUser } from '@alga-psa/auth';
+import * as algaDb from '@alga-psa/db';
 import * as apiDb from '@/lib/db/db';
 import { ApiBaseController } from '@/lib/api/controllers/ApiBaseController';
 import { POST as reverseApprovalRoute } from '@/app/api/v1/time-sheets/[id]/reverse-approval/route';
 import { POST as bulkApprovalRoute } from '@/app/api/v1/time-sheets/bulk/route';
 import { POST as rejectTimeSheetRoute } from '@/app/api/v1/time-sheets/[id]/reject/route';
+import { reverseTimeSheetApproval } from '@alga-psa/scheduling/actions/timeSheetActions';
 
 /**
  * REST `POST /api/v1/time-sheets` and `PUT /api/v1/time-sheets/:id` are thin wrappers over
@@ -670,6 +673,125 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: sheetId }).first()).toEqual(sheetBefore);
     expect(await tenantTable(f.tenantId, 'time_entries').where({ entry_id: entryId }).first()).toEqual(entryBefore);
     expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: sheetId }).select('*')).toEqual(commentsBefore);
+  });
+
+  it('server action denies linked invoiced entries unchanged and replaces stale audit fields on a valid reversal', async () => {
+    const f = await seed();
+    const invoiceSheetId = uuidv4();
+    const invoiceEntryId = uuidv4();
+    const clientId = uuidv4();
+    const invoiceId = uuidv4();
+    await tenantTable(f.tenantId, 'clients').insert({ tenant: f.tenantId, client_id: clientId, client_name: 'UI reversal invoice fixture', billing_cycle: 'monthly' });
+    await tenantTable(f.tenantId, 'invoices').insert({
+      tenant: f.tenantId, invoice_id: invoiceId, client_id: clientId,
+      invoice_number: `UI-REV-${invoiceId.slice(0, 8)}`, invoice_date: new Date(), due_date: new Date(),
+      total_amount: 0, status: 'draft',
+    });
+    await tenantTable(f.tenantId, 'time_sheets').insert({ tenant: f.tenantId, id: invoiceSheetId, user_id: f.actor, period_id: f.periodId, approval_status: 'APPROVED', approved_by: f.subject, approved_at: new Date() });
+    await tenantTable(f.tenantId, 'time_entries').insert({
+      tenant: f.tenantId, entry_id: invoiceEntryId, user_id: f.actor, time_sheet_id: invoiceSheetId,
+      start_time: new Date().toISOString(), end_time: new Date().toISOString(), work_date: '2026-01-06',
+      work_timezone: 'UTC', approval_status: 'APPROVED', invoiced: false, created_at: db.fn.now(), updated_at: db.fn.now(),
+    });
+    await tenantTable(f.tenantId, 'invoice_time_entries').insert({ invoice_time_entry_id: uuidv4(), tenant: f.tenantId, invoice_id: invoiceId, entry_id: invoiceEntryId });
+    await tenantTable(f.tenantId, 'time_sheet_comments').insert({
+      tenant: f.tenantId, comment_id: uuidv4(), time_sheet_id: invoiceSheetId, user_id: f.subject,
+      comment: 'prior history', is_approver: true, created_at: db.fn.now(),
+    });
+
+    const validSheetId = uuidv4();
+    const validEntryId = uuidv4();
+    const secondPeriodId = uuidv4();
+    await tenantTable(f.tenantId, 'time_periods').insert({ period_id: secondPeriodId, tenant: f.tenantId, start_date: '2026-01-12', end_date: '2026-01-19' });
+    const staleReversedAt = new Date('2025-01-01T00:00:00Z');
+    await tenantTable(f.tenantId, 'time_sheets').insert({
+      tenant: f.tenantId, id: validSheetId, user_id: f.actor, period_id: secondPeriodId,
+      approval_status: 'APPROVED', approved_by: f.subject, approved_at: new Date(),
+      reversal_reason: 'stale reason', reversed_at: staleReversedAt, reversed_by: f.subject,
+    });
+    await tenantTable(f.tenantId, 'time_entries').insert({
+      tenant: f.tenantId, entry_id: validEntryId, user_id: f.actor, time_sheet_id: validSheetId,
+      start_time: new Date().toISOString(), end_time: new Date().toISOString(), work_date: '2026-01-06',
+      work_timezone: 'UTC', approval_status: 'APPROVED', invoiced: false, created_at: db.fn.now(), updated_at: db.fn.now(),
+    });
+    await tenantTable(f.tenantId, 'time_sheet_comments').insert({
+      tenant: f.tenantId, comment_id: uuidv4(), time_sheet_id: validSheetId, user_id: f.subject,
+      comment: 'retained history', is_approver: true, created_at: db.fn.now(),
+    });
+    // The server action historically requires reverse permission; REST separately requires manage.
+    grants.byUser.set(f.actor, new Set(['time_sheet:reverse']));
+    vi.spyOn(algaDb, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.tenantId } as any);
+    const actionUser = { user_id: f.actor, tenant: f.tenantId, user_type: 'internal' } as any;
+    const beforeSheet = await tenantTable(f.tenantId, 'time_sheets').where({ id: invoiceSheetId }).first();
+    const beforeEntry = await tenantTable(f.tenantId, 'time_entries').where({ entry_id: invoiceEntryId }).first();
+    const beforeComments = await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: invoiceSheetId }).select('*');
+    const denied = await runWithApiKeyUser(actionUser, () => reverseTimeSheetApproval(invoiceSheetId, f.actor, 'linked invoice'));
+    expect(denied).toMatchObject({ actionError: expect.stringContaining('cannot be reopened') });
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: invoiceSheetId }).first()).toEqual(beforeSheet);
+    expect(await tenantTable(f.tenantId, 'time_entries').where({ entry_id: invoiceEntryId }).first()).toEqual(beforeEntry);
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: invoiceSheetId }).select('*')).toEqual(beforeComments);
+
+    const flaggedSheetId = uuidv4();
+    const flaggedEntryId = uuidv4();
+    const flaggedPeriodId = uuidv4();
+    const flaggedReversedAt = new Date('2025-01-01T00:00:00Z');
+    await tenantTable(f.tenantId, 'time_periods').insert({ period_id: flaggedPeriodId, tenant: f.tenantId, start_date: '2026-01-19', end_date: '2026-01-26' });
+    await tenantTable(f.tenantId, 'time_sheets').insert({
+      tenant: f.tenantId, id: flaggedSheetId, user_id: f.actor, period_id: flaggedPeriodId,
+      approval_status: 'APPROVED', reversal_reason: 'preserve me', reversed_by: f.subject,
+      reversed_at: flaggedReversedAt,
+    });
+    await tenantTable(f.tenantId, 'time_entries').insert({
+      tenant: f.tenantId, entry_id: flaggedEntryId, user_id: f.actor, time_sheet_id: flaggedSheetId,
+      start_time: new Date().toISOString(), end_time: new Date().toISOString(), work_date: '2026-01-20',
+      work_timezone: 'UTC', approval_status: 'APPROVED', invoiced: true, created_at: db.fn.now(), updated_at: db.fn.now(),
+    });
+    const flaggedSheetBefore = await tenantTable(f.tenantId, 'time_sheets').where({ id: flaggedSheetId }).first();
+    const flaggedEntryBefore = await tenantTable(f.tenantId, 'time_entries').where({ entry_id: flaggedEntryId }).first();
+    const flaggedCommentsBefore = await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: flaggedSheetId }).select('*');
+    const flaggedDenied = await runWithApiKeyUser(actionUser, () => reverseTimeSheetApproval(flaggedSheetId, f.actor, 'must stay unchanged'));
+    expect(flaggedDenied).toMatchObject({ actionError: expect.stringContaining('cannot be reopened') });
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: flaggedSheetId }).first()).toEqual(flaggedSheetBefore);
+    expect(await tenantTable(f.tenantId, 'time_entries').where({ entry_id: flaggedEntryId }).first()).toEqual(flaggedEntryBefore);
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: flaggedSheetId }).select('*')).toEqual(flaggedCommentsBefore);
+
+    const reversalStartedAt = Date.now();
+    const actionResult = await runWithApiKeyUser(actionUser, () => reverseTimeSheetApproval(validSheetId, f.actor, 'current reason'));
+    const reversalFinishedAt = Date.now();
+    expect(actionResult).toBeUndefined();
+    const reversed = await tenantTable(f.tenantId, 'time_sheets').where({ id: validSheetId }).first();
+    expect(reversed).toMatchObject({
+      approval_status: 'CHANGES_REQUESTED', approved_at: null, approved_by: null,
+      reversal_reason: 'current reason', reversed_by: f.actor,
+    });
+    expect(reversed.reversed_at).toBeInstanceOf(Date);
+    expect(reversed.reversed_at.getTime()).toBeGreaterThanOrEqual(reversalStartedAt);
+    expect(reversed.reversed_at.getTime()).toBeLessThanOrEqual(reversalFinishedAt);
+    expect(reversed.reversed_at.getTime()).not.toBe(staleReversedAt.getTime());
+    expect((await tenantTable(f.tenantId, 'time_entries').where({ entry_id: validEntryId }).first()).approval_status).toBe('CHANGES_REQUESTED');
+    expect((await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: validSheetId }).orderBy('created_at').select('comment')))
+      .toEqual([{ comment: 'retained history' }, { comment: 'Approval reversed: current reason' }]);
+
+    // Reapprove the same sheet and reverse it again: structured audit fields describe
+    // the latest reversal while the comment stream retains both events.
+    const secondStaleAt = new Date('2024-01-01T00:00:00Z');
+    await tenantTable(f.tenantId, 'time_sheets').where({ id: validSheetId }).update({
+      approval_status: 'APPROVED', approved_at: secondStaleAt, approved_by: f.subject,
+      reversal_reason: 'prior reversal', reversed_at: secondStaleAt, reversed_by: f.subject,
+    });
+    await tenantTable(f.tenantId, 'time_entries').where({ entry_id: validEntryId }).update({ approval_status: 'APPROVED' });
+    const secondActionResult = await runWithApiKeyUser(actionUser, () => reverseTimeSheetApproval(validSheetId, f.actor, 'latest reason'));
+    expect(secondActionResult).toBeUndefined();
+    const reversedAgain = await tenantTable(f.tenantId, 'time_sheets').where({ id: validSheetId }).first();
+    expect(reversedAgain).toMatchObject({ reversal_reason: 'latest reason', reversed_by: f.actor, approval_status: 'CHANGES_REQUESTED' });
+    expect(reversedAgain.reversed_at).toBeInstanceOf(Date);
+    expect(reversedAgain.reversed_at.getTime()).not.toBe(secondStaleAt.getTime());
+    expect((await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: validSheetId }).orderBy('created_at').select('comment')))
+      .toEqual([
+        { comment: 'retained history' },
+        { comment: 'Approval reversed: current reason' },
+        { comment: 'Approval reversed: latest reason' },
+      ]);
   });
 
   it('bulk route performs approvals and persists approval metadata, entry state, and comment', async () => {
