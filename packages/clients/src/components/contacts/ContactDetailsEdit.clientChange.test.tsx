@@ -70,12 +70,12 @@ const searchClients = vi.fn(async (params?: { ids?: string[] }) => {
   return { clients: rows, total: rows.length };
 });
 
-const renderEdit = () =>
+const renderEdit = (initialContact: any = contact) =>
   render(
     <ClientTagsProvider value={{ fetchClientTags: async () => [], fetchClientTagOptions: async () => [] }}>
       <ClientPickerSearchProvider value={{ searchClients }}>
         <ContactDetailsEdit
-          initialContact={contact}
+          initialContact={initialContact}
           onSave={onSave}
           onCancel={onCancel}
           isInDrawer
@@ -164,15 +164,7 @@ describe('ContactDetailsEdit client change', () => {
   };
 
   it('T029: naming the links a client change would remove, keeping the old client on cancel', async () => {
-    render(
-      <ContactDetailsEdit
-        initialContact={linkedContact}
-        clients={[triage, life, inactive]}
-        onSave={onSave}
-        onCancel={onCancel}
-        isInDrawer
-      />
-    );
+    renderEdit(linkedContact);
 
     await pickLife();
 
@@ -188,15 +180,7 @@ describe('ContactDetailsEdit client change', () => {
   });
 
   it('T029: confirming the change moves the contact and saves with no location links', async () => {
-    render(
-      <ContactDetailsEdit
-        initialContact={linkedContact}
-        clients={[triage, life, inactive]}
-        onSave={onSave}
-        onCancel={onCancel}
-        isInDrawer
-      />
-    );
+    renderEdit(linkedContact);
 
     await pickLife();
 
@@ -219,15 +203,7 @@ describe('ContactDetailsEdit client change', () => {
   });
 
   it('T030: a contact with no links changes client without a confirmation', async () => {
-    render(
-      <ContactDetailsEdit
-        initialContact={contact}
-        clients={[triage, life, inactive]}
-        onSave={onSave}
-        onCancel={onCancel}
-        isInDrawer
-      />
-    );
+    renderEdit();
 
     await pickLife();
 
@@ -242,15 +218,7 @@ describe('ContactDetailsEdit client change', () => {
   it('confirms with the stored count when the contact was opened without its links', async () => {
     hoisted.getContactLocationCount.mockResolvedValue(3);
 
-    render(
-      <ContactDetailsEdit
-        initialContact={contact}
-        clients={[triage, life, inactive]}
-        onSave={onSave}
-        onCancel={onCancel}
-        isInDrawer
-      />
-    );
+    renderEdit();
 
     await pickLife();
 
@@ -260,15 +228,7 @@ describe('ContactDetailsEdit client change', () => {
   it('does not re-ask on a second client change once the links are already dropped', async () => {
     hoisted.getContactLocationCount.mockResolvedValue(3);
 
-    render(
-      <ContactDetailsEdit
-        initialContact={contact}
-        clients={[triage, life, inactive]}
-        onSave={onSave}
-        onCancel={onCancel}
-        isInDrawer
-      />
-    );
+    renderEdit();
 
     await pickLife();
     fireEvent.click(await waitFor(() => {

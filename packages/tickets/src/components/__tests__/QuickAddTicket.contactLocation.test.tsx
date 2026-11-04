@@ -68,6 +68,8 @@ vi.mock('../../actions/clientLookupActions', () => ({
     { location_id: 'head-office', location_name: 'Head office', is_default: true, is_active: true },
   ]),
   getContactEffectiveLocation: (...args: unknown[]) => getContactEffectiveLocationMock(...args),
+  searchClientsForPicker: vi.fn().mockResolvedValue({ clients: [], total: 0 }),
+  getClientById: vi.fn().mockResolvedValue(null),
 }));
 
 vi.mock('@alga-psa/reference-data/actions', () => ({
