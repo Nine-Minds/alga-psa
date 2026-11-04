@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { configureGmailProvider } from '@alga-psa/integrations/actions/email-actions/configureGmailProvider';
+import { requireOutboundEmailAdmin } from '@alga-psa/integrations/actions/email-actions/mspOutboundEmailAccess';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +13,15 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const knex = await getAdminConnection();
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) {
+      const error = access.reason === 'missing_permission'
+        ? `${access.message}. Required permission: ticket_settings:update`
+        : access.message;
+      return NextResponse.json({ error }, { status: 403 });
     }
     
     console.log(`👤 User requesting refresh: ${user.email || 'unknown'}`);
@@ -33,7 +43,6 @@ export async function POST(request: NextRequest) {
     console.log(`🔍 Refreshing Gmail watch for provider: ${providerId}`);
     
     // Get database connection
-    const knex = await getAdminConnection();
     const db = tenantDb(knex, user.tenant);
     
     // Get the email provider and its Google config
