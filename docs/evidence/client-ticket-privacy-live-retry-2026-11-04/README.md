@@ -34,3 +34,16 @@ The older evidence files `portal-login-email-blocker.txt` and `retained-comment-
 ## Review first
 
 Inspect the comment deletion/token-detachment change and its behavioral regression, then the credential-safe current-user action projection and runtime regression. Review the shared-workspace live read-only evidence and fixture cleanup record along with the two security fixes.
+
+## Current-checkout verification at 08:05 UTC
+
+The checkout was at `dd90969d4023c28d9b79f771610e04dae28dde31`. Its only commits after application revision `75acf2e3556473abedcc1d024ccb657a9dad1d6a` are documentation commits; the current uncommitted changes are the pre-existing `package-lock.json` edit and a response-source test fixture update. No application source was changed since the live run. The existing live evidence therefore applies to the same application code, while the following commands were rerun on this checkout:
+
+- Client portal visibility and deletion UI: 39 tests passed.
+- Ticket ownership, author resolution, and comment visibility: 30 tests passed.
+- Current-user credential projection: 2 Vitest project runs passed (one behavioral case in each project).
+- Client portal and tickets package typechecks passed; user-composition `tsc --noEmit` passed.
+- Client portal and tickets Nx builds passed; Nx reused cached outputs for all 51 and 29 tasks respectively.
+- `workflow-ensure-service` confirmed registered `dev-server:3` live and healthy. Port 3456 is owned by PID 1417595; `/proc/1417595/cwd` resolves to this checkout's `server/`. Direct unauthenticated `/auth/signin` returned HTTP 307.
+
+No new implementation defect was found. The live ordinary-permission deletion, token detachment, refreshed conversation, payload privacy, document visibility, non-owner denial, and shared-workspace read-only results remain those recorded above at application revision `75acf2e3`; temporary credentials and fixtures were restored. No other workload or reservation was changed.
