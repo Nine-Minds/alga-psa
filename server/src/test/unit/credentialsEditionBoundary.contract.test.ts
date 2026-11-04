@@ -53,10 +53,9 @@ const ALLOWED_FILES = new Set<string>([
   'packages/clients/src/lib/clientMergePlan.ts',
   'packages/clients/src/lib/clientMergeEngine.test.ts',
 
-  // Behavioral test for an EE-only portable vault implementation. The test
-  // runs in the shared server unit suite but does not make this code reachable
-  // from CE runtime source.
-  'server/src/test/unit/product/coManagedPortableVault.test.ts',
+  // Behavioral test for the EE-only portable vault implementation. Its
+  // fixtures intentionally reference EE credential APIs, outside the CE scan.
+  'ee/server/src/lib/credentials/__tests__/portableVault.test.ts',
 ]);
 
 // Shared lifecycle/admission catalogs describe the combined CE + EE schema.
