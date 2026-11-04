@@ -643,6 +643,39 @@ describe('getAssetDocuments (integration)', () => {
     }
   });
 
+  it('generic creation rechecks asset read scope after the picker selected the asset', async () => {
+    const fx = await seedFixture();
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.userId;
+    actionAuth.userType = 'internal';
+    const documentId = await fx.seedDocument('Owned document selected before asset scope changed.md', fx.userId);
+    const asset = await table(fx.tenantId, 'assets').where({ asset_id: fx.assetId }).first('asset_id', 'client_id');
+
+    await db.transaction(async (trx) => {
+      const context = await createAssetReadContext(trx, fx.tenantId, {
+        user_id: fx.userId,
+        user_type: 'internal',
+      } as any);
+      expect(await isAssetReadAllowed(trx, fx.tenantId, context, asset)).toBe(true);
+    });
+
+    // The user already selected these identifiers while the asset was readable.
+    await setAssetScopes(fx, { read: [fx.outsiderClientId] });
+    await db.transaction(async (trx) => {
+      const context = await createAssetReadContext(trx, fx.tenantId, {
+        user_id: fx.userId,
+        user_type: 'internal',
+      } as any);
+      expect(await isAssetReadAllowed(trx, fx.tenantId, context, asset)).toBe(false);
+    });
+
+    const result = await createDocumentAssociations(fx.assetId, 'asset', [documentId]);
+
+    expect(result).toHaveProperty('permissionError');
+    expect(await table(fx.tenantId, 'document_associations')
+      .where({ entity_id: fx.assetId, entity_type: 'asset', document_id: documentId }).first()).toBeUndefined();
+  });
+
   it('generic creation checks document permission and visibility before inserting any batch row', async () => {
     const fx = await seedFixture();
     actionAuth.tenant = fx.tenantId;
@@ -674,11 +707,13 @@ describe('getAssetDocuments (integration)', () => {
         read: deniedAction === 'read' ? [fx.outsiderClientId] : [fx.clientId],
         delete: deniedAction === 'delete' ? [fx.outsiderClientId] : [fx.clientId],
       });
+      const associationBefore = await table(fx.tenantId, 'document_associations')
+        .where({ association_id: fx.associationId }).first();
 
       const result = await removeDocumentAssociations(fx.assetId, 'asset', [fx.documentId]);
 
       expect(result).toHaveProperty('permissionError');
-      expect(await table(fx.tenantId, 'document_associations').where({ association_id: fx.associationId }).first()).toBeDefined();
+      expect(await table(fx.tenantId, 'document_associations').where({ association_id: fx.associationId }).first()).toEqual(associationBefore);
     }
   });
 
