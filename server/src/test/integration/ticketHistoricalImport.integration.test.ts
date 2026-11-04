@@ -48,7 +48,19 @@ vi.mock('@/lib/db/db', async (importOriginal) => {
 });
 
 import { TicketService } from '../../lib/api/services/TicketService';
-import { ValidationError } from '../../lib/api/middleware/apiMiddleware';
+import { ForbiddenError, NotFoundError, ValidationError } from '../../lib/api/middleware/apiMiddleware';
+
+async function grantHistoricalWritePermissions(db: Knex, tenant: string, userId: string) {
+  const table = (name: string) => tenantDb(db, tenant).table(name);
+  const roleId = uuidv4();
+  await table('roles').insert({ tenant, role_id: roleId, role_name: 'History importer', msp: true, client: false });
+  await table('user_roles').insert({ tenant, user_id: userId, role_id: roleId });
+  for (const action of ['create', 'update']) {
+    const permissionId = uuidv4();
+    await table('permissions').insert({ tenant, permission_id: permissionId, resource: 'ticket', action, msp: true, client: false });
+    await table('role_permissions').insert({ tenant, role_id: roleId, permission_id: permissionId });
+  }
+}
 
 describe('historical ticket import via TicketService (integration)', () => {
   const HOOK_TIMEOUT = 180_000;
@@ -62,7 +74,7 @@ describe('historical ticket import via TicketService (integration)', () => {
   let priorityId: string;
   let service: TicketService;
   const table = (name: string) => tenantDb(db, tenantId).table(name);
-  const ctx = () => ({ tenant: tenantId, userId, user: { user_id: userId, user_type: 'internal' } }) as any;
+  const ctx = () => ({ tenant: tenantId, userId, user: { tenant: tenantId, user_id: userId, user_type: 'internal' } }) as any;
   const body = (extra: Record<string, unknown> = {}) => ({
     title: 'Imported ticket',
     client_id: clientId,
@@ -79,6 +91,7 @@ describe('historical ticket import via TicketService (integration)', () => {
     tenantId = await createTenant(db, 'Historical Import Tenant');
     clientId = await createClient(db, tenantId, 'Historical Import Client');
     userId = await createUser(db, tenantId, { first_name: 'Ida', last_name: 'Import', user_type: 'internal' });
+    await grantHistoricalWritePermissions(db, tenantId, userId);
     boardId = uuidv4();
     await table('boards').insert({ tenant: tenantId, board_id: boardId, board_name: 'Hist Board' });
     openStatusId = uuidv4();
@@ -103,6 +116,80 @@ describe('historical ticket import via TicketService (integration)', () => {
 
   beforeEach(() => {
     state.published.length = 0;
+  });
+
+  it('persists an entered_at correction with an offset and returns it without live update events or SLA', async () => {
+    const ticket = await service.create(body({ entered_at: '2025-03-14T09:30:00Z' }), ctx());
+    state.published.length = 0;
+    const result = await service.update(ticket.ticket_id, { entered_at: '2024-01-01T08:00:00-05:00' }, ctx());
+    const stored = await table('tickets').where({ ticket_id: ticket.ticket_id }).first();
+    expect(new Date(result.entered_at!).toISOString()).toBe('2024-01-01T13:00:00.000Z');
+    expect(new Date(stored.entered_at).toISOString()).toBe('2024-01-01T13:00:00.000Z');
+    expect(stored.sla_started_at).toBeNull();
+    expect(eventTypes()).not.toContain('TICKET_UPDATED');
+  });
+
+  it('preserves normal update events when a date correction also changes a live ticket field', async () => {
+    const ticket = await service.create(body({ entered_at: '2025-03-14T09:30:00Z' }), ctx());
+    state.published.length = 0;
+    const result = await service.update(ticket.ticket_id, { entered_at: '2024-01-01T00:00:00Z', title: 'Corrected title' }, ctx());
+    expect(result.title).toBe('Corrected title');
+    expect(new Date(result.entered_at!).toISOString()).toBe('2024-01-01T00:00:00.000Z');
+    expect(eventTypes()).toContain('TICKET_UPDATED');
+  });
+
+  it.each(['yesterday', '2025-02-30T09:30:00Z', '2999-01-01T00:00:00Z', 0, null])(
+    'rejects invalid update/comment timestamps %s without persisting them', async (timestamp) => {
+      const ticket = await service.create(body({ entered_at: '2025-03-14T09:30:00Z' }), ctx());
+      await expect(service.update(ticket.ticket_id, { entered_at: timestamp } as any, ctx()))
+        .rejects.toMatchObject({ statusCode: 400, details: expect.arrayContaining([expect.objectContaining({ path: ['entered_at'] })]) });
+      await expect(service.addComment(ticket.ticket_id, { comment_text: 'invalid history', created_at: timestamp } as any, ctx()))
+        .rejects.toMatchObject({ statusCode: 400, details: expect.arrayContaining([expect.objectContaining({ path: ['created_at'] })]) });
+      const stored = await table('tickets').where({ ticket_id: ticket.ticket_id }).first();
+      expect(new Date(stored.entered_at).toISOString()).toBe('2025-03-14T09:30:00.000Z');
+      expect(await table('comments').where({ ticket_id: ticket.ticket_id })).toHaveLength(0);
+    },
+  );
+
+  it.each(['client', 'unprivileged', 'missing'])(
+    'denies historical create/update/comment for a %s caller without writing', async (caller) => {
+      const ticket = await service.create(body({ entered_at: '2025-03-14T09:30:00Z' }), ctx());
+      const callerId = await createUser(db, tenantId, { user_type: caller === 'client' ? 'client' : 'internal' });
+      const context = { tenant: tenantId, userId: callerId, user: caller === 'missing' ? undefined
+        : { user_id: callerId, tenant: tenantId, user_type: caller === 'client' ? 'client' : 'internal' } } as any;
+      const before = await table('tickets').count('* as count').first();
+      await expect(service.create(body({ entered_at: '2024-01-01T00:00:00Z' }), context)).rejects.toBeInstanceOf(ForbiddenError);
+      await expect(service.update(ticket.ticket_id, { entered_at: '2024-01-01T00:00:00Z' }, context)).rejects.toBeInstanceOf(ForbiddenError);
+      await expect(service.addComment(ticket.ticket_id, { comment_text: 'history', created_at: '2025-04-01T00:00:00Z' } as any, context))
+        .rejects.toBeInstanceOf(ForbiddenError);
+      expect((await table('tickets').count('* as count').first())?.count).toBe(before?.count);
+      expect(await table('comments').where({ ticket_id: ticket.ticket_id })).toHaveLength(0);
+      expect(new Date((await table('tickets').where({ ticket_id: ticket.ticket_id }).first()).entered_at).toISOString())
+        .toBe('2025-03-14T09:30:00.000Z');
+    },
+  );
+
+  it('keeps historical writes tenant-scoped even for an authorized importer in another tenant', async () => {
+    const ticket = await service.create(body({ entered_at: '2025-03-14T09:30:00Z' }), ctx());
+    const foreignTenant = await createTenant(db, 'Other historical import tenant');
+    const foreignUser = await createUser(db, foreignTenant);
+    await grantHistoricalWritePermissions(db, foreignTenant, foreignUser);
+    const context = { tenant: foreignTenant, userId: foreignUser, user: { tenant: foreignTenant, user_id: foreignUser, user_type: 'internal' } } as any;
+    await expect(service.update(ticket.ticket_id, { entered_at: '2024-01-01T00:00:00Z' }, context)).rejects.toBeInstanceOf(NotFoundError);
+    await expect(service.addComment(ticket.ticket_id, { comment_text: 'foreign history', created_at: '2025-04-01T00:00:00Z' } as any, context))
+      .rejects.toBeInstanceOf(NotFoundError);
+    await expect(service.create(body({ entered_at: '2024-01-01T00:00:00Z' }), context)).rejects.toBeInstanceOf(ValidationError);
+    expect(new Date((await table('tickets').where({ ticket_id: ticket.ticket_id }).first()).entered_at).toISOString())
+      .toBe('2025-03-14T09:30:00.000Z');
+    expect(await table('comments').where({ ticket_id: ticket.ticket_id })).toHaveLength(0);
+  });
+
+  it('rejects an entered_at correction after an existing comment or closure', async () => {
+    const ticket = await service.create(body({ entered_at: '2025-03-14T09:30:00Z' }), ctx());
+    await service.addComment(ticket.ticket_id, { comment_text: 'history', created_at: '2025-04-01T00:00:00Z' } as any, ctx());
+    await expect(service.update(ticket.ticket_id, { entered_at: '2025-05-01T00:00:00Z' }, ctx())).rejects.toBeInstanceOf(ValidationError);
+    const closed = await service.create(body({ status_id: closedStatusId, entered_at: '2025-03-14T09:30:00Z', closed_at: '2025-04-01T00:00:00Z' }), ctx());
+    await expect(service.update(closed.ticket_id, { entered_at: '2025-05-01T00:00:00Z' }, ctx())).rejects.toBeInstanceOf(ValidationError);
   });
 
   it('keeps a past entered_at, starts no SLA, and publishes no TICKET_CREATED', async () => {
@@ -162,7 +249,7 @@ describe('historical ticket import via TicketService (integration)', () => {
 
     const c1 = await service.addComment(
       ticket.ticket_id,
-      { comment_text: 'first', is_internal: false, created_at: '2025-03-15T10:00:00Z' } as any,
+      { comment_text: 'first', is_internal: false, created_at: '2025-03-15T05:00:00-05:00' } as any,
       ctx(),
     );
     const c2 = await service.addComment(
@@ -173,6 +260,9 @@ describe('historical ticket import via TicketService (integration)', () => {
     const rows = await table('comments').where({ ticket_id: ticket.ticket_id }).orderBy('created_at', 'asc');
     expect(rows.map((r: any) => r.comment_id)).toEqual([c1.comment_id, c2.comment_id]);
     expect(new Date(rows[0].created_at).toISOString()).toBe('2025-03-15T10:00:00.000Z');
+    expect(new Date(c1.created_at).toISOString()).toBe('2025-03-15T10:00:00.000Z');
+    const thread = await table('comment_threads').where({ thread_id: c1.thread_id }).first();
+    expect(new Date(thread.created_at).toISOString()).toBe('2025-03-15T10:00:00.000Z');
     expect(eventTypes()).not.toContain('TICKET_COMMENT_ADDED');
     // The publication intent lives on the comment row; a historical comment never gets one.
     for (const r of rows) {

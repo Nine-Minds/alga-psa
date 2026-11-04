@@ -42,6 +42,11 @@ function validateTicketNotificationSuppression(
 /** ISO 8601 datetime with an explicit offset (`Z` or `+hh:mm`); date-only values are rejected. */
 const offsetDatetimeSchema = z.string().datetime({ offset: true });
 
+export const historicalTimestampSchema = offsetDatetimeSchema.refine(
+  (value) => Date.parse(value) <= Date.now(),
+  'Timestamp must not be in the future',
+);
+
 /** Historical timestamps may not be in the future; compared against the clock at parse time. */
 function addIfFuture(value: unknown, path: string, ctx: z.RefinementCtx): void {
   if (typeof value !== 'string') return;
@@ -151,10 +156,10 @@ export const createTicketFieldsSchema = z.object({
   attributes: ticketAttributesSchema,
   tags: z.array(z.string()).optional(),
   external_links: inlineTicketExternalLinksSchema,
-  // Historical import (create-only). Supplying `entered_at` marks the ticket as a
+  // On creation, supplying `entered_at` marks the ticket as a
   // historical record: created silently, no SLA, no notifications, webhooks or
   // workflows. `closed_at` / `closed_by` describe a ticket imported already closed.
-  entered_at: offsetDatetimeSchema.optional(),
+  entered_at: historicalTimestampSchema.optional(),
   closed_at: offsetDatetimeSchema.optional(),
   closed_by: uuidSchema.optional(),
   // Create silently: no customer-facing ticket-created email (which otherwise
@@ -170,7 +175,6 @@ function validateHistoricalTicketFields(
   value: { entered_at?: string; closed_at?: string; closed_by?: string },
   ctx: z.RefinementCtx,
 ): void {
-  addIfFuture(value.entered_at, 'entered_at', ctx);
   addIfFuture(value.closed_at, 'closed_at', ctx);
   if (!value.entered_at) {
     for (const field of ['closed_at', 'closed_by'] as const) {
@@ -203,8 +207,7 @@ export const updateTicketSchema = createUpdateSchema(
     severity_id: true,
     urgency_id: true,
     impact_id: true,
-    // Historical import dates are create-only.
-    entered_at: true,
+    // Closure fields remain specific to historical create and status updates.
     closed_at: true,
     closed_by: true,
   })
@@ -490,7 +493,6 @@ function validateHistoricalComment(
   ctx: z.RefinementCtx,
 ): void {
   if (value.created_at === undefined) return;
-  addIfFuture(value.created_at, 'created_at', ctx);
   const conflicts: Array<[string, unknown]> = [
     ['scheduled_publish_at', value.scheduled_publish_at],
     ['scheduled_publish_tz', value.scheduled_publish_tz],
@@ -531,7 +533,7 @@ export const createTicketCommentSchema = z.object({
   bcc: z.array(z.string().email()).max(MAX_TICKET_COMMENT_EMAIL_RECIPIENTS).optional(),
   // Historical import: stores the comment with this timestamp and publishes nothing
   // (no notifications, webhooks, workflows or SLA first response).
-  created_at: offsetDatetimeSchema.optional(),
+  created_at: historicalTimestampSchema.optional(),
   ...ticketNotificationSuppressionSchema,
 })
   .superRefine(validateTicketNotificationSuppression)

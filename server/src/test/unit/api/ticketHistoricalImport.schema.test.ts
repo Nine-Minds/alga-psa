@@ -126,8 +126,8 @@ describe('historical import schemas (alga-2026-0002678)', () => {
     });
   });
 
-  describe('updateTicketSchema (create-only fields)', () => {
-    it('strips entered_at, closed_at and closed_by', () => {
+  describe('updateTicketSchema', () => {
+    it('keeps entered_at while closure fields remain specific to the status endpoint', () => {
       const parsed = updateTicketSchema.parse({
         title: 'Renamed',
         entered_at: '2026-01-01T00:00:00Z',
@@ -135,10 +135,18 @@ describe('historical import schemas (alga-2026-0002678)', () => {
         closed_by: UUID.user,
       }) as Record<string, unknown>;
       expect(parsed.title).toBe('Renamed');
-      expect(parsed).not.toHaveProperty('entered_at');
+      expect(parsed.entered_at).toBe('2026-01-01T00:00:00Z');
       expect(parsed).not.toHaveProperty('closed_at');
       expect(parsed).not.toHaveProperty('closed_by');
     });
+
+    it.each(['2026-01-01', '2026-02-30T00:00:00Z', 'not-a-date', '2026-10-13T00:00:00Z', 0, null])(
+      'rejects invalid entered_at %s instead of stripping or coercing it', (entered_at) => {
+        const result = updateTicketSchema.safeParse({ entered_at });
+        expect(result.success).toBe(false);
+        if (!result.success) expect(result.error.issues[0].path).toEqual(['entered_at']);
+      },
+    );
   });
 
   describe('updateTicketStatusSchema.closed_at', () => {

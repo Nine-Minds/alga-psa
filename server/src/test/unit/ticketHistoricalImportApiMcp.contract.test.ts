@@ -35,6 +35,10 @@ describe('historical ticket import in generated API and MCP artifacts', () => {
     const comment = spec.paths?.['/api/v1/tickets/{id}/comments']?.post;
     const commentSchema = resolveOpenApiSchema(spec, comment?.requestBody?.content?.['application/json']?.schema);
     expect(commentSchema?.properties?.created_at, 'POST comments created_at').toBeTruthy();
+
+    const update = spec.paths?.['/api/v1/tickets/{id}']?.put;
+    const updateSchema = resolveOpenApiSchema(spec, update?.requestBody?.content?.['application/json']?.schema);
+    expect(updateSchema?.properties?.entered_at, 'PUT ticket entered_at').toMatchObject({ type: 'string', format: 'date-time' });
   });
 
   it.each([
@@ -50,5 +54,8 @@ describe('historical ticket import in generated API and MCP artifacts', () => {
 
     const comment = registry.find((e) => e.method === 'post' && e.path === '/api/v1/tickets/{id}/comments');
     expect(comment?.requestBodySchema?.properties?.created_at).toBeTruthy();
+
+    const update = registry.find((e) => e.method === 'put' && e.path === '/api/v1/tickets/{id}');
+    expect(update?.requestBodySchema?.properties?.entered_at).toMatchObject({ type: 'string', format: 'date-time' });
   });
 });

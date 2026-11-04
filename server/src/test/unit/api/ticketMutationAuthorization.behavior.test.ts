@@ -146,6 +146,30 @@ describe('ticket mutations are authorized against update/delete scope, not read'
     expect(state.seenActions).toContain('update');
   });
 
+  it('forwards explicit historical timestamps through PUT and comment POST', async () => {
+    const entered_at = '2024-01-01T08:00:00-05:00';
+    const created_at = '2024-01-02T08:00:00-05:00';
+    expect((await PUT(req('PUT', '', { entered_at }), ctx as any)).status).toBe(200);
+    expect(svc.update).toHaveBeenCalledWith(TICKET, { entered_at }, expect.anything());
+    expect((await commentPOST(req('POST', '/comments', { comment_text: 'history', created_at }), ctx as any)).status).toBe(201);
+    expect(svc.addComment).toHaveBeenCalledWith(TICKET, expect.objectContaining({ created_at }), expect.anything());
+  });
+
+  it.each(['yesterday', '2999-01-01T00:00:00Z', null])('returns 400 for invalid timestamps %s without calling the service', async (timestamp) => {
+    expect((await PUT(req('PUT', '', { entered_at: timestamp }), ctx as any)).status).toBe(400);
+    expect((await commentPOST(req('POST', '/comments', { comment_text: 'history', created_at: timestamp }), ctx as any)).status).toBe(400);
+    expect(svc.update).not.toHaveBeenCalled();
+    expect(svc.addComment).not.toHaveBeenCalled();
+  });
+
+  it('denies explicit historical writes when the ticket is outside update scope', async () => {
+    state.deniedActions = new Set(['update']);
+    expect((await PUT(req('PUT', '', { entered_at: '2024-01-01T00:00:00Z' }), ctx as any)).status).toBe(403);
+    expect((await commentPOST(req('POST', '/comments', { comment_text: 'history', created_at: '2024-01-02T00:00:00Z' }), ctx as any)).status).toBe(403);
+    expect(svc.update).not.toHaveBeenCalled();
+    expect(svc.addComment).not.toHaveBeenCalled();
+  });
+
   it('with no update rule at all the PUT and DELETE stay allowed (default unchanged)', async () => {
     expect((await PUT(req('PUT', '', { title: 'x' }), ctx as any)).status).toBe(200);
     expect((await DELETE(req('DELETE'), ctx as any)).status).toBe(204);

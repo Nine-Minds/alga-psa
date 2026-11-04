@@ -17016,12 +17016,12 @@ components:
         entered_at:
           type: string
           format: date-time
-          description: "Historical import (create-only). ISO 8601 datetime with an offset,
-            not in the future. Supplying it stores the ticket with this open
-            date and marks it a historical record: created silently with
-            source=api_import, no SLA clock, no TICKET_CREATED, and no
-            notifications, webhooks or workflows. MSP (internal) users only.
-            Cannot be changed afterwards."
+          description: "Historical import. ISO 8601 datetime with an offset, not in the
+            future. Supplying it stores the ticket with this open date and marks
+            it a historical record: created silently with source=api_import, no
+            SLA clock, no TICKET_CREATED, and no notifications, webhooks or
+            workflows. Requires an internal MSP user with ticket:create
+            permission."
         closed_at:
           type: string
           format: date-time
@@ -17051,6 +17051,13 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+        entered_at:
+          type: string
+          format: date-time
+          description: Correct the ticket open date. Requires an internal MSP user with
+            ticket:update permission. Must not be in the future or after the
+            ticket closure or earliest comment. A date-only correction does not
+            publish TICKET_UPDATED or start SLA timers.
         url:
           type: string
           format: uri
@@ -17226,13 +17233,14 @@ components:
         created_at:
           type: string
           format: date-time
-          description: "Historical import. ISO 8601 datetime with an offset (date-only is
-            rejected), not in the future and not before the ticket's entered_at
-            (a reply: not before its parent comment). The comment is stored with
-            this timestamp and is silent: no TICKET_COMMENT_ADDED, no
-            notifications, webhooks, workflows, SLA first response or
-            response-state change. Cannot be combined with scheduled_publish_at,
-            scheduled_publish_tz, cc or bcc."
+          description: "Historical import. Requires an internal MSP user with
+            ticket:update permission. ISO 8601 datetime with an offset
+            (date-only is rejected), not in the future and not before the
+            ticket's entered_at (a reply: not before its parent comment). The
+            comment is stored with this timestamp and is silent: no
+            TICKET_COMMENT_ADDED, no notifications, webhooks, workflows, SLA
+            first response or response-state change. Cannot be combined with
+            scheduled_publish_at, scheduled_publish_tz, cc or bcc."
         suppressContactNotifications:
           type: boolean
           description: When true, suppresses customer-facing email and portal

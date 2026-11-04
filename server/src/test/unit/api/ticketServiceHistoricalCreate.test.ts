@@ -34,6 +34,8 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   };
 });
 
+vi.mock('../../../lib/auth/rbac', () => ({ hasPermission: vi.fn(async () => true) }));
+
 vi.mock('@alga-psa/tickets/actions/externalLinks/externalLinkPersistence', () => ({
   persistExternalLinksForCreate: vi.fn(async () => [{ link_id: 'link-1' }]),
   publishExternalLinkEvent: vi.fn(async () => undefined),
@@ -53,6 +55,7 @@ import { TicketService } from '../../../lib/api/services/TicketService';
 import { TicketModel } from '@shared/models/ticketModel';
 import { ForbiddenError, ValidationError } from '../../../lib/api/middleware/apiMiddleware';
 import { publishExternalLinkEvent } from '@alga-psa/tickets/actions/externalLinks/externalLinkPersistence';
+import { hasPermission } from '../../../lib/auth/rbac';
 
 const requestBody = (extra: Record<string, unknown> = {}) =>
   ({
@@ -73,6 +76,7 @@ describe('TicketService.create historical import', () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.mocked(hasPermission).mockResolvedValue(true);
     h.writeTicketActivity.mockClear();
     h.audit.mockClear();
     vi.mocked(publishExternalLinkEvent).mockClear();
@@ -167,6 +171,25 @@ describe('TicketService.create historical import', () => {
     ).rejects.toBeInstanceOf(ForbiddenError);
     expect(createSpy).not.toHaveBeenCalled();
   });
+
+  it('denies historical creation to an internal caller without ticket:create', async () => {
+    vi.mocked(hasPermission).mockResolvedValue(false);
+    await expect(service.create(requestBody({ entered_at: '2025-03-14T09:30:00Z' }), internalContext))
+      .rejects.toBeInstanceOf(ForbiddenError);
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(hasPermission).toHaveBeenCalledWith(
+      expect.objectContaining({ tenant: h.tenant }), 'ticket', 'create', expect.anything(),
+    );
+  });
+
+  it.each(['2025-02-30T09:30:00Z', 'yesterday', '2999-01-01T00:00:00Z', 0, null])(
+    'rejects invalid entered_at %s at the service boundary without creating a record', async (entered_at) => {
+      await expect(service.create(requestBody({ entered_at }), internalContext)).rejects.toMatchObject({
+        statusCode: 400, details: expect.arrayContaining([expect.objectContaining({ path: ['entered_at'] })]),
+      });
+      expect(createSpy).not.toHaveBeenCalled();
+    },
+  );
 
   it('maps a model historical invariant error to a 400 with the field path', async () => {
     createSpy.mockRejectedValue(

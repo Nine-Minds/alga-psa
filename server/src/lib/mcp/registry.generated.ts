@@ -46534,7 +46534,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets",
     "displayName": "Create Ticket",
     "summary": "Create a new ticket",
-    "description": "Creates a new ticket on a specified board with the desired status and priority. Requires ticket create permission. IMPORTANT: status_id must belong to board_id. HISTORICAL IMPORT: send entered_at (ISO 8601 with offset, not in the future) to create a silent source=api_import record with no SLA clock, TICKET_CREATED, notifications, webhooks or workflows. For already-closed history, use a closed status and closed_at (entered_at <= closed_at <= now), optionally closed_by; no TICKET_CLOSED fires. Then create comments with created_at after their ticket and parent. Historical dates are create-only and require an internal (MSP) user. Notification suppression fields also apply to live creates; suppressed live creations retain their normal audit, workflow and webhook behavior.",
+    "description": "Creates a new ticket on a specified board with the desired status and priority. Requires ticket create permission. IMPORTANT: status_id must belong to board_id. HISTORICAL IMPORT: send entered_at (ISO 8601 with offset, not in the future) to create a silent source=api_import record with no SLA clock, TICKET_CREATED, notifications, webhooks or workflows. For already-closed history, use a closed status and closed_at (entered_at <= closed_at <= now), optionally closed_by; no TICKET_CLOSED fires. Then create comments with created_at after their ticket and parent. Historical dates require an internal (MSP) user with the corresponding ticket create/update permission. Use PUT /tickets/{id} with entered_at to correct an existing open date. Notification suppression fields also apply to live creates; suppressed live creations retain their normal audit, workflow and webhook behavior.",
     "tags": [
       "Work Management v1"
     ],
@@ -46678,7 +46678,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "entered_at": {
           "type": "string",
           "format": "date-time",
-          "description": "Historical import. ISO 8601 datetime with offset; not in the future. Stores the ticket with this open date and marks it historical: silent, source=api_import, no SLA clock, TICKET_CREATED, notifications, webhooks or workflows. Internal (MSP) users only. Create-only."
+          "description": "Historical import. ISO 8601 datetime with offset; not in the future. Stores the ticket with this open date and marks it historical: silent, source=api_import, no SLA clock, TICKET_CREATED, notifications, webhooks or workflows. Requires an internal MSP user with ticket:create permission."
         },
         "closed_at": {
           "type": "string",
@@ -47188,6 +47188,11 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 255
         },
+        "entered_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Correct the ticket open date. ISO 8601 datetime with an offset; requires an internal MSP user with ticket:update permission. Must not be in the future or after closure or the earliest comment. A date-only correction does not publish TICKET_UPDATED or start SLA timers."
+        },
         "url": {
           "type": "string",
           "format": "uri"
@@ -47666,7 +47671,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "created_at": {
           "type": "string",
           "format": "date-time",
-          "description": "Historical import. ISO 8601 datetime with an offset (date-only is rejected), not in the future, and not before the ticket's entered_at (for a reply, not before the parent comment). The comment is stored with this timestamp and is silent: no TICKET_COMMENT_ADDED, notifications, webhooks, workflows, SLA first response or response-state change. Cannot be combined with scheduled_publish_at, scheduled_publish_tz, cc or bcc."
+          "description": "Historical import. Requires an internal MSP user with ticket:update permission. ISO 8601 datetime with an offset (date-only is rejected), not in the future, and not before the ticket's entered_at (for a reply, not before the parent comment). The comment is stored with this timestamp and is silent: no TICKET_COMMENT_ADDED, notifications, webhooks, workflows, SLA first response or response-state change. Cannot be combined with scheduled_publish_at, scheduled_publish_tz, cc or bcc."
         }
       },
       "required": [

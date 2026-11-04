@@ -122,7 +122,7 @@ The format and future checks belong in the zod schemas. The cross-row checks (ag
 - This matches the in-app CSV import, which lets any `ticket:create` holder backdate today. A dedicated permission on the API alone would gate one door and leave the other open.
 - If a dedicated permission is wanted, it should cover both doors. See the open question in §6.
 
-**D7. Create-only.** `entered_at` and `closed_at` are omitted from `updateTicketSchema`, the same way `external_links` already is (`schemas/ticket.ts:146-151`). Correcting dates on already-created tickets is not in scope; tickets that need it can be deleted and reimported.
+**D7. Date correction (amended 2026-11-04).** `PUT /tickets/{id}` accepts `entered_at` so existing imports can have their open dates corrected. The value must be an offset ISO datetime, no later than now, the ticket closure or its earliest comment. Historical timestamp writes require an internal MSP user with the corresponding `ticket:create` or `ticket:update` permission; the service enforces this in addition to controller authorization. A date-only correction does not publish `TICKET_UPDATED` or change SLA state. `closed_at` and `closed_by` remain excluded from generic updates.
 
 **D8. Layering: the model owns historical creation, not the service or the CSV action.**
 - `CreateTicketInput` gains one explicit key:
@@ -192,7 +192,7 @@ The format and future checks belong in the zod schemas. The cross-row checks (ag
    - `server/src/lib/api/openapi/routes/workManagementV1.ts`:
      - add `entered_at`, `closed_at` and `closed_by` to `WorkV1CreateTicketBody` (`:138-161`)
      - add `created_at` to `WorkV1TicketCommentCreateBody` (`:221-238`)
-     - each description states the historical-import semantics: silent, no SLA, no notifications or webhooks or workflows; create-only; not in the future; ordering rules
+     - each description states the historical-import semantics: silent historical creates/comments, permission requirements, date correction on update, not in the future, and ordering rules
      - note on `WorkV1TicketStatusUpdateBody.closed_at` (`:194-208`) that it is now honored when closing
    - `ee/docs/api-registry/tickets.json`: make the same additions to the POST `/api/v1/tickets` override (~`:455-528`) and the POST comments override (~`:667-741`). These overrides replace the OpenAPI body in the MCP registry (`ee/scripts/generate-chat-registry.mjs:308`), so skipping this file leaves MCP blind to the fields. Add a short import recipe to the ticket create description: create with `entered_at` (and `closed_at` for closed history), then add comments with `created_at`.
    - Regenerate:
@@ -224,7 +224,7 @@ Unit and contract tests live in `server/src/test/unit/api/` unless noted.
 - a future `entered_at` is rejected
 - `closed_at` without `entered_at` is rejected
 - `closed_at < entered_at` is rejected
-- the update schema strips or rejects `entered_at`
+- the update schema accepts a valid `entered_at` and rejects malformed or future values
 - comment `created_at`: format, not in the future, and rejected together with `scheduled_publish_at` or `cc`
 
 **Model** (unit, alongside the existing `buildTicketCreateRow` coverage):
@@ -266,7 +266,7 @@ Unit and contract tests live in `server/src/test/unit/api/` unless noted.
 - **Silent stripping of unknown keys** on create schemas (the root of the reporter's confusion). Follow-up: make the create schemas `.strict()`, or return a `warnings: ["ignored field: x"]` envelope.
 - **Comment author attribution for imports.** Historical comments are attributed to the API user (`author_type` internal), so customer-authored history shows as staff comments. Fully faithful history needs a create-time author override (`contact_id` / `user_id`, internal-only, historical-only).
 - **Response state of imported open tickets** stays null because historical comments don't drive it. If wanted, a post-import "recompute response state from the last public comment" endpoint would do it.
-- **Correcting dates on existing tickets** (PUT `entered_at`). Excluded by D7.
+- **Correcting dates on existing tickets** (PUT `entered_at`) is covered by the amended D7.
 - **The CSV import writes `ticket_origin: 'INTERNAL'`** (uppercase) against `TICKET_ORIGINS.INTERNAL = 'internal'` (`ticketImportActions.ts:786`). This is a separate small bug, noticed during research.
 - **Tickets created in a closed status through the non-historical path** keep `is_closed = false` (closed fields are excluded at create). This is pre-existing and unchanged here.
 - **EE Temporal SLA workflow ignores `sla_started_at`** (`sla-ticket-workflow.ts:152`). Imports never start SLA, so this is irrelevant here, but it is a real drift for any ticket whose `entered_at` precedes the subscriber run.

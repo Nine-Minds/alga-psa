@@ -110,6 +110,7 @@ import {
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 // Event types no longer needed as we create objects directly
 import {
+  historicalTimestampSchema,
   CreateTicketData,
   UpdateTicketData,
   TicketFilterData,
@@ -325,6 +326,28 @@ function tenantScopedTable(
   tenant: string
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table);
+}
+
+/** Historical timestamps require the same MSP permission as the owning API write. */
+async function validateHistoricalTimestampWrite(
+  field: 'entered_at' | 'created_at',
+  value: unknown,
+  action: 'create' | 'update',
+  context: ServiceContext,
+  knex: Knex,
+): Promise<string> {
+  const user = context.user ? { ...context.user, tenant: context.tenant } : null;
+  if (user?.user_type !== 'internal'
+    || !(await hasPermission(user, 'ticket', action, knex))) {
+    throw new ForbiddenError(`Historical ${field} requires an internal user with ticket:${action} permission`);
+  }
+  const parsed = historicalTimestampSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new ValidationError('Validation failed', parsed.error.issues.map((issue) => ({
+      ...issue, path: [field, ...issue.path],
+    })));
+  }
+  return parsed.data;
 }
 
 export type BundleMode = 'link_only' | 'sync_updates';
@@ -1716,6 +1739,10 @@ export class TicketService extends BaseService<ITicket> {
       const { suppressContactNotifications, suppressInternalNotifications } =
         resolveTicketNotificationSuppression(data);
 
+      if (isHistorical) {
+        await validateHistoricalTimestampWrite('entered_at', data.entered_at, 'create', context, knex);
+      }
+
       const { fullTicket, externalLinks } = await withTransaction(knex, async (trx) => {
         // Validate status belongs to the specified board before proceeding
         const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
@@ -1903,6 +1930,8 @@ export class TicketService extends BaseService<ITicket> {
    */
   async update(id: string, data: UpdateTicketData, context: ServiceContext, options: { honorSuppliedClosure?: boolean } = {}): Promise<ITicket> {
     const { knex } = await this.getKnex();
+    const enteredAt = data.entered_at === undefined ? undefined
+      : await validateHistoricalTimestampWrite('entered_at', data.entered_at, 'update', context, knex);
 
     return withTransaction(knex, async (trx) => {
       // Get current ticket for event comparison
@@ -1916,6 +1945,19 @@ export class TicketService extends BaseService<ITicket> {
 
       if (!currentTicket) {
         throw new NotFoundError('Ticket not found');
+      }
+
+      if (enteredAt !== undefined) {
+        // Preserve the chronology enforced when historical comments and closes are created.
+        const firstComment = await tenantScopedTable(trx, 'comments', context.tenant)
+          .where({ ticket_id: id }).orderBy('created_at', 'asc').first('created_at');
+        const enteredTime = Date.parse(enteredAt);
+        if ((currentTicket.closed_at && enteredTime > new Date(currentTicket.closed_at).getTime())
+          || (firstComment && enteredTime > new Date(firstComment.created_at).getTime())) {
+          throw new ValidationError('Validation failed', [
+            { path: ['entered_at'], message: 'entered_at must not be after the ticket closure or its earliest comment' },
+          ]);
+        }
       }
 
       // Remove undefined values from data object
@@ -2118,10 +2160,11 @@ export class TicketService extends BaseService<ITicket> {
             ? (cleanedData as { closed_by?: string }).closed_by
             : undefined;
           closedAt = suppliedClosedAt ? new Date(suppliedClosedAt) : new Date();
+          const effectiveEnteredAt = enteredAt ?? currentTicket.entered_at;
           if (
             suppliedClosedAt
-            && currentTicket.entered_at
-            && closedAt.getTime() < new Date(currentTicket.entered_at).getTime()
+            && effectiveEnteredAt
+            && closedAt.getTime() < new Date(effectiveEnteredAt).getTime()
           ) {
             throw new ValidationError('Validation failed', [
               { path: ['closed_at'], message: 'closed_at must not be before the ticket entered_at' },
@@ -2297,13 +2340,16 @@ export class TicketService extends BaseService<ITicket> {
         }
       }
 
-      await this.safePublishEvent('TICKET_UPDATED', context, buildTicketUpdatedPayload({
-        ticketId: ticket.ticket_id,
-        updatedByUserId: context.userId,
-        changes: structuredChanges,
-        suppressContactNotifications,
-        suppressInternalNotifications,
-      }));
+      // A date-only correction is historical bookkeeping, not a live ticket update.
+      if (enteredAt === undefined || Object.keys(cleanedData).some((field) => field !== 'entered_at')) {
+        await this.safePublishEvent('TICKET_UPDATED', context, buildTicketUpdatedPayload({
+          ticketId: ticket.ticket_id,
+          updatedByUserId: context.userId,
+          changes: structuredChanges,
+          suppressContactNotifications,
+          suppressInternalNotifications,
+        }));
+      }
 
       // Activity-timeline row for REST API updates. Uses curated diff so
       // only user-meaningful field changes produce a timeline entry; no-op
@@ -2623,6 +2669,9 @@ export class TicketService extends BaseService<ITicket> {
     context: ServiceContext
   ): Promise<any> {
     const { knex } = await this.getKnex();
+    if (data.created_at !== undefined) {
+      await validateHistoricalTimestampWrite('created_at', data.created_at, 'update', context, knex);
+    }
     const notificationSuppression = resolveTicketNotificationSuppression(data);
     let createdExternalLinks: IExternalEntityLink[] = [];
 
