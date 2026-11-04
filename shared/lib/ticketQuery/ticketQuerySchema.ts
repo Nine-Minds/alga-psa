@@ -27,18 +27,23 @@
  * describe the row itself.
  */
 import { tagSet } from '@alga-psa/predicates/sql';
-import type { Attribute, ComputedAttribute, PredicateOperator, QuerySchema, SqlFragment } from '@alga-psa/predicates';
+import type { Attribute, ComputedAttribute, PredicateLiteral, PredicateOperator, QuerySchema, SqlFragment } from '@alga-psa/predicates';
 import { ticketSlaBreachedSql } from './ticketSlaSql';
 
-type Resolver = (alias: string, value: unknown, nowIso: string, operator: PredicateOperator) => SqlFragment;
+type Resolver = (alias: string, value: PredicateLiteral | PredicateLiteral[] | undefined, nowIso: string, operator: PredicateOperator) => SqlFragment;
 
-const scalar = (value: unknown): unknown => (Array.isArray(value) ? value[0] : value);
-const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : value === undefined ? [] : [value]);
+const scalar = (value: PredicateLiteral | PredicateLiteral[] | undefined): PredicateLiteral | undefined => (Array.isArray(value) ? value[0] : value);
+const list = (value: PredicateLiteral | PredicateLiteral[] | undefined): PredicateLiteral[] => (Array.isArray(value) ? value : value === undefined ? [] : [value]);
+const requiredScalar = (value: PredicateLiteral | PredicateLiteral[] | undefined): PredicateLiteral => {
+  const result = scalar(value);
+  if (result === undefined) throw new Error('Computed ticket predicate requires a scalar value');
+  return result;
+};
 
 const COMPUTED_RESOLVERS = (() => {
   // Computed attributes return positive, two-valued predicates; the compiler supplies complements.
   // LEVERAGE: friction computed-scalar-comparisons — computed expressions repeat the compiler's scalar operators; an expression resolver would let the compiler own those comparisons.
-  const compare = (expression: SqlFragment, type: 'string' | 'uuid', operator: PredicateOperator, value: unknown): SqlFragment => {
+  const compare = (expression: SqlFragment, type: 'string' | 'uuid', operator: PredicateOperator, value: PredicateLiteral | PredicateLiteral[] | undefined): SqlFragment => {
     const repeat = () => [...expression.bindings, ...expression.bindings];
     if (operator === 'is_not_empty') return type === 'string'
       ? { sql: `(${expression.sql}) IS NOT NULL AND (${expression.sql}) <> ''`, bindings: repeat() }
@@ -51,11 +56,12 @@ const COMPUTED_RESOLVERS = (() => {
       const values = list(value);
       return values.length ? { sql: `COALESCE((${expression.sql}) IN (${values.map(() => '?').join(', ')}), FALSE)`, bindings: [...expression.bindings, ...values] } : { sql: 'FALSE', bindings: [] };
     }
+    const single = requiredScalar(value);
     if (operator === 'equals' || operator === 'not_equals') return {
-      sql: `COALESCE((${expression.sql}) ${operator === 'equals' ? '=' : '<>'} ?, FALSE)`, bindings: [...expression.bindings, value],
+      sql: `COALESCE((${expression.sql}) ${operator === 'equals' ? '=' : '<>'} ?, FALSE)`, bindings: [...expression.bindings, single],
     };
     if (operator === 'contains' || operator === 'starts_with' || operator === 'ends_with') {
-      const escaped = String(value).replace(/[\\%_]/g, (character) => `\\${character}`);
+      const escaped = String(single).replace(/[\\%_]/g, (character) => `\\${character}`);
       const pattern = operator === 'contains' ? `%${escaped}%` : operator === 'starts_with' ? `${escaped}%` : `%${escaped}`;
       return { sql: `COALESCE((${expression.sql}) LIKE ? ESCAPE '\\', FALSE)`, bindings: [...expression.bindings, pattern] };
     }
@@ -69,7 +75,7 @@ const COMPUTED_RESOLVERS = (() => {
   }, 'string', operator, value),
   from_service_request: (alias, value) => value === null ? { sql: 'FALSE', bindings: [] } : ({
     sql: `EXISTS (SELECT 1 FROM service_request_submissions AS __sr WHERE __sr.tenant = ?? AND __sr.created_ticket_id = ??) = ?`,
-    bindings: [`${alias}.tenant`, `${alias}.ticket_id`, scalar(value)],
+    bindings: [`${alias}.tenant`, `${alias}.ticket_id`, requiredScalar(value)],
   }),
   service_request_definition_id: (alias, value, _now, operator) => compare({
     sql: `(SELECT __sr.definition_id FROM service_request_submissions AS __sr WHERE __sr.tenant = ?? AND __sr.created_ticket_id = ?? LIMIT 1)`,
@@ -80,21 +86,21 @@ const COMPUTED_RESOLVERS = (() => {
   board_inactive: (alias, value) => ({
     sql: `EXISTS (SELECT 1 FROM boards AS __cb WHERE __cb.tenant = ??
       AND __cb.board_id = ?? AND __cb.is_inactive = ?)`,
-    bindings: [`${alias}.tenant`, `${alias}.board_id`, scalar(value) === true],
+    bindings: [`${alias}.tenant`, `${alias}.board_id`, requiredScalar(value) === true],
   }),
 
   /** `status_closed equals true|false`: the ticket's status is (not) a closed status. */
   status_closed: (alias, value) => ({
     sql: `EXISTS (SELECT 1 FROM statuses AS __cs WHERE __cs.tenant = ??
       AND __cs.status_id = ?? AND __cs.is_closed = ?)`,
-    bindings: [`${alias}.tenant`, `${alias}.status_id`, scalar(value) === true],
+    bindings: [`${alias}.tenant`, `${alias}.status_id`, requiredScalar(value) === true],
   }),
 
   /** `status_name equals <name>`: the ticket's status has this exact name (statuses are per board). */
   status_name: (alias, value) => ({
     sql: `EXISTS (SELECT 1 FROM statuses AS __sn WHERE __sn.tenant = ??
       AND __sn.status_id = ?? AND __sn.name = ?)`,
-    bindings: [`${alias}.tenant`, `${alias}.status_id`, scalar(value)],
+    bindings: [`${alias}.tenant`, `${alias}.status_id`, requiredScalar(value)],
   }),
 
   /**
@@ -162,7 +168,7 @@ const COMPUTED_RESOLVERS = (() => {
    * (ticket_resources), or a member of the assigned team. Backs "assigned to me".
    */
   involves_user: (alias, value) => {
-    const userId = scalar(value);
+    const userId = requiredScalar(value);
     return {
       sql: `(?? = ?
         OR EXISTS (SELECT 1 FROM ticket_resources AS __tr WHERE __tr.tenant = ??
