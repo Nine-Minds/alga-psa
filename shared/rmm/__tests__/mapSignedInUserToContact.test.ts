@@ -159,6 +159,7 @@ const TENANT = 'tenant-1';
 const INTEGRATION = 'int-1';
 const OURS = 'client-ours';
 const THEIRS = 'client-theirs';
+const allowMapping = async () => {};
 
 function device(assetId: string, clientId: string, org: string, user: string) {
   h.dbState.assets.push({
@@ -211,6 +212,18 @@ beforeEach(() => {
 });
 
 describe('mapSignedInUserToContact', () => {
+  it('fails closed when the caller omits record authorization', async () => {
+    await expect(mapSignedInUserToContact(h.knexMock, TENANT, {
+      integrationId: INTEGRATION,
+      provider: 'ninjaone',
+      rawUser: 'CORP\\jdoe',
+      contactId: 'c-jane',
+    } as any)).rejects.toThrow('Permission denied');
+
+    expect(h.dbState.tenant_external_entity_mappings).toHaveLength(0);
+    expect(h.setAssetAssignee).not.toHaveBeenCalled();
+  });
+
   it('only follows along inside the contact’s own client', async () => {
     const result = await mapSignedInUserToContact(h.knexMock, TENANT, {
       integrationId: INTEGRATION,
@@ -218,6 +231,7 @@ describe('mapSignedInUserToContact', () => {
       rawUser: 'CORP\\jdoe',
       contactId: 'c-jane',
       actorUserId: 'user-1',
+      authorize: allowMapping,
     });
 
     expect(result.assignedAssetIds).toEqual(['asset-ours']);
@@ -240,6 +254,7 @@ describe('mapSignedInUserToContact', () => {
       rawUser: 'CORP\\jdoe',
       contactId: 'c-jane',
       actorUserId: 'user-1',
+      authorize: allowMapping,
     });
 
     expect(result.assignedAssetIds).toEqual(['asset-ours-2']);
@@ -285,6 +300,32 @@ describe('mapSignedInUserToContact', () => {
       id: 'mapping-1', alga_entity_id: 'c-hidden',
     })]);
     expect(h.setAssetAssignee).not.toHaveBeenCalled();
+  });
+
+  it('does not delete a mapping whose existing contact is inaccessible', async () => {
+    h.dbState.tenant_external_entity_mappings.push({
+      tenant: TENANT,
+      id: 'mapping-delete-protected',
+      integration_type: 'rmm:ninjaone',
+      alga_entity_type: 'contact',
+      alga_entity_id: 'c-hidden',
+      external_realm_id: INTEGRATION,
+      external_entity_id: 'jdoe',
+    });
+
+    await expect(mapSignedInUserToContact(h.knexMock, TENANT, {
+      integrationId: INTEGRATION,
+      provider: 'ninjaone',
+      rawUser: 'CORP\\jdoe',
+      contactId: null,
+      authorize: async ({ contactId }) => {
+        if (contactId === 'c-hidden') throw new RmmUserMappingAuthorizationError();
+      },
+    })).rejects.toThrow('Permission denied');
+
+    expect(h.dbState.tenant_external_entity_mappings).toEqual([expect.objectContaining({
+      id: 'mapping-delete-protected', alga_entity_id: 'c-hidden',
+    })]);
   });
 
   it('filters each automatic candidate and still assigns authorized devices', async () => {
@@ -342,6 +383,7 @@ describe('mapSignedInUserToContact', () => {
         rawUser: 'CORP\\jdoe',
         contactId: 'c-jane',
         actorUserId: 'user-1',
+        authorize: allowMapping,
       }),
     ).rejects.toThrow('connection terminated');
   });
@@ -352,6 +394,7 @@ describe('mapSignedInUserToContact', () => {
       provider: 'ninjaone',
       rawUser: 'CORP\\jdoe',
       contactId: null,
+      authorize: allowMapping,
     });
 
     expect(h.setAssetAssignee).not.toHaveBeenCalled();

@@ -105,7 +105,7 @@ export async function suggestContactForAsset(
   conn: Knex | Knex.Transaction,
   tenant: string,
   assetId: string,
-  authorize?: AuthorizeRmmUserMapping
+  authorize: AuthorizeRmmUserMapping
 ): Promise<RmmSignedInUserSuggestion | null> {
   const asset = await table(conn, tenant, 'assets')
     .where({ asset_id: assetId })
@@ -146,6 +146,10 @@ export async function suggestContactForAsset(
   if (!mapping) return null;
   if ((mapping.contact_assignment_mode ?? 'suggest') === 'off') return null;
 
+  // The shared core is public to multiple server actions. Never expose asset
+  // telemetry or integration details when a caller forgets its policy callback.
+  if (typeof authorize !== 'function') throw new RmmUserMappingAuthorizationError();
+
   try {
     const workspace = await table(conn, tenant, 'asset_group_members as m')
       .join('asset_groups as g', function joinGroups(this: Knex.JoinClause) {
@@ -162,7 +166,7 @@ export async function suggestContactForAsset(
   }
 
   // Authorize the asset and integration before reading the signed-in identity.
-  await authorize?.({
+  await authorize({
     assetIds: [assetId],
     contactId: null,
     integrationId: mapping.integration_id,
@@ -181,7 +185,7 @@ export async function suggestContactForAsset(
     normalized
   );
 
-  await authorize?.({
+  await authorize({
     assetIds: [assetId],
     contactId: match?.contactId ?? null,
     integrationId: mapping.integration_id,
@@ -223,9 +227,13 @@ export async function mapSignedInUserToContact(
     contactId: string | null;
     assignAssetId?: string | null;
     actorUserId?: string | null;
-    authorize?: AuthorizeRmmUserMapping;
+    authorize: AuthorizeRmmUserMapping;
   }
 ): Promise<{ key: string; assignedAssetIds: string[] }> {
+  // Fail closed at the shared mutation boundary. The callback is mandatory
+  // even for calls that only change a mapping and do not assign an asset.
+  if (typeof args.authorize !== 'function') throw new RmmUserMappingAuthorizationError();
+
   const normalized = normalizeRmmUsername(args.rawUser);
   if (!normalized) throw new Error('Signed-in user name is empty');
 
@@ -280,13 +288,13 @@ export async function mapSignedInUserToContact(
   const existing = await mappings.where(mappingKey)
     .first<{ id: string; alga_entity_id: string }>('id', 'alga_entity_id');
 
-  await args.authorize?.({
+  await args.authorize({
     assetIds: target ? [String(target.asset_id)] : [],
     contactId: args.contactId,
     integrationId: args.integrationId,
   });
   if (existing?.alga_entity_id && existing.alga_entity_id !== args.contactId) {
-    await args.authorize?.({
+    await args.authorize({
       assetIds: target ? [String(target.asset_id)] : [],
       contactId: existing.alga_entity_id,
       integrationId: args.integrationId,
@@ -364,7 +372,7 @@ export async function mapSignedInUserToContact(
       if (!reported || reported.key !== normalized.key) continue;
 
       try {
-        await args.authorize?.({
+        await args.authorize({
           assetIds: [assetId],
           contactId: args.contactId,
           integrationId: args.integrationId,

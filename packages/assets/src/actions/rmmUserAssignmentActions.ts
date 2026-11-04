@@ -30,6 +30,7 @@ function createRmmMappingAuthorizer(
   user: MappingActionUser,
   action: 'read' | 'update',
 ) {
+  // LEVERAGE: pattern rmm-action-record-authorization — the settings action builds the same policy bridge.
   let authorizationContextPromise: ReturnType<typeof createAssetReadContext> | undefined;
   return async ({ assetIds, contactId, integrationId }: RmmUserMappingAuthorizationRequest) => {
     const db = tenantDb(conn, tenant);
