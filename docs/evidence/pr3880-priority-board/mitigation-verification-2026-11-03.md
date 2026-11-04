@@ -1,6 +1,8 @@
-# PR #3880 mitigation verification (2026-11-03)
+# PR #3880 mitigation verification — historical 2026-11-03 results
 
-## Follow-up attempt (2026-11-04)
+> Historical record: this document was written before the current recovery. Its checkout, service, and blocked-verification statements below describe the 2026-11-03/early-2026-11-04 attempt only. They are superseded for current environment status by [current mitigation verification](current-mitigation-2026-11-04.md). Historical test results are not evidence for the current verification.
+
+## Historical follow-up attempt (2026-11-04)
 
 - The branch is now at `9f1affb46f00e02e00d27cb18dd0d003dcbe0c09`; `origin/feature/validate-priority-type-against-board-recurring-t` points to the same revision. The published dossier revision `7ed5e379d4fe6d3dfd1158fbd60ec0043b9e8ebb` is an ancestor, not the current checkout.
 - The prior uncommitted source edit in `packages/tickets/src/lib/ticketFieldReferences.ts` remains present and was not changed in this attempt. It is not included in evidence commits.
