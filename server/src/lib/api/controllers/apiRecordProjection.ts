@@ -51,7 +51,7 @@ const DEFINITIONS: Record<'project' | 'ticket' | 'quote' | 'asset' | 'phase' | '
       task_id: ['task_id', 'project_tasks.task_id', 'tasks.task_id'],
       // Project-link rows carry a task name, but a field-level task redaction
       // must not treat the whole task resource as a name dependency.
-      task_name: [...taskNameFieldAliases, 'task_id', 'project_tasks.task_id'],
+      task_name: [...taskNameFieldAliases, 'task_id', 'taskId', 'project_tasks.task_id', 'tasks.task_id'],
       estimated_hours: ['project_tasks.estimated_hours'],
       task_updated_at: ['task_updated_at', 'project_tasks.updated_at'],
       is_closed: ['is_closed', 'status', 'status_id', 'project_status_mapping_id', 'statuses.is_closed', 'standard_statuses.is_closed'],
