@@ -165,6 +165,19 @@ describe('sendUserInvitation authorization boundary', () => {
     expect(fixture.delivered).toHaveLength(0);
   });
 
+  it('rejects an otherwise eligible role when the inviter lacks user:invite', async () => {
+    fixture.hasPermission.mockImplementation(async (_user: unknown, _resource: string, action: string) => action !== 'invite');
+
+    const result = await sendUserInvitation({
+      email: 'eligible@example.test', firstName: 'Eligible', lastName: 'User', roleId: 'eligible-role',
+    } as any);
+
+    expect(result).toMatchObject({ success: false, errorCode: 'PERMISSION_DENIED_INVITE' });
+    expect(result.error).toMatch(/invite users/);
+    expect(fixture.invitationRows).toHaveLength(0);
+    expect(fixture.delivered).toHaveLength(0);
+  });
+
   it('rejects an otherwise eligible role when the inviter lacks user:update', async () => {
     fixture.hasPermission.mockImplementation(async (_user: unknown, _resource: string, action: string) => action !== 'update');
 
