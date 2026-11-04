@@ -25,6 +25,10 @@ vi.mock('@alga-psa/db', () => ({
   }),
 }));
 vi.mock('./assetReadAuthorization', () => ({
+  isAssetReadAllowed: vi.fn(async (_trx: unknown, _tenant: string, _context: unknown, asset: { asset_id: string; client_id?: string | null }) => {
+    h.seen.push({ asset_id: asset.asset_id, client_id: asset.client_id ?? null, action: 'read' });
+    return h.allowedClients.has(asset.client_id ?? '') && !h.deniedAssets.has(asset.asset_id);
+  }),
   createAssetReadContext: vi.fn(async () => ({})),
   isAssetClientActionAllowed: vi.fn(async (_trx: unknown, _tenant: string, _context: unknown, clientId: string) => h.allowedClients.has(clientId)),
   isAssetActionAllowed: vi.fn(async (_trx: unknown, _tenant: string, _context: unknown, asset: { asset_id: string; client_id?: string | null }, action: string) => {

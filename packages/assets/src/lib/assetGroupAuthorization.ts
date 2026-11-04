@@ -3,12 +3,36 @@ import { tenantDb } from '@alga-psa/db';
 import {
   createAssetReadContext,
   isAssetActionAllowed,
+  isAssetReadAllowed,
   isAssetClientActionAllowed,
   type AssetAuthUser,
 } from './assetReadAuthorization';
 
 type GroupScope = { client_id: string; group_id: string };
 type AssetScope = { asset_id: string; client_id: string | null };
+type AssetGroupOperation = {
+  action: 'read' | 'update';
+  groupId?: string;
+  clientId?: string;
+  assetIds?: readonly string[];
+};
+
+const SCOPE_DENIED = { assetGroupScopeDenied: true } as const;
+export function isAssetGroupScopeDenied(value: unknown): value is typeof SCOPE_DENIED {
+  return value === SCOPE_DENIED;
+}
+
+/** Run the operation only after resolving and authorizing its full scope on this transaction. */
+export async function withAuthorizedAssetGroup<T>(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: AssetAuthUser,
+  input: AssetGroupOperation,
+  work: (trx: Knex.Transaction) => Promise<T>
+): Promise<T | typeof SCOPE_DENIED> {
+  if (!await isAssetGroupOperationAllowed(trx, tenant, user, input)) return SCOPE_DENIED;
+  return work(trx);
+}
 
 /**
  * Authorize a group as one record: its client and every member must be in scope.
@@ -19,12 +43,7 @@ export async function isAssetGroupOperationAllowed(
   trx: Knex | Knex.Transaction,
   tenant: string,
   user: AssetAuthUser,
-  input: {
-    action: 'read' | 'update';
-    groupId?: string;
-    clientId?: string;
-    assetIds?: readonly string[];
-  }
+  input: AssetGroupOperation
 ): Promise<boolean> {
   const db = tenantDb(trx, tenant);
   let group: GroupScope | undefined;
@@ -65,7 +84,7 @@ export async function isAssetGroupOperationAllowed(
   const can = (asset: { asset_id: string; client_id: string | null }) =>
     isAssetActionAllowed(trx, tenant, context, asset, input.action);
   const canRead = (asset: { asset_id: string; client_id: string | null }) =>
-    isAssetActionAllowed(trx, tenant, context, asset, 'read');
+    isAssetReadAllowed(trx, tenant, context, asset);
 
   for (const asset of assets) {
     if (!(await canRead(asset)) || (input.action !== 'read' && !(await can(asset)))) return false;
