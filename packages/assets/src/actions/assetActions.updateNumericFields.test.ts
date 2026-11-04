@@ -398,6 +398,7 @@ beforeEach(() => {
   h.privateGroupSummary = null;
   vi.clearAllMocks();
   h.authorizedGroupSummary.mockResolvedValue(null);
+  h.authorizedGroupSummaries.mockResolvedValue(new Map());
 });
 
 describe('getAsset returns the normalised Asset (alga0002283 root cause)', () => {
@@ -454,6 +455,30 @@ describe('getAsset returns the normalised Asset (alga0002283 root cause)', () =>
     expect(result.assets.map((asset: any) => asset.asset_id)).toContain(ASSET_ID);
     expect(result.assets.find((asset: any) => asset.asset_id === ASSET_ID).group).toBeNull();
     expect(h.authorizedGroupSummaries).toHaveBeenCalledWith(h.knexMock, TENANT, h.mockUser, [ASSET_ID]);
+  });
+
+  it('T113: lists authorized group summaries alongside assets whose groups are denied', async () => {
+    const otherAssetId = 'e0000000-0000-4000-8000-00000000000e';
+    seedAsset();
+    seedAsset({ asset_id: otherAssetId, asset_tag: 'NET-002', name: 'Other switch' });
+    const allowedSummary = {
+      group_id: 'b0000000-0000-4000-8000-00000000000b',
+      name: 'Allowed group',
+      kind: 'bundle',
+      member_count: 2,
+      user_count: 0,
+    };
+    h.privateGroupSummary = { group_id: 'secret-group', name: 'Forbidden group', member_count: 2 };
+    h.authorizedGroupSummaries.mockResolvedValue(new Map([[ASSET_ID, allowedSummary]]));
+
+    const result = (await listAssets({ page: 1, limit: 10 } as any)) as any;
+
+    expect(result.assets).toHaveLength(2);
+    expect(result.assets).toEqual(expect.arrayContaining([
+      expect.objectContaining({ asset_id: ASSET_ID, group: allowedSummary }),
+      expect.objectContaining({ asset_id: otherAssetId, group: null }),
+    ]));
+    expect(JSON.stringify(result)).not.toContain('Forbidden group');
   });
 });
 

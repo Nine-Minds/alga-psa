@@ -94,15 +94,6 @@ describe('asset group surfaces', () => {
     expect(text).toMatch(/record\.group\?\.name/);
   });
 
-  it('T113: listAssets populates the group the column reads', () => {
-    const text = source('packages/assets/src/actions/assetActions.ts');
-
-    expect(text).toMatch(/getAssetGroupSummariesForAssets\(\s*trx,\s*tenant,/);
-    expect(text).toContain('group: groupSummaries.get(asset.asset_id) ?? null,');
-    // And the filter the column pairs with.
-    expect(text).toMatch(/if \(validatedParams\.group_id\)/);
-  });
-
   it('T114: a shared-workspace member shows the workspace line instead of Assign', () => {
     const text = source('packages/assets/src/components/AssetAssigneeRow.tsx');
 
