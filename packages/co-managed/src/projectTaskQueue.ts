@@ -4,7 +4,7 @@ import { withCoManagedSharedWork } from './sharedWork';
 import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, isCoManagedUuid, isCoManagedSharedWorkError, CoManagedSharedWorkError,
   type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
-import { maskCoManagedSnapshot, CO_MANAGED_TASK_NAME_ALIASES, CO_MANAGED_PROJECT_NAME_ALIASES, CO_MANAGED_ORGANIZATION_NAME_ALIASES, CO_MANAGED_ASSIGNEE_NAME_ALIASES } from './sharedWorkProjection';
+import { coManagedEditFieldPaths, maskCoManagedSnapshot, CO_MANAGED_TASK_NAME_ALIASES, CO_MANAGED_PROJECT_NAME_ALIASES, CO_MANAGED_ORGANIZATION_NAME_ALIASES, CO_MANAGED_ASSIGNEE_NAME_ALIASES } from './sharedWorkProjection';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
 
 /** The customer organization's display name, or '' when redacted. Single source for the project list and the reference snapshot. */
@@ -113,7 +113,7 @@ export async function listCoManagedSharedProjectTasks(db: Knex, inputActor: CoMa
       .where({ customer_tenant: target.customerTenant.toLowerCase(), relationship_id: target.relationshipId.toLowerCase(), active: true }).whereIn('task_id', page.map(task => task.task_id))
       .select('task_id', 'revision', 'assignee_name', 'assigned_to') : [];
     const byTask = new Map(references.map(reference => [reference.task_id, reference]));
-    const dueHidden = isCoManagedReadFieldHidden(context.redactedFields, ['due_date', 'values.due_date', 'project_tasks.due_date']);
+    const dueHidden = isCoManagedReadFieldHidden(context.redactedFields, coManagedEditFieldPaths('due_date'));
     return {
       rows: page.map(task => {
         const reference = byTask.get(task.task_id);
