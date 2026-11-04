@@ -3,6 +3,7 @@
  * are card-specific, so apply/reset never edits the shared Oz review tenant.
  */
 import type { Knex } from 'knex';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { CREATED, fingerprint, id, put, VALID_UNTIL, type FixtureEngines, type FixtureModule, type VerifyReport } from './shared';
 
 export const NOTIFICATION_CUSTOMER = id('tenant/notification-customer');
@@ -41,6 +42,7 @@ const MANAGEMENT_READ_PERMISSION_ID = id('permission/notification-management-rea
 const MANAGEMENT_PERMISSION_ID = id('permission/notification-management-manage');
 const SPONSOR_PERMISSION_IDS = [PERMISSION_ID, CLIENT_READ_PERMISSION_ID, MANAGEMENT_READ_PERMISSION_ID, MANAGEMENT_PERMISSION_ID];
 const CUSTOMER_PERMISSION_ID = id('permission/notification-customer-ticket-read');
+const CUSTOMER_UPDATE_PERMISSION_ID = id('permission/notification-customer-ticket-update');
 const CUSTOMER_ROLE_ID = id('role/notification-customer-admin');
 const LEGACY_SHARED_SPONSOR = id('tenant/oz');
 const LEGACY_SPONSOR_CLIENT = id('client/oz/notification-customer');
@@ -50,7 +52,7 @@ const LEGACY_ROLE_IDS = ['redacted', 'visible'].map(key => id(`role/oz/notificat
 const LEGACY_PERMISSION_ID = id('permission/oz/notification-ticket-read');
 const ROLE = Object.fromEntries(NOTIFICATION_USERS.map(user => [user.key, id(`role/notification-${user.key}`)])) as Record<(typeof NOTIFICATION_USERS)[number]['key'], string>;
 const OPERATION_FINGERPRINT = fingerprint('notification-provisioning-operation');
-const SMTP_PORT = Number(process.env.NOTIFICATION_SMTP_PORT || '1025');
+const SMTP_PORT = Number(process.env.NOTIFICATION_SMTP_PORT || '3025');
 const SMTP_HOST = process.env.NOTIFICATION_SMTP_HOST || '127.0.0.1';
 const SMTP_TENANTS = [NOTIFICATION_SPONSOR, NOTIFICATION_CUSTOMER];
 const SMTP_PROVIDER_ID = (tenant: string) => `notification-local-smtp-${tenant}`;
@@ -127,11 +129,15 @@ export const notificationModule: FixtureModule = {
       hashed_password: await credentialHash(trx, NOTIFICATION_CUSTOMER, NOTIFICATION_CUSTOMER_ADMIN.userId, NOTIFICATION_CUSTOMER_ADMIN.password, engines),
       user_type: 'internal', auth_method: 'password', is_inactive: false, two_factor_enabled: false, created_at: CREATED });
     await put(trx, 'permissions', ['tenant', 'permission_id'], { tenant: NOTIFICATION_CUSTOMER, permission_id: CUSTOMER_PERMISSION_ID,
-      resource: 'ticket', action: 'read', msp: false, client: true });
+      resource: 'ticket', action: 'read', msp: true, client: false });
+    await put(trx, 'permissions', ['tenant', 'permission_id'], { tenant: NOTIFICATION_CUSTOMER, permission_id: CUSTOMER_UPDATE_PERMISSION_ID,
+      resource: 'ticket', action: 'update', msp: true, client: false });
     await put(trx, 'roles', ['tenant', 'role_id'], { tenant: NOTIFICATION_CUSTOMER, role_id: CUSTOMER_ROLE_ID,
-      role_name: 'Notification Customer Admin', msp: false, client: true });
+      role_name: 'Notification Customer Admin', msp: true, client: false });
     await put(trx, 'role_permissions', ['tenant', 'role_id', 'permission_id'], { tenant: NOTIFICATION_CUSTOMER,
       role_id: CUSTOMER_ROLE_ID, permission_id: CUSTOMER_PERMISSION_ID });
+    await put(trx, 'role_permissions', ['tenant', 'role_id', 'permission_id'], { tenant: NOTIFICATION_CUSTOMER,
+      role_id: CUSTOMER_ROLE_ID, permission_id: CUSTOMER_UPDATE_PERMISSION_ID });
     await put(trx, 'user_roles', ['tenant', 'user_id', 'role_id'], { tenant: NOTIFICATION_CUSTOMER,
       user_id: NOTIFICATION_CUSTOMER_ADMIN.userId, role_id: CUSTOMER_ROLE_ID });
 
@@ -224,7 +230,7 @@ export const notificationModule: FixtureModule = {
         const provider = parseProviderConfigs(settings?.provider_configs)[0];
         return Boolean(provider && provider.providerId === SMTP_PROVIDER_ID(tenant) && provider.providerType === 'smtp' &&
           provider.isEnabled && typeof provider.config?.host === 'string' && provider.config.host.trim().length > 0 &&
-          Number.isInteger(Number(provider.config?.port)) && Number(provider.config.port) > 0 && Number(provider.config.port) <= 65535);
+          Number(provider.config?.port) === SMTP_PORT);
       } catch { return false; }
     }));
     const reports: VerifyReport[] = [
@@ -263,6 +269,12 @@ export const notificationModule: FixtureModule = {
     if (customerCredentialValid && customerUser) customerCredentialValid = await engines!.verifyPassword(NOTIFICATION_CUSTOMER_ADMIN.password, customerUser.hashed_password);
     reports.push({ ok: Boolean(customerCredentialValid), area: 'notification', detail: 'fixture customer admin password is accepted by the application verifier' });
     reports.push({ ok: Boolean(customerRole), area: 'notification', detail: 'fixture customer admin has role membership' });
+    const permissionUser = customerUser ? { ...customerUser, tenant: NOTIFICATION_CUSTOMER } : null;
+    const canReadTicket = Boolean(permissionUser && await hasPermission(permissionUser as any, 'ticket', 'read', db));
+    const canPostSharedIt = Boolean(permissionUser && await hasPermission(permissionUser as any, 'ticket', 'update', db) &&
+      await hasPermission(permissionUser as any, 'ticket', 'read', db));
+    reports.push({ ok: canReadTicket, area: 'notification', detail: 'fixture customer admin passes runtime ticket:read authorization' });
+    reports.push({ ok: canPostSharedIt, area: 'notification', detail: 'fixture customer admin passes runtime ticket authorization for Shared IT comments' });
     return reports;
   },
   async reset(trx) {
@@ -294,6 +306,8 @@ export const notificationModule: FixtureModule = {
     await trx('authorization_bundles').whereIn('bundle_id', NOTIFICATION_USERS.map(user => POLICY[user.key].bundleId)).andWhere({ tenant: NOTIFICATION_SPONSOR }).delete();
     for (const tenant of SMTP_TENANTS) await removeLocalSmtp(trx, tenant);
     for (const user of NOTIFICATION_USERS) {
+      await trx('user_preferences').where({ tenant: NOTIFICATION_SPONSOR, user_id: user.userId }).delete();
+      await trx('sessions').where({ tenant: NOTIFICATION_SPONSOR, user_id: user.userId }).delete();
       await trx('user_roles').where({ tenant: NOTIFICATION_SPONSOR, user_id: user.userId }).delete();
       await trx('users').where({ tenant: NOTIFICATION_SPONSOR, user_id: user.userId }).delete();
     }
@@ -302,8 +316,12 @@ export const notificationModule: FixtureModule = {
     await trx('permissions').whereIn('permission_id', SPONSOR_PERMISSION_IDS).andWhere({ tenant: NOTIFICATION_SPONSOR }).delete();
     await trx('user_roles').where({ tenant: NOTIFICATION_CUSTOMER, user_id: NOTIFICATION_CUSTOMER_ADMIN.userId, role_id: CUSTOMER_ROLE_ID }).delete();
     await trx('role_permissions').where({ tenant: NOTIFICATION_CUSTOMER, role_id: CUSTOMER_ROLE_ID, permission_id: CUSTOMER_PERMISSION_ID }).delete();
+    await trx('role_permissions').where({ tenant: NOTIFICATION_CUSTOMER, role_id: CUSTOMER_ROLE_ID, permission_id: CUSTOMER_UPDATE_PERMISSION_ID }).delete();
     await trx('roles').where({ tenant: NOTIFICATION_CUSTOMER, role_id: CUSTOMER_ROLE_ID }).delete();
     await trx('permissions').where({ tenant: NOTIFICATION_CUSTOMER, permission_id: CUSTOMER_PERMISSION_ID }).delete();
+    await trx('permissions').where({ tenant: NOTIFICATION_CUSTOMER, permission_id: CUSTOMER_UPDATE_PERMISSION_ID }).delete();
+    await trx('user_preferences').where({ tenant: NOTIFICATION_CUSTOMER, user_id: NOTIFICATION_CUSTOMER_ADMIN.userId }).delete();
+    await trx('sessions').where({ tenant: NOTIFICATION_CUSTOMER, user_id: NOTIFICATION_CUSTOMER_ADMIN.userId }).delete();
     await trx('users').where({ tenant: NOTIFICATION_CUSTOMER, user_id: NOTIFICATION_CUSTOMER_ADMIN.userId }).delete();
     await trx('boards').where({ tenant: NOTIFICATION_CUSTOMER, board_id: NOTIFICATION_BOARD }).delete();
     await trx('boards').where({ tenant: NOTIFICATION_SPONSOR, board_id: NOTIFICATION_SPONSOR_BOARD }).delete();

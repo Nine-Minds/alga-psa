@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
+vi.mock('@alga-psa/db/models/user', () => ({ default: { getUserRolesWithPermissions: vi.fn() } }));
+import User from '@alga-psa/db/models/user';
 import { id, resolveModules, type FixtureModule } from './shared';
 import { parseArgs, parseEnvFile, REGISTRY, run } from './index';
 import { DISPOSABLE_CLIENTS, L1A_CAPACITY, l1aModule } from './L1a';
@@ -29,14 +31,22 @@ function notificationRows(): Rows {
       customer_tenant: NOTIFICATION_CUSTOMER, relationship_id: NOTIFICATION_RELATIONSHIP, state: 'active' }],
     co_managed_entitlements: [{ tenant: NOTIFICATION_SPONSOR, source: 'admin_grant', capacity: 2 }],
     tenant_email_settings: [NOTIFICATION_SPONSOR, NOTIFICATION_CUSTOMER].map(tenant => ({ tenant, email_provider: 'smtp', provider_configs: [
-      { providerId: `notification-local-smtp-${tenant}`, providerType: 'smtp', isEnabled: true, config: { host: '127.0.0.1', port: 1025 } },
+      { providerId: `notification-local-smtp-${tenant}`, providerType: 'smtp', isEnabled: true, config: { host: '127.0.0.1', port: 3025 } },
     ] })),
     users: [
       ...NOTIFICATION_USERS.map(user => ({ tenant: NOTIFICATION_SPONSOR, user_id: user.userId, user_type: 'internal', is_inactive: false, hashed_password: `valid:${user.password}` })),
       { tenant: NOTIFICATION_CUSTOMER, user_id: NOTIFICATION_CUSTOMER_ADMIN.userId, user_type: 'internal', is_inactive: false, hashed_password: `valid:${NOTIFICATION_CUSTOMER_ADMIN.password}` },
     ],
-    roles: [], user_roles: [{ tenant: NOTIFICATION_CUSTOMER, user_id: NOTIFICATION_CUSTOMER_ADMIN.userId, role_id: id('role/notification-customer-admin') }],
-    role_permissions: [], co_management_staff_assignments: [],
+    roles: [{ tenant: NOTIFICATION_CUSTOMER, role_id: id('role/notification-customer-admin'), msp: true, client: false }],
+    user_roles: [{ tenant: NOTIFICATION_CUSTOMER, user_id: NOTIFICATION_CUSTOMER_ADMIN.userId, role_id: id('role/notification-customer-admin') }],
+    permissions: [
+      { tenant: NOTIFICATION_CUSTOMER, permission_id: id('permission/notification-customer-ticket-read'), resource: 'ticket', action: 'read', msp: true, client: false },
+      { tenant: NOTIFICATION_CUSTOMER, permission_id: id('permission/notification-customer-ticket-update'), resource: 'ticket', action: 'update', msp: true, client: false },
+    ],
+    role_permissions: [
+      { tenant: NOTIFICATION_CUSTOMER, role_id: id('role/notification-customer-admin'), permission_id: id('permission/notification-customer-ticket-read') },
+      { tenant: NOTIFICATION_CUSTOMER, role_id: id('role/notification-customer-admin'), permission_id: id('permission/notification-customer-ticket-update') },
+    ], co_management_staff_assignments: [],
     authorization_bundle_assignments: [], authorization_bundle_rules: [],
   };
   for (const user of NOTIFICATION_USERS) {
@@ -120,8 +130,22 @@ describe('co-managed fixtures', () => {
   it('notification verification rejects missing credentials, staff memberships, operation locator, allocation, and SMTP', async () => {
     const base = notificationRows();
     const engines = { verifyPassword: async (password: string, stored: string) => stored === `valid:${password}` } as any;
+    let activeRows = base;
+    vi.mocked(User.getUserRolesWithPermissions).mockImplementation(async (_db: any, userId: string) => {
+      const memberships = activeRows.user_roles.filter(row => row.tenant === NOTIFICATION_CUSTOMER && row.user_id === userId);
+      return memberships.map(membership => {
+        const role = activeRows.roles.find(row => row.tenant === NOTIFICATION_CUSTOMER && row.role_id === membership.role_id)!;
+        const permissions = activeRows.role_permissions.filter(row => row.tenant === NOTIFICATION_CUSTOMER && row.role_id === role.role_id)
+          .map(link => activeRows.permissions.find(row => row.tenant === NOTIFICATION_CUSTOMER && row.permission_id === link.permission_id)!)
+          .map(permission => ({ permission_id: permission.permission_id, resource: permission.resource, action: permission.action,
+            msp: permission.msp, client: permission.client }));
+        return { ...role, role_name: 'Notification customer admin', permissions };
+      }) as any;
+    });
     const initialReports = await notificationModule.verify(memoryDb(base), engines);
     expect(initialReports.filter(report => !report.ok).map(report => report.detail)).toEqual([]);
+    expect(initialReports.find(report => report.detail.includes('runtime ticket:read'))?.ok).toBe(true);
+    expect(initialReports.find(report => report.detail.includes('Shared IT comments'))?.ok).toBe(true);
 
     const missing: Array<[string, (rows: Rows) => void]> = [
       ['redacted login credential', rows => { rows.users[0].hashed_password = null; }],
@@ -139,10 +163,12 @@ describe('co-managed fixtures', () => {
       ['capacity entitlement', rows => { rows.co_managed_entitlements = []; }],
       ['sponsor local SMTP settings', rows => { rows.tenant_email_settings = rows.tenant_email_settings.filter(row => row.tenant !== NOTIFICATION_SPONSOR); }],
       ['customer local SMTP settings', rows => { rows.tenant_email_settings = rows.tenant_email_settings.filter(row => row.tenant !== NOTIFICATION_CUSTOMER); }],
+      ['fixture SMTP listener port', rows => { rows.tenant_email_settings[0].provider_configs[0].config.port = 1025; }],
     ];
     for (const [name, remove] of missing) {
       const rows = structuredClone(base);
       remove(rows);
+      activeRows = rows;
       const reports = await notificationModule.verify(memoryDb(rows), engines);
       expect(reports.some(report => !report.ok), name).toBe(true);
       if (name === 'sponsor local SMTP settings' || name === 'customer local SMTP settings') {
@@ -152,6 +178,7 @@ describe('co-managed fixtures', () => {
         vi.restoreAllMocks();
       }
     }
+    vi.mocked(User.getUserRolesWithPermissions).mockReset();
   });
 
   it('notification reset removes only its owned records and preserves unrelated QA rows', async () => {
@@ -159,6 +186,9 @@ describe('co-managed fixtures', () => {
       tenants: [{ tenant: NOTIFICATION_CUSTOMER }, { tenant: NOTIFICATION_SPONSOR }, { tenant: id('tenant/oz') }, { tenant: id('tenant/shared-qa') }],
       users: [{ tenant: NOTIFICATION_SPONSOR, user_id: NOTIFICATION_USERS[0].userId },
         { tenant: id('tenant/oz'), user_id: id('user/oz/unrelated') },
+        { tenant: id('tenant/shared-qa'), user_id: id('user/shared') }],
+      sessions: [{ tenant: NOTIFICATION_SPONSOR, user_id: NOTIFICATION_USERS[0].userId },
+        { tenant: NOTIFICATION_CUSTOMER, user_id: NOTIFICATION_CUSTOMER_ADMIN.userId },
         { tenant: id('tenant/shared-qa'), user_id: id('user/shared') }],
       tenant_email_settings: [...[NOTIFICATION_SPONSOR, NOTIFICATION_CUSTOMER].map(tenant => ({ tenant, email_provider: 'microsoft',
         provider_configs: [{ providerId: `notification-local-smtp-${tenant}`, providerType: 'smtp', isEnabled: true },
@@ -202,6 +232,7 @@ describe('co-managed fixtures', () => {
     expect(rows.tenants).toEqual([{ tenant: id('tenant/oz') }, { tenant: id('tenant/shared-qa') }]);
     expect(rows.users).toEqual([{ tenant: id('tenant/oz'), user_id: id('user/oz/unrelated') },
       { tenant: id('tenant/shared-qa'), user_id: id('user/shared') }]);
+    expect(rows.sessions).toEqual([{ tenant: id('tenant/shared-qa'), user_id: id('user/shared') }]);
     expect(rows.tenant_email_settings).toEqual([
       { tenant: NOTIFICATION_SPONSOR, email_provider: 'microsoft', provider_configs: JSON.stringify([{ providerId: `unrelated-${NOTIFICATION_SPONSOR}`, providerType: 'microsoft', isEnabled: true }]) },
       { tenant: NOTIFICATION_CUSTOMER, email_provider: 'microsoft', provider_configs: JSON.stringify([{ providerId: `unrelated-${NOTIFICATION_CUSTOMER}`, providerType: 'microsoft', isEnabled: true }]) },
