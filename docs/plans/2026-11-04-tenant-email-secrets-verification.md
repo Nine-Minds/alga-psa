@@ -136,9 +136,9 @@ card-origin URL
 `http://feature-move-tenant-smtp-resend-secrets-out-of-plaintext.localhost:3590`
 returned HTTP 307 to the MSP sign-in route. This verifies registration recovery;
 the earlier 6 GiB admission queue is no longer blocking the service. The
-supervisor release recorded above is `202611040722-g518a7e9`; this follow-up
-verified service behavior but did not independently query the supervisor's
-current release identifier.
+host supervisor's current release marker was independently read at
+`/home/robert/.alga-dev/releases/current` and confirms release
+`202611040722-g518a7e9`.
 
 The authenticated continuation ran on branch revision
 `39e29740e7d7bd276be93209f79c9db50c0dc215`, against QA tenant
