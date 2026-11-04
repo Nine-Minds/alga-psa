@@ -77,7 +77,7 @@ export class UserInvitationService {
       }
 
       const token = this.generateSecureToken();
-      const normalizedEmail = params.email.toLowerCase();
+      const normalizedEmail = params.email.trim().toLowerCase();
 
       // Reuse an existing active invitation for the same email to allow
       // resending without erroring.

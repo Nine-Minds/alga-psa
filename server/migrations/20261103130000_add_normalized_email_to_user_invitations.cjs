@@ -16,7 +16,7 @@ exports.up = async function up(knex) {
   const invitations = await knex('user_invitations')
     .select('tenant', 'invitation_id', 'email', 'email_normalized');
   for (const invitation of invitations) {
-    const normalizedEmail = invitation.email.toLowerCase();
+    const normalizedEmail = invitation.email.trim().toLowerCase();
     if (invitation.email_normalized === normalizedEmail) continue;
     await knex('user_invitations')
       .where({ tenant: invitation.tenant, invitation_id: invitation.invitation_id })

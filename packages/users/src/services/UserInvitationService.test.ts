@@ -43,9 +43,9 @@ describe('UserInvitationService persistence schema compatibility', () => {
     });
   });
 
-  it('persists lowercase email and its normalized lookup key together', async () => {
+  it('persists trimmed lowercase email and its normalized lookup key together', async () => {
     const result = await UserInvitationService.createInvitationWithTransaction(
-      { email: 'New.User@Example.test', firstName: 'New', lastName: 'User', roleId: 'role-1' },
+      { email: '  New.User@Example.test  ', firstName: 'New', lastName: 'User', roleId: 'role-1' },
       { fn: { now: () => new Date() }, raw: (sql: string) => sql } as any,
     );
 

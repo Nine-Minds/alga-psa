@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import knex, { type Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
@@ -91,6 +91,13 @@ describe('20261103130000_add_normalized_email_to_user_invitations', () => {
     expect(await db.schema.hasColumn('user_invitations', 'email_normalized')).toBe(false);
   }, 600_000);
 
+  beforeEach(async () => {
+    // Vitest randomizes test order. Restore the canonical pre-migration shape
+    // so a preceding drifted-schema case cannot affect legacy row seeding.
+    await resetInvitationSchemaToOriginal();
+    await resetInvitationRows();
+  });
+
   afterAll(async () => {
     await db?.destroy();
     const admin = knex({ client: 'pg', connection: {
@@ -104,7 +111,7 @@ describe('20261103130000_add_normalized_email_to_user_invitations', () => {
 
   it('backfills the original schema, enforces the key, and permits service insertion', async () => {
     const tenant = await seedTenant();
-    const invitationId = await seedLegacyInvitation(tenant, 'Legacy.User@Example.test');
+    const invitationId = await seedLegacyInvitation(tenant, '  Legacy.User@Example.test  ');
 
     await migration.up(db);
 
