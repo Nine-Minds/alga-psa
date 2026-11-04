@@ -117,9 +117,9 @@ describe('runSmartSearch', () => {
   });
 
   it('hands each enumerated row\'s redaction set to candidate loading and hydration', async () => {
-    mocks.enumerate.mockResolvedValue([{ id: 's1', redactedFields: ['description'] }, { id: 's2' }]);
+    mocks.enumerate.mockResolvedValue([{ id: 's1', redactedFields: ['description'] }, { id: 's2', redactedFields: [] }]);
     await collect();
-    const expected = new Map([['s1', ['description']]]);
+    const expected = new Map([['s1', ['description']], ['s2', []]]);
     expect(mocks.loadCandidates).toHaveBeenCalledWith(expect.anything(), 't1', user, ['s1', 's2'], expected);
     expect(mocks.hydrateRows).toHaveBeenCalledWith(expect.anything(), expect.any(Array), expected);
   });
@@ -129,8 +129,15 @@ describe('runSmartSearch', () => {
     await expect(collect()).rejects.toMatchObject({ code: 'FORBIDDEN' });
   });
 
+  it('fails closed on a target with no authorization decision before loading or scoring', async () => {
+    mocks.enumerate.mockResolvedValue([{ id: 's1' }]);
+    await expect(collect()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    expect(mocks.loadCandidates).not.toHaveBeenCalled();
+    expect(mocks.systemOne).not.toHaveBeenCalled();
+  });
+
   it('streams scored rows with buckets, then a done event that sums usage', async () => {
-    mocks.enumerate.mockResolvedValue(['s1', 'n1', 's2'].map((id) => ({ id })));
+    mocks.enumerate.mockResolvedValue(['s1', 'n1', 's2'].map((id) => ({ id, redactedFields: [] })));
     const events = await collect();
 
     expect(events[0]).toEqual({ type: 'started', searchId: expect.any(String), total: 3 });
@@ -165,14 +172,14 @@ describe('runSmartSearch', () => {
   });
 
   it('passes the entity prompt to every request', async () => {
-    mocks.enumerate.mockResolvedValue(['s1'].map((id) => ({ id })));
+    mocks.enumerate.mockResolvedValue(['s1'].map((id) => ({ id, redactedFields: [] })));
     await collect();
     const request = mocks.systemOne.mock.calls[0][0] as { questions: Record<string, { instructions: { question: string } }> };
     expect(request.questions.c0.instructions.question).toBe('q-c0');
   });
 
   it('reports a batch that fails after retries and keeps scoring the rest', async () => {
-    mocks.enumerate.mockResolvedValue(['s1', 's2', 's3', 's4'].map((id) => ({ id })));
+    mocks.enumerate.mockResolvedValue(['s1', 's2', 's3', 's4'].map((id) => ({ id, redactedFields: [] })));
     let calls = 0;
     mocks.systemOne.mockImplementation(async (request: never) => {
       calls += 1;
@@ -195,7 +202,7 @@ describe('runSmartSearch', () => {
   });
 
   it('reports rows whose text could not be loaded as unscored', async () => {
-    mocks.enumerate.mockResolvedValue(['s1', 'gone'].map((id) => ({ id })));
+    mocks.enumerate.mockResolvedValue(['s1', 'gone'].map((id) => ({ id, redactedFields: [] })));
     mocks.loadCandidates.mockImplementation(async (_t: unknown, _te: string, _u: unknown, ids: string[]) =>
       candidatesFor(ids.filter((id) => id !== 'gone'))
     );
@@ -207,7 +214,7 @@ describe('runSmartSearch', () => {
   });
 
   it('reports rows the hydrator no longer returns as unscored', async () => {
-    mocks.enumerate.mockResolvedValue(['s1', 's2'].map((id) => ({ id })));
+    mocks.enumerate.mockResolvedValue(['s1', 's2'].map((id) => ({ id, redactedFields: [] })));
     mocks.hydrateRows.mockImplementation(async (_scope: unknown, ids: string[]) => ({
       rows: ids.filter((id) => id !== 's2').map((widget_id) => ({ widget_id, title: widget_id })),
       metadata: { tags: {} },
@@ -219,7 +226,7 @@ describe('runSmartSearch', () => {
   });
 
   it('never holds more than inflightPerSearch requests open', async () => {
-    mocks.enumerate.mockResolvedValue(Array.from({ length: 12 }, (_, i) => ({ id: `s${i}` }))); // 6 batches of 2
+    mocks.enumerate.mockResolvedValue(Array.from({ length: 12 }, (_, i) => ({ id: `s${i}`, redactedFields: [] }))); // 6 batches of 2
     let inflight = 0;
     let peak = 0;
     mocks.systemOne.mockImplementation(async (request: never) => {
@@ -236,7 +243,7 @@ describe('runSmartSearch', () => {
   });
 
   it('caps requests across concurrent searches at inflightPerProcess', async () => {
-    mocks.enumerate.mockResolvedValue(Array.from({ length: 12 }, (_, i) => ({ id: `s${i}` })));
+    mocks.enumerate.mockResolvedValue(Array.from({ length: 12 }, (_, i) => ({ id: `s${i}`, redactedFields: [] })));
     let inflight = 0;
     let peak = 0;
     mocks.systemOne.mockImplementation(async (request: never) => {
@@ -252,7 +259,7 @@ describe('runSmartSearch', () => {
   });
 
   it('stops issuing requests once the signal aborts and ends without a done event', async () => {
-    mocks.enumerate.mockResolvedValue(Array.from({ length: 12 }, (_, i) => ({ id: `s${i}` })));
+    mocks.enumerate.mockResolvedValue(Array.from({ length: 12 }, (_, i) => ({ id: `s${i}`, redactedFields: [] })));
     const controller = new AbortController();
     mocks.systemOne.mockImplementation(async (request: never) => {
       await new Promise((resolve) => setTimeout(resolve, 5));

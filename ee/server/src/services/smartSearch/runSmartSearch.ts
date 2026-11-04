@@ -150,9 +150,12 @@ export async function* runSmartSearch<TScope, TRow, TMetadata>(
     throw new Error(getErrorMessage(enumerated));
   }
   const targets = enumerated as SmartSearchTarget[];
+  if (targets.some((target) => !Array.isArray(target.redactedFields))) {
+    throw new SmartSearchForbiddenError('Authorization context is missing for one or more search targets');
+  }
   const ids = targets.map((target) => target.id);
   const redactions: SmartSearchRedactions = new Map(
-    targets.flatMap((target) => (target.redactedFields?.length ? [[target.id, target.redactedFields] as const] : []))
+    targets.map((target) => [target.id, target.redactedFields] as const)
   );
   const total = ids.length;
 

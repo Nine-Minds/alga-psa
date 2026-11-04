@@ -13,7 +13,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { aclPredicateSql, resolveSearchAclPrincipal, type SearchAclPrincipal } from '@alga-psa/search/acl';
-import { getAllMatchingTicketIds, loadTicketListItemsByIds } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { authorizeTicketIdsWithRedactions, getAllMatchingTicketIds, loadTicketListItemsByIds } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { ticketListFiltersSchema } from '@alga-psa/tickets/schemas/ticket.schema';
 import type { TicketSmartSearchRowMetadata, TicketSmartSearchScope } from '@alga-psa/tickets/lib/smartTicketSearch/types';
 import type { ITicketListItem, IUserWithRoles } from '@alga-psa/types';
@@ -29,8 +29,9 @@ import {
   type CandidateChild,
   type SmartSearchCandidate,
 } from '../candidate';
-import type { SmartSearchEntityDefinition } from '../entityDefinition';
+import type { SmartSearchEntityDefinition, SmartSearchRedactions } from '../entityDefinition';
 import type { RelevancePrompt } from '../scoreBatch';
+import { hiddenTicketFields, interpretTicketRedactions } from '@alga-psa/tickets/lib/ticketFieldProjection';
 
 export type TicketCommentAuthor = 'technician' | 'client' | 'system';
 
@@ -113,7 +114,13 @@ export function assembleTicketCandidate(
   );
 }
 
-async function loadTicketTextRows(trx: Knex.Transaction, tenant: string, ticketIds: string[]): Promise<TicketTextRow[]> {
+function maskedColumn(trx: Knex.Transaction, hidden: ReadonlySet<string>, field: string, type: string, expression: string): Knex.Raw {
+  return hidden.has(field) ? trx.raw(`NULL::${type} as ??`, [field]) : trx.raw(`${expression} as ??`, [field]);
+}
+
+async function loadTicketTextRows(trx: Knex.Transaction, tenant: string, ticketIds: string[], redactedFields: readonly string[]): Promise<TicketTextRow[]> {
+  const hidden = hiddenTicketFields(redactedFields);
+  if (hidden.has('ticket_id') || redactedFields.includes('*')) return [];
   const db = tenantDb(trx, tenant);
   const query = db.table('tickets as t');
   db.tenantJoin(query, 'clients as comp', 't.client_id', 'comp.client_id', { type: 'left' });
@@ -129,20 +136,20 @@ async function loadTicketTextRows(trx: Knex.Transaction, tenant: string, ticketI
     .whereIn('t.ticket_id', ticketIds)
     .select(
       't.ticket_id',
-      't.ticket_number',
-      't.title',
-      trx.raw("t.attributes->>'description' as description"),
-      'comp.client_name',
-      's.name as status_name',
-      's.is_closed',
-      'p.priority_name',
-      'b.board_name',
-      trx.raw("NULLIF(TRIM(CONCAT(au.first_name, ' ', au.last_name)), '') as assigned_to_name"),
-      'tm.team_name as assigned_team_name',
-      't.entered_at',
-      't.updated_at',
-      't.closed_at',
-      't.due_date'
+      maskedColumn(trx, hidden, 'ticket_number', 'text', 't.ticket_number'),
+      hidden.has('title') ? trx.raw("'Hidden ticket'::text as title") : 't.title',
+      maskedColumn(trx, hidden, 'description', 'text', "t.attributes->>'description'"),
+      maskedColumn(trx, hidden, 'client_name', 'text', 'comp.client_name'),
+      maskedColumn(trx, hidden, 'status_name', 'text', 's.name'),
+      maskedColumn(trx, hidden, 'is_closed', 'boolean', 's.is_closed'),
+      maskedColumn(trx, hidden, 'priority_name', 'text', 'p.priority_name'),
+      maskedColumn(trx, hidden, 'board_name', 'text', 'b.board_name'),
+      maskedColumn(trx, hidden, 'assigned_to_name', 'text', "NULLIF(TRIM(CONCAT(au.first_name, ' ', au.last_name)), '')"),
+      maskedColumn(trx, hidden, 'assigned_team_name', 'text', 'tm.team_name'),
+      maskedColumn(trx, hidden, 'entered_at', 'timestamptz', 't.entered_at'),
+      maskedColumn(trx, hidden, 'updated_at', 'timestamptz', 't.updated_at'),
+      maskedColumn(trx, hidden, 'closed_at', 'timestamptz', 't.closed_at'),
+      maskedColumn(trx, hidden, 'due_date', 'timestamptz', 't.due_date')
     );
 }
 
@@ -150,8 +157,10 @@ async function loadVisibleCommentRows(
   trx: Knex.Transaction,
   tenant: string,
   principal: SearchAclPrincipal,
-  ticketIds: string[]
+  ticketIds: string[],
+  suppressComments: boolean
 ): Promise<CommentIndexRow[]> {
+  if (suppressComments) return [];
   const acl = aclPredicateSql(principal);
   // Newest first per ticket, capped per ticket so a 400-comment thread does not
   // pull 400 rows the budget will throw away. ROW_NUMBER keeps the query one
@@ -181,16 +190,36 @@ export async function loadTicketCandidates(
   trx: Knex.Transaction,
   tenant: string,
   user: IUserWithRoles,
-  ticketIds: string[]
+  ticketIds: string[],
+  redactions: SmartSearchRedactions
 ): Promise<SmartSearchCandidate[]> {
   if (ticketIds.length === 0) {
     return [];
   }
+  const authorizedIds = ticketIds.filter((id) => redactions.has(id));
+  if (authorizedIds.length === 0) return [];
   const principal = await resolveSearchAclPrincipal(trx, user);
-  const [ticketRows, commentRows] = await Promise.all([
-    loadTicketTextRows(trx, tenant, ticketIds),
-    loadVisibleCommentRows(trx, tenant, principal, ticketIds),
-  ]);
+  const attributesRows = await tenantDb(trx, tenant).table('tickets').whereIn('ticket_id', authorizedIds).select('ticket_id', 'attributes');
+  const attributesById = new Map(attributesRows.map((row: { ticket_id: string; attributes: Record<string, unknown> | null }) => [row.ticket_id, row.attributes]));
+  const grouped = new Map<string, string[]>();
+  for (const id of authorizedIds) {
+    const fields = [...new Set(redactions.get(id)!)].sort();
+    // Candidate construction must reject policy names it cannot interpret just as hydration does.
+    interpretTicketRedactions(fields, attributesById.get(id));
+    const key = JSON.stringify(fields);
+    grouped.set(key, [...(grouped.get(key) ?? []), id]);
+  }
+  const ticketRows: TicketTextRow[] = [];
+  const commentRows: CommentIndexRow[] = [];
+  for (const [key, ids] of grouped) {
+    const fields = JSON.parse(key) as string[];
+    const [rows, comments] = await Promise.all([
+      loadTicketTextRows(trx, tenant, ids, fields),
+      loadVisibleCommentRows(trx, tenant, principal, ids, fields.length > 0),
+    ]);
+    ticketRows.push(...rows);
+    commentRows.push(...comments);
+  }
 
   const commentsByTicket = new Map<string, TicketComment[]>();
   for (const row of commentRows) {
@@ -205,7 +234,7 @@ export async function loadTicketCandidates(
 
   const rowsById = new Map(ticketRows.map((row) => [row.ticket_id, row] as const));
   const candidates: SmartSearchCandidate[] = [];
-  for (const ticketId of ticketIds) {
+  for (const ticketId of authorizedIds) {
     const row = rowsById.get(ticketId);
     if (!row) {
       // Filtered out or deleted between enumeration and load; the runner
@@ -251,15 +280,32 @@ export const ticketSmartSearch: SmartSearchEntityDefinition<TicketSmartSearchSco
   normalizeScope: (scope) => ({ ...scope, searchQuery: '' }),
   enumerate: async (scope) => {
     const ids = await getAllMatchingTicketIds(scope);
-    return Array.isArray(ids) ? ids.map((id) => ({ id })) : ids;
+    if (!Array.isArray(ids)) return ids;
+    const authorized = await authorizeTicketIdsWithRedactions(ids);
+    if (isActionMessageError(authorized) || isActionPermissionError(authorized)) return authorized;
+    return authorized.map(({ ticketId, redactedFields }) => ({ id: ticketId, redactedFields }));
   },
   loadCandidates: loadTicketCandidates,
-  hydrateRows: async (scope, ids) => {
-    const result = await loadTicketListItemsByIds(scope, ids);
-    if (isActionMessageError(result) || isActionPermissionError(result)) {
-      return result;
-    }
-    return { rows: result.tickets, metadata: result.metadata };
+  hydrateRows: async (scope, ids, originalRedactions) => {
+    const fresh = await authorizeTicketIdsWithRedactions(ids);
+    if (isActionMessageError(fresh) || isActionPermissionError(fresh)) return fresh;
+    const byId = new Map(fresh.map(({ ticketId, redactedFields }) => [ticketId, [...new Set([...(originalRedactions.get(ticketId) ?? []), ...redactedFields])]] as const));
+    const authorizedIds = ids.filter((id) => byId.has(id));
+    const callerRedactions = Object.fromEntries(authorizedIds.map((id) => [id, [...byId.get(id)!]])) as Record<string, string[]>;
+    const result = await loadTicketListItemsByIds(scope, authorizedIds, callerRedactions);
+    if (isActionMessageError(result) || isActionPermissionError(result)) return result;
+    const rows = result.tickets.filter((ticket) => byId.has(ticket.ticket_id));
+    const visibleIds = new Set(rows.map((ticket) => ticket.ticket_id));
+    const visibleAgents = new Set(rows.flatMap((ticket) => ticket.assigned_to ? [ticket.assigned_to] : []));
+    const visibleTeams = new Set(rows.flatMap((ticket) => ticket.assigned_team_id ? [ticket.assigned_team_id] : []));
+    return {
+      rows,
+      metadata: {
+        agentAvatarUrls: Object.fromEntries(Object.entries(result.metadata.agentAvatarUrls).filter(([id]) => visibleAgents.has(id))),
+        teamAvatarUrls: Object.fromEntries(Object.entries(result.metadata.teamAvatarUrls).filter(([id]) => visibleTeams.has(id))),
+        ticketTags: Object.fromEntries(Object.entries(result.metadata.ticketTags).filter(([id]) => visibleIds.has(id))),
+      },
+    };
   },
   rowId: (ticket) => ticket.ticket_id as string,
   relevance: TICKET_RELEVANCE,

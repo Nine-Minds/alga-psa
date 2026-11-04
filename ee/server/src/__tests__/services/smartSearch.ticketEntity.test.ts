@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@alga-psa/tickets/actions/optimizedTicketActions', () => ({
+  authorizeTicketIdsWithRedactions: vi.fn(),
   getAllMatchingTicketIds: vi.fn(),
   loadTicketListItemsByIds: vi.fn(),
 }));
@@ -11,7 +12,7 @@ vi.mock('@alga-psa/db', () => ({ tenantDb: vi.fn() }));
 import { approxTokens } from '../../services/smartSearch/budgets';
 import { buildRelevanceRequest } from '../../services/smartSearch/scoreBatch';
 import { assembleTicketCandidate, ticketSmartSearch } from '../../services/smartSearch/entities/ticket';
-import { loadTicketListItemsByIds } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { authorizeTicketIdsWithRedactions, loadTicketListItemsByIds } from '@alga-psa/tickets/actions/optimizedTicketActions';
 
 const row = (description: string | null = 'A plain description.') => ({
   ticket_id: 'tid',
@@ -88,6 +89,7 @@ describe('ticketSmartSearch definition', () => {
       tickets: [{ ticket_id: 'a' } as never],
       metadata: { agentAvatarUrls: {}, teamAvatarUrls: {}, ticketTags: {} },
     });
+    vi.mocked(authorizeTicketIdsWithRedactions).mockResolvedValue([{ ticketId: 'a', redactedFields: [] }] as never);
     await expect(ticketSmartSearch.hydrateRows({} as never, ['a'], new Map())).resolves.toEqual({
       rows: [{ ticket_id: 'a' }],
       metadata: { agentAvatarUrls: {}, teamAvatarUrls: {}, ticketTags: {} },
@@ -95,6 +97,32 @@ describe('ticketSmartSearch definition', () => {
     vi.mocked(loadTicketListItemsByIds).mockResolvedValue({ permissionError: 'nope' } as never);
     await expect(ticketSmartSearch.hydrateRows({} as never, ['a'], new Map())).resolves.toEqual({ permissionError: 'nope' });
     expect(ticketSmartSearch.rowId({ ticket_id: 'z' } as never)).toBe('z');
+  });
+
+  it('keeps original redactions, applies fresh restrictions, and omits tickets denied during hydration', async () => {
+    vi.mocked(loadTicketListItemsByIds).mockResolvedValue({
+      tickets: [
+        { ticket_id: 'a', title: 'Hidden ticket', attributes: { description: null }, client_name: null, assigned_to: null } as never,
+        { ticket_id: 'b', title: 'Denied ticket' } as never,
+      ],
+      metadata: {
+        agentAvatarUrls: { hiddenAgent: '/avatar' }, teamAvatarUrls: { team: '/avatar' },
+        ticketTags: { a: [], b: [] },
+      },
+    });
+    vi.mocked(authorizeTicketIdsWithRedactions).mockResolvedValue([
+      { ticketId: 'a', redactedFields: ['client_name'] },
+    ] as never);
+    const result = await ticketSmartSearch.hydrateRows({} as never, ['a', 'b'], new Map([
+      ['a', ['title', 'description']],
+      ['b', []],
+    ]));
+    expect(loadTicketListItemsByIds).toHaveBeenLastCalledWith({}, ['a'], { a: ['title', 'description', 'client_name'] });
+    expect(result).toMatchObject({
+      rows: [{ ticket_id: 'a', title: 'Hidden ticket', attributes: { description: null }, client_name: null }],
+      metadata: { agentAvatarUrls: {}, teamAvatarUrls: {}, ticketTags: { a: [] } },
+    });
+    expect(JSON.stringify(result)).not.toContain('Denied ticket');
   });
 
   it('names the ticket facts in the question so a literal reader knows when to use them', () => {
