@@ -1,9 +1,13 @@
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
+import os from 'node:os';
+import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Browser } from 'puppeteer';
 import { JSDOM } from 'jsdom';
-import { configureIsolatedPage } from '@alga-psa/documents/lib/renderHtmlToPng';
+import { configureIsolatedPage, prepareHtmlForIsolatedRendering } from '@alga-psa/documents/lib/renderHtmlToPng';
 import { browserPoolService } from './browserPoolService';
 
 const INTERNAL_SECRET = 'internal-loopback-response-4bfca1';
@@ -67,6 +71,59 @@ function pdfHasHeader(pdf: Buffer): boolean {
   return pdf.subarray(0, 5).toString('ascii') === '%PDF-';
 }
 
+function withPdfFile<T>(pdf: Buffer, inspect: (pdfPath: string, directory: string) => T): T {
+  const directory = mkdtempSync(path.join(os.tmpdir(), 'document-pdf-ssrf-'));
+  const pdfPath = path.join(directory, 'export.pdf');
+  writeFileSync(pdfPath, pdf);
+  try {
+    return inspect(pdfPath, directory);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+function extractPdfText(pdf: Buffer): string {
+  return withPdfFile(pdf, (pdfPath) => execFileSync('pdftotext', ['-layout', pdfPath, '-'], { encoding: 'utf8' }));
+}
+
+function countRedPixelsInPdf(pdf: Buffer): number {
+  return withPdfFile(pdf, (pdfPath, directory) => {
+    const prefix = path.join(directory, 'page');
+    execFileSync('pdftoppm', ['-f', '1', '-l', '1', '-singlefile', '-r', '96', pdfPath, prefix]);
+    const ppm = readFileSync(`${prefix}.ppm`);
+    let offset = 0;
+    const nextToken = (): string => {
+      while (offset < ppm.length) {
+        if (ppm[offset] === 35) {
+          while (offset < ppm.length && ppm[offset] !== 10) offset++;
+        } else if (ppm[offset] <= 32) {
+          offset++;
+        } else {
+          break;
+        }
+      }
+      const start = offset;
+      while (offset < ppm.length && ppm[offset] > 32) offset++;
+      return ppm.subarray(start, offset).toString('ascii');
+    };
+    expect(nextToken()).toBe('P6');
+    const width = Number(nextToken());
+    const height = Number(nextToken());
+    expect(nextToken()).toBe('255');
+    if (ppm[offset] === 13 && ppm[offset + 1] === 10) offset += 2;
+    else offset++;
+
+    let redPixels = 0;
+    for (let pixel = 0; pixel < width * height; pixel++) {
+      const red = ppm[offset + pixel * 3];
+      const green = ppm[offset + pixel * 3 + 1];
+      const blue = ppm[offset + pixel * 3 + 2];
+      if (red > 200 && green < 80 && blue < 80) redPixels++;
+    }
+    return redPixels;
+  });
+}
+
 describe('PDFGenerationService stored document rendering isolation', () => {
   it('exports stored Markdown without fetching or disclosing malicious internal content', async () => {
     const target = `http://127.0.0.1:${port}`;
@@ -78,7 +135,7 @@ describe('PDFGenerationService stored document rendering isolation', () => {
       `<script>fetch("${target}/script")</script>`,
       `<img src="file:///etc/hostname" alt="local file">`,
       `<iframe src="file:///etc/hostname"></iframe>`,
-      `<style>.private { background-image: url("${target}/css"); }</style>`,
+      `<style>@import "${target}/import.css"; .private { background-image: url("file:///etc/hostname"); }</style>`,
       '<p onclick="document.body.dataset.clicked=true">Click me</p>',
       '<p class="private">Visible paragraph</p>',
     ].join('\n');
@@ -88,13 +145,21 @@ describe('PDFGenerationService stored document rendering isolation', () => {
     const title = new JSDOM(html).window.document.title;
     expect(title).toBe('Quarterly <script>alert(1)</script> & Report');
 
+    const prepared = await prepareHtmlForIsolatedRendering(html);
+    expect(prepared).not.toContain('@import');
+    expect(prepared).not.toContain('file:///etc/hostname');
+    expect(prepared).not.toContain(`${target}/import.css`);
+
     const pdf = await (service as any).generatePDFBuffer(html) as Buffer;
     await new Promise((resolve) => setTimeout(resolve, 300));
+    const pdfText = extractPdfText(pdf);
 
     expect(pdfHasHeader(pdf)).toBe(true);
     expect(pdf.length).toBeGreaterThan(1000);
     expect(requests).toEqual([]);
-    expect(pdf.toString('latin1')).not.toContain(INTERNAL_SECRET);
+    expect(pdfText).toContain('Safe document heading');
+    expect(pdfText).toContain('Visible paragraph');
+    expect(pdfText).not.toContain(INTERNAL_SECRET);
   }, 60000);
 
   it('still produces a printable PDF for ordinary stored Markdown', async () => {
@@ -106,6 +171,33 @@ describe('PDFGenerationService stored document rendering isolation', () => {
     expect(pdfHasHeader(pdf)).toBe(true);
     expect(pdf.length).toBeGreaterThan(1000);
   }, 60000);
+
+  it('inlines validated image assets and removes unsupported image and CSS resource schemes', async () => {
+    const fetched: string[] = [];
+    const prepared = await prepareHtmlForIsolatedRendering(`
+      <img src="https://assets.example.test/allowed.png" alt="validated image">
+      <img src="file:///etc/hostname" alt="blocked file">
+      <style>
+        @import "http://127.0.0.1:${port}/a.css";
+        @import url("https://assets.example.test/import.css");
+        .file { background-image: url(file:///etc/hostname); }
+        .set { background-image: image-set("http://127.0.0.1:${port}/remote.png" 1x); }
+        .valid { background-image: url("https://assets.example.test/allowed.png"); }
+      </style>
+    `, {
+      fetchAsset: async (url) => {
+        fetched.push(url);
+        return { bytes: Buffer.from('approved-image-bytes'), contentType: 'image/png' };
+      },
+    });
+
+    expect(fetched).toEqual(['https://assets.example.test/allowed.png']);
+    expect(prepared).toContain('data:image/png;base64,YXBwcm92ZWQtaW1hZ2UtYnl0ZXM=');
+    expect(prepared).not.toContain('@import');
+    expect(prepared).not.toContain('file:///etc/hostname');
+    expect(prepared).not.toContain('127.0.0.1');
+    expect(prepared).not.toContain('assets.example.test/import.css');
+  });
 
   it('disables scripts and blocks browser network and file requests during PDF rendering', async () => {
     const browser = await browserPoolService.getBrowser() as Browser;
@@ -144,27 +236,56 @@ describe('PDFGenerationService stored document rendering isolation', () => {
 
   it('keeps repeated exports isolated while rendering permitted inline image assets', async () => {
     const service = new PDFGenerationService('tenant-1');
-    const browserBefore = await browserPoolService.getBrowser();
-    await browserPoolService.releaseBrowser(browserBefore);
+    const browser = await browserPoolService.getBrowser() as Browser;
+    await browserPoolService.releaseBrowser(browser);
+    const createContext = browser.createBrowserContext.bind(browser);
+    const target = `http://127.0.0.1:${port}`;
+    let contextCount = 0;
+    let firstContextCookie: string[] = [];
+    let secondContextCookies: string[] = [];
+    const createContextSpy = vi.spyOn(browser, 'createBrowserContext').mockImplementation(async (...args) => {
+      const context = await createContext(...args);
+      contextCount++;
+      if (contextCount === 1) {
+        await context.setCookie({ name: 'first-export-state', value: 'isolated-value', domain: '127.0.0.1', path: '/' });
+        firstContextCookie = (await context.cookies()).map((cookie) => cookie.name);
+      } else if (contextCount === 2) {
+        secondContextCookies = (await context.cookies()).map((cookie) => cookie.name);
+      }
+      return context;
+    });
 
-    documentRows.content = '# First export\n\n<script>document.cookie="leak=yes"</script>';
-    const first = await (service as any).generatePDFBuffer(await (service as any).getDocumentHtml('doc-1')) as Buffer;
+    let first: Buffer;
+    let second: Buffer;
+    try {
+      documentRows.content = '# First export\n\nThe first PDF establishes isolated browser state.';
+      first = await (service as any).generatePDFBuffer(await (service as any).getDocumentHtml('doc-1')) as Buffer;
 
-    documentRows.content = [
-      '# Second export',
-      '',
-      '![inline image](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=)',
-      `<img src="http://127.0.0.1:${port}/second-image">`,
-      `<iframe src="http://127.0.0.1:${port}/second-frame"></iframe>`,
-      `<style>.private { background-image: url("http://127.0.0.1:${port}/second-css"); }</style>`,
-      '<p>Second export content</p>',
-    ].join('\n');
-    const second = await (service as any).generatePDFBuffer(await (service as any).getDocumentHtml('doc-1')) as Buffer;
+      const redSvg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#e00000"/></svg>').toString('base64');
+      documentRows.content = [
+        '# Second export',
+        '',
+        `![permitted red image](data:image/svg+xml;base64,${redSvg})`,
+        `<img src="${target}/second-image">`,
+        `<iframe src="${target}/second-frame"></iframe>`,
+        `<style>@import "${target}/second-import.css"; .private { background-image: url("file:///etc/hostname"); }</style>`,
+        '<p>Second export content</p>',
+      ].join('\n');
+      second = await (service as any).generatePDFBuffer(await (service as any).getDocumentHtml('doc-1')) as Buffer;
+    } finally {
+      createContextSpy.mockRestore();
+    }
 
-    expect(pdfHasHeader(first)).toBe(true);
-    expect(pdfHasHeader(second)).toBe(true);
-    expect(second.toString('latin1')).not.toContain('leak=yes');
-    expect(second.toString('latin1')).not.toContain(INTERNAL_SECRET);
+    const secondText = extractPdfText(second!);
+
+    expect(contextCount).toBe(2);
+    expect(firstContextCookie).toContain('first-export-state');
+    expect(secondContextCookies).not.toContain('first-export-state');
+    expect(pdfHasHeader(first!)).toBe(true);
+    expect(pdfHasHeader(second!)).toBe(true);
+    expect(secondText).toContain('Second export content');
+    expect(secondText).not.toContain(INTERNAL_SECRET);
+    expect(countRedPixelsInPdf(second!)).toBeGreaterThan(100);
     expect(requests).toEqual([]);
   }, 60000);
 });
