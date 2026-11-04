@@ -1,0 +1,27 @@
+3828-}
+3829- GET /auth/client-portal/signin 200 in 145ms (next.js: 43ms, proxy.ts: 3ms, application-code: 98ms)
+3830-[browser] [PostHog.js] [Surveys] Flags not loaded yet. Not loading surveys.
+3831:[sendTenantRecoveryEmail] Sending recovery email to: dorothy.2993@gale-farm.oz
+3832:[sendTenantRecoveryEmail] Number of tenants: 1
+3833-[db/tenant] Database configuration {
+3834-  client: 'pg',
+3835-  connection: {
+--
+3848-    destroyTimeoutMillis: 500
+3849-  }
+3850-}
+3851:[SystemEmailProviderFactory] Email service is disabled
+3852-[SystemEmailService] Email service disabled or not configured
+3853-[SystemEmailService] Service disabled or not configured
+3854:[sendTenantRecoveryEmail] Failed to send recovery email: Email service is disabled or not configured
+3855:[sendTenantRecoveryEmail] Error sending recovery email: {
+3856-  name: 'Error',
+3857:  message: 'Email service is disabled or not configured',
+3858-  code: undefined
+3859-}
+3860:[requestTenantSignInLinks] Error processing request: {
+3861-  name: 'Error',
+3862:  message: 'Email service is disabled or not configured',
+3863-  code: undefined
+3864-}
+3865- POST /auth/client-portal/signin 200 in 795ms (next.js: 41ms, proxy.ts: 8ms, application-code: 746ms)

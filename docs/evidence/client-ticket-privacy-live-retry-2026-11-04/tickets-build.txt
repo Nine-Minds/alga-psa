@@ -1,0 +1,97 @@
+
+ NX   Running target build for project @alga-psa/tickets and 28 tasks it depends on:
+
+
+
+> nx run @alga-psa/ui:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/validation:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/predicates:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/event-schemas:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/workflow-streams:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/ee-stubs:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/storage:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/workflows:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/block-content:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/documents:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/types:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/event-bus:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/core:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/db:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/formatting:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/authorization:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/licensing:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/shared:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/auth:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/user-composition:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/reference-data:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/list-views:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/tags:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/teams:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/tenancy:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/assets:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/inventory:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/email:build  [existing outputs match the cache, left as is]
+
+
+> nx run @alga-psa/tickets:build  [existing outputs match the cache, left as is]
+
+
+
+
+ NX   Successfully ran target build for project @alga-psa/tickets and 28 tasks it depends on
+
+Nx read the output from the cache instead of running the command for 29 out of 29 tasks.
