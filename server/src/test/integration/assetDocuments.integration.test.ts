@@ -15,7 +15,7 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 const HOOK_TIMEOUT = 180_000;
-const actionAuth = vi.hoisted(() => ({ tenant: '', userId: '' }));
+const actionAuth = vi.hoisted(() => ({ tenant: '', userId: '', userType: 'internal', clientId: '' }));
 
 vi.mock('@alga-psa/auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/auth')>();
@@ -23,7 +23,7 @@ vi.mock('@alga-psa/auth', async (importOriginal) => {
     ...actual,
     hasPermission: vi.fn().mockResolvedValue(true),
     withAuth: (action: any) => async (...args: unknown[]) => action(
-      { user_id: actionAuth.userId },
+      { user_id: actionAuth.userId, user_type: actionAuth.userType, clientId: actionAuth.clientId },
       { tenant: actionAuth.tenant },
       ...args,
     ),
@@ -46,6 +46,8 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
 
 let db: Knex;
 let getAssetDocuments: typeof import('@alga-psa/assets/actions/assetDocumentActions').getAssetDocuments;
+let associateDocumentWithAsset: typeof import('@alga-psa/assets/actions/assetDocumentActions').associateDocumentWithAsset;
+let removeDocumentFromAsset: typeof import('@alga-psa/assets/actions/assetDocumentActions').removeDocumentFromAsset;
 const columns: Record<string, Record<string, unknown>> = {};
 const cleanupTenants = new Set<string>();
 
@@ -94,12 +96,36 @@ async function seedFixture() {
   });
 
   const clientId = randomUUID();
+  const outsiderClientId = randomUUID();
   await table(tenantId, 'clients').insert({
     tenant: tenantId,
     client_id: clientId,
     client_name: 'Emerald City',
     ...(hasColumn('clients', 'created_at') ? { created_at: db.fn.now() } : {}),
     ...(hasColumn('clients', 'updated_at') ? { updated_at: db.fn.now() } : {}),
+  });
+  await table(tenantId, 'clients').insert({
+    tenant: tenantId,
+    client_id: outsiderClientId,
+    client_name: 'Other Client',
+    ...(hasColumn('clients', 'created_at') ? { created_at: db.fn.now() } : {}),
+    ...(hasColumn('clients', 'updated_at') ? { updated_at: db.fn.now() } : {}),
+  });
+
+  const outsiderUserId = randomUUID();
+  await table(tenantId, 'users').insert({
+    tenant: tenantId,
+    user_id: outsiderUserId,
+    username: `assetdoc-client-${tenantId.slice(0, 8)}`,
+    hashed_password: 'not-used',
+    first_name: 'Client',
+    last_name: 'Tester',
+    ...(hasColumn('users', 'email') ? { email: `assetdoc-client-${tenantId.slice(0, 8)}@example.com` } : {}),
+    ...(hasColumn('users', 'user_type') ? { user_type: 'client' } : {}),
+    ...(hasColumn('users', 'client_id') ? { client_id: outsiderClientId } : {}),
+    ...(hasColumn('users', 'is_inactive') ? { is_inactive: false } : {}),
+    ...(hasColumn('users', 'created_at') ? { created_at: db.fn.now() } : {}),
+    ...(hasColumn('users', 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
   const assetId = randomUUID();
@@ -126,15 +152,15 @@ async function seedFixture() {
     icon: 'book',
   });
 
-  const seedDocument = async (name: string) => {
+  const seedDocument = async (name: string, creatorId = userId) => {
     const documentId = randomUUID();
     await table(tenantId, 'documents').insert({
       tenant: tenantId,
       document_id: documentId,
       document_name: name,
       type_id: typeId,
-      user_id: userId,
-      created_by: userId,
+      user_id: creatorId,
+      created_by: creatorId,
       entered_at: db.fn.now(),
       updated_at: db.fn.now(),
     });
@@ -157,10 +183,17 @@ async function seedFixture() {
   const otherDocumentId = await seedDocument('Other asset runbook.md');
   await link(otherDocumentId, otherAssetId);
 
-  return { tenantId, userId, assetId, otherAssetId, documentId, associationId, otherDocumentId };
+  return { tenantId, userId, outsiderUserId, clientId, outsiderClientId, assetId, otherAssetId, documentId, associationId, otherDocumentId, seedDocument, link };
 }
 
 describe('getAssetDocuments (integration)', () => {
+  beforeEach(() => {
+    actionAuth.tenant = '';
+    actionAuth.userId = '';
+    actionAuth.userType = 'internal';
+    actionAuth.clientId = '';
+  });
+
   beforeAll(async () => {
     wireLocalTestDbEnv();
     process.env.APP_ENV = process.env.APP_ENV || 'test';
@@ -174,7 +207,7 @@ describe('getAssetDocuments (integration)', () => {
     for (const name of ['tenants', 'users', 'clients']) {
       columns[name] = await tenantDb(db, '__asset_documents_schema__').unscoped(name, 'schema introspection').columnInfo();
     }
-    ({ getAssetDocuments } = await import('@alga-psa/assets/actions/assetDocumentActions'));
+    ({ getAssetDocuments, associateDocumentWithAsset, removeDocumentFromAsset } = await import('@alga-psa/assets/actions/assetDocumentActions'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -223,5 +256,117 @@ describe('getAssetDocuments (integration)', () => {
     await table(fx.tenantId, 'document_associations').where({ association_id: fx.associationId }).del();
 
     expect(await getAssetDocuments(fx.assetId)).toEqual([]);
+  });
+
+  it('creates and removes an authorized asset association and persists both outcomes', async () => {
+    const fx = await seedFixture();
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.userId;
+    actionAuth.userType = 'internal';
+    const documentId = await fx.seedDocument('New authorized runbook.md');
+
+    const created = await associateDocumentWithAsset({ entity_id: fx.assetId, document_id: documentId });
+    expect(created).toMatchObject({ entity_id: fx.assetId, entity_type: 'asset', document_id: documentId });
+    const persisted = await table(fx.tenantId, 'document_associations').where({ association_id: (created as any).association_id }).first();
+    expect(persisted).toMatchObject({ entity_id: fx.assetId, entity_type: 'asset', document_id: documentId });
+
+    await removeDocumentFromAsset((created as any).association_id);
+    expect(await table(fx.tenantId, 'document_associations').where({ association_id: (created as any).association_id }).first()).toBeUndefined();
+  });
+
+  it('denies a coarse-permitted client user excluded from the target asset client', async () => {
+    const fx = await seedFixture();
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.outsiderUserId;
+    actionAuth.userType = 'client';
+    actionAuth.clientId = fx.outsiderClientId;
+    const documentId = await fx.seedDocument('Attempted cross-client link.md', fx.outsiderUserId);
+    const before = await table(fx.tenantId, 'document_associations').count('* as count').first();
+
+    const result = await associateDocumentWithAsset({ entity_id: fx.assetId, document_id: documentId });
+
+    expect(result).toHaveProperty('permissionError');
+    expect(Number((await table(fx.tenantId, 'document_associations').count('* as count').first())?.count)).toBe(Number(before?.count));
+  });
+
+  it('denies an accessible client asset paired with a document outside the caller document policy', async () => {
+    const fx = await seedFixture();
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.outsiderUserId;
+    actionAuth.userType = 'client';
+    actionAuth.clientId = fx.clientId;
+    const documentId = await fx.seedDocument('Private internal document.md');
+    const before = await table(fx.tenantId, 'document_associations').count('* as count').first();
+
+    const result = await associateDocumentWithAsset({ entity_id: fx.assetId, document_id: documentId });
+
+    expect(result).toHaveProperty('permissionError');
+    expect(Number((await table(fx.tenantId, 'document_associations').count('* as count').first())?.count)).toBe(Number(before?.count));
+  });
+
+  it('does not remove an association belonging to an asset outside the caller client', async () => {
+    const fx = await seedFixture();
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.outsiderUserId;
+    actionAuth.userType = 'client';
+    actionAuth.clientId = fx.outsiderClientId;
+
+    const result = await removeDocumentFromAsset(fx.associationId);
+
+    expect(result).toHaveProperty('permissionError');
+    expect(await table(fx.tenantId, 'document_associations').where({ association_id: fx.associationId }).first()).toBeDefined();
+  });
+
+  it('does not remove an association whose document is inaccessible to the caller', async () => {
+    const fx = await seedFixture();
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.outsiderUserId;
+    actionAuth.userType = 'client';
+    actionAuth.clientId = fx.clientId;
+    const privateDocumentId = await fx.seedDocument('Private client runbook.md');
+    const associationId = await fx.link(privateDocumentId, fx.assetId);
+
+    const result = await removeDocumentFromAsset(associationId);
+
+    expect(result).toHaveProperty('permissionError');
+    expect(await table(fx.tenantId, 'document_associations').where({ association_id: associationId }).first()).toBeDefined();
+  });
+
+  it('does not remove a non-asset association', async () => {
+    const fx = await seedFixture();
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.userId;
+    actionAuth.userType = 'internal';
+    const associationId = randomUUID();
+    await table(fx.tenantId, 'document_associations').insert({
+      tenant: fx.tenantId, association_id: associationId, document_id: fx.documentId,
+      entity_id: randomUUID(), entity_type: 'ticket',
+    });
+
+    const result = await removeDocumentFromAsset(associationId);
+
+    expect(result).toHaveProperty('permissionError');
+    expect(await table(fx.tenantId, 'document_associations').where({ association_id: associationId }).first()).toBeDefined();
+  });
+
+  it('denies missing and cross-tenant identifiers without changing associations', async () => {
+    const local = await seedFixture();
+    const foreign = await seedFixture();
+    actionAuth.tenant = local.tenantId;
+    actionAuth.userId = local.userId;
+    actionAuth.userType = 'internal';
+    const before = await table(local.tenantId, 'document_associations').count('* as count').first();
+
+    expect(await associateDocumentWithAsset({ entity_id: '', document_id: '' })).toHaveProperty('permissionError');
+    expect(await associateDocumentWithAsset({ entity_id: randomUUID(), document_id: local.documentId })).toHaveProperty('permissionError');
+    expect(await associateDocumentWithAsset({ entity_id: local.assetId, document_id: randomUUID() })).toHaveProperty('permissionError');
+    expect(await associateDocumentWithAsset({ entity_id: local.assetId, document_id: foreign.documentId })).toHaveProperty('permissionError');
+    expect(await associateDocumentWithAsset({ entity_id: foreign.assetId, document_id: foreign.documentId })).toHaveProperty('permissionError');
+    expect(await removeDocumentFromAsset(randomUUID())).toHaveProperty('permissionError');
+    expect(await removeDocumentFromAsset('')).toHaveProperty('permissionError');
+    expect(await removeDocumentFromAsset(foreign.associationId)).toHaveProperty('permissionError');
+
+    expect(Number((await table(local.tenantId, 'document_associations').count('* as count').first())?.count)).toBe(Number(before?.count));
+    expect(await table(foreign.tenantId, 'document_associations').where({ association_id: foreign.associationId }).first()).toBeDefined();
   });
 });
