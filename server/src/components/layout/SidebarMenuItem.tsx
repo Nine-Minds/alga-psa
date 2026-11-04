@@ -35,6 +35,18 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
   const { t } = useTranslation('msp/core');
   const hasActiveSubItem = item.subItems?.some((subItem) => isActive(subItem.href || '')) ?? false;
 
+  // Collapsed, the labelled row shrinks to a 32px box while the glyph it holds is
+  // 20px wide and still carries the label's right margin — so the active tint
+  // stopped 4px past the icon and read as highlighting only part of it. The rail
+  // instead draws one 40x40 pill per icon, centred like the collapsed search
+  // button above it.
+  const rowClass = sidebarOpen
+    ? 'flex items-center px-2 py-2 mx-2 rounded hover:bg-sidebar-hover'
+    : 'flex items-center justify-center h-10 w-10 mx-auto rounded-md hover:bg-sidebar-hover';
+  const iconClass = `h-5 w-5 flex-shrink-0 ${sidebarOpen ? 'mr-2' : ''}`;
+  // The link fills the pill so the whole highlighted square stays clickable.
+  const innerClass = `flex items-center min-w-0 flex-1${sidebarOpen ? '' : ' justify-center h-full'}`;
+
   if (item.subItems) {
     const isExternalLink = item.href?.startsWith('http://') || item.href?.startsWith('https://');
     const isRowActive = (item.href ? isActive(item.href) : false)
@@ -42,14 +54,14 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
       || (item.relatedPaths ? isRelatedPathActive?.(item.relatedPaths) ?? false : false);
     const content = (
       <>
-        <item.icon className="h-5 w-5 mr-2 flex-shrink-0" />
+        <item.icon className={iconClass} />
         {sidebarOpen && <span className="truncate">{item.name}</span>}
       </>
     );
 
     return (
       <div
-        className={`flex items-center px-2 py-2 mx-2 rounded hover:bg-sidebar-hover ${isRowActive ? 'bg-[rgb(var(--color-primary-500)/0.2)]' : ''}`}
+        className={`${rowClass} ${isRowActive ? 'bg-[rgb(var(--color-primary-500)/0.2)]' : ''}`}
         data-automation-id={`sidebar-menu-${id}`}
         aria-expanded={openSubmenu === item.name}
       >
@@ -59,19 +71,19 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
               href={item.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center min-w-0 flex-1"
+              className={innerClass}
             >
               {content}
             </a>
           ) : (
-            <Link prefetch={false} href={item.href} className="flex items-center min-w-0 flex-1" onClick={() => onMenuItemClick?.(item.href)}>
+            <Link prefetch={false} href={item.href} className={innerClass} onClick={() => onMenuItemClick?.(item.href)}>
               {content}
             </Link>
           )
         ) : (
           <button
             type="button"
-            className="flex items-center min-w-0 flex-1 text-left"
+            className={`${innerClass} text-left`}
             onClick={() => onToggleSubmenu(item.name)}
           >
             {content}
@@ -109,7 +121,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
 
   const linkContent = (
     <>
-      <item.icon className="h-5 w-5 mr-2 flex-shrink-0" />
+      <item.icon className={iconClass} />
       {sidebarOpen && (
         <>
           <span className="truncate">{item.name}</span>
@@ -127,7 +139,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
         href={item.href}
         target="_blank"
         rel="noopener noreferrer"
-        className={`flex items-center px-2 py-2 mx-2 rounded hover:bg-sidebar-hover`}
+        className={rowClass}
         data-automation-id={`sidebar-menu-${id}`}
       >
         {linkContent}
@@ -139,7 +151,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
     <Link
       prefetch={false}
       href={item.href || '#'}
-      className={`flex items-center px-2 py-2 mx-2 rounded hover:bg-sidebar-hover ${isActive(item.href || '#') ? 'bg-[rgb(var(--color-primary-500)/0.2)]' : ''}`}
+      className={`${rowClass} ${isActive(item.href || '#') ? 'bg-[rgb(var(--color-primary-500)/0.2)]' : ''}`}
       data-automation-id={`sidebar-menu-${id}`}
       onClick={() => onMenuItemClick?.(item.href)}
     >

@@ -407,9 +407,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     id="settings-back-to-main-button"
                     onClick={handleBackToMain}
-                    className="w-full p-2 flex items-center justify-center text-sidebar-icon hover:text-sidebar-text hover:bg-sidebar-text/10 rounded-md transition-colors"
+                    className="mx-auto h-10 w-10 flex items-center justify-center text-sidebar-icon hover:text-sidebar-text hover:bg-sidebar-text/10 rounded-md transition-colors"
                   >
-                    <ChevronLeft className="h-4 w-4" />
+                    <ChevronLeft className="h-5 w-5" />
                   </button>
                 </Tooltip.Trigger>
                 <Tooltip.Portal>

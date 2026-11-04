@@ -120,6 +120,44 @@ describe('collapsed rail sub-items', () => {
   });
 });
 
+describe('collapsed active highlight', () => {
+  const iconClass = (row: HTMLElement) => row.querySelector('svg')?.getAttribute('class') ?? '';
+
+  it('wraps the whole icon in a centred pill instead of stopping at its edge', () => {
+    renderSidebar();
+
+    const row = sectionRow('menu-home');
+    expect(row.className).toContain(ACTIVE_CLASS_HINT);
+    // 40x40 centred, matching the collapsed search button directly above it.
+    expect(row.className).toContain('h-10');
+    expect(row.className).toContain('w-10');
+    expect(row.className).toContain('mx-auto');
+    expect(row.className).toContain('justify-center');
+    // The label's right margin is what pushed the glyph off-centre in the tint.
+    expect(iconClass(row)).not.toContain('mr-2');
+  });
+
+  it('shapes a section row the same way as a leaf row', () => {
+    state.pathname = '/msp/tickets/recurring';
+    renderSidebar();
+
+    const row = sectionRow('menu-tickets');
+    expect(row.className).toContain(ACTIVE_CLASS_HINT);
+    expect(row.className).toContain('w-10');
+    expect(row.className).toContain('justify-center');
+    expect(iconClass(row)).not.toContain('mr-2');
+  });
+
+  it('keeps the labelled row geometry when the rail is expanded', () => {
+    renderSidebar({ sidebarOpen: true });
+
+    const row = sectionRow('menu-home');
+    expect(row.className).toContain('px-2');
+    expect(row.className).not.toContain('w-10');
+    expect(iconClass(row)).toContain('mr-2');
+  });
+});
+
 describe('expanded section separators', () => {
   const openSection = (id: string) => within(sectionRow(id)).getAllByRole('button')[0];
   const openGroup = (id: string) => document.querySelector(`[data-automation-id="sidebar-section-open-${id}"]`);
