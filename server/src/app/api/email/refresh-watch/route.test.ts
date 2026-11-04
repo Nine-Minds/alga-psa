@@ -28,6 +28,14 @@ function buildRequest(providerId = 'provider-1') {
   }) as any;
 }
 
+function buildRawRequest(body: string) {
+  return new Request('https://example.test/api/email/refresh-watch', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body,
+  }) as any;
+}
+
 function setupTenantDb(options: { provider?: Record<string, unknown> | null; config?: Record<string, unknown> } = {}) {
   const provider = Object.hasOwn(options, 'provider') ? options.provider : {
     id: 'provider-1',
@@ -82,6 +90,19 @@ describe('POST /api/email/refresh-watch authorization and rate limit', () => {
     expect(mocks.configureGmailProvider).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['malformed JSON', '{'],
+    ['an empty body', ''],
+  ])('denies an internal user without ticket_settings:update before parsing %s', async (_label, body) => {
+    mocks.hasPermission.mockResolvedValue(false);
+
+    const response = await POST(buildRawRequest(body));
+
+    expect(response.status).toBe(403);
+    expect(mocks.tenantDb).not.toHaveBeenCalled();
+    expect(mocks.configureGmailProvider).not.toHaveBeenCalled();
+  });
+
   it('denies client users even if permission data says they have the permission', async () => {
     mocks.getCurrentUser.mockResolvedValue({
       user_id: 'client-1', user_type: 'client', tenant: 'tenant-1',
@@ -91,6 +112,21 @@ describe('POST /api/email/refresh-watch authorization and rate limit', () => {
 
     expect(response.status).toBe(403);
     expect(mocks.hasPermission).not.toHaveBeenCalled();
+    expect(mocks.tenantDb).not.toHaveBeenCalled();
+    expect(mocks.configureGmailProvider).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['malformed JSON', '{'],
+    ['an empty body', ''],
+  ])('denies a client user before parsing %s', async (_label, body) => {
+    mocks.getCurrentUser.mockResolvedValue({
+      user_id: 'client-1', user_type: 'client', tenant: 'tenant-1',
+    });
+
+    const response = await POST(buildRawRequest(body));
+
+    expect(response.status).toBe(403);
     expect(mocks.tenantDb).not.toHaveBeenCalled();
     expect(mocks.configureGmailProvider).not.toHaveBeenCalled();
   });
