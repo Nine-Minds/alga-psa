@@ -10,6 +10,7 @@ import { setupCommonMocks, createMockUser } from '../../../test-utils/testMocks'
 import * as auth from '@alga-psa/auth';
 import * as rbac from '@alga-psa/auth/rbac';
 import * as ticketActions from '@alga-psa/tickets/actions/ticketActions';
+import * as ticketResourceActions from '@alga-psa/tickets/actions/ticketResourceActions';
 import { TestContext } from '../../../test-utils/testContext';
 import { createUser } from '../../../test-utils/testDataFactory';
 import * as dbModule from '@alga-psa/db';
@@ -33,6 +34,9 @@ describe('addTicket create extras (integration)', () => {
   let priorityId: string;
   let creator: any;
   let watcherUserId: string;
+  let primaryAgentId: string;
+  let additionalAgentId: string;
+  let secondAdditionalAgentId: string;
   let assetA: string;
   let assetB: string;
   let foreignAsset: string;
@@ -83,6 +87,16 @@ describe('addTicket create extras (integration)', () => {
     return Number((row as any).n);
   }
 
+  function poolLikeForActionTransactions() {
+    const outer = context.db;
+    return new Proxy(outer as any, {
+      get: (target, prop) =>
+        prop === 'commit' || prop === 'rollback' ? undefined : prop === 'transaction'
+          ? (cb: any) => target.transaction(cb)
+          : Reflect.get(target, prop, target),
+    });
+  }
+
   beforeEach(async () => {
     await context.reset();
     tenantId = context.tenantId;
@@ -93,6 +107,15 @@ describe('addTicket create extras (integration)', () => {
     });
     watcherUserId = await createUser(context.db, tenantId, {
       username: 'extras-watcher', first_name: 'Wes', last_name: 'Watcher', email: 'wes@example.com', user_type: 'internal',
+    });
+    primaryAgentId = await createUser(context.db, tenantId, {
+      username: 'extras-primary', first_name: 'Pat', last_name: 'Primary', email: 'pat@example.com', user_type: 'internal',
+    });
+    additionalAgentId = await createUser(context.db, tenantId, {
+      username: 'extras-additional', first_name: 'Ari', last_name: 'Additional', email: 'ari@example.com', user_type: 'internal',
+    });
+    secondAdditionalAgentId = await createUser(context.db, tenantId, {
+      username: 'extras-additional-2', first_name: 'Sam', last_name: 'Second', email: 'sam@example.com', user_type: 'internal',
     });
 
     boardId = uuidv4();
@@ -170,13 +193,7 @@ describe('addTicket create extras (integration)', () => {
     // TestContext runs everything inside one outer transaction, so addTicket's withTransaction would
     // just join it and nothing could roll back. Hand the action a pool-like handle (no commit/rollback)
     // whose transaction() is a savepoint, so the action owns its transaction as it does in production.
-    const outer = context.db;
-    const poolLike = new Proxy(outer as any, {
-      get: (target, prop) =>
-        prop === 'commit' || prop === 'rollback' ? undefined : prop === 'transaction'
-          ? (cb: any) => target.transaction(cb)
-          : Reflect.get(target, prop, target),
-    });
+    const poolLike = poolLikeForActionTransactions();
     vi.spyOn(dbModule, 'createTenantKnex').mockImplementationOnce(async () => ({ knex: poolLike, tenant: tenantId }) as any);
     const outcome = await ticketActions.addTicket(
       createForm({ asset_ids: JSON.stringify([assetA, foreignAsset]) })
@@ -185,6 +202,58 @@ describe('addTicket create extras (integration)', () => {
     expect(message).toMatch(/Invalid asset/);
     expect(await countTickets()).toBe(before);
     expect(await tt('asset_associations').where({ asset_id: assetA }).count('* as n').first().then((r: any) => Number(r.n))).toBe(0);
+  });
+
+  it('creates primary and additional staffing atomically when later ticket updates are denied', async () => {
+    const before = await countTickets();
+    vi.spyOn(dbModule, 'createTenantKnex').mockImplementationOnce(async () => ({
+      knex: poolLikeForActionTransactions(), tenant: tenantId,
+    }) as any);
+    const created: any = await ticketActions.addTicket(createForm({
+      assigned_to: primaryAgentId,
+      additional_agent_ids: JSON.stringify([additionalAgentId]),
+    }));
+    expect(created?.ticket_id).toBeTruthy();
+
+    // The creator retains create permission but loses the permission required by the
+    // follow-up resource action. The assignment inserted during creation stays available.
+    const ticketUpdatePermissions = await tt('permissions')
+      .where({ resource: 'ticket', action: 'update', msp: true }).select('permission_id');
+    await tt('role_permissions').whereIn('permission_id', ticketUpdatePermissions.map((p: any) => p.permission_id)).delete();
+    const beforeDeniedAssignments = await tt('ticket_resources').where({ ticket_id: created.ticket_id }).select('*');
+    const beforeDeniedAudit = await tt('ticket_audit_logs').where({ ticket_id: created.ticket_id }).select('*');
+    const denied = await ticketResourceActions.addTicketResource(created.ticket_id, secondAdditionalAgentId, 'support');
+
+    expect(denied).toMatchObject({ permissionError: expect.stringContaining('Permission denied') });
+    const ticket = await tt('tickets').where({ ticket_id: created.ticket_id }).first();
+    expect(ticket.assigned_to).toBe(primaryAgentId);
+    expect(await tt('ticket_resources').where({ ticket_id: created.ticket_id }).select('*'))
+      .toEqual(beforeDeniedAssignments);
+    expect(beforeDeniedAssignments.map((row: any) => row.additional_user_id)).toEqual([additionalAgentId]);
+    expect(await tt('ticket_audit_logs').where({ ticket_id: created.ticket_id }).select('*')).toEqual(beforeDeniedAudit);
+    expect(beforeDeniedAudit).toEqual(expect.arrayContaining([
+      expect.objectContaining({ event_type: 'TICKET_ASSIGNED', details: expect.objectContaining({ additional_agent_id: additionalAgentId }) }),
+    ]));
+    expect(await countTickets()).toBe(before + 1);
+  });
+
+  it('rolls back ticket and valid staffing when a later additional agent is invalid', async () => {
+    const before = await countTickets();
+    vi.spyOn(dbModule, 'createTenantKnex').mockImplementationOnce(async () => ({
+      knex: poolLikeForActionTransactions(), tenant: tenantId,
+    }) as any);
+    const outcome = await ticketActions.addTicket(createForm({
+      assigned_to: primaryAgentId,
+      additional_agent_ids: JSON.stringify([additionalAgentId, uuidv4()]),
+    })).then((value: any) => ({ value }), (error: Error) => ({ error }));
+
+    expect('error' in outcome ? outcome.error.message : outcome.value).toMatch(/not found|assignee/i);
+    expect(await countTickets()).toBe(before);
+    expect(await tt('ticket_resources').where({ additional_user_id: additionalAgentId }).count('* as n').first()
+      .then((row: any) => Number(row.n))).toBe(0);
+    expect(await tt('ticket_audit_logs').where({ event_type: 'TICKET_ASSIGNED' })
+      .whereRaw("details->>'additional_agent_id' = ?", [additionalAgentId]).count('* as n').first()
+      .then((row: any) => Number(row.n))).toBe(0);
   });
 
   it('rejects an unknown watcher without creating a ticket', async () => {
