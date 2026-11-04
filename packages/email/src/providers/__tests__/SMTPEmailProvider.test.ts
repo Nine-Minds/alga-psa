@@ -284,3 +284,50 @@ describe('SMTPEmailProvider config validation', () => {
     });
   });
 });
+
+describe('SMTPEmailProvider on-wire Message-ID (Amazon SES relay)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  async function providerFor(host: string, response: string) {
+    const transporter = createTransporterMock();
+    transporter.sendMail.mockResolvedValue({
+      messageId: '<generated-1@alga.test>',
+      response,
+      envelope: { from: 'noreply@alga.test', to: ['one@example.com'] }
+    });
+    createTransportMock.mockReturnValue(transporter);
+    const provider = new SMTPEmailProvider('smtp-ses');
+    await provider.initialize({ ...validConfig, host });
+    return provider;
+  }
+
+  it('stores the SES-assigned id as rfcMessageId and keeps the generated id in metadata', async () => {
+    const provider = await providerFor('email-smtp.us-east-1.amazonaws.com', '250 Ok 0100019abc-def-000000');
+
+    const result = await provider.sendEmail(baseMessage(), 'tenant-1');
+
+    expect(result.rfcMessageId).toBe('<0100019abc-def-000000@email.amazonses.com>');
+    expect(result.metadata).toMatchObject({
+      generatedRfcMessageId: '<generated-1@alga.test>',
+      sesMessageId: '<0100019abc-def-000000@email.amazonses.com>'
+    });
+  });
+
+  it('uses the regional SES domain outside us-east-1', async () => {
+    const provider = await providerFor('email-smtp.eu-west-1.amazonaws.com', '250 Ok 0100019abc-def-000000');
+
+    const result = await provider.sendEmail(baseMessage(), 'tenant-1');
+
+    expect(result.rfcMessageId).toBe('<0100019abc-def-000000@eu-west-1.amazonses.com>');
+  });
+
+  it('keeps the generated id for non-SES hosts or unparsable responses', async () => {
+    const other = await providerFor('smtp.example.com', '250 Ok 0100019abc-def-000000');
+    expect((await other.sendEmail(baseMessage(), 'tenant-1')).rfcMessageId).toBe('<generated-1@alga.test>');
+
+    const ses = await providerFor('email-smtp.us-east-1.amazonaws.com', '250 OK');
+    expect((await ses.sendEmail(baseMessage(), 'tenant-1')).rfcMessageId).toBe('<generated-1@alga.test>');
+  });
+});

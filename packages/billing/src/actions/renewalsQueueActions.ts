@@ -9,6 +9,7 @@ import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
 import { normalizeClientContract } from '@alga-psa/shared/billingClients/clientContracts';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { reownBlocksForRenewalActivation } from '../services/prepaidBlockRenewalService';
 import {
   RENEWAL_TICKET_MANUAL_RETRY_SOURCE,
   buildRenewalTicketIdempotencyKey,
@@ -273,7 +274,7 @@ export const listRenewalQueueRows = withAuth(async (
   const rows = await query;
 
   const queueRows = rows
-    .map(normalizeClientContract)
+    .map((row) => normalizeClientContract(row))
     .filter(
       (row) =>
         Boolean(row.decision_due_date) &&
@@ -559,6 +560,8 @@ export const createRenewalDraftForQueueItem = withAuth(async (
       is_active: false,
       status: 'draft',
       is_template: false,
+      // Durable renewal marker (the source's created_draft_contract_id link is nulled on cycle change).
+      renewal_of_contract_id: (source as any).contract_id,
       created_at: nowIso,
       updated_at: nowIso,
     });
@@ -854,6 +857,15 @@ export const completeRenewalQueueItemForActivation = withAuth(async (
     if (!activeRenewalContract) {
       throw new Error('Activated renewal contract was not found in active status');
     }
+
+    // Prepaid Block carry-over (captain decision 1b): the source assignment's unexpired contract
+    // blocks move to the matching block line of the renewal contract (equal covered-service set).
+    // Unmatched lines keep their blocks, which the contract-end pass forfeits when the term ends.
+    await reownBlocksForRenewalActivation(trx, tenant, {
+      sourceClientContractId: clientContractId,
+      renewalContractId: resolvedActivatedContractId,
+      userId: actorUserId,
+    });
 
     const updatedAt = new Date().toISOString();
     await db.table('client_contracts')

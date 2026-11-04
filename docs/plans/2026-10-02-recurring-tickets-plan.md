@@ -1,5 +1,8 @@
 # Plan: Recurring tickets (first-class, all editions)
 
+> **Superseded in part (2026-10-14):** a definition no longer owns ticket content (title, description, board, priority, category, tags, checklist). It points at a shared ticket template; see `2026-10-14-recurring-tickets-on-ticket-templates-plan.md`. The schedule, window, ledger and generator semantics below still apply.
+
+
 Base: main @ 8845cc15e2, branch `feature/recurring-tickets-2`. All paths are relative to the worktree root.
 
 ## 1. Problem

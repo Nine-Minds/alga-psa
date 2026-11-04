@@ -5,6 +5,7 @@ import type { TemplateEvaluationResult } from './evaluator';
 import { evaluateTemplateAst } from './evaluator';
 import { formatTemplateFieldValue } from './fieldFormatting';
 import { renderEvaluatedTemplateAst } from './react-renderer';
+import { resolveTemplateAstI18n } from './i18nLabels';
 
 const invoiceFixture = {
   invoiceNumber: 'INV-1001',
@@ -18,6 +19,52 @@ const invoiceFixture = {
 };
 
 describe('renderEvaluatedTemplateAst', () => {
+  it.each([['custom title', 'custom title'], [null, 'Localized Monthly'], [undefined, 'Localized Monthly'], ['', 'Localized Monthly'], ['   ', 'Localized Monthly']] as const)(
+    'renders binding value %s or its localized fallback', async (value, expected) => {
+      const ast: TemplateAst = {
+        kind: 'invoice-template-ast', version: TEMPLATE_AST_VERSION,
+        bindings: { values: {}, collections: {} },
+        layout: { id: 'root', type: 'document', children: [{
+          id: 'heading', type: 'text', content: { type: 'binding', bindingId: 'heading', fallback: { i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' } },
+        }] },
+      };
+      const localizedAst = resolveTemplateAstI18n(ast, () => 'Localized Monthly');
+      const evaluation = { bindings: { heading: value }, rows: {}, aggregates: {} } as unknown as TemplateEvaluationResult;
+      const rendered = await renderEvaluatedTemplateAst(localizedAst, evaluation);
+      expect(rendered.html).toContain(expected);
+      expect(rendered.html).not.toContain('[object Object]');
+    }
+  );
+
+  it('resolves an optional binding through the evaluator path used by document generation', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast', version: TEMPLATE_AST_VERSION,
+      bindings: { values: { sectionHeading: { id: 'sectionHeading', kind: 'value', path: 'section_heading' } }, collections: {} },
+      layout: { id: 'root', type: 'document', children: [{
+        id: 'heading', type: 'text', content: { type: 'binding', bindingId: 'sectionHeading', fallback: { i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' } },
+      }] },
+    };
+    const localizedAst = resolveTemplateAstI18n(ast, () => 'Localized Monthly');
+    const evaluation = evaluateTemplateAst(localizedAst, { section_heading: 'Custom heading' });
+    const rendered = await renderEvaluatedTemplateAst(localizedAst, evaluation);
+    expect(rendered.html).toContain('Custom heading');
+    expect(rendered.html).not.toContain('Localized Monthly');
+  });
+
+  it('uses authored default text if a binding fallback reaches the renderer without localization', async () => {
+    const ast: TemplateAst = {
+      kind: 'invoice-template-ast', version: TEMPLATE_AST_VERSION,
+      bindings: { values: {}, collections: {} },
+      layout: { id: 'root', type: 'document', children: [{
+        id: 'heading', type: 'text', content: { type: 'binding', bindingId: 'heading', fallback: { i18nKey: 'labels.monthlyItems', defaultValue: 'Monthly Items' } },
+      }] },
+    };
+    const evaluation = { bindings: { heading: null }, rows: {}, aggregates: {} } as unknown as TemplateEvaluationResult;
+    const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+    expect(rendered.html).toContain('Monthly Items');
+    expect(rendered.html).not.toContain('[object Object]');
+  });
+
   it('renders HTML for text/field/table/totals node combinations', async () => {
     const ast: TemplateAst = {
       kind: 'invoice-template-ast',
@@ -1567,5 +1614,27 @@ describe('titled sections with nothing to head', () => {
     expect(rendered.css).toContain('section > h2 { break-after: avoid; }');
     expect(rendered.css).toContain('section > h2 + * { break-before: avoid; }');
     expect(rendered.css).toContain('#signature-block { break-inside: avoid; }');
+  });
+
+  it('drops blank text lines from column stacks (no gap for an empty line) but keeps them in rows', async () => {
+    const line = (id: string) => ({ id, type: 'text', content: { type: 'binding', bindingId: id } }) as const;
+    const ast = {
+      kind: 'invoice-template-ast', version: TEMPLATE_AST_VERSION,
+      bindings: { values: {}, collections: {} },
+      layout: { id: 'root', type: 'document', children: [
+        { id: 'col', type: 'stack', direction: 'column', children: [line('filled'), line('blank'), line('spaces')] },
+        { id: 'row', type: 'stack', direction: 'row', children: [line('rowBlank'), line('rowFilled')] },
+      ] },
+    } as unknown as TemplateAst;
+    const evaluation = {
+      bindings: { filled: 'Shown', blank: null, spaces: '  ', rowBlank: '', rowFilled: 'Right' },
+      rows: {}, aggregates: {},
+    } as unknown as TemplateEvaluationResult;
+    const { html } = await renderEvaluatedTemplateAst(ast, evaluation);
+    expect(html).toContain('id="filled"');
+    expect(html).not.toContain('id="blank"');
+    expect(html).not.toContain('id="spaces"');
+    expect(html).toContain('id="rowBlank"');
+    expect(html).toContain('id="rowFilled"');
   });
 });

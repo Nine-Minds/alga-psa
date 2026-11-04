@@ -10,7 +10,11 @@ const store = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({ getAdminConnection: async () => ({}) }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  // Replay revives the stored payload then publishes it; pass it straight through to the spy.
+  reviveStoredWorkflowPayload: (eventType: string, payload: unknown) => ({ eventType, payload }),
+  publishBuiltWorkflowPayload: publishEvent,
+}));
 vi.mock('../inboundEmailDurableStore', () => ({
   ...store,
   getDurableLeaseTtlMs: () => 1000,

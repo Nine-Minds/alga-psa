@@ -68,8 +68,9 @@ vi.mock('server/src/lib/analytics/posthog', () => ({ analytics: { capture: vi.fn
 // Like the real Redis consumer (packages/event-bus/src/eventBus.ts) it runs the
 // event through EventSchemas[eventType].parse(...) first, so fields the schema
 // does not declare are stripped exactly as in production.
-vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishEvent: vi.fn(async (event: { eventType: string; payload: any }) => {
+vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => {
+  const actual = (await importOriginal()) as typeof import('@alga-psa/event-bus/publishers');
+  const publishEvent = vi.fn(async (event: { eventType: string; payload: any }) => {
     state.published.push({ eventType: event.eventType, payload: event.payload });
     const handler = state.handlers.get(event.eventType);
     if (handler) {
@@ -104,9 +105,28 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
         await handler(parsed);
       }
     }
-  }),
-  publishWorkflowEvent: vi.fn(async () => {}),
-}));
+  });
+  const stubs = {
+    publishEvent,
+    // Catalogued events (TICKET_RESPONSE_STATE_CHANGED) go through publishWorkflowEvent; stamp ctx
+    // onto the payload like the real publisher, then deliver through the same in-process bus.
+    publishWorkflowEvent: vi.fn(async (params: { eventType: string; payload: any; ctx: any; idempotencyKey?: string }) => {
+      const { buildWorkflowPayload } = await import('@alga-psa/event-schemas');
+      const ctx = params.idempotencyKey ? { ...params.ctx, idempotencyKey: params.idempotencyKey } : params.ctx;
+      await publishEvent({ eventType: params.eventType, payload: buildWorkflowPayload(params.payload, ctx) });
+    }),
+    // TICKET_COMMENT_ADDED is replayed from the comment publication outbox with a complete payload.
+    publishStoredWorkflowEvent: vi.fn(async (event: { eventType: string; payload: any }) => {
+      const revived = actual.reviveStoredWorkflowPayload(event.eventType, event.payload);
+      if (!revived) throw new Error(`${event.eventType} is not a catalogued workflow event`);
+      await publishEvent({ eventType: revived.eventType, payload: revived.payload });
+    }),
+    publishBuiltWorkflowPayload: vi.fn(async (event: { eventType: string; payload: any }) => {
+      await publishEvent(event);
+    }),
+  };
+  return { ...actual, ...stubs };
+});
 
 vi.mock('@/lib/eventBus', () => ({
   getEventBus: () => ({

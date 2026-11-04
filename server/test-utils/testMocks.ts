@@ -76,6 +76,10 @@ vi.mock('@/lib/auth/rbac', () => ({
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn((user: IUserWithRoles, resource: string, action: string) =>
     Promise.resolve(permissionCheckRef.fn(user, resource, action))
+  ),
+  checkMultiplePermissions: vi.fn((user: IUserWithRoles, checks: { resource: string; action: string }[]) =>
+    Promise.resolve(checks.map(({ resource, action }) =>
+      ({ resource, action, granted: permissionCheckRef.fn(user, resource, action) })))
   )
 }));
 
@@ -85,6 +89,11 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(async () => undefined),
   publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 /**

@@ -1,0 +1,77 @@
+{
+  "checkedAt": "2026-10-11T23:00:16.368Z",
+  "invoice": {
+    "invoice_id": "cc1b7023-0c3a-4f7d-b271-d78eadb9c8c2",
+    "invoice_number": "INV-000042",
+    "currency_code": "AUD",
+    "subtotal": 24460,
+    "tax": 0,
+    "total_amount": "24460",
+    "tax_source": "pending_external"
+  },
+  "charges": [
+    {
+      "item_id": "1a7ad306-79f3-4b7d-b9bc-59305be4045b",
+      "description": "Product: Cabling",
+      "is_manual": false,
+      "net_amount": "12000",
+      "adjustment_source_id": null,
+      "adjustment_scope": null,
+      "adjustment_base_amount": null,
+      "adjustment_period_start": null,
+      "adjustment_period_end": null
+    },
+    {
+      "item_id": "302123bf-75ef-4975-b14c-e491d2004f64",
+      "description": "REVIEW-3499-MITIGATION-DEFAULT-FIXED-25",
+      "is_manual": false,
+      "net_amount": "-2500",
+      "adjustment_source_id": "dbc74420-cb3f-4c9c-84b3-9cd3cead340b",
+      "adjustment_scope": "contract",
+      "adjustment_base_amount": "32000",
+      "adjustment_period_start": "2026-09-01T04:00:00.000Z",
+      "adjustment_period_end": "2026-10-01T04:00:00.000Z"
+    },
+    {
+      "item_id": "56fbb743-0aa8-498e-85ab-470834e201d8",
+      "description": "REVIEW-3499-MITIGATION-DEFAULT-12P",
+      "is_manual": false,
+      "net_amount": "-3840",
+      "adjustment_source_id": "a9dcdd81-2a6c-4236-ad92-c054b494f9d3",
+      "adjustment_scope": "contract",
+      "adjustment_base_amount": "32000",
+      "adjustment_period_start": "2026-09-01T04:00:00.000Z",
+      "adjustment_period_end": "2026-10-01T04:00:00.000Z"
+    },
+    {
+      "item_id": "a97e6254-8615-4cb2-9d9e-72874a61696c",
+      "description": "REVIEW-3499-MITIGATION-TWO-FIXED-LINES - Fixed Fee",
+      "is_manual": false,
+      "net_amount": "20000",
+      "adjustment_source_id": null,
+      "adjustment_scope": null,
+      "adjustment_base_amount": null,
+      "adjustment_period_start": null,
+      "adjustment_period_end": null
+    },
+    {
+      "item_id": "c1feced3-d1a6-4754-b27d-cc224e5c0852",
+      "description": "REVIEW-3499-LINE-CABLING-10P",
+      "is_manual": false,
+      "net_amount": "-1200",
+      "adjustment_source_id": "01c1ee40-196c-4e69-9e44-581034ea12aa",
+      "adjustment_scope": "line",
+      "adjustment_base_amount": "12000",
+      "adjustment_period_start": "2026-09-01T04:00:00.000Z",
+      "adjustment_period_end": "2026-10-01T04:00:00.000Z"
+    }
+  ],
+  "ledger": [
+    {
+      "transaction_id": "a432029a-13e3-465a-b0e7-ef08a8287fce",
+      "type": "invoice_generated",
+      "status": "completed",
+      "amount": "24460"
+    }
+  ]
+}

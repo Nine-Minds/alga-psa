@@ -1,0 +1,20 @@
+{
+  "projectId": "b97eda7b-0e3f-4b09-be80-6b57f934d8a5",
+  "name": "dev-server",
+  "sessionId": "card-service:b97eda7b-0e3f-4b09-be80-6b57f934d8a5:dev-server:19",
+  "hostId": "ts:robert-X670E-Pro-RS",
+  "hostname": "robert-X670E-Pro-RS",
+  "cwd": "/home/robert/alga-copies/feature-contract-invoices-automatic-adjustments-and-disc/server",
+  "command": "NODE_OPTIONS=--max-old-space-size=8192 HOST=0.0.0.0 PORT=3185 npm run dev:turbo",
+  "status": "suspended",
+  "createdAt": "2026-10-07T04:54:07.521Z",
+  "createdBy": "agent:Draft Implementation",
+  "restartedAt": "2026-10-07T06:06:30.063Z",
+  "restartedBy": "agent:Draft Implementation",
+  "readiness": {
+    "port": 3185,
+    "path": "/api/health"
+  },
+  "suspendedAt": "2026-10-07T06:24:24.678Z",
+  "suspendedReason": "\"Draft Implementation\" does not use it"
+}

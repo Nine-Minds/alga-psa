@@ -136,6 +136,58 @@ describe('slaTicketWorkflow integration', () => {
     }
   });
 
+  it('keeps tracking SLA (breach at 100%, resolution phase) when checkAndEscalate always fails', async () => {
+    let escalationAttempts = 0;
+    const { env, worker, taskQueue, notifications, statusUpdates } = await setupWorkflowTest({
+      checkAndEscalate: async () => {
+        escalationAttempts += 1;
+        throw new Error('SLA escalation failed for ticket ticket-esc-fail (level 1): boom');
+      },
+    });
+
+    try {
+      await worker.runUntil(async () => {
+        const handle = await env.client.workflow.start(slaTicketWorkflow, {
+          args: [
+            {
+              ticketId: 'ticket-esc-fail',
+              tenantId: 'tenant-esc-fail',
+              policyTargets: [{ ...target, resolution_time_minutes: 20 }],
+              businessHoursSchedule: schedule24x7,
+            },
+          ],
+          taskQueue,
+          workflowId: 'sla-ticket-tenant-esc-fail-ticket-esc-fail',
+        });
+
+        await expect.poll(async () => (await handle.query<any>('getState')).nextWakeTime, { timeout: 15_000 }).toBeTruthy();
+        // Let the 10-minute response phase run to its 100% threshold (time-skipping).
+        await env.sleep(15 * 60 * 1000);
+        await expect
+          .poll(async () => (await handle.query<any>('getState')).currentPhase, { timeout: 30_000 })
+          .toBe('resolution');
+
+        await handle.signal('completeResolution', { met: true });
+        await handle.result();
+      });
+
+      // Every response threshold still notified, and the 100% breach was recorded.
+      expect(
+        notifications.filter((entry) => entry.phase === 'response').map((entry) => entry.thresholdPercent)
+      ).toEqual([50, 75, 90, 100]);
+      expect(statusUpdates).toContainEqual({
+        tenantId: 'tenant-esc-fail',
+        ticketId: 'ticket-esc-fail',
+        phase: 'response',
+        breached: true,
+      });
+      // Retries ran (maximumAttempts: 3) for each failing threshold before the workflow moved on.
+      expect(escalationAttempts).toBeGreaterThanOrEqual(3);
+    } finally {
+      await env.teardown();
+    }
+  });
+
   it('pauses and resumes timers without firing notifications while paused', async () => {
     let notificationResolve: (() => void) | null = null;
     const notificationPromise = new Promise<void>((resolve) => {

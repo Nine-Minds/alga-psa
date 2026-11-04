@@ -1,9 +1,12 @@
+'use client';
+
 import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { generateEntityColor, adaptColorsForDarkMode } from '../../lib/colorUtils';
 import { ITag } from '@alga-psa/types';
 import { useTheme } from 'next-themes';
+import { useTranslation } from '../../lib/i18n/client';
 
 interface TagGridProps {
   tags: string[] | ITag[];
@@ -18,6 +21,7 @@ export const TagGrid: React.FC<TagGridProps> = ({
   onTagSelect,
   className = ''
 }) => {
+  const { t } = useTranslation('common');
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
@@ -69,7 +73,7 @@ export const TagGrid: React.FC<TagGridProps> = ({
       })}
       {tags.length === 0 && (
         <div className="col-span-3 text-center py-4 text-gray-500 text-sm">
-          No tags found
+          {t('tags.empty')}
         </div>
       )}
     </div>

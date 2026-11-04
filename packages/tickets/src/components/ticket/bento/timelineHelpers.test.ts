@@ -4,6 +4,7 @@ import {
   sortTimelineNodes,
   laneCounts,
   filterByLane,
+  isReplyEchoEvent,
   dayLabel,
   withDayBreaks,
   type Lane,
@@ -118,5 +119,20 @@ describe('withDayBreaks', () => {
   it('emits a break for the very first node', () => {
     const nodes = [node('2026-06-09T09:00:00Z', 'a', 'reply')];
     expect(withDayBreaks(nodes, now)[0].dayBreak).toBe('Jun 9');
+  });
+});
+
+describe('isReplyEchoEvent', () => {
+  it('flags activity events that only restate a posted reply', () => {
+    for (const type of ['TICKET_COMMENT_ADDED', 'TICKET_MESSAGE_ADDED', 'TICKET_CUSTOMER_REPLIED', 'TICKET_INTERNAL_NOTE_ADDED']) {
+      expect(isReplyEchoEvent(type)).toBe(true);
+    }
+  });
+
+  it('keeps every other event, and tolerates missing types', () => {
+    expect(isReplyEchoEvent('TICKET_STATUS_CHANGED')).toBe(false);
+    expect(isReplyEchoEvent('TICKET_COMMENT_UPDATED')).toBe(false);
+    expect(isReplyEchoEvent(null)).toBe(false);
+    expect(isReplyEchoEvent(undefined)).toBe(false);
   });
 });

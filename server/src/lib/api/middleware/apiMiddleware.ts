@@ -15,6 +15,16 @@ import { runAsSystem } from '@alga-psa/db';
 import type { RateLimitDecision } from '../rateLimit/enforce';
 import { enforceApiRateLimit } from '../rateLimit/enforce';
 import { redactSensitiveFields } from '../utils/redactSensitiveFields';
+import type { BucketConfig } from '@alga-psa/core/rateLimit';
+import { resolveServicePrincipalApiContext } from '@product/service-principals/entry';
+import { isInteractiveUserType } from '@alga-psa/types';
+
+/** Who the request is made as. Defaults to the key owner (`kind: 'user'`). */
+export interface ApiPrincipal {
+  userId: string;
+  userType: string;
+  kind: 'user' | 'service';
+}
 
 export interface ApiContext {
   userId: string;
@@ -24,6 +34,14 @@ export interface ApiContext {
   rateLimitSubjectId?: string;
   rateLimit?: RateLimitDecision | null;
   kind?: 'system' | 'user';
+  /** The authenticated key owner. Defaults to the owner as a plain user. */
+  principal?: ApiPrincipal;
+  /** User named by a delegation header, if any. Unset by default. */
+  actAsUserId?: string | null;
+  /** User the request is evaluated and attributed as. Defaults to the key owner; equals `userId`. */
+  effectiveUserId?: string;
+  /** Optional token-bucket override honored by enforceApiRateLimit. */
+  rateLimitConfig?: BucketConfig;
 }
 
 export interface ApiRequest extends NextRequest {
@@ -41,109 +59,20 @@ export interface AuthenticatedApiRequest extends NextRequest {
   params?: any;
 }
 
-export interface ApiError extends Error {
-  statusCode: number;
-  code?: string;
-  details?: any;
-  headers?: Record<string, string>;
-}
-
-export class ValidationError extends Error implements ApiError {
-  statusCode = 400;
-  code = 'VALIDATION_ERROR';
-  details: any;
-
-  constructor(message: string, details?: any) {
-    super(message);
-    this.name = 'ValidationError';
-    this.details = details;
-  }
-}
-
-export class UnauthorizedError extends Error implements ApiError {
-  statusCode = 401;
-  code = 'UNAUTHORIZED';
-
-  constructor(message: string = 'Unauthorized') {
-    super(message);
-    this.name = 'UnauthorizedError';
-  }
-}
-
-export class ForbiddenError extends Error implements ApiError {
-  statusCode = 403;
-  code = 'FORBIDDEN';
-
-  constructor(message: string = 'Forbidden') {
-    super(message);
-    this.name = 'ForbiddenError';
-  }
-}
-
-export class NotFoundError extends Error implements ApiError {
-  statusCode = 404;
-  code = 'NOT_FOUND';
-
-  constructor(message: string = 'Resource not found') {
-    super(message);
-    this.name = 'NotFoundError';
-  }
-}
-
-export class ConflictError extends Error implements ApiError {
-  statusCode = 409;
-  code = 'CONFLICT';
-  details: any;
-
-  constructor(message: string = 'Resource conflict', details?: any) {
-    super(message);
-    this.name = 'ConflictError';
-    this.details = details;
-  }
-}
-
-export class BadRequestError extends Error implements ApiError {
-  statusCode = 400;
-  code = 'BAD_REQUEST';
-
-  constructor(message: string = 'Bad request') {
-    super(message);
-    this.name = 'BadRequestError';
-  }
-}
-
-export class BadGatewayError extends Error implements ApiError {
-  statusCode = 502;
-  code = 'BAD_GATEWAY';
-
-  constructor(message: string = 'Bad gateway') {
-    super(message);
-    this.name = 'BadGatewayError';
-  }
-}
-
-export class NotImplementedError extends Error implements ApiError {
-  statusCode = 501;
-  code = 'NOT_IMPLEMENTED';
-
-  constructor(message: string = 'Not implemented') {
-    super(message);
-    this.name = 'NotImplementedError';
-  }
-}
-
-export class TooManyRequestsError extends Error implements ApiError {
-  statusCode = 429;
-  code = 'RATE_LIMITED';
-  details: any;
-  headers?: Record<string, string>;
-
-  constructor(message: string = 'Too many requests', details?: any) {
-    super(message);
-    this.name = 'TooManyRequestsError';
-    this.details = details;
-  }
-}
+export * from './apiErrors';
+import {
+  ValidationError,
+  UnauthorizedError,
+  ForbiddenError,
+  NotFoundError,
+  ConflictError,
+  BadRequestError,
+  UnprocessableEntityError,
+  BadGatewayError,
+  NotImplementedError,
+  TooManyRequestsError,
+  type ApiError,
+} from './apiErrors';
 
 export type ServerActionErrorResult =
   | { readonly permissionError: string }
@@ -192,6 +121,13 @@ export function createServerActionErrorResponse(error: ServerActionErrorResult):
 }
 
 const APPLICATION_ERROR_STATUS: Record<string, number> = {
+  CO_MANAGED_NOT_ACTIVE: 409,
+  CO_MANAGED_SEAT_LIMIT: 403,
+  CO_MANAGED_LICENSE_LAPSED: 403,
+  CO_MANAGED_ALLOCATION_CONFLICT: 409,
+  CO_MANAGED_INVITATION_INVALID: 409,
+  CO_MANAGED_READ_ONLY: 423,
+  HUMAN_WORK_ASSIGNEE_INVALID: 422,
   QBO_AUTH_ERROR: 401,
   QBO_CONFIG_MISSING: 400,
   QBO_INVALID_INPUT: 400,
@@ -263,34 +199,76 @@ function getApplicationErrorStatus(error: unknown): number | undefined {
 }
 
 /**
- * The authenticated API user context is an internal-user credential. A client
- * user must never be admitted to a user-key API context, even if a validator
- * was accidentally bypassed, replaced, or mocked permissively. This is the
- * final context-construction defense before a handler runs.
+ * Contexts produced by the edition boundary (resolveServicePrincipalApiContext).
+ * Only membership here, never a field on the context, makes a non-internal
+ * principal acceptable to assertApiPrincipal, so a forged `principal` is inert.
  */
-export function assertInternalApiUser(user: SafeApiUser | null | undefined): asserts user is SafeApiUser {
-  if (!user) {
+const boundaryProducedContexts = new WeakSet<object>();
+
+/**
+ * The authenticated API principal is an internal-user credential, or a context
+ * the edition boundary produced for a non-user principal. A client user must
+ * never be admitted to an API context, even if a validator was accidentally
+ * bypassed, replaced, or mocked permissively. This is the final
+ * context-construction defense before a handler runs.
+ *
+ * Accepts the loaded API user (the copied-auth controllers) or a built context.
+ */
+export function assertApiPrincipal(
+  subject: SafeApiUser | ApiContext | null | undefined
+): asserts subject is SafeApiUser | AuthenticatedApiContext {
+  if (!subject) {
     throw new UnauthorizedError('User not found');
   }
-  if (user.user_type !== 'internal') {
+  if (boundaryProducedContexts.has(subject)) {
+    return;
+  }
+  const userType =
+    'user_type' in subject ? subject.user_type : (subject as ApiContext).user?.user_type;
+  if (userType !== 'internal') {
     throw new UnauthorizedError('Invalid API key');
   }
 }
 
-export async function buildAuthenticatedApiContext(keyRecord: {
-  user_id: string;
-  tenant: string;
-  api_key_id?: string;
-}): Promise<AuthenticatedApiContext> {
+export async function buildAuthenticatedApiContext(
+  keyRecord: {
+    user_id: string;
+    tenant: string;
+    api_key_id?: string;
+    agent_id?: string | null;
+  },
+  req?: Request
+): Promise<AuthenticatedApiContext> {
   const user = await findUserByIdForApi(keyRecord.user_id, keyRecord.tenant);
-  assertInternalApiUser(user);
+
+  // Owners that are neither internal nor client belong to the edition boundary.
+  // The CE implementation returns null, which rejects the key exactly as before.
+  if (user && !isInteractiveUserType(user.user_type)) {
+    const boundaryContext = await resolveServicePrincipalApiContext(
+      keyRecord,
+      user,
+      req ?? new Request('http://localhost')
+    );
+    if (!boundaryContext) {
+      throw new UnauthorizedError('Invalid API key');
+    }
+    const context = boundaryContext as unknown as AuthenticatedApiContext;
+    boundaryProducedContexts.add(context);
+    assertApiPrincipal(context);
+    return context;
+  }
+
+  assertApiPrincipal(user);
 
   return {
     userId: keyRecord.user_id,
     tenant: keyRecord.tenant,
     apiKeyId: keyRecord.api_key_id,
     user,
-    kind: 'user'
+    kind: 'user',
+    principal: { userId: keyRecord.user_id, userType: user.user_type, kind: 'user' },
+    actAsUserId: null,
+    effectiveUserId: keyRecord.user_id,
   };
 }
 
@@ -368,7 +346,7 @@ export function withApiKeyAuth(options: ApiKeyAuthOptions = {}) {
         if (!keyRecord) {
           throw new UnauthorizedError('Invalid API key');
         }
-        req.context = await buildAuthenticatedApiContext(keyRecord);
+        req.context = await buildAuthenticatedApiContext(keyRecord, req);
         req.context.rateLimit = await enforceApiRateLimit(req, req.context);
 
         return await handler(req);
@@ -397,7 +375,7 @@ export async function withAuth(handler: (req: ApiRequest) => Promise<NextRespons
         throw new UnauthorizedError('Invalid API key');
       }
 
-      req.context = await buildAuthenticatedApiContext(keyRecord);
+      req.context = await buildAuthenticatedApiContext(keyRecord, req);
       req.context.rateLimit = await enforceApiRateLimit(req, req.context);
 
       return await handler(req);
@@ -444,7 +422,7 @@ export function withValidation(schema: ZodSchema) {
         return await handler(req, validatedData);
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -466,7 +444,7 @@ export function withQueryValidation(schema: ZodSchema) {
         return await handler(req, validatedQuery);
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Query validation failed', error.errors));
+          return handleApiError(new ValidationError('Query validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -551,7 +529,7 @@ export function handleApiError(error: any): NextResponse {
       error: {
         code: 'VALIDATION_ERROR',
         message: 'Validation failed',
-        details: redactSensitiveFields(error.errors)
+        details: redactSensitiveFields(error.issues)
       }
     }, { status: 400 });
   }

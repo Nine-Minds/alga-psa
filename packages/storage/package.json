@@ -10,6 +10,10 @@
       "import": "./dist/index.mjs",
       "types": "./src/index.ts"
     },
+    "./fileUploadTransaction": {
+      "import": "./dist/fileUploadTransaction.mjs",
+      "types": "./src/fileUploadTransaction.ts"
+    },
     "./StorageService": {
       "import": "./dist/StorageService.mjs",
       "types": "./src/StorageService.ts"
@@ -46,6 +50,7 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/event-bus": "*",
+    "@alga-psa/event-schemas": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/types": "*",
     "@alga-psa/validation": "*",

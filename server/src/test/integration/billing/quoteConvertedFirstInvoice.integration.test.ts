@@ -81,6 +81,11 @@ vi.mock('@alga-psa/auth', async () => {
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(async () => {}),
   publishWorkflowEvent: vi.fn(async () => {}),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/auth/rbac', () => ({
@@ -491,8 +496,9 @@ describe('quote-converted contract: first invoice (alga0002168)', () => {
     );
     await db.raw(`CREATE OR REPLACE FUNCTION ${triggerDel}() RETURNS trigger AS $$ BEGIN RAISE EXCEPTION 'injected contract delete fault'; END; $$ LANGUAGE plpgsql`);
     await db.raw(`CREATE TRIGGER ${triggerDel} BEFORE DELETE ON contracts FOR EACH ROW EXECUTE FUNCTION ${triggerDel}()`);
-    const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
-    const publishMock = vi.mocked(publishWorkflowEvent);
+    // Contract deletion events are non-catalogued, published via publishNonCatalogWorkflowEvent.
+    const { publishNonCatalogWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+    const publishMock = vi.mocked(publishNonCatalogWorkflowEvent);
     const countRows = async (table: string, column = 'contract_id') =>
       (await tenantTable(db, tenantId, table).where({ tenant: tenantId, [column]: faulty.contractId })).length;
     const linesAndConfigs = async () => {

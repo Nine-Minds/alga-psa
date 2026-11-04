@@ -1,5 +1,6 @@
 'use server';
 
+import { buildInventoryTransferPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
 import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -18,7 +19,6 @@ import {
   publishInventoryEvent,
   queryTransfers,
   receiveTransferCore,
-  timestampPayload,
 } from '../lib';
 
 /**
@@ -201,13 +201,13 @@ export const dispatchTransfer = withAuth(
 
         return (await loadTransfer(trx, tenant, transfer.transfer_id)) as IStockTransfer;
       });
-      await publishInventoryEvent('INVENTORY_TRANSFER_DISPATCHED', timestampPayload({
+      await publishInventoryEvent('INVENTORY_TRANSFER_DISPATCHED', buildInventoryTransferPayload({
         tenant,
-        transfer_id: result.transfer_id,
-        from_location_id: result.from_location_id,
-        to_location_id: result.to_location_id,
-        line_count: result.lines?.length ?? 0,
-        user_id: user.user_id,
+        transferId: result.transfer_id,
+        fromLocationId: result.from_location_id,
+        toLocationId: result.to_location_id,
+        lineCount: result.lines?.length ?? 0,
+        userId: user.user_id,
       }));
       return result;
     });
@@ -222,13 +222,13 @@ export const receiveTransfer = withAuth(
       const result = await withTransaction(db, (trx: Knex.Transaction) =>
         receiveTransferCore(trx, tenant, user.user_id, { transfer_id: transferId }),
       );
-      await publishInventoryEvent('INVENTORY_TRANSFER_RECEIVED', timestampPayload({
+      await publishInventoryEvent('INVENTORY_TRANSFER_RECEIVED', buildInventoryTransferPayload({
         tenant,
-        transfer_id: result.transfer_id,
-        from_location_id: result.from_location_id,
-        to_location_id: result.to_location_id,
-        line_count: result.lines?.length ?? 0,
-        user_id: user.user_id,
+        transferId: result.transfer_id,
+        fromLocationId: result.from_location_id,
+        toLocationId: result.to_location_id,
+        lineCount: result.lines?.length ?? 0,
+        userId: user.user_id,
       }));
       return result;
     });

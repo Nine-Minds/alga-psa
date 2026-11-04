@@ -8,7 +8,7 @@
  * data-flow idioms, worked example, pitfalls) is authored here.
  */
 
-import { zodToWorkflowJsonSchema } from '../jsonSchemaMetadata';
+import { zodToWorkflowJsonSchema } from '@alga-psa/event-schemas';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { listWorkflowExpressionFunctions } from '../expressionFunctions';
 import {

@@ -50,7 +50,11 @@ const mockKnex: any = Object.assign(
     tableChains[table] = chain;
     return chain;
   },
-  { raw: (...args: any[]) => rawMock(...args) }
+  {
+    raw: (...args: any[]) => rawMock(...args),
+    // Filing fixtures exercise stored PDF placement without contract true-ups.
+    schema: { hasTable: vi.fn(async () => false) },
+  }
 );
 
 const createTenantKnex = vi.fn();
@@ -98,6 +102,12 @@ vi.mock('@alga-psa/documents/models', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: (...args: any[]) => publishWorkflowEventMock(...args),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({

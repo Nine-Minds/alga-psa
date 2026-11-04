@@ -1,4 +1,4 @@
-import type { DateTriggerSourceDefinition } from './dateTriggerSourceDefinitions';
+import type { DateTriggerSourceDefinition } from '@alga-psa/event-schemas';
 
 /** Params a new `ticket.status_age` trigger starts with (the designer's controls and Attach (new workflow)). */
 export const DEFAULT_STATUS_AGE_PARAMS = {

@@ -40,7 +40,7 @@ vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', async (importOrigin
 
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: unknown) => fn }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn() }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(), publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 vi.mock('./recordExternalPayment', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./recordExternalPayment')>()),
   recordExternalPayment: recordExternalPaymentMock,
@@ -69,6 +69,7 @@ function makeStats() {
     paymentsReversed: 0,
     paymentsSkipped: 0,
     driftFound: 0,
+    externalVoidsApplied: 0,
     customersUpdated: 0,
     opsProcessed: 0,
     opsFailed: 0,

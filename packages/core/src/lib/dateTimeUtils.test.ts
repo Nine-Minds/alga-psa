@@ -1,5 +1,5 @@
-import { afterAll, describe, expect, it } from 'vitest';
-import { formatCalendarDate, toCalendarDateString, toCalendarDisplayDate, toISOTimestamp, toPlainDate } from './dateTimeUtils';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+import { formatCalendarDate, getCurrentDateInUserTimeZone, toCalendarDateString, toCalendarDisplayDate, toISOTimestamp, toPlainDate } from './dateTimeUtils';
 import { formatDate } from './formatters';
 
 const originalTz = process.env.TZ;
@@ -81,5 +81,34 @@ describe('calendar-date display helpers', () => {
     expect(storedPerformedAt).toBe('2026-08-23T00:00:00.000Z');
     expect(formatCalendarDate(storedPerformedAt, 'MMM d, yyyy')).toBe('Aug 23, 2026');
     expect(formatCalendarDate(storedPerformedAt)).toBe('2026-08-23');
+  });
+});
+
+describe('client contract assignment dates (alga0002302)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // pg returns a `timestamp` column as a Date at UTC midnight; the stored day is the UTC day.
+  it.each([
+    ['America/Los_Angeles'],
+    ['America/New_York'],
+    ['UTC'],
+    ['Pacific/Auckland'],
+    ['Pacific/Kiritimati'],
+  ])('shows the stored day for a UTC-midnight Date under %s', (zone) => {
+    process.env.TZ = zone;
+    const stored = new Date('2026-12-31T00:00:00Z');
+    expect(formatCalendarDate(stored)).toBe('2026-12-31');
+    const display = toCalendarDisplayDate(stored)!;
+    expect([display.getFullYear(), display.getMonth() + 1, display.getDate()]).toEqual([2026, 12, 31]);
+  });
+
+  it('defaults "today" to the viewer\'s local day, not the UTC day, on a US-West evening', () => {
+    process.env.TZ = 'America/Los_Angeles';
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-08-26T02:30:00Z'));
+    expect(getCurrentDateInUserTimeZone()).toBe('2026-08-25');
+    expect(new Date().toISOString().split('T')[0]).toBe('2026-08-26');
   });
 });

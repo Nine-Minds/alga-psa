@@ -23,9 +23,10 @@ describe('team service member-management tenant-scoped query contract', () => {
     expect(section).toContain(".table('teams')");
     expect(section).toContain(".table('users')");
     expect(section).toContain(".table('team_members')");
-    expect(section).toContain(".table('task_assignments')");
+    // task_assignments has no table in the schema; querying it made every member removal fail.
+    expect(section).not.toContain('task_assignments');
 
-    expect(section).not.toMatch(/trx\('(?:teams|users|team_members|task_assignments)'\)\s*\.(?:where|whereIn|update|del|delete|count|pluck|first)/);
+    expect(section).not.toMatch(/trx\('(?:teams|users|team_members)'\)\s*\.(?:where|whereIn|update|del|delete|count|pluck|first)/);
     expect(section).not.toMatch(/\.where\('tenant', context\.tenant\)/);
     expect(section).not.toMatch(/\.where\(\{[^}]*tenant: context\.tenant/);
   });

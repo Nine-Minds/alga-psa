@@ -1,5 +1,10 @@
 import type { FixedPricingBasis } from '@alga-psa/types';
 import { isUnitPricedFixedConfig } from './usageSemantics';
+import { normalizeToMonthlyCents } from '@alga-psa/shared/billingClients/recurringMemberRate';
+
+// Client-safe re-export, as resolveFixedLineRate is re-exported for billing.
+export * from '@alga-psa/shared/billingClients/fixedMemberRate';
+import { allocateCentsByWeights } from '@alga-psa/shared/billingClients/fixedMemberRate';
 
 /**
  * Shared authoring rules for a fixed-line member's pricing basis.
@@ -60,23 +65,21 @@ export function fixedServicesRecurringTotalCents(
   return unitTotal + (hasBundleFixedService(services) ? Number(bundleBaseRateCents ?? 0) : 0);
 }
 
-// LEVERAGE: pattern monthly-cadence-normalization — twin of shared/billingClients/contractMonthlyValue.normalizeToMonthlyCents;
-// that module imports the server DB layer, so client-side wizard code cannot import it. The pure cadence math
-// belongs in a client-safe layer both import.
-function normalizeToMonthlyCents(amountCents: number, billingFrequency: string | null | undefined): number {
-  switch (billingFrequency) {
-    case 'weekly':
-      return Math.round(amountCents * 4.33);
-    case 'quarterly':
-      return Math.round(amountCents / 3);
-    case 'semi-annually':
-    case 'semi_annually':
-      return Math.round(amountCents / 6);
-    case 'annually':
-      return Math.round(amountCents / 12);
-    default:
-      return Math.round(amountCents);
-  }
+export type FixedLinePeriodInput = {
+  billing_frequency?: string | null;
+  base_rate?: number | null;
+  services: ReadonlyArray<FixedServiceBasisFields>;
+};
+
+/**
+ * Un-normalized recurring amount of ONE billing period of a fixed line. A
+ * service-less line contributes only its base rate, matching the stored-contract
+ * valuation.
+ */
+export function fixedLinePeriodCents(line: FixedLinePeriodInput): number {
+  return line.services.length === 0
+    ? Number(line.base_rate ?? 0)
+    : fixedServicesRecurringTotalCents(line.services, line.base_rate);
 }
 
 /**
@@ -87,20 +90,14 @@ function normalizeToMonthlyCents(amountCents: number, billingFrequency: string |
  * matching the stored-contract valuation.
  */
 export function fixedLinesRecurringTotalCents(
-  lines: ReadonlyArray<{
-    billing_frequency?: string | null;
-    base_rate?: number | null;
-    services: ReadonlyArray<FixedServiceBasisFields>;
-  }>,
+  lines: ReadonlyArray<FixedLinePeriodInput>,
   defaultBillingFrequency?: string | null,
 ): number {
-  return lines.reduce((sum, line) => {
-    const amount =
-      line.services.length === 0
-        ? Number(line.base_rate ?? 0)
-        : fixedServicesRecurringTotalCents(line.services, line.base_rate);
-    return sum + normalizeToMonthlyCents(amount, line.billing_frequency ?? defaultBillingFrequency);
-  }, 0);
+  return lines.reduce(
+    (sum, line) =>
+      sum + normalizeToMonthlyCents(fixedLinePeriodCents(line), line.billing_frequency ?? defaultBillingFrequency),
+    0,
+  );
 }
 
 /**
@@ -113,7 +110,7 @@ export function getFixedServiceBasisIssue(
   service: FixedServiceBasisFields,
   options: { requireUnitRate?: boolean } = {},
 ): FixedServiceBasisIssue | null {
-  // Templates are currency-neutral: their unit rate is an optional default and
+  // A template's unit rate is an optional default in the template's base currency;
   // an empty one follows the catalog price in the contract's currency.
   const requireUnitRate = options.requireUnitRate ?? true;
   if (isUnitFixedService(service)) {
@@ -133,8 +130,8 @@ export function getFixedServiceBasisIssue(
 
 /**
  * Split a line base rate across the BUNDLE members only, proportionally to
- * their allocation quantity; the last bundle member absorbs the rounding
- * remainder so the shares always sum to the base rate. Unit members get no
+ * their allocation quantity, with cent remainders handed out by
+ * `allocateCentsByWeights` so the shares always sum to the base rate. Unit members get no
  * share (their rate is quantity × unit rate, billed independently) — this is
  * what prevents a mixed line from double-billing seats.
  *
@@ -147,20 +144,20 @@ export function allocateBundleBaseRate<T extends FixedServiceBasisFields>(
   const bundleIndexes = services
     .map((service, index) => (isUnitFixedService(service) ? -1 : index))
     .filter((index) => index >= 0);
-  const totalQuantity =
-    bundleIndexes.reduce((sum, index) => sum + (services[index].quantity ?? 1), 0) || bundleIndexes.length;
+  const quantities = bundleIndexes.map((index) => services[index].quantity ?? 1);
+  // Zero total quantity falls back to an even split.
+  const evenSplit = quantities.reduce((sum, quantity) => sum + quantity, 0) <= 0;
+  const { amounts } = allocateCentsByWeights(
+    baseRateCents,
+    bundleIndexes.map((index, position) => ({
+      key: String(position).padStart(6, '0'),
+      weight: evenSplit ? 1 : quantities[position],
+    })),
+  );
 
   const shares: Array<number | null> = services.map(() => null);
-  let allocated = 0;
   bundleIndexes.forEach((serviceIndex, position) => {
-    if (position === bundleIndexes.length - 1) {
-      shares[serviceIndex] = baseRateCents - allocated;
-      return;
-    }
-    const quantity = services[serviceIndex].quantity ?? 1;
-    const share = Math.round(baseRateCents * (quantity / totalQuantity));
-    shares[serviceIndex] = share;
-    allocated = Math.round(allocated + share);
+    shares[serviceIndex] = amounts[position];
   });
   return shares;
 }

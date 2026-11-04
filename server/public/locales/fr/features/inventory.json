@@ -32,7 +32,8 @@
     "to": "À",
     "today": "Aujourd'hui",
     "total": "Total",
-    "unknown": "Inconnu"
+    "unknown": "Inconnu",
+    "recordUnavailable": "Introuvable, ou vous n'y avez pas accès"
   },
   "counts": {
     "adjustments": "{{count}} ajustement(s)",
@@ -588,7 +589,32 @@
       "returnLocationRequired": "Sélectionnez un emplacement avant de réceptionner le retour.",
       "returnedUnitNotFound": "Unité en stock retournée introuvable. Veuillez actualiser la page et choisir une autre unité.",
       "returnedUnitRequired": "L'identifiant de l'unité retournée est obligatoire.",
-      "vendorRequired": "Sélectionnez un fournisseur avant d'envoyer le RMA."
+      "vendorRequired": "Sélectionnez un fournisseur avant d'envoyer le RMA.",
+      "warrantyUnitTracked": "Ce RMA concerne une unité de stock. Utilisez les actions RMA de l'unité de stock.",
+      "warrantyStockTrackedAsset": "Cet appareil a été vendu depuis le stock. Ouvrez plutôt un RMA depuis son unité de stock.",
+      "warrantyNotClientOwned": "Les demandes de garantie concernent le matériel appartenant au client.",
+      "warrantyNoCustody": "L'appareil n'est pas en garde. Réceptionnez d'abord le matériel.",
+      "warrantyCustodyWrongState": "L'appareil n'est pas au bon endroit pour cette étape. Actualisez et vérifiez sa garde.",
+      "warrantyLocationRequired": "Choisissez où se trouve l'appareil actuellement afin de pouvoir le réceptionner.",
+      "warrantyInvalidTransition": "Cette étape n'est pas disponible dans le statut actuel du RMA. Actualisez et réessayez.",
+      "warrantyReviewClose": "Approuvez ou refusez la demande avant de la clôturer.",
+      "duplicateReference": "Cette référence ou ce numéro de RMA est déjà utilisé.",
+      "checkViolation": "Cette valeur n'est pas autorisée pour ce RMA.",
+      "ticketNotFound": "Ticket introuvable.",
+      "noTicket": "Ce RMA n'est pas lié à un ticket.",
+      "referenceRequired": "Ajoutez d'abord le numéro de dossier du fournisseur.",
+      "warrantyClaimUnitAction": "Il s'agit d'une demande de garantie sur du matériel client. Utilisez les actions de garantie du RMA.",
+      "warrantyReasonRequired": "Décrivez le problème de l'appareil.",
+      "warrantyDenialReasonRequired": "Indiquez pourquoi la demande n'est pas couverte.",
+      "warrantyCarrierRequired": "Saisissez le transporteur.",
+      "warrantyTrackingRequired": "Saisissez le numéro de suivi.",
+      "warrantyReplacementSerialRequired": "Saisissez le numéro de série de l'appareil de remplacement.",
+      "warrantyDateFormat": "Utilisez le format AAAA-MM-JJ.",
+      "warrantyDateInvalid": "Cette date n'existe pas.",
+      "warrantyInputInvalid": "Certaines informations ne sont pas valides. Vérifiez-les et réessayez.",
+      "baseUrlMissing": "L'URL de l'application n'est pas configurée.",
+      "vendorSystemNotFound": "Ce système de dossier fournisseur n'est pas disponible.",
+      "vendorSystemTemplateInvalid": "Le modèle de lien de ce système ne peut pas être utilisé pour un dossier fournisseur."
     },
     "salesOrders": {
       "clientRequired": "Sélectionnez un client avant de créer la commande client.",
@@ -1255,7 +1281,9 @@
       "type": "Type",
       "vendor": "Fournisseur",
       "creditAtStake": "Crédit en jeu",
-      "rmaNumber": "N° de RMA"
+      "rmaNumber": "N° de RMA",
+      "ticket": "Ticket",
+      "returnBy": "Retour avant le"
     },
     "deadUnitsOwed": "Unités défectueuses dues",
     "fields": {
@@ -1300,11 +1328,128 @@
       "replaced": "Remplacé",
       "credited": "Crédité",
       "charged": "Facturé",
-      "closed": "Fermé"
+      "closed": "Fermé",
+      "warrantyReview": "Examen de garantie",
+      "repaired": "Réparé"
     },
     "ageAtVendor": "Chez le fournisseur depuis {{days}} j",
     "filters": {
       "statusActive": "Affichage des dossiers RMA au statut {{status}}."
+    },
+    "detail": {
+      "title": "RMA {{id}}",
+      "reference": "Référence RMA",
+      "product": "Produit",
+      "returnedSerial": "Numéro de série de l'unité retournée",
+      "opened": "Ouvert le",
+      "updated": "Mis à jour le",
+      "age": "Ancienneté (jours)",
+      "reason": "Motif",
+      "viewUnit": "Voir l'unité",
+      "viewAsset": "Voir l'actif"
+    },
+    "tabs": {
+      "all": "Tous",
+      "review": "Examen de garantie",
+      "inProgress": "En cours",
+      "closed": "Fermés"
+    },
+    "warranty": {
+      "openDetail": "Ouvrir",
+      "updated": "RMA mis à jour.",
+      "updateFailed": "Impossible de mettre à jour le RMA.",
+      "printTag": "Imprimer l'étiquette RMA",
+      "printTagFailed": "Impossible d'imprimer l'étiquette RMA.",
+      "popupBlocked": "Autorisez les fenêtres contextuelles pour voir l'étiquette.",
+      "printSlip": "Imprimer le bordereau de retour",
+      "mirrorToTicket": "Répercuter le dossier fournisseur sur le ticket",
+      "mirrored": "Dossier fournisseur ajouté au ticket.",
+      "mirrorFailed": "Impossible d'ajouter le dossier fournisseur au ticket.",
+      "mirrorSystem": "Système du dossier fournisseur",
+      "mirrorSystemGeneric": "Lien générique",
+      "assetLink": "Actif : {{name}}",
+      "ticketLink": "Ticket : {{number}}",
+      "timeline": "Historique",
+      "noEvents": "Aucun historique pour le moment.",
+      "confirmReceived": "Confirmez que l'appareil est au bureau. Sa garde doit être au bureau.",
+      "confirmCredit": "Indiquez que le fournisseur a crédité cet appareil. La période de garde est clôturée comme mise au rebut.",
+      "actions": {
+        "approveStandard": "Approuver (standard)",
+        "approveAdvance": "Approuver (remplacement anticipé)",
+        "deny": "Refuser la demande",
+        "cancel": "Annuler la demande",
+        "markDeviceReceived": "Marquer l'appareil comme reçu",
+        "shipToVendor": "Expédier au fournisseur",
+        "receiveReplacement": "Réceptionner le remplacement",
+        "recordRepair": "Enregistrer la réparation",
+        "recordCredit": "Enregistrer l'avoir fournisseur",
+        "returnToClient": "Retourner au client",
+        "close": "Clôturer le RMA"
+      },
+      "events": {
+        "opened": "Demande ouverte",
+        "warrantyApproved": "Garantie approuvée",
+        "warrantyDenied": "Garantie refusée",
+        "deviceReceived": "Appareil reçu",
+        "shippedOutbound": "Expédié au fournisseur",
+        "vendorCaseRecorded": "Dossier fournisseur enregistré",
+        "replacementReceived": "Remplacement reçu",
+        "repairReceived": "Réparation reçue",
+        "vendorCredited": "Crédité par le fournisseur",
+        "returnedToClient": "Retourné au client",
+        "closed": "Fermé",
+        "note": "Note"
+      },
+      "outcome": {
+        "covered": "Couvert",
+        "notCovered": "Non couvert",
+        "unknown": "Inconnu"
+      },
+      "closeReason": {
+        "resolved": "Résolu",
+        "warrantyDenied": "Garantie refusée",
+        "cancelled": "Annulé",
+        "duplicate": "Doublon",
+        "vendorCredited": "Crédité par le fournisseur"
+      },
+      "fields": {
+        "outcome": "Décision de garantie",
+        "decidedAt": "Date de décision",
+        "denialReason": "Motif du refus",
+        "vendorRef": "Référence RMA du fournisseur",
+        "returnBy": "Retour avant le",
+        "outbound": "Expédition sortante",
+        "inbound": "Expédition entrante",
+        "replacementSerial": "Numéro de série du remplacement",
+        "returnShipTo": "Adresse de retour",
+        "closedReason": "Motif de clôture",
+        "cancelReason": "Motif",
+        "carrier": "Transporteur",
+        "tracking": "Numéro de suivi",
+        "model": "Modèle",
+        "manufacturer": "Fabricant",
+        "warrantyEnd": "Date de fin de garantie",
+        "inboundCarrier": "Transporteur entrant",
+        "inboundTracking": "Numéro de suivi entrant",
+        "counterparty": "Retourné à",
+        "closeReason": "Motif de clôture",
+        "note": "Note"
+      },
+      "claim": {
+        "title": "Nouvelle demande de garantie",
+        "loadAssetsFailed": "Impossible de charger le matériel.",
+        "assetRequired": "Choisissez le matériel.",
+        "reasonRequired": "Décrivez le problème de l'appareil.",
+        "opened": "Demande de garantie ouverte.",
+        "openFailed": "Impossible d'ouvrir la demande de garantie.",
+        "search": "Rechercher du matériel",
+        "searchPlaceholder": "Nom, étiquette ou numéro de série",
+        "asset": "Matériel",
+        "assetPlaceholder": "Sélectionner un matériel…",
+        "track": "Suivre",
+        "stockHint": "Les appareils vendus depuis le stock ne peuvent pas être réclamés ici. Utilisez plutôt Ouvrir un RMA depuis l'unité de stock.",
+        "submit": "Ouvrir la demande"
+      }
     }
   },
   "salesOrders": {
@@ -1564,6 +1709,10 @@
       "inProgress": "Reconstruction…"
     },
     "receive": {
+      "searchProducts": "Rechercher des produits ou un SKU...",
+      "noProductsFound": "Aucun produit trouvé",
+      "searchLocations": "Rechercher des emplacements...",
+      "noLocationsFound": "Aucun emplacement trouvé",
       "costNonNegative": "Le coût unitaire ne peut pas être négatif.",
       "failed": "Impossible de réceptionner le stock.",
       "inProgress": "Réception…",
@@ -1698,7 +1847,15 @@
       "failed": "Impossible de réapprovisionner le retour.",
       "restocking": "Réapprovisionnement…",
       "submit": "Réapprovisionner"
-    }
+    },
+    "printLabel": "Imprimer l'étiquette",
+    "printWithTemplate": "Imprimer avec {{code}}",
+    "claimant": {
+      "project": "Projet {{number}}",
+      "salesOrder": "Commande de vente {{number}}"
+    },
+    "printPopupBlocked": "Autorisez les fenêtres contextuelles pour ouvrir l'étiquette.",
+    "printFailed": "Impossible d'imprimer cette étiquette."
   },
   "transfers": {
     "addLine": "Ajouter une ligne",

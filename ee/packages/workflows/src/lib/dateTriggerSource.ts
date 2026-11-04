@@ -1,9 +1,9 @@
 import type { Knex } from 'knex';
-import type { DateTriggerSourceId } from '../../../../../shared/workflow/runtime/dateTriggerSourceDefinitions';
+import type { WorkflowCatalogEventType, DateTriggerSourceId } from '@alga-psa/event-schemas';
 
-// The list of sources (ids, payload schema refs, mode, domain events) is shared/workflow/runtime/
-// dateTriggerSourceDefinitions.ts. A DateTriggerSource here is only the query half: packages/jobs
-// supplies `findOccurrences` for each definition id.
+// The list of sources (ids, payload schema refs, mode, domain events) is
+// packages/event-schemas/src/schemas/domain/dateTriggerSourceDefinitions.ts. A DateTriggerSource here
+// is only the query half: packages/jobs supplies `findOccurrences` for each definition id.
 export type { DateTriggerSourceId };
 
 export interface DateOccurrence {
@@ -19,6 +19,18 @@ export interface DateOccurrence {
   payload: Record<string, unknown>;
 }
 
+/**
+ * Type-erased domain-event emitter stored on a source. The event type and its branded payload are only
+ * correlated inside jobs' `defineDateDomainEvent` (packages/jobs/src/lib/dateTriggers/defineDateDomainEvent.ts),
+ * so emission is a closure rather than a (eventType, payload) pair the scanner would have to re-correlate.
+ * `eventType` and `windowDays` must equal the source definition's `domainEvent` (registry.test.ts checks).
+ */
+export interface DateDomainEvent {
+  eventType: WorkflowCatalogEventType;
+  windowDays: number;
+  emitOnce(knex: Knex, tenant: string, occurrence: DateOccurrence, daysUntil: number): Promise<boolean>;
+}
+
 /** What a source needs beyond a date window. Always passed for `mode: 'condition'` sources. */
 export interface DateTriggerScanContext {
   /** The workflow trigger's `params`, validated by the launcher. */
@@ -31,14 +43,14 @@ export interface DateTriggerScanContext {
 
 export interface DateTriggerSource {
   id: DateTriggerSourceId;
+  /** Present exactly for sources whose definition declares a `domainEvent`. */
+  domainEvent?: DateDomainEvent;
   /**
    * `window` sources: occurrences whose date lies in `fromDate..toDate`.
    * `condition` sources: the occurrences that hold as of `context.today` (`fromDate` and `toDate`
    * are both today and are ignored); the launcher relies on the fire key for dedup.
    */
   findOccurrences(db: Knex, tenant: string, fromDate: string, toDate: string, context?: DateTriggerScanContext): Promise<DateOccurrence[]>;
-  /** Builds the upcoming-date domain event for sources whose definition declares a `domainEvent`. */
-  buildDomainEventPayload?(occurrence: DateOccurrence, daysUntil: number): Record<string, unknown>;
 }
 
 export type DateSourceScanOptions = { db: Knex; tenant: string; fromDate: string; toDate: string };

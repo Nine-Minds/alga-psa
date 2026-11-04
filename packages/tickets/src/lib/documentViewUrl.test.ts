@@ -68,3 +68,13 @@ describe('documentViewUrl', () => {
     );
   });
 });
+
+describe('resolveDocumentViewUrl serving policy', () => {
+  it('never links SVG to the view route', () => {
+    expect(resolveDocumentViewUrl({ file_id: 'f1', mime_type: 'image/svg+xml' })).toBe('/api/documents/download/f1');
+  });
+  it('links png to view and text/plain to download', () => {
+    expect(resolveDocumentViewUrl({ file_id: 'f1', mime_type: 'image/png' })).toBe('/api/documents/view/f1');
+    expect(resolveDocumentViewUrl({ file_id: 'f1', mime_type: 'text/plain' })).toBe('/api/documents/download/f1');
+  });
+});

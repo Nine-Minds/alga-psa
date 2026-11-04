@@ -18,6 +18,7 @@ import {
   TICKET_VIEW_DENSITY_STEP,
   type ResolvedTicketViewSettings,
 } from './ticketViewSettings';
+import { TICKET_TAG_PATHS, sanitizeTicketWhere } from './ticketWhere';
 import { resolveTicketColumnOrder, resolveTicketColumnVisibility } from './ticketColumnCatalog';
 
 /**
@@ -57,6 +58,8 @@ export interface TicketListViewContext {
     userIds?: ReadonlySet<string>;
     teamIds?: ReadonlySet<string>;
     tags?: ReadonlySet<string>;
+    /** Tag definition ids by `where` tag path (tags, contact.tags, client.tags). */
+    whereTagIds?: Partial<Record<(typeof TICKET_TAG_PATHS)[number], ReadonlySet<string>>>;
   };
 }
 
@@ -186,7 +189,15 @@ export function sanitizeTicketListView(
     assignedToIds: collector.keepList('assignedToIds', filters.assignedToIds, known.userIds),
     assignedTeamIds: collector.keepList('assignedTeamIds', filters.assignedTeamIds, known.teamIds),
     tags: collector.keepList('tags', filters.tags, known.tags),
+    where: undefined,
   });
+
+  // Predicate clauses: malformed ones go, and ids of deleted tags are dropped from the rest.
+  if (filters.where) {
+    const sanitized = sanitizeTicketWhere(filters.where, known.whereTagIds);
+    if (sanitized.where) next.where = sanitized.where;
+    for (const entry of sanitized.dropped) collector.recordDropped(entry.field, entry.count);
+  }
 
   return {
     settings: { ...settings, filters: next as TicketListViewFilters },

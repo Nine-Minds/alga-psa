@@ -180,8 +180,10 @@ function PortalSetupContent() {
         // Attempt auto sign-in with the new credentials
         try {
           const signinRes = await signIn('credentials', {
-            username: result.username,
+            email: result.username,
             password: formData.password,
+            userType: 'client',
+            ...(tenantSlug ? { tenant: tenantSlug } : {}),
             redirect: false
           });
           if (signinRes && (signinRes as any).error) {

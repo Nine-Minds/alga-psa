@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { LabelPrintDialog } from '@alga-psa/ui/components/labels/LabelPrintDialog';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -78,6 +79,7 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
   const { t } = useTranslation('msp/assets');
   const router = useRouter();
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
+  const [isPrintLabelOpen, setIsPrintLabelOpen] = useState(false);
   const [isRebootDialogOpen, setIsRebootDialogOpen] = useState(false);
   const { mutate } = useSWRConfig();
   const { renderQuickAddTicket } = useAssetCrossFeature();
@@ -197,10 +199,29 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
         </div>
 
         <div className="flex items-center gap-3" data-print-hide>
+          <Button
+            id="asset-print-label-button"
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={() => setIsPrintLabelOpen(true)}
+          >
+            <Printer className="h-4 w-4" />
+            {t('assetDetailHeader.actions.printLabel', { defaultValue: 'Print asset label' })}
+          </Button>
           <PrintButton
             id="asset-detail-print-button"
             variant="outline"
+            label={t('assetDetailHeader.actions.printPage', { defaultValue: 'Print page' })}
           />
+          {isPrintLabelOpen && (
+            <LabelPrintDialog
+              isOpen={isPrintLabelOpen}
+              onClose={() => setIsPrintLabelOpen(false)}
+              labelClass="asset-identity"
+              ids={[asset.asset_id]}
+              idPrefix="asset-print-label"
+            />
+          )}
           <RemoteAccessButton asset={asset} variant="default" hasTemplateLinks={hasTemplateLinks} surface="asset-header" />
           
           <Button 

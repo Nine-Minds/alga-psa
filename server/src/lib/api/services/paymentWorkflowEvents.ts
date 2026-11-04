@@ -1,5 +1,7 @@
+import { builtWorkflowPayload, type PaymentRecordedSource } from '@alga-psa/event-schemas';
 import { formatMoneyAmount } from './invoiceWorkflowEvents';
 
+// LEVERAGE: pattern payment-recorded-builder — packages/billing/src/lib/paymentRecordedEvent.ts builds the same payload (billing cannot import server/); belongs in a shared builders layer.
 export function buildPaymentRecordedPayload(params: {
   paymentId: string;
   clientId?: string | null;
@@ -9,8 +11,10 @@ export function buildPaymentRecordedPayload(params: {
   method: string;
   receivedByUserId?: string;
   gatewayTransactionId?: string | null;
+  /** Explicit provenance; consumers allow-list on it (missing = do not act). */
+  source?: PaymentRecordedSource;
 }) {
-  return {
+  return builtWorkflowPayload('PAYMENT_RECORDED', {
     paymentId: params.paymentId,
     clientId: params.clientId ?? undefined,
     receivedAt: params.receivedAt,
@@ -19,7 +23,8 @@ export function buildPaymentRecordedPayload(params: {
     method: params.method,
     receivedByUserId: params.receivedByUserId,
     gatewayTransactionId: params.gatewayTransactionId ?? undefined,
-  };
+    source: params.source,
+  });
 }
 
 export function buildPaymentAppliedPayload(params: {
@@ -28,7 +33,7 @@ export function buildPaymentAppliedPayload(params: {
   appliedByUserId?: string;
   applications: Array<{ invoiceId: string; amountApplied: number }>;
 }) {
-  return {
+  return builtWorkflowPayload('PAYMENT_APPLIED', {
     paymentId: params.paymentId,
     appliedAt: params.appliedAt,
     appliedByUserId: params.appliedByUserId,
@@ -36,7 +41,7 @@ export function buildPaymentAppliedPayload(params: {
       invoiceId: application.invoiceId,
       amountApplied: formatMoneyAmount(application.amountApplied),
     })),
-  };
+  });
 }
 
 export function buildPaymentFailedPayload(params: {
@@ -51,7 +56,7 @@ export function buildPaymentFailedPayload(params: {
   failureMessage?: string;
   retryable?: boolean;
 }) {
-  return {
+  return builtWorkflowPayload('PAYMENT_FAILED', {
     paymentId: params.paymentId,
     invoiceId: params.invoiceId,
     clientId: params.clientId ?? undefined,
@@ -62,7 +67,7 @@ export function buildPaymentFailedPayload(params: {
     failureCode: params.failureCode,
     failureMessage: params.failureMessage,
     retryable: params.retryable,
-  };
+  });
 }
 
 export function buildPaymentRefundedPayload(params: {
@@ -73,13 +78,13 @@ export function buildPaymentRefundedPayload(params: {
   currency: string;
   reason?: string | null;
 }) {
-  return {
+  return builtWorkflowPayload('PAYMENT_REFUNDED', {
     paymentId: params.paymentId,
     refundedAt: params.refundedAt,
     refundedByUserId: params.refundedByUserId,
     amount: formatMoneyAmount(params.amount),
     currency: params.currency,
     reason: params.reason ?? undefined,
-  };
+  });
 }
 

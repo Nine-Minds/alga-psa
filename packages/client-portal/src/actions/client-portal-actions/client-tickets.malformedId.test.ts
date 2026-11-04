@@ -48,7 +48,7 @@ vi.mock('@shared/models/ticketModel', () => ({
 
 vi.mock('@alga-psa/event-bus', () => ({ ServerEventPublisher: class {} }));
 vi.mock('@alga-psa/analytics', () => ({ ServerAnalyticsTracker: class {} }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: vi.fn() }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: vi.fn(), publishWorkflowEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
   maybeReopenBundleMasterFromChildReply: vi.fn(),
   revertBundlePropagationForChild: vi.fn(),

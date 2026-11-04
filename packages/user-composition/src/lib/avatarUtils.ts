@@ -89,6 +89,7 @@ export async function getClientLogoUrl(clientId: string, tenant: string): Promis
   return getEntityImageUrl('client', clientId, tenant);
 }
 
+// LEVERAGE: pattern entity-image-url-batch — same assoc -> documents -> external_files batch as packages/formatting/src/avatarUtils.ts
 export async function getEntityImageUrlsBatch(
   entityType: EntityType,
   entityIds: string[],

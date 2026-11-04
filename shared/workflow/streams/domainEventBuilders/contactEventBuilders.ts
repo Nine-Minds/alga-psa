@@ -1,3 +1,5 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
+
 import type {
   IContactEmailAddress,
   IContactPhoneNumber,
@@ -52,8 +54,8 @@ export function buildContactCreatedPayload(params: {
   defaultPhoneType?: string;
   createdByUserId?: string;
   createdAt?: Date | string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'CONTACT_CREATED'> {
+  return builtWorkflowPayload('CONTACT_CREATED', {
     contactId: params.contactId,
     ...(params.clientId ? { clientId: params.clientId } : {}),
     fullName: params.fullName,
@@ -67,7 +69,7 @@ export function buildContactCreatedPayload(params: {
     ...(params.defaultPhoneType ? { defaultPhoneType: params.defaultPhoneType } : {}),
     ...(params.createdByUserId ? { createdByUserId: params.createdByUserId } : {}),
     ...(params.createdAt ? { createdAt: normalizeChangeValue(params.createdAt) } : {}),
-  };
+  });
 }
 
 export function buildContactUpdatedPayload(params: {
@@ -78,7 +80,7 @@ export function buildContactUpdatedPayload(params: {
   updatedFieldKeys: string[];
   updatedByUserId?: string;
   updatedAt?: Date | string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'CONTACT_UPDATED'> {
   const updatedFields: string[] = [];
   const changes: Record<string, { previous: unknown; new: unknown }> = {};
   const seenPaths = new Set<string>();
@@ -105,14 +107,14 @@ export function buildContactUpdatedPayload(params: {
     }
   }
 
-  return {
+  return builtWorkflowPayload('CONTACT_UPDATED', {
     contactId: params.contactId,
     ...(params.clientId ? { clientId: params.clientId } : {}),
     ...(params.updatedByUserId ? { updatedByUserId: params.updatedByUserId } : {}),
     ...(params.updatedAt ? { updatedAt: normalizeChangeValue(params.updatedAt) } : {}),
     ...(updatedFields.length ? { updatedFields } : {}),
     ...(Object.keys(changes).length ? { changes } : {}),
-  };
+  });
 }
 
 export function buildContactPrimarySetPayload(params: {
@@ -121,14 +123,14 @@ export function buildContactPrimarySetPayload(params: {
   previousPrimaryContactId?: string;
   setByUserId?: string;
   setAt?: Date | string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'CONTACT_PRIMARY_SET'> {
+  return builtWorkflowPayload('CONTACT_PRIMARY_SET', {
     clientId: params.clientId,
     contactId: params.contactId,
     ...(params.previousPrimaryContactId ? { previousPrimaryContactId: params.previousPrimaryContactId } : {}),
     ...(params.setByUserId ? { setByUserId: params.setByUserId } : {}),
     ...(params.setAt ? { setAt: normalizeChangeValue(params.setAt) } : {}),
-  };
+  });
 }
 
 export function buildContactArchivedPayload(params: {
@@ -137,14 +139,14 @@ export function buildContactArchivedPayload(params: {
   archivedByUserId?: string;
   archivedAt?: Date | string;
   reason?: string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'CONTACT_ARCHIVED'> {
+  return builtWorkflowPayload('CONTACT_ARCHIVED', {
     contactId: params.contactId,
     ...(params.clientId ? { clientId: params.clientId } : {}),
     ...(params.archivedByUserId ? { archivedByUserId: params.archivedByUserId } : {}),
     ...(params.archivedAt ? { archivedAt: normalizeChangeValue(params.archivedAt) } : {}),
     ...(params.reason ? { reason: params.reason } : {}),
-  };
+  });
 }
 
 export function buildContactMergedPayload(params: {
@@ -153,12 +155,12 @@ export function buildContactMergedPayload(params: {
   mergedByUserId?: string;
   mergedAt?: Date | string;
   strategy?: string;
-}): Record<string, unknown> {
-  return {
+}): Record<string, unknown> & BuiltWorkflowPayload<'CONTACT_MERGED'> {
+  return builtWorkflowPayload('CONTACT_MERGED', {
     sourceContactId: params.sourceContactId,
     targetContactId: params.targetContactId,
     ...(params.mergedByUserId ? { mergedByUserId: params.mergedByUserId } : {}),
     ...(params.mergedAt ? { mergedAt: normalizeChangeValue(params.mergedAt) } : {}),
     ...(params.strategy ? { strategy: params.strategy } : {}),
-  };
+  });
 }

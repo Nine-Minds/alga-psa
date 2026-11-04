@@ -52,7 +52,9 @@ describe('ticket clipboard image flow end-to-end contract', () => {
     expect(ticketDetailsSource).toContain("thirdButtonLabel={deleteDialogHasImages ? t('conversation.deleteCommentOnly', 'Delete Comment Only') : undefined}");
     expect(ticketDetailsSource).toContain("confirmLabel={deleteDialogHasImages ? t('conversation.deleteCommentImages', 'Delete Comment + Images') : t('conversation.delete', 'Delete')}");
     expect(ticketDetailsSource).toContain('const result = await deleteDraftClipboardImages({');
-    expect(commentItemSource).toContain('onClick={() => onDelete(conversation)}');
+    // Optional handler: a read-only host (the client portal's shared-workspace
+    // view) passes none and the control is not rendered at all.
+    expect(commentItemSource).toContain('onClick={() => onDelete?.(conversation)}');
   });
   it('T034: edit-mode content changes do not mutate TicketDetails currentComment state on every keystroke', () => {
     const ticketDetailsPath = path.resolve(__dirname, './TicketDetails.tsx');

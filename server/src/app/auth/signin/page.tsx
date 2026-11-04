@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@alga-psa/auth';
+import { isLicensedUserType } from '@alga-psa/types';
 import { SSO_PROFILE_TAB_URL } from '@alga-psa/auth/lib/sso/linkStateCookie';
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
@@ -38,7 +39,7 @@ export default async function SignIn({
     // the link succeeded. The link-state cookie is no proof either way --
     // ensureOAuthAccountLink() consumes it before it rejects -- so only the
     // session's own user type decides, since the link tab is MSP-only.
-    const isInternalUser = session.user.user_type !== 'client';
+    const isInternalUser = isLicensedUserType(session.user.user_type);
     // Auth.js also lands here with no error at all: when a provider returns no
     // usable profile it redirects to its own signin action, which forwards the
     // stored callbackUrl only. For a link attempt that URL carries `linked=1`,

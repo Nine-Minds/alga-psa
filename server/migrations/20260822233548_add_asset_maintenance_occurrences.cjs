@@ -45,11 +45,6 @@ exports.up = async function up(knex) {
   // util no-ops when the table is already distributed or on plain Postgres.
   await ensureTenantDistribution(knex, 'asset_maintenance_schedules');
   await ensureTenantDistribution(knex, 'asset_maintenance_occurrences');
-  // Citus rejects multiple utility statements in a single command against a
-  // distributed table ("cannot execute multiple utility events"), so enable RLS
-  // and create the policy as separate raw calls.
-  await knex.raw("ALTER TABLE asset_maintenance_occurrences ENABLE ROW LEVEL SECURITY");
-  await knex.raw("CREATE POLICY tenant_isolation_policy ON asset_maintenance_occurrences USING (tenant::TEXT = current_setting('app.current_tenant')::TEXT)");
   await knex.raw("INSERT INTO asset_maintenance_occurrences (tenant, schedule_id, asset_id, due_date, status) SELECT tenant, schedule_id, asset_id, next_maintenance, 'open' FROM asset_maintenance_schedules WHERE is_active = true AND archived_at IS NULL ON CONFLICT (tenant, schedule_id) WHERE status = 'open' DO NOTHING");
 };
 

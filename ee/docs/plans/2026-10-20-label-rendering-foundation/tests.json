@@ -1,0 +1,102 @@
+[
+  {
+    "id": "T001",
+    "description": "Resolver round-trip for all six types",
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "description": "Mobile copy byte-identity",
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "description": "Page-size options and @page rule; Letter/A4/Legal unchanged",
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "description": "Barcode constraints and encoders",
+    "implemented": true
+  },
+  {
+    "id": "T005",
+    "description": "Registry: every standard template renders",
+    "implemented": true
+  },
+  {
+    "id": "T006",
+    "description": "e2e PDF: 4x2in single label decodes QR/Code128 to recordUrl",
+    "implemented": true
+  },
+  {
+    "id": "T007",
+    "description": "e2e PDF: n-up Letter order and decode",
+    "implemented": true
+  },
+  {
+    "id": "T008",
+    "description": "Layout planner overflow/validation",
+    "implemented": true
+  },
+  {
+    "id": "T009",
+    "description": "Route: uniform 404, validation, no render before auth",
+    "implemented": true
+  },
+  {
+    "id": "T010",
+    "description": "Client bundle isolation",
+    "implemented": true
+  },
+  {
+    "id": "T011",
+    "description": "Translation validation",
+    "implemented": true
+  },
+  {
+    "id": "T012",
+    "description": "e2e containment: worst-case data (39-char RMM tag, 29-char Code 128 tag, long names) on all four standard templates, 4x2in and Letter 2x5: no painted text outside the printable area or over a code, identifier complete and unclipped, margin band white, codes decode",
+    "implemented": true
+  },
+  {
+    "id": "T013",
+    "description": "composeLabelSheets adds no cell padding (margin applied once)",
+    "implemented": true
+  },
+  {
+    "id": "T014",
+    "description": "renderLabelBatchHtml names every failing record with suggestedTemplateCode, the suggested template prints them, no suggestion for non-barcode failures",
+    "implemented": true
+  },
+  {
+    "id": "T015",
+    "description": "printLabels passes failures through in the 422",
+    "implemented": true
+  },
+  {
+    "id": "T016",
+    "description": "Designer: imported record-URL binding displays as {{label.recordUrl}} and typing it exports a binding, not a literal",
+    "implemented": true
+  },
+  {
+    "id": "T017",
+    "description": "resolveTemplatePreviewSheetFromAst: 4x2in label -> 101.6x50.8 mm sheet, guide at the renderer's 11 px margin; mm labels at their size; documents return null",
+    "implemented": true
+  },
+  {
+    "id": "T018",
+    "description": "Preview sheet CSS is screen-only (guide hidden in print); renderTemplateAstHtmlDocument adds the sheet only with previewSheet and leaves the @page rule unchanged",
+    "implemented": true
+  },
+  {
+    "id": "T019",
+    "description": "Chromium e2e: for every standard label template the preview sheet equals the printed 4x2in label cell (size, overflow hidden) and every rendered node's box matches within 0.5 px",
+    "implemented": true
+  },
+  {
+    "id": "T020",
+    "description": "computePreviewSheetScale: fit fills the pane bounded by height and 400%, shrinks in narrow panes; 100% is 1",
+    "implemented": true
+  }
+]

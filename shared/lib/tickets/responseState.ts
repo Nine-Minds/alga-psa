@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
-import type { TicketResponseState } from '@alga-psa/types';
+import { isClientUserType, isMspPrincipalUserType, type TicketResponseState } from '@alga-psa/types';
+import { buildTicketResponseStateChangedPayload } from './ticketWorkflowEventPayloads';
 
 /**
  * Shared "comment added" response-state engine.
@@ -66,10 +67,14 @@ export async function resolveCommentAuthor(
   if (!user) {
     return { authorType: 'unknown', contactId: null };
   }
-  if (user.user_type === 'internal') {
+  // internal and service principals are MSP-side authors (a service user is never a client author).
+  if (isMspPrincipalUserType(user.user_type)) {
     return { authorType: 'internal', contactId: null };
   }
-  return { authorType: 'client', contactId: user.contact_id ?? null };
+  if (isClientUserType(user.user_type)) {
+    return { authorType: 'client', contactId: user.contact_id ?? null };
+  }
+  return { authorType: 'unknown', contactId: null };
 }
 
 /** Pure rule table: the state a comment moves the ticket to. */
@@ -106,19 +111,20 @@ export function publishResponseStateChange(
   registerAfterCommit(
     trx,
     async () => {
-      const { publishEvent } = await import('@alga-psa/event-bus/publishers');
-      await publishEvent({
+      const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+      await publishWorkflowEvent({
         eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-        payload: {
-          tenantId: params.tenant,
-          occurredAt: params.occurredAt ?? new Date().toISOString(),
+        payload: buildTicketResponseStateChangedPayload({
           ticketId: params.ticketId,
           userId: params.userId,
-          previousResponseState: params.previousState,
-          newResponseState: params.newState,
           previousState: params.previousState,
           newState: params.newState,
           trigger: params.trigger,
+        }),
+        ctx: {
+          tenantId: params.tenant,
+          occurredAt: params.occurredAt ?? new Date().toISOString(),
+          actor: params.userId ? { actorType: 'USER', actorUserId: params.userId } : { actorType: 'SYSTEM' },
         },
       });
     },

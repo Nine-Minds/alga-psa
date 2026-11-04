@@ -19,7 +19,7 @@ vi.mock('../../app/api/integrations/entra/_guards', () => ({
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { filterEntraUsersForManagedTenant } from '@ee/lib/integrations/entra/settingsService';
 import { executeEntraSync } from '@ee/lib/integrations/entra/sync/syncEngine';
-import { excludeSharedMailboxEntraIdentities, markDisabledEntraUsersInactive, markExcludedEntraUsersInactive, selectLinkedEntraIdentities } from '@ee/lib/integrations/entra/sync/disableHandler';
+import { excludeSharedMailboxEntraIdentities, markDisabledEntraUsersInactive, markExcludedEntraUsersInactive, selectDeactivatableExcludedEntraIdentities, selectLinkedEntraIdentities } from '@ee/lib/integrations/entra/sync/disableHandler';
 import filterMigration from '../../../migrations/20260923120000_entra_managed_tenant_user_filters.cjs';
 import contactKindMigration from '../../../../../server/migrations/20260924120000_add_contact_kind.cjs';
 
@@ -258,6 +258,38 @@ describe('Entra user filter PostgreSQL integration', () => {
     await state.trx('contacts').insert({ tenant: foreignTenant, contact_name_id: localShared.contact_name_id, full_name: 'Foreign person', email: 'join-foreign-person@example.test', client_id: foreignClient, contact_kind: 'person' });
     await state.trx('entra_contact_links').insert({ tenant: state.tenant, contact_name_id: localShared.contact_name_id, client_id: clientId, entra_tenant_id: entraTenantId, entra_object_id: 'tenant-join-shared', link_status: 'active', is_active: true });
     expect(await selectLinkedEntraIdentities(state.tenant, [{ entraTenantId, entraObjectId: 'tenant-join-shared' }])).toEqual([]);
+
+    // Third leg: the exclusion-deactivation query. Its contact join was the one
+    // left tenant-less, which made Citus plan a re-partition join (the
+    // alga-2026-0002906 "cannot connect to /var/run/postgresql:5432 to fetch
+    // intermediate results" failure) and let a foreign tenant's row decide
+    // eligibility. The local contact is ineligible, the colliding foreign one
+    // is not; only a tenant-scoped join returns nothing.
+    const localIneligible = await ContactModel.createContact({ full_name: 'Local ineligible', email: 'join-local-ineligible@example.test', client_id: clientId }, state.tenant, state.trx);
+    await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: localIneligible.contact_name_id }).update({ entra_sync_status_reason: 'disabled_upstream' });
+    await state.trx('contacts').insert({ tenant: foreignTenant, contact_name_id: localIneligible.contact_name_id, full_name: 'Foreign eligible', email: 'join-foreign-eligible@example.test', client_id: foreignClient, contact_kind: 'person', is_inactive: false });
+    await state.trx('entra_contact_links').insert({ tenant: state.tenant, contact_name_id: localIneligible.contact_name_id, client_id: clientId, entra_tenant_id: entraTenantId, entra_object_id: 'tenant-join-excluded', link_status: 'active', is_active: true });
+    expect(await selectDeactivatableExcludedEntraIdentities(state.tenant, [{ entraTenantId, entraObjectId: 'tenant-join-excluded' }])).toEqual([]);
+  });
+
+  it('deactivates an excluded, linked, active contact through the exclusion step', async () => {
+    const contact = await ContactModel.createContact({ full_name: 'Excluded active', email: 'excluded-active@example.test', client_id: clientId }, state.tenant, state.trx);
+    await state.trx('entra_contact_links').insert({ tenant: state.tenant, contact_name_id: contact.contact_name_id, client_id: clientId, entra_tenant_id: entraTenantId, entra_object_id: 'excluded-active', link_status: 'active', is_active: true });
+
+    const identity = { entraTenantId, entraObjectId: 'excluded-active' };
+    expect(await selectDeactivatableExcludedEntraIdentities(state.tenant, [identity])).toEqual([{ identity, linkedContactCount: 1 }]);
+
+    const result = await executeEntraSync({
+      tenantId: state.tenant, clientId, managedTenantId,
+      users: [buildUser('still-in-scope')],
+      excludedIdentities: [{ ...identity, reason: 'not_in_included_group' }],
+      deactivateExcludedContacts: true,
+      enabledSourceUserCount: 2,
+    });
+    expect(result.excludedContactsOutOfScope).toBe(1);
+    expect(result.counters.inactivated).toBe(1);
+    expect(await state.trx('contacts').where({ tenant: state.tenant, contact_name_id: contact.contact_name_id }).first()).toMatchObject({ is_inactive: true, entra_sync_status_reason: 'excluded_by_filter' });
+    expect(await state.trx('entra_contact_links').where({ tenant: state.tenant, contact_name_id: contact.contact_name_id }).first()).toMatchObject({ is_active: false, link_status: 'inactive' });
   });
 });
 

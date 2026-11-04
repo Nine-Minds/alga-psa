@@ -1,13 +1,16 @@
 'use client';
 
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 /**
  * DocumentSkeletonCard - A skeleton loading component for document cards
  */
 export function DocumentSkeletonCard({ id }: { id: string }): React.JSX.Element {
+  const { t } = useTranslation('features/documents');
+
   return (
-    <ReflectionContainer id={id} label="Document Skeleton Card">
+    <ReflectionContainer id={id} label={t('skeleton.cardLabel')}>
       <div className="bg-[rgb(var(--color-card))] rounded-lg border border-[rgb(var(--color-border-200))] card-elevated p-4 h-full flex flex-col">
         <div className="flex-1">
           {/* Document header with icon and title */}

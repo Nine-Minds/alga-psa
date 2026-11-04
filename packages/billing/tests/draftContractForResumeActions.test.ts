@@ -33,6 +33,12 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/workflow-streams/domainEventBuilders/contractEventBuilders', () => ({
@@ -609,246 +615,10 @@ describe('getDraftContractForResume action', () => {
     });
   });
 
-  it('T027: template snapshot preserves decoupled selections and mode-default prefills when stored rates are empty', async () => {
-    const knex = makeKnex({
-      contract_templates: {
-        template_id: 'template-1',
-        template_name: 'Template Alpha',
-        template_description: 'Test',
-        default_billing_frequency: 'monthly',
-      },
-      service_catalog_mode_defaults: [
-        { service_id: 'svc-hourly', rate: 14400 },
-        { service_id: 'svc-usage', rate: 880 },
-      ],
-    });
-    createTenantKnex.mockResolvedValue({ knex });
-    fetchDetailedContractLines.mockResolvedValue([
-      {
-        contract_line_id: 'hourly-template-line',
-        contract_line_type: 'Hourly',
-      },
-      {
-        contract_line_id: 'usage-template-line',
-        contract_line_type: 'Usage',
-      },
-    ]);
-
-    getTemplateLineServicesWithConfigurations.mockImplementation(async (lineId: string) => {
-      if (lineId === 'hourly-template-line') {
-        return [
-          {
-            service: {
-              service_id: 'svc-hourly',
-              service_name: 'Hourly Service',
-              item_kind: 'service',
-              default_rate: 11300,
-            },
-            configuration: { custom_rate: 0 },
-            typeConfig: {
-              hourly_rate: 0,
-              minimum_billable_time: 20,
-              round_up_to_nearest: 10,
-            },
-            bucketConfig: null,
-          },
-        ];
-      }
-      if (lineId === 'usage-template-line') {
-        return [
-          {
-            service: {
-              service_id: 'svc-usage',
-              service_name: 'Usage Service',
-              item_kind: 'service',
-              default_rate: 640,
-              unit_of_measure: 'device',
-            },
-            configuration: { custom_rate: 0 },
-            typeConfig: {
-              base_rate: 0,
-              unit_of_measure: 'device',
-              enable_tiered_pricing: false,
-            },
-            bucketConfig: null,
-          },
-        ];
-      }
-
-      return [];
-    });
-
-    const { getContractTemplateSnapshotForClientWizard } = await import('../src/actions/contractWizardActions');
-    const snapshot = await getContractTemplateSnapshotForClientWizard('template-1');
-
-    expect(snapshot.hourly_services?.[0]).toMatchObject({
-      service_id: 'svc-hourly',
-      hourly_rate: 14400,
-    });
-    expect(snapshot.usage_services?.[0]).toMatchObject({
-      service_id: 'svc-usage',
-      unit_rate: 880,
-    });
-  });
-
-  it('returns template snapshot bucket overlays for hourly and usage services', async () => {
-    const knex = makeKnex({
-      contract_templates: {
-        template_id: 'template-1',
-        template_name: 'Template Alpha',
-        template_description: 'Test',
-        default_billing_frequency: 'monthly',
-      },
-    });
-    createTenantKnex.mockResolvedValue({ knex });
-    fetchDetailedContractLines.mockResolvedValue([
-      {
-        contract_line_id: 'hourly-template-line',
-        contract_line_type: 'Hourly',
-      },
-      {
-        contract_line_id: 'usage-template-line',
-        contract_line_type: 'Usage',
-      },
-    ]);
-
-    getTemplateLineServicesWithConfigurations.mockImplementation(async (lineId: string) => {
-      if (lineId === 'hourly-template-line') {
-        return [
-          {
-            service: {
-              service_id: 'svc-hourly',
-              service_name: 'Hourly Service',
-              item_kind: 'service',
-              default_rate: 11300,
-            },
-            configuration: { custom_rate: 0 },
-            typeConfig: {
-              hourly_rate: 0,
-              minimum_billable_time: 20,
-              round_up_to_nearest: 10,
-            },
-            bucketConfig: {
-              total_minutes: 180,
-              overage_rate: 25000,
-              allow_rollover: true,
-              billing_period: 'weekly',
-            },
-          },
-        ];
-      }
-      if (lineId === 'usage-template-line') {
-        return [
-          {
-            service: {
-              service_id: 'svc-usage',
-              service_name: 'Usage Service',
-              item_kind: 'service',
-              default_rate: 640,
-              unit_of_measure: 'device',
-            },
-            configuration: { custom_rate: 0 },
-            typeConfig: {
-              base_rate: 0,
-              unit_of_measure: 'device',
-              enable_tiered_pricing: false,
-            },
-            bucketConfig: {
-              total_minutes: 25,
-              overage_rate: 1500,
-              allow_rollover: false,
-              billing_period: 'monthly',
-            },
-          },
-        ];
-      }
-
-      return [];
-    });
-
-    const { getContractTemplateSnapshotForClientWizard } = await import('../src/actions/contractWizardActions');
-    const snapshot = await getContractTemplateSnapshotForClientWizard('template-1');
-
-    expect(snapshot.hourly_services?.[0]?.bucket_overlay).toEqual({
-      total_minutes: 180,
-      overage_rate: 25000,
-      allow_rollover: true,
-      billing_period: 'weekly',
-    });
-    expect(snapshot.usage_services?.[0]?.bucket_overlay).toEqual({
-      total_minutes: 25,
-      overage_rate: 1500,
-      allow_rollover: false,
-      billing_period: 'monthly',
-    });
-  });
-
-  it('returns cadence_owner from template fixed lines and defaults missing values to client', async () => {
-    const knex = makeKnex({
-      contract_templates: {
-        template_id: 'template-1',
-        template_name: 'Template Alpha',
-        template_description: 'Test',
-        default_billing_frequency: 'monthly',
-      },
-    });
-    createTenantKnex.mockResolvedValue({ knex });
-    fetchDetailedContractLines.mockResolvedValue([
-      {
-        contract_line_id: 'fixed-template-line',
-        contract_line_type: 'Fixed',
-        cadence_owner: 'contract',
-      },
-      {
-        contract_line_id: 'hourly-template-line',
-        contract_line_type: 'Hourly',
-      },
-    ]);
-
-    getTemplateLineServicesWithConfigurations.mockImplementation(async (lineId: string) => {
-      if (lineId === 'fixed-template-line') {
-        return [
-          {
-            service: {
-              service_id: 'svc-fixed',
-              service_name: 'Fixed Service',
-              item_kind: 'service',
-            },
-            configuration: { quantity: 1 },
-            typeConfig: null,
-            bucketConfig: null,
-          },
-        ];
-      }
-
-      if (lineId === 'hourly-template-line') {
-        return [
-          {
-            service: {
-              service_id: 'svc-hourly',
-              service_name: 'Hourly Service',
-              item_kind: 'service',
-              default_rate: 11300,
-            },
-            configuration: { custom_rate: 0 },
-            typeConfig: {
-              hourly_rate: 0,
-              minimum_billable_time: 20,
-              round_up_to_nearest: 10,
-            },
-            bucketConfig: null,
-          },
-        ];
-      }
-
-      return [];
-    });
-
-    const { getContractTemplateSnapshotForClientWizard } = await import('../src/actions/contractWizardActions');
-    const snapshot = await getContractTemplateSnapshotForClientWizard('template-1');
-
-    expect(snapshot.cadence_owner).toBe('contract');
-  });
+  // The flattened template snapshot (getContractTemplateSnapshotForClientWizard) was removed:
+  // creating from a template now clones every line on the server (see
+  // server/src/test/integration/createContractFromTemplate.integration.test.ts), so the
+  // snapshot's rate-fallback / bucket-overlay / cadence_owner behaviours have no unit here.
 
   it('throws error if contract is not a draft (T030)', async () => {
     const knex = makeKnex({
@@ -1036,23 +806,40 @@ describe('getDraftContractForResume: per-line fixed pricing and fidelity', () =>
     expect(merged.hourly_services.map((s: any) => s.service_id)).toEqual(['a', 'b']);
   });
 
-  it('7: a template snapshot with two fixed lines gives two fixed_lines (no last-wins)', async () => {
-    createTenantKnex.mockResolvedValue({
-      knex: makeKnex({
-        contract_templates: { template_id: 'template-1', template_name: 'T', template_description: '', default_billing_frequency: 'monthly' },
-      }),
-    });
-    fetchDetailedContractLines.mockResolvedValue([
-      { contract_line_id: 't1', contract_line_type: 'Fixed', rate: 300000, enable_proration: true, billing_frequency: 'monthly' },
-      { contract_line_id: 't2', contract_line_type: 'Fixed', rate: 105000, enable_proration: false, billing_frequency: 'monthly' },
-    ]);
-    getTemplateLineServicesWithConfigurations.mockImplementation(async (lineId: string) =>
-      lineId === 't1' ? [member('A')] : [member('C')],
+  it('7: an advance fixed line plus stored-arrears hourly line resumes with advance billing_timing', async () => {
+    arrange(
+      [
+        { contract_line_id: 'f1', contract_line_name: 'F1', contract_line_type: 'Fixed', billing_frequency: 'monthly', billing_timing: 'advance', rate: 10000 },
+        { contract_line_id: 'h1', contract_line_name: 'H1', contract_line_type: 'Hourly', billing_frequency: 'monthly', billing_timing: 'arrears' },
+      ],
+      {
+        f1: [member('s1')],
+        h1: [{ service: { service_id: 'hs', service_name: 'H hs', item_kind: 'service' }, configuration: {}, typeConfig: { hourly_rate: 12500 }, bucketConfig: null }],
+      },
     );
-    const { getContractTemplateSnapshotForClientWizard } = await import('../src/actions/contractWizardActions');
-    const snapshot: any = await getContractTemplateSnapshotForClientWizard('template-1');
-    expect(snapshot.fixed_lines).toHaveLength(2);
-    expect(snapshot.fixed_lines.map((l: any) => l.base_rate)).toEqual([300000, 105000]);
-    expect(snapshot.fixed_lines.map((l: any) => l.services[0].service_id)).toEqual(['A', 'C']);
+    const result = await resume();
+    expect(result.messageKey).toBeUndefined();
+    expect(result.billing_timing).toBe('advance');
+    expect(result.hourly_services.map((s: any) => s.service_id)).toEqual(['hs']);
+  });
+
+  it('8: an advance products line with an arrears default resumes as a products advance override next to hourly', async () => {
+    arrange(
+      [
+        { contract_line_id: 'f1', contract_line_name: 'F1', contract_line_type: 'Fixed', billing_frequency: 'monthly', billing_timing: 'arrears', rate: 10000 },
+        { contract_line_id: 'p1', contract_line_name: 'P1', contract_line_type: 'Fixed', billing_frequency: 'monthly', billing_timing: 'advance' },
+        { contract_line_id: 'h1', contract_line_name: 'H1', contract_line_type: 'Hourly', billing_frequency: 'monthly', billing_timing: 'arrears' },
+      ],
+      {
+        f1: [member('s1')],
+        p1: [{ service: { service_id: 'prod', service_name: 'Prod', item_kind: 'product' }, configuration: { quantity: 2, custom_rate: 500 }, bucketConfig: null }],
+        h1: [{ service: { service_id: 'hs', service_name: 'H hs', item_kind: 'service' }, configuration: {}, typeConfig: { hourly_rate: 12500 }, bucketConfig: null }],
+      },
+    );
+    const result = await resume();
+    expect(result.messageKey).toBeUndefined();
+    expect(result.billing_timing).toBe('arrears');
+    expect(result.product_billing_timing).toBe('advance');
+    expect(result.product_services.map((s: any) => s.service_id)).toEqual(['prod']);
   });
 });

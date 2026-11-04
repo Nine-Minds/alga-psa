@@ -2,6 +2,8 @@ export const RESERVED_INBOUND_WEBHOOK_INTEGRATION_TYPES = [
   'ninjaone',
   'tacticalrmm',
   'tactical_rmm',
+  'datto',
+  'datto_rmm',
   'tanium',
   'xero',
   'xero_csv',

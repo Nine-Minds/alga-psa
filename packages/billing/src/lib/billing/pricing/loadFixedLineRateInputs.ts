@@ -168,6 +168,7 @@ export async function loadFixedLineRateInputs(
       "clsc.custom_rate as configuration_custom_rate",
       "clsc.config_id",
       "clsfc.base_rate as service_base_rate",
+      "clsfc.base_rate_basis as base_rate_basis",
       "clsfc.rate_provenance as base_rate_provenance",
       "clsfc.pricing_basis as pricing_basis",
     );

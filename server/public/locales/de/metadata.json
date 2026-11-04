@@ -203,7 +203,10 @@
             "title": "Projektaufgabe"
           }
         },
-        "fallbackTitle": "Projektdetails"
+        "fallbackTitle": "Projektdetails",
+        "staging": {
+          "title": "Projektbereitstellung"
+        }
       },
       "title": "Projekte",
       "templates": {
@@ -285,6 +288,12 @@
       },
       "recurring": {
         "title": "Wiederkehrende Tickets"
+      },
+      "templates": {
+        "title": "Ticket-Vorlagen"
+      },
+      "cannedResponses": {
+        "title": "Textbausteine"
       }
     },
     "userActivities": {
@@ -362,7 +371,10 @@
         },
         "fallbackTitle": "Asset-Details"
       },
-      "title": "Asset-Inventar"
+      "title": "Asset-Inventar",
+      "custody": {
+        "title": "Equipment in Verwahrung"
+      }
     },
     "chat": {
       "title": "Chat"
@@ -507,6 +519,32 @@
     },
     "layout": {
       "defaultTitle": "Dashboard | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Co-Managed-IT"
+    },
+    "coManagement": {
+      "title": "Co-Managed-Zugriff",
+      "administration": {
+        "title": "Co-Managed-Administration"
+      },
+      "customerTickets": {
+        "title": "Kundentickets"
+      },
+      "sharedTicket": {
+        "title": "Geteiltes Ticket"
+      },
+      "providers": {
+        "title": "E-Mail- und Identitätsanbieter"
+      },
+      "sharedTasks": {
+        "title": "Geteilte Aufgaben",
+        "taskTitle": "Geteilte Aufgabe",
+        "projectTitle": "Geteiltes Projekt"
+      },
+      "export": {
+        "title": "Arbeitsbereich exportieren"
+      }
     }
   },
   "auth": {
@@ -627,5 +665,8 @@
     "setupComplete": {
       "title": "Karteneinrichtung"
     }
+  },
+  "pay": {
+    "title": "Rechnung bezahlen"
   }
 }

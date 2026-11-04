@@ -36,6 +36,8 @@ vi.mock('@alga-psa/shared/models/contactModel', () => ({
   ContactModel: {
     createContact: createContactMock,
     updateContact: updateContactMock,
+    // trackContactUpdates reads before/after rows through the model (it hydrates phone_numbers).
+    getContactById: vi.fn(async (id: string) => ({ contact_name_id: id, client_id: 'client-1', is_inactive: false })),
   },
 }));
 

@@ -17,6 +17,7 @@ import { isEnterprise } from '@alga-psa/core/features';
 import { TenantProvider } from '@alga-psa/ui/components/providers/TenantProvider';
 import { DynamicExtensionProvider } from '@alga-psa/ui/components/providers/DynamicExtensionProvider';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
+import { resolveCapabilityBootstrap } from '@/lib/capability/bootstrap';
 import { AppThemeProvider } from '@/components/providers/AppThemeProvider';
 import { ThemeBridge } from '@/components/providers/ThemeBridge';
 import { ClientUIStateProvider } from '@alga-psa/ui/ui-reflection/ClientUIStateProvider';
@@ -185,6 +186,10 @@ export default async function RootLayout({
   // `:lang()` — it has to follow the resolved locale, not a hardcoded 'en'.
   const locale = await getServerLocale();
 
+  // Server-evaluated release flag + capability decisions, so gated UI renders on
+  // first paint and follows the server even when posthog-js is blocked.
+  const initialFeatureFlags = await resolveCapabilityBootstrap(tenant ?? null);
+
   return (
     <html
       lang={locale}
@@ -210,7 +215,7 @@ export default async function RootLayout({
         )}
       </head>
       <body className={`${inter.className} ${inter.variable}`} suppressHydrationWarning>
-        <PostHogProvider>
+        <PostHogProvider initialFeatureFlags={initialFeatureFlags}>
            <MainContent tenant={tenant}>{children}</MainContent>
         </PostHogProvider>
       </body>

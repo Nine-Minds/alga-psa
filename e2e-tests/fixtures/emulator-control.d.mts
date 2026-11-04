@@ -29,7 +29,7 @@ export interface RequestHistory<RecordType extends ProviderRequestRecord = Provi
 }
 
 export class EmulatorControl {
-  constructor(baseURL: string, providers: string[], options?: { timeoutMs?: number });
+  constructor(baseURL: string, providers: string[], options?: { timeoutMs?: number; settleMs?: number; settleIntervalMs?: number });
   readonly baseURL: string;
   readonly providers: string[];
   readonly operations: Array<{ path: string; method: string; status: number }>;

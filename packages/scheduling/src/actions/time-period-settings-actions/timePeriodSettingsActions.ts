@@ -1,4 +1,5 @@
 'use server'
+import { delegateToTimeSource } from '../../lib/timeSource';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { ITimePeriodSettings } from '@alga-psa/types';
 import { formatISO } from 'date-fns';
@@ -11,11 +12,12 @@ import {
   TimePeriodSettingsRuleError,
   type TimePeriodSettingsFields,
 } from '../../models/timePeriodSettings';
-import { withAuth } from '@alga-psa/auth';
+import { hasPermission, withAuth } from '@alga-psa/auth';
 import {
   actionError,
   isActionMessageError,
   isActionPermissionError,
+  permissionError,
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
@@ -59,12 +61,42 @@ function timePeriodSettingsActionErrorFrom(error: unknown, fallback: string): Ti
   return actionError(fallback);
 }
 
+// Time period settings decide every tenant's time-sheet cadence, so reading them needs
+// `time_period:read` and changing them needs `time_period:manage` — the same split the
+// v1 API applies in ApiTimeSheetController.
+const TIME_PERIOD_SETTINGS_PERMISSION_MESSAGES: Record<'read' | 'manage', string> = {
+  read: 'Permission denied: cannot view time period settings.',
+  manage: 'Permission denied: cannot manage time period settings.',
+};
+
+async function timePeriodSettingsPermissionError(
+  user: Parameters<typeof hasPermission>[0],
+  action: 'read' | 'manage',
+  db: Knex | Knex.Transaction
+): Promise<ActionPermissionError | null> {
+  if (await hasPermission(user, 'time_period', action, db)) {
+    return null;
+  }
+  return permissionError(
+    TIME_PERIOD_SETTINGS_PERMISSION_MESSAGES[action],
+    `msp/time-entry:errors.timePeriodSettings.permissions.${action}`
+  );
+}
+
 export const getActiveTimePeriodSettings = withAuth(async (
-  _user,
+  user,
   { tenant }
 ): Promise<TimePeriodSettingsActionResult<ITimePeriodSettings[]>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.readActiveSettings(ctx));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
+
+    const denied = await timePeriodSettingsPermissionError(user, 'read', db);
+    if (denied) {
+      return denied;
+    }
 
     const activeSettings = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await tenantDb(trx, tenant).table<ITimePeriodSettings>('time_period_settings')
@@ -91,12 +123,20 @@ export const getActiveTimePeriodSettings = withAuth(async (
 });
 
 export const updateTimePeriodSettings = withAuth(async (
-  _user,
+  user,
   { tenant },
   settings: ITimePeriodSettings
 ): Promise<TimePeriodSettingsActionResult<void>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.updateSettings(ctx, settings));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
+
+    const denied = await timePeriodSettingsPermissionError(user, 'manage', db);
+    if (denied) {
+      return denied;
+    }
 
     // Validate input settings
     const validatedSettings = validateData(timePeriodSettingsSchema, {
@@ -132,8 +172,16 @@ export const createTimePeriodSettings = withAuth(async (
   { tenant },
   settings: Partial<ITimePeriodSettings>
 ): Promise<TimePeriodSettingsActionResult<ITimePeriodSettings>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.createSettings(ctx, settings));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
+
+    const denied = await timePeriodSettingsPermissionError(user, 'manage', db);
+    if (denied) {
+      return denied;
+    }
 
     // The model defaults a missing effective_from (the user-timezone period start, handed off past
     // ended settings), validates the business rules and rejects overlaps; the REST API shares it.
@@ -149,12 +197,20 @@ export const createTimePeriodSettings = withAuth(async (
 });
 
 export const deleteTimePeriodSettings = withAuth(async (
-  _user,
+  user,
   { tenant },
   settingId: string
 ): Promise<TimePeriodSettingsActionResult<void>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.removeSettings(ctx, settingId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
+    const denied = await timePeriodSettingsPermissionError(user, 'manage', db);
+    if (denied) {
+      return denied;
+    }
+
     await TimePeriodSettings.delete(db, tenant, settingId);
   } catch (error) {
     console.error('Error deleting time period settings:', error);

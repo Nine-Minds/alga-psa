@@ -1,3 +1,5 @@
+import { builtWorkflowPayload } from '@alga-psa/event-schemas';
+
 export function buildIntegrationConnectedPayload(params: {
   integrationId: string;
   provider: string;
@@ -5,13 +7,13 @@ export function buildIntegrationConnectedPayload(params: {
   connectedAt?: string;
   connectedByUserId?: string;
 }) {
-  return {
+  return builtWorkflowPayload('INTEGRATION_CONNECTED', {
     integrationId: params.integrationId,
     provider: params.provider,
     connectionId: params.connectionId,
     connectedAt: params.connectedAt,
     connectedByUserId: params.connectedByUserId,
-  };
+  });
 }
 
 export function buildIntegrationDisconnectedPayload(params: {
@@ -22,13 +24,13 @@ export function buildIntegrationDisconnectedPayload(params: {
   disconnectedByUserId?: string;
   reason?: string;
 }) {
-  return {
+  return builtWorkflowPayload('INTEGRATION_DISCONNECTED', {
     integrationId: params.integrationId,
     provider: params.provider,
     connectionId: params.connectionId,
     disconnectedAt: params.disconnectedAt,
     disconnectedByUserId: params.disconnectedByUserId,
     reason: params.reason,
-  };
+  });
 }
 

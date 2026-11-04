@@ -66,6 +66,7 @@ describe('workflowRunLauncher', () => {
 
     workflowGetByIdMock.mockResolvedValue({
       workflow_id: 'wf-1',
+      tenant: 'tenant-1',
       is_paused: false,
       concurrency_limit: null,
       payload_schema_ref: null,
@@ -112,7 +113,7 @@ describe('workflowRunLauncher', () => {
     expect(workflowRunUpdateMock).toHaveBeenCalledWith({} as any, 'run-1', {
       temporal_workflow_id: 'workflow-runtime-v2:run:run-1',
       temporal_run_id: 'temporal-run-1',
-    });
+    }, 'tenant-1');
     expect(result).toEqual({
       runId: 'run-1',
       workflowVersion: 3,
@@ -133,6 +134,22 @@ describe('workflowRunLauncher', () => {
       expect.objectContaining({ runId: 'run-1' }),
       { connectTimeoutMs: INTERACTIVE_ENGINE_CONNECT_TIMEOUT_MS },
     );
+  });
+
+  // Unscoped workflow_id / trigger_fire_key lookups fan out to every Citus shard
+  // and open internal connections; the launcher must route them to the
+  // definition's tenant.
+  it('scopes version and fire-key lookups to the workflow tenant', async () => {
+    await launchPublishedWorkflowRun({} as any, {
+      workflowId: 'wf-1',
+      tenantId: 'tenant-1',
+      payload: {},
+      triggerType: 'date',
+      triggerFireKey: 'date:wf-1:fire',
+    });
+
+    expect(listByWorkflowMock).toHaveBeenCalledWith({} as any, 'wf-1', 'tenant-1');
+    expect(getByTriggerFireKeyMock).toHaveBeenCalledWith({} as any, 'date:wf-1:fire', 'tenant-1');
   });
 
   it('returns the existing run for a repeated date fire key', async () => {
@@ -189,6 +206,7 @@ describe('workflowRunLauncher', () => {
           stage: 'launch',
         }),
       }),
+      'tenant-1',
     );
   });
 

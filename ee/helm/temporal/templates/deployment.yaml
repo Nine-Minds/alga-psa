@@ -9,6 +9,9 @@ metadata:
     app.kubernetes.io/component: server
 spec:
   replicas: {{ .Values.server.replicaCount }}
+  {{- if .Values.server.progressDeadlineSeconds }}
+  progressDeadlineSeconds: {{ .Values.server.progressDeadlineSeconds }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "temporal.selectorLabels" . | nindent 6 }}
@@ -70,6 +73,13 @@ spec:
               value: "true"
             - name: SKIP_ADD_CUSTOM_SEARCH_ATTRIBUTES
               value: "true"
+            # Let the Go GC work toward the container limit instead of growing
+            # the heap until the kernel OOM-kills the pod.
+            - name: GOMEMLIMIT
+              valueFrom:
+                resourceFieldRef:
+                  containerName: temporal
+                  resource: limits.memory
           ports:
             - name: grpc
               containerPort: {{ .Values.service.port }}

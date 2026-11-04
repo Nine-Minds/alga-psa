@@ -19,13 +19,14 @@ const mocks = vi.hoisted(() => ({
   listItems: vi.fn(),
   listAccounts: vi.fn(),
   withTransaction: vi.fn(),
+  lockQboItemTargets: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: (...args: any[]) => any) => async (...args: any[]) => fn(...args),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(async () => undefined) }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(async () => undefined), publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 vi.mock('../lib/qbo/qboClientService', () => ({
   getStoredQboCredentialsMap: mocks.getStoredQboCredentialsMap,
   QboClientService: { create: mocks.qboCreate },
@@ -40,17 +41,34 @@ vi.mock('../lib/xero/xeroClientService', () => ({
 vi.mock('@alga-psa/db', () => {
   function table(name: string) {
     const filters: Row[] = [];
-    const flags = { notNull: false, null: false };
+    const excluded: Row[] = [];
+    const nullCols: string[] = [];
+    const raws: Array<{ sql: string; bindings: unknown[] }> = [];
+    const flags = { notNull: false };
+    const matchesAll = (m: Row, f: Row) => Object.entries(f).every(([k, v]) => m[k] === v);
+    // The create path's raw predicates are the two the partial unique indexes
+    // are keyed/filtered on: the realm COALESCE group, and the Xero exclusion
+    // that lets an account target be shared by many entities.
+    const matchesRaw = (m: Row, { sql, bindings }: { sql: string; bindings: unknown[] }) => {
+      if (sql.includes('external_realm_id')) return (m.external_realm_id ?? '') === bindings[0];
+      if (sql.includes('xeroTargetKind')) return (m.metadata?.xeroTargetKind ?? 'item') !== 'account';
+      throw new Error(`fake tenantDb: unsupported raw predicate ${sql}`);
+    };
     const builder: any = {
       where(f: Row) { filters.push(f); return builder; },
-      whereNull() { flags.null = true; return builder; },
+      whereNot(f: Row) { excluded.push(f); return builder; },
+      whereNull(col: string) { nullCols.push(col); return builder; },
       whereNotNull() { flags.notNull = true; return builder; },
       whereIn() { return builder; },
+      whereRaw(sql: string, bindings: unknown[] = []) { raws.push({ sql, bindings }); return builder; },
       async first() {
         if (name === 'service_catalog') return { service_id: 'exists' };
         if (flags.notNull) return undefined; // no tombstones in this fake
         return store.mappings.find((m) =>
-          filters.every((f) => Object.entries(f).every(([k, v]) => m[k] === v))
+          filters.every((f) => matchesAll(m, f)) &&
+          excluded.every((f) => !matchesAll(m, f)) &&
+          nullCols.every((col) => m[col] === null || m[col] === undefined) &&
+          raws.every((raw) => matchesRaw(m, raw))
         );
       },
       insert(row: Row) {
@@ -73,6 +91,7 @@ vi.mock('@alga-psa/db', () => {
     createTenantKnex: vi.fn(async () => ({ knex: {} })),
     lockInvoiceForExternalSync: vi.fn(),
     lockInvoicesForExternalSync: vi.fn(),
+    lockQboItemTargets: mocks.lockQboItemTargets,
     tenantDb: () => ({ table }),
     withTransaction: mocks.withTransaction,
     writeAccountingAudit: vi.fn(async () => undefined),
@@ -234,6 +253,19 @@ describe('createExternalEntityMappings', () => {
     expect(results[1].error).toMatch(/QuickBooks Item missing does not exist/);
     expect(mocks.qboCreate).toHaveBeenCalledTimes(1);
     expect(mocks.qboRead).toHaveBeenCalledTimes(3);
+    // Each QBO service row serializes on its own item target before the
+    // existence check, so item import never decides over a stale set.
+    expect(mocks.lockQboItemTargets.mock.calls.map((c: any[]) => [c[1], c[2]])).toEqual([
+      ['t1', [{ realm: 'qbo-realm', itemId: '10' }]],
+      ['t1', [{ realm: 'qbo-realm', itemId: 'missing' }]],
+      ['t1', [{ realm: 'qbo-realm', itemId: '12' }]],
+    ]);
+  });
+
+  it('does not take the QBO item-target lock for Xero rows', async () => {
+    const results = await call([row('svc-a', 'B', 'item'), row('svc-b', '200', 'account')]);
+    expect(results.map((r: any) => r.ok)).toEqual([true, true]);
+    expect(mocks.lockQboItemTargets).not.toHaveBeenCalled();
   });
 
   it('returns an empty result for an empty batch', async () => {

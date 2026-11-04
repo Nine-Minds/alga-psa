@@ -16,6 +16,12 @@ const eventBus = vi.hoisted(() => ({ publishEvent: vi.fn(async () => undefined) 
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: eventBus.publishEvent,
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 import { tenantDb } from '@alga-psa/db';

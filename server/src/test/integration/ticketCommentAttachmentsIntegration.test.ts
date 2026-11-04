@@ -11,9 +11,13 @@ vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: async () 
 vi.mock('@alga-psa/auth', async importOriginal => ({ ...await importOriginal<typeof import('@alga-psa/auth')>(),
   withAuth: (fn: any) => (...args: any[]) => fn(routeSession.user, { tenant: routeSession.user?.tenant }, ...args),
   hasPermission: async (_user: unknown, resource: string) => routeSession.permitted && (resource !== 'document' || routeSession.documentsPermitted),
+  checkMultiplePermissions: async (_user: unknown, checks: { resource: string; action: string }[]) => checks.map(check =>
+    ({ ...check, granted: routeSession.permitted && (check.resource !== 'document' || routeSession.documentsPermitted) })),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: async (_user: unknown, resource: string) => routeSession.permitted && (resource !== 'document' || routeSession.documentsPermitted),
+  checkMultiplePermissions: async (_user: unknown, checks: { resource: string; action: string }[]) => checks.map(check =>
+    ({ ...check, granted: routeSession.permitted && (check.resource !== 'document' || routeSession.documentsPermitted) })),
 }));
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: async () => routeSession.permitted }));
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
@@ -383,7 +387,7 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     });
     await table('tickets').where({ticket_id:ticket}).update({response_state:'awaiting_client'});
     const connection = vi.spyOn(dbModule,'getConnection').mockResolvedValue(trx);
-    const publish = vi.spyOn(publishers,'publishEvent').mockResolvedValue(undefined);
+    const publish = vi.spyOn(publishers,'publishBuiltWorkflowPayload').mockResolvedValue(undefined);
     try {
       const {publishScheduledCommentHandler} = await import('@/lib/jobs/handlers/publishScheduledCommentHandler');
       await publishScheduledCommentHandler({tenantId:tenant,ticketId:ticket,commentId:scheduled});
@@ -834,7 +838,7 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
       for (const name of JobHandlerRegistry.getAll().keys()) {
         expect(registrations.mock.calls.filter(([queue]) => queue === name), name).toHaveLength(1);
       }
-      const publish = vi.spyOn(publishers, 'publishEvent')
+      const publish = vi.spyOn(publishers, 'publishStoredWorkflowEvent')
         .mockRejectedValueOnce(new Error('Recoverable publication transport outage'))
         .mockImplementation(async () => sendEventEmail({ mailClass: 'ticket', tenantId: tenant, to: mailbox, subject: 'Worker recovery', template: 'ticket-comment-added', context: { comment: { content: 'Recovery smoke' } }, replyContext: { ticketId: ticket, commentId: comment } }));
       spy(publish);
@@ -882,7 +886,7 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     await table('tickets').where({ticket_id:ticket}).update({response_state:'awaiting_client'});
     expect(await listPublishedCommentAttachments(trx,tenant,ticket,comment)).toEqual([]);
     const connection=vi.spyOn(dbModule,'getConnection').mockResolvedValue(trx);
-    const publish=vi.spyOn(publishers,'publishEvent').mockRejectedValueOnce(new Error('Redis unavailable')).mockResolvedValue(undefined);
+    const publish=vi.spyOn(publishers,'publishBuiltWorkflowPayload').mockRejectedValueOnce(new Error('Redis unavailable')).mockResolvedValue(undefined);
     try {
       const {publishScheduledCommentHandler}=await import('@/lib/jobs/handlers/publishScheduledCommentHandler');
       await expect(publishScheduledCommentHandler({tenantId:tenant,ticketId:ticket,commentId:comment})).rejects.toThrow('Redis unavailable');

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
-import { withWorkflowJsonSchemaMetadata, withWorkflowPicker, withWorkflowNotFoundPolicy } from '../../jsonSchemaMetadata';
+import { withWorkflowJsonSchemaMetadata, withWorkflowPicker, withWorkflowNotFoundPolicy } from '@alga-psa/event-schemas';
 import {
   actionProvidedKey,
   isoDateTimeSchema,

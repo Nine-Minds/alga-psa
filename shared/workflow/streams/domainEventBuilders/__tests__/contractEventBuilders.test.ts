@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   contractCreatedEventPayloadSchema,
   contractRenewalUpcomingEventPayloadSchema,
   contractStatusChangedEventPayloadSchema,
   contractUpdatedEventPayloadSchema,
-} from '../../../runtime/schemas/billingEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildContractCreatedPayload,
   buildContractRenewalUpcomingPayload,

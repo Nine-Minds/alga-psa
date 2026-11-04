@@ -24,7 +24,7 @@ function adminDb() {
 
 const TEST_DISCOVERY_TENANT = '__test_discovery__';
 
-test.describe('Tenant Project Task Status Library Management', () => {
+test.describe('Tenant Task Status Library Management', () => {
   test.setTimeout(180_000); // Allow time for migrations/server start
 
   let db: any;
@@ -68,7 +68,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
   async function gotoTaskStatusSettings(page: Page) {
     // Use domcontentloaded to avoid hanging on networkidle due to SSE/long polls
     await page.goto(settingsUrl, { waitUntil: 'domcontentloaded', timeout: 120_000 });
-    await page.waitForSelector('text=Project Task Status Library', { timeout: 60_000 });
+    await page.waitForSelector('text=Task Status Library', { timeout: 60_000 });
   }
 
   test('navigate to tenant task status settings', async ({ page }) => {
@@ -87,7 +87,7 @@ test.describe('Tenant Project Task Status Library Management', () => {
     await gotoTaskStatusSettings(page);
 
     // Verify the task status library page loads
-    await expect(page.locator('text=Project Task Status Library')).toBeVisible();
+    await expect(page.locator('text=Task Status Library')).toBeVisible();
     await expect(page.locator('text=Manage your organization\'s project task statuses')).toBeVisible();
 
     // Verify create button is present

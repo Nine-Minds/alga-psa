@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCpuSummary } from '../lib/extensionDisplay';
+import { calendarDateToLocalDate } from '../lib/calendarDate';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { PhoneText } from '@alga-psa/ui/components/PhoneText';
 import { useClientDrawer } from '@alga-psa/ui';
@@ -43,6 +44,8 @@ import { AssetPatchStatusSection } from './AssetPatchStatusSection';
 import { AssetTimeline } from './AssetTimeline';
 import { AssetSoftwareInventory } from './AssetSoftwareInventory';
 import { ASSET_DRAWER_TABS, type AssetDrawerTab } from './AssetDetailDrawer.types';
+import { useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { assetStatusLabel } from '../lib/assetStatus';
 
 interface AssetDetailDrawerClientProps {
   isOpen: boolean;
@@ -112,9 +115,11 @@ export function AssetDetailDrawerClient({
     [ASSET_DRAWER_TABS.DOCUMENTS]: t('assetDetailDrawer.tabs.documents', { defaultValue: 'Documents' }),
   } satisfies Record<AssetDrawerTab, string>), [t]);
 
+  // F021: a custom status reads as its registry label, not its slug.
+  const { statuses: assetStatuses } = useAssetStatusRegistry();
   const translateStatus = useCallback(
-    (status: string) => t(`assetDetailDrawer.statuses.${status}`, { defaultValue: formatTitleCase(status) }),
-    [t]
+    (status: string) => assetStatusLabel(t, status, assetStatuses) || formatTitleCase(status),
+    [assetStatuses, t]
   );
 
   const handleTabChange = useCallback(
@@ -195,6 +200,7 @@ export function AssetDetailDrawerClient({
           maintenanceReport: maintenanceReport ?? null,
           router,
           statusBadge,
+          statusLabel: translateStatus(asset.status),
           onClose,
           defaultBoardId,
           t,
@@ -236,6 +242,7 @@ export function AssetDetailDrawerClient({
     statusBadge,
     tickets,
     t,
+    translateStatus,
     visibleAssetId,
   ]);
 
@@ -290,6 +297,7 @@ type OverviewTabProps = {
   history: AssetHistory[];
   router: ReturnType<typeof useRouter>;
   statusBadge: ReactNode;
+  statusLabel: string;
   onClose: () => void;
   defaultBoardId?: string;
   t: TranslationFn;
@@ -297,7 +305,7 @@ type OverviewTabProps = {
   hasTemplateLinks: boolean;
 };
 
-function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, onClose, defaultBoardId, t, onClientClick, hasTemplateLinks }: OverviewTabProps) {
+function renderOverviewTab({ asset, maintenanceReport, history, router, statusBadge, statusLabel, onClose, defaultBoardId, t, onClientClick, hasTemplateLinks }: OverviewTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -396,7 +404,7 @@ function renderOverviewTab({ asset, maintenanceReport, history, router, statusBa
 
       <Card className="space-y-4 p-4" {...withDataAutomationId({ id: 'asset-drawer-overview-info' })}>
         <SectionTitle icon={<Settings2 className="h-4 w-4" />} title={t('assetDetailDrawer.overview.assetSummary', { defaultValue: 'Asset summary' })} />
-        <InfoGrid asset={asset} onClientClick={onClientClick} statusLabel={t(`assetDetailDrawer.statuses.${asset.status}`, { defaultValue: formatTitleCase(asset.status) })} t={t} />
+        <InfoGrid asset={asset} onClientClick={onClientClick} statusLabel={statusLabel} t={t} />
       </Card>
 
       {/* RMM Alerts Section - Shows active alerts for RMM-managed assets */}
@@ -549,8 +557,10 @@ function renderConfigurationTab({ asset, t }: ConfigurationTabProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700">
           <ConfigurationRow label={t('assetDetailDrawer.configuration.serialNumber', { defaultValue: 'Serial number' })} value={asset.serial_number || t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
           <ConfigurationRow label={t('assetDetailDrawer.configuration.location', { defaultValue: 'Location' })} value={asset.location || t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
-          <ConfigurationRow label={t('assetDetailDrawer.configuration.purchaseDate', { defaultValue: 'Purchase date' })} value={asset.purchase_date ? formatDate(asset.purchase_date) : t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
-          <ConfigurationRow label={t('assetDetailDrawer.configuration.warrantyEnd', { defaultValue: 'Warranty end' })} value={asset.warranty_end_date ? formatDate(asset.warranty_end_date) : t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
+          {/* Calendar days, not instants: formatDate would show the previous
+              day west of UTC, with a meaningless midnight time beside it. */}
+          <ConfigurationRow label={t('assetDetailDrawer.configuration.purchaseDate', { defaultValue: 'Purchase date' })} value={calendarDateToLocalDate(asset.purchase_date)?.toLocaleDateString() ?? t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
+          <ConfigurationRow label={t('assetDetailDrawer.configuration.warrantyEnd', { defaultValue: 'Warranty end' })} value={calendarDateToLocalDate(asset.warranty_end_date)?.toLocaleDateString() ?? t('assetDetailDrawer.configuration.notProvided', { defaultValue: 'Not provided' })} />
         </div>
       </Card>
 
@@ -653,6 +663,30 @@ function InfoGrid({
       )}
       <InfoRow label={t('assetDetailDrawer.info.assetTag', { defaultValue: 'Asset tag' })} value={asset.asset_tag} />
       <InfoRow label={t('assetDetailDrawer.info.status', { defaultValue: 'Status' })} value={statusLabel} />
+      <InfoRow
+        label={t('assetDetailDrawer.info.assignedTo', { defaultValue: 'Assigned to' })}
+        value={asset.contact_name || t('assetDetailDrawer.info.unassigned', { defaultValue: 'Unassigned' })}
+      />
+      {asset.manufacturer ? (
+        <InfoRow label={t('assetDetailDrawer.info.manufacturer', { defaultValue: 'Manufacturer' })} value={asset.manufacturer} />
+      ) : null}
+      {asset.model ? (
+        <InfoRow label={t('assetDetailDrawer.info.model', { defaultValue: 'Model' })} value={asset.model} />
+      ) : null}
+      {asset.group ? (
+        <InfoRow
+          label={t('assetDetailDrawer.info.group', { defaultValue: 'Group' })}
+          value={asset.group.kind === 'shared_workspace'
+            ? t('assetDetailDrawer.info.groupSharedWorkspace', {
+                defaultValue: '{{name}} · shared workspace',
+                name: asset.group.name,
+              })
+            : t('assetDetailDrawer.info.groupBundle', {
+                defaultValue: '{{name}} · bundle',
+                name: asset.group.name,
+              })}
+        />
+      ) : null}
       <InfoRow label={t('assetDetailDrawer.info.created', { defaultValue: 'Created' })} value={formatDate(asset.created_at)} />
       <InfoRow label={t('assetDetailDrawer.info.updated', { defaultValue: 'Updated' })} value={formatRelative(asset.updated_at, t)} />
       <InfoRow label={t('assetDetailDrawer.info.tenant', { defaultValue: 'Tenant' })} value={asset.tenant} />

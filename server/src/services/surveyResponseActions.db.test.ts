@@ -19,6 +19,11 @@ vi.mock('@alga-psa/auth', () => ({ localizeActionError: async (error: unknown) =
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: async (event: unknown) => { state.events.push(event); },
   publishWorkflowEvent: async (event: unknown) => { state.workflows.push(event); },
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 vi.mock('../lib/db', async () => {
   const db = await import('@alga-psa/db');
@@ -26,6 +31,12 @@ vi.mock('../lib/db', async () => {
 });
 vi.mock('../lib/eventBus/publishers', () => ({
   publishWorkflowEvent: async (event: unknown) => { state.workflows.push(event); },
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 vi.mock('@alga-psa/email', async () => {
   const { DatabaseTemplateProcessor } = await import('../../../packages/email/src/templateProcessors');

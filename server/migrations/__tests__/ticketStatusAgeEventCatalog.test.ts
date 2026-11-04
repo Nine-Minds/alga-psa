@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import { describe, expect, it, vi } from 'vitest';
-import { dateTriggerSourceDefinitions } from '../../../shared/workflow/runtime/dateTriggerSourceDefinitions';
+import { dateTriggerSourceDefinitions } from '@alga-psa/event-schemas';
 
 const require = createRequire(import.meta.url);
 const migration = require('../20261005120100_add_ticket_status_age_workflow_trigger.cjs');

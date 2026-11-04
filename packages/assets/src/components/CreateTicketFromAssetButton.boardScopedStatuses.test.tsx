@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { describe, beforeEach, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import CreateTicketFromAssetButton from './CreateTicketFromAssetButton';
@@ -16,10 +16,18 @@ const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
 const mockCreateTicketFromAsset = vi.fn();
 const mockGetAllBoards = vi.fn();
+const mockGetAssetTicketContactOptions = vi.fn();
 
 vi.mock('@alga-psa/reference-data/actions', () => ({
   getAllPriorities: (...args: unknown[]) => mockGetAllPriorities(...args),
   getTicketStatuses: (...args: unknown[]) => mockGetTicketStatuses(...args),
+}));
+
+vi.mock('../actions/assetGroupActions', () => ({
+  addAssetsToGroup: vi.fn(),
+  createAssetGroup: vi.fn(),
+  listAssetGroups: vi.fn(async () => []),
+  getAssetTicketContactOptions: (...args: unknown[]) => mockGetAssetTicketContactOptions(...args),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -119,6 +127,9 @@ vi.mock('@alga-psa/ui/components/TextArea', () => ({
 
 describe('CreateTicketFromAssetButton board-scoped statuses', () => {
   beforeEach(() => {
+    // No global auto-cleanup in this package's vitest config: without this the
+    // previous test's dialog is still mounted and every query is ambiguous.
+    cleanup();
     vi.clearAllMocks();
 
     mockGetAllPriorities.mockResolvedValue([
@@ -150,11 +161,11 @@ describe('CreateTicketFromAssetButton board-scoped statuses', () => {
     mockCreateTicketFromAsset.mockResolvedValue({
       ticket_id: 'ticket-1',
     });
+
+    mockGetAssetTicketContactOptions.mockResolvedValue({ options: [], preselect: null });
   });
 
-  it('T033: loads and submits statuses for the selected board only', async () => {
-    const user = userEvent.setup();
-
+  const renderButton = () =>
     render(
       <AssetCrossFeatureProvider
         value={{
@@ -180,6 +191,11 @@ describe('CreateTicketFromAssetButton board-scoped statuses', () => {
         />
       </AssetCrossFeatureProvider>
     );
+
+  it('T033: loads and submits statuses for the selected board only', async () => {
+    const user = userEvent.setup();
+
+    renderButton();
 
     await user.click(screen.getByRole('button', { name: 'Create Ticket' }));
 
@@ -218,5 +234,60 @@ describe('CreateTicketFromAssetButton board-scoped statuses', () => {
     });
     expect(mockPush).toHaveBeenCalledWith('/msp/tickets/ticket-1');
     expect(mockToastSuccess).toHaveBeenCalledWith('Ticket created successfully');
+  });
+
+  it('T123: a shared workspace offers its users and files for the one chosen', async () => {
+    const user = userEvent.setup();
+
+    // Three users: nobody is preselected, so the dialog has to offer them.
+    mockGetAssetTicketContactOptions.mockResolvedValue({
+      options: [
+        { contact_name_id: 'contact-1', contact_name: 'Dorothy Gale' },
+        { contact_name_id: 'contact-2', contact_name: 'Wanda West' },
+        { contact_name_id: 'contact-3', contact_name: null },
+      ],
+      preselect: null,
+    });
+
+    renderButton();
+
+    await user.click(screen.getByRole('button', { name: 'Create Ticket' }));
+
+    const contactSelect = await screen.findByLabelText('Contact');
+    expect(screen.getByRole('option', { name: 'Dorothy Gale' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'Wanda West' })).toBeTruthy();
+    // A contact with no name still has to be pickable.
+    expect(screen.getByRole('option', { name: 'Unnamed contact' })).toBeTruthy();
+
+    await user.selectOptions(contactSelect, 'contact-2');
+    await user.selectOptions(await screen.findByLabelText('Priority'), 'priority-1');
+    await user.click(screen.getAllByRole('button', { name: 'Create Ticket' })[1]!);
+
+    expect(mockCreateTicketFromAsset).toHaveBeenCalledWith(
+      expect.objectContaining({ contact_name_id: 'contact-2' })
+    );
+  });
+
+  it('T123: a single option is preselected without a choice to make', async () => {
+    const user = userEvent.setup();
+
+    mockGetAssetTicketContactOptions.mockResolvedValue({
+      options: [{ contact_name_id: 'contact-9', contact_name: 'Glinda Good' }],
+      preselect: 'contact-9',
+    });
+
+    renderButton();
+
+    await user.click(screen.getByRole('button', { name: 'Create Ticket' }));
+
+    const contactSelect = await screen.findByLabelText('Contact');
+    await waitFor(() => expect((contactSelect as HTMLSelectElement).value).toBe('contact-9'));
+
+    await user.selectOptions(await screen.findByLabelText('Priority'), 'priority-1');
+    await user.click(screen.getAllByRole('button', { name: 'Create Ticket' })[1]!);
+
+    expect(mockCreateTicketFromAsset).toHaveBeenCalledWith(
+      expect.objectContaining({ contact_name_id: 'contact-9' })
+    );
   });
 });

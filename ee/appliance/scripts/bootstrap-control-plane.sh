@@ -147,6 +147,23 @@ detect_ip() {
   printf '%s\n' "$ip"
 }
 
+# k3s is Type=notify: systemd's default 90s TimeoutStartSec kills it if the
+# apiserver is not ready by then, and Restart=always starts it over. On a slow
+# disk with a large datastore startup can take minutes, so that turns any k3s
+# restart into an endless crash loop. Upstream's installer sets no limit
+# either. The drop-in also covers units written by older appliance images.
+K3S_START_TIMEOUT_DROPIN="/etc/systemd/system/k3s.service.d/10-start-timeout.conf"
+
+ensure_k3s_start_timeout() {
+  local desired=$'[Service]\nTimeoutStartSec=0'
+  if [ -f "$K3S_START_TIMEOUT_DROPIN" ] && [ "$(cat "$K3S_START_TIMEOUT_DROPIN")" = "$desired" ]; then
+    return 0
+  fi
+  mkdir -p "$(dirname "$K3S_START_TIMEOUT_DROPIN")"
+  printf '%s\n' "$desired" > "$K3S_START_TIMEOUT_DROPIN"
+  systemctl daemon-reload
+}
+
 ensure_k3s_started() {
   log "Substrate: ensuring k3s is installed and running"
   if [ "$DRY_RUN" = "true" ]; then
@@ -155,6 +172,7 @@ ensure_k3s_started() {
   fi
 
   if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files k3s.service >/dev/null 2>&1; then
+    ensure_k3s_start_timeout
     systemctl enable --now k3s
     return 0
   fi
@@ -181,6 +199,7 @@ KillMode=process
 Delegate=yes
 Restart=always
 RestartSec=5s
+TimeoutStartSec=0
 LimitNOFILE=1048576
 LimitNPROC=infinity
 LimitCORE=infinity

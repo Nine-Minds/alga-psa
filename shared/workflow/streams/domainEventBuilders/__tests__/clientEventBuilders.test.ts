@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   clientArchivedEventPayloadSchema,
   clientCreatedEventPayloadSchema,
@@ -7,7 +7,7 @@ import {
   clientOwnerAssignedEventPayloadSchema,
   clientStatusChangedEventPayloadSchema,
   clientUpdatedEventPayloadSchema,
-} from '../../../runtime/schemas/crmEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildClientArchivedPayload,
   buildClientCreatedPayload,

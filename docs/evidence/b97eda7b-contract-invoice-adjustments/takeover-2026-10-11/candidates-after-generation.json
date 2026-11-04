@@ -1,0 +1,5 @@
+{
+  "checkedAt": "2026-10-11T23:06:00Z",
+  "clientFilter": "REVIEW-3499-MITIGATION-CLIENT-B",
+  "visibleText": "Automatic Invoices\nAll\n1\nReady\n0\nCombinable\n0\nNeeds attention\n0\nNot yet due\n1\nFilters\nSelect groups or line items to preview or generate invoices.\n\t\nCLIENT / GROUP\n\t\nSTATUS\n\t\nSERVICE PERIOD\n\t\nAMOUNT\n\n\n\t\nREVIEW-3499-MITIGATION-CLIENT-B\nFIX \u00d74\n4 line items\n\t\nNot yet due\nOpens Nov 1, 2026\n\t\nOct 2026\n\t\nA$400.00\n+ 2 at generation\nRecurring Invoice History\n1 column hidden.\nShow all\nClient\n\t\nAssignment Scope\n\t\nCadence Source\n\t\nService Period\n\t\nInvoice Window\n\t\nActions\n\n\nRE\nREVIEW-3499-MITIGATION-CLIENT-B\n\t\nExplicit contract assignment\n\t\nClient scheduleService-period-backed\n\t\n2026-09-01 to 2026-10-01\n\t\n2026-10-01 to 2026-11-01\n\t\nOpen menu\n\n\nRE\nREVIEW-3499-MITIGATION-CLIENT-A\n\t\nExplicit contract assignment\n\t\nClient scheduleService-period-backed\n\t\n2026-09-01 to 2026-10-01\n\t\n2026-10-01 to 2026-11-01\n\t\nOpen menu\n\n"
+}

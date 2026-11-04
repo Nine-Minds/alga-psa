@@ -124,10 +124,6 @@ vi.mock('@alga-psa/ui/components/CountryPicker', () => ({
   default: () => <div data-testid="country-picker" />,
 }));
 
-vi.mock('../../../../../packages/clients/src/components/clients/ClientCreatedDialog', () => ({
-  default: () => <div data-testid="client-created-dialog" />,
-}));
-
 vi.mock('@alga-psa/tags/components/QuickAddTagPicker', () => ({
   QuickAddTagPicker: () => <div data-testid="quick-add-tag-picker" />,
 }));

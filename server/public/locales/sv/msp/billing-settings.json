@@ -202,6 +202,27 @@
         "save": "Det gick inte att spara inställningarna",
         "range": "Ange ett heltal från 1 till 365."
       }
+    },
+    "paymentTerms": {
+      "title": "Standardbetalningsvillkor",
+      "description": "Ange de betalningsvillkor som nya fakturor använder när varken kunden eller dess faktureringsprofil anger något.",
+      "fields": {
+        "terms": {
+          "label": "Betalningsvillkor",
+          "help": "Gäller endast nya fakturor. Befintliga fakturor och kunder med egna villkor behåller sina."
+        }
+      },
+      "actions": {
+        "save": "Spara"
+      },
+      "toast": {
+        "updated": "Standardbetalningsvillkoren har uppdaterats."
+      },
+      "errors": {
+        "load": "Det gick inte att läsa in inställningarna",
+        "save": "Det gick inte att spara inställningarna",
+        "invalid": "Välj ett giltigt betalningsvillkor."
+      }
     }
   },
   "quoting": {
@@ -1474,6 +1495,103 @@
     }
   },
   "payment": {
+    "import": {
+      "title": "Importera befintliga Stripe-kunder",
+      "description": "Flytta över Stripe-kunder och sparade kort från ett annat system. Importen anmäler aldrig en kund till autobetalning; det bekräftar du per rad.",
+      "open": "Starta import",
+      "preview": "Förhandsgranska",
+      "execute": "Importera",
+      "reset": "Börja om",
+      "default": "standard",
+      "done": "Importen är klar",
+      "attest": "Kunden har godkänt återkommande debiteringar på det här kortet",
+      "alreadyEnrolled": "Redan anmäld",
+      "scaRisk": "SCA-risk: inget bevis för att kortet sparats för användning utan kundmedverkan",
+      "cardsImported": "{{count}} kort importerade",
+      "csv": {
+        "label": "Rader (kund, faktureringsprofil, Stripe-kund-ID)",
+        "upload": "Ladda upp CSV"
+      },
+      "assisted": {
+        "run": "Matcha på e-post, sedan på namn",
+        "summary": "{{matched}} föreslagna, {{ambiguous}} tvetydiga (inte föreslagna){{truncated}}",
+        "truncated": "; listan har kortats",
+        "ambiguousTitle": "Tvetydiga matchningar (inte föreslagna)",
+        "addRow": "Lägg till som rad",
+        "matchedBy": "Matchad på {{by}}",
+        "by": {
+          "email": "e-post",
+          "name": "namn"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Matchar flera faktureringsprofiler",
+          "multiple-customers": "Matchar flera Stripe-kunder"
+        }
+      },
+      "errors": {
+        "preview": "Förhandsgranskningen misslyckades",
+        "noRows": "Lägg till minst en rad",
+        "match": "Matchningen misslyckades",
+        "execute": "Importen misslyckades"
+      },
+      "table": {
+        "customer": "Stripe-kund",
+        "plan": "Abonnemang",
+        "cards": "Kort",
+        "enroll": "Anmäl till autobetalning",
+        "clientProfile": "Kund / faktureringsprofil",
+        "include": "Inkludera"
+      },
+      "actions": {
+        "adopt": "Ta över",
+        "already-imported": "Redan importerad",
+        "conflict": "Konflikt",
+        "skip": "Hoppa över"
+      },
+      "cardActions": {
+        "import": "Importera",
+        "already-imported": "Redan importerat",
+        "conflict": "Konflikt",
+        "skip": "Hoppa över"
+      },
+      "cardReasons": {
+        "unsupported-method": "metoden stöds inte",
+        "expired-card": "kortet har gått ut",
+        "card-claimed-elsewhere": "kortet tillhör en annan kund"
+      },
+      "reasons": {
+        "invalid-customer-id": "Inte ett giltigt Stripe-kund-ID",
+        "customer-not-found": "Kunden hittades inte i Stripe",
+        "customer-deleted": "Kunden är borttagen i Stripe",
+        "profile-not-found": "Kunden eller faktureringsprofilen hittades inte",
+        "profile-inactive": "Faktureringsprofilen är inaktiv",
+        "currency-not-configured": "Ingen faktureringsvaluta är konfigurerad för den här kunden",
+        "currency-unsupported": "Faktureringsvalutan stöds inte av Stripe autobetalning",
+        "duplicate-customer-in-input": "Samma Stripe-kund förekommer på flera rader",
+        "duplicate-profile-in-input": "Samma faktureringsprofil förekommer med flera Stripe-kunder",
+        "customer-claimed-by-other": "Stripe-kunden är redan kopplad till en annan kund eller faktureringsprofil",
+        "customer-metadata-owned-by-other": "Stripe-kundens metadata anger en annan tenant, kund eller faktureringsprofil",
+        "profile-mapped-to-other-customer": "Den här faktureringsprofilen använder redan en annan Stripe-kund"
+      },
+      "warnings": {
+        "no-cards": "Kunden har inga betalningsmetoder",
+        "customer-currency-mismatch": "Stripe-kundens valuta skiljer sig från faktureringsvalutan",
+        "no-importable-card": "Inget kort kan importeras"
+      },
+      "resultStatus": {
+        "imported": "Importerad",
+        "unchanged": "Inget att göra",
+        "skipped": "Hoppades över",
+        "conflict": "Konflikt",
+        "failed": "Misslyckades"
+      },
+      "enrollment": {
+        "enrolled": "anmäld till autobetalning",
+        "not-eligible": "inte berättigad till anmälan",
+        "already-enrolled": "redan anmäld",
+        "failed": "anmälan misslyckades"
+      }
+    },
     "messages": {
       "loadConfigFailed": "Det gick inte att läsa in betalningskonfigurationen",
       "keysRequired": "Ange både den hemliga och den publicerbara nyckeln",
@@ -1500,7 +1618,7 @@
       "daysPlural": "{{count}} dagar",
       "daysDecimal": "{{count}} dagar",
       "hoursUnit": "timmar ({{formatted}})",
-      "willExpireAfter": "Betalningslänkar löper ut efter {{duration}}"
+      "willExpireAfter": "Betalningslänken i mejlet fungerar i {{duration}}"
     },
     "notConnected": {
       "title": "Stripe är inte anslutet",
@@ -1518,7 +1636,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Giltighetstid för betalningslänkar",
-        "description": "Hur länge betalningslänkar är giltiga innan de löper ut"
+        "description": "Hur länge betalningslänken i fakturamejl fungerar (1 timme till 30 dagar). Varje klick öppnar en ny säker betalning så länge fakturan är obetald."
       },
       "actions": {
         "save": "Spara inställningar",

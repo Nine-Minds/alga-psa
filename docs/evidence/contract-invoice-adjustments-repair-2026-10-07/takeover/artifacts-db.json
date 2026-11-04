@@ -1,0 +1,18 @@
+[
+  {
+    "adapter_type": "quickbooks_csv",
+    "status": "delivered",
+    "filename": "quickbooks-invoices-2026-10-07.csv",
+    "bytes": 1192,
+    "sha256": "c7b1f9c957a2fe8a3f82987f035a56db6c9bd56a776bcd1e179aae0fc939bc3e",
+    "committed": true
+  },
+  {
+    "adapter_type": "xero_csv",
+    "status": "delivered",
+    "filename": "xero-invoice-export-b3d28588-4a78-4400-a8a0-0d2d25647415.csv",
+    "bytes": 1398,
+    "sha256": "9fbb588220033efbbf42b3addb4031631882829ddb81e099f656a56886938355",
+    "committed": true
+  }
+]

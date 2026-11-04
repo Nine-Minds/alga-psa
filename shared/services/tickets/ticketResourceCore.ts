@@ -1,7 +1,10 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import type { ITicketResource } from '@alga-psa/types';
+import { assertHumanWorkAssignee } from '../../lib/humanWork/assertHumanWorkAssignee';
+import { buildTicketAdditionalAgentAssignedPayload, buildTicketAssignedPayload } from '../../lib/tickets/ticketWorkflowEventPayloads';
 import { writeTicketActivity } from '../../lib/ticketActivity/writeTicketActivity';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -57,7 +60,28 @@ export class TicketResourceError extends Error {
   }
 }
 
-type TicketResourceEvent = Parameters<typeof publishEvent>[0];
+/**
+ * What a ticket-resource change publishes. `payload` is the event-specific part;
+ * the envelope (tenantId, occurredAt, actor) is added at publish time from
+ * `tenant` / `actorUserId`.
+ */
+export type TicketResourceEvent =
+  | {
+      eventType: 'TICKET_ASSIGNED';
+      payload: Record<string, unknown> & BuiltWorkflowPayload<'TICKET_ASSIGNED'>;
+      tenant: string;
+      /** Null for system-initiated work. */
+      actorUserId: string | null;
+    }
+  | {
+      eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED';
+      payload: Record<string, unknown> & BuiltWorkflowPayload<'TICKET_ADDITIONAL_AGENT_ASSIGNED'>;
+      tenant: string;
+      /** Null for system-initiated work. */
+      actorUserId: string | null;
+    };
+
+export type TicketAdditionalAgentEvent = Extract<TicketResourceEvent, { eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED' }>;
 
 export interface AddTicketResourceResult {
   /** Null when the ticket had no primary assignee and the user was promoted. */
@@ -72,7 +96,15 @@ export type TicketResourceNotificationSuppression = {
 
 /** Publish what `addTicketResourceCore` returned, once its transaction commits. */
 export async function publishTicketResourceEvent(event: TicketResourceEvent): Promise<void> {
-  await publishEvent(event);
+  const ctx = {
+    tenantId: event.tenant,
+    actor: event.actorUserId ? ({ actorType: 'USER', actorUserId: event.actorUserId } as const) : ({ actorType: 'SYSTEM' } as const),
+  };
+  if (event.eventType === 'TICKET_ASSIGNED') {
+    await publishWorkflowEvent({ eventType: event.eventType, payload: event.payload, ctx });
+    return;
+  }
+  await publishWorkflowEvent({ eventType: event.eventType, payload: event.payload, ctx });
 }
 
 /**
@@ -105,6 +137,9 @@ export async function addTicketResourceCore(
     throw new TicketResourceError(`Ticket not found in tenant ${tenant}`, 'not_found');
   }
 
+  // Human-work guard: both the additional agent and the promoted-to-primary assignee are this id.
+  await assertHumanWorkAssignee(trx, tenant, [additionalUserId]);
+
   // If the ticket has no primary assignment yet, promote this user to primary
   if (!ticket.assigned_to) {
     const [updatedTicket] = await tenantScopedTable(trx, 'tickets', tenant)
@@ -129,13 +164,14 @@ export async function addTicketResourceCore(
       resource: null,
       event: {
         eventType: 'TICKET_ASSIGNED',
-        payload: {
-          tenantId: tenant,
+        payload: buildTicketAssignedPayload({
           ticketId: ticketId,
           userId: additionalUserId,
           ...(actorUserId ? { assignedByUserId: actorUserId } : {}),
           ...notificationSuppression,
-        }
+        }),
+        tenant,
+        actorUserId,
       }
     };
   }
@@ -174,14 +210,15 @@ export async function addTicketResourceCore(
     resource,
     event: {
       eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED',
-      payload: {
-        tenantId: tenant,
-        ticketId: ticketId,
+      payload: buildTicketAdditionalAgentAssignedPayload({
+        ticketId,
         primaryAgentId: ticket.assigned_to,
         additionalAgentId: additionalUserId,
-        ...(actorUserId ? { assignedByUserId: actorUserId } : {}),
+        assignedByUserId: actorUserId,
         ...notificationSuppression,
-      }
+      }),
+      tenant,
+      actorUserId,
     }
   };
 }

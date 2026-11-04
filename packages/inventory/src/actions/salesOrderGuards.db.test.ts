@@ -25,7 +25,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
     testState.permissions.has(`${resource}:${action}`)),
 }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: vi.fn() }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: vi.fn(), publishWorkflowEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { createDropShipForSoLine, confirmDropShipShipment } from './dropShipActions';

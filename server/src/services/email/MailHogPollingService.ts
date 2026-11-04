@@ -332,17 +332,19 @@ export class MailHogPollingService {
     try {
       console.log(`📤 Emitting INBOUND_EMAIL_RECEIVED event for: ${eventData.emailData.subject}`);
       
-      const { getEventBus } = await import('../../lib/eventBus');
-      const eventBus = getEventBus();
-      
-      await eventBus.publish({
+      const { publishWorkflowEvent } = await import('../../lib/eventBus/publishers');
+      const { buildInboundEmailReceivedPayload } = await import(
+        '@alga-psa/shared/workflow/streams/domainEventBuilders/emailLifecycleEventBuilders'
+      );
+
+      await publishWorkflowEvent({
         eventType: 'INBOUND_EMAIL_RECEIVED',
-        payload: {
-          tenantId: eventData.tenantId,  // Changed from eventData.tenant to eventData.tenantId
+        payload: buildInboundEmailReceivedPayload({
           tenant: eventData.tenantId,
           providerId: eventData.providerId,
-          emailData: eventData.emailData
-        }
+          emailData: eventData.emailData,
+        }),
+        ctx: { tenantId: eventData.tenantId, actor: { actorType: 'SYSTEM' } },
       });
       
       console.log(`[TENANT-DEBUG] MailHogPollingService emitted INBOUND_EMAIL_RECEIVED event: tenant=${eventData.tenantId}, subject=${eventData.emailData.subject}`);

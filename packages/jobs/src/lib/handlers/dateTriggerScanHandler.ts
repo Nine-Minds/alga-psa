@@ -1,8 +1,7 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex, resolveEffectiveTimeZone } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
-import { emitDateDomainEventOnce } from '@alga-psa/event-bus/workflow/dateDomainEvents';
-import { dateTriggerSources, dateTriggerSourceDomainEvents } from '../dateTriggers/registry';
+import { dateTriggerSources } from '../dateTriggers/registry';
 import type { Knex } from 'knex';
 
 export interface DateTriggerScanJobData extends Record<string, unknown> { tenantId: string; now?: string; }
@@ -28,18 +27,14 @@ export function createDateTriggerScanHandler(
     if (Number.isNaN(now.getTime())) throw new Error(`Invalid date-trigger-scan clock value: ${data.now}`);
     const today = localDate(timezone, now);
     for (const source of dateTriggerSources) {
-      const domainEvent = dateTriggerSourceDomainEvents.get(source.id);
-      if (!domainEvent || !source.buildDomainEventPayload) continue;
+      const domainEvent = source.domainEvent;
+      if (!domainEvent) continue;
       const toDate = Temporal.PlainDate.from(today).add({ days: domainEvent.windowDays }).toString();
       const occurrences = await source.findOccurrences(knex, data.tenantId, today, toDate);
       for (const occurrence of occurrences) {
         const distance = daysUntil(today, occurrence.occursOn);
-        const eventPayload = source.buildDomainEventPayload(occurrence, distance);
         try {
-          await emitDateDomainEventOnce(knex, data.tenantId, {
-            eventType: domainEvent.eventType, entityId: occurrence.entityId, cycleKey: occurrence.cycleKey,
-            occursOn: occurrence.occursOn, payload: eventPayload,
-          });
+          await domainEvent.emitOnce(knex, data.tenantId, occurrence, distance);
         } catch (error) {
           logger.error('Failed to emit date-trigger domain event; the ledger entry can retry on the next scan', {
             tenantId: data.tenantId,

@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "title": "Prepaid hours on contracts: priced block in advance, overage in arrears (alga-2026-0002684) smoke test",
+  "paneId": "ca167e5d-5196-499e-87f9-ecae8eb7a182",
+  "startedAt": "2026-10-25T17:29:54.410Z",
+  "finishedAt": "2026-10-25T17:32:51.415Z",
+  "durationMs": 58442,
+  "width": 1920,
+  "height": 755,
+  "bytes": 3014572,
+  "frames": 1018,
+  "marks": [
+    {
+      "t": 0.054,
+      "label": "Defect 3: replay past invoices after monthly->quarterly change (R5 client)"
+    },
+    {
+      "t": 20.703,
+      "label": "Regression: R5 forward simulation after the change uses the new quarterly cadence"
+    },
+    {
+      "t": 32.397,
+      "label": "Regression: acceptance contract R2 (monthly, no change) replays Sep 3,000 / Oct 3,600 at zero deltas"
+    }
+  ],
+  "files": {
+    "video": "smoke-walkthrough.webm",
+    "chapters": "smoke-walkthrough.vtt"
+  }
+}

@@ -103,7 +103,7 @@ vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ReviewContra
 vi.mock('@alga-psa/billing/actions/contractWizardActions', () => ({
   createClientContractFromWizard: (...args: unknown[]) => mocks.createClientContractFromWizard(...args),
   listContractTemplatesForWizard: vi.fn(async () => []),
-  getContractTemplateSnapshotForClientWizard: vi.fn(),
+  getContractTemplateLinesForClientWizard: vi.fn(),
 }));
 
 vi.mock('@alga-psa/billing/actions/billingSettingsActions', () => ({

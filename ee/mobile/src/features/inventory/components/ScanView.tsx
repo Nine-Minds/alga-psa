@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTheme } from "../../../ui/ThemeContext";
-import { IconButton, PrimaryButton, TextInput } from "../../../ui/components";
+import { IconButton, PrimaryButton, SecondaryButton, TextInput } from "../../../ui/components";
 import { EntityPickerModal, type EntityPickerItem } from "../../../ui/components/EntityPickerModal";
 import { lookupInventoryCode, type InventoryLookupResult, type StockUnitSummary } from "../../../api/inventory";
 import { listProducts, setProductBarcode } from "../../../api/materials";
@@ -20,6 +20,9 @@ import { RegisterAssetModal } from "./RegisterAssetModal";
 import type { RootStackParamList } from "../../../navigation/types";
 
 import { INVENTORY_BARCODE_TYPES } from "../barcodeTypes";
+import { classifyScannedCode } from "../scanRouting";
+import { recordUrl } from "../../../urls/recordLinks";
+import { logger } from "../../../logging/logger";
 
 const SCAN_DEBOUNCE_MS = 1500;
 
@@ -31,7 +34,7 @@ export function ScanView() {
   const isFocused = useIsFocused();
   const { t } = useTranslation("inventory");
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { client, apiKey } = useInventoryApi();
+  const { client, apiKey, baseUrl } = useInventoryApi();
   const [permission, requestPermission] = useCameraPermissions();
   const [torchOn, setTorchOn] = useState(false);
   const [manualMode, setManualMode] = useState(false);
@@ -40,6 +43,11 @@ export function ScanView() {
   const [result, setResult] = useState<InventoryLookupResult | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // A recognised Alga label that has no in-app screen (project, RMA) or that
+  // belongs to another server. Carries no record content.
+  const [recordNotice, setRecordNotice] = useState<
+    { kind: "foreign" } | { kind: "browser"; url: string } | null
+  >(null);
   const lastScanRef = useRef<{ code: string; atMs: number } | null>(null);
   const { showToast } = useToast();
   const [attachPickerVisible, setAttachPickerVisible] = useState(false);
@@ -68,8 +76,54 @@ export function ScanView() {
     [client, apiKey],
   );
 
+  const clearScanState = useCallback(() => {
+    setResult(null);
+    setScannedCode(null);
+    setRecordNotice(null);
+    lastScanRef.current = null;
+  }, []);
+
   const resolveCode = useCallback(
     async (code: string) => {
+      // Record URLs are routed before any request: the scanner only navigates,
+      // and the destination screen's own REST read does the authorization.
+      const classified = classifyScannedCode(code, baseUrl);
+      if (classified.kind === "foreign-record") {
+        // Host only: the path carries a record id.
+        logger.warn("Scanned label from a different server", { host: classified.host });
+        setLookupError(null);
+        setRecordNotice({ kind: "foreign" });
+        return;
+      }
+      if (classified.kind === "record") {
+        const { entityType, id, projectId } = classified.target;
+        setLookupError(null);
+        switch (entityType) {
+          case "ticket":
+            clearScanState();
+            navigation.navigate("TicketDetail", { ticketId: id });
+            return;
+          case "asset":
+            clearScanState();
+            navigation.navigate("AssetDetail", { assetId: id });
+            return;
+          case "stock_unit":
+            clearScanState();
+            navigation.navigate("StockUnitDetail", { unitId: id });
+            return;
+          case "project_task":
+            clearScanState();
+            navigation.navigate("ProjectTaskDetail", { taskId: id });
+            return;
+          default:
+            // project, rma, staging_container: no mobile screen. Rebuild the URL on the
+            // connected server; never open the scanned string.
+            if (baseUrl) {
+              setRecordNotice({ kind: "browser", url: recordUrl(entityType, id, baseUrl, { projectId }) });
+            }
+            return;
+        }
+      }
       if (!client || !apiKey) return;
       setBusy(true);
       setLookupError(null);
@@ -82,7 +136,7 @@ export function ScanView() {
         setLookupError(t("scan.lookupFailed", "Lookup failed. Try again."));
       }
     },
-    [client, apiKey, t],
+    [client, apiKey, baseUrl, navigation, clearScanState, t],
   );
 
   const attachBarcodeToProduct = useCallback(
@@ -103,7 +157,7 @@ export function ScanView() {
 
   const onBarcodeScanned = useCallback(
     ({ data }: { data: string }) => {
-      if (!data || busy || result) return;
+      if (!data || busy || result || recordNotice) return;
       const now = Date.now();
       const last = lastScanRef.current;
       if (last && last.code === data && now - last.atMs < SCAN_DEBOUNCE_MS) return;
@@ -111,14 +165,10 @@ export function ScanView() {
       Vibration.vibrate(30);
       void resolveCode(data.trim());
     },
-    [busy, result, resolveCode],
+    [busy, result, recordNotice, resolveCode],
   );
 
-  const dismissResult = useCallback(() => {
-    setResult(null);
-    setScannedCode(null);
-    lastScanRef.current = null;
-  }, []);
+  const dismissResult = clearScanState;
 
   if (!permission) {
     return null;
@@ -244,6 +294,33 @@ export function ScanView() {
         <Text style={{ ...theme.typography.caption, color: theme.colors.danger, textAlign: "center", padding: theme.spacing.sm }}>
           {lookupError}
         </Text>
+      ) : null}
+      {recordNotice ? (
+        <View
+          testID="inventory-scan-record-notice"
+          style={{ padding: theme.spacing.md, gap: theme.spacing.sm, alignItems: "center" }}
+        >
+          <Text style={{ ...theme.typography.body, color: theme.colors.text, textAlign: "center" }}>
+            {recordNotice.kind === "foreign"
+              ? t("scan.foreignServer", "This label is from a different Alga server")
+              : t("scan.openInBrowserHint", "This record opens in the browser")}
+          </Text>
+          {recordNotice.kind === "browser" ? (
+            <PrimaryButton
+              testID="inventory-scan-open-in-browser"
+              onPress={() => {
+                const url = recordNotice.url;
+                clearScanState();
+                void Linking.openURL(url);
+              }}
+            >
+              {t("scan.openInBrowser", "Open in browser")}
+            </PrimaryButton>
+          ) : null}
+          <SecondaryButton testID="inventory-scan-notice-dismiss" onPress={clearScanState}>
+            {t("scan.dismiss", "Dismiss")}
+          </SecondaryButton>
+        </View>
       ) : null}
       {result && scannedCode ? (
         <ScanResultCard

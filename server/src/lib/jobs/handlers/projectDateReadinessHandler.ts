@@ -1,6 +1,10 @@
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildProjectBillingSchedulePayload,
+  buildProjectMilestoneReadyPayload,
+} from '@alga-psa/workflow-streams';
 import { computeEntryAmounts, evaluateDateReadiness } from '@alga-psa/billing/services';
 import type { IProjectBillingConfig, IProjectBillingScheduleEntry } from '@alga-psa/types';
 import { runWithTenant } from 'server/src/lib/db';
@@ -63,21 +67,21 @@ export async function projectDateReadinessHandler(data: ProjectDateReadinessJobD
         });
         continue;
       }
-      await publishEvent({
+      const ctx = { tenantId: data.tenantId, actor: { actorType: 'SYSTEM' as const } };
+      await publishWorkflowEvent({
         eventType: 'PROJECT_MILESTONE_READY',
-        payload: {
-          tenantId: data.tenantId,
+        payload: buildProjectMilestoneReadyPayload({
           projectId: config.project_id,
           entryId: entry.schedule_entry_id,
           description: entry.description,
           computedAmount: computedAmountByEntryId.get(entry.schedule_entry_id) ?? 0,
           trigger: 'date',
-        },
+        }),
+        ctx,
       });
-      await publishEvent({
+      await publishWorkflowEvent({
         eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
-        payload: {
-          tenantId: data.tenantId,
+        payload: buildProjectBillingSchedulePayload({
           projectId: config.project_id,
           configId: entry.config_id,
           entryId: entry.schedule_entry_id,
@@ -85,7 +89,8 @@ export async function projectDateReadinessHandler(data: ProjectDateReadinessJobD
           status: 'ready',
           previousStatus: 'pending',
           requiresPaymentBeforeWork: entry.requires_payment_before_work,
-        },
+        }),
+        ctx,
       });
     }
 

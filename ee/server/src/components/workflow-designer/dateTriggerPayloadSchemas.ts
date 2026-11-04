@@ -1,5 +1,5 @@
 // The source-to-payload-schema map is derived from the shared source definitions
-// (shared/workflow/runtime/dateTriggerSourceDefinitions.ts); there is no separate copy here.
+// (packages/event-schemas/src/schemas/domain/dateTriggerSourceDefinitions.ts); there is no separate copy here.
 import { dateTriggerSourceDefinitions, type DateTriggerPayloadSchemaRefs } from '@alga-psa/workflows/authoring';
 
 export const DATE_TRIGGER_PAYLOAD_SCHEMA_REFS = Object.fromEntries(

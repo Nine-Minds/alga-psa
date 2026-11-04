@@ -8,6 +8,7 @@ import type { TaggedEntityType, ITag, PendingTag } from '@alga-psa/types';
 import { generateEntityColor } from '@alga-psa/ui/lib/colorUtils';
 import { getAllTags, isTagActionError } from '../actions';
 import { useTags } from '../context/TagContext';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface QuickAddTagPickerProps {
   id?: string;
@@ -30,11 +31,13 @@ export const QuickAddTagPicker: React.FC<QuickAddTagPickerProps> = ({
   entityType,
   pendingTags,
   onPendingTagsChange,
-  placeholder = 'Add tag...',
+  placeholder,
   className = '',
   disabled = false,
-  label = 'Tags'
+  label: labelProp
 }) => {
+  const { t } = useTranslation('common');
+  const label = labelProp === undefined ? t('tags.fields.tags.label') : labelProp;
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [isLoadingTags, setIsLoadingTags] = useState(false);
@@ -197,7 +200,7 @@ export const QuickAddTagPicker: React.FC<QuickAddTagPickerProps> = ({
                   type="button"
                   onClick={() => handleRemoveTag(index)}
                   className="hover:opacity-70 focus:outline-none"
-                  aria-label={`Remove tag ${tag.tag_text}`}
+                  aria-label={t('tags.actions.removeTag', { tag: tag.tag_text })}
                 >
                   <X size={12} />
                 </button>
@@ -231,7 +234,7 @@ export const QuickAddTagPicker: React.FC<QuickAddTagPickerProps> = ({
                 onKeyDown={handleKeyPress}
                 onBlur={handleBlur}
                 className="rounded-l-md px-2 py-1 text-sm w-32 border-0"
-                placeholder={placeholder}
+                placeholder={placeholder === undefined ? t('tags.fields.tags.placeholder') : placeholder}
                 autoComplete="off"
                 containerClassName="m-0"
                 disabled={disabled}
@@ -245,7 +248,7 @@ export const QuickAddTagPicker: React.FC<QuickAddTagPickerProps> = ({
                 variant={!inputValue.trim() ? "outline" : "default"}
                 size="sm"
               >
-                Add
+                {t('actions.add')}
               </Button>
             </div>
 

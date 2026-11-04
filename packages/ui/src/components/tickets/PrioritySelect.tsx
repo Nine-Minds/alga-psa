@@ -2,6 +2,7 @@
 
 import React from 'react';
 import CustomSelect, { SelectOption } from '../CustomSelect';
+import { useTranslation } from '../../lib/i18n/client';
 
 interface PriorityOption extends SelectOption {
   color?: string;
@@ -25,13 +26,14 @@ export const PrioritySelect: React.FC<PrioritySelectProps> = ({
   value,
   options,
   onValueChange,
-  placeholder = 'Select Priority',
+  placeholder,
   className,
   customStyles,
   id,
   isItilBoard = false,
   disabled = false
 }) => {
+  const { t } = useTranslation('common');
   // Transform options to include color in the label
   const transformedOptions: SelectOption[] = options.map((option) => ({
     value: option.value,
@@ -62,7 +64,7 @@ export const PrioritySelect: React.FC<PrioritySelectProps> = ({
       value={value || ''}
       options={transformedOptions}
       onValueChange={onValueChange}
-      placeholder={placeholder}
+      placeholder={placeholder ?? t('fields.priority.placeholder')}
       className={className}
       customStyles={customStyles}
       disabled={disabled}

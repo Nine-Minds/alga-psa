@@ -1,3 +1,4 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 function formatMoneyAmount(value: number): string {
   if (!Number.isFinite(value)) return '0';
   return String(Math.max(0, value));
@@ -19,7 +20,7 @@ export function buildCreditNoteCreatedPayload(params: {
   sourceServicePeriodStart?: string | null;
   sourceServicePeriodEnd?: string | null;
 }) {
-  return {
+  return builtWorkflowPayload('CREDIT_NOTE_CREATED', {
     creditNoteId: params.creditNoteId,
     clientId: params.clientId ?? undefined,
     createdByUserId: params.createdByUserId,
@@ -34,7 +35,7 @@ export function buildCreditNoteCreatedPayload(params: {
     sourceInvoiceDateBasis: params.sourceInvoiceDateBasis,
     sourceServicePeriodStart: params.sourceServicePeriodStart ?? undefined,
     sourceServicePeriodEnd: params.sourceServicePeriodEnd ?? undefined,
-  };
+  });
 }
 
 export function buildCreditNoteAppliedPayload(params: {
@@ -50,7 +51,7 @@ export function buildCreditNoteAppliedPayload(params: {
   appliedServicePeriodStart?: string | null;
   appliedServicePeriodEnd?: string | null;
 }) {
-  return {
+  return builtWorkflowPayload('CREDIT_NOTE_APPLIED', {
     creditNoteId: params.creditNoteId,
     invoiceId: params.invoiceId,
     appliedByUserId: params.appliedByUserId,
@@ -62,7 +63,7 @@ export function buildCreditNoteAppliedPayload(params: {
     appliedInvoiceDateBasis: params.appliedInvoiceDateBasis,
     appliedServicePeriodStart: params.appliedServicePeriodStart ?? undefined,
     appliedServicePeriodEnd: params.appliedServicePeriodEnd ?? undefined,
-  };
+  });
 }
 
 export function buildCreditNoteVoidedPayload(params: {
@@ -71,10 +72,10 @@ export function buildCreditNoteVoidedPayload(params: {
   voidedAt?: string;
   reason?: string | null;
 }) {
-  return {
+  return builtWorkflowPayload('CREDIT_NOTE_VOIDED', {
     creditNoteId: params.creditNoteId,
     voidedByUserId: params.voidedByUserId,
     voidedAt: params.voidedAt,
     reason: params.reason ?? undefined,
-  };
+  });
 }

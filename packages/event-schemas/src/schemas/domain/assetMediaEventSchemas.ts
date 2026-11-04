@@ -1,9 +1,9 @@
 import { z } from 'zod';
-import { BaseDomainEventPayloadSchema, changesSchema, updatedFieldsSchema, uuidSchema } from './commonEventPayloadSchemas';
+import { BaseDomainEventPayloadSchema, changesSchema, updatedFieldsSchema, uuidSchema, entityIdSchema } from './commonEventPayloadSchemas';
 
 const assetIdSchema = uuidSchema('Asset ID');
-const clientIdSchema = uuidSchema('Client ID');
-const userIdSchema = uuidSchema('User ID');
+const clientIdSchema = entityIdSchema('Client ID', 'client');
+const userIdSchema = entityIdSchema('User ID', 'user');
 const fileIdSchema = uuidSchema('File ID');
 
 export const assetCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
@@ -58,6 +58,28 @@ export const assetWarrantyExpiringEventPayloadSchema = BaseDomainEventPayloadSch
 }).describe('Payload for ASSET_WARRANTY_EXPIRING');
 
 export type AssetWarrantyExpiringEventPayload = z.infer<typeof assetWarrantyExpiringEventPayloadSchema>;
+
+export const ASSET_CUSTODY_EVENT_TYPES = ['received', 'moved', 'handed_off', 'shipped', 'returned'] as const;
+
+export const assetCustodyChangedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  assetId: assetIdSchema,
+  custodyId: uuidSchema('Custody ID'),
+  clientId: clientIdSchema.optional(),
+  ticketId: entityIdSchema('Ticket ID', 'ticket').optional(),
+  /** The physical step, or 'updated' for a non-physical edit (purpose, next action, follow-up, condition, accessories). */
+  eventType: z.enum([...ASSET_CUSTODY_EVENT_TYPES, 'updated']),
+  state: z.enum(['in_office', 'with_vendor', 'closed']),
+  purpose: z.enum(['repair', 'warranty_evaluation', 'loaner_prep', 'staging']),
+  nextActionParty: z.enum(['msp', 'client', 'vendor']),
+  followUpOn: z.string().optional().describe('Calendar date YYYY-MM-DD'),
+  locationId: uuidSchema('Stock location ID').optional(),
+  bin: z.string().optional(),
+  holderUserId: entityIdSchema('Holder user ID', 'user').optional(),
+  actorUserId: entityIdSchema('Actor user ID', 'user').optional(),
+  occurredAt: z.string().datetime(),
+}).describe('Payload for ASSET_CUSTODY_CHANGED');
+
+export type AssetCustodyChangedEventPayload = z.infer<typeof assetCustodyChangedEventPayloadSchema>;
 
 export const fileUploadedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   fileId: fileIdSchema,

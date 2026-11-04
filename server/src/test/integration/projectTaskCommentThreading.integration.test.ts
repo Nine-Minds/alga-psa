@@ -9,7 +9,7 @@ const dbRef = vi.hoisted(() => ({
 }));
 
 const userRef = vi.hoisted(() => ({
-  user: null as { user_id: string; user_type: 'internal' | 'client' } | null,
+  user: null as { user_id: string; user_type: 'internal' | 'client'; clientId?: string } | null,
 }));
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({
@@ -23,12 +23,22 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: vi.fn(async () => true),
 }));
 
+// getTaskComments now gates on project_task:read through the rbac entry point.
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
+}));
+
 const publishEventMock = vi.hoisted(() => vi.fn());
 const publishWorkflowEventMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: publishEventMock,
   publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 import { createTaskComment, deleteTaskComment, getTaskComments } from '../../../../packages/projects/src/actions/projectTaskCommentActions';
@@ -360,18 +370,21 @@ describe('project task comment threading model', () => {
       threadId = root.thread_id;
 
       publishEventMock.mockClear();
+      publishWorkflowEventMock.mockClear();
       replyCommentId = await createTaskComment({
         taskId: context.task_id,
         note: blockNote('Task reply for event payload test'),
         parent_comment_id: rootCommentId,
       });
 
-      const addedEvent = publishEventMock.mock.calls
+      // TASK_COMMENT_ADDED is now a catalogued event published through publishWorkflowEvent; the tenant
+      // travels in ctx and is stamped into the payload by the publisher.
+      const addedEvent = publishWorkflowEventMock.mock.calls
         .map(([event]) => event)
         .find((event) => event.eventType === 'TASK_COMMENT_ADDED');
       expect(addedEvent).toBeTruthy();
+      expect(addedEvent.ctx.tenantId).toBe(context.tenant);
       expect(addedEvent.payload).toMatchObject({
-        tenantId: context.tenant,
         taskId: context.task_id,
         userId: userRef.user?.user_id,
         taskCommentId: replyCommentId,
@@ -401,9 +414,15 @@ describe('project task comment threading model', () => {
 
   it('T032: client users can delete own task replies but not another client reply', async () => {
     const context = await taskContextQuery()
-      .select('pt.tenant', 'pt.task_id')
+      .select('pt.tenant', 'pt.task_id', 'pp.project_id')
       .first();
     expect(context).toBeTruthy();
+    // Client users act within their own client's projects (record-level same_client scope).
+    const project = await scopedDb(context.tenant).table('projects')
+      .select('client_id')
+      .where({ project_id: context.project_id })
+      .first();
+    expect(project?.client_id).toBeTruthy();
 
     const ids = await knex.raw(`
       SELECT
@@ -494,7 +513,7 @@ describe('project task comment threading model', () => {
         },
       ]);
 
-      userRef.user = { user_id: generated.client_user_id, user_type: 'client' };
+      userRef.user = { user_id: generated.client_user_id, user_type: 'client', clientId: project.client_id };
       await deleteTaskComment(generated.own_reply_id);
 
       const ownReply = await scopedDb(context.tenant).table('project_task_comments')

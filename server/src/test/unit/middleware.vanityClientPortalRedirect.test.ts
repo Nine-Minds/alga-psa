@@ -123,4 +123,48 @@ describe('getVanityClientPortalInternalRedirectTarget', () => {
 
     expect(redirectTarget).toBeNull();
   });
+
+  describe('by custom-domain surface (alga-2026-0002799)', () => {
+    const base = {
+      pathname: '/client-portal/dashboard',
+      isAuthPage: false,
+      requestHostname: 'helpdesk.pbnj.ca',
+      canonicalUrlEnv,
+      userType: 'internal' as const,
+      requestOrigin: 'https://helpdesk.pbnj.ca',
+    };
+
+    it('evicts internal users to the canonical host on a client_portal domain', () => {
+      expect(getVanityClientPortalInternalRedirectTarget({ ...base, hostSurface: 'client_portal' })?.toString())
+        .toBe('https://algapsa.com/msp/dashboard');
+    });
+
+    it('keeps internal users on an msp domain (dashboard on the same host)', () => {
+      expect(getVanityClientPortalInternalRedirectTarget({ ...base, hostSurface: 'msp' })?.toString())
+        .toBe('https://helpdesk.pbnj.ca/msp/dashboard');
+    });
+
+    it('keeps internal users on a both domain (dashboard on the same host), including portal signin', () => {
+      expect(getVanityClientPortalInternalRedirectTarget({ ...base, hostSurface: 'both' })?.toString())
+        .toBe('https://helpdesk.pbnj.ca/msp/dashboard');
+      expect(getVanityClientPortalInternalRedirectTarget({
+        ...base,
+        pathname: '/auth/client-portal/signin',
+        isAuthPage: true,
+        hostSurface: 'both',
+      })?.toString()).toBe('https://helpdesk.pbnj.ca/msp/dashboard');
+    });
+
+    it('treats an unknown host / failed lookup (null or undefined surface) as the legacy eviction', () => {
+      expect(getVanityClientPortalInternalRedirectTarget({ ...base, hostSurface: null })?.toString())
+        .toBe('https://algapsa.com/msp/dashboard');
+      expect(getVanityClientPortalInternalRedirectTarget({ ...base })?.toString())
+        .toBe('https://algapsa.com/msp/dashboard');
+    });
+
+    it('falls back to eviction when an msp domain has no request origin to stay on', () => {
+      expect(getVanityClientPortalInternalRedirectTarget({ ...base, requestOrigin: undefined, hostSurface: 'msp' })?.toString())
+        .toBe('https://algapsa.com/msp/dashboard');
+    });
+  });
 });

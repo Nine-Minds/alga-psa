@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { getActionRegistryV2 } from '@alga-psa/shared/workflow/runtime/registries/actionRegistry';
-import { zodToWorkflowJsonSchema } from '@alga-psa/shared/workflow/runtime/jsonSchemaMetadata';
+import { zodToWorkflowJsonSchema } from '@alga-psa/event-schemas';
 import { registerBusinessOperationsActionsV2 } from '@alga-psa/shared/workflow/runtime/actions/registerBusinessOperationsActions';
 import { registerTransformActionsV2 } from '@alga-psa/shared/workflow/runtime/actions/registerTransformActions';
 import { registerAiActionsV2 } from '@alga-psa/shared/workflow/runtime/actions/registerAiActions';

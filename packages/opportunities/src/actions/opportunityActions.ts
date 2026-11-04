@@ -10,7 +10,7 @@ import { createOpportunitySchema, updateOpportunitySchema, loseOpportunitySchema
 import { OpportunityModel } from '../models/opportunityModel';
 import { correctEvidence, declareStage, recordEvidence } from '../lib/stageEngine';
 import { onQuoteAccepted, onQuoteSent, recomputeAcceptedQuoteValues } from '../lib/quoteLifecycleHooks';
-import { buildOpportunityCreatedPayload, buildOpportunityStatusChangedPayload } from '../lib/opportunityEventBuilders';
+import { buildOpportunityCreatedPayload, buildOpportunityStageChangedPayload, buildOpportunityStatusChangedPayload } from '../lib/opportunityEventBuilders';
 import { publishOpportunityEventAfterCommit } from '../lib/opportunityEvents';
 import { completeOpportunityNextAction, removeOpportunityStepScheduleEntries } from '../lib/opportunitySteps';
 import type { OpportunityListResult } from '../models/opportunityModel';
@@ -21,7 +21,8 @@ import {
 } from '../lib/closeGates';
 import { prepareOpportunityWinConversions, type WinOpportunityOptions } from '../lib/opportunityWin';
 import { getOpportunityHandoffData } from '../lib/opportunityHandoff';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildProjectCreatedPayload } from '@alga-psa/workflow-streams';
 import { promoteProspectClientAfterWin } from '../lib/clientLifecyclePromotion';
 
 export interface LinkableOpportunityQuote {
@@ -154,9 +155,9 @@ async function closeOpportunity(trx: Knex.Transaction, tenant: string, opportuni
   const changedAt = new Date().toISOString();
   const updated = await OpportunityModel.update(trx, tenant, opportunityId, { ...patch, status, stage: status, next_action: null, next_action_due: null });
   if (current.stage !== status) {
-    publishOpportunityEventAfterCommit(trx, tenant, 'OPPORTUNITY_STAGE_CHANGED', {
+    publishOpportunityEventAfterCommit(trx, tenant, 'OPPORTUNITY_STAGE_CHANGED', buildOpportunityStageChangedPayload({
       opportunityId, clientId: current.client_id, previousStage: current.stage, newStage: status, changedAt,
-    }, `opportunity_stage_changed:${opportunityId}:${status}:${changedAt}`);
+    }), `opportunity_stage_changed:${opportunityId}:${status}:${changedAt}`);
   }
   const payload = buildOpportunityStatusChangedPayload({ opportunityId, clientId: current.client_id, previousStatus: current.status, newStatus: status, changedAt });
   publishOpportunityEventAfterCommit(trx, tenant, 'OPPORTUNITY_STATUS_CHANGED', payload, `opportunity_status_changed:${opportunityId}:${status}:${changedAt}`);
@@ -192,14 +193,19 @@ export const winOpportunity = withAuth(async (
     }, actorId(user));
     if (conversions.converted_project_id) {
       const projectId = conversions.converted_project_id;
-      registerAfterCommit(trx, () => publishEvent({
+      const createdAt = new Date();
+      registerAfterCommit(trx, () => publishWorkflowEvent({
         eventType: 'PROJECT_CREATED',
-        payload: {
+        ctx: {
           tenantId: tenant,
-          projectId,
-          userId: actorId(user),
-          timestamp: new Date().toISOString(),
+          occurredAt: createdAt,
+          actor: { actorType: 'USER', actorUserId: actorId(user) },
         },
+        payload: buildProjectCreatedPayload({
+          projectId,
+          createdByUserId: actorId(user),
+          createdAt,
+        }),
       }), `project_created_from_opportunity:${opportunityId}:${projectId}`);
     }
     await recordEvidence(trx, tenant, {

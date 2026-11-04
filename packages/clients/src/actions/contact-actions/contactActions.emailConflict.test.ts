@@ -64,13 +64,25 @@ vi.mock('@alga-psa/tags/lib/tagCleanup', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...((await importOriginal()) as any),
   buildContactArchivedPayload: vi.fn(),
   buildContactCreatedPayload: vi.fn(),
   buildContactUpdatedPayload: vi.fn(),
 }));
+
+// Static import (vi.mock calls are hoisted above it): the module graph is loaded once at
+// collection time instead of inside a test body, where a cold import under CI load can
+// exceed the per-test timeout.
+import { addContact, updateContact } from './contactActions';
 
 function additionalEmailUniqueError() {
   return Object.assign(
@@ -85,6 +97,11 @@ function additionalEmailUniqueError() {
 describe('contact action email conflict handling', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // clearAllMocks keeps queued *Once implementations; reset them so a value queued by one
+    // test can never be consumed by the next.
+    for (const mock of [assertMspPermissionMock, createContactMock, getContactByIdMock, updateContactMock]) {
+      mock.mockReset();
+    }
     assertMspPermissionMock.mockResolvedValue(undefined);
     withTransactionMock.mockImplementation(async (_db: unknown, callback: (trx: unknown) => Promise<unknown>) =>
       callback({} as any)
@@ -93,8 +110,6 @@ describe('contact action email conflict handling', () => {
 
   it('returns a create-contact EMAIL_EXISTS result for duplicate additional email addresses', async () => {
     createContactMock.mockRejectedValueOnce(additionalEmailUniqueError());
-
-    const { addContact } = await import('./contactActions');
 
     await expect(addContact({
       full_name: 'Alice Example',
@@ -110,8 +125,6 @@ describe('contact action email conflict handling', () => {
 
   it('returns a create-contact permission result when the caller cannot create contacts', async () => {
     assertMspPermissionMock.mockRejectedValueOnce(new Error('Permission denied: Cannot create contacts'));
-
-    const { addContact } = await import('./contactActions');
 
     await expect(addContact({
       full_name: 'Alice Example',
@@ -131,8 +144,6 @@ describe('contact action email conflict handling', () => {
       additional_email_addresses: [],
     });
     updateContactMock.mockRejectedValueOnce(additionalEmailUniqueError());
-
-    const { updateContact } = await import('./contactActions');
 
     await expect(updateContact({
       contact_name_id: 'contact-1',

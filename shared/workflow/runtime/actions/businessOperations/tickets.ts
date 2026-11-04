@@ -13,7 +13,7 @@ import {
 import { createTicketWithSideEffects } from '../../../../services/tickets/createTicketWithSideEffects';
 import { auditCloseRulesBypassIfGated } from '../../../../lib/ticketCloseRules';
 import { TICKET_ACTIVITY_ACTOR, TICKET_ACTIVITY_SOURCE } from '../../../../lib/ticketActivity';
-import { applyChecklistTemplateToTicket } from '../../../../lib/ticketChecklists';
+import { addChecklistItemsToTicket, applyChecklistTemplateToTicket, type AddChecklistItemInput } from '../../../../lib/ticketChecklists';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -29,14 +29,16 @@ import {
   attachDocumentToTicket,
   type TenantTxContext,
 } from './shared';
+import { retainWorkflowTicketAuthority } from './shared';
 import { getCurrentTicketAdditionalUserIds } from './userRecipients';
+import { assertHumanWorkAssignee } from '../../../../lib/humanWork/assertHumanWorkAssignee';
 import {
   WORKFLOW_COMMENT_VISIBILITY_LABELS,
   withWorkflowExplicitChoice,
   withWorkflowJsonSchemaMetadata,
   withWorkflowPicker,
   withWorkflowNotFoundPolicy,
-} from '../../jsonSchemaMetadata';
+} from '@alga-psa/event-schemas';
 import { orderTicketCommentsNewestFirst, whereCustomerAuthoredComment } from './ticketComments';
 
 /**
@@ -353,6 +355,9 @@ const reconcileWorkflowTicketAdditionalUsers = async (
   assignedTo: string | null,
   additionalUsers: WorkflowTicketResolvedAdditionalUser[]
 ): Promise<void> => {
+  // Human-work guard (R5.3): additional agents and the primary must be active internal users.
+  await assertHumanWorkAssignee(tx.trx, tx.tenantId, [assignedTo, ...additionalUsers.map((u) => u.userId)]);
+
   await tenantScopedTable(tx, 'ticket_resources')
     .where('ticket_id', ticketId)
     .delete();
@@ -439,8 +444,8 @@ export function registerTicketActions(): void {
         ['board_id', 'category_id']
       ),
       tags: z.array(z.string()).optional().describe('Optional tags (applied to ticket tags and mirrored into ticket attributes)'),
-      custom_fields: z.record(z.unknown()).optional().describe('Optional custom fields (stored in ticket attributes)'),
-      attributes: z.record(z.unknown()).optional().describe('Additional attributes (merged into ticket.attributes)'),
+      custom_fields: z.record(z.string(), z.unknown()).optional().describe('Optional custom fields (stored in ticket attributes)'),
+      attributes: z.record(z.string(), z.unknown()).optional().describe('Additional attributes (merged into ticket.attributes)'),
       initial_comment: z.object({
         body: z.string().min(1).describe('Initial comment body'),
         visibility: commentVisibilityChoice()
@@ -653,6 +658,7 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, ['comments']);
 
       const content = input.mentions?.length ? buildBlockNoteWithMentions({ body: input.body, mentions: input.mentions }) : input.body;
 
@@ -763,8 +769,8 @@ export function registerTicketActions(): void {
         ),
         due_date: isoDateTimeSchema.nullable().optional().describe('Optional due date (stored in ticket.attributes.due_date)'),
         tags: z.array(z.string()).optional().describe('Tags (stored in ticket attributes)'),
-        custom_fields: z.record(z.unknown()).optional().describe('Custom fields (stored in ticket attributes)'),
-        attributes: z.record(z.unknown()).optional().describe('Attributes merge')
+        custom_fields: z.record(z.string(), z.unknown()).optional().describe('Custom fields (stored in ticket attributes)'),
+        attributes: z.record(z.string(), z.unknown()).optional().describe('Attributes merge')
       }).describe('Patch object').refine((patch) => Object.keys(patch).length > 0, {
         message: 'Patch must include at least one field'
       }),
@@ -787,6 +793,7 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, Object.keys(input.patch));
 
       const current = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!current) {
@@ -997,6 +1004,7 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, ['assignment']);
 
       const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
@@ -1160,6 +1168,7 @@ export function registerTicketActions(): void {
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+      await retainWorkflowTicketAuthority(ctx, tx, input.ticket_id, ['status_id']);
 
       const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
       if (!ticket) {
@@ -1344,7 +1353,7 @@ export function registerTicketActions(): void {
       entity_type: z.enum(['project', 'project_task', 'asset', 'contract']).describe('Entity type'),
       entity_id: uuidSchema.describe('Entity id'),
       link_type: z.string().min(1).describe('Link type'),
-      metadata: z.record(z.unknown()).optional().describe('Optional link metadata')
+      metadata: z.record(z.string(), z.unknown()).optional().describe('Optional link metadata')
     }),
     outputSchema: z.object({
       link_id: uuidSchema,
@@ -1552,7 +1561,7 @@ export function registerTicketActions(): void {
     closed_at: isoDateTimeSchema.nullable().describe('Closed at'),
     is_closed: z.boolean().nullable().describe('Is closed'),
     response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional().describe('Waiting on (client or internal)'),
-    attributes: z.record(z.unknown()).optional().describe('Custom attributes')
+    attributes: z.record(z.string(), z.unknown()).optional().describe('Custom attributes')
   });
 
   type TicketDisplayNames = {
@@ -1733,7 +1742,7 @@ export function registerTicketActions(): void {
         return { ticket: null, latest_comment: null, latest_customer_comment: null, comments: [], attachments: [] };
       }
 
-      const include = input.include ?? {};
+      const include: Partial<NonNullable<typeof input.include>> = input.include ?? {};
       const includeAttributes = Boolean(include.attributes || include.custom_fields);
       const attrs = includeAttributes ? parseJsonMaybe(ticket.attributes) : undefined;
 
@@ -1851,7 +1860,8 @@ export function registerTicketActions(): void {
       ticket_id: uuidSchema,
       template_id: uuidSchema,
       applied: z.boolean().describe('False when the template was already on the ticket (idempotent no-op)'),
-      items_added: z.number().int()
+      items_added: z.number().int(),
+      reason: z.enum(['template-client-mismatch']).optional().describe('Set when the template is scoped to a different client than the ticket and was not applied')
     }),
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
@@ -1898,8 +1908,62 @@ export function registerTicketActions(): void {
         ticket_id: input.ticket_id,
         template_id: input.template_id,
         applied: applyResult.applied,
-        items_added: applyResult.itemsAdded
+        items_added: applyResult.itemsAdded,
+        // Workflow choice: a client-scope mismatch is a non-fatal no-op reported in the output
+        // (like the idempotent already-applied case) so a run isn't failed by template scope.
+        ...(applyResult.reason ? { reason: applyResult.reason } : {})
       };
+    })
+  });
+
+  // ---------------------------------------------------------------------------
+  // tickets.add_checklist_items
+  // ---------------------------------------------------------------------------
+  registry.register({
+    id: 'tickets.add_checklist_items',
+    version: 1,
+    inputSchema: z.object({
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
+      items: z.array(z.object({
+        item_name: z.string().trim().min(1).describe('Checklist item text'),
+        description: z.string().optional().describe('Optional item details'),
+        is_required: z.boolean().default(false).describe('Required items gate ticket closure')
+      })).min(1).describe('Checklist items to append, in order')
+    }),
+    outputSchema: z.object({
+      ticket_id: uuidSchema,
+      added: z.array(z.object({
+        checklist_item_id: uuidSchema,
+        item_name: z.string()
+      }))
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Add checklist items',
+      category: 'Business Operations',
+      description: 'Append ad-hoc checklist items (unchecked, unassigned) to a ticket'
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+
+      const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
+      if (!ticket) {
+        throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: input.ticket_id } });
+      }
+
+      const added = await addChecklistItemsToTicket(tx.trx, tx.tenantId, input.ticket_id, input.items as AddChecklistItemInput[], {
+        source: 'workflow',
+        createdBy: tx.actorUserId ?? null
+      });
+
+      await writeRunAudit(ctx, tx, {
+        operation: 'workflow_action:tickets.add_checklist_items',
+        changedData: { ticket_id: input.ticket_id, items_added: added.length },
+        details: { action_id: 'tickets.add_checklist_items', action_version: 1 }
+      });
+
+      return { ticket_id: input.ticket_id, added };
     })
   });
 }

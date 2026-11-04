@@ -45,7 +45,7 @@ async function inTx(fn: (trx: Knex.Transaction) => Promise<void>) {
 describe('inventory — RMA / reports / search (real DB, rolled back)', () => {
   it('T029/T030: advance-replacement RMA walks its full status path; bad status rejected', async () => {
     await inTx(async (trx) => {
-      const [c] = await trx('rma_cases').insert({ tenant: TENANT, rma_type: 'advance_replacement', service_id: SERVICE, status: 'open', reason: 'DOA' }).returning('rma_id');
+      const [c] = await trx('rma_cases').insert({ tenant: TENANT, rma_number: `RMA-T${Math.random().toString(36).slice(2, 10)}`, rma_type: 'advance_replacement', service_id: SERVICE, status: 'open', reason: 'DOA' }).returning('rma_id');
       const setStatus = (s: string, extra: any = {}) => trx('rma_cases').where({ tenant: TENANT, rma_id: c.rma_id }).update({ status: s, ...extra });
       await setStatus('replacement_received');
       await setStatus('replacement_deployed');
@@ -61,8 +61,8 @@ describe('inventory — RMA / reports / search (real DB, rolled back)', () => {
   it('T031: dead-units-owed lists owed cases ordered by due date (soonest first)', async () => {
     await inTx(async (trx) => {
       await trx('rma_cases').insert([
-        { tenant: TENANT, rma_type: 'advance_replacement', service_id: SERVICE, status: 'dead_unit_owed', reason: 'late', dead_unit_due_date: knex.raw("now() + interval '20 days'") },
-        { tenant: TENANT, rma_type: 'advance_replacement', service_id: SERVICE, status: 'dead_unit_owed', reason: 'soon', dead_unit_due_date: knex.raw("now() + interval '3 days'") },
+        { tenant: TENANT, rma_number: `RMA-T${Math.random().toString(36).slice(2, 10)}`, rma_type: 'advance_replacement', service_id: SERVICE, status: 'dead_unit_owed', reason: 'late', dead_unit_due_date: knex.raw("now() + interval '20 days'") },
+        { tenant: TENANT, rma_number: `RMA-T${Math.random().toString(36).slice(2, 10)}`, rma_type: 'advance_replacement', service_id: SERVICE, status: 'dead_unit_owed', reason: 'soon', dead_unit_due_date: knex.raw("now() + interval '3 days'") },
       ]);
       const owed = await trx('rma_cases')
         .where({ tenant: TENANT, status: 'dead_unit_owed' })

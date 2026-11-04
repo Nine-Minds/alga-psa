@@ -1,11 +1,11 @@
 import { describe, it } from 'vitest';
-import { buildWorkflowPayload } from '@alga-psa/workflow-streams/workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   paymentAppliedEventPayloadSchema,
   paymentFailedEventPayloadSchema,
   paymentRecordedEventPayloadSchema,
   paymentRefundedEventPayloadSchema,
-} from '@alga-psa/workflows/runtime/schemas/billingEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildPaymentAppliedPayload,
   buildPaymentFailedPayload,
@@ -31,7 +31,9 @@ describe('payment workflow event payload builders', () => {
       method: 'manual',
       receivedByUserId: USER_ID,
       gatewayTransactionId: 'ref_123',
+      source: 'manual',
     });
+    expect((payload as any).source).toBe('manual');
 
     paymentRecordedEventPayloadSchema.parse(
       buildWorkflowPayload(payload as any, {

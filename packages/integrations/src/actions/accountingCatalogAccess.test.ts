@@ -53,6 +53,8 @@ vi.mock('../lib/qbo/qboClientService', () => ({
   QBO_CLIENT_ID_SECRET_NAME: 'qbo_client_id',
   QBO_CLIENT_SECRET_SECRET_NAME: 'qbo_client_secret',
   getQboEnvironment: () => 'sandbox',
+  resolveTenantQboEnvironment: async () => 'sandbox',
+  getExplicitTenantQboEnvironment: async () => null,
   getQboOAuthScopes: () => ['com.intuit.quickbooks.accounting'],
   getQboRedirectUri: async () => 'https://example.test/callback',
   resolveQboOAuthCredentials: async () => null,
@@ -103,6 +105,12 @@ vi.mock('@alga-psa/db', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';

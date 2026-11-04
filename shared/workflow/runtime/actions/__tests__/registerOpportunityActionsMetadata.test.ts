@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { registerOpportunityActions } from '../businessOperations/opportunities';
-import { zodToWorkflowJsonSchema } from '../../jsonSchemaMetadata';
+import { zodToWorkflowJsonSchema } from '@alga-psa/event-schemas';
 
 describe('opportunity workflow actions', () => {
   it('registers all opportunity runtime actions with validation and Designer metadata', () => {

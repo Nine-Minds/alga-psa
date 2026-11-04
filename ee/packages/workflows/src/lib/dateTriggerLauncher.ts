@@ -4,7 +4,7 @@ import type { Knex } from 'knex';
 import { listPublishedWorkflowDefinitions } from '@alga-psa/workflows/persistence';
 import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime/core';
 import { computeDateTriggerFireDate } from '../../../../../shared/workflow/runtime/dateTriggerOccurrence';
-import { getDateTriggerSourceDefinition } from '../../../../../shared/workflow/runtime/dateTriggerSourceDefinitions';
+import { getDateTriggerSourceDefinition } from '@alga-psa/event-schemas';
 import { canonicalizeDateTriggerParams, validateDateTriggerParams } from '../../../../../shared/workflow/runtime/dateTriggerParams';
 import { launchPublishedWorkflowRun } from './workflowRunLauncher';
 import logger from '@alga-psa/core/logger';

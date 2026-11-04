@@ -3,11 +3,15 @@ import { registerDefaultNodes } from './nodes/registerDefaultNodes';
 import { registerEmailWorkflowActionsV2 } from './actions/registerEmailWorkflowActions';
 import { registerBusinessOperationsActionsV2 } from './actions/registerBusinessOperationsActions';
 import { registerTransformActionsV2 } from './actions/registerTransformActions';
-import { emailWorkflowPayloadSchema } from './schemas/emailWorkflowSchemas';
-import { emptyWorkflowPayloadSchema, EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF } from './schemas/emptyWorkflowPayloadSchema';
-import { workflowClockTriggerPayloadSchema, WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from './schemas/workflowClockTriggerSchema';
-import { workflowEventPayloadSchemas } from './schemas/workflowEventPayloadSchemas';
-import { dateTriggerPayloadSchemas } from './schemas/dateTriggerPayloadSchemas';
+import {
+  dateTriggerPayloadSchemas,
+  emailWorkflowPayloadSchema,
+  emptyWorkflowPayloadSchema,
+  EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF,
+  workflowClockTriggerPayloadSchema,
+  WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
+  workflowEventPayloadSchemas,
+} from '@alga-psa/event-schemas';
 
 let initialized = false;
 

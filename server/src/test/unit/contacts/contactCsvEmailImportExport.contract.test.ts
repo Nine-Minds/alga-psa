@@ -24,6 +24,12 @@ vi.mock('@alga-psa/tags/actions', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 import {
@@ -99,6 +105,7 @@ describe('contact CSV hybrid email contract', () => {
             },
           ],
           client_id: 'client-1',
+          client_name: 'Acme Client',
           role: 'Coordinator',
           notes: 'Export test',
           default_phone_number: null,
@@ -122,12 +129,6 @@ describe('contact CSV hybrid email contract', () => {
               display_order: 1,
             },
           ],
-        } as any,
-      ],
-      [
-        {
-          client_id: 'client-1',
-          client_name: 'Acme Client',
         } as any,
       ],
       { 'contact-1': [] }

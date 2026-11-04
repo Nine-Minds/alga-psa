@@ -1,4 +1,4 @@
-import type { DateTriggerSourceId } from './dateTriggerSourceDefinitions';
+import type { DateTriggerSourceId } from '@alga-psa/event-schemas';
 import { validateDateTriggerParams, type TicketStatusAgeParams } from './dateTriggerParams';
 
 /**
@@ -178,6 +178,16 @@ export const DATE_TRIGGER_OCCURRENCE_RULES: Record<WorkflowDateTriggerSourceId, 
     fromRecord: (record) => {
       const occursOn = toIsoDateOnly(record.warranty_end_date);
       return occursOn ? { occursOn, payload: { warrantyEndDate: occursOn } } : null;
+    },
+  },
+  'asset.maintenance_due': {
+    recordKind: 'asset',
+    payloadDateField: 'dueDate',
+    // The scheduler fires on the open occurrence's due_date. The Run dialog has no occurrence
+    // picker; the asset's own next_maintenance is the closest stand-in for a test payload.
+    fromRecord: (record) => {
+      const occursOn = toIsoDateOnly(record.next_maintenance ?? record.due_date);
+      return occursOn ? { occursOn, payload: { dueDate: occursOn } } : null;
     },
   },
   'ticket.status_age': {

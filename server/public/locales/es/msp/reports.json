@@ -276,7 +276,7 @@
       },
       "bucketUsage": {
         "title": "Utilización de horas de paquete",
-        "description": "Supervisar el uso de horas de paquete e identificar situaciones de exceso",
+        "description": "Supervise el uso de horas en bloque e identifique situaciones de sobrepago. Los bloques de horas prepago (de contrato y puntuales) se listan con su consumo.",
         "empty": "No se encontraron contratos basados en paquetes"
       },
       "profitability": {
@@ -305,13 +305,23 @@
       "profit": "Beneficio",
       "margin": "Margen",
       "plusVariableUsage": "+ uso variable",
-      "variableUsage": "Uso variable"
+      "variableUsage": "Uso variable",
+      "service": "Servicio",
+      "hourlyRate": "Tarifa / h",
+      "expirationDate": "Vence",
+      "neverExpires": "Nunca",
+      "adhocBlock": "Puntual",
+      "remainingValue": "Valor restante",
+      "validFrom": "Válido desde"
     },
     "statusValues": {
       "active": "Activo",
       "upcoming": "Próximo",
       "yes": "Sí",
-      "no": "No"
+      "no": "No",
+      "expired": "Vencido",
+      "voided": "Anulado",
+      "all": "Todos los estados"
     },
     "profitability": {
       "formats": {
@@ -414,6 +424,11 @@
         "allAgreements": "Todos los acuerdos",
         "currency": "Moneda"
       }
+    },
+    "columnsMenu": {
+      "label": "Columnas",
+      "title": "Columnas",
+      "reset": "Restablecer columnas predeterminadas"
     }
   },
   "contractPerformance": {

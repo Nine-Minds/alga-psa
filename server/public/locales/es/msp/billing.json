@@ -230,12 +230,14 @@
       "selectService": "Seleccionar Servicio",
       "taxable": "(Imponible)",
       "nonTaxable": "(No imponible)",
-      "calculatedOnSave": "(calculado al guardar)"
+      "calculatedOnSave": "(calculado al guardar)",
+      "credit": "Crédito"
     },
     "expanded": {
       "discount": "Descuento",
       "item": "Artículo {{number}}",
-      "markedForRemoval": "Marcado para su eliminación"
+      "markedForRemoval": "Marcado para su eliminación",
+      "credit": "Crédito"
     },
     "fields": {
       "service": "Servicio",
@@ -247,10 +249,18 @@
       "applyDiscountTo": "Aplicar descuento a",
       "entireInvoice": "Factura completa",
       "rate": "Tarifa ({{currencySymbol}})",
-      "description": "Descripción"
+      "description": "Descripción",
+      "creditUnit": "Crédito por unidad ({{currencySymbol}})",
+      "taxTreatment": "Tratamiento fiscal",
+      "nonTaxable": "No imponible",
+      "location": "Ubicación",
+      "clientDefaultLocation": "Predeterminado del cliente",
+      "billingProfile": "Perfil de facturación",
+      "clientDefaultProfile": "Predeterminado del cliente"
     },
     "placeholders": {
-      "discountDescription": "por ejemplo, descuento por pago anticipado"
+      "discountDescription": "por ejemplo, descuento por pago anticipado",
+      "creditDescription": "p. ej., crédito de cortesía"
     },
     "actions": {
       "add": "Agregar",
@@ -267,11 +277,15 @@
       "invoiceTotal": "{{percentage}}% del total de la factura",
       "amount": "Cantidad: -{{currencySymbol}}{{amount}}",
       "appliedTo": "Aplicado a: {{description}}",
-      "subtotal": "Subtotal: {{currencySymbol}}{{amount}}"
+      "subtotal": "Subtotal: {{currencySymbol}}{{amount}}",
+      "credit": "Crédito"
     },
     "options": {
       "percentage": "Porcentaje",
       "fixedAmount": "Monto Fijo"
+    },
+    "errors": {
+      "serviceRequired": "Asigne un servicio a este cargo antes de guardar."
     }
   },
   "contractLineServices": {
@@ -402,7 +416,8 @@
       "createBatch": "Crear lote",
       "creating": "Creando...",
       "cancelBatch": "Cancelar lote",
-      "retry": "Reintentar"
+      "retry": "Reintentar",
+      "resolveUnmapped": "Resolver elementos sin asignar"
     },
     "states": {
       "loadingBatches": "Cargando lotes...",
@@ -459,7 +474,8 @@
       "executeError": "No se pudo ejecutar el lote",
       "cancelled": "Lote cancelado",
       "cancelError": "No se pudo cancelar el lote",
-      "realmRequired": "Elija una empresa contable conectada antes de crear la exportación."
+      "realmRequired": "Elija una empresa contable conectada antes de crear la exportación.",
+      "artifactDownloadError": "No se puede descargar este archivo exportado."
     },
     "status": {
       "pending": "Pendiente",
@@ -470,6 +486,41 @@
       "failed": "Fallido",
       "cancelled": "Cancelado",
       "needsAttention": "Requiere atencion"
+    },
+    "artifacts": {
+      "title": "Archivos entregados",
+      "download": "Descargar",
+      "unavailable": "Este lote histórico no tiene ningún archivo guardado. No se puede recuperar sin ejecutar una nueva exportación.",
+      "storageFallback": "Guardado en una copia de seguridad de la base de datos"
+    },
+    "unmapped": {
+      "title": "Elementos de QuickBooks sin asignar",
+      "descriptionDesktop": "Estos necesitan un cliente o artículo de QuickBooks Desktop antes de poder exportarse. Créelos como entradas nuevas (el archivo IIF los añadirá a QuickBooks Desktop) o vincúlelos a una entrada existente de QuickBooks con exactamente el mismo nombre. Sus elecciones se guardan como asignaciones de QuickBooks Desktop, por lo que las próximas exportaciones no volverán a preguntar.",
+      "descriptionCsv": "Estos elementos aún no tienen asignación en QuickBooks. Expórtelos con el nombre indicado (QuickBooks añade los nombres nuevos al importar el CSV) o vincúlelos a una entrada existente de QuickBooks con exactamente el mismo nombre. Sus elecciones se guardan como asignaciones, por lo que las próximas exportaciones no volverán a preguntar.",
+      "permissionNotice": "Para guardar asignaciones de QuickBooks se requiere la capacidad de gestionar asignaciones. Consulte a un administrador o asigne estos elementos desde la configuración de QuickBooks.",
+      "kinds": {
+        "client": "Cliente",
+        "service": "Servicio",
+        "product": "Producto",
+        "discount": "Descuento"
+      },
+      "modes": {
+        "create": "Crear nuevo",
+        "existing": "Ya existe en QuickBooks"
+      },
+      "nameAria": "Nombre en QuickBooks para {{name}}",
+      "desktopNote": "Los productos nuevos usan el tipo de artículo elegido en la configuración de QuickBooks Desktop. Elija \"Ya existe en QuickBooks\" para todo lo que ya figure en su archivo de empresa, de modo que no se sobrescriban sus datos.",
+      "actions": {
+        "cancel": "Cancelar",
+        "goToMappings": "Ir a las asignaciones de QuickBooks",
+        "save": "Guardar asignaciones y exportar"
+      },
+      "toast": {
+        "saved": "Asignaciones de QuickBooks guardadas",
+        "saveError": "No se pudieron guardar las asignaciones de QuickBooks"
+      },
+      "postsTo": "Se registra en {{account}}",
+      "postsToDefault": "Se registra en la cuenta de ingresos predeterminada"
     }
   },
   "templateRenderer": {
@@ -633,7 +684,8 @@
       "referenceMissing": "El cliente, contrato o registro de facturación seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
       "duplicate": "Esta asignación de contrato del cliente ya existe.",
       "missingField": "Falta un campo obligatorio del contrato del cliente.",
-      "missingFieldNamed": "Falta un campo obligatorio del contrato del cliente: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio del contrato del cliente: {{field}}.",
+      "alreadyActiveScheduled": "Este contrato ya está activo y comienza el {{startDate}}; no hay nada que activar."
     },
     "cycle": {
       "cannotCreateNext": "No se puede crear el siguiente ciclo de facturación en este momento"
@@ -707,7 +759,25 @@
         "create": "Permiso denegado: no se pueden crear lotes de exportación contable",
         "read": "Permiso denegado: no se puede acceder a los lotes de exportación contable",
         "update": "Permiso denegado: no se pueden modificar los lotes de exportación contable",
-        "execute": "Permiso denegado: no se pueden ejecutar los lotes de exportación contable"
+        "execute": "Permiso denegado: no se pueden ejecutar los lotes de exportación contable",
+        "createMappings": "Para crear asignaciones de QuickBooks desde una exportación se requieren las capacidades de exportar y de gestionar asignaciones"
+      },
+      "quickbooksMapping": {
+        "noDecisions": "Elija cómo tratar al menos un elemento sin asignar.",
+        "stale": "Uno de los elementos seleccionados ya no está sin asignar en este lote. Actualice e inténtelo de nuevo.",
+        "duplicateSubmission": "\"{{algaName}}\" se envió dos veces.",
+        "invalidMode": "Elija crear o existente para \"{{algaName}}\".",
+        "nameRequired": "Introduzca un nombre de QuickBooks para \"{{algaName}}\".",
+        "nameInvalidCharacters": "El nombre de QuickBooks para \"{{algaName}}\" no puede contener tabulaciones, saltos de línea ni comillas dobles.",
+        "nameTooLong": "El nombre de QuickBooks para \"{{algaName}}\" supera los {{maxLength}} caracteres.",
+        "duplicateNewName": "\"{{qbName}}\" se usa para más de una entrada nueva de QuickBooks.",
+        "duplicateClientName": "\"{{qbName}}\" está elegido para más de un cliente. Cada nombre de QuickBooks solo puede asignarse a uno.",
+        "duplicateItemName": "\"{{qbName}}\" está elegido para más de un artículo. Cada nombre de QuickBooks solo puede asignarse a uno.",
+        "nameTakenByClient": "\"{{qbName}}\" ya está asignado a otro cliente, por lo que no puede usarse también para \"{{algaName}}\". Elija otro nombre de QuickBooks o cambie la asignación existente en las asignaciones de QuickBooks.",
+        "nameTakenByItem": "\"{{qbName}}\" ya está asignado a otro artículo, por lo que no puede usarse también para \"{{algaName}}\". Elija otro nombre de QuickBooks o cambie la asignación existente en las asignaciones de QuickBooks.",
+        "unsupportedBatch": "Este lote no es una exportación de QuickBooks Desktop ni de QuickBooks CSV.",
+        "nameTakenConcurrently": "Uno de estos nombres de QuickBooks se acaba de asignar a otra entrada. Actualice la lista y elija otro nombre.",
+        "desktopIncomeAccountRequired": "Defina la cuenta de ingresos predeterminada en la configuración de QuickBooks Desktop antes de asignar artículos desde una exportación."
       }
     },
     "vendorBill": {

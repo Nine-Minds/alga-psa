@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTestDbConnection } from '@main-test-utils/dbConfig';
 import { createDateTriggerScanHandler } from '../../../../../packages/jobs/src/lib/handlers/dateTriggerScanHandler';
 import { launchDateTriggeredWorkflows } from '../../../../packages/workflows/src/lib/dateTriggerLauncher';
-import { dateTriggerPayloadSchemas } from '../../../../../shared/workflow/runtime/schemas/dateTriggerPayloadSchemas';
+import { dateTriggerPayloadSchemas } from '@alga-psa/event-schemas/schemas';
 import { TicketModel } from '../../../../../shared/models/ticketModel';
 import {
   writeTicketActivity,
@@ -18,12 +18,12 @@ import { ticketStatusClockPatch } from '../../../../../shared/lib/ticketStatusCl
 /**
  * "Ticket in status for N days" against a real database: dedup across scans, clock resets, board
  * scope, repeats, the no-activity condition and the payload. Every test runs in a transaction that is
- * rolled back. Status-change timing uses the real DB clock (ticketStatusClockPatch writes now()), so
+ * rolled back. Status-change timing uses the app clock (ticketStatusClockPatch binds new Date()), so
  * those tests anchor their scan dates on the current time.
  */
 
 const mocks = vi.hoisted(() => ({ publish: vi.fn(), temporalStart: vi.fn() }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: mocks.publish }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: mocks.publish, publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 vi.mock('../../../../packages/workflows/src/lib/workflowRuntimeV2Temporal', async (importOriginal) => ({
   ...((await importOriginal()) as typeof import('../../../../packages/workflows/src/lib/workflowRuntimeV2Temporal')),
   startWorkflowRuntimeV2TemporalRun: mocks.temporalStart,
@@ -82,7 +82,7 @@ describe('ticket.status_age date trigger integration', () => {
         const trigger = { type: 'date', source: 'ticket.status_age', offsetDays: 0, localTime: '00:00', timezone: 'UTC', ...(params ? { params } : {}) };
         const definition = { trigger, payloadSchemaRef: REF, steps: [] };
         await trx('workflow_definitions').insert({ workflow_id: workflowId, tenant, name: `Status age ${workflowId.slice(0, 4)}`, payload_schema_ref: REF, trigger: JSON.stringify(trigger), draft_definition: JSON.stringify(definition), draft_version: 1, status: 'published' });
-        await trx('workflow_definition_versions').insert({ workflow_id: workflowId, version: 1, definition_json: JSON.stringify(definition), published_at: '2026-01-01' });
+        await trx('workflow_definition_versions').insert({ workflow_id: workflowId, tenant, version: 1, definition_json: JSON.stringify(definition), published_at: '2026-01-01' });
         return workflowId;
       };
       const scan = async (at: Date | string) => {

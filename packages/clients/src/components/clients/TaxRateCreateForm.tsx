@@ -14,9 +14,10 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 interface TaxRateCreateFormProps {
     onSuccess: () => Promise<void>; // Callback on successful creation
     onError: (error: Error) => void; // Callback on error
+    onCancel: () => void; // Callback to close the parent drawer
 }
 
-const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onError }) => {
+const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onError, onCancel }) => {
     const { t } = useTranslation('msp/clients');
     const [regionCode, setRegionCode] = useState('');
     const [percentage, setPercentage] = useState(''); // Store as string for input flexibility
@@ -248,15 +249,11 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
             </div>
             {/* Footer using standard div */}
             <div className="flex justify-end gap-2 pt-4">
-                {/* Use a standard button for Cancel, Drawer closes via onOpenChange prop in parent */}
-                {/* We need a way to trigger the close from here. A simple approach is to simulate clicking the built-in close button if available, or rely on the parent managing the open state */}
+                {/* Cancel delegates closing to the parent, which owns the Drawer open state */}
                 <Button id="cancel-create-tax-rate-button" type="button" variant="ghost" onClick={() => {
                     setHasAttemptedSubmit(false);
                     setValidationErrors([]);
-                    // Attempt to find and click the Drawer's default close button
-                    const closeButton = document.querySelector('button[aria-label="Close"]') as HTMLElement | null;
-                    closeButton?.click();
-                    // If that doesn't work, the parent's onOpenChange(false) should handle it
+                    onCancel();
                 }} disabled={isSubmitting}>{t('taxRateCreateForm.cancel', { defaultValue: 'Cancel' })}</Button>
                 <Button 
                     id="submit-create-tax-rate-button" 

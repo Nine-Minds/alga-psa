@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers';
-import { capacityThresholdReachedEventPayloadSchema } from '../../../runtime/schemas/schedulingEventSchemas';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
+import { capacityThresholdReachedEventPayloadSchema } from '@alga-psa/event-schemas';
 import { buildCapacityThresholdReachedPayload } from '../capacityThresholdEventBuilders';
 
 describe('capacityThresholdEventBuilders', () => {

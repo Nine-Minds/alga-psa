@@ -1,3 +1,5 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
+
 function requireNonEmpty(value: string, field: string): string {
   if (!value) throw new Error(`${field} is required`);
   return value;
@@ -17,12 +19,12 @@ export function buildNotificationSentPayload(params: {
   templateId?: string;
   contextType?: string;
   contextId?: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'NOTIFICATION_SENT'> {
   requireNonEmpty(params.notificationId, 'notificationId');
   requireNonEmpty(params.channel, 'channel');
   requireNonEmpty(params.recipientId, 'recipientId');
 
-  return {
+  return builtWorkflowPayload('NOTIFICATION_SENT', {
     notificationId: params.notificationId,
     channel: params.channel,
     recipientId: params.recipientId,
@@ -30,7 +32,7 @@ export function buildNotificationSentPayload(params: {
     ...(params.templateId ? { templateId: params.templateId } : {}),
     ...(params.contextType ? { contextType: params.contextType } : {}),
     ...(params.contextId ? { contextId: params.contextId } : {}),
-  };
+  });
 }
 
 export function buildNotificationDeliveredPayload(params: {
@@ -39,18 +41,18 @@ export function buildNotificationDeliveredPayload(params: {
   recipientId: string;
   deliveredAt?: string;
   providerMessageId?: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'NOTIFICATION_DELIVERED'> {
   requireNonEmpty(params.notificationId, 'notificationId');
   requireNonEmpty(params.channel, 'channel');
   requireNonEmpty(params.recipientId, 'recipientId');
 
-  return {
+  return builtWorkflowPayload('NOTIFICATION_DELIVERED', {
     notificationId: params.notificationId,
     channel: params.channel,
     recipientId: params.recipientId,
     ...withOptionalTimestamp('deliveredAt', params.deliveredAt),
     ...(params.providerMessageId ? { providerMessageId: params.providerMessageId } : {}),
-  };
+  });
 }
 
 export function buildNotificationFailedPayload(params: {
@@ -61,13 +63,13 @@ export function buildNotificationFailedPayload(params: {
   errorCode?: string;
   errorMessage: string;
   retryable?: boolean;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'NOTIFICATION_FAILED'> {
   requireNonEmpty(params.notificationId, 'notificationId');
   requireNonEmpty(params.channel, 'channel');
   requireNonEmpty(params.recipientId, 'recipientId');
   requireNonEmpty(params.errorMessage, 'errorMessage');
 
-  return {
+  return builtWorkflowPayload('NOTIFICATION_FAILED', {
     notificationId: params.notificationId,
     channel: params.channel,
     recipientId: params.recipientId,
@@ -75,7 +77,7 @@ export function buildNotificationFailedPayload(params: {
     ...(params.errorCode ? { errorCode: params.errorCode } : {}),
     errorMessage: params.errorMessage,
     ...(typeof params.retryable === 'boolean' ? { retryable: params.retryable } : {}),
-  };
+  });
 }
 
 export function buildNotificationReadPayload(params: {
@@ -84,16 +86,16 @@ export function buildNotificationReadPayload(params: {
   recipientId: string;
   readAt?: string;
   client?: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'NOTIFICATION_READ'> {
   requireNonEmpty(params.notificationId, 'notificationId');
   requireNonEmpty(params.channel, 'channel');
   requireNonEmpty(params.recipientId, 'recipientId');
 
-  return {
+  return builtWorkflowPayload('NOTIFICATION_READ', {
     notificationId: params.notificationId,
     channel: params.channel,
     recipientId: params.recipientId,
     ...withOptionalTimestamp('readAt', params.readAt),
     ...(params.client ? { client: params.client } : {}),
-  };
+  });
 }

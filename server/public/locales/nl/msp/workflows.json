@@ -535,6 +535,7 @@
         "renewal": "de beslisdatum voor verlenging van het contract",
         "contractEnd": "de einddatum van het contract",
         "warrantyEnd": "de einddatum van de garantie van het asset",
+        "maintenanceDue": "de vervaldatum van het onderhoud van het asset",
         "ticketStatusAge": "de dag waarop het ticket het aantal dagen in de status bereikt"
       }
     }
@@ -565,7 +566,8 @@
       "exportCsv": "CSV exporteren",
       "exportJson": "JSON exporteren",
       "close": "Sluiten",
-      "viewRunDetails": "Uitvoeringsdetails bekijken"
+      "viewRunDetails": "Uitvoeringsdetails bekijken",
+      "backToEvents": "Terug naar gebeurtenissen"
     },
     "table": {
       "schemaConflict": "catalogus ≠ indiening",
@@ -627,7 +629,8 @@
     },
     "actions": {
       "refresh": "Vernieuwen",
-      "loadMore": "Meer laden"
+      "loadMore": "Meer laden",
+      "backToList": "Terug naar dead-letter"
     },
     "table": {
       "columns": {
@@ -793,6 +796,7 @@
       "dateSourceRenewal": "Beslissingsdatum voor contractverlenging",
       "dateSourceContractEnd": "Einddatum contract",
       "dateSourceWarranty": "Einde garantie asset",
+      "dateSourceMaintenanceDue": "Onderhoud asset vervallen",
       "dateOffset": "Dagen",
       "dateDirection": "Tijdstip",
       "before": "Voor",
@@ -879,6 +883,7 @@
       "add": "Toevoegen",
       "remove": "Verwijderen",
       "empty": "Nog geen koppelingen.",
+      "nameRequired": "Voer een naam in voor deze koppeling.",
       "expressionLabel": "Expressie"
     },
     "schemaForm": {
@@ -1062,6 +1067,26 @@
           "label": "Koppelingsnaamruimten weergeven",
           "description": "Geef de naamruimten van workflow-entiteitskoppelingen weer die door deze tenant worden gebruikt."
         }
+      },
+      "assets.get_maintenance": {
+        "label": "Assetonderhoud ophalen",
+        "description": "Zoek plan en onderhoudsbeurt via plan, beurt of gekoppeld ticket."
+      },
+      "assets.create_maintenance_ticket": {
+        "label": "Onderhoudsticket maken",
+        "description": "Maak en koppel een ticket voor een open onderhoudsbeurt."
+      },
+      "assets.complete_maintenance": {
+        "label": "Assetonderhoud voltooien",
+        "description": "Leg onderhoud vast en open de volgende onderhoudsbeurt."
+      },
+      "assets.skip_maintenance": {
+        "label": "Assetonderhoud overslaan",
+        "description": "Sla een onderhoudsbeurt over met een reden en open de volgende."
+      },
+      "assets.set_maintenance_paused": {
+        "label": "Assetonderhoud pauzeren of hervatten",
+        "description": "Pauzeer of hervat een onderhoudsplan."
       }
     },
     "validation": {
@@ -1285,6 +1310,10 @@
         "data-store": {
           "label": "Gegevensopslag",
           "description": "Duurzame workflow-status lezen en schrijven over uitvoeringen heen."
+        },
+        "maintenance": {
+          "label": "Onderhoud",
+          "description": "Zoek onderhoud, koppel tickets, voltooi of sla onderhoudsbeurten over en pauzeer of hervat plannen."
         }
       },
       "noMatches": {
@@ -1476,6 +1505,9 @@
         "contains": "bevat",
         "starts_with": "begint met",
         "ends_with": "eindigt op",
+        "not_contains": "bevat niet",
+        "not_starts_with": "begint niet met",
+        "not_ends_with": "eindigt niet op",
         "is_empty": "is leeg",
         "is_not_empty": "is niet leeg"
       },
@@ -1517,7 +1549,9 @@
         "summary_one": "{{count}} gebeurtenis overgeslagen in de afgelopen {{days}} dagen — {{reasons}}",
         "summary_other": "{{count}} gebeurtenissen overgeslagen in de afgelopen {{days}} dagen — {{reasons}}",
         "lastSkipped": "Laatst overgeslagen {{when}}",
-        "view": "Overgeslagen gebeurtenissen bekijken"
+        "view": "Overgeslagen gebeurtenissen bekijken",
+        "summary_few": "{{count}} gebeurtenissen overgeslagen in de afgelopen {{days}} dagen — {{reasons}}",
+        "summary_many": "{{count}} gebeurtenissen overgeslagen in de afgelopen {{days}} dagen — {{reasons}}"
       },
       "drawer": {
         "title": "Overgeslagen gebeurtenissen",
@@ -1589,6 +1623,9 @@
         "client_id": "Kies eerst een vaste klant om locatieopties te laden."
       },
       "ticket-category": {
+        "board_id": "Kies eerst een vast bord om categorieopties te laden."
+      },
+      "ticket-category-any": {
         "board_id": "Kies eerst een vast bord om categorieopties te laden."
       },
       "ticket-status": {
@@ -1860,7 +1897,9 @@
     "insertionPointLabel": "Nieuwe stappen komen hier",
     "emptyBranchPrompt": "Voeg een stap toe aan deze tak",
     "emptyActivePrompt": "Nieuwe stappen komen hier. Kies er een uit het palet.",
-    "stepCount": "({{count}} stappen)"
+    "stepCount": "({{count}} stappen)",
+    "stepCount_few": "({{count}} stappen)",
+    "stepCount_many": "({{count}} stappen)"
   },
   "expressionEditor": {
     "ariaLabel": "Expressie-editor",
@@ -2373,7 +2412,12 @@
       "currentRun": "Uitvoering {{id}}",
       "backToWorkflow": "Terug naar workflow"
     },
-    "title": "Workflow-uitvoeringsstudio"
+    "title": "Workflow-uitvoeringsstudio",
+    "communityEdition": {
+      "title": "Pro-functie",
+      "description": "De studio voor workflowuitvoeringen is alleen beschikbaar in Pro.",
+      "runId": "Uitvoerings-ID: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -3146,6 +3190,10 @@
         "selectBoard": "Selecteer of voer een bord in",
         "selectPriority": "Selecteer of voer een prioriteit in"
       }
+    },
+    "proFeature": {
+      "title": "Pro-functie",
+      "description": "Het workflowsysteem is alleen beschikbaar in Pro. Upgrade uw installatie om toegang te krijgen tot deze functie."
     }
   },
   "toggle": {
@@ -3284,5 +3332,29 @@
       "label": "Causaliteitsdiepte overschreden",
       "hint": "De keten van veroorzaakte gebeurtenissen overschreed de maximale diepte; overgeslagen om op hol geslagen lussen te voorkomen."
     }
+  },
+  "createFromTicket": {
+    "title": "Workflow maken van ticket",
+    "description": "Maakt een conceptworkflow waarvan de eerste stap een ticket zoals #{{number}} aanmaakt. Er wordt niets gepubliceerd.",
+    "cancel": "Annuleren",
+    "creating": "Aanmaken…",
+    "submit": "Concept maken en ontwerper openen",
+    "nameLabel": "Workflownaam",
+    "triggerLabel": "Trigger",
+    "triggerManual": "Handmatig (op verzoek uitvoeren)",
+    "ticketCreatedWarning": "Deze workflow maakt een ticket aan, en een nieuw ticket activeert deze trigger opnieuw. Voeg vóór het publiceren een voorwaarde toe om een lus te voorkomen.",
+    "includeLegend": "Overnemen uit het ticket",
+    "propertiesAlways": "Titel, beschrijving, klant, contactpersoon, bord, categorie en prioriteit worden altijd overgenomen.",
+    "includeAssignment": "Toewijzing",
+    "includeTags": "Labels",
+    "includeCustomFields": "Aangepaste velden",
+    "includeChecklist": "Controlelijst",
+    "errors": {
+      "nameRequired": "Workflownaam is vereist",
+      "generic": "Het conceptworkflow kon niet worden aangemaakt"
+    },
+    "includeCustomFieldsCount": "Aangepaste velden ({{n}})",
+    "includeChecklistCount": "Controlelijst ({{total}} items: {{templates}} uit sjablonen / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Items uit sjablonen worden opnieuw toegepast vanuit het huidige sjabloon, dus wijzigingen op dit ticket worden niet overgenomen."
   }
 }

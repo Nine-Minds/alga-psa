@@ -1,15 +1,16 @@
 # QuickBooks Integration (Admin Guide)
 
-AlgaPSA reaches QuickBooks two ways. **QuickBooks Online** connects over OAuth:
+AlgaPSA reaches QuickBooks three ways. **QuickBooks Online** connects over OAuth:
 AlgaPSA sends invoices to your QuickBooks company through Intuit's API and reads
-back what QuickBooks records. **QuickBooks CSV** needs no connection at all — it
-produces files you import into QuickBooks yourself. QuickBooks Online is a
-**Pro** feature and the panel appears only in Pro; QuickBooks CSV is available in
-every edition. Each tenant connects its own QuickBooks company and keeps its own
+back what QuickBooks records. **QuickBooks CSV** and **QuickBooks Desktop
+(IIF)** need no connection at all — they produce files you import into
+QuickBooks yourself. QuickBooks Online is a **Pro** feature and the panel appears
+only in Pro; QuickBooks CSV and QuickBooks Desktop are available in every
+edition. Each tenant connects its own QuickBooks company and keeps its own
 mappings.
 
-Both paths are configured at **Settings → Integrations → Accounting**. Pick a
-card there to open its settings. Exports for either one run from **Billing →
+All three are configured at **Settings → Integrations → Accounting**. Pick a
+card there to open its settings. Exports for every one run from **Billing →
 Accounting Exports**.
 
 ## Choose a path
@@ -21,9 +22,14 @@ Accounting Exports**.
 - **QuickBooks CSV.** AlgaPSA writes a CSV compatible with QuickBooks' invoice
   import and you upload it. Nothing leaves AlgaPSA on its own, and you enter the
   QuickBooks-side identifier for each mapping by hand.
+- **QuickBooks Desktop (IIF).** AlgaPSA writes an IIF file for QuickBooks
+  Desktop's **File → Utilities → Import → IIF Files**. It has its own mappings
+  and account settings on the QuickBooks Desktop (IIF) setup card. See
+  [Configure QuickBooks Desktop (IIF)](#configure-quickbooks-desktop-iif).
 
 You can keep CSV configured while you use QuickBooks Online. They store their
-mappings separately and do not interfere.
+mappings separately and do not interfere. QuickBooks Desktop also stores its
+mappings separately.
 
 ## Which Intuit app you connect through
 
@@ -70,6 +76,20 @@ Once a company is connected, a setup wizard walks you through matching your
 AlgaPSA clients to QuickBooks customers, reviewing invoice history, and going
 live.
 
+After the initial wizard, you can continue to manage client-to-customer links
+from the **Customer Mappings** panel on the settings page. Two row actions are
+available for each mapped client:
+
+- **Re-link** — retargets the mapping to a different QuickBooks customer. The
+  underlying `external_entity_id` is moved to the new customer, so all future
+  exports and payments flow to the correct account. An audit entry records the
+  before and after customer.
+- **Unlink** — removes the mapping entirely, returning the client to an
+  unmapped state. Use this when a client was linked to the wrong customer and
+  you need to start over rather than immediately selecting a replacement. After
+  unlinking, the client surfaces in the wizard as unmatched with suggested
+  candidates, ready to be re-mapped.
+
 ## Register your own Intuit app
 
 Do this when you self-host and have not configured a deployment-wide app, or
@@ -91,9 +111,18 @@ happens on the Intuit side except the last two.
      shows them on the Production tab after you complete its app assessment
      questionnaire.
 
-   The settings page shows which one AlgaPSA is calling under **Intuit
-   Environment**, set by the `QBO_ENVIRONMENT` variable on your deployment. Use
-   the matching keys; a Development key against Production fails at sign-in.
+   Which one you need is the **Intuit Environment** setting on the Intuit App
+   card, chosen per tenant: **Production** for real QuickBooks companies,
+   **Sandbox** for an Intuit test company. It defaults to the deployment-wide
+   `QBO_ENVIRONMENT` value (production when unset on a production build), and a
+   tenant admin can change it while nothing is connected — switching
+   environments requires disconnecting first, because a realm ID and its tokens
+   exist only in the environment they were authorized in.
+
+   Use the keys that match: a Development key against Production fails at
+   sign-in, and a Production key against a sandbox company fails the same way.
+   Because Intuit accepts only Development keys against sandbox companies, a
+   tenant on **Sandbox** must connect through its own Intuit app — see below.
 4. On the same **Keys & credentials** page, find **Redirect URIs** and add the
    **Redirect URI** shown on the AlgaPSA settings page. Intuit matches it
    character for character, so copy and paste rather than retyping. Save the
@@ -113,6 +142,13 @@ and `qbo_client_secret` are accepted too) rather than pasting it into a tenant's
 card. Optionally set `QBO_REDIRECT_URI` if the public callback URL differs from
 `NEXT_PUBLIC_BASE_URL` plus `/api/integrations/qbo/callback`.
 
+A shared app is registered with one set of keys, normally Production. So a
+tenant that selects **Sandbox** cannot use it: AlgaPSA blocks the connection
+with a message naming the Intuit app's Development keys, and that tenant has to
+register its own app and save its Development keys on the card. This is how a
+hosted tenant tests against an Intuit sandbox company without changing anything
+for the rest of the deployment.
+
 Save both tenant keys together. If only one of the two is stored, connecting
 fails with a message that the client ID and secret were not fully configured,
 and AlgaPSA does **not** fall back to the deployment's shared app. That is
@@ -125,14 +161,25 @@ The mapping card appears once a company is connected, with three tabs. Each one
 loads its QuickBooks side live from the connected company, so you pick from real
 records:
 
-- **Items / Services** — your AlgaPSA services to QuickBooks items. An exported
-  invoice line carries the item you choose here.
+- **Items / Services** — your AlgaPSA services and discounts to QuickBooks
+  items. An exported invoice line carries the item you choose here. Multiple
+  AlgaPSA services can share the same QuickBooks item — for example, several
+  support-tier services can all map to a single "Managed Services" item in
+  QuickBooks. Clients, invoices, payments, tax codes, and payment terms remain
+  exclusive to one QuickBooks record each.
 - **Tax Codes** — your AlgaPSA tax regions to QuickBooks tax codes.
 - **Payment Terms** — your AlgaPSA payment terms to QuickBooks terms.
 
 Mappings are scoped to the connected company and stored in
 `tenant_external_entity_mappings`. Add, edit, and delete them from the row menu
 in each tab.
+
+When importing QuickBooks items through the reconciliation wizard's **Products &
+Services** step, any QBO item that already has more than one AlgaPSA service
+mapped to it is skipped with a visible reason. The skip is by design: importing
+such an item would require choosing which service owns the catalog record, a
+decision AlgaPSA leaves to the MSP. All other items in the same import batch
+still proceed normally.
 
 ## Read the tax code list
 
@@ -193,16 +240,102 @@ These mappings are stored in `tenant_external_entity_mappings` under
 mappings. The external side is typed in by hand, since there is no connection to
 read a catalog from.
 
+## Configure QuickBooks Desktop (IIF)
+
+Select **QuickBooks Desktop (IIF)** at **Settings → Integrations → Accounting**.
+
+> **Back up your company file first.** When QuickBooks Desktop imports an IIF
+> file, it adds every customer, item, account, or term name it does not
+> recognise, and the import cannot be undone. Try your first import on a backup
+> copy.
+
+1. **IIF export settings.** Enter these names exactly as they appear in your
+   Chart of Accounts and Item List:
+   - **Accounts Receivable account**: defaults to `Accounts Receivable`.
+   - **Default income account**: used for items mapped from an export prompt,
+     and for any Services or Discounts mapping without its own account.
+   - **Sales tax liability account**: defaults to `Sales Tax Payable`. Used
+     unless a tax region's Tax Codes mapping names another account.
+   - **Default sales tax item**: used for taxed invoices whose Tax Codes
+     mapping does not name a sales tax item.
+   - **New product item type**: the QuickBooks item type an export uses when it
+     creates a new item for an AlgaPSA product. The default is **Non-inventory
+     Part**: AlgaPSA stays the inventory system of record and QuickBooks only
+     records the sale. If you choose **Inventory Part**, also enter the
+     inventory asset and cost of goods sold accounts. AlgaPSA's stock receipts
+     are not exported, so QuickBooks on-hand quantities will go negative unless
+     you also enter stock there.
+2. **Mappings.** All QuickBooks Desktop mappings are on the same card. Enter
+   QuickBooks Desktop list names exactly as they appear in your company file:
+   - **Clients**: the QuickBooks Desktop customer each client is invoiced as.
+   - **Items / Services** and **Discounts**: the income account the line posts
+     to, and the **Desktop item name** it uses. The item is required: every
+     invoice line names a QuickBooks item, so lines carry a quantity and rate,
+     reduce inventory, and appear in item reports. Several services can share
+     an account or an item.
+   - **Tax Codes**: each region's sales tax liability account, and optionally
+     its **sales tax item or group**. Regions without an item use the default
+     sales tax item.
+   - **Payment Terms**: the QuickBooks Desktop terms name. Unmapped payment
+     terms are left blank.
+
+   Every client, service, product and discount on an exported invoice needs a
+   mapping with an item. You don't have to set them all up in advance: the
+   export prompts for anything missing (see
+   [Export invoices and import tax back](#export-invoices-and-import-tax-back)).
+   To map many services at once, use **Bulk map** on the Items / Services tab:
+   enter the income account and the Desktop item name on each row. A row is
+   saved only when both are filled.
+
+Each invoice becomes one QuickBooks invoice. Its lines come from the mapped
+items, and it carries one sales tax line for the tax AlgaPSA calculated.
+QuickBooks Desktop allows one sales tax item per invoice. An invoice whose tax
+regions map to different sales tax items fails to export with an error instead.
+QuickBooks Desktop cannot return calculated tax to AlgaPSA. Invoices set to
+external tax export without a tax line and keep their taxable flags.
+
 ## Export invoices and import tax back
 
-Go to **Billing → Accounting Exports** to create an export batch, run it, and
-download the file. AlgaPSA validates the batch first. A batch missing mappings
+Go to **Billing → Accounting Exports** to create an export batch and run it.
+For QuickBooks CSV and QuickBooks Desktop, download the file from the batch
+details once the batch has run.
+AlgaPSA validates the batch first. A batch missing mappings
 moves to `needs_attention` and lists what to map; add the mappings and run it
 again.
+
+For QuickBooks CSV and QuickBooks Desktop, a batch that stops on unmapped
+clients, services, products or discounts opens a prompt instead. For QuickBooks
+Desktop this includes services and discounts whose mapping has no item name
+yet. You can also reopen it with **Resolve unmapped items** in the batch
+details. For each entry, choose:
+
+- **Create new**: add it to QuickBooks under the name shown, which you can edit.
+  For QuickBooks Desktop, the IIF file defines the new customer (with its
+  billing address, phone and email) or item (type, description, income account
+  and price) before the invoices that use it. If an invoice fails to export,
+  the next file that includes it defines them again. For QuickBooks CSV,
+  QuickBooks adds the new name when you import the file.
+- **Already in QuickBooks**: link to an existing QuickBooks entry with exactly
+  that name. Nothing is written to QuickBooks for it, so its existing details
+  are not overwritten.
+
+**Save mappings and export** saves your choices as QuickBooks mappings and
+runs the batch again, and later exports use those mappings without asking.
+**Go to QuickBooks mappings** opens the mapping tabs instead. Saving from the
+prompt requires the manage-mappings capability as well as export access.
+
+Serial numbers are not included in QuickBooks exports.
 
 Once an invoice exports successfully, AlgaPSA records an invoice mapping and
 excludes that invoice from later exports for the same integration. You cannot
 export the same invoice twice.
+
+For QuickBooks Desktop, the downloadable IIF file, invoice mappings and new-entry
+delivery markers commit together. A failed export does not mark its invoices or
+new entries as exported; correct the reported error and retry the batch.
+Invoices already voided are omitted. If an invoice is voided after file
+preparation but before finalization, the batch fails rather than publishing
+stale invoice data.
 
 If your tenant delegates tax calculation to QuickBooks, the same screen imports
 tax amounts back from QuickBooks report CSVs onto the matching invoices.
