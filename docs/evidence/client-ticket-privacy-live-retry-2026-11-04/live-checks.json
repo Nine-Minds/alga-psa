@@ -1,0 +1,14 @@
+{
+  "revision": "75acf2e3556473abedcc1d024ccb657a9dad1d6a",
+  "tenantSlug": "6d178745f8f9",
+  "identity": "Dorothy Gale, existing client portal user, ordinary permissions",
+  "ticketId": "29930000-0000-4000-8000-0000000000a7",
+  "commentDeletion": {"status":"passed","commentId":"bc934302-b215-4878-b0f9-2d2bf8856b71","databaseRemoved":true,"replyTokenDetached":true,"afterRefreshAbsent":true,"otherCommentsRemaining":5},
+  "commentCreateEdit": {"status":"passed","persistedCreate":true,"persistedEdit":true,"temporaryCommentsCleaned":true},
+  "nonOwner": {"status":"passed","editControlAbsent":true,"deleteControlAbsent":true,"updateActionDenied":true,"deleteActionDenied":true,"otherCommentUnchanged":true},
+  "listDetailPrivacy": {"status":"passed","actualRscAndActionResponsesInspected":true,"ticketAttributeSentinelAbsent":true,"watcherSentinelAbsent":true,"emailMetadataSentinelAbsent":true,"commentSourceIdentityFieldsAbsent":true,"sessionCredentialFieldsAbsentAfterFix":true},
+  "documents": {"status":"passed","withoutDocumentsObserved":true,"publicDocumentVisible":true,"privateDocumentAbsent":true,"temporaryRowsAndAssociationsCleaned":true},
+  "sharedWorkspace": {"status":"unknown","reason":"No co_managed_ticket_references row exists for Dorothy's tenant; a valid shared-workspace portal ticket is unavailable without new relationship setup.","behavioralSuitePassed":true},
+  "temporaryPassword": "original hash restored",
+  "temporaryFixtures": "restored or deleted"
+}

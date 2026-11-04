@@ -1,3 +1,1 @@
-
-> @alga-psa/client-portal@0.1.0 typecheck
-> tsc --noEmit
+Passed with exit code 0; no diagnostics.

@@ -1,9 +1,13 @@
-[
-  {
-    "comment_id": "bc934302-b215-4878-b0f9-2d2bf8856b71",
-    "ticket_id": "29930000-0000-4000-8000-0000000000a7",
-    "deleted_at": null,
-    "is_internal": false,
-    "is_system_generated": false
-  }
-]
+{
+  "applicationRevision": "75acf2e3556473abedcc1d024ccb657a9dad1d6a",
+  "ticketId": "29930000-0000-4000-8000-0000000000a7",
+  "commentId": "bc934302-b215-4878-b0f9-2d2bf8856b71",
+  "uiDelete": "succeeded",
+  "databaseCommentRow": "absent",
+  "replyTokenCommentReference": "detached",
+  "refreshedConversation": {
+    "remainingCommentCount": 5,
+    "deletedCommentPresent": false
+  },
+  "evidence": "Live portal UI deletion followed by tenant-scoped PostgreSQL state check and browser refresh."
+}

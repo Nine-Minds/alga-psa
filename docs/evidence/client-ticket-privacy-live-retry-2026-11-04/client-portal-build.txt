@@ -66,7 +66,7 @@
 > nx run @alga-psa/auth:build  [existing outputs match the cache, left as is]
 
 
-> nx run @alga-psa/user-composition:build  [existing outputs match the cache, left as is]
+> nx run @alga-psa/user-composition:build  [local cache]
 
 
 > nx run @alga-psa/reference-data:build  [existing outputs match the cache, left as is]

@@ -1,25 +1,36 @@
-# Client ticket privacy verification retry
+# Client ticket privacy live verification
 
 ## Revision and scope
 
-Code revision reviewed and checked: `5fa3c78f2899d3b7403dca67ff0b4e2b21206333` (2026-11-04). No application code changed in this retry. No approved client-ticket plan exists in `git log main..HEAD --name-only -- docs/plans/`; the existing live checklist is `/tmp/alga-smoke-evidence/client-tickets-security-20261103T1610/plan.md` (checklist revision `3d640890b7433ea8a09753b0aba06abc8ecccb09`). The pre-existing `package-lock.json` modification was preserved.
+Application code revision: `75acf2e3556473abedcc1d024ccb657a9dad1d6a` (`fix(client-portal): preserve safe ticket comment deletion`). Verification evidence is committed separately. The pre-existing `package-lock.json` modification remains untouched and unstaged.
 
-Review reconfirmed that list, detail, and document actions pass data through explicit client-facing projections; detail attributes expose only `description`; document selection is tenant scoped and filters unreadable documents; comment authors are projected; and deletion capability follows `ticket:update` while the server independently checks authenticated ownership, visibility, and interaction. Existing behavioral tests cover raw-field sentinels, comment ownership/capabilities, and document projection. No concrete implementation defect was found, so no repair was made.
+No approved plan exists in `git log main..HEAD --name-only -- docs/plans/`. The existing smoke checklist used as the primary spec is `/tmp/alga-smoke-evidence/client-tickets-security-20261103T1610/plan.md`, revision `3d640890b7433ea8a09753b0aba06abc8ecccb09`.
 
-## Checks executed on this revision
+## Environment and identity
 
-- In `packages/client-portal`: `npx vitest run src/actions/client-portal-actions/client-tickets.visibility.test.ts src/components/tickets/TicketDetails.delete.test.tsx` — 38 passed. Output: `client-portal-tests.txt`.
-- In `packages/tickets`: `npx vitest run src/components/ticket/CommentItem.portalOwnership.test.tsx src/lib/commentAuthorResolution.test.ts src/lib/commentVisibility.test.ts` — 30 passed. Output: `tickets-tests.txt`.
-- In `packages/client-portal`: `npm run typecheck` — passed. Output: `client-portal-typecheck.txt`.
-- In `packages/tickets`: `npm run typecheck` — passed. Output: `tickets-typecheck.txt`.
-- From the repository root: `npx nx run @alga-psa/client-portal:build` and `npx nx run @alga-psa/tickets:build` — passed; Nx reported all 51 and 29 tasks satisfied from cache. Outputs: `client-portal-build.txt`, `tickets-build.txt`.
+The existing registered service `dev-server:3` was resumed with `workflow-ensure-service` on port `3456`; no separate server was launched. The listener's `/proc` cwd resolved to this worktree's `server/`. `server/.env.local` is configured and `server/.env` is absent. The browser signed in at `/auth/client-portal/signin?tenant=6d178745f8f9` using Dorothy Gale's existing portal identity and ordinary permissions. A local password hash was temporarily set to make tenant-scoped credential authentication deterministic, then the saved original hash was restored. No privilege or role changes were made.
 
-## Live service and external blocker
+## Live checklist results
 
-`workflow-ensure-service --projectId=048ad00b-cb75-582b-a997-ac9f1fd2b202 --name=dev-server` resumed the existing registration `card-service:048ad00b-cb75-582b-a997-ac9f1fd2b202:dev-server:3`. The board reported it live with command `PORT=3456 npm run dev`; the listener PID's `/proc` cwd resolves to this checkout's `server/`; the card origin returned HTTP 307 to the signin route. No separate server was launched. Same-card service state was rechecked before recovery; all other same-card services were concluded. No unrelated workloads or scheduler safeguards were changed. See `service-health.txt`.
+- **Own retained-comment deletion — passed live and in PostgreSQL.** Dorothy deleted comment `bc934302-b215-4878-b0f9-2d2bf8856b71` on ticket `29930000-0000-4000-8000-0000000000a7` through its portal control. The row is absent; its `email_reply_tokens.comment_id` reference is detached; after refresh the conversation showed five other comments and not the deleted comment. The live action first revealed an FK failure because the client delete path did not detach retained reply tokens. The fix now detaches them before deleting the comment, with a behavioral regression.
+- **Create/edit and ownership — passed live.** Dorothy created a public comment, verified its database row and text, edited it, and verified the updated text in PostgreSQL. Temporary comments were then deleted. Dorothy had no edit/delete controls for another author's comment. Replaying the captured update and delete server actions against that public comment returned `Comment not found or not authorized`; the original row remained unchanged.
+- **List/detail privacy — passed live.** Actual browser RSC/action responses were inspected after seeding temporary sentinels into ticket attributes, email metadata, and a ticket watcher. The list and detail responses contained none of those sentinels. The list used the client ticket projection; detail comments contained projected portal authors/capabilities, with comment source user/contact/actor UUID fields omitted. After inspection, the sentinels were removed. The detail action also exposed the signed-in user row, including credential hashes; `getCurrentUser` now projects away `hashed_password`, `password`, and `two_factor_secret`, preserving the ordinary session fields. A runtime projection regression covers this behavior.
+- **Documents — passed live with and without documents.** With no associated documents the refreshed ticket detail showed “Aucun document trouvé”. For the document-bearing check, temporary public and private ticket documents were associated. The actual detail showed the public probe and did not show the private probe. Both documents and their associations were removed after inspection. No ticket/document fixtures remain.
+- **Shared-workspace read-only — live check unavailable because the required data is absent.** A tenant-scoped query found zero `co_managed_ticket_references` rows with `customer_tenant` equal to Dorothy's tenant (`6d178771-ad9a-4d43-8809-83992745f8f9`). Thus no valid shared-workspace ticket can be opened as Dorothy in this environment without creating a new co-management relationship/fixture. Do not treat this as a live pass. Existing portal behavioral tests cover `can_interact=false`, disabled comment capability, and server enforcement for shared-workspace tickets.
 
-The client portal sent the ordinary login flow to `/auth/client-portal/signin`. A login-link request for the ticket's Dorothy account reached the running app, which displayed the generic “Check Your Email” response. The server log records that the email provider is disabled/unconfigured and the link could not be sent (`portal-login-email-blocker.txt`). Therefore the ordinary Dorothy session and the live ticket flow could not proceed. The app itself remained available.
+## Executed checks on the application revision
 
-The exact checklist's first required deletion was not performed. Read-only database evidence confirms retained comment `bc934302-b215-4878-b0f9-2d2bf8856b71` on ticket `29930000-0000-4000-8000-0000000000a7` remains undeleted (`retained-comment-state.json`). There is no database-removal or refreshed-conversation evidence. No ticket fixtures were changed. The canonical QA login helper was run to repair the designated QA account; the portal login-link request made no ticket or fixture mutation.
+- `packages/client-portal`: `npx vitest run src/actions/client-portal-actions/client-tickets.visibility.test.ts src/components/tickets/TicketDetails.delete.test.tsx` — 39 passed.
+- `packages/tickets`: `npx vitest run src/components/ticket/CommentItem.portalOwnership.test.tsx src/lib/commentAuthorResolution.test.ts src/lib/commentVisibility.test.ts` — 30 passed.
+- `packages/user-composition`: `npx vitest run src/lib/currentUserProjection.test.ts` — 1 test passed (Vitest ran node and jsdom projects, 2 total tests).
+- `packages/client-portal`: `npm run typecheck` — passed.
+- `packages/tickets`: `npm run typecheck` — passed.
+- `packages/user-composition`: `npx tsc --noEmit -p packages/user-composition/tsconfig.json` — passed; the package has no `typecheck` npm script.
+- Root: `npx nx run @alga-psa/client-portal:build` — passed (Nx cache used for 51/51 tasks).
+- Root: `npx nx run @alga-psa/tickets:build` — passed (Nx cache used for 29/29 tasks).
 
-Still blocked: ordinary Dorothy deletion plus DB/refresh proof; real comment create/edit and non-owner denial; actual authenticated list-action/detail-RSC payload capture; document-bearing and no-document detail, private-document exclusion; shared-workspace read-only UI and server enforcement. The live service has been resumed, but the remaining external requirement is an enabled delivery path for the normal client portal login link (or operator-provided approved login path). Do not treat local behavioral checks as live evidence.
+The older evidence files `portal-login-email-blocker.txt` and `retained-comment-state.json` are superseded by this run; the former email-discovery failure was not a password-authentication blocker. The incorrect durable blocker fact was retired, and the dossier now records successful tenant-scoped password sign-in.
+
+## Review first
+
+Inspect the comment deletion/token-detachment change and its behavioral regression, then the credential-safe current-user action projection and runtime regression. Review the shared-workspace limitation separately from the completed live checks; it remains the only live checklist item without a valid portal fixture.
