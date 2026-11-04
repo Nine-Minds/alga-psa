@@ -310,9 +310,11 @@ describe.sequential('addTicket create extras (integration)', () => {
     const outcome = await ticketActions.addTicket(createForm({
       assigned_to: primaryAgentId,
       additional_agent_ids: JSON.stringify([additionalAgentId, uuidv4()]),
-    })).then((value: any) => ({ value }), (error: Error) => ({ error }));
+    }));
 
-    expect('error' in outcome ? outcome.error.message : outcome.value).toMatch(/not found|assignee/i);
+    expect(outcome).toMatchObject({
+      actionError: expect.stringMatching(/selected agents cannot be assigned/i),
+    });
     expect(await countTickets()).toBe(before);
     expect(await tt('ticket_resources').where({ additional_user_id: additionalAgentId }).count('* as n').first()
       .then((row: any) => Number(row.n))).toBe(0);
