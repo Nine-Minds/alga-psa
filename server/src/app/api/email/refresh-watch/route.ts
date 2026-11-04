@@ -21,6 +21,17 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // This endpoint is exempt from API-key middleware, so authorize the
+    // authenticated session before parsing input or looking up a provider.
+    const knex = await getAdminConnection();
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) {
+      const error = access.reason === 'missing_permission'
+        ? `${access.message}. Required permission: ticket_settings:update`
+        : access.message;
+      return NextResponse.json({ error }, { status: 403 });
+    }
     
     console.log(`👤 User requesting refresh: ${user.email || 'unknown'}`);
     
@@ -40,16 +51,6 @@ export async function POST(request: NextRequest) {
     
     console.log(`🔍 Refreshing Gmail watch for provider: ${providerId}`);
     
-    // Get database connection
-    const knex = await getAdminConnection();
-    const access = await requireOutboundEmailAdmin(user, knex);
-    if (!access.allowed) {
-      const error = access.reason === 'missing_permission'
-        ? `${access.message}. Required permission: ticket_settings:update`
-        : access.message;
-      return NextResponse.json({ error }, { status: 403 });
-    }
-
     const db = tenantDb(knex, user.tenant);
     
     // Get the email provider and its Google config
