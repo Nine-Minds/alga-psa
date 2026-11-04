@@ -90,6 +90,7 @@ function requireWorkerExecution(events, input) {
   if (worker.credentialGeneration !== input.credentialGeneration) {
     fail('email-service worker did not report the expected persisted credential generation');
   }
+  requiredString(worker.workerId, 'email-service worker ID');
 
   const listener = providerEvents.find((event) => event.event === 'folder_listener_start'
     && event.host === input.expectedHost
@@ -99,13 +100,34 @@ function requireWorkerExecution(events, input) {
     && event.credentialGeneration === input.credentialGeneration
     && typeof event.listenerId === 'string');
   if (!listener) fail('email-service did not start a listener for the expected provider and destination');
+  requiredString(listener.listenerId, 'email-service listener ID');
   return { providerEvents, worker, listener };
 }
 
-function requireConnected(providerEvents, listener, providerId) {
+function observedListenerLifetime(providerEvents, worker, listener, serviceEndedAt) {
+  // Ownership ends at the first listener termination, worker stop, or replacement.
+  // A stop during startup also invalidates a listener-start logged after the stop.
+  const endedAt = providerEvents.reduce((end, event) => {
+    if (event === worker || event._at < worker._at) return end;
+    const workerEnded = (event.event === 'worker_stop' && event.workerId === worker.workerId)
+      || (event.event === 'worker_start' && event.workerId !== worker.workerId);
+    const listenerEnded = event.listenerId === listener.listenerId
+      && ['folder_listener_stop', 'listener_stop_inbound_paused'].includes(event.event);
+    return workerEnded || listenerEnded ? Math.min(end, event._at) : end;
+  }, serviceEndedAt);
+  if (endedAt <= listener._at) fail('email-service listener has no active lifetime after termination');
+  return { startedAt: listener._at, endedAt };
+}
+
+function duringLifetime(event, lifetime) {
+  return event._at >= lifetime.startedAt && event._at <= lifetime.endedAt;
+}
+
+function requireConnected(providerEvents, listener, providerId, lifetime) {
   if (!providerEvents.some((event) => event.event === 'connected'
     && event.providerId === providerId
-    && event.listenerId === listener.listenerId)) {
+    && event.listenerId === listener.listenerId
+    && duringLifetime(event, lifetime))) {
     fail('email-service did not authenticate and connect the expected IMAP listener');
   }
 }
@@ -153,7 +175,7 @@ function oauthClientId(event) {
   return event.clientId ?? event.credentialId;
 }
 
-function validateScopeChange({ input, state, recipientEvents, providerEvents, listener, windowStart, serviceStartedAt, serviceEndedAt }) {
+function validateScopeChange({ input, state, recipientEvents, providerEvents, worker, listener, lifetime, windowStart, serviceStartedAt }) {
   const previousGeneration = state.before.credentialGeneration;
   const originalHost = state.before.host;
   const originalCredentialId = requiredString(input.originalCredentialId, 'positive-control credential ID');
@@ -184,11 +206,15 @@ function validateScopeChange({ input, state, recipientEvents, providerEvents, li
   const error = providerEvents.find((event) => event.event === 'folder_listener_error'
     && event.providerId === input.providerId
     && event.listenerId === listener.listenerId
+    && duringLifetime(event, lifetime)
     && event.message === 'IMAP credentials missing');
   if (!error) fail('scope-change worker did not fail closed on missing replacement credentials');
+  if (providerEvents.some((event) => event.event === 'connected' && event.listenerId === listener.listenerId)) {
+    fail('scope-change listener connected after credentials were cleared');
+  }
 
-  const observationStartedAt = listener._at;
-  const observationDurationMs = serviceEndedAt - observationStartedAt;
+  const observationStartedAt = lifetime.startedAt;
+  const observationDurationMs = lifetime.endedAt - observationStartedAt;
   if (observationStartedAt < scopeSavedAt || observationDurationMs < minimumObservationSeconds * 1000) {
     fail('scope-change current-generation listener observation is shorter than the required duration');
   }
@@ -210,9 +236,10 @@ function validateScopeChange({ input, state, recipientEvents, providerEvents, li
   return {
     runId: input.runId,
     scenario: input.scenario,
-    workerId: providerEvents.find((event) => event.event === 'worker_start')?.workerId,
+    workerId: worker.workerId,
     credentialGeneration: state.generation,
     observationStartedAt: new Date(observationStartedAt).toISOString(),
+    observationEndedAt: new Date(lifetime.endedAt).toISOString(),
     observationDurationMs,
     recipientEventCount: recipientEvents.length,
   };
@@ -239,6 +266,7 @@ export function validatePublicEmailServiceEvidence(input) {
   const serviceEvents = serviceEventsFromLog(input.emailServiceLog, serviceContext);
   const stateBoundInput = { ...input, credentialGeneration: state.generation };
   const { providerEvents, worker, listener } = requireWorkerExecution(serviceEvents, stateBoundInput);
+  const lifetime = observedListenerLifetime(providerEvents, worker, listener, serviceEndedAt);
 
   const records = parseJsonLines(input.recipientJsonl, 'recipient export');
   records.forEach((record) => rejectSecretFields(record, 'recipient export'));
@@ -287,13 +315,14 @@ export function validatePublicEmailServiceEvidence(input) {
     && event.credentialGeneration === generation
     && event.result === 'success'
     && event._at >= serviceStartedAt
-    && event._at <= serviceEndedAt;
+    && event._at <= serviceEndedAt
+    && duringLifetime(event, lifetime);
 
   if (scenario === 'scope-change') {
-    return validateScopeChange({ input, state, recipientEvents, providerEvents, listener, windowStart, serviceStartedAt, serviceEndedAt });
+    return validateScopeChange({ input, state, recipientEvents, providerEvents, worker, listener, lifetime, windowStart, serviceStartedAt });
   }
 
-  requireConnected(providerEvents, listener, input.providerId);
+  requireConnected(providerEvents, listener, input.providerId, lifetime);
   requireRecipientEvent(recipientEvents, imapAuth(input.expectedHost, input.expectedCredentialId, state.generation),
     'recipient export lacks successful in-service IMAP auth with the expected credential ID and generation');
 

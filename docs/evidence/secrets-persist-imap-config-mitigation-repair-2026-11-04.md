@@ -117,3 +117,22 @@ Checks rerun against `abb4d1eabcf34ab40bce87e528a4e964b298b90b`:
 - `bash -n scripts/security/run-public-email-service-evidence.sh` and `git diff --check` — passed.
 
 These are local behavioral and build results. The public recipient scenarios and isolated UI/worker runtime remain unresolved. The registered dev-server still lacks the isolated database and external secret-store settings, and no authorized public IMAPS/OAuth fixture and controls are available. No public evidence run or `security-finding-resolved` success is claimed. The private fixture contract at `/home/robert/alga-review-private/3276c089/public-fixture-setup.md` now documents the token-recipient fields, keyed secret fingerprint, and listener-based observation window.
+
+## Listener lifetime validation
+
+The validator now ends a listener's observation at the earliest matching listener stop, inbound pause, owning-worker stop, replacement-worker start, or captured process exit. It reports both `observationStartedAt` and `observationEndedAt`. Time after termination cannot satisfy the minimum interval, and separate listener lifetimes cannot be added together. A listener logged after its worker has already stopped is rejected.
+
+Missing-credential failures must occur within that same lifetime. Successful connection and recipient-authentication evidence must also fall within the observed listener lifetime. Scope-change evidence that reports a successful listener connection is rejected, even if it also contains a missing-credential error.
+
+Before this repair, eight added behavioral regressions failed against the parent implementation. With the repair:
+
+- Evidence validator and snapshot tests: 28 passed. Coverage includes every termination boundary, worker termination during startup, unrelated resource termination, interrupted observations, out-of-lifetime authentication, and all prior OAuth recipient, credential-generation, and HMAC regressions.
+- IMAP action security tests: 60 passed.
+- Email-service tests: 51 passed across 9 files.
+- OAuth and inbound-worker tests: 26 passed across 5 files.
+- Email-service build and integrations typecheck: passed.
+- Snapshot no-emit TypeScript check with `--module esnext --moduleResolution bundler`: passed.
+- Migration lint: zero violations, undecided rules, or stale annotations.
+- Runner shell syntax and branch whitespace checks: passed.
+
+The existing card-owned dev-server was inspected without starting or replacing it. Its registered cwd is this worktree's `server/` directory, its command is `PORT=3948 npm run dev`, and the process listens on `0.0.0.0:3948`. The card-origin email-settings route returned HTTP 307 to sign-in. The process still lacks the isolated database and external secret-store settings required by the evidence runner. No controlled public recipient configuration or public evidence run is available. These checks do not establish public IMAPS authentication, OAuth reconnect/refresh, or a successful `security-finding-resolved` result.

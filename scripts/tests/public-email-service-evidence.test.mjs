@@ -182,7 +182,7 @@ function scopeChangeEvidence({ recipientEvents = [], durationSeconds = 20, liste
   const listenerStartedAt = new Date(started + listenerDelaySeconds * 1000).toISOString();
   const controlAt = new Date(Date.parse(runStart) + 15_000).toISOString();
   const events = [
-    ...defaultServiceEvents({ host: newHost, at: listenerStartedAt }),
+    ...defaultServiceEvents({ host: newHost, at: listenerStartedAt }).filter((event) => event.event !== 'connected'),
     { ts: listenerStartedAt, evidenceRunId: 'public-run-1', event: 'folder_listener_error', providerId: 'provider-1', listenerId: 'listener-1', message: 'IMAP credentials missing' },
   ];
   const { input } = evidence({
@@ -225,6 +225,103 @@ test('requires a successful old-scope positive control and a full fail-closed ob
 test('measures scope-change observation from the current-generation listener, not process startup', () => {
   const lateListener = scopeChangeEvidence({ durationSeconds: 20, listenerDelaySeconds: 6 });
   assert.throws(() => validatePublicEmailServiceEvidence(lateListener), /listener observation is shorter than the required duration/);
+});
+
+function appendServiceEvents(input, events) {
+  input.emailServiceLog += events.map((event) => `\n[IMAP_SM] ${JSON.stringify({
+    evidenceRunId: input.runId,
+    providerId: input.providerId,
+    ...event,
+  })}`).join('');
+}
+
+for (const terminal of [
+  { event: 'folder_listener_stop', listenerId: 'listener-1' },
+  { event: 'listener_stop_inbound_paused', listenerId: 'listener-1' },
+  { event: 'worker_stop', workerId: 'worker-1' },
+  { event: 'worker_start', workerId: 'replacement-worker', credentialGeneration: 'generation-other' },
+]) {
+  test(`does not count idle process time after ${terminal.event}`, () => {
+    const input = scopeChangeEvidence();
+    appendServiceEvents(input, [{ ...terminal, ts: new Date(Date.parse(serviceStart) + 3_000).toISOString() }]);
+    assert.throws(() => validatePublicEmailServiceEvidence(input), /listener observation is shorter than the required duration/);
+  });
+}
+
+test('reports the listener stop boundary after a sufficient continuous observation', () => {
+  const input = scopeChangeEvidence();
+  const stoppedAt = new Date(Date.parse(serviceStart) + 18_000).toISOString();
+  appendServiceEvents(input, [{ event: 'folder_listener_stop', listenerId: 'listener-1', ts: stoppedAt }]);
+  const result = validatePublicEmailServiceEvidence(input);
+  assert.equal(result.observationDurationMs, 16_000);
+  assert.equal(result.observationEndedAt, stoppedAt);
+});
+
+test('ignores termination of unrelated listeners and workers', () => {
+  const input = scopeChangeEvidence();
+  const ts = new Date(Date.parse(serviceStart) + 3_000).toISOString();
+  appendServiceEvents(input, [
+    { event: 'folder_listener_stop', listenerId: 'unrelated-listener', ts },
+    { event: 'worker_stop', workerId: 'unrelated-worker', ts },
+  ]);
+  assert.equal(validatePublicEmailServiceEvidence(input).observationDurationMs, 18_000);
+});
+
+test('rejects a listener logged after its owning worker stopped during startup', () => {
+  const input = scopeChangeEvidence({ listenerDelaySeconds: 6 });
+  const events = input.emailServiceLog.split('\n').map((line) => JSON.parse(line.slice('[IMAP_SM] '.length)));
+  events[0].ts = serviceStart;
+  events.splice(1, 0, {
+    event: 'worker_stop', workerId: 'worker-1', providerId: input.providerId,
+    evidenceRunId: input.runId, ts: new Date(Date.parse(serviceStart) + 1_000).toISOString(),
+  });
+  input.emailServiceLog = events.map((event) => `[IMAP_SM] ${JSON.stringify(event)}`).join('\n');
+  input.minimumObservationSeconds = 10;
+  assert.throws(() => validatePublicEmailServiceEvidence(input), /listener.*lifetime|listener.*terminated/);
+});
+
+test('does not combine interrupted listener lifetimes into a passing observation', () => {
+  const input = scopeChangeEvidence({ durationSeconds: 40 });
+  // Keep the export window covering the longer process while neither listener runs for 15 seconds.
+  const rows = input.recipientJsonl.split('\n').map((line) => JSON.parse(line));
+  rows[0].endedAt = input.serviceEndedAt;
+  rows[0].exportedAt = input.serviceEndedAt;
+  input.recipientJsonl = rows.map((row) => JSON.stringify(row)).join('\n');
+  appendServiceEvents(input, [
+    { event: 'folder_listener_stop', listenerId: 'listener-1', ts: new Date(Date.parse(serviceStart) + 10_000).toISOString() },
+    { event: 'folder_listener_start', listenerId: 'listener-2', workerId: 'worker-1', credentialGeneration: 'generation-new', host: input.expectedHost, port: 993, ts: new Date(Date.parse(serviceStart) + 20_000).toISOString() },
+    { event: 'folder_listener_stop', listenerId: 'listener-2', ts: new Date(Date.parse(serviceStart) + 30_000).toISOString() },
+  ]);
+  assert.throws(() => validatePublicEmailServiceEvidence(input), /listener observation is shorter than the required duration/);
+});
+
+test('requires the missing-credential failure to occur during the observed listener lifetime', () => {
+  const input = scopeChangeEvidence();
+  const events = input.emailServiceLog.split('\n').map((line) => JSON.parse(line.slice('[IMAP_SM] '.length)));
+  events.find((event) => event.event === 'folder_listener_error').ts = new Date(Date.parse(serviceStart) + 19_000).toISOString();
+  input.emailServiceLog = events.map((event) => `[IMAP_SM] ${JSON.stringify(event)}`).join('\n');
+  appendServiceEvents(input, [{ event: 'folder_listener_stop', listenerId: 'listener-1', ts: new Date(Date.parse(serviceStart) + 18_000).toISOString() }]);
+  assert.throws(() => validatePublicEmailServiceEvidence(input), /fail closed/);
+});
+
+test('rejects contradictory scope-change evidence that reports a successful listener connection', () => {
+  const input = scopeChangeEvidence();
+  appendServiceEvents(input, [{ event: 'connected', listenerId: 'listener-1', ts: workerAt }]);
+  assert.throws(() => validatePublicEmailServiceEvidence(input), /connected after credentials were cleared/);
+});
+
+test('requires successful IMAP connection and recipient authentication within the listener lifetime', () => {
+  const stoppedAt = new Date(Date.parse(workerAt) + 1_000).toISOString();
+  const afterStop = new Date(Date.parse(workerAt) + 2_000).toISOString();
+  const lateAuth = evidence({ recipientEvents: [{ ...successfulImap, at: afterStop }] }).input;
+  appendServiceEvents(lateAuth, [{ event: 'folder_listener_stop', listenerId: 'listener-1', ts: stoppedAt }]);
+  assert.throws(() => validatePublicEmailServiceEvidence(lateAuth), /lacks successful in-service IMAP auth/);
+
+  const events = defaultServiceEvents();
+  events.find((event) => event.event === 'connected').ts = afterStop;
+  const lateConnection = evidence({ recipientEvents: [successfulImap], serviceEvents: events }).input;
+  appendServiceEvents(lateConnection, [{ event: 'folder_listener_stop', listenerId: 'listener-1', ts: stoppedAt }]);
+  assert.throws(() => validatePublicEmailServiceEvidence(lateConnection), /did not authenticate and connect/);
 });
 
 test('rejects old credentials delivered to the changed destination through IMAP or OAuth', () => {
