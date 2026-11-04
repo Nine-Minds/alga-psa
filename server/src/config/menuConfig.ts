@@ -3,14 +3,15 @@
 import type { ElementType } from 'react';
 import { TIER_FEATURES } from '@alga-psa/types';
 import {
+  Activity,
   AtSign,
-  BarChart3,
   Bell,
   BookOpen,
   Building2,
   Calendar,
   CalendarClock,
   CheckCircle,
+  ClipboardCheck,
   ClipboardList,
   Clock,
   Coins,
@@ -26,11 +27,12 @@ import {
   Gauge,
   Ghost,
   Handshake,
+  HardDrive,
+  HeartPulse,
   HelpCircle,
   Home,
   KeyRound,
   Layers3,
-  LayoutDashboard,
   LayoutTemplate,
   MessageSquareText,
   ListTodo,
@@ -39,7 +41,6 @@ import {
   Mail,
   MapPin,
   Megaphone,
-  Monitor,
   Package,
   Palette,
   Percent,
@@ -57,7 +58,6 @@ import {
   User,
   UserCog,
   Users,
-  Star,
   Target,
   Repeat,
   Ticket,
@@ -113,7 +113,9 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'User Activities',
         translationKey: 'nav.userActivities',
-        icon: BarChart3,
+        // Not a bar chart: that glyph family belongs to Reports, and a collapsed
+        // rail reader guesses "Reports" every time it appears here.
+        icon: ListChecks,
         href: '/msp/user-activities'
       },
       {
@@ -136,7 +138,8 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Surveys',
         translationKey: 'nav.surveys',
-        icon: Star,
+        // A star reads as "favourites", not "surveys".
+        icon: ClipboardCheck,
         href: '/msp/surveys/dashboard'
       },
       {
@@ -198,9 +201,10 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Assets',
         translationKey: 'nav.assets',
-        icon: Monitor,
+        // A screen is the System Monitoring metaphor; assets are devices.
+        icon: HardDrive,
         subItems: [
-          { name: 'All Assets', translationKey: 'nav.assetsAll', icon: Monitor, href: '/msp/assets' },
+          { name: 'All Assets', translationKey: 'nav.assetsAll', icon: HardDrive, href: '/msp/assets' },
           { name: 'Maintenance', translationKey: 'nav.assetsMaintenance', icon: Wrench, href: '/msp/assets/maintenance' },
           { name: 'Equipment in custody', translationKey: 'nav.assetsCustody', icon: PackageOpen, href: '/msp/assets/custody' }
         ]
@@ -282,9 +286,11 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'System Monitoring',
         translationKey: 'nav.systemMonitoring',
-        icon: LayoutDashboard,
+        // Same glyph the dashboard's System Monitoring card uses.
+        icon: HeartPulse,
         subItems: [
-          { name: 'Job Monitoring', translationKey: 'nav.jobMonitoring', icon: LayoutDashboard, href: '/msp/jobs' },
+          // Same glyph the header's job activity indicator uses for /msp/jobs.
+          { name: 'Job Monitoring', translationKey: 'nav.jobMonitoring', icon: Activity, href: '/msp/jobs' },
           { name: 'Email Logs', translationKey: 'nav.emailLogs', icon: Mail, href: '/msp/email-logs' },
         ]
       },
@@ -352,7 +358,7 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'Tags', translationKey: 'settings.tabs.tags', icon: Tags, href: '/msp/settings/tags' },
       { name: 'SLA', translationKey: 'settings.tabs.sla', icon: Timer, href: '/msp/settings/sla' },
       { name: 'Projects', translationKey: 'settings.tabs.projects', icon: ListTodo, href: '/msp/settings/projects' },
-      { name: 'Assets', translationKey: 'settings.tabs.assets', icon: Monitor, href: '/msp/settings/assets' },
+      { name: 'Assets', translationKey: 'settings.tabs.assets', icon: HardDrive, href: '/msp/settings/assets' },
       { name: 'Interactions', translationKey: 'settings.tabs.interactions', icon: Handshake, href: '/msp/settings/interactions' },
       { name: 'Opportunities', translationKey: 'settings.tabs.opportunities', icon: Target, href: '/msp/settings/opportunities' },
     ]
