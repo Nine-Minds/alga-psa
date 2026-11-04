@@ -1,5 +1,14 @@
 # PR #3880 mitigation verification (2026-11-03)
 
+## Follow-up attempt (2026-11-04)
+
+- The branch is now at `9f1affb46f00e02e00d27cb18dd0d003dcbe0c09`; `origin/feature/validate-priority-type-against-board-recurring-t` points to the same revision. The published dossier revision `7ed5e379d4fe6d3dfd1158fbd60ec0043b9e8ebb` is an ancestor, not the current checkout.
+- The prior uncommitted source edit in `packages/tickets/src/lib/ticketFieldReferences.ts` remains present and was not changed in this attempt. It is not included in evidence commits.
+- Current board records still show the card host as X670E, while its existing `dev-server` registration is on Ryzen and suspended. `workflow-restart-service` reports no live service; `workflow-ensure-service` fails with `Please specify the projectName option`. The current X670E deployed bundle `20261104000126-g692866e297` contains `projectName: "ghostty-pane-ide"`, so the failure remains unresolved in the board/remote host path. The service was not bypassed or launched separately.
+- Card hostname probes to `/api/health` and `/auth/msp/signin` both fail to connect while the registered service is suspended. Consequently this attempt could not verify the served revision or perform fresh browser or generator checks. The prior takeover artifacts remain historical evidence only.
+- `server/next.config.mjs` still maps `@alga-psa/core/capability` to `../packages/core/src/lib/capability.ts` at line 306. No alias workaround was added. The card database was not touched.
+- The required current-state fact was recorded on the Draft Implementation step as fact `29842169-3bac-48b4-bf69-723b95734734`.
+
 ## Scope and checkout
 
 - Branch: `feature/validate-priority-type-against-board-recurring-t`; published HEAD is `7ed5e379d4fe6d3dfd1158fbd60ec0043b9e8ebb`.
