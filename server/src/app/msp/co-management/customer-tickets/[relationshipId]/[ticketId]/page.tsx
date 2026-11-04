@@ -1,10 +1,17 @@
 import { notFound, redirect } from 'next/navigation';
+import type { Metadata } from 'next';
 import { getSession } from '@alga-psa/auth';
 import { requireCapabilityForPage } from '@alga-psa/core/capability/server';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getCoManagedSharedTicketAction } from '@/lib/actions/coManagedWorkActions';
 import { coManagedSharedTicketHref } from '@/lib/co-managed/ticketListReturn';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'metadata');
+  return { title: t('msp.coManagement.sharedTicket.title', { defaultValue: 'Shared Ticket' }) };
+}
 
 /**
  * Old standalone shared-ticket URL (it carries no customer tenant). The tenant is resolved through the same
