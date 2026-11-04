@@ -1190,26 +1190,24 @@ export class ContractLineService extends BaseService<IContractLine> {
       } = data as any;
 
       const status = data.status ?? 'draft';
-      const contractData = await this.filterAuditFields(
+      const contractData = await this.addCreateAuditFields(
         trx,
-        this.addCreateAuditFields(
-          {
-            contract_id: uuidv4(),
-            ...rest,
-            contract_description,
-            owner_client_id: ownerClientId,
-            // A contract is billed in its client's currency (same resolution as the wizard).
-            currency_code: await resolveClientContractCurrency(trx, context.tenant, ownerClientId),
-            start_date: data.start_date,
-            end_date: data.end_date,
-            // The owning client is enforced, so this is a non-template contract.
-            // Explicitly flag it (the column defaults to true) so non-template
-            // listings/reports that filter on is_template don't silently drop it.
-            is_template: false,
-            status,
-          },
-          context
-        ),
+        {
+          contract_id: uuidv4(),
+          ...rest,
+          contract_description,
+          owner_client_id: ownerClientId,
+          // A contract is billed in its client's currency (same resolution as the wizard).
+          currency_code: await resolveClientContractCurrency(trx, context.tenant, ownerClientId),
+          start_date: data.start_date,
+          end_date: data.end_date,
+          // The owning client is enforced, so this is a non-template contract.
+          // Explicitly flag it (the column defaults to true) so non-template
+          // listings/reports that filter on is_template don't silently drop it.
+          is_template: false,
+          status,
+        },
+        context,
         'contracts'
       );
 

@@ -19483,10 +19483,6 @@ components:
           type:
             - string
             - "null"
-        start_date:
-          type: string
-        end_date:
-          type: string
         billing_frequency:
           type: string
         status:

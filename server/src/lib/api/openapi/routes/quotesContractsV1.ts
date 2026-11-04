@@ -89,8 +89,6 @@ export function registerQuotesContractsV1Routes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       contract_name: zOpenApi.string().min(1).optional(),
       contract_description: zOpenApi.string().nullable().optional(),
-      start_date: zOpenApi.string().optional(),
-      end_date: zOpenApi.string().optional(),
       billing_frequency: zOpenApi.string().optional(),
       status: zOpenApi.enum(['active', 'draft', 'terminated', 'expired', 'published', 'archived']).optional(),
       is_active: zOpenApi.boolean().optional(),

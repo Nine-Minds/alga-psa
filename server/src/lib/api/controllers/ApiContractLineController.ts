@@ -568,7 +568,7 @@ export class ApiContractLineController {
       await this.requireBillingPermission(requestContext, 'update');
       const validation = updateContractSchema.safeParse(await req.json());
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
       const contract = await this.contractLineService.updateContract(params.contractId, validation.data, requestContext);
       return createApiResponse(contract);
@@ -611,7 +611,7 @@ export class ApiContractLineController {
       await this.requireBillingPermission(requestContext, 'create');
       const validation = createContractAssignmentSchema.safeParse(await req.json());
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
       const assignment = await this.contractLineService.createContractAssignment(
         params.contractId,
@@ -655,7 +655,7 @@ export class ApiContractLineController {
       await this.requireBillingPermission(requestContext, 'update');
       const validation = updateContractAssignmentSchema.safeParse(await req.json());
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
       const assignment = await this.contractLineService.updateContractAssignment(
         params.contractId,

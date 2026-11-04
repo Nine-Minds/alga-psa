@@ -57274,12 +57274,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "null"
           ]
         },
-        "start_date": {
-          "type": "string"
-        },
-        "end_date": {
-          "type": "string"
-        },
         "billing_frequency": {
           "type": "string"
         },
@@ -57363,12 +57357,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "string",
             "null"
           ]
-        },
-        "start_date": {
-          "type": "string"
-        },
-        "end_date": {
-          "type": "string"
         },
         "billing_frequency": {
           "type": "string"
