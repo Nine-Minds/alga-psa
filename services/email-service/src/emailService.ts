@@ -509,6 +509,12 @@ class ImapFolderListener {
     return this.connected;
   }
 
+  updateOAuthCredentials(nextProvider: ImapProviderRow) {
+    this.provider.access_token = nextProvider.access_token;
+    this.provider.refresh_token = nextProvider.refresh_token;
+    this.provider.token_expires_at = nextProvider.token_expires_at;
+  }
+
   private async persistFolderState(update: Partial<FolderState>): Promise<void> {
     const db = await getAdminConnection();
     const currentState = this.provider.folder_state || {};
@@ -1357,7 +1363,22 @@ class ImapProviderWorker {
   }
 
   updateProvider(nextProvider: ImapProviderRow) {
+    if (this.running || this.listeners.length > 0) {
+      throw new Error('Cannot replace an IMAP worker provider while listeners are running');
+    }
     this.provider = nextProvider;
+  }
+
+  refreshProviderSnapshot(nextProvider: ImapProviderRow) {
+    if (this.needsRestart(nextProvider)) {
+      throw new Error('Cannot refresh an IMAP worker snapshot across a runtime scope change');
+    }
+    this.provider.access_token = nextProvider.access_token;
+    this.provider.refresh_token = nextProvider.refresh_token;
+    this.provider.token_expires_at = nextProvider.token_expires_at;
+    for (const listener of this.listeners) {
+      listener.updateOAuthCredentials(nextProvider);
+    }
   }
 }
 
@@ -1590,6 +1611,10 @@ export class EmailService {
           this.workers.delete(row.id);
           continue;
         }
+        // Tokens may be replaced by OAuth reconnect without changing the
+        // destination generation. Keep the polling cycle alive while updating
+        // the worker and every listener's snapshot for its next client.
+        existing.refreshProviderSnapshot(row);
       }
     }
 

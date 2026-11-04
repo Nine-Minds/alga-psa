@@ -9,7 +9,7 @@ import { createTenantKnex } from '@/lib/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { assertSafeOutboundUrl } from '@alga-psa/shared/services/net/outboundAddressPolicy';
 import { getImapCredentialSecret, setImapCredentialSecret } from '@alga-psa/shared/services/email/imapCredentialSecrets';
-import axios from 'axios';
+import { postImapOAuthToken } from '@alga-psa/shared/services/email/imapOauthToken';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
 
 export async function GET(request: NextRequest) {
@@ -100,11 +100,7 @@ export async function GET(request: NextRequest) {
 
     let tokenResponse;
     try {
-      tokenResponse = await axios.post(imapConfig.oauth_token_url, params, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        // LEVERAGE: pattern oauth-no-redirect — credential-bearing OAuth posts must stay at their validated URL.
-        maxRedirects: 0,
-      });
+      tokenResponse = await postImapOAuthToken(imapConfig.oauth_token_url, params);
     } catch (tokenError) {
       console.warn('IMAP OAuth token exchange failed:', tokenError);
       return NextResponse.json(

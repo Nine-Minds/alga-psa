@@ -17,6 +17,17 @@ function asNonEmptyString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+/**
+ * Send credential-bearing IMAP OAuth form data only to the validated endpoint.
+ * Token services must not redirect these requests to another recipient.
+ */
+export async function postImapOAuthToken(url: string, body: URLSearchParams) {
+  return axios.post(url, body, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    maxRedirects: 0,
+  });
+}
+
 export async function getImapOauthSecrets(provider: {
   id: string;
   tenant: string;
@@ -70,11 +81,7 @@ export async function refreshImapAccessToken(params: {
     paramsBody.append('client_secret', effectiveClientSecret);
   }
 
-  const response = await axios.post(provider.oauth_token_url, paramsBody, {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    // LEVERAGE: pattern oauth-no-redirect — credential-bearing OAuth posts must stay at their validated URL.
-    maxRedirects: 0,
-  });
+  const response = await postImapOAuthToken(provider.oauth_token_url, paramsBody);
   const accessToken = asNonEmptyString(response?.data?.access_token);
   if (!accessToken) {
     throw new Error('IMAP OAuth refresh returned no access token');

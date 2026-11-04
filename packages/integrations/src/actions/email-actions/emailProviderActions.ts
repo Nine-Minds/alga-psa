@@ -25,6 +25,7 @@ import {
   getImapCredentialSecret,
   imapCredentialSecretKey,
 } from '@alga-psa/shared/services/email/imapCredentialSecrets';
+import { postImapOAuthToken } from '@alga-psa/shared/services/email/imapOauthToken';
 import { setupPubSub } from './setupPubSub';
 import { ImapFlow } from 'imapflow';
 import axios from 'axios';
@@ -1659,11 +1660,7 @@ export const testEmailProviderConnection = withAuth(async (
 
           let response;
           try {
-            response = await axios.post(config.oauth_token_url, params as any, {
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              // LEVERAGE: pattern oauth-no-redirect — credential-bearing OAuth posts must stay at their validated URL.
-              maxRedirects: 0,
-            });
+            response = await postImapOAuthToken(config.oauth_token_url, params);
           } catch (oauthError) {
             console.warn('IMAP OAuth token refresh failed:', oauthError);
             return emailProviderOperationError(

@@ -27,6 +27,7 @@ vi.mock('@alga-psa/db', () => ({
       const query: any = {
         where: () => query,
         andWhere: () => query,
+        first: async () => ({ inbound_paused_at: null, inbound_pause_reason: null }),
         update: async () => {
           mocks.leaseUpdates += 1;
           return 1;
@@ -136,6 +137,54 @@ describe('EmailService provider refresh credential generations', () => {
     expect(mocks.clients).toHaveLength(1);
     expect(mocks.clients[0].logout).not.toHaveBeenCalled();
     expect(mocks.leaseUpdates).toBe(2);
+    await service.stop();
+    vi.clearAllTimers();
+  });
+
+  it('updates existing listener snapshots after a same-generation OAuth reconnect', async () => {
+    const service = new EmailService();
+    await (service as any).refreshProviders();
+    await waitForClientCount(1);
+
+    const worker = (service as any).workers.get('provider-1');
+    const listener = worker.listeners[0];
+    const workerId = worker.workerId;
+    const listenerId = listener.listenerId;
+    mocks.rows = [provider({ access_token: 'access-token-reconnected' })];
+    await (service as any).refreshProviders();
+
+    const nextClient = await listener.buildClient();
+
+    expect(nextClient.options.auth.accessToken).toBe('access-token-reconnected');
+    expect((service as any).workers.get('provider-1')).toBe(worker);
+    expect(worker.workerId).toBe(workerId);
+    expect(worker.listeners[0]).toBe(listener);
+    expect(listener.listenerId).toBe(listenerId);
+    expect(mocks.clients[0].logout).not.toHaveBeenCalled();
+    await service.stop();
+    vi.clearAllTimers();
+  });
+
+  it('refreshes a listener snapshot after OAuth reconnect when it started without tokens', async () => {
+    const service = new EmailService();
+    mocks.rows = [provider({ access_token: null })];
+    await (service as any).refreshProviders();
+
+    const worker = (service as any).workers.get('provider-1');
+    const listener = worker.listeners[0];
+    const workerId = worker.workerId;
+    const listenerId = listener.listenerId;
+    expect(mocks.clients).toHaveLength(0);
+
+    mocks.rows = [provider({ access_token: 'access-token-after-reconnect' })];
+    await (service as any).refreshProviders();
+    const nextClient = await listener.buildClient();
+
+    expect(nextClient.options.auth.accessToken).toBe('access-token-after-reconnect');
+    expect((service as any).workers.get('provider-1')).toBe(worker);
+    expect(worker.workerId).toBe(workerId);
+    expect(worker.listeners[0]).toBe(listener);
+    expect(listener.listenerId).toBe(listenerId);
     await service.stop();
     vi.clearAllTimers();
   });

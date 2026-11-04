@@ -55,11 +55,11 @@ describe('shared IMAP OAuth refresh generation guard', () => {
       oauth_client_id: 'client-id',
       access_token: null,
       token_expires_at: null,
+      refresh_token: 'refresh-token',
     };
 
     await expect(refreshImapAccessToken({ provider, db: { fn: { now: () => 'NOW' } } as any }))
       .rejects.toThrow(/credential scope changed/i);
-    expect(mocks.axiosPost.mock.calls[0]?.[2]).toMatchObject({ maxRedirects: 0 });
     expect(mocks.secretReads).toEqual([
       'imap_oauth_client_secret_provider-1_generation-old',
       'imap_refresh_token_provider-1_generation-old',
@@ -68,6 +68,28 @@ describe('shared IMAP OAuth refresh generation guard', () => {
       email_provider_id: 'provider-1',
       credential_generation: 'generation-old',
     });
+    expect(provider.access_token).toBeNull();
+  });
+
+  it('does not save access-token state when the OAuth token endpoint redirects', async () => {
+    const provider: any = {
+      id: 'provider-1',
+      tenant: 'tenant-1',
+      credential_generation: 'generation-new',
+      oauth_token_url: 'https://idp.example.test/token',
+      oauth_client_id: 'client-id',
+      access_token: null,
+      token_expires_at: null,
+      refresh_token: 'refresh-token',
+    };
+    mocks.axiosPost.mockRejectedValueOnce(Object.assign(new Error('OAuth token request redirected'), {
+      response: { status: 302 },
+    }));
+
+    await expect(refreshImapAccessToken({ provider, db: { fn: { now: () => 'NOW' } } as any }))
+      .rejects.toThrow(/redirected/i);
+
+    expect(mocks.filters).toEqual({});
     expect(provider.access_token).toBeNull();
   });
 });

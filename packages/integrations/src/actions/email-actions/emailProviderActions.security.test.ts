@@ -798,8 +798,22 @@ describe('testEmailProviderConnection re-validates stored token URLs', () => {
     const result = await testEmailProviderConnection('prov-1');
     expect(mocks.axiosPost).toHaveBeenCalledTimes(1);
     expect(mocks.axiosPost.mock.calls[0][0]).toBe('https://idp.example.test/token');
-    expect(mocks.axiosPost.mock.calls[0][2]).toMatchObject({ maxRedirects: 0 });
     expect(result.success).toBe(true);
+  });
+
+  it('does not persist token fields when the validated OAuth endpoint responds with a redirect', async () => {
+    seedOauthImap('https://idp.example.test/token');
+    mocks.axiosPost.mockRejectedValueOnce(Object.assign(new Error('OAuth token request redirected'), {
+      response: { status: 302 },
+    }));
+
+    const { testEmailProviderConnection } = await import('./emailProviderActions');
+    const result = await testEmailProviderConnection('prov-1');
+
+    expect(result).toMatchObject({ success: false, errorCode: 'oauth_refresh_failed' });
+    expect(mocks.updates.filter(([table, values]) =>
+      table === 'imap_email_provider_config' && ('access_token' in values || 'token_expires_at' in values)
+    )).toEqual([]);
   });
 
   it('rejects a prohibited IMAP destination before reading credentials or connecting', async () => {

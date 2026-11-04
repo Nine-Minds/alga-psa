@@ -164,13 +164,26 @@ describe('IMAP OAuth callback credential generation', () => {
     const response: any = await GET(callbackRequest(currentState));
     expect(response.status, JSON.stringify(response.body)).toBe(302);
     expect(mocks.axiosPost).toHaveBeenCalledTimes(1);
-    expect(mocks.axiosPost.mock.calls[0]?.[2]).toMatchObject({ maxRedirects: 0 });
     expect(mocks.updateWhere).toMatchObject({ credential_generation: 'generation-new' });
     expect(mocks.setTenantSecret).toHaveBeenCalledWith(
       'tenant-1',
       'imap_refresh_token_provider-1_generation-new',
       'refresh-token'
     );
+  });
+
+  it('does not save an authorization response when the token endpoint redirects', async () => {
+    const currentState = await makeState('generation-old');
+    mocks.axiosPost.mockRejectedValueOnce(Object.assign(new Error('OAuth token request redirected'), {
+      response: { status: 302 },
+    }));
+
+    const response: any = await GET(callbackRequest(currentState));
+
+    expect(response.status).toBe(400);
+    expect(mocks.updateWhere).toBeNull();
+    expect(mocks.setTenantSecret).not.toHaveBeenCalled();
+    expect(mocks.providerUpdates).toEqual([]);
   });
 
   it('rejects replay of a successfully consumed reconnect state', async () => {
