@@ -122,6 +122,23 @@ describe('projectRecord REST projection', () => {
     expect(projectApiRecord('task', task, ['project_tasks'])).toBeNull();
   });
 
+  it('preserves project-link task names when unrelated task fields are hidden', () => {
+    const link = {
+      project_id: 'project-1', project_name: 'Migration', task_id: 'task-1',
+      task_name: 'Review C (merge)', estimated_hours: 80,
+    };
+    expect(projectRecord(link, [])).toEqual(link);
+    for (const [restriction, hiddenField] of [
+      ['project_tasks.estimated_hours', 'estimated_hours'],
+      ['project_tasks.project_name', 'project_name'],
+    ]) {
+      const projected = projectRecord(link, [restriction]);
+      expect(projected).toHaveProperty('task_name', link.task_name);
+      expect(projected).not.toHaveProperty(hiddenField);
+    }
+    expect(projectRecord(link, ['projects.project_id'])).toBeNull();
+  });
+
   it('paginates and serializes only allowed projected rows', async () => {
     const page = await buildAuthorizationAwarePage<Record<string, any>>({
       page: 1,

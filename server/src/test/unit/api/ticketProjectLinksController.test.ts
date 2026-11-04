@@ -159,6 +159,21 @@ describe('GET /api/v1/tickets/{id}/project-links', () => {
     expect(authorizeReadMock.mock.calls.filter(([input]) => input.resource === 'project')).toHaveLength(2);
   });
 
+  it.each([
+    ['project_tasks.estimated_hours', 'estimated_hours'],
+    ['project_tasks.project_name', 'project_name'],
+  ])('preserves unrelated task names in serialized links when %s is hidden', async (restriction, hiddenField) => {
+    state.redactions[`project:${PROJECT_A}`] = [restriction];
+    const res = await GET(request());
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data).toHaveLength(2);
+    for (const link of data) {
+      expect(link).toHaveProperty('task_name');
+      expect(link).not.toHaveProperty(hiddenField);
+    }
+  });
+
   it.each(['projects', 'values.project_id', 'projects.project_number', 'values.project_number'])('suppresses linked projects hidden by %s', async (redaction) => {
     state.readable.add(`project:${PROJECT_B}`);
     state.redactions[`project:${PROJECT_A}`] = [redaction];

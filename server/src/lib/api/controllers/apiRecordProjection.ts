@@ -36,8 +36,8 @@ const DEFINITIONS: Record<'project' | 'ticket' | 'quote' | 'asset' | 'phase' | '
     aliases: ['project', 'projects'],
     identifiers: ['project_id', 'projectId', 'projects.project_id', 'values.project_id', 'id', 'project_number', 'projects.project_number'],
     fields: {
-      project_name: [...CO_MANAGED_PROJECT_NAME_ALIASES.filter((alias) => !['project', 'project_id', 'projects'].includes(alias)), 'values.project_name', 'projects.project_name'],
-      projectName: [...CO_MANAGED_PROJECT_NAME_ALIASES.filter((alias) => !['project', 'project_id', 'projects'].includes(alias)), 'values.project_name', 'projects.project_name'],
+      project_name: [...CO_MANAGED_PROJECT_NAME_ALIASES.filter((alias) => !['project', 'project_id', 'projects'].includes(alias)), 'values.project_name', 'projects.project_name', 'project_tasks.project_name'],
+      projectName: [...CO_MANAGED_PROJECT_NAME_ALIASES.filter((alias) => !['project', 'project_id', 'projects'].includes(alias)), 'values.project_name', 'projects.project_name', 'project_tasks.project_name'],
       client_name: commonClientName,
       clientName: commonClientName,
       status_name: [...commonStatusName, 'standard_statuses', 'standard_statuses.name', 'project_status_mapping_id', 'project_status_mappings', 'project_status_mappings.custom_name'],
@@ -46,7 +46,10 @@ const DEFINITIONS: Record<'project' | 'ticket' | 'quote' | 'asset' | 'phase' | '
       phase_id: ['phase_id', 'project_phases.phase_id'],
       phase_name: [...CO_MANAGED_PHASE_NAME_ALIASES, 'phase_id', 'project_phases', 'project_phases.phase_id'],
       task_id: ['task_id', 'project_tasks.task_id', 'tasks.task_id'],
-      task_name: [...CO_MANAGED_TASK_NAME_ALIASES, 'task_id', 'project_tasks.task_id'],
+      // Project-link rows carry a task name, but a field-level task redaction
+      // must not treat the whole task resource as a name dependency.
+      task_name: [...taskNameFieldAliases, 'task_id', 'project_tasks.task_id'],
+      estimated_hours: ['project_tasks.estimated_hours'],
       task_updated_at: ['task_updated_at', 'project_tasks.updated_at'],
       is_closed: ['is_closed', 'status', 'status_id', 'project_status_mapping_id', 'statuses.is_closed', 'standard_statuses.is_closed'],
     },
