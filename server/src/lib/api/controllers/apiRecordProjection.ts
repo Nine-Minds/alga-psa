@@ -4,7 +4,12 @@ import {
   CO_MANAGED_PHASE_NAME_ALIASES,
   CO_MANAGED_PROJECT_NAME_ALIASES,
   CO_MANAGED_TASK_NAME_ALIASES,
+  CO_MANAGED_TASK_RESOURCE_ALIASES,
 } from '@alga-psa/co-managed/sharedWorkProjection';
+
+const taskNameFieldAliases = CO_MANAGED_TASK_NAME_ALIASES.filter(
+  (alias) => !(CO_MANAGED_TASK_RESOURCE_ALIASES as readonly string[]).includes(alias),
+);
 
 type ResourceDefinition = {
   aliases: readonly string[];
@@ -118,8 +123,8 @@ const DEFINITIONS: Record<'project' | 'ticket' | 'quote' | 'asset' | 'phase' | '
     aliases: ['task', 'tasks', 'project_task', 'project_tasks'],
     identifiers: ['task_id', 'taskId', 'project_tasks.task_id', 'phase_id', 'project_phases.phase_id', 'project_id', 'projects.project_id'],
     fields: {
-      task_name: [...CO_MANAGED_TASK_NAME_ALIASES, 'project_tasks.task_name'],
-      taskName: [...CO_MANAGED_TASK_NAME_ALIASES, 'project_tasks.task_name'],
+      task_name: [...taskNameFieldAliases, 'project_tasks.task_name'],
+      taskName: [...taskNameFieldAliases, 'project_tasks.task_name'],
       phase_name: [...CO_MANAGED_PHASE_NAME_ALIASES, 'project_phases.phase_name'],
       phaseName: [...CO_MANAGED_PHASE_NAME_ALIASES, 'project_phases.phase_name'],
       project_name: [...CO_MANAGED_PROJECT_NAME_ALIASES, 'projects.project_name'],

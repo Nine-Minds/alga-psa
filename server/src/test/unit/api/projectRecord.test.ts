@@ -101,13 +101,25 @@ describe('projectRecord REST projection', () => {
   });
 
   it('expands direct and derived source aliases across task and phase resources', () => {
-    const task = { task_id: 't1', estimated_hours: 80, project_name: 'Migration' };
+    const task = { task_id: 't1', task_name: 'Review C (merge)', estimated_hours: 80, project_name: 'Migration' };
     const phase = { phase_id: 'p1', start_date: '2026-01-01' };
     expect(projectApiRecord('task', task, [])).toEqual(task);
-    expect(projectApiRecord('task', task, ['project_tasks.estimated_hours'])).not.toHaveProperty('estimated_hours');
-    expect(projectApiRecord('task', task, ['project_tasks.project_name'])).not.toHaveProperty('project_name');
+    for (const [restriction, hiddenField] of [
+      ['project_tasks.estimated_hours', 'estimated_hours'],
+      ['project_tasks.project_name', 'project_name'],
+    ]) {
+      const projected = projectApiRecord('task', task, [restriction]);
+      expect(projected).not.toHaveProperty(hiddenField);
+      expect(projected).toHaveProperty('task_name', task.task_name);
+    }
     expect(projectApiRecord('phase', phase, [])).toEqual(phase);
     expect(projectApiRecord('phase', phase, ['project_phases.start_date'])).not.toHaveProperty('start_date');
+  });
+
+  it('still suppresses task records when their identifier or whole resource is hidden', () => {
+    const task = { task_id: 't1', task_name: 'Review C (merge)' };
+    expect(projectApiRecord('task', task, ['project_tasks.task_id'])).toBeNull();
+    expect(projectApiRecord('task', task, ['project_tasks'])).toBeNull();
   });
 
   it('paginates and serializes only allowed projected rows', async () => {

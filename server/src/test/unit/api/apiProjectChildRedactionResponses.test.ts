@@ -79,6 +79,12 @@ describe('project child read response projections', () => {
     state.redactedFields = ['project_tasks.estimated_hours'];
     const hiddenTaskHours = await body(await controller.getTask()(req(`/api/v1/projects/tasks/${TASK}`)));
     expect(hiddenTaskHours.data).not.toHaveProperty('estimated_hours');
+    expect(hiddenTaskHours.data.task_name).toBe(task.task_name);
+
+    state.redactedFields = ['project_tasks.project_name'];
+    const hiddenProjectName = await body(await controller.getTask()(req(`/api/v1/projects/tasks/${TASK}`)));
+    expect(hiddenProjectName.data).not.toHaveProperty('project_name');
+    expect(hiddenProjectName.data.task_name).toBe(task.task_name);
   });
 
   it('projects task and phase collections and suppresses hidden identifiers or resources', async () => {
@@ -113,5 +119,18 @@ describe('project child read response projections', () => {
 
     state.redactedFields = ['project_tasks'];
     expect((await body(await controller.listPhaseTasks()(req(`/api/v1/projects/phases/${PHASE}/tasks`)))).data).toEqual([]);
+
+    for (const restriction of ['project_tasks.estimated_hours', 'project_tasks.project_name']) {
+      state.redactedFields = [restriction];
+      for (const response of [
+        await controller.getTasks()(req(`/api/v1/projects/${PROJECT}/tasks`)),
+        await controller.listPhaseTasks()(req(`/api/v1/projects/phases/${PHASE}/tasks`)),
+      ]) {
+        const result = await body(response);
+        expect(result.data).toHaveLength(1);
+        expect(result.data[0]).not.toHaveProperty(restriction.endsWith('estimated_hours') ? 'estimated_hours' : 'project_name');
+        expect(result.data[0].task_name).toBe(task.task_name);
+      }
+    }
   });
 });
