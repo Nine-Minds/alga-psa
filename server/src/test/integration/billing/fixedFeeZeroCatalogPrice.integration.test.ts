@@ -458,7 +458,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
       expect(fixed.find((charge) => charge.serviceId === w.serviceB)?.total).toBe(67500);
       expect(await estimatedMonthlyCents(w.contractId)).toBe(90000);
 
-      const generated = unwrap(await generateInvoice(w.cycleId)) as any;
+      const generated = unwrap(await generateInvoiceForCycle(w.cycleId)) as any;
       const persisted = await table('invoices').where({ invoice_id: generated.invoice_id }).first();
       expect(Number(persisted.subtotal)).toBe(90000);
       expect(persisted.currency_code).toBe('EUR');
@@ -500,7 +500,7 @@ describe('fixed-fee line with $0 catalog services and no contract-currency price
       expect(fixed.find((charge) => charge.serviceId === w.serviceB)?.total).toBe(67500);
       expect(await estimatedMonthlyCents(w.contractId)).toBe(90000);
 
-      const generated = unwrap(await generateInvoice(w.cycleId)) as any;
+      const generated = unwrap(await generateInvoiceForCycle(w.cycleId)) as any;
       const persisted = await table('invoices').where({ invoice_id: generated.invoice_id }).first();
       expect(Number(persisted.subtotal)).toBe(90000);
     }, HOOK_TIMEOUT);
