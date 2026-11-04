@@ -96,6 +96,19 @@ describe('safeFetch URL policy', () => {
     expect(fetch.mock.calls[0]![2]).toEqual(pin);
   });
 
+  it('fetches a public IPv6 literal without DNS and pins its address', async () => {
+    const pin: ResolvedAddress = { address: '2606:4700::1111', family: 6 };
+    const lookup = vi.fn(lookupPublic);
+    const fetch = vi.fn(async (_url: string, _init: unknown, _pin: ResolvedAddress) => new Response('public IPv6'));
+
+    const result = await safeFetch('https://[2606:4700::1111]/a', opts, { lookup, fetch });
+
+    expect(result.bytes.toString()).toBe('public IPv6');
+    expect(lookup).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch.mock.calls[0]![2]).toEqual(pin);
+  });
+
   it('fails closed when DNS resolution fails', async () => {
     const lookup = async () => {
       throw new Error('ENOTFOUND');
