@@ -148,4 +148,17 @@ describe('client_logo_url on project and asset lists', () => {
     expect(context.logoCalls).toHaveLength(1);
     expect(context.logoCalls[0].sort()).toEqual([ids.acme, ids.bravo].sort());
   });
+
+  it('listAssets fetches logos only for distinct clients on the requested page', async () => {
+    context.logoCalls.length = 0;
+    const result = await listAssets({ page: 1, limit: 2, sort_by: 'name', sort_direction: 'asc' });
+    if ('error' in result) throw new Error(result.error);
+
+    expect(result.assets.map((asset) => asset.name)).toEqual(['Acme PC 1', 'Acme PC 2']);
+    expect(result.total).toBe(3);
+    for (const asset of result.assets) {
+      expect(asset.client?.client_logo_url).toBe(`/logo/${ids.acme}`);
+    }
+    expect(context.logoCalls).toEqual([[ids.acme]]);
+  });
 });
