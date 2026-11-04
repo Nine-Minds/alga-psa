@@ -2,13 +2,7 @@ import { tenantDb } from '@alga-psa/db';
 import type { CoManagedSharedWorkContext } from './sharedWork';
 import { CoManagedSharedWorkError } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
-import {
-  maskCoManagedSnapshot,
-  CO_MANAGED_ASSIGNEE_NAME_ALIASES,
-  CO_MANAGED_ORGANIZATION_NAME_ALIASES,
-  CO_MANAGED_PROJECT_NAME_ALIASES,
-  CO_MANAGED_TASK_NAME_ALIASES,
-} from './sharedWorkProjection';
+import { maskCoManagedSnapshot, coManagedTaskFieldAliases } from './sharedWorkProjection';
 
 /** Only projected display fields leave this reader. Raw reference snapshots stay inside the admitted callback. */
 export interface CoManagedProjectTaskReference {
@@ -46,19 +40,19 @@ export function projectCoManagedProjectTaskReferenceSnapshot(
     organizationName: reference.organization_name,
     assigneeName: reference.assignee_name,
   }, {
-    taskName: CO_MANAGED_TASK_NAME_ALIASES,
-    projectName: CO_MANAGED_PROJECT_NAME_ALIASES,
-    organizationName: CO_MANAGED_ORGANIZATION_NAME_ALIASES,
-    assigneeName: CO_MANAGED_ASSIGNEE_NAME_ALIASES,
+    taskName: coManagedTaskFieldAliases('task_name'),
+    projectName: coManagedTaskFieldAliases('project_name'),
+    organizationName: coManagedTaskFieldAliases('organization_name'),
+    assigneeName: coManagedTaskFieldAliases('assignee_name'),
   });
 
   return {
     referenceId: reference.reference_id,
     revision: reference.revision,
     ...projected,
-    hasAssigneeName: isCoManagedReadFieldHidden(redactedFields, CO_MANAGED_ASSIGNEE_NAME_ALIASES) ? null : Boolean(reference.assignee_name),
-    assigneeKind: isCoManagedReadFieldHidden(redactedFields, CO_MANAGED_ASSIGNEE_NAME_ALIASES) ? null : reference.assigned_team_id ? 'team' : reference.assigned_to ? 'user' : null,
-    assignedToMe: isCoManagedReadFieldHidden(redactedFields, CO_MANAGED_ASSIGNEE_NAME_ALIASES) ? null : reference.assigned_to === actorUserId,
+    hasAssigneeName: isCoManagedReadFieldHidden(redactedFields, coManagedTaskFieldAliases('assignee_name')) ? null : Boolean(reference.assignee_name),
+    assigneeKind: isCoManagedReadFieldHidden(redactedFields, coManagedTaskFieldAliases('assignee_name')) ? null : reference.assigned_team_id ? 'team' : reference.assigned_to ? 'user' : null,
+    assignedToMe: isCoManagedReadFieldHidden(redactedFields, coManagedTaskFieldAliases('assignee_name')) ? null : reference.assigned_to === actorUserId,
   };
 }
 

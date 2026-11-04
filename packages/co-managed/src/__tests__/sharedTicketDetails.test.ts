@@ -26,7 +26,7 @@ describe('getCoManagedSharedTicketDetails current assignee policy', () => {
     expect(tightened.fields.customer_assignee).toBeUndefined();
     expect(JSON.stringify(tightened)).not.toContain('QA Tester');
   });
-  it.each(['assignee_name', 'users', 'teams'])('suppresses assignee_name under %s bundle redaction', async redaction => {
+  it.each(['assignee_name', 'assigneeName', 'values.assigneeName', 'users', 'teams'])('suppresses assignee_name under %s bundle redaction', async redaction => {
     state.redactedFields = [redaction];
     const details = await getCoManagedSharedTicketDetails({} as any, actor, resource);
     expect(details.fields.customer_assignee).toBeUndefined();

@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { withCoManagedSharedWork, type CoManagedSessionActor, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
+import { CO_MANAGED_ASSIGNEE_NAME_ALIASES, expandCoManagedPolicyAliases } from './sharedWorkProjection';
 import { CoManagedSharedWorkError } from './sharedWorkIdentity';
 
 /** Customer people and organisations are shown by name only. Their IDs are not
@@ -29,7 +30,7 @@ const sources: Record<keyof CoManagedSharedTicketDetails['fields'], string[]> = 
   client: ['client', 'clients', 'client_id', 'client_name', 'tickets.client_id'],
   category: ['category', 'categories', 'category_id', 'category_name', 'tickets.category_id'],
   due_date: ['due_date', 'tickets.due_date'],
-  customer_assignee: ['customer_assignee', 'assignee', 'assignee_name', 'values.assignee_name', 'fields.assignee_name', 'tickets.assignee_name', 'assigned_to', 'assigned_to_name', 'tickets.assigned_to', 'users', 'teams'],
+  customer_assignee: expandCoManagedPolicyAliases(['customer_assignee', ...CO_MANAGED_ASSIGNEE_NAME_ALIASES, 'assigned_to', 'assigned_to_name']),
 };
 const visible = (context: CoManagedSharedWorkContext, key: keyof typeof sources) =>
   !isCoManagedReadFieldHidden(context.redactedFields, [key, ...sources[key]]);

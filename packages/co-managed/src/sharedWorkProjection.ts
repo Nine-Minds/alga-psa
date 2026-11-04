@@ -25,6 +25,27 @@ export const CO_MANAGED_ACTOR_NAME_ALIASES = ['actor_display_name', 'values.acto
 /** History organization labels are cached from the acting staff member's organization. */
 export const CO_MANAGED_ACTOR_ORGANIZATION_NAME_ALIASES = ['actor_organization_name', 'values.actor_organization_name', 'actorOrganizationName', 'values.actorOrganizationName', 'organization_name', 'values.organization_name', 'organizationName', 'values.organizationName', 'client_name', 'tenants'] as const;
 
+/** One dependency registry for task snapshots, live values, assignment metadata and history. */
+const CO_MANAGED_TASK_FIELD_SOURCES: Record<string, readonly string[]> = {
+  // Whole-resource aliases must not make a nested redaction hide sibling fields.
+  task_name: [...CO_MANAGED_TASK_NAME_ALIASES.filter(alias => !(CO_MANAGED_TASK_RESOURCE_ALIASES as readonly string[]).includes(alias)), 'tasks.task_name'],
+  project_name: CO_MANAGED_PROJECT_NAME_ALIASES,
+  organization_name: CO_MANAGED_ORGANIZATION_NAME_ALIASES,
+  assignee_name: CO_MANAGED_ASSIGNEE_NAME_ALIASES,
+  actor_display_name: CO_MANAGED_ACTOR_NAME_ALIASES,
+  actor_organization_name: CO_MANAGED_ACTOR_ORGANIZATION_NAME_ALIASES,
+  project_status_mapping_id: ['status', 'selectedStatus', 'status_id', 'status_name', 'project_status_mappings'],
+};
+
+/** Expand every task field's sources through the same storage and response namespaces. */
+export function coManagedTaskFieldAliases(field: string): readonly string[] {
+  return expandCoManagedPolicyAliases([
+    field,
+    ...(Object.hasOwn(CO_MANAGED_TASK_FIELD_SOURCES, field) ? CO_MANAGED_TASK_FIELD_SOURCES[field] : []),
+    ...(Object.hasOwn(CO_MANAGED_AUDIT_DERIVED_ALIASES, field) ? CO_MANAGED_AUDIT_DERIVED_ALIASES[field] : []),
+  ], ['values', 'project_tasks', 'co_managed_project_task_references']);
+}
+
 export const CO_MANAGED_PHASE_NAME_ALIASES = ['phase_name', 'values.phase_name', 'project_phases.phase_name', 'phaseName'] as const;
 
 /**
@@ -72,8 +93,7 @@ export const CO_MANAGED_AUDIT_DERIVED_ALIASES: Record<string, readonly string[]>
 
 /** Every alias a reader's redactions are matched against for one audit `changed_data` field. */
 export function coManagedAuditFieldAliases(field: string): readonly string[] {
-  // LEVERAGE: pattern co-managed-alias-lists — [field, values.field, table.field] is hand-built at several call sites (e.g. projectTaskAssignments.ts task_name/project_name checks).
-  return [field, `values.${field}`, `project_tasks.${field}`, ...(Object.hasOwn(CO_MANAGED_AUDIT_DERIVED_ALIASES, field) ? CO_MANAGED_AUDIT_DERIVED_ALIASES[field] : [])];
+  return coManagedTaskFieldAliases(field);
 }
 
 /**
@@ -93,8 +113,8 @@ export function projectCoManagedActorAttribution(redactedFields: readonly string
     authorName: typeof details?.actor_display_name === 'string' ? details.actor_display_name : '',
     organizationName: typeof details?.actor_organization_name === 'string' ? details.actor_organization_name : '',
   }, {
-    authorName: CO_MANAGED_ACTOR_NAME_ALIASES,
-    organizationName: CO_MANAGED_ACTOR_ORGANIZATION_NAME_ALIASES,
+    authorName: coManagedTaskFieldAliases('actor_display_name'),
+    organizationName: coManagedTaskFieldAliases('actor_organization_name'),
   });
   return { authorName: projected.authorName ?? '', organizationName: projected.organizationName ?? '' };
 }

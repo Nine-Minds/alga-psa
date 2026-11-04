@@ -4,7 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { snapshotCoManagedSessionActor, isCoManagedUuid, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
-import { isCoManagedTaskResourceHidden } from './sharedWorkProjection';
+import { isCoManagedTaskResourceHidden, coManagedTaskFieldAliases } from './sharedWorkProjection';
 import { readCoManagedProjectTaskReferences, type CoManagedProjectTaskReference } from './projectTaskReference';
 import { readCoManagedCustomerOrganizationName } from './projectTaskQueue';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
@@ -40,8 +40,7 @@ export class CoManagedTaskEditError extends Error {
 export type CoManagedTaskWriter = (trx: Knex.Transaction, customerTenant: string, taskId: string, patch: CoManagedTaskEditPatch) => Promise<void>;
 
 const iso = (value: unknown): string => value instanceof Date ? value.toISOString() : new Date(value as string).toISOString();
-const fieldHidden = (redacted: readonly string[], field: CoManagedTaskEditField) => isCoManagedReadFieldHidden(redacted, [field, `values.${field}`, `project_tasks.${field}`,
-  ...(field === 'project_status_mapping_id' ? ['status', 'selectedStatus', 'status_id', 'status_name', 'project_status_mappings'] : [])]);
+const fieldHidden = (redacted: readonly string[], field: CoManagedTaskEditField) => isCoManagedReadFieldHidden(redacted, coManagedTaskFieldAliases(field));
 
 function snapshotRequest(input: CoManagedTaskEditRequest): CoManagedTaskEditRequest {
   const invalid = (): never => { throw new CoManagedTaskEditError('INVALID_TASK_EDIT'); };

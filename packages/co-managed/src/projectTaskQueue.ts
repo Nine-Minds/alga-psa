@@ -4,13 +4,13 @@ import { withCoManagedSharedWork } from './sharedWork';
 import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, isCoManagedUuid, isCoManagedSharedWorkError, CoManagedSharedWorkError,
   type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
-import { CO_MANAGED_TASK_NAME_ALIASES, CO_MANAGED_PROJECT_NAME_ALIASES, CO_MANAGED_ORGANIZATION_NAME_ALIASES } from './sharedWorkProjection';
+import { coManagedTaskFieldAliases } from './sharedWorkProjection';
 import { readCoManagedProjectTaskReferences } from './projectTaskReference';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
 
 /** The customer organization's display name, or '' when redacted. Single source for the project list and the reference snapshot. */
 export async function readCoManagedCustomerOrganizationName(trx: Knex.Transaction, customerTenant: string, redactedFields: Parameters<typeof isCoManagedReadFieldHidden>[0]): Promise<string> {
-  if (isCoManagedReadFieldHidden(redactedFields, CO_MANAGED_ORGANIZATION_NAME_ALIASES)) return '';
+  if (isCoManagedReadFieldHidden(redactedFields, coManagedTaskFieldAliases('organization_name'))) return '';
   const organization = await tenantDb(trx, customerTenant).table('tenants').first('client_name');
   return organization?.client_name ?? '';
 }
@@ -74,7 +74,7 @@ export async function listCoManagedSharedProjects(db: Knex, inputActor: CoManage
 async function readProject(db: Knex, actor: CoManagedSessionActor, customerTenant: string, relationshipId: string, projectId: string): Promise<CoManagedSharedProjectRow | null> {
   try {
     return await withCoManagedSharedWork(db, actor, { tenant: customerTenant, relationshipId, kind: 'project', id: projectId }, 'read', async context => {
-      if (isCoManagedReadFieldHidden(context.redactedFields, CO_MANAGED_PROJECT_NAME_ALIASES)) return null;
+      if (isCoManagedReadFieldHidden(context.redactedFields, coManagedTaskFieldAliases('project_name'))) return null;
       const customer = tenantDb(context.trx, customerTenant);
       const project = await customer.table('projects').where('project_id', projectId).first('project_name');
       const scope = await customer.table('co_management_project_scopes').where({ relationship_id: relationshipId, project_id: projectId }).first('can_collaborate');
@@ -103,7 +103,7 @@ export async function listCoManagedSharedProjectTasks(db: Knex, inputActor: CoMa
   await assertCoManagedProjectWorkServed(actor.tenant);
   return withCoManagedSharedWork(db, actor, { tenant: target.customerTenant.toLowerCase(), relationshipId: target.relationshipId.toLowerCase(), kind: 'project', id: target.projectId.toLowerCase() }, 'read', async context => {
     // A redacted task name drops the task row: nothing is inferred from a sibling column.
-    if (isCoManagedReadFieldHidden(context.redactedFields, CO_MANAGED_TASK_NAME_ALIASES)) return { rows: [], nextAfterTaskId: null };
+    if (isCoManagedReadFieldHidden(context.redactedFields, coManagedTaskFieldAliases('task_name'))) return { rows: [], nextAfterTaskId: null };
     const customer = tenantDb(context.trx, target.customerTenant.toLowerCase());
     const query = customer.table('project_tasks as task').orderBy('task.task_id').limit(limit + 1).where('phase.project_id', target.projectId.toLowerCase());
     customer.tenantJoin(query, 'project_phases as phase', 'task.phase_id', 'phase.phase_id');
@@ -111,7 +111,7 @@ export async function listCoManagedSharedProjectTasks(db: Knex, inputActor: CoMa
     const tasks = await query.select('task.task_id', 'task.task_name', 'task.due_date', 'task.updated_at');
     const page = tasks.slice(0, limit);
     const byTask = await readCoManagedProjectTaskReferences(context, page.map(task => task.task_id));
-    const dueHidden = isCoManagedReadFieldHidden(context.redactedFields, ['due_date', 'values.due_date', 'project_tasks.due_date']);
+    const dueHidden = isCoManagedReadFieldHidden(context.redactedFields, coManagedTaskFieldAliases('due_date'));
     return {
       rows: page.map(task => {
         const reference = byTask.get(task.task_id);

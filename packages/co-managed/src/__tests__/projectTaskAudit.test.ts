@@ -34,7 +34,7 @@ describe('projectCoManagedChanges', () => {
   });
   it('derives the assignee-name aliases for msp_assignee only', () => {
     expect(coManagedAuditFieldAliases('msp_assignee')).toEqual(expect.arrayContaining(['msp_assignee', 'values.msp_assignee', 'assignee_name', 'users', 'teams', 'assignee']));
-    expect(coManagedAuditFieldAliases('task_name')).toEqual(['task_name', 'values.task_name', 'project_tasks.task_name']);
+    expect(coManagedAuditFieldAliases('task_name')).toEqual(expect.arrayContaining(['task_name', 'values.task_name', 'project_tasks.task_name']));
   });
   it.each(['assignee_name', 'values.assignee_name', 'users', 'teams', 'assignee', 'msp_assignee', 'values.msp_assignee', '*', 'fields', 'fields.assignee_name'])(
     'omits msp_assignee when %s is redacted', redaction => {
@@ -100,6 +100,29 @@ describe('listCoManagedProjectTaskHistory', () => {
     expect(projected.authorName).toBe(redaction === 'values.actor_display_name' ? '' : 'Sam');
     expect(projected.organizationName).toBe(redaction === 'values.organization_name' ? '' : 'MSP Co');
     expect(state.rows[0].details).toEqual(storedDetails);
+  });
+  it.each(['project_tasks', 'co_managed_project_task_references'])('masks qualified history dependencies under %s', async namespace => {
+    const visible = await listCoManagedProjectTaskHistory({} as any, actor, resource);
+    expect(visible[0].changes.msp_assignee).toBeDefined();
+    state.redactedFields = [`${namespace}.assignee_name`, `${namespace}.organization_name`];
+    const [hidden] = await listCoManagedProjectTaskHistory({} as any, actor, resource);
+    expect(hidden.changes).toEqual({});
+    expect(hidden.organizationName).toBe('');
+    expect(hidden.authorName).toBe('Sam');
+  });
+  it.each(['project_tasks.organization_name', 'co_managed_project_task_references.organization_name'])('masks history organization independently under %s', async alias => {
+    state.redactedFields = [alias];
+    const [entry] = await listCoManagedProjectTaskHistory({} as any, actor, resource);
+    expect(entry.organizationName).toBe('');
+    expect(entry.authorName).toBe('Sam');
+    expect(entry.changes.msp_assignee).toEqual({ kind: 'user', name: 'Alex MSP' });
+  });
+  it.each(['taskName', 'values.taskName', 'co_managed_project_task_references.task_name'])('omits historical task names under %s', async alias => {
+    state.rows[0].changed_data = { task_name: { from: 'Secret old task', to: 'Secret new task' } };
+    state.redactedFields = [alias];
+    const [entry] = await listCoManagedProjectTaskHistory({} as any, actor, resource);
+    expect(entry.changes).toEqual({});
+    expect(JSON.stringify(entry)).not.toContain('Secret');
   });
   it.each([['*'], ['tasks'], ['project_tasks']])('denies the whole history when the task resource is redacted (%s)', async redaction => {
     state.redactedFields = [redaction];

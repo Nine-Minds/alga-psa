@@ -27,17 +27,19 @@ const request = (expectedRevision = 4, expectedTaskUpdatedAt = updatedAt): any =
 
 describe('editCoManagedProjectTask conflict snapshots', () => {
   beforeEach(() => { state.redactedFields = []; state.writes = 0; });
-  it.each([
-    ['revision', request(3, updatedAt)],
-    ['customer_drift', request(4, '2026-11-02T12:00:00.000Z')],
-  ] as const)('attaches a current-policy snapshot to %s conflict', async (_reason, editRequest) => {
-    state.redactedFields = ['assignee_name'];
-    let failure: unknown;
-    try { await editCoManagedProjectTask({} as any, actor, resource, editRequest, async () => { state.writes += 1; }); }
-    catch (error) { failure = error; }
-    expect(failure).toBeInstanceOf(CoManagedTaskEditError);
-    expect((failure as CoManagedTaskEditError).snapshot).toMatchObject({ revision: 4, assignee: null, values: { task_name: 'Replace core switch' } });
-    expect(JSON.stringify((failure as CoManagedTaskEditError).snapshot)).not.toContain('QA Tester');
-    expect(state.writes).toBe(0);
+  describe.each(['assignee_name', 'project_tasks.assignee_name', 'co_managed_project_task_references.assignee_name'])('redaction %s', alias => {
+    it.each([
+      ['revision', request(3, updatedAt)],
+      ['customer_drift', request(4, '2026-11-02T12:00:00.000Z')],
+    ] as const)('attaches a current-policy snapshot to %s conflict', async (_reason, editRequest) => {
+      state.redactedFields = [alias];
+      let failure: unknown;
+      try { await editCoManagedProjectTask({} as any, actor, resource, editRequest, async () => { state.writes += 1; }); }
+      catch (error) { failure = error; }
+      expect(failure).toBeInstanceOf(CoManagedTaskEditError);
+      expect((failure as CoManagedTaskEditError).snapshot).toMatchObject({ revision: 4, assignee: null, values: { task_name: 'Replace core switch' } });
+      expect(JSON.stringify((failure as CoManagedTaskEditError).snapshot)).not.toContain('QA Tester');
+      expect(state.writes).toBe(0);
+    });
   });
 });
