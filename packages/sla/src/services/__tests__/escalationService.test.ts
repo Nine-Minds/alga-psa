@@ -885,6 +885,34 @@ describe('checkEscalationNeeded', () => {
   });
 
   describe('escalation threshold checks', () => {
+    it('makes each configured level eligible only at its own percentage boundary', async () => {
+      const ticketBuilder = {
+        where: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue({
+          sla_policy_id: SLA_POLICY_ID,
+          priority_id: PRIORITY_ID,
+          escalation_level: null,
+        }),
+      };
+      const targetBuilder = {
+        where: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue({
+          escalation_1_percent: 70,
+          escalation_2_percent: 90,
+          escalation_3_percent: 110,
+        }),
+      };
+      mockTrx.tableBuilders['tickets'] = ticketBuilder as any;
+      mockTrx.tableBuilders['sla_policy_targets'] = targetBuilder as any;
+
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 69.999)).toBeNull();
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 70)).toBe(1);
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 89.999)).toBe(1);
+      expect(await checkEscalationNeeded(mockTrx.trx, TENANT, TICKET_ID, 90)).toBe(2);
+    });
+
     it('should return level 1 when elapsed percentage exceeds escalation_1_percent', async () => {
       const ticketData = {
         sla_policy_id: SLA_POLICY_ID,

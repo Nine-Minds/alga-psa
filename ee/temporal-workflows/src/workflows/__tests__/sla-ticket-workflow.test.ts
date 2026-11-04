@@ -136,6 +136,62 @@ describe('slaTicketWorkflow', () => {
     }
   });
 
+  it('schedules each escalation level at its exact threshold and keeps later levels pending', async () => {
+    const calculateInputs: Array<{ currentTime: string; targetMinutes: number }> = [];
+    const escalations: number[] = [];
+    const notifications: number[] = [];
+    let delayFirstWake = true;
+    const { env, worker, taskQueue } = await setupWorkflowTest({
+      calculateNextWakeTime: async ({ currentTime, targetMinutes }: { currentTime: string; targetMinutes: number }) => {
+        calculateInputs.push({ currentTime, targetMinutes });
+        const deadline = new Date(new Date(currentTime).getTime() + targetMinutes * 60_000);
+        if (delayFirstWake) {
+          delayFirstWake = false;
+          deadline.setMinutes(deadline.getMinutes() + 2);
+        }
+        return deadline.toISOString();
+      },
+      sendSlaNotification: async ({ thresholdPercent }: { thresholdPercent: number }) => {
+        notifications.push(thresholdPercent);
+      },
+      checkAndEscalate: async ({ thresholdPercent }: { thresholdPercent: number }) => {
+        escalations.push(thresholdPercent);
+      },
+    });
+    try {
+      await worker.runUntil(async () => {
+        const handle = await env.client.workflow.start(slaTicketWorkflow, {
+          args: [{
+            ticketId: 'ticket-escalation-timing',
+            tenantId: 'tenant-timing',
+            policyTargets: [{
+              ...target,
+              response_time_minutes: 2,
+              resolution_time_minutes: null,
+              escalation_1_percent: 70,
+              escalation_2_percent: 90,
+              escalation_3_percent: 0,
+            }],
+            businessHoursSchedule: schedule24x7,
+            notificationThresholds: [50, 75],
+          }],
+          taskQueue,
+          workflowId: 'sla-ticket-escalation-timing',
+        });
+        await handle.result();
+      });
+
+      expect(calculateInputs.map(({ targetMinutes }) => targetMinutes)).toEqual([
+        1, 1.4, 1.5, 1.8, 2,
+      ]);
+      expect(escalations).toEqual([50, 70, 75, 90, 100]);
+      expect(notifications).toEqual([50, 75, 100]);
+      expect(escalations.indexOf(70)).toBeLessThan(escalations.indexOf(90));
+    } finally {
+      await env.teardown();
+    }
+  });
+
   it('pause and resume update pause state', async () => {
     let signalFirstCalculate!: () => void;
     const firstCalculateDone = new Promise<void>((resolve) => {
