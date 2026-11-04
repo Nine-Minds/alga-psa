@@ -491,6 +491,32 @@ describe('IMAP OAuth credentials are bound to their issuer', () => {
     expect(mocks.secrets.deleteTenantSecret).not.toHaveBeenCalled();
   });
 
+  it('preserves credentials when only the provider name changes', async () => {
+    const credentialGeneration = 'generation-rename-preserved';
+    const row = { ...storedImapRow, credential_generation: credentialGeneration };
+    seed({
+      email_providers: { first: providerRow, returned: { ...providerRow, providerName: 'Renamed Support' } },
+      imap_email_provider_config: { first: row, returned: { ...row, folder_filters: [] } },
+    });
+
+    const { updateEmailProvider } = await import('./emailProviderActions');
+    const result = await updateEmailProvider('prov-1', {
+      ...imapPayload(),
+      providerName: 'Renamed Support',
+    });
+
+    expect(result.reconnectRequired).toBeUndefined();
+    const mergeEntry = mocks.merges.find(([table]) => table === 'imap_email_provider_config');
+    expect(mergeEntry).toBeDefined();
+    if (!mergeEntry) throw new Error('Expected the IMAP config merge');
+    const [, merge] = mergeEntry;
+    expect(merge.credential_generation).toBe(credentialGeneration);
+    expect(merge.refresh_token.raw).toContain('COALESCE');
+    expect(merge.access_token.raw).toContain('COALESCE');
+    expect(mocks.secrets.deleteTenantSecret).not.toHaveBeenCalled();
+    expect(mocks.updates).toContainEqual(expect.arrayContaining(['email_providers', expect.objectContaining({ provider_name: 'Renamed Support' })]));
+  });
+
   it.each([
     ['host', { host: 'mail.attacker.test' }],
     ['port', { port: 143 }],
