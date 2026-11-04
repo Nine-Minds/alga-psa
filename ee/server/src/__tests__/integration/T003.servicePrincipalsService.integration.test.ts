@@ -14,7 +14,7 @@ import type { Knex } from 'knex';
 import crypto from 'node:crypto';
 import { rmSync } from 'node:fs';
 import { v4 as uuidv4 } from 'uuid';
-import { tenantDb } from '@alga-psa/db';
+import { auditLog, tenantDb } from '@alga-psa/db';
 
 import { createTestDbConnection } from '../../../../../server/test-utils/dbConfig';
 import { buildMergedEeMigrationsDir } from '../../../../../server/test-utils/eeMigrations';
@@ -248,6 +248,49 @@ describe('delete vs archive (T006)', () => {
     expect(await db('users').where({ tenant, user_id: unused.user_id }).first()).toBeUndefined();
     expect(await db('service_principals').where({ tenant, user_id: unused.user_id }).first()).toBeUndefined();
     expect(await db('api_keys').where({ tenant, user_id: unused.user_id }).first()).toBeUndefined();
+  });
+
+  it.each(['actor', 'via'] as const)('archives a principal referenced only by a generic audit %s', async (reference) => {
+    const principal = await createServicePrincipal(db, tenant, { kind: 'api', name: 'audit only' });
+    await issueServicePrincipalKey(db, tenant, principal.user_id);
+    const human = await insertInternal(tenant);
+    const recordId = uuidv4();
+    await db.transaction(async (trx) => {
+      await trx.raw("SELECT set_config('app.current_tenant', ?, true)", [tenant]);
+      await auditLog(trx, {
+        userId: reference === 'actor' ? principal.user_id : human,
+        viaPrincipalUserId: reference === 'via' ? principal.user_id : null,
+        operation: 'update', tableName: 'invoices', recordId,
+        changedData: { status: 'draft' }, details: { source: 'audit retention' },
+      });
+    });
+    const audit = await db('audit_logs').where({ tenant, record_id: recordId }).first();
+    expect(audit).toBeDefined();
+    if (reference === 'via') expect(audit.details.via_principal_user_id).toBe(principal.user_id);
+    else expect(audit.user_id).toBe(principal.user_id);
+
+    expect(await archiveOrDeleteServicePrincipal(db, tenant, principal.user_id)).toBe('archived');
+    expect(await db('users').where({ tenant, user_id: principal.user_id }).first()).toMatchObject({ is_inactive: true });
+    expect((await db('service_principals').where({ tenant, user_id: principal.user_id }).first()).archived_at).toBeTruthy();
+    expect(await db('api_keys').where({ tenant, user_id: principal.user_id })).toEqual([]);
+    expect(await db('audit_logs').where({ tenant, record_id: recordId }).first()).toEqual(audit);
+    expect(await getServicePrincipalUsage(db, tenant)).toEqual({ limit: 2, used: 0, remaining: 2 });
+  });
+
+  it.each(['actor', 'via'] as const)('ignores a generic audit %s reference in another tenant', async (reference) => {
+    const principal = await createServicePrincipal(db, tenant, { kind: 'api', name: 'unreferenced here' });
+    const otherTenant = await newTenant();
+    const recordId = uuidv4();
+    await db.transaction(async (trx) => {
+      await trx.raw("SELECT set_config('app.current_tenant', ?, true)", [otherTenant]);
+      await auditLog(trx, {
+        userId: reference === 'actor' ? principal.user_id : undefined,
+        viaPrincipalUserId: reference === 'via' ? principal.user_id : null,
+        operation: 'update', tableName: 'invoices', recordId, changedData: {}, details: {},
+      });
+    });
+    expect(await archiveOrDeleteServicePrincipal(db, tenant, principal.user_id)).toBe('deleted');
+    expect(await db('audit_logs').where({ tenant: otherTenant, record_id: recordId }).first()).toBeDefined();
   });
 });
 

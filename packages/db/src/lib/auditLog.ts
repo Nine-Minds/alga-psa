@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from './tenantDb';
+import { withViaPrincipal } from './viaPrincipal';
 import { v4 as uuidv4 } from 'uuid';
 
 interface AuditLogParams {
@@ -42,9 +43,7 @@ export async function auditLog(
       table_name: params.tableName,
       record_id: params.recordId,
       changed_data: params.changedData,
-      details: params.viaPrincipalUserId
-        ? { ...params.details, via_principal_user_id: params.viaPrincipalUserId }
-        : params.details,
+      details: withViaPrincipal(params, params.details, 'via_principal_user_id'),
       timestamp: new Date().toISOString()
     });
   } catch (error) {

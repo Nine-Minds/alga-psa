@@ -14,7 +14,7 @@
  */
 
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withViaPrincipal } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 
 import {
@@ -171,7 +171,7 @@ export async function writeTicketActivity(
   const changes = isEmptyChanges(input.changes) ? {} : input.changes ?? {};
   const details = input.details ?? {};
 
-  await tenantScopedTable(knex, 'ticket_audit_logs', input.tenant).insert({
+  await tenantScopedTable(knex, 'ticket_audit_logs', input.tenant).insert(withViaPrincipal(input.actor, {
     tenant: input.tenant,
     audit_id: auditId,
     ticket_id: input.ticketId,
@@ -181,14 +181,13 @@ export async function writeTicketActivity(
     actor_type: actorType,
     actor_user_id: input.actor.userId ?? null,
     actor_contact_id: input.actor.contactId ?? null,
-    ...(viaPrincipalUserId ? { via_principal_user_id: viaPrincipalUserId } : {}),
     actor_display_name: displayName,
     source: input.source,
     occurred_at: occurredAt,
     changes: JSON.stringify(changes),
     details: JSON.stringify(details),
     created_at: new Date().toISOString(),
-  });
+  }, 'via_principal_user_id'));
 
   return auditId;
 }

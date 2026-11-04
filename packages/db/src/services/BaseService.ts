@@ -7,6 +7,8 @@ import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, withTransaction } from '../lib/tenant';
 import { tenantDb } from '../lib/tenantDb';
+import { withViaPrincipal } from '../lib/viaPrincipal';
+export { withViaPrincipal } from '../lib/viaPrincipal';
 
 const tableColumnsCache = new Map<string, Promise<Set<string>>>();
 const warnedMissingAuditFields = new Set<string>();
@@ -49,26 +51,6 @@ export interface ServiceContext {
    * made on behalf of `userId`. Unset by default; only an edition boundary sets it.
    */
   viaPrincipalUserId?: string | null;
-}
-
-/**
- * Adds the via-principal column(s) to a row, only when the context carries a
- * `viaPrincipalUserId`. Otherwise the row is returned unchanged (same object),
- * so a write path behaves identically when no principal is involved.
- */
-export function withViaPrincipal<T extends object>(
-  ctx: Pick<ServiceContext, 'viaPrincipalUserId'>,
-  row: T,
-  columns: string | readonly string[] = 'via_principal_id'
-): T {
-  if (!ctx.viaPrincipalUserId) {
-    return row;
-  }
-  const via: Record<string, string> = {};
-  for (const column of typeof columns === 'string' ? [columns] : columns) {
-    via[column] = ctx.viaPrincipalUserId;
-  }
-  return { ...row, ...via };
 }
 
 /**

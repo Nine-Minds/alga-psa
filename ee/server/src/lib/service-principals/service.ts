@@ -379,7 +379,9 @@ export async function setServicePrincipalActive(
 // Columns that may reference a user without a database foreign key (or with a
 // cascade that would silently drop history). Together with a savepointed delete
 // that surfaces real FK references, this decides archive vs hard delete.
-const NON_FK_REFERENCES: Array<[table: string, column: string]> = [
+const NON_FK_REFERENCES: Array<[table: string, column: string, ...jsonPath: string[]]> = [
+  ['audit_logs', 'user_id'],
+  ['audit_logs', 'details', 'via_principal_user_id'],
   ['tickets', 'entered_by'],
   ['tickets', 'updated_by'],
   ['tickets', 'closed_by'],
@@ -406,9 +408,15 @@ async function isReferenced(trx: Knex.Transaction, tenant: string, userId: strin
     const audit = await db.table('mcp_agent_audit').where({ agent_id: agentId }).first('agent_id');
     if (audit) return true;
   }
-  for (const [table, column] of NON_FK_REFERENCES) {
+  for (const [table, column, ...jsonPath] of NON_FK_REFERENCES) {
     if (!(await trx.schema.hasTable(table)) || !(await trx.schema.hasColumn(table, column))) continue;
-    const hit = await db.table(table).where({ [column]: userId }).first(column);
+    const query = db.table(table);
+    if (jsonPath.length > 0) {
+      query.whereRaw('?? #>> ?::text[] = ?', [column, jsonPath, userId]);
+    } else {
+      query.where({ [column]: userId });
+    }
+    const hit = await query.first(column);
     if (hit) return true;
   }
   return false;

@@ -112,6 +112,14 @@ exports.down = async function down(knex) {
   const rows = await knex('service_principals').where({ kind: 'mcp_agent' }).select('tenant', 'user_id');
   for (const { tenant, user_id: userId } of rows) {
     await knex.transaction(async (trx) => {
+      // Agents created after up have no legacy binding. Restore it before the
+      // schema rollback removes service_user_id, preserving other metadata.
+      await trx('agents').where({ tenant, service_user_id: userId }).update({
+        metadata: trx.raw(
+          "COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('backing_user_id', ?::text)",
+          [userId]
+        ),
+      });
       await trx('users').where({ tenant, user_id: userId, user_type: 'service' }).update({ user_type: 'internal' });
       await trx('service_principals').where({ tenant, user_id: userId }).del();
     });
