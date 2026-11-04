@@ -1,14 +1,25 @@
-import { createHash } from 'node:crypto';
-import { writeFileSync } from 'node:fs';
+import { readFileSync, statSync, writeFileSync } from 'node:fs';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { createImapProviderStateSnapshot } from './imap-provider-state-snapshot.mjs';
 
 const outputPath = process.env.IMAP_STATE_OUTPUT;
 const tenantId = process.env.TENANT_ID;
 const providerId = process.env.PROVIDER_ID;
 const expectedDatabase = process.env.DB_NAME_SERVER;
-if (!outputPath || !tenantId || !providerId || !expectedDatabase) {
-  throw new Error('IMAP state snapshot requires output path, tenant, provider, and database');
+const fingerprintKeyPath = process.env.IMAP_SCOPE_FINGERPRINT_KEY_FILE;
+if (!outputPath || !tenantId || !providerId || !expectedDatabase || !fingerprintKeyPath) {
+  throw new Error('IMAP state snapshot requires output path, tenant, provider, database, and private fingerprint key');
 }
+
+const keyStat = statSync(fingerprintKeyPath);
+if (![0o400, 0o600].includes(keyStat.mode & 0o777)) {
+  throw new Error('Provider scope fingerprint key file must have mode 400 or 600');
+}
+const keyText = readFileSync(fingerprintKeyPath, 'utf8').trim();
+if (!/^(?:[0-9a-fA-F]{2}){32,}$/.test(keyText)) {
+  throw new Error('Provider scope fingerprint key file must contain at least 32 bytes of hexadecimal key material');
+}
+const fingerprintKey = Buffer.from(keyText, 'hex');
 
 const db = await getAdminConnection();
 try {
@@ -23,36 +34,9 @@ try {
       'oauth_client_secret', 'credential_generation', 'updated_at',
     );
   if (!row) throw new Error('Provider state row was not found in the isolated database');
-  if (typeof row.credential_generation !== 'string' || row.credential_generation.length === 0) {
-    throw new Error('Persisted provider has no credential generation');
-  }
-  const updatedAt = new Date(row.updated_at).toISOString();
-
-  const identity = {
-    host: row.host,
-    port: Number(row.port),
-    secure: Boolean(row.secure ?? true),
-    allowStarttls: Boolean(row.allow_starttls ?? false),
-    username: row.username ?? null,
-    authType: row.auth_type ?? null,
-    oauthTokenUrl: row.oauth_token_url ?? null,
-    oauthAuthorizeUrl: row.oauth_authorize_url ?? null,
-    oauthClientId: row.oauth_client_id ?? null,
-    oauthClientSecretPresent: typeof row.oauth_client_secret === 'string' && row.oauth_client_secret.length > 0,
-  };
-  const state = {
-    database,
-    providerId,
-    host: identity.host,
-    port: identity.port,
-    authType: identity.authType,
-    oauthClientId: identity.oauthClientId,
-    credentialGeneration: row.credential_generation,
-    scopeFingerprint: createHash('sha256').update(JSON.stringify(identity)).digest('hex'),
-    updatedAt,
-    capturedAt: new Date().toISOString(),
-  };
+  const state = createImapProviderStateSnapshot({ row, database, providerId, fingerprintKey });
   writeFileSync(outputPath, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });
 } finally {
+  fingerprintKey.fill(0);
   await db.destroy();
 }

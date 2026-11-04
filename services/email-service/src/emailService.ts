@@ -491,7 +491,8 @@ class ImapFolderListener {
 
   constructor(
     private provider: ImapProviderRow,
-    private folder: string
+    private folder: string,
+    private workerId: string
   ) {
     this.folderState = this.loadFolderState();
   }
@@ -1117,6 +1118,8 @@ class ImapFolderListener {
       tenant: this.provider.tenant,
       folder: this.folder,
       listenerId: this.listenerId,
+      workerId: this.workerId,
+      credentialGeneration: this.provider.credential_generation,
       host: this.provider.host,
       port: this.provider.port,
       authType: this.provider.auth_type,
@@ -1326,7 +1329,7 @@ class ImapProviderWorker {
       credentialGeneration: this.provider.credential_generation,
     });
 
-    this.listeners = folders.map(folder => new ImapFolderListener(this.provider, folder));
+    this.listeners = folders.map(folder => new ImapFolderListener(this.provider, folder, this.workerId));
     for (const listener of this.listeners) {
       listener.start();
     }

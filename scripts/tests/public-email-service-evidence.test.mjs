@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { validatePublicEmailServiceEvidence } from '../lib/public-email-service-evidence.mjs';
+import { createImapProviderStateSnapshot } from '../security/imap-provider-state-snapshot.mjs';
 
 const now = Date.now();
 const runStart = new Date(now - 60_000).toISOString();
@@ -19,7 +20,7 @@ function readiness(ready = true) {
 function defaultServiceEvents({ host = 'imap.test.example', generation = 'generation-new', at = workerAt } = {}) {
   return [
     { ts: at, evidenceRunId: 'public-run-1', event: 'worker_start', providerId: 'provider-1', workerId: 'worker-1', host, port: 993, credentialGeneration: generation },
-    { ts: at, evidenceRunId: 'public-run-1', event: 'folder_listener_start', providerId: 'provider-1', listenerId: 'listener-1', host, port: 993 },
+    { ts: at, evidenceRunId: 'public-run-1', event: 'folder_listener_start', providerId: 'provider-1', workerId: 'worker-1', credentialGeneration: generation, listenerId: 'listener-1', host, port: 993 },
     { ts: at, evidenceRunId: 'public-run-1', event: 'connected', providerId: 'provider-1', listenerId: 'listener-1' },
   ];
 }
@@ -62,8 +63,8 @@ function evidence({
     expectedCredentialId,
     expectedOAuthClientId: 'oauth-client-1',
     persistedState: persistedState ?? {
-      before: { credentialGeneration, scopeFingerprint: 'same-scope', host: expectedHost, port: 993, oauthClientId: 'oauth-client-1', updatedAt: new Date(now - 50_000).toISOString() },
-      after: { credentialGeneration, scopeFingerprint: 'same-scope', host: expectedHost, port: 993, oauthClientId: 'oauth-client-1', updatedAt: new Date(now - 40_000).toISOString() },
+      before: { credentialGeneration, scopeFingerprint: 'same-scope', host: expectedHost, port: 993, oauthClientId: 'oauth-client-1', oauthTokenProtocol: 'https:', oauthTokenHost: 'oauth.example', oauthTokenPort: 443, updatedAt: new Date(now - 50_000).toISOString() },
+      after: { credentialGeneration, scopeFingerprint: 'same-scope', host: expectedHost, port: 993, oauthClientId: 'oauth-client-1', oauthTokenProtocol: 'https:', oauthTokenHost: 'oauth.example', oauthTokenPort: 443, updatedAt: new Date(now - 40_000).toISOString() },
     },
     oldCredentialIds: ['credential-old'],
     oldCredentialGenerations: ['generation-old'],
@@ -105,14 +106,14 @@ test('accepts UI authorization-code exchange before capture and worker authentic
   const { input } = evidence({
     scenario: 'oauth-reconnect',
     persistedState: {
-      before: { credentialGeneration: 'generation-old', scopeFingerprint: 'scope-old', host: 'imap.test.example', port: 993, oauthClientId: 'oauth-client-1', updatedAt: new Date(now - 50_000).toISOString() },
-      after: { credentialGeneration: 'generation-new', scopeFingerprint: 'scope-new', host: 'imap.test.example', port: 993, oauthClientId: 'oauth-client-1', updatedAt: new Date(now - 40_000).toISOString() },
+      before: { credentialGeneration: 'generation-old', scopeFingerprint: 'scope-old', host: 'imap.test.example', port: 993, oauthClientId: 'oauth-client-1', oauthTokenProtocol: 'https:', oauthTokenHost: 'oauth.example', oauthTokenPort: 443, updatedAt: new Date(now - 50_000).toISOString() },
+      after: { credentialGeneration: 'generation-new', scopeFingerprint: 'scope-new', host: 'imap.test.example', port: 993, oauthClientId: 'oauth-client-1', oauthTokenProtocol: 'https:', oauthTokenHost: 'oauth.example', oauthTokenPort: 443, updatedAt: new Date(now - 40_000).toISOString() },
     },
     recipientEvents: [
       { ...successfulImap },
       {
         type: 'token', protocol: 'oauth', at: uiAt, grantType: 'authorization_code',
-        destinationHost: 'imap.test.example', destinationPort: 993, clientId: 'oauth-client-1',
+        recipientHost: 'oauth.example', recipientPort: 443, clientId: 'oauth-client-1',
         credentialGeneration: 'generation-new', result: 'success',
       },
     ],
@@ -127,7 +128,7 @@ test('requires baseline OAuth refresh token and IMAP authentication at the store
       successfulImap,
       {
         type: 'token', protocol: 'oauth', at: workerAt, grantType: 'refresh_token',
-        destinationHost: 'imap.test.example', destinationPort: 993,
+        recipientHost: 'oauth.example', recipientPort: 443,
         clientId: 'oauth-client-1', credentialGeneration: 'generation-new', result: 'success',
       },
     ],
@@ -146,12 +147,12 @@ test('requires the exported fixture window to cover UI actions before the servic
   const { input } = evidence({
     scenario: 'oauth-reconnect',
     persistedState: {
-      before: { credentialGeneration: 'generation-old', scopeFingerprint: 'scope-old', host: 'imap.test.example', port: 993, oauthClientId: 'oauth-client-1', updatedAt: new Date(now - 50_000).toISOString() },
-      after: { credentialGeneration: 'generation-new', scopeFingerprint: 'scope-new', host: 'imap.test.example', port: 993, oauthClientId: 'oauth-client-1', updatedAt: new Date(now - 40_000).toISOString() },
+      before: { credentialGeneration: 'generation-old', scopeFingerprint: 'scope-old', host: 'imap.test.example', port: 993, oauthClientId: 'oauth-client-1', oauthTokenProtocol: 'https:', oauthTokenHost: 'oauth.example', oauthTokenPort: 443, updatedAt: new Date(now - 50_000).toISOString() },
+      after: { credentialGeneration: 'generation-new', scopeFingerprint: 'scope-new', host: 'imap.test.example', port: 993, oauthClientId: 'oauth-client-1', oauthTokenProtocol: 'https:', oauthTokenHost: 'oauth.example', oauthTokenPort: 443, updatedAt: new Date(now - 40_000).toISOString() },
     },
     recipientEvents: [{
       type: 'token', protocol: 'oauth', at: uiAt, grantType: 'authorization_code',
-      destinationHost: 'imap.test.example', destinationPort: 993, clientId: 'oauth-client-1',
+      recipientHost: 'oauth.example', recipientPort: 443, clientId: 'oauth-client-1',
       credentialGeneration: 'generation-new', result: 'success',
     }],
   });
@@ -174,14 +175,15 @@ test('rejects evidence without worker execution or successful readiness', () => 
   assert.throws(() => validatePublicEmailServiceEvidence(notReady), /did not report ready/);
 });
 
-function scopeChangeEvidence({ recipientEvents = [], durationSeconds = 20 } = {}) {
+function scopeChangeEvidence({ recipientEvents = [], durationSeconds = 20, listenerDelaySeconds = 2 } = {}) {
   const newHost = 'imap.changed.example';
   const started = Date.parse(serviceStart);
   const ended = new Date(started + durationSeconds * 1000).toISOString();
+  const listenerStartedAt = new Date(started + listenerDelaySeconds * 1000).toISOString();
   const controlAt = new Date(Date.parse(runStart) + 15_000).toISOString();
   const events = [
-    ...defaultServiceEvents({ host: newHost }),
-    { ts: workerAt, evidenceRunId: 'public-run-1', event: 'folder_listener_error', providerId: 'provider-1', listenerId: 'listener-1', message: 'IMAP credentials missing' },
+    ...defaultServiceEvents({ host: newHost, at: listenerStartedAt }),
+    { ts: listenerStartedAt, evidenceRunId: 'public-run-1', event: 'folder_listener_error', providerId: 'provider-1', listenerId: 'listener-1', message: 'IMAP credentials missing' },
   ];
   const { input } = evidence({
     scenario: 'scope-change',
@@ -217,7 +219,12 @@ test('requires a successful old-scope positive control and a full fail-closed ob
   assert.throws(() => validatePublicEmailServiceEvidence(noControl), /positive control/);
 
   const shortObservation = scopeChangeEvidence({ durationSeconds: 10 });
-  assert.throws(() => validatePublicEmailServiceEvidence(shortObservation), /shorter than the required duration/);
+  assert.throws(() => validatePublicEmailServiceEvidence(shortObservation), /listener observation is shorter than the required duration/);
+});
+
+test('measures scope-change observation from the current-generation listener, not process startup', () => {
+  const lateListener = scopeChangeEvidence({ durationSeconds: 20, listenerDelaySeconds: 6 });
+  assert.throws(() => validatePublicEmailServiceEvidence(lateListener), /listener observation is shorter than the required duration/);
 });
 
 test('rejects old credentials delivered to the changed destination through IMAP or OAuth', () => {
@@ -225,23 +232,35 @@ test('rejects old credentials delivered to the changed destination through IMAP 
     type: 'auth', protocol: 'imap', at: workerAt, destinationHost: 'imap.changed.example', destinationPort: 993,
     credentialId: 'credential-old', credentialGeneration: 'generation-old', result: 'failure',
   }] });
-  assert.throws(() => validatePublicEmailServiceEvidence(oldImap), /changed IMAP destination received credential authentication/);
+  assert.throws(() => validatePublicEmailServiceEvidence(oldImap), /changed IMAP destination received authentication/);
 
   const oldRefreshToken = scopeChangeEvidence({ recipientEvents: [{
-    type: 'token', protocol: 'oauth', at: workerAt, destinationHost: 'imap.changed.example', destinationPort: 993,
+    type: 'token', protocol: 'oauth', at: workerAt, recipientHost: 'oauth.example', recipientPort: 443,
     grantType: 'refresh_token', credentialId: 'credential-old', clientId: 'oauth-client-old',
     credentialGeneration: 'generation-old', result: 'failure',
   }] });
-  assert.throws(() => validatePublicEmailServiceEvidence(oldRefreshToken), /changed IMAP destination received credential authentication/);
+  assert.throws(() => validatePublicEmailServiceEvidence(oldRefreshToken), /old credential ID or generation/);
 
   const oldRefreshAtOriginalDestination = scopeChangeEvidence({ recipientEvents: [{
-    type: 'token', protocol: 'oauth', at: workerAt, destinationHost: 'imap.test.example', destinationPort: 993,
+    type: 'token', protocol: 'oauth', at: workerAt, recipientHost: 'oauth.example', recipientPort: 443,
     grantType: 'refresh_token', credentialId: 'credential-old', credentialGeneration: 'generation-old', result: 'failure',
   }] });
-  assert.throws(() => validatePublicEmailServiceEvidence(oldRefreshAtOriginalDestination), /old OAuth credential was delivered/);
+  assert.throws(() => validatePublicEmailServiceEvidence(oldRefreshAtOriginalDestination), /old credential ID or generation/);
+
+  const oldGenerationAtOriginalImapHost = scopeChangeEvidence({ recipientEvents: [{
+    type: 'auth', protocol: 'imap', at: workerAt, destinationHost: 'imap.test.example', destinationPort: 993,
+    credentialId: 'credential-other', credentialGeneration: 'generation-old', result: 'failure',
+  }] });
+  assert.throws(() => validatePublicEmailServiceEvidence(oldGenerationAtOriginalImapHost), /old credential ID or generation/);
+
+  const oldCredentialAtOriginalImapHost = scopeChangeEvidence({ recipientEvents: [{
+    type: 'auth', protocol: 'imap', at: workerAt, destinationHost: 'imap.test.example', destinationPort: 993,
+    credentialId: 'credential-old', credentialGeneration: 'generation-new', result: 'success',
+  }] });
+  assert.throws(() => validatePublicEmailServiceEvidence(oldCredentialAtOriginalImapHost), /old credential ID or generation/);
 });
 
-test('requires mandatory new-generation state and binds OAuth events to the IMAP destination', () => {
+test('requires mandatory state and binds OAuth exchanges to their persisted HTTPS recipient', () => {
   const missingGeneration = evidence({ recipientEvents: [successfulImap] }).input;
   delete missingGeneration.persistedState.after.credentialGeneration;
   assert.throws(() => validatePublicEmailServiceEvidence(missingGeneration), /post-UI persisted credential generation is required/);
@@ -252,24 +271,24 @@ test('requires mandatory new-generation state and binds OAuth events to the IMAP
   assert.throws(() => validatePublicEmailServiceEvidence(staleWorker), /worker did not report the expected persisted credential generation/);
 
   const reconnectState = {
-    before: { credentialGeneration: 'generation-old', scopeFingerprint: 'scope-old', host: 'imap.test.example', port: 993, oauthClientId: 'oauth-client-1', updatedAt: new Date(now - 50_000).toISOString() },
-    after: { credentialGeneration: 'generation-new', scopeFingerprint: 'scope-new', host: 'imap.test.example', port: 993, oauthClientId: 'oauth-client-1', updatedAt: new Date(now - 40_000).toISOString() },
+    before: { credentialGeneration: 'generation-old', scopeFingerprint: 'scope-old', host: 'imap.test.example', port: 993, oauthClientId: 'oauth-client-1', oauthTokenProtocol: 'https:', oauthTokenHost: 'oauth.example', oauthTokenPort: 443, updatedAt: new Date(now - 50_000).toISOString() },
+    after: { credentialGeneration: 'generation-new', scopeFingerprint: 'scope-new', host: 'imap.test.example', port: 993, oauthClientId: 'oauth-client-1', oauthTokenProtocol: 'https:', oauthTokenHost: 'oauth.example', oauthTokenPort: 443, updatedAt: new Date(now - 40_000).toISOString() },
   };
   const missingDestination = evidence({ scenario: 'oauth-reconnect', persistedState: reconnectState, recipientEvents: [
     successfulImap,
     { type: 'token', protocol: 'oauth', at: uiAt, grantType: 'authorization_code', clientId: 'oauth-client-1', credentialGeneration: 'generation-new' },
   ] }).input;
-  assert.throws(() => validatePublicEmailServiceEvidence(missingDestination), /OAuth token destination host is required/);
+  assert.throws(() => validatePublicEmailServiceEvidence(missingDestination), /OAuth token recipient host is required/);
 
   const wrongDestination = evidence({ scenario: 'oauth-reconnect', persistedState: reconnectState, recipientEvents: [
     successfulImap,
-    { type: 'token', protocol: 'oauth', at: uiAt, grantType: 'authorization_code', destinationHost: 'imap.other.example', destinationPort: 993, clientId: 'oauth-client-1', credentialGeneration: 'generation-new' },
+    { type: 'token', protocol: 'oauth', at: uiAt, grantType: 'authorization_code', recipientHost: 'idp.other.example', recipientPort: 443, clientId: 'oauth-client-1', credentialGeneration: 'generation-new' },
   ] }).input;
-  assert.throws(() => validatePublicEmailServiceEvidence(wrongDestination), /bound to the expected IMAP destination/);
+  assert.throws(() => validatePublicEmailServiceEvidence(wrongDestination), /does not match the persisted OAuth token endpoint/);
 
   const wrongPersistedClient = evidence({ scenario: 'oauth-reconnect', persistedState: reconnectState, recipientEvents: [
     successfulImap,
-    { type: 'token', protocol: 'oauth', at: uiAt, grantType: 'authorization_code', destinationHost: 'imap.test.example', destinationPort: 993, clientId: 'oauth-client-1', credentialGeneration: 'generation-new' },
+    { type: 'token', protocol: 'oauth', at: uiAt, grantType: 'authorization_code', recipientHost: 'oauth.example', recipientPort: 443, clientId: 'oauth-client-1', credentialGeneration: 'generation-new' },
   ] }).input;
   wrongPersistedClient.persistedState.after.oauthClientId = 'oauth-client-other';
   assert.throws(() => validatePublicEmailServiceEvidence(wrongPersistedClient), /persisted OAuth client identity/);
@@ -277,7 +296,7 @@ test('requires mandatory new-generation state and binds OAuth events to the IMAP
 
 test('requires a successful expected OAuth refresh exchange during service authentication', () => {
   const token = {
-    type: 'token', protocol: 'oauth', destinationHost: 'imap.test.example', destinationPort: 993,
+    type: 'token', protocol: 'oauth', recipientHost: 'oauth.example', recipientPort: 443,
     grantType: 'refresh_token', clientId: 'oauth-client-1', credentialGeneration: 'generation-new',
   };
   const missingExchange = evidence({ scenario: 'oauth-refresh', recipientEvents: [successfulImap] }).input;
@@ -287,6 +306,40 @@ test('requires a successful expected OAuth refresh exchange during service authe
   events.push({ ts: workerAt, evidenceRunId: 'public-run-1', event: 'oauth_refresh', providerId: 'provider-1' });
   input.emailServiceLog = events.map((event) => `[IMAP_SM] ${JSON.stringify(event)}`).join('\n');
   assert.equal(validatePublicEmailServiceEvidence(input).scenario, 'oauth-refresh');
+});
+
+test('secret-only OAuth client-secret rotation changes the captured scope and validates reconnect evidence', () => {
+  const fingerprintKey = Buffer.from('11'.repeat(32), 'hex');
+  const beforeRow = {
+    host: 'imap.test.example', port: 993, secure: true, allow_starttls: false, username: 'mailbox@example.test',
+    auth_type: 'oauth2', oauth_token_url: 'https://oauth.example/token',
+    oauth_authorize_url: 'https://oauth.example/authorize', oauth_client_id: 'oauth-client-1',
+    oauth_client_secret: 'synthetic-client-secret-before', credential_generation: 'generation-old',
+    updated_at: new Date(now - 50_000).toISOString(),
+  };
+  const afterRow = {
+    ...beforeRow,
+    oauth_client_secret: 'synthetic-client-secret-after',
+    credential_generation: 'generation-new',
+    updated_at: new Date(now - 40_000).toISOString(),
+  };
+  const before = createImapProviderStateSnapshot({ row: beforeRow, database: 'smoke_imap_public_test', providerId: 'provider-1', fingerprintKey });
+  const after = createImapProviderStateSnapshot({ row: afterRow, database: 'smoke_imap_public_test', providerId: 'provider-1', fingerprintKey });
+  assert.notEqual(before.scopeFingerprint, after.scopeFingerprint);
+  assert.equal(after.oauthTokenHost, 'oauth.example');
+  assert.equal(after.oauthTokenPort, 443);
+  assert.equal(JSON.stringify({ before, after }).includes('synthetic-client-secret'), false);
+
+  const { input } = evidence({
+    scenario: 'oauth-reconnect',
+    persistedState: { before, after },
+    recipientEvents: [successfulImap, {
+      type: 'token', protocol: 'oauth', at: uiAt, grantType: 'authorization_code',
+      recipientHost: 'oauth.example', recipientPort: 443, clientId: 'oauth-client-1',
+      credentialGeneration: 'generation-new', result: 'success',
+    }],
+  });
+  assert.equal(validatePublicEmailServiceEvidence(input).scenario, 'oauth-reconnect');
 });
 
 test('accepts a shutdown event at a millisecond-precision service end boundary', () => {

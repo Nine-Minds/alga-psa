@@ -116,10 +116,14 @@ case "$EVIDENCE_PHASE" in
   prepare)
     [[ ! -e "$run_dir" ]] || fail "evidence run already exists: $run_dir"
     mkdir -m 700 "$run_dir"
+    fingerprint_key_file="$run_dir/scope-fingerprint-key"
+    (umask 077; openssl rand -hex 32 > "$fingerprint_key_file") || fail 'could not create the private scope fingerprint key'
+    chmod 600 "$fingerprint_key_file"
     binding=$(verify_ui_runtime) || fail 'UI dev-server must share the isolated database and secret filesystem before UI edits'
     printf '%s\n' "$binding" > "$run_dir/runtime-binding.json"
     chmod 600 "$run_dir/runtime-binding.json"
-    IMAP_STATE_OUTPUT="$run_dir/provider-before-ui.json" "$REPO/node_modules/.bin/tsx" "$REPO/scripts/security/capture-imap-provider-state.ts"
+    IMAP_SCOPE_FINGERPRINT_KEY_FILE="$fingerprint_key_file" IMAP_STATE_OUTPUT="$run_dir/provider-before-ui.json" \
+      "$REPO/node_modules/.bin/tsx" "$REPO/scripts/security/capture-imap-provider-state.ts"
     reset_body="$run_dir/reset-request.json"
     printf '{"runId":"%s","scenario":"%s"}\n' "$EVIDENCE_RUN_ID" "$SCENARIO" > "$reset_body"
     chmod 600 "$reset_body"
@@ -144,6 +148,8 @@ NODE
     [[ -d "$run_dir" && -f "$run_dir/reset-response.json" ]] || fail 'run must be prepared before capture'
     run_started_at=$(node -e 'process.stdout.write(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")).startedAt)' "$run_dir/reset-response.json")
     [[ -f "$run_dir/runtime-binding.json" && -f "$run_dir/provider-before-ui.json" ]] || fail 'prepare must bind the UI runtime and capture pre-UI provider state'
+    fingerprint_key_file="$run_dir/scope-fingerprint-key"
+    [[ -f "$fingerprint_key_file" ]] || fail 'prepare must retain its private scope fingerprint key through capture'
     need EXPECTED_IMAP_HOST
     need EXPECTED_IMAP_PORT
     need EXPECTED_CREDENTIAL_ID
@@ -161,7 +167,8 @@ if (before.pid !== after.pid || before.startTicks !== after.startTicks || before
   throw new Error('registered UI dev-server changed during the real UI scenario');
 }
 NODE
-    IMAP_STATE_OUTPUT="$run_dir/provider-after-ui.json" "$REPO/node_modules/.bin/tsx" "$REPO/scripts/security/capture-imap-provider-state.ts"
+    IMAP_SCOPE_FINGERPRINT_KEY_FILE="$fingerprint_key_file" IMAP_STATE_OUTPUT="$run_dir/provider-after-ui.json" \
+      "$REPO/node_modules/.bin/tsx" "$REPO/scripts/security/capture-imap-provider-state.ts"
     node - "$run_dir/provider-before-ui.json" "$run_dir/provider-after-ui.json" "$run_dir/persisted-provider-state.json" <<'NODE'
 const fs = require('node:fs');
 const before = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
@@ -171,6 +178,18 @@ fs.writeFileSync(process.argv[4], JSON.stringify({ before, after }, null, 2) + '
 NODE
     [[ -f "$REPO/services/email-service/dist/services/email-service/src/index.js" ]] || fail 'production email-service build is missing'
     export PUBLIC_IMAP_ORIGINAL_HOST PUBLIC_IMAP_REPLACEMENT_HOST PUBLIC_IMAP_PORT PUBLIC_OAUTH_TOKEN_URL
+    if [[ "$SCENARIO" == oauth-baseline || "$SCENARIO" == oauth-reconnect || "$SCENARIO" == oauth-refresh ]]; then
+      node - "$run_dir/provider-after-ui.json" "$PUBLIC_OAUTH_TOKEN_URL" <<'NODE'
+const fs = require('node:fs');
+const state = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+const expected = new URL(process.argv[3]);
+if (expected.protocol !== 'https:' || expected.username || expected.password
+  || expected.hostname.toLowerCase() !== state.oauthTokenHost
+  || Number(expected.port || 443) !== Number(state.oauthTokenPort)) {
+  throw new Error('public OAuth token URL does not match the persisted OAuth token recipient');
+}
+NODE
+    fi
     (cd "$REPO" && "$REPO/node_modules/.bin/tsx" -e 'import { assertSafeOutboundHost, assertSafeOutboundUrl } from "./shared/services/net/outboundAddressPolicy.ts"; (async () => { await assertSafeOutboundHost(process.env.PUBLIC_IMAP_ORIGINAL_HOST!); await assertSafeOutboundHost(process.env.PUBLIC_IMAP_REPLACEMENT_HOST!); await assertSafeOutboundUrl(process.env.PUBLIC_OAUTH_TOKEN_URL!); })().catch((e) => { console.error(`public fixture destination rejected: ${e instanceof Error ? e.message : String(e)}`); process.exitCode = 1; });')
     for host in "$PUBLIC_IMAP_ORIGINAL_HOST" "$PUBLIC_IMAP_REPLACEMENT_HOST"; do
       timeout 15s openssl s_client -connect "$host:$PUBLIC_IMAP_PORT" -servername "$host" -verify_hostname "$host" -verify_return_error </dev/null >/dev/null 2>&1 || fail "trusted IMAPS TLS validation failed for $host"
@@ -271,6 +290,7 @@ const metadata = {
 fs.writeFileSync(out, JSON.stringify(metadata, null, 2) + '\n', { mode: 0o600 });
 NODE
     chmod 600 "$run_dir"/*.json "$service_log" "$run_dir/recipient-records.jsonl"
+    rm -f "$fingerprint_key_file"
     ;;
   *) fail 'EVIDENCE_PHASE must be prepare or capture' ;;
 esac

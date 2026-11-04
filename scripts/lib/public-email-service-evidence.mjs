@@ -94,6 +94,9 @@ function requireWorkerExecution(events, input) {
   const listener = providerEvents.find((event) => event.event === 'folder_listener_start'
     && event.host === input.expectedHost
     && Number(event.port) === Number(input.expectedPort)
+    && event._at >= worker._at
+    && event.workerId === worker.workerId
+    && event.credentialGeneration === input.credentialGeneration
     && typeof event.listenerId === 'string');
   if (!listener) fail('email-service did not start a listener for the expected provider and destination');
   return { providerEvents, worker, listener };
@@ -126,6 +129,13 @@ function validatePersistedState(input) {
   if (Number(state.after.port) !== Number(input.expectedPort) || state.after.host !== input.expectedHost) {
     fail('persisted provider destination does not match the expected IMAP destination');
   }
+  if (['oauth-baseline', 'oauth-reconnect', 'oauth-refresh'].includes(input.scenario)) {
+    if (state.after.oauthTokenProtocol !== 'https:') fail('persisted OAuth token endpoint must use HTTPS');
+    requiredString(state.after.oauthTokenHost, 'persisted OAuth token host');
+    if (!Number.isFinite(Number(state.after.oauthTokenPort)) || Number(state.after.oauthTokenPort) <= 0) {
+      fail('persisted OAuth token port is required');
+    }
+  }
 
   const changedScope = beforeGeneration !== generation
     && state.before.scopeFingerprint !== state.after.scopeFingerprint;
@@ -155,10 +165,6 @@ function validateScopeChange({ input, state, recipientEvents, providerEvents, li
   if (!Number.isFinite(minimumObservationSeconds) || minimumObservationSeconds <= 0) {
     fail('scope-change minimum observation duration must be positive');
   }
-  const serviceDurationMs = serviceEndedAt - serviceStartedAt;
-  if (serviceDurationMs < minimumObservationSeconds * 1000) {
-    fail('scope-change service observation is shorter than the required duration');
-  }
   const scopeSavedAt = parseTime(state.after.updatedAt, 'scope-change persisted update time');
   if (scopeSavedAt < windowStart || scopeSavedAt >= serviceStartedAt) {
     fail('scope-change persisted save time is outside the UI phase');
@@ -181,18 +187,24 @@ function validateScopeChange({ input, state, recipientEvents, providerEvents, li
     && event.message === 'IMAP credentials missing');
   if (!error) fail('scope-change worker did not fail closed on missing replacement credentials');
 
-  if (recipientEvents.some((event) => ['auth', 'token'].includes(event.type)
+  const observationStartedAt = listener._at;
+  const observationDurationMs = serviceEndedAt - observationStartedAt;
+  if (observationStartedAt < scopeSavedAt || observationDurationMs < minimumObservationSeconds * 1000) {
+    fail('scope-change current-generation listener observation is shorter than the required duration');
+  }
+
+  if (recipientEvents.some((event) => event.type === 'auth'
     && event._at >= scopeSavedAt
     && event.destinationHost === input.expectedHost
     && Number(event.destinationPort) === Number(input.expectedPort))) {
-    fail('changed IMAP destination received credential authentication or OAuth exchange after scope save');
+    fail('changed IMAP destination received authentication after scope save');
   }
   const oldIds = new Set(oldCredentialIds);
-  if (recipientEvents.some((event) => event.type === 'token'
+  if (recipientEvents.some((event) => ['auth', 'token'].includes(event.type)
     && event._at >= scopeSavedAt
     && (oldIds.has(event.credentialId) || oldIds.has(event.clientId)
       || event.credentialGeneration === previousGeneration))) {
-    fail('an old OAuth credential was delivered after the credential scope changed');
+    fail('an old credential ID or generation was delivered after the credential scope changed');
   }
 
   return {
@@ -200,7 +212,8 @@ function validateScopeChange({ input, state, recipientEvents, providerEvents, li
     scenario: input.scenario,
     workerId: providerEvents.find((event) => event.event === 'worker_start')?.workerId,
     credentialGeneration: state.generation,
-    observationDurationMs: serviceDurationMs,
+    observationStartedAt: new Date(observationStartedAt).toISOString(),
+    observationDurationMs,
     recipientEventCount: recipientEvents.length,
   };
 }
@@ -250,9 +263,17 @@ export function validatePublicEmailServiceEvidence(input) {
     if (!['success', 'failure'].includes(event.result)) fail('recipient event has no success/failure result');
     if (['auth', 'token'].includes(event.type)) {
       requiredString(event.credentialGeneration, 'recipient credential generation');
-      requiredString(event.destinationHost, event.type === 'token' ? 'OAuth token destination host' : 'IMAP auth destination host');
-      if (!Number.isFinite(Number(event.destinationPort)) || Number(event.destinationPort) <= 0) {
+      if (event.type === 'token' && event.protocol !== 'oauth') fail('recipient token event must identify the OAuth protocol');
+      requiredString(event.type === 'token' ? event.recipientHost : event.destinationHost,
+        event.type === 'token' ? 'OAuth token recipient host' : 'IMAP auth destination host');
+      const port = event.type === 'token' ? event.recipientPort : event.destinationPort;
+      if (!Number.isFinite(Number(port)) || Number(port) <= 0) {
         fail('recipient credential event destination port is required');
+      }
+      if (event.type === 'token' && ['oauth-baseline', 'oauth-reconnect', 'oauth-refresh'].includes(scenario)
+        && (event.recipientHost !== state.after.oauthTokenHost
+          || Number(event.recipientPort) !== Number(state.after.oauthTokenPort))) {
+        fail('OAuth token recipient does not match the persisted OAuth token endpoint');
       }
     }
     return { ...event, _at: at };
@@ -285,14 +306,14 @@ export function validatePublicEmailServiceEvidence(input) {
     const isUiReconnect = scenario === 'oauth-reconnect';
     requireRecipientEvent(recipientEvents, (event) => event.type === 'token'
       && event.protocol === 'oauth'
-      && event.destinationHost === input.expectedHost
-      && Number(event.destinationPort) === Number(input.expectedPort)
+      && event.recipientHost === state.after.oauthTokenHost
+      && Number(event.recipientPort) === Number(state.after.oauthTokenPort)
       && event.grantType === grantType
       && oauthClientId(event) === expectedOAuthClientId
       && event.credentialGeneration === state.generation
       && event.result === 'success'
       && (isUiReconnect ? event._at < serviceStartedAt : event._at >= serviceStartedAt && event._at <= serviceEndedAt),
-    `recipient export lacks a successful ${isUiReconnect ? 'UI-phase' : 'in-service'} OAuth ${grantType} exchange bound to the expected IMAP destination`);
+    `recipient export lacks a successful ${isUiReconnect ? 'UI-phase' : 'in-service'} OAuth ${grantType} exchange at the persisted OAuth token endpoint`);
   }
   if (scenario === 'oauth-refresh') {
     if (!providerEvents.some((event) => event.event === 'oauth_refresh' && event.providerId === input.providerId)) {
