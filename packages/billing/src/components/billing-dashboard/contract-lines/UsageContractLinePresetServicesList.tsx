@@ -36,6 +36,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { useUnsavedNavigationGuard } from '../../../hooks/useUnsavedNavigationGuard';
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -70,8 +71,6 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
-  const [showNavigateAwayConfirm, setShowNavigateAwayConfirm] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!presetId) return;
@@ -171,53 +170,12 @@ const UsageContractLinePresetServicesList: React.FC<UsageContractLinePresetServi
     });
   }, [presetServices, originalServices]);
 
-  // Navigation warning
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (!hasUnsavedChanges) return;
-
-      const target = e.target as HTMLElement;
-      const link = target.closest('a[href]') as HTMLAnchorElement;
-
-      if (link && link.href) {
-        const currentPath = window.location.pathname + window.location.search;
-        const linkPath = new URL(link.href, window.location.origin).pathname + new URL(link.href, window.location.origin).search;
-
-        if (linkPath !== currentPath && !link.target && !link.download) {
-          e.preventDefault();
-          e.stopPropagation();
-          setPendingNavigation(link.href);
-          setShowNavigateAwayConfirm(true);
-        }
-      }
-    };
-
-    document.addEventListener('click', handleClick, true);
-    return () => document.removeEventListener('click', handleClick, true);
-  }, [hasUnsavedChanges]);
-
-  const handleNavigateAwayConfirm = () => {
-    if (pendingNavigation) {
-      window.location.href = pendingNavigation;
-    }
-  };
-
-  const handleNavigateAwayDismiss = () => {
-    setShowNavigateAwayConfirm(false);
-    setPendingNavigation(null);
-  };
+  // Warn before leaving this editor with unsaved changes
+  const {
+    showConfirm: showNavigateAwayConfirm,
+    confirmNavigation: handleNavigateAwayConfirm,
+    cancelNavigation: handleNavigateAwayDismiss,
+  } = useUnsavedNavigationGuard(hasUnsavedChanges);
 
   const getDefaultOverlay = useCallback((): BucketOverlayInput => ({
     total_minutes: undefined,

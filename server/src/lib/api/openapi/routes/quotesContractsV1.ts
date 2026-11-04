@@ -1,32 +1,33 @@
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
+import { CONTRACT_START_DATE_DESCRIPTION, CONTRACT_END_DATE_DESCRIPTION } from '../../schemas/contractLineSchemas';
 
 export function registerQuotesContractsV1Routes(registry: ApiOpenApiRegistry) {
   const tag = 'Quotes & Contracts v1';
 
   const QuoteIdParam = registry.registerSchema(
     'QuoteIdParamV1',
-    zOpenApi.object({ id: zOpenApi.string().uuid().describe('Quote UUID from quotes.quote_id.') }),
+    zOpenApi.object({ id: zOpenApi.string().guid().describe('Quote UUID from quotes.quote_id.') }),
   );
 
   const QuoteItemParams = registry.registerSchema(
     'QuoteItemParamsV1',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Quote UUID from quotes.quote_id.'),
-      itemId: zOpenApi.string().uuid().describe('Quote item UUID from quote_items.quote_item_id.'),
+      id: zOpenApi.string().guid().describe('Quote UUID from quotes.quote_id.'),
+      itemId: zOpenApi.string().guid().describe('Quote item UUID from quote_items.quote_item_id.'),
     }),
   );
 
   const ContractLineParams = registry.registerSchema(
     'ContractLineParamsV1',
     zOpenApi.object({
-      contractId: zOpenApi.string().uuid().describe('Contract UUID from contracts.contract_id.'),
-      contractLineId: zOpenApi.string().uuid().describe('Contract line UUID from contract_lines.contract_line_id.'),
+      contractId: zOpenApi.string().guid().describe('Contract UUID from contracts.contract_id.'),
+      contractLineId: zOpenApi.string().guid().describe('Contract line UUID from contract_lines.contract_line_id.'),
     }),
   );
 
   const ContractIdParam = registry.registerSchema(
     'ContractIdParamV1',
-    zOpenApi.object({ contractId: zOpenApi.string().uuid().describe('Contract UUID from contracts.contract_id.') }),
+    zOpenApi.object({ contractId: zOpenApi.string().guid().describe('Contract UUID from contracts.contract_id.') }),
   );
 
   const ListQuery = registry.registerSchema(
@@ -45,26 +46,26 @@ export function registerQuotesContractsV1Routes(registry: ApiOpenApiRegistry) {
 
   const GenericBody = registry.registerSchema(
     'QuotesContractsGenericBodyV1',
-    zOpenApi.record(zOpenApi.unknown()).describe('Controller/service-specific payload; see quote/contract controller schemas for exact required fields.'),
+    zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('Controller/service-specific payload; see quote/contract controller schemas for exact required fields.'),
   );
 
   const CreateQuoteBody = registry.registerSchema(
     'CreateQuoteBodyV1',
     zOpenApi.object({
-      client_id: zOpenApi.string().uuid(),
+      client_id: zOpenApi.string().guid(),
       title: zOpenApi.string().optional(),
       quote_number: zOpenApi.string().optional(),
       valid_until: zOpenApi.string().optional(),
       notes: zOpenApi.string().optional(),
       terms: zOpenApi.string().optional(),
-      items: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).optional(),
+      items: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())).optional(),
     }),
   );
 
   const CreateContractBody = registry.registerSchema(
     'CreateContractBodyV1',
     zOpenApi.object({
-      client_id: zOpenApi.string().uuid(),
+      client_id: zOpenApi.string().guid(),
       contract_name: zOpenApi.string().optional(),
       start_date: zOpenApi.string().optional(),
       end_date: zOpenApi.string().optional(),
@@ -87,25 +88,52 @@ export function registerQuotesContractsV1Routes(registry: ApiOpenApiRegistry) {
     'QuotesContractsApiSuccessV1',
     zOpenApi.object({
       data: zOpenApi.union([
-        zOpenApi.record(zOpenApi.unknown()),
-        zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+        zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
+        zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
       ]),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
   const ApiPaginated = registry.registerSchema(
     'QuotesContractsApiPaginatedV1',
     zOpenApi.object({
-      data: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+      data: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
       pagination: zOpenApi.object({
         page: zOpenApi.number().int(),
         limit: zOpenApi.number().int(),
         total: zOpenApi.number().int(),
         totalPages: zOpenApi.number().int(),
       }).optional(),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
-      _links: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
+      _links: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
+    }),
+  );
+
+  const ContractListItem = registry.registerSchema(
+    'ContractListItemV1',
+    zOpenApi.object({
+      contract_id: zOpenApi.string().guid(),
+      contract_name: zOpenApi.string(),
+      start_date: zOpenApi.string().datetime().nullable().optional().describe(CONTRACT_START_DATE_DESCRIPTION),
+      end_date: zOpenApi.string().datetime().nullable().optional().describe(CONTRACT_END_DATE_DESCRIPTION),
+      total_plans: zOpenApi.number().int().optional().describe('Count of contract lines on the contract.'),
+      clients_using_contract: zOpenApi.number().int().optional().describe('Count of distinct clients assigned the contract.'),
+    }).passthrough().describe('Contract header as returned by the list endpoint; see contractResponseSchema for the full field set.'),
+  );
+
+  const ApiPaginatedContracts = registry.registerSchema(
+    'ContractsApiPaginatedV1',
+    zOpenApi.object({
+      data: zOpenApi.array(ContractListItem),
+      pagination: zOpenApi.object({
+        page: zOpenApi.number().int(),
+        limit: zOpenApi.number().int(),
+        total: zOpenApi.number().int(),
+        totalPages: zOpenApi.number().int(),
+      }).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
+      _links: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -163,7 +191,7 @@ export function registerQuotesContractsV1Routes(registry: ApiOpenApiRegistry) {
     if (def.path === '/api/v1/contracts/{contractId}/contract-lines') {
       req.body = {
         schema: zOpenApi.object({
-          contract_line_id: zOpenApi.string().uuid(),
+          contract_line_id: zOpenApi.string().guid(),
           custom_rate: zOpenApi.number().optional(),
         }),
       };
@@ -185,7 +213,7 @@ export function registerQuotesContractsV1Routes(registry: ApiOpenApiRegistry) {
       return responses;
     }
     if (def.path === '/api/v1/contracts' && def.method === 'get') {
-      responses[200] = { description: 'Paginated contracts returned.', schema: ApiPaginated };
+      responses[200] = { description: 'Paginated contracts returned.', schema: ApiPaginatedContracts };
       return responses;
     }
 

@@ -14,7 +14,7 @@ import { getRegistry } from '../chat/registry/apiRegistry.indexer';
 import {
   ChatApiRegistryEntry,
 } from '../chat/registry/apiRegistry.schema';
-import { searchRegistryEntries, type RegistrySearchResult } from '../chat/registry/search';
+import { runRegistrySearch, type RegistrySearchHit } from '@alga-psa/agent-tooling/registry/searchResult';
 import {
   resolveSearchAclPrincipal,
   verifyResultVisibility,
@@ -274,14 +274,13 @@ export class ChatCompletionsService {
     };
   }
 
-  private static summarizeRegistryResults(results: RegistrySearchResult[]) {
-    return results.slice(0, 5).map(({ entry, score, matchedFields }) => ({
-      id: entry.id,
-      displayName: entry.displayName,
-      method: entry.method.toUpperCase(),
-      path: entry.path,
-      score: Number(score.toFixed(2)),
-      matchedFields,
+  private static summarizeRegistryResults(results: RegistrySearchHit[]) {
+    return results.slice(0, 5).map((hit) => ({
+      id: hit.entryId,
+      displayName: hit.displayName,
+      method: hit.method,
+      path: hit.path,
+      score: hit.score,
     }));
   }
 
@@ -468,14 +467,14 @@ export class ChatCompletionsService {
             query: typeof parsedArgs.query === 'string' ? parsedArgs.query : undefined,
             limit: parsedArgs.limit,
           });
-          const results = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
+          const searchResult = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
           conversation = [
             ...conversation,
             assistantMessage,
             {
               role: 'function',
               name: SEARCH_TOOL_NAME,
-              content: JSON.stringify({ results }),
+              content: JSON.stringify(searchResult),
               tool_call_id: toolCallId,
             },
           ];
@@ -1000,7 +999,7 @@ export class ChatCompletionsService {
               },
               limit: {
                 type: isVertex ? 'number' : 'integer',
-                description: 'Maximum number of results to return (default 5).',
+                description: 'Maximum number of results to return (default 5, max 25).',
               },
             },
             required: ['query'],
@@ -1197,35 +1196,20 @@ export class ChatCompletionsService {
   }
 
   private static searchRegistry(query: unknown, limitValue: unknown) {
-    const text = typeof query === 'string' ? query.trim() : '';
-    if (!text) {
+    const result = runRegistrySearch(getRegistry(), { query, limit: limitValue });
+    if (!result.ok) {
       this.logWarn('registry_search_empty_query', {
         rawQueryType: typeof query,
       });
-      return [];
+      return { error: result.error };
     }
 
-    const limit = Math.max(1, Math.min(typeof limitValue === 'number' ? limitValue : parseInt(String(limitValue ?? ''), 10) || 5, 25));
-    const registry = getRegistry();
-    const ranked = searchRegistryEntries(registry, text, limit);
     this.logDebug('registry_search', {
-      query: text,
-      limit,
-      topResults: this.summarizeRegistryResults(ranked),
+      query: result.data.query.trim(),
+      limit: limitValue,
+      topResults: this.summarizeRegistryResults(result.data.results),
     });
-    const top = ranked.map(({ entry }) => ({
-      id: entry.id,
-      displayName: entry.displayName,
-      description: entry.description,
-      method: entry.method.toUpperCase(),
-      path: entry.path,
-      approvalRequired: entry.approvalRequired,
-      tags: entry.tags ?? [],
-      parameters: entry.parameters ?? [],
-      examples: entry.examples?.slice(0, 1) ?? [],
-    }));
-
-    return top;
+    return result.data;
   }
 
   private static async searchBusinessData(args: Record<string, unknown>, context: {
@@ -1390,11 +1374,11 @@ export class ChatCompletionsService {
       );
 
       if (functionName === SEARCH_TOOL_NAME) {
-        const results = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
+        const searchResult = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
         nextConversation.push(assistantMessage, {
           role: 'function',
           name: SEARCH_TOOL_NAME,
-          content: JSON.stringify({ results }),
+          content: JSON.stringify(searchResult),
           tool_call_id: toolCallId,
         });
         events.push(this.buildAutoToolExecutedEvent({
@@ -1717,11 +1701,11 @@ export class ChatCompletionsService {
             query: typeof parsedArgs.query === 'string' ? parsedArgs.query : undefined,
             limit: parsedArgs.limit,
           });
-          const results = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
+          const searchResult = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
           const functionMessage: ChatCompletionMessage = {
             role: 'function',
             name: SEARCH_TOOL_NAME,
-            content: JSON.stringify({ results }),
+            content: JSON.stringify(searchResult),
             tool_call_id: toolCallId,
           };
           conversation = [...conversation, assistantMessage, functionMessage];
@@ -3250,9 +3234,8 @@ export class ChatCompletionsService {
     requestedEntryId: string,
     toolCallId: string,
   ): ChatCompletionMessage {
-    const suggestions = requestedEntryId
-      ? this.searchRegistry(requestedEntryId, 5)
-      : [];
+    const suggestionSearch = requestedEntryId ? this.searchRegistry(requestedEntryId, 5) : null;
+    const suggestions = suggestionSearch && 'results' in suggestionSearch ? suggestionSearch.results : [];
 
     const errorMessage = requestedEntryId
       ? `No registry entry matches entryId=${JSON.stringify(requestedEntryId)}. Retry ${EXECUTE_TOOL_NAME} using one of the suggested entryIds below, or call ${SEARCH_TOOL_NAME} for a broader search.`

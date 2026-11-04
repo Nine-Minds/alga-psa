@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   ClaimedUnifiedInboundEmailQueueJob,
   FailUnifiedInboundEmailQueueJobResult,
@@ -187,5 +187,55 @@ describe('UnifiedInboundEmailQueueConsumer provider claim/processing flow', () =
       })
     );
     warnSpy.mockRestore();
+  });
+});
+
+describe('UnifiedInboundEmailQueueConsumer loop resilience (alga0002256)', () => {
+  beforeEach(() => {
+    claimUnifiedInboundEmailQueueJobMock.mockReset();
+    reclaimExpiredUnifiedInboundEmailQueueJobsMock.mockReset();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('keeps looping with backoff after runOnce throws, and only a successful tick advances the heartbeat', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    reclaimExpiredUnifiedInboundEmailQueueJobsMock.mockRejectedValueOnce(new Error('redis down'));
+    reclaimExpiredUnifiedInboundEmailQueueJobsMock.mockRejectedValueOnce(new Error('redis down'));
+    reclaimExpiredUnifiedInboundEmailQueueJobsMock.mockResolvedValue(0);
+    claimUnifiedInboundEmailQueueJobMock.mockResolvedValue(null);
+
+    const consumer = new UnifiedInboundEmailQueueConsumer({ handleJob: vi.fn(), pollDelayMs: 250 });
+    expect(consumer.lastSuccessfulTickAt).toBeNull();
+
+    const task = consumer.start();
+    await vi.advanceTimersByTimeAsync(0);
+    // First tick failed: loop still alive, heartbeat has not advanced.
+    expect(reclaimExpiredUnifiedInboundEmailQueueJobsMock).toHaveBeenCalledTimes(1);
+    expect(consumer.lastSuccessfulTickAt).toBeNull();
+
+    await vi.advanceTimersByTimeAsync(1_000); // 1s backoff
+    expect(reclaimExpiredUnifiedInboundEmailQueueJobsMock).toHaveBeenCalledTimes(2);
+    expect(consumer.lastSuccessfulTickAt).toBeNull();
+
+    await vi.advanceTimersByTimeAsync(1_999); // not yet: second backoff is 2s
+    expect(reclaimExpiredUnifiedInboundEmailQueueJobsMock).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(reclaimExpiredUnifiedInboundEmailQueueJobsMock).toHaveBeenCalledTimes(3);
+    // Empty poll is a successful tick.
+    expect(consumer.lastSuccessfulTickAt).not.toBeNull();
+
+    consumer.stop();
+    await vi.advanceTimersByTimeAsync(1_000);
+    await task;
+  });
+
+  it('exposes a stale threshold of job timeout + 30s', () => {
+    const consumer = new UnifiedInboundEmailQueueConsumer({ handleJob: vi.fn(), handleJobTimeoutMs: 90_000 });
+    expect(consumer.heartbeatStaleAfterMs).toBe(120_000);
   });
 });

@@ -35,6 +35,11 @@ test('T002 control-plane manifests define isolated namespace, workload, exposure
   assert.match(rbac, /resources: \["pods\/exec", "pods\/portforward"\]/);
   // WebSocket streaming opens exec/port-forward with GET; create alone 403s.
   assert.match(rbac, /verbs: \["get", "create"\]/);
+  // alga0002256: read-only service proxy for email-service /status and /metrics.
+  assert.match(rbac, /resources: \["services\/proxy"\]\n\s+verbs: \["get"\]/);
+  const statusPod = fs.readFileSync(path.join(repoRoot, 'ee', 'appliance', 'flux', 'base', 'platform', 'appliance-status.yaml'), 'utf8');
+  assert.match(statusPod, /http:\/\/email-service\.msp\.svc\.cluster\.local:8080\/status/);
+  assert.match(statusPod, /LEVERAGE: pattern appliance-status-triplicate/);
   assert.doesNotMatch(rbac, /resources: \["\*"\]/);
   assert.doesNotMatch(rbac, /verbs: \["\*"\]/);
   assert.doesNotMatch(rbac, /host kubeconfig/);

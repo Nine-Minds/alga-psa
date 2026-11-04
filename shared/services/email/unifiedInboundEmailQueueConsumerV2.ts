@@ -27,6 +27,13 @@ import {
   reclaimExpiredInboundEmailDurableJobs,
   renewInboundEmailDurableQueueClaim,
 } from './unifiedInboundEmailQueueV2';
+import { observeQueueJobDuration, recordConsumerLoopError } from './inboundEmailMetrics';
+
+/** Loop-error backoff bounds (alga0002256): survive Redis/DB errors instead of dying. */
+const LOOP_ERROR_BACKOFF_INITIAL_MS = 1_000;
+const LOOP_ERROR_BACKOFF_MAX_MS = 30_000;
+/** Slack added to the job timeout before the heartbeat counts as stale. */
+const HEARTBEAT_STALE_SLACK_MS = 30_000;
 
 export interface UnifiedInboundEmailQueueConsumerV2Options {
   consumerId?: string;
@@ -115,6 +122,8 @@ export class UnifiedInboundEmailQueueConsumerV2 {
   private readonly handleJobTimeoutMs: number;
   private readonly heartbeatIntervalMs: number;
   private running = false;
+  private lastSuccessfulTickAtMs: number | null = null;
+  private readonly startedAtMs = Date.now();
 
   constructor(options: UnifiedInboundEmailQueueConsumerV2Options) {
     this.options = options;
@@ -134,6 +143,22 @@ export class UnifiedInboundEmailQueueConsumerV2 {
 
   public get id(): string {
     return this.consumerId;
+  }
+
+  /**
+   * Epoch ms of the last `runOnce()` that completed without throwing (an empty
+   * poll counts). Null until the first success.
+   */
+  public get lastSuccessfulTickAt(): number | null {
+    return this.lastSuccessfulTickAtMs;
+  }
+
+  public get heartbeatStaleAfterMs(): number {
+    return this.handleJobTimeoutMs + HEARTBEAT_STALE_SLACK_MS;
+  }
+
+  public get startedAt(): number {
+    return this.startedAtMs;
   }
 
   public async runOnce(): Promise<boolean> {
@@ -207,6 +232,7 @@ export class UnifiedInboundEmailQueueConsumerV2 {
 
     startHeartbeat();
 
+    const jobStartedAt = Date.now();
     try {
       const result = await withTimeoutAndAbort(
         Promise.resolve().then(() =>
@@ -218,6 +244,11 @@ export class UnifiedInboundEmailQueueConsumerV2 {
       );
 
       stopHeartbeat();
+      observeQueueJobDuration({
+        queue: 'v2',
+        providerType: (claim.job as any).provider,
+        seconds: (Date.now() - jobStartedAt) / 1000,
+      });
       if (ownershipLost) {
         console.warn('[UnifiedInboundEmailQueueConsumerV2] ownership lost before disposition; dropping job', {
           event: 'inbound_email_queue_v2_ownership_lost',
@@ -247,6 +278,11 @@ export class UnifiedInboundEmailQueueConsumerV2 {
       }
     } catch (error: any) {
       stopHeartbeat();
+      observeQueueJobDuration({
+        queue: 'v2',
+        providerType: (claim.job as any).provider,
+        seconds: (Date.now() - jobStartedAt) / 1000,
+      });
       const reason = error?.message || String(error);
       if (ownershipLost) {
         console.warn('[UnifiedInboundEmailQueueConsumerV2] handling aborted after ownership loss; not failing claim', {
@@ -276,10 +312,26 @@ export class UnifiedInboundEmailQueueConsumerV2 {
     if (this.running) return;
     this.running = true;
 
+    // LEVERAGE: pattern queue-consumer-resilient-loop — identical loop in unifiedInboundEmailQueueConsumer.ts
+    let errorBackoffMs = LOOP_ERROR_BACKOFF_INITIAL_MS;
     while (this.running) {
-      const processed = await this.runOnce();
-      if (!processed && this.options.pollDelayMs && this.options.pollDelayMs > 0) {
-        await sleep(this.options.pollDelayMs);
+      try {
+        const processed = await this.runOnce();
+        this.lastSuccessfulTickAtMs = Date.now();
+        errorBackoffMs = LOOP_ERROR_BACKOFF_INITIAL_MS;
+        if (!processed && this.options.pollDelayMs && this.options.pollDelayMs > 0) {
+          await sleep(this.options.pollDelayMs);
+        }
+      } catch (error: any) {
+        recordConsumerLoopError({ queue: 'v2' });
+        console.error('[UnifiedInboundEmailQueueConsumerV2] loop error; backing off', {
+          event: 'inbound_email_queue_consumer_loop_error',
+          consumerId: this.consumerId,
+          backoffMs: errorBackoffMs,
+          error: error?.message || String(error),
+        });
+        await sleep(errorBackoffMs);
+        errorBackoffMs = Math.min(errorBackoffMs * 2, LOOP_ERROR_BACKOFF_MAX_MS);
       }
     }
   }

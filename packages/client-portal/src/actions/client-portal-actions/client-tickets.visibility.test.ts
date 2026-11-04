@@ -89,6 +89,12 @@ vi.mock('@alga-psa/analytics', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: (...args: any[]) => publishEventMock(...args),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({
@@ -241,7 +247,7 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsBuilder,
       expect.objectContaining({ visibleBoardIds: ['board-1'] }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } }
     );
   });
 
@@ -289,7 +295,7 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       ticketsBuilder,
       expect.objectContaining({ visibleBoardIds: null }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } }
     );
   });
 
@@ -376,7 +382,7 @@ describe('client portal ticket visibility enforcement', () => {
     expect(applyTicketVisibilityFilterMock).toHaveBeenCalledWith(
       expect.any(Object),
       expect.objectContaining({ visibleBoardIds: ['board-1'] }),
-      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes' }
+      { boardColumn: 't.board_id', contactColumn: 't.contact_name_id', billingProfileColumn: 't.billing_profile_id', watchListColumn: 't.attributes', sharedWorkspaceTickets: { ticketIdColumn: 't.ticket_id', tenantColumn: 't.tenant', closedColumn: 't.is_closed' } }
     );
   });
 
@@ -449,6 +455,172 @@ describe('client portal ticket visibility enforcement', () => {
     await expect(getClientTicketDetails(TICKET_HIDDEN)).resolves.toEqual({
       actionError: 'Ticket not found or access denied',
       messageKey: 'client-portal:errors.tickets.notFoundOrDenied',
+    });
+  });
+
+  describe('portal comment projection (alga-2026-0002972)', () => {
+    const SCHEDULING_COLUMNS = [
+      'schedule_job_id',
+      'scheduled_publish_event_id',
+      'scheduled_publish_dispatched_at',
+      'scheduled_response_event_id',
+      'scheduled_previous_response_state',
+      'scheduled_response_dispatched_at',
+    ];
+
+    let lastDetail: any;
+
+    async function loadConversations(commentRows: any[]) {
+      const ticketBuilder = makeDetailBuilder({
+        ticket_id: TICKET_1,
+        ticket_number: 'T-1',
+        title: 'Visible ticket',
+        board_id: 'board-1',
+        client_id: 'client-1',
+        entered_by_user_type: 'internal',
+        entered_at: '2026-03-15T00:00:00.000Z',
+        updated_at: '2026-03-15T00:00:00.000Z',
+        closed_at: null,
+      });
+      withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
+        const trx = Object.assign(
+          (table: string) => {
+            if (table === 'users') return makeUserQuery();
+            if (table === 'tickets as t') return ticketBuilder;
+            if (table === 'comments') return makeChainable(commentRows);
+            if (table === 'asset_associations as aa') {
+              return {
+                innerJoin: vi.fn().mockReturnThis(),
+                where: vi.fn().mockReturnThis(),
+                select: vi.fn().mockResolvedValue([]),
+              };
+            }
+            return makeChainable();
+          },
+          { raw: vi.fn().mockResolvedValue({ rows: [] }) },
+        );
+        return callback(trx);
+      });
+      getVisibilityContextMock.mockResolvedValue({
+        ticketScope: 'client',
+        effectiveTicketScope: 'client',
+        isClientAdmin: false,
+        contactId: 'contact-1',
+        clientId: 'client-1',
+        visibilityGroupId: 'group-1',
+        visibleBoardIds: ['board-1'],
+      });
+      const { getClientTicketDetails } = await import('./client-tickets');
+      const detail: any = await getClientTicketDetails(TICKET_1);
+      lastDetail = detail;
+      return detail.conversations as any[];
+    }
+
+    const row = (over: any = {}) => ({
+      comment_id: 'c1',
+      ticket_id: TICKET_1,
+      thread_id: 't1',
+      parent_comment_id: null,
+      note: 'hello',
+      markdown_content: 'hello',
+      is_internal: false,
+      publish_state: 'published',
+      deleted_at: null,
+      created_at: '2026-03-15T00:00:00.000Z',
+      user_id: 'u1',
+      contact_id: null,
+      metadata: null,
+      bundle_mirror_source_comment_id: null,
+      ...over,
+    });
+
+    it('drops metadata.email and Bcc from published comments, keeps Cc', async () => {
+      const [c] = await loadConversations([
+        row({
+          metadata: {
+            responseSource: 'inbound_email',
+            email: { providerId: 'p', messageId: 'm', from: 'a@x', subject: 's' },
+            email_recipients: { cc: [{ email: 'cc@x' }], bcc: [{ email: 'secret@x' }] },
+          },
+        }),
+      ]);
+      expect(c.metadata.email).toBeUndefined();
+      expect(c.metadata.responseSource).toBe('inbound_email');
+      expect(JSON.stringify(c.metadata)).not.toContain('secret@x');
+      expect(JSON.stringify(c.metadata)).toContain('cc@x');
+    });
+
+    it('removes every CLIENT_REDACTED_COMMENT_FIELDS column', async () => {
+      const scheduling = Object.fromEntries(SCHEDULING_COLUMNS.map((k) => [k, 'x']));
+      const [c] = await loadConversations([row(scheduling)]);
+      for (const k of SCHEDULING_COLUMNS) expect(c).not.toHaveProperty(k);
+    });
+
+    it('drops comment_publication_payload and scheduling columns from live public comments', async () => {
+      const [c] = await loadConversations([
+        row({
+          note: 'POSTEDIT',
+          markdown_content: 'POSTEDIT',
+          comment_publication_payload: {
+            comment: { content: 'PREEDIT' },
+            tenantId: 'tenant-1',
+            suppressContactNotifications: true,
+          },
+          scheduled_publish_at: '2026-04-01T00:00:00.000Z',
+          scheduled_publish_tz: 'UTC',
+        }),
+      ]);
+      expect(c.note).toBe('POSTEDIT');
+      expect(c).not.toHaveProperty('comment_publication_payload');
+      expect(c).not.toHaveProperty('scheduled_publish_at');
+      expect(c).not.toHaveProperty('scheduled_publish_tz');
+      expect(JSON.stringify(lastDetail)).not.toContain('PREEDIT');
+    });
+
+    it('nulls unparseable string metadata', async () => {
+      const [c] = await loadConversations([row({ metadata: '{not json' })]);
+      expect(c.metadata).toBeNull();
+    });
+
+    it('returns deleted comments as minimal tombstones without metadata', async () => {
+      const scheduling = Object.fromEntries(SCHEDULING_COLUMNS.map((k) => [k, 'x']));
+      const [c] = await loadConversations([
+        row({
+          deleted_at: '2026-03-16T00:00:00.000Z',
+          note: 'secret body',
+          markdown_content: 'secret body',
+          metadata: { email: { messageId: 'm' } },
+          bundle_mirror_source_comment_id: 'src-1',
+          ...scheduling,
+        }),
+      ]);
+      expect(c).not.toHaveProperty('metadata');
+      expect(Object.keys(c).sort()).toEqual(
+        [
+          'comment_id', 'thread_id', 'parent_comment_id', 'created_at', 'deleted_at', 'user_id',
+          'contact_id', 'is_internal', 'publish_state', 'note', 'markdown_content', 'bundle_mirror_source',
+        ].sort(),
+      );
+      expect(c.note).toBe('[deleted]');
+      expect(c.markdown_content).toBe('[deleted]');
+      expect(c.bundle_mirror_source).toEqual({ source_comment_id: 'src-1' });
+    });
+
+    it('masks parent_comment_id when the parent was not served', async () => {
+      const [reply, deletedReply] = await loadConversations([
+        row({ comment_id: 'r1', parent_comment_id: 'unserved' }),
+        row({ comment_id: 'r2', parent_comment_id: 'unserved', deleted_at: '2026-03-16T00:00:00.000Z' }),
+      ]);
+      expect(reply.parent_comment_id).toBeNull();
+      expect(deletedReply.parent_comment_id).toBeNull();
+    });
+
+    it('keeps parent_comment_id when the parent was served', async () => {
+      const rows = await loadConversations([
+        row({ comment_id: 'p1' }),
+        row({ comment_id: 'r1', parent_comment_id: 'p1' }),
+      ]);
+      expect(rows[1].parent_comment_id).toBe('p1');
     });
   });
 
@@ -546,6 +718,11 @@ describe('client portal ticket visibility enforcement', () => {
     // Comment-derived involved-user ids are likewise restricted to
     // client-visible comments so internal-only commenters aren't enumerated.
     expect(commentUserIdsBuilder.where).toHaveBeenCalledWith('c.is_internal', false);
+
+    // L4a: both reads also apply the shared audience predicate (commentAudienceSql), so only
+    // requester-audience comments reach the portal and shared_it / organization_private never do.
+    expect(conversationsBuilder.whereRaw).toHaveBeenCalledWith("(?) = 'requester'", expect.any(Array));
+    expect(commentUserIdsBuilder.whereRaw).toHaveBeenCalledWith("(?) = 'requester'", expect.any(Array));
   });
 
   it('T012: client portal ticket documents reject hidden-board access', async () => {
@@ -844,6 +1021,40 @@ describe('contact-scoped portal enforcement', () => {
     if (path === 'documents') expect(touched).not.toContain('documents as d');
     expect(touched).not.toContain('statuses');
   });
+
+  // T156 / FR-E7b: a shared-workspace colleague reads the ticket but must not
+  // be able to comment on it, edit or delete a comment, or close it. That is
+  // decided by whether the gate for each path passes `sharedWorkspaceTickets`.
+  it.each([
+    ['comment', false],
+    ['edit-comment', false],
+    ['delete-comment', false],
+    ['status', false],
+    // The detail and list read paths are asserted by call shape in T008-T010
+    // above; `documents` is the read path this harness can drive to the end.
+    ['documents', true],
+  ] as Array<[string, boolean]>)('%s gate includes workspace tickets: %s', async (path, expectsWorkspace) => {
+    getVisibilityContextMock.mockResolvedValue({ ticketScope: 'contact', effectiveTicketScope: 'contact', isClientAdmin: false, contactId: 'contact-1', clientId: 'client-1', visibilityGroupId: 'g', visibleBoardIds: ['board-1'] });
+    withTransactionMock.mockImplementation(async (_db: any, callback: any) => callback(Object.assign((table: string) => {
+      if (table === 'comments') return filteredTickets([{ comment_id: 'comment-1', ticket_id: TICKET_1, user_id: 'u' }]);
+      if (table === 'users') return makeUserQuery();
+      if (table === 'tickets as t' || table === 'tickets') return filteredTickets([]);
+      return makeChainable([]);
+    }, { raw: vi.fn() })));
+
+    const actions = await import('./client-tickets');
+    if (path === 'comment') await actions.addClientTicketComment(TICKET_1, 'note');
+    else if (path === 'edit-comment') await actions.updateClientTicketComment('comment-1', { note: 'changed' });
+    else if (path === 'delete-comment') await actions.deleteClientTicketComment('comment-1');
+    else if (path === 'status') await actions.updateTicketStatus(TICKET_1, 'status-2');
+    else await actions.getClientTicketDocuments(TICKET_1);
+
+    expect(applyTicketVisibilityFilterMock).toHaveBeenCalled();
+    const sawWorkspace = applyTicketVisibilityFilterMock.mock.calls.some(
+      (call: any[]) => Boolean(call[2]?.sharedWorkspaceTickets)
+    );
+    expect(sawWorkspace).toBe(expectsWorkspace);
+  });
 });
 
 function filteredTickets(initial: any[]) {
@@ -852,6 +1063,33 @@ function filteredTickets(initial: any[]) {
   const builder = makeChainable();
   const field = (name: string) => name.split('.').pop()!;
   builder.where = vi.fn((column: any, value?: any) => {
+    // applyTicketVisibilityFilter uses a nested `where(callback)` as soon as it
+    // has more than the plain contact predicate (profiles, watchers, shared
+    // workspaces). Apply the callback's base predicates and ignore its `or*`
+    // branches: this harness has no join data to satisfy them, so ignoring
+    // them keeps the fake conservative rather than accidentally widening.
+    if (typeof column === 'function') {
+      const nested: any = {
+        where: (nestedColumn: any, nestedValue?: any) => {
+          const conditions = typeof nestedColumn === 'string' ? { [nestedColumn]: nestedValue } : nestedColumn;
+          if (conditions && typeof conditions === 'object') {
+            rows = rows.filter((row) => Object.entries(conditions).every(([key, val]) => row[field(key)] === val));
+          }
+          return nested;
+        },
+        whereIn: (nestedColumn: string, values: any[]) => {
+          rows = rows.filter((row) => values.includes(row[field(nestedColumn)]));
+          return nested;
+        },
+        whereRaw: () => nested,
+        orWhere: () => nested,
+        orWhereIn: () => nested,
+        orWhereNull: () => nested,
+        orWhereRaw: () => nested,
+      };
+      column(nested);
+      return builder;
+    }
     const conditions = typeof column === 'string' ? { [column]: value } : column;
     if (conditions && typeof conditions === 'object') {
       rows = rows.filter((row) => Object.entries(conditions).every(([key, val]) => row[field(key)] === val));

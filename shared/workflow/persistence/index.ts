@@ -12,6 +12,8 @@ export { default as WorkflowRunWaitModelV2 } from './workflowRunWaitModelV2';
 export { default as WorkflowActionInvocationModelV2 } from './workflowActionInvocationModelV2';
 export { default as WorkflowRunSnapshotModelV2 } from './workflowRunSnapshotModelV2';
 export { default as WorkflowRuntimeEventModelV2 } from './workflowRuntimeEventModelV2';
+export { default as WorkflowEventLaunchSkipModelV2 } from './workflowEventLaunchSkipModelV2';
+export type { WorkflowEventLaunchSkipRecord, WorkflowEventLaunchSkipInsert } from './workflowEventLaunchSkipModelV2';
 export { default as WorkflowScheduleStateModel } from './workflowScheduleStateModel';
 export { default as WorkflowDataStoreModel } from './workflowDataStoreModel';
 export { default as WorkflowEntityLinkModel } from './workflowEntityLinkModel';

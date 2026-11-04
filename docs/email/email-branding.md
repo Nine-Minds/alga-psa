@@ -57,7 +57,7 @@ Click **Remove Branding** to delete only the rows that email branding previously
 
 Enterprise tenants see two additional controls on the **Email Branding** tab:
 
-- **Header logo** – Upload an image to inject as a header logo into branded templates. The logo is injected idempotently: re-applying branding after uploading a new logo replaces the old one without duplicating it.
+- **Header logo** – Upload an image to inject as a header logo into branded templates. The logo is embedded in each outgoing email as an inline `cid:` attachment (Base64-encoded, capped at 1 MB), so it renders automatically in all email clients — including Gmail, Outlook, and Apple Mail — without requiring recipients to enable image downloading. Template rows written before this change are repaired automatically on their next send; no manual migration is required. The logo is injected idempotently: re-applying branding after uploading a new logo replaces the old one without duplicating it.
 - **Remove "Powered by AlgaPSA" attribution** – Toggle off the footer attribution line from all branded templates. The removal is idempotent; re-applying branding never re-inserts the line once it has been removed.
 
 Both controls apply only to templates that pass through the branding apply run. Customized templates excluded from the run keep whatever logo and footer state they had before.
@@ -71,6 +71,8 @@ Newly cloned tenant templates (created after a manual "Clone template" action in
 ## Using the Template Editor with a Saved Palette
 
 In **Settings > Notifications > Email Templates**, the template editor exposes an **Apply my palette** action on each template draft. This action rewrites the draft HTML in the browser using your saved palette tokens — the same transformation that a full branding apply would perform — without touching the database. Review the result, then save the template when it looks correct.
+
+If the logo uses a `cid:` source in the template HTML, the editor shows a hint reminding you not to replace it with a plain URL — the `cid:` reference is required for inline delivery and is resolved to the actual image bytes at send time.
 
 ## Saved Palette vs. Applied Templates
 

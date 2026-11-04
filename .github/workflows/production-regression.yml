@@ -30,8 +30,6 @@ jobs:
       should_run: ${{ steps.select.outputs.should_run }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -62,6 +60,13 @@ jobs:
 
   browser:
     uses: ./.github/workflows/e2e-fresh-install-tests.yaml
+    # The browser lane hands candidate images between its jobs through the
+    # GitHub Container Registry; a fork's read-only token silently keeps it on
+    # archive artifacts. Granted here, not workflow-wide, so the other lanes
+    # never hold a package-writing token.
+    permissions:
+      contents: read
+      packages: write
     secrets: inherit
 
   temporal:
@@ -238,3 +243,14 @@ jobs:
           path: test-results/production-readiness/
           if-no-files-found: error
           retention-days: 30
+      # One row per run in the sheet's gate_runs tab: the verdict above plus the
+      # lanes that went red (docs/reference/test-metrics.md). No-op without the
+      # Google secrets; never fails the gate.
+      - name: Record gate verdict to Google Sheet
+        if: always()
+        continue-on-error: true
+        run: node scripts/record-gate-metrics.mjs
+        env:
+          READINESS_JOBS: ${{ toJSON(needs) }}
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}

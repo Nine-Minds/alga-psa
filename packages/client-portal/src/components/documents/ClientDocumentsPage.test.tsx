@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { act, cleanup, render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import ClientDocumentsPage from './ClientDocumentsPage';
 import type { IDocument, IFolderNode } from '@alga-psa/types';
 
@@ -12,7 +12,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   }),
 }));
 
-const { mockFolders, mockDocuments, mockRenderViewer } = vi.hoisted(() => {
+const { mockFolders, mockDocuments, mockTextDocument, mockRenderViewer } = vi.hoisted(() => {
   const mockFolders = [
     {
       name: 'Contracts',
@@ -70,7 +70,24 @@ const { mockFolders, mockDocuments, mockRenderViewer } = vi.hoisted(() => {
     },
   ] as IDocument[];
 
-  return { mockFolders, mockDocuments, mockRenderViewer: vi.fn(() => null) };
+  const mockTextDocument = {
+    tenant: 'tenant-1',
+    document_id: 'doc-3',
+    file_id: 'file-3',
+    document_name: 'Server Notes.txt',
+    type_id: null,
+    user_id: 'user-1',
+    order_number: 3,
+    created_by: 'user-1',
+    folder_path: '/Contracts',
+    mime_type: 'text/plain',
+    is_client_visible: true,
+    created_at: '2026-02-28T00:00:00Z',
+    updated_at: '2026-02-28T00:00:00Z',
+    file_size: 2048,
+  } as IDocument;
+
+  return { mockFolders, mockDocuments, mockTextDocument, mockRenderViewer: vi.fn(() => null) };
 });
 
 vi.mock('@alga-psa/client-portal/actions/client-portal-actions/client-documents', () => ({
@@ -189,6 +206,35 @@ describe('ClientDocumentsPage', () => {
     expect(downloadButtons.length).toBeGreaterThan(0);
   });
 
+  it('sizes the card grid by available width so names keep room beside the actions', async () => {
+    render(<ClientDocumentsPage />);
+
+    await waitFor(() => expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument());
+
+    // Fixed column counts squeezed cards to ~130px next to the folder sidebar on
+    // a 1024px screen, collapsing the name to nothing and pushing an action
+    // button past the card border.
+    const title = document.getElementById('client-docs-title-view-doc-1')!;
+    const grid = title.closest('[data-testid="card"]')!.parentElement!;
+    // `min(18rem,100%)` keeps the track from outgrowing a narrow column, which a
+    // bare 18rem minimum would overflow on a phone-width portal.
+    expect(grid.className).toContain('grid-cols-[repeat(auto-fill,minmax(min(18rem,100%),1fr))]');
+    expect(grid.className).not.toContain('grid-cols-3');
+
+    expect(title.className).toContain('truncate');
+    expect(title).toHaveAttribute('title', 'Service Agreement.pdf');
+    expect(title.closest('.min-w-0')?.nextElementSibling?.className).toContain('flex-shrink-0');
+
+    // Beside an expanded folder sidebar an 800px portal leaves a 224px card,
+    // where sharing a row with the actions cut the name to ~15px. The card
+    // measures itself and drops the actions to their own line under 18rem.
+    const row = title.closest('.\\@container')!;
+    expect(row).not.toBeNull();
+    const actionsWrapper = title.closest('.min-w-0')!.parentElement!;
+    expect(actionsWrapper.className).toContain('flex-col');
+    expect(actionsWrapper.className).toContain('@[18rem]:flex-row');
+  });
+
   it('routes uploaded document downloads through the checked portal file endpoint', async () => {
     const { fetchAndSaveFile } = await import('../../lib/fetchAndSaveFile');
     render(<ClientDocumentsPage />);
@@ -266,11 +312,42 @@ describe('ClientDocumentsPage', () => {
     await waitFor(() => expect(screen.getByText('Service Agreement.pdf')).toBeInTheDocument());
     fireEvent.click(document.getElementById(`client-docs-view-document-${documentId}`)!);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(`/api/client-portal/documents/${documentId}/file?disposition=inline`, { credentials: 'include' }));
-    if (documentId === 'doc-1') await waitFor(() => expect(screen.getByTitle('Service Agreement.pdf')).toHaveAttribute('src', 'blob:doc-1'));
+    if (documentId === 'doc-1') await waitFor(() => expect(within(screen.getByRole('dialog')).getByTitle('Service Agreement.pdf')).toHaveAttribute('src', 'blob:doc-1'));
     else await waitFor(() => expect(screen.getByAltText('Network Diagram.png')).toHaveAttribute('src', 'blob:doc-2'));
     fireEvent.click(await screen.findByRole('button', { name: 'Close' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(revoke).toHaveBeenCalledWith(`blob:${documentId}`);
+  });
+
+  it('reads an uploaded text file inline instead of only offering a download', async () => {
+    const actions = await import('@alga-psa/client-portal/actions/client-portal-actions/client-documents');
+    vi.mocked(actions.getClientDocuments).mockResolvedValue({ documents: [mockTextDocument], total: 1, page: 1, pageSize: 20, totalPages: 1 } as any);
+    vi.mocked(actions.getClientDocumentContent).mockResolvedValue({ document: { document_id: 'doc-3' }, content: { kind: 'file' } } as any);
+    const fetchMock = vi.fn().mockResolvedValue(new Response('server rebooted at 02:00\nall clear'));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ClientDocumentsPage />);
+    await waitFor(() => expect(screen.getByText('Server Notes.txt')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('client-docs-view-document-doc-3')!);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/client-portal/documents/doc-3/file?disposition=inline', { credentials: 'include' }));
+    const body = await screen.findByText(/server rebooted at 02:00/);
+    expect(body.tagName).toBe('PRE');
+    expect(body).toHaveTextContent('all clear');
+    expect(screen.queryByText('Preview is not available for this file type.')).not.toBeInTheDocument();
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+  });
+
+  it('leaves an oversized text file on the download path', async () => {
+    const actions = await import('@alga-psa/client-portal/actions/client-portal-actions/client-documents');
+    const hugeTextDocument = { ...mockTextDocument, file_size: 8 * 1024 * 1024 } as IDocument;
+    vi.mocked(actions.getClientDocuments).mockResolvedValue({ documents: [hugeTextDocument], total: 1, page: 1, pageSize: 20, totalPages: 1 } as any);
+    vi.mocked(actions.getClientDocumentContent).mockResolvedValue({ document: { document_id: 'doc-3' }, content: { kind: 'file' } } as any);
+    const fetchMock = vi.fn().mockResolvedValue(new Response('too many bytes'));
+    vi.stubGlobal('fetch', fetchMock);
+    render(<ClientDocumentsPage />);
+    await waitFor(() => expect(screen.getByText('Server Notes.txt')).toBeInTheDocument());
+    fireEvent.click(document.getElementById('client-docs-view-document-doc-3')!);
+    await waitFor(() => expect(screen.getByText('Preview is not available for this file type.')).toBeInTheDocument());
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   const deferred = <T,>() => {
@@ -326,7 +403,7 @@ describe('ClientDocumentsPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Close' }));
     act(() => content.resolve({ document: { document_id: 'doc-1' }, content: { kind: 'block', blockData: [] } }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    expect(screen.queryByTitle('Service Agreement.pdf')).not.toBeInTheDocument();
+    expect(document.querySelector('iframe')).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
     expect(mockRenderViewer).not.toHaveBeenCalled();
   });

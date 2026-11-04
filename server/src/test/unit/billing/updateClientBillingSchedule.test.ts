@@ -244,6 +244,8 @@ describe('updateClientBillingSchedule', () => {
     const responses = {
       'clients:select:first': { client_id: 'client-1', billing_cycle: 'monthly' },
       'client_billing_cycles as cbc:select:first': { period_end_date: '2026-01-10T00:00:00Z' },
+      // Per-contract billed-boundary ledger (no billed rows): a many-select, not first().
+      'recurring_service_periods as rsp:select:many': [],
       'client_contracts as cc:select:many': [
         {
           client_contract_line_id: 'line-1',
@@ -257,11 +259,10 @@ describe('updateClientBillingSchedule', () => {
         {
           record_id: 'rsp-1',
           tenant: 'tenant-1',
-          schedule_key: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
+          schedule_key: 'schedule:tenant-1:line-1:client:arrears',
           period_key: 'period:2026-01-10:2026-02-10',
           revision: 1,
           obligation_id: 'line-1',
-          obligation_type: 'client_contract_line',
           charge_family: 'fixed',
           cadence_owner: 'client',
           due_position: 'arrears',
@@ -328,7 +329,6 @@ describe('updateClientBillingSchedule', () => {
       expect.arrayContaining([
         expect.objectContaining({
           obligation_id: 'line-1',
-          obligation_type: 'client_contract_line',
           cadence_owner: 'client',
           due_position: 'arrears',
           provenance_kind: 'regenerated',
@@ -341,7 +341,6 @@ describe('updateClientBillingSchedule', () => {
       expect.arrayContaining([
         expect.objectContaining({
           obligation_id: 'line-1',
-          obligation_type: 'client_contract_line',
           cadence_owner: 'client',
           due_position: 'arrears',
           provenance_kind: 'generated',
@@ -366,6 +365,8 @@ describe('updateClientBillingSchedule', () => {
     const responses = {
       'clients:select:first': { client_id: 'client-1', billing_cycle: 'monthly' },
       'client_billing_cycles as cbc:select:first': null,
+      // Per-contract billed-boundary ledger (no billed rows): a many-select, not first().
+      'recurring_service_periods as rsp:select:many': [],
       'client_contracts as cc:select:many': [
         {
           client_contract_line_id: 'line-1',

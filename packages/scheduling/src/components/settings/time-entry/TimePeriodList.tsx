@@ -16,20 +16,19 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { Temporal } from '@js-temporal/polyfill';
+import { formatPeriodLastDay } from '../../../lib/timePeriodDisplay';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type { TimePeriodPermissions } from './useTimePeriodPermissions';
 
-// Helper to get the last inclusive day from an exclusive end_date
-// end_date is the day AFTER the period ends (exclusive boundary)
-function getLastInclusiveDay(exclusiveEndDate: string): string {
-  const endDate = Temporal.PlainDate.from(exclusiveEndDate);
-  const lastDay = endDate.subtract({ days: 1 });
-  return lastDay.toString();
+interface TimePeriodListProps {
+  /** `time_period` permissions of the viewer; without create/update/delete the list is read-only. */
+  permissions: TimePeriodPermissions;
 }
 
-const TimePeriodList: React.FC = () => {
+const TimePeriodList: React.FC<TimePeriodListProps> = ({ permissions }) => {
   const { t } = useTranslation(['msp/settings', 'common']);
+  const canEdit = permissions.update || permissions.delete;
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
   const [timePeriods, setTimePeriods] = useState<ITimePeriodView[]>([]);
   const [settings, setSettings] = useState<ITimePeriodSettings[] | null>(null);
@@ -125,12 +124,12 @@ const TimePeriodList: React.FC = () => {
       title: t('timeEntry.periods.columns.endDate'),
       dataIndex: 'end_date',
       // Show the last inclusive day (end_date is exclusive - the day AFTER the period)
-      render: (value) => getLastInclusiveDay(value)
+      render: (value) => formatPeriodLastDay(value)
     },
-    {
+    ...(canEdit ? [{
       title: t('timeEntry.periods.columns.actions'),
-      dataIndex: 'period_id',
-      render: (_, record) => (
+      dataIndex: 'period_id' as const,
+      render: (_: unknown, record: ITimePeriodView) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -156,7 +155,7 @@ const TimePeriodList: React.FC = () => {
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-    },
+    }] : []),
   ];
 
   if (isLoading) {
@@ -183,17 +182,19 @@ const TimePeriodList: React.FC = () => {
             {loadError}
           </div>
         )}
-        <Button
-          id="create-time-period-button"
-          className="mb-4"
-          onClick={() => {
-            setMode('create');
-            setSelectedPeriod(null);
-            setIsFormOpen(true);
-          }}
-        >
-          {t('timeEntry.periods.create')}
-        </Button>
+        {permissions.create && (
+          <Button
+            id="create-time-period-button"
+            className="mb-4"
+            onClick={() => {
+              setMode('create');
+              setSelectedPeriod(null);
+              setIsFormOpen(true);
+            }}
+          >
+            {t('timeEntry.periods.create')}
+          </Button>
+        )}
         <TimePeriodForm
           isOpen={isFormOpen}
           onClose={handleClose}
@@ -203,12 +204,13 @@ const TimePeriodList: React.FC = () => {
           existingTimePeriods={timePeriods}
           selectedPeriod={selectedPeriod}
           mode={mode}
+          permissions={permissions}
         />
         <DataTable
           id="settings-time-periods-table"
           data={timePeriods}
           columns={columns}
-          onRowClick={handleRowClick}
+          onRowClick={canEdit ? handleRowClick : undefined}
           pagination={true}
           currentPage={currentPage}
           onPageChange={handlePageChange}

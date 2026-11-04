@@ -5,7 +5,7 @@ import {
   technicianCheckedOutEventPayloadSchema,
   technicianDispatchedEventPayloadSchema,
   technicianEnRouteEventPayloadSchema,
-} from '../schedulingEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildTechnicianArrivedPayload,
   buildTechnicianCheckedOutPayload,

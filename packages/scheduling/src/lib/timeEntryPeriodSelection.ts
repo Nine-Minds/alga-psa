@@ -122,7 +122,7 @@ export function nearestEditableWorkDate(periods: readonly CatalogPeriod[], today
   return after ?? null;
 }
 
-export type DefaultTimeSource = 'none' | 'context' | 'timer';
+export type DefaultTimeSource = 'none' | 'context';
 
 /** Why the default date is not simply the supplied times or today. */
 export type DefaultDateMove =
@@ -152,7 +152,7 @@ export interface ResolvedEntryDefaults {
  * take time. Returns null when no period accepts time at all.
  */
 export function resolveEntryDefaults(params: {
-  context: Pick<TimeEntryWorkItemContext, 'startTime' | 'endTime' | 'elapsedTime'>;
+  context: Pick<TimeEntryWorkItemContext, 'startTime' | 'endTime'>;
   periods: readonly CatalogPeriod[];
   timeZone: string | null | undefined;
   now?: Date;
@@ -160,15 +160,9 @@ export function resolveEntryDefaults(params: {
   const { context, periods, timeZone } = params;
   const now = params.now ?? new Date();
 
-  let suppliedStartTime: Date | undefined = context.startTime;
-  let suppliedEndTime: Date | undefined = context.endTime;
-  let source: DefaultTimeSource = suppliedStartTime || suppliedEndTime ? 'context' : 'none';
-
-  if (!suppliedStartTime && !suppliedEndTime && context.elapsedTime && context.elapsedTime > 0) {
-    suppliedEndTime = now;
-    suppliedStartTime = new Date(now.getTime() - context.elapsedTime * 1000);
-    source = 'timer';
-  }
+  const suppliedStartTime: Date | undefined = context.startTime;
+  const suppliedEndTime: Date | undefined = context.endTime;
+  const source: DefaultTimeSource = suppliedStartTime || suppliedEndTime ? 'context' : 'none';
 
   if (suppliedStartTime && suppliedEndTime) {
     const startPeriod = periodForWorkDate(periods, workDateInTimeZone(suppliedStartTime, timeZone));

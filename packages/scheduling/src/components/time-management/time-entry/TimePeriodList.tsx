@@ -10,15 +10,7 @@ import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
 import { Settings, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { formatISO, parseISO } from 'date-fns';
-import { Temporal } from '@js-temporal/polyfill';
-
-// Helper to get the last inclusive day from an exclusive end_date
-// end_date is the day AFTER the period ends (exclusive boundary)
-function getLastInclusiveDay(exclusiveEndDate: string): string {
-  const endDate = Temporal.PlainDate.from(exclusiveEndDate.slice(0, 10));
-  const lastDay = endDate.subtract({ days: 1 });
-  return lastDay.toString();
-}
+import { formatPeriodLastDay } from '../../../lib/timePeriodDisplay';
 
 // Removing a row is a single action that fully clears it when possible. Each removable row
 // resolves to a composite operation:
@@ -45,7 +37,7 @@ interface TimePeriodListProps {
 }
 
 function formatPeriodRange(startDate: string, endDate: string): string {
-  return `${startDate.slice(0, 10)} - ${getLastInclusiveDay(endDate)}`;
+  return `${startDate.slice(0, 10)} - ${formatPeriodLastDay(endDate)}`;
 }
 
 export function TimePeriodList({

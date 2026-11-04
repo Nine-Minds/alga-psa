@@ -7,6 +7,10 @@
     "description": "{{feature}} richiede Pro. Effettua l'upgrade per accedere a questa funzionalità."
   },
   "settings": {
+    "unavailable": {
+      "title": "Impostazioni delle estensioni non disponibili",
+      "description": "La gestione delle impostazioni delle estensioni è disponibile in AlgaPSA Pro."
+    },
     "title": "Gestione estensioni",
     "description": "Installa, configura e gestisci le estensioni per ampliare le funzionalità di AlgaPSA.",
     "tabs": {
@@ -98,7 +102,12 @@
       "description": "Gestisci estensioni"
     },
     "title": "Estensioni",
-    "description": "La gestione delle estensioni è disponibile in Pro."
+    "description": "La gestione delle estensioni è disponibile in Pro.",
+    "unavailable": {
+      "metadataTitle": "Estensioni (solo EE)",
+      "title": "Estensioni non disponibili",
+      "description": "Disponibile in Pro."
+    }
   },
   "detail": {
     "metadataTitle": "Estensioni - Funzionalità Pro",
@@ -121,7 +130,12 @@
       "description": "Visualizza i dettagli dell'estensione"
     },
     "title": "Dettagli dell'estensione",
-    "description": "I dettagli dell'estensione sono disponibili in Pro."
+    "description": "I dettagli dell'estensione sono disponibili in Pro.",
+    "unavailable": {
+      "metadataTitle": "Dettagli dell’estensione (solo EE)",
+      "title": "Dettagli dell’estensione non disponibili",
+      "description": "Questa pagina è disponibile in Pro."
+    }
   },
   "settingsPage": {
     "metadata": {
@@ -129,7 +143,12 @@
       "description": "Configura le impostazioni delle estensioni"
     },
     "title": "Impostazioni estensioni",
-    "description": "Le impostazioni delle estensioni sono disponibili in Pro."
+    "description": "Le impostazioni delle estensioni sono disponibili in Pro.",
+    "unavailable": {
+      "metadataTitle": "Impostazioni dell’estensione (solo EE)",
+      "title": "Impostazioni dell’estensione non disponibili",
+      "description": "Questa pagina è disponibile in Pro."
+    }
   },
   "details": {
     "label": "Dettagli estensione",
@@ -235,6 +254,10 @@
     "cancel": "Annulla"
   },
   "list": {
+    "unavailable": {
+      "title": "Estensioni non disponibili",
+      "description": "La gestione delle estensioni è disponibile in AlgaPSA Pro."
+    },
     "label": "Gestione estensioni",
     "heading": "Estensioni",
     "loading": "Caricamento estensioni...",
@@ -294,7 +317,20 @@
     "installCompleteError": "Estensione finalizzata, ma l'installazione non è stata completata",
     "installUnexpected": "Errore imprevisto durante l'installazione",
     "finalizeRequireManifest": "Incolla il JSON del manifest prima di finalizzare.",
-    "finalizeProvidedFailed": "Finalizzazione non riuscita con il manifest fornito"
+    "finalizeProvidedFailed": "Finalizzazione non riuscita con il manifest fornito",
+    "pro": {
+      "title": "Estensioni (Pro)",
+      "description": "L’installazione e la gestione delle estensioni sono disponibili in AlgaPSA Pro.",
+      "featureTitle": "Funzionalità Pro",
+      "help": "Il programma di installazione delle estensioni è disponibile solo in AlgaPSA Pro.",
+      "actions": {
+        "learnMore": "Scopri di più su Pro"
+      }
+    },
+    "unavailable": {
+      "title": "Installazione delle estensioni non disponibile",
+      "description": "L’installazione delle estensioni è disponibile in AlgaPSA Pro."
+    }
   },
   "installSimple": {
     "title": "Installa estensione",
@@ -371,5 +407,19 @@
       "medium": "Le autorizzazioni di modifica consentono all'estensione di aggiornare i dati esistenti.",
       "high": "Le autorizzazioni avanzate consentono all'estensione di creare, eliminare o eseguire operazioni."
     }
+  },
+  "iframe": {
+    "title": "Applicazione dell’estensione",
+    "starting": "Avvio dell’estensione",
+    "loadingUi": "Caricamento dell’interfaccia dell’estensione…",
+    "connecting": "Connessione all’area di lavoro di esecuzione…",
+    "loadFailed": "Impossibile caricare questa estensione.",
+    "configurationHint": "Controlla la configurazione dell’estensione e riprova."
+  },
+  "unavailable": {
+    "metadataTitle": "Estensioni (solo EE)",
+    "title": "Estensione non disponibile",
+    "description": "Il sistema di estensioni è disponibile in Pro e non è incluso in questa versione Community Edition.",
+    "requestedId": "ID richiesto: {{id}}"
   }
 }

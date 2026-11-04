@@ -15,8 +15,9 @@ This runbook covers the day-to-day operational tasks for the Google and Microsof
    - Give the provider an operator-friendly name.
    - Supply the external calendar identifier (use `primary` for the default Google calendar or `calendar` for Outlook).
    - Choose the desired sync direction and enable the provider.
-5. Press **Authorize**. A vendor popup appears; complete the OAuth consent flow.
-6. After a successful callback you will see the `OAuth Complete` badge. Save the form to persist changes.
+5. For Outlook, the Microsoft profile's **Tenant ID** selects the sign-in authority. A multi-tenant app (recommended) works with a blank or `common` Tenant ID. A single-tenant app works if you enter its directory (tenant) ID. AlgaPSA reports `AADSTS50194`, `AADSTS700016`, `AADSTS50020` and `AADSTS50011` with a specific message. Register the calendar redirect URI shown on the Microsoft app registration screen. The Outlook connect form shows the redirect URI (with a copy button) and the delegated permissions to grant before you click **Connect**: `Calendars.ReadWrite`, `MailboxSettings.ReadWrite` and `offline_access`. Outlook Calendar does not request any mail permission. If the bound profile still needs Microsoft 365 administrator approval, the form says so and hides **Connect** until an administrator has approved the app.
+6. Press **Authorize**. A vendor popup appears; complete the OAuth consent flow.
+7. After a successful callback you will see the `OAuth Complete` badge. Save the form to persist changes.
 
 ## Monitoring Sync Health
 - Each provider card now shows **Connection Status**, **OAuth badge**, **Last Sync**, and **Sync Direction** at a glance.
@@ -42,11 +43,12 @@ This runbook covers the day-to-day operational tasks for the Google and Microsof
 3. The provider is removed and a toast confirms success. Any scheduled jobs referencing the provider will skip automatically.
 
 ## Troubleshooting Checklist
-- **Authorization failures**: ensure the OAuth popup is not blocked and that tenant secrets are valid.
+- **"Calendar provider has not completed OAuth authorization yet"**: this message appears immediately when **Sync Now** is clicked on a provider that has no stored OAuth tokens — the OAuth consent flow was never finished. Open the provider's settings card, click **Authorize**, complete the consent flow until you see the **OAuth Complete** badge, save the form, then retry the sync.
+- **Authorization failures (other)**: ensure the OAuth popup is not blocked, that tenant secrets are valid, and that the provider credentials have not been revoked.
 - **Stale last sync**: run a manual sync to force a pass; if the timestamp does not advance check webhook subscriptions.
-- **Webhook errors**: consult the `calendar-webhook-maintenance` job logs. Google uses Calendar “watch” channels (webhook) and Microsoft uses Graph subscriptions; both are renewed by maintenance jobs.
+- **Webhook errors**: consult the `calendar-webhook-maintenance` job logs. Google uses Calendar "watch" channels (webhook) and Microsoft uses Graph subscriptions; both are renewed by maintenance jobs.
 - **Multi-tenant bleed**: confirm the provider belongs to the active tenant. All actions enforce tenant scoping; mismatches result in `Forbidden` errors.
-- **Conflicts stuck**: if repeated conflicts appear, reset the mapping’s `sync_status` through the conflict resolution workflow and retry.
+- **Conflicts stuck**: if repeated conflicts appear, reset the mapping's `sync_status` through the conflict resolution workflow and retry.
 
 ## Escalation
 - Pager duty rotation: **Platform Integrations**.

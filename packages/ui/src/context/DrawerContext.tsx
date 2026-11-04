@@ -1,11 +1,13 @@
 'use client';
 
 import Drawer from '../components/Drawer';
-import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback, useReducer } from 'react';
+import { guardActiveDismiss } from '../components/DismissGuard';
+import React, { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback, useReducer } from 'react';
 import type { Activity, ActivityType } from '@alga-psa/types';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '../components/Button';
 import { useCatalogShortcut, useShortcutScope } from '../keyboard-shortcuts';
+import { useTranslation } from '../lib/i18n/client';
 
 // Define the drawer history entry type
 interface DrawerHistoryEntry {
@@ -63,6 +65,14 @@ interface DrawerContextType {
   ) => void;
   
   goForward: () => void;
+  /**
+   * True while a DrawerOutlet is mounted under this provider. Routes without an outlet would
+   * swallow openDrawer silently; callers that must show UI (e.g. the header stopwatch Stop) check
+   * this and fall back explicitly.
+   */
+  hasOutlet?: () => boolean;
+  /** Called by DrawerOutlet on mount; returns the unregister function. */
+  registerOutlet?: () => () => void;
   canGoBack: boolean;
   canGoForward: boolean;
   currentEntry: DrawerHistoryEntry | null;
@@ -195,7 +205,7 @@ function drawerReducer(state: DrawerState, action: DrawerAction): DrawerState {
         type: 'form',
         activityType: activity.type,
         activityId: activity.id,
-        title: title || `${activity.title} - Form`,
+        title: title || '',
         content,
         onMount,
         metadata: { activity, formId },
@@ -247,6 +257,12 @@ const DrawerContext = createContext<DrawerContextType | undefined>(undefined);
 
 export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(drawerReducer, initialState);
+  const outletCountRef = useRef(0);
+  const registerOutlet = useCallback(() => {
+    outletCountRef.current += 1;
+    return () => { outletCountRef.current -= 1; };
+  }, []);
+  const hasOutlet = useCallback(() => outletCountRef.current > 0, []);
   
   // Compute derived state
   const canGoBack = state.currentIndex > 0;
@@ -318,9 +334,14 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, []);
 
   useShortcutScope('panel', state.isOpen);
-  useCatalogShortcut('panel.close', closeDrawer, { enabled: state.isOpen });
-  useCatalogShortcut('drawer.historyBack', goBack, { enabled: state.isOpen && canGoBack });
-  useCatalogShortcut('drawer.historyForward', goForward, { enabled: state.isOpen && canGoForward });
+  // Keyboard and header-button dismissals go through the drawer's unsaved-changes
+  // guard; programmatic `closeDrawer()` callers (e.g. after a successful save) do not.
+  const guardedClose = useCallback(() => guardActiveDismiss(closeDrawer), [closeDrawer]);
+  const guardedBack = useCallback(() => guardActiveDismiss(goBack), [goBack]);
+  const guardedForward = useCallback(() => guardActiveDismiss(goForward), [goForward]);
+  useCatalogShortcut('panel.close', guardedClose, { enabled: state.isOpen });
+  useCatalogShortcut('drawer.historyBack', guardedBack, { enabled: state.isOpen && canGoBack });
+  useCatalogShortcut('drawer.historyForward', guardedForward, { enabled: state.isOpen && canGoForward });
 
   return (
     <DrawerContext value={{
@@ -332,6 +353,8 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       openDetailDrawer,
       openFormDrawer,
       goForward,
+      hasOutlet,
+      registerOutlet,
       canGoBack,
       canGoForward,
       currentEntry,
@@ -347,8 +370,13 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
  * Place this inside all context providers so drawer content inherits the full provider tree.
  */
 export const DrawerOutlet: React.FC = () => {
-  const { closeDrawer, goBack, goForward, canGoBack, canGoForward, currentEntry, history } = useDrawer();
+  const { t } = useTranslation('common');
+  const { closeDrawer, goBack, goForward, canGoBack, canGoForward, currentEntry, history, registerOutlet } = useDrawer();
+  useEffect(() => registerOutlet?.(), [registerOutlet]);
   const isOpen = history.length > 0 && currentEntry !== null;
+  const title = currentEntry?.type === 'form' && !currentEntry.title
+    ? t('drawer.formTitle', { title: currentEntry.metadata?.activity.title, defaultValue: `${currentEntry.metadata?.activity.title} - Form` })
+    : currentEntry?.title;
 
   return (
     <Drawer
@@ -361,7 +389,7 @@ export const DrawerOutlet: React.FC = () => {
     >
       {currentEntry && (
         <div className="flex flex-col h-full relative">
-          {(currentEntry.title || canGoBack || canGoForward) ? (
+          {(title || canGoBack || canGoForward) ? (
             <div className="flex items-center justify-between mb-4 border-b pb-3">
               <div className="flex items-center">
                 {canGoBack && (
@@ -369,14 +397,14 @@ export const DrawerOutlet: React.FC = () => {
                     id="drawer-back-button"
                     variant="ghost"
                     size="sm"
-                    onClick={goBack}
+                    onClick={() => guardActiveDismiss(goBack)}
                     className="mr-2"
-                    aria-label="Go back"
+                    aria-label={t('drawer.actions.goBack', { defaultValue: 'Go back' })}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                 )}
-                {currentEntry.title && <h2 className="text-xl font-semibold">{currentEntry.title}</h2>}
+                {title && <h2 className="text-xl font-semibold">{title}</h2>}
               </div>
               <div className="flex items-center">
                 {canGoForward && (
@@ -384,9 +412,9 @@ export const DrawerOutlet: React.FC = () => {
                     id="drawer-forward-button"
                     variant="ghost"
                     size="sm"
-                    onClick={goForward}
+                    onClick={() => guardActiveDismiss(goForward)}
                     className="mr-2"
-                    aria-label="Go forward"
+                    aria-label={t('drawer.actions.goForward', { defaultValue: 'Go forward' })}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -395,8 +423,8 @@ export const DrawerOutlet: React.FC = () => {
                   id="drawer-close-button"
                   variant="ghost"
                   size="sm"
-                  onClick={closeDrawer}
-                  aria-label="Close drawer"
+                  onClick={() => guardActiveDismiss(closeDrawer)}
+                  aria-label={t('drawer.actions.close', { defaultValue: 'Close drawer' })}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -408,8 +436,8 @@ export const DrawerOutlet: React.FC = () => {
                 id="drawer-close-button"
                 variant="ghost"
                 size="sm"
-                onClick={closeDrawer}
-                aria-label="Close drawer"
+                onClick={() => guardActiveDismiss(closeDrawer)}
+                aria-label={t('drawer.actions.close', { defaultValue: 'Close drawer' })}
                 className="hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))]"
               >
                 <X className="h-4 w-4" />

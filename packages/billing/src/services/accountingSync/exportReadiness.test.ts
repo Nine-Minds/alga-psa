@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
 const resolveServiceMappingMock = vi.hoisted(() => vi.fn());
+const resolveDiscountMappingMock = vi.hoisted(() => vi.fn());
 
 vi.mock('./accountingSyncSettings', () => ({
   getAccountingSyncSettings: vi.fn(async () => ({
@@ -17,7 +18,10 @@ vi.mock('./accountingSyncSettings', () => ({
 
 vi.mock('../accountingMappingResolver', () => ({
   AccountingMappingResolver: vi.fn().mockImplementation(function () {
-    return { resolveServiceMapping: resolveServiceMappingMock };
+      return {
+        resolveServiceMapping: resolveServiceMappingMock,
+        resolveDiscountMapping: resolveDiscountMappingMock
+      };
   })
 }));
 
@@ -48,7 +52,7 @@ function makeKnex(fixture: KnexFixture): any {
       return {
         whereIn: () => ({
           andWhere: () => ({
-            select: async () => (fixture.detailBackedChargeIds ?? []).map((id) => ({ item_id: id }))
+            select: async () => (fixture.detailBackedChargeIds ?? []).map((id) => ({ item_id: id, service_id: 'detail-service' }))
           })
         })
       };
@@ -77,6 +81,7 @@ beforeEach(() => {
   });
   vi.mocked(resolveDefaultRealm).mockResolvedValue('realm-1');
   resolveServiceMappingMock.mockResolvedValue({ external_entity_id: 'item-1', metadata: {} });
+  resolveDiscountMappingMock.mockResolvedValue({ external_entity_id: 'discount-account', metadata: {} });
 });
 
 afterEach(() => {
@@ -121,6 +126,16 @@ describe('assertInvoiceExportReady', () => {
     await expect(assertInvoiceExportReady(knex, TENANT, INVOICE)).rejects.toBeInstanceOf(
       InvoiceExportReadinessError
     );
+  });
+
+  it('blocks auto-finalize with an actionable discount mapping requirement', async () => {
+    resolveDiscountMappingMock.mockResolvedValue(null);
+    const knex = makeKnex({
+      invoice: standardInvoice,
+      charges: [{ item_id: 'discount-1', service_id: null, description: 'Contract discount', is_discount: true }]
+    });
+
+    await expect(assertInvoiceExportReady(knex, TENANT, INVOICE)).rejects.toThrow(/configure the discount mapping/i);
   });
 
   it('does not flag consolidated fixed-plan parent charges (their services live in detail rows)', async () => {

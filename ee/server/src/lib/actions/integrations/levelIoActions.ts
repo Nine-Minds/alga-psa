@@ -1,10 +1,15 @@
 'use server';
 
 import { randomBytes } from 'crypto';
+import type { Knex } from 'knex';
+import { moveRmmOrganizationAssets } from '@alga-psa/shared/rmm/moveRmmOrganizationAssets';
+import { resolveMappingBillingProfileId } from '@alga-psa/shared/rmm/mappingBillingProfile';
+import { isRmmContactAssignmentMode } from '@alga-psa/shared/rmm/userMatching';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { tenantDb } from '@alga-psa/db';
+import { withTransaction } from '@alga-psa/db';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { createTenantKnex } from '@/lib/db';
 import { getWebhookBaseUrl } from '@alga-psa/integrations/utils/email/webhookHelpers';
@@ -19,7 +24,12 @@ import {
   LevelIoApiError,
   LEVELIO_API_KEY_SECRET,
   LEVELIO_WEBHOOK_SECRET_KEY,
+  LEVELIO_WEBHOOK_SIGNING_SECRET_KEY,
 } from '../../integrations/levelio/levelApiClient';
+import {
+  LEVELIO_AUTOMATION_DESCRIPTION_PLACEHOLDER,
+  LEVELIO_AUTOMATION_NAME_PLACEHOLDER,
+} from '../../integrations/levelio/webhookPayload';
 import {
   runLevelIoAlertsBackfill,
   runLevelIoDeviceSync,
@@ -34,6 +44,11 @@ import {
 } from '../../integrations/levelio/sync/transport';
 
 const PROVIDER = 'levelio' as const;
+
+/** Key pasted into Level's Settings -> Webhooks "secret" field. */
+function generateSigningSecret(): string {
+  return randomBytes(32).toString('hex');
+}
 
 function sanitizeError(error: unknown, fallback = 'Unable to complete the Level request.'): string {
   if (error instanceof LevelIoApiError) {
@@ -242,6 +257,10 @@ export const saveLevelIoConfiguration = withAdvancedAssetsAccess(async (
     if (!existingWebhookSecret) {
       await secretProvider.setTenantSecret(tenant, LEVELIO_WEBHOOK_SECRET_KEY, randomBytes(24).toString('hex'));
     }
+    const existingSigningSecret = await secretProvider.getTenantSecret(tenant, LEVELIO_WEBHOOK_SIGNING_SECRET_KEY);
+    if (!existingSigningSecret) {
+      await secretProvider.setTenantSecret(tenant, LEVELIO_WEBHOOK_SIGNING_SECRET_KEY, generateSigningSecret());
+    }
 
     const row = await upsertLevelIoIntegrationRow({
       tenant,
@@ -302,6 +321,7 @@ export const disconnectLevelIoIntegration = withAdvancedAssetsAccess(async (user
     await Promise.all([
       secretProvider.deleteTenantSecret(tenant, LEVELIO_API_KEY_SECRET),
       secretProvider.deleteTenantSecret(tenant, LEVELIO_WEBHOOK_SECRET_KEY),
+      secretProvider.deleteTenantSecret(tenant, LEVELIO_WEBHOOK_SIGNING_SECRET_KEY),
     ]);
 
     await tenantDb(knex, tenant).table('rmm_integrations')
@@ -439,6 +459,8 @@ export const listLevelIoOrganizationMappings = withAdvancedAssetsAccess(async (u
         'rom.external_organization_name',
         'rom.client_id',
         'rom.default_contact_id',
+        'rom.contact_assignment_mode',
+        'rom.billing_profile_id',
         'rom.auto_sync_assets',
         'rom.auto_create_tickets',
         'rom.metadata',
@@ -466,6 +488,10 @@ export const updateLevelIoOrganizationMapping = withAdvancedAssetsAccess(async (
     defaultContactId?: string | null;
     autoSyncAssets?: boolean;
     autoCreateTickets?: boolean;
+    /** FR-D3: off | suggest | auto. */
+    contactAssignmentMode?: string;
+    /** FR-F1: the organization's billing profile, or null. */
+    billingProfileId?: string | null;
   }
 ) => {
   const permitted = await hasPermission(user as any, 'system_settings', 'update');
@@ -479,12 +505,47 @@ export const updateLevelIoOrganizationMapping = withAdvancedAssetsAccess(async (
     };
     if (typeof input.clientId !== 'undefined') patch.client_id = input.clientId || null;
     if (typeof input.defaultContactId !== 'undefined') patch.default_contact_id = input.defaultContactId || null;
+    if (typeof input.contactAssignmentMode !== 'undefined') {
+      if (!isRmmContactAssignmentMode(input.contactAssignmentMode)) {
+        return { success: false, error: 'Invalid people mode' };
+      }
+      patch.contact_assignment_mode = input.contactAssignmentMode;
+    }
     if (typeof input.autoSyncAssets !== 'undefined') patch.auto_sync_assets = input.autoSyncAssets;
     if (typeof input.autoCreateTickets !== 'undefined') patch.auto_create_tickets = input.autoCreateTickets;
 
-    await db.table('rmm_organization_mappings')
-      .where({ mapping_id: input.mappingId })
-      .update(patch);
+    // FR-G4: a client change moves the organization's assets in the same
+    // transaction as the mapping update, so the two can never disagree.
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const trxDb = tenantDb(trx, tenant);
+      const existing = await trxDb.table('rmm_organization_mappings')
+        .where({ mapping_id: input.mappingId })
+        .first('client_id', 'integration_id', 'external_organization_id');
+
+      // FR-F1: validated against the client the mapping ends up on, and
+      // cleared by a client change whatever else the patch carries.
+      const billingProfileId = await resolveMappingBillingProfileId(trx, tenant, {
+        existingClientId: existing?.client_id ?? null,
+        nextClientId: input.clientId,
+        billingProfileId: input.billingProfileId,
+      });
+      if (typeof billingProfileId !== 'undefined') patch.billing_profile_id = billingProfileId;
+
+      await trxDb.table('rmm_organization_mappings')
+        .where({ mapping_id: input.mappingId })
+        .update(patch);
+
+      const nextClientId = patch.client_id as string | null | undefined;
+      if (nextClientId && existing && String(existing.client_id ?? '') !== String(nextClientId)) {
+        await moveRmmOrganizationAssets(trx, tenant, {
+          integrationId: String(existing.integration_id),
+          provider: 'levelio',
+          externalOrganizationId: String(existing.external_organization_id),
+          newClientId: String(nextClientId),
+          actorUserId: (user as { user_id?: string }).user_id ?? null,
+        });
+      }
+    });
 
     return { success: true };
   } catch (error) {
@@ -504,16 +565,29 @@ export const getLevelIoWebhookInfo = withAdvancedAssetsAccess(async (user, { ten
       return { success: true, webhook: null };
     }
 
+    // Integrations connected before native webhook support have no signing
+    // secret yet; create it on first view so the native setup can be shown.
+    let signingSecret = await secretProvider.getTenantSecret(tenant, LEVELIO_WEBHOOK_SIGNING_SECRET_KEY);
+    if (!signingSecret) {
+      signingSecret = generateSigningSecret();
+      await secretProvider.setTenantSecret(tenant, LEVELIO_WEBHOOK_SIGNING_SECRET_KEY, signingSecret);
+    }
+
     const baseUrl = getWebhookBaseUrl().replace(/\/$/, '');
+    // Fallback automation payload. Level has no alert variables, so only
+    // documented system variables are used (docs.level.io/en/articles/11321970).
+    // `name` is typed by the customer per automation: together with the device
+    // it forms the alert identity (see automationAlertId in webhookPayload.ts).
     const payloadTemplate = JSON.stringify(
       {
         event: 'alert.triggered',
-        alert_id: '{{alert_id}}',
-        device_id: '{{device_id}}',
-        hostname: '{{hostname}}',
-        name: '{{alert_name}}',
-        severity: '{{severity}}',
-        description: '{{description}}',
+        name: LEVELIO_AUTOMATION_NAME_PLACEHOLDER,
+        severity: 'warning',
+        description: LEVELIO_AUTOMATION_DESCRIPTION_PLACEHOLDER,
+        device_id: '{{level_device_id}}',
+        hostname: '{{level_device_hostname}}',
+        group_id: '{{level_group_id}}',
+        alert_time: '{{level_time}}',
       },
       null,
       2
@@ -526,10 +600,30 @@ export const getLevelIoWebhookInfo = withAdvancedAssetsAccess(async (user, { ten
         headerName: 'X-Alga-Webhook-Secret',
         secret,
         payloadTemplate,
+        signingSecret,
+        eventTypes: ['alert_active', 'alert_resolved'],
       },
     };
   } catch (error) {
     return { success: false, error: sanitizeError(error, 'Unable to load Level webhook details.') };
+  }
+});
+
+export const regenerateLevelIoWebhookSigningSecret = withAdvancedAssetsAccess(async (user, { tenant }) => {
+  const permitted = await hasPermission(user as any, 'system_settings', 'update');
+  if (!permitted) return { success: false, error: 'Forbidden' };
+
+  try {
+    const secretProvider = await getSecretProviderInstance();
+    // Only for a connected integration (the shared secret exists once saved).
+    if (!(await secretProvider.getTenantSecret(tenant, LEVELIO_WEBHOOK_SECRET_KEY))) {
+      return { success: false, error: 'Connect Level before generating a webhook signing secret.' };
+    }
+    const signingSecret = generateSigningSecret();
+    await secretProvider.setTenantSecret(tenant, LEVELIO_WEBHOOK_SIGNING_SECRET_KEY, signingSecret);
+    return { success: true, signingSecret };
+  } catch (error) {
+    return { success: false, error: sanitizeError(error, 'Unable to regenerate the Level webhook signing secret.') };
   }
 });
 

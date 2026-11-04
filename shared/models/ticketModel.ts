@@ -10,15 +10,26 @@ import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
 import { applyCommentResponseState, announcerFor } from '../lib/tickets/responseState';
+import {
+  assertReplyAudience, lockLabelledThreadAudience, nativeThreadAudience, type NativeCommentAudience,
+} from '../lib/commentAudience';
+import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
+import { assertHumanWorkAssignee } from '../lib/humanWork/assertHumanWorkAssignee';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
+import { resolveTicketEventActor } from '@alga-psa/event-schemas';
 import { isSilentTicketCreation, isTicketCreationWithPayloadExtras, type TicketCreationEvents } from '../lib/tickets/ticketLifecycleEvents';
 import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
+import { ticketStatusClockPatch } from '../lib/ticketStatusClock';
 import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipients';
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
 import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
+import { TicketWatcherService } from '../services/tickets/ticketWatcherService';
+import { parseTicketWatchListAttributes } from '../lib/tickets/watchList';
+import { resolveAssetBillingProfileId } from './assetBillingProfileModel';
+import { buildTicketCommentAddedPayload, buildTicketModelChanges } from '../lib/tickets/ticketWorkflowEventPayloads';
 
 // LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
 const TICKET_ORIGINS = {
@@ -36,16 +47,16 @@ const TICKET_ORIGINS = {
 // Core ticket form validation schema extracted from server actions
 export const ticketFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  board_id: z.string().uuid('Board ID must be a valid UUID'),
-  client_id: z.string().uuid('Client ID must be a valid UUID'),
-  location_id: z.string().uuid('Location ID must be a valid UUID').nullable().optional(),
-  contact_name_id: z.string().uuid('Contact ID must be a valid UUID').nullable(),
-  status_id: z.string().uuid('Status ID must be a valid UUID'),
-  assigned_to: z.string().uuid('Assigned to must be a valid UUID').nullable(),
-  priority_id: z.string().uuid('Priority ID must be a valid UUID').nullable(), // Required - used for both custom and ITIL priorities
+  board_id: z.string().guid('Board ID must be a valid UUID'),
+  client_id: z.string().guid('Client ID must be a valid UUID'),
+  location_id: z.string().guid('Location ID must be a valid UUID').nullable().optional(),
+  contact_name_id: z.string().guid('Contact ID must be a valid UUID').nullable(),
+  status_id: z.string().guid('Status ID must be a valid UUID'),
+  assigned_to: z.string().guid('Assigned to must be a valid UUID').nullable(),
+  priority_id: z.string().guid('Priority ID must be a valid UUID').nullable(), // Required - used for both custom and ITIL priorities
   description: z.string(),
-  category_id: z.string().uuid('Category ID must be a valid UUID').nullable(),
-  subcategory_id: z.string().uuid('Subcategory ID must be a valid UUID').nullable(),
+  category_id: z.string().guid('Category ID must be a valid UUID').nullable(),
+  subcategory_id: z.string().guid('Subcategory ID must be a valid UUID').nullable(),
   // ITIL-specific fields (for UI calculation only)
   itil_impact: z.number().int().min(1).max(5).optional(),
   itil_urgency: z.number().int().min(1).max(5).optional(),
@@ -55,48 +66,52 @@ export const ticketFormSchema = z.object({
 export const createTicketFromAssetSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string(),
-  priority_id: z.string().uuid('Priority ID must be a valid UUID'),
-  status_id: z.string().uuid('Status ID must be a valid UUID'),
-  board_id: z.string().uuid('Board ID must be a valid UUID'),
-  asset_id: z.string().uuid('Asset ID must be a valid UUID'),
-  client_id: z.string().uuid('Client ID must be a valid UUID')
+  priority_id: z.string().guid('Priority ID must be a valid UUID'),
+  status_id: z.string().guid('Status ID must be a valid UUID'),
+  board_id: z.string().guid('Board ID must be a valid UUID'),
+  asset_id: z.string().guid('Asset ID must be a valid UUID'),
+  client_id: z.string().guid('Client ID must be a valid UUID'),
+  // FR-E8: the asset's assignee, or a shared workspace's single user.
+  contact_name_id: z.string().guid('Contact ID must be a valid UUID').nullable().optional(),
+  // FR-F2: an explicit pick wins; omitted means "inherit from the asset".
+  billing_profile_id: z.string().guid('Billing profile ID must be a valid UUID').nullable().optional()
 });
 
 // Complete ticket schema for validation
 export const ticketSchema = z.object({
-  tenant: z.string().uuid().optional(),
-  ticket_id: z.string().uuid(),
+  tenant: z.string().guid().optional(),
+  ticket_id: z.string().guid(),
   ticket_number: z.string(),
   title: z.string(),
   url: z.string().nullable(),
   // Optional classification references. Nullable so a create that omits them
   // still validates; retained here so the shared create parse cannot silently
   // strip supplied values before the insert.
-  severity_id: z.string().uuid().nullable().optional(),
-  urgency_id: z.string().uuid().nullable().optional(),
-  impact_id: z.string().uuid().nullable().optional(),
-  board_id: z.string().uuid(),
-  client_id: z.string().uuid(),
-  location_id: z.string().uuid().nullable().optional(),
-  billing_profile_id: z.string().uuid().nullable().optional(),
-  contact_name_id: z.string().uuid().nullable(),
-  status_id: z.string().uuid(),
-  category_id: z.string().uuid().nullable(),
-  subcategory_id: z.string().uuid().nullable(),
-  entered_by: z.string().uuid().nullable(),
-  updated_by: z.string().uuid().nullable(),
-  closed_by: z.string().uuid().nullable(),
-  assigned_to: z.string().uuid().nullable(),
-  assigned_team_id: z.string().uuid().nullable().optional(),
+  severity_id: z.string().guid().nullable().optional(),
+  urgency_id: z.string().guid().nullable().optional(),
+  impact_id: z.string().guid().nullable().optional(),
+  board_id: z.string().guid(),
+  client_id: z.string().guid(),
+  location_id: z.string().guid().nullable().optional(),
+  billing_profile_id: z.string().guid().nullable().optional(),
+  contact_name_id: z.string().guid().nullable(),
+  status_id: z.string().guid(),
+  category_id: z.string().guid().nullable(),
+  subcategory_id: z.string().guid().nullable(),
+  entered_by: z.string().guid().nullable(),
+  updated_by: z.string().guid().nullable(),
+  closed_by: z.string().guid().nullable(),
+  assigned_to: z.string().guid().nullable(),
+  assigned_team_id: z.string().guid().nullable().optional(),
   entered_at: z.string().nullable(),
   updated_at: z.string().nullable(),
   closed_at: z.string().nullable(),
   due_date: z.string().nullable().optional(),
   source: z.string().nullable().optional(),
   ticket_origin: z.string().nullable().optional(),
-  attributes: z.record(z.unknown()).nullable(),
+  attributes: z.record(z.string(), z.unknown()).nullable(),
   email_metadata: z.unknown().nullable().optional(),
-  priority_id: z.string().uuid().nullable().optional(), // Optional for ITIL tickets
+  priority_id: z.string().guid().nullable().optional(), // Optional for ITIL tickets
   response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional(),
   // ITIL-specific fields
   itil_impact: z.number().int().min(1).max(5).nullable().optional(),
@@ -105,7 +120,9 @@ export const ticketSchema = z.object({
   itil_category: z.string().nullable().optional(),
   itil_subcategory: z.string().nullable().optional(),
   // Provenance for a ticket created via "Duplicate". Create-only; no FK.
-  duplicated_from_ticket_id: z.string().uuid().nullable().optional()
+  duplicated_from_ticket_id: z.string().guid().nullable().optional(),
+  // Provenance for a ticket created from a ticket template. Create-only; no FK.
+  created_from_template_id: z.string().guid().nullable().optional()
 });
 
 // Ticket update schema. Classification references (severity/urgency/impact)
@@ -121,20 +138,23 @@ export const ticketUpdateSchema = ticketSchema.partial().omit({
   urgency_id: true,
   impact_id: true,
   duplicated_from_ticket_id: true,
+  created_from_template_id: true,
 });
 
 // Comment validation schema
 export const createCommentSchema = z.object({
-  ticket_id: z.string().uuid('Ticket ID must be a valid UUID'),
+  ticket_id: z.string().guid('Ticket ID must be a valid UUID'),
   content: z.string().min(1, 'Comment content is required'),
-  parent_comment_id: z.string().uuid('Parent comment ID must be a valid UUID').optional(),
+  parent_comment_id: z.string().guid('Parent comment ID must be a valid UUID').optional(),
   is_internal: z.boolean().optional(),
+  // Names who may read a shared-work comment; native tenants never need it (see nativeThreadAudience).
+  collaboration_audience: z.enum(['requester', 'organization_private']).optional(),
   is_resolution: z.boolean().optional(),
   is_system_generated: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
-  author_id: z.string().uuid('Author ID must be a valid UUID').optional(),
-  contact_id: z.string().uuid('Contact ID must be a valid UUID').optional(),
-  metadata: z.record(z.unknown()).optional(),
+  author_id: z.string().guid('Author ID must be a valid UUID').optional(),
+  contact_id: z.string().guid('Contact ID must be a valid UUID').optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   emailRecipients: z.object({
     cc: z.array(z.string()).optional(),
     bcc: z.array(z.string()).optional(),
@@ -144,6 +164,11 @@ export const createCommentSchema = z.object({
 // =============================================================================
 // INTERFACES
 // =============================================================================
+
+/** A submission to link after ticket insertion, in the ticket creation transaction. */
+export interface CreateTicketOptions {
+  serviceRequestSubmissionId?: string;
+}
 
 export interface CreateTicketInput {
   title: string;
@@ -184,6 +209,8 @@ export interface CreateTicketInput {
   due_date?: string;
   /** Source ticket this one was duplicated from (provenance, create-only). */
   duplicated_from_ticket_id?: string;
+  /** Ticket template this one was created from (provenance, create-only). */
+  created_from_template_id?: string;
 }
 
 export interface CreateTicketFromAssetInput {
@@ -194,6 +221,10 @@ export interface CreateTicketFromAssetInput {
   board_id: string;
   asset_id: string;
   client_id: string;
+  /** FR-E8: the asset's assignee, or a shared workspace's single user. */
+  contact_name_id?: string | null;
+  /** FR-F3: the profile resolved from the asset (or its location). */
+  billing_profile_id?: string | null;
 }
 
 export interface UpdateTicketInput {
@@ -241,6 +272,7 @@ export interface CreateCommentValidationInput {
   content: string;
   parent_comment_id?: string;
   is_internal?: boolean;
+  collaboration_audience?: NativeCommentAudience;
   is_resolution?: boolean;
   is_system_generated?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
@@ -288,6 +320,8 @@ export interface CreateCommentOutput {
   ticket_id: string;
   content: string;
   author_type: string;
+  /** Final stored visibility (may differ from the requested flag; see D1). */
+  is_internal: boolean;
   created_at: string;
 }
 
@@ -388,7 +422,7 @@ export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): T {
     return schema.parse(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+      const errorMessages = error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
       throw new Error(`Validation failed: ${errorMessages}`);
     }
     throw error;
@@ -448,6 +482,7 @@ export const INPUT_DRIVEN_TICKET_COLUMNS = [
   'itil_urgency',
   'due_date',
   'duplicated_from_ticket_id',
+  'created_from_template_id',
 ] as const;
 
 type InputDrivenTicketColumn = (typeof INPUT_DRIVEN_TICKET_COLUMNS)[number];
@@ -537,6 +572,7 @@ const CREATE_TICKET_FIELD_HANDLING: { [K in keyof CreateTicketInput]-?: TicketCr
   is_closed: { kind: 'excluded', reason: 'tickets are created open' },
   due_date: { kind: 'column', column: 'due_date' },
   duplicated_from_ticket_id: { kind: 'column', column: 'duplicated_from_ticket_id', nullish: true },
+  created_from_template_id: { kind: 'column', column: 'created_from_template_id', nullish: true },
 };
 
 type TicketCreateRowBase = {
@@ -828,10 +864,11 @@ export class TicketModel {
     eventPublisher: TicketCreationEvents,
     analyticsTracker?: IAnalyticsTracker,
     userId?: string,
-    maxRetries: number = 3
+    maxRetries: number = 3,
+    options?: CreateTicketOptions
   ): Promise<CreateTicketOutput> {
     return withRetry(
-      () => this.createTicket(input, tenant, trx, validationOptions, eventPublisher, analyticsTracker, userId),
+      () => this.createTicket(input, tenant, trx, validationOptions, eventPublisher, analyticsTracker, userId, options),
       maxRetries
     );
   }
@@ -891,7 +928,8 @@ export class TicketModel {
     validationOptions: ValidationOptions,
     eventPublisher: TicketCreationEvents,
     analyticsTracker?: IAnalyticsTracker,
-    userId?: string
+    userId?: string,
+    options?: CreateTicketOptions
   ): Promise<CreateTicketOutput> {
     if (!eventPublisher) {
       throw new Error(
@@ -1001,18 +1039,31 @@ export class TicketModel {
       attributes: completeValidation.attributes ? JSON.stringify(completeValidation.attributes) : null
     };
 
+    // Human-work guard: a ticket's primary assignee must be an active internal user.
+    await assertHumanWorkAssignee(trx, tenant, [dbData.assigned_to]);
+
     // Insert the ticket
     await tenantDb(trx, tenant).table('tickets').insert(dbData);
 
-    // Auto-apply matching checklist templates (idempotent; null matcher =
-    // match any). Failure here must not break ticket creation.
+    // Bring ticket_watchers in line with the initial attributes.watch_list (inbound To/Cc,
+    // board defaults); the mirror is then rewritten from the table.
+    // Skipped when the ticket was created without one (the common case).
+    if (parseTicketWatchListAttributes(completeValidation.attributes).length > 0) {
+      await TicketWatcherService.seedFromAttributes(trx, tenant, ticketId);
+    }
+
+    if (options?.serviceRequestSubmissionId) {
+      const updated = await tenantDb(trx, tenant).table('service_request_submissions')
+        .where({ submission_id: options.serviceRequestSubmissionId })
+        .update({ created_ticket_id: ticketId });
+      if (!updated) throw new Error('Service request submission not found');
+    }
+
+    // Auto-apply predicates against the inserted ticket in this transaction.
+    // Application is idempotent; validation failures are logged without a fallback.
     try {
       await applyMatchingChecklistTemplates(trx, tenant, {
         ticket_id: ticketId,
-        board_id: cleanedInput.board_id,
-        category_id: cleanedInput.category_id ?? null,
-        subcategory_id: cleanedInput.subcategory_id ?? null,
-        priority_id: cleanedInput.priority_id ?? null,
       });
     } catch (error) {
       console.error('Failed to auto-apply checklist templates:', error);
@@ -1024,6 +1075,7 @@ export class TicketModel {
         ? eventPublisher.publisher
         : eventPublisher;
       const payloadExtras = isTicketCreationWithPayloadExtras(eventPublisher) ? eventPublisher.payloadExtras : {};
+      const creationActor = isTicketCreationWithPayloadExtras(eventPublisher) ? eventPublisher.actor : undefined;
       try {
         // Tickets from inbound email or the portal often have no contact or
         // client. Carry real names plus the sender email so a workflow title
@@ -1034,6 +1086,8 @@ export class TicketModel {
           tenantId: tenant,
           ticketId: ticketId,
           userId: userId,
+          // Only a contact/system actor is passed explicitly; otherwise the publisher derives it from userId.
+          ...(creationActor && !userId ? { actor: creationActor } : {}),
           metadata: {
             source: cleanedInput.source,
             board_id: cleanedInput.board_id,
@@ -1120,6 +1174,11 @@ export class TicketModel {
 
     const validatedData = validation.data;
 
+    // FR-F2: a ticket raised from an asset inherits the asset's billing profile
+    // — or its location's default — unless the caller picked one explicitly.
+    const billingProfileId = validatedData.billing_profile_id
+      ?? await resolveAssetBillingProfileId(trx, tenant, validatedData.asset_id);
+
     // Convert to CreateTicketInput format using the provided status_id and board_id
     const createTicketInput: CreateTicketInput = {
       title: validatedData.title,
@@ -1128,6 +1187,8 @@ export class TicketModel {
       client_id: validatedData.client_id,
       status_id: validatedData.status_id,
       board_id: validatedData.board_id,
+      contact_id: validatedData.contact_name_id ?? null,
+      billing_profile_id: billingProfileId,
       entered_by: enteredBy,
       attributes: {
         created_from_asset: validatedData.asset_id
@@ -1257,11 +1318,18 @@ export class TicketModel {
       }
     }
 
+    // Human-work guard: validate assigned_to only when this write changes it, so legacy
+    // references (e.g. a former agent user) never block unrelated edits.
+    if ('assigned_to' in updateData && updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
+      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
+    }
+
     // Update the ticket
     const [updatedTicket] = await db.table('tickets')
       .where({ ticket_id: ticketId })
       .update({
         ...updateData,
+        ...ticketStatusClockPatch(trx, updateData.status_id),
         ...ticketUpdateStamp(trx, input.updated_by ?? userId ?? null)
       })
       .returning('*');
@@ -1277,7 +1345,7 @@ export class TicketModel {
           tenantId: tenant,
           ticketId: ticketId,
           userId: userId,
-          changes: updateData,
+          changes: buildTicketModelChanges(currentTicket, updateData),
           metadata: {
             updated_fields: Object.keys(updateData)
           }
@@ -1386,6 +1454,7 @@ export class TicketModel {
       .where({ ticket_id: ticketId })
       .update({
         ...updateData,
+        ...ticketStatusClockPatch(trx, updateData.status_id),
         ...ticketUpdateStamp(trx, updateData.updated_by ?? null)
       })
       .returning('*');
@@ -1465,9 +1534,11 @@ export class TicketModel {
     }
 
     const commentId = uuidv4();
-    const parentCommentId = validatedData.parent_comment_id || null;
+    let parentCommentId = validatedData.parent_comment_id || null;
     let threadId = uuidv4();
     let commentIsInternal = validatedData.is_internal || false;
+    // Set only for a labelled (co-managed) thread; stays undefined for every native comment.
+    let labelledAudience: string | undefined;
     const now = new Date();
 
     // Map legacy/alias author types to current enum: internal | client | unknown
@@ -1495,6 +1566,7 @@ export class TicketModel {
           thread_id: 'parent.thread_id',
           deleted_at: 'parent.deleted_at',
           thread_is_internal: 'thread.is_internal',
+          thread_audience: 'thread.collaboration_audience',
         })
         .first()) as unknown as
         | {
@@ -1502,6 +1574,7 @@ export class TicketModel {
             deleted_at?: Date | string | null;
             thread_id: string;
             thread_is_internal?: boolean | null;
+            thread_audience?: string | null;
           }
         | undefined;
 
@@ -1517,9 +1590,39 @@ export class TicketModel {
         throw new Error('Cannot reply to a deleted comment');
       }
 
-      threadId = parent.thread_id;
-      commentIsInternal = Boolean(parent.thread_is_internal);
+      // D1 (alga-2026-0002798): a client/contact author can never create an
+      // internal comment. If the parent thread is internal, do not join it (a
+      // public comment inside an internal thread would be hidden/misrouted);
+      // store a top-level public comment in a fresh public thread instead.
+      // LEVERAGE: pattern non-internal-author-visibility-guard — duplicated in packages/tickets/src/models/comment.ts (insert); extract a shared visibility resolver.
+      if (Boolean(parent.thread_is_internal) && dbAuthorType === 'client') {
+        parentCommentId = null;
+        commentIsInternal = false;
+      } else {
+        threadId = parent.thread_id;
+        commentIsInternal = Boolean(parent.thread_is_internal);
+        // A reply inherits its thread's audience. Only a labelled (co-managed) thread
+        // is re-read under lock, so legacy threads cost no extra statement.
+        if (parent.thread_audience != null) {
+          labelledAudience = parent.thread_audience;
+          await lockLabelledThreadAudience(trx, tenant, { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience });
+          assertReplyAudience(
+            { collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
+            { isInternal: validatedData.is_internal, audience: validatedData.collaboration_audience },
+          );
+        }
+      }
     }
+
+    // Audience of a NEW thread: {} (no SQL) for internal notes, plain authors and PSA tenants;
+    // fails closed in a co-managed workspace when a staff comment names no audience.
+    // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
+    const threadAudience = parentCommentId ? {} : await nativeThreadAudience(trx, tenant, {
+      isInternal: commentIsInternal,
+      authorType: dbAuthorType,
+      audience: validatedData.collaboration_audience,
+    });
+    labelledAudience ??= threadAudience.collaboration_audience;
 
     // One-off Cc/Bcc ride along in metadata. Visibility is resolved above, so a
     // reply inheriting an internal thread is rejected here too.
@@ -1558,6 +1661,7 @@ export class TicketModel {
         project_task_id: null,
         root_comment_id: commentId,
         is_internal: commentIsInternal,
+        ...threadAudience,
         reply_count: 0,
         last_activity_at: now,
         created_at: now,
@@ -1577,13 +1681,7 @@ export class TicketModel {
         });
     }
 
-    if (!validatedData.is_internal && validatedData.author_type === 'contact') {
-      // Contact replies move the ticket to awaiting_internal through the shared
-      // engine (tracking setting, nested-settings fallback, change event).
-      // `commentIsInternal` is the thread-inherited visibility: a reply into an
-      // internal thread must not move state. The durable inbound pipeline's
-      // outbox publisher records the event in this transaction; every other
-      // caller publishes after commit.
+    if (validatedData.author_type === 'contact') {
       await applyCommentResponseState(trx, {
         tenant,
         ticketId: validatedData.ticket_id,
@@ -1606,34 +1704,51 @@ export class TicketModel {
           user_id: validatedData.author_id,
           metadata: validatedData.metadata,
         });
-        // The event schema requires a uuid; user-less comments reuse the ticket
-        // id as the sentinel actor, matching the inbound-email outbox publisher.
-        const eventUserId = userId || validatedData.author_id || validatedData.ticket_id;
+        // Never substitute a non-user id: a user-less comment is published as a CONTACT
+        // (matched sender) or SYSTEM actor with no payload.userId.
+        const actor = resolveTicketEventActor({
+          userId: userId || validatedData.author_id,
+          contactId: validatedData.contact_id,
+        });
 
         const event = {
           tenantId: tenant,
           ticketId: validatedData.ticket_id,
           commentId: commentId,
-          userId: eventUserId,
+          userId: userId || validatedData.author_id || undefined,
+          actor,
           metadata: {
             author_type: dbAuthorType,
             is_internal: validatedData.is_internal,
             isInternal: commentIsInternal,
             is_resolution: validatedData.is_resolution,
             content: validatedData.content,
-            author: authorName
+            author: authorName,
+            // Present only on labelled threads, so a native event is byte-identical.
+            ...(labelledAudience ? { collaborationAudience: labelledAudience, threadId } : {})
           }
         };
-        if ((eventPublisher as any).__inboundOutboxPublisher === true) {
-          // The inbound publisher writes its durable outbox in this transaction.
-          await eventPublisher.publishCommentCreated(event);
-        } else {
-          await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: {
-            tenantId: tenant, ticketId: validatedData.ticket_id, commentId, userId: eventUserId,
-            comment: { id: commentId, content: validatedData.content, author: authorName,
-              isInternal: commentIsInternal, authorType: dbAuthorType },
-          } });
-        }
+        await publishCommentEvent(trx, 'ticket', {
+          tenantId: tenant,
+          ticketId: validatedData.ticket_id,
+          commentId,
+          userId: event.userId,
+          actor: event.actor,
+          metadata: event.metadata,
+          eventType: 'TICKET_COMMENT_ADDED',
+        }, async () => {
+          if ((eventPublisher as any).__inboundOutboxPublisher === true) {
+            // The inbound publisher writes its durable outbox in this transaction.
+            await eventPublisher.publishCommentCreated(event);
+          } else {
+            await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: buildTicketCommentAddedPayload({
+              tenantId: tenant, occurredAt: new Date().toISOString(), ticketId: validatedData.ticket_id, commentId, actor,
+              comment: { content: validatedData.content, author: authorName,
+                isInternal: commentIsInternal, authorType: dbAuthorType },
+              ...(labelledAudience ? { collaboration_audience: labelledAudience as NativeCommentAudience, thread_id: threadId } : {}),
+            }) });
+          }
+        });
       } catch (error) {
         console.error('Failed to publish comment created event:', error);
         throw error;
@@ -1645,7 +1760,7 @@ export class TicketModel {
       try {
         await analyticsTracker.trackCommentCreated({
           ticket_id: validatedData.ticket_id,
-          is_internal: validatedData.is_internal || false,
+          is_internal: commentIsInternal,
           is_resolution: validatedData.is_resolution || false,
           author_type: dbAuthorType,
           created_via: 'manual'
@@ -1660,6 +1775,7 @@ export class TicketModel {
       ticket_id: validatedData.ticket_id,
       content: validatedData.content,
       author_type: validatedData.author_type || 'system',
+      is_internal: commentIsInternal,
       created_at: now.toISOString()
     };
   }

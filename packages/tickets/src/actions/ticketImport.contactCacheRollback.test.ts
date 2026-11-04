@@ -123,6 +123,11 @@ const fake = vi.hoisted(() => {
 });
 
 const createTicketMock = vi.hoisted(() => vi.fn());
+const queueContactCreatedMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@alga-psa/shared/lib/contacts/contactEvents', () => ({
+  queueContactCreated: queueContactCreatedMock,
+}));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => (...args: any[]) =>
@@ -224,6 +229,13 @@ describe('importTickets contact cache after a per-row rollback', () => {
     // The rolled-back contact is gone and the good row minted a fresh one.
     expect(fake.store.contacts).toHaveLength(1);
     expect(fake.store.contacts[0].full_name).toBe('Shared Contact');
+
+    // Only the contact that survived the rollback is announced (contact.created), never the
+    // rolled-back one.
+    expect(queueContactCreatedMock).toHaveBeenCalledTimes(1);
+    expect(queueContactCreatedMock.mock.calls[0][2]).toMatchObject({
+      contact_name_id: fake.store.contacts[0].contact_name_id,
+    });
 
     // The surviving ticket points at a contact that actually exists.
     expect(fake.store.tickets).toHaveLength(1);

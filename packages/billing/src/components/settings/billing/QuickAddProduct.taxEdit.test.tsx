@@ -32,7 +32,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/billing/actions/serviceActions', () => ({
   updateService: (...args: unknown[]) => mocks.updateService(...args),
-  createService: (...args: unknown[]) => mocks.createService(...args),
+  createServiceWithPricing: (...args: unknown[]) => mocks.createService(...args),
   getServiceTypesForSelection: (...args: unknown[]) => mocks.getServiceTypesForSelection(...args),
   setServicePrices: (...args: unknown[]) => mocks.setServicePrices(...args),
   createServiceTypeInline: (...args: unknown[]) => mocks.createServiceTypeInline(...args),
@@ -64,7 +64,10 @@ vi.mock('@alga-psa/inventory/actions/vendorProductActions', () => ({
 vi.mock('@alga-psa/ui/lib', () => ({
   useCurrencyFormat: () => ({ money: (cents: number) => `$${(cents / 100).toFixed(2)}` }),
 }));
-vi.mock('@alga-psa/core', () => ({
+// Partial: the price/cost editors read and write minor units through
+// lib/currency/rateInput, which needs core's real currency-exponent helpers.
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/core')>()),
   CURRENCY_OPTIONS: [{ value: 'USD', label: 'USD' }],
   getCurrencySymbol: () => '$',
 }));

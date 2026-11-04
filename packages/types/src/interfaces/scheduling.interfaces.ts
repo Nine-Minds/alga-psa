@@ -136,6 +136,9 @@ export interface TimeEntryWorkItemContext {
   serviceName?: string | null;
   /** Which hierarchy level `serviceId` was inherited from (task → phase → project). */
   serviceSource?: ProjectServiceSource;
-  elapsedTime?: number;
   timeDescription?: string;
+  /** Explanation shown above the time entry form (e.g. times estimated from activity). */
+  notice?: string;
+  /** Stopwatch session this entry logs; saving the entry closes the session (D4). */
+  stopwatchSessionId?: string;
 }

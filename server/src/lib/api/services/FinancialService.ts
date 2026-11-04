@@ -25,6 +25,7 @@ import {
   resolvePaymentBillingProfileId,
 } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { auditLog } from '../../logging/auditLog';
+import { describeStatusChangeBlock } from '../../invoices/invoiceStatusPolicy';
 import { TaxService, normalizeTaxCapAmount } from '@alga-psa/billing/services/taxService';
 import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
 import { v4 as uuidv4 } from 'uuid';
@@ -126,6 +127,7 @@ import {
 } from '../../../interfaces/billing.interfaces';
 
 import { BillingEngine as BillingEngineClass } from '@alga-psa/billing/services';
+import { paymentTermOptions } from '@alga-psa/shared/billingClients/paymentPreferences';
 
 /**
  * HATEOAS Link interface for API discoverability
@@ -495,6 +497,21 @@ export class FinancialService extends BaseService<ITransaction> {
       });
     }
 
+    // transactions has created_at but no updated_at, so created_* maps and
+    // updated_* is declared unsupported (null) and rejected.
+    this.applyRangeFilters(dataQuery, query, {
+      created_from: 't.created_at',
+      created_to: 't.created_at',
+      updated_from: null,
+      updated_to: null,
+    });
+    this.applyRangeFilters(countQuery, query, {
+      created_from: 'created_at',
+      created_to: 'created_at',
+      updated_from: null,
+      updated_to: null,
+    });
+
     // Sorting and pagination
     dataQuery = dataQuery
       .select(
@@ -537,8 +554,6 @@ export class FinancialService extends BaseService<ITransaction> {
       client_id,
       status,
       billing_cycle_id,
-      due_date_from,
-      due_date_to,
       amount_min,
       amount_max,
       is_manual,
@@ -580,15 +595,18 @@ export class FinancialService extends BaseService<ITransaction> {
       countQuery = countQuery.where('i.billing_cycle_id', billing_cycle_id);
     }
 
-    if (due_date_from) {
-      dataQuery = dataQuery.where('i.due_date', '>=', due_date_from);
-      countQuery = countQuery.where('i.due_date', '>=', due_date_from);
-    }
-
-    if (due_date_to) {
-      dataQuery = dataQuery.where('i.due_date', '<=', due_date_to);
-      countQuery = countQuery.where('i.due_date', '<=', due_date_to);
-    }
+    // Common created_/updated_ plus the due-date window; unsupported range keys
+    // throw rather than returning unfiltered invoices.
+    const invoiceRangeColumns = {
+      created_from: 'i.created_at',
+      created_to: 'i.created_at',
+      updated_from: 'i.updated_at',
+      updated_to: 'i.updated_at',
+      due_date_from: 'i.due_date',
+      due_date_to: 'i.due_date',
+    };
+    this.applyRangeFilters(dataQuery, query, invoiceRangeColumns);
+    this.applyRangeFilters(countQuery, query, invoiceRangeColumns);
 
     if (amount_min !== undefined) {
       dataQuery = dataQuery.where('i.total_amount', '>=', amount_min);
@@ -917,6 +935,14 @@ export class FinancialService extends BaseService<ITransaction> {
       baseQuery = baseQuery.where('credit_tracking.is_expired', false);
     }
 
+    // Common created_/updated_ range filters; unsupported keys throw.
+    baseQuery = this.applyRangeFilters(baseQuery, query, {
+      created_from: 'credit_tracking.created_at',
+      created_to: 'credit_tracking.created_at',
+      updated_from: 'credit_tracking.updated_at',
+      updated_to: 'credit_tracking.updated_at',
+    });
+
     // Count
     const [{ count }] = (await baseQuery.clone().count('credit_id as count')) as Array<{ count: string }>;
     const total = parseInt(count as string);
@@ -1147,6 +1173,15 @@ export class FinancialService extends BaseService<ITransaction> {
       });
       countQuery = countQuery.whereILike('pm.last4', `%${search}%`);
     }
+
+    const paymentMethodRangeColumns = {
+      created_from: 'pm.created_at',
+      created_to: 'pm.created_at',
+      updated_from: 'pm.updated_at',
+      updated_to: 'pm.updated_at',
+    };
+    this.applyRangeFilters(dataQuery, query, paymentMethodRangeColumns);
+    this.applyRangeFilters(countQuery, query, paymentMethodRangeColumns);
 
     const [paymentMethods, [{ count }]] = await Promise.all([
       dataQuery
@@ -1568,24 +1603,31 @@ export class FinancialService extends BaseService<ITransaction> {
           
           switch (operation.operation) {
             case 'finalize':
-              result = await tenantDb(trx, context.tenant).table('invoices')
+            case 'cancel': {
+              // Status / finalized_at are owned by the finalize and void commands
+              // (credit reversal, hour blocks, provider propagation, ...). This
+              // route only holds invoice:update, so it never writes them; the
+              // shared policy decides which message the caller gets.
+              const target = operation.operation === 'finalize' ? 'sent' : 'cancelled';
+              const current = await tenantDb(trx, context.tenant).table('invoices')
                 .where('invoice_id', invoiceId)
-                .update({
-                  status: 'sent',
-                  finalized_at: new Date().toISOString()
-                })
-                .returning('*');
-              break;
-              
-            case 'cancel':
-              result = await tenantDb(trx, context.tenant).table('invoices')
-                .where('invoice_id', invoiceId)
-                .update({
-                  status: 'cancelled'
-                })
-                .returning('*');
-              break;
-              
+                .first('status');
+              if (!current) {
+                throw new NotFoundError('Invoice not found');
+              }
+              const blocked = describeStatusChangeBlock(current.status, target);
+              if (blocked) {
+                throw new ConflictError(blocked);
+              }
+              // Policy-plain or no-op (e.g. pending -> sent): still no inline write.
+              const owner = operation.operation === 'finalize'
+                ? 'finalizeInvoice (requires invoice:finalize)'
+                : 'void (requires invoice:void)';
+              throw new ConflictError(
+                `Bulk ${operation.operation} is not available here; use the ${owner} command`
+              );
+            }
+
             case 'apply_credit':
               // This would need additional parameters in the operation
               const creditAmount = operation.parameters?.credit_amount || 0;
@@ -1937,11 +1979,7 @@ export class FinancialService extends BaseService<ITransaction> {
     const hasPaymentTermsTable = await knex.schema.hasTable('payment_terms');
     if (!hasPaymentTermsTable) {
       return {
-        data: [
-          { id: 'due_on_receipt', name: 'Due on receipt' },
-          { id: 'net_15', name: 'Net 15' },
-          { id: 'net_30', name: 'Net 30' },
-        ],
+        data: paymentTermOptions(),
         links: []
       };
     }

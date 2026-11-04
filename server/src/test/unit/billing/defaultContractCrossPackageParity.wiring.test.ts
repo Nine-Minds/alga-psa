@@ -7,10 +7,16 @@ const readRepo = (relativePath: string): string =>
 
 describe('default-contract cross-package parity wiring', () => {
   it('F066: integration-created clients keep first billing-config touchpoint default-contract ensure hook', () => {
-    const source = readRepo('packages/integrations/src/services/xeroCsvClientSyncService.ts');
-    expect(source).toContain('ensureDefaultContractForClientIfBillingConfigured');
-    expect(source).toContain('await ensureDefaultContractForClientIfBillingConfigured(trx, {');
-    expect(source).toContain('await db.table(\'clients\').insert({');
+    // Xero-created clients no longer own their `clients` insert: the shared
+    // creation seam does the insert and carries the default-contract ensure
+    // hook for every creation path, so the parity assertion follows it there.
+    const xeroSource = readRepo('packages/integrations/src/services/xeroCsvClientSyncService.ts');
+    const seamSource = readRepo('shared/models/clientCreation.ts');
+
+    expect(xeroSource).toMatch(/await createClientWithDefaults\(\s*trx,\s*tenant,/);
+    expect(seamSource).toContain('ensureDefaultContractForClientIfBillingConfigured');
+    expect(seamSource).toContain('await ensureDefaultContractForClientIfBillingConfigured(trx, {');
+    expect(seamSource).toContain('await db.table(\'clients\')');
   });
 
   it('F067: package action layers continue using shared billing-settings ensure helpers', () => {
@@ -31,10 +37,16 @@ describe('default-contract cross-package parity wiring', () => {
   });
 
   it('T018: integration-created clients still rely on first qualifying billing-config touchpoint for default-contract ensure', () => {
-    const source = readRepo('packages/integrations/src/services/xeroCsvClientSyncService.ts');
-    expect(source).toContain('await db.table(\'clients\').insert({');
-    expect(source).toContain('await ensureDefaultContractForClientIfBillingConfigured(trx, {');
-    expect(source).toContain('tenant,');
-    expect(source).toContain('clientId,');
+    const xeroSource = readRepo('packages/integrations/src/services/xeroCsvClientSyncService.ts');
+    const seamSource = readRepo('shared/models/clientCreation.ts');
+
+    // The integration path must not re-grow its own insert; the gated ensure
+    // call stays adjacent to the single insert inside the seam.
+    expect(xeroSource).not.toContain('await db.table(\'clients\').insert({');
+    expect(seamSource).toContain('await db.table(\'clients\')');
+    expect(seamSource).toContain('.insert({');
+    expect(seamSource).toContain('await ensureDefaultContractForClientIfBillingConfigured(trx, {');
+    expect(seamSource).toContain('tenant,');
+    expect(seamSource).toContain('clientId: created.client_id,');
   });
 });

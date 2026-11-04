@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { buildSurveySentPayload, buildSurveyReminderSentPayload, buildSurveyResponseReceivedPayload, buildSurveyExpiredPayload } from '../surveyEventBuilders';
-import { surveySentEventPayloadSchema, surveyReminderSentEventPayloadSchema, surveyResponseReceivedEventPayloadSchema, surveyExpiredEventPayloadSchema } from '../../../runtime/schemas/communicationsEventSchemas';
+import { surveySentEventPayloadSchema, surveyReminderSentEventPayloadSchema, surveyResponseReceivedEventPayloadSchema, surveyExpiredEventPayloadSchema } from '@alga-psa/event-schemas';
 
 const base = { tenantId: randomUUID(), occurredAt: new Date().toISOString() };
 const common = { surveyId: randomUUID(), recipientId: randomUUID() };

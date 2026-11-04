@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import TicketDetails from '../TicketDetails';
 import { entryLayoutBootstrap } from './entryLayoutBootstrap';
 import { createComment, updateComment, findCommentById } from '../../../actions/comment-actions/commentActions';
@@ -15,7 +15,11 @@ const {
   toastSuccessMock,
   toastErrorMock,
   getDocumentsMock,
+  getTicketLayoutPreferenceMock,
+  setTicketLayoutPreferenceMock,
 } = vi.hoisted(() => ({
+  getTicketLayoutPreferenceMock: vi.fn(),
+  setTicketLayoutPreferenceMock: vi.fn().mockResolvedValue(undefined),
   routerPushMock: vi.fn(),
   findBoardByIdMock: vi.fn(),
   getTicketByIdMock: vi.fn(),
@@ -108,21 +112,6 @@ vi.mock('@alga-psa/ui/context', () => ({
 
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: () => ({ enabled: false }),
-  useTicketTimeTracking: () => ({
-    isTracking: false,
-    currentIntervalId: null,
-    isLockedByOther: false,
-    startTracking: vi.fn().mockResolvedValue(false),
-    stopTracking: vi.fn().mockResolvedValue(undefined),
-    refreshLockState: vi.fn().mockResolvedValue(undefined),
-  }),
-}));
-
-vi.mock('@alga-psa/ui/services', () => ({
-  IntervalTrackingService: class {
-    endInterval = vi.fn().mockResolvedValue(undefined);
-    getOpenInterval = vi.fn().mockResolvedValue(null);
-  },
 }));
 
 vi.mock('@alga-psa/ui/components', () => ({
@@ -244,6 +233,17 @@ vi.mock('@alga-psa/teams/actions', () => ({
   getTeamById: vi.fn().mockResolvedValue(null),
   getTeams: vi.fn().mockResolvedValue([]),
   isTeamActionError: () => false,
+}));
+
+// The Grid body is a separate composition; these specs only need to know it mounted.
+vi.mock('../bento/TicketBentoLayout', () => ({
+  __esModule: true,
+  default: () => <div data-testid="grid-layout" />,
+}));
+
+vi.mock('../../../actions/ticketLayoutPreference', () => ({
+  getTicketLayoutPreference: (...args: unknown[]) => getTicketLayoutPreferenceMock(...args),
+  setTicketLayoutPreference: (...args: unknown[]) => setTicketLayoutPreferenceMock(...args),
 }));
 
 vi.mock('../../../actions/ticketDisplaySettings', () => ({
@@ -504,7 +504,7 @@ describe('TicketDetails remote live updates', () => {
     vi.mocked(createComment).mockResolvedValue(comment as any);
     vi.mocked(updateComment).mockResolvedValue(comment as any);
     vi.mocked(findCommentById).mockResolvedValue(comment as any);
-    const onAddComment = operation === 'optimized create' ? vi.fn().mockResolvedValue(undefined) : undefined;
+    const onAddComment = operation === 'optimized create' ? vi.fn().mockResolvedValue(true) : undefined;
     await act(async () => { renderTicketDetails({ initialDocuments: [draft], onAddComment }); });
     expect(screen.getByTestId('ticket-documents')).toHaveTextContent(JSON.stringify([draft]));
     getDocumentsMock.mockResolvedValue([claimed]);
@@ -869,5 +869,34 @@ describe('TicketDetails remote live updates', () => {
     });
 
     expect(routerPushMock).toHaveBeenCalledWith('/msp/tickets');
+  });
+
+  describe('stored layout preference', () => {
+    const unbootstrapped = { ...entryLayoutBootstrap, layoutPreference: null };
+
+    it('applies the stored layout when the user has not chosen one', async () => {
+      getTicketLayoutPreferenceMock.mockResolvedValueOnce({ layout: 'entry', timelineOrder: 'asc' });
+      renderTicketDetails({ bootstrap: unbootstrapped });
+      // Grid is the default until the stored preference arrives.
+      expect(screen.getByTestId('grid-layout')).toBeInTheDocument();
+      await act(async () => {});
+      expect(screen.getByRole('button', { name: 'Entry' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.queryByTestId('grid-layout')).toBeNull();
+    });
+
+    it('keeps an explicit layout choice made before the stored preference loads', async () => {
+      let resolveStored: (value: { layout: 'grid' | 'entry'; timelineOrder: 'asc' | 'desc' }) => void = () => {};
+      getTicketLayoutPreferenceMock.mockReturnValueOnce(new Promise((resolve) => { resolveStored = resolve; }));
+      renderTicketDetails({ bootstrap: unbootstrapped });
+      await act(async () => {});
+      fireEvent.click(screen.getByRole('button', { name: 'Entry' }));
+      expect(screen.getByRole('button', { name: 'Entry' })).toHaveAttribute('aria-pressed', 'true');
+      await act(async () => { resolveStored({ layout: 'grid', timelineOrder: 'desc' }); });
+      // The late stored value ("grid") must not unmount the Entry screen the user chose.
+      expect(screen.getByRole('button', { name: 'Entry' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'Grid' })).toHaveAttribute('aria-pressed', 'false');
+      expect(screen.queryByTestId('grid-layout')).toBeNull();
+      expect(setTicketLayoutPreferenceMock).toHaveBeenCalledWith({ layout: 'entry' });
+    });
   });
 });

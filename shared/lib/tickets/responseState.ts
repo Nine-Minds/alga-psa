@@ -1,6 +1,7 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
 import type { IEventPublisher, TicketResponseState } from '@alga-psa/types';
+import { buildTicketResponseStateChangedPayload } from './ticketWorkflowEventPayloads';
 
 /**
  * Shared "comment added" response-state engine.
@@ -140,8 +141,22 @@ export const announceAfterCommit: ResponseStateAnnouncer = (trx, payload) => {
   registerAfterCommit(
     trx,
     async () => {
-      const { publishEvent } = await import('@alga-psa/event-bus/publishers');
-      await publishEvent({ eventType: 'TICKET_RESPONSE_STATE_CHANGED', payload });
+      const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+      await publishWorkflowEvent({
+        eventType: 'TICKET_RESPONSE_STATE_CHANGED',
+        payload: buildTicketResponseStateChangedPayload({
+          ticketId: payload.ticketId,
+          userId: payload.userId,
+          previousState: payload.previousState,
+          newState: payload.newState,
+          trigger: payload.trigger,
+        }),
+        ctx: {
+          tenantId: payload.tenantId,
+          occurredAt: payload.occurredAt,
+          actor: payload.userId ? { actorType: 'USER', actorUserId: payload.userId } : { actorType: 'SYSTEM' },
+        },
+      });
     },
     `TICKET_RESPONSE_STATE_CHANGED ticket=${payload.ticketId}`
   );

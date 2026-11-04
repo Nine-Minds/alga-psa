@@ -1,7 +1,10 @@
 import { z } from 'zod';
+import { withWorkflowPicker } from '../../jsonSchemaMetadata';
+import { collaborationActorReferenceSchema } from '../collaborationActorSchemas';
 import {
   BaseDomainEventPayloadSchema,
   changesSchema,
+  entityIdSchema,
   updatedFieldsSchema,
   uuidSchema,
 } from './commonEventPayloadSchemas';
@@ -14,26 +17,27 @@ import {
  * - These are intentionally higher-level and stable; they can be expanded/versioned as needed.
  */
 
-const ticketIdSchema = uuidSchema('Ticket ID');
-const userIdSchema = uuidSchema('User ID');
-const contactIdSchema = uuidSchema('Contact ID');
+const ticketIdSchema = entityIdSchema('Ticket ID', 'ticket');
+const userIdSchema = entityIdSchema('User ID', 'user');
+const contactIdSchema = entityIdSchema('Contact ID', 'contact');
+const assigneeIdSchema = (label: string) => entityIdSchema(label, 'user-or-team');
+const statusIdSchema = (label: string) => withWorkflowPicker(z.string().min(1), label, 'ticket-status');
+const priorityIdSchema = (label: string) => withWorkflowPicker(z.string().min(1), label, 'ticket-priority');
 const messageIdSchema = uuidSchema('Message ID');
 const noteIdSchema = uuidSchema('Note ID');
 const timeEntryIdSchema = uuidSchema('Time Entry ID');
 const assigneeTypeSchema = z.enum(['user', 'team']).describe('Assignee type');
-const suppressionFlagsSchema = {
-  suppressContactNotifications: z.boolean().optional().default(false)
-    .describe('Whether customer-facing notifications are suppressed for this operation'),
-  suppressInternalNotifications: z.boolean().optional().default(false)
-    .describe('Whether internal staff notifications are suppressed for this operation'),
+const notificationSuppressionPayloadFields = {
+  suppressContactNotifications: z
+    .boolean()
+    .default(false)
+    .describe('Skip contact-facing ticket notifications for this operation'),
+  suppressInternalNotifications: z
+    .boolean()
+    .default(false)
+    .describe('Skip internal staff ticket notifications for this operation'),
 };
 
-/**
- * Display identity of who a ticket came from. Always names, never ids: workflow
- * authors build notification titles from these, so every field is optional and
- * absent when unknown (e.g. an email ticket with no contact or client).
- */
-// LEVERAGE: pattern ticket-event-schema-dup — mirrored in shared/workflow/runtime/schemas/ticketEventSchemas.ts; keep both in sync
 export const ticketRequesterFieldsSchema = {
   clientName: z.string().optional().describe('Name of the ticket client, when one is set'),
   contactName: z.string().optional().describe('Name of the ticket contact, when one is set'),
@@ -49,18 +53,9 @@ export const ticketCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.exte
   createdAt: z.string().optional().describe('Created timestamp (ISO 8601)'),
   updatedFields: updatedFieldsSchema,
   changes: changesSchema,
-  externalLinks: z.array(z.object({
-    linkId: uuidSchema('Link ID').optional(),
-    entityType: z.enum(['ticket', 'comment']).optional(),
-    entityId: z.string().min(1).optional(),
-    system: z.string().min(1),
-    externalId: z.string().min(1),
-    externalParentId: z.string().nullable().optional(),
-    realm: z.string().nullable().optional(),
-    url: z.string().nullable().optional(),
-    relationship: z.enum(['origin', 'mirror', 'reference']).optional(),
-  })).optional().describe('Ticket-level external links created with the ticket'),
-  ...suppressionFlagsSchema,
+  externalLinks: z.array(z.record(z.string(), z.unknown())).optional()
+    .describe('Ticket-level external links created with the ticket'),
+  ...notificationSuppressionPayloadFields,
 }).describe('Payload for TICKET_CREATED');
 
 export type TicketCreatedEventPayload = z.infer<typeof ticketCreatedEventPayloadSchema>;
@@ -83,14 +78,14 @@ export const ticketAssignedEventPayloadSchema = BaseDomainEventPayloadSchema.ext
   ticketId: ticketIdSchema,
   assignedToUserId: userIdSchema.optional().describe('Deprecated: user assigned to the ticket'),
   assignedByUserId: userIdSchema.optional().describe('User who performed the assignment'),
-  previousAssigneeId: z.string().uuid().optional(),
+  previousAssigneeId: assigneeIdSchema('Previous assignee ID').optional(),
   previousAssigneeType: assigneeTypeSchema.optional(),
-  newAssigneeId: z.string().uuid().optional(),
+  newAssigneeId: assigneeIdSchema('New assignee ID').optional(),
   newAssigneeType: assigneeTypeSchema.optional(),
   assignedAt: z.string().optional().describe('Assigned timestamp (ISO 8601)'),
   updatedFields: updatedFieldsSchema,
   changes: changesSchema,
-  ...suppressionFlagsSchema,
+  ...notificationSuppressionPayloadFields,
 }).describe('Payload for TICKET_ASSIGNED');
 
 export type TicketAssignedEventPayload = z.infer<typeof ticketAssignedEventPayloadSchema>;
@@ -102,29 +97,17 @@ export const ticketClosedEventPayloadSchema = BaseDomainEventPayloadSchema.exten
   reason: z.string().optional().describe('Optional close reason'),
   updatedFields: updatedFieldsSchema,
   changes: changesSchema,
-  ...suppressionFlagsSchema,
+  ...notificationSuppressionPayloadFields,
 }).describe('Payload for TICKET_CLOSED');
 
 export type TicketClosedEventPayload = z.infer<typeof ticketClosedEventPayloadSchema>;
-
-export const ticketAutoCloseWarningEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  ticketId: z.string().describe('Ticket ID'),
-  ticketNumber: z.string().describe('Ticket number'),
-  title: z.string().describe('Ticket title'),
-  scheduledCloseAt: z.string().describe('Scheduled auto-close timestamp (ISO 8601)'),
-  contactNameId: z.string().nullable().optional().describe('Associated contact ID'),
-  assignedTo: z.string().nullable().optional().describe('Assigned user ID'),
-  enteredBy: z.string().nullable().optional().describe('User who entered the ticket'),
-}).describe('Payload for TICKET_AUTO_CLOSE_WARNING');
-
-export type TicketAutoCloseWarningEventPayload = z.infer<typeof ticketAutoCloseWarningEventPayloadSchema>;
 
 export const ticketUpdatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
   updatedByUserId: userIdSchema.optional().describe('User who updated the ticket'),
   updatedFields: updatedFieldsSchema,
   changes: changesSchema,
-  ...suppressionFlagsSchema,
+  ...notificationSuppressionPayloadFields,
 }).describe('Payload for TICKET_UPDATED');
 
 export type TicketUpdatedEventPayload = z.infer<typeof ticketUpdatedEventPayloadSchema>;
@@ -141,19 +124,18 @@ export type TicketResponseStateChangedEventPayload = z.infer<
 
 export const ticketStatusChangedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  previousStatusId: z.string().min(1).describe('Previous status ID'),
-  newStatusId: z.string().min(1).describe('New status ID'),
+  previousStatusId: statusIdSchema('Previous status ID'),
+  newStatusId: statusIdSchema('New status ID'),
   reason: z.string().optional(),
   changedAt: z.string().datetime().optional().describe('Timestamp when status changed (ISO 8601)'),
-  ...suppressionFlagsSchema,
 }).describe('Payload for TICKET_STATUS_CHANGED');
 
 export type TicketStatusChangedEventPayload = z.infer<typeof ticketStatusChangedEventPayloadSchema>;
 
 export const ticketPriorityChangedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  previousPriorityId: z.string().min(1).describe('Previous priority ID'),
-  newPriorityId: z.string().min(1).describe('New priority ID'),
+  previousPriorityId: priorityIdSchema('Previous priority ID'),
+  newPriorityId: priorityIdSchema('New priority ID'),
   reason: z.string().optional(),
   changedAt: z.string().datetime().optional().describe('Timestamp when priority changed (ISO 8601)'),
 }).describe('Payload for TICKET_PRIORITY_CHANGED');
@@ -162,9 +144,9 @@ export type TicketPriorityChangedEventPayload = z.infer<typeof ticketPriorityCha
 
 export const ticketUnassignedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  previousAssigneeId: z.string().uuid().describe('Previous assignee ID'),
+  previousAssigneeId: assigneeIdSchema('Previous assignee ID'),
   previousAssigneeType: assigneeTypeSchema.describe('Previous assignee type'),
-  newAssigneeId: z.string().uuid().optional().describe('New assignee ID (typically absent after unassignment)'),
+  newAssigneeId: assigneeIdSchema('New assignee ID (typically absent after unassignment)').optional(),
   newAssigneeType: assigneeTypeSchema.optional().describe('New assignee type (typically absent after unassignment)'),
   unassignedAt: z.string().datetime().optional(),
   reason: z.string().optional(),
@@ -174,8 +156,8 @@ export type TicketUnassignedEventPayload = z.infer<typeof ticketUnassignedEventP
 
 export const ticketReopenedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  previousStatusId: z.string().min(1).describe('Previous status ID'),
-  newStatusId: z.string().min(1).describe('New status ID'),
+  previousStatusId: statusIdSchema('Previous status ID'),
+  newStatusId: statusIdSchema('New status ID'),
   reopenedAt: z.string().datetime().optional(),
   reason: z.string().optional(),
 }).describe('Payload for TICKET_REOPENED');
@@ -202,8 +184,8 @@ export type TicketSplitEventPayload = z.infer<typeof ticketSplitEventPayloadSche
 
 export const ticketTagsChangedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  addedTagIds: z.array(z.string().uuid()).optional(),
-  removedTagIds: z.array(z.string().uuid()).optional(),
+  addedTagIds: z.array(z.string().guid()).optional(),
+  removedTagIds: z.array(z.string().guid()).optional(),
   changedAt: z.string().datetime().optional(),
 }).describe('Payload for TICKET_TAGS_CHANGED');
 
@@ -211,8 +193,8 @@ export type TicketTagsChangedEventPayload = z.infer<typeof ticketTagsChangedEven
 
 export const ticketQueueChangedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  previousBoardId: z.string().uuid().optional(),
-  newBoardId: z.string().uuid().optional(),
+  previousBoardId: entityIdSchema('Previous board ID', 'board').optional(),
+  newBoardId: entityIdSchema('New board ID', 'board').optional(),
   changedAt: z.string().datetime().optional(),
 }).describe('Payload for TICKET_QUEUE_CHANGED');
 
@@ -220,8 +202,8 @@ export type TicketQueueChangedEventPayload = z.infer<typeof ticketQueueChangedEv
 
 export const ticketEscalatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  fromQueueId: z.string().uuid().optional(),
-  toQueueId: z.string().uuid().optional(),
+  fromQueueId: z.string().guid().optional(),
+  toQueueId: z.string().guid().optional(),
   escalatedAt: z.string().datetime().optional(),
   reason: z.string().optional(),
 }).describe('Payload for TICKET_ESCALATED');
@@ -230,17 +212,53 @@ export type TicketEscalatedEventPayload = z.infer<typeof ticketEscalatedEventPay
 
 const visibilitySchema = z.enum(['public', 'internal']).describe('Message visibility');
 const messageChannelSchema = z.enum(['email', 'portal', 'ui', 'api']).describe('Message channel');
-const authorTypeSchema = z.enum(['user', 'contact']).describe('Author type');
+const authorTypeSchema = z.enum(['user', 'contact', 'collaborator']).describe('Author type');
 
-export const ticketMessageAddedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+/** Shared by both authorship branches below. */
+const ticketMessageAddedCommonShape = {
   ticketId: ticketIdSchema,
   messageId: messageIdSchema,
   visibility: visibilitySchema,
-  authorId: z.string().uuid().describe('Author ID (user/contact)'),
-  authorType: authorTypeSchema,
+  audience: z.enum(['requester', 'shared_it', 'organization_private']).optional(),
   channel: messageChannelSchema,
   createdAt: z.string().datetime().optional(),
   attachmentsCount: z.number().int().nonnegative().optional(),
+};
+
+/**
+ * Authorship is a discriminated union, not a flat object with a cross-field
+ * refinement, because the refinement could not be expressed in the published
+ * JSON Schema: a local message requires `authorId`, but `authorId` was declared
+ * optional, so nothing reading the catalog -- including this repo's own example
+ * generator and any external workflow consumer -- could derive a payload that
+ * validates. The union carries the requirement structurally, so the JSON Schema
+ * says it too.
+ */
+const ticketMessageAddedLocalSchema = BaseDomainEventPayloadSchema.extend({
+  ...ticketMessageAddedCommonShape,
+  authorType: z.enum(['user', 'contact']),
+  authorId: z.string().guid().describe('Owner-local author ID (user/contact)'),
+  authorReference: z.undefined().optional().describe('A local message has no collaboration author'),
+});
+
+const ticketMessageAddedCollaboratorSchema = BaseDomainEventPayloadSchema.extend({
+  ...ticketMessageAddedCommonShape,
+  authorType: z.literal('collaborator'),
+  authorId: z.undefined().optional().describe('A foreign message has no owner-local author'),
+  authorReference: collaborationActorReferenceSchema,
+});
+
+export const ticketMessageAddedEventPayloadSchema = z.discriminatedUnion('authorType', [
+  ticketMessageAddedLocalSchema,
+  ticketMessageAddedCollaboratorSchema,
+]).superRefine((payload, context) => {
+  const fail = (message: string) => context.addIssue({ code: z.ZodIssueCode.custom, message });
+  if (payload.audience && (payload.visibility === 'public') !== (payload.audience === 'requester')) fail('Message visibility must match its audience');
+  if (payload.authorType === 'collaborator') {
+    if (payload.actorType !== 'COLLABORATOR' || !payload.actorReference ||
+        payload.authorReference.ownerTenantId !== payload.tenantId || !payload.audience || payload.audience === 'organization_private') fail('A foreign message requires qualified shared authorship');
+    else if (Object.keys(payload.authorReference).some(key => payload.authorReference![key as keyof typeof payload.authorReference] !== payload.actorReference![key as keyof typeof payload.actorReference])) fail('Message author and actor must agree');
+  } else if (payload.actorType === 'COLLABORATOR') fail('A local message requires a local author');
 }).describe('Payload for TICKET_MESSAGE_ADDED');
 
 export type TicketMessageAddedEventPayload = z.infer<typeof ticketMessageAddedEventPayloadSchema>;
@@ -259,7 +277,10 @@ export type TicketCustomerRepliedEventPayload = z.infer<typeof ticketCustomerRep
 export const ticketInternalNoteAddedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
   noteId: noteIdSchema,
+  audience: z.enum(['shared_it', 'organization_private']).optional(),
   createdAt: z.string().datetime().optional(),
+}).superRefine((payload, context) => {
+  if (payload.actorType === 'COLLABORATOR' && payload.audience !== 'shared_it') context.addIssue({ code: z.ZodIssueCode.custom, message: 'A foreign internal note requires the shared IT audience' });
 }).describe('Payload for TICKET_INTERNAL_NOTE_ADDED');
 
 export type TicketInternalNoteAddedEventPayload = z.infer<
@@ -280,7 +301,7 @@ const slaStageSchema = z.enum(['response', 'resolution', 'custom']).describe('SL
 
 export const ticketSlaStageEnteredEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  slaPolicyId: z.string().uuid(),
+  slaPolicyId: z.string().guid(),
   stage: slaStageSchema,
   enteredAt: z.string().datetime().optional(),
   targetAt: z.string().datetime().optional(),
@@ -290,7 +311,7 @@ export type TicketSlaStageEnteredEventPayload = z.infer<typeof ticketSlaStageEnt
 
 export const ticketSlaStageMetEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  slaPolicyId: z.string().uuid(),
+  slaPolicyId: z.string().guid(),
   stage: slaStageSchema,
   metAt: z.string().datetime().optional(),
   targetAt: z.string().datetime().optional(),
@@ -300,7 +321,7 @@ export type TicketSlaStageMetEventPayload = z.infer<typeof ticketSlaStageMetEven
 
 export const ticketSlaStageBreachedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  slaPolicyId: z.string().uuid(),
+  slaPolicyId: z.string().guid(),
   stage: slaStageSchema,
   breachedAt: z.string().datetime().optional(),
   targetAt: z.string().datetime().optional(),
@@ -311,17 +332,9 @@ export type TicketSlaStageBreachedEventPayload = z.infer<
   typeof ticketSlaStageBreachedEventPayloadSchema
 >;
 
-export const ticketSlaThresholdReachedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  ticketId: ticketIdSchema,
-  phase: z.enum(['response', 'resolution']).describe('SLA phase'),
-  thresholdPercent: z.number().int().min(0).max(100).describe('Threshold percentage reached (e.g., 50, 75, 90, 100)'),
-}).describe('Payload for TICKET_SLA_THRESHOLD_REACHED');
-
-export type TicketSlaThresholdReachedEventPayload = z.infer<typeof ticketSlaThresholdReachedEventPayloadSchema>;
-
 export const ticketApprovalRequestedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  approvalRequestId: z.string().uuid(),
+  approvalRequestId: z.string().guid(),
   approvalType: z.string().min(1),
   requestedByUserId: userIdSchema.optional(),
   requestedAt: z.string().datetime().optional(),
@@ -332,7 +345,7 @@ export type TicketApprovalRequestedEventPayload = z.infer<typeof ticketApprovalR
 
 export const ticketApprovalGrantedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  approvalRequestId: z.string().uuid(),
+  approvalRequestId: z.string().guid(),
   approvedByUserId: userIdSchema.optional(),
   approvedAt: z.string().datetime().optional(),
   conditions: z.unknown().optional(),
@@ -342,10 +355,55 @@ export type TicketApprovalGrantedEventPayload = z.infer<typeof ticketApprovalGra
 
 export const ticketApprovalRejectedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  approvalRequestId: z.string().uuid(),
+  approvalRequestId: z.string().guid(),
   rejectedByUserId: userIdSchema.optional(),
   rejectedAt: z.string().datetime().optional(),
   reason: z.string().optional(),
 }).describe('Payload for TICKET_APPROVAL_REJECTED');
 
 export type TicketApprovalRejectedEventPayload = z.infer<typeof ticketApprovalRejectedEventPayloadSchema>;
+
+// ---------------------------------------------------------------------------
+// Legacy ticket events (still used in harness fixtures)
+// ---------------------------------------------------------------------------
+
+export const ticketCommentAddedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  ticketId: ticketIdSchema,
+  commentId: z.string().guid().optional(),
+  visibility: z.enum(['public', 'internal']).optional(),
+  authorId: z.string().guid().optional(),
+  authorType: z.enum(['user', 'contact']).optional(),
+  createdAt: z.string().datetime().optional(),
+}).describe('Payload for TICKET_COMMENT_ADDED');
+
+export type TicketCommentAddedEventPayload = z.infer<typeof ticketCommentAddedEventPayloadSchema>;
+
+export const ticketAdditionalAgentAssignedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  ticketId: ticketIdSchema,
+  primaryAgentId: userIdSchema,
+  additionalAgentId: userIdSchema,
+  assignedByUserId: userIdSchema.optional(),
+  assignedAt: z.string().datetime().optional(),
+}).describe('Payload for TICKET_ADDITIONAL_AGENT_ASSIGNED');
+
+export type TicketAdditionalAgentAssignedEventPayload = z.infer<typeof ticketAdditionalAgentAssignedEventPayloadSchema>;
+
+export const ticketAutoCloseWarningEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  ticketId: z.string().describe('Ticket ID'),
+  ticketNumber: z.string().describe('Ticket number'),
+  title: z.string().describe('Ticket title'),
+  scheduledCloseAt: z.string().describe('Scheduled auto-close timestamp (ISO 8601)'),
+  contactNameId: z.string().nullable().optional().describe('Associated contact ID'),
+  assignedTo: z.string().nullable().optional().describe('Assigned user ID'),
+  enteredBy: z.string().nullable().optional().describe('User who entered the ticket'),
+}).describe('Payload for TICKET_AUTO_CLOSE_WARNING');
+
+export type TicketAutoCloseWarningEventPayload = z.infer<typeof ticketAutoCloseWarningEventPayloadSchema>;
+
+export const ticketSlaThresholdReachedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  ticketId: ticketIdSchema,
+  phase: z.enum(['response', 'resolution']).describe('SLA phase'),
+  thresholdPercent: z.number().int().min(0).max(100).describe('Threshold percentage reached (e.g., 50, 75, 90, 100)'),
+}).describe('Payload for TICKET_SLA_THRESHOLD_REACHED');
+
+export type TicketSlaThresholdReachedEventPayload = z.infer<typeof ticketSlaThresholdReachedEventPayloadSchema>;

@@ -9,9 +9,9 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import type { IClient, IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
+import type { IContact, IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import { isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
-import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
+import { useBillingClient } from '../../../hooks/useBillingClient';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '../../../actions/billingClientLocationActions';
 import LocationAddress from '../locations/LocationAddress';
 import { buildLocationGroups, shouldShowLocationGroups } from '../locations/locationGrouping';
@@ -19,11 +19,13 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DEFAULT_SENDER_SELECTION } from '@alga-psa/email/senderSelection';
 import { listSelectableSenders } from '@alga-psa/email/senderActions';
 import type { IQuoteDocumentTemplate } from '@alga-psa/types';
-import { approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuoteRevision, deleteQuote, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
+import { approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuoteRevision, deleteQuote, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuoteVersions, markQuoteAccepted, renderQuotePreview, requestQuoteApprovalChanges, resendQuote, saveQuoteAsTemplate, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getSalesOrderForQuote, type SalesOrderQuoteLink } from '@alga-psa/inventory/actions/salesOrderLinkActions';
 import { getProductAvailability, type ProductAvailability } from '@alga-psa/inventory/actions/availabilityActions';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions/contactQueryActions';
+import QuoteMarkAcceptedDialog from './QuoteMarkAcceptedDialog';
+import QuoteSoleApproverNotice from './QuoteSoleApproverNotice';
 import QuoteStatusBadge from './QuoteStatusBadge';
 import { QuoteTermsContent } from '@alga-psa/ui/editor';
 import { ArrowLeft } from 'lucide-react';
@@ -150,7 +152,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [quote, setQuote] = useState<IQuote | null>(null);
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
   const [versions, setVersions] = useState<IQuote[]>([]);
-  const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isWorking, setIsWorking] = useState(false);
@@ -160,6 +161,10 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [isConversionDialogOpen, setIsConversionDialogOpen] = useState(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [approvalRequired, setApprovalRequired] = useState(false);
+  // Current user is the tenant's only possible approver (may approve own quotes).
+  const [isSoleApprover, setIsSoleApprover] = useState(false);
+  const [isMarkAcceptedOpen, setIsMarkAcceptedOpen] = useState(false);
+  const [markAcceptedNote, setMarkAcceptedNote] = useState('');
   const [approvalDialogMode, setApprovalDialogMode] = useState<'approve' | 'changes' | null>(null);
   const [approvalComment, setApprovalComment] = useState('');
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
@@ -183,9 +188,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const loadQuote = async () => {
     try {
       setIsLoading(true);
-      const [loadedQuote, loadedClients, loadedContacts, approvalSettings, loadedTemplates] = await Promise.all([
+      const [loadedQuote, loadedContacts, approvalSettings, loadedTemplates] = await Promise.all([
         getQuote(quoteId),
-        getAllClientsForBilling(false),
         getContactsForPicker('active'),
         getQuoteApprovalSettings(),
         getQuoteDocumentTemplates(),
@@ -201,14 +205,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       if (isActionPermissionError(loadedContacts) || isActionMessageError(loadedContacts)) {
         throw new Error(getErrorMessage(loadedContacts));
       }
-      if (isActionPermissionError(loadedClients) || isActionMessageError(loadedClients)) {
-        throw new Error(getErrorMessage(loadedClients));
-      }
 
       setQuote(loadedQuote);
-      setClients(loadedClients);
       setContacts(loadedContacts);
       setApprovalRequired(!isActionPermissionError(approvalSettings) && approvalSettings.approvalRequired === true);
+      setIsSoleApprover(!isActionPermissionError(approvalSettings) && approvalSettings.currentUserIsSoleApprover === true);
       setDocumentTemplates(Array.isArray(loadedTemplates) ? loadedTemplates : []);
 
       const loadedVersions = await listQuoteVersions(quoteId);
@@ -226,7 +227,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     }
   };
 
-  const client = useMemo(() => clients.find((entry) => entry.client_id === quote?.client_id) ?? null, [clients, quote?.client_id]);
+  const { client } = useBillingClient(quote?.client_id);
   const contact = useMemo(() => contacts.find((entry) => entry.contact_name_id === quote?.contact_id) ?? null, [contacts, quote?.contact_id]);
   const acceptedOptionalItems = useMemo(
     () => (quote?.quote_items || []).filter((item) => item.is_optional),
@@ -473,6 +474,43 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
           ? actionError.message
           : t('quoteDetail.errors.requestChanges', {
             defaultValue: 'Failed to request quote changes',
+          }),
+      );
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  // LEVERAGE: pattern quote-workflow-action-handlers — QuoteDetail and QuoteForm each re-implement the approve/request-changes/mark-accepted handlers, dialogs and notices; a shared quote-workflow hook/component layer is missing.
+  const handleMarkAccepted = async () => {
+    if (!quote) {
+      return;
+    }
+
+    try {
+      setIsWorking(true);
+      setError(null);
+      setNotice(null);
+      const result = await markQuoteAccepted(quote.quote_id, markAcceptedNote);
+
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
+      }
+
+      setQuote(result);
+      setIsMarkAcceptedOpen(false);
+      setMarkAcceptedNote('');
+      setNotice(
+        t('quoteDetail.notices.markedAccepted', {
+          defaultValue: 'Quote marked as accepted.',
+        }),
+      );
+    } catch (actionError) {
+      setError(
+        actionError instanceof Error
+          ? actionError.message
+          : t('quoteDetail.errors.markAccepted', {
+            defaultValue: 'Failed to mark quote as accepted',
           }),
       );
     } finally {
@@ -901,6 +939,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             <Button id="quote-detail-revise" onClick={() => void handleReviseQuote()} disabled={isWorking}>{t('common.actions.revise', { defaultValue: 'Revise' })}</Button>
             <Button id="quote-detail-resend" variant="outline" onClick={() => void handleResendQuote()} disabled={isWorking}>{t('common.actions.resend', { defaultValue: 'Resend' })}</Button>
             <Button id="quote-detail-reminder" variant="outline" onClick={() => void handleSendReminder()} disabled={isWorking}>{t('common.actions.sendReminder', { defaultValue: 'Send Reminder' })}</Button>
+            <Button id="quote-detail-mark-accepted" variant="outline" onClick={() => setIsMarkAcceptedOpen(true)} disabled={isWorking}>{t('common.actions.markAccepted', { defaultValue: 'Mark as accepted' })}</Button>
             <Button id="quote-detail-cancel" variant="outline" onClick={() => void handleCancelQuote()} disabled={isWorking}>{t('common.actions.cancel', { defaultValue: 'Cancel' })}</Button>
           </>
         );
@@ -1000,6 +1039,13 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             </Button>
           </div>
         </div>
+
+        {approvalRequired && isSoleApprover && (quote.status === 'pending_approval' || quote.status === 'draft') ? (
+          <QuoteSoleApproverNotice
+            id="quote-detail-sole-approver-notice"
+            context={quote.status === 'pending_approval' ? 'pending' : 'draft'}
+          />
+        ) : null}
 
         {notice ? (
           <Alert>
@@ -1303,7 +1349,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                 {t('quoteConversion.actions.salesOrder', { defaultValue: 'Create Sales Order' })}
               </Button>
             )}
-            {conversionPreview && conversionPreview.contract_items.length > 0 && (
+            {conversionPreview && conversionPreview.contract_items.length > 0 && !conversionPreview.contract_blocked_reason && (
               <Button id="quote-conversion-contract" onClick={() => void handleConfirmConversion('contract')} disabled={isWorking}>
                 {t('quoteConversion.actions.contract', { defaultValue: 'Create Draft Contract' })}
               </Button>
@@ -1339,6 +1385,18 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
               {conversionPreview.invoice_error && (
                 <Alert variant="destructive">
                   <AlertDescription>{conversionPreview.invoice_error}</AlertDescription>
+                </Alert>
+              )}
+              {conversionPreview.contract_blocked_reason && (
+                <Alert variant="destructive" id="quote-conversion-contract-blocked">
+                  <AlertDescription>
+                    {conversionPreview.contract_blocked_item_description != null
+                      ? t('quoteConversion.contractBlockedServiceless', {
+                          defaultValue: conversionPreview.contract_blocked_reason,
+                          description: conversionPreview.contract_blocked_item_description,
+                        })
+                      : conversionPreview.contract_blocked_reason}
+                  </AlertDescription>
                 </Alert>
               )}
               {conversionPreview.sales_order_items.length > 0 ? (
@@ -1423,6 +1481,26 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">{t('quoteConversion.empty.contractItems', { defaultValue: 'No recurring items will convert to a contract.' })}</p>
+                )}
+                {conversionPreview.contract_discounts.length > 0 && (
+                  <div className="space-y-2" data-testid="quote-conversion-contract-discounts">
+                    <h4 className="text-sm font-semibold">{t('quoteConversion.sections.carriedDiscounts', { defaultValue: 'Discounts carried onto contract lines' })}</h4>
+                    {conversionPreview.contract_discounts.map((discount) => (
+                      <div key={`${discount.quote_item_id}:${discount.line_quote_item_id}`} className="rounded-md border border-border p-3">
+                        <div className="font-medium text-foreground">{discount.description}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {discount.line_description} {'\u2022'} {discount.discount_type === 'percentage' && discount.percentage !== null
+                            ? `${discount.percentage}%`
+                            : `-${formatCurrency(discount.amount, quote.currency_code || 'USD')}`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {conversionPreview.contract_items.length > 0 && (
+                  <div className="text-sm font-medium text-foreground" data-testid="quote-conversion-contract-monthly-total">
+                    {t('quoteConversion.summary.monthlyTotal', { defaultValue: 'Monthly total after discounts' })}: {formatCurrency(conversionPreview.contract_monthly_total, quote.currency_code || 'USD')}
+                  </div>
                 )}
               </section>
 
@@ -1510,6 +1588,14 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         onClose={() => setIsSendDialogOpen(false)}
         onConfirm={(payload) => void handleSendQuote(payload)}
       />
+      <QuoteMarkAcceptedDialog
+        isOpen={isMarkAcceptedOpen}
+        isWorking={isWorking}
+        note={markAcceptedNote}
+        onNoteChange={setMarkAcceptedNote}
+        onConfirm={() => void handleMarkAccepted()}
+        onClose={() => { setIsMarkAcceptedOpen(false); setMarkAcceptedNote(''); }}
+      />
       <Dialog
         id="quote-approval-dialog"
         isOpen={approvalDialogMode !== null}
@@ -1551,6 +1637,13 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                 defaultValue: 'Return this quote to draft with requested changes. Please describe what needs to be revised.',
               })}
           </DialogDescription>
+          {approvalDialogMode === 'approve' && isSoleApprover ? (
+            <p id="quote-approval-dialog-sole-approver-note" className="text-sm text-muted-foreground">
+              {t('quoteApproval.soleApprover.dialogNote', {
+                defaultValue: 'You are the only approver, so approving your own quote is allowed. The approval is recorded as a self-approval.',
+              })}
+            </p>
+          ) : null}
           <div className="space-y-3 py-2">
             <label className="flex flex-col gap-1 text-sm font-medium">
               {approvalDialogMode === 'approve'

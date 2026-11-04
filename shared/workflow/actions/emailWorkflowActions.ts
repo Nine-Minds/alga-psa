@@ -4,7 +4,7 @@
  * using shared database patterns to avoid cross-package dependencies.
  */
 
-import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
+import { ticketCreationWithActor } from '../../lib/tickets/ticketLifecycleEvents';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
@@ -13,12 +13,12 @@ import { inboundEmailReplyReceivedEventPayloadSchema } from '@alga-psa/event-sch
 import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBuilders/inboundEmailReplyEventBuilders';
 import { normalizeRfc822MessageId } from '../../services/email/inboundEmailIdentity';
 import { normalizeEmailAddress } from '../../lib/email/addressUtils';
+import { contactEmailMatch } from '../../lib/email/contactEmailMatch';
 import { ContactModel } from '../../models/contactModel';
+import { createClientWithDefaults } from '../../models/clientCreation';
 import { buildContactCreatedPayload } from '../streams/domainEventBuilders/contactEventBuilders';
 import {
-  mergeTicketWatchListRecipients,
   parseTicketWatchListAttributes,
-  setTicketWatchListOnAttributes,
   type TicketWatchListRecipientInput,
 } from '../../lib/tickets/watchList';
 
@@ -212,29 +212,6 @@ export interface SaveEmailClientAssociationOutput {
   client_id: string;
 }
 
-function parseTicketAttributes(raw: unknown): Record<string, unknown> {
-  if (!raw) {
-    return {};
-  }
-
-  if (typeof raw === 'string') {
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return parsed as Record<string, unknown>;
-      }
-    } catch {
-      return {};
-    }
-  }
-
-  if (typeof raw === 'object' && !Array.isArray(raw)) {
-    return { ...(raw as Record<string, unknown>) };
-  }
-
-  return {};
-}
-
 export type InboundDestinationResolutionSource =
   | 'contact_override'
   | 'client_default_from_contact'
@@ -326,16 +303,7 @@ export async function findContactByEmail(
       });
 
       const candidates = await candidatesQuery
-        .andWhere(function contactEmailMatch(this: Knex.QueryBuilder) {
-          this
-            .where('contacts.email', normalizedEmail)
-            .orWhereExists(
-              db.subquery('contact_additional_email_addresses as caea')
-                .select(trx.raw('1'))
-                .whereRaw('caea.contact_name_id = contacts.contact_name_id')
-                .andWhere('caea.normalized_email_address', normalizedEmail)
-            );
-        })
+        .andWhere(contactEmailMatch(db, trx, normalizedEmail))
         .orderBy('contacts.created_at', 'asc')
         .orderBy('contacts.contact_name_id', 'asc');
 
@@ -732,7 +700,7 @@ export async function createOrFindContact(
     throw new Error('Invalid email address');
   }
 
-  return await withAdminTransaction(async (trx: Knex.Transaction) => {
+  const result = await withAdminTransaction(async (trx: Knex.Transaction) => {
       // First try to find existing contact
       const existingContact = await ContactModel.getContactByEmail(normalizedEmail, tenant, trx);
 
@@ -757,6 +725,7 @@ export async function createOrFindContact(
         role: input.title,
       }, tenant, trx);
 
+      const createdAt = createdContact.created_at ? new Date(createdContact.created_at).toISOString() : new Date().toISOString();
       return {
         id: createdContact.contact_name_id,
         name: createdContact.full_name,
@@ -764,10 +733,43 @@ export async function createOrFindContact(
         client_id: createdContact.client_id || input.client_id,
         phone: getDefaultPhoneNumber(createdContact),
         title: createdContact.role || input.title,
-        created_at: createdContact.created_at ? new Date(createdContact.created_at).toISOString() : new Date().toISOString(),
-        is_new: true
+        created_at: createdAt,
+        is_new: true,
+        // carried out of the transaction so the event is published only after it commits
+        __created: createdContact,
       };
     });
+
+  const { __created, ...output } = result as typeof result & { __created?: any };
+  if (__created) {
+    // LEVERAGE: pattern contact-event-publish — CONTACT_CREATED after commit; withAdminTransaction does not flush registerAfterCommit hooks, so publish here.
+    await publishWorkflowEvent({
+      eventType: 'CONTACT_CREATED',
+      payload: buildContactCreatedPayload(contactCreatedParamsFor(__created, output.created_at)),
+      ctx: { tenantId: tenant, occurredAt: output.created_at },
+      idempotencyKey: `contact_created:${__created.contact_name_id}`,
+    }).catch((error) => {
+      console.warn('createOrFindContact: CONTACT_CREATED publish failed', { tenantId: tenant, contactId: __created.contact_name_id, error: error instanceof Error ? error.message : String(error) });
+    });
+  }
+  return output as CreateOrFindContactOutput;
+}
+
+function contactCreatedParamsFor(contact: any, createdAt: string): Parameters<typeof buildContactCreatedPayload>[0] {
+  return {
+    contactId: contact.contact_name_id,
+    clientId: contact.client_id,
+    fullName: contact.full_name,
+    email: contact.email ?? undefined,
+    primaryEmailCanonicalType: contact.primary_email_canonical_type ?? null,
+    primaryEmailCustomTypeId: contact.primary_email_custom_type_id ?? null,
+    primaryEmailType: contact.primary_email_type ?? null,
+    additionalEmailAddresses: contact.additional_email_addresses ?? [],
+    phoneNumbers: contact.phone_numbers ?? [],
+    defaultPhoneNumber: contact.default_phone_number || undefined,
+    defaultPhoneType: contact.default_phone_type || undefined,
+    createdAt,
+  };
 }
 
 // LEVERAGE: pattern contact-create-with-event
@@ -783,9 +785,10 @@ export async function createContactForInboundSender(
 ): Promise<{ contactId: string; created: boolean } | null> {
   const normalizedEmail = normalizeEmailAddress(input.email);
   if (!normalizedEmail) return null;
+  const contactCreatedParams = (contact: any): Parameters<typeof buildContactCreatedPayload>[0] => ({ contactId: contact.contact_name_id, clientId: contact.client_id, fullName: contact.full_name, email: contact.email ?? normalizedEmail, primaryEmailCanonicalType: contact.primary_email_canonical_type ?? 'work', primaryEmailCustomTypeId: contact.primary_email_custom_type_id ?? null, primaryEmailType: contact.primary_email_type ?? null, additionalEmailAddresses: contact.additional_email_addresses ?? [], phoneNumbers: contact.phone_numbers ?? [], defaultPhoneNumber: contact.default_phone_number || undefined, defaultPhoneType: contact.default_phone_type || undefined, createdAt: contact.created_at ?? new Date() });
   const { withAdminTransaction } = await import('@alga-psa/db');
   let createdContact: any = null;
-  let eventPayload: Record<string, unknown> | null = null;
+  let eventPayload: ReturnType<typeof buildContactCreatedPayload> | null = null;
   try {
     const result = await withAdminTransaction(async (trx: Knex.Transaction) => {
       const run = async (savepoint: Knex.Transaction) => {
@@ -809,7 +812,7 @@ export async function createContactForInboundSender(
         }
         const contact = await ContactModel.createContact({ full_name: input.name?.trim() || normalizedEmail, email: normalizedEmail, client_id: input.clientId }, tenant, savepoint);
         createdContact = contact;
-        eventPayload = buildContactCreatedPayload({ contactId: contact.contact_name_id, clientId: contact.client_id, fullName: contact.full_name, email: contact.email ?? normalizedEmail, primaryEmailCanonicalType: contact.primary_email_canonical_type ?? 'work', primaryEmailCustomTypeId: contact.primary_email_custom_type_id ?? null, primaryEmailType: contact.primary_email_type ?? null, additionalEmailAddresses: contact.additional_email_addresses ?? [], phoneNumbers: contact.phone_numbers ?? [], defaultPhoneNumber: contact.default_phone_number || undefined, defaultPhoneType: contact.default_phone_type || undefined, createdAt: contact.created_at ?? new Date() });
+        eventPayload = buildContactCreatedPayload(contactCreatedParams(contact));
         if (executionOptions?.existingConnection) {
           if (!executionOptions.contactEventPublisher || typeof (executionOptions.contactEventPublisher as any).publishContactCreated !== 'function') {
             throw new Error('CONTACT_CREATED outbox publisher is required for durable inbound contact creation');
@@ -835,7 +838,7 @@ export async function createContactForInboundSender(
     }, executionOptions?.existingConnection as any);
     if (result?.created && eventPayload && !executionOptions?.existingConnection) {
       try {
-        await publishWorkflowEvent({ eventType: 'CONTACT_CREATED', payload: eventPayload, ctx: { tenantId: tenant }, idempotencyKey: `contact_created:${createdContact.contact_name_id}` });
+        await publishWorkflowEvent({ eventType: 'CONTACT_CREATED', payload: buildContactCreatedPayload(contactCreatedParams(createdContact)), ctx: { tenantId: tenant }, idempotencyKey: `contact_created:${createdContact.contact_name_id}` });
       } catch (eventError) {
         console.warn('createContactForInboundSender: CONTACT_CREATED publish failed', { tenantId: tenant, contactId: createdContact?.contact_name_id, error: eventError instanceof Error ? eventError.message : String(eventError) });
       }
@@ -1309,6 +1312,34 @@ export async function createTicketFromEmail(
         }
       }
 
+      // A matched contact with no user account is the actor of the inbound ticket.
+      // Without one, TICKET_CREATED is published as a SYSTEM actor with no userId.
+      const creationEvents =
+        !userId && ticketData.contact_id
+          ? ticketCreationWithActor(
+              eventPublisher,
+              { actorType: 'CONTACT', actorContactId: ticketData.contact_id },
+              'inbound email ticket: sender matched a contact'
+            )
+          : eventPublisher;
+
+      // A stale defaults location from another client would fail ticket
+      // validation and drop the whole email; prefer a ticket without location.
+      let locationId = ticketData.location_id;
+      if (locationId && ticketData.client_id) {
+        const ownedLocation = await tenantDb(trx, tenant).table('client_locations')
+          .where({ location_id: locationId, client_id: ticketData.client_id })
+          .first('location_id');
+        if (!ownedLocation) {
+          console.warn('createTicketFromEmail: location does not belong to ticket client; creating ticket without location', {
+            tenant,
+            clientId: ticketData.client_id,
+            locationId,
+          });
+          locationId = undefined;
+        }
+      }
+
       // Use enhanced TicketModel with events and analytics
       const result = await TicketModel.createTicketWithRetry({
         title: ticketData.title,
@@ -1321,13 +1352,13 @@ export async function createTicketFromEmail(
         priority_id: ticketData.priority_id,
         category_id: ticketData.category_id,
         subcategory_id: ticketData.subcategory_id,
-        location_id: ticketData.location_id,
+        location_id: locationId,
         entered_by: ticketData.entered_by || undefined,
         assigned_to: assignedTo,
         email_metadata: ticketData.email_metadata,
         attributes: ticketData.attributes ?? undefined,
         ticket_origin: TICKET_ORIGINS.INBOUND_EMAIL,
-      }, tenant, trx, {}, eventPublisher, analyticsTracker, userId, 3);
+      }, tenant, trx, {}, creationEvents, analyticsTracker, userId, 3);
 
       // Publish TICKET_ASSIGNED event if an agent was assigned
       // Note: Event publishing failure should not prevent ticket creation
@@ -1458,38 +1489,30 @@ export async function upsertTicketWatchListRecipients(
 ): Promise<{ updated: boolean; watchList: ReturnType<typeof parseTicketWatchListAttributes> }> {
   const { withAdminTransaction } = await import('@alga-psa/db');
 
+  const { TicketWatcherService, TicketWatcherError } = await import('../../services/tickets/ticketWatcherService');
+
   return withAdminTransaction(async (trx: Knex.Transaction) => {
-    const db = tenantDb(trx, tenant);
-    const ticket = await db.table('tickets')
-      .select('attributes')
-      .where({
-        ticket_id: params.ticketId,
-      })
-      .first<{ attributes?: unknown }>();
-
-    if (!ticket) {
-      return { updated: false, watchList: [] };
+    // The watcher table is the source of truth; the service also rewrites the
+    // attributes.watch_list mirror in this transaction.
+    try {
+      const result = await TicketWatcherService.addRecipients(trx, tenant, params.ticketId, params.recipients ?? [], null);
+      return {
+        updated: result.changed,
+        watchList: result.watchers.map((watcher) => ({
+          email: watcher.email,
+          active: watcher.active,
+          ...(watcher.name ? { name: watcher.name } : {}),
+          ...(watcher.source ? { source: watcher.source } : {}),
+          ...(watcher.entity_type ? { entity_type: watcher.entity_type } : {}),
+          ...(watcher.entity_id ? { entity_id: watcher.entity_id } : {}),
+        })),
+      };
+    } catch (error) {
+      if (error instanceof TicketWatcherError && error.kind === 'ticket_not_found') {
+        return { updated: false, watchList: [] };
+      }
+      throw error;
     }
-
-    const currentAttributes = parseTicketAttributes(ticket.attributes);
-    const currentWatchList = parseTicketWatchListAttributes(currentAttributes);
-    const mergedWatchList = mergeTicketWatchListRecipients(currentWatchList, params.recipients ?? []);
-
-    if (JSON.stringify(currentWatchList) === JSON.stringify(mergedWatchList)) {
-      return { updated: false, watchList: currentWatchList };
-    }
-
-    const nextAttributes = setTicketWatchListOnAttributes(currentAttributes, mergedWatchList);
-    await db.table('tickets')
-      .where({
-        ticket_id: params.ticketId,
-      })
-      .update({
-        attributes: nextAttributes ? JSON.stringify(nextAttributes) : null,
-        ...ticketUpdateStamp(trx, null),
-      });
-
-    return { updated: true, watchList: mergedWatchList };
   }, existingConnection);
 }
 
@@ -1648,16 +1671,15 @@ export async function createCommentFromEmail(
         )
       }, tenant, trx, eventPublisher, analyticsTracker, userId);
 
-      // Client authors were handled by TicketModel.createComment. A staff reply
-      // by email moves the ticket to awaiting_client through the same engine; the
-      // announcer matches the publisher (outbox row on the durable path).
-      if (normalizedAuthorType === 'internal') {
+      // Apply the shared response-state rules to the comment's final visibility.
+      // The announcer writes to the durable outbox on inbound-email paths.
+      if (normalizedAuthorType === 'client' || normalizedAuthorType === 'internal') {
         const { applyCommentResponseState, announcerFor } = await import('../../lib/tickets/responseState');
         await applyCommentResponseState(trx, {
           tenant,
           ticketId: commentData.ticket_id,
-          authorType: 'internal',
-          isInternal: false,
+          authorType: normalizedAuthorType,
+          isInternal: result.is_internal,
           userId: commentData.author_id ?? userId ?? null,
           announce: announcerFor(eventPublisher),
         });
@@ -1760,7 +1782,7 @@ export async function createCommentFromEmail(
 
     // Building/validating the event is best-effort: a reply comment is never
     // rolled back or orphaned by an event we cannot construct or validate.
-    let payload: Record<string, unknown> | null = null;
+    let payload: ReturnType<typeof buildInboundEmailReplyReceivedPayload> | null = null;
     try {
       payload = buildInboundEmailReplyReceivedPayload({
         tenantId: tenant,
@@ -1850,7 +1872,7 @@ export async function parseEmailReplyBody(
 export async function findTicketByReplyToken(
   token: string,
   tenant: string
-): Promise<{ ticketId?: string; commentId?: string; projectId?: string } | null> {
+): Promise<{ ticketId?: string; commentId?: string; projectId?: string; metadata?: unknown } | null> {
   if (!token) {
     return null;
   }
@@ -1870,6 +1892,7 @@ export async function findTicketByReplyToken(
       ticketId: record.ticket_id || undefined,
       commentId: record.comment_id || undefined,
       projectId: record.project_id || undefined,
+      metadata: record.metadata ?? undefined,
     };
   });
 }
@@ -1888,22 +1911,19 @@ export async function createClientFromEmail(
   const { withAdminTransaction } = await import('@alga-psa/db');
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
-      const clientId = uuidv4();
-
-      await tenantDb(trx, tenant).table('clients')
-        .insert({
-          client_id: clientId,
-          tenant,
-          client_name: clientData.client_name,
-          email: clientData.email,
-          source: clientData.source || 'email',
-          created_at: new Date(),
-          updated_at: new Date()
-        });
+      // Neither `email` nor `source` is a clients column: the former lives in
+      // billing_email, the latter in properties. The insert used to name both
+      // and failed outright.
+      const created = await createClientWithDefaults(trx, tenant, {
+        client_id: uuidv4(),
+        client_name: clientData.client_name,
+        billing_email: clientData.email ?? null,
+        properties: { source: clientData.source || 'email' },
+      });
 
       return {
-        client_id: clientId,
-        client_name: clientData.client_name
+        client_id: created.client_id,
+        client_name: created.client_name
       };
     });
 }

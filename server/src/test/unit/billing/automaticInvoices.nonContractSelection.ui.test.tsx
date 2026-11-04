@@ -99,7 +99,6 @@ function createContractMember() {
       sourceObligation: {
         tenant: 'tenant-1',
         obligationId: 'line-1',
-        obligationType: 'contract_line',
         chargeFamily: 'fixed',
       },
       invoiceWindow: {
@@ -165,7 +164,6 @@ function createSystemManagedDefaultMember() {
       sourceObligation: {
         tenant: 'tenant-1',
         obligationId: 'line-default',
-        obligationType: 'contract_line',
         chargeFamily: 'fixed',
       },
       invoiceWindow: {

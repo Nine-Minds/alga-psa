@@ -43,28 +43,17 @@ import {
   getDraftTabBadgeCount,
   normalizeContractSubtab,
 } from './contractsTabs';
-import { toPlainDate } from '@alga-psa/core';
-
-// start_date/end_date are calendar dates. Parsing them with `new Date()` reads a
-// date-only/UTC-midnight value as UTC, so `.toLocaleDateString()` renders the
-// previous day in negative-offset timezones. Pin to noon UTC to stay on the
-// intended calendar day regardless of the viewer's timezone.
-// Module scope has no hook to read the locale from, so it is passed in rather
-// than omitted — omitting it silently means the browser's, not the app's.
-const formatCalendarDate = (value: unknown, locale: string): string | null => {
-  if (value === null || value === undefined || value === '') return null;
-  try {
-    const plainDate = toPlainDate(value as string | Date);
-    const displayDate = new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
-    return displayDate.toLocaleDateString(locale);
-  } catch {
-    return null;
-  }
-};
+import { toCalendarDisplayDate } from '@alga-psa/core';
 
 const Contracts: React.FC = () => {
   const { t } = useTranslation('msp/contracts');
-  const { locale, formatDate } = useFormatters();
+  const { formatDate } = useFormatters();
+  // start_date/end_date are calendar days in timestamp columns, so they must not be
+  // formatted as instants: toCalendarDisplayDate pins the day, formatDate renders it.
+  const formatCalendarDate = (value: unknown): string | null => {
+    const displayDate = toCalendarDisplayDate(value as string | Date | null | undefined);
+    return displayDate ? formatDate(displayDate) : null;
+  };
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -184,6 +173,8 @@ const Contracts: React.FC = () => {
       const result = await deleteContract(contractToDelete.contractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         handleError(getErrorMessage(result));
+        // The delete may have been refused after the list went stale; show current state.
+        await fetchContracts();
         setContractToDelete(null);
         return;
       }
@@ -194,6 +185,7 @@ const Contracts: React.FC = () => {
         ? err.message
         : t('contractsList.toasts.failedToDeleteContract', { defaultValue: 'Failed to delete contract' });
       toast.error(message);
+      await fetchContracts();
     } finally {
       setIsDeletingContract(false);
     }
@@ -230,6 +222,7 @@ const Contracts: React.FC = () => {
       const result = await deleteContract(draftToDiscard.contractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         handleError(getErrorMessage(result));
+        await fetchContracts();
         return;
       }
       await fetchContracts();
@@ -237,6 +230,7 @@ const Contracts: React.FC = () => {
       setDraftToDiscard(null);
     } catch (err) {
       handleError(err, t('contractsList.toasts.failedToDiscardDraft', { defaultValue: 'Failed to discard draft' }));
+      await fetchContracts();
     } finally {
       setIsDiscardingDraft(false);
     }
@@ -288,6 +282,7 @@ const Contracts: React.FC = () => {
       const result = await activateClientContractForBilling(clientContractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
+        await fetchContracts();
         return;
       }
       toast.success(t('contractsList.toasts.contractActivated', { defaultValue: 'Contract activated' }));
@@ -321,6 +316,7 @@ const Contracts: React.FC = () => {
     const normalized = (status || 'draft').toLowerCase();
     const statusConfig: Record<string, { variant: 'success' | 'default-muted' | 'warning' | 'error' | 'info'; label: string }> = {
       active: { variant: 'success', label: t('status.active', { defaultValue: 'Active' }) },
+      scheduled: { variant: 'info', label: t('status.scheduled', { defaultValue: 'Scheduled' }) },
       draft: { variant: 'default-muted', label: t('status.draft', { defaultValue: 'Draft' }) },
       terminated: { variant: 'warning', label: t('status.terminated', { defaultValue: 'Terminated' }) },
       expired: { variant: 'error', label: t('status.expired', { defaultValue: 'Expired' }) },
@@ -426,13 +422,13 @@ const Contracts: React.FC = () => {
       title: t('contractsList.columns.startDate', { defaultValue: 'Start Date' }),
       dataIndex: 'start_date',
       render: (value: any) =>
-        formatCalendarDate(value, locale) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
+        formatCalendarDate(value) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
     },
     {
       title: t('contractsList.columns.endDate', { defaultValue: 'End Date' }),
       dataIndex: 'end_date',
       render: (value: any) =>
-        formatCalendarDate(value, locale) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
+        formatCalendarDate(value) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
     },
     {
       title: t('contractsList.columns.status', { defaultValue: 'Status' }),
@@ -477,7 +473,8 @@ const Contracts: React.FC = () => {
                   ? t('contractsList.actions.resume', { defaultValue: 'Resume' })
                   : t('common.actions.edit', { defaultValue: 'Edit' })}
               </DropdownMenuItem>
-            {liveStatus === 'active' && (
+            {/* A scheduled contract is confirmed and can be terminated before it starts. */}
+            {(liveStatus === 'active' || liveStatus === 'scheduled') && (
               <DropdownMenuItem
                 id="terminate-contract-menu-item"
                 className="text-orange-600 focus:text-orange-600"
@@ -499,6 +496,15 @@ const Contracts: React.FC = () => {
                 }}
               >
                 {t('contractsList.actions.restore', { defaultValue: 'Restore' })}
+              </DropdownMenuItem>
+            )}
+            {liveStatus === 'scheduled' && (
+              // Already active: "Set to Active" would be a no-op, so explain the start date instead.
+              <DropdownMenuItem id="scheduled-start-menu-item" disabled>
+                {t('status.startsOn', {
+                  defaultValue: 'Starts {{date}}',
+                  date: formatCalendarDate(record.start_date) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
+                })}
               </DropdownMenuItem>
             )}
             {liveStatus === 'draft' && (

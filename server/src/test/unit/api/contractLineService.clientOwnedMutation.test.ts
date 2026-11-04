@@ -11,11 +11,16 @@ class MockBaseService<T> {
     throw new Error('getKnex mock not provided');
   }
 
-  addUpdateAuditFields(data: Record<string, unknown>) {
+  // Real BaseService drops audit columns the table lacks (contract_lines has no created_by/updated_by).
+  async filterAuditFields(_conn: unknown, data: Record<string, unknown>) {
+    return data;
+  }
+
+  async addUpdateAuditFields(_conn: unknown, data: Record<string, unknown>) {
     return { ...data };
   }
 
-  addCreateAuditFields(data: Record<string, unknown>) {
+  async addCreateAuditFields(_conn: unknown, data: Record<string, unknown>) {
     return { ...data };
   }
 }
@@ -45,6 +50,24 @@ vi.mock('@alga-psa/billing/services', () => ({
 
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn(),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
+}));
+
+vi.mock('@alga-psa/shared/billingClients/templateAmounts', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  resolveTemplateAmountsForContract: vi.fn(async () => ({
+    source: 'base',
+    template_currency: 'USD',
+    target_currency: 'USD',
+    price_set_currencies: [],
+    slots: [],
+    amountBySlot: new Map(),
+  })),
 }));
 
 vi.mock('@alga-psa/billing/lib/billing/utils/templateClone', () => ({
@@ -417,6 +440,7 @@ describe('ContractLineService client-owned mutation paths', () => {
         templateContractId: 'template-contract-1',
         templateContractLineId: 'template-line-1',
         contractLineId: expect.any(String),
+        amounts: expect.objectContaining({ target_currency: 'USD' }),
       }),
     );
   });

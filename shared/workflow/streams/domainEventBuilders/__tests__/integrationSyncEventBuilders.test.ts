@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import {
   integrationSyncCompletedEventPayloadSchema,
   integrationSyncFailedEventPayloadSchema,
   integrationSyncStartedEventPayloadSchema,
-} from '../../../runtime/schemas/integrationEventSchemas';
+} from '@alga-psa/event-schemas';
 import {
   buildIntegrationSyncCompletedPayload,
   buildIntegrationSyncFailedPayload,

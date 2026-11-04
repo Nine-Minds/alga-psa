@@ -6,6 +6,9 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import TicketResolutionDialog from "./TicketResolutionDialog";
+import { TicketDataSourceProvider } from "./TicketDataSourceContext";
+import { nativeTicketDataSource } from "../../lib/nativeTicketDataSource";
+import { composeTicketDataSource } from "../../lib/ticketDataSource";
 
 const DEFAULT_BLOCK = [
   {
@@ -172,7 +175,7 @@ vi.mock("@alga-psa/ui/components/CustomSelect", () => ({
 }));
 
 describe("TicketResolutionDialog", () => {
-  it("requires a close status and non-empty resolution, then submits blocks and suppression", async () => {
+  it("requires a close status, then submits blocks and suppression", async () => {
     const onConfirm = vi.fn().mockResolvedValue(true);
 
     render(
@@ -192,7 +195,7 @@ describe("TicketResolutionDialog", () => {
 
     expect(
       screen.getByText(
-        "Choose a close status and add a resolution for this ticket.",
+        "Choose a close status. Add a resolution, or leave it blank to close without one.",
       ),
     ).toBeInTheDocument();
     const confirm = screen.getByRole("button", { name: "Resolve and close" });
@@ -233,6 +236,72 @@ describe("TicketResolutionDialog", () => {
     await waitFor(() => {
       expect(uploadSessionMock.resetDraftTracking).toHaveBeenCalledOnce();
     });
+  });
+
+  // A resolution is optional: picking a close status is the only requirement.
+  it("closes with no resolution when the editor is left empty", async () => {
+    const onConfirm = vi.fn().mockResolvedValue(true);
+
+    render(
+      <TicketResolutionDialog
+        id="ticket-resolution-close"
+        isOpen
+        ticketId="ticket-1"
+        statusOptions={[{ value: "closed", label: "Closed" }]}
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    const confirm = screen.getByRole("button", { name: "Resolve and close" });
+    expect(confirm).toBeEnabled();
+    fireEvent.click(confirm);
+
+    expect(onConfirm).toHaveBeenCalledWith(
+      "closed",
+      DEFAULT_BLOCK,
+      {
+        suppressContactNotifications: false,
+        suppressInternalNotifications: false,
+      },
+      false,
+      undefined,
+    );
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledOnce());
+  });
+
+  // Whitespace is not a resolution; the close still goes through without one.
+  it("treats a whitespace-only resolution as empty", () => {
+    const onConfirm = vi.fn().mockResolvedValue(true);
+
+    render(
+      <TicketResolutionDialog
+        id="ticket-resolution-close"
+        isOpen
+        ticketId="ticket-1"
+        statusOptions={[{ value: "closed", label: "Closed" }]}
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Resolution"), {
+      target: { value: "   " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Resolve and close" }));
+
+    expect(onConfirm).toHaveBeenCalledWith(
+      "closed",
+      [
+        {
+          ...DEFAULT_BLOCK[0],
+          content: [{ type: "text", text: "   ", styles: {} }],
+        },
+      ],
+      expect.any(Object),
+      false,
+      undefined,
+    );
   });
 
   it("keeps draft image tracking until the async resolution save succeeds", async () => {
@@ -512,6 +581,28 @@ describe("TicketResolutionDialog", () => {
       expect(confirm).toBeEnabled();
     });
 
+    // The recipients travel on the resolution comment's metadata, so with no
+    // comment to carry them they would be silently dropped.
+    it("blocks a no-resolution close while recipients are entered", () => {
+      const onConfirm = vi.fn().mockResolvedValue(true);
+      render(<TicketResolutionDialog {...ccBccProps} isOpen onConfirm={onConfirm} />);
+
+      const confirm = screen.getByRole("button", { name: "Resolve and close" });
+      expect(confirm).toBeEnabled();
+
+      fireEvent.click(toggle());
+      fireEvent.change(ccInput(), { target: { value: "vendor@acme.test" } });
+      fireEvent.keyDown(ccInput(), { key: "Enter" });
+      expect(confirm).toBeDisabled();
+      fireEvent.submit(document.getElementById("ticket-resolution-close-form")!);
+      expect(onConfirm).not.toHaveBeenCalled();
+
+      fireEvent.change(screen.getByLabelText("Resolution"), {
+        target: { value: "Replaced the switch." },
+      });
+      expect(confirm).toBeEnabled();
+    });
+
     it("T076: reopening the dialog clears the recipients from the last close", () => {
       const props = { ...ccBccProps, onConfirm: vi.fn().mockResolvedValue(true) };
       const { rerender } = render(<TicketResolutionDialog {...props} isOpen />);
@@ -583,5 +674,52 @@ describe("TicketResolutionDialog", () => {
       "aria-checked",
       "false",
     );
+  });
+
+  describe("with audiences in the conversation config", () => {
+    const renderWithAudiences = (onConfirm: ReturnType<typeof vi.fn>, audiences: ("requester" | "shared_it" | "organization_private")[]) =>
+      render(
+        <TicketDataSourceProvider dataSource={composeTicketDataSource(nativeTicketDataSource, { conversation: { audiences } })}>
+          <TicketResolutionDialog
+            id="ticket-resolution-close"
+            isOpen
+            ticketId="ticket-1"
+            statusOptions={[{ value: "closed", label: "Closed" }]}
+            onClose={vi.fn()}
+            onConfirm={onConfirm as never}
+          />
+        </TicketDataSourceProvider>,
+      );
+    const audienceSelect = () => document.getElementById("ticket-resolution-close-audience-select") as HTMLSelectElement;
+
+    it("replaces the Internal switch, blocks submit until an audience is chosen, and passes it through", () => {
+      const onConfirm = vi.fn().mockResolvedValue(true);
+      renderWithAudiences(onConfirm, ["requester", "shared_it", "organization_private"]);
+      const confirm = screen.getByRole("button", { name: "Resolve and close" });
+
+      expect(screen.queryByRole("switch", { name: /internal/i })).toBeNull();
+      // Shared IT cannot carry a resolution: only the native audiences are offered here.
+      expect(Array.from(audienceSelect().options).map((o) => o.value)).toEqual(["", "requester", "organization_private"]);
+      expect(confirm).toBeDisabled();
+      fireEvent.click(confirm);
+      expect(onConfirm).not.toHaveBeenCalled();
+
+      fireEvent.change(audienceSelect(), { target: { value: "organization_private" } });
+      expect(confirm).toBeEnabled();
+      fireEvent.click(confirm);
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+      const args = onConfirm.mock.calls[0];
+      expect(args[0]).toBe("closed");
+      expect(args[3]).toBe(true);
+      expect(args[5]).toBe("organization_private");
+    });
+
+    it("keeps the legacy Internal switch and passes no audience without config", () => {
+      const onConfirm = vi.fn().mockResolvedValue(true);
+      renderWithAudiences(onConfirm, []);
+      expect(audienceSelect()).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Resolve and close" }));
+      expect(onConfirm.mock.calls[0]).toHaveLength(5);
+    });
   });
 });

@@ -18,17 +18,19 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IContact, ITeam, IUser } from '@alga-psa/types';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
-import {
-  mergeTicketWatchListRecipients,
-  parseTicketWatchListAttributes,
-  type TicketWatchListRecipientInput,
-  type TicketWatchListEntry,
-} from '@shared/lib/tickets/watchList';
+import { parseTicketWatchListAttributes, type TicketWatchListEntry } from '@shared/lib/tickets/watchList';
+import type { AddTicketWatcherInput } from '@shared/services/tickets/ticketWatcherService';
 
 interface TicketWatchListCardProps {
   id: string;
   attributes: unknown;
-  onUpdateWatchList?: (watchList: TicketWatchListEntry[]) => Promise<boolean>;
+  /**
+   * Watcher writes go through TicketWatcherService-backed server actions; the card
+   * never submits a whole watch list. `attributes` is read-only display state.
+   */
+  onAddWatchers?: (inputs: AddTicketWatcherInput[]) => Promise<boolean>;
+  onSetWatcherActive?: (email: string, active: boolean) => Promise<boolean>;
+  onRemoveWatcher?: (email: string) => Promise<boolean>;
   watchListSaving?: boolean;
   internalUsers?: IUser[];
   clientContacts?: IContact[];
@@ -46,7 +48,9 @@ type ContactScope = 'client' | 'all';
 const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
   id,
   attributes,
-  onUpdateWatchList,
+  onAddWatchers,
+  onSetWatcherActive,
+  onRemoveWatcher,
   watchListSaving = false,
   internalUsers = [],
   clientContacts = [],
@@ -102,15 +106,15 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
   const availableContacts = contactScope === 'all' ? filteredAllContacts : filteredClientContacts;
   const isContactScopeLoading = contactScope === 'all' && allContactsLoading;
 
-  const persistWatchList = async (nextWatchList: TicketWatchListEntry[]): Promise<boolean> => {
-    if (!onUpdateWatchList || isWatchListSaving) {
+  const persistWatchList = async (write: (() => Promise<boolean>) | undefined): Promise<boolean> => {
+    if (!write || isWatchListSaving) {
       return false;
     }
 
     setWatchListError(null);
     setWatchListSavingInternal(true);
     try {
-      const updated = await onUpdateWatchList(nextWatchList);
+      const updated = await write();
       if (!updated) {
         setWatchListError(t('watchList.updateFailed', 'Unable to update watch list. Please try again.'));
       }
@@ -147,18 +151,11 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
     }
   };
 
-  const addRecipient = async (
-    recipient: TicketWatchListRecipientInput,
+  const addRecipients = async (
+    inputs: AddTicketWatcherInput[],
     onSuccess: () => void
   ): Promise<void> => {
-    const mergedWatchList = mergeTicketWatchListRecipients(watchList, [recipient]);
-    if (JSON.stringify(mergedWatchList) === JSON.stringify(watchList)) {
-      setWatchListError(null);
-      onSuccess();
-      return;
-    }
-
-    const success = await persistWatchList(mergedWatchList);
+    const success = await persistWatchList(onAddWatchers ? () => onAddWatchers(inputs) : undefined);
     if (success) {
       onSuccess();
     }
@@ -171,20 +168,11 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
       return;
     }
 
-    await addRecipient(
-      {
-        email: normalizedEmail,
-        source: 'manual',
-      },
-      () => setWatchListInput('')
-    );
+    await addRecipients([{ email: normalizedEmail }], () => setWatchListInput(''));
   };
 
   const handleToggleWatcher = async (email: string, active: boolean) => {
-    const nextWatchList = watchList.map((entry) =>
-      entry.email === email ? { ...entry, active } : entry
-    );
-    await persistWatchList(nextWatchList);
+    await persistWatchList(onSetWatcherActive ? () => onSetWatcherActive(email, active) : undefined);
   };
 
   const handleAddInternalUser = async () => {
@@ -205,22 +193,11 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
       return;
     }
 
-    const displayName = `${selectedUser?.first_name || ''} ${selectedUser?.last_name || ''}`.trim();
-    await addRecipient(
-      {
-        email: normalizedEmail,
-        source: 'manual',
-        name: displayName || undefined,
-        entity_type: 'user',
-        entity_id: selectedUser.user_id,
-      },
-      () => setSelectedUserId('')
-    );
+    await addRecipients([{ user_id: selectedUser.user_id }], () => setSelectedUserId(''));
   };
 
   const handleRemoveWatcher = async (email: string) => {
-    const nextWatchList = watchList.filter((entry) => entry.email !== email);
-    await persistWatchList(nextWatchList);
+    await persistWatchList(onRemoveWatcher ? () => onRemoveWatcher(email) : undefined);
   };
 
   const handleAddTeamMembers = async (teamId: string) => {
@@ -230,19 +207,12 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
       return;
     }
 
-    const recipients: TicketWatchListRecipientInput[] = [];
+    const recipients: AddTicketWatcherInput[] = [];
     for (const member of team.members) {
       if (member.is_inactive) continue;
       const normalizedEmail = normalizeEmailAddress(member.email);
       if (!normalizedEmail) continue;
-      const displayName = `${member.first_name || ''} ${member.last_name || ''}`.trim();
-      recipients.push({
-        email: normalizedEmail,
-        source: 'manual',
-        name: displayName || undefined,
-        entity_type: 'user',
-        entity_id: member.user_id,
-      });
+      recipients.push({ user_id: member.user_id });
     }
 
     if (recipients.length === 0) {
@@ -250,10 +220,7 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
       return;
     }
 
-    const mergedWatchList = mergeTicketWatchListRecipients(watchList, recipients);
-    if (JSON.stringify(mergedWatchList) !== JSON.stringify(watchList)) {
-      await persistWatchList(mergedWatchList);
-    }
+    await persistWatchList(onAddWatchers ? () => onAddWatchers(recipients) : undefined);
   };
 
   const handleAddContact = async () => {
@@ -276,14 +243,8 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
       return;
     }
 
-    await addRecipient(
-      {
-        email: normalizedEmail,
-        source: 'manual',
-        name: selectedContact.full_name || undefined,
-        entity_type: 'contact',
-        entity_id: selectedContact.contact_name_id,
-      },
+    await addRecipients(
+      [{ contact_id: selectedContact.contact_name_id }],
       () => {
         if (contactScope === 'all') {
           setSelectedAllContactId('');

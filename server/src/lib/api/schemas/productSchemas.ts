@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { uuidSchema } from './common';
 import { isUnitOfMeasureCode } from '@alga-psa/core/unitOfMeasure';
+import {
+  currencyCodeSchema as supportedCurrencyCodeSchema,
+  minorUnitRateSchema,
+  scheduledServicePricesInputSchema,
+  servicePricesInputSchema,
+} from '@alga-psa/billing/lib/catalog/serviceCatalogPricing';
 
 const billingMethodSchema = z.enum(['usage']);
 
@@ -20,23 +26,16 @@ const defaultRateSchema = z.preprocess((value) => {
 
 const nullableUuidSchema = z.union([uuidSchema, z.null()]);
 const descriptionSchema = z.union([z.string().max(2048), z.null()]);
-// DD-2/F-2: no static 'USD' default. Products are tenant-scoped (no client_id),
-// so ProductCatalogService.create resolves the currency from the tenant's
-// default_billing_settings.default_currency_code (falling back to 'USD' only as
-// a last resort) and sets cost_currency explicitly before insert.
-const currencyCodeSchema = z.string().length(3); // ISO 4217 currency code
-
-const priceSchema = z.object({
-  currency_code: z.string().length(3),
-  rate: z.number().min(0)
-});
-
 const productShape = {
   service_name: z.string().min(1).max(255),
   custom_service_type_id: uuidSchema,
   billing_method: billingMethodSchema.optional().default('usage'),
-  default_rate: defaultRateSchema.optional().default(0),
-  currency_code: currencyCodeSchema.optional(),
+  // No schema default: the service applies 0 when neither default_rate nor
+  // prices is sent, so `currency_code` without `default_rate` is detectable (400).
+  default_rate: defaultRateSchema.optional(),
+  // Shorthand for a single price: `{ currency_code, default_rate }` is the same as
+  // `prices: [{ currency_code, rate: default_rate }]`. Never a service_catalog column.
+  currency_code: supportedCurrencyCodeSchema.optional().describe('Shorthand for one price: with default_rate it upserts a single prices entry { currency_code, rate: default_rate } (default_rate is integer minor units, same as prices[].rate) and never writes a catalog column. Must be from the supported currency list. default_rate is required with it. On create it creates that one price; on update it sets that currency as the primary price (prices[0], mirrored into default_rate), replaces its rate if present or adds it, and leaves the other current prices untouched. Cannot be combined with prices (400).'),
   unit_of_measure: z.string().trim().min(1).max(128).optional(),
   unit_code: z.string().refine(isUnitOfMeasureCode, 'Unknown unit of measure code').optional(),
   category_id: nullableUuidSchema.optional(),
@@ -59,14 +58,36 @@ const productShape = {
   license_billing_cadence: z.union([z.string().max(64), z.null()]).optional(),
   is_active: z.boolean().optional().default(true),
 
-  prices: z.array(priceSchema).optional()
+  // Shared with the services API: validated against CURRENCY_OPTIONS, integer
+  // minor units, `prices[0]` is primary. `prices` replaces the current window,
+  // `scheduled_prices` the future window.
+  prices: servicePricesInputSchema.optional().describe('Full set of current prices, rate in integer minor units (e.g. cents), currency_code from the supported currency list. Replaces the entire current price window; omitted currencies are removed and prices: [] clears it. prices[0] is the primary price and is mirrored into default_rate. Currencies must be unique.'),
+  scheduled_prices: scheduledServicePricesInputSchema.optional().describe('Full set of future-dated prices (each effective_date must be after today). Replaces the entire future price window; scheduled_prices: [] clears it. Does not change the current prices or default_rate.')
 } as const;
 
-export const createProductSchema = z.object(productShape);
+/** `currency_code` is a single-price shorthand: needs `default_rate`, excludes `prices`. */
+function refineCurrencyShorthand(
+  data: { currency_code?: string; default_rate?: number; prices?: unknown },
+  ctx: z.RefinementCtx,
+) {
+  if (data.currency_code === undefined) return;
+  if (data.prices !== undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['currency_code'], message: 'currency_code cannot be combined with prices; send either the currency_code + default_rate shorthand or prices[]' });
+  }
+  if (data.default_rate === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['default_rate'], message: 'default_rate is required when currency_code is sent' });
+  } else if (!minorUnitRateSchema.safeParse(data.default_rate).success) {
+    // default_rate mirrors prices[0].rate, so both are integer minor units (no conversion).
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['default_rate'], message: 'default_rate must be an integer number of minor units (e.g. cents) when currency_code is sent' });
+  }
+}
+
+export const createProductSchema = z.object(productShape).superRefine(refineCurrencyShorthand);
 
 export const updateProductSchema = z.object(productShape)
   .partial()
   .superRefine((data, ctx) => {
+    refineCurrencyShorthand(data, ctx);
     if (Object.keys(data).length === 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

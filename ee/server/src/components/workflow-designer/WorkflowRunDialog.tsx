@@ -1417,7 +1417,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
         ...current,
         [payloadPathKey(path)]: {
           fields: missing,
-          neverFires: setsTriggerDates && !DATE_TRIGGER_OCCURRENCE_RULES[activeDateTrigger!.source].fromRecord(record, today),
+          neverFires: setsTriggerDates && !DATE_TRIGGER_OCCURRENCE_RULES[activeDateTrigger!.source].fromRecord(record, today, activeDateTrigger!.params),
         },
       }));
       setFormValue((prev: unknown) => {

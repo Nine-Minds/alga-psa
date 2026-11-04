@@ -7,28 +7,45 @@ import React from 'react';
 import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
-const enSettings = JSON.parse(
-  fs.readFileSync(
-    path.join(process.cwd(), 'public/locales/en/msp/settings.json'),
-    'utf8'
-  )
-);
+const readEnBundle = (namespace: string) =>
+  JSON.parse(
+    fs.readFileSync(
+      path.join(process.cwd(), `public/locales/en/${namespace}.json`),
+      'utf8'
+    )
+  );
 
-// Resolve against the real en bundle so the test also proves the keys exist.
-const translate = (key: string, options?: Record<string, unknown>) => {
-  const template = key.split('.').reduce<any>((acc, part) => acc?.[part], enSettings);
+const enBundles: Record<string, any> = {
+  'msp/settings': readEnBundle('msp/settings'),
+  // Dialog's shared dismiss guard renders its discard prompt from `common`.
+  common: readEnBundle('common'),
+};
+
+// Resolve against the real en bundle of the requested namespace so the test also
+// proves the keys exist where the component actually looks them up.
+const makeTranslate = (namespace: string) => (key: string, options?: Record<string, unknown>) => {
+  const bundle = enBundles[namespace];
+  if (!bundle) {
+    throw new Error(`Unexpected i18n namespace in test: ${namespace}`);
+  }
+  const template = key.split('.').reduce<any>((acc, part) => acc?.[part], bundle);
   if (typeof template !== 'string') {
-    throw new Error(`Missing en msp/settings key: ${key}`);
+    throw new Error(`Missing en ${namespace} key: ${key}`);
   }
   return template.replace(/\{\{(\w+)\}\}/g, (match, name: string) =>
     options?.[name] === undefined ? match : String(options[name])
   );
 };
 const stableI18n = { language: 'en' };
-const stableTranslation = { t: translate, i18n: stableI18n };
+const stableTranslations: Record<string, { t: ReturnType<typeof makeTranslate>; i18n: typeof stableI18n }> = {};
+const translationFor = (namespace: string = 'msp/settings') =>
+  (stableTranslations[namespace] ??= { t: makeTranslate(namespace), i18n: stableI18n });
+const stableTranslation = translationFor('msp/settings');
+const translate = stableTranslation.t;
+const enSettings = enBundles['msp/settings'];
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => stableTranslation,
+  useTranslation: (namespace?: string) => translationFor(namespace),
   useFormatters: () => ({}),
   useI18n: () => ({ locale: 'en', ...stableTranslation }),
   useOptionalI18n: () => ({ locale: 'en', ...stableTranslation }),

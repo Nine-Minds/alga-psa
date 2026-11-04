@@ -12,7 +12,6 @@ describe('recurring service period backfill', () => {
   it('T013: recurring service-period backfill creates future active records for active recurring obligations with no existing rows', () => {
     const sourceObligation = buildPersistedRecurringObligationRef({
       obligationId: 'line-backfill-new',
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     });
     const materialized = materializeClientCadenceServicePeriods({
@@ -56,7 +55,6 @@ describe('recurring service period backfill', () => {
   it('T286: existing client-cadence recurring lines backfill persisted future service periods without altering billed history', () => {
     const sourceObligation = buildPersistedRecurringObligationRef({
       obligationId: 'line-1',
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     });
     const materialized = materializeClientCadenceServicePeriods({
@@ -134,7 +132,6 @@ describe('recurring service period backfill', () => {
   it('T294: backfill realigns untouched future rows under explicit backfill provenance while keeping billed history untouched', () => {
     const sourceObligation = buildPersistedRecurringObligationRef({
       obligationId: 'line-2',
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     });
     const materialized = materializeClientCadenceServicePeriods({
@@ -240,10 +237,9 @@ describe('recurring service period backfill', () => {
   it('allocates replacements above superseded revision history and reruns as a no-op', () => {
     const sourceObligation = buildPersistedRecurringObligationRef({
       obligationId: 'line-superseded-gap',
-      obligationType: 'contract_line',
       chargeFamily: 'hourly',
     });
-    const scheduleKey = 'schedule:tenant-1:contract_line:line-superseded-gap:client:arrears';
+    const scheduleKey = 'schedule:tenant-1:line-superseded-gap:client:arrears';
     const billedRecord = buildRecurringServicePeriodRecord({
       recordId: 'rsp_billed_may_r1',
       scheduleKey,
@@ -346,7 +342,7 @@ describe('recurring service period backfill', () => {
         candidateRecords: [
           buildRecurringServicePeriodRecord({
             sourceObligation,
-            scheduleKey: 'schedule:tenant-1:contract_line:line-overlap:client:advance',
+            scheduleKey: 'schedule:tenant-1:line-overlap:client:advance',
             periodKey: 'period:2026-03-15:2026-04-15',
             servicePeriod: {
               start: '2026-03-15',
@@ -371,7 +367,6 @@ describe('recurring service period backfill', () => {
   it('T095: rerunning recurring service-period backfill/replenishment does not duplicate active future records when the materialized horizon is already present', () => {
     const sourceObligation = buildPersistedRecurringObligationRef({
       obligationId: 'line-idempotent',
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     });
     const materialized = materializeClientCadenceServicePeriods({

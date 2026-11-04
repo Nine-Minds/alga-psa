@@ -573,6 +573,32 @@ describe('workflow-runtime-v2 activities', () => {
     expect(result).toEqual({ stepId: 'step-1' });
   });
 
+  it('loads the run on its tenant shard when the workflow passes the tenant', async () => {
+    const { projectWorkflowRuntimeV2StepStart } = await import('../workflow-runtime-v2-activities');
+    await projectWorkflowRuntimeV2StepStart({
+      runId: 'run-1',
+      tenantId: 'tenant-1',
+      stepPath: 'root.steps[0]',
+      definitionStepId: 'step-a',
+    });
+    expect(mocks.getRunById).toHaveBeenCalledTimes(1);
+    expect(mocks.getRunById).toHaveBeenCalledWith(expect.anything(), 'run-1', 'tenant-1');
+  });
+
+  it('falls back to the unscoped run lookup when the tenant-scoped lookup misses', async () => {
+    mocks.getRunById.mockResolvedValueOnce(null);
+    const { projectWorkflowRuntimeV2StepStart } = await import('../workflow-runtime-v2-activities');
+    const result = await projectWorkflowRuntimeV2StepStart({
+      runId: 'run-1',
+      tenantId: 'stale-tenant',
+      stepPath: 'root.steps[0]',
+      definitionStepId: 'step-a',
+    });
+    expect(mocks.getRunById).toHaveBeenNthCalledWith(1, expect.anything(), 'run-1', 'stale-tenant');
+    expect(mocks.getRunById).toHaveBeenNthCalledWith(2, expect.anything(), 'run-1');
+    expect(result).toEqual({ stepId: 'step-1' });
+  });
+
   it('returns quotaPaused and does not create STARTED row when reservation is denied', async () => {
     mocks.reserveStepStart.mockResolvedValueOnce({
       allowed: false,

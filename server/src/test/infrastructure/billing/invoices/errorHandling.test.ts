@@ -219,7 +219,7 @@ describe('Billing Invoice Generation – Error Handling', () => {
     await expectError(
       () => generateInvoice(billingCycleId),
       {
-        messagePattern: /Recurring service periods were not materialized for this client billing schedule window\./
+        messagePattern: /^Service periods haven't been generated for this billing window yet\./
       }
     );
   });
@@ -359,7 +359,7 @@ describe('Billing Invoice Generation – Error Handling', () => {
     await expectError(
       () => generateInvoice(billingCycleId),
       {
-        message: 'Recurring service periods were not materialized for this client billing schedule window.'
+        message: "Service periods haven't been generated for this billing window yet. Use Fix all on the Automatic Invoices page, or check Billing > Service Periods, then preview again."
       }
     );
   });

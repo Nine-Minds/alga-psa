@@ -107,8 +107,16 @@ describe('Contract Model', () => {
 
     it('deletes recurring service periods linked to contract lines before removing the contract lines', async () => {
       const { knex, mocks } = createMockKnex();
-      mocks.first.mockResolvedValueOnce({ count: '0' });
+      // Contract.hasInvoices runs first: charge count, then assignment ids, header
+      // invoice lookup, contract line ids, and linked-period lookup (no invoices found).
+      mocks.first
+        .mockResolvedValueOnce({ count: '0' })
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined);
+      // pluck order: hasInvoices (assignments, lines), then delete (assignments, lines, configs).
       mocks.pluck
+        .mockResolvedValueOnce(['client-contract-1'])
+        .mockResolvedValueOnce(['line-1', 'line-2'])
         .mockResolvedValueOnce(['client-contract-1'])
         .mockResolvedValueOnce(['line-1', 'line-2'])
         .mockResolvedValueOnce([]);

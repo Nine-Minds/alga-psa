@@ -1,5 +1,6 @@
 import http from 'node:http';
 import logger from '@alga-psa/core/logger';
+import type { Registry } from 'prom-client';
 
 export interface HealthSnapshot {
   ready: boolean;
@@ -8,7 +9,7 @@ export interface HealthSnapshot {
 }
 
 /**
- * Minimal HTTP server that answers the /health probe Istio rewrites
+ * Minimal HTTP server that also serves GET /metrics (Prometheus) and answers the /health probe Istio rewrites
  * kubelet's liveness/readiness checks to. Returns 200 once markReady()
  * has been called and 503 before that so kubelet sees an honest state
  * during startup.
@@ -18,7 +19,10 @@ export class HealthServer {
   private readonly port: number;
   private state: HealthSnapshot;
 
-  constructor(port?: number) {
+  private readonly metricsRegistry: Registry | null;
+
+  constructor(port?: number, metricsRegistry?: Registry) {
+    this.metricsRegistry = metricsRegistry ?? null;
     this.port = Number(port ?? process.env.PORT ?? 4000);
     this.state = {
       ready: false,
@@ -48,6 +52,22 @@ export class HealthServer {
           res.statusCode = this.state.ready ? 200 : 503;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify(this.state));
+          return;
+        }
+        if (path === '/metrics' && this.metricsRegistry) {
+          const registry = this.metricsRegistry;
+          registry.metrics().then(
+            (body) => {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', registry.contentType);
+              res.end(body);
+            },
+            (err) => {
+              logger.error('[HealthServer] Failed to render metrics', { err });
+              res.statusCode = 500;
+              res.end();
+            }
+          );
           return;
         }
         res.statusCode = 404;

@@ -58,7 +58,6 @@ function buildPreviewSourceObligation(cadenceOwner: 'client' | 'contract'): IPer
   return {
     tenant: 'preview-tenant',
     obligationId: `preview-${cadenceOwner}-line`,
-    obligationType: 'contract_line',
     chargeFamily: 'fixed',
   };
 }

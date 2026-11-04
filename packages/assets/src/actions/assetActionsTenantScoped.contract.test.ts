@@ -3,6 +3,12 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const source = readFileSync(resolve(__dirname, 'assetActions.ts'), 'utf8');
+// Subject / record resolution for asset read authorization was extracted from assetActions.ts
+// (alga-2026-0002683 C2) so the label code paths share it. It is tenant-scoped structurally through
+// tenantDb(trx, tenant).table(...), which is the same guarantee tenantScopedTable gives the actions.
+// The implementation now lives in @alga-psa/authorization so document authorization can share it;
+// packages/assets/src/lib/assetReadAuthorization.ts re-exports it.
+const readAuthSource = readFileSync(resolve(__dirname, '../../../authorization/src/assetReadAuthorization.ts'), 'utf8');
 
 function sourceBetween(start: string, end: string): string {
     const startIndex = source.indexOf(start);
@@ -25,10 +31,12 @@ describe('asset action helper tenant-scoped query contract', () => {
         expect(source).toContain('function tenantScopedTable(');
         expect(source).not.toContain('createTenantScopedQuery');
         expect(helperSection).toContain("tenantScopedTable(trx, 'client_locations', tenant)");
-        expect(helperSection).toContain("tenantScopedTable(trx, 'user_roles', tenant)");
-        expect(helperSection).toContain("tenantScopedTable(trx, 'team_members', tenant)");
-        expect(helperSection).toContain("tenantScopedTable(trx, 'users', tenant)");
-        expect(helperSection).toContain("tenantScopedTable(trx, 'asset_associations', tenant)");
+        // The authorization helper tables no longer live in assetActions.ts; they must not creep back.
+        for (const table of ['user_roles', 'team_members', 'users', 'asset_associations']) {
+            expect(helperSection).not.toContain(`'${table}'`);
+        }
+        expect(helperSection).toContain('resolveSharedAuthorizationSubject(trx, tenant, user)');
+        expect(helperSection).toContain('resolveSharedAssetAuthorizationRecords(trx, tenant, assets)');
         expect(helperSection).toContain("tenantScopedTable(trx, 'assets', tenant)");
         expect(helperSection).toContain("tenantScopedTable(knex, 'workstation_assets', tenant)");
         expect(helperSection).toContain("tenantScopedTable(knex, table, tenant)");
@@ -38,5 +46,17 @@ describe('asset action helper tenant-scoped query contract', () => {
         expect(helperSection).not.toContain('.where({ tenant })');
         expect(helperSection).not.toContain('.where({ tenant, asset_id');
         expect(helperSection).not.toContain('.where({ tenant, client_id');
+    });
+
+    it('keeps the extracted asset read authorization helpers structurally tenant-scoped', () => {
+        expect(readAuthSource).toContain("import { tenantDb } from '@alga-psa/db'");
+        expect(readAuthSource).toContain('const db = tenantDb(trx, tenant);');
+        expect(readAuthSource).toContain("db.table('user_roles')");
+        expect(readAuthSource).toContain("db.table('team_members')");
+        expect(readAuthSource).toContain("db.table('users')");
+        expect(readAuthSource).toContain("tenantDb(trx, tenant)\n    .table('asset_associations')");
+        // No raw knex(table) root and no hand-written tenant predicates.
+        expect(readAuthSource).not.toMatch(/\b(trx|knex)\(\s*['"`a-z_]/);
+        expect(readAuthSource).not.toContain('.where({ tenant');
     });
 });

@@ -1,0 +1,714 @@
+{
+  "fixtureName": "REVIEW-3499-UNBILLED-20261012-dcd6e36f",
+  "tenant": "6d178771-ad9a-4d43-8809-83992745f8f9",
+  "clientId": "5ba78228-ace1-4990-b42f-30739458299a",
+  "contractId": "a5e37780-a9ba-4a35-a643-2233c25a5d0b",
+  "clientContractId": "4921ceb2-72f5-4f0a-afdc-da256e932c41",
+  "assignment": {
+    "start_date": "2026-09-01T00:00:00.000Z",
+    "end_date": null,
+    "is_active": true
+  },
+  "lines": [
+    {
+      "contract_line_id": "dd5c2b59-a8b8-430d-a3ca-1bcc126dd997",
+      "contract_line_name": "REVIEW-3499-MITIGATION-TWO-FIXED-LINES - Fixed Fee",
+      "billing_frequency": "monthly",
+      "billing_timing": "arrears",
+      "cadence_owner": "client"
+    },
+    {
+      "contract_line_id": "85923f68-0cfa-4a94-83c5-3eadd740978d",
+      "contract_line_name": "REVIEW-3499-MITIGATION-TWO-FIXED-LINES - Products",
+      "billing_frequency": "monthly",
+      "billing_timing": "arrears",
+      "cadence_owner": "client"
+    }
+  ],
+  "configs": [
+    {
+      "config_id": "cc61090b-649f-4a73-8b65-173521ddc0fe",
+      "contract_line_id": "dd5c2b59-a8b8-430d-a3ca-1bcc126dd997",
+      "service_id": "fb91e1ce-a481-43ef-86e7-403ec0702f19",
+      "service_name": "Managed Workstation",
+      "quantity": 1,
+      "configuration_type": "Fixed",
+      "custom_rate": null,
+      "line_service_custom_rate": "20000"
+    },
+    {
+      "config_id": "bce16202-175b-496b-9502-bfce522c0f40",
+      "contract_line_id": "85923f68-0cfa-4a94-83c5-3eadd740978d",
+      "service_id": "ff7a7555-266c-4468-8afd-e232b669bbf6",
+      "service_name": "Cabling",
+      "quantity": 1,
+      "configuration_type": "Fixed",
+      "custom_rate": null,
+      "line_service_custom_rate": "12000"
+    }
+  ],
+  "copies": [
+    {
+      "template_discount_key": "066c0ca2-9675-4a29-bc8a-cf7c804ca6bd",
+      "discount_id": "9365c6cc-c681-483c-bb96-63ce6dea0271",
+      "discount_name": "REVIEW-3499-LINE-CABLING-10P",
+      "discount_type": "percentage",
+      "value": "0.1000",
+      "scope": "line",
+      "start_date": "2026-09-01T00:00:00.000Z",
+      "end_date": null,
+      "is_active": true,
+      "contract_line_id": "85923f68-0cfa-4a94-83c5-3eadd740978d"
+    },
+    {
+      "template_discount_key": "a7bc5947-e533-41b8-b9b5-052e8b07cb54",
+      "discount_id": "c23f8952-378a-4de5-80d1-3f032396fec6",
+      "discount_name": "REVIEW-3499-MITIGATION-DEFAULT-12P",
+      "discount_type": "percentage",
+      "value": "0.1200",
+      "scope": "contract",
+      "start_date": "2026-09-01T00:00:00.000Z",
+      "end_date": null,
+      "is_active": true,
+      "contract_line_id": null
+    },
+    {
+      "template_discount_key": "540312b9-625d-438f-a877-c70afa1a98df",
+      "discount_id": "f100f50c-4f9f-4d3a-ba5f-6d607ef3e605",
+      "discount_name": "REVIEW-3499-MITIGATION-DEFAULT-FIXED-25",
+      "discount_type": "fixed",
+      "value": "25.0000",
+      "scope": "contract",
+      "start_date": "2026-09-01T00:00:00.000Z",
+      "end_date": null,
+      "is_active": true,
+      "contract_line_id": null
+    }
+  ],
+  "periods": [
+    {
+      "record_id": "fe039803-e891-4faf-89d0-7b3ec84af1c5",
+      "schedule_key": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears",
+      "period_key": "period:2026-09-01:2026-10-01",
+      "revision": 1,
+      "lifecycle_state": "generated",
+      "service_period_start": "2026-09-01T00:00:00.000Z",
+      "service_period_end": "2026-10-01T00:00:00.000Z",
+      "invoice_window_start": "2026-10-01T00:00:00.000Z",
+      "invoice_window_end": "2026-11-01T00:00:00.000Z",
+      "invoice_id": null,
+      "invoice_charge_detail_id": null
+    },
+    {
+      "record_id": "89dc916d-e753-4039-a505-1dafb452c70e",
+      "schedule_key": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears",
+      "period_key": "period:2026-10-01:2026-11-01",
+      "revision": 1,
+      "lifecycle_state": "generated",
+      "service_period_start": "2026-10-01T00:00:00.000Z",
+      "service_period_end": "2026-11-01T00:00:00.000Z",
+      "invoice_window_start": "2026-11-01T00:00:00.000Z",
+      "invoice_window_end": "2026-12-01T00:00:00.000Z",
+      "invoice_id": null,
+      "invoice_charge_detail_id": null
+    },
+    {
+      "record_id": "71107a6a-c075-48ee-b35c-513263febb23",
+      "schedule_key": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears",
+      "period_key": "period:2026-11-01:2026-12-01",
+      "revision": 1,
+      "lifecycle_state": "generated",
+      "service_period_start": "2026-11-01T00:00:00.000Z",
+      "service_period_end": "2026-12-01T00:00:00.000Z",
+      "invoice_window_start": "2026-12-01T00:00:00.000Z",
+      "invoice_window_end": "2027-01-01T00:00:00.000Z",
+      "invoice_id": null,
+      "invoice_charge_detail_id": null
+    },
+    {
+      "record_id": "10b86ce6-00e9-448b-ae0a-c9f4607cc003",
+      "schedule_key": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears",
+      "period_key": "period:2026-12-01:2027-01-01",
+      "revision": 1,
+      "lifecycle_state": "generated",
+      "service_period_start": "2026-12-01T00:00:00.000Z",
+      "service_period_end": "2027-01-01T00:00:00.000Z",
+      "invoice_window_start": "2027-01-01T00:00:00.000Z",
+      "invoice_window_end": "2027-02-01T00:00:00.000Z",
+      "invoice_id": null,
+      "invoice_charge_detail_id": null
+    },
+    {
+      "record_id": "173a3838-71cb-4d4c-81b7-7bd0c78984eb",
+      "schedule_key": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears",
+      "period_key": "period:2027-01-01:2027-02-01",
+      "revision": 1,
+      "lifecycle_state": "generated",
+      "service_period_start": "2027-01-01T00:00:00.000Z",
+      "service_period_end": "2027-02-01T00:00:00.000Z",
+      "invoice_window_start": "2027-02-01T00:00:00.000Z",
+      "invoice_window_end": "2027-03-01T00:00:00.000Z",
+      "invoice_id": null,
+      "invoice_charge_detail_id": null
+    },
+    {
+      "record_id": "b283c957-2fb8-40df-be8c-6f8513906ee0",
+      "schedule_key": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears",
+      "period_key": "period:2027-02-01:2027-03-01",
+      "revision": 1,
+      "lifecycle_state": "generated",
+      "service_period_start": "2027-02-01T00:00:00.000Z",
+      "service_period_end": "2027-03-01T00:00:00.000Z",
+      "invoice_window_start": "2027-03-01T00:00:00.000Z",
+      "invoice_window_end": "2027-04-01T00:00:00.000Z",
+      "invoice_id": null,
+      "invoice_charge_detail_id": null
+    },
+    {
+      "record_id": "e9bc57da-dd5e-48b1-ae4d-9c76a6d87337",
+      "schedule_key": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears",
+      "period_key": "period:2027-03-01:2027-04-01",
+      "revision": 1,
+      "lifecycle_state": "generated",
+      "service_period_start": "2027-03-01T00:00:00.000Z",
+      "service_period_end": "2027-04-01T00:00:00.000Z",
+      "invoice_window_start": "2027-04-01T00:00:00.000Z",
+      "invoice_window_end": "2027-05-01T00:00:00.000Z",
+      "invoice_id": null,
+      "invoice_charge_detail_id": null
+    },
+    {
+      "record_id": "4f0980e3-9216-40f4-95f1-b73bf8c1c7d3",
+      "schedule_key": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears",
+      "period_key": "period:2027-04-01:2027-05-01",
+      "revision": 1,
+      "lifecycle_state": "generated",
+      "service_period_start": "2027-04-01T00:00:00.000Z",
+      "service_period_end": "2027-05-01T00:00:00.000Z",
+      "invoice_window_start": "2027-05-01T00:00:00.000Z",
+      "invoice_window_end": "2027-06-01T00:00:00.000Z",
+      "invoice_id": null,
+      "invoice_charge_detail_id": null
+    },
+    {
+      "record_id": "dea8e371-e639-4650-87a3-87fa8ce42f28",
+      "schedule_key": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears",
+      "period_key": "period:2026-09-01:2026-10-01",
+      "revision": 1,
+      "lifecycle_state": "generated",
+      "service_period_start": "2026-09-01T00:00:00.000Z",
+      "service_period_end": "2026-10-01T00:00:00.000Z",
+      "invoice_window_start": "2026-10-01T00:00:00.000Z",
+      "invoice_window_end": "2026-11-01T00:00:00.000Z",
+      "invoice_id": null,
+      "invoice_charge_detail_id": null
+    },
+    {
+      "record_id": "eadacf19-0e01-4a60-97e0-a6d06181e5be",
+      "schedule_key": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears",
+      "period_key": "period:2026-10-01:2026-11-01",
+      "revision": 1,
+      "lifecycle_state": "generated",
+      "service_period_start": "2026-10-01T00:00:00.000Z",
+      "service_period_end": "2026-11-01T00:00:00.000Z",
+      "invoice_window_start": "2026-11-01T00:00:00.000Z",
+      "invoice_window_end": "2026-12-01T00:00:00.000Z",
+      "invoice_id": null,
+      "invoice_charge_detail_id": null
+    },
+    {
+      "record_id": "66a4311f-f2b5-4a87-a283-97ad7ca84b7c",
+      "schedule_key": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears",
+      "period_key": "period:2026-11-01:2026-12-01",
+      "revision": 1,
+      "lifecycle_state": "generated",
+      "service_period_start": "2026-11-01T00:00:00.000Z",
+      "service_period_end": "2026-12-01T00:00:00.000Z",
+      "invoice_window_start": "2026-12-01T00:00:00.000Z",
+      "invoice_window_end": "2027-01-01T00:00:00.000Z",
+      "invoice_id": null,
+      "invoice_charge_detail_id": null
+    },
+    {
+      "record_id": "745e3ff9-7fd2-4b3e-b675-40dea01ab885",
+      "schedule_key": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears",
+      "period_key": "period:2026-12-01:2027-01-01",
+      "revision": 1,
+      "lifecycle_state": "generated",
+      "service_period_start": "2026-12-01T00:00:00.000Z",
+      "service_period_end": "2027-01-01T00:00:00.000Z",
+      "invoice_window_start": "2027-01-01T00:00:00.000Z",
+      "invoice_window_end": "2027-02-01T00:00:00.000Z",
+      "invoice_id": null,
+      "invoice_charge_detail_id": null
+    },
+    {
+      "record_id": "483b8fdf-368d-4382-bb09-c07ea46f7c85",
+      "schedule_key": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears",
+      "period_key": "period:2027-01-01:2027-02-01",
+      "revision": 1,
+      "lifecycle_state": "generated",
+      "service_period_start": "2027-01-01T00:00:00.000Z",
+      "service_period_end": "2027-02-01T00:00:00.000Z",
+      "invoice_window_start": "2027-02-01T00:00:00.000Z",
+      "invoice_window_end": "2027-03-01T00:00:00.000Z",
+      "invoice_id": null,
+      "invoice_charge_detail_id": null
+    },
+    {
+      "record_id": "25eb7adb-7800-4117-a88e-3a2cc3b4951e",
+      "schedule_key": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears",
+      "period_key": "period:2027-02-01:2027-03-01",
+      "revision": 1,
+      "lifecycle_state": "generated",
+      "service_period_start": "2027-02-01T00:00:00.000Z",
+      "service_period_end": "2027-03-01T00:00:00.000Z",
+      "invoice_window_start": "2027-03-01T00:00:00.000Z",
+      "invoice_window_end": "2027-04-01T00:00:00.000Z",
+      "invoice_id": null,
+      "invoice_charge_detail_id": null
+    },
+    {
+      "record_id": "b66e28ad-3533-40de-a87c-6973c5912b0c",
+      "schedule_key": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears",
+      "period_key": "period:2027-03-01:2027-04-01",
+      "revision": 1,
+      "lifecycle_state": "generated",
+      "service_period_start": "2027-03-01T00:00:00.000Z",
+      "service_period_end": "2027-04-01T00:00:00.000Z",
+      "invoice_window_start": "2027-04-01T00:00:00.000Z",
+      "invoice_window_end": "2027-05-01T00:00:00.000Z",
+      "invoice_id": null,
+      "invoice_charge_detail_id": null
+    },
+    {
+      "record_id": "1785e7e6-afcc-4bd8-b9ae-8d3d157c0400",
+      "schedule_key": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears",
+      "period_key": "period:2027-04-01:2027-05-01",
+      "revision": 1,
+      "lifecycle_state": "generated",
+      "service_period_start": "2027-04-01T00:00:00.000Z",
+      "service_period_end": "2027-05-01T00:00:00.000Z",
+      "invoice_window_start": "2027-05-01T00:00:00.000Z",
+      "invoice_window_end": "2027-06-01T00:00:00.000Z",
+      "invoice_id": null,
+      "invoice_charge_detail_id": null
+    }
+  ],
+  "invoices": [],
+  "candidate": {
+    "candidateKey": "invoice-candidate:5ba78228-ace1-4990-b42f-30739458299a:2026-10-01:2026-11-01",
+    "clientId": "5ba78228-ace1-4990-b42f-30739458299a",
+    "clientName": "REVIEW-3499-UNBILLED-20261012-dcd6e36f",
+    "windowStart": "2026-10-01",
+    "windowEnd": "2026-11-01",
+    "windowLabel": "2026-10-01 to 2026-11-01",
+    "servicePeriodStart": "2026-09-01",
+    "servicePeriodEnd": "2026-10-01",
+    "servicePeriodLabel": "2026-09-01 to 2026-10-01",
+    "cadenceOwners": [
+      "client"
+    ],
+    "cadenceSources": [
+      "client_schedule"
+    ],
+    "contractId": null,
+    "contractName": null,
+    "purchaseOrderScopeKey": null,
+    "currencyCode": "AUD",
+    "taxSource": null,
+    "exportShapeKey": null,
+    "splitReasons": [],
+    "memberCount": 2,
+    "canGenerate": true,
+    "notYetDue": false,
+    "availableOnDate": null,
+    "monthEndCloseEligible": false,
+    "blockedReason": null,
+    "attributionSummary": {
+      "explicitContractCount": 2,
+      "systemManagedDefaultContractCount": 0,
+      "unresolvedCount": 0,
+      "missingAttributionCount": 0,
+      "labels": [
+        "Explicit contract"
+      ]
+    },
+    "members": [
+      {
+        "rowKey": "recurring-due-row:client_cadence_window:client:5ba78228-ace1-4990-b42f-30739458299a:schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears:period:2026-09-01:2026-10-01:2026-10-01:2026-11-01",
+        "executionIdentityKey": "client_cadence_window:client:5ba78228-ace1-4990-b42f-30739458299a:schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears:period:2026-09-01:2026-10-01:2026-10-01:2026-11-01",
+        "selectionKey": "recurring-run-selection:client_cadence_window:client:5ba78228-ace1-4990-b42f-30739458299a:schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears:period:2026-09-01:2026-10-01:2026-10-01:2026-11-01",
+        "retryKey": "recurring-run-retry:client_cadence_window:client:5ba78228-ace1-4990-b42f-30739458299a:schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears:period:2026-09-01:2026-10-01:2026-10-01:2026-11-01",
+        "selectorInput": {
+          "clientId": "5ba78228-ace1-4990-b42f-30739458299a",
+          "windowStart": "2026-10-01",
+          "windowEnd": "2026-11-01",
+          "executionWindow": {
+            "kind": "client_cadence_window",
+            "cadenceOwner": "client",
+            "clientId": "5ba78228-ace1-4990-b42f-30739458299a",
+            "scheduleKey": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears",
+            "periodKey": "period:2026-09-01:2026-10-01",
+            "windowStart": "2026-10-01",
+            "windowEnd": "2026-11-01",
+            "identityKey": "client_cadence_window:client:5ba78228-ace1-4990-b42f-30739458299a:schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears:period:2026-09-01:2026-10-01:2026-10-01:2026-11-01"
+          }
+        },
+        "executionWindow": {
+          "kind": "client_cadence_window",
+          "cadenceOwner": "client",
+          "clientId": "5ba78228-ace1-4990-b42f-30739458299a",
+          "scheduleKey": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears",
+          "periodKey": "period:2026-09-01:2026-10-01",
+          "windowStart": "2026-10-01",
+          "windowEnd": "2026-11-01",
+          "identityKey": "client_cadence_window:client:5ba78228-ace1-4990-b42f-30739458299a:schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears:period:2026-09-01:2026-10-01:2026-10-01:2026-11-01"
+        },
+        "executionWindowKind": "client_cadence_window",
+        "cadenceOwner": "client",
+        "cadenceSource": "client_schedule",
+        "duePosition": "arrears",
+        "dueState": "due",
+        "isEarly": false,
+        "canGenerate": true,
+        "clientId": "5ba78228-ace1-4990-b42f-30739458299a",
+        "clientName": "REVIEW-3499-UNBILLED-20261012-dcd6e36f",
+        "billingCycleId": null,
+        "servicePeriodStart": "2026-09-01",
+        "servicePeriodEnd": "2026-10-01",
+        "servicePeriodLabel": "2026-09-01 to 2026-10-01",
+        "invoiceWindowStart": "2026-10-01",
+        "invoiceWindowEnd": "2026-11-01",
+        "invoiceWindowLabel": "2026-10-01 to 2026-11-01",
+        "scheduleKey": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears",
+        "periodKey": "period:2026-09-01:2026-10-01",
+        "recordId": "fe039803-e891-4faf-89d0-7b3ec84af1c5",
+        "lifecycleState": "generated",
+        "contractId": null,
+        "contractLineId": null,
+        "contractName": "REVIEW-3499-UNBILLED-20261012-dcd6e36f-CONTRACT",
+        "contractLineName": "REVIEW-3499-MITIGATION-TWO-FIXED-LINES - Products",
+        "purchaseOrderScopeKey": null,
+        "currencyCode": "AUD",
+        "taxSource": null,
+        "exportShapeKey": null,
+        "attribution": {
+          "source": "explicit_contract",
+          "label": "Explicit contract",
+          "isComplete": true,
+          "missingFields": []
+        },
+        "chargeType": "Fixed",
+        "approvalBlockedEntryCount": 0,
+        "warnings": []
+      },
+      {
+        "rowKey": "recurring-due-row:client_cadence_window:client:5ba78228-ace1-4990-b42f-30739458299a:schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears:period:2026-09-01:2026-10-01:2026-10-01:2026-11-01",
+        "executionIdentityKey": "client_cadence_window:client:5ba78228-ace1-4990-b42f-30739458299a:schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears:period:2026-09-01:2026-10-01:2026-10-01:2026-11-01",
+        "selectionKey": "recurring-run-selection:client_cadence_window:client:5ba78228-ace1-4990-b42f-30739458299a:schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears:period:2026-09-01:2026-10-01:2026-10-01:2026-11-01",
+        "retryKey": "recurring-run-retry:client_cadence_window:client:5ba78228-ace1-4990-b42f-30739458299a:schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears:period:2026-09-01:2026-10-01:2026-10-01:2026-11-01",
+        "selectorInput": {
+          "clientId": "5ba78228-ace1-4990-b42f-30739458299a",
+          "windowStart": "2026-10-01",
+          "windowEnd": "2026-11-01",
+          "executionWindow": {
+            "kind": "client_cadence_window",
+            "cadenceOwner": "client",
+            "clientId": "5ba78228-ace1-4990-b42f-30739458299a",
+            "scheduleKey": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears",
+            "periodKey": "period:2026-09-01:2026-10-01",
+            "windowStart": "2026-10-01",
+            "windowEnd": "2026-11-01",
+            "identityKey": "client_cadence_window:client:5ba78228-ace1-4990-b42f-30739458299a:schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears:period:2026-09-01:2026-10-01:2026-10-01:2026-11-01"
+          }
+        },
+        "executionWindow": {
+          "kind": "client_cadence_window",
+          "cadenceOwner": "client",
+          "clientId": "5ba78228-ace1-4990-b42f-30739458299a",
+          "scheduleKey": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears",
+          "periodKey": "period:2026-09-01:2026-10-01",
+          "windowStart": "2026-10-01",
+          "windowEnd": "2026-11-01",
+          "identityKey": "client_cadence_window:client:5ba78228-ace1-4990-b42f-30739458299a:schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears:period:2026-09-01:2026-10-01:2026-10-01:2026-11-01"
+        },
+        "executionWindowKind": "client_cadence_window",
+        "cadenceOwner": "client",
+        "cadenceSource": "client_schedule",
+        "duePosition": "arrears",
+        "dueState": "due",
+        "isEarly": false,
+        "canGenerate": true,
+        "clientId": "5ba78228-ace1-4990-b42f-30739458299a",
+        "clientName": "REVIEW-3499-UNBILLED-20261012-dcd6e36f",
+        "billingCycleId": null,
+        "servicePeriodStart": "2026-09-01",
+        "servicePeriodEnd": "2026-10-01",
+        "servicePeriodLabel": "2026-09-01 to 2026-10-01",
+        "invoiceWindowStart": "2026-10-01",
+        "invoiceWindowEnd": "2026-11-01",
+        "invoiceWindowLabel": "2026-10-01 to 2026-11-01",
+        "scheduleKey": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears",
+        "periodKey": "period:2026-09-01:2026-10-01",
+        "recordId": "dea8e371-e639-4650-87a3-87fa8ce42f28",
+        "lifecycleState": "generated",
+        "contractId": null,
+        "contractLineId": null,
+        "contractName": "REVIEW-3499-UNBILLED-20261012-dcd6e36f-CONTRACT",
+        "contractLineName": "REVIEW-3499-MITIGATION-TWO-FIXED-LINES - Fixed Fee",
+        "purchaseOrderScopeKey": null,
+        "currencyCode": "AUD",
+        "taxSource": null,
+        "exportShapeKey": null,
+        "attribution": {
+          "source": "explicit_contract",
+          "label": "Explicit contract",
+          "isComplete": true,
+          "missingFields": []
+        },
+        "chargeType": "Fixed",
+        "approvalBlockedEntryCount": 0,
+        "warnings": [],
+        "amountCents": 20000
+      }
+    ],
+    "approvalBlockedEntryCount": 0,
+    "hasApprovalBlockers": false,
+    "warnings": []
+  },
+  "preview": [
+    {
+      "previewGroupKey": "invoice-candidate:5ba78228-ace1-4990-b42f-30739458299a:2026-10-01:2026-11-01",
+      "selectorInputs": [
+        {
+          "clientId": "5ba78228-ace1-4990-b42f-30739458299a",
+          "windowStart": "2026-10-01",
+          "windowEnd": "2026-11-01",
+          "executionWindow": {
+            "kind": "client_cadence_window",
+            "cadenceOwner": "client",
+            "clientId": "5ba78228-ace1-4990-b42f-30739458299a",
+            "scheduleKey": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears",
+            "periodKey": "period:2026-09-01:2026-10-01",
+            "windowStart": "2026-10-01",
+            "windowEnd": "2026-11-01",
+            "identityKey": "client_cadence_window:client:5ba78228-ace1-4990-b42f-30739458299a:schedule:6d178771-ad9a-4d43-8809-83992745f8f9:85923f68-0cfa-4a94-83c5-3eadd740978d:client:arrears:period:2026-09-01:2026-10-01:2026-10-01:2026-11-01"
+          }
+        },
+        {
+          "clientId": "5ba78228-ace1-4990-b42f-30739458299a",
+          "windowStart": "2026-10-01",
+          "windowEnd": "2026-11-01",
+          "executionWindow": {
+            "kind": "client_cadence_window",
+            "cadenceOwner": "client",
+            "clientId": "5ba78228-ace1-4990-b42f-30739458299a",
+            "scheduleKey": "schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears",
+            "periodKey": "period:2026-09-01:2026-10-01",
+            "windowStart": "2026-10-01",
+            "windowEnd": "2026-11-01",
+            "identityKey": "client_cadence_window:client:5ba78228-ace1-4990-b42f-30739458299a:schedule:6d178771-ad9a-4d43-8809-83992745f8f9:dd5c2b59-a8b8-430d-a3ca-1bcc126dd997:client:arrears:period:2026-09-01:2026-10-01:2026-10-01:2026-11-01"
+          }
+        }
+      ],
+      "data": {
+        "invoiceNumber": "PREVIEW",
+        "issueDate": "2026-10-12",
+        "dueDate": "2026-11-11",
+        "currencyCode": "AUD",
+        "poNumber": null,
+        "customer": {
+          "name": "REVIEW-3499-UNBILLED-20261012-dcd6e36f",
+          "address": "N/A"
+        },
+        "tenantClient": null,
+        "items": [
+          {
+            "id": "preview-8d943d1a-fc6c-4565-8036-0e3bacd64a03",
+            "description": "Contract: REVIEW-3499-UNBILLED-20261012-dcd6e36f-CONTRACT",
+            "quantity": 1,
+            "unitPrice": 0,
+            "total": 0,
+            "servicePeriodStart": null,
+            "servicePeriodEnd": null,
+            "billingTiming": null
+          },
+          {
+            "id": "preview-09b4bffa-29bb-4b20-bae8-3aac1618cb5f",
+            "description": "Managed Workstation",
+            "quantity": 1,
+            "unitPrice": 20000,
+            "total": 20000,
+            "servicePeriodStart": "2026-09-01",
+            "servicePeriodEnd": "2026-09-30",
+            "billingTiming": "arrears"
+          },
+          {
+            "id": "preview-879dace1-4348-4479-ab8e-0e1f84b72798",
+            "description": "Cabling",
+            "quantity": 1,
+            "unitPrice": 12000,
+            "total": 12000,
+            "servicePeriodStart": "2026-09-01",
+            "servicePeriodEnd": "2026-09-30",
+            "billingTiming": "arrears"
+          },
+          {
+            "id": "preview-discount-00fe4a1e-c691-47fb-a03f-d76c43c44584",
+            "description": "REVIEW-3499-MITIGATION-DEFAULT-12P",
+            "quantity": 1,
+            "unitPrice": -3840,
+            "total": -3840
+          },
+          {
+            "id": "preview-discount-9365c6cc-c681-483c-bb96-63ce6dea0271",
+            "description": "REVIEW-3499-LINE-CABLING-10P",
+            "quantity": 1,
+            "unitPrice": -1200,
+            "total": -1200
+          },
+          {
+            "id": "preview-discount-cc2580e9-68d2-4008-b4c1-43c1cb7db6c2",
+            "description": "REVIEW-3499-MITIGATION-DEFAULT-FIXED-25",
+            "quantity": 1,
+            "unitPrice": -2500,
+            "total": -2500
+          }
+        ],
+        "subtotal": 24460,
+        "tax": 0,
+        "total": 24460,
+        "ticketPresentationRows": [
+          {
+            "id": "preview-8d943d1a-fc6c-4565-8036-0e3bacd64a03",
+            "description": "Contract: REVIEW-3499-UNBILLED-20261012-dcd6e36f-CONTRACT",
+            "quantity": 1,
+            "unitPrice": 0,
+            "total": 0,
+            "servicePeriodStart": null,
+            "servicePeriodEnd": null,
+            "billingTiming": null,
+            "timePresentation": true,
+            "label": "",
+            "rate": 0,
+            "rateDisplay": 0,
+            "amount": 0,
+            "contributions": [
+              {
+                "itemId": "preview-8d943d1a-fc6c-4565-8036-0e3bacd64a03",
+                "entryId": null,
+                "amount": 0
+              }
+            ]
+          },
+          {
+            "id": "preview-09b4bffa-29bb-4b20-bae8-3aac1618cb5f",
+            "description": "Managed Workstation",
+            "quantity": 1,
+            "unitPrice": 20000,
+            "total": 20000,
+            "servicePeriodStart": "2026-09-01",
+            "servicePeriodEnd": "2026-09-30",
+            "billingTiming": "arrears",
+            "timePresentation": true,
+            "label": "",
+            "rate": 20000,
+            "rateDisplay": 20000,
+            "amount": 20000,
+            "contributions": [
+              {
+                "itemId": "preview-09b4bffa-29bb-4b20-bae8-3aac1618cb5f",
+                "entryId": null,
+                "amount": 20000
+              }
+            ]
+          },
+          {
+            "id": "preview-879dace1-4348-4479-ab8e-0e1f84b72798",
+            "description": "Cabling",
+            "quantity": 1,
+            "unitPrice": 12000,
+            "total": 12000,
+            "servicePeriodStart": "2026-09-01",
+            "servicePeriodEnd": "2026-09-30",
+            "billingTiming": "arrears",
+            "timePresentation": true,
+            "label": "",
+            "rate": 12000,
+            "rateDisplay": 12000,
+            "amount": 12000,
+            "contributions": [
+              {
+                "itemId": "preview-879dace1-4348-4479-ab8e-0e1f84b72798",
+                "entryId": null,
+                "amount": 12000
+              }
+            ]
+          },
+          {
+            "id": "preview-discount-00fe4a1e-c691-47fb-a03f-d76c43c44584",
+            "description": "REVIEW-3499-MITIGATION-DEFAULT-12P",
+            "quantity": 1,
+            "unitPrice": -3840,
+            "total": -3840,
+            "timePresentation": true,
+            "label": "",
+            "rate": -3840,
+            "rateDisplay": -3840,
+            "amount": -3840,
+            "contributions": [
+              {
+                "itemId": "preview-discount-00fe4a1e-c691-47fb-a03f-d76c43c44584",
+                "entryId": null,
+                "amount": -3840
+              }
+            ]
+          },
+          {
+            "id": "preview-discount-9365c6cc-c681-483c-bb96-63ce6dea0271",
+            "description": "REVIEW-3499-LINE-CABLING-10P",
+            "quantity": 1,
+            "unitPrice": -1200,
+            "total": -1200,
+            "timePresentation": true,
+            "label": "",
+            "rate": -1200,
+            "rateDisplay": -1200,
+            "amount": -1200,
+            "contributions": [
+              {
+                "itemId": "preview-discount-9365c6cc-c681-483c-bb96-63ce6dea0271",
+                "entryId": null,
+                "amount": -1200
+              }
+            ]
+          },
+          {
+            "id": "preview-discount-cc2580e9-68d2-4008-b4c1-43c1cb7db6c2",
+            "description": "REVIEW-3499-MITIGATION-DEFAULT-FIXED-25",
+            "quantity": 1,
+            "unitPrice": -2500,
+            "total": -2500,
+            "timePresentation": true,
+            "label": "",
+            "rate": -2500,
+            "rateDisplay": -2500,
+            "amount": -2500,
+            "contributions": [
+              {
+                "itemId": "preview-discount-cc2580e9-68d2-4008-b4c1-43c1cb7db6c2",
+                "entryId": null,
+                "amount": -2500
+              }
+            ]
+          }
+        ],
+        "ticketCoverageStatus": "none",
+        "ticketDetailNote": "",
+        "paymentMethod": null
+      },
+      "expectedRecurringPricingSources": []
+    }
+  ]
+}

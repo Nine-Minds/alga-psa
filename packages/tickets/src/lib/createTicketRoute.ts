@@ -21,6 +21,8 @@ export interface CreateTicketPrefill {
   isAlgaDeskMode?: boolean;
   /** Ticket to prefill the form from ("Duplicate"). The form loads the source itself. */
   duplicateFromTicketId?: string;
+  /** Ticket template to prefill the form from ("New ticket from template"). The form loads it itself. */
+  templateId?: string;
 }
 
 type SearchParamValue = string | string[] | undefined;
@@ -49,6 +51,7 @@ export function buildCreateTicketHref(prefill: CreateTicketPrefill = {}): string
     params.set('agents', JSON.stringify(prefill.additionalAgents));
   }
   if (prefill.duplicateFromTicketId) params.set('duplicateFrom', prefill.duplicateFromTicketId);
+  if (prefill.templateId) params.set('template', prefill.templateId);
   if (prefill.isAlgaDeskMode) params.set('form', 'algadesk');
 
   const qs = params.toString();
@@ -81,6 +84,7 @@ export function parseCreateTicketPrefill(searchParams: SearchParams): CreateTick
     dueDate: first(searchParams.dueDate),
     additionalAgents,
     duplicateFromTicketId: first(searchParams.duplicateFrom),
+    templateId: first(searchParams.template),
     isAlgaDeskMode: first(searchParams.form) === 'algadesk',
   };
 }

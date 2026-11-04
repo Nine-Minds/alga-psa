@@ -23,7 +23,6 @@ function buildCompositeKey(scheduleKey: string, periodKey: string) {
 function normalizeDerivedSelection(tenant: string, selection: IRecurringDuePeriodSelection) {
   const scheduleKey = buildRecurringServicePeriodScheduleKey({
     tenant,
-    obligationType: selection.servicePeriod.sourceObligation.obligationType,
     obligationId: selection.servicePeriod.sourceObligation.obligationId,
     cadenceOwner: selection.servicePeriod.cadenceOwner,
     duePosition: selection.servicePeriod.duePosition,

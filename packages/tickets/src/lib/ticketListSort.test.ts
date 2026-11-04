@@ -17,6 +17,7 @@ describe('ticket list sort contract', () => {
       'latest_activity_at',
       'entered_at',
       'due_date',
+      'contact_name',
     ]) {
       expect(TICKET_LIST_SORT_KEYS).toContain(key);
     }

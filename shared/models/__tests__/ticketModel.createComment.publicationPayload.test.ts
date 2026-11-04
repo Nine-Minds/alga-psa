@@ -1,7 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { EventSchemas } from '@alga-psa/event-schemas';
 import { TicketModel } from '../ticketModel';
+import {
+  registerCommentEventContributor,
+  resetCommentEventContributors,
+  type CommentEventEnvelope,
+} from '@alga-psa/db/commentEventRegistry';
 
 // Same passthrough facade the sibling authorship test uses: tenant scoping is
 // the real facade's concern, not this test's.
@@ -39,6 +44,10 @@ function createTrxHarness() {
         };
       case 'ticket_comment_attachments':
         return { where: () => ({ orderBy: () => ({ forUpdate: async () => [] }) }) };
+      case 'contacts': {
+        const chain: any = { where: () => chain, select: () => chain, first: async () => ({ full_name: 'Contact Person' }) };
+        return chain;
+      }
       default:
         throw new Error(`Unexpected table in createComment publication payload test: ${table}`);
     }
@@ -81,8 +90,27 @@ describe('TicketModel.createComment publication payload', () => {
 
     const payload = persistedPayload();
     expect(payload.comment.author).toBe('Ada Lovelace');
-    expect(payload.userId).toBe(ticketId);
+    // Never the ticket id: a user-less comment is a SYSTEM actor with no userId.
+    expect(payload).not.toHaveProperty('userId');
+    expect(payload.actorType).toBe('SYSTEM');
     expect(() => parseAsEvent(payload)).not.toThrow();
+  });
+
+  it('publishes a CONTACT actor and no userId when the comment has a contact', async () => {
+    const { trx, persistedPayload } = createTrxHarness();
+    const contactId = randomUUID();
+
+    await TicketModel.createComment(
+      { ticket_id: ticketId, content: 'Reply from a contact', contact_id: contactId },
+      tenant,
+      trx,
+      { publishCommentCreated: vi.fn() } as any
+    );
+
+    const payload = persistedPayload();
+    expect(payload).not.toHaveProperty('userId');
+    expect(payload).toMatchObject({ actorType: 'CONTACT', actorContactId: contactId });
+    expect(parseAsEvent(payload).payload).toMatchObject({ actorType: 'CONTACT', actorContactId: contactId });
   });
 
   it('falls back to the sender address when only an address was captured', async () => {
@@ -116,7 +144,44 @@ describe('TicketModel.createComment publication payload', () => {
 
     const payload = persistedPayload();
     expect(payload.comment.author).toBe('System');
-    expect(payload.userId).toBe(ticketId);
-    expect(parseAsEvent(payload).payload).toMatchObject({ userId: ticketId, comment: { author: 'System' } });
+    expect(payload).not.toHaveProperty('userId');
+    const parsed = parseAsEvent(payload).payload as any;
+    expect(parsed).not.toHaveProperty('userId');
+    expect(parsed).toMatchObject({ actorType: 'SYSTEM', comment: { author: 'System' } });
+  });
+});
+
+describe('TicketModel.createComment comment-event registry', () => {
+  afterEach(() => resetCommentEventContributors());
+
+  it('hands a retainer the same event the publisher path receives, actor and metadata included', async () => {
+    const contactId = randomUUID();
+    const input = { ticket_id: ticketId, content: 'Reply from a contact', contact_id: contactId, is_internal: false };
+
+    // Native path through an inbound-outbox publisher: capture the event it is given.
+    const publishCommentCreated = vi.fn();
+    await TicketModel.createComment(input, tenant, createTrxHarness().trx,
+      { publishCommentCreated, __inboundOutboxPublisher: true } as any);
+    expect(publishCommentCreated).toHaveBeenCalledTimes(1);
+    const nativeEvent = publishCommentCreated.mock.calls[0][0];
+
+    // Same comment with a retaining contributor: native publication is skipped.
+    const envelopes: CommentEventEnvelope[] = [];
+    registerCommentEventContributor({ name: 'capture', retain: async (_trx, envelope) => { envelopes.push(envelope); return true; } });
+    const retainedPublisher = vi.fn();
+    await TicketModel.createComment(input, tenant, createTrxHarness().trx,
+      { publishCommentCreated: retainedPublisher, __inboundOutboxPublisher: true } as any);
+    expect(retainedPublisher).not.toHaveBeenCalled();
+    expect(envelopes).toHaveLength(1);
+    const { source, event } = envelopes[0];
+    expect(source).toBe('ticket');
+    expect(event.actor).toMatchObject({ actorType: 'CONTACT', actorContactId: contactId });
+    expect(event.metadata).toMatchObject({ content: 'Reply from a contact', author: 'Contact Person' });
+    // commentId is generated per call; everything else matches the publisher's event field for field.
+    expect({ ...event, commentId: undefined }).toEqual({
+      ...nativeEvent,
+      commentId: undefined,
+      eventType: 'TICKET_COMMENT_ADDED',
+    });
   });
 });

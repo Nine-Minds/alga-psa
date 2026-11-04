@@ -15,6 +15,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import {
   deriveClientContractStatus,
+  getTenantLocalToday,
   checkAndReactivateExpiredContract as checkAndReactivateExpiredContractShared,
 } from '@alga-psa/shared/billingClients';
 
@@ -102,7 +103,38 @@ const Contract = {
         .count('ii.item_id as count')
         .first() as { count?: string };
 
-      return Number(result?.count ?? 0) > 0;
+      if (Number(result?.count ?? 0) > 0) {
+        return true;
+      }
+
+      // Invoice headers and period links reference the assignment too, even when no
+      // charge row does (e.g. a zero-charge or charge-less invoice).
+      const clientContractIds = await contractTable(knexOrTrx, tenant, 'client_contracts')
+        .where({ contract_id: contractId })
+        .pluck('client_contract_id');
+      if (clientContractIds.length === 0) {
+        return false;
+      }
+
+      const headerInvoice = await contractTable(knexOrTrx, tenant, 'invoices')
+        .whereIn('client_contract_id', clientContractIds)
+        .first('invoice_id');
+      if (headerInvoice) {
+        return true;
+      }
+
+      const contractLineIds = await contractTable(knexOrTrx, tenant, 'contract_lines')
+        .where({ contract_id: contractId })
+        .pluck('contract_line_id');
+      if (contractLineIds.length === 0) {
+        return false;
+      }
+
+      const linkedPeriod = await contractTable(knexOrTrx, tenant, 'recurring_service_periods')
+        .whereNotNull('invoice_id')
+        .whereIn('obligation_id', contractLineIds)
+        .first('record_id');
+      return Boolean(linkedPeriod);
     } catch (error) {
       console.error(`Error checking contract ${contractId} invoices:`, error);
       throw error;
@@ -201,6 +233,33 @@ const Contract = {
           .delete();
       }
 
+      // Unlink rows that point at the contract. The FKs are ON DELETE SET NULL on
+      // plain Postgres but Citus rejects that action, so null them explicitly.
+      const linkedQuotes = await contractTable(knexOrTrx, tenant, 'quotes')
+        .where({ converted_contract_id: contractId })
+        .select('quote_id');
+      if (linkedQuotes.length > 0) {
+        await contractTable(knexOrTrx, tenant, 'quotes')
+          .where({ converted_contract_id: contractId })
+          .update({ converted_contract_id: null });
+        await contractTable(knexOrTrx, tenant, 'quote_activities').insert(
+          linkedQuotes.map((quote) => ({
+            tenant,
+            quote_id: quote.quote_id as string,
+            activity_type: 'contract_deleted',
+            description: 'Converted contract was deleted',
+            performed_by: null,
+            metadata: { contract_id: contractId },
+          }))
+        );
+      }
+      await contractTable(knexOrTrx, tenant, 'opportunities')
+        .where({ converted_contract_id: contractId })
+        .update({ converted_contract_id: null });
+      await contractTable(knexOrTrx, tenant, 'project_billing_configs')
+        .where({ contract_id: contractId })
+        .update({ contract_id: null });
+
       // Delete the contract itself
       const deleted = await contractTable(knexOrTrx, tenant, 'contracts')
         .where({ contract_id: contractId })
@@ -287,8 +346,10 @@ const Contract = {
         )
         .orderBy('cc.created_at', 'desc');
 
+      const tenantToday = await getTenantLocalToday(knexOrTrx, tenant);
       return rows.map((row: any) => {
         const assignmentStatus = deriveClientContractStatus({
+          now: tenantToday,
           isActive: Boolean(row.assignment_is_active),
           startDate: row.start_date,
           endDate: row.end_date,

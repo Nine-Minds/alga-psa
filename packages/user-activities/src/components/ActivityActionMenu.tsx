@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MoreVertical } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useActivityDrawer } from "./ActivityDrawerProvider";
+import { MoveToGroupSubmenu, MoveToNewGroupDialog } from "./MoveToGroupSubmenu";
 import {
   updateActivityStatus,
   reassignActivity,
@@ -36,6 +37,7 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
 
   const crossFeature = useActivityCrossFeature();
   const [convertTarget, setConvertTarget] = useState<'ticket' | 'task' | null>(null);
+  const [newGroupOpen, setNewGroupOpen] = useState(false);
 
   const isAdHoc = activity.type === ActivityType.SCHEDULE
     && (activity as ScheduleActivity).workItemType === 'ad_hoc';
@@ -278,6 +280,11 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
             {t('table.adHoc.convertToTask', { defaultValue: 'Convert to project task' })}
           </DropdownMenuItem>
         )}
+        <MoveToGroupSubmenu
+          activity={activity}
+          onRequestNewGroup={() => setNewGroupOpen(true)}
+          onActionComplete={onActionComplete}
+        />
         {activity.actions
           .filter(action => shouldShowAction(action.id))
           .map(action => (
@@ -295,6 +302,12 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
           ))}
       </DropdownMenuContent>
     </DropdownMenu>
+    <MoveToNewGroupDialog
+      activity={activity}
+      isOpen={newGroupOpen}
+      onClose={() => setNewGroupOpen(false)}
+      onActionComplete={onActionComplete}
+    />
     {convertTarget === 'ticket' && crossFeature.renderConvertAdHocToTicket?.(convertProps)}
     {convertTarget === 'task' && crossFeature.renderConvertAdHocToProjectTask?.(convertProps)}
     </>

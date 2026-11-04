@@ -39,5 +39,6 @@ export {
   moveActivityToGroupForApi,
   removeActivityFromGroupsForApi,
   reorderActivitiesInGroupForApi,
+  setDefaultActivityGroupForApi,
 } from '../actions/activityGroupCore';
 export type { ActivityGroup, ActivityGroupItem } from '../actions/activityGroupCore';

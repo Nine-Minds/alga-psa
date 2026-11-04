@@ -28,9 +28,10 @@ import type { IClient, IContact, IQuote, IQuoteDocumentTemplate, IQuoteListItem,
 import { isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
-import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
+import { getClientByIdForBilling } from '../../../actions/billingClientsActions';
+import { useBillingClient } from '../../../hooks/useBillingClient';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '../../../actions/billingClientLocationActions';
-import { addQuoteItem, approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuote, createQuoteFromTemplate, createQuoteRevision, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuotes, removeQuoteItem, reorderQuoteItems, requestQuoteApprovalChanges, resendQuote, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
+import { addQuoteItem, approveQuote, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuote, createQuoteFromTemplate, createQuoteRevision, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuotes, markQuoteAccepted, removeQuoteItem, reorderQuoteItems, requestQuoteApprovalChanges, resendQuote, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getContactsForPicker } from '@alga-psa/user-composition/actions/contactQueryActions';
 import QuoteLineItemsEditor from './QuoteLineItemsEditor';
@@ -39,6 +40,8 @@ import {
   collectDistinctLocationIds,
 } from '../locations/locationGrouping';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
+import QuoteMarkAcceptedDialog from './QuoteMarkAcceptedDialog';
+import QuoteSoleApproverNotice from './QuoteSoleApproverNotice';
 import QuoteStatusBadge from './QuoteStatusBadge';
 import { calculateDraftCadenceSummary, calculateDraftMonthlyRecurringNet, calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
 import { QuoteTermsContent, TextEditor } from '@alga-psa/ui/editor';
@@ -95,6 +98,8 @@ interface QuoteFormState {
   quote_date: string;
   valid_until: string;
   po_number: string;
+  recurring_section_title: string;
+  onetime_section_title: string;
   client_notes: string;
   terms_and_conditions: string;
   currency_code: string;
@@ -109,6 +114,8 @@ const EMPTY_FORM: QuoteFormState = {
   quote_date: '',
   valid_until: '',
   po_number: '',
+  recurring_section_title: '',
+  onetime_section_title: '',
   client_notes: '',
   terms_and_conditions: '',
   currency_code: 'USD',
@@ -209,7 +216,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const [extraGroupLocationIds, setExtraGroupLocationIds] = useState<string[]>([]);
 
   const [isTemplate, setIsTemplate] = useState(initialIsTemplate);
-  const [clients, setClients] = useState<IClient[]>([]);
+  // Latest create-mode currency lookup; an older response for a previously picked client is dropped.
+  const currencyLookupRef = useRef(0);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [businessTemplates, setBusinessTemplates] = useState<IQuoteListItem[]>([]);
   const [documentTemplates, setDocumentTemplates] = useState<IQuoteDocumentTemplate[]>([]);
@@ -233,6 +241,10 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const [quote, setQuote] = useState<IQuote | null>(null);
   const [isWorking, setIsWorking] = useState(false);
   const [approvalRequired, setApprovalRequired] = useState(false);
+  // Current user is the tenant's only possible approver (may approve own quotes).
+  const [isSoleApprover, setIsSoleApprover] = useState(false);
+  const [isMarkAcceptedOpen, setIsMarkAcceptedOpen] = useState(false);
+  const [markAcceptedNote, setMarkAcceptedNote] = useState('');
   const [isSendDialogOpen, setIsSendDialogOpen] = useState(false);
   const [quoteSenders, setQuoteSenders] = useState<Array<{ sender_id: string; email_address: string }>>([]);
   const [quoteEffectiveSenderAddress, setQuoteEffectiveSenderAddress] = useState('');
@@ -331,8 +343,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     try {
       setIsLoading(true);
 
-      const [fetchedClients, fetchedContacts, fetchedTemplates, fetchedDocTemplates, approvalSettings, billingSettingsResult] = await Promise.all([
-        getAllClientsForBilling(false),
+      const [fetchedContacts, fetchedTemplates, fetchedDocTemplates, approvalSettings, billingSettingsResult] = await Promise.all([
         getContactsForPicker('active'),
         listQuotes({ is_template: true, pageSize: 200 }),
         getQuoteDocumentTemplates(),
@@ -353,14 +364,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       setDefaultCurrency(tenantCurrency);
 
       setApprovalRequired(!isActionPermissionError(approvalSettings) && approvalSettings.approvalRequired === true);
+      setIsSoleApprover(!isActionPermissionError(approvalSettings) && approvalSettings.currentUserIsSoleApprover === true);
       if (isActionPermissionError(fetchedContacts) || isActionMessageError(fetchedContacts)) {
         throw new Error(getErrorMessage(fetchedContacts));
       }
-      if (isActionPermissionError(fetchedClients) || isActionMessageError(fetchedClients)) {
-        throw new Error(getErrorMessage(fetchedClients));
-      }
 
-      setClients(fetchedClients);
       setContacts(fetchedContacts);
       setBusinessTemplates(isActionPermissionError(fetchedTemplates) ? [] : fetchedTemplates.data);
       setDocumentTemplates(Array.isArray(fetchedDocTemplates) ? fetchedDocTemplates : []);
@@ -390,6 +398,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           quote_date: toDateInputValue(quote.quote_date),
           valid_until: toDateInputValue(quote.valid_until),
           po_number: quote.po_number || '',
+          recurring_section_title: quote.recurring_section_title || '',
+          onetime_section_title: quote.onetime_section_title || '',
           client_notes: quote.client_notes || '',
           terms_and_conditions: quote.terms_and_conditions || '',
           currency_code: quote.currency_code || tenantCurrency,
@@ -410,9 +420,13 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         // Seed create-mode currency from the initial client when one is
         // supplied (deep link / opportunity), otherwise from the tenant default.
         const initialClientId = initialContext?.clientId ?? '';
-        const initialClient = initialClientId
-          ? fetchedClients.find((client) => client.client_id === initialClientId)
-          : undefined;
+        let initialClient: IClient | undefined;
+        if (initialClientId) {
+          const lookedUp = await getClientByIdForBilling(initialClientId).catch(() => null);
+          if (lookedUp && !isActionMessageError(lookedUp) && !isActionPermissionError(lookedUp)) {
+            initialClient = lookedUp;
+          }
+        }
         const initialCurrency = initialClient
           ? (initialClient.default_currency_code || tenantCurrency)
           : tenantCurrency;
@@ -483,10 +497,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     [lineItems],
   );
 
-  const selectedClient = useMemo(
-    () => clients.find((c) => c.client_id === form.client_id) ?? null,
-    [clients, form.client_id],
-  );
+  const { client: selectedClient, prime: primeSelectedClient } = useBillingClient(form.client_id || null);
 
   const selectedDocTemplate = useMemo(
     () => documentTemplates.find((dt) => dt.template_id === documentTemplateId) ?? null,
@@ -535,8 +546,16 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   // Create-mode currency re-resolution: a selected client owns the default, an
   // empty client falls back to the tenant default. Never called in edit mode so
   // a saved quote's currency is not silently relabeled.
-  const applyClientCurrency = (clientId: string) => {
-    const client = clientId ? clients.find((c) => c.client_id === clientId) : undefined;
+  const applyClientCurrency = async (clientId: string) => {
+    const lookupId = ++currencyLookupRef.current;
+    let client: IClient | undefined;
+    if (clientId) {
+      const lookedUp = await getClientByIdForBilling(clientId).catch(() => null);
+      if (lookupId !== currencyLookupRef.current) return;
+      if (lookedUp && !isActionMessageError(lookedUp) && !isActionPermissionError(lookedUp)) {
+        client = lookedUp;
+      }
+    }
     handleChange('currency_code', client ? (client.default_currency_code || defaultCurrency) : defaultCurrency);
     setCurrencySource(client ? 'client' : 'tenant');
   };
@@ -549,7 +568,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       // Clearing the template re-resolves to the client/tenant default rather
       // than leaving a template label on a currency the template no longer owns.
       if (!isEditMode) {
-        applyClientCurrency(form.client_id);
+        void applyClientCurrency(form.client_id);
       }
       return;
     }
@@ -633,6 +652,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         quote_date: form.quote_date || null,
         valid_until: form.valid_until || null,
         po_number: form.po_number || null,
+        recurring_section_title: form.recurring_section_title.trim() || null,
+        onetime_section_title: form.onetime_section_title.trim() || null,
         client_notes: form.client_notes || null,
         terms_and_conditions: form.terms_and_conditions || null,
         terms_and_conditions_block: hasTermsContent(termsBlock) ? termsBlock : null,
@@ -891,6 +912,21 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
     );
     if (result) {
       setNotice(t('quoteForm.notices.resent', { defaultValue: 'Quote resent.' }));
+    }
+  };
+
+  // LEVERAGE: pattern quote-workflow-action-handlers — QuoteDetail and QuoteForm each re-implement the approve/request-changes/mark-accepted handlers, dialogs and notices; a shared quote-workflow hook/component layer is missing.
+  const handleMarkAccepted = async () => {
+    if (!quote) return;
+    const result = await runWorkflowAction(
+      t('quoteForm.errorActions.markAccepted', { defaultValue: 'mark quote as accepted' }),
+      () => markQuoteAccepted(quote.quote_id, markAcceptedNote),
+      { notifyStatusChanged: true },
+    );
+    if (result) {
+      setIsMarkAcceptedOpen(false);
+      setMarkAcceptedNote('');
+      setNotice(t('quoteForm.notices.markedAccepted', { defaultValue: 'Quote marked as accepted.' }));
     }
   };
 
@@ -1296,6 +1332,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       return [
         { id: 'quote-form-resend', label: t('quoteForm.actions.resend', { defaultValue: 'Resend' }), onClick: () => void handleResendQuote(), disabled: isWorking },
         { id: 'quote-form-reminder', label: t('quoteForm.actions.sendReminder', { defaultValue: 'Send reminder' }), onClick: () => void handleSendReminder(), disabled: isWorking },
+        { id: 'quote-form-mark-accepted', label: t('quoteForm.actions.markAccepted', { defaultValue: 'Mark as accepted' }), onClick: () => setIsMarkAcceptedOpen(true), disabled: isWorking },
         { id: 'quote-form-cancel-quote', label: t('quoteForm.actions.cancelQuote', { defaultValue: 'Cancel quote' }), onClick: () => void handleCancelQuote(), disabled: isWorking },
       ];
     }
@@ -1578,7 +1615,6 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                     <label htmlFor="quote-client">{t('quoteForm.essentials.client', { defaultValue: 'Client' })}</label>
                     <ClientPicker
                       id="quote-client"
-                      clients={clients}
                       selectedClientId={form.client_id || null}
                       onSelect={(clientId) => {
                         if (isReadOnly) return;
@@ -1592,7 +1628,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                           // precedence: template, then client, then tenant).
                           // Editing keeps the saved currency.
                           if (!isEditMode && !form.source_template_id) {
-                            applyClientCurrency(nextClientId);
+                            void applyClientCurrency(nextClientId);
                           }
                         }
                       }}
@@ -1738,6 +1774,23 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                 }
                 onRemoveLocationGroup={handleRemoveLocationGroup}
               />
+            </section>
+
+            <section className="rounded-lg border border-border bg-background p-5 shadow-sm">
+              <header className="mb-4 space-y-1">
+                <h3 className="text-base font-semibold">{t('quoteForm.sectionTitles.title', { defaultValue: 'Grouped quote section titles' })}</h3>
+                <p className="text-xs text-muted-foreground">{t('quoteForm.sectionTitles.description', { defaultValue: 'Optional headings used by the Standard Quote Grouped layout.' })}</p>
+              </header>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  {t('quoteForm.sectionTitles.monthlyLabel', { defaultValue: 'Monthly section title' })}
+                  <Input id="quote-monthly-section-title" value={form.recurring_section_title} maxLength={255} placeholder={t('quoteForm.sectionTitles.monthlyPlaceholder')} onChange={(event) => handleChange('recurring_section_title', event.target.value)} disabled={isReadOnly} />
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  {t('quoteForm.sectionTitles.oneTimeLabel', { defaultValue: 'One-time section title' })}
+                  <Input id="quote-onetime-section-title" value={form.onetime_section_title} maxLength={255} placeholder={t('quoteForm.sectionTitles.oneTimePlaceholder')} onChange={(event) => handleChange('onetime_section_title', event.target.value)} disabled={isReadOnly} />
+                </label>
+              </div>
             </section>
 
             {/* --- Client-facing text card --- */}
@@ -1941,6 +1994,14 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                   <p className="mt-2 text-sm text-muted-foreground">
                     {t('quoteForm.sidebar.approvalMessage', { defaultValue: 'Quotes need sales lead approval before sending.' })}
                   </p>
+                  {isSoleApprover && (
+                    <div className="mt-3">
+                      <QuoteSoleApproverNotice
+                        id="quote-form-sole-approver-notice"
+                        context={quoteStatus === 'pending_approval' ? 'pending' : 'draft'}
+                      />
+                    </div>
+                  )}
                   {quoteStatus === 'draft' && (
                     <Button
                       id="quote-form-sidebar-submit-approval"
@@ -2055,6 +2116,15 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         </DialogContent>
       </Dialog>
 
+      <QuoteMarkAcceptedDialog
+        isOpen={isMarkAcceptedOpen}
+        isWorking={isWorking}
+        note={markAcceptedNote}
+        onNoteChange={setMarkAcceptedNote}
+        onConfirm={() => void handleMarkAccepted()}
+        onClose={() => { setIsMarkAcceptedOpen(false); setMarkAcceptedNote(''); }}
+      />
+
       {/* Approval dialog */}
       <Dialog
         id="quote-form-approval-dialog"
@@ -2092,6 +2162,13 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                 defaultValue: 'Return this quote to draft with requested changes.',
               })}
           </DialogDescription>
+          {approvalDialogMode === 'approve' && isSoleApprover ? (
+            <p id="quote-form-approval-sole-approver-note" className="text-sm text-muted-foreground">
+              {t('quoteApproval.soleApprover.dialogNote', {
+                defaultValue: 'You are the only approver, so approving your own quote is allowed. The approval is recorded as a self-approval.',
+              })}
+            </p>
+          ) : null}
           <div className="space-y-3 py-2">
             <label className="flex flex-col gap-1 text-sm font-medium">
               {approvalDialogMode === 'approve'
@@ -2134,7 +2211,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                 {t('quoteConversion.actions.salesOrder', { defaultValue: 'Create Sales Order' })}
               </Button>
             )}
-            {conversionPreview && conversionPreview.contract_items.length > 0 && (
+            {conversionPreview && conversionPreview.contract_items.length > 0 && !conversionPreview.contract_blocked_reason && (
               <Button id="quote-form-conversion-contract" onClick={() => void handleConfirmConversion('contract')} disabled={isWorking}>
                 {t('quoteConversion.actions.contract', { defaultValue: 'Create Draft Contract' })}
               </Button>
@@ -2169,6 +2246,18 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
               {conversionPreview.invoice_error && (
                 <Alert variant="destructive">
                   <AlertDescription>{conversionPreview.invoice_error}</AlertDescription>
+                </Alert>
+              )}
+              {conversionPreview.contract_blocked_reason && (
+                <Alert variant="destructive" id="quote-conversion-contract-blocked">
+                  <AlertDescription>
+                    {conversionPreview.contract_blocked_item_description != null
+                      ? t('quoteConversion.contractBlockedServiceless', {
+                          defaultValue: conversionPreview.contract_blocked_reason,
+                          description: conversionPreview.contract_blocked_item_description,
+                        })
+                      : conversionPreview.contract_blocked_reason}
+                  </AlertDescription>
                 </Alert>
               )}
               {conversionPreview.sales_order_items.length > 0 ? (
@@ -2256,6 +2345,26 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                     })}
                   </p>
                 )}
+                {conversionPreview.contract_discounts.length > 0 && (
+                  <div className="space-y-2" data-testid="quote-conversion-contract-discounts">
+                    <h4 className="text-sm font-semibold">{t('quoteConversion.sections.carriedDiscounts', { defaultValue: 'Discounts carried onto contract lines' })}</h4>
+                    {conversionPreview.contract_discounts.map((discount) => (
+                      <div key={`${discount.quote_item_id}:${discount.line_quote_item_id}`} className="rounded-md border border-border p-3">
+                        <div className="font-medium text-foreground">{discount.description}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {discount.line_description} {'\u2022'} {discount.discount_type === 'percentage' && discount.percentage !== null
+                            ? `${discount.percentage}%`
+                            : `-${formatCurrency(discount.amount)}`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {conversionPreview.contract_items.length > 0 && (
+                  <div className="text-sm font-medium text-foreground" data-testid="quote-conversion-contract-monthly-total">
+                    {t('quoteConversion.summary.monthlyTotal', { defaultValue: 'Monthly total after discounts' })}: {formatCurrency(conversionPreview.contract_monthly_total)}
+                  </div>
+                )}
               </section>
               <section className="space-y-2 rounded-lg border border-border p-4">
                 <h3 className="text-base font-semibold">{t('quoteConversion.sections.willBecomeInvoiceCharges', { defaultValue: 'Will Become Invoice Charges' })}</h3>
@@ -2315,15 +2424,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         open: isQuickAddClientOpen,
         onOpenChange: setIsQuickAddClientOpen,
         onClientAdded: (newClient) => {
-          setClients((currentClients) => {
-            const existingIndex = currentClients.findIndex(
-              (client) => client.client_id === newClient.client_id,
-            );
-            if (existingIndex === -1) return [...currentClients, newClient];
-            const nextClients = [...currentClients];
-            nextClients[existingIndex] = newClient;
-            return nextClients;
-          });
+          primeSelectedClient(newClient);
+          currencyLookupRef.current += 1;
           setForm((current) => ({
             ...current,
             client_id: newClient.client_id,

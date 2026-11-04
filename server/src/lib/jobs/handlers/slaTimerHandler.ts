@@ -17,7 +17,7 @@ import { Knex } from 'knex';
 import { findCrossedThresholds } from '@alga-psa/sla';
 import { calculateElapsedBusinessMinutes } from '@alga-psa/sla/services/businessHoursCalculator';
 import type { IBusinessHoursScheduleWithEntries } from '@alga-psa/sla/types';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import logger from '@alga-psa/core/logger';
 import { normalizeHolidayRows } from '@alga-psa/sla/utils/holidayUtils';
 
@@ -176,7 +176,7 @@ async function processTicketSla(
       updatedResponseThreshold = highestThreshold;
       needsUpdate = true;
 
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'TICKET_SLA_THRESHOLD_REACHED',
         payload: {
           ticketId: ticket.ticket_id,
@@ -236,7 +236,7 @@ async function processTicketSla(
       updatedResolutionThreshold = resHighest;
       needsUpdate = true;
 
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'TICKET_SLA_THRESHOLD_REACHED',
         payload: {
           ticketId: ticket.ticket_id,

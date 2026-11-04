@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { ConfirmationDialog } from '../components/ConfirmationDialog';
+import { useTranslation } from '../lib/i18n/client';
+import { useLeaveGuard } from '../lib/leaveGuard';
 
 interface UnsavedChangesContextType {
   /**
@@ -43,13 +45,24 @@ interface UnsavedChangesProviderProps {
    * Custom message for the confirmation dialog
    */
   dialogMessage?: string;
+  /**
+   * Custom label for the button that leaves and discards the changes
+   */
+  dialogConfirmLabel?: string;
+  /**
+   * Custom label for the button that stays on the page
+   */
+  dialogCancelLabel?: string;
 }
 
 export function UnsavedChangesProvider({
   children,
-  dialogTitle = 'Unsaved Changes',
-  dialogMessage = 'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.',
+  dialogTitle,
+  dialogMessage,
+  dialogConfirmLabel,
+  dialogCancelLabel,
 }: UnsavedChangesProviderProps) {
+  const { t } = useTranslation('common');
   // Use ref to track unsaved components without causing re-renders
   const unsavedComponentsRef = useRef<Set<string>>(new Set());
 
@@ -108,18 +121,9 @@ export function UnsavedChangesProvider({
   const router = useRouter();
   const pendingNavigationRef = useRef<string | null>(null);
 
-  // Handle browser beforeunload
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (unsavedComponentsRef.current.size > 0) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
+  // Reload / tab close and browser history chords (outside an editable) while
+  // anything is dirty. Shared with DismissGuard so there is one implementation.
+  useLeaveGuard(hasAnyUnsavedChanges);
 
   // Intercept link clicks for client-side navigation (Next.js App Router)
   useEffect(() => {
@@ -186,12 +190,34 @@ export function UnsavedChangesProvider({
         isOpen={showDialog}
         onClose={handleClose}
         onConfirm={handleConfirm}
-        title={dialogTitle}
-        message={dialogMessage}
-        confirmLabel="Leave Without Saving"
-        cancelLabel="Stay"
+        title={dialogTitle ?? t('dialogs.unsavedChanges.title', 'Unsaved Changes')}
+        message={dialogMessage ?? t('dialogs.unsavedChanges.message', 'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.')}
+        confirmLabel={dialogConfirmLabel ?? t('dialogs.unsavedChanges.confirm', 'Leave Without Saving')}
+        cancelLabel={dialogCancelLabel ?? t('dialogs.unsavedChanges.cancel', 'Stay')}
       />
     </UnsavedChangesContext>
+  );
+}
+
+/**
+ * The provider wearing the app's translated guard copy, so a page only has to wrap its body. Use it
+ * unless a surface needs wording of its own.
+ */
+export function TranslatedUnsavedChangesProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation('common');
+
+  return (
+    <UnsavedChangesProvider
+      dialogTitle={t('unsavedChangesGuard.title', 'Discard unsaved changes?')}
+      dialogMessage={t(
+        'unsavedChangesGuard.message',
+        'You have unsaved changes that will be lost if you close this. Do you want to discard them?',
+      )}
+      dialogConfirmLabel={t('unsavedChangesGuard.discard', 'Discard changes')}
+      dialogCancelLabel={t('unsavedChangesGuard.keepEditing', 'Keep editing')}
+    >
+      {children}
+    </UnsavedChangesProvider>
   );
 }
 

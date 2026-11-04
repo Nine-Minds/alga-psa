@@ -87,7 +87,7 @@ describe('silent ticket close/update platform contracts', () => {
   });
 
   it('F065: workflow event catalog and runtime schemas expose the suppression flags', () => {
-    const runtimeSchemas = read('shared/workflow/runtime/schemas/ticketEventSchemas.ts');
+    const runtimeSchemas = read('packages/event-schemas/src/schemas/domain/ticketEventSchemas.ts');
     const systemCatalog = read('ee/packages/workflows/src/models/eventCatalog.ts');
     const domainCatalogMigration = read('server/migrations/20260123150000_upsert_domain_workflow_event_catalog_v2.cjs');
 

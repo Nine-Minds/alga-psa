@@ -1,6 +1,5 @@
 import type { Knex } from "knex";
 import { tenantDb } from "@alga-psa/db";
-import { buildPostDropRecurringObligationCandidates } from "@alga-psa/shared/billingClients/postDropRecurringObligationIdentity";
 
 export interface InvoicedPeriod {
   start: string;
@@ -16,7 +15,8 @@ export interface InvoicedPeriod {
  * All three engine signals are mirrored here:
  *
  *   1. `recurring_service_periods.invoice_id` — materialized recurring service
- *      periods already linked to an invoice (the fixed/recurring signal).
+ *      periods already linked to an invoice (the fixed/recurring signal). The
+ *      `prepaid_block` stream is excluded: a block fee is not a priced service charge.
  *   2. `invoice_charge_details` joined to the line's configuration — persisted
  *      per-service-period charges (`billingEngine.hasExistingServicePeriodCharge`).
  *   3. A client billing cycle overlapping `[period.start, period.end)` that
@@ -40,31 +40,15 @@ export async function isPeriodAlreadyInvoiced(
 
   const db = tenantDb(trx, tenant);
 
-  const candidates = buildPostDropRecurringObligationCandidates({
-    contractLineId,
-    chargeFamily: "fixed",
-  });
-
   const recurringRow = await db
     .table("recurring_service_periods")
     .whereNotNull("invoice_id")
+    // A cadence prepaid block fee is its own advance stream of the line: its invoiced period says
+    // nothing about the line's hourly time, which a price change still reprices.
+    .whereNot("charge_family", "prepaid_block")
     .where("service_period_start", "<", period.end)
     .where("service_period_end", ">=", period.start)
-    .where(function matchObligationCandidates(this: Knex.QueryBuilder) {
-      for (const [index, candidate] of candidates.entries()) {
-        const match = function matchCandidate(this: Knex.QueryBuilder) {
-          this.where("obligation_type", candidate.obligationType).andWhere(
-            "obligation_id",
-            candidate.obligationId,
-          );
-        };
-        if (index === 0) {
-          this.where(match);
-        } else {
-          this.orWhere(match);
-        }
-      }
-    })
+    .where("obligation_id", contractLineId)
     .first();
 
   if (recurringRow) {

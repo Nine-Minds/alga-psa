@@ -11,6 +11,7 @@ import { tenantDb } from '@alga-psa/db';
 // which pricing schedule is active, including the null-rate-latest case.
 import { selectActivePricingSchedule, selectEffectiveServicePrice } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
 import type { ServicePriceRateRow } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
+import { fixedMemberContributionCents, fixedRateBasisOf } from '@alga-psa/shared/billingClients/fixedMemberRate';
 
 import { resolvePeriodFee, type BilledFeeCandidate } from './fee';
 import { classifyCreditSource, type CreditSourceInvoice } from './creditSource';
@@ -408,7 +409,8 @@ export async function loadBilledBucketFees(
 
 /**
  * Configured base rate per bucket line×service from the line's Fixed config
- * (contract_line_service_fixed_config.base_rate × quantity), in cents. The
+ * (contract_line_service_fixed_config.base_rate read through its basis: a
+ * share as-is, a per-unit rate × quantity), in cents. The
  * report's fee fallback resolves: contract-line custom rate → this →
  * service-catalog default rate.
  */
@@ -428,14 +430,26 @@ export async function loadFixedConfigBaseRates(
   );
   const fixedConfigs = await fixedConfigsQuery
     .where('clsc.configuration_type', 'Fixed')
-    .select('clsc.contract_line_id', 'clsc.service_id', 'clsc.quantity as config_quantity', 'fc.base_rate');
+    .select(
+      'clsc.contract_line_id',
+      'clsc.service_id',
+      'clsc.quantity as config_quantity',
+      'fc.base_rate',
+      'fc.base_rate_basis',
+      'fc.pricing_basis',
+    );
 
   const byLineService = new Map<string, number | null>();
 
   for (const row of fixedConfigs) {
     const quantity = Math.max(1, toNumber(row.config_quantity) || 1);
     const baseRate = row.base_rate !== null && row.base_rate !== undefined ? toNumber(row.base_rate) : null;
-    byLineService.set(`${row.contract_line_id}\u0000${row.service_id}`, baseRate !== null ? baseRate * quantity : null);
+    // A share is the member's slice of the line fee and is never scaled;
+    // a per-unit rate is multiplied by quantity (clamped to at least 1).
+    byLineService.set(
+      `${row.contract_line_id}\u0000${row.service_id}`,
+      baseRate !== null ? fixedMemberContributionCents(baseRate, fixedRateBasisOf(row), quantity) : null,
+    );
   }
 
   return byLineService;

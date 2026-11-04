@@ -51,7 +51,7 @@ const GROUP_LINES = [
   { lineId: uuidv4(), chargeFamily: 'usage' },
 ].map((line) => ({
   ...line,
-  scheduleKey: `schedule:${TENANT}:client_contract_line:${line.lineId}:client:arrears`,
+  scheduleKey: `schedule:${TENANT}:${line.lineId}:client:arrears`,
 }));
 
 let db: Knex;
@@ -64,7 +64,6 @@ async function insertGroupServicePeriods(): Promise<void> {
       period_key: PERIOD_KEY,
       revision: 1,
       obligation_id: line.lineId,
-      obligation_type: 'client_contract_line',
       charge_family: line.chargeFamily,
       cadence_owner: 'client',
       due_position: 'arrears',

@@ -33,80 +33,32 @@ export interface RateLimitResult {
   msBeforeNext?: number;
 }
 
-export async function checkRegistrationLimit(email: string): Promise<RateLimitResult> {
+// rate-limiter-flexible rejects with a RateLimiterRes (not an Error) when the
+// budget is spent; only an internal failure rejects with an Error.
+async function consume(limiter: RateLimiterMemory, key: string): Promise<RateLimitResult> {
   try {
-    const rateLimitInfo = await registrationLimiter.consume(email);
-    return {
-      success: true,
-      remainingPoints: rateLimitInfo.remainingPoints,
-      msBeforeNext: rateLimitInfo.msBeforeNext,
-    };
-  } catch (error) {
-    if (error instanceof Error) {
-      return {
-        success: false,
-        msBeforeNext: error.message ? parseInt(error.message) : undefined,
-      };
-    }
-    return { success: false };
+    const info = await limiter.consume(key);
+    return { success: true, remainingPoints: info.remainingPoints, msBeforeNext: info.msBeforeNext };
+  } catch (rejection) {
+    const msBeforeNext = (rejection as { msBeforeNext?: unknown } | null)?.msBeforeNext;
+    return { success: false, msBeforeNext: typeof msBeforeNext === 'number' ? msBeforeNext : undefined };
   }
+}
+
+export async function checkRegistrationLimit(email: string): Promise<RateLimitResult> {
+  return consume(registrationLimiter, email);
 }
 
 export async function checkAuthVerificationLimit(identifier: string): Promise<RateLimitResult> {
-  try {
-    const rateLimitInfo = await authVerificationLimiter.consume(identifier);
-    return {
-      success: true,
-      remainingPoints: rateLimitInfo.remainingPoints,
-      msBeforeNext: rateLimitInfo.msBeforeNext,
-    };
-  } catch (error) {
-    if (error instanceof Error) {
-      return {
-        success: false,
-        msBeforeNext: error.message ? parseInt(error.message) : undefined,
-      };
-    }
-    return { success: false };
-  }
+  return consume(authVerificationLimiter, identifier);
 }
 
 export async function checkPortalInvitationLimit(userId: string): Promise<RateLimitResult> {
-  try {
-    const rateLimitInfo = await portalInvitationLimiter.consume(userId);
-    return {
-      success: true,
-      remainingPoints: rateLimitInfo.remainingPoints,
-      msBeforeNext: rateLimitInfo.msBeforeNext,
-    };
-  } catch (error) {
-    if (error instanceof Error) {
-      return {
-        success: false,
-        msBeforeNext: error.message ? parseInt(error.message) : undefined,
-      };
-    }
-    return { success: false };
-  }
+  return consume(portalInvitationLimiter, userId);
 }
 
 export async function checkPasswordResetLimit(email: string): Promise<RateLimitResult> {
-  try {
-    const rateLimitInfo = await passwordResetLimiter.consume(email.toLowerCase());
-    return {
-      success: true,
-      remainingPoints: rateLimitInfo.remainingPoints,
-      msBeforeNext: rateLimitInfo.msBeforeNext,
-    };
-  } catch (error) {
-    if (error instanceof Error) {
-      return {
-        success: false,
-        msBeforeNext: error.message ? parseInt(error.message) : undefined,
-      };
-    }
-    return { success: false };
-  }
+  return consume(passwordResetLimiter, email.toLowerCase());
 }
 
 export async function formatRateLimitError(msBeforeNext?: number): Promise<string> {

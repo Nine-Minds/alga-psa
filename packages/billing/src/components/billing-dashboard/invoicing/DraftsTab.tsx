@@ -10,8 +10,9 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { toast } from 'react-hot-toast';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { FileText, MoreVertical, GripVertical, Search, CheckCircle, Download, ArrowRight, RotateCcw } from 'lucide-react';
+import { AlertTriangle, FileText, MoreVertical, GripVertical, Search, CheckCircle, Download, ArrowRight, RotateCcw } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,10 +22,10 @@ import {
 import type { ColumnDefinition, InvoiceViewModel as DbInvoiceViewModel, IInvoiceTemplate } from '@alga-psa/types';
 import { fetchInvoicesPaginated } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
-import { finalizeInvoice, hardDeleteInvoice } from '@alga-psa/billing/actions/invoiceModification';
+import { finalizeInvoice, deleteDraftInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { validateInvoiceFinalization, updateInvoiceTaxSource } from '@alga-psa/billing/actions/taxSourceActions';
 import { downloadInvoicePDF } from '@alga-psa/billing/actions/invoiceGeneration';
-import { toPlainDate } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits, toPlainDate } from '@alga-psa/core';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -48,7 +49,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
   refreshTrigger
 }) => {
   const { t } = useTranslation('msp/invoicing');
-  const { formatCurrency, formatDate } = useFormatters();
+  const { formatDate, locale } = useFormatters();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -225,6 +226,24 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     }
   };
 
+  // A finalize that returned success has COMMITTED. Post-commit steps (credit
+  // auto-apply, export, events, ...) are best-effort; surface any that failed
+  // as a warning toast naming the step, but never as a finalize failure.
+  const showFinalizeWarnings = (result: { warnings?: Array<{ step: string; message: string }> }, invoiceNumber?: string | null) => {
+    const warnings = result.warnings ?? [];
+    if (warnings.length === 0) return;
+    const steps = warnings
+      .map((w) => t(`draftsTab.warnings.steps.${w.step}`, { defaultValue: w.step }))
+      .join(', ');
+    toast(
+      `${invoiceNumber ? `${invoiceNumber}: ` : ''}${t('draftsTab.warnings.finalizedWithWarnings', {
+        steps,
+        defaultValue: 'Invoice finalized, but a follow-up step did not complete: {{steps}}. The invoice is finalized; you can retry that step.',
+      })}`,
+      { icon: <AlertTriangle className="h-5 w-5 text-amber-500" aria-hidden="true" />, duration: 10000 },
+    );
+  };
+
   const handleFinalizeSingle = async (invoiceId: string) => {
     setError(null);
     setFinalizeNotice(null);
@@ -256,6 +275,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
         return;
       }
 
+      showFinalizeWarnings(finalizeResult, invoices.find(inv => inv.invoice_id === invoiceId)?.invoice_number);
       await loadData();
       onRefreshNeeded();
       setSelectedInvoices(prev => {
@@ -271,6 +291,10 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       setError(t('draftsTab.errors.finalizeFailed', {
         defaultValue: 'Failed to finalize invoice. Please try again.',
       }));
+      // The finalize may have committed before the failure surfaced; never leave
+      // a stale draft list on screen.
+      await loadData();
+      onRefreshNeeded();
     }
   };
 
@@ -301,6 +325,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
         return;
       }
 
+      showFinalizeWarnings(finalizeResult, taxSourceFixState.invoiceNumber);
       await loadData();
       onRefreshNeeded();
       setSelectedInvoices(prev => {
@@ -359,6 +384,8 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
         if (isInvoiceActionError(finalizeResult)) {
           otherBlocked += 1;
           firstFinalizeError ??= getErrorMessage(finalizeResult);
+        } else {
+          showFinalizeWarnings(finalizeResult, invoices.find(inv => inv.invoice_id === invoiceId)?.invoice_number);
         }
       }
       setSelectedInvoices(new Set());
@@ -382,6 +409,8 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       setError(t('draftsTab.errors.bulkFinalizeFailed', {
         defaultValue: 'Failed to finalize selected invoices. Please try again.',
       }));
+      await loadData();
+      onRefreshNeeded();
     }
   };
 
@@ -460,9 +489,9 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     {
       title: t('draftsTab.columns.amount', { defaultValue: 'Amount' }),
       dataIndex: 'total_amount',
-      render: (value, record) => formatCurrency(Number(value) / 100, record.currencyCode || 'USD', {
-        minimumFractionDigits: 2,
-      }),
+      // Totals are minor units; the exponent is the currency's (USD 2, JPY 0), so this
+      // column agrees with the rendered invoice instead of assuming a fixed divisor.
+      render: (value, record) => formatCurrencyFromMinorUnits(Number(value), locale, record.currencyCode || 'USD'),
     },
     {
       title: t('draftsTab.columns.invoiceDate', { defaultValue: 'Invoice Date' }),
@@ -724,7 +753,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
 
           try {
             for (const invoiceId of invoiceIds) {
-              const deleteResult = await hardDeleteInvoice(invoiceId);
+              const deleteResult = await deleteDraftInvoice(invoiceId);
               if (isInvoiceActionError(deleteResult)) {
                 throw new Error(getErrorMessage(deleteResult));
               }

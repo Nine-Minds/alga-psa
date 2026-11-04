@@ -21,7 +21,8 @@ vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
 vi.mock('@alga-psa/billing/actions/billingProfileActions', () => ({
   getClientBillingProfilesForBilling: mocks.loadProfiles,
 }));
-vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
+vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/billing/hooks/useBillingEnumOptions')>()),
   useBillingFrequencyOptions: () => [{ value: 'monthly', label: 'Monthly' }],
   useFormatBillingFrequency: () => (value: string) => value,
 }));
@@ -57,7 +58,7 @@ const wizardData = (billingProfileId: string | null) => ({
   currency_code: 'USD',
   start_date: '2026-01-01',
   billing_profile_id: billingProfileId,
-  fixed_services: [],
+  fixed_lines: [],
   product_services: [],
   hourly_services: [],
   usage_services: [],

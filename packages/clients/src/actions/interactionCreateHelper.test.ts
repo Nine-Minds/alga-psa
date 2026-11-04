@@ -21,6 +21,12 @@ vi.mock('@alga-psa/shared/models/scheduleEntry', () => ({
   },
 }));
 
+// The human-work guard is covered against a real database in T043; the fake trx here has no users table.
+vi.mock('@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee', () => ({
+  assertHumanWorkAssignee: vi.fn(async () => undefined),
+  assertHumanWorkOwner: vi.fn(async () => undefined),
+}));
+
 vi.mock('../models/interactions', () => ({
   default: {
     addInteraction: hoisted.addInteractionMock,
@@ -30,10 +36,17 @@ vi.mock('../models/interactions', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: hoisted.publishEventMock,
   publishWorkflowEvent: hoisted.publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...((await importOriginal()) as any),
   buildInteractionLoggedPayload: hoisted.buildInteractionLoggedPayloadMock,
+  buildScheduleEntryCreatedPayload: (input: Record<string, unknown>) => ({ ...input }),
 }));
 
 vi.mock('next/cache', () => ({
@@ -323,21 +336,21 @@ describe('interactionCreateHelper', () => {
 
   describe('resolveScheduleAssignees', () => {
     it('defaults to the creator when nobody was requested', () => {
-      expect(resolveScheduleAssignees('user-1')).toEqual(['user-1']);
-      expect(resolveScheduleAssignees('user-1', [])).toEqual(['user-1']);
-      expect(resolveScheduleAssignees('user-1', ['', '  '])).toEqual(['user-1']);
+      expect(resolveScheduleAssignees('user-1', undefined, 'internal')).toEqual(['user-1']);
+      expect(resolveScheduleAssignees('user-1', [], 'internal')).toEqual(['user-1']);
+      expect(resolveScheduleAssignees('user-1', ['', '  '], 'internal')).toEqual(['user-1']);
     });
 
     it('keeps the requested users, de-duplicated and in order', () => {
-      expect(resolveScheduleAssignees('user-1', ['user-2', 'user-3', 'user-2'])).toEqual(['user-2', 'user-3']);
+      expect(resolveScheduleAssignees('user-1', ['user-2', 'user-3', 'user-2'], 'internal')).toEqual(['user-2', 'user-3']);
     });
 
     it('does not add the creator to an explicit list', () => {
-      expect(resolveScheduleAssignees('user-1', ['user-2'])).toEqual(['user-2']);
+      expect(resolveScheduleAssignees('user-1', ['user-2'], 'internal')).toEqual(['user-2']);
     });
 
     it('trims the ids it hands to the schedule', () => {
-      expect(resolveScheduleAssignees('user-1', [' user-2 ', 'user-2'])).toEqual(['user-2']);
+      expect(resolveScheduleAssignees('user-1', [' user-2 ', 'user-2'], 'internal')).toEqual(['user-2']);
     });
   });
 
@@ -372,16 +385,14 @@ describe('interactionCreateHelper', () => {
         }),
         { assignedUserIds: ['user-1'], assignedByUserId: 'user-1' },
       );
-      expect(hoisted.publishEventMock).not.toHaveBeenCalled();
+      expect(hoisted.publishWorkflowEventMock).not.toHaveBeenCalled();
 
       await result!.publishScheduleEntryCreated();
 
-      expect(hoisted.publishEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      expect(hoisted.publishWorkflowEventMock).toHaveBeenCalledWith(expect.objectContaining({
         eventType: 'SCHEDULE_ENTRY_CREATED',
-        payload: expect.objectContaining({
-          tenantId: 'tenant-1',
-          entryId: 'schedule-entry-1',
-        }),
+        payload: expect.objectContaining({ entryId: 'schedule-entry-1' }),
+        ctx: expect.objectContaining({ tenantId: 'tenant-1' }),
       }));
     });
 

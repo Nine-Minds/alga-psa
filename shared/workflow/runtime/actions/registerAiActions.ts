@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import type { WorkflowJsonSchema } from '../ai/aiSchema';
 import { isWorkflowAiInferAction, resolveWorkflowAiSchemaFromConfig } from '../ai/aiSchema';
-import { withWorkflowJsonSchemaMetadata } from '../jsonSchemaMetadata';
+import { withWorkflowJsonSchemaMetadata } from '@alga-psa/event-schemas';
 import { throwActionError } from './businessOperations/shared';
 
 const aiInferInputSchema = z.object({

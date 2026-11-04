@@ -69,7 +69,9 @@
       "message_one": "Le type de téléphone personnalisé suivant n’est plus utilisé par aucun contact : {{labels}}. Supprimer la définition du type ou la conserver pour une utilisation future ?",
       "message_other": "Les types de téléphone personnalisés suivants ne sont plus utilisés par aucun contact : {{labels}}. Supprimer les définitions de types ou les conserver pour une utilisation future ?",
       "deleteType": "Supprimer le type",
-      "keepType": "Conserver le type"
+      "keepType": "Conserver le type",
+      "message_few": "Les types de téléphone personnalisés suivants ne sont plus utilisés par aucun contact : {{labels}}. Supprimer les définitions de types ou les conserver pour une utilisation future ?",
+      "message_many": "Les types de téléphone personnalisés suivants ne sont plus utilisés par aucun contact : {{labels}}. Supprimer les définitions de types ou les conserver pour une utilisation future ?"
     },
     "print": {
       "title": "Contacts",
@@ -455,7 +457,9 @@
         "invitationNotFound": "Invitation introuvable ou déjà utilisée."
       },
       "userNotFound": "Utilisateur du client introuvable"
-    }
+    },
+    "boardCount_few": "{{count}} tableaux",
+    "boardCount_many": "{{count}} tableaux"
   },
   "quickAddContact": {
     "title": "Ajouter un nouveau contact",
@@ -734,7 +738,67 @@
       "visibilityDuplicate": "Un groupe de visibilité avec ces informations existe déjà pour ce client.",
       "visibilityInvalidData": "Données de groupe de visibilité non valides. Veuillez vérifier les informations du groupe et les tableaux sélectionnés.",
       "groupNameRequired": "Le nom du groupe est obligatoire",
-      "readPermission": "Autorisation refusée : impossible de lire des contacts"
+      "readPermission": "Autorisation refusée : impossible de lire des contacts",
+      "idRequired": "L’identifiant du contact est obligatoire",
+      "schemaError": "Erreur de schéma de base de données — veuillez contacter le support",
+      "readFailed": "Une erreur inattendue s’est produite lors de la récupération des informations du contact",
+      "deleteRecordFailed": "La fiche contact est introuvable ou n’a pas pu être supprimée",
+      "updateIdRequired": "L’identifiant du contact est obligatoire pour les mises à jour",
+      "clientMissing": "Le client sélectionné n’existe plus",
+      "destinationMissing": "La destination sélectionnée pour les tickets entrants n’existe plus",
+      "updateMissing": "Le contact que vous tentez de mettre à jour n’existe plus",
+      "updateRecordMissing": "La mise à jour du contact s’est terminée sans renvoyer la fiche actualisée",
+      "clientIdRequired": "L’identifiant du client est obligatoire",
+      "specifiedClientMissing": "Le client indiqué n’existe pas",
+      "updateDataRequired": "Aucune donnée de mise à jour fournie",
+      "emailInvalid": "Veuillez saisir une adresse e-mail valide",
+      "bulkUpdateFailed": "La mise à jour des contacts du client s’est terminée sans modifier de fiche contact",
+      "updateFailed": "Une erreur inattendue s’est produite lors de la mise à jour des contacts du client",
+      "importMultipleMatches": "Les adresses e-mail importées correspondent à plusieurs contacts existants",
+      "updatePermission": "Impossible de mettre à jour les contacts",
+      "importDataRequired": "Aucune donnée de contact fournie",
+      "fullNameRequired": "Le nom complet est requis",
+      "importFailed": "Une erreur inattendue s’est produite lors de l’importation des contacts",
+      "emailsRequired": "Aucune adresse e-mail fournie",
+      "validEmailsRequired": "Aucune adresse e-mail valide fournie",
+      "checkEmailsFailed": "Une erreur inattendue s’est produite lors de la vérification des adresses e-mail existantes",
+      "portalAdminRequired": "Un accès administrateur au portail client est requis",
+      "assignedGroupInvalid": "Le groupe de visibilité attribué n’est pas valide pour ce contact",
+      "groupNotFound": "Groupe de visibilité introuvable",
+      "boardsInvalid": "Un ou plusieurs tableaux ne sont pas valides pour ce locataire",
+      "groupCreateFailed": "La création du groupe de visibilité s’est terminée sans renvoyer d’identifiant de groupe",
+      "groupInUse": "Impossible de supprimer le groupe de visibilité tant qu’il est attribué à des contacts",
+      "importEmailInvalid": "Format d’e-mail invalide pour le contact : {{name}}",
+      "importClientMissing": "Client introuvable pour le contact : {{name}}",
+      "invalidEmailValue": "Format d’e-mail invalide : {{email}}",
+      "invalidData": "Données de contact invalides",
+      "phoneExtensionInvalid": "Téléphone {{index}} : veuillez saisir un numéro de poste valide",
+      "phoneNumberInvalid": "Téléphone {{index}} : veuillez saisir un numéro de téléphone valide",
+      "phoneCountryRequired": "Téléphone {{index}} : incluez l’indicatif du pays, commençant par +",
+      "tenantEmailExists": "Une adresse e-mail de contact existe déjà dans ce locataire",
+      "importRowFailed": "Impossible d’importer ce contact. Vérifiez les champs obligatoires et les références clients.",
+      "deleteMissing": "Le contact que vous tentez de supprimer n’existe plus.",
+      "deleteFailed": "Impossible de supprimer le contact. Veuillez réessayer.",
+      "deleteDependencies": "Impossible de supprimer le contact car il possède des enregistrements associés",
+      "connectionFailed": "Problème de connexion à la base de données. Veuillez réessayer.",
+      "deleteUnexpected": "Une erreur inattendue s’est produite lors de la suppression du contact",
+      "importFileFailed": "Impossible d’importer les contacts. Vérifiez le fichier et réessayez.",
+      "portalAdminUpdateFailed": "Impossible de mettre à jour le statut d’administrateur du portail. Actualisez la page et réessayez.",
+      "userLoadFailed": "Impossible de récupérer l’utilisateur",
+      "sharedMailboxAdmin": "Les contacts de boîtes aux lettres partagées ne peuvent pas être administrateurs clients.",
+      "createFailed": "Une erreur inattendue s’est produite lors de la création du contact",
+      "importDuplicateEmail": "Un contact avec cette adresse e-mail existe déjà : {{value}}",
+      "importDuplicateName": "Un contact portant ce nom existe déjà : {{value}}",
+      "permissions": {
+        "readContacts": "Impossible de lire les contacts",
+        "deleteContacts": "Impossible de supprimer les contacts",
+        "createContacts": "Impossible de créer des contacts",
+        "updateContacts": "Impossible de mettre à jour les contacts",
+        "managePhoneTypes": "Impossible de gérer les types de téléphone",
+        "updateClientUsers": "Vous n’avez pas l’autorisation de mettre à jour les utilisateurs clients",
+        "viewClientUsers": "Vous n’avez pas l’autorisation de consulter les utilisateurs clients"
+      },
+      "field": "champ"
     }
   },
   "portal": {
@@ -760,7 +824,30 @@
       "scopeSummaryOwn": "Propres",
       "managerScopeNote_one": "Sa vue inclut aussi les éléments de {{count}} personne qui lui est rattachée.",
       "managerScopeNote_many": "Sa vue inclut aussi les éléments de {{count}} de personnes qui lui sont rattachées.",
-      "managerScopeNote_other": "Sa vue inclut aussi les éléments de {{count}} personnes qui lui sont rattachées."
+      "managerScopeNote_other": "Sa vue inclut aussi les éléments de {{count}} personnes qui lui sont rattachées.",
+      "managerScopeNote_few": "Sa vue inclut aussi les éléments de {{count}} personnes qui lui sont rattachées."
     }
+  },
+  "messages": {
+    "success": {
+      "updated": "Contact mis à jour avec succès",
+      "created": "Contact créé avec succès"
+    }
+  },
+  "csvTemplate": {
+    "explorerRole": "Exploratrice en chef",
+    "explorerNotes": "Est tombée dans un terrier de lapin et a découvert un tout nouveau monde",
+    "explorerTags": "Curieuse, Aventurière, Courageuse",
+    "teaRole": "Expert en chef de la cérémonie du thé",
+    "teaNotes": "Sait pourquoi un corbeau ressemble à un bureau",
+    "teaTags": "Créatif, Excentrique, Expert en thé"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · dernière synchronisation le {{date}}",
+    "description": "Ce contact est synchronisé avec un compte de l’annuaire.",
+    "signInName": "Nom de connexion : {{name}}",
+    "lastSynced": "Dernière synchronisation le {{date}}",
+    "deleted": "Inactif — le compte Microsoft a été supprimé.",
+    "disabled": "Inactif — le compte Microsoft est désactivé."
   }
 }

@@ -5,6 +5,7 @@ import { WidgetProps } from '@rjsf/utils';
 import { useCreateBlockNote } from "@blocknote/react";
 import { PartialBlock } from '@blocknote/core';
 import RichTextViewer from '../../editor/RichTextViewer'; // Adjusted path
+import { useTranslation } from '../../lib/i18n/client';
 
 // Define options if any might be needed in the future, for consistency
 interface RichTextViewerWidgetOptions {
@@ -22,6 +23,7 @@ const RichTextViewerWidget = ({
   options,
   label,
 }: CustomRichTextViewerWidgetProps) => {
+  const { t } = useTranslation('common');
   const [blocks, setBlocks] = useState<PartialBlock[] | undefined>(undefined);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -66,7 +68,7 @@ const RichTextViewerWidget = ({
     // Optional: render a loading state
     return (
       <div className="mb-4">
-        <div>Loading content...</div>
+        <div>{t('widgets.richTextViewer.loading')}</div>
       </div>
     );
   }
@@ -75,7 +77,7 @@ const RichTextViewerWidget = ({
     // If blocks are still undefined after loading, render nothing or a placeholder
     return (
       <div className="mb-4">
-        <div>Error loading content</div>
+        <div>{t('widgets.richTextViewer.errors.loadFailed')}</div>
       </div>
     );
   }

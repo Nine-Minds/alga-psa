@@ -1,3 +1,5 @@
+import { builtWorkflowPayload } from '@alga-psa/event-schemas';
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const DEFAULT_TOKEN_EXPIRING_WINDOW_DAYS = 7;
@@ -50,14 +52,14 @@ export function buildIntegrationTokenExpiringPayload(params: {
   daysUntilExpiry: number;
   notifiedAt?: string;
 }) {
-  return {
+  return builtWorkflowPayload('INTEGRATION_TOKEN_EXPIRING', {
     integrationId: params.integrationId,
     provider: params.provider,
     connectionId: params.connectionId,
     expiresAt: params.expiresAt,
     daysUntilExpiry: params.daysUntilExpiry,
     notifiedAt: params.notifiedAt,
-  };
+  });
 }
 
 export function buildIntegrationTokenRefreshFailedPayload(params: {
@@ -69,7 +71,7 @@ export function buildIntegrationTokenRefreshFailedPayload(params: {
   errorMessage: string;
   retryable?: boolean;
 }) {
-  return {
+  return builtWorkflowPayload('INTEGRATION_TOKEN_REFRESH_FAILED', {
     integrationId: params.integrationId,
     provider: params.provider,
     connectionId: params.connectionId,
@@ -77,6 +79,6 @@ export function buildIntegrationTokenRefreshFailedPayload(params: {
     errorCode: params.errorCode,
     errorMessage: params.errorMessage,
     retryable: params.retryable,
-  };
+  });
 }
 

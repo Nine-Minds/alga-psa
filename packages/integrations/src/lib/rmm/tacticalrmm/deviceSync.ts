@@ -17,6 +17,7 @@ import type { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { applyRmmSignedInUserAssignment } from '@alga-psa/shared/rmm/autoAssignFromSignedInUser';
 
 import { TacticalRmmClient, normalizeTacticalBaseUrl } from './tacticalApiClient';
 import { computeTacticalAgentStatus } from './agentStatus';
@@ -68,7 +69,7 @@ export async function publishRmmSyncEvent(args: {
   };
 
   try {
-    await publishEvent({ eventType: args.eventType, payload } as any);
+    await publishEvent({ eventType: args.eventType, payload });
   } catch {
     // Best-effort: never fail the sync on event-publish issues.
   }
@@ -303,6 +304,56 @@ export interface TacticalHardware {
   disk_usage: Array<{ name: string; total_gb: number; free_gb: number; utilization_percent: number }> | null;
   serial_number: string | null;
   last_reboot_at: Date | null;
+  manufacturer: string | null;
+  model: string | null;
+}
+
+function cleanHardwareString(value: unknown): string | null {
+  const text = String(value ?? '').trim();
+  if (!text) return null;
+  // Tactical echoes these OEM placeholders verbatim; they are not a make.
+  if (/^(system manufacturer|system product name|to be filled by o\.?e\.?m\.?|default string|unknown|none|n\/?a)$/i.test(text)) {
+    return null;
+  }
+  return text.slice(0, 255);
+}
+
+/**
+ * Make and model from either Tactical payload shape (FR-A3). The list endpoint
+ * gives one `make_model` string ("Dell Inc. Latitude 5420"); the detail
+ * endpoint's `wmi_detail.comp_sys` carries them apart. When only the combined
+ * string is available and the make is known, the make prefix is stripped so
+ * the model column does not repeat it.
+ */
+export function extractTacticalMakeModel(agent: any): { manufacturer: string | null; model: string | null } {
+  const wmi = agent?.wmi_detail && typeof agent.wmi_detail === 'object' ? agent.wmi_detail : null;
+  let manufacturer: string | null = null;
+  let model: string | null = null;
+
+  if (wmi) {
+    if (isTacticalPosix(agent)) {
+      manufacturer = cleanHardwareString(wmi.manufacturer);
+      model = cleanHardwareString(wmi.model ?? wmi.make_model);
+    } else {
+      for (const entry of Array.isArray(wmi.comp_sys) ? wmi.comp_sys : []) {
+        const rows: any[] = Array.isArray(entry) ? entry : [entry];
+        for (const row of rows) {
+          if (!row || typeof row !== 'object') continue;
+          manufacturer = manufacturer ?? cleanHardwareString((row as any).Manufacturer);
+          model = model ?? cleanHardwareString((row as any).Model);
+        }
+      }
+    }
+  }
+
+  const combined = cleanHardwareString(agent?.make_model ?? agent?.makeModel);
+  if (!model && combined) {
+    model = manufacturer && combined.toLowerCase().startsWith(manufacturer.toLowerCase())
+      ? cleanHardwareString(combined.slice(manufacturer.length))
+      : combined;
+  }
+
+  return { manufacturer, model };
 }
 
 /**
@@ -384,6 +435,8 @@ export function extractHardware(agent: any): TacticalHardware {
     serial = typeof raw === 'string' && raw.trim() ? raw.trim() : null;
   }
 
+  const makeModel = extractTacticalMakeModel(agent);
+
   return {
     cpu_model: cpuModel,
     cpu_cores: cpuCores,
@@ -391,7 +444,20 @@ export function extractHardware(agent: any): TacticalHardware {
     disk_usage: diskUsage,
     serial_number: serial,
     last_reboot_at: bootTimeToDate(agent),
+    manufacturer: makeModel.manufacturer,
+    model: makeModel.model,
   };
+}
+
+/**
+ * Hardware identity columns on `assets`. Only non-empty values are included so
+ * a thin list-endpoint payload never blanks what the detail endpoint filled.
+ */
+export function buildTacticalAssetIdentityPatch(hardware: TacticalHardware): Record<string, string> {
+  const patch: Record<string, string> = {};
+  if (hardware.manufacturer) patch.manufacturer = hardware.manufacturer;
+  if (hardware.model) patch.model = hardware.model;
+  return patch;
 }
 
 /**
@@ -449,6 +515,8 @@ export async function createTacticalAssetRecord(
     name: string;
     serialNumber: string;
     location: string;
+    /** FR-B6: the lifecycle status is set once, on create, like every provider. */
+    status?: string;
   }
 ): Promise<{ asset_id: string }> {
   const now = new Date().toISOString();
@@ -459,7 +527,7 @@ export async function createTacticalAssetRecord(
       client_id: args.clientId,
       asset_tag: args.assetTag,
       name: args.name,
-      status: 'active',
+      status: args.status ?? 'active',
       location: args.location,
       serial_number: args.serialNumber,
       created_at: now,
@@ -468,6 +536,66 @@ export async function createTacticalAssetRecord(
     .returning(['asset_id']);
 
   return { asset_id: String(asset.asset_id) };
+}
+
+/**
+ * FR-B6: a device Tactical no longer knows about is retired.
+ *
+ * Tactical has no deletion webhook and the agent list is the only signal, so
+ * this runs on a full sync only — an incremental run sees a filtered page and
+ * would retire everything that simply had not changed. An empty list is
+ * treated as "could not see the fleet" rather than "the fleet is gone".
+ */
+async function retireVanishedTacticalAssets(
+  conn: Knex,
+  args: { tenant: string; externalOrgId: string; seenAgentIds: string[]; isFullSync: boolean }
+): Promise<number> {
+  if (!args.isFullSync || args.seenAgentIds.length === 0) return 0;
+
+  const mappings = await tenantScopedTable(conn, 'tenant_external_entity_mappings', args.tenant)
+    .where({
+      integration_type: PROVIDER,
+      alga_entity_type: 'asset',
+      external_realm_id: args.externalOrgId,
+    })
+    .whereNotIn('external_entity_id', args.seenAgentIds)
+    .select(['id', 'alga_entity_id', 'metadata']);
+  if (mappings.length === 0) return 0;
+
+  const now = new Date().toISOString();
+  let retired = 0;
+
+  for (const mapping of mappings as Array<Record<string, any>>) {
+    const assetId = String(mapping.alga_entity_id ?? '');
+    if (!assetId) continue;
+
+    const changed = await tenantScopedTable(conn, 'assets', args.tenant)
+      .whereRaw('assets.asset_id::text = ?', [assetId])
+      .whereNot({ status: 'retired' })
+      .update({
+        // Connectivity lives in agent_status; `status` is the lifecycle.
+        status: 'retired',
+        agent_status: 'offline',
+        last_rmm_sync_at: conn.fn.now(),
+        updated_at: now,
+      });
+    if (!changed) continue;
+
+    await tenantScopedTable(conn, 'tenant_external_entity_mappings', args.tenant)
+      .where({ id: mapping.id })
+      .update({
+        sync_status: 'error',
+        last_synced_at: conn.fn.now(),
+        metadata: {
+          ...((typeof mapping.metadata === 'object' && mapping.metadata) || {}),
+          deleted: true,
+          deletedAt: now,
+        },
+      });
+    retired += 1;
+  }
+
+  return retired;
 }
 
 export interface TacticalDeviceSyncOptions {
@@ -555,7 +683,7 @@ export async function runTacticalRmmDeviceSync(
       .where({ integration_id: integration.integration_id })
       .whereNotNull('client_id')
       .andWhere('auto_sync_assets', true)
-      .select(['external_organization_id', 'client_id']);
+      .select(['external_organization_id', 'client_id', 'contact_assignment_mode']);
 
     const sites = await client.listAllBeta<any>({ path: '/beta/v1/site/' });
     const siteById = new Map<string, any>();
@@ -567,10 +695,12 @@ export async function runTacticalRmmDeviceSync(
     let processed = 0;
     let created = 0;
     let updated = 0;
+    let deleted = 0;
 
     for (const org of mappedOrgs) {
       const externalOrgId = String((org as any).external_organization_id);
       const algaClientId = String((org as any).client_id);
+      const assignmentMode = (org as any).contact_assignment_mode ?? 'suggest';
 
       const allAgents = await client.listAllBeta<any>({
         path: '/beta/v1/agent/',
@@ -623,6 +753,9 @@ export async function runTacticalRmmDeviceSync(
               name: deviceName,
               serialNumber: hardware.serial_number ?? '',
               location: siteName || '',
+              // An agent that is already offline when we first meet it is not
+              // a deployed device; every other provider says the same.
+              status: status === 'offline' ? 'inactive' : 'active',
             });
 
             await tenantScopedTable(knex, 'assets', tenant)
@@ -634,6 +767,7 @@ export async function runTacticalRmmDeviceSync(
                 agent_status: status,
                 last_seen_at: lastSeen ? new Date(lastSeen) : null,
                 last_rmm_sync_at: knex.fn.now(),
+                ...buildTacticalAssetIdentityPatch(hardware),
               });
 
             await upsertTacticalAssetExtension(knex, {
@@ -641,6 +775,19 @@ export async function runTacticalRmmDeviceSync(
               assetType,
               assetId: String(asset.asset_id),
               patch: extensionPatch,
+            });
+
+            // FR-D4: after the extension row, so the matcher sees the signed-in
+            // user this run reported.
+            await applyRmmSignedInUserAssignment(knex, {
+              tenant,
+              assetId: String(asset.asset_id),
+              clientId: algaClientId,
+              integrationId: String(integration.integration_id),
+              provider: PROVIDER,
+              mode: assignmentMode,
+              currentUser: extensionPatch.current_user as string | null,
+              actorUserId: actorUserId ?? null,
             });
 
             await tenantScopedTable(knex, 'tenant_external_entity_mappings', tenant).insert({
@@ -665,7 +812,7 @@ export async function runTacticalRmmDeviceSync(
 
             const assetRow = await tenantScopedTable(knex, 'assets', tenant)
               .whereRaw('assets.asset_id::text = ?', [assetIdText])
-              .first(['asset_type']);
+              .first(['asset_type', 'client_id']);
 
             await tenantScopedTable(knex, 'assets', tenant)
               .whereRaw('assets.asset_id::text = ?', [assetIdText])
@@ -678,6 +825,7 @@ export async function runTacticalRmmDeviceSync(
                 last_seen_at: lastSeen ? new Date(lastSeen) : null,
                 last_rmm_sync_at: knex.fn.now(),
                 ...(hardware.serial_number ? { serial_number: hardware.serial_number } : {}),
+                ...buildTacticalAssetIdentityPatch(hardware),
               });
 
             await upsertTacticalAssetExtension(knex, {
@@ -685,6 +833,20 @@ export async function runTacticalRmmDeviceSync(
               assetType: assetRow?.asset_type,
               assetId: assetIdText,
               patch: extensionPatch,
+            });
+
+            // The asset's own client, not the mapping's: FR-G5 keeps a manual
+            // move, so the matcher works where the device is now.
+            const assignmentClientId = assetRow?.client_id ? String(assetRow.client_id) : algaClientId;
+            await applyRmmSignedInUserAssignment(knex, {
+              tenant,
+              assetId: assetIdText,
+              clientId: assignmentClientId,
+              integrationId: String(integration.integration_id),
+              provider: PROVIDER,
+              mode: assignmentMode,
+              currentUser: extensionPatch.current_user as string | null,
+              actorUserId: actorUserId ?? null,
             });
 
             await tenantScopedTable(knex, 'tenant_external_entity_mappings', tenant)
@@ -707,6 +869,15 @@ export async function runTacticalRmmDeviceSync(
           errors.push(`Failed to sync agent ${agentId}.`);
         }
       }
+
+      deleted += await retireVanishedTacticalAssets(knex, {
+        tenant,
+        externalOrgId,
+        seenAgentIds: allAgents
+          .map((entry) => String((entry as any).agent_id ?? (entry as any).id ?? (entry as any).pk ?? ''))
+          .filter(Boolean),
+        isFullSync: syncType === 'full',
+      });
     }
 
     await tenantScopedTable(knex, 'rmm_integrations', tenant)
@@ -730,7 +901,7 @@ export async function runTacticalRmmDeviceSync(
       items_processed: processed,
       items_created: created,
       items_updated: updated,
-      items_deleted: 0,
+      items_deleted: deleted,
       items_failed: errors.length,
       errors: errors.length ? errors : undefined,
       sync_type: syncType,

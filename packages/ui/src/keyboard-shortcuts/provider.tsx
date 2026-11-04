@@ -12,6 +12,7 @@ import React, {
   type ReactNode,
 } from 'react';
 import { matchEvent } from './matcher';
+import { isKeyboardEventInEditable } from './editable';
 import { hasRadixEscapeOwner } from './escape';
 import { parseBinding, parseSequence } from './parser';
 import { ShortcutRegistry } from './registry';
@@ -85,34 +86,6 @@ export interface KeyboardShortcutRegistrySnapshot {
 const KeyboardShortcutsContext = createContext<KeyboardShortcutsContextValue | null>(null);
 
 let nextEntryId = 1;
-
-function isElementEditable(element: Element): boolean {
-  const htmlElement = element as HTMLElement;
-  const tagName = htmlElement.tagName.toLowerCase();
-
-  if (tagName === 'input' || tagName === 'textarea' || tagName === 'select') {
-    return true;
-  }
-
-  if (htmlElement.isContentEditable) {
-    return true;
-  }
-
-  if (htmlElement.closest('[contenteditable="true"]')) {
-    return true;
-  }
-
-  const role = htmlElement.getAttribute('role');
-  if (role === 'textbox' || role === 'combobox') {
-    return true;
-  }
-
-  return Boolean(htmlElement.closest('[data-keyboard-shortcuts-editor-root="true"]'));
-}
-
-function isEditableTarget(target: EventTarget | null): boolean {
-  return target instanceof Element && isElementEditable(target);
-}
 
 function requiresActiveRegion(action: ShortcutAction): boolean {
   // Only roving-focus selection actions (j/k/Enter) need a focused list region;
@@ -506,7 +479,9 @@ export function KeyboardShortcutsProvider({
         return;
       }
 
-      const editableTarget = isEditableTarget(event.target);
+      // Typing keys (including Cmd/Ctrl+Arrow caret moves) belong to the editable
+      // element; only actions that opt in via allowInEditable may run there.
+      const editableTarget = isKeyboardEventInEditable(event);
 
       if (handleSequence(event, editableTarget)) {
         return;

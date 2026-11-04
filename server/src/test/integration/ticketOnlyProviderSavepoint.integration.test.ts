@@ -20,7 +20,14 @@ vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => ({
   publishEvent: vi.fn(async (event: any) => {
     busEvents.push({ eventType: event.eventType, payload: event.payload });
   }),
-  publishWorkflowEvent: vi.fn(async () => {}),
+  // Builder-minted payloads (WorkflowEventPublisher / ticket model) arrive already complete.
+  publishBuiltWorkflowPayload: vi.fn(async (event: any) => {
+    busEvents.push({ eventType: event.eventType, payload: event.payload });
+  }),
+  publishWorkflowEvent: vi.fn(async (params: any) => {
+    const { buildWorkflowPayload } = await import('@alga-psa/event-schemas');
+    busEvents.push({ eventType: params.eventType, payload: buildWorkflowPayload(params.payload, params.ctx) });
+  }),
 }));
 
 describe('ticket-only execution provider transaction handling (integration)', () => {
@@ -60,18 +67,34 @@ describe('ticket-only execution provider transaction handling (integration)', ()
     busEvents.length = 0;
   });
 
-  const context = (knex: Knex, config: Record<string, unknown>) => ({
-    knex,
-    tenant,
-    definitionId: uuidv4(),
-    definitionVersionId: uuidv4(),
-    submissionId: uuidv4(),
-    requesterUserId: requesterId,
-    clientId,
-    contactId: null,
-    payload: {},
-    config: { boardId, statusId, priorityId, ...config },
-  });
+  const context = async (knex: Knex, config: Record<string, unknown>) => {
+    const definitionId = uuidv4();
+    const definitionVersionId = uuidv4();
+    const submissionId = uuidv4();
+    const requestDb = tenantDb(knex, tenant);
+    await requestDb.table('service_request_definitions').insert({ tenant, definition_id: definitionId, name: 'Request' });
+    await requestDb.table('service_request_definition_versions').insert({
+      tenant, version_id: definitionVersionId, definition_id: definitionId, version_number: 1, name: 'Request',
+      form_schema_snapshot: {}, execution_provider: 'ticket-only', form_behavior_provider: 'basic',
+      visibility_provider: 'all-authenticated-client-users',
+    });
+    await requestDb.table('service_request_submissions').insert({
+      tenant, submission_id: submissionId, definition_id: definitionId, definition_version_id: definitionVersionId,
+      client_id: clientId, requester_user_id: requesterId, request_name: 'Request', submitted_payload: {},
+    });
+    return {
+      knex,
+      tenant,
+      definitionId,
+      definitionVersionId,
+      submissionId,
+      requesterUserId: requesterId,
+      clientId,
+      contactId: null,
+      payload: {},
+      config: { boardId, statusId, priorityId, ...config },
+    };
+  };
 
   it('publishes TICKET_CREATED after the submission transaction commits', async () => {
     const { ticketOnlyExecutionProvider } = await import(
@@ -79,7 +102,7 @@ describe('ticket-only execution provider transaction handling (integration)', ()
     );
     let result: any;
     await withTransaction(testDb, async (outer) => {
-      result = await ticketOnlyExecutionProvider.execute(context(outer, {}) as any);
+      result = await ticketOnlyExecutionProvider.execute(await context(outer, {}) as any);
       expect(result.status).toBe('succeeded');
       expect(created()).toHaveLength(0); // deferred until the outer transaction commits
     });
@@ -91,7 +114,7 @@ describe('ticket-only execution provider transaction handling (integration)', ()
     const { ticketOnlyExecutionProvider } = await import(
       '../../lib/service-requests/providers/builtins/ticketOnlyExecutionProvider'
     );
-    const result = await ticketOnlyExecutionProvider.execute(context(testDb, {}) as any);
+    const result = await ticketOnlyExecutionProvider.execute(await context(testDb, {}) as any);
     expect(result.status).toBe('succeeded');
     expect(created()).toHaveLength(1);
   });
@@ -105,7 +128,7 @@ describe('ticket-only execution provider transaction handling (integration)', ()
     await withTransaction(testDb, async (outer) => {
       await tenantDb(outer, tenant).table('boards').insert({ tenant, board_id: marker, board_name: `Marker ${marker.slice(0, 6)}`, is_default: false });
       // A status id that does not exist violates the tickets status foreign key: a real DB error.
-      result = await ticketOnlyExecutionProvider.execute(context(outer, { statusId: uuidv4() }) as any);
+      result = await ticketOnlyExecutionProvider.execute(await context(outer, { statusId: uuidv4() }) as any);
       expect(result.status).toBe('failed');
       // The outer transaction is not aborted: the caller can still record the outcome.
       const row = await tenantDb(outer, tenant).table('boards').where({ board_id: marker }).first();

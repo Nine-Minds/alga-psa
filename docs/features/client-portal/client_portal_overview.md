@@ -41,12 +41,13 @@ The Client Portal is a secure, multi-tenant web application that allows MSP clie
 
 ### Authentication Flow
 
-1. **User Access**: Client navigates to `/auth/client-portal/signin` (or is redirected there from a vanity hostname)
+1. **User Access**: Client navigates to `/auth/client-portal/signin` (or is redirected there from a vanity hostname). If the request originates on a registered vanity domain (one with an active `portal_domains` row), the sign-in page resolves the tenant from that host server-side and pre-scopes the session to the correct tenant. A vanity domain host with no active `portal_domains` row falls through to the tenant-discovery form rather than signing in unscoped.
 2. **Form Submission**: Email/password submitted via NextAuth credentials provider on the canonical host
 3. **Backend Validation**: 
    - [`authenticateUser()`](server/src/lib/actions/auth.tsx:14) validates credentials
    - User type checked (`client` vs `internal`)
    - Password verified against hashed value
+   - If no tenant is identified from sign-in context and the same credentials match client users in more than one tenant, authentication throws `TenantRequiredError`; the login form switches to the login-links recovery path so the user can identify their tenant.
 4. **Session Creation**: JWT token generated with user context on the canonical host
 5. **Vanity Redirect**: If the tenant has an active custom domain, NextAuth issues a one-time transfer token (OTT) and redirects the browser to `https://<vanity-host>/auth/client-portal/handoff?ott=...`
 6. **Session Exchange**: The handoff page calls `/api/client-portal/domain-session` to validate the OTT, verify DNS alignment, and mint a vanity-domain Auth.js cookie
@@ -89,7 +90,7 @@ The system distinguishes between two main user types:
 
 **Key Authentication Methods:**
 - [`authenticateUser()`](server/src/lib/actions/auth.tsx:14) - Core authentication logic
-- [`User.findUserByEmailAndType()`](server/src/lib/models/user.tsx:51) - User lookup with type filtering
+- `User.findUserByEmailAndType()` / `findUsersByEmailAndType()` - User lookup with type filtering; the plural form handles multi-tenant credential lookups when no tenant is identified from context
 - [`verifyPassword()`](server/src/utils/encryption/encryption) - Password verification
 
 ### Database Models

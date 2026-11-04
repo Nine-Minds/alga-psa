@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { createClient, type RedisClientType } from 'redis';
 import { getSecret } from '@alga-psa/core/secrets';
+import { recordQueueJobOutcome } from './inboundEmailMetrics';
 import type {
   GoogleInboundEmailPointer,
   ImapInboundEmailPointer,
@@ -440,6 +441,7 @@ export async function claimUnifiedInboundEmailQueueJob(params: {
     }
 
     if ((envelope as any).status === 'invalid') {
+      recordQueueJobOutcome({ queue: 'v1', providerType: 'other', outcome: 'invalid_payload' });
       console.error('[UnifiedInboundEmailQueue] invalid_payload_dlq', {
         event: 'inbound_email_queue_invalid_payload_dlq',
         reason: 'invalid_queue_payload',
@@ -487,6 +489,7 @@ export async function ackUnifiedInboundEmailQueueJob(
     .zRem(queueConfig.inflightLeaseKey, claim.job.jobId)
     .exec();
 
+  recordQueueJobOutcome({ queue: 'v1', providerType: claim.job.provider, outcome: 'ack' });
   console.log('[UnifiedInboundEmailQueue] ack', {
     event: 'inbound_email_queue_ack',
     ...getJobLogFields(claim.job),
@@ -524,6 +527,7 @@ export async function failUnifiedInboundEmailQueueJob(params: {
       .exec();
     const queueDepthRaw = Array.isArray(execResult) ? execResult[execResult.length - 1] : null;
     const queueDepth = Number.isFinite(Number(queueDepthRaw)) ? Number(queueDepthRaw) : 0;
+    recordQueueJobOutcome({ queue: 'v1', providerType: retriedJob.provider, outcome: 'dlq' });
     console.error('[UnifiedInboundEmailQueue] dlq', {
       event: 'inbound_email_queue_dlq',
       ...getJobLogFields(retriedJob),
@@ -548,6 +552,7 @@ export async function failUnifiedInboundEmailQueueJob(params: {
     .exec();
   const queueDepthRaw = Array.isArray(execResult) ? execResult[execResult.length - 1] : null;
   const queueDepth = Number.isFinite(Number(queueDepthRaw)) ? Number(queueDepthRaw) : 0;
+  recordQueueJobOutcome({ queue: 'v1', providerType: retriedJob.provider, outcome: 'retry' });
   console.warn('[UnifiedInboundEmailQueue] retry', {
     event: 'inbound_email_queue_retry',
     ...getJobLogFields(retriedJob),
@@ -600,6 +605,7 @@ export async function reclaimExpiredUnifiedInboundEmailQueueJobs(
       .zRem(queueConfig.inflightLeaseKey, jobId)
       .rPush(queueConfig.readyQueueKey, claimRecord.originalPayload)
       .exec();
+    recordQueueJobOutcome({ queue: 'v1', providerType: claimRecord.job.provider, outcome: 'reclaim' });
     console.warn('[UnifiedInboundEmailQueue] reclaim', {
       event: 'inbound_email_queue_reclaim',
       ...getJobLogFields(claimRecord.job),

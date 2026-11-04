@@ -36,7 +36,7 @@ describe('qboItemResolver', () => {
       qboItem({ Id: '3', Name: 'Gadget', Type: 'Inventory', Sku: 'G-1' })
     ];
 
-    const [consulting, widget, gadget] = resolveQboItems(items, [], noMappings, noTax);
+    const [consulting, widget, gadget] = resolveQboItems(items, [], noMappings, noTax, 'USD');
 
     expect(consulting.action).toBe('create');
     expect(consulting.fields).toMatchObject({
@@ -54,7 +54,7 @@ describe('qboItemResolver', () => {
   it('skips Category items with a reason', () => {
     const [resolution] = resolveQboItems(
       [qboItem({ Id: '9', Name: 'Design', Type: 'Category' })],
-      [], noMappings, noTax
+      [], noMappings, noTax, 'USD'
     );
     expect(resolution.action).toBe('skip');
     expect(resolution.flags).toContain('category_skipped');
@@ -64,7 +64,7 @@ describe('qboItemResolver', () => {
   it('uses the leaf Name, keeping FullyQualifiedName out of the catalog name', () => {
     const [resolution] = resolveQboItems(
       [qboItem({ Id: '4', Name: 'Child', FullyQualifiedName: 'Parent:Child', SubItem: true })],
-      [], noMappings, noTax
+      [], noMappings, noTax, 'USD'
     );
     expect(resolution.fields?.service_name).toBe('Child');
   });
@@ -78,7 +78,7 @@ describe('qboItemResolver', () => {
 
     const [resolution] = resolveQboItems(
       [qboItem({ Id: 'q1', Name: 'Consulting' })],
-      services, mappings, noTax
+      services, mappings, noTax, 'USD'
     );
 
     expect(resolution.matchedServiceId).toBe('s-mapped');
@@ -96,7 +96,7 @@ describe('qboItemResolver', () => {
 
     const [resolution] = resolveQboItems(
       [qboItem({ Id: 'q1', Name: 'Widget', Type: 'NonInventory', Sku: 'abc' })],
-      services, noMappings, noTax
+      services, noMappings, noTax, 'USD'
     );
 
     expect(resolution.matchedServiceId).toBe('s-sku');
@@ -108,7 +108,7 @@ describe('qboItemResolver', () => {
     ];
     const [resolution] = resolveQboItems(
       [qboItem({ Id: 'q1', Name: 'Consulting', UnitPrice: 150, Description: 'x' })],
-      services, noMappings, noTax
+      services, noMappings, noTax, 'USD'
     );
     expect(resolution.action).toBe('link');
     expect(resolution.matchedServiceId).toBe('s1');
@@ -120,7 +120,7 @@ describe('qboItemResolver', () => {
 
     const [resolution] = resolveQboItems(
       [qboItem({ Id: 'q1', Name: 'Widget 2', Type: 'NonInventory', Sku: 'ABC' })],
-      services, mappings, noTax
+      services, mappings, noTax, 'USD'
     );
 
     expect(resolution.action).toBe('skip');
@@ -133,7 +133,7 @@ describe('qboItemResolver', () => {
 
     const [resolution] = resolveQboItems(
       [qboItem({ Id: 'q1', Name: 'Consulting' })],
-      services, mappings, noTax
+      services, mappings, noTax, 'USD'
     );
 
     expect(resolution.action).toBe('skip');
@@ -145,7 +145,7 @@ describe('qboItemResolver', () => {
       qboItem({ Id: 'q1', Name: 'Widget A', Type: 'NonInventory', Sku: 'DUP' }),
       qboItem({ Id: 'q2', Name: 'Widget B', Type: 'NonInventory', Sku: 'DUP' })
     ];
-    const [first, second] = resolveQboItems(items, [], noMappings, noTax);
+    const [first, second] = resolveQboItems(items, [], noMappings, noTax, 'USD');
     expect(first.action).toBe('create');
     expect(second.action).toBe('skip');
     expect(second.flags).toContain('sku_conflict');
@@ -154,7 +154,7 @@ describe('qboItemResolver', () => {
   it('flags inactive items and imports them as is_active=false', () => {
     const [resolution] = resolveQboItems(
       [qboItem({ Id: 'q1', Name: 'Retired', Active: false })],
-      [], noMappings, noTax
+      [], noMappings, noTax, 'USD'
     );
     expect(resolution.action).toBe('create');
     expect(resolution.fields?.is_active).toBe(false);
@@ -177,7 +177,8 @@ describe('qboItemResolver', () => {
       items,
       [],
       noMappings,
-      taxMap
+      taxMap,
+      'USD'
     );
 
     expect(taxed.fields?.tax_rate_id).toBe('rate-1');
@@ -195,7 +196,7 @@ describe('qboItemResolver', () => {
     const mappings = [{ id: 'm1', alga_entity_id: 'gone', external_entity_id: 'q1' }];
     const [resolution] = resolveQboItems(
       [qboItem({ Id: 'q1', Name: 'Ghost' })],
-      [], mappings, noTax
+      [], mappings, noTax, 'USD'
     );
     expect(resolution.action).toBe('create');
     expect(resolution.existingMappingId).toBe('m1');
@@ -207,7 +208,7 @@ describe('qboItemResolver', () => {
     ];
     const [resolution] = resolveQboItems(
       [qboItem({ Id: 'q1', Name: 'Consulting', UnitPrice: 20, Description: 'new' })],
-      services, noMappings, noTax
+      services, noMappings, noTax, 'USD'
     );
 
     for (const change of resolution.fieldChanges ?? []) {
@@ -215,5 +216,45 @@ describe('qboItemResolver', () => {
       expect(ALGA_AUTHORITATIVE_FIELDS).not.toContain(change.field as never);
     }
     expect(resolution.fieldChanges?.map((c) => c.field).sort()).toEqual(['default_rate', 'description']);
+  });
+
+  describe('items shared by several services', () => {
+    const services = [
+      serviceRow({ service_id: 's1', service_name: 'Managed Backup', default_rate: 100 }),
+      serviceRow({ service_id: 's2', service_name: 'Managed Firewall', default_rate: 200 }),
+      serviceRow({ service_id: 's3', service_name: 'Services', default_rate: 0 })
+    ];
+    const live = [
+      { id: 'm1', alga_entity_id: 's1', external_entity_id: 'q1' },
+      { id: 'm2', alga_entity_id: 's2', external_entity_id: 'q1' }
+    ];
+    // Same name as an unrelated service: must NOT fall through to name matching.
+    const item = qboItem({ Id: 'q1', Name: 'Services', UnitPrice: 5 });
+
+    it.each([
+      ['mapping order', live],
+      ['reversed mapping order', [...live].reverse()]
+    ])('skips with a reason, never matching by name (%s)', (_label, mappings) => {
+      const [resolution] = resolveQboItems([item], services, mappings, noTax, 'USD');
+      expect(resolution.action).toBe('skip');
+      expect(resolution.flags).toContain('shared_item_mapping');
+      expect(resolution.reason).toMatch(/2 services/);
+      expect(resolution.matchedServiceId).toBeUndefined();
+      expect(resolution.fieldChanges).toBeUndefined();
+    });
+
+    it('still imports an unrelated single-mapped item normally alongside the skipped one', () => {
+      const other = qboItem({ Id: 'q2', Name: 'Managed Firewall', UnitPrice: 250 });
+      const mappings = [...live, { id: 'm3', alga_entity_id: 's2', external_entity_id: 'q2' }].filter((m) => m.id !== 'm2');
+      const resolutions = resolveQboItems([item, other], services, [...mappings, { id: 'm2', alga_entity_id: 's3', external_entity_id: 'q1' }], noTax, 'USD');
+      expect(resolutions[0].action).toBe('skip');
+      expect(resolutions[1]).toMatchObject({ action: 'update', matchedServiceId: 's2' });
+    });
+
+    it('treats one live mapping (tombstones are filtered before resolution) as unambiguous', () => {
+      const [resolution] = resolveQboItems([item], services, [live[0]], noTax, 'USD');
+      expect(resolution.action).toBe('update');
+      expect(resolution.matchedServiceId).toBe('s1');
+    });
   });
 });

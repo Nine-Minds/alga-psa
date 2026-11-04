@@ -1,9 +1,10 @@
 import type { Knex } from 'knex';
 import { v5 as uuidv5 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
+import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { publishWorkflowEvent } from '../publishers';
 import { normalizeDateOnly } from '@alga-psa/types';
-import type { WorkflowEventPublishContext } from '../workflow/workflowEventPublishHelpers';
+import type { WorkflowEventPublishContext } from '@alga-psa/event-schemas';
 
 const EVENT_ID_NAMESPACE = '4e2f55ec-8a63-5e7b-ae61-745387c70d42';
 
@@ -31,12 +32,13 @@ export function toTenantLocalDate(instant: string | Date, timezone: string): str
   return `${fields.year}-${fields.month}-${fields.day}`;
 }
 
-export async function emitDateDomainEventOnce(knex: Knex, tenant: string, params: {
-  eventType: string;
+export async function emitDateDomainEventOnce<T extends WorkflowCatalogEventType>(knex: Knex, tenant: string, params: {
+  eventType: T;
   entityId: string;
   cycleKey: string;
   occursOn: string;
-  payload: Record<string, unknown>;
+  /** Must come from a registered payload builder for `eventType`. */
+  payload: BuiltWorkflowPayload<T>;
   ctx?: WorkflowEventPublishContext;
 }): Promise<boolean> {
   const dedupeKey = buildDateDomainEventDedupeKey(params.eventType, params.entityId, params.cycleKey);
@@ -51,7 +53,7 @@ export async function emitDateDomainEventOnce(knex: Knex, tenant: string, params
   if (inserted.length === 0) return false;
   try {
     await publishWorkflowEvent({
-      eventType: params.eventType as never,
+      eventType: params.eventType,
       payload: params.payload,
       ctx: params.ctx ?? { tenantId: tenant, actor: { actorType: 'SYSTEM' } },
     }, { eventId: uuidv5(dedupeKey, EVENT_ID_NAMESPACE) });

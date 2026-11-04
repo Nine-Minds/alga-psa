@@ -1,7 +1,8 @@
 import type { Knex } from 'knex';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { registerAfterCommit } from '@alga-psa/db';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildScheduleEntryCreatedPayload, buildScheduleEntryDeletedPayload, buildScheduleEntryUpdatedPayload } from '@alga-psa/workflow-streams';
 import { IEditScope, type IOpportunity, type IOpportunityStep, type IScheduleEntry } from '@alga-psa/types';
 import { OpportunityModel } from '../models/opportunityModel';
 import { OpportunityStepModel } from '../models/opportunityStepModel';
@@ -50,15 +51,18 @@ function publishScheduleEntryEventAfterCommit(
   entryId: string,
   changes: Record<string, unknown>,
 ): void {
-  registerAfterCommit(trx, () => publishEvent({
-    eventType,
-    payload: {
-      tenantId: tenant,
-      userId: actorUserId,
-      entryId,
-      changes,
-    },
-  }), `${eventType} entry=${entryId}`);
+  const params = { userId: actorUserId, entryId, changes };
+  const ctx = { tenantId: tenant, actor: { actorType: 'USER' as const, actorUserId } };
+  registerAfterCommit(trx, () => {
+    switch (eventType) {
+      case 'SCHEDULE_ENTRY_CREATED':
+        return publishWorkflowEvent({ eventType, payload: buildScheduleEntryCreatedPayload(params), ctx });
+      case 'SCHEDULE_ENTRY_UPDATED':
+        return publishWorkflowEvent({ eventType, payload: buildScheduleEntryUpdatedPayload(params), ctx });
+      case 'SCHEDULE_ENTRY_DELETED':
+        return publishWorkflowEvent({ eventType, payload: buildScheduleEntryDeletedPayload(params), ctx });
+    }
+  }, `${eventType} entry=${entryId}`);
 }
 
 /**

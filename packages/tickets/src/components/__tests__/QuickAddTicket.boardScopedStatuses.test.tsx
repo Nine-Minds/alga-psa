@@ -56,6 +56,7 @@ vi.mock('../../actions/ticketFormActions', () => ({
 vi.mock('../../actions/clientLookupActions', () => ({
   getContactsByClient: vi.fn().mockResolvedValue([]),
   getClientLocations: vi.fn().mockResolvedValue([]),
+  searchClientsForPicker: vi.fn().mockResolvedValue({ clients: [], total: 0 }),
 }));
 
 vi.mock('@alga-psa/reference-data/actions', () => ({
@@ -320,6 +321,7 @@ vi.mock('../useQuickAddRichTextUploadSession', () => ({
     uploadFile: vi.fn(),
     requestDiscard: vi.fn(),
     resetDraftTracking: vi.fn(),
+    stagedClipboardImages: [],
     showDraftCancelDialog: false,
     setShowDraftCancelDialog: vi.fn(),
     deleteTrackedDraftClipboardImages: vi.fn(),
@@ -330,6 +332,7 @@ vi.mock('../useQuickAddRichTextUploadSession', () => ({
 vi.mock('../../lib/ticketRichText', () => ({
   parseTicketRichTextContent: vi.fn().mockReturnValue([]),
   serializeTicketRichTextContent: vi.fn().mockReturnValue(''),
+  extractTicketRichTextPlainText: vi.fn().mockReturnValue(''),
 }));
 
 vi.mock('../../lib/ticketRichTextImages', () => ({

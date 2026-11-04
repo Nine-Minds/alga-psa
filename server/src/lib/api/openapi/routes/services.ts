@@ -11,7 +11,7 @@ export function registerServiceRoutes(
   const ServiceIdParams = registry.registerSchema(
     'ServiceIdParams',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Service UUID.'),
+      id: zOpenApi.string().guid().describe('Service UUID.'),
     }),
   );
 
@@ -19,7 +19,9 @@ export function registerServiceRoutes(
     'ServicePrice',
     zOpenApi.object({
       currency_code: zOpenApi.string().length(3),
-      rate: zOpenApi.number(),
+      rate: zOpenApi.number().describe('Rate in integer minor units (e.g. cents).'),
+      display_order: zOpenApi.number().int().optional()
+        .describe('Position within its window; 0 is the primary price. Responses are sorted by display_order, then currency_code.'),
       effective_date: zOpenApi.string().nullable().optional()
         .describe('Calendar date the price takes effect; the epoch when untagged.'),
     }),
@@ -28,16 +30,16 @@ export function registerServiceRoutes(
   const ServiceResource = registry.registerSchema(
     'ServiceCatalogEntry',
     zOpenApi.object({
-      service_id: zOpenApi.string().uuid(),
-      tenant: zOpenApi.string().uuid(),
+      service_id: zOpenApi.string().guid(),
+      tenant: zOpenApi.string().guid(),
       service_name: zOpenApi.string(),
-      custom_service_type_id: zOpenApi.string().uuid(),
+      custom_service_type_id: zOpenApi.string().guid(),
       billing_method: zOpenApi.enum(['fixed', 'hourly', 'usage']),
       default_rate: zOpenApi.number(),
       unit_of_measure: zOpenApi.string(),
       unit_code: zOpenApi.string().nullable().optional(),
-      category_id: zOpenApi.string().uuid().nullable().optional(),
-      tax_rate_id: zOpenApi.string().uuid().nullable().optional(),
+      category_id: zOpenApi.string().guid().nullable().optional(),
+      tax_rate_id: zOpenApi.string().guid().nullable().optional(),
       description: zOpenApi.string().nullable().optional(),
       item_kind: zOpenApi.enum(['service', 'product']).optional(),
       is_active: zOpenApi.boolean().optional(),
@@ -62,7 +64,7 @@ export function registerServiceRoutes(
     'ServiceEnvelope',
     zOpenApi.object({
       data: ServiceResource,
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -78,7 +80,7 @@ export function registerServiceRoutes(
         hasNext: zOpenApi.boolean(),
         hasPrev: zOpenApi.boolean(),
       }),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -123,7 +125,7 @@ export function registerServiceRoutes(
     path: '/api/v1/services',
     summary: 'Create service',
     description:
-      'Creates a new service catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Use this endpoint for fixed, hourly, or usage-based service offerings.',
+      'Creates a new service catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Use this endpoint for fixed, hourly, or usage-based service offerings. Supply prices (rates in integer minor units) to set the displayed prices; prices[0] is primary and is mirrored into default_rate, so default_rate may then be omitted. scheduled_prices sets future-dated prices.',
     tags,
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -138,7 +140,7 @@ export function registerServiceRoutes(
         schema: ServiceEnvelope,
       },
       400: {
-        description: 'Validation error.',
+        description: 'Validation error, including rejected price writes: unsupported currency, fractional or negative rate, duplicate currency, scheduled date not in the future, default_rate conflicting with prices[0].rate, or a top-level currency_code.',
         schema: deps.ErrorResponse,
       },
       401: {
@@ -204,7 +206,7 @@ export function registerServiceRoutes(
     method: 'put',
     path: '/api/v1/services/{id}',
     summary: 'Update service',
-    description: 'Updates a service catalog entry by UUID.',
+    description: 'Updates a service catalog entry by UUID. Send prices to replace the current price window (prices[0] is primary and is mirrored into default_rate) and scheduled_prices to replace the future window; either is applied in full or rejected with 400. Sending only default_rate rewrites the rate of the primary current price. A default_rate that differs from prices[0].rate, a top-level currency_code, an unsupported currency, a fractional or negative rate, or a duplicate currency returns 400.',
     tags,
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -220,7 +222,7 @@ export function registerServiceRoutes(
         schema: ServiceEnvelope,
       },
       400: {
-        description: 'Validation error.',
+        description: 'Validation error, including rejected price writes: unsupported currency, fractional or negative rate, duplicate currency, scheduled date not in the future, default_rate conflicting with prices[0].rate, or a top-level currency_code.',
         schema: deps.ErrorResponse,
       },
       401: {

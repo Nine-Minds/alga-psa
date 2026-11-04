@@ -19,6 +19,7 @@
 
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
+import { recordMessageOutcome } from './inboundEmailMetrics';
 import { tenantDb, withAdminTransaction } from '@alga-psa/db';
 import type {
   InboundEmailInboxRecord,
@@ -261,6 +262,19 @@ export async function processInboundInbox(
   if (commitResult.terminalReplay === true) {
     return storedOutcomeDisposition(commitResult.inbox);
   }
+  // Recorded only after the durable transaction committed, so a rollback can
+  // never over-count. Terminal replays were already counted on first commit.
+  // LEVERAGE: pattern inbound-message-outcome-metric — same shape in unifiedInboundEmailQueueJobProcessor.ts
+  recordMessageOutcome({
+    providerType: inbox.provider_type,
+    outcome:
+      commitResult.kind === 'reconciled'
+        ? 'deduped'
+        : commitResult.kind === 'retryable'
+          ? 'failed'
+          : commitResult.kind,
+    reason: commitResult.kind === 'retryable' ? 'error' : commitResult.reason,
+  });
   if (commitResult.kind === 'skipped') {
     return { disposition: 'ack', outcome: 'skipped', reason: commitResult.reason };
   }

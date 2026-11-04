@@ -9,6 +9,7 @@ import { withAuth } from "@alga-psa/auth";
 import { revalidatePath } from "next/cache";
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import {
   captureTicketTransitionSnapshot,
   publishTicketTransitionsAfterCommit,
@@ -90,8 +91,10 @@ export const updateActivityStatus = withAuth(async (
           
           await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
+            // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
             .update({
               status_id: status.status_id,
+              ...ticketStatusClockPatch(trx, status.status_id),
               ...ticketUpdateStamp(trx, user.user_id),
             });
           break;
@@ -172,8 +175,10 @@ export const updateActivityStatusById = withAuth(async (
           const transitionBefore = await captureTicketTransitionSnapshot(trx, tenant, activityId);
           const updatedRows = await tenantScopedTable("tickets")
             .where("ticket_id", activityId)
+            // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
             .update({
               status_id: statusId,
+              ...ticketStatusClockPatch(trx, statusId),
               ...ticketUpdateStamp(trx, user.user_id),
             });
           await publishTicketTransitionsAfterCommit(trx, {

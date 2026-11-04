@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@alga-psa/ui/components/DropdownMenu';
+import { SectionCard } from '@alga-psa/ui/components/SectionCard';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ColumnDefinition } from '@alga-psa/types';
@@ -144,15 +145,16 @@ export function RecurringClientsSection({
   ], [t, i18n.language, nextDueAt, timeZone, readOnly, showAssets]);
 
   return (
-    <section id="recurring-clients-section" className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">{t('recurring.sections.clients', 'Clients')}</h2>
-        {!readOnly && (
-          <Button id="recurring-add-clients" type="button" onClick={() => setAdding(true)}>
-            {t('recurring.clients.add', 'Add clients')}
-          </Button>
-        )}
-      </div>
+    <SectionCard
+      id="recurring-clients-section"
+      title={t('recurring.sections.clients', 'Clients')}
+      bodyClassName="space-y-3"
+      actions={!readOnly && (
+        <Button id="recurring-add-clients" type="button" onClick={() => setAdding(true)}>
+          {t('recurring.clients.add', 'Add clients')}
+        </Button>
+      )}
+    >
       {clients.length === 0 ? (
         <p className="text-sm text-[rgb(var(--color-text-500))]">
           {t('recurring.clients.empty', 'No clients yet. Tickets are only created for the clients you add here.')}
@@ -189,7 +191,7 @@ export function RecurringClientsSection({
         confirmLabel={t('recurring.clients.remove', 'Remove')}
         cancelLabel={t('recurring.actions.cancel', 'Cancel')}
       />
-    </section>
+    </SectionCard>
   );
 }
 

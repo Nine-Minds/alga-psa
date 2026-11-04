@@ -1,7 +1,15 @@
-import type { IEventPublisher } from '@alga-psa/types';
+import type { IEventPublisher, WorkflowActor } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { registerAfterCommit } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
+import {
+  buildModelPublisherTicketAssignedPayload,
+  buildModelPublisherTicketCommentAddedPayload,
+  buildModelPublisherTicketClosedPayload,
+  buildModelPublisherTicketCreatedPayload,
+  buildModelPublisherTicketUpdatedPayload,
+} from '../../lib/tickets/ticketWorkflowEventPayloads';
 
 export class TicketModelEventPublisher implements IEventPublisher {
   /**
@@ -22,39 +30,27 @@ export class TicketModelEventPublisher implements IEventPublisher {
     } = {},
   ) {}
 
-  async publishTicketCreated(data: { tenantId: string; ticketId: string; userId?: string; metadata?: Record<string, any> }): Promise<void> {
-    await this.safePublishEvent('TICKET_CREATED', {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId,
-      ...data.metadata,
-      ...this.options.ticketCreatedPayload,
-    });
+  async publishTicketCreated(data: { tenantId: string; ticketId: string; userId?: string; actor?: WorkflowActor; metadata?: Record<string, any> }): Promise<void> {
+    await this.safePublishEvent(
+      'TICKET_CREATED',
+      data.tenantId,
+      buildModelPublisherTicketCreatedPayload(data, this.options.ticketCreatedPayload)
+    );
   }
 
   async publishTicketUpdated(data: {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     changes: Record<string, any>;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishEvent('TICKET_UPDATED', {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId,
-      changes: data.changes,
-      ...data.metadata,
-    });
+    await this.safePublishEvent('TICKET_UPDATED', data.tenantId, buildModelPublisherTicketUpdatedPayload(data));
   }
 
-  async publishTicketClosed(data: { tenantId: string; ticketId: string; userId?: string; metadata?: Record<string, any> }): Promise<void> {
-    await this.safePublishEvent('TICKET_CLOSED', {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId,
-      ...data.metadata,
-    });
+  async publishTicketClosed(data: { tenantId: string; ticketId: string; userId?: string; actor?: WorkflowActor; metadata?: Record<string, any> }): Promise<void> {
+    await this.safePublishEvent('TICKET_CLOSED', data.tenantId, buildModelPublisherTicketClosedPayload(data));
   }
 
   async publishCommentCreated(data: {
@@ -62,44 +58,53 @@ export class TicketModelEventPublisher implements IEventPublisher {
     ticketId: string;
     commentId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void> {
-    await this.safePublishEvent('TICKET_COMMENT_ADDED', {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      commentId: data.commentId,
-      userId: data.userId,
-      ...data.metadata,
-    });
+    await this.safePublishEvent('TICKET_COMMENT_ADDED', data.tenantId, buildModelPublisherTicketCommentAddedPayload(data));
   }
 
   async publishTicketAssigned(data: { tenantId: string; ticketId: string; userId: string; assignedByUserId?: string }): Promise<void> {
-    await this.safePublishEvent('TICKET_ASSIGNED', {
-      tenantId: data.tenantId,
-      ticketId: data.ticketId,
-      userId: data.userId,
-      assignedByUserId: data.assignedByUserId,
-    });
+    await this.safePublishEvent('TICKET_ASSIGNED', data.tenantId, buildModelPublisherTicketAssignedPayload(data));
   }
 
-  private async safePublishEvent(eventType: string, payload: any): Promise<void> {
+  private safePublishEvent<T extends WorkflowCatalogEventType>(
+    eventType: T,
+    tenantId: string,
+    payload: BuiltWorkflowPayload<T>
+  ): Promise<void> {
+    return this.deliver(eventType, payload, (ctx) =>
+      publishWorkflowEvent({ eventType, payload, ctx: { tenantId, ...ctx } })
+    );
+  }
+
+  private async deliver(
+    eventType: string,
+    payload: unknown,
+    publishWith: (ctx: { actor: WorkflowActor }) => Promise<void>
+  ): Promise<void> {
+    // The payload was built from an explicit/derived actor (ticketEventActorFields), so a
+    // CONTACT actor is carried by actorType + actorContactId. TICKET_ASSIGNED attributes
+    // the action to the assigner (falling back to the assignee), as before.
+    const fields = payload as
+      | { assignedByUserId?: unknown; userId?: unknown; ticketId?: unknown; actorType?: unknown; actorContactId?: unknown }
+      | undefined;
     const actorUserId =
-      typeof payload?.assignedByUserId === 'string' && payload.assignedByUserId
-        ? payload.assignedByUserId
-        : (typeof payload?.userId === 'string' ? payload.userId : undefined);
+      typeof fields?.assignedByUserId === 'string' && fields.assignedByUserId
+        ? fields.assignedByUserId
+        : (typeof fields?.userId === 'string' ? fields.userId : undefined);
+    const actor: WorkflowActor =
+      fields?.actorType === 'CONTACT' && typeof fields.actorContactId === 'string'
+        ? { actorType: 'CONTACT', actorContactId: fields.actorContactId }
+        : actorUserId
+          ? { actorType: 'USER', actorUserId }
+          : { actorType: 'SYSTEM' };
 
     const publish = () =>
-      publishWorkflowEvent({
-        eventType: eventType as any,
-        payload,
-        ctx: {
-          tenantId: String(payload?.tenantId ?? ''),
-          actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' }
-        }
-      });
+      publishWith({ actor });
 
     if (this.trx) {
-      registerAfterCommit(this.trx, publish, `${eventType} ticket=${payload?.ticketId ?? 'unknown'}`);
+      registerAfterCommit(this.trx, publish, `${eventType} ticket=${fields?.ticketId ?? 'unknown'}`);
       return;
     }
 

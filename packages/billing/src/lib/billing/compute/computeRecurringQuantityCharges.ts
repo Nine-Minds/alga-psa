@@ -13,6 +13,7 @@ import type {
 } from "./types";
 import { resolveChargeProfileFor } from "../billingProfileResolution";
 import { prorateRecurringCoverageByRatio } from "@alga-psa/shared/billingClients/coverageProration";
+import { resolveRecurringMemberRate } from "./recurringMemberRate";
 
 /**
  * Effective pricing selected from a scheduled revision for the covered service
@@ -71,6 +72,7 @@ function formatCents(cents: number, currencyCode: string): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currencyCode || "USD",
+  // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
   }).format(cents / 100);
 }
 
@@ -163,22 +165,12 @@ export function computeRecurringQuantityCharges(
         throw new Error(missingPriceMessage);
       }
 
-      const rateCandidate =
-        service.configuration_custom_rate ??
-        service.service_line_custom_rate ??
-        service.price_rate ??
-        service.default_rate ??
-        0;
-      originalRate = Math.round(Number(rateCandidate) || 0);
+      const resolvedRate = resolveRecurringMemberRate(service);
+      originalRate = resolvedRate.rateCents;
       const quantityCandidate =
         service.configuration_quantity ?? service.service_quantity ?? 1;
       quantity = Math.max(1, Math.round(Number(quantityCandidate) || 1));
-      rateSource =
-        service.configuration_custom_rate != null
-          ? "configuration override"
-          : service.service_line_custom_rate != null
-            ? "service override"
-            : "currency catalog price";
+      rateSource = resolvedRate.source;
     }
 
     if (effective) {

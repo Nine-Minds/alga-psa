@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   currencyFractionDigits,
   formatCurrencyFromMinorUnits,
+  fromMinorUnits,
+  minorUnitsToPlainDecimalText,
   toMinorUnits,
 } from './formatters';
 
@@ -18,5 +20,25 @@ describe('currency minor-unit formatters', () => {
     expect(currencyFractionDigits('BHD', 'en-US')).toBe(3);
     expect(toMinorUnits(12.345, 'en-US', 'BHD')).toBe(12345);
     expect(formatCurrencyFromMinorUnits(12345, 'en-US', 'BHD').replace(/\u00a0/g, ' ')).toBe('BHD 12.345');
+  });
+
+  it('fromMinorUnits uses the currency exponent and inverts toMinorUnits', () => {
+    expect(fromMinorUnits(1050, 'en-US', 'USD')).toBe(10.5);
+    expect(fromMinorUnits(10000, 'en-US', 'JPY')).toBe(10000);
+    expect(fromMinorUnits(12345, 'en-US', 'BHD')).toBe(12.345);
+
+    for (const [value, currency] of [[12.34, 'USD'], [10000, 'JPY'], [12.345, 'BHD'], [0, 'USD']] as const) {
+      expect(fromMinorUnits(toMinorUnits(value, 'en-US', currency), 'en-US', currency)).toBe(value);
+    }
+  });
+
+  it('minorUnitsToPlainDecimalText matches toFixed(2) for USD and emits whole units for JPY', () => {
+    expect(minorUnitsToPlainDecimalText(1050, 'en-US', 'USD')).toBe('10.50');
+    expect(minorUnitsToPlainDecimalText(5, 'en-US', 'USD')).toBe('0.05');
+    expect(minorUnitsToPlainDecimalText(0, 'en-US', 'USD')).toBe('0.00');
+    expect(minorUnitsToPlainDecimalText(-500, 'en-US', 'USD')).toBe('-5.00');
+    expect(minorUnitsToPlainDecimalText(1049.6, 'en-US', 'USD')).toBe('10.50');
+    expect(minorUnitsToPlainDecimalText(10000, 'en-US', 'JPY')).toBe('10000');
+    expect(minorUnitsToPlainDecimalText(12345, 'en-US', 'BHD')).toBe('12.345');
   });
 });

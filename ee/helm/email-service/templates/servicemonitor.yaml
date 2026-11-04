@@ -1,0 +1,26 @@
+{{- if and .Values.enabled .Values.metrics.enabled .Values.metrics.serviceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "email-service.fullname" . }}
+  namespace: {{ include "email-service.namespace" . }}
+  labels:
+    {{- include "email-service.labels" . | nindent 4 }}
+    app.kubernetes.io/component: email-service
+    {{- with .Values.metrics.serviceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "email-service.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: email-service
+  namespaceSelector:
+    matchNames:
+      - {{ include "email-service.namespace" . }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.metrics.serviceMonitor.interval }}
+      scrapeTimeout: {{ .Values.metrics.serviceMonitor.scrapeTimeout }}
+{{- end }}

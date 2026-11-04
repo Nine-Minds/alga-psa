@@ -22,6 +22,11 @@ const contractLineActionsSource = readFileSync(
   resolve(__dirname, '../../../../../packages/billing/src/actions/contractLineAction.ts'),
   'utf8',
 );
+// The line update guard lives in the shared transaction-scoped update module.
+const contractLineUpdateSource = readFileSync(
+  resolve(__dirname, '../../../../../packages/billing/src/lib/billing/contractLineUpdate.ts'),
+  'utf8',
+);
 const contractLineMappingActionsSource = readFileSync(
   resolve(__dirname, '../../../../../packages/billing/src/actions/contractLineMappingActions.ts'),
   'utf8',
@@ -50,8 +55,14 @@ const usageActionsSource = readFileSync(
   resolve(__dirname, '../../../../../packages/billing/src/actions/usageActions.ts'),
   'utf8',
 );
-const timeEntryCrudActionsSource = readFileSync(
-  resolve(__dirname, '../../../../../packages/scheduling/src/actions/timeEntryCrudActions.ts'),
+// Contract line resolution: the shared time-entry write core (saveTimeEntry
+// delegates to it) calls `resolveTimeEntryContract`, which owns the selection.
+const timeEntryWriteCoreSource = readFileSync(
+  resolve(__dirname, '../../../../../packages/scheduling/src/lib/timeEntryWriteCore.ts'),
+  'utf8',
+);
+const timeEntryContractSource = readFileSync(
+  resolve(__dirname, '../../../../../packages/scheduling/src/lib/timeEntryContract.ts'),
   'utf8',
 );
 const contractLinesUiSource = readFileSync(
@@ -67,8 +78,8 @@ describe('system-managed default attribution-shell cutover wiring', () => {
   it('F072/F085: excludes system-managed defaults from recurring materialization and due-work/admin recurring schedule authority paths', () => {
     expect(contractCadenceSource).toContain("whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false)");
     expect(clientCadenceSource).toContain("whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false)");
-    expect(billingAndTaxSource).toContain("where('rsp.obligation_type', 'contract_line')");
-    expect(billingAndTaxSource).toContain("where('rsp.obligation_type', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE)");
+    expect(billingAndTaxSource).not.toContain('rsp.obligation_type');
+    expect(billingAndTaxSource).not.toContain('POST_DROP');
     expect(billingAndTaxSource).toContain("whereNull('ct.is_system_managed_default').orWhere('ct.is_system_managed_default', false)");
     expect(recurringAdminSource).toContain('context.is_system_managed_default');
     expect(recurringAdminSource).toContain('attribution-only and cannot be managed in recurring service period admin tools');
@@ -76,7 +87,9 @@ describe('system-managed default attribution-shell cutover wiring', () => {
 
   it('F071/F073: backend mutation paths block authoring for system-managed default contracts', () => {
     expect(contractLineActionsSource).toContain('assertContractLineIsAuthorable');
-    expect(contractLineActionsSource).toContain('contract-line authoring is disabled');
+    expect(contractLineActionsSource).toContain("from '../lib/billing/contractLineUpdate'");
+    expect(contractLineUpdateSource).toContain('export async function assertContractLineIsAuthorable');
+    expect(contractLineUpdateSource).toContain('contract-line authoring is disabled');
     expect(contractLineMappingActionsSource).toContain('assertContractIsAuthorable');
     expect(contractLineMappingActionsSource).toContain('contract-line authoring is disabled');
     expect(contractPricingScheduleActionsSource).toContain('pricing schedule authoring is disabled');
@@ -97,8 +110,11 @@ describe('system-managed default attribution-shell cutover wiring', () => {
     // disambiguation module with the same system-managed exclusion, which
     // additionally reports *why* it could not pick a line. Both entry points
     // still go through that module and nowhere else.
-    expect(timeEntryCrudActionsSource).toContain('resolveContractLineSelection');
-    expect(timeEntryCrudActionsSource).toContain("from '../lib/contractLineDisambiguation'");
+    expect(timeEntryWriteCoreSource).toContain('resolveTimeEntryContract(');
+    expect(timeEntryWriteCoreSource).toContain("from './timeEntryContract'");
+    expect(timeEntryWriteCoreSource).not.toContain('getEligibleContractLines');
+    expect(timeEntryContractSource).toContain('resolveContractLineSelection(');
+    expect(timeEntryContractSource).toContain("from './contractLineDisambiguation'");
   });
 
   it('F073/F074: contract line and pricing schedule UI surfaces become read-only with attribution-only guidance', () => {

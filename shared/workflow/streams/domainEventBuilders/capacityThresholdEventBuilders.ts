@@ -1,4 +1,5 @@
-import type { CapacityThresholdReachedEventPayload } from '../../runtime/schemas/schedulingEventSchemas';
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
+import type { CapacityThresholdReachedEventPayload } from '@alga-psa/event-schemas';
 
 export function buildCapacityThresholdReachedPayload(params: {
   teamId: string;
@@ -6,13 +7,13 @@ export function buildCapacityThresholdReachedPayload(params: {
   capacityLimit: number;
   currentBooked: number;
   triggeredAt?: string;
-}): Omit<CapacityThresholdReachedEventPayload, 'tenantId' | 'occurredAt'> {
-  return {
+}): Omit<CapacityThresholdReachedEventPayload, 'tenantId' | 'occurredAt'> & BuiltWorkflowPayload<'CAPACITY_THRESHOLD_REACHED'> {
+  return builtWorkflowPayload('CAPACITY_THRESHOLD_REACHED', {
     teamId: params.teamId,
     date: params.date,
     capacityLimit: params.capacityLimit,
     currentBooked: params.currentBooked,
     ...(params.triggeredAt ? { triggeredAt: params.triggeredAt } : {}),
-  };
+  });
 }
 

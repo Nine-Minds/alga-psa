@@ -1,3 +1,5 @@
+import { builtWorkflowPayload, type BuiltWorkflowPayload } from '@alga-psa/event-schemas';
+
 function toIsoString(value: string | Date | undefined): string | undefined {
   if (!value) return undefined;
   if (typeof value === 'string') return value;
@@ -18,10 +20,10 @@ export function buildDocumentUploadedPayload(params: {
   contentType: string;
   sizeBytes: number | string;
   storageKey: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'DOCUMENT_UPLOADED'> {
   const uploadedAt = toIsoString(params.uploadedAt);
 
-  return {
+  return builtWorkflowPayload('DOCUMENT_UPLOADED', {
     documentId: params.documentId,
     ...(params.uploadedByUserId ? { uploadedByUserId: params.uploadedByUserId } : {}),
     ...(uploadedAt ? { uploadedAt } : {}),
@@ -29,7 +31,7 @@ export function buildDocumentUploadedPayload(params: {
     contentType: params.contentType,
     sizeBytes: toNonNegativeInt(params.sizeBytes),
     storageKey: params.storageKey,
-  };
+  });
 }
 
 export function buildDocumentDeletedPayload(params: {
@@ -37,13 +39,13 @@ export function buildDocumentDeletedPayload(params: {
   deletedByUserId?: string;
   deletedAt?: string | Date;
   reason?: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> & BuiltWorkflowPayload<'DOCUMENT_DELETED'> {
   const deletedAt = toIsoString(params.deletedAt);
 
-  return {
+  return builtWorkflowPayload('DOCUMENT_DELETED', {
     documentId: params.documentId,
     ...(params.deletedByUserId ? { deletedByUserId: params.deletedByUserId } : {}),
     ...(deletedAt ? { deletedAt } : {}),
     ...(params.reason ? { reason: params.reason } : {}),
-  };
+  });
 }

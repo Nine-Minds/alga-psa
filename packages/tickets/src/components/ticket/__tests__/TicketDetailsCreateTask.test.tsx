@@ -96,21 +96,6 @@ vi.mock('@alga-psa/ui/context', () => ({
 
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: () => ({ enabled: false }),
-  useTicketTimeTracking: () => ({
-    isTracking: false,
-    currentIntervalId: null,
-    isLockedByOther: false,
-    startTracking: vi.fn().mockResolvedValue(undefined),
-    stopTracking: vi.fn().mockResolvedValue(undefined),
-    refreshLockState: vi.fn().mockResolvedValue(undefined),
-  }),
-}));
-
-vi.mock('@alga-psa/ui/services', () => ({
-  IntervalTrackingService: class {
-    endInterval = vi.fn().mockResolvedValue(undefined);
-    getOpenInterval = vi.fn().mockResolvedValue(null);
-  },
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({

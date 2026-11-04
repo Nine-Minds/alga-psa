@@ -64,12 +64,12 @@ describe('generateInvoiceHandler recurring execution identity', () => {
           kind: 'client_cadence_window',
           cadenceOwner: 'client',
           clientId: 'client-1',
-          scheduleKey: 'schedule:tenant-1:client_contract_line:assignment-1:client:advance',
+          scheduleKey: 'schedule:tenant-1:assignment-1:client:advance',
           periodKey: 'period:2025-02-01:2025-03-01',
           windowStart: '2025-02-01T00:00:00Z',
           windowEnd: '2025-03-01T00:00:00Z',
           identityKey:
-            'client_cadence_window:client:client-1:schedule:tenant-1:client_contract_line:assignment-1:client:advance:period:2025-02-01:2025-03-01:2025-02-01T00:00:00Z:2025-03-01T00:00:00Z',
+            'client_cadence_window:client:client-1:schedule:tenant-1:assignment-1:client:advance:period:2025-02-01:2025-03-01:2025-02-01T00:00:00Z:2025-03-01T00:00:00Z',
         },
       } as any),
     ).rejects.toThrow('Recurring invoice job is missing selectorInput.');

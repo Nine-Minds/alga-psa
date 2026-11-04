@@ -69,7 +69,9 @@
       "message_one": "Der folgende benutzerdefinierte Telefontyp wird von keinem Kontakt mehr verwendet: {{labels}}. Typdefinition löschen oder für spätere Verwendung behalten?",
       "message_other": "Die folgenden benutzerdefinierten Telefontypen werden von keinem Kontakt mehr verwendet: {{labels}}. Typdefinitionen löschen oder für spätere Verwendung behalten?",
       "deleteType": "Typ löschen",
-      "keepType": "Typ behalten"
+      "keepType": "Typ behalten",
+      "message_few": "Die folgenden benutzerdefinierten Telefontypen werden von keinem Kontakt mehr verwendet: {{labels}}. Typdefinitionen löschen oder für spätere Verwendung behalten?",
+      "message_many": "Die folgenden benutzerdefinierten Telefontypen werden von keinem Kontakt mehr verwendet: {{labels}}. Typdefinitionen löschen oder für spätere Verwendung behalten?"
     },
     "print": {
       "title": "Kontakte",
@@ -455,7 +457,9 @@
         "invitationNotFound": "Einladung nicht gefunden oder bereits verwendet."
       },
       "userNotFound": "Kundenportalbenutzer nicht gefunden"
-    }
+    },
+    "boardCount_few": "{{count}} Boards",
+    "boardCount_many": "{{count}} Boards"
   },
   "quickAddContact": {
     "title": "Neuen Kontakt hinzufügen",
@@ -734,7 +738,67 @@
       "visibilityDuplicate": "Eine Sichtbarkeitsgruppe mit diesen Angaben existiert für diesen Kunden bereits.",
       "visibilityInvalidData": "Ungültige Daten der Sichtbarkeitsgruppe übermittelt. Bitte prüfen Sie die Gruppenangaben und die ausgewählten Boards.",
       "groupNameRequired": "Gruppenname ist erforderlich",
-      "readPermission": "Berechtigung verweigert: Kontakte können nicht gelesen werden"
+      "readPermission": "Berechtigung verweigert: Kontakte können nicht gelesen werden",
+      "idRequired": "Kontakt-ID ist erforderlich",
+      "schemaError": "Fehler im Datenbankschema – wenden Sie sich an den Support",
+      "readFailed": "Beim Abrufen der Kontaktinformationen ist ein unerwarteter Fehler aufgetreten",
+      "deleteRecordFailed": "Kontaktdatensatz nicht gefunden oder konnte nicht gelöscht werden",
+      "updateIdRequired": "Kontakt-ID ist für Aktualisierungen erforderlich",
+      "clientMissing": "Der ausgewählte Kunde existiert nicht mehr",
+      "destinationMissing": "Das ausgewählte Ziel für eingehende Tickets existiert nicht mehr",
+      "updateMissing": "Der Kontakt, den Sie aktualisieren möchten, existiert nicht mehr",
+      "updateRecordMissing": "Die Kontaktaktualisierung wurde abgeschlossen, ohne den aktualisierten Kontaktdatensatz zurückzugeben",
+      "clientIdRequired": "Kunden-ID ist erforderlich",
+      "specifiedClientMissing": "Der angegebene Kunde existiert nicht",
+      "updateDataRequired": "Keine Aktualisierungsdaten angegeben",
+      "emailInvalid": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
+      "bulkUpdateFailed": "Die Aktualisierung der Kundenkontakte wurde abgeschlossen, ohne Kontaktdatensätze zu ändern",
+      "updateFailed": "Beim Aktualisieren der Kundenkontakte ist ein unerwarteter Fehler aufgetreten",
+      "importMultipleMatches": "Importierte E-Mail-Adressen stimmen mit mehreren vorhandenen Kontakten überein",
+      "updatePermission": "Kontakte können nicht aktualisiert werden",
+      "importDataRequired": "Keine Kontaktdaten angegeben",
+      "fullNameRequired": "Der vollständige Name ist erforderlich",
+      "importFailed": "Beim Importieren von Kontakten ist ein unerwarteter Fehler aufgetreten",
+      "emailsRequired": "Keine E-Mail-Adressen angegeben",
+      "validEmailsRequired": "Keine gültigen E-Mail-Adressen angegeben",
+      "checkEmailsFailed": "Beim Prüfen vorhandener E-Mail-Adressen ist ein unerwarteter Fehler aufgetreten",
+      "portalAdminRequired": "Administratorzugriff auf das Kundenportal ist erforderlich",
+      "assignedGroupInvalid": "Die zugewiesene Sichtbarkeitsgruppe ist für diesen Kontakt ungültig",
+      "groupNotFound": "Sichtbarkeitsgruppe nicht gefunden",
+      "boardsInvalid": "Ein oder mehrere Boards sind für diesen Mandanten ungültig",
+      "groupCreateFailed": "Die Sichtbarkeitsgruppe wurde erstellt, ohne eine Gruppen-ID zurückzugeben",
+      "groupInUse": "Die Sichtbarkeitsgruppe kann nicht gelöscht werden, solange sie Kontakten zugewiesen ist",
+      "importEmailInvalid": "Ungültiges E-Mail-Format für Kontakt: {{name}}",
+      "importClientMissing": "Kunde für Kontakt nicht gefunden: {{name}}",
+      "invalidEmailValue": "Ungültiges E-Mail-Format: {{email}}",
+      "invalidData": "Ungültige Kontaktdaten",
+      "phoneExtensionInvalid": "Telefon {{index}}: Geben Sie eine gültige Durchwahl ein",
+      "phoneNumberInvalid": "Telefon {{index}}: Geben Sie eine gültige Telefonnummer ein",
+      "phoneCountryRequired": "Telefon {{index}}: Geben Sie die Ländervorwahl beginnend mit + an",
+      "tenantEmailExists": "Eine Kontakt-E-Mail-Adresse existiert bereits in diesem Mandanten",
+      "importRowFailed": "Dieser Kontakt konnte nicht importiert werden. Prüfen Sie die Pflichtfelder und Kundenreferenzen.",
+      "deleteMissing": "Der Kontakt, den Sie löschen möchten, existiert nicht mehr.",
+      "deleteFailed": "Der Kontakt konnte nicht gelöscht werden. Versuchen Sie es erneut.",
+      "deleteDependencies": "Der Kontakt kann nicht gelöscht werden, da er verknüpfte Datensätze hat",
+      "connectionFailed": "Problem mit der Datenbankverbindung. Versuchen Sie es erneut.",
+      "deleteUnexpected": "Beim Löschen des Kontakts ist ein unerwarteter Fehler aufgetreten",
+      "importFileFailed": "Kontakte konnten nicht importiert werden. Prüfen Sie die Datei und versuchen Sie es erneut.",
+      "portalAdminUpdateFailed": "Der Portaladministratorstatus konnte nicht aktualisiert werden. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "userLoadFailed": "Benutzer konnte nicht abgerufen werden",
+      "sharedMailboxAdmin": "Kontakte freigegebener Postfächer können keine Kundenadministratoren sein.",
+      "createFailed": "Beim Erstellen des Kontakts ist ein unerwarteter Fehler aufgetreten",
+      "importDuplicateEmail": "Ein Kontakt mit dieser E-Mail-Adresse existiert bereits: {{value}}",
+      "importDuplicateName": "Ein Kontakt mit diesem Namen existiert bereits: {{value}}",
+      "permissions": {
+        "readContacts": "Kontakte können nicht gelesen werden",
+        "deleteContacts": "Kontakte können nicht gelöscht werden",
+        "createContacts": "Kontakte können nicht erstellt werden",
+        "updateContacts": "Kontakte können nicht aktualisiert werden",
+        "managePhoneTypes": "Telefontypen können nicht verwaltet werden",
+        "updateClientUsers": "Sie haben keine Berechtigung, Kundenbenutzer zu aktualisieren",
+        "viewClientUsers": "Sie haben keine Berechtigung, Kundenbenutzer anzuzeigen"
+      },
+      "field": "Feld"
     }
   },
   "portal": {
@@ -759,7 +823,31 @@
       "scopeSummaryAll": "Alle",
       "scopeSummaryOwn": "Eigene",
       "managerScopeNote_one": "Die Ansicht umfasst auch Datensätze von {{count}} unterstellten Person.",
-      "managerScopeNote_other": "Die Ansicht umfasst auch Datensätze von {{count}} unterstellten Personen."
+      "managerScopeNote_other": "Die Ansicht umfasst auch Datensätze von {{count}} unterstellten Personen.",
+      "managerScopeNote_few": "Die Ansicht umfasst auch Datensätze von {{count}} unterstellten Personen.",
+      "managerScopeNote_many": "Die Ansicht umfasst auch Datensätze von {{count}} unterstellten Personen."
     }
+  },
+  "messages": {
+    "success": {
+      "updated": "Kontakt erfolgreich aktualisiert",
+      "created": "Kontakt erfolgreich erstellt"
+    }
+  },
+  "csvTemplate": {
+    "explorerRole": "Leitende Entdeckerin",
+    "explorerNotes": "Fiel in einen Kaninchenbau und entdeckte eine völlig neue Welt",
+    "explorerTags": "Neugierig, Abenteuerlustig, Mutig",
+    "teaRole": "Leitender Experte für Teezeremonien",
+    "teaNotes": "Weiß, warum ein Rabe einem Schreibtisch gleicht",
+    "teaTags": "Kreativ, Exzentrisch, Teeexperte"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · zuletzt synchronisiert am {{date}}",
+    "description": "Dieser Kontakt wird mit einem Verzeichniskonto synchronisiert.",
+    "signInName": "Anmeldename: {{name}}",
+    "lastSynced": "Zuletzt synchronisiert am {{date}}",
+    "deleted": "Inaktiv — das Microsoft-Konto wurde gelöscht.",
+    "disabled": "Inaktiv — das Microsoft-Konto ist deaktiviert."
   }
 }

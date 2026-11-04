@@ -57,6 +57,14 @@ test('generateSupportBundle captures diagnostics and redacts sensitive values', 
   assert.match(fs.readFileSync(path.join(captureDir, 'cluster', 'control-plane-resources.txt'), 'utf8'), /alga-appliance-control-plane/);
   assert.match(fs.readFileSync(path.join(captureDir, 'cluster', 'control-plane-logs.txt'), 'utf8'), /deploy\/appliance-control-plane/);
   assert.match(fs.readFileSync(path.join(captureDir, 'cluster', 'app-bootstrap-resources.txt'), 'utf8'), /app\.kubernetes\.io\/part-of=alga-psa/);
+
+  // alga0002256: email-service health via the API-server service proxy, redacted like everything else.
+  const emailStatus = fs.readFileSync(path.join(captureDir, 'cluster', 'email-service-status.json'), 'utf8');
+  assert.match(emailStatus, /services\/http:email-service:http\/proxy\/status/);
+  assert.equal(emailStatus.includes('abc123'), false);
+  const emailMetrics = fs.readFileSync(path.join(captureDir, 'cluster', 'email-service-metrics.txt'), 'utf8');
+  assert.match(emailMetrics, /services\/http:email-service:http\/proxy\/metrics/);
+  assert.equal(emailMetrics.includes('password=secret'), false);
 });
 
 test('generateSupportBundle uses host agent diagnostics when running in Kubernetes control-plane mode', () => {

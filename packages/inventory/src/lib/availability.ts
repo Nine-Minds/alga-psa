@@ -43,11 +43,17 @@ export async function queryProductAvailability(
       const qty = Number(r.quantity_on_hand ?? 0);
       onHand += qty;
       available += qty - Number(r.reserved_quantity ?? 0) - Number(r.held_quantity ?? 0);
-      if (qty !== 0) {
+      const reserved = Number(r.reserved_quantity ?? 0);
+      const held = Number(r.held_quantity ?? 0);
+      if (qty !== 0 || reserved !== 0 || held !== 0) {
         locations.push({
           location_id: r.location_id,
           location_name: r.location_name,
           on_hand: qty,
+          reserved,
+          held,
+          // Same formula the materials consume gate applies (levels.availableQuantity).
+          free: qty - reserved - held,
         });
       }
     }

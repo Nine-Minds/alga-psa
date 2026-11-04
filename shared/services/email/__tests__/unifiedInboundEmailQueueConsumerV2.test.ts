@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UnifiedInboundEmailQueueJobV2 } from '../../../interfaces/inbound-email.interfaces';
 
 function buildJob(): UnifiedInboundEmailQueueJobV2 {
@@ -161,5 +161,40 @@ describe('UnifiedInboundEmailQueueConsumerV2', () => {
     await c.runOnce();
     expect(renewPg).toHaveBeenCalled();
     expect(queueModule.renewInboundEmailDurableQueueClaim).toHaveBeenCalled();
+  });
+});
+
+describe('UnifiedInboundEmailQueueConsumerV2 loop resilience (alga0002256)', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('survives runOnce errors with backoff; heartbeat advances only on a successful tick', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { consumer, queueModule } = await loadConsumerModule();
+    vi.useFakeTimers();
+    queueModule.reclaimExpiredInboundEmailDurableJobs
+      .mockRejectedValueOnce(new Error('redis down'))
+      .mockResolvedValue(0);
+    queueModule.claimInboundEmailDurableJob.mockResolvedValue(null);
+    const c = new consumer.UnifiedInboundEmailQueueConsumerV2({
+      handleJob: async () => ({ disposition: 'ack' }),
+      pollDelayMs: 250,
+      blockSeconds: 0,
+      handleJobTimeoutMs: 2000,
+      heartbeatIntervalMs: 60000,
+    });
+    expect(c.lastSuccessfulTickAt).toBeNull();
+    const task = c.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(queueModule.reclaimExpiredInboundEmailDurableJobs).toHaveBeenCalledTimes(1);
+    expect(c.lastSuccessfulTickAt).toBeNull();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(queueModule.reclaimExpiredInboundEmailDurableJobs).toHaveBeenCalledTimes(2);
+    expect(c.lastSuccessfulTickAt).not.toBeNull();
+    c.stop();
+    await vi.advanceTimersByTimeAsync(500);
+    await task;
   });
 });

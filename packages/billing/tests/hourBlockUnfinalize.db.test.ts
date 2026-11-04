@@ -98,6 +98,7 @@ async function seed(overrides: {
     });
     await db('time_entries').insert({
       tenant, entry_id: uuidv4(), user_id: entryUserId,
+      start_time: '2026-08-10T09:00:00Z', end_time: '2026-08-10T11:00:00Z',
       work_date: '2026-08-10', work_timezone: 'UTC',
     });
     const entry = await db('time_entries').where({ tenant }).first();

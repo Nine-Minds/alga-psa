@@ -245,9 +245,8 @@ This document provides a high-level architectural overview of the open-source MS
     - Timesheet submission and approval process
   * Key Files:
     - `server/src/lib/models/timeEntry.interfaces.ts`: Core time entry data structures
-    - `server/src/services/IntervalTrackingService.ts`: Service for managing ticket viewing intervals
-    - `server/src/hooks/useTicketTimeTracking.ts`: React hook for automatic interval tracking
-    - `server/src/components/time-management/interval-tracking/`: Interval management components
+    - `packages/scheduling/src/lib/stopwatch/`: Server-side stopwatch core and math
+    - `packages/scheduling/src/providers/StopwatchProvider.tsx`: Web stopwatch state
     - `server/src/components/time-management/time-entry/`: Time entry components
   * Features:
     - Automatic tracking of time spent viewing tickets

@@ -6,7 +6,7 @@ export async function listPublishedWorkflowDefinitions(knex: Knex, tenantId: str
   const workflows = await WorkflowDefinitionModelV2.list(knex, tenantId);
   const published = workflows.filter((workflow) => workflow.status === 'published');
   const results = await Promise.all(published.map(async (workflow) => {
-    const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflow.workflow_id);
+    const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflow.workflow_id, tenantId);
     const latestVersion = versions[0] ?? null;
     return latestVersion ? { workflow, latestVersion, definition: latestVersion.definition_json as Record<string, unknown> | null } : null;
   }));

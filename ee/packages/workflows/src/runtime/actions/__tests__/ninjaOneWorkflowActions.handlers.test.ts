@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../ninjaOneWorkflowRuntimeSupport', () => ({
   createNinjaOneWorkflowClient: vi.fn(),
@@ -81,6 +81,12 @@ const loadActionById = async (actionId: string) => {
 };
 
 describe('NinjaOne workflow action handlers', () => {
+  // The first import of the action registry transforms the whole module graph;
+  // under parallel Nx load on CI that alone has blown the 10s per-test budget.
+  beforeAll(async () => {
+    await loadActionById('ninjaone.devices.find');
+  }, 60_000);
+
   it('T008: ninjaone.devices.find returns normalized local device fields without secret leakage', async () => {
     const action = await loadActionById('ninjaone.devices.find');
 

@@ -1,7 +1,10 @@
 'use server'
 
+import { delegateToTimeSource } from '../lib/timeSource';
 import { Knex } from 'knex'; // Import Knex type
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, resolveUserTimeZone } from '@alga-psa/db';
+import { Temporal } from '@js-temporal/polyfill';
+import { ensureTimePeriodCoversDate } from '../lib/timePeriodMaterialization';
 import {
   ITimeSheet,
   ITimeSheetView,
@@ -20,6 +23,7 @@ import {
 } from './timeEntrySchemas'; // Import schemas from the new module
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { assertCanActOnBehalf } from './timeEntryDelegationAuth';
+import { findOrCreateTimeSheetRow } from '../lib/timeSheetResolution';
 import {
   timeSheetActionErrorFrom,
   type TimeSheetActionError,
@@ -90,6 +94,9 @@ function toDateOnlyString(value: string | Date | null | undefined): string | und
 }
 
 export const fetchTimeSheets = withAuth(async (user, { tenant }): Promise<ITimeSheet[]> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.list(ctx));
+  if (delegated.handled) return delegated.value;
   const currentUserId = user.user_id;
 
   console.log('Fetching time sheets for user:', currentUserId);
@@ -124,6 +131,9 @@ export const fetchTimeSheets = withAuth(async (user, { tenant }): Promise<ITimeS
 });
 
 export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheet | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.submit(ctx, timeSheetId));
+  if (delegated.handled) return delegated.value;
   // Validate input
   const validatedParams = validateData<SubmitTimeSheetParams>(submitTimeSheetParamsSchema, { timeSheetId });
 
@@ -207,6 +217,9 @@ export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: st
 });
 
 export const fetchAllTimeSheets = withAuth(async (_user, { tenant }): Promise<ITimeSheet[]> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant }, (source, ctx) => source.sheets.listAll(ctx));
+  if (delegated.handled) return delegated.value;
   const {knex: db} = await createTenantKnex();
   const facade = tenantDb(db, tenant);
 
@@ -235,6 +248,9 @@ export const fetchAllTimeSheets = withAuth(async (_user, { tenant }): Promise<IT
 });
 
 export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string): Promise<ITimePeriodWithStatusView[] | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.readForUser(ctx, userId));
+  if (delegated.handled) return delegated.value;
   try {
     // Validate input
     const validatedParams = validateData<FetchTimePeriodsParams>(fetchTimePeriodsParamsSchema, { userId });
@@ -242,6 +258,10 @@ export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string
     const {knex: db} = await createTenantKnex();
 
     await assertCanActOnBehalf(user, tenant, validatedParams.userId, db);
+
+    // Time entry reads materialize the current period (in the subject user's zone) when settings exist.
+    const subjectTimeZone = await resolveUserTimeZone(db, tenant, validatedParams.userId);
+    await ensureTimePeriodCoversDate(db, tenant, Temporal.Now.plainDateISO(subjectTimeZone));
 
     const facade = tenantDb(db, tenant);
     const timeEntrySummaries = facade.table('time_sheets as summary_ts');
@@ -348,6 +368,9 @@ export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string
 });
 
 export const fetchOrCreateTimeSheet = withAuth(async (user, { tenant }, userId: string, periodId: string): Promise<ITimeSheetView | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.open(ctx, userId, periodId));
+  if (delegated.handled) return delegated.value;
   try {
     // Validate input
     const validatedParams = validateData<FetchOrCreateTimeSheetParams>(
@@ -361,23 +384,12 @@ export const fetchOrCreateTimeSheet = withAuth(async (user, { tenant }, userId: 
 
     const facade = tenantDb(db, tenant);
 
-    let timeSheet = await facade.table('time_sheets')
-      .where({
-        user_id: validatedParams.userId,
-        period_id: validatedParams.periodId,
-      })
-      .first();
-
-    if (!timeSheet) {
-      [timeSheet] = await facade.table('time_sheets')
-        .insert({
-          user_id: validatedParams.userId,
-          period_id: validatedParams.periodId,
-          approval_status: 'DRAFT',
-          tenant
-        })
-        .returning('*');
-    }
+    const timeSheet = await findOrCreateTimeSheetRow(
+      db,
+      tenant,
+      validatedParams.userId,
+      validatedParams.periodId,
+    );
 
     const timePeriod = await facade.table('time_periods')
       .where({
@@ -427,6 +439,9 @@ export const deleteTimeSheets = withAuth(async (
   { tenant },
   timeSheetIds: string[]
 ): Promise<DeleteTimeSheetsResult> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.remove(ctx, timeSheetIds));
+  if (delegated.handled) return delegated.value;
   const { knex: db } = await createTenantKnex();
 
   const uniqueIds = Array.from(

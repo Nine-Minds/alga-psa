@@ -14,6 +14,11 @@ import { toggleTaskCommentReaction, getTaskCommentsReactionsBatch } from '@alga-
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(),
   publishWorkflowEvent: vi.fn(),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 // Hoisted refs so mocks return the test transaction and user
@@ -32,6 +37,10 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
 }));
 
 // Mock withAuth to bypass session/tenant resolution and call the action directly
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
+}));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => (...args: any[]) =>
     action(userRef.user, { tenant: dbRef.tenant }, ...args),

@@ -156,11 +156,15 @@ describe('MSP i18n Phase 0 - config', () => {
       'msp/core',
       'features/tickets',
       'msp/time-entry',
+      'msp/user-activities',
+      'msp/schedule',
+      'features/documents',
     ]);
     expect(ROUTE_NAMESPACES['/msp/settings']).toEqual([
       'common',
       'msp/core',
       'msp/settings',
+      'msp/extensions',
       'msp/keyboard-shortcuts',
       'msp/admin',
       'msp/email-providers',
@@ -171,6 +175,7 @@ describe('MSP i18n Phase 0 - config', () => {
       'features/billing',
       'msp/calendar',
       'msp/integrations',
+      'features/documents',
     ]);
 
     const hasLegacyMsp = Object.values(ROUTE_NAMESPACES).some((namespaces) =>
@@ -190,6 +195,14 @@ describe('MSP i18n Phase 0 - config', () => {
       ROUTE_NAMESPACES['/msp/tickets']
     );
     expect(getNamespacesForRoute('/unknown/route')).toEqual(['common']);
+  });
+
+  it('preloads user-activities copy for the My group control on host work-item routes', () => {
+    expect(getNamespacesForRoute('/msp/tickets/ticket-1')).toContain('msp/user-activities');
+    expect(getNamespacesForRoute('/msp/projects/project-1/tasks/task-1')).toContain(
+      'msp/user-activities'
+    );
+    expect(getNamespacesForRoute('/msp/technician-dispatch')).toContain('msp/user-activities');
   });
 
   it('preloads time-entry copy for the launcher on nested work-item routes', () => {

@@ -20,6 +20,10 @@ interface NewWorkItemTimeEntryProps {
   periods: ITimePeriodWithStatusView[];
   /** From resolveEntryDefaults; always lands on an editable day. */
   defaults: ResolvedEntryDefaults;
+  /** Caller-supplied explanation shown above the form (e.g. the stopwatch pause summary). */
+  contextNotice?: string;
+  /** Stopwatch session this entry logs; saving closes it atomically. */
+  stopwatchSessionId?: string;
 }
 
 /**
@@ -36,6 +40,8 @@ export default function NewWorkItemTimeEntry({
   userTimeZone,
   periods,
   defaults,
+  contextNotice,
+  stopwatchSessionId,
 }: NewWorkItemTimeEntryProps): React.JSX.Element {
   const { t } = useTranslation('msp/time-entry');
   const { formatDate } = useFormatters();
@@ -50,11 +56,12 @@ export default function NewWorkItemTimeEntry({
       createTimeEntrySaveHandler(
         onComplete,
         createCatalogSheetResolver({ userId, periods, timeZone: userTimeZone, formatWorkDate }),
+        { stopwatchSessionId },
       ),
-    [onComplete, userId, periods, userTimeZone, formatWorkDate],
+    [onComplete, userId, periods, userTimeZone, formatWorkDate, stopwatchSessionId],
   );
 
-  const notice = useMemo(() => {
+  const movedNotice = useMemo(() => {
     const { moved } = defaults;
     if (moved.kind === 'supplied') {
       return t('workItemEntry.defaultMoved.supplied', {
@@ -76,6 +83,11 @@ export default function NewWorkItemTimeEntry({
     }
     return undefined;
   }, [defaults, formatWorkDate, t]);
+
+  const notice = useMemo(
+    () => [contextNotice, movedNotice].filter(Boolean).join(' ') || undefined,
+    [contextNotice, movedNotice],
+  );
 
   return (
     <TimeEntryDialog

@@ -1,0 +1,16 @@
+{
+    "claim": {
+        "invoice_id": null,
+        "lifecycle_state": "locked",
+        "invoice_charge_id": null,
+        "invoice_linked_at": null,
+        "service_period_end": "2026-07-01",
+        "service_period_start": "2026-06-01",
+        "invoice_charge_detail_id": null
+    },
+    "contract_line": {
+        "end_date": null,
+        "start_date": null,
+        "invoice_line_description": "Original locked claim text"
+    }
+}

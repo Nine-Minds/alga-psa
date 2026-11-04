@@ -1,4 +1,4 @@
-import type { WorkflowPickerKind } from '../jsonSchemaMetadata';
+import type { WorkflowPickerKind } from '@alga-psa/event-schemas';
 
 /**
  * The action that loads an entity's details from its id. Events and many actions carry only an

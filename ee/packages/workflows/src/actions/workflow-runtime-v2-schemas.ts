@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { workflowDefinitionSchema } from '@alga-psa/workflows/runtime';
+import { WORKFLOW_LAUNCH_SKIP_REASONS } from '../lib/workflowLaunchSkipReasons';
 
 const versionNumber = z.preprocess(
   (val) => (typeof val === 'string' ? Number(val) : val),
@@ -48,17 +49,17 @@ export const UpdateWorkflowDefinitionInput = z.object({
 export const SimulateWorkflowDefinitionInput = z.object({
   definition: workflowDefinitionSchema,
   /** Workflow payload used as-is. Wins over eventPayload/synthesis. */
-  payload: z.record(z.any()).optional(),
+  payload: z.record(z.string(), z.any()).optional(),
   /** Replay a persisted workflow runtime event by id. Mutually exclusive with payload. */
-  eventId: z.string().uuid().optional(),
+  eventId: z.string().guid().optional(),
   /** Replay the latest persisted event for the trigger event type. Mutually exclusive with payload. */
   useLatestEvent: z.boolean().optional(),
   /** Source event payload, run through the trigger's payloadMapping. */
-  eventPayload: z.record(z.any()).optional(),
+  eventPayload: z.record(z.string(), z.any()).optional(),
   /** Event to synthesize a payload for when neither payload nor eventPayload is given. */
   eventType: z.string().min(1).optional(),
   /** Stub outputs keyed by step id or actionId; see simulator docs. */
-  fixtures: z.record(z.any()).optional(),
+  fixtures: z.record(z.string(), z.any()).optional(),
   options: z.object({
     maxSteps: z.number().int().positive().optional(),
     maxForEachIterations: z.number().int().positive().optional(),
@@ -84,7 +85,7 @@ export const UpdateWorkflowDefinitionMetadataInput = z.object({
   autoPauseOnFailure: z.boolean().optional(),
   failureRateThreshold: clearableNumber(z.number().min(0).max(1)),
   failureRateMinRuns: clearableNumber(z.number().int().nonnegative()),
-  retentionPolicyOverride: z.record(z.any()).optional()
+  retentionPolicyOverride: z.record(z.string(), z.any()).optional()
 });
 
 export const DeleteWorkflowDefinitionInput = z.object({
@@ -99,13 +100,13 @@ export const GetWorkflowDefinitionVersionInput = z.object({
 export const PublishWorkflowDefinitionInput = z.object({
   workflowId: z.string().min(1),
   version: versionNumber,
-  definition: z.record(z.any()).optional()
+  definition: z.record(z.string(), z.any()).optional()
 });
 
 export const StartWorkflowRunInput = z.object({
   workflowId: z.string().min(1),
   workflowVersion: versionNumber.optional(),
-  payload: z.record(z.any()).default({}),
+  payload: z.record(z.string(), z.any()).default({}),
   eventType: z.string().min(1).optional(),
   sourcePayloadSchemaRef: z.string().min(1).optional(),
   /**
@@ -173,7 +174,7 @@ export const ReplayWorkflowRunInput = z.object({
   reason: z.string().min(3),
   // Omitted payload means "replay with the original run's input"; an explicit
   // value (including {}) overrides it.
-  payload: z.record(z.any()).optional(),
+  payload: z.record(z.string(), z.any()).optional(),
   source: z.string().optional()
 });
 
@@ -240,5 +241,33 @@ export const SubmitWorkflowEventInput = z.object({
   workflowCorrelationKey: z.string().min(1).optional(),
   correlationKey: z.string().min(1).optional(),
   payloadSchemaRef: z.string().min(1).optional(),
-  payload: z.record(z.any()).default({})
+  payload: z.record(z.string(), z.any()).default({})
+});
+
+// --- Workflow event launch skips (alga0002106) ---
+
+const launchSkipReasonSchema = z.enum(WORKFLOW_LAUNCH_SKIP_REASONS);
+
+export const GetWorkflowLaunchSkipSummaryInput = z.object({
+  workflowId: z.string().guid(),
+  from: z.string().datetime({ offset: true }).optional()
+});
+
+export const ListWorkflowLaunchSkipsPagedInput = z.object({
+  workflowId: z.string().guid(),
+  from: z.string().datetime({ offset: true }).optional(),
+  to: z.string().datetime({ offset: true }).optional(),
+  reason: launchSkipReasonSchema.optional(),
+  intentional: z.boolean().optional(),
+  page: pageNumber.default(1),
+  pageSize: pageSizeNumber.default(25)
+});
+
+export const ListWorkflowLaunchSkipCountsInput = z.object({
+  workflowIds: z.array(z.string().guid()).max(500),
+  from: z.string().datetime({ offset: true }).optional()
+});
+
+export const ListEventLaunchSkipsInput = z.object({
+  eventId: z.string().guid()
 });

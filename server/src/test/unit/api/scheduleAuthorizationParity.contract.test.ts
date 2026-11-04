@@ -29,18 +29,20 @@ describe('Schedule endpoints authorization parity contract', () => {
     expect(source).toContain('maskApiScheduleEntry(');
   });
 
-  it('requires user_schedule:update to assign entries to other users on create', () => {
+  it('rejects assigning other users on create unless calendar access allows it (canAssignUser)', () => {
     const source = readControllerSource();
 
+    expect(source).toContain('canAssignUser(');
     expect(source).toContain('Permission denied: Cannot assign schedules to other users');
   });
 
-  it('guards single-entry get/update/delete by ownership for non-update users', () => {
+  it('guards single-entry update/delete via the shared-calendar access rule (getScheduleEntryForAccess + evaluateEntryAccess)', () => {
     const source = readControllerSource();
 
-    expect(source).toContain('const canUpdateAll = await hasPermission(');
-    expect(source).toContain('const canDeleteAll = await hasPermission(');
-    expect(source).toContain('const isOwnEntry = existing.created_by === user.user_id ||');
+    expect(source).toContain('getScheduleEntryForAccess(');
+    expect(source).toContain('evaluateEntryAccess(');
+    expect(source).toContain('canAssignUser(');
+    expect(source).toContain('existing.is_private &&');
   });
 
   it('enforces user_schedule RBAC in the service helpers', () => {

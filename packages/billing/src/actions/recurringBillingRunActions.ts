@@ -21,15 +21,6 @@ import {
 import {
   DUPLICATE_RECURRING_INVOICE_CODE,
   DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
-  NO_BILLING_EMAIL_MESSAGE_KEY,
-  TIME_APPROVAL_REQUIRED_MESSAGE_KEY,
-  USAGE_RECORDS_MISSING_MESSAGE_KEY,
-  USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
-  USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
-  RECURRING_PRICING_STALE_MESSAGE_KEY,
-  USAGE_CALCULATION_ERROR_MESSAGE_KEY,
-  FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY,
-  FIXED_LINE_NO_SERVICES_MESSAGE_KEY,
 } from './invoiceGeneration.constants';
 import {
   buildRecurringRunSelectionIdentity,
@@ -62,6 +53,11 @@ export type {
   RecurringBillingRunInvoiceFailure,
 } from './recurringBillingRunActions.shared';
 import {
+  handledRecurringFailureFromActionError,
+  recurringRunFailureFromThrown,
+  type RecurringBillingRunActionError,
+} from './recurringBillingRunFailure';
+import {
   buildRecurringBillingRunCompletedPayload,
   buildRecurringBillingRunFailedPayload,
   buildRecurringBillingRunStartedPayload,
@@ -71,9 +67,7 @@ import {
 // These actions do their own auth check rather than going through withAuth, so their
 // payloads must still be built by the shared helpers: that is what carries the
 // messageKey the localization boundary reads. Local clones would drop it silently.
-export type RecurringBillingRunActionError =
-  | ActionMessageErrorShape
-  | ActionPermissionErrorShape;
+export type { RecurringBillingRunActionError };
 
 function isRecurringBillingRunActionError(value: unknown): value is RecurringBillingRunActionError {
   return isActionMessageError(value) || isActionPermissionError(value);
@@ -81,84 +75,6 @@ function isRecurringBillingRunActionError(value: unknown): value is RecurringBil
 
 function getRecurringBillingRunActionErrorMessage(error: RecurringBillingRunActionError): string {
   return 'permissionError' in error ? error.permissionError : error.actionError;
-}
-
-/**
- * Recovers the structured, known failure (code/params) from a keyed action error
- * returned by the invoice-generation boundary. Recognized by message key, never by
- * the English sentence, which the localization boundary rewrites. Unknown/internal
- * errors carry nothing, so the failure keeps the generic message for the UI.
- */
-function handledRecurringFailureFromActionError(error: RecurringBillingRunActionError): {
-  code?: HandledRecurringFailureCode;
-  params?: Record<string, string>;
-} {
-  if (error.messageKey === TIME_APPROVAL_REQUIRED_MESSAGE_KEY) {
-    return { code: 'TIME_APPROVAL_REQUIRED', params: error.messageParams as Record<string, string> | undefined };
-  }
-  if (error.messageKey === NO_BILLING_EMAIL_MESSAGE_KEY) {
-    return {
-      code: 'NO_BILLING_EMAIL',
-      params: error.messageParams as Record<string, string> | undefined,
-    };
-  }
-  // Incomplete-usage windows: whether the whole window is unreported
-  // (USAGE_RECORDS_MISSING) or billable charges would omit unreported usage
-  // services (…_ACK_REQUIRED), the automated run reports the coded,
-  // actionable incomplete-usage failure instead of silently finalizing a
-  // partial period. The acknowledgement variant keeps its
-  // `acknowledgeRequired` param so the UI can offer an explicit
-  // generate-anyway confirmation.
-  if (
-    error.messageKey != null &&
-    (error.messageKey === USAGE_RECORDS_MISSING_MESSAGE_KEY ||
-      error.messageKey === USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY)
-  ) {
-    return {
-      code: 'USAGE_RECORDS_MISSING',
-      params: error.messageParams as Record<string, string> | undefined,
-    };
-  }
-  // A stale previewed period total refused finalization: the operator must
-  // re-preview, so the coded failure (not a generic string) reaches the UI.
-  if (error.messageKey === USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY) {
-    return {
-      code: 'USAGE_PERIOD_TOTAL_STALE',
-      params: error.messageParams as Record<string, string> | undefined,
-    };
-  }
-  // A scheduled recurring quantity/price revision (or its inherited catalog
-  // price) changed after the preview that was approved: the run reports the
-  // coded stale-pricing failure so the operator re-previews before generating.
-  if (error.messageKey === RECURRING_PRICING_STALE_MESSAGE_KEY) {
-    return {
-      code: 'RECURRING_PRICING_STALE',
-      params: error.messageParams as Record<string, string> | undefined,
-    };
-  }
-  // Recorded usage the engine could not price keeps its structured
-  // per-service diagnostics across the run boundary.
-  if (error.messageKey === USAGE_CALCULATION_ERROR_MESSAGE_KEY) {
-    return {
-      code: 'USAGE_CALCULATION_ERROR',
-      params: error.messageParams as Record<string, string> | undefined,
-    };
-  }
-  // A fixed-fee line with no resolvable rate refused generation; the coded
-  // failure names the line instead of a generic error string.
-  if (error.messageKey === FIXED_LINE_RATE_UNRESOLVED_MESSAGE_KEY) {
-    return {
-      code: 'FIXED_LINE_RATE_UNRESOLVED',
-      params: error.messageParams as Record<string, string> | undefined,
-    };
-  }
-  if (error.messageKey === FIXED_LINE_NO_SERVICES_MESSAGE_KEY) {
-    return {
-      code: 'FIXED_LINE_NO_SERVICES',
-      params: error.messageParams as Record<string, string> | undefined,
-    };
-  }
-  return {};
 }
 
 function normalizeRecurringBillingRunTargets(params: {
@@ -257,37 +173,6 @@ function isDuplicateRecurringInvoiceActionError(error: RecurringBillingRunAction
  * safe identifiers already present in the run are included; no invoice
  * contents, customer data, or other sensitive payloads are logged.
  */
-function logRecurringBillingRunInvoiceFailure(params: {
-  runId: string;
-  tenantId: string;
-  error: unknown;
-  billingCycleId?: string | null;
-  executionIdentityKey: string;
-  executionWindowKind: string;
-}) {
-  const {
-    runId,
-    tenantId,
-    error,
-    billingCycleId,
-    executionIdentityKey,
-    executionWindowKind,
-  } = params;
-  const normalizedError =
-    error instanceof Error
-      ? { name: error.name, message: error.message, stack: error.stack }
-      : { name: 'Unknown', message: String(error), stack: undefined };
-  console.error('[billing.recurringBillingRun.invoiceFailure]', {
-    event: 'billing.recurringBillingRun.invoiceFailure',
-    runId,
-    tenantId,
-    billingCycleId: billingCycleId ?? null,
-    executionIdentityKey,
-    executionWindowKind,
-    error: normalizedError,
-  });
-}
-
 export async function generateInvoicesAsRecurringBillingRun(params: {
   targets?: RecurringBillingRunTarget[];
   allowPoOverage?: boolean;
@@ -391,21 +276,13 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
           continue;
         }
 
-        logRecurringBillingRunInvoiceFailure({
+        failures.push(recurringRunFailureFromThrown(err, {
           runId,
           tenantId,
-          error: err,
           billingCycleId: target.billingCycleId ?? null,
           executionIdentityKey: executionWindow.identityKey,
           executionWindowKind: executionWindow.kind,
-        });
-
-        failures.push({
-          billingCycleId: target.billingCycleId ?? null,
-          executionIdentityKey: executionWindow.identityKey,
-          executionWindowKind: executionWindow.kind,
-          errorMessage: 'Failed to generate invoice for this billing cycle.',
-        });
+        }));
       }
     }
 
@@ -861,21 +738,13 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
           continue;
         }
 
-        logRecurringBillingRunInvoiceFailure({
+        failures.push(recurringRunFailureFromThrown(err, {
           runId,
           tenantId,
-          error: err,
           billingCycleId: group.billingCycleId ?? null,
           executionIdentityKey: executionWindow.identityKey,
           executionWindowKind: executionWindow.kind,
-        });
-
-        failures.push({
-          billingCycleId: group.billingCycleId ?? null,
-          executionIdentityKey: executionWindow.identityKey,
-          executionWindowKind: executionWindow.kind,
-          errorMessage: 'Failed to generate invoice for this billing cycle.',
-        });
+        }));
       }
     }
 

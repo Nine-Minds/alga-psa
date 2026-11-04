@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildQuoteTemplateBindings } from '../../../lib/quote-template-ast/bindings';
 import { buildSalesOrderTemplateBindings } from '../../../lib/sales-order-template-ast/bindings';
-import { getStandardTemplateAstByCode } from '../../../lib/invoice-template-ast/standardTemplates';
+import { buildInvoiceTemplateBindings, getStandardTemplateAstByCode } from '../../../lib/invoice-template-ast/standardTemplates';
+import { buildLabelTemplateBindings } from '../../../lib/label-template-ast/bindings';
 import { resolveDesignerDocumentKind } from './documentKind';
 
 const buildDocumentNode = (metadata: Record<string, unknown> = {}) => ({
@@ -18,6 +19,12 @@ const buildDocumentNode = (metadata: Record<string, unknown> = {}) => ({
 describe('resolveDesignerDocumentKind', () => {
   it('defaults to invoice when no document node exists', () => {
     expect(resolveDesignerDocumentKind([] as any)).toBe('invoice');
+  });
+
+  it('detects label binding catalogs as work-tag (not quote, despite clientName/tenantName)', () => {
+    const nodes = [buildDocumentNode({ __astBindingCatalog: buildLabelTemplateBindings() })];
+
+    expect(resolveDesignerDocumentKind(nodes)).toBe('work-tag');
   });
 
   it('detects quote binding catalogs from quote-specific bindings', () => {
@@ -39,6 +46,12 @@ describe('resolveDesignerDocumentKind', () => {
     ];
 
     expect(resolveDesignerDocumentKind(nodes)).toBe('invoice');
+  });
+
+  it('keeps the full invoice binding catalog (which now publishes discountTotal) classified as invoice', () => {
+    const bindings = buildInvoiceTemplateBindings();
+    expect(bindings.values).toHaveProperty('discountTotal');
+    expect(resolveDesignerDocumentKind([buildDocumentNode({ __astBindingCatalog: bindings })])).toBe('invoice');
   });
 
   it('detects sales-order binding catalogs (and prefers them over the shared quote/tenant bindings)', () => {

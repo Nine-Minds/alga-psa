@@ -11,7 +11,7 @@ export function registerProductRoutes(
   const ProductIdParams = registry.registerSchema(
     'ProductIdParams',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Product UUID.'),
+      id: zOpenApi.string().guid().describe('Product UUID.'),
     }),
   );
 
@@ -19,7 +19,9 @@ export function registerProductRoutes(
     'ProductPrice',
     zOpenApi.object({
       currency_code: zOpenApi.string().length(3),
-      rate: zOpenApi.number(),
+      rate: zOpenApi.number().describe('Rate in integer minor units (e.g. cents).'),
+      display_order: zOpenApi.number().int().optional()
+        .describe('Position within its window; 0 is the primary price. Responses are sorted by display_order, then currency_code.'),
       effective_date: zOpenApi.string().nullable().optional()
         .describe('Calendar date the price takes effect; the epoch when untagged.'),
     }),
@@ -28,16 +30,16 @@ export function registerProductRoutes(
   const ProductResource = registry.registerSchema(
     'ProductCatalogEntry',
     zOpenApi.object({
-      service_id: zOpenApi.string().uuid(),
-      tenant: zOpenApi.string().uuid(),
+      service_id: zOpenApi.string().guid(),
+      tenant: zOpenApi.string().guid(),
       service_name: zOpenApi.string(),
-      custom_service_type_id: zOpenApi.string().uuid(),
+      custom_service_type_id: zOpenApi.string().guid(),
       billing_method: zOpenApi.enum(['usage']),
       default_rate: zOpenApi.number(),
       unit_of_measure: zOpenApi.string(),
       unit_code: zOpenApi.string().nullable().optional(),
-      category_id: zOpenApi.string().uuid().nullable().optional(),
-      tax_rate_id: zOpenApi.string().uuid().nullable().optional(),
+      category_id: zOpenApi.string().guid().nullable().optional(),
+      tax_rate_id: zOpenApi.string().guid().nullable().optional(),
       description: zOpenApi.string().nullable().optional(),
       item_kind: zOpenApi.enum(['product']),
       is_active: zOpenApi.boolean().optional(),
@@ -63,7 +65,7 @@ export function registerProductRoutes(
     'ProductEnvelope',
     zOpenApi.object({
       data: ProductResource,
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -79,7 +81,7 @@ export function registerProductRoutes(
         hasNext: zOpenApi.boolean(),
         hasPrev: zOpenApi.boolean(),
       }),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -124,7 +126,7 @@ export function registerProductRoutes(
     path: '/api/v1/products',
     summary: 'Create product',
     description:
-      'Creates a new product catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Products are catalog entries with item_kind product and always use billing_method usage.',
+      'Creates a new product catalog entry. Resolve custom_service_type_id with GET /api/v1/service-types and category_id with GET /api/v1/categories/service before calling this endpoint. Products are catalog entries with item_kind product and always use billing_method usage. Supply prices (integer minor units) to set the displayed prices; prices[0] is primary and is mirrored into default_rate. Shorthand: currency_code + default_rate (integer minor units) creates a single price { currency_code, rate: default_rate }; default_rate is required with currency_code and currency_code cannot be combined with prices.',
     tags,
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -139,7 +141,7 @@ export function registerProductRoutes(
         schema: ProductEnvelope,
       },
       400: {
-        description: 'Validation error.',
+        description: 'Validation error, including rejected price writes: unsupported currency, fractional or negative rate, duplicate currency, scheduled date not in the future, default_rate conflicting with prices[0].rate, an unsupported currency_code, currency_code without default_rate, or currency_code combined with prices.',
         schema: deps.ErrorResponse,
       },
       401: {
@@ -209,7 +211,7 @@ export function registerProductRoutes(
     method: 'put',
     path: '/api/v1/products/{id}',
     summary: 'Update product',
-    description: 'Updates a product catalog entry by UUID.',
+    description: 'Updates a product catalog entry by UUID. Send prices to replace the current price window (prices[0] is primary and is mirrored into default_rate) and scheduled_prices to replace the future window; either is applied in full or rejected with 400. Sending only default_rate rewrites the rate of the primary current price. Shorthand: currency_code + default_rate (integer minor units) upserts that single currency as the primary price (prices[0], mirrored into default_rate), replacing its rate or adding it, and leaves the other current prices of the product untouched; default_rate is required with currency_code and currency_code cannot be combined with prices. A default_rate that differs from prices[0].rate, currency_code without default_rate, currency_code together with prices, an unsupported currency, a fractional or negative rate, or a duplicate currency returns 400.',
     tags,
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -225,7 +227,7 @@ export function registerProductRoutes(
         schema: ProductEnvelope,
       },
       400: {
-        description: 'Validation error.',
+        description: 'Validation error, including rejected price writes: unsupported currency, fractional or negative rate, duplicate currency, scheduled date not in the future, default_rate conflicting with prices[0].rate, an unsupported currency_code, currency_code without default_rate, or currency_code combined with prices.',
         schema: deps.ErrorResponse,
       },
       401: {

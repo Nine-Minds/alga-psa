@@ -1,12 +1,16 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { normalizeGtin } from '@alga-psa/core';
-import { resolveCatalogUnitForCreate, resolveCatalogUnitForUpdate } from '@alga-psa/shared/billingClients/tenantUnitsOfMeasure';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { splitServicePricesByEffectiveDate } from '@alga-psa/billing/models/service';
-import { resolveCatalogTaxRateIdForCreate } from '@alga-psa/shared/billingClients/defaultTaxRate';
+import {
+  createProductCore,
+  updateProductCore,
+  ProductCatalogCoreError,
+} from '@alga-psa/billing/lib/catalog/productCatalogCore';
+import { isServiceCatalogPricingError } from '@alga-psa/billing/lib/catalog/serviceCatalogPricing';
 import { ListOptions } from '../controllers/types';
 import { publishServiceCatalogSearchEvent } from './ServiceCatalogService';
-import { ConflictError, NotFoundError } from '../middleware/apiMiddleware';
+import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 type SortField = 'service_name' | 'billing_method' | 'default_rate';
 
@@ -17,22 +21,16 @@ type FilterOptions = {
   is_license?: boolean;
 };
 
-function rethrowProductUniqueViolation(error: unknown): never {
-  const databaseError = error as { code?: string; constraint?: string };
-
-  if (databaseError?.code === '23505') {
-    if (databaseError.constraint?.includes('service_catalog_product_barcode_unique')) {
-      throw new ConflictError(
-        'A product with this barcode already exists. Use a different barcode or edit the existing product.'
-      );
-    }
-    if (databaseError.constraint?.includes('service_catalog_product_sku_unique')) {
-      throw new ConflictError(
-        'A product with this SKU already exists. Use a different SKU or edit the existing product.'
-      );
-    }
+/** Map the transport-neutral core errors onto the REST error classes. */
+function mapProductCoreError(error: unknown): never {
+  if (error instanceof ProductCatalogCoreError) {
+    if (error.code === 'not_found') throw new NotFoundError(error.message);
+    if (error.code === 'validation') throw new ValidationError(error.message);
+    throw new ConflictError(error.message);
   }
-
+  if (isServiceCatalogPricingError(error)) {
+    throw new ValidationError(error.message, { issues: error.issues });
+  }
   throw error;
 }
 
@@ -153,6 +151,7 @@ export class ProductCatalogService extends BaseService<IService> {
       ? await db.table('service_prices')
           .whereIn('service_id', serviceIds)
           .select('*')
+          .orderBy([{ column: 'display_order' }, { column: 'currency_code' }])
       : [];
 
     const pricesByService: Record<string, any[]> = {};
@@ -205,7 +204,8 @@ export class ProductCatalogService extends BaseService<IService> {
 
     const prices = await db.table('service_prices')
       .where('service_id', id)
-      .select('*');
+      .select('*')
+      .orderBy([{ column: 'display_order' }, { column: 'currency_code' }]);
 
     const { current, scheduled } = splitServicePricesByEffectiveDate(prices);
     return { ...product, prices: current, scheduled_prices: scheduled } as IService;
@@ -218,10 +218,13 @@ export class ProductCatalogService extends BaseService<IService> {
     const rawData = data as any;
     const {
       prices,
+      scheduled_prices: scheduledPrices,
       billing_method: _billing_method,
       unit_of_measure,
       ...rest
     } = rawData;
+    // currency_code (single-price shorthand) rides in `rest`; createProductCore
+    // owns its expansion into prices[] and keeps it out of the insert.
 
     // DD-2/F-2: resolve the product cost currency when not explicitly provided.
     // Products are tenant-scoped (no client_id), so precedence is:
@@ -235,54 +238,28 @@ export class ProductCatalogService extends BaseService<IService> {
       const billingSettings = await tenantDb(knex, tenant).table('default_billing_settings')
         .select('default_currency_code')
         .first();
+      // LEVERAGE: friction tenant-currency-usd-fallback — REST create still falls back to 'USD'; the AMP applier resolves strictly via resolveConfiguredTenantCurrency and fails the row instead.
       costCurrency = billingSettings?.default_currency_code || 'USD';
     }
 
-    // Resolve inherited defaults and units in the transaction, holding the
-    // documented rate/region locks until the catalog row is persisted.
     // Publication happens only after commit so search consumers can read it.
     const createdResult = await withTransaction(knex, async (trx) => {
-      const productData = {
-        ...rest,
-        cost_currency: costCurrency,
-        item_kind: 'product',
-        billing_method: 'usage',
-        ...(await resolveCatalogUnitForCreate(trx, tenant, { unit_of_measure, unit_code: rest.unit_code, item_kind: 'product' })),
-        tenant,
-        default_rate: typeof rest.default_rate === 'string'
-          ? parseFloat(rest.default_rate) || 0
-          : rest.default_rate,
-        // Omitted inherits the tenant default; explicit null stays non-taxable.
-        tax_rate_id: await resolveCatalogTaxRateIdForCreate(
-          trx,
-          tenant,
-          rest.tax_rate_id,
-          undefined,
-          { lock: true },
-        ),
-        category_id: rest.category_id ?? null,
-        barcode: normalizeGtin(rest.barcode ?? '') || null,
-      };
-
-      let created: IService;
       try {
-        [created] = await tenantDb(trx, tenant).table<IService>('service_catalog')
-          .insert(productData)
-          .returning('*');
+        const created = await createProductCore(trx, tenant, {
+          ...rest,
+          prices,
+          scheduled_prices: scheduledPrices,
+          unit_of_measure,
+          cost_currency: costCurrency,
+        });
+        return {
+          serviceId: created.serviceId,
+          itemKind: 'product' as const,
+          changedFields: created.changedFields,
+        };
       } catch (error) {
-        rethrowProductUniqueViolation(error);
+        mapProductCoreError(error);
       }
-
-      // Set prices if provided
-      if (prices && prices.length > 0) {
-        await this.setServicePrices(trx, created.service_id, tenant, prices);
-      }
-
-      return {
-        serviceId: created.service_id,
-        itemKind: 'product' as const,
-        changedFields: Object.keys(productData),
-      };
     });
 
     await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, createdResult.serviceId, {
@@ -298,45 +275,20 @@ export class ProductCatalogService extends BaseService<IService> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
 
-    // Verify it's a product
-    const existing = await tenantDb(knex, tenant).table('service_catalog')
-      .where('service_id', id)
-      .select('item_kind')
-      .first();
-    if (!existing || existing.item_kind !== 'product') {
-      throw new NotFoundError('Resource not found or permission denied');
-    }
-
-    const { prices, billing_method: _billing_method, service_type_name: _, ...updateData } = data as any;
-    const normalizedUpdateData = {
-      ...updateData,
-      ...(await resolveCatalogUnitForUpdate(knex, tenant, updateData)),
-      ...(updateData.barcode !== undefined
-        ? { barcode: normalizeGtin(updateData.barcode ?? '') || null }
-        : {}),
-    };
-
-    try {
-      await tenantDb(knex, tenant).table('service_catalog')
-        .where('service_id', id)
-        .update({
-          ...normalizedUpdateData,
-          item_kind: 'product',
-          billing_method: 'usage'
-        });
-    } catch (error) {
-      rethrowProductUniqueViolation(error);
-    }
-
-    // Update prices if provided
-    if (prices) {
-      await this.setServicePrices(knex, id, tenant, prices);
-    }
+    // One transaction for the catalog row and its prices: a failure after the
+    // catalog write leaves no partial state.
+    const { changedFields } = await withTransaction(knex, async (trx) => {
+      try {
+        return await updateProductCore(trx, tenant, id, data as Record<string, any>);
+      } catch (error) {
+        mapProductCoreError(error);
+      }
+    });
 
     await publishServiceCatalogSearchEvent('SERVICE_CATALOG_UPDATED', tenant, id, {
       userId: context.userId,
       itemKind: 'product',
-      changedFields: Object.keys(normalizedUpdateData),
+      changedFields,
     });
 
     return this.getById(id, context) as Promise<IService>;
@@ -354,33 +306,6 @@ export class ProductCatalogService extends BaseService<IService> {
       userId: context.userId,
       itemKind: 'product',
     });
-  }
-
-  private async setServicePrices(
-    knex: any,
-    serviceId: string,
-    tenant: string,
-    prices: Array<{ currency_code: string; rate: number }>
-  ): Promise<void> {
-    // Replace the currently-effective window only; leave scheduled future rows
-    // in place so an ordinary product save cannot revoke a scheduled increase.
-    const today = new Date().toISOString().slice(0, 10);
-    await tenantDb(knex, tenant).table('service_prices')
-      .where('service_id', serviceId)
-      .where('effective_date', '<=', today)
-      .delete();
-
-    if (prices.length > 0) {
-      await tenantDb(knex, tenant).table('service_prices').insert(
-        prices.map((p) => ({
-          service_id: serviceId,
-          tenant,
-          currency_code: p.currency_code,
-          rate: p.rate,
-          effective_date: '1970-01-01'
-        }))
-      );
-    }
   }
 
   private normalizeSortField(sort?: string | null): SortField {

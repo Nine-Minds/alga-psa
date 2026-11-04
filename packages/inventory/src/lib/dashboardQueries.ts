@@ -363,8 +363,8 @@ export async function queryGhostWeek(db: Db, tenant: string): Promise<GhostWeek>
         .where('tm.tenant', tenant)
         .andWhere('tm.is_billed', true)
         .andWhereRaw("tm.created_at >= now() - interval '90 days'")
-        .groupBy('tm.ticket_id')
-        .select('tm.ticket_id', db.raw('SUM(tm.rate * tm.quantity) as total'))
+        .groupBy('tm.tenant', 'tm.ticket_id')
+        .select('tm.tenant', 'tm.ticket_id', db.raw('SUM(tm.rate * tm.quantity) as total'))
         .as('t'),
     )
     .select<{ median: string | null }[]>(db.raw('percentile_cont(0.5) WITHIN GROUP (ORDER BY t.total) as median'))

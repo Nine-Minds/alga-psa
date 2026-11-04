@@ -1,6 +1,7 @@
 // server/src/components/ui/ContactPickerDialog.tsx
 'use client';
 
+import { useTranslation } from '../lib/i18n/client';
 import React, { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { IContact } from '@alga-psa/types';
@@ -31,6 +32,7 @@ const ContactPickerDialog = ({
   prefilledClientId,
   id
 }: ContactPickerDialogProps & AutomationProps) => {
+  const { t } = useTranslation('common');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [filteredContacts, setFilteredContacts] = useState<IContact[]>([]);
@@ -39,7 +41,7 @@ const ContactPickerDialog = ({
   const updateDialog = useRegisterUIComponent<DialogComponent>({
     type: 'dialog',
     id: (id && isOpen) ? id : '__skip_registration_dialog',
-    title: 'Select Contact',
+    title: t('dialogs.contactPicker.title'),
     open: true
   });
 
@@ -48,7 +50,7 @@ const ContactPickerDialog = ({
     type: 'formField',
     fieldType: 'textField',
     id: (id && isOpen) ? `${id}-search` : '__skip_registration_search',
-    label: 'Search',
+    label: t('actions.search'),
     value: searchTerm,
     parentId: id
   });
@@ -57,7 +59,7 @@ const ContactPickerDialog = ({
   const updateCancelButton = useRegisterUIComponent<ButtonComponent>({
     type: 'button',
     id: (id && isOpen) ? `${id}-cancel` : '__skip_registration_cancel',
-    label: 'Cancel',
+    label: t('actions.cancel'),
     variant: 'ghost',
     parentId: id
   });
@@ -93,7 +95,7 @@ const ContactPickerDialog = ({
 
   const columns: ColumnDefinition<IContact>[] = [
     {
-      title: 'Name',
+      title: t('dialogs.contactPicker.columns.name'),
       dataIndex: 'full_name',
       render: (value, record) => (
         <div className="flex items-center">
@@ -109,16 +111,16 @@ const ContactPickerDialog = ({
       ),
     },
     {
-      title: 'Email',
+      title: t('dialogs.contactPicker.columns.email'),
       dataIndex: 'email',
     },
     {
-      title: 'Phone',
+      title: t('dialogs.contactPicker.columns.phone'),
       dataIndex: 'default_phone_number',
       render: (_, record) => getDefaultPhoneNumber(record),
     },
     {
-      title: 'Action',
+      title: t('dialogs.contactPicker.columns.action'),
       dataIndex: 'contact_name_id',
       render: (_, record) => (
         <Button
@@ -130,7 +132,7 @@ const ContactPickerDialog = ({
           size="sm"
           id={`${id}-select-${record.contact_name_id}`}
         >
-          Select
+          {t('dialogs.contactPicker.select')}
         </Button>
       ),
     },
@@ -140,7 +142,7 @@ const ContactPickerDialog = ({
     <Dialog
       isOpen={isOpen}
       onClose={onClose}
-      title="Select Contact"
+      title={t('dialogs.contactPicker.title')}
       className="max-w-2xl max-h-[80vh] overflow-y-auto"
       id={id || 'contact-picker-dialog'}
     >
@@ -151,7 +153,7 @@ const ContactPickerDialog = ({
               <Search size={20} className="text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by name, email, or phone..."
+                placeholder={t('dialogs.contactPicker.searchPlaceholder')}
                 className="flex-1 outline-none"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -176,7 +178,7 @@ const ContactPickerDialog = ({
               onClick={onClose}
               id={`${id}-cancel`}
             >
-              Cancel
+              {t('actions.cancel')}
             </Button>
           </div>
       </DialogContent>

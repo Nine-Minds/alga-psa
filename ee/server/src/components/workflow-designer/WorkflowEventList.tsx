@@ -2,6 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { XCircle } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ListDetailLayout } from '@alga-psa/ui/components/ListDetailLayout';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
@@ -13,12 +15,18 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { toast } from 'react-hot-toast';
+import {
+  WORKFLOW_LAUNCH_SKIP_REASON_LABEL_KEYS,
+  isWorkflowLaunchSkipReason
+} from '@alga-psa/workflows/lib/workflowLaunchSkipReasons';
 import { mapWorkflowServerError } from './workflowServerErrors';
 import {
   exportWorkflowEventsAction,
   getWorkflowEventAction,
   listWorkflowEventSummaryAction,
-  listWorkflowEventsPagedAction
+  listWorkflowEventsPagedAction,
+  listEventLaunchSkipsAction,
+  type EventLaunchSkipItem
 } from '@alga-psa/workflows/actions';
 import {
   useFormatWorkflowEventStatus,
@@ -160,7 +168,26 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
   const [summary, setSummary] = useState<WorkflowEventSummary | null>(null);
   const [totalItems, setTotalItems] = useState(0);
 
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  // Selection lives in the URL (?eventId=<uuid>) so deep links, Close and Back stay consistent.
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const selectedEventId = searchParams?.get('eventId') || null;
+  const selectEvent = useCallback(
+    (eventId: string | null) => {
+      const params = new URLSearchParams(searchParams?.toString() ?? '');
+      if (eventId) {
+        params.set('eventId', eventId);
+      } else {
+        params.delete('eventId');
+      }
+      const query = params.toString();
+      const pathname = window.location.pathname;
+      // scroll: false — selecting an event must not jump the page to the top.
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [router, searchParams]
+  );
+  const [launchSkips, setLaunchSkips] = useState<EventLaunchSkipItem[]>([]);
   const [eventDetail, setEventDetail] = useState<WorkflowEventDetailResponse | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -290,6 +317,27 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
     }
     fetchEventDetail(selectedEventId);
   }, [fetchEventDetail, selectedEventId]);
+
+  useEffect(() => {
+    if (!selectedEventId) {
+      setLaunchSkips([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const items = await listEventLaunchSkipsAction({ eventId: selectedEventId });
+        if (!cancelled) setLaunchSkips(items);
+      } catch (error) {
+        // Advisory section; the rest of the detail panel stays usable.
+        console.error('Failed to load workflow launch skips for event', error);
+        if (!cancelled) setLaunchSkips([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedEventId]);
 
   const handleStatusChange = (value: string) =>
     setQuery((prev) => ({ ...prev, status: value, page: 1 }));
@@ -422,7 +470,11 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
   }, [formatDateTime, formatWorkflowEventStatus, t]);
 
   return (
-    <div className="flex h-full gap-4">
+    <ListDetailLayout
+      id="workflow-events-layout"
+      onBack={() => selectEvent(null)}
+      backLabel={t('eventList.actions.backToEvents', { defaultValue: 'Back to events' })}
+      list={
       <div className="flex-1 min-h-0 flex flex-col gap-3">
         <Card className="p-3 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -432,7 +484,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
               onChange={(event) => setEventNameInput(event.target.value)}
               onClear={() => setEventNameInput('')}
               placeholder={t('eventList.filters.eventNamePlaceholder', { defaultValue: 'Event name…' })}
-              className="w-56 h-[38px]"
+              className="w-56 max-w-full h-[38px]"
             />
             <SearchInput
               id="workflow-events-correlation"
@@ -440,7 +492,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
               onChange={(event) => setCorrelationKeyInput(event.target.value)}
               onClear={() => setCorrelationKeyInput('')}
               placeholder={t('eventList.filters.correlationKeyPlaceholder', { defaultValue: 'Correlation key…' })}
-              className="w-48 h-[38px]"
+              className="w-48 max-w-full h-[38px]"
             />
             <CustomSelect
               id="workflow-events-status"
@@ -483,7 +535,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
                 {t('eventList.actions.reset', { defaultValue: 'Reset' })}
               </Button>
             )}
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex flex-wrap items-center gap-2">
               <Button id="workflow-events-export-csv" variant="outline" size="sm" onClick={() => handleExport('csv')}>
                 {t('eventList.actions.exportCsv', { defaultValue: 'Export CSV' })}
               </Button>
@@ -520,7 +572,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
             pageSize={query.pageSize}
             onItemsPerPageChange={(size) => setQuery((prev) => ({ ...prev, pageSize: size, page: 1 }))}
             totalItems={totalItems}
-            onRowClick={(row) => setSelectedEventId((row as WorkflowEventRecord).event_id)}
+            onRowClick={(row) => selectEvent((row as WorkflowEventRecord).event_id)}
             rowClassName={(row) =>
               (row as WorkflowEventRecord).event_id === selectedEventId
                 ? 'bg-table-selected'
@@ -540,13 +592,13 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
           />
         </Card>
       </div>
-
-      {selectedEventId && (
-        <div className="w-[480px] shrink-0 overflow-auto space-y-4">
+      }
+      detail={selectedEventId ? (
+        <>
           <Card id="workflow-event-detail-panel" className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="text-sm font-semibold">{t('eventList.detail.title', { defaultValue: 'Event Detail' })}</div>
-              <Button id="workflow-event-detail-close" variant="ghost" onClick={() => setSelectedEventId(null)}>
+              <Button id="workflow-event-detail-close" variant="ghost" onClick={() => selectEvent(null)}>
                 {t('eventList.actions.close', { defaultValue: 'Close' })}
               </Button>
             </div>
@@ -592,6 +644,38 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
                     defaultValue: 'Error: {{message}}',
                     message: eventDetail.event.error_message,
                   })}</div>
+                )}
+                {launchSkips.length > 0 && (
+                  <div id="workflow-event-detail-launch-skips" className="space-y-2">
+                    <div className="text-xs text-gray-500">
+                      {t('eventList.detail.launchSkips.title', { defaultValue: 'Workflows not launched' })}
+                    </div>
+                    <ul className="space-y-2">
+                      {launchSkips.map((skip, index) => (
+                        <li
+                          key={`${skip.workflowKey ?? skip.workflowName ?? 'workflow'}-${skip.reason}-${index}`}
+                          className="rounded border border-[rgb(var(--color-border-200))] p-2 space-y-1"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-medium">
+                              {skip.workflowName ?? t('eventList.detail.launchSkips.unknownWorkflow', { defaultValue: 'Deleted workflow' })}
+                            </span>
+                            <Badge variant={skip.intentional ? 'default-muted' : 'warning'}>
+                              {isWorkflowLaunchSkipReason(skip.reason)
+                                ? t(WORKFLOW_LAUNCH_SKIP_REASON_LABEL_KEYS[skip.reason], { defaultValue: skip.reason })
+                                : skip.reason}
+                            </Badge>
+                            {skip.intentional && (
+                              <span className="text-xs text-gray-500">
+                                {t('eventList.detail.launchSkips.intentional', { defaultValue: 'Intentional' })}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-600 break-words">{skip.message}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
                 {eventDetail.wait && (
                   <div className="space-y-1">
@@ -644,9 +728,9 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
               onClose={handleRunDetailsClose}
             />
           )}
-        </div>
-      )}
-    </div>
+        </>
+      ) : null}
+    />
   );
 };
 

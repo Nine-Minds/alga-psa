@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  searchRegistryEntries,
+  runRegistrySearch,
   buildRequest,
   buildMetaToolDefinitions,
   SEARCH_API_REGISTRY_TOOL,
   SEARCH_BUSINESS_DATA_TOOL,
   CALL_API_ENDPOINT_TOOL,
+  ATTACH_FILE_TOOL,
+  MCP_SERVER_INSTRUCTIONS,
+  buildAttachFileRequest,
+  AttachFileInputError,
+  redactToolArguments,
   type ChatApiRegistryEntry,
   type CallEndpointArgs,
 } from '@alga-psa/agent-tooling';
@@ -62,18 +67,13 @@ const textContent = (data: unknown): Array<{ type: 'text'; text: string }> => [
 const toolOk = (data: unknown): ToolOutcome => ({ content: textContent(data), isError: false });
 const toolErr = (message: string): ToolOutcome => ({ content: textContent({ error: message }), isError: true });
 
-function clampInt(value: unknown, fallback: number, min: number, max: number): number {
-  const n = typeof value === 'number' ? value : parseInt(String(value ?? ''), 10);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(min, Math.min(Math.floor(n), max));
-}
-
 function bearerToken(authHeader: string | null): string | null {
   if (!authHeader) return null;
   const m = /^Bearer\s+(.+)$/i.exec(authHeader.trim());
   return m ? m[1] : null;
 }
 
+// LEVERAGE: pattern registry-resolve-entry — same id-tolerant lookup lives in alga-mcp-connector tools.ts and chat's resolveRegistryEntry
 function resolveEntry(registry: ChatApiRegistryEntry[], entryId: unknown): ChatApiRegistryEntry | null {
   const want = String(entryId ?? '').replace(/-/g, '_');
   if (!want) return null;
@@ -102,20 +102,8 @@ async function selfFetch(
 
 async function dispatchTool(name: string, args: Record<string, unknown>, ctx: DispatchCtx): Promise<ToolOutcome> {
   if (name === SEARCH_API_REGISTRY_TOOL) {
-    const query = typeof args.query === 'string' ? args.query : '';
-    if (!query.trim()) return toolErr('search_api_registry requires a non-empty "query".');
-    const limit = clampInt(args.limit, 5, 1, 25);
-    const results = searchRegistryEntries(ctx.registry, query, limit).map((r) => ({
-      entryId: r.entry.id,
-      displayName: r.entry.displayName,
-      method: r.entry.method.toUpperCase(),
-      path: r.entry.path,
-      summary: r.entry.summary,
-      parameters: r.entry.parameters,
-      approvalRequired: r.entry.approvalRequired,
-      score: Number(r.score.toFixed(2)),
-    }));
-    return toolOk({ query, count: results.length, results });
+    const r = runRegistrySearch(ctx.registry, args);
+    return r.ok ? toolOk(r.data) : toolErr(r.error);
   }
 
   if (name === SEARCH_BUSINESS_DATA_TOOL) {
@@ -150,6 +138,25 @@ async function dispatchTool(name: string, args: Record<string, unknown>, ctx: Di
     return { content: textContent({ status: r.status, ok: r.ok, data: r.data }), isError: !r.ok, statusCode: r.status };
   }
 
+  // LEVERAGE: pattern mcp-tool-dispatch — the same attach_file dispatch lives in alga-mcp-connector tools.ts
+  if (name === ATTACH_FILE_TOOL) {
+    let built;
+    try {
+      built = buildAttachFileRequest(args);
+    } catch (err) {
+      // AttachFileInputError messages are written to never echo the signed URL.
+      if (err instanceof AttachFileInputError) return toolErr(err.message);
+      throw err;
+    }
+    const r = await selfFetch(
+      ctx.baseUrl,
+      built.path,
+      { method: built.method, headers: { 'content-type': 'application/json' }, body: built.body },
+      ctx.apiKey,
+    );
+    return { content: textContent({ status: r.status, ok: r.ok, data: r.data }), isError: !r.ok, statusCode: r.status };
+  }
+
   return toolErr(`Unknown tool: ${name}`);
 }
 
@@ -161,6 +168,7 @@ async function handleOne(m: JsonRpcMessage, ctx: DispatchCtx): Promise<object | 
         protocolVersion: (m.params?.protocolVersion as string) ?? PROTOCOL_VERSION,
         capabilities: { tools: {} },
         serverInfo: { name: 'alga-psa', version: '0.1.0' },
+        instructions: MCP_SERVER_INSTRUCTIONS,
       });
     case 'notifications/initialized':
     case 'notifications/cancelled':
@@ -194,7 +202,7 @@ async function handleOne(m: JsonRpcMessage, ctx: DispatchCtx): Promise<object | 
             tenant: ctx.tenant,
             agentId: ctx.agentId,
             tool: name,
-            arguments: args,
+            arguments: redactToolArguments(name, args),
             ok: !out.isError,
             statusCode: out.statusCode ?? null,
             decision,

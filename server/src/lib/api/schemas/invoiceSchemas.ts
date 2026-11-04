@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { PREFERRED_PAYMENT_METHODS } from '@alga-psa/shared/billingClients/paymentPreferences';
 import {
   uuidSchema,
   dateSchema,
@@ -22,22 +23,14 @@ import {
   booleanTransform,
   numberTransform
 } from './common';
+import { INVOICE_STATUSES } from '../../invoices/invoiceStatusPolicy';
 
 // ============================================================================
 // Base Invoice Schemas
 // ============================================================================
 
 // Invoice status enum
-const invoiceStatusSchema = z.enum([
-  'draft',
-  'sent', 
-  'paid',
-  'overdue',
-  'cancelled',
-  'pending',
-  'prepayment',
-  'partially_applied'
-]);
+const invoiceStatusSchema = z.enum(INVOICE_STATUSES);
 
 const recurringExecutionWindowKindSchema = z.enum([
   'client_cadence_window',
@@ -165,6 +158,8 @@ const baseInvoiceSchema = z.object({
   client_id: uuidSchema,
   invoice_date: invoiceDateSchema,
   due_date: dueDateSchema,
+  payment_method: z.enum(PREFERRED_PAYMENT_METHODS).nullable().optional(),
+  billing_profile_id: uuidSchema.nullable().optional(),
   subtotal: monetaryAmountSchema,
   tax: monetaryAmountSchema,
   total_amount: monetaryAmountSchema,
@@ -198,8 +193,25 @@ const createInvoiceSchema = baseInvoiceSchema.omit({
   items: z.array(createInvoiceItemSchema).optional()
 });
 
-// Update invoice schema
-const updateInvoiceSchema = createUpdateSchema(createInvoiceSchema);
+// Update invoice schema. tax_source is update-only: a new invoice takes its
+// tax source from the client/tenant default, while an existing one may be
+// switched (any direction on a draft; internal -> pending_external on a
+// finalized invoice that has not been exported).
+// The editable set is an explicit allowlist (INVOICE_UPDATE_FIELDS); lifecycle,
+// identity and monetary fields are owned by dedicated commands. Strict so that a
+// PUT carrying e.g. {"status":"paid"} is a 400 naming the key, never a silent no-op 200.
+// Never use omit here: it would fail open when a column is added.
+const updateInvoiceSchema = createUpdateSchema(
+  createInvoiceSchema.pick({
+    payment_method: true,
+    billing_profile_id: true,
+    due_date: true,
+    invoice_date: true,
+    items: true,
+  })
+).extend({
+  tax_source: z.enum(['internal', 'external', 'pending_external']).optional(),
+}).strict();
 
 // Invoice response schema
 const invoiceResponseSchema = baseInvoiceSchema.merge(baseEntitySchema).extend({
@@ -241,7 +253,7 @@ const invoiceViewModelSchema = z.object({
   invoice_charges: z.array(invoiceItemResponseSchema),
   service_period_start: z.string().nullable().optional(),
   service_period_end: z.string().nullable().optional(),
-  custom_fields: z.record(z.any()).optional(),
+  custom_fields: z.record(z.string(), z.any()).optional(),
   finalized_at: z.string().optional(),
   credit_applied: z.number().default(0),
   billing_cycle_id: uuidSchema.nullable().optional(),
@@ -270,7 +282,7 @@ const layoutBlockSchema = z.object({
   grid_row: z.number().min(1),
   grid_column_span: z.number().min(1),
   grid_row_span: z.number().min(1),
-  styles: z.record(z.string())
+  styles: z.record(z.string(), z.string())
 });
 
 // Template element schemas
@@ -384,7 +396,7 @@ const recurringDueSelectionInputSchema = z.object({
 
 const recurringInvoiceSelectionRequestSchema = z.object({
   selector_input: recurringDueSelectionInputSchema,
-}).strict('Recurring preview and generate requests require selector_input and do not accept billing_cycle_id.');
+}, { error: (issue) => (issue.code === 'unrecognized_keys' ? 'Recurring preview and generate requests require selector_input and do not accept billing_cycle_id.' : undefined) }).strict();
 
 // Generate invoice schema
 const generateInvoiceSchema = recurringInvoiceSelectionRequestSchema;
@@ -400,6 +412,7 @@ const generateInvoicePDFSchema = z.object({
 // Manual invoice request schema
 const manualInvoiceRequestSchema = z.object({
   clientId: uuidSchema,
+  billingProfileId: uuidSchema.optional(),
   items: z.array(manualInvoiceItemSchema).min(1),
   expirationDate: z.string().optional(),
   isPrepayment: z.boolean().default(false)
@@ -540,7 +553,8 @@ const updateInvoiceAnnotationSchema = createUpdateSchema(createInvoiceAnnotation
 const bulkInvoiceStatusUpdateSchema = z.object({
   invoice_ids: z.array(uuidSchema).min(1).max(100),
   status: invoiceStatusSchema,
-  finalized_at: invoiceDateSchema.optional()
+  // Workflow-controlled: finalization has its own command.
+  finalized_at: z.never({ message: 'finalized_at cannot be set through bulk status update; use the finalize command' }).optional()
 });
 
 // Bulk invoice send

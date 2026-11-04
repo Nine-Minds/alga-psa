@@ -16,6 +16,7 @@ type StatusOptionRow = {
   id: string;
   name: string;
   is_default: boolean | null;
+  is_closed: boolean | null;
   board_id: string | null;
   board_name: string | null;
 };
@@ -93,6 +94,7 @@ async function selectStatusOptions(
     'statuses.status_id as id',
     'statuses.name as name',
     'statuses.is_default as is_default',
+    'statuses.is_closed as is_closed',
     'statuses.board_id as board_id',
     'boards.board_name as board_name'
   );
@@ -100,6 +102,7 @@ async function selectStatusOptions(
     id: row.id,
     name: row.name,
     is_default: Boolean(row.is_default),
+    is_closed: Boolean(row.is_closed),
     board_id: row.board_id ?? undefined,
     board_name: row.board_name ?? undefined
   }));

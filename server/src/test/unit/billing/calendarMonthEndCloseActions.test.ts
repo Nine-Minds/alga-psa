@@ -45,6 +45,12 @@ vi.mock('@alga-psa/auth', async (importOriginal) => {
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 const { generateCalendarMonthEndCloseInvoices } = await import(
@@ -53,7 +59,7 @@ const { generateCalendarMonthEndCloseInvoices } = await import(
 
 const TENANT = 'tenant-1';
 const USER = { user_id: 'user-1', tenant: TENANT };
-const SCHEDULE_KEY = 'schedule:tenant-1:client_contract_line:line-1:client:arrears';
+const SCHEDULE_KEY = 'schedule:tenant-1:line-1:client:arrears';
 const PERIOD_KEY = 'period:2026-06-01:2026-07-01';
 
 interface ServicePeriodRowFixture {

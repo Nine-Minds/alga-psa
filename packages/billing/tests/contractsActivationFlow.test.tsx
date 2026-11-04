@@ -117,7 +117,7 @@ describe('Contracts activation flow (draft -> active)', () => {
       start_date: '2026-01-01',
       currency_code: 'USD',
       enable_proration: false,
-      fixed_services: [],
+      fixed_lines: [],
       product_services: [],
       hourly_services: [],
       usage_services: [],
@@ -168,7 +168,7 @@ describe('Contracts activation flow (draft -> active)', () => {
       start_date: '2026-01-01',
       currency_code: 'USD',
       enable_proration: false,
-      fixed_services: [],
+      fixed_lines: [],
       product_services: [],
       hourly_services: [],
       usage_services: [],
@@ -206,5 +206,37 @@ describe('Contracts activation flow (draft -> active)', () => {
     await waitFor(() => {
       expect(screen.getByText('Draft Alpha')).toBeInTheDocument();
     });
+  });
+  it('scheduled contract row menu names its calendar start day, not a UTC-shifted day', async () => {
+    mockSearchParams = new URLSearchParams('tab=contracts&subtab=client-contracts');
+    mockDraftContracts = [];
+    mockClientContracts = [
+      {
+        contract_id: 'contract-2',
+        contract_name: 'Scheduled Beta',
+        client_name: 'Acme Co',
+        status: 'active',
+        assignment_status: 'scheduled',
+        client_id: 'client-1',
+        client_contract_id: 'client-contract-2',
+        // Timestamp-column calendar day as serialized at UTC midnight.
+        start_date: '2099-03-01T00:00:00.000Z',
+        end_date: null,
+      },
+    ];
+
+    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+    render(<Contracts />);
+
+    expect(await screen.findByText('Scheduled Beta')).toBeInTheDocument();
+    const user = userEvent.setup();
+    await act(async () => {
+      await user.click(await screen.findByRole('button', { name: /open menu/i }));
+    });
+
+    const item = await screen.findByText(/^Starts /);
+    expect(item.closest('#scheduled-start-menu-item')).not.toBeNull();
+    expect(item).toHaveTextContent('Starts 03/01/2099');
+    expect(item).not.toHaveTextContent('02/28/2099');
   });
 });

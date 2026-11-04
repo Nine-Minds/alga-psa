@@ -103,8 +103,7 @@ vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ContractBasi
             start_date: '2026-01-01',
             billing_frequency: 'monthly',
             currency_code: 'USD',
-            fixed_base_rate: 10000,
-            fixed_services: [{ service_id: 'svc-1', quantity: 1 }],
+            fixed_lines: [{ line_key: 'line-1', enable_proration: false, base_rate: 10000, services: [{ service_id: 'svc-1', quantity: 1, pricing_basis: 'bundle' }] }],
           })
         }
       >
@@ -127,7 +126,7 @@ vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServ
   }) => (
     <div
       data-testid="step-fixed-fee"
-      data-fixed-services-count={String((data.fixed_services ?? []).length)}
+      data-fixed-services-count={String((data.fixed_lines ?? []).flatMap((line: any) => line.services).length)}
       data-cadence-owner={data.cadence_owner ?? 'client'}
       data-billing-timing={data.billing_timing ?? 'arrears'}
       data-enable-proration={String(Boolean(data.enable_proration))}
@@ -165,7 +164,7 @@ vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ReviewContra
     <div
       data-testid="step-review"
       data-contract-name={data.contract_name ?? ''}
-      data-fixed-services-count={String((data.fixed_services ?? []).length)}
+      data-fixed-services-count={String((data.fixed_lines ?? []).flatMap((line: any) => line.services).length)}
       data-product-services-count={String((data.product_services ?? []).length)}
       data-hourly-services-count={String((data.hourly_services ?? []).length)}
       data-usage-services-count={String((data.usage_services ?? []).length)}
@@ -178,7 +177,35 @@ vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/ReviewContra
 vi.mock('@alga-psa/billing/actions/contractWizardActions', () => ({
   createClientContractFromWizard: vi.fn(),
   listContractTemplatesForWizard: vi.fn(async () => []),
-  getContractTemplateSnapshotForClientWizard: vi.fn(),
+  getContractTemplateLinesForClientWizard: vi.fn(),
+}));
+
+vi.mock('../src/components/billing-dashboard/contracts/wizard-steps/TemplateLinesStep', () => ({
+  TemplateLinesStep: ({
+    view,
+    edits,
+    onChange,
+  }: {
+    view: any;
+    edits: any[];
+    onChange: (next: any[]) => void;
+  }) => (
+    <div
+      data-testid="step-template-lines"
+      data-line-count={String(view?.lines?.length ?? 0)}
+      data-currency={view?.currency_code ?? ''}
+    >
+      <button
+        type="button"
+        onClick={() =>
+          onChange([...edits, { template_line_id: 'tl-2', line_name: 'Renamed hourly line' }])
+        }
+      >
+        Edit second line
+      </button>
+    </div>
+  ),
+  TemplateLinesReview: () => <div data-testid="step-template-review" />,
 }));
 
 vi.mock('@alga-psa/billing/actions/billingSettingsActions', () => ({
@@ -232,7 +259,7 @@ describe('ContractWizard resume behavior', () => {
           billing_frequency: 'monthly',
           currency_code: 'USD',
           enable_proration: false,
-          fixed_services: [],
+          fixed_lines: [],
           product_services: [],
           hourly_services: [],
           usage_services: [],
@@ -260,7 +287,7 @@ describe('ContractWizard resume behavior', () => {
           billing_frequency: 'monthly',
           currency_code: 'USD',
           enable_proration: false,
-          fixed_services: [],
+          fixed_lines: [],
           product_services: [],
           hourly_services: [],
           usage_services: [],
@@ -286,7 +313,7 @@ describe('ContractWizard resume behavior', () => {
           billing_frequency: 'monthly',
           currency_code: 'USD',
           enable_proration: false,
-          fixed_services: [],
+          fixed_lines: [],
           product_services: [],
           hourly_services: [],
           usage_services: [],
@@ -313,7 +340,7 @@ describe('ContractWizard resume behavior', () => {
           billing_frequency: 'monthly',
           currency_code: 'USD',
           enable_proration: false,
-          fixed_services: [],
+          fixed_lines: [],
           product_services: [],
           hourly_services: [],
           usage_services: [],
@@ -340,11 +367,10 @@ describe('ContractWizard resume behavior', () => {
           billing_frequency: 'monthly',
           currency_code: 'USD',
           enable_proration: false,
-          fixed_base_rate: 10000,
-          fixed_services: [
-            { service_id: 'svc-1', quantity: 1 },
-            { service_id: 'svc-2', quantity: 2 },
-          ],
+          fixed_lines: [{ line_key: 'line-1', enable_proration: false, base_rate: 10000, services: [
+            { service_id: 'svc-1', quantity: 1, pricing_basis: 'bundle' },
+            { service_id: 'svc-2', quantity: 2, pricing_basis: 'bundle' },
+          ] }],
           product_services: [],
           hourly_services: [],
           usage_services: [],
@@ -378,8 +404,7 @@ describe('ContractWizard resume behavior', () => {
           cadence_owner: 'contract',
           billing_timing: 'advance',
           enable_proration: false,
-          fixed_base_rate: 10000,
-          fixed_services: [{ service_id: 'svc-1', quantity: 1 }],
+          fixed_lines: [{ line_key: 'line-1', enable_proration: false, base_rate: 10000, services: [{ service_id: 'svc-1', quantity: 1, pricing_basis: 'bundle' }] }],
           product_services: [],
           hourly_services: [],
           usage_services: [],
@@ -420,7 +445,7 @@ describe('ContractWizard resume behavior', () => {
           billing_frequency: 'monthly',
           currency_code: 'USD',
           enable_proration: false,
-          fixed_services: [],
+          fixed_lines: [],
           product_services: [
             { service_id: 'prod-1', quantity: 1 },
             { service_id: 'prod-2', quantity: 2 },
@@ -458,7 +483,7 @@ describe('ContractWizard resume behavior', () => {
           billing_frequency: 'monthly',
           currency_code: 'USD',
           enable_proration: false,
-          fixed_services: [],
+          fixed_lines: [],
           product_services: [],
           hourly_services: [
             { service_id: 'hr-1' },
@@ -499,7 +524,7 @@ describe('ContractWizard resume behavior', () => {
           billing_frequency: 'monthly',
           currency_code: 'USD',
           enable_proration: false,
-          fixed_services: [],
+          fixed_lines: [],
           product_services: [],
           hourly_services: [],
           usage_services: [
@@ -537,8 +562,7 @@ describe('ContractWizard resume behavior', () => {
           billing_frequency: 'monthly',
           currency_code: 'USD',
           enable_proration: false,
-          fixed_base_rate: 10000,
-          fixed_services: [{ service_id: 'svc-1', quantity: 1 }],
+          fixed_lines: [{ line_key: 'line-1', enable_proration: false, base_rate: 10000, services: [{ service_id: 'svc-1', quantity: 1, pricing_basis: 'bundle' }] }],
           product_services: [{ service_id: 'prod-1', quantity: 1 }],
           hourly_services: [{ service_id: 'hr-1' }],
           usage_services: [{ service_id: 'u-1' }],
@@ -579,7 +603,7 @@ describe('ContractWizard resume behavior', () => {
           billing_frequency: 'monthly',
           currency_code: 'USD',
           enable_proration: false,
-          fixed_services: [],
+          fixed_lines: [],
           product_services: [],
           hourly_services: [],
           usage_services: [],
@@ -623,8 +647,7 @@ describe('ContractWizard resume behavior', () => {
           cadence_owner: 'contract',
           billing_timing: 'advance',
           enable_proration: false,
-          fixed_base_rate: 10000,
-          fixed_services: [{ service_id: 'svc-1', quantity: 1 }],
+          fixed_lines: [{ line_key: 'line-1', enable_proration: false, base_rate: 10000, services: [{ service_id: 'svc-1', quantity: 1, pricing_basis: 'bundle' }] }],
           product_services: [],
           hourly_services: [],
           usage_services: [],
@@ -662,20 +685,25 @@ describe('ContractWizard resume behavior', () => {
     });
   });
 
-  it('applies template-authored cadence_owner and billing_timing to the client contract submission payload (T236)', async () => {
+  it('template mode: loads the per-line view, sends template_id + per-line edits and no flat per-type payload (T236)', async () => {
     const {
       createClientContractFromWizard,
-      getContractTemplateSnapshotForClientWizard,
+      getContractTemplateLinesForClientWizard,
     } = await import('@alga-psa/billing/actions/contractWizardActions');
     (createClientContractFromWizard as any).mockResolvedValue({ contract_id: 'contract-template' });
-    (getContractTemplateSnapshotForClientWizard as any).mockResolvedValue({
+    const noAmount = { slot_key: 'k', template_amount: null, amount: null, catalog_amount: null, required: false };
+    const unpricedLineFields = { base_rate: noAmount, overtime_rate: noAmount, bucket_pools: [] };
+    const unpricedServiceFields = { rate: noAmount, overtime_rate: noAmount, bucket_overage_rate: noAmount };
+    (getContractTemplateLinesForClientWizard as any).mockResolvedValue({
+      template_id: 'template-1',
       contract_name: 'Template Contract',
+      description: null,
       billing_frequency: 'monthly',
-      cadence_owner: 'contract',
-      billing_timing: 'advance',
-      enable_proration: false,
-      fixed_base_rate: 10000,
-      fixed_services: [{ service_id: 'svc-template', quantity: 1 }],
+      currency_code: 'EUR',
+      lines: [
+        { template_line_id: 'tl-1', line_name: 'Fixed A', line_type: 'Fixed', billing_frequency: 'monthly', ...unpricedLineFields, services: [{ service_id: 'svc-a', ...unpricedServiceFields }] },
+        { template_line_id: 'tl-2', line_name: 'Hourly B', line_type: 'Hourly', billing_frequency: 'weekly', ...unpricedLineFields, services: [{ service_id: 'svc-b', ...unpricedServiceFields }] },
+      ],
     });
 
     render(<ContractWizard open={true} onOpenChange={vi.fn()} />);
@@ -688,18 +716,20 @@ describe('ContractWizard resume behavior', () => {
     });
 
     await waitFor(() => {
-      expect(getContractTemplateSnapshotForClientWizard).toHaveBeenCalledWith('template-1');
+      expect(getContractTemplateLinesForClientWizard).toHaveBeenCalledWith('template-1', 'client-1');
     });
 
+    // Template mode collapses the per-type steps into one per-line step.
     await act(async () => {
       await user.click(screen.getByText('Next'));
     });
-
-    const fixedStep = await screen.findByTestId('step-fixed-fee');
-    expect(fixedStep).toHaveAttribute('data-cadence-owner', 'contract');
-    expect(fixedStep).toHaveAttribute('data-billing-timing', 'advance');
+    const linesStep = await screen.findByTestId('step-template-lines');
+    expect(linesStep).toHaveAttribute('data-line-count', '2');
+    expect(linesStep).toHaveAttribute('data-currency', 'EUR');
+    expect(screen.queryByTestId('step-fixed-fee')).not.toBeInTheDocument();
 
     await act(async () => {
+      await user.click(screen.getByText('Edit second line'));
       await user.click(screen.getByText('Save Draft'));
     });
 
@@ -711,10 +741,11 @@ describe('ContractWizard resume behavior', () => {
     expect(options).toEqual({ isDraft: true });
     expect(submission).toMatchObject({
       template_id: 'template-1',
-      cadence_owner: 'contract',
-      billing_timing: 'advance',
-      enable_proration: false,
-      fixed_services: [{ service_id: 'svc-template', quantity: 1 }],
+      template_lines: [{ template_line_id: 'tl-2', line_name: 'Renamed hourly line' }],
+      fixed_lines: [],
+      hourly_services: [],
+      usage_services: [],
+      product_services: [],
     });
   });
 
@@ -735,7 +766,7 @@ describe('ContractWizard resume behavior', () => {
           billing_frequency: 'monthly',
           currency_code: 'USD',
           enable_proration: false,
-          fixed_services: [],
+          fixed_lines: [],
           product_services: [],
           hourly_services: [],
           usage_services: [],
@@ -776,7 +807,7 @@ describe('ContractWizard resume behavior', () => {
           billing_frequency: 'monthly',
           currency_code: 'USD',
           enable_proration: false,
-          fixed_services: [],
+          fixed_lines: [],
           product_services: [],
           hourly_services: [],
           usage_services: [],
@@ -815,8 +846,7 @@ describe('ContractWizard resume behavior', () => {
           billing_frequency: 'monthly',
           currency_code: 'USD',
           enable_proration: false,
-          fixed_base_rate: 10000,
-          fixed_services: [{ service_id: 'svc-1', quantity: 1 }],
+          fixed_lines: [{ line_key: 'line-1', enable_proration: false, base_rate: 10000, services: [{ service_id: 'svc-1', quantity: 1, pricing_basis: 'bundle' }] }],
           product_services: [],
           hourly_services: [],
           usage_services: [],
@@ -863,8 +893,7 @@ describe('ContractWizard resume behavior', () => {
           billing_frequency: 'monthly',
           currency_code: 'USD',
           enable_proration: false,
-          fixed_base_rate: 10000,
-          fixed_services: [{ service_id: 'svc-1', quantity: 1 }],
+          fixed_lines: [{ line_key: 'line-1', enable_proration: false, base_rate: 10000, services: [{ service_id: 'svc-1', quantity: 1, pricing_basis: 'bundle' }] }],
           product_services: [],
           hourly_services: [],
           usage_services: [],

@@ -14,20 +14,36 @@ import {
 } from './common';
 
 // Work item type schema
-export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'non_billable_category', 'ad_hoc', 'interaction']);
+export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'non_billable_category', 'ad_hoc', 'interaction', 'co_managed']);
+// 'co_managed' is a contributed type: a write is accepted only when a registered time source owns it (TimeEntryService.assertNativeWorkItemType).
 
 // Approval status schema
 export const approvalStatusSchema = z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']);
 
 // Base time entry schema (without refinements)
 const baseTimeEntrySchema = z.object({
-  work_item_id: uuidSchema.optional(),
+  work_item_id: uuidSchema.optional().describe(
+    'Required when work_item_type is ticket or project_task (the ticket must exist). Not required for other work item types.'
+  ),
   work_item_type: workItemTypeSchema,
-  start_time: z.string().datetime(),
-  end_time: z.string().datetime(),
+  start_time: z.string().datetime().describe(
+    'ISO 8601 datetime. Duration is computed from start_time and end_time and cannot be submitted.'
+  ),
+  end_time: z.string().datetime().describe(
+    'ISO 8601 datetime. Must be after start_time. Duration is computed and cannot be submitted.'
+  ),
   notes: z.string().optional(),
-  service_id: uuidSchema.optional(),
+  service_id: uuidSchema.optional().describe('Required on create (it drives billing); cannot be cleared on update.'),
   tax_region: z.string().optional(),
+  tax_rate_id: uuidSchema.nullable().optional().describe(
+    'Optional. Stored as given, like the UI save path; the API does not compute tax.'
+  ),
+  contract_line_id: uuidSchema.optional().describe(
+    'Optional. Must be one of the contract lines eligible for the work item\'s client, the service and the work date, else 400. ' +
+    'When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 ' +
+    '(details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. ' +
+    'Ignored for non-billable entries.'
+  ),
   is_billable: z.boolean().optional().default(true)
 });
 
@@ -62,7 +78,16 @@ function validateTimeEntryWrite(
 }
 
 // Create time entry schema
-export const createTimeEntrySchema = baseTimeEntrySchema.superRefine((data, ctx) => {
+// service_id is required at the type level so the OpenAPI conversion lists it as required;
+// a superRefine requirement alone is invisible to the generator.
+const createTimeEntryObjectSchema = baseTimeEntrySchema.extend({
+  service_id: z
+    .string({ error: (issue) => (issue.input === undefined ? 'service_id is required for time entries' : undefined) })
+    .uuid()
+    .describe('Required (it drives billing).')
+});
+
+export const createTimeEntrySchema = createTimeEntryObjectSchema.superRefine((data, ctx) => {
   validateTimeEntryWrite(data, ctx, { requireServiceId: true });
 });
 
@@ -218,10 +243,10 @@ export const timeEntryStatsResponseSchema = z.object({
   total_billable_hours: z.number(),
   total_non_billable_hours: z.number(),
   billable_percentage: z.number(),
-  entries_by_type: z.record(z.number()),
-  entries_by_status: z.record(z.number()),
-  entries_by_user: z.record(z.number()),
-  entries_by_service: z.record(z.number()),
+  entries_by_type: z.record(z.string(), z.number()),
+  entries_by_status: z.record(z.string(), z.number()),
+  entries_by_user: z.record(z.string(), z.number()),
+  entries_by_service: z.record(z.string(), z.number()),
   total_revenue: z.number(),
   average_entry_duration: z.number(),
   entries_this_week: z.number(),
@@ -245,14 +270,14 @@ export const timeEntrySearchSchema = z.object({
   date_from: dateSchema.optional(),
   date_to: dateSchema.optional(),
   billable_only: booleanTransform.optional(),
-  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
+  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).prefault('25')
 });
 
 // Time entry export schema
 export const timeEntryExportQuerySchema = z.object({
   format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_billing_info: booleanTransform.optional().default("false"),
-  include_work_item_details: booleanTransform.optional().default("false"),
+  include_billing_info: booleanTransform.prefault("false"),
+  include_work_item_details: booleanTransform.prefault("false"),
   group_by: z.enum(['user', 'work_item', 'service', 'date', 'none']).optional().default('none'),
   work_item_types: z.array(workItemTypeSchema).optional(),
   approval_statuses: z.array(approvalStatusSchema).optional(),

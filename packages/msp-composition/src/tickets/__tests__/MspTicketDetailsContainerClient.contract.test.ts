@@ -9,11 +9,11 @@ function readTicketCompositionSource(): string {
 }
 
 describe('MspTicketDetailsContainerClient static contracts', () => {
-  it('keeps AlgaDesk project-task and interval integrations disabled in component composition', () => {
+  it('keeps AlgaDesk project-task integrations disabled in component composition', () => {
     const source = readTicketCompositionSource();
 
     expect(source).toContain('renderCreateProjectTask={isAlgaDeskMode ? undefined : renderCreateProjectTask}');
-    expect(source).toContain('renderIntervalManagement={isAlgaDeskMode ? undefined : renderIntervalManagement}');
+    expect(source).not.toContain('renderInterval');
     expect(source).toContain('disableAgentSchedule={isAlgaDeskMode}');
   });
 

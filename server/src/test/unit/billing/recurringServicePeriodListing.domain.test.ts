@@ -45,7 +45,6 @@ describe('recurring service period listing', () => {
       sourceObligation: {
         tenant: 'tenant-1',
         obligationId: 'line-2',
-        obligationType: 'contract_line',
         chargeFamily: 'product',
       },
       servicePeriod: {

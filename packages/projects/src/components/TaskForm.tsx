@@ -70,9 +70,10 @@ import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
 import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
+import { useProjectEffortIntegration } from '../context/ProjectEffortIntegrationContext';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
-import { useSchedulingCallbacks } from '@alga-psa/ui/context';
+import { useSchedulingCallbacks, useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import type { ProjectServiceSource } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
@@ -123,6 +124,10 @@ interface TaskFormProps {
   printTitle?: string;
 }
 
+// A fresh [] default would change identity on every render and retrigger the
+// project tree effect that is keyed on this prop.
+const NO_PROJECT_TREE_DATA: any[] = [];
+
 export default function TaskForm({
   task,
   phase,
@@ -135,7 +140,7 @@ export default function TaskForm({
   mode,
   onPhaseChange,
   inDrawer = false,
-  projectTreeData = [],
+  projectTreeData = NO_PROJECT_TREE_DATA,
   prefillData,
   onCommentCountChange,
   confirmBeforeSave,
@@ -147,6 +152,7 @@ export default function TaskForm({
   // Read 'en-US' outright, so it stayed American in every locale.
   const { formatDate } = useFormatters();
   const billingIntegration = useProjectBillingIntegration();
+  const effortIntegration = useProjectEffortIntegration();
   const { createDocumentAssociations, deleteDocument, removeDocumentAssociations } = useDocumentsCrossFeature();
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
   const ticketLinksRef = useRef<TaskTicketLinksRef>(null);
@@ -200,6 +206,7 @@ export default function TaskForm({
       : prefillData?.due_date ?? undefined
   );
   const [taskResources, setTaskResources] = useState<any[]>(task?.task_id ? [] : []);
+  const activityCrossFeature = useOptionalActivityCrossFeature();
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [initialTaskResources, setInitialTaskResources] = useState<any[]>([]);
   const [resourcesLoaded, setResourcesLoaded] = useState(false); // Track if resources have been loaded
@@ -1735,6 +1742,19 @@ export default function TaskForm({
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
                 <label className="block text-sm font-medium text-gray-700">{taskFormT('taskNameLabel', 'Task Name *')}</label>
+                {mode === 'edit' && task?.task_id && activityCrossFeature?.renderActivityGroupControl
+                  ? activityCrossFeature.renderActivityGroupControl({
+                      id: 'task-form-activity-group',
+                      activityType: 'projectTask',
+                      activityId: task.task_id,
+                      // SAVED state: the persisted primary assignee plus additional agents
+                      // (additional agents are written immediately in edit mode); not unsaved form edits.
+                      assignmentKey: [
+                        task.assigned_to ?? '',
+                        taskResources.map((r) => r.additional_user_id).filter(Boolean).sort().join(','),
+                      ].join('|'),
+                    })
+                  : null}
                 {mode === 'create' && (
                   <Button
                     id="task-create-from-ticket"
@@ -2312,6 +2332,9 @@ export default function TaskForm({
             />
           )}
 
+          {/* Effort split (customer / MSP / combined); the slot is null unless the workspace serves co-managed. */}
+          {mode === 'edit' && task?.task_id && effortIntegration && <effortIntegration.TaskEffort taskId={task.task_id} />}
+
           {/* Full width Associated Tickets section */}
           <TaskTicketLinks
             ref={ticketLinksRef}
@@ -2360,6 +2383,7 @@ export default function TaskForm({
           {mode === 'edit' && task && (
             <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
               <TaskCommentThread
+                key={task.task_id}
                 taskId={task.task_id}
                 projectId={phase.project_id}
                 onCommentCountChange={onCommentCountChange}

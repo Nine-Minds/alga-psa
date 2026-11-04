@@ -10,8 +10,12 @@ function readRepoFile(relativePathFromRepoRoot: string): string {
 }
 
 describe('contract wizard service picker policy', () => {
-  const fixedSource = readRepoFile(
+  const fixedStepSource = readRepoFile(
     'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep.tsx'
+  );
+  // The fixed step renders one FixedLineEditor per fixed line; the service picker lives there.
+  const fixedSource = readRepoFile(
+    'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/FixedLineEditor.tsx'
   );
   const hourlySource = readRepoFile(
     'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/HourlyServicesStep.tsx'
@@ -30,6 +34,8 @@ describe('contract wizard service picker policy', () => {
   );
 
   it('T006: fixed wizard picker no longer gates services by catalog billing_method', () => {
+    expect(fixedStepSource).toContain('<FixedLineEditor');
+    expect(fixedStepSource).not.toContain("billingMethods={['fixed']}");
     expect(fixedSource).not.toContain("billingMethods={['fixed']}");
     expect(fixedSource).toContain('<ServiceCatalogPicker');
   });

@@ -4,28 +4,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { AlertCircle, ChevronDown } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Switch } from '@alga-psa/ui/components/Switch';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import * as Accordion from '@radix-ui/react-accordion';
 
 // Import actions and types
-import { getContractLineServicesWithConfigurations } from '@alga-psa/billing/actions/contractLineServiceActions'; // Get list of services
-import { getContractLineConfigurationForService, upsertPlanServiceConfiguration } from '@alga-psa/billing/actions/contractLineServiceConfigurationActions';
-// Import specific interfaces needed
-import { IContractLineServiceConfiguration, IContractLineServiceUsageConfig, IContractLineServiceRateTier, IService, IContractLinePreset } from '@alga-psa/types';
+import { IContractLinePreset } from '@alga-psa/types';
 import { getContractLinePresetById, updateContractLinePreset } from '@alga-psa/billing/actions/contractLinePresetActions'; // Added action to get base plan details
-import { ServiceUsageConfigForm, ServiceUsageConfig, ServiceValidationErrors } from './ServiceUsageConfigForm'; // Import the new form component and types
-import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -41,37 +32,11 @@ interface UsagePresetConfigurationProps {
   className?: string;
 }
 
-// Define the structure returned by getPlanServicesWithConfigurations locally
-// Based on its usage in GenericPlanServicesList.tsx and the action definition
-type PlanServiceWithConfig = {
-  service: IService & { service_type_name?: string };
-  configuration: IContractLineServiceConfiguration;
-  // typeConfig might also be present, but we primarily need service_id and service_name
-};
-
-
-// State structure for all service configurations
-type AllServiceConfigs = {
-  [serviceId: string]: ServiceUsageConfig;
-};
-
-// State structure for all service validation errors
-type AllServiceValidationErrors = {
-  [serviceId: string]: ServiceValidationErrors;
-};
-
-// Define the expected result type for getContractLineConfigurationForService
-// Combining relevant fields from the interfaces file
-type FetchedServiceConfig = IContractLineServiceConfiguration & IContractLineServiceUsageConfig & {
-    tiers?: IContractLineServiceRateTier[];
-};
-
 export function UsagePresetConfiguration({
   presetId,
   className = '',
 }: UsagePresetConfigurationProps) {
   const { t } = useTranslation('msp/contract-lines');
-  const { money } = useCurrencyFormat();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   // State for the base plan details
   const [plan, setPlan] = useState<IContractLinePreset | null>(null);
@@ -85,42 +50,28 @@ export function UsagePresetConfiguration({
   const tenant = useTenant()!;
 
   const markBasicsDirty = () => setIsBasicsDirty(true);
-  // State for the list of services associated with the plan
-  const [planServices, setPlanServices] = useState<PlanServiceWithConfig[]>([]);
-  // State to hold configuration for each service, keyed by serviceId (current state)
-  const [serviceConfigs, setServiceConfigs] = useState<AllServiceConfigs>({});
-  // State to hold the initial configuration fetched from the server
-  const [initialServiceConfigs, setInitialServiceConfigs] = useState<AllServiceConfigs>({});
-  // State to hold validation errors for each service, keyed by serviceId
-  const [serviceValidationErrors, setServiceValidationErrors] = useState<AllServiceValidationErrors>({});
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveAttempted, setSaveAttempted] = useState<boolean>(false);
 
   // --- Data Fetching ---
   const fetchPlanData = useCallback(async () => {
     setLoading(true);
     setError(null);
     setPlan(null); // Reset plan on fetch
-    setServiceConfigs({}); // Reset current configs on fetch
-    setInitialServiceConfigs({}); // Reset initial configs on fetch
-    setPlanServices([]); // Reset services on fetch
     try {
-      // 0. Fetch base plan details first
+      // Fetch base plan details. Preset services live in
+      // contract_line_preset_services and are managed by the services list
+      // below, which loads them itself.
       const fetchedPlan = await getContractLinePresetById(presetId);
       if (isReturnedActionError(fetchedPlan)) {
         setError(getErrorMessage(fetchedPlan));
-        setLoading(false);
         return;
       }
       if (!fetchedPlan || fetchedPlan.contract_line_type !== 'Usage') {
         setError(t('preset.usage.errors.invalidPlanTypeOrNotFound', {
           defaultValue: 'Invalid plan type or plan not found.',
         }));
-        setLoading(false);
         return;
       }
       setPlan(fetchedPlan); // Store base plan details
@@ -129,76 +80,6 @@ export function UsagePresetConfiguration({
       setPlanName(fetchedPlan.preset_name);
       setBillingFrequency(fetchedPlan.billing_frequency);
       setIsBasicsDirty(false);
-
-      // 1. Fetch the list of services associated with the plan
-      const servicesList = await getContractLineServicesWithConfigurations(presetId);
-      if (isReturnedActionError(servicesList)) {
-        setError(getErrorMessage(servicesList));
-        setLoading(false);
-        return;
-      }
-      setPlanServices(servicesList);
-
-      if (servicesList.length === 0) {
-        // Don't return early, we still want to show the empty state with the correct title
-      }
-
-      // 2. Fetch configuration for each service concurrently
-      const configPromises = servicesList.map(service =>
-        // Use service.configuration.service_id as it's guaranteed by PlanServiceWithConfig type
-        getContractLineConfigurationForService(presetId, service.configuration.service_id)
-          .then(config => {
-            if (isReturnedActionError(config)) {
-              throw new Error(getErrorMessage(config));
-            }
-            return { serviceId: service.configuration.service_id, config: config as FetchedServiceConfig | null };
-          }) // Cast result
-          .catch(err => {
-            console.error(`Error fetching config for service ${service.configuration.service_id}:`, err);
-            // Return null config on error for this specific service
-            return { serviceId: service.configuration.service_id, config: null };
-          })
-      );
-
-      const results = await Promise.all(configPromises);
-
-      // 3. Populate the serviceConfigs state
-      const initialConfigs: AllServiceConfigs = {};
-      results.forEach(({ serviceId, config }) => {
-        if (config) {
-          // Ensure tiers have client-side IDs
-          // Map backend tier structure to frontend TierConfig
-          const tiersWithIds = (config.tiers || []).map((tier, index) => ({
-            id: `tier-${serviceId}-${index}-${Date.now()}`, // Generate unique ID
-            fromAmount: tier.min_quantity, // Map min_quantity
-            toAmount: tier.max_quantity === undefined || tier.max_quantity === null ? null : tier.max_quantity, // Map max_quantity (handle undefined/null)
-            rate: tier.rate,
-          }));
-          initialConfigs[serviceId] = {
-            // Handle potential null values from DB by converting to undefined for state
-            base_rate: config.base_rate === null ? undefined : Number(config.base_rate),
-            unit_of_measure: config.unit_of_measure,
-            enable_tiered_pricing: config.enable_tiered_pricing,
-            minimum_usage: config.minimum_usage === null ? undefined : config.minimum_usage,
-            tiers: tiersWithIds, // Use mapped tiers
-          };
-        } else {
-          // Handle case where config fetch failed or service has no config yet
-          // Initialize with default/empty values
-          initialConfigs[serviceId] = {
-             // Access nested service properties correctly
-             base_rate: Number(servicesList.find(s => s.configuration.service_id === serviceId)?.service?.default_rate) || undefined,
-             unit_of_measure: servicesList.find(s => s.configuration.service_id === serviceId)?.service?.unit_of_measure || '',
-             enable_tiered_pricing: false,
-             minimum_usage: 0,
-             tiers: [],
-          };
-          console.warn(`Using default config for service ${serviceId}`);
-        }
-      });
-      setServiceConfigs(initialConfigs);
-      setInitialServiceConfigs(JSON.parse(JSON.stringify(initialConfigs))); // Deep copy for initial state
-
     } catch (err) {
       console.error('Error fetching plan services or configurations:', err);
       setError(t('preset.usage.errors.failedToLoadPlanServicesOrConfigurations', {
@@ -248,7 +129,7 @@ export function UsagePresetConfiguration({
       if (plan?.preset_id) {
         const result = await updateContractLinePreset(plan.preset_id, planData);
         if (isReturnedActionError(result)) {
-          setSaveError(getErrorMessage(result));
+          setPlanBasicsErrors([getErrorMessage(result)]);
           return;
         }
       }
@@ -277,272 +158,11 @@ export function UsagePresetConfiguration({
     }
   };
 
-  // --- Event Handlers ---
-  const handleConfigChange = useCallback((serviceId: string, field: keyof ServiceUsageConfig, value: any) => {
-    setServiceConfigs(prevConfigs => ({
-      ...prevConfigs,
-      [serviceId]: {
-        ...prevConfigs[serviceId],
-        [field]: value,
-      }
-    }));
-    // Clear validation error for the specific field when changed
-    setServiceValidationErrors(prevErrors => ({
-        ...prevErrors,
-        [serviceId]: {
-            ...prevErrors[serviceId],
-            [field]: undefined, // Clear error for this field
-            ...(field === 'enable_tiered_pricing' && { tiers: undefined }) // Clear tier error if switch toggled
-        }
-    }));
-    setSaveAttempted(false); // Reset save attempt state on change
-    setSaveError(null); // Clear global save error
-  }, []);
-
-  const handleTiersChange = useCallback((serviceId: string, tiers: TierConfig[]) => {
-    setServiceConfigs(prevConfigs => ({
-      ...prevConfigs,
-      [serviceId]: {
-        ...prevConfigs[serviceId],
-        tiers: tiers,
-      }
-    }));
-     // Clear validation error for tiers when changed
-    setServiceValidationErrors(prevErrors => ({
-        ...prevErrors,
-        [serviceId]: {
-            ...prevErrors[serviceId],
-            tiers: undefined,
-        }
-    }));
-    setSaveAttempted(false); // Reset save attempt state on change
-    setSaveError(null); // Clear global save error
-  }, []);
-
   // Callback to refresh data when services are added/removed in the child component
   const handleServicesChanged = useCallback(() => {
     console.log('Services changed, refetching plan data...');
     fetchPlanData();
   }, [fetchPlanData]);
-
-  // --- Validation ---
-  const validateSingleServiceConfig = (config: ServiceUsageConfig): ServiceValidationErrors => {
-    const errors: ServiceValidationErrors = {};
-    const isTiered = config.enable_tiered_pricing ?? false;
-
-    if (!isTiered && (config.base_rate === undefined || config.base_rate === null)) {
-        errors.base_rate = t('preset.usage.validation.baseRateRequiredWhenTieredOff', {
-          defaultValue: 'Base rate is required when tiered pricing is off.',
-        });
-    } else if (config.base_rate !== undefined && config.base_rate < 0) {
-        errors.base_rate = t('preset.usage.validation.baseRateNonNegative', {
-          defaultValue: 'Base rate cannot be negative.',
-        });
-    }
-
-    if (config.minimum_usage !== undefined && config.minimum_usage < 0) {
-        errors.minimum_usage = t('preset.usage.validation.minimumUsageNonNegative', {
-          defaultValue: 'Minimum usage cannot be negative.',
-        });
-    }
-    if (!config.unit_of_measure) {
-        errors.unit_of_measure = t('preset.usage.validation.unitOfMeasureRequired', {
-          defaultValue: 'Unit of measure is required.',
-        });
-    }
-
-    if (isTiered) {
-        const tiers = config.tiers || [];
-        if (tiers.length === 0) {
-            errors.tiers = t('preset.usage.validation.tiersRequiredWhenTieredOn', {
-              defaultValue: 'At least one tier is required when tiered pricing is enabled.',
-            });
-        } else {
-            const sortedTiers = [...tiers].sort((a, b) => a.fromAmount - b.fromAmount);
-            let tierErrorFound = false;
-            for (let i = 0; i < sortedTiers.length; i++) {
-                const currentTier = sortedTiers[i];
-                if (currentTier.rate < 0) {
-                    errors.tiers = t('preset.usage.validation.tierRatesNonNegative', {
-                      defaultValue: 'Tier rates cannot be negative.',
-                    });
-                    tierErrorFound = true; break;
-                }
-                if (currentTier.toAmount !== null && currentTier.toAmount < currentTier.fromAmount) {
-                    errors.tiers = t('preset.usage.validation.tierUpperBound', {
-                      defaultValue: 'Tier {{tier}}: Upper bound must be >= lower bound.',
-                      tier: i + 1,
-                    });
-                    tierErrorFound = true; break;
-                }
-                if (i < sortedTiers.length - 1) {
-                    const nextTier = sortedTiers[i + 1];
-                    if (currentTier.toAmount === null) {
-                        errors.tiers = t('preset.usage.validation.onlyLastTierUnlimited', {
-                          defaultValue: 'Only the last tier can have an unlimited upper bound.',
-                        });
-                        tierErrorFound = true; break;
-                    }
-                    // Allow adjacent: toAmount can equal next fromAmount
-                    // Allow adjacent tiers: upper bound can equal next lower bound
-                    if (currentTier.toAmount !== null && currentTier.toAmount > nextTier.fromAmount) {
-                         errors.tiers = t('preset.usage.validation.tierOverlap', {
-                           defaultValue: 'Tier {{tier1}} overlaps with Tier {{tier2}}.',
-                           tier1: i + 1,
-                           tier2: i + 2,
-                         });
-                         tierErrorFound = true; break;
-                    }
-                    // Check for gaps
-                    // Check for gaps (ensure toAmount is not null before adding 1)
-                    if (currentTier.toAmount !== null && currentTier.toAmount + 1 < nextTier.fromAmount) {
-                         errors.tiers = t('preset.usage.validation.tierGap', {
-                           defaultValue: 'Gap detected between Tier {{tier1}} and Tier {{tier2}}.',
-                           tier1: i + 1,
-                           tier2: i + 2,
-                         });
-                         tierErrorFound = true; break;
-                    }
-                }
-            }
-            if (!tierErrorFound && sortedTiers[0]?.fromAmount !== 0) {
-                errors.tiers = t('preset.usage.validation.firstTierStartsAtZero', {
-                  defaultValue: 'The first tier must start from 0.',
-                });
-            }
-        }
-    }
-    return errors;
-  };
-
-  const validateAllServiceConfigs = (): AllServiceValidationErrors => {
-    const allErrors: AllServiceValidationErrors = {};
-    let hasErrors = false;
-    for (const serviceId in serviceConfigs) {
-      const config = serviceConfigs[serviceId];
-      const serviceErrors = validateSingleServiceConfig(config);
-      if (Object.keys(serviceErrors).length > 0) {
-        allErrors[serviceId] = serviceErrors;
-        hasErrors = true;
-      }
-    }
-    return allErrors;
-  };
-
-
-  // --- Save Logic (Phase 3: Save Changed Configurations) ---
-  const handleSave = async () => {
-    setSaveAttempted(true);
-    setSaveError(null);
-    setServiceValidationErrors({}); // Clear previous errors
-
-    // 1. Identify changed services
-    const changedServiceIds = Object.keys(serviceConfigs).filter(serviceId => {
-      // Simple deep comparison using JSON stringify (consider lodash.isEqual for robustness)
-      return JSON.stringify(serviceConfigs[serviceId]) !== JSON.stringify(initialServiceConfigs[serviceId]);
-    });
-
-    if (changedServiceIds.length === 0) {
-      setSaveError(t('preset.usage.errors.noChangesDetected', {
-        defaultValue: 'No changes detected to save.',
-      }));
-      setSaveAttempted(false); // No actual save attempt needed
-      return;
-    }
-
-    // 2. Validate *only* changed services
-    const validationErrorsForChanged: AllServiceValidationErrors = {};
-    let hasErrors = false;
-    for (const serviceId of changedServiceIds) {
-      const config = serviceConfigs[serviceId];
-      const serviceErrors = validateSingleServiceConfig(config);
-      if (Object.keys(serviceErrors).length > 0) {
-        validationErrorsForChanged[serviceId] = serviceErrors;
-        hasErrors = true;
-      }
-    }
-
-    // 3. Handle validation errors
-    if (hasErrors) {
-      setServiceValidationErrors(validationErrorsForChanged);
-      setSaveError(t('preset.usage.errors.validationErrorsInModifiedServices', {
-        defaultValue: 'Cannot save, validation errors exist in the modified services.',
-      }));
-      // TODO: Consider focusing/opening the first accordion item with an error
-      console.log("Validation failed for changed services:", Object.keys(validationErrorsForChanged));
-      return;
-    }
-
-    // 4. Prepare payloads and execute upserts
-    setSaving(true);
-    try {
-      const savePromises = changedServiceIds.map(serviceId => {
-        const config = serviceConfigs[serviceId];
-
-        // Prepare backend tier structure
-        const tiersToSave = (config.tiers || [])
-          .sort((a, b) => a.fromAmount - b.fromAmount)
-          .map(tier => ({
-            min_quantity: tier.fromAmount,
-            // Map null back to undefined for the backend if necessary, or handle null in backend
-            max_quantity: tier.toAmount === null ? undefined : tier.toAmount,
-            rate: tier.rate,
-          }));
-
-        const payload = {
-          contractLineId: presetId,
-          serviceId: serviceId,
-          // tenantId is handled by the backend action
-          base_rate: config.enable_tiered_pricing ? undefined : config.base_rate,
-          unit_of_measure: config.unit_of_measure,
-          minimum_usage: config.minimum_usage,
-          enable_tiered_pricing: config.enable_tiered_pricing,
-          tiers: config.enable_tiered_pricing ? tiersToSave : [],
-        };
-
-        console.log(`Saving config for service ${serviceId}:`, payload);
-        return upsertPlanServiceConfiguration(payload);
-      });
-
-      // Execute all save operations concurrently
-      const saveResults = await Promise.all(savePromises);
-      const expectedSaveError = saveResults.find(isReturnedActionError);
-      if (expectedSaveError) {
-        setSaveError(getErrorMessage(expectedSaveError));
-        return;
-      }
-
-      // 5. Handle success
-      console.log("Successfully saved configurations for services:", changedServiceIds);
-      // Update initial state to reflect the saved state
-      setInitialServiceConfigs(JSON.parse(JSON.stringify(serviceConfigs)));
-      setSaveAttempted(false); // Reset save attempt on success
-      setSaveError(null); // Clear any previous save error
-      // Optionally: Show a success toast/message
-
-    } catch (err: any) {
-      // 6. Handle errors
-      console.error('Error saving service configurations:', err);
-      // Attempt to parse Zod validation errors if available
-      let errorMessage = t('preset.usage.errors.failedToSaveOneOrMoreServiceConfigurations', {
-        defaultValue: 'Failed to save one or more service configurations. Please check the details and try again.',
-      });
-      if (err.issues && Array.isArray(err.issues)) {
-          errorMessage = t('preset.usage.errors.validationErrorDetails', {
-            defaultValue: 'Validation Error: {{details}}',
-            details: err.issues.map((issue: any) => `${issue.path.join('.')} - ${issue.message}`).join(', '),
-          });
-      } else if (err.message) {
-          errorMessage = t('common.errors.errorWithMessage', {
-            defaultValue: 'Error: {{message}}',
-            message: err.message,
-          });
-      }
-      setSaveError(errorMessage);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   // --- Rendering ---
   if (loading) {
@@ -558,363 +178,128 @@ export function UsagePresetConfiguration({
     );
   }
 
-  if (planServices.length === 0) {
-      return (
-          <div className={`space-y-6 ${className}`}>
-              {/* Contract Line Preset Basics - Inline Editing */}
-              <Card>
-                  <CardHeader>
-                      <CardTitle>
-                        {t('preset.usage.basics.cardTitle', {
-                          defaultValue: 'Edit Contract Line Preset: {{name}} (Usage)',
-                          name: plan?.preset_name || '...',
-                        })}
-                      </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                      {planBasicsErrors.length > 0 && (
-                          <Alert variant="destructive">
-                              <AlertDescription>
-                                  <p className="font-medium mb-2">
-                                    {t('common.validation.prefix', {
-                                      defaultValue: 'Please correct the following:',
-                                    })}
-                                  </p>
-                                  <ul className="list-disc list-inside space-y-1">
-                                      {planBasicsErrors.map((err, idx) => (
-                                          <li key={idx}>{err}</li>
-                                      ))}
-                                  </ul>
-                              </AlertDescription>
-                          </Alert>
-                      )}
-
-                      <section className="space-y-4">
-                          <div>
-                              <h3 className="text-lg font-semibold">
-                                {t('preset.usage.basics.heading', {
-                                  defaultValue: 'Contract Line Preset Basics',
+  return (
+      <div className={`space-y-6 ${className}`}>
+          {/* Contract Line Preset Basics - Inline Editing */}
+          <Card>
+              <CardHeader>
+                  <CardTitle>
+                    {t('preset.usage.basics.cardTitle', {
+                      defaultValue: 'Edit Contract Line Preset: {{name}} (Usage)',
+                      name: plan?.preset_name || '...',
+                    })}
+                  </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                  {planBasicsErrors.length > 0 && (
+                      <Alert variant="destructive">
+                          <AlertDescription>
+                              <p className="font-medium mb-2">
+                                {t('common.validation.prefix', {
+                                  defaultValue: 'Please correct the following:',
                                 })}
-                              </h3>
-                              <p className="text-sm text-muted-foreground">
-                                  {t('preset.usage.basics.description', {
-                                    defaultValue:
-                                      'Name the contract line preset and choose how it should bill by default.',
-                                  })}
                               </p>
+                              <ul className="list-disc list-inside space-y-1">
+                                  {planBasicsErrors.map((err, idx) => (
+                                      <li key={idx}>{err}</li>
+                                  ))}
+                              </ul>
+                          </AlertDescription>
+                      </Alert>
+                  )}
+
+                  <section className="space-y-4">
+                      <div>
+                          <h3 className="text-lg font-semibold">
+                            {t('preset.usage.basics.heading', {
+                              defaultValue: 'Contract Line Preset Basics',
+                            })}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                              {t('preset.usage.basics.description', {
+                                defaultValue:
+                                  'Name the contract line preset and choose how it should bill by default.',
+                              })}
+                          </p>
+                      </div>
+                      <div className="space-y-3">
+                          <div>
+                              <Label htmlFor="name">
+                                {t('preset.usage.basics.nameLabel', {
+                                  defaultValue: 'Contract Line Preset Name *',
+                                })}
+                              </Label>
+                              <Input
+                                  id="name"
+                                  value={planName}
+                                  onChange={(e) => {
+                                      setPlanName(e.target.value);
+                                      markBasicsDirty();
+                                  }}
+                                  placeholder={t('preset.usage.basics.namePlaceholder', {
+                                    defaultValue: 'e.g. Usage-Based Services',
+                                  })}
+                                  required
+                              />
                           </div>
-                          <div className="space-y-3">
+                          <div className="grid gap-4 md:grid-cols-2">
                               <div>
-                                  <Label htmlFor="name">
-                                    {t('preset.usage.basics.nameLabel', {
-                                      defaultValue: 'Contract Line Preset Name *',
+                                  <Label htmlFor="frequency">
+                                    {t('preset.usage.basics.billingFrequencyLabel', {
+                                      defaultValue: 'Billing Frequency *',
                                     })}
                                   </Label>
-                                  <Input
-                                      id="name"
-                                      value={planName}
-                                      onChange={(e) => {
-                                          setPlanName(e.target.value);
+                                  <CustomSelect
+                                      id="frequency"
+                                      value={billingFrequency}
+                                      onValueChange={(value) => {
+                                          setBillingFrequency(value);
                                           markBasicsDirty();
                                       }}
-                                      placeholder={t('preset.usage.basics.namePlaceholder', {
-                                        defaultValue: 'e.g. Usage-Based Services',
+                                      options={billingFrequencyOptions}
+                                      placeholder={t('preset.usage.basics.billingFrequencyPlaceholder', {
+                                        defaultValue: 'Select billing frequency',
                                       })}
-                                      required
                                   />
                               </div>
-                              <div className="grid gap-4 md:grid-cols-2">
-                                  <div>
-                                      <Label htmlFor="frequency">
-                                        {t('preset.usage.basics.billingFrequencyLabel', {
-                                          defaultValue: 'Billing Frequency *',
-                                        })}
-                                      </Label>
-                                      <CustomSelect
-                                          id="frequency"
-                                          value={billingFrequency}
-                                          onValueChange={(value) => {
-                                              setBillingFrequency(value);
-                                              markBasicsDirty();
-                                          }}
-                                          options={billingFrequencyOptions}
-                                          placeholder={t('preset.usage.basics.billingFrequencyPlaceholder', {
-                                            defaultValue: 'Select billing frequency',
-                                          })}
-                                      />
-                                  </div>
-                              </div>
                           </div>
-                      </section>
-
-                      <div className="flex justify-end gap-2 pt-4 border-t">
-                          <Button
-                              id="reset-usage-plan-basics"
-                              variant="outline"
-                              onClick={handleResetPlanBasics}
-                              disabled={isSavingBasics || !isBasicsDirty}
-                          >
-                              {t('common.actions.reset', { defaultValue: 'Reset' })}
-                          </Button>
-                          <Button
-                              id="save-usage-plan-basics"
-                              onClick={handleSavePlanBasics}
-                              disabled={isSavingBasics || !isBasicsDirty}
-                          >
-                              {isSavingBasics
-                                ? t('common.actions.saving', { defaultValue: 'Saving...' })
-                                : t('common.actions.saveChanges', { defaultValue: 'Save Changes' })}
-                          </Button>
                       </div>
-                  </CardContent>
-              </Card>
+                  </section>
 
-              <Card>
-                  <CardHeader>
-                      <CardTitle>
-                        {t('preset.usage.services.manageCardTitle', {
-                          defaultValue: 'Manage Contract Line Preset Services',
-                        })}
-                      </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                      <UsageContractLinePresetServicesList presetId={presetId} onServiceAdded={handleServicesChanged} />
-                  </CardContent>
-              </Card>
-          </div>
-      );
-  }
-
-  return (
-    <div className={`space-y-6 ${className}`}>
-      {/* Contract Line Preset Basics - Inline Editing */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {t('preset.usage.basics.cardTitle', {
-              defaultValue: 'Edit Contract Line Preset: {{name}} (Usage)',
-              name: plan?.preset_name || '...',
-            })}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {planBasicsErrors.length > 0 && (
-            <Alert variant="destructive">
-              <AlertDescription>
-                <p className="font-medium mb-2">
-                  {t('common.validation.prefix', {
-                    defaultValue: 'Please correct the following:',
-                  })}
-                </p>
-                <ul className="list-disc list-inside space-y-1">
-                  {planBasicsErrors.map((err, idx) => (
-                    <li key={idx}>{err}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <section className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold">
-                {t('preset.usage.basics.heading', {
-                  defaultValue: 'Contract Line Preset Basics',
-                })}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {t('preset.usage.basics.description', {
-                  defaultValue: 'Name the contract line preset and choose how it should bill by default.',
-                })}
-              </p>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <Label htmlFor="name">
-                  {t('preset.usage.basics.nameLabel', {
-                    defaultValue: 'Contract Line Preset Name *',
-                  })}
-                </Label>
-                <Input
-                  id="name"
-                  value={planName}
-                  onChange={(e) => {
-                    setPlanName(e.target.value);
-                    markBasicsDirty();
-                  }}
-                  placeholder={t('preset.usage.basics.namePlaceholder', {
-                    defaultValue: 'e.g. Usage-Based Services',
-                  })}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="frequency">
-                  {t('preset.usage.basics.billingFrequencyLabel', {
-                    defaultValue: 'Billing Frequency *',
-                  })}
-                </Label>
-                <CustomSelect
-                  id="frequency"
-                  value={billingFrequency}
-                  onValueChange={(value) => {
-                    setBillingFrequency(value);
-                    markBasicsDirty();
-                  }}
-                  options={billingFrequencyOptions}
-                  placeholder={t('preset.usage.basics.billingFrequencyPlaceholder', {
-                    defaultValue: 'Select billing frequency',
-                  })}
-                />
-              </div>
-            </div>
-          </section>
-
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button
-              id="reset-usage-plan-basics"
-              variant="outline"
-              onClick={handleResetPlanBasics}
-              disabled={isSavingBasics || !isBasicsDirty}
-            >
-              {t('common.actions.reset', { defaultValue: 'Reset' })}
-            </Button>
-            <Button
-              id="save-usage-plan-basics"
-              onClick={handleSavePlanBasics}
-              disabled={isSavingBasics || !isBasicsDirty}
-            >
-              {isSavingBasics
-                ? t('common.actions.saving', { defaultValue: 'Saving...' })
-                : t('common.actions.saveChanges', { defaultValue: 'Save Changes' })}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Service Pricing Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {t('preset.usage.services.pricingCardTitle', {
-              defaultValue: 'Service Pricing',
-            })}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {saveError && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{saveError}</AlertDescription>
-            </Alert>
-          )}
-
-          <Accordion.Root
-            type="multiple" // Allow multiple items open
-            className="w-full space-y-2"
-            // Consider managing open state if needed to auto-open on error
-          >
-            {planServices.sort((a, b) => (a.service?.service_name || '').localeCompare(b.service?.service_name || '')).map((service, index) => ( // Add index
-              // Use slate-100 for a subtle alternating background
-              <Accordion.Item key={service.configuration.service_id} value={service.configuration.service_id} className="border rounded overflow-hidden odd:bg-slate-100">
-                <Accordion.Header className="flex">
-                  <Accordion.Trigger
-                    id={`accordion-trigger-${service.configuration.service_id}`}
-                    className="flex flex-1 items-center justify-between p-3 font-medium transition-all hover:bg-muted/50 [&[data-state=open]>svg]:rotate-180 bg-muted/20"
-                  >
-                    <div className="flex flex-col text-left"> {/* Use flex-col for name and summary */}
-                      <span>
-                        {service.service?.service_name || t('preset.usage.services.fallbackServiceName', {
-                          defaultValue: 'Service ID: {{id}}',
-                          id: service.configuration.service_id,
-                        })}
-                      </span>
-                      {/* Add Summary Span */}
-                      <span className="text-xs font-normal text-muted-foreground">
-                        {(() => {
-                          const config = serviceConfigs[service.configuration.service_id];
-                          if (!config) {
-                            return t('preset.usage.services.summary.loading', { defaultValue: 'Loading...' });
-                          }
-                          if (config.enable_tiered_pricing) {
-                            return t('preset.usage.services.summary.tieredPricing', {
-                              defaultValue: 'Tiered Pricing ({{count}} tiers)',
-                              count: config.tiers?.length || 0,
-                            });
-                          } else {
-                            const rate = config.base_rate !== undefined
-                              ? money(Math.round(Number(config.base_rate) * 100))
-                              : t('preset.usage.services.summary.notSet', { defaultValue: 'Not Set' });
-                            const unit = config.unit_of_measure || t('preset.usage.services.summary.defaultUnit', { defaultValue: 'Unit' });
-                            return t('preset.usage.services.summary.ratePerUnit', {
-                              defaultValue: '{{rate}} / {{unit}}',
-                              rate,
-                              unit,
-                            });
-                          }
-                        })()}
-                      </span>
-                    </div>
-                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
-                  </Accordion.Trigger>
-                </Accordion.Header>
-                <Accordion.Content
-                  id={`accordion-content-${service.configuration.service_id}`}
-                  className="overflow-hidden text-sm data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
-                >
-                  <div className="p-4 border-t">
-                    {serviceConfigs[service.configuration.service_id] ? (
-                      <ServiceUsageConfigForm
-                        serviceId={service.configuration.service_id}
-                        serviceName={service.service?.service_name || ''}
-                        config={serviceConfigs[service.configuration.service_id]}
-                        validationErrors={serviceValidationErrors[service.configuration.service_id]}
-                        saveAttempted={saveAttempted}
-                        disabled={saving} // Disable form while saving
-                        onConfigChange={handleConfigChange}
-                        onTiersChange={handleTiersChange}
-                      />
-                    ) : (
-                      <div className="text-muted-foreground">
-                        {t('preset.usage.services.loadingConfiguration', {
-                          defaultValue: 'Loading configuration...',
-                        })}
-                      </div>
-                    )}
+                  <div className="flex justify-end gap-2 pt-4 border-t">
+                      <Button
+                          id="reset-usage-plan-basics"
+                          variant="outline"
+                          onClick={handleResetPlanBasics}
+                          disabled={isSavingBasics || !isBasicsDirty}
+                      >
+                          {t('common.actions.reset', { defaultValue: 'Reset' })}
+                      </Button>
+                      <Button
+                          id="save-usage-plan-basics"
+                          onClick={handleSavePlanBasics}
+                          disabled={isSavingBasics || !isBasicsDirty}
+                      >
+                          {isSavingBasics
+                            ? t('common.actions.saving', { defaultValue: 'Saving...' })
+                            : t('common.actions.saveChanges', { defaultValue: 'Save Changes' })}
+                      </Button>
                   </div>
-                </Accordion.Content>
-              </Accordion.Item>
-            ))}
-          </Accordion.Root>
+              </CardContent>
+          </Card>
 
-          {/* Save Button */}
-          <div className="flex justify-end pt-4">
-            <Button id="save-all-service-configs-button" onClick={handleSave} disabled={saving || loading}>
-              {saving
-                ? <LoadingIndicator spinnerProps={{ size: "sm" }} text={t('preset.usage.actions.saveAllConfigurations', {
-                    defaultValue: 'Save All Configurations',
-                  })} />
-                : t('preset.usage.actions.saveAllConfigurations', {
-                    defaultValue: 'Save All Configurations',
-                  })}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Keep Services List for adding/removing services */}
-       <Card>
-           <CardHeader>
-            <CardTitle>
-              {t('preset.usage.services.manageCardTitle', {
-                defaultValue: 'Manage Contract Line Preset Services',
-              })}
-            </CardTitle>
-           </CardHeader>
-           <CardContent>
-               <UsageContractLinePresetServicesList presetId={presetId} onServiceAdded={handleServicesChanged} />
-           </CardContent>
-       </Card>
-    </div>
+          <Card>
+              <CardHeader>
+                  <CardTitle>
+                    {t('preset.usage.services.manageCardTitle', {
+                      defaultValue: 'Manage Contract Line Preset Services',
+                    })}
+                  </CardTitle>
+              </CardHeader>
+              <CardContent>
+                  <UsageContractLinePresetServicesList presetId={presetId} onServiceAdded={handleServicesChanged} />
+              </CardContent>
+          </Card>
+      </div>
   );
 }

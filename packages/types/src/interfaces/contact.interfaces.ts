@@ -1,5 +1,5 @@
 import type { TenantEntity } from '.';
-import type { ITaggable } from './tag.interfaces';
+import type { IDisplayTag, ITaggable } from './tag.interfaces';
 
 export const CONTACT_PHONE_CANONICAL_TYPES = ['work', 'mobile', 'home', 'fax', 'other'] as const;
 
@@ -56,6 +56,8 @@ export interface ContactPhoneNumberInput {
 }
 
 export interface IContact extends TenantEntity, ITaggable {
+  /** Chip tags for the viewer (display rules); set by picker/list loaders, not stored. */
+  displayTags?: IDisplayTag[];
   contact_name_id: string;
   contact_kind?: 'person' | 'shared_mailbox';
   full_name: string;
@@ -76,6 +78,8 @@ export interface IContact extends TenantEntity, ITaggable {
   updated_at: string;
 
   avatarUrl?: string | null;
+  /** Logo of the contact's client; attached per page by list actions (getAllContacts / getContactsByClient). */
+  client_logo_url?: string | null;
   is_client_admin?: boolean;
   portal_visibility_group_id?: string | null;
   /** Reports-to: the contact whose staff this contact is (same client, acyclic). */

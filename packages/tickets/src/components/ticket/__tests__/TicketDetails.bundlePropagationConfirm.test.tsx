@@ -81,21 +81,6 @@ vi.mock('@alga-psa/ui/context', () => ({
 
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: () => ({ enabled: false }),
-  useTicketTimeTracking: () => ({
-    isTracking: false,
-    currentIntervalId: null,
-    isLockedByOther: false,
-    startTracking: vi.fn().mockResolvedValue(false),
-    stopTracking: vi.fn().mockResolvedValue(undefined),
-    refreshLockState: vi.fn().mockResolvedValue(undefined),
-  }),
-}));
-
-vi.mock('@alga-psa/ui/services', () => ({
-  IntervalTrackingService: class {
-    endInterval = vi.fn().mockResolvedValue(undefined);
-    getOpenInterval = vi.fn().mockResolvedValue(null);
-  },
 }));
 
 vi.mock('@alga-psa/ui/components', () => ({
@@ -367,10 +352,16 @@ vi.mock('../TicketResolutionDialog', () => ({
       <button
         type="button"
         onClick={() =>
-          void onConfirm('status-closed', [], {
-            suppressContactNotifications: false,
-            suppressInternalNotifications: false,
-          })
+          void onConfirm(
+            'status-closed',
+            // Non-empty: keeps this spec on the path that saves a resolution
+            // comment before the propagation prompt.
+            [{ type: 'paragraph', content: [{ type: 'text', text: 'Fixed.', styles: {} }] }],
+            {
+              suppressContactNotifications: false,
+              suppressInternalNotifications: false,
+            },
+          )
         }
       >
         confirm-resolution

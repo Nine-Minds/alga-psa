@@ -26,6 +26,7 @@ vi.mock('@alga-psa/db', () => ({
   tenantDb: (conn: any, tenant: string) => ({
     table: (table: string) => ({
       where: () => ({
+        first: vi.fn(async () => null),
         select: () => ({
           first: vi.fn(async () => null),
         }),
@@ -76,6 +77,7 @@ describe('upsertPlanServiceBucketConfigurationAction success contract', () => {
     expect(mockUpsertBucketOverlayInTransaction).toHaveBeenCalledWith(
       expect.anything(),
       'tenant-1',
+      user,
       'line-1',
       'service-1',
       {

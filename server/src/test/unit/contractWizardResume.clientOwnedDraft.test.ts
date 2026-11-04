@@ -26,6 +26,12 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(),
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@shared/workflow/streams/domainEventBuilders/contractEventBuilders', () => ({
@@ -47,6 +53,10 @@ vi.mock('@alga-psa/billing/actions/contractLineServiceActions', () => ({
 
 vi.mock('@alga-psa/billing/actions/bucketOverlayActions', () => ({
   upsertBucketOverlayInTransaction: vi.fn(),
+}));
+
+vi.mock('@alga-psa/shared/billingClients/contractMonthlyValue', () => ({
+  getContractMonthlyFixedValuesByContract: vi.fn(async () => new Map()),
 }));
 
 type KnexRow = Record<string, unknown> | null;
@@ -119,7 +129,8 @@ describe('contract wizard resume client-owned drafts', () => {
       billing_frequency: 'monthly',
       currency_code: 'USD',
     });
-    expect(result.fixed_services).toEqual([]);
+    expect(result.fixed_lines).toEqual([]);
+    expect(result.recurring_baseline).toEqual({ monthly_cents: 0 });
     expect(result.product_services).toEqual([]);
     expect(result.hourly_services).toEqual([]);
     expect(result.usage_services).toEqual([]);

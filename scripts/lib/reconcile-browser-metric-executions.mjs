@@ -4,6 +4,12 @@ import { BROWSER_RETENTION_WINDOW_MS } from './browser-metrics-retention.mjs';
 
 const revisionDiagnosticCodes = new Set(['artifact-missing', 'artifact-expired', 'artifact-stale-attempt', 'artifact-invalid',
   'artifact-inventory-unavailable', 'artifact-duplicate', 'revision-conflicting', 'revision-unverified']);
+// A browser job that did not succeed is already a red lane in the regression
+// gate (and a gate_runs row). Its missing export is expected, not a reporting
+// gap, so it never fails reconciliation on its own. These issues still do: they
+// mean the recorder ran and the rows are wrong or absent.
+const exportAnomalyCodes = new Set(['export-attempted-but-missing', 'recorder-unsuccessful', 'recorder-not-completed',
+  'duplicate-run-export', 'conflicting-export-identity', 'invalid-row-kind']);
 const decimal = value => typeof value === 'string' && /^[1-9][0-9]*$/.test(value);
 const number = value => (typeof value === 'number' || typeof value === 'string' && /^\d+$/.test(value))
   && Number.isSafeInteger(Number(value)) && Number(value) >= 0 ? Number(value) : null;
@@ -56,11 +62,15 @@ export function reconcileBrowserMetricExecutions(input) {
         ? ['success', 'failure', 'cancelled', 'timed_out', 'skipped', 'neutral'].includes(entry.recorderConclusion)
         : entry.recorderConclusion === null), 'Invalid recorder state');
     if (entry.executionRequired !== undefined) assert.equal(typeof entry.executionRequired, 'boolean', 'Invalid execution requirement');
+    if (entry.credentialsAvailable !== undefined) assert.equal(typeof entry.credentialsAvailable, 'boolean', 'Invalid credentials availability');
+    if (entry.credentialsAvailable === false) assert.ok(entry.credentialsEvidence === 'fork-pull-request'
+      && entry.eventName === 'pull_request', 'Invalid credentials evidence');
     if (entry.executionRequired === false) assert.ok(entry.selectionEvidence === 'changes-filter'
       && entry.runStatus === 'completed' && entry.conclusion === 'success'
       && entry.recorderStatus === 'completed' && entry.recorderConclusion === 'skipped', 'Invalid non-selection evidence');
     const selected = { repository: entry.repository.toLowerCase(), revision: entry.revision, runId: entry.runId,
       ...(entry.executionRequired === false ? { executionRequired: false, selectionEvidence: entry.selectionEvidence } : {}),
+      ...(entry.credentialsAvailable === false ? { credentialsAvailable: false, credentialsEvidence: entry.credentialsEvidence } : {}),
       runAttempt: entry.runAttempt, edition: entry.edition, eventName: entry.eventName, runStatus: entry.runStatus, conclusion: entry.conclusion,
       ...(entry.revisionEvidence !== undefined ? { revisionEvidence: entry.revisionEvidence } : {}),
       ...(entry.revisionDiagnostics !== undefined ? { revisionDiagnostics: [...new Set(entry.revisionDiagnostics)].sort() } : {}),
@@ -81,12 +91,29 @@ export function reconcileBrowserMetricExecutions(input) {
     const sameAttempt = related.filter(row => number(row.run_attempt) === entry.runAttempt);
     if (entry.executionRequired === false) {
       const unexpectedExports = sameAttempt.length > 0;
-      return { key: key(entry), ...entry, status: unexpectedExports ? 'incomplete' : 'not-required',
+      return { key: key(entry), ...entry, status: unexpectedExports ? 'incomplete' : 'not-required', blocking: unexpectedExports,
         exportStatus: unexpectedExports ? 'conflicting-export' : 'not-required',
         unverifiedCurrentAttemptRunExportCount: sameAttempt.filter(row => row.row_kind === 'run').length,
         legacyRunExportCount, runExportCount: 0, journeyExportCount: 0,
         staleAttempts: [...new Set(related.map(row => number(row.run_attempt)).filter(attempt => attempt !== null && attempt !== entry.runAttempt))].sort((a,b)=>a-b),
         issues: [unexpectedExports ? 'unexpected-export-for-unselected-tests' : 'browser-tests-not-selected'] };
+    }
+    // A fork pull request runs without the Sheets credentials, so its recorder
+    // cannot export: an absent export is expected and a present one is not.
+    // The lane's own result still stands, as for the selection marker above.
+    if (entry.credentialsAvailable === false) {
+      const unexpectedExports = sameAttempt.length > 0;
+      const status = unexpectedExports ? 'incomplete'
+        : entry.runStatus !== 'completed' ? 'pending'
+        : entry.conclusion === 'cancelled' ? 'cancelled'
+        : entry.conclusion === null ? 'incomplete'
+        : entry.conclusion !== 'success' ? 'failed' : 'not-required';
+      return { key: key(entry), ...entry, status, blocking: status === 'incomplete',
+        exportStatus: unexpectedExports ? 'conflicting-export' : 'credentials-unavailable',
+        unverifiedCurrentAttemptRunExportCount: sameAttempt.filter(row => row.row_kind === 'run').length,
+        legacyRunExportCount, runExportCount: 0, journeyExportCount: 0,
+        staleAttempts: [...new Set(related.map(row => number(row.run_attempt)).filter(attempt => attempt !== null && attempt !== entry.runAttempt))].sort((a,b)=>a-b),
+        issues: [unexpectedExports ? 'unexpected-export-without-credentials' : 'metrics-credentials-unavailable'] };
     }
     const current = sameAttempt.filter(row => String(row.run_id) === entry.runId && row.tested_sha === entry.revision
       && row.event_name === entry.eventName && number(row.schema_version) === 2);
@@ -131,12 +158,15 @@ export function reconcileBrowserMetricExecutions(input) {
     else if (entry.conclusion !== 'success') status = 'failed';
     else if (recorderUnsuccessful || entry.revision === null) status = 'incomplete';
     else status = exportStatus;
-    return { key: key(entry), ...entry, status, exportStatus,
+    const laneUnsuccessful = entry.runStatus === 'completed' && entry.conclusion !== null && entry.conclusion !== 'success';
+    const blocking = status !== 'observed-pass' && !(laneUnsuccessful && !issues.some(issue => exportAnomalyCodes.has(issue)));
+    return { key: key(entry), ...entry, status, blocking, exportStatus,
       unverifiedCurrentAttemptRunExportCount: entry.revision === null ? sameAttempt.filter(row => row.row_kind === 'run').length : 0, legacyRunExportCount, runExportCount: runs.length, journeyExportCount: journeys.length,
       staleAttempts, issues };
   });
   return { schemaVersion: 1, scope: 'observed-browser-execution-export-reconciliation',
     status: records.length && records.every(record => record.status === 'not-required') ? 'not-required'
-      : records.length && records.every(record => ['observed-pass', 'not-required'].includes(record.status)) ? 'passed' : 'incomplete', records,
+      : records.length && records.every(record => ['observed-pass', 'not-required'].includes(record.status)) ? 'passed'
+      : records.length && records.every(record => !record.blocking) ? 'lane-unsuccessful' : 'incomplete', records,
     limitations: ['Observed executions only; never-created workflows require explicit expectations.', 'Operator-supplied tested revision may have validated merge relationships; this does not prove the actual checkout.', 'An observed metrics pass is not independent artifact, deployment or release-readiness verification.'] };
 }

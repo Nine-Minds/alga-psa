@@ -14,6 +14,9 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 const updateSpy = vi.hoisted(() => vi.fn().mockResolvedValue(1));
 const integrationRow = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
 const tenantRow = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
+// Rows returned by successive rmm_integrations reads (handler gate, then the
+// backstop re-read). Empty queue falls back to integrationRow.
+const rowQueue = vi.hoisted(() => ({ rows: [] as Array<Record<string, unknown> | null> }));
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -34,7 +37,7 @@ vi.mock('@alga-psa/db', () => ({
       }
       return {
         where: () => ({
-          first: async () => integrationRow.current,
+          first: async () => (rowQueue.rows.length ? rowQueue.rows.shift() : integrationRow.current),
           update: updateSpy,
         }),
       };
@@ -68,6 +71,7 @@ describe('rmmDeviceSyncHandler', () => {
 
   beforeEach(() => {
     updateSpy.mockClear();
+    rowQueue.rows = [];
     integrationRow.current = { ...enabledIntegration };
     tenantRow.current = { suspended_at: null };
     sync = vi.fn().mockResolvedValue({ devicesProcessed: 3 });
@@ -169,5 +173,58 @@ describe('rmmDeviceSyncHandler', () => {
 
     const [{ since }] = sync.mock.calls[0];
     expect(since.toISOString()).toBe('2026-08-01T00:00:00.000Z');
+  });
+
+  describe('reconnect_required', () => {
+    const reconnectSettings = {
+      deviceSync: { enabled: true, intervalMinutes: 60 },
+      tokenLifecycle: { status: 'reconnect_required' },
+    };
+
+    it('skips without calling the strategy or writing anything', async () => {
+      integrationRow.current = { ...enabledIntegration, settings: reconnectSettings };
+      await expect(rmmDeviceSyncHandler('job-1', data)).resolves.toBeUndefined();
+
+      expect(sync).not.toHaveBeenCalled();
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    it('still runs and advances the cursor when the lifecycle is healthy or missing', async () => {
+      for (const settings of [
+        { deviceSync: { enabled: true }, tokenLifecycle: { status: 'healthy' } },
+        { deviceSync: { enabled: true } },
+      ]) {
+        sync.mockClear();
+        updateSpy.mockClear();
+        integrationRow.current = { ...enabledIntegration, settings };
+        await rmmDeviceSyncHandler('job-1', data);
+        expect(sync).toHaveBeenCalledTimes(1);
+        expect(updateSpy.mock.calls.at(-1)?.[0]).toMatchObject({ sync_status: 'completed' });
+      }
+    });
+
+    it('resolves, records the failure and leaves the cursor when the re-read shows reconnect_required', async () => {
+      // Gate reads healthy; the lifecycle flips mid-run. The Temporal adapter
+      // loses the error type, so only the re-read can tell.
+      rowQueue.rows = [{ ...enabledIntegration }, { settings: reconnectSettings }];
+      sync.mockRejectedValue(new Error('sync workflow failed'));
+
+      await expect(rmmDeviceSyncHandler('job-1', data)).resolves.toBeUndefined();
+
+      expect(updateSpy.mock.calls.at(-1)?.[0]).toMatchObject({
+        sync_status: 'failed',
+        sync_error: 'sync workflow failed',
+      });
+      for (const [patch] of updateSpy.mock.calls) {
+        expect(patch).not.toHaveProperty('last_incremental_sync_at');
+      }
+    });
+
+    it('still rejects with the same error when the row is healthy', async () => {
+      // Real failures must not be swallowed by the backstop.
+      const error = new Error('provider 503');
+      sync.mockRejectedValue(error);
+      await expect(rmmDeviceSyncHandler('job-1', data)).rejects.toBe(error);
+    });
   });
 });

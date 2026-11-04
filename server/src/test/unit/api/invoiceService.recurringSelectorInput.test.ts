@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { InvoiceService } from '../../../lib/api/services/InvoiceService';
+import { ConflictError } from '../../../lib/api/middleware/apiMiddleware';
+import {
+  NO_ACTIVE_CONTRACT_LINES_MESSAGE_KEY,
+  NOTHING_TO_BILL_MESSAGE_KEY,
+  RECURRING_PERIODS_NOT_MATERIALIZED_MESSAGE_KEY,
+} from '@alga-psa/billing/actions/invoiceGeneration.constants';
 
 const mocks = vi.hoisted(() => ({
   previewInvoiceForSelectionInput: vi.fn(),
@@ -93,5 +99,41 @@ describe('InvoiceService recurring selector-input routing', () => {
     expect(selectorResult).toEqual({
       invoice_id: 'invoice-selector-1',
     });
+  });
+
+  it.each([
+    ['RECURRING_PERIODS_NOT_MATERIALIZED', RECURRING_PERIODS_NOT_MATERIALIZED_MESSAGE_KEY],
+    ['NO_ACTIVE_CONTRACT_LINES', NO_ACTIVE_CONTRACT_LINES_MESSAGE_KEY],
+    ['NOTHING_TO_BILL', NOTHING_TO_BILL_MESSAGE_KEY],
+  ])('API generation answers 409 for the keyed %s refusal whatever its wording', async (_code, messageKey) => {
+    const service = new InvoiceService();
+    vi.spyOn(service as any, 'validatePermissions').mockResolvedValue(undefined);
+    mocks.generateInvoiceForSelectionInput.mockResolvedValueOnce({
+      actionError: 'Operator-facing guidance that names no engine sentence.',
+      messageKey,
+    });
+
+    const error = await service
+      .generateRecurringInvoice({ selector_input: selectorInput }, context)
+      .catch((caught) => caught);
+
+    expect(error).toBeInstanceOf(ConflictError);
+    expect(error.message).toBe('Operator-facing guidance that names no engine sentence.');
+  });
+
+  it('API generation does not treat an unrecognized action error as a conflict', async () => {
+    const service = new InvoiceService();
+    vi.spyOn(service as any, 'validatePermissions').mockResolvedValue(undefined);
+    mocks.generateInvoiceForSelectionInput.mockResolvedValueOnce({
+      actionError: 'Something unexpected.',
+      messageKey: 'msp/invoicing:errors.somethingElse',
+    });
+
+    const error = await service
+      .generateRecurringInvoice({ selector_input: selectorInput }, context)
+      .catch((caught) => caught);
+
+    expect(error).not.toBeInstanceOf(ConflictError);
+    expect(error.message).toBe('Something unexpected.');
   });
 });

@@ -2,6 +2,7 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- onboarding actions consult QBO customers and connection state */
 import { withAuth } from '@alga-psa/auth';
+import { fromMinorUnits } from '@alga-psa/core';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { auditLog, createTenantKnex, lockInvoiceForExternalSync, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
@@ -9,6 +10,7 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { getQboCustomers } from '@alga-psa/integrations/actions/qboActions';
+import { updateExternalEntityMapping } from '@alga-psa/integrations/actions/externalMappingActions';
 import logger from '@alga-psa/core/logger';
 import type { AccountingExternalChange } from '@alga-psa/types';
 import {
@@ -135,6 +137,8 @@ export const getCustomerMatchCandidates = withAuth(async (
     clientName: string;
     mappedExternalId: string | null;
     mappedExternalName: string | null;
+    /** Live mapping row id, so the panel can unlink it. Null when unmapped. */
+    mappingId: string | null;
     suggestion: { externalId: string; externalName: string; exact: boolean } | null;
     /**
      * Set on rows that address a separately-billing profile rather than the
@@ -162,8 +166,10 @@ export const getCustomerMatchCandidates = withAuth(async (
     })
     .select('client_id', 'client_name');
 
-  // Existing 'client' mappings from the ledger (for this realm)
-  const existingMappings: Array<{ alga_entity_id: string; external_entity_id: string; metadata: Record<string, any> | null }> =
+  // Existing live 'client' mappings from the ledger (for this realm). Unlinked
+  // rows are tombstones: the client must show as unmapped-with-suggestions
+  // again, exactly as it did before it was ever linked.
+  const existingMappings: Array<{ id: string; alga_entity_id: string; external_entity_id: string; metadata: Record<string, any> | null }> =
     await db.table('tenant_external_entity_mappings')
       .where({
         tenant: tenant,
@@ -171,11 +177,13 @@ export const getCustomerMatchCandidates = withAuth(async (
         alga_entity_type: 'client',
         external_realm_id: realm
       })
-      .select('alga_entity_id', 'external_entity_id', 'metadata');
+      .whereNull('deleted_at')
+      .select('id', 'alga_entity_id', 'external_entity_id', 'metadata');
 
-  const mappingByClientId = new Map<string, { externalId: string; displayName: string | null }>();
+  const mappingByClientId = new Map<string, { id: string; externalId: string; displayName: string | null }>();
   for (const row of existingMappings) {
     mappingByClientId.set(row.alga_entity_id, {
+      id: row.id,
       externalId: row.external_entity_id,
       displayName: (row.metadata?.display_name as string | undefined) ?? null
     });
@@ -230,6 +238,7 @@ export const getCustomerMatchCandidates = withAuth(async (
       clientName: c.client_name,
       mappedExternalId: mapped?.externalId ?? null,
       mappedExternalName: mapped?.displayName ?? null,
+      mappingId: mapped?.id ?? null,
       suggestion
     };
   });
@@ -239,7 +248,7 @@ export const getCustomerMatchCandidates = withAuth(async (
   // customers is reconciling one list against QuickBooks, and a site whose
   // mapping lives elsewhere is a site whose invoices fail to export with no
   // obvious cause.
-  const profileMappings: Array<{ alga_entity_id: string; external_entity_id: string; metadata: Record<string, any> | null }> =
+  const profileMappings: Array<{ id: string; alga_entity_id: string; external_entity_id: string; metadata: Record<string, any> | null }> =
     await db.table('tenant_external_entity_mappings')
       .where({
         tenant: tenant,
@@ -247,11 +256,13 @@ export const getCustomerMatchCandidates = withAuth(async (
         alga_entity_type: BILLING_PROFILE_ENTITY_TYPE,
         external_realm_id: realm
       })
-      .select('alga_entity_id', 'external_entity_id', 'metadata');
+      .whereNull('deleted_at')
+      .select('id', 'alga_entity_id', 'external_entity_id', 'metadata');
   const mappingByProfileId = new Map(
     profileMappings.map((row) => [
       row.alga_entity_id,
       {
+        id: row.id,
         externalId: row.external_entity_id,
         displayName: (row.metadata?.display_name as string | undefined) ?? null
       }
@@ -268,6 +279,7 @@ export const getCustomerMatchCandidates = withAuth(async (
         clientName: subCustomerDisplayName(client.client_name, profile.name),
         mappedExternalId: mapped?.externalId ?? null,
         mappedExternalName: mapped?.displayName ?? null,
+        mappingId: mapped?.id ?? null,
         // No auto-suggestion: a sub-customer's name is derived from its parent,
         // so fuzzy-matching it against the flat customer list would propose
         // links a person has no way to sanity-check.
@@ -305,8 +317,10 @@ export const linkClientToQboCustomer = withAuth(async (
   const algaEntityType = input.billingProfileId ? BILLING_PROFILE_ENTITY_TYPE : 'client';
   const algaEntityId = input.billingProfileId ?? input.clientId;
 
-  // Reject if external id already linked to a different entity
-  const existing = await tenantDb(knex, tenant).table('tenant_external_entity_mappings')
+  // Reject if the requested customer is already held by a LIVE mapping for a
+  // different entity. A tombstoned (unlinked) row reserves nothing, so it must
+  // not block the link.
+  const targetHolder = await tenantDb(knex, tenant).table('tenant_external_entity_mappings')
     .where({
       tenant: tenant,
       integration_type: SYNC_ADAPTER_TYPE,
@@ -314,41 +328,64 @@ export const linkClientToQboCustomer = withAuth(async (
       external_entity_id: input.externalId,
       external_realm_id: realm
     })
+    .whereNot({ alga_entity_id: algaEntityId })
+    .whereNull('deleted_at')
     .first();
 
-  if (existing && existing.alga_entity_id !== algaEntityId) {
+  if (targetHolder) {
     return {
       linked: false,
       error: `QBO customer ${input.externalId} is already linked to another client.`
     };
   }
 
-  if (existing) {
-    // Update existing row
-    await tenantDb(knex, tenant).table('tenant_external_entity_mappings')
-      .where({ id: existing.id })
-      .update({
-        alga_entity_id: algaEntityId,
-        sync_status: 'synced',
-        last_synced_at: knex.fn.now(),
-        metadata: {
-          ...(existing.metadata ?? {}),
-          display_name: input.externalName,
-          linked_via: 'onboarding'
-        },
-        updated_at: knex.fn.now()
-      });
-  } else {
-    const ledger = new SyncMappingLedger(knex, tenant, SYNC_ADAPTER_TYPE);
-    await ledger.insert({
-      algaEntityType,
-      algaEntityId,
-      externalEntityId: input.externalId,
-      targetRealm: realm,
-      syncStatus: 'synced',
-      metadata: { display_name: input.externalName, linked_via: 'onboarding' }
+  const ledger = new SyncMappingLedger(knex, tenant, SYNC_ADAPTER_TYPE);
+  const existing = await ledger.findByAlgaId(algaEntityType, algaEntityId, realm);
+
+  if (existing && existing.external_entity_id !== input.externalId) {
+    // Re-link to a different customer: the external id itself has to move. The
+    // ledger's relink path only refreshes status/metadata, which is how a
+    // re-link used to rename the row while exports kept going to the old
+    // customer. Route it through the shared mapping update instead — it proves
+    // the target customer exists in the connected company, writes the
+    // before/after audit entry, publishes EXTERNAL_MAPPING_CHANGED and
+    // invalidates the mapping cache.
+    const retargeted = await updateExternalEntityMapping(existing.id, {
+      external_entity_id: input.externalId,
+      metadata: {
+        ...(existing.metadata ?? {}),
+        display_name: input.externalName,
+        linked_via: 'onboarding'
+      }
     });
+    if (isActionMessageError(retargeted) || isActionPermissionError(retargeted)) {
+      return { linked: false, error: getErrorMessage(retargeted) };
+    }
+    return { linked: true };
   }
+
+  if (existing) {
+    // Same customer re-selected — idempotent refresh of status/metadata only.
+    await ledger.update(existing.id, {
+      syncStatus: 'synced',
+      metadata: {
+        ...(existing.metadata ?? {}),
+        display_name: input.externalName,
+        linked_via: 'onboarding'
+      },
+      touchSyncedAt: true
+    });
+    return { linked: true };
+  }
+
+  await ledger.insert({
+    algaEntityType,
+    algaEntityId,
+    externalEntityId: input.externalId,
+    targetRealm: realm,
+    syncStatus: 'synced',
+    metadata: { display_name: input.externalName, linked_via: 'onboarding' }
+  });
 
   return { linked: true };
 });
@@ -521,7 +558,7 @@ async function fetchQboInvoicesPaged(
     const dateFilter = options?.windowStart
       ? ` WHERE TxnDate >= '${options.windowStart}'`
       : '';
-    const query = `SELECT Id, DocNumber, TotalAmt, SyncToken, CustomerRef FROM Invoice${dateFilter} STARTPOSITION ${startPosition} MAXRESULTS ${PAGE_SIZE}`;
+    const query = `SELECT Id, DocNumber, TotalAmt, SyncToken, CustomerRef, CurrencyRef FROM Invoice${dateFilter} STARTPOSITION ${startPosition} MAXRESULTS ${PAGE_SIZE}`;
 
     const page = await qboClient.query<QboInvoiceRow>(query);
     results.push(...page);
@@ -563,7 +600,7 @@ export const getHistoricalInvoiceMatches = withAuth(async (
   const candidateQuery = (status: string) => {
     const query = db.table('invoices')
       .where({ status })
-      .select('invoice_id', 'invoice_number', 'total_amount', 'client_id');
+      .select('invoice_id', 'invoice_number', 'total_amount', 'client_id', 'currency_code');
     if (mappedIds.length > 0) {
       query.whereNotIn('invoice_id', mappedIds);
     }
@@ -700,9 +737,9 @@ export const bulkLinkHistoricalInvoices = withAuth(async (
         syncStatus: 'synced',
         metadata: {
           sync_token: match.externalSyncToken ?? remoteInvoice.SyncToken ?? null,
-          // Snapshot convention is QBO dollars (adapter stores response.TotalAmt);
-          // the matcher carries cents internally.
-          exported_total: match.externalTotal / 100,
+          // Snapshot convention is QBO major units (adapter stores response.TotalAmt);
+          // the matcher carries minor units internally.
+          exported_total: fromMinorUnits(match.externalTotal, 'en-US', remoteInvoice.CurrencyRef?.value ?? 'USD'),
           doc_number: match.externalDocNumber,
           linked_via: 'onboarding'
         }

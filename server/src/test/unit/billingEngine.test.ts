@@ -1350,17 +1350,20 @@ describe("BillingEngine", () => {
       expect(clientContractsBuilder.where).toHaveBeenCalledWith(
         expect.objectContaining({
           "cc.client_id": preservedClientId,
-          "cc.is_active": true,
           "cc.tenant": mockTenant,
         }),
       );
       expect(clientContractsBuilder.where).toHaveBeenCalledWith(
         expect.objectContaining({
           "cc.client_id": clonedClientId,
-          "cc.is_active": true,
           "cc.tenant": mockTenant,
         }),
       );
+      // Liveness (assignment, contract header and line all active) is applied by the
+      // shared scope helper rather than inline in the client/tenant predicate.
+      expect(clientContractsBuilder.where).toHaveBeenCalledWith("cc.is_active", true);
+      expect(clientContractsBuilder.where).toHaveBeenCalledWith("c.is_active", true);
+      expect(clientContractsBuilder.where).toHaveBeenCalledWith("cl.is_active", true);
     });
   });
 

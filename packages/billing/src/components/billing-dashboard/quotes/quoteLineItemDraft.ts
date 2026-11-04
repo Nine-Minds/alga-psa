@@ -334,5 +334,6 @@ export function formatDraftQuoteMoney(minorUnits: number, currencyCode: string):
   return new Intl.NumberFormat(undefined, {
     style: 'currency',
     currency: currencyCode,
+  // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
   }).format((minorUnits || 0) / 100);
 }

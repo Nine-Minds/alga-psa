@@ -1,4 +1,7 @@
+'use client';
+
 import EntityAvatar, { EntityAvatarProps, getDefaultInitials } from './EntityAvatar';
+import { useTranslation } from '../lib/i18n/client';
 
 interface UserAvatarProps {
   userId: string;
@@ -25,6 +28,8 @@ const UserAvatar = ({
   size = 'md',
   className,
 }: UserAvatarProps) => {
+  const { t } = useTranslation('common');
+
   return (
     <EntityAvatar
       entityId={userId}
@@ -33,7 +38,7 @@ const UserAvatar = ({
       size={size}
       className={className}
       getInitials={getUserInitials}
-      altText={`${userName || 'User'} avatar`}
+      altText={userName ? t('userAvatar.alt', { name: userName }) : t('userAvatar.defaultAlt')}
     />
   );
 };

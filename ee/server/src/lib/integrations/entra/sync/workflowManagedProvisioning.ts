@@ -2,7 +2,7 @@
 // the Temporal worker bundle, and the server-side publisher barrel drags in
 // @alga-psa/notifications, whose exports resolve to .ts sources that plain Node
 // cannot load from the built worker.
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishUnregisteredEventType } from '@alga-psa/event-bus/publishers';
 import type { EntraSyncUser } from './types';
 
 export type WorkflowManagedPortalEventType =
@@ -45,9 +45,16 @@ export async function publishWorkflowManagedPortalProvisioningEvent(
     entitled ? 'eligible' : user.accountEnabled ? 'removed_entitlement' : 'removed_disabled',
   ].join(':');
 
-  await publishWorkflowEvent({
+  // KNOWN DEFECT alga-2026-0002675: ENTRA_PORTAL_ACCESS_ELIGIBLE / _REMOVED are not in EVENT_TYPES,
+  // so the transport rejects this publish and the sync path throws. Behaviour is unchanged here
+  // (the old by-name publisher threw "Unknown event type"); the envelope is stamped inline because
+  // there is no workflow-catalog entry for publishWorkflowEvent to validate against.
+  await publishUnregisteredEventType({
     eventType,
     payload: {
+      occurredAt: new Date().toISOString(),
+      actorType: 'SYSTEM',
+      idempotencyKey,
       tenantId: context.tenantId,
       clientId: context.clientId,
       contactNameId: context.contactNameId,
@@ -70,12 +77,6 @@ export async function publishWorkflowManagedPortalProvisioningEvent(
         isMember: user.clientPortalEntitlement?.isMember ?? null,
       },
     },
-    ctx: {
-      tenantId: context.tenantId,
-      actor: { actorType: 'SYSTEM' },
-      correlationId: context.syncRunId || undefined,
-    },
-    idempotencyKey,
   });
 
   return eventType;

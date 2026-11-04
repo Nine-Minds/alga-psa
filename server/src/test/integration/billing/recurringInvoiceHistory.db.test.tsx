@@ -43,6 +43,7 @@ vi.mock('@alga-psa/billing/actions/billingAndTax', () => ({
   getAvailableRecurringDueWork: vi.fn(async () => ({
     invoiceCandidates: [], recurringDueWork: [], materializationGaps: [],
   })),
+  getLateApprovedHourlyTime: vi.fn(async () => []),
 }));
 vi.mock('@alga-psa/billing/actions/invoiceModification', () => ({ hardDeleteInvoice: vi.fn() }));
 vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({
@@ -90,7 +91,7 @@ beforeAll(async () => {
   });
   await db('recurring_service_periods').insert({
     tenant, schedule_key: `history:${invoiceId}`, period_key: 'period:2026-09-01:2026-10-01',
-    revision: 1, obligation_id: randomUUID(), obligation_type: 'client_contract_line',
+    revision: 1, obligation_id: randomUUID(),
     charge_family: 'fixed', cadence_owner: 'client', due_position: 'arrears', lifecycle_state: 'billed',
     service_period_start: '2026-09-01', service_period_end: '2026-10-01',
     invoice_window_start: '2026-10-01', invoice_window_end: '2026-11-01',

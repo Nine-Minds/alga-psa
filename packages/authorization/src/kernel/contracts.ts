@@ -10,12 +10,14 @@ export interface AuthorizationReason {
   sourceType?: 'builtin' | 'bundle' | 'system';
   sourceId?: string;
   metadata?: Record<string, unknown>;
+  /** Set only on joint (two-subject) evaluations: whose evaluation produced this reason. */
+  subjectUserId?: string;
 }
 
 export interface AuthorizationSubject {
   tenant: string;
   userId: string;
-  userType: 'internal' | 'client';
+  userType: 'internal' | 'client' | 'service';
   roleIds?: string[];
   teamIds?: string[];
   clientId?: string | null;
@@ -71,6 +73,14 @@ export interface AuthorizationMutationInput {
   kind: string;
   record?: AuthorizationRecord;
   next?: Record<string, unknown>;
+  /**
+   * `approve` mutations only: the caller has determined that the subject is the sole
+   * possible approver (no other active approver exists), so the not-self-approver
+   * rules must not deny an approval of a record the subject owns. Computed at the
+   * call site (see `allowSelfQuoteApproval`) because the kernel must not query the DB.
+   * Omitted/false keeps the strict behaviour.
+   */
+  allowSelfApproval?: boolean;
 }
 
 /** Trusted, resolved portal scope; null context means resolution failed (deny). */
@@ -79,6 +89,13 @@ export type ContactVisibilityScope = TicketVisibilityScope;
 export interface AuthorizationEvaluationInput {
   contactVisibility?: ContactVisibilityScope | null;
   subject: AuthorizationSubject;
+  /**
+   * Optional second subject authorized together with `subject`. The call is
+   * allowed only if both subjects are allowed; each subject is evaluated
+   * (RBAC, record-level rules, narrowing, mutation guards) independently and the
+   * scopes are intersected. Omitted, evaluation is exactly the single-subject path.
+   */
+  jointSubject?: AuthorizationSubject;
   resource: AuthorizationResourceRef;
   record?: AuthorizationRecord;
   selectedClientIds?: string[];

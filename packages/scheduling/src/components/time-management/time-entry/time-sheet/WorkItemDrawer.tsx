@@ -242,8 +242,11 @@ export function WorkItemDrawer({
                                     scheduled_start: new Date(adHocData.scheduled_start || new Date()),
                                     scheduled_end: new Date(adHocData.scheduled_end || new Date()),
                                     status: 'SCHEDULED',
-                                    assigned_user_ids: workItem.users && workItem.users.length > 0
-                                        ? workItem.users.map(u => u.user_id)
+                                    // The entry's real assignees, not the viewer: workItem
+                                    // carries no `users` on the time-sheet path, so the old
+                                    // fallback silently reassigned the entry on save.
+                                    assigned_user_ids: adHocData.assigned_user_ids?.length
+                                        ? adHocData.assigned_user_ids
                                         : [currentUser.user_id],
                                     created_at: new Date(),
                                     updated_at: new Date()

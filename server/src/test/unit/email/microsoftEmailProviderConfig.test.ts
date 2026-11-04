@@ -81,7 +81,7 @@ function credential(
   clientSecret: string,
   source: MicrosoftEmailRuntimeCredentials['source']
 ): MicrosoftEmailRuntimeCredentials {
-  return { clientId, clientSecret, tenantId: 'common', source };
+  return { clientId, clientSecret, tenantId: 'common', source, issuerKind: 'tenant-owned' };
 }
 
 describe('Microsoft email runtime credential selection', () => {
@@ -199,6 +199,50 @@ describe('buildMicrosoftEmailProviderConfig provider-pinned issuer resolution', 
     expect(config.provider_config.resolved_client_id).toBe('legacy-app');
     expect(config.provider_config.resolved_client_secret).toBe('legacy-vendor-secret');
     expect(config.provider_config.resolved_credential_source).toBe('vendor');
+  });
+
+  it('never lets the deployment-wide MICROSOFT_TENANT_ID reach a legacy (tenant-secret) app', async () => {
+    // MICROSOFT_TENANT_ID is the hosting tenant on hosted deployments. A legacy
+    // tenant-owned app takes its directory only from its own tenant secret.
+    hoisted.state.appSecrets.set('MICROSOFT_TENANT_ID', 'hosting-tenant-guid');
+    hoisted.state.tenantSecrets.set('tenant-1:microsoft_client_id', 'legacy-tenant-app');
+    hoisted.state.tenantSecrets.set('tenant-1:microsoft_client_secret', 'legacy-tenant-secret');
+
+    const config = await buildMicrosoftEmailProviderConfig({
+      id: 'provider-1',
+      tenant: 'tenant-1',
+      name: 'Mailbox',
+      provider_type: 'microsoft',
+      mailbox: 'support@client.com',
+      folder_to_monitor: 'Inbox',
+      active: true,
+      provider_config: {},
+    } as any);
+
+    expect(config.provider_config.resolved_credential_source).toBe('legacy');
+    expect(config.provider_config.resolved_issuer_kind).toBe('tenant-owned');
+    expect(config.provider_config.resolved_tenant_id).toBe('common');
+    expect(config.provider_config.resolved_tenant_id).not.toBe('hosting-tenant-guid');
+  });
+
+  it('tags the environment app platform-managed, so its hosting tenant id never selects the authority', async () => {
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_ID', 'platform-app');
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_SECRET', 'platform-secret');
+    hoisted.state.appSecrets.set('MICROSOFT_TENANT_ID', 'hosting-tenant-guid');
+
+    const config = await buildMicrosoftEmailProviderConfig({
+      id: 'provider-1',
+      tenant: 'tenant-1',
+      name: 'Mailbox',
+      provider_type: 'microsoft',
+      mailbox: 'support@client.com',
+      folder_to_monitor: 'Inbox',
+      active: true,
+      provider_config: {},
+    } as any);
+
+    expect(config.provider_config.resolved_credential_source).toBe('environment');
+    expect(config.provider_config.resolved_issuer_kind).toBe('platform-managed');
   });
 
   it('fails closed when the pinned profile no longer exists instead of falling back to the Email binding', async () => {

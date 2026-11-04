@@ -15,6 +15,7 @@ import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getQuoteApprovalSettings, listQuotes, updateQuoteApprovalSettings } from '../../../actions/quoteActions';
 import QuoteDetail from './QuoteDetail';
+import QuoteSoleApproverNotice from './QuoteSoleApproverNotice';
 import QuoteStatusBadge from './QuoteStatusBadge';
 
 interface QuoteApprovalDashboardProps {
@@ -35,6 +36,9 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<'pending_approval' | 'approved'>('pending_approval');
   const [approvalRequired, setApprovalRequired] = useState(false);
+  // True when the current user is the tenant's only possible quote approver, so they
+  // can approve their own quotes (alga-2026-0002597).
+  const [isSoleApprover, setIsSoleApprover] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   useEffect(() => {
@@ -75,6 +79,7 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
     const result = await getQuoteApprovalSettings();
     if (!isReturnedActionError(result)) {
       setApprovalRequired(result.approvalRequired === true);
+      setIsSoleApprover(result.currentUserIsSoleApprover === true);
     }
   };
 
@@ -86,6 +91,9 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
         throw new Error(getErrorMessage(result));
       }
       setApprovalRequired(result.approvalRequired);
+      // Whether the user is the sole approver only matters (and is only computed) while
+      // approval is required, so refresh it after the toggle changes.
+      await loadSettings();
     } catch (settingsError) {
       setError(settingsError instanceof Error ? settingsError.message : t('quoteApproval.errors.settings', {
         defaultValue: 'Failed to update quote approval settings',
@@ -217,6 +225,10 @@ const QuoteApprovalDashboard: React.FC<QuoteApprovalDashboardProps> = ({ embedde
           )}
         </div>
       </div>
+
+      {approvalRequired && isSoleApprover && (
+        <QuoteSoleApproverNotice id="quote-approvals-sole-approver-notice" context="settings" />
+      )}
 
       {error ? (
         <Alert variant="destructive">

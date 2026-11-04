@@ -11,7 +11,12 @@ import type {
 } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildProjectBillingConfigUpdatedPayload,
+  buildProjectBillingSchedulePayload,
+  buildProjectMilestoneReadyPayload,
+} from '@alga-psa/workflow-streams';
 import ProjectBillingConfig from '../models/projectBillingConfig';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
 import {
@@ -81,10 +86,9 @@ async function publishScheduleEvent(input: {
   previousStatus?: ProjectBillingScheduleStatus | null;
   changes?: Record<string, unknown>;
 }): Promise<void> {
-  await publishEvent({
+  await publishWorkflowEvent({
     eventType: input.eventType,
-    payload: {
-      tenantId: input.tenant,
+    payload: buildProjectBillingSchedulePayload({
       projectId: input.projectId,
       configId: input.entry.config_id,
       entryId: input.entry.schedule_entry_id,
@@ -94,7 +98,8 @@ async function publishScheduleEvent(input: {
       requiresPaymentBeforeWork: input.entry.requires_payment_before_work,
       userId: input.userId,
       changes: input.changes,
-    },
+    }),
+    ctx: { tenantId: input.tenant, actor: { actorType: 'USER', actorUserId: input.userId } },
   });
 }
 
@@ -375,17 +380,17 @@ export const createScheduleEntry = withAuth(withProjectBillingActionErrors(async
     entry: result.entry,
   });
   if (parsed.increase_total) {
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'PROJECT_BILLING_CONFIG_UPDATED',
-      payload: {
-        tenantId: tenant,
+      payload: buildProjectBillingConfigUpdatedPayload({
         projectId: result.projectId,
         configId: result.config.config_id,
         billingModel: result.config.billing_model,
         invoiceMode: result.config.invoice_mode,
         userId: user.user_id,
         changes: { total_price: result.config.total_price, source: 'schedule_add_on' },
-      },
+      }),
+      ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } },
     });
   }
   return { entry: result.entry, config: result.config };
@@ -523,16 +528,16 @@ export const markEntryReady = withAuth(withProjectBillingActionErrors(async (
       ready_at: new Date().toISOString(),
     });
   });
-  await publishEvent({
+  await publishWorkflowEvent({
     eventType: 'PROJECT_MILESTONE_READY',
-    payload: {
-      tenantId: tenant,
+    payload: buildProjectMilestoneReadyPayload({
       projectId: result.projectId,
       entryId: result.entry.schedule_entry_id,
       description: result.entry.description,
       computedAmount: result.entry.computed_amount,
       trigger: 'manual',
-    },
+    }),
+    ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } },
   });
   await publishScheduleEvent({
     eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',

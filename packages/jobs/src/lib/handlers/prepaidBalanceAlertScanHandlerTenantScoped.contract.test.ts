@@ -8,6 +8,12 @@ const publishEventMock = vi.fn(async (event: unknown) => undefined);
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: async (event: unknown) => publishEventMock(event),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 import { PREPAID_BALANCE_ALERT_SCAN_JOB, prepaidBalanceAlertScanHandler } from './prepaidBalanceAlertScanHandler';

@@ -1,8 +1,12 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import type { DuePosition } from '@alga-psa/types';
-import { POST_DROP_RECURRING_OBLIGATION_TYPES } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
-import { isRecurringLineExpectedInClientCadenceWindow } from '@alga-psa/shared/billingClients/recurringTiming';
+import { contractLineRecurringStreams, streamForChargeFamily } from '@alga-psa/shared/billingClients/contractLineTimingRule';
+import { whereLiveRecurringContractLine } from '@alga-psa/shared/billingClients/liveClientCadenceRecurringLine';
+import {
+  isClientCadenceLineExpectedInWindow,
+  loadClientCadenceContractBilledBoundaries,
+} from '@alga-psa/shared/billingClients/clientCadenceScheduleRegeneration';
 
 /**
  * Canonical client-cadence window materialization.
@@ -65,7 +69,6 @@ export async function listCanonicalClientCadenceWindowPeriods(params: {
         'rsp.invoice_window_end': windowEnd,
         'c.client_id': params.clientId,
       })
-      .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
       .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
       .orderBy('rsp.service_period_start', 'asc')
       .orderBy('rsp.revision', 'asc')
@@ -125,14 +128,28 @@ export async function listUnmaterializedClientCadenceWindowLineIds(params: {
     params.knex,
     async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, params.tenant);
+      // Contract-scoped billed boundary: the same rule gap discovery uses, so
+      // a line added to a billed contract is expected where its first period
+      // actually lands, not where the raw assignment start implies.
+      const boundaries = await loadClientCadenceContractBilledBoundaries(trx, {
+        tenant: params.tenant,
+        clientId: params.clientId,
+      });
       const query = db.table('client_contracts as cc');
       db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
       db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
+      db.tenantJoin(query, 'contract_line_prepaid_blocks as pb', 'pb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
 
-      return query
+      whereLiveRecurringContractLine(
+        query,
+        // Unchanged from before: this guard never excluded system-managed
+        // defaults.
+        { excludeSystemManagedDefault: false },
+      );
+
+      const rows = await query
         .where({
           'cc.client_id': params.clientId,
-          'cc.is_active': true,
           'cl.cadence_owner': 'client',
         })
         .whereNotNull('cl.billing_frequency')
@@ -142,30 +159,55 @@ export async function listUnmaterializedClientCadenceWindowLineIds(params: {
           this.where('cc.end_date', '>=', windowStart)
             .orWhereNull('cc.end_date');
         })
-        .select('cl.contract_line_id', 'cl.billing_timing', 'cc.start_date', 'cc.end_date');
+        .select(
+          'cl.contract_line_id',
+          'cl.contract_id',
+          'cl.billing_timing',
+          'cl.contract_line_type',
+          'pb.issue_mode as prepaid_block_issue_mode',
+          'cc.start_date',
+          'cc.end_date',
+        );
+      return rows.map((row) => ({
+        ...row,
+        billed_boundary_end: boundaries.get(row.contract_id) ?? null,
+      }));
     },
   );
 
-  const activeRecurringLineIds = Array.from(
-    new Set(
-      activeRecurringLineRows
-        // Only lines whose assignment actually has a service period settling in
-        // this window are expected: an arrears line assigned at (or after) the
-        // window start bills its first period in a later window, and demanding
-        // materialization for it would falsely block every other line here.
-        .filter((row) =>
-          isRecurringLineExpectedInClientCadenceWindow({
-            duePosition: row.billing_timing === 'arrears' ? 'arrears' : 'advance',
-            assignmentStart: toDateOnly(row.start_date),
-            assignmentEnd: row.end_date ? toDateOnly(row.end_date) : null,
-            windowStart,
-            windowEnd,
-          }),
-        )
-        .map((row) => row.contract_line_id)
-        .filter((value): value is string => Boolean(value)),
-    ),
-  );
+  const fallbackStart = new Date().toISOString();
+  // One expectation per (line, stream): a cadence-mode block fee is its own
+  // schedule, so a line with only its hourly stream materialized is still short.
+  const expectedStreams = new Map<string, Set<string>>();
+  for (const row of activeRecurringLineRows) {
+    if (!row.contract_line_id) {
+      continue;
+    }
+    for (const entry of contractLineRecurringStreams(
+      row,
+      { issue_mode: row.prepaid_block_issue_mode ?? null },
+    )) {
+      // Only lines whose assignment actually has a service period settling in
+      // this window are expected: an arrears line assigned at (or after) the
+      // window start bills its first period in a later window, and demanding
+      // materialization for it would falsely block every other line here.
+      const expected = isClientCadenceLineExpectedInWindow({
+        duePosition: entry.duePosition,
+        assignmentStart: row.start_date,
+        assignmentEnd: row.end_date ? toDateOnly(row.end_date) : null,
+        billedBoundaryEnd: row.billed_boundary_end,
+        fallbackStart,
+        windowStart,
+        windowEnd,
+      });
+      if (expected) {
+        const set = expectedStreams.get(row.contract_line_id) ?? new Set<string>();
+        set.add(entry.stream);
+        expectedStreams.set(row.contract_line_id, set);
+      }
+    }
+  }
+  const activeRecurringLineIds = [...expectedStreams.keys()];
   if (activeRecurringLineIds.length === 0) {
     return [];
   }
@@ -179,17 +221,18 @@ export async function listUnmaterializedClientCadenceWindowLineIds(params: {
           invoice_window_start: windowStart,
           invoice_window_end: windowEnd,
         })
-        .whereIn('obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
         .whereIn('obligation_id', activeRecurringLineIds)
         .whereNotIn('lifecycle_state', ['archived', 'superseded'])
-        .select('obligation_id'),
+        .select('obligation_id', 'charge_family'),
   );
 
-  const materializedLineIds = new Set(
+  const materialized = new Set(
     materializedRows
-      .map((row) => row.obligation_id)
-      .filter((value): value is string => Boolean(value)),
+      .filter((row) => Boolean(row.obligation_id))
+      .map((row) => `${row.obligation_id}|${streamForChargeFamily(row.charge_family)}`),
   );
 
-  return activeRecurringLineIds.filter((lineId) => !materializedLineIds.has(lineId));
+  return activeRecurringLineIds.filter((lineId) =>
+    [...(expectedStreams.get(lineId) ?? [])].some((stream) => !materialized.has(`${lineId}|${stream}`)),
+  );
 }

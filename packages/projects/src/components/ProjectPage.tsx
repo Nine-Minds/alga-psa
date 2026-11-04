@@ -7,7 +7,7 @@ import { TaskShareActionsProvider } from './TaskShareActionsContext';
 import { TaskSelectionProvider } from './TaskSelectionContext';
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
-import type { IClient, IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ITag, IUserWithRoles, ProjectStatus } from '@alga-psa/types';
+import type { IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ITag, IUserWithRoles, ProjectStatus } from '@alga-psa/types';
 import {
   getErrorMessage,
   handleError,
@@ -23,7 +23,6 @@ interface ProjectMetadata {
   users: IUserWithRoles[];
   contact?: { full_name: string };
   assignedUser?: IUserWithRoles | null;
-  clients: IClient[];
 }
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
@@ -44,6 +43,9 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [projectMetadata, setProjectMetadata] = useState<ProjectMetadata | null>(null);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
+  // The edit drawer deletes status columns (moving their tasks) without the
+  // board knowing; this counter is how it asks the board to re-read.
+  const [statusRefreshKey, setStatusRefreshKey] = useState(0);
 
   useEffect(() => {
     const initializeParams = async () => {
@@ -134,6 +136,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     }
   };
   
+  const handleStatusesChanged = useCallback(() => {
+    setStatusRefreshKey(key => key + 1);
+  }, []);
+
   const handleTagsUpdate = (tags: ITag[], allTags: string[]) => {
     setProjectTags(tags);
     setAllTagTexts(allTags);
@@ -175,10 +181,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         contact={projectMetadata.contact}
         assignedUser={projectMetadata.assignedUser || undefined}
         users={projectMetadata.users}
-        clients={projectMetadata.clients}
         onAssignedUserChange={handleAssignedUserChange}
         onContactChange={handleContactChange}
         onProjectUpdate={handleProjectUpdate}
+        onStatusesChanged={handleStatusesChanged}
         projectTags={projectTags}
         allTagTexts={allTagTexts}
         onTagsChange={setProjectTags}
@@ -188,12 +194,12 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         phases={projectMetadata.phases}
         statuses={projectMetadata.statuses}
         users={projectMetadata.users}
-        clients={projectMetadata.clients}
         onTagsUpdate={handleTagsUpdate}
         initialTaskId={taskIdFromUrl}
         initialPhaseId={phaseIdFromUrl}
         initialViewMode={viewFromUrl}
         onUrlUpdate={handleUrlUpdate}
+        statusRefreshKey={statusRefreshKey}
       />
     </div>
     </TaskSelectionProvider>

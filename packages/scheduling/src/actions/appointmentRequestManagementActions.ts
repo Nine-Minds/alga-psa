@@ -1,5 +1,9 @@
 'use server';
 
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { scheduleSeam } from '../lib/sharedWorkScheduling';
+import { publishScheduleEvent, resolveSharedWorkBrowserActor } from '../lib/sharedWorkActor';
+import { appointmentMeetingProvider } from '../lib/appointmentMeetingCreation';
 import { createTenantKnex, tenantDb, User } from '@alga-psa/db';
 import { withTransaction, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -20,11 +24,14 @@ import {
 import { SystemEmailService } from '@alga-psa/email';
 import { enqueueImmediateJob } from '@alga-psa/core';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildAppointmentAssignedPayload,
   buildAppointmentCreatedPayload,
+  buildAppointmentRequestApprovedPayload,
+  buildAppointmentRequestDeclinedPayload,
+  buildScheduleEntryCreatedPayload,
+  buildScheduleEntryUpdatedPayload,
 } from '@alga-psa/workflow-streams';
 import {
   getTenantSettings,
@@ -93,6 +100,7 @@ export interface AppointmentRequestResult<T> {
 }
 
 export interface OnlineMeetingAppointmentArtifact {
+  download_url?: string;
   artifact_id: string;
   artifact_type: 'recording' | 'transcript';
   document_id: string | null;
@@ -112,7 +120,14 @@ function appointmentRequestActionErrorMessage(error: unknown, fallback: string):
     message === 'Service not found' ||
     message === 'Ticket not found' ||
     message === 'Ticket does not belong to the same client as the appointment request' ||
-    message === 'Online Meeting interaction type is not configured'
+    message === 'Online Meeting interaction type is not configured' ||
+    // Preconditions of the "Generate Teams meeting" retry action. Each names
+    // the state the operator has to change, so the generic fallback would
+    // strip the only actionable part of the failure.
+    message === 'A Teams meeting can only be generated for approved appointment requests' ||
+    message === 'This appointment request already has a meeting link' ||
+    message === 'The approved request has no schedule entry to attach a meeting to' ||
+    message === 'Schedule entry not found for the approved request'
   ) {
     return message;
   }
@@ -301,6 +316,8 @@ export const getAppointmentRequestById = withAuth(async (
 ): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const admitted = await scheduleSeam.delegate(tenant, p => p.readAppointmentRequests(db, tenant, () => resolveSharedWorkBrowserActor(user, tenant), { id: appointmentRequestId }));
+    if (admitted.handled) return admitted.requests[0] ? { success: true, data: admitted.requests[0] } : { success: false, error: 'Appointment request not found' };
 
     // Check permissions - use same permission as schedule actions
     const canRead = await hasPermission(user, 'user_schedule', 'read', db) || await hasPermission(user, 'user_schedule', 'update', db);
@@ -371,6 +388,8 @@ export const getAppointmentRequests = withAuth(async (
 ): Promise<AppointmentRequestResult<IAppointmentRequest[]>> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const admitted = await scheduleSeam.delegate(tenant, p => p.readAppointmentRequests(db, tenant, () => resolveSharedWorkBrowserActor(user, tenant), { filters: filters ? appointmentRequestFilterSchema.parse(filters) : {} }));
+    if (admitted.handled) return { success: true, data: admitted.requests };
 
     // Check permissions - use same permission as schedule actions
     const canRead = await hasPermission(user, 'user_schedule', 'read', db) || await hasPermission(user, 'user_schedule', 'update', db);
@@ -535,6 +554,8 @@ export const getAppointmentRequestsByTicketId = withAuth(async (
 ): Promise<AppointmentRequestResult<IAppointmentRequest[]>> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const admitted = await scheduleSeam.delegate(tenant, p => p.readAppointmentRequests(db, tenant, () => resolveSharedWorkBrowserActor(user, tenant), { ticketId }));
+    if (admitted.handled) return { success: true, data: admitted.requests };
 
     // Check permissions - use same permission as schedule actions
     const canRead = await hasPermission(user, 'user_schedule', 'read', db) || await hasPermission(user, 'user_schedule', 'update', db);
@@ -589,6 +610,17 @@ export const approveAppointmentRequest = withAuth(async (
     const validatedData = approveAppointmentRequestSchema.parse(data);
 
     const { knex: db } = await createTenantKnex();
+    const approval = { id: validatedData.appointment_request_id, assignedUserId: validatedData.assigned_user_id, finalDate: validatedData.final_date, finalTime: validatedData.final_time, ticketId: validatedData.ticket_id, internalNotes: validatedData.internal_notes };
+    if (!validatedData.generate_teams_meeting) {
+      const admitted = await scheduleSeam.delegate(tenant, p => p.approveAppointment(db, tenant, approval, () => resolveSharedWorkBrowserActor(user, tenant), publishScheduleEvent));
+      if (admitted.handled) return { success: true, data: admitted.request };
+    } else {
+      const admitted = await scheduleSeam.delegate(tenant, async p => p.approveAppointmentWithMeeting(db, tenant, approval, () => resolveSharedWorkBrowserActor(user, tenant), publishScheduleEvent, await appointmentMeetingProvider(tenant), validatedData.approve_without_meeting));
+      if (admitted.handled) {
+        if ('meetingCreationFailed' in admitted) return { success: false, meetingCreationFailed: true, error: 'The Teams meeting could not be created, so the appointment was not approved. Incomplete meeting cleanup is pending; you can approve without a meeting.' };
+        return { success: true, data: admitted.request, ...('warning' in admitted ? { teamsMeetingWarning: admitted.warning } : {}) };
+      }
+    }
 
     // Permission gate: either the global schedule perm, or being a configured approver
     // for this specific request. The latter is checked inside the transaction so we can
@@ -641,6 +673,8 @@ export const approveAppointmentRequest = withAuth(async (
         if (!assignedUser) {
           throw new Error('Assigned user not found');
         }
+        // Human-work guard (R5.3): a technician assigned to an appointment must be an active internal user.
+        await assertHumanWorkAssignee(trx, tenant, [validatedData.assigned_user_id]);
 
         const service = await trxTenantDb.table('service_catalog')
           .where({
@@ -796,6 +830,8 @@ export const approveAppointmentRequest = withAuth(async (
       if (!assignedUser) {
         throw new Error('Assigned user not found');
       }
+      // Human-work guard (R5.3): a technician assigned to an appointment must be an active internal user.
+      await assertHumanWorkAssignee(trx, tenant, [validatedData.assigned_user_id]);
 
       // Get service details
       const service = await trxTenantDb.table('service_catalog')
@@ -891,18 +927,10 @@ export const approveAppointmentRequest = withAuth(async (
 
         // Publish SCHEDULE_ENTRY_UPDATED event for calendar sync
         try {
-          await publishEvent({
-            eventType: 'SCHEDULE_ENTRY_UPDATED',
-            payload: {
-              tenantId: tenant,
-              userId: user.user_id,
-              entryId: request.schedule_entry_id,
-              changes: {
+          await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: buildScheduleEntryUpdatedPayload({ userId: user.user_id, entryId: request.schedule_entry_id, changes: {
                 after: updatedEntry,
                 assignedUserIds: [validatedData.assigned_user_id]
-              }
-            }
-          });
+              } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } } });
         } catch (eventError) {
           console.error('[AppointmentApproval] Failed to publish SCHEDULE_ENTRY_UPDATED event', eventError);
         }
@@ -950,18 +978,10 @@ export const approveAppointmentRequest = withAuth(async (
 
         // Publish SCHEDULE_ENTRY_CREATED event for calendar sync
         try {
-          await publishEvent({
-            eventType: 'SCHEDULE_ENTRY_CREATED',
-            payload: {
-              tenantId: tenant,
-              userId: user.user_id,
-              entryId: scheduleEntry.entry_id,
-              changes: {
+          await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_CREATED', payload: buildScheduleEntryCreatedPayload({ userId: user.user_id, entryId: scheduleEntry.entry_id, changes: {
                 after: scheduleEntry,
                 assignedUserIds: [validatedData.assigned_user_id]
-              }
-            }
-          });
+              } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } } });
         } catch (eventError) {
           console.error('[AppointmentApproval] Failed to publish SCHEDULE_ENTRY_CREATED event', eventError);
         }
@@ -1133,10 +1153,7 @@ export const approveAppointmentRequest = withAuth(async (
       }
 
       // Publish event (will trigger internal notifications automatically)
-      await publishEvent({
-        eventType: 'APPOINTMENT_REQUEST_APPROVED',
-        payload: {
-          tenantId: tenant || '',
+      await publishWorkflowEvent({ eventType: 'APPOINTMENT_REQUEST_APPROVED', payload: buildAppointmentRequestApprovedPayload({
           appointmentRequestId: request.appointment_request_id,
           clientId: request.client_id,
           contactId: request.contact_id,
@@ -1151,9 +1168,8 @@ export const approveAppointmentRequest = withAuth(async (
           requesterName: request.requester_name,
           approvedByUserId: user.user_id,
           assignedUserId: validatedData.assigned_user_id,
-          scheduleEntryId: scheduleEntry.entry_id
-        }
-      });
+          scheduleEntryId: scheduleEntry.entry_id,
+        }), ctx: { tenantId: tenant || '', actor: { actorType: 'USER', actorUserId: user.user_id } } });
 
       // Send emails using SystemEmailService
       try {
@@ -1331,6 +1347,8 @@ export const declineAppointmentRequest = withAuth(async (
     const validatedData = declineAppointmentRequestSchema.parse(data);
 
     const { knex: db } = await createTenantKnex();
+    const admitted = await scheduleSeam.delegate(tenant, p => p.declineAppointment(db, tenant, { id: validatedData.appointment_request_id, reason: validatedData.decline_reason }, () => resolveSharedWorkBrowserActor(user, tenant), publishScheduleEvent));
+    if (admitted.handled) return { success: true };
 
     // Permission gate: either the global schedule perm, or being a configured approver
     // for this specific request. The latter is checked inside the transaction so we can
@@ -1452,10 +1470,7 @@ export const declineAppointmentRequest = withAuth(async (
       }
 
       // Publish event (will trigger internal notifications automatically)
-      await publishEvent({
-        eventType: 'APPOINTMENT_REQUEST_DECLINED',
-        payload: {
-          tenantId: tenant || '',
+      await publishWorkflowEvent({ eventType: 'APPOINTMENT_REQUEST_DECLINED', payload: buildAppointmentRequestDeclinedPayload({
           appointmentRequestId: request.appointment_request_id,
           clientId: request.client_id,
           contactId: request.contact_id,
@@ -1468,9 +1483,8 @@ export const declineAppointmentRequest = withAuth(async (
           isAuthenticated: request.is_authenticated,
           requesterEmail: request.requester_email || '',
           requesterName: request.requester_name,
-          declineReason: validatedData.decline_reason
-        }
-      });
+          declineReason: validatedData.decline_reason,
+        }), ctx: { tenantId: tenant || '', actor: { actorType: 'USER', actorUserId: user.user_id } } });
 
       // Send notification email
       try {
@@ -1558,6 +1572,8 @@ export const updateAppointmentRequestDateTime = withAuth(async (
     const validatedData = updateAppointmentRequestDateTimeSchema.parse(data);
 
     const { knex: db } = await createTenantKnex();
+    const admitted = await scheduleSeam.delegate(tenant, p => p.rescheduleAppointment(db, tenant, { id: validatedData.appointment_request_id, date: validatedData.new_date, time: validatedData.new_time, timezone: validatedData.new_timezone, duration: validatedData.new_duration }, () => resolveSharedWorkBrowserActor(user, tenant), publishScheduleEvent));
+    if (admitted.handled) return { success: true, data: admitted.request };
 
     // Permission gate: either the global schedule perm, or being a configured approver
     // for this specific request.
@@ -1665,18 +1681,10 @@ export const updateAppointmentRequestDateTime = withAuth(async (
 
           if (previousScheduleEntry && updatedScheduleEntry) {
             try {
-              await publishEvent({
-                eventType: 'SCHEDULE_ENTRY_UPDATED',
-                payload: {
-                  tenantId: tenant,
-                  userId: user.user_id,
-                  entryId: request.schedule_entry_id,
-                  changes: {
+              await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: buildScheduleEntryUpdatedPayload({ userId: user.user_id, entryId: request.schedule_entry_id, changes: {
                     before: previousScheduleEntry,
                     after: updatedScheduleEntry,
-                  }
-                }
-              });
+                  } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } } });
             } catch (eventError) {
               console.error('[AppointmentRequestUpdate] Failed to publish SCHEDULE_ENTRY_UPDATED event', eventError);
             }
@@ -1793,6 +1801,8 @@ export const associateRequestToTicket = withAuth(async (
     const validatedData = associateRequestToTicketSchema.parse(data);
 
     const { knex: db } = await createTenantKnex();
+    const admitted = await scheduleSeam.delegate(tenant, p => p.associateAppointmentTicket(db, tenant, { id: validatedData.appointment_request_id, ticketId: validatedData.ticket_id }, () => resolveSharedWorkBrowserActor(user, tenant), publishScheduleEvent));
+    if (admitted.handled) return { success: true };
 
     // Permission gate: either the global schedule perm, or being a configured approver
     // for this specific request.
@@ -1885,6 +1895,13 @@ export const generateTeamsMeetingForApprovedRequest = withAuth(async (
 ): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const admitted = await scheduleSeam.delegate(tenant, async p => p.generateAppointmentMeeting(db, tenant, appointmentRequestId, () => resolveSharedWorkBrowserActor(user, tenant), publishScheduleEvent, await appointmentMeetingProvider(tenant)));
+    if (admitted.handled) {
+      if ('meetingCreationFailed' in admitted) return { success: false, meetingCreationFailed: true, error: admitted.unavailable
+        ? 'Teams is unavailable for this workspace. The appointment remains approved without a meeting.'
+        : 'The Teams meeting could not be created. Incomplete meeting cleanup is pending; the appointment remains approved.' };
+      return { success: true, data: admitted.request };
+    }
     const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
 
     const context = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -2113,7 +2130,7 @@ export const generateTeamsMeetingForApprovedRequest = withAuth(async (
     return { success: true, data: updatedRequest as IAppointmentRequest };
   } catch (error) {
     console.error('Error generating Teams meeting for approved request:', error);
-    const message = error instanceof Error ? error.message : 'Failed to generate Teams meeting';
+    const message = appointmentRequestActionErrorMessage(error, 'Failed to generate Teams meeting');
     return { success: false, error: message };
   }
 });

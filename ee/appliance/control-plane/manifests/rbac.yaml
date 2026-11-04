@@ -33,6 +33,12 @@ rules:
   - apiGroups: [""]
     resources: ["namespaces", "configmaps", "secrets", "services", "serviceaccounts", "persistentvolumeclaims", "persistentvolumes", "pods", "pods/log", "events", "resourcequotas", "limitranges"]
     verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  # Read-only API-server service proxy so the status snapshot and support bundle
+  # can read email-service /status and /metrics via `kubectl get --raw`
+  # (/api/v1/namespaces/msp/services/http:email-service:http/proxy/...).
+  - apiGroups: [""]
+    resources: ["services/proxy"]
+    verbs: ["get"]
   # Read-only node visibility so the status snapshot can determine platform
   # readiness (a Ready node) without granting node mutation.
   - apiGroups: [""]

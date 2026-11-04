@@ -18,6 +18,10 @@
       "import": "./dist/kernel/*.js",
       "types": "./src/kernel/*"
     },
+    "./quoteSelfApproval": {
+      "import": "./dist/quoteSelfApproval.js",
+      "types": "./src/quoteSelfApproval.ts"
+    },
     "./portal": {
       "import": "./dist/portal/visibility.js",
       "types": "./src/portal/visibility.ts"
@@ -49,6 +53,14 @@
     "./pagination/authorizationAwarePagination": {
       "import": "./dist/pagination/authorizationAwarePagination.js",
       "types": "./src/pagination/authorizationAwarePagination.ts"
+    },
+    "./assetReadAuthorization": {
+      "import": "./dist/assetReadAuthorization.js",
+      "types": "./src/assetReadAuthorization.ts"
+    },
+    "./rbac": {
+      "import": "./dist/rbac.js",
+      "types": "./src/rbac.ts"
     }
   },
   "scripts": {

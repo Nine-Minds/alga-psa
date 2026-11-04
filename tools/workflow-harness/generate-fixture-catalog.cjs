@@ -12,7 +12,7 @@ const DEFAULT_PLAN_DIR = path.resolve(
 const DEFAULT_FIXTURE_ROOT = path.resolve(process.cwd(), 'ee/test-data/workflow-harness');
 const SCHEMA_REGISTRY_PATH = path.resolve(
   process.cwd(),
-  'shared/workflow/runtime/schemas/workflowEventPayloadSchemas.ts'
+  'packages/event-schemas/src/schemas/domain/workflowEventPayloadSchemas.ts'
 );
 
 function usage() {

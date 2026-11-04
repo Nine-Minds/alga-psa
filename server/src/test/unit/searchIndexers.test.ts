@@ -46,6 +46,7 @@ function createFirstRowKnex(row: unknown) {
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     whereNotNull: vi.fn().mockReturnThis(),
+    whereNull: vi.fn().mockReturnThis(),
     andWhere: vi.fn().mockReturnThis(),
     groupBy: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
@@ -63,6 +64,7 @@ function createBatchKnex(rows: unknown[]) {
     distinctOn: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
+    whereNull: vi.fn().mockReturnThis(),
     andWhere: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
@@ -70,6 +72,40 @@ function createBatchKnex(rows: unknown[]) {
   };
   const knex = vi.fn().mockReturnValue(queryBuilder);
   return { knex, queryBuilder };
+}
+
+/** Contacts load in two queries: the contact row, then its 1:N phone rows. */
+function createContactKnex(row: unknown, phoneRows: unknown[]) {
+  const joinBuilder = {
+    on: vi.fn().mockReturnThis(),
+    andOn: vi.fn().mockReturnThis(),
+  };
+  const contactBuilder = {
+    leftJoin: vi.fn((_table: string, joinCallback: (this: typeof joinBuilder) => void) => {
+      joinCallback.call(joinBuilder);
+      return contactBuilder;
+    }),
+    select: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    andWhere: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    first: vi.fn().mockResolvedValue(row),
+    then: vi.fn((resolve, reject) => Promise.resolve(row ? [row] : []).then(resolve, reject)),
+  };
+  const phoneBuilder = {
+    select: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    whereIn: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    then: vi.fn((resolve, reject) => Promise.resolve(phoneRows).then(resolve, reject)),
+  };
+  const knex = vi.fn((tableExpression: string) =>
+    tableExpression.startsWith('contact_phone_numbers') ? phoneBuilder : contactBuilder);
+  Object.assign(knex, {
+    raw: vi.fn((sql: string) => ({ sql })),
+  });
+  return { knex, contactBuilder, phoneBuilder };
 }
 
 describe('search entity indexers', () => {
@@ -149,14 +185,19 @@ describe('search entity indexers', () => {
     expect(docs.every((doc) => doc.acl.requiredPermission === 'client:read')).toBe(true);
   });
 
-  it('T029 contact subtitle includes email and role', async () => {
-    const { knex, queryBuilder } = createFirstRowKnex({
-      contact_name_id: 'contact-1',
-      full_name: 'Ada Lovelace',
-      email: 'ada@example.com',
-      role: 'Primary Contact',
-      updated_at: '2026-05-13T10:00:00.000Z',
-    });
+  it('T029 contact doc carries email, role, client name, phone digits and notes', async () => {
+    const { knex, contactBuilder, phoneBuilder } = createContactKnex(
+      {
+        contact_name_id: 'contact-1',
+        full_name: 'Ada Lovelace',
+        email: 'ada@example.com',
+        role: 'Primary Contact',
+        notes: 'Prefers SMS after hours',
+        client_name: 'ACME Corp',
+        updated_at: '2026-05-13T10:00:00.000Z',
+      },
+      [{ contact_name_id: 'contact-1', phone_number: '+61 433 521 762' }],
+    );
 
     const doc = await contactIndexer.loadOne(
       knex as never,
@@ -164,20 +205,25 @@ describe('search entity indexers', () => {
       'contact-1',
     );
 
-    expect(knex).toHaveBeenCalledWith('contacts as contacts');
-    expect(queryBuilder.where).toHaveBeenCalledWith(
-      'contacts.tenant',
+    expect(knex).toHaveBeenCalledWith('contacts as ct');
+    expect(knex).toHaveBeenCalledWith('contact_phone_numbers as contact_phone_numbers');
+    expect(contactBuilder.where).toHaveBeenCalledWith(
+      'ct.tenant',
       '11111111-1111-4111-8111-111111111111',
     );
-    expect(queryBuilder.andWhere).toHaveBeenCalledWith('contact_name_id', 'contact-1');
+    expect(contactBuilder.andWhere).toHaveBeenCalledWith('ct.contact_name_id', 'contact-1');
+    expect(phoneBuilder.whereIn).toHaveBeenCalledWith('contact_name_id', ['contact-1']);
     expect(doc).toMatchObject({
       objectType: 'contact',
       objectId: 'contact-1',
       title: 'Ada Lovelace',
-      subtitle: 'ada@example.com | Primary Contact',
+      subtitle: 'ada@example.com | Primary Contact | ACME Corp',
       url: '/msp/contacts/contact-1',
       acl: { requiredPermission: 'contact:read' },
     });
+    // Digits-only form is indexed alongside the formatted number so a search
+    // for the number without its spacing still hits.
+    expect(doc?.body).toBe('+61 433 521 762 61433521762 Prefers SMS after hours');
   });
 
   it("T030 user indexer excludes users with user_type='client'", async () => {
@@ -204,6 +250,7 @@ describe('search entity indexers', () => {
       ticket_id: 'ticket-1',
       ticket_number: 'TIC-1023',
       title: 'Exchange outage',
+      client_id: 'client-1',
       client_name: 'ACME Corp',
       updated_at: '2026-05-13T10:00:00.000Z',
     });
@@ -230,8 +277,9 @@ describe('search entity indexers', () => {
       subtitle: 'ACME Corp | TIC-1023',
       url: '/msp/tickets/ticket-1',
       metadata: { identifier: 'TIC-1023' },
-      acl: { requiredPermission: 'ticket:read' },
+      acl: { requiredPermission: 'ticket:read', clientScopeId: 'client-1' },
     });
+    expect((queryBuilder.select as any).mock.calls.flat()).toContain('t.client_id');
   });
 
   it('T032 ticket-comment indexer marks internal comments as internal-only', async () => {
@@ -242,6 +290,7 @@ describe('search entity indexers', () => {
       is_internal: true,
       ticket_title: 'Exchange outage',
       ticket_number: 'TIC-1023',
+      ticket_client_id: 'client-1',
       updated_at: '2026-05-13T10:00:00.000Z',
     });
 
@@ -271,8 +320,48 @@ describe('search entity indexers', () => {
       acl: {
         requiredPermission: 'ticket:read',
         isInternalOnly: true,
+        clientScopeId: 'client-1',
       },
     });
+    expect((queryBuilder.select as any).mock.calls.flat()).toContain('t.client_id as ticket_client_id');
+  });
+
+  it('L4a ticket-comment indexer is internal-only unless the resolved audience is requester', async () => {
+    const run = async (row: Record<string, unknown>) => {
+      const { knex } = createFirstRowKnex({ comment_id: 'c', ticket_id: 't', note: 'x', ticket_title: 'T', ticket_number: '1', ...row });
+      return (await ticketCommentIndexer.loadOne(knex as never, '11111111-1111-4111-8111-111111111111', 'c'))!.acl;
+    };
+    expect((await run({ is_internal: false, audience: 'requester' })).isInternalOnly).toBe(false);
+    expect((await run({ is_internal: true, audience: 'shared_it' })).isInternalOnly).toBe(true);
+    expect((await run({ is_internal: true, audience: 'organization_private' })).isInternalOnly).toBe(true);
+    // A public-flagged comment on a private/inconsistent thread resolves private in SQL and must not be searchable.
+    expect((await run({ is_internal: false, audience: 'organization_private' })).isInternalOnly).toBe(true);
+  });
+
+  it('C7 ticket-comment indexer excludes soft-deleted and unpublished comments at the source', async () => {
+    const tenant = '11111111-1111-4111-8111-111111111111';
+    // loadOne: a soft-deleted/scheduled/canceled row is filtered out by the query, so no row comes back -> null.
+    const one = createFirstRowKnex(undefined);
+    expect(await ticketCommentIndexer.loadOne(one.knex as never, tenant, 'gone')).toBeNull();
+    expect(one.queryBuilder.whereNull).toHaveBeenCalledWith('c.deleted_at');
+    expect(one.queryBuilder.where).toHaveBeenCalledWith('c.publish_state', 'published');
+
+    // loadBatch shares the same base query.
+    const batch = createFirstRowKnex(undefined);
+    Object.assign(batch.queryBuilder, {
+      limit: vi.fn().mockReturnThis(),
+      then: vi.fn((resolve, reject) => Promise.resolve([]).then(resolve, reject)),
+    });
+    await ticketCommentIndexer.loadBatch(batch.knex as never, tenant, { limit: 10 } as never);
+    expect(batch.queryBuilder.whereNull).toHaveBeenCalledWith('c.deleted_at');
+    expect(batch.queryBuilder.where).toHaveBeenCalledWith('c.publish_state', 'published');
+  });
+
+  it('C7 project-task-comment indexer excludes soft-deleted comments at the source', async () => {
+    const tenant = '11111111-1111-4111-8111-111111111111';
+    const one = createFirstRowKnex(undefined);
+    expect(await projectTaskCommentIndexer.loadOne(one.knex as never, tenant, 'gone')).toBeNull();
+    expect(one.queryBuilder.whereNull).toHaveBeenCalledWith('pc.deleted_at');
   });
 
   it('T033 ticket-comment indexer links to the comment hash anchor', async () => {

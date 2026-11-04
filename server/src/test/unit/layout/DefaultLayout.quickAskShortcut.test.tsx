@@ -41,6 +41,10 @@ vi.mock('@alga-psa/scheduling/providers/SchedulingProviderWithCallbacks', () => 
   SchedulingProviderWithCallbacks: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock('@alga-psa/scheduling/providers/StopwatchProvider', () => ({
+  StopwatchProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 vi.mock('@alga-psa/msp-composition/projects', () => ({
   MspTicketIntegrationProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   MspClientIntegrationProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -74,6 +78,21 @@ vi.mock('@alga-psa/ui/components/Drawer', () => ({
 
 vi.mock('@alga-psa/ui/lib', () => ({
   savePreference: vi.fn(),
+}));
+
+// Shell banners and providers that fetch through server actions on mount. They are
+// not under test here; rendering them for real opens a tenant DB pool whose late
+// log/rejection outlives the test file and tears down the vitest worker mid-RPC.
+vi.mock('../../../components/layout/PlatformNotificationBanner', () => ({
+  PlatformNotificationBanner: () => null,
+}));
+
+vi.mock('@alga-psa/integrations/components/IntegrationHealthBanner', () => ({
+  IntegrationHealthBanner: () => null,
+}));
+
+vi.mock('@alga-psa/msp-composition/clients/MspClientTagsProvider', () => ({
+  MspClientTagsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions', () => ({

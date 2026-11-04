@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { parseRmmDeviceSyncState } from './rmmAlertPollingHandlers';
+import { isIntegrationReconnectRequired, parseRmmDeviceSyncState, parseRmmPollState } from './rmmAlertPollingHandlers';
 
 // rmmAlertPollingHandlers pulls in the whole alert pipeline (Redis publishers,
 // provider fetchers) that these pure-function tests never exercise. Stubbing
@@ -104,5 +104,42 @@ describe('parseRmmDeviceSyncState', () => {
     });
     expect(state.pollingEnabled).toBe(false);
     expect(state.intervalMinutes).toBe(60);
+  });
+});
+
+describe('reconnectRequired parsing', () => {
+  const active = { is_active: true };
+  const parsers = { parseRmmPollState, parseRmmDeviceSyncState };
+
+  for (const [name, parse] of Object.entries(parsers)) {
+    describe(name, () => {
+      it('is true when tokenLifecycle.status is reconnect_required', () => {
+        const settings = { tokenLifecycle: { status: 'reconnect_required' } };
+        expect(parse({ ...active, settings }).reconnectRequired).toBe(true);
+      });
+
+      it('is true for string-encoded settings', () => {
+        const settings = JSON.stringify({ tokenLifecycle: { status: 'reconnect_required' } });
+        expect(parse({ ...active, settings }).reconnectRequired).toBe(true);
+      });
+
+      it('is false when healthy, absent, null or unparseable', () => {
+        for (const settings of [
+          { tokenLifecycle: { status: 'healthy' } },
+          JSON.stringify({ tokenLifecycle: { status: 'healthy' } }),
+          {},
+          { tokenLifecycle: null },
+          null,
+          '{not json',
+        ]) {
+          expect(parse({ ...active, settings }).reconnectRequired, JSON.stringify(settings)).toBe(false);
+        }
+      });
+    });
+  }
+
+  it('uses the same condition as the predicate (status only, not the legacy reconnectRequired flag)', () => {
+    expect(isIntegrationReconnectRequired({ tokenLifecycle: { status: 'reconnect_required' } })).toBe(true);
+    expect(isIntegrationReconnectRequired({ reconnectRequired: true })).toBe(false);
   });
 });

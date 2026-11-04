@@ -61,7 +61,7 @@ vi.mock('../src/components/billing-dashboard/contracts/BillingFrequencyOverrideS
 import { FixedFeeServicesStep } from '../src/components/billing-dashboard/contracts/wizard-steps/FixedFeeServicesStep';
 import type { ContractWizardData } from '../src/components/billing-dashboard/contracts/ContractWizard';
 
-type FixedService = ContractWizardData['fixed_services'][number];
+type FixedService = ContractWizardData['fixed_lines'][number]['services'][number];
 
 type Deferred<T> = { promise: Promise<T>; resolve: (value: T) => void };
 const deferred = <T,>(): Deferred<T> => {
@@ -83,7 +83,7 @@ function Harness({ initialServices }: { initialServices: FixedService[] }) {
         currency_code: 'USD',
         billing_frequency: 'monthly',
         enable_proration: false,
-        fixed_services: initialServices,
+        fixed_lines: [{ line_key: 'line-1', enable_proration: true, base_rate: null, services: initialServices }],
       }) as unknown as ContractWizardData,
   );
   latestData = data;
@@ -122,44 +122,44 @@ describe('FixedFeeServicesStep catalog prefill race', () => {
     render(<Harness initialServices={[seatRow()]} />);
     await waitFor(() => expect(catalogMocks.getServiceCatalogRatesForCurrency).toHaveBeenCalledTimes(1));
 
-    fireEvent.change(document.getElementById('quantity-0') as HTMLInputElement, { target: { value: '23' } });
-    expect(latestData.fixed_services[0].quantity).toBe(23);
+    fireEvent.change(document.getElementById('fixed-line-0-quantity-0') as HTMLInputElement, { target: { value: '23' } });
+    expect(latestData.fixed_lines[0].services[0].quantity).toBe(23);
 
     await resolveCatalog({ 'svc-seat': 1500 });
 
-    await waitFor(() => expect(latestData.fixed_services[0].unit_rate).toBe(1500));
-    expect(latestData.fixed_services[0].quantity).toBe(23);
-    expect((document.getElementById('quantity-0') as HTMLInputElement).value).toBe('23');
+    await waitFor(() => expect(latestData.fixed_lines[0].services[0].unit_rate).toBe(1500));
+    expect(latestData.fixed_lines[0].services[0].quantity).toBe(23);
+    expect((document.getElementById('fixed-line-0-quantity-0') as HTMLInputElement).value).toBe('23');
   });
 
   it('keeps a unit rate the operator typed while the request is pending', async () => {
     render(<Harness initialServices={[seatRow()]} />);
     await waitFor(() => expect(catalogMocks.getServiceCatalogRatesForCurrency).toHaveBeenCalledTimes(1));
 
-    fireEvent.change(document.getElementById('wizard-fixed-0-fixed-service-unit-rate') as HTMLInputElement, {
+    fireEvent.change(document.getElementById('wizard-fixed-0-0-fixed-service-unit-rate') as HTMLInputElement, {
       target: { value: '9.99' },
     });
-    expect(latestData.fixed_services[0].unit_rate).toBe(999);
+    expect(latestData.fixed_lines[0].services[0].unit_rate).toBe(999);
 
     await resolveCatalog({ 'svc-seat': 1500 });
 
     await act(async () => {});
-    expect(latestData.fixed_services[0].unit_rate).toBe(999);
-    expect(latestData.fixed_services[0].quantity).toBe(20);
+    expect(latestData.fixed_lines[0].services[0].unit_rate).toBe(999);
+    expect(latestData.fixed_lines[0].services[0].quantity).toBe(20);
   });
 
   it('keeps a row added while the request is pending', async () => {
     render(<Harness initialServices={[seatRow()]} />);
     await waitFor(() => expect(catalogMocks.getServiceCatalogRatesForCurrency).toHaveBeenCalledTimes(1));
 
-    fireEvent.click(document.getElementById('add-fixed-service-button') as HTMLElement);
-    expect(latestData.fixed_services).toHaveLength(2);
+    fireEvent.click(document.getElementById('fixed-line-0-add-service-button') as HTMLElement);
+    expect(latestData.fixed_lines[0].services).toHaveLength(2);
 
     await resolveCatalog({ 'svc-seat': 1500 });
 
-    await waitFor(() => expect(latestData.fixed_services[0].unit_rate).toBe(1500));
-    expect(latestData.fixed_services).toHaveLength(2);
-    expect(latestData.fixed_services[1]).toMatchObject({ service_id: '', pricing_basis: 'bundle', quantity: 1 });
+    await waitFor(() => expect(latestData.fixed_lines[0].services[0].unit_rate).toBe(1500));
+    expect(latestData.fixed_lines[0].services).toHaveLength(2);
+    expect(latestData.fixed_lines[0].services[1]).toMatchObject({ service_id: '', pricing_basis: 'bundle', quantity: 1 });
   });
 
   it('keeps another row switched to allocation while the request is pending', async () => {
@@ -174,15 +174,15 @@ describe('FixedFeeServicesStep catalog prefill race', () => {
     await waitFor(() => expect(catalogMocks.getServiceCatalogRatesForCurrency).toHaveBeenCalledTimes(1));
 
     const radio = document.querySelector(
-      'input[name="wizard-fixed-1-fixed-pricing-basis"][value="bundle"]',
+      'input[name="wizard-fixed-0-1-fixed-pricing-basis"][value="bundle"]',
     ) as HTMLInputElement;
     fireEvent.click(radio);
-    expect(latestData.fixed_services[1].pricing_basis).toBe('bundle');
+    expect(latestData.fixed_lines[0].services[1].pricing_basis).toBe('bundle');
 
     await resolveCatalog({ 'svc-seat': 1500 });
 
-    await waitFor(() => expect(latestData.fixed_services[0].unit_rate).toBe(1500));
-    expect(latestData.fixed_services[1]).toMatchObject({ pricing_basis: 'bundle', quantity: 5 });
+    await waitFor(() => expect(latestData.fixed_lines[0].services[0].unit_rate).toBe(1500));
+    expect(latestData.fixed_lines[0].services[1]).toMatchObject({ pricing_basis: 'bundle', quantity: 5 });
   });
 
   it('does not fill a row that was switched to allocation while its rate was pending', async () => {
@@ -190,16 +190,16 @@ describe('FixedFeeServicesStep catalog prefill race', () => {
     await waitFor(() => expect(catalogMocks.getServiceCatalogRatesForCurrency).toHaveBeenCalledTimes(1));
 
     const radio = document.querySelector(
-      'input[name="wizard-fixed-0-fixed-pricing-basis"][value="bundle"]',
+      'input[name="wizard-fixed-0-0-fixed-pricing-basis"][value="bundle"]',
     ) as HTMLInputElement;
     fireEvent.click(radio);
-    expect(latestData.fixed_services[0].pricing_basis).toBe('bundle');
+    expect(latestData.fixed_lines[0].services[0].pricing_basis).toBe('bundle');
 
     await resolveCatalog({ 'svc-seat': 1500 });
 
     await act(async () => {});
-    expect(latestData.fixed_services[0].pricing_basis).toBe('bundle');
-    expect(latestData.fixed_services[0].unit_rate ?? null).toBeNull();
+    expect(latestData.fixed_lines[0].services[0].pricing_basis).toBe('bundle');
+    expect(latestData.fixed_lines[0].services[0].unit_rate ?? null).toBeNull();
   });
 
   it('keeps a stored zero quantity at zero through the prefill', async () => {
@@ -208,7 +208,7 @@ describe('FixedFeeServicesStep catalog prefill race', () => {
 
     await resolveCatalog({ 'svc-seat': 1500 });
 
-    await waitFor(() => expect(latestData.fixed_services[0].unit_rate).toBe(1500));
-    expect(latestData.fixed_services[0].quantity).toBe(0);
+    await waitFor(() => expect(latestData.fixed_lines[0].services[0].unit_rate).toBe(1500));
+    expect(latestData.fixed_lines[0].services[0].quantity).toBe(0);
   });
 });

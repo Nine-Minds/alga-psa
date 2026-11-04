@@ -1,0 +1,17 @@
+/**
+ * Invoice History API Route
+ * GET /api/v1/invoices/[id]/history - Invoice lifecycle audit trail
+ */
+
+import { ApiInvoiceController } from 'server/src/lib/api/controllers/ApiInvoiceController';
+
+const controller = new ApiInvoiceController();
+
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const req = request as any;
+  req.params = params;
+  return controller.history()(req);
+}
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';

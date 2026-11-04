@@ -47,6 +47,30 @@ describe('date trigger test payloads', () => {
     expect(typedFireDate.fireDate).toBe('2026-01-01');
   });
 
+  it('carries the status-age params and derives the timing from the ticket record', () => {
+    const params = { statusName: 'Waiting for client', days: 7 };
+    const trigger = toRunDialogDateTrigger({ type: 'date', source: 'ticket.status_age', offsetDays: 0, params });
+    expect(trigger).toEqual({ source: 'ticket.status_age', offsetDays: 0, params });
+
+    const payload = applyDateTriggerTiming({ ticketId: 't1' }, {
+      trigger: trigger!,
+      record: { status_changed_at: '2026-09-10T09:00:00.000Z' },
+      today: '2026-09-12',
+      canOverwrite: () => true,
+    });
+    expect(payload).toMatchObject({ occursOn: '2026-09-17', fireDate: '2026-09-17', offsetDays: 0 });
+
+    // A different threshold moves the date: the params, not just the source, drive the math.
+    const longer = applyDateTriggerTiming({}, {
+      trigger: { ...trigger!, params: { ...params, days: 14 } },
+      record: { status_changed_at: '2026-09-10T09:00:00.000Z' },
+      today: '2026-09-12',
+      canOverwrite: () => true,
+    });
+    expect(longer.occursOn).toBe('2026-09-24');
+    expect(describeDateTriggerPayloadField(t, 'occursOn', trigger!)).toContain('number of days in status');
+  });
+
   it('explains the timing fields in plain words', () => {
     const trigger = { source: 'client.anniversary' as const, offsetDays: 14 };
     expect(describeDateTriggerPayloadField(t, 'occursOn', trigger)).toMatch(/the client's next anniversary/);

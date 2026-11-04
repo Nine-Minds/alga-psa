@@ -33,6 +33,8 @@ export { fetchWorkflowTaskActivities };
 // to the activity tier, with legacy type-fallback. Kept in its own typed module
 // so it stays independently unit-testable.
 import { mapStoredNotificationPriority } from './notificationPriority';
+import { collapseRecurringSeries } from '../lib/recurringSeries';
+import { whereProjectTaskOnUsersList, whereTicketOnUsersList } from './activityAssignmentScope';
 
 // Enhanced in-memory cache implementation with different TTLs and invalidation
 const cache = {
@@ -721,21 +723,7 @@ export async function fetchProjectActivities(
       );
 
       return await projectTasksQuery
-        .where(function() {
-          // Tasks directly assigned to the user
-          this.where("project_tasks.assigned_to", userId);
-
-          // Or tasks where the user is an additional resource
-          this.orWhereExists(
-            scopedDb.table("task_resources")
-              .select(db.raw(1))
-              .whereRaw("task_resources.task_id = project_tasks.task_id")
-              .andWhere(function() {
-                this.where("task_resources.assigned_to", userId)
-                  .orWhere("task_resources.additional_user_id", userId);
-              })
-          );
-        })
+        .where(whereProjectTaskOnUsersList(scopedDb, db, userId))
       // Apply filters
       .modify(function(queryBuilder) {
         // Apply status filter if provided
@@ -1002,21 +990,7 @@ export async function fetchTicketActivities(
       scopedDb.tenantJoin(ticketsQuery, "priorities", "tickets.priority_id", "priorities.priority_id", { type: "left" });
 
       return await ticketsQuery
-        .where(function() {
-          // Tickets directly assigned to the user
-          this.where("tickets.assigned_to", userId);
-
-          // Or tickets where the user is an additional resource
-          this.orWhereExists(
-            scopedDb.table("ticket_resources")
-              .select(db.raw(1))
-              .whereRaw("ticket_resources.ticket_id = tickets.ticket_id")
-              .andWhere(function() {
-                this.where("ticket_resources.assigned_to", userId)
-                  .orWhere("ticket_resources.additional_user_id", userId);
-              })
-          );
-        })
+        .where(whereTicketOnUsersList(scopedDb, db, userId))
       // Apply filters
       .modify(function(queryBuilder) {
         if (filters.status && filters.status.length > 0) {
@@ -1281,7 +1255,7 @@ export async function fetchTimeEntryActivities(
 /**
  * Process activities by applying additional filtering, sorting, etc.
  */
-function processActivities(
+export function processActivities(
   activities: Activity[],
   filters: ActivityFilters
 ): Activity[] {
@@ -1370,6 +1344,13 @@ function processActivities(
 
   // Apply sorting
   sortActivities(filteredActivities, filters.sortBy, filters.sortDirection);
+
+  // Collapse recurring series AFTER sorting (the fetcher's occurrence order is not guaranteed,
+  // so the survivor is the first in sort order, i.e. the earliest due under the default sort)
+  // and BEFORE pagination (the caller slices afterwards) so counts are per series.
+  if (filters.collapseRecurringSeries) {
+    filteredActivities = collapseRecurringSeries(filteredActivities);
+  }
 
   return filteredActivities;
 }

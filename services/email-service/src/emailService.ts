@@ -18,6 +18,12 @@ import {
   recordInboundSourceAuthFailure,
 } from '@alga-psa/shared/services/email/inboundEmailAuthOutcomeRecorder';
 import { resolveImapSyncStartUid } from '@alga-psa/shared/services/email/imapSyncCursor';
+import { classifyInboundAuthFailure } from '@alga-psa/shared/services/email/InboundEmailAuthFailurePolicy';
+import {
+  recordImapListenerError,
+  recordImapWebhookDispatchRetry,
+  type MetricImapListenerErrorReason,
+} from '@alga-psa/shared/services/email/inboundEmailMetrics';
 
 const DEFAULT_REFRESH_MS = 60_000;
 const DEFAULT_RECONNECT_BASE_MS = 2_000;
@@ -278,6 +284,7 @@ export async function dispatchImapInboundWebhookWithRetry(input: {
       lastError = error instanceof Error ? error : new Error(String(error));
     }
 
+    recordImapWebhookDispatchRetry();
     stateLog('webhook_retry', {
       providerId: input.providerId,
       tenant: input.tenant,
@@ -333,6 +340,25 @@ function normalizeImapError(error: any): {
     authenticationFailed: error?.authenticationFailed,
     oauthError: oauthErrorText,
   };
+}
+
+/**
+ * Bounded metric reason for an IMAP listener error. Derived from structured
+ * error metadata only (classifier + errno-style `code`), never message text.
+ */
+function classifyImapListenerErrorReason(error: any): MetricImapListenerErrorReason {
+  if (error?.authenticationFailed === true) return 'auth';
+  if (classifyInboundAuthFailure({ providerType: 'imap', error }).kind === 'unrecoverable_auth') {
+    return 'auth';
+  }
+  const code = String(error?.code || '').toUpperCase();
+  if (code === 'ETIMEDOUT' || code === 'ESOCKETTIMEDOUT' || code === 'TIMEOUT') return 'timeout';
+  if (
+    ['ECONNREFUSED', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN', 'EPIPE', 'EHOSTUNREACH', 'ENETUNREACH', 'NOCONNECTION'].includes(code)
+  ) {
+    return 'connection';
+  }
+  return 'other';
 }
 
 function applyOauthMechanismOverride(client: ImapFlow, mechanism: 'XOAUTH2' | 'OAUTHBEARER'): void {
@@ -452,6 +478,7 @@ class ImapFolderListener {
   private client: ImapFlow | null = null;
   private folderState: FolderState = {};
   private idleFailures = 0;
+  private connected = false;
   private listenerId = uuidv4();
   private jitterPct = getTimerJitterPct();
 
@@ -469,6 +496,11 @@ class ImapFolderListener {
       last_uid: this.provider.last_uid || undefined,
       last_seen_at: this.provider.last_seen_at || undefined,
     };
+  }
+
+  /** True between a successful connect and the next error/stop (metrics gauge). */
+  isConnected(): boolean {
+    return this.connected;
   }
 
   private async persistFolderState(update: Partial<FolderState>): Promise<void> {
@@ -779,7 +811,12 @@ class ImapFolderListener {
     );
     await Promise.race([
       client.connect(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('IMAP connection timeout')), timeoutMs)),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(Object.assign(new Error('IMAP connection timeout'), { code: 'ETIMEDOUT' })),
+          timeoutMs
+        )
+      ),
     ]);
   }
 
@@ -1124,6 +1161,7 @@ class ImapFolderListener {
           folder: this.folder,
           listenerId: this.listenerId,
         });
+        this.connected = true;
         this.client.on('expunge', (seq) => {
           logger.info('[IMAP] Expunge received', { providerId: this.provider.id, tenant: this.provider.tenant, folder: this.folder, seq });
         });
@@ -1171,6 +1209,8 @@ class ImapFolderListener {
         await this.syncNewMessages(this.client);
         await this.idleLoop(this.client);
       } catch (error: any) {
+        this.connected = false;
+        recordImapListenerError({ reason: classifyImapListenerErrorReason(error) });
         const errorDetails = normalizeImapError(error);
         logger.error('[IMAP] Folder listener error', {
           providerId: this.provider.id,
@@ -1215,6 +1255,7 @@ class ImapFolderListener {
         await this.persistFolderState({ last_seen_at: new Date().toISOString() });
         await this.delayWithBackoff();
       } finally {
+        this.connected = false;
         if (this.client) {
           try {
             await this.client.logout();
@@ -1228,6 +1269,7 @@ class ImapFolderListener {
 
   async stop() {
     this.running = false;
+    this.connected = false;
     stateLog('folder_listener_stop', {
       providerId: this.provider.id,
       tenant: this.provider.tenant,
@@ -1328,6 +1370,10 @@ class ImapProviderWorker {
     this.listeners = [];
   }
 
+  connectedListenerCount(): number {
+    return this.listeners.filter((listener) => listener.isConnected()).length;
+  }
+
   needsRestart(nextProvider: ImapProviderRow): boolean {
     const nextSignature = JSON.stringify({
       host: nextProvider.host,
@@ -1354,6 +1400,15 @@ export class EmailService {
   private instanceId = uuidv4();
   private shuttingDown = false;
   private jitterPct = getTimerJitterPct();
+
+  /** In-process listener stats for the metrics gauges (no I/O). */
+  getListenerStats(): { providersLeased: number; activeListeners: number } {
+    let activeListeners = 0;
+    for (const worker of this.workers.values()) {
+      activeListeners += worker.connectedListenerCount();
+    }
+    return { providersLeased: this.workers.size, activeListeners };
+  }
 
   async start() {
     this.shuttingDown = false;

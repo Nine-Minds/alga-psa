@@ -10,6 +10,11 @@ const contractLineServiceActionsSource = readFileSync(
   path.resolve(process.cwd(), '../packages/billing/src/actions/contractLineServiceActions.ts'),
   'utf8',
 );
+// Live and template attach paths delegate to the shared membership helpers.
+const contractLineMembershipSource = readFileSync(
+  path.resolve(process.cwd(), '../packages/billing/src/lib/billing/contractLineMembership.ts'),
+  'utf8',
+);
 
 describe('contract authoring decoupling checklist guards', () => {
   it('T003: wizard submission validation accepts service identity across fixed/hourly/usage contexts', () => {
@@ -22,15 +27,21 @@ describe('contract authoring decoupling checklist guards', () => {
   });
 
   it('T004: template/draft resume paths preserve decoupled selections and mode-default prefill support', () => {
-    expect(contractWizardActionsSource).toContain('getContractTemplateSnapshotForClientWizard');
+    expect(contractWizardActionsSource).toContain('getContractTemplateLinesForClientWizard');
     expect(contractWizardActionsSource).toContain('getDraftContractForResume');
     expect(contractWizardActionsSource).toContain('fetchModeDefaultRatesByServiceId');
   });
 
   it('T005: contract-line service attach validates by target line mode instead of service-type billing coupling', () => {
-    expect(contractLineServiceActionsSource).toContain('resolveContractLineServiceConfigurationType(');
-    expect(contractLineServiceActionsSource).not.toContain('service_type_billing_method');
-    expect(contractLineServiceActionsSource).not.toContain('Only fixed billing method services can be attached to this template line.');
+    // Live and template lines share one policy resolver:
+    // resolveContractLineServiceConfig wraps
+    // resolveContractLineServiceConfigurationType plus the per-type defaults.
+    expect(contractLineServiceActionsSource).toContain("from '../lib/billing/contractLineMembership'");
+    expect(contractLineMembershipSource).toMatch(/resolveContractLineServiceConfig(?:urationType)?\(/);
+    for (const source of [contractLineServiceActionsSource, contractLineMembershipSource]) {
+      expect(source).not.toContain('service_type_billing_method');
+      expect(source).not.toContain('Only fixed billing method services can be attached to this template line.');
+    }
   });
 
   it('T006: pricing defaults keep override > mode-default > catalog-default precedence hooks', () => {

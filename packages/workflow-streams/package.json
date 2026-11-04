@@ -17,10 +17,6 @@
       "import": "./src/streams/workflowEventSchema.ts",
       "types": "./src/streams/workflowEventSchema.ts"
     },
-    "./workflowEventPublishHelpers": {
-      "import": "./src/streams/workflowEventPublishHelpers.ts",
-      "types": "./src/streams/workflowEventPublishHelpers.ts"
-    },
     "./domainEventBuilders/*": {
       "import": "./src/streams/domainEventBuilders/*.ts",
       "types": "./src/streams/domainEventBuilders/*.ts"

@@ -5,7 +5,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { NumericInput, parseNumericValue } from './NumericInput';
 
-vi.mock('../lib/i18n/client', () => ({ useOptionalI18n: () => ({ locale: 'en' }) }));
+vi.mock('../lib/i18n/client', () => ({
+  useOptionalI18n: () => ({ locale: 'en' }),
+  useTranslation: () => ({ t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key }),
+}));
 vi.mock('../ui-reflection/useAutomationIdAndRegister', () => ({ useAutomationIdAndRegister: () => ({ automationIdProps: {}, updateMetadata: vi.fn() }) }));
 
 describe('NumericInput', () => {

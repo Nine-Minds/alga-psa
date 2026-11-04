@@ -39,7 +39,7 @@ vi.mock('@alga-psa/formatting/avatarUtils', () => ({
 }));
 vi.mock('@alga-psa/tags/actions/tagActions', () => ({ createTag: vi.fn(), findTagsByEntityId: vi.fn() }));
 vi.mock('@alga-psa/tags/lib/tagCleanup', () => ({ deleteEntityTags: vi.fn() }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn() }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(), publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 
 import { createClient, getAllClientsPaginated, updateClient } from '@alga-psa/clients/actions/clientActions';
 import { getClientById } from '@alga-psa/clients/actions/queryActions';

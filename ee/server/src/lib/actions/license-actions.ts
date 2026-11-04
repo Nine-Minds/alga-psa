@@ -3,12 +3,17 @@
 import { getLicenseUsage, type LicenseUsage } from '../license/get-license-usage';
 import { getSession } from '@alga-psa/auth';
 import type { AddOnKey } from '@alga-psa/types';
-import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
+import {
+  checkAccountManagementPermission,
+  checkAccountManagementUpdatePermission,
+  checkAccountManagementDeletePermission,
+} from '@alga-psa/auth/actions';
 import { getStripeService, AppleIapBillingError } from '../stripe/StripeService';
 import { getConnection } from '@/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { sendCancellationRequestEmail } from '@alga-psa/email/sendCancellationRequestEmail';
+import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { cancellationFeedbackSchema } from '../cancellationFeedbackValidation';
 import {
   IGetSubscriptionInfoResponse,
@@ -22,8 +27,19 @@ import {
   IScheduledLicenseChange,
 } from 'server/src/interfaces/subscription.interfaces';
 
-async function hasAccountManagementAccess(): Promise<boolean> {
-  return await checkAccountManagementPermission();
+type AccountManagementLevel = 'read' | 'update' | 'delete';
+
+// The level is required (no default) so every action must choose explicitly:
+// read = views/previews, update = billing mutations, delete = cancellation.
+async function hasAccountManagementAccess(level: AccountManagementLevel): Promise<boolean> {
+  switch (level) {
+    case 'read':
+      return await checkAccountManagementPermission();
+    case 'update':
+      return await checkAccountManagementUpdatePermission();
+    case 'delete':
+      return await checkAccountManagementDeletePermission();
+  }
 }
 
 function permissionDenied(error = 'Permission denied') {
@@ -106,7 +122,7 @@ export async function getInvoicePreviewAction(
       };
     }
 
-    if (!(await hasAccountManagementAccess())) {
+    if (!(await hasAccountManagementAccess('read'))) {
       return permissionDenied('You do not have permission to manage billing');
     }
 
@@ -182,7 +198,7 @@ export async function createLicenseCheckoutSessionAction(
       };
     }
 
-    if (!(await hasAccountManagementAccess())) {
+    if (!(await hasAccountManagementAccess('update'))) {
       return permissionDenied('You do not have permission to manage billing');
     }
 
@@ -275,6 +291,126 @@ export async function createLicenseCheckoutSessionAction(
 }
 
 /**
+ * The tenant's current license total: the canonical license subscription's
+ * quantity, falling back to the tenant seat limit for tenants without one.
+ */
+async function getCurrentLicenseQuantity(tenantId: string): Promise<number> {
+  const knex = await getConnection(tenantId);
+  const db = tenantDb(knex, tenantId);
+
+  const subscription = await db.table<IStripeSubscription>('stripe_subscriptions')
+    .whereIn('status', ['active', 'trialing'])
+    .whereRaw("COALESCE(metadata->>'addon_key', '') = ''")
+    .orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
+    .first();
+  if (subscription) {
+    return subscription.quantity;
+  }
+
+  const tenant = await db.table('tenants').first('licensed_user_count');
+  return tenant?.licensed_user_count ?? 0;
+}
+
+function validateLicensesToAdd(additional: number): string | null {
+  if (!Number.isInteger(additional) || additional < 1) {
+    return 'Enter how many licenses to add (minimum 1)';
+  }
+  if (additional > 100000) {
+    return 'License quantity exceeds maximum allowed (100,000)';
+  }
+  return null;
+}
+
+/**
+ * Preview adding `additional` licenses on top of the current total.
+ * The total is computed here, never trusted from the client, so this path
+ * can only ever increase the subscription.
+ */
+export async function getAddLicensesPreviewAction(
+  additional: number
+): Promise<{
+  success: boolean;
+  data?: {
+    currentQuantity: number;
+    newQuantity: number;
+    isIncrease: boolean;
+    amountDue: number;
+    currency: string;
+    currentPeriodEnd: string;
+    prorationAmount: number;
+    remainingAmount: number;
+    isTrialing: boolean;
+    trialEnd: string | null;
+  };
+  error?: string;
+}> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+    if (!(await hasAccountManagementAccess('read'))) {
+      return permissionDenied('You do not have permission to manage billing');
+    }
+
+    const validationError = validateLicensesToAdd(additional);
+    if (validationError) {
+      return { success: false, error: validationError };
+    }
+
+    const current = await getCurrentLicenseQuantity(session.user.tenant);
+    const preview = await getStripeService().getUpcomingInvoicePreview(
+      session.user.tenant,
+      current + additional
+    );
+
+    if (!preview) {
+      return { success: false, error: 'No existing subscription found' };
+    }
+
+    return {
+      success: true,
+      data: {
+        ...preview,
+        currentPeriodEnd: preview.currentPeriodEnd.toISOString(),
+        trialEnd: preview.trialEnd ? preview.trialEnd.toISOString() : null,
+      },
+    };
+  } catch (error) {
+    logger.error('[getAddLicensesPreviewAction] Error getting invoice preview:', error);
+    return { success: false, error: 'Failed to get invoice preview' };
+  }
+}
+
+/**
+ * Add `additional` licenses to the current total. Reductions go through
+ * reduceLicenseCountAction, which enforces the active-user guard.
+ */
+export async function addLicensesAction(
+  additional: number
+): Promise<ReturnType<typeof createLicenseCheckoutSessionAction>> {
+  const session = await getSession();
+  if (!session?.user?.tenant) {
+    return { success: false, error: 'Not authenticated' };
+  }
+  if (!(await hasAccountManagementAccess('update'))) {
+    return permissionDenied('You do not have permission to manage billing');
+  }
+
+  const validationError = validateLicensesToAdd(additional);
+  if (validationError) {
+    return { success: false, error: validationError };
+  }
+
+  const current = await getCurrentLicenseQuantity(session.user.tenant);
+  logger.info(
+    `[addLicensesAction] Adding ${additional} licenses for tenant ${session.user.tenant} (current total ${current})`
+  );
+
+  return createLicenseCheckoutSessionAction(current + additional);
+}
+
+/**
  * Server action to get license pricing information
  * Reads from the tenant's actual subscription in stripe_subscriptions + stripe_prices.
  * Falls back to the STRIPE_PRO_PRICE_ID env var for tenants without a subscription row.
@@ -297,7 +433,7 @@ export async function getLicensePricingAction(): Promise<{
       return { success: false, error: 'Not authenticated' };
     }
 
-    const hasPermission = await checkAccountManagementPermission();
+    const hasPermission = await hasAccountManagementAccess('read');
     if (!hasPermission) {
       return { success: false, error: 'Permission denied' };
     }
@@ -379,7 +515,7 @@ export async function getSubscriptionInfoAction(): Promise<IGetSubscriptionInfoR
       };
     }
 
-    if (!(await hasAccountManagementAccess())) {
+    if (!(await hasAccountManagementAccess('read'))) {
       return permissionDenied('Permission denied');
     }
 
@@ -454,7 +590,7 @@ export async function getPaymentMethodInfoAction(): Promise<IGetPaymentMethodRes
       };
     }
 
-    if (!(await hasAccountManagementAccess())) {
+    if (!(await hasAccountManagementAccess('read'))) {
       return permissionDenied('You do not have permission to manage billing');
     }
 
@@ -538,7 +674,7 @@ export async function getRecentInvoicesAction(limit: number = 10): Promise<IGetI
       };
     }
 
-    if (!(await hasAccountManagementAccess())) {
+    if (!(await hasAccountManagementAccess('read'))) {
       return permissionDenied('You do not have permission to manage billing');
     }
 
@@ -619,7 +755,7 @@ export async function createCustomerPortalSessionAction(): Promise<IUpdatePaymen
       };
     }
 
-    if (!(await hasAccountManagementAccess())) {
+    if (!(await hasAccountManagementAccess('update'))) {
       return permissionDenied('You do not have permission to manage billing');
     }
 
@@ -687,7 +823,7 @@ export async function sendCancellationFeedbackAction(
       };
     }
 
-    if (!(await hasAccountManagementAccess())) {
+    if (!(await hasAccountManagementAccess('update'))) {
       return permissionDenied('You do not have permission to cancel the subscription');
     }
 
@@ -776,7 +912,7 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
       };
     }
 
-    if (!(await hasAccountManagementAccess())) {
+    if (!(await hasAccountManagementAccess('delete'))) {
       return permissionDenied('You do not have permission to cancel the subscription');
     }
 
@@ -857,24 +993,38 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
     // Send cancellation request received email (fire-and-forget, don't block the response)
     try {
       const tenant = await db.table('tenants')
-        .select('email', 'client_name', 'company_name')
+        .select('email', 'client_name')
         .first();
 
       if (tenant?.email) {
-        const tenantName = tenant.company_name || tenant.client_name || 'your organization';
+        const tenantName = tenant.client_name || 'your organization';
+        // Format the cancel date in the recipient's locale, not a hardcoded en-US.
+        // A locale lookup must never block the cancellation email itself.
+        const locale = await resolveEmailLocale(session.user.tenant, {
+          email: tenant.email,
+          userType: 'internal',
+        }).catch(() => 'en');
         await sendCancellationRequestEmail({
           tenantName,
           recipientName: tenant.client_name || tenantName,
           recipientEmail: tenant.email,
           cancelAtDate,
+          locale,
         });
         logger.info(
           `[cancelSubscriptionAction][tenant=${session.user.tenant}] Cancellation request email sent to ${tenant.email}`
         );
+      } else {
+        logger.warn(
+          `[cancelSubscriptionAction][tenant=${session.user.tenant}] Tenant has no email on file; skipping cancellation request email`
+        );
       }
     } catch (emailError) {
       // Don't fail the cancellation if email fails
-      logger.warn('[cancelSubscriptionAction] Failed to send cancellation request email:', emailError);
+      logger.error(
+        `[cancelSubscriptionAction][tenant=${session.user.tenant}] Failed to send cancellation request email:`,
+        emailError
+      );
     }
 
     return {
@@ -897,7 +1047,7 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
  * Get count of active (non-deactivated) internal users for a tenant
  * Used for validating license reductions
  */
-export async function getActiveUserCount(tenantId: string): Promise<number> {
+async function getActiveUserCount(tenantId: string): Promise<number> {
   const knex = await getConnection(tenantId);
   const db = tenantDb(knex, tenantId);
 
@@ -918,7 +1068,7 @@ export async function getActiveUserCount(tenantId: string): Promise<number> {
  * - Checks active user count constraint
  * - Schedules reduction at period end (Stripe handles automatically)
  */
-export async function reduceLicenseCount(
+async function reduceLicenseCount(
   tenantId: string,
   newQuantity: number
 ): Promise<{
@@ -1073,7 +1223,7 @@ export async function reduceLicenseCountAction(
       };
     }
 
-    if (!(await hasAccountManagementAccess())) {
+    if (!(await hasAccountManagementAccess('update'))) {
       return permissionDenied('You do not have permission to reduce license count');
     }
 
@@ -1110,7 +1260,7 @@ export async function getScheduledLicenseChangesAction(): Promise<{
       };
     }
 
-    if (!(await hasAccountManagementAccess())) {
+    if (!(await hasAccountManagementAccess('read'))) {
       return permissionDenied('Permission denied');
     }
 
@@ -1168,7 +1318,7 @@ export async function upgradeTierAction(
       return { success: false, error: 'Not authenticated' };
     }
 
-    const hasPermission = await checkAccountManagementPermission();
+    const hasPermission = await hasAccountManagementAccess('update');
     if (!hasPermission) {
       return { success: false, error: 'You do not have permission to change the subscription plan' };
     }
@@ -1212,7 +1362,7 @@ export async function downgradeTierAction(
       return { success: false, error: 'Not authenticated' };
     }
 
-    const hasPermission = await checkAccountManagementPermission();
+    const hasPermission = await hasAccountManagementAccess('update');
     if (!hasPermission) {
       return { success: false, error: 'You do not have permission to change the subscription plan' };
     }
@@ -1254,7 +1404,7 @@ export async function purchaseAddOnAction(
       return { success: false, error: 'Not authenticated' };
     }
 
-    const hasPermission = await checkAccountManagementPermission();
+    const hasPermission = await hasAccountManagementAccess('update');
     if (!hasPermission) {
       return { success: false, error: 'You do not have permission to manage add-ons' };
     }
@@ -1299,7 +1449,7 @@ export async function cancelAddOnAction(
       return { success: false, error: 'Not authenticated' };
     }
 
-    const hasPermission = await checkAccountManagementPermission();
+    const hasPermission = await hasAccountManagementAccess('update');
     if (!hasPermission) {
       return { success: false, error: 'You do not have permission to manage add-ons' };
     }
@@ -1345,6 +1495,10 @@ export async function getUpgradePreviewAction(
       return { success: false, error: 'Not authenticated' };
     }
 
+    if (!(await hasAccountManagementAccess('read'))) {
+      return permissionDenied();
+    }
+
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
       return { success: false, error: 'Stripe billing is not configured' };
@@ -1372,7 +1526,7 @@ export async function switchBillingIntervalAction(
       return { success: false, error: 'Not authenticated' };
     }
 
-    const hasPermission = await checkAccountManagementPermission();
+    const hasPermission = await hasAccountManagementAccess('update');
     if (!hasPermission) {
       return { success: false, error: 'You do not have permission to change the billing interval' };
     }
@@ -1414,6 +1568,10 @@ export async function getIntervalSwitchPreviewAction(
       return { success: false, error: 'Not authenticated' };
     }
 
+    if (!(await hasAccountManagementAccess('read'))) {
+      return permissionDenied();
+    }
+
     const stripeService = getStripeService();
     if (!(await stripeService.isConfigured())) {
       return { success: false, error: 'Stripe billing is not configured' };
@@ -1440,7 +1598,7 @@ export async function startSoloProTrialAction(): Promise<{ success: boolean; err
       return { success: false, error: 'Not authenticated' };
     }
 
-    const hasPermission = await checkAccountManagementPermission();
+    const hasPermission = await hasAccountManagementAccess('update');
     if (!hasPermission) {
       return { success: false, error: 'You do not have permission to manage the subscription' };
     }
@@ -1489,6 +1647,10 @@ export async function getIapBillingContextAction(): Promise<{
     const session = await getSession();
     if (!session?.user?.tenant) {
       return { success: false, error: 'Not authenticated' };
+    }
+
+    if (!(await hasAccountManagementAccess('read'))) {
+      return permissionDenied();
     }
 
     const knex = await getConnection(session.user.tenant);
@@ -1567,7 +1729,7 @@ export async function startIapUpgradeAction(
       return { success: false, error: 'Not authenticated' };
     }
 
-    const hasPermission = await checkAccountManagementPermission();
+    const hasPermission = await hasAccountManagementAccess('update');
     if (!hasPermission) {
       return { success: false, error: 'You do not have permission to change the subscription plan' };
     }
@@ -1629,7 +1791,7 @@ export async function cancelIapTransitionAction(): Promise<{
       return { success: false, error: 'Not authenticated' };
     }
 
-    const hasPermission = await checkAccountManagementPermission();
+    const hasPermission = await hasAccountManagementAccess('update');
     if (!hasPermission) {
       return { success: false, error: 'You do not have permission to manage the subscription' };
     }
