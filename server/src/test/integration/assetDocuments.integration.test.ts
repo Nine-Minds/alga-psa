@@ -11,6 +11,7 @@ import {
   upsertBundleRule,
 } from '@alga-psa/authorization/bundles/service';
 import { createAssetReadContext, isAssetActionAllowed, isAssetReadAllowed } from '@alga-psa/authorization/assetReadAuthorization';
+import * as documentAuthorization from '@shared/lib/documentAuthorization';
 
 /**
  * Regression coverage for alga-2026-0002549: getAssetDocuments selected a
@@ -410,6 +411,73 @@ describe('getAssetDocuments (integration)', () => {
 
     expect(result).toHaveProperty('permissionError');
     expect(await table(fx.tenantId, 'document_associations').where({ association_id: fx.associationId }).first()).toBeDefined();
+  });
+
+  it('requires asset read scope even when delete is allowed, and removes after read access is restored', async () => {
+    const fx = await seedFixture();
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.userId;
+    actionAuth.permissions = { 'asset:read': true, 'asset:delete': true, 'document:read': true };
+
+    const bundle = await createAuthorizationBundle(db, {
+      tenant: fx.tenantId,
+      name: `Asset document removal narrowing ${fx.tenantId.slice(0, 8)}`,
+      actorUserId: fx.userId,
+    });
+    await upsertBundleRule(db, {
+      tenant: fx.tenantId,
+      bundleId: bundle.bundleId,
+      revisionId: bundle.revisionId,
+      resourceType: 'asset',
+      action: 'read',
+      templateKey: 'selected_clients',
+      config: { selectedClientIds: [fx.outsiderClientId] },
+      actorUserId: fx.userId,
+    });
+    await publishBundleRevision(db, {
+      tenant: fx.tenantId,
+      bundleId: bundle.bundleId,
+      revisionId: bundle.revisionId,
+      actorUserId: fx.userId,
+    });
+    await createBundleAssignment(db, {
+      tenant: fx.tenantId,
+      bundleId: bundle.bundleId,
+      targetType: 'user',
+      targetId: fx.userId,
+      actorUserId: fx.userId,
+    });
+
+    const targetAsset = await table(fx.tenantId, 'assets').where({ asset_id: fx.assetId }).first('asset_id', 'client_id');
+    const expectAssetScope = async (readAllowed: boolean) => {
+      await db.transaction(async (trx) => {
+        const context = await createAssetReadContext(trx, fx.tenantId, {
+          user_id: fx.userId,
+          user_type: 'internal',
+        } as any);
+        expect(await isAssetReadAllowed(trx, fx.tenantId, context, targetAsset)).toBe(readAllowed);
+        expect(await isAssetActionAllowed(trx, fx.tenantId, context, targetAsset, 'delete')).toBe(true);
+      });
+    };
+    await expectAssetScope(false);
+
+    // Keep document access independent so its asset-link policy cannot mask a
+    // missing asset authorization check in the mutation itself.
+    const documentAccess = vi.spyOn(documentAuthorization, 'authorizeAndRedactDocuments')
+      .mockImplementation(async (_trx, _tenant, _user, documents) => documents);
+    try {
+      expect(await removeDocumentFromAsset(fx.associationId)).toHaveProperty('permissionError');
+      expect(await table(fx.tenantId, 'document_associations').where({ association_id: fx.associationId }).first()).toBeDefined();
+
+      await table(fx.tenantId, 'authorization_bundle_assignments')
+        .where({ bundle_id: bundle.bundleId, target_type: 'user', target_id: fx.userId }).delete();
+      await expectAssetScope(true);
+
+      expect(await removeDocumentFromAsset(fx.associationId)).toBeUndefined();
+      expect(await table(fx.tenantId, 'document_associations').where({ association_id: fx.associationId }).first()).toBeUndefined();
+    } finally {
+      documentAccess.mockRestore();
+    }
   });
 
   it('does not remove an association whose document is inaccessible to the caller', async () => {

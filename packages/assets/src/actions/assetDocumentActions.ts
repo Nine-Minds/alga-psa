@@ -111,7 +111,9 @@ export const removeDocumentFromAsset = withAuth(async (
                 .forUpdate()
                 .first('asset_id', 'client_id');
             const context = await createAssetReadContext(trx, tenant, user as any);
-            if (!asset || !await isAssetActionAllowed(trx, tenant, context, asset, 'delete')) {
+            if (!asset ||
+                !await isAssetReadAllowed(trx, tenant, context, asset) ||
+                !await isAssetActionAllowed(trx, tenant, context, asset, 'delete')) {
                 return permissionError('Permission denied: Cannot remove documents from assets', 'msp/assets:errors.permissions.removeDocuments');
             }
 
