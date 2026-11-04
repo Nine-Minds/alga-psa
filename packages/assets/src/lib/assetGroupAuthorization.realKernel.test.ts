@@ -173,6 +173,31 @@ describe('asset group authorization with the production asset resolver and kerne
     expect(result).toEqual(new Map([[allowedAsset, expect.objectContaining({ group_id: allowedGroup, name: 'Allowed group', member_count: 1 })]]));
   });
 
+  it('suppresses a previously allowed summary after access to any member is revoked', async () => {
+    const secondAsset = '44444444-4444-4444-8444-444444444444';
+    h.tables.asset_groups[0].name = 'Team workspace';
+    h.tables.asset_groups[0].kind = 'bundle';
+    h.tables.asset_group_members.push({ tenant: TENANT, group_id: GROUP, asset_id: secondAsset });
+    h.tables.assets.push({ tenant: TENANT, asset_id: secondAsset, client_id: CLIENT });
+    h.tables.team_members = [{ tenant: TENANT, user_id: 'u1', team_id: 'team-1' }];
+    h.tables.asset_associations = [
+      { tenant: TENANT, asset_id: ASSET, entity_type: 'team', entity_id: 'team-1' },
+      { tenant: TENANT, asset_id: secondAsset, entity_type: 'team', entity_id: 'team-1' },
+    ];
+    h.rules = [{ id: 'same-team-read', resource: 'asset', action: 'read', templateKey: 'same_team' }];
+    const user = { user_id: 'u1', user_type: 'internal', roles: ['r1'] } as any;
+
+    await expect(getAuthorizedAssetGroupSummary({} as any, TENANT, user, ASSET))
+      .resolves.toMatchObject({ group_id: GROUP, name: 'Team workspace', member_count: 2 });
+
+    h.tables.asset_associations = h.tables.asset_associations.filter((association) => association.asset_id !== secondAsset);
+
+    // The readable asset remains available to its caller, while the group is
+    // now denied atomically because one member fell outside the caller's scope.
+    await expect(getAuthorizedAssetGroupSummary({} as any, TENANT, user, ASSET)).resolves.toBeNull();
+    await expect(getAuthorizedAssetGroupSummariesForAssets({} as any, TENANT, user, [ASSET])).resolves.toEqual(new Map());
+  });
+
   it('denies a selected-client restriction before resolving member relationships', async () => {
     h.rules = [{
       id: 'selected-client-read',

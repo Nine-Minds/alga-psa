@@ -520,6 +520,7 @@ describe('updateAsset: warranty-only edits (alga0002283)', () => {
     expect(result.group).toBeNull();
     expect(JSON.stringify(result)).not.toContain('secret-group');
     expect(h.authorizedGroupSummary).toHaveBeenCalledWith(h.knexMock, TENANT, h.mockUser, ASSET_ID);
+    expect(h.authorizedGroupSummary).toHaveBeenCalledTimes(2);
   });
 
   it('preserves an authorized group summary in the update response', async () => {
