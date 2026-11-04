@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 const state = vi.hoisted(() => ({
@@ -101,6 +101,22 @@ describe('collapsed rail sub-items', () => {
     renderSidebar();
 
     expect(sectionRow('menu-tickets').className).toContain(ACTIVE_CLASS_HINT);
+  });
+
+  it('hands focus back to the section row when the flyout is dismissed', async () => {
+    const user = userEvent.setup();
+    renderSidebar();
+
+    const trigger = within(sectionRow('menu-tickets')).getByRole('button');
+    await user.click(trigger);
+
+    const flyout = await screen.findByLabelText('Tickets');
+    expect(flyout.contains(document.activeElement)).toBe(true);
+
+    await user.keyboard('{Escape}');
+
+    // Dropping focus on <body> would restart the next Tab at the top of the page.
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
   });
 });
 

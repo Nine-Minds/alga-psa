@@ -36,8 +36,16 @@ const SidebarCollapsedFlyout: React.FC<SidebarCollapsedFlyoutProps> = ({
   children,
 }) => {
   const anchorRef = useRef<HTMLLIElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const hoverTimerRef = useRef<number | null>(null);
   const openedByHoverRef = useRef(false);
+  const restoreFocusRef = useRef(false);
+
+  // Decided while the panel is still mounted: by the time Radix asks where focus
+  // should land, the focused sub-item is already gone from the document.
+  const markFocusRestore = () => {
+    restoreFocusRef.current = contentRef.current?.contains(document.activeElement) ?? false;
+  };
 
   const clearHoverTimer = () => {
     if (hoverTimerRef.current !== null) {
@@ -92,6 +100,7 @@ const SidebarCollapsedFlyout: React.FC<SidebarCollapsedFlyoutProps> = ({
       </Popover.Anchor>
       <Popover.Portal>
         <Popover.Content
+          ref={contentRef}
           side="right"
           align="start"
           sideOffset={6}
@@ -104,7 +113,25 @@ const SidebarCollapsedFlyout: React.FC<SidebarCollapsedFlyoutProps> = ({
               event.preventDefault();
             }
           }}
+          onEscapeKeyDown={markFocusRestore}
+          onCloseAutoFocus={(event) => {
+            // The anchor is the section row, not a Popover.Trigger, so Radix has
+            // no trigger to hand focus back to and Escape would drop the user on
+            // <body> — their next Tab then restarts at the top of the page.
+            if (!restoreFocusRef.current) {
+              return;
+            }
+            restoreFocusRef.current = false;
+            const row = anchorRef.current?.querySelector<HTMLElement>('a[href], button');
+            if (!row) {
+              return;
+            }
+            event.preventDefault();
+            row.focus();
+          }}
           onPointerDownOutside={(event) => {
+            // Dismissing by pointer means the user is already somewhere else.
+            restoreFocusRef.current = false;
             // The section row is outside the panel, so let its own click toggle
             // the flyout instead of closing and immediately reopening it.
             if (anchorRef.current?.contains(event.target as Node)) {
@@ -123,6 +150,9 @@ const SidebarCollapsedFlyout: React.FC<SidebarCollapsedFlyoutProps> = ({
                   parentId={parentId}
                   isActive={isActive}
                   onMenuItemClick={(href) => {
+                    // Navigating unmounts the link that holds focus, so keep the
+                    // keyboard user in the rail rather than back on <body>.
+                    markFocusRestore();
                     onOpenChange(false);
                     onMenuItemClick?.(href);
                   }}
