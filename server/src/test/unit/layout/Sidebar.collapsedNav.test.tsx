@@ -120,6 +120,32 @@ describe('collapsed rail sub-items', () => {
   });
 });
 
+describe('expanded section separators', () => {
+  const openSection = (id: string) => within(sectionRow(id)).getAllByRole('button')[0];
+  const openGroup = (id: string) => document.querySelector(`[data-automation-id="sidebar-section-open-${id}"]`);
+
+  it('brackets an open section with the rail hairline above and below', async () => {
+    const user = userEvent.setup();
+    renderSidebar({ sidebarOpen: true });
+
+    expect(openGroup('menu-tickets')).toBeNull();
+
+    await user.click(openSection('menu-tickets'));
+
+    expect(openGroup('menu-tickets')?.className).toContain('border-y');
+    expect(openGroup('menu-tickets')?.className).toContain('border-sidebar-text/20');
+  });
+
+  it('marks the bottom Settings section the same way', async () => {
+    const user = userEvent.setup();
+    renderSidebar({ sidebarOpen: true });
+
+    await user.click(openSection('bottom-menu-settings'));
+
+    expect(openGroup('bottom-menu-settings')?.className).toContain('border-y');
+  });
+});
+
 describe('Settings highlight across the settings subtree', () => {
   it('highlights Settings on a settings page that is not one of the quick links', () => {
     state.pathname = '/msp/settings/users';

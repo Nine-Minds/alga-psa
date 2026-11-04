@@ -201,8 +201,15 @@ const Sidebar: React.FC<SidebarProps> = ({
     );
 
     if (sidebarOpen) {
+      const isExpanded = Boolean(item.subItems) && openSubmenu === item.name;
       return (
-        <li key={item.name}>
+        // An open section is bracketed by the same hairline the rail already uses
+        // under the last bottom item, so its sub-items read as one marked group.
+        <li
+          key={item.name}
+          className={isExpanded ? 'my-1 py-1 border-y border-sidebar-text/20' : undefined}
+          data-automation-id={isExpanded ? `sidebar-section-open-${itemId}` : undefined}
+        >
           {menuItem}
           {item.subItems && openSubmenu === item.name && (
             <ul className="ml-4 mt-2 space-y-1">
