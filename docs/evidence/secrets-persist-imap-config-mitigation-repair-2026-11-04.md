@@ -96,3 +96,24 @@ The registered `dev-server` remains at the required worktree path and port. Its 
 No controlled public IMAPS endpoints, trusted fixture DNS/certificates, HTTPS OAuth fixture, fixture admin API/token, isolated `smoke_imap_public_*` database, or external secret filesystem were available. The available GreenMail service is private and remains unsuitable as public-recipient evidence. No public evidence run was attempted, and no credential was sent to a fixture. The exact provisioning contract and access gap are recorded in the private handoff at `/home/robert/alga-review-private/3276c089/public-fixture-setup.md`.
 
 Password replacement, OAuth reconnect/refresh against a public recipient, old-credential non-delivery after UI scope changes, and the complete scope-change matrix remain unproven. Do not mark `security-finding-resolved` successful based on this local validation. Review the updated runner and validator first; close the finding only after the required runtime bindings and recipient fixtures produce correlated evidence at the published revision.
+
+## Evidence validator corrections at `abb4d1eabcf34ab40bce87e528a4e964b298b90b`
+
+This code revision corrects three validator/snapshot issues and ties scope-change observation to a real current-generation listener:
+
+- Provider snapshots derive the HTTPS OAuth token recipient host and effective port from the persisted `oauth_token_url`. OAuth event fields are `recipientHost` and `recipientPort`, and must match that persisted endpoint. They describe the OAuth server, separately from IMAP auth `destinationHost` and `destinationPort`.
+- Scope-change validation rejects an old credential ID or the previous generation in either IMAP auth or OAuth token events after save, at any endpoint and for either success or failure. It continues to reject authentication at the changed IMAP destination.
+- Scope fingerprints use a private per-run HMAC key over the complete persisted scope, including the OAuth client-secret value. Snapshots contain only the keyed fingerprint. The key is stored with mode 600 in the private evidence directory and removed after a successful capture.
+- The email-service listener-start event now includes its worker ID and credential generation. The validator binds the listener to the current-generation worker and measures observation from that listener's start through service shutdown, so startup delay does not count.
+
+Checks rerun against `abb4d1eabcf34ab40bce87e528a4e964b298b90b`:
+
+- `node --test scripts/tests/public-email-service-evidence.test.mjs` — passed, 17 tests, including valid OAuth at a separate `oauth.example:443` endpoint, old credential rejection at the original IMAP host, delayed listener startup, and client-secret-only scope rotation through snapshot creation and evidence validation.
+- `npm test --workspace=@alga-psa/integrations -- src/actions/email-actions/emailProviderActions.security.test.ts` — passed, 60 tests.
+- `npm test --workspace=email-service -- src/emailService.credentialGeneration.test.ts` — passed, 51 tests across 9 files.
+- OAuth initiation/callback/token redirect/scope and inbound worker suites — passed, 26 tests across 5 files.
+- `npm run build --workspace=email-service` — passed.
+- No-emit TypeScript check for `scripts/security/capture-imap-provider-state.ts` — passed.
+- `bash -n scripts/security/run-public-email-service-evidence.sh` and `git diff --check` — passed.
+
+These are local behavioral and build results. The public recipient scenarios and isolated UI/worker runtime remain unresolved. The registered dev-server still lacks the isolated database and external secret-store settings, and no authorized public IMAPS/OAuth fixture and controls are available. No public evidence run or `security-finding-resolved` success is claimed. The private fixture contract at `/home/robert/alga-review-private/3276c089/public-fixture-setup.md` now documents the token-recipient fields, keyed secret fingerprint, and listener-based observation window.
