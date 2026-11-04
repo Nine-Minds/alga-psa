@@ -55,6 +55,7 @@ import type {
   getClientById,
   getAllClients,
   getClientBillingProfiles,
+  getContactEffectiveLocation,
   searchClientsForPicker,
 } from '../actions/clientLookupActions';
 import type {
@@ -434,6 +435,7 @@ export interface TicketPeopleMethods {
   getAllClients: typeof getAllClients;
   getClientLocations: typeof getClientLocations;
   getClientBillingProfiles: typeof getClientBillingProfiles;
+  getContactEffectiveLocation: typeof getContactEffectiveLocation;
   /** Paged/searchable client lookup backing the async client picker. */
   searchClientsForPicker: typeof searchClientsForPicker;
 }

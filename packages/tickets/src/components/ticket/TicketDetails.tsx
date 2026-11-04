@@ -362,7 +362,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         findCommentsByTicketId, findCommentById, createComment, updateComment, deleteComment,
         addTicketCommentWithCache, deleteDraftClipboardImages,
     } = dataSource.comments;
-    const { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getClientLocations } = dataSource.people;
+    const { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getClientLocations, getContactEffectiveLocation } = dataSource.people;
     const { addTicketResource, getTicketResources, removeTicketResource, assignTeamToTicket, removeTeamFromTicket, getTeamById, getTeams } = dataSource.resources;
     const { addTicketWatchers, setTicketWatcherActive, removeTicketWatcher } = dataSource.watchers;
     const { checkTicketClosure, getTicketAutoCloseState } = dataSource.closeRules;
@@ -2733,6 +2733,18 @@ const handleClose = () => {
             if (newContactId) {
                 const contactData = await getContactByContactNameId(newContactId);
                 setContactInfo(contactData);
+
+                // An empty location is a question nobody answered, so the new requester's own site
+                // answers it — and the write goes through the normal location path, so it lands in
+                // the ticket history like any other change. A location already on the ticket is
+                // never re-pointed here; the tile offers "Use contact's location" for that, which
+                // takes a click.
+                if (!ticket.location_id) {
+                    const effective = await getContactEffectiveLocation(newContactId);
+                    if (effective.locationId) {
+                        await handleLocationChange(effective.locationId);
+                    }
+                }
             } else {
                 setContactInfo(null);
             }

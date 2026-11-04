@@ -15,6 +15,7 @@ import {
   type ContactPhoneCanonicalType,
   type ContactPhoneNumberInput,
   CONTACT_EMAIL_CANONICAL_TYPES,
+  CONTACT_WORK_ARRANGEMENTS,
   type ContactEmailCanonicalType,
   type IContactEmailAddress,
   type ContactEmailAddressInput,
@@ -27,6 +28,7 @@ import { ValidationResult } from '../interfaces/validation.interfaces';
 
 const canonicalPhoneTypeSchema = z.enum(CONTACT_PHONE_CANONICAL_TYPES);
 const canonicalEmailTypeSchema = z.enum(CONTACT_EMAIL_CANONICAL_TYPES);
+const workArrangementSchema = z.enum(CONTACT_WORK_ARRANGEMENTS);
 
 export async function isSharedMailboxContact(
   db: Knex | Knex.Transaction,
@@ -195,6 +197,7 @@ export const contactFormSchema = z.object({
   role: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   is_inactive: z.boolean().optional(),
+  work_arrangement: workArrangementSchema.nullish(),
 });
 
 export const contactSchema = z.object({
@@ -239,6 +242,7 @@ export const contactSchema = z.object({
   role: z.string().nullable(),
   notes: z.string().nullable(),
   is_inactive: z.boolean().nullable(),
+  work_arrangement: workArrangementSchema.nullish(),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -894,6 +898,7 @@ export class ContactModel {
       role: input.role?.trim() || null,
       notes: input.notes?.trim() || null,
       is_inactive: input.is_inactive || false,
+      work_arrangement: validatedInput.work_arrangement ?? null,
       created_at: now,
       updated_at: now,
     };
@@ -1093,11 +1098,19 @@ export class ContactModel {
       // Moving to another client drops the old manager: a manager never crosses clients.
       (updateData as { manager_contact_id?: string | null }).manager_contact_id = null;
     }
+    let removedLocationCount = 0;
     if (clientChanged) {
       // ...and detaches everyone who reported to this contact in the old client.
       await tenantScopedTable(trx, 'contacts', tenant)
         .where('manager_contact_id', contactId)
         .update({ manager_contact_id: null });
+
+      // A location link only ever points at the contact's own client's locations, so moving the
+      // contact removes them all. The count rides back on the returned contact so the caller can
+      // report what the move cost (the UI confirms with it before the save).
+      removedLocationCount = await tenantScopedTable(trx, 'contact_locations', tenant)
+        .where('contact_name_id', contactId)
+        .delete();
     }
 
     const now = new Date().toISOString();
@@ -1167,7 +1180,7 @@ export class ContactModel {
       throw new Error('SYSTEM_ERROR: Failed to load contact after update');
     }
 
-    return hydratedContact;
+    return { ...hydratedContact, removedLocationCount };
   }
 
   static async replacePhoneNumbers(

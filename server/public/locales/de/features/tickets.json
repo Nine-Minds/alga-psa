@@ -116,7 +116,9 @@
     "clientTags": "Kunden-Tags",
     "tagModeAny": "Mindestens eines von",
     "tagModeNone": "Keines von",
-    "droppedFromLink": "Einige Filter in diesem Link sind ungültig und wurden ignoriert."
+    "droppedFromLink": "Einige Filter in diesem Link sind ungültig und wurden ignoriert.",
+    "location": "Standort",
+    "requesterLocation": "Standort des Anfragenden"
   },
   "create": {
     "title": "Support-Ticket erstellen",
@@ -185,7 +187,7 @@
     "additionalAgents": "Zusätzliche Agents",
     "createdBy": "Erstellt von",
     "lastActivity": "Letzte Aktivität",
-    "location": "Ort",
+    "location": "Standort",
     "contactPhone": "Kontakt-Telefon",
     "clientPhone": "Kunden-Telefon",
     "contactEmail": "Kontakt-E-Mail",
@@ -1023,7 +1025,9 @@
       "heading": "Beobachter",
       "placeholder": "Beobachter hinzufügen..."
     },
-    "attachmentsPartialFailure": "Ticket erstellt, aber diese Dateien konnten nicht angehängt werden: {{files}}. Fügen Sie sie im Ticket hinzu."
+    "attachmentsPartialFailure": "Ticket erstellt, aber diese Dateien konnten nicht angehängt werden: {{files}}. Fügen Sie sie im Ticket hinzu.",
+    "contactLocationSuffix": "(Standort des Kontakts)",
+    "contactPrimaryLocationSuffix": "(primärer Standort des Kontakts)"
   },
   "itil": {
     "calculatedPriority": "Priorität (berechnet)",
@@ -2057,7 +2061,9 @@
       "changeLocation": "Standort ändern",
       "addDescriptionPrompt": "Beschreibung hinzufügen – worum geht es, und was braucht der Kunde?",
       "projectTasks": "Projektaufgaben",
-      "timeAndBilling": "Zeit & Abrechnung"
+      "timeAndBilling": "Zeit & Abrechnung",
+      "useContactLocation": "Standort des Kontakts übernehmen",
+      "remote": "Im Homeoffice"
     },
     "timeline": {
       "subtitle": "Antworten, Zeit und Systemänderungen an einem Ort",
