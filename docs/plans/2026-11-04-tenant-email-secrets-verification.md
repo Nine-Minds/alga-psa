@@ -140,26 +140,48 @@ supervisor release recorded above is `202611040722-g518a7e9`; this follow-up
 verified service behavior but did not independently query the supervisor's
 current release identifier.
 
-The QA fixture was inspected with its redacted `show` action and reset to `legacy`
-using the documented fixture script. GreenMail readiness returned HTTP 200 on
-the dedicated simulator's REST port. No SMTP password or Resend key was emitted.
-The browser reached the MSP sign-in form. Authenticated settings/API and browser
-save flows could not be rerun because this worktree's local configuration has no
-development login credential and the board server's earlier generated startup
-credential was no longer present in the accessible terminal history. No user
-password or server startup configuration was changed to bypass this gap. The
-fixture remains seeded for the authenticated continuation.
+The authenticated continuation ran on branch revision
+`39e29740e7d7bd276be93209f79c9db50c0dc215`, against QA tenant
+`6d178771-ad9a-4d43-8809-83992745f8f9`. The review dossier's documented QA
+account `qa@emeraldcity.oz` was confirmed in that tenant and signed in
+successfully. SMTP and Resend values were not recorded in evidence.
 
-The direct authenticated checks still outstanding are: legacy-secret redaction
-in settings responses and rendered fields; save into tenant secret storage with
-SMTP delivery; preservation on a non-secret edit; missing-reference failure and
-replacement recovery; and send from the running process after backfill. The
-prior direct runtime helper and operator-script checks documented above remain
-valid but do not substitute for these authenticated flows.
+The first settings navigation returned HTTP 500 because this local QA tenant's
+`product_code` was `co_managed`, which this checkout does not recognize. For this
+QA-only run, the value was temporarily changed to supported `psa`; after the
+checks it was restored to `co_managed`. No application code or startup
+configuration was changed.
 
-Vault access from every production mail-sending process and CE shared-secret
-volume behavior remain deployment checks from the approved plan. They were not
-verified by these local filesystem tests.
+The documented legacy fixture loaded in the authenticated settings page with the
+expected SMTP host, port, username, sender and display name, and an empty
+password input. A page scan found no `secretRefs` or secret names. A sanitized
+inspection of the settings/test action responses found no `secretRefs` or
+`email_outbound_*` names; any returned credential fields were blank or masked.
+Clicking Test Connection migrated both SMTP and Resend credentials to the tenant
+secret store and removed inline values from `provider_configs`. The simulator
+inbox contained the expected outbound test message.
+
+A non-secret display-name edit retained the same SMTP secret reference. A
+subsequent Test Connection succeeded and produced another inbox receipt. The
+`broken` fixture then removed the SMTP secret while leaving its reference. Test
+Connection reported: “The saved SMTP password could not be read from the secret
+store; re-enter it in Outbound Email settings.” Re-entering the fixture password
+restored successful delivery.
+
+For the backfill flow, the legacy fixture was seeded again. Dry-run reported two
+fields and left the row unchanged; execution migrated two fields; rerun migrated
+zero fields with zero failures. A before/after comparison confirmed `updated_at`
+was preserved. With those backfilled references present, the running app loaded
+the settings with an empty password field and sent successfully; GreenMail
+recorded the receipt.
+
+After verification, `fixtures/reset.sh legacy` restored the documented review
+starting state, and the QA tenant's original `co_managed` product code was
+restored. The fixture's `show` output was redacted; no SMTP password or Resend
+key is included in this record. Direct runtime helper and Citus purge checks
+remain as previously recorded. Production Vault/worker access, CE shared-secret
+volume behavior, and production heap size remain deployment checks from the
+approved plan.
 
 After shipment, SMT-Tech must rotate its SMTP password and re-enter it in
 Outbound Email settings. Track that follow-up on PSA ticket `alga-2026-0002693`.
