@@ -4,7 +4,8 @@ import { tenantDb } from '@alga-psa/db';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { snapshotCoManagedSessionActor, isCoManagedUuid, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
-import { isCoManagedTaskResourceHidden, maskCoManagedSnapshot, CO_MANAGED_ASSIGNEE_NAME_ALIASES } from './sharedWorkProjection';
+import { isCoManagedTaskResourceHidden } from './sharedWorkProjection';
+import { readCoManagedProjectTaskReferences, type CoManagedProjectTaskReference } from './projectTaskReference';
 import { readCoManagedCustomerOrganizationName } from './projectTaskQueue';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
 import { coManagedRequestHash, findCoManagedTaskReplay, recordCoManagedTaskAudit } from './projectTaskAudit';
@@ -21,9 +22,10 @@ export interface CoManagedTaskEditRequest { /** Client-generated per submit atte
 export interface CoManagedTaskEditReceipt { revision: number; taskUpdatedAt: string }
 /** `assignee` is the current MSP assignee as a display name and kind only; ids never leave the server. */
 export interface CoManagedTaskSnapshot { revision: number; taskUpdatedAt: string; values: CoManagedTaskEditPatch; assignee: { kind: 'user' | 'team'; name: string | null } | null }
-/** The assignee name is masked with the reader's current redactions; a hidden name is `null`, never dropped. */
-const assigneeOf = (reference: { assigned_to?: string | null; assigned_team_id?: string | null; assignee_name?: string | null }, redacted: readonly string[]): CoManagedTaskSnapshot['assignee'] =>
-  reference.assignee_name ? maskCoManagedSnapshot(redacted, { kind: reference.assigned_team_id ? 'team' as const : 'user' as const, name: reference.assignee_name as string | null }, { name: CO_MANAGED_ASSIGNEE_NAME_ALIASES }) : null;
+export function projectCoManagedTaskSnapshot(reference: CoManagedProjectTaskReference, row: { updated_at: unknown } & Record<string, unknown>, redactedFields: readonly string[]): CoManagedTaskSnapshot {
+  return { revision: reference.revision, taskUpdatedAt: iso(row.updated_at), values: values(row, redactedFields),
+    assignee: reference.hasAssigneeName && reference.assigneeKind ? { kind: reference.assigneeKind, name: reference.assigneeName } : null };
+}
 
 export type CoManagedTaskEditErrorCode = 'INVALID_TASK_EDIT' | 'TASK_EDIT_CONFLICT';
 /** A conflict carries a fresh snapshot so the editor can reload; it never merges. */
@@ -89,7 +91,7 @@ export async function getCoManagedProjectTaskSnapshot(db: Knex, inputActor: CoMa
     if (isCoManagedTaskResourceHidden(context.redactedFields)) throw new CoManagedSharedWorkError();
     const reference = await referenceRow(context, false);
     const row = await lockTaskShared(context.trx, resource);
-    return { revision: reference.revision, taskUpdatedAt: iso(row.updated_at), values: values(row, context.redactedFields), assignee: assigneeOf(reference, context.redactedFields) };
+    return projectCoManagedTaskSnapshot(reference, row, context.redactedFields);
   });
 }
 async function lockTaskShared(trx: Knex.Transaction, resource: CoManagedSharedResource) {
@@ -100,10 +102,7 @@ async function lockTaskShared(trx: Knex.Transaction, resource: CoManagedSharedRe
 }
 /** The MSP participation row; no row (or an inactive one) means the task is not in this technician's scope. */
 async function referenceRow(context: CoManagedSharedWorkContext, lock: boolean) {
-  const query = tenantDb(context.trx, context.actor.tenant).table('co_managed_project_task_references')
-    .where({ customer_tenant: context.resource.tenant, relationship_id: context.resource.relationshipId, task_id: context.resource.id, active: true });
-  if (lock) query.forUpdate();
-  const reference = await query.first();
+  const reference = (await readCoManagedProjectTaskReferences(context, [context.resource.id], { lock })).get(context.resource.id);
   if (!reference) throw new CoManagedSharedWorkError();
   return reference;
 }
@@ -130,7 +129,7 @@ export async function editCoManagedProjectTask(db: Knex, inputActor: CoManagedSe
       if (replay) return replay;
     }
     const task = await lockTask(trx, resource);
-    const fresh = (): CoManagedTaskSnapshot => ({ revision: reference.revision, taskUpdatedAt: iso(task.updated_at), values: values(task, context.redactedFields), assignee: assigneeOf(reference, context.redactedFields) });
+    const fresh = (): CoManagedTaskSnapshot => projectCoManagedTaskSnapshot(reference, task, context.redactedFields);
     // Side one: shared-command concurrency. Side two: the customer changed the task since it was loaded.
     if (reference.revision !== request.expectedRevision) throw new CoManagedTaskEditError('TASK_EDIT_CONFLICT', 'revision', fresh());
     if (iso(task.updated_at) !== request.expectedTaskUpdatedAt) throw new CoManagedTaskEditError('TASK_EDIT_CONFLICT', 'customer_drift', fresh());
@@ -146,7 +145,7 @@ export async function editCoManagedProjectTask(db: Knex, inputActor: CoManagedSe
     const next = reference.revision + 1;
     const patchedName = request.patch.task_name;
     // write-admission: exempt — MSP-owned participation reference (no customer data), written under the reference-row lock inside L2 admission (withCoManagedSharedWork 'update')
-    await home.table('co_managed_project_task_references').where({ reference_id: reference.reference_id })
+    await home.table('co_managed_project_task_references').where({ reference_id: reference.referenceId })
       .update({ revision: next, updated_at: trx.fn.now(), organization_name: await readCoManagedCustomerOrganizationName(trx, resource.tenant, context.redactedFields), ...(patchedName ? { task_name: patchedName } : {}) });
     const receipt = { revision: next, taskUpdatedAt: iso(written.updated_at) };
     const changes = Object.fromEntries(Object.keys(request.patch).map(field => [field, { from: (task as any)[field] instanceof Date ? (task as any)[field].toISOString() : ((task as any)[field] ?? null), to: request.patch[field as CoManagedTaskEditField] ?? null }]));

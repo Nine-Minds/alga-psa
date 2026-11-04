@@ -29,7 +29,7 @@ const sources: Record<keyof CoManagedSharedTicketDetails['fields'], string[]> = 
   client: ['client', 'clients', 'client_id', 'client_name', 'tickets.client_id'],
   category: ['category', 'categories', 'category_id', 'category_name', 'tickets.category_id'],
   due_date: ['due_date', 'tickets.due_date'],
-  customer_assignee: ['customer_assignee', 'assignee', 'assigned_to', 'assigned_to_name', 'tickets.assigned_to', 'users'],
+  customer_assignee: ['customer_assignee', 'assignee', 'assignee_name', 'values.assignee_name', 'fields.assignee_name', 'tickets.assignee_name', 'assigned_to', 'assigned_to_name', 'tickets.assigned_to', 'users', 'teams'],
 };
 const visible = (context: CoManagedSharedWorkContext, key: keyof typeof sources) =>
   !isCoManagedReadFieldHidden(context.redactedFields, [key, ...sources[key]]);

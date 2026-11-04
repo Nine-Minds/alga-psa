@@ -9,11 +9,17 @@ export const isCoManagedTaskResourceHidden = (redactedFields: readonly string[])
   if (typeof field !== 'string') throw new CoManagedSharedWorkError();
   return field === '*' || field === 'fields' || (CO_MANAGED_TASK_RESOURCE_ALIASES as readonly string[]).includes(field.startsWith('fields.') ? field.slice(7) : field);
 });
-export const CO_MANAGED_TASK_NAME_ALIASES = ['task_name', 'values.task_name', 'project_tasks.task_name', ...CO_MANAGED_TASK_RESOURCE_ALIASES] as const;
-export const CO_MANAGED_PROJECT_NAME_ALIASES = ['project_name', 'projectName', 'values.project_name', 'projects.project_name', 'project', 'project_id', 'projects'] as const;
-export const CO_MANAGED_ORGANIZATION_NAME_ALIASES = ['client_name', 'organizationName', 'tenants'] as const;
+export const CO_MANAGED_TASK_NAME_ALIASES = ['task_name', 'taskName', 'values.task_name', 'values.taskName', 'project_tasks.task_name', ...CO_MANAGED_TASK_RESOURCE_ALIASES] as const;
+export const CO_MANAGED_PROJECT_NAME_ALIASES = ['project_name', 'projectName', 'values.project_name', 'values.projectName', 'projects.project_name', 'project', 'project_id', 'projects'] as const;
+export const CO_MANAGED_ORGANIZATION_NAME_ALIASES = ['client_name', 'organization_name', 'values.organization_name', 'organizationName', 'tenants'] as const;
 /** The assignee display name; same aliases the ticket assignment surface uses for the assignee (users/teams are its sources). */
-export const CO_MANAGED_ASSIGNEE_NAME_ALIASES = ['assignee_name', 'values.assignee_name', 'assignee', 'users', 'teams'] as const;
+export const CO_MANAGED_ASSIGNEE_NAME_ALIASES = ['assignee_name', 'assigneeName', 'values.assignee_name', 'values.assigneeName', 'assignee', 'users', 'teams'] as const;
+/** Presence, identity and names derived from a co-managed assignment share one disclosure dependency. */
+export const CO_MANAGED_ASSIGNMENT_ALIASES = [...CO_MANAGED_ASSIGNEE_NAME_ALIASES, 'assigned_to', 'assigned_team_id', 'msp_assignment', 'mspAssignment', 'work', 'co_management_ticket_work', 'co_managed_ticket_references'] as const;
+/** Names attached to history entries are derived from the acting staff user, not from the changed task field. */
+export const CO_MANAGED_ACTOR_NAME_ALIASES = ['actor_display_name', 'actorDisplayName', 'author_name', 'authorName', 'user_name', 'users'] as const;
+/** History organization labels are cached from the acting staff member's organization. */
+export const CO_MANAGED_ACTOR_ORGANIZATION_NAME_ALIASES = ['actor_organization_name', 'actorOrganizationName', 'organization_name', 'organizationName', 'client_name', 'tenants'] as const;
 
 export const CO_MANAGED_PHASE_NAME_ALIASES = ['phase_name', 'values.phase_name', 'project_phases.phase_name', 'phaseName'] as const;
 
@@ -72,6 +78,21 @@ export function coManagedAuditFieldAliases(field: string): readonly string[] {
  */
 export function projectCoManagedChanges(redactedFields: readonly string[], changedData: Record<string, unknown> | null | undefined): Record<string, unknown> {
   return Object.fromEntries(Object.entries(changedData ?? {}).filter(([field]) => !isCoManagedReadFieldHidden(redactedFields, coManagedAuditFieldAliases(field))));
+}
+
+/** Hide cached audit author labels under the reader's CURRENT policy, retaining the history header shape. */
+export function projectCoManagedActorAttribution(redactedFields: readonly string[], details: Record<string, unknown> | null | undefined): {
+  authorName: string;
+  organizationName: string;
+} {
+  const projected = maskCoManagedSnapshot(redactedFields, {
+    authorName: typeof details?.actor_display_name === 'string' ? details.actor_display_name : '',
+    organizationName: typeof details?.actor_organization_name === 'string' ? details.actor_organization_name : '',
+  }, {
+    authorName: CO_MANAGED_ACTOR_NAME_ALIASES,
+    organizationName: CO_MANAGED_ACTOR_ORGANIZATION_NAME_ALIASES,
+  });
+  return { authorName: projected.authorName ?? '', organizationName: projected.organizationName ?? '' };
 }
 
 export type CoManagedSnapshotSpec<Row> = { [Field in keyof Row]?: readonly string[] };

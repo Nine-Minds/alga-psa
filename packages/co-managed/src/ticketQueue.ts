@@ -5,6 +5,7 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
 import { getCoManagedOperationalState } from '@alga-psa/licensing/lifecycle';
 import { hasCoManagedLocalPermission } from './localPermission';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { CO_MANAGED_ASSIGNMENT_ALIASES, CO_MANAGED_ORGANIZATION_NAME_ALIASES } from './sharedWorkProjection';
 import { assertCoManagedSessionUnexpired, CoManagedSharedWorkError, isCoManagedUuid, lockCoManagedSessionIdentity, snapshotCoManagedSessionActor, type CoManagedSessionActor } from './sharedWorkIdentity';
 
 /**
@@ -86,6 +87,8 @@ const sources = {
   work_revision: ['work_revision', 'values.work_revision', 'tickets.work_revision', 'revision', 'work', 'co_management_ticket_work', 'co_management_ticket_work.revision'],
   entered_at: ['entered_at', 'tickets.entered_at'], updated_at: ['updated_at', 'tickets.updated_at'],
   has_msp_assignment: [
+    ...CO_MANAGED_ASSIGNMENT_ALIASES,
+    ...CO_MANAGED_ORGANIZATION_NAME_ALIASES,
     'mspAssignment', 'values.mspAssignment', 'tickets.mspAssignment',
     'msp_assignment', 'values.msp_assignment', 'tickets.msp_assignment',
     'assigned_to', 'values.assigned_to', 'tickets.assigned_to',
@@ -147,22 +150,20 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
     if (!await hasCoManagedLocalPermission(trx, actor, 'ticket', 'read', true)) throw new CoManagedSharedWorkError();
     const rules = (await resolveBundleNarrowingRulesForEvaluation(trx, { subject, resource: { type: 'ticket', action: 'read' }, knex: trx }, { lock: true }))
       .filter(rule => rule.resource === 'ticket' && rule.action === 'read');
-    const redactions = rules.flatMap(rule => rule.redactedFields ?? []);
-    const visible = Object.fromEntries(Object.entries(sources).map(([field, aliases]) => [field, !isCoManagedReadFieldHidden(redactions, aliases)]));
-    // Assignment presence is a projection of the same redaction policy that
-    // gates the working-queue membership test, read from the qualified MSP
-    // reference in this query — never a browser-side directory lookup.
-    const assignmentVisible = visible.has_msp_assignment;
-    // Callout signals read responsibility, assignment and response state. If any
-    // field that drives a signal is redacted, the signal is false for the row.
-    const responseStateVisible = !isCoManagedReadFieldHidden(redactions, responseStateAliases);
-    const escalatedSignalVisible = visible.responsibility && assignmentVisible;
-    const awaitingSignalVisible = responseStateVisible && assignmentVisible;
+    const homeRedactions = rules.flatMap(rule => rule.redactedFields ?? []);
     const queries: Knex.QueryBuilder[] = [];
     // Native tickets in the home tenant are never part of this relation (the
     // customer tickets page lists shared work only); every projection is a
     // shared record read through its qualified relationship.
     function projection(ownerTenant: string, name: string, relationship: any, boardIds: string[] = []) {
+      const redactions = [...homeRedactions, ...(relationship.redacted_fields ?? [])];
+      const visible = Object.fromEntries(Object.entries(sources).map(([field, aliases]) => [field, !isCoManagedReadFieldHidden(redactions, aliases)])) as Record<keyof typeof sources, boolean>;
+      // Assignment-derived presence, membership, and signals share the same policy dependencies.
+      const assignmentVisible = visible.has_msp_assignment;
+      const responseStateVisible = !isCoManagedReadFieldHidden(redactions, responseStateAliases);
+      const escalatedSignalVisible = visible.responsibility && assignmentVisible;
+      const awaitingSignalVisible = responseStateVisible && assignmentVisible;
+      const visibleFields = Object.keys(sources).filter(field => visible[field as keyof typeof sources]);
       const owner = tenantDb(trx, ownerTenant);
       const base = owner.table('tickets as t');
       owner.tenantJoin(base, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
@@ -203,7 +204,8 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
       const authorized = trx.from(base.as('q'));
       applyCoManagedQueuePolicy(authorized, subject, rules, { resourceType: 'ticket', shared: true });
       authorized.select('q.tenant', 'q.ticket_id', 'q.relationship_id', 'q.workspace_name', 'q.client_id', 'q.sig_escalated', 'q.sig_awaiting');
-      for (const field of Object.keys(sources)) authorized.select(visible[field] ? `q.${field}` : trx.raw(`NULL::${['is_closed', 'has_msp_assignment'].includes(field) ? 'boolean' : field === 'work_revision' ? 'integer' : ['entered_at', 'updated_at'].includes(field) ? 'timestamptz' : 'text'} as ??`, [field]));
+      authorized.select(trx.raw('?::text[] as policy_visible_fields', [visibleFields]));
+      for (const field of Object.keys(sources)) authorized.select(visible[field as keyof typeof sources] ? `q.${field}` : trx.raw(`NULL::${['is_closed', 'has_msp_assignment'].includes(field) ? 'boolean' : field === 'work_revision' ? 'integer' : ['entered_at', 'updated_at'].includes(field) ? 'timestamptz' : 'text'} as ??`, [field]));
       queries.push(authorized);
     }
     let assignedRelationshipCount = 0;
@@ -252,7 +254,7 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
         trx.raw("COALESCE((SELECT json_agg(page_rows) FROM page_rows), '[]'::json) AS items")).first();
     await assertCoManagedSessionUnexpired(trx, actor);
     const items = result.items.map((row: any) => ({ tenant: row.tenant, relationshipId: row.relationship_id, ticketId: row.ticket_id, workspaceName: row.workspace_name,
-      fields: Object.fromEntries(Object.keys(sources).filter(field => visible[field]).map(field => [field, row[field]])) }));
+      fields: Object.fromEntries((row.policy_visible_fields as string[]).map(field => [field, row[field]])) }));
     return { items, workspaces: result.workspaces, totalCount: Number(result.total_count), openCount: Number(result.open_count), closedCount: Number(result.closed_count), page: request.page, pageSize: request.pageSize,
       signals: { escalatedUnassigned: Number(result.escalated_count), awaitingReply: Number(result.awaiting_count) }, assignedRelationshipCount };
   });

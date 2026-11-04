@@ -19,7 +19,7 @@ vi.mock('../sharedWork', () => ({ withCoManagedSharedWork: async (_db: any, _act
   work({ trx: {}, redactedFields: state.redactedFields }) }));
 
 import { listCoManagedProjectTaskHistory } from '../projectTaskAudit';
-import { coManagedAuditFieldAliases, projectCoManagedChanges } from '../sharedWorkProjection';
+import { coManagedAuditFieldAliases, projectCoManagedActorAttribution, projectCoManagedChanges } from '../sharedWorkProjection';
 
 const U = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const actor: any = { tenant: U(1), userId: U(2) };
@@ -47,6 +47,13 @@ describe('projectCoManagedChanges', () => {
     expect(projectCoManagedChanges([], changed)).toEqual(changed);
     expect(projectCoManagedChanges([], null)).toEqual({});
   });
+  it('masks history actor display labels under their current reader aliases', () => {
+    const details = { actor_display_name: 'Sam Tech', actor_organization_name: 'Partner Co' };
+    expect(projectCoManagedActorAttribution([], details)).toEqual({ authorName: 'Sam Tech', organizationName: 'Partner Co' });
+    expect(projectCoManagedActorAttribution(['users'], details)).toEqual({ authorName: '', organizationName: 'Partner Co' });
+    expect(projectCoManagedActorAttribution(['tenants'], details)).toEqual({ authorName: 'Sam Tech', organizationName: '' });
+    expect(projectCoManagedActorAttribution(['users', 'tenants'], details)).toEqual({ authorName: '', organizationName: '' });
+  });
 });
 
 describe('listCoManagedProjectTaskHistory', () => {
@@ -63,8 +70,17 @@ describe('listCoManagedProjectTaskHistory', () => {
   it.each([['assignee_name'], ['users']])('omits msp_assignee for a reader with %s redacted but keeps the header', async redaction => {
     state.redactedFields = [redaction];
     const [entry] = await listCoManagedProjectTaskHistory({} as any, actor, resource);
-    expect(entry).toMatchObject({ auditId: U(7), operation: 'co_managed_project_task_assignment', authorName: 'Sam', organizationName: 'MSP Co', changes: {} });
+    expect(entry).toMatchObject({ auditId: U(7), operation: 'co_managed_project_task_assignment', organizationName: 'MSP Co', changes: {} });
     expect(JSON.stringify(entry)).not.toContain('Alex MSP');
+  });
+  it('applies bundled redactions tightened after the audit snapshot was written', async () => {
+    const [unredacted] = await listCoManagedProjectTaskHistory({} as any, actor, resource);
+    expect(unredacted).toMatchObject({ authorName: 'Sam', organizationName: 'MSP Co', changes: { msp_assignee: { kind: 'user', name: 'Alex MSP' } } });
+
+    state.redactedFields = ['assignee_name', 'users', 'tenants'];
+    const [redacted] = await listCoManagedProjectTaskHistory({} as any, actor, resource);
+    expect(redacted).toMatchObject({ auditId: U(7), authorName: '', organizationName: '', changes: {} });
+    expect(JSON.stringify(redacted)).not.toMatch(/Alex MSP|Sam|MSP Co/);
   });
   it.each([['*'], ['tasks'], ['project_tasks']])('denies the whole history when the task resource is redacted (%s)', async redaction => {
     state.redactedFields = [redaction];

@@ -4,7 +4,8 @@ import { withCoManagedSharedWork } from './sharedWork';
 import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, isCoManagedUuid, isCoManagedSharedWorkError, CoManagedSharedWorkError,
   type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
-import { maskCoManagedSnapshot, CO_MANAGED_TASK_NAME_ALIASES, CO_MANAGED_PROJECT_NAME_ALIASES, CO_MANAGED_ORGANIZATION_NAME_ALIASES, CO_MANAGED_ASSIGNEE_NAME_ALIASES } from './sharedWorkProjection';
+import { CO_MANAGED_TASK_NAME_ALIASES, CO_MANAGED_PROJECT_NAME_ALIASES, CO_MANAGED_ORGANIZATION_NAME_ALIASES } from './sharedWorkProjection';
+import { readCoManagedProjectTaskReferences } from './projectTaskReference';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
 
 /** The customer organization's display name, or '' when redacted. Single source for the project list and the reference snapshot. */
@@ -89,7 +90,7 @@ async function readProject(db: Knex, actor: CoManagedSessionActor, customerTenan
 
 export interface CoManagedSharedTaskRow {
   taskId: string; taskName: string; dueDate: string | null; taskUpdatedAt: string;
-  reference: { revision: number; assigneeName: string; assignedToMe: boolean } | null;
+  reference: { revision: number; assigneeName: string | null; assignedToMe: boolean | null } | null;
 }
 export interface CoManagedSharedTaskPage { rows: CoManagedSharedTaskRow[]; nextAfterTaskId: string | null }
 
@@ -109,16 +110,13 @@ export async function listCoManagedSharedProjectTasks(db: Knex, inputActor: CoMa
     if (options.afterTaskId) query.where('task.task_id', '>', options.afterTaskId.toLowerCase());
     const tasks = await query.select('task.task_id', 'task.task_name', 'task.due_date', 'task.updated_at');
     const page = tasks.slice(0, limit);
-    const references = page.length ? await tenantDb(context.trx, actor.tenant).table('co_managed_project_task_references')
-      .where({ customer_tenant: target.customerTenant.toLowerCase(), relationship_id: target.relationshipId.toLowerCase(), active: true }).whereIn('task_id', page.map(task => task.task_id))
-      .select('task_id', 'revision', 'assignee_name', 'assigned_to') : [];
-    const byTask = new Map(references.map(reference => [reference.task_id, reference]));
+    const byTask = await readCoManagedProjectTaskReferences(context, page.map(task => task.task_id));
     const dueHidden = isCoManagedReadFieldHidden(context.redactedFields, ['due_date', 'values.due_date', 'project_tasks.due_date']);
     return {
       rows: page.map(task => {
         const reference = byTask.get(task.task_id);
         return { taskId: task.task_id, taskName: task.task_name, dueDate: dueHidden || !task.due_date ? null : new Date(task.due_date).toISOString(), taskUpdatedAt: new Date(task.updated_at).toISOString(),
-          reference: reference ? { revision: reference.revision, assigneeName: reference.assignee_name, assignedToMe: reference.assigned_to === actor.userId } : null };
+          reference: reference ? { revision: reference.revision, assigneeName: reference.assigneeName, assignedToMe: reference.assignedToMe } : null };
       }),
       nextAfterTaskId: tasks.length > limit ? page[page.length - 1].task_id : null,
     };
@@ -127,7 +125,7 @@ export async function listCoManagedSharedProjectTasks(db: Knex, inputActor: CoMa
 
 export interface CoManagedAssignedTaskRow {
   customerTenant: string; relationshipId: string; taskId: string; taskName: string | null; projectName: string | null; organizationName: string | null; assigneeName: string | null;
-  assignedToMe: boolean; revision: number;
+  assignedToMe: boolean | null; revision: number;
 }
 export interface CoManagedAssignedTaskPage { rows: CoManagedAssignedTaskRow[]; next: { referenceId: string } | null }
 
@@ -154,19 +152,20 @@ export async function listCoManagedAssignedTasks(db: Knex, inputActor: CoManaged
         if (assigned === 'my_teams' || assigned === 'any') scope.orWhereIn('assigned_team_id', teams);
       });
       if (cursor) query.where('reference_id', '>', cursor);
-      return query.select('reference_id', 'customer_tenant', 'relationship_id', 'task_id', 'task_name', 'project_name', 'organization_name', 'assignee_name', 'assigned_to', 'revision');
+      return query.select('reference_id', 'customer_tenant', 'relationship_id', 'task_id');
     });
     for (const reference of batch) {
       if (rows.length >= limit) return { rows, next: { referenceId: lastReturned! } };
       cursor = reference.reference_id;
       let row: CoManagedAssignedTaskRow;
       try {
-        row = await withCoManagedSharedWork(db, actor, { kind: 'project_task', tenant: reference.customer_tenant, relationshipId: reference.relationship_id, id: reference.task_id }, 'read', async context =>
-          maskCoManagedSnapshot(context.redactedFields, {
-            customerTenant: reference.customer_tenant, relationshipId: reference.relationship_id, taskId: reference.task_id, taskName: reference.task_name as string,
-            projectName: reference.project_name as string, organizationName: reference.organization_name as string, assigneeName: reference.assignee_name as string,
-            assignedToMe: reference.assigned_to === actor.userId, revision: reference.revision as number,
-          }, { taskName: CO_MANAGED_TASK_NAME_ALIASES, projectName: CO_MANAGED_PROJECT_NAME_ALIASES, organizationName: CO_MANAGED_ORGANIZATION_NAME_ALIASES, assigneeName: CO_MANAGED_ASSIGNEE_NAME_ALIASES }));
+        row = await withCoManagedSharedWork(db, actor, { kind: 'project_task', tenant: reference.customer_tenant, relationshipId: reference.relationship_id, id: reference.task_id }, 'read', async context => {
+          const projected = (await readCoManagedProjectTaskReferences(context, [reference.task_id])).get(reference.task_id);
+          if (!projected) throw new CoManagedSharedWorkError();
+          return { customerTenant: reference.customer_tenant, relationshipId: reference.relationship_id, taskId: reference.task_id,
+            taskName: projected.taskName, projectName: projected.projectName, organizationName: projected.organizationName, assigneeName: projected.assigneeName,
+            assignedToMe: projected.assignedToMe, revision: projected.revision };
+        });
       } catch (error) {
         if (isCoManagedSharedWorkError(error)) continue;
         throw error;

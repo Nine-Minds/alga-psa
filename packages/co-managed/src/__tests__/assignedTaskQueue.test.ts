@@ -1,12 +1,13 @@
 /** listCoManagedAssignedTasks applies the reader's CURRENT redactions to the cached reference snapshots. Mocked: the DB, admission wrapper, identity lock and licence gate. */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const state = vi.hoisted(() => ({ references: [] as any[], redactedFields: [] as string[], denied: new Set<string>() }));
+const state = vi.hoisted(() => ({ references: [] as any[], redactedFields: [] as string[], denied: new Set<string>(), taskIds: [] as string[] }));
 
 vi.mock('@alga-psa/db', () => ({
   withTransaction: async (_db: any, work: any) => work({}),
-  tenantDb: () => ({ table: () => {
-    const builder: any = { where: () => builder, orderBy: () => builder, limit: () => builder, select: async () => state.references };
+  tenantDb: () => ({ tenantJoin: () => undefined, table: (name: string) => {
+    const builder: any = { where: () => builder, whereIn: (_field: string, ids: string[]) => { state.taskIds = ids; return builder; }, orderBy: () => builder, limit: () => builder,
+      select: async () => name === 'project_tasks as task' ? state.taskIds.map(task_id => ({ task_id })) : name === 'co_managed_project_task_references' ? state.references : [] };
     return builder;
   } }),
 }));
@@ -19,7 +20,7 @@ vi.mock('../sharedWork', async () => {
   const actual = await vi.importActual<typeof import('../sharedWorkIdentity')>('../sharedWorkIdentity');
   return { withCoManagedSharedWork: async (_db: any, _actor: any, resource: any, _action: string, work: any) => {
     if (state.denied.has(resource.id)) throw new actual.CoManagedSharedWorkError();
-    return work({ trx: {}, redactedFields: state.redactedFields });
+    return work({ trx: {}, redactedFields: state.redactedFields, actor: _actor, resource });
   } };
 });
 
