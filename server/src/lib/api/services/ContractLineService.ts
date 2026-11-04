@@ -1268,6 +1268,11 @@ export class ContractLineService extends BaseService<IContractLine> {
       {
         ...contract,
         client_id: contract.owner_client_id,
+        // The public contract period is assignment-owned. Return the same
+        // date-only values used by list/detail projections instead of the
+        // timestamp precision retained on the contract header.
+        start_date: assignment.start_date,
+        end_date: assignment.end_date,
         assignment: this.withAssignmentLinks(contract.contract_id, assignment),
         contract_lines: lines,
       },

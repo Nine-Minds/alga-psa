@@ -93,6 +93,7 @@ async function templateLine(_service?: unknown) {
     template_id: templateId,
     template_name: `Template ${id.slice(0, 6)}`,
     default_billing_frequency: 'monthly',
+    currency_code: 'USD',
     template_status: 'published',
   });
   await db('contract_template_lines').insert({
