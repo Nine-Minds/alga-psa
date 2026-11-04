@@ -4,6 +4,7 @@ import { decodeState, validateState } from '@/utils/email/oauthHelpers';
 import { createTenantKnex } from '@/lib/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { assertSafeOutboundUrl } from '@alga-psa/shared/services/net/outboundAddressPolicy';
+import { getImapCredentialSecret, setImapCredentialSecret } from '@alga-psa/shared/services/email/imapCredentialSecrets';
 import axios from 'axios';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
 
@@ -53,6 +54,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'IMAP provider config not found' }, { status: 404 });
     }
 
+    if ((state.credentialGeneration ?? null) !== (imapConfig.credential_generation ?? null)) {
+      return NextResponse.json({ error: 'IMAP credentials changed during OAuth. Start reconnect again.' }, { status: 409 });
+    }
+
     if (!imapConfig.oauth_token_url || !imapConfig.oauth_client_id) {
       return NextResponse.json({ error: 'IMAP OAuth token configuration missing' }, { status: 400 });
     }
@@ -64,7 +69,13 @@ export async function GET(request: NextRequest) {
     }
 
     const secretProvider = await getSecretProviderInstance();
-    const clientSecret = await secretProvider.getTenantSecret(tenant, `imap_oauth_client_secret_${state.providerId}`);
+    const clientSecret = await getImapCredentialSecret(
+      secretProvider,
+      tenant,
+      state.providerId,
+      'oauth_client_secret',
+      imapConfig.credential_generation
+    );
 
     const params = new URLSearchParams();
     params.append('grant_type', 'authorization_code');
@@ -100,18 +111,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (refreshToken) {
-      await secretProvider.setTenantSecret(tenant, `imap_refresh_token_${state.providerId}`, refreshToken);
-    }
-
-    await db.table('imap_email_provider_config')
-      .where({ email_provider_id: state.providerId })
+    const saved = await db.table('imap_email_provider_config')
+      .where({
+        email_provider_id: state.providerId,
+        credential_generation: imapConfig.credential_generation ?? null,
+      })
       .update({
         access_token: accessToken,
         refresh_token: refreshToken || null,
         token_expires_at: expiresAt,
         updated_at: knex.fn.now(),
       });
+
+    if (saved === 0) {
+      return NextResponse.json({ error: 'IMAP credentials changed during OAuth. Start reconnect again.' }, { status: 409 });
+    }
+    if (refreshToken) {
+      await setImapCredentialSecret(
+        secretProvider,
+        tenant,
+        state.providerId,
+        'refresh_token',
+        refreshToken,
+        imapConfig.credential_generation
+      );
+    }
 
     await db.table('email_providers')
       .where({ id: state.providerId })

@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   renewWebhooks: vi.fn(),
   recoverAuthPaused: vi.fn(),
   failImapMerge: false,
+  staleCredentialUpdate: false,
   axiosPost: vi.fn(),
   imapConnect: vi.fn(),
   lookup: vi.fn(),
@@ -23,11 +24,13 @@ const mocks = vi.hoisted(() => ({
     deleteTenantSecret: vi.fn(),
   },
   secretValues: {} as Record<string, string>,
+  secretProviderOverride: null as any,
   sessionUser: { user_id: 'user-1', user_type: 'internal' as 'internal' | 'client', tenant: 'tenant-123' },
 }));
 
 function makeTable(name: string) {
   mocks.tableCalls.push(name);
+  const filters: Record<string, unknown> = {};
   const seed = () => mocks.tables[name] ?? {};
   const thenable = (value: () => unknown, extra: Record<string, unknown> = {}) => {
     const p: any = Promise.resolve().then(value);
@@ -35,13 +38,23 @@ function makeTable(name: string) {
     return p;
   };
   const chain: any = {
-    where: () => chain,
+    where: (values: any) => {
+      if (values && typeof values === 'object') Object.assign(filters, values);
+      return chain;
+    },
     orderBy: () => chain,
     select: () => thenable(() => seed().rows ?? [], { first: async () => seed().first }),
     first: async () => seed().first,
     update: (values: any) => {
       mocks.updates.push([name, values]);
-      return thenable(() => 1, { returning: async () => [seed().returned] });
+      return thenable(() => {
+        if (name === 'imap_email_provider_config' && mocks.staleCredentialUpdate && 'access_token' in values) return 0;
+        if (name === 'imap_email_provider_config' && 'credential_generation' in filters) {
+          const actual = seed().first?.credential_generation ?? null;
+          if (actual !== (filters.credential_generation ?? null)) return 0;
+        }
+        return 1;
+      }, { returning: async () => [seed().returned] });
     },
     insert: () => ({
       onConflict: () => ({
@@ -81,7 +94,7 @@ vi.mock('@alga-psa/auth', () => ({
     fn({ ...mocks.sessionUser }, { tenant: mocks.sessionUser.tenant }, ...args),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.hasPermission }));
-vi.mock('@alga-psa/core/secrets', () => ({ getSecretProviderInstance: async () => mocks.secrets }));
+vi.mock('@alga-psa/core/secrets', () => ({ getSecretProviderInstance: async () => mocks.secretProviderOverride ?? mocks.secrets }));
 vi.mock('axios', () => ({ default: { post: mocks.axiosPost } }));
 vi.mock('imapflow', () => ({
   ImapFlow: class {
@@ -192,6 +205,8 @@ beforeEach(() => {
     delete mocks.secretValues[key];
   });
   mocks.failImapMerge = false;
+  mocks.staleCredentialUpdate = false;
+  mocks.secretProviderOverride = null;
   mocks.axiosPost.mockResolvedValue({ data: { access_token: 'at', expires_in: 3600 } });
   mocks.imapConnect.mockResolvedValue(undefined);
   mocks.renewWebhooks.mockResolvedValue([]);
@@ -514,9 +529,58 @@ describe('IMAP OAuth credentials are bound to their issuer', () => {
     }));
 
     expect(result.reconnectRequired).toBe(true);
-    expect(mocks.secrets.setTenantSecret).toHaveBeenCalledWith('tenant-123', 'imap_password_prov-1', 'replacement-password');
-    expect(mocks.secrets.setTenantSecret).toHaveBeenCalledWith('tenant-123', 'imap_oauth_client_secret_prov-1', 'replacement-client-secret');
+    const generation = mocks.merges.find(([table]) => table === 'imap_email_provider_config')![1].credential_generation;
+    expect(mocks.secrets.setTenantSecret).toHaveBeenCalledWith('tenant-123', `imap_password_prov-1_${generation}`, 'replacement-password');
+    expect(mocks.secrets.setTenantSecret).toHaveBeenCalledWith('tenant-123', `imap_oauth_client_secret_prov-1_${generation}`, 'replacement-client-secret');
     expect(mocks.secrets.setTenantSecret).not.toHaveBeenCalledWith('tenant-123', 'imap_refresh_token_prov-1', expect.any(String));
+  });
+
+  it('keeps a delayed password write from an older save unreachable after a concurrent scope change', async () => {
+    let resolvePasswordWrite!: () => void;
+    let passwordWriteStarted!: () => void;
+    const started = new Promise<void>((resolve) => { passwordWriteStarted = resolve; });
+    const delayedWrite = new Promise<void>((resolve) => { resolvePasswordWrite = resolve; });
+    const row = {
+      ...storedImapRow,
+      auth_type: 'password',
+      credential_generation: 'generation-old',
+      oauth_client_secret: null,
+    };
+    seed({ email_providers: { first: providerRow, returned: providerRow }, imap_email_provider_config: { first: row, returned: { ...row } } });
+    mocks.secrets.setTenantSecret.mockImplementation(async (_tenant: string, key: string, value: string) => {
+      if (key.endsWith('_generation-old')) {
+        passwordWriteStarted();
+        await delayedWrite;
+      }
+      mocks.secretValues[key] = value;
+    });
+
+    const { updateEmailProvider, testEmailProviderConnection } = await import('./emailProviderActions');
+    const firstSave = updateEmailProvider('prov-1', imapPayload({
+      auth_type: 'password',
+      password: 'delayed-old-password',
+    }));
+    await started;
+
+    const secondSave: any = await updateEmailProvider('prov-1', imapPayload({
+      host: 'imap.new-scope.example.test',
+      auth_type: 'password',
+      password: undefined,
+    }));
+    expect(secondSave.reconnectRequired).toBe(true);
+    const generation = mocks.merges[mocks.merges.length - 1]![1].credential_generation;
+    mocks.tables.imap_email_provider_config.first = {
+      ...row,
+      host: 'imap.new-scope.example.test',
+      credential_generation: generation,
+    };
+    resolvePasswordWrite();
+    await firstSave;
+
+    const tested = await testEmailProviderConnection('prov-1');
+    expect(tested).toMatchObject({ success: false, errorCode: 'missing_credentials' });
+    expect(mocks.secretValues['imap_password_prov-1_generation-old']).toBe('delayed-old-password');
+    expect(mocks.imapConnect).not.toHaveBeenCalled();
   });
 
   it('cannot use a password or OAuth token from the old scope after saving a changed destination', async () => {
@@ -662,6 +726,39 @@ describe('IMAP OAuth credentials are bound to their issuer', () => {
     expect(mocks.secrets.getTenantSecret).not.toHaveBeenCalled();
     expect(mocks.imapConnect).not.toHaveBeenCalled();
   });
+
+  it('does not let a composite fallback provider serve a legacy password after the scope rotates', async () => {
+    const { CompositeSecretProvider } = await import('../../../../core/src/lib/secrets/CompositeSecretProvider');
+    const primary = {
+      getAppSecret: vi.fn(async () => undefined),
+      getTenantSecret: vi.fn(async () => undefined),
+      setTenantSecret: vi.fn(async () => undefined),
+      deleteTenantSecret: vi.fn(async () => undefined),
+    };
+    const fallback = {
+      getAppSecret: vi.fn(async () => undefined),
+      getTenantSecret: vi.fn(async (_tenant: string, key: string) =>
+        key === 'imap_password_prov-1' ? 'old-fallback-password' : undefined),
+      setTenantSecret: vi.fn(async () => undefined),
+      deleteTenantSecret: vi.fn(async () => undefined),
+    };
+    mocks.secretProviderOverride = new CompositeSecretProvider([primary, fallback], primary as any);
+    seed({
+      email_providers: { first: { id: 'prov-1', provider_type: 'imap' } },
+      imap_email_provider_config: {
+        first: {
+          auth_type: 'password', username: 'u', host: 'imap.example.test', port: 993, secure: true,
+          credential_generation: 'new-generation',
+        },
+      },
+    });
+
+    const { testEmailProviderConnection } = await import('./emailProviderActions');
+    const result = await testEmailProviderConnection('prov-1');
+    expect(result).toMatchObject({ success: false, errorCode: 'missing_credentials' });
+    expect(fallback.getTenantSecret).toHaveBeenCalledWith('tenant-123', 'imap_password_prov-1_new-generation');
+    expect(mocks.imapConnect).not.toHaveBeenCalled();
+  });
 });
 
 describe('testEmailProviderConnection re-validates stored token URLs', () => {
@@ -736,5 +833,48 @@ describe('testEmailProviderConnection re-validates stored token URLs', () => {
     expect(result.error).toMatch(/credentials were cleared/i);
     expect(mocks.axiosPost).not.toHaveBeenCalled();
     expect(mocks.imapConnect).not.toHaveBeenCalled();
+  });
+
+  it('rejects an OAuth refresh response that arrives after the destination generation changes', async () => {
+    let resolveRefresh!: (value: any) => void;
+    mocks.axiosPost.mockImplementationOnce(() => new Promise((resolve) => { resolveRefresh = resolve; }));
+    const oldConfig = {
+      ...storedImapRow,
+      credential_generation: 'generation-old',
+      access_token: null,
+      refresh_token: null,
+      token_expires_at: '2000-01-01T00:00:00.000Z',
+    };
+    seed({
+      email_providers: { first: { id: 'prov-1', tenant: 'tenant-123', provider_type: 'imap' }, returned: providerRow },
+      imap_email_provider_config: { first: oldConfig, returned: { ...oldConfig } },
+    });
+    mocks.secretValues[`${'imap_refresh_token_prov-1_generation-old'}`] = 'old-refresh-token';
+    mocks.secretValues[`${'imap_oauth_client_secret_prov-1_generation-old'}`] = 'old-client-secret';
+
+    const { testEmailProviderConnection, updateEmailProvider } = await import('./emailProviderActions');
+    const connection = testEmailProviderConnection('prov-1');
+    await vi.waitFor(() => expect(mocks.axiosPost).toHaveBeenCalledTimes(1));
+
+    const saved: any = await updateEmailProvider('prov-1', imapPayload({ host: 'attacker.example.test' }));
+    expect(saved.reconnectRequired).toBe(true);
+    const newGeneration = mocks.merges.find(([table]) => table === 'imap_email_provider_config')![1].credential_generation;
+    mocks.tables.imap_email_provider_config.first = {
+      ...oldConfig,
+      host: 'attacker.example.test',
+      credential_generation: newGeneration,
+      access_token: null,
+      refresh_token: null,
+      token_expires_at: null,
+    };
+    resolveRefresh({ data: { access_token: 'old-scope-access-token', expires_in: 3600 } });
+
+    const result = await connection;
+    expect(result).toMatchObject({ success: false, errorCode: 'missing_config' });
+    mocks.secrets.getTenantSecret.mockImplementation(async (_tenant: string, key: string) => mocks.secretValues[key]);
+    const nextConnection = await testEmailProviderConnection('prov-1');
+    expect(nextConnection).toMatchObject({ success: false, errorCode: 'missing_credentials' });
+    expect(mocks.imapConnect).not.toHaveBeenCalled();
+    expect(mocks.updates.some(([table, values]) => table === 'imap_email_provider_config' && values.access_token === 'old-scope-access-token')).toBe(true);
   });
 });

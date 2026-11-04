@@ -9,6 +9,7 @@ import { tenantDb } from '@alga-psa/db';
 import type { getAdminConnection } from '@alga-psa/db/admin';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { assertSafeOutboundUrl } from '../net/outboundAddressPolicy';
+import { getImapCredentialSecret } from './imapCredentialSecrets';
 
 function asNonEmptyString(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -19,12 +20,13 @@ function asNonEmptyString(value: unknown): string | null {
 export async function getImapOauthSecrets(provider: {
   id: string;
   tenant: string;
+  credential_generation?: string | null;
 }): Promise<{ clientSecret: string | null; refreshToken: string | null }> {
   const secretProvider = await getSecretProviderInstance();
   const clientSecret =
-    (await secretProvider.getTenantSecret(provider.tenant, `imap_oauth_client_secret_${provider.id}`)) ?? null;
+    (await getImapCredentialSecret(secretProvider, provider.tenant, provider.id, 'oauth_client_secret', provider.credential_generation)) ?? null;
   const refreshToken =
-    (await secretProvider.getTenantSecret(provider.tenant, `imap_refresh_token_${provider.id}`)) ?? null;
+    (await getImapCredentialSecret(secretProvider, provider.tenant, provider.id, 'refresh_token', provider.credential_generation)) ?? null;
   return { clientSecret, refreshToken };
 }
 
@@ -38,6 +40,7 @@ export async function refreshImapAccessToken(params: {
     refresh_token?: string | null;
     access_token?: string | null;
     token_expires_at?: string | null;
+    credential_generation?: string | null;
   };
   db: Awaited<ReturnType<typeof getAdminConnection>>;
 }): Promise<string> {
@@ -51,6 +54,7 @@ export async function refreshImapAccessToken(params: {
   const { clientSecret, refreshToken } = await getImapOauthSecrets({
     id: provider.id,
     tenant: provider.tenant,
+    credential_generation: provider.credential_generation,
   });
   const effectiveRefreshToken = refreshToken || provider.refresh_token;
   const effectiveClientSecret = clientSecret || provider.oauth_client_secret;
@@ -79,13 +83,16 @@ export async function refreshImapAccessToken(params: {
     Date.now() + (Number.isFinite(expiresInSeconds) ? expiresInSeconds : 3600) * 1000
   ).toISOString();
 
-  await tenantDb(db, provider.tenant).table('imap_email_provider_config')
+  const updatedCount = await tenantDb(db, provider.tenant).table('imap_email_provider_config')
     .where({ email_provider_id: provider.id })
+    .andWhere('credential_generation', provider.credential_generation ?? null)
     .update({
       access_token: accessToken,
       token_expires_at: expiresAt,
       updated_at: db.fn.now(),
     });
+
+  if (updatedCount === 0) throw new Error('IMAP OAuth refresh became stale because the credential scope changed');
 
   provider.access_token = accessToken;
   provider.token_expires_at = expiresAt;

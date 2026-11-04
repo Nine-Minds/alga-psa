@@ -24,6 +24,7 @@ export default defineConfig({
     'utils/encryption': 'utils/encryption.ts',
     'utils/retryUtils': 'utils/retryUtils.ts',
     'services/email/microsoftEmailProviderConfig': 'services/email/microsoftEmailProviderConfig.ts',
+    'services/email/imapCredentialSecrets': 'services/email/imapCredentialSecrets.ts',
     'services/email/microsoftGraphDiagnostics': 'services/email/microsoftGraphDiagnostics.ts',
     'services/net/outboundAddressPolicy': 'services/net/outboundAddressPolicy.ts',
     'services/email/providers/MicrosoftGraphAdapter': 'services/email/providers/MicrosoftGraphAdapter.ts',

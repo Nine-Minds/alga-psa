@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       tenant: user.tenant,
       userId: user.user_id,
       providerId,
+      credentialGeneration: imapConfig.credential_generation ?? null,
       redirectUri: effectiveRedirectUri,
       timestamp: Date.now(),
       nonce: generateNonce(),

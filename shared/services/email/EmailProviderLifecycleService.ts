@@ -15,6 +15,7 @@ import { enqueueUnifiedInboundEmailQueueJob } from './unifiedInboundEmailQueue';
 import { refreshImapAccessToken } from './imapOauthToken';
 import { recordAuthFailure, recordAutoPause } from './inboundEmailMetrics';
 import { assertSafeOutboundHost } from '../net/outboundAddressPolicy';
+import { getImapCredentialSecret } from './imapCredentialSecrets';
 
 export type InboundPauseReason = 'manual' | 'tenant_cancelled' | 'auth_failure';
 
@@ -718,7 +719,13 @@ export class EmailProviderLifecycleService {
     } else {
       const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
       const secretProvider = await getSecretProviderInstance();
-      auth.pass = await secretProvider.getTenantSecret(tenant, `imap_password_${providerId}`);
+      auth.pass = await getImapCredentialSecret(
+        secretProvider,
+        tenant,
+        providerId,
+        'password',
+        imapConfig.credential_generation
+      );
     }
 
     if (!auth.pass && !auth.accessToken) {
