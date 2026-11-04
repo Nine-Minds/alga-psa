@@ -14,6 +14,7 @@ import { persistIngressPointer } from './inboundEmailProducer';
 import { enqueueUnifiedInboundEmailQueueJob } from './unifiedInboundEmailQueue';
 import { refreshImapAccessToken } from './imapOauthToken';
 import { recordAuthFailure, recordAutoPause } from './inboundEmailMetrics';
+import { assertSafeOutboundHost } from '../net/outboundAddressPolicy';
 
 export type InboundPauseReason = 'manual' | 'tenant_cancelled' | 'auth_failure';
 
@@ -698,6 +699,8 @@ export class EmailProviderLifecycleService {
     if (!imapConfig?.host) {
       throw new Error('IMAP provider config not found');
     }
+
+    await assertSafeOutboundHost(imapConfig.host);
 
     const knex = await getAdminConnection();
     let accessToken = typeof imapConfig.access_token === 'string' && imapConfig.access_token.trim()

@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   initializeProviderWebhook: vi.fn(),
   renewWebhooks: vi.fn(),
   recoverAuthPaused: vi.fn(),
+  failImapMerge: false,
   axiosPost: vi.fn(),
   imapConnect: vi.fn(),
   lookup: vi.fn(),
@@ -21,6 +22,7 @@ const mocks = vi.hoisted(() => ({
     setTenantSecret: vi.fn(),
     deleteTenantSecret: vi.fn(),
   },
+  secretValues: {} as Record<string, string>,
   sessionUser: { user_id: 'user-1', user_type: 'internal' as 'internal' | 'client', tenant: 'tenant-123' },
 }));
 
@@ -45,7 +47,14 @@ function makeTable(name: string) {
       onConflict: () => ({
         merge: (values: any) => {
           mocks.merges.push([name, values]);
-          return { returning: async () => [seed().returned] };
+          return {
+            returning: async () => {
+              if (name === 'imap_email_provider_config' && mocks.failImapMerge) {
+                throw new Error('database write failed');
+              }
+              return [seed().returned];
+            },
+          };
         },
       }),
       returning: async () => [seed().returned],
@@ -150,13 +159,19 @@ const imapPayload = (overrides: Record<string, unknown> = {}) => ({
 });
 
 const storedImapRow = {
+  host: 'imap.example.test',
+  port: 993,
+  secure: true,
+  allow_starttls: false,
+  auth_type: 'oauth2',
+  username: 'support@example.test',
   oauth_authorize_url: 'https://idp.example.test/authorize',
   oauth_token_url: 'https://idp.example.test/token',
   oauth_client_id: 'client-1',
   oauth_client_secret: 'stored-client-secret',
 };
 
-const providerRow = { id: 'prov-1', tenant: 'tenant-123', providerType: 'imap', providerName: 'Support' };
+const providerRow = { id: 'prov-1', tenant: 'tenant-123', provider_type: 'imap', providerType: 'imap', providerName: 'Support' };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -168,8 +183,15 @@ beforeEach(() => {
   grant('ticket_settings:read', 'ticket_settings:update');
   mocks.lookup.mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
   mocks.secrets.getTenantSecret.mockResolvedValue(undefined);
-  mocks.secrets.setTenantSecret.mockResolvedValue(undefined);
-  mocks.secrets.deleteTenantSecret.mockResolvedValue(undefined);
+  for (const key of Object.keys(mocks.secretValues)) delete mocks.secretValues[key];
+  mocks.secrets.getTenantSecret.mockImplementation(async (_tenant: string, key: string) => mocks.secretValues[key]);
+  mocks.secrets.setTenantSecret.mockImplementation(async (_tenant: string, key: string, value: string) => {
+    mocks.secretValues[key] = value;
+  });
+  mocks.secrets.deleteTenantSecret.mockImplementation(async (_tenant: string, key: string) => {
+    delete mocks.secretValues[key];
+  });
+  mocks.failImapMerge = false;
   mocks.axiosPost.mockResolvedValue({ data: { access_token: 'at', expires_in: 3600 } });
   mocks.imapConnect.mockResolvedValue(undefined);
   mocks.renewWebhooks.mockResolvedValue([]);
@@ -391,7 +413,7 @@ describe('getEmailProviders', () => {
 describe('save results are secret-free', () => {
   it('returns a sanitized provider from updateEmailProvider', async () => {
     seed({
-      email_providers: { returned: providerRow },
+      email_providers: { first: providerRow, returned: providerRow },
       imap_email_provider_config: {
         first: storedImapRow,
         returned: { ...storedImapRow, host: 'imap.example.test', port: 993, auth_type: 'oauth2', username: 'u', folder_filters: [], access_token: SEEDS.imapAccess, refresh_token: SEEDS.imapRefresh },
@@ -410,7 +432,7 @@ describe('save results are secret-free', () => {
 describe('IMAP OAuth credentials are bound to their issuer', () => {
   const seedStored = () =>
     seed({
-      email_providers: { returned: providerRow },
+      email_providers: { first: providerRow, returned: providerRow },
       imap_email_provider_config: { first: storedImapRow, returned: { ...storedImapRow, folder_filters: [] } },
     });
 
@@ -454,12 +476,135 @@ describe('IMAP OAuth credentials are bound to their issuer', () => {
     expect(mocks.secrets.deleteTenantSecret).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['host', { host: 'mail.attacker.test' }],
+    ['port', { port: 143 }],
+    ['secure', { secure: false }],
+    ['STARTTLS mode', { allow_starttls: true }],
+    ['username', { username: 'other@example.test' }],
+    ['authentication type', { auth_type: 'password' }],
+  ])('clears all stored credentials when %s changes', async (_label, change) => {
+    seedStored();
+    const { updateEmailProvider } = await import('./emailProviderActions');
+    const result: any = await updateEmailProvider('prov-1', imapPayload(change));
+
+    expect(result.reconnectRequired).toBe(true);
+    const [, merge] = mocks.merges.find(([table]) => table === 'imap_email_provider_config')!;
+    expect(merge.access_token).toBeNull();
+    expect(merge.refresh_token).toBeNull();
+    expect(merge.token_expires_at).toBeNull();
+    for (const key of [
+      'imap_password_prov-1',
+      'imap_refresh_token_prov-1',
+      'imap_oauth_client_secret_prov-1',
+      'imap_access_token_prov-1',
+    ]) {
+      expect(mocks.secrets.deleteTenantSecret).toHaveBeenCalledWith('tenant-123', key);
+    }
+  });
+
+  it('associates an explicitly supplied password and client secret with the changed scope after commit', async () => {
+    seedStored();
+    const { updateEmailProvider } = await import('./emailProviderActions');
+    const result: any = await updateEmailProvider('prov-1', imapPayload({
+      host: 'mail.new.example.test',
+      password: 'replacement-password',
+      oauth_client_secret: 'replacement-client-secret',
+      refresh_token: 'must-not-carry-refresh-token',
+    }));
+
+    expect(result.reconnectRequired).toBe(true);
+    expect(mocks.secrets.setTenantSecret).toHaveBeenCalledWith('tenant-123', 'imap_password_prov-1', 'replacement-password');
+    expect(mocks.secrets.setTenantSecret).toHaveBeenCalledWith('tenant-123', 'imap_oauth_client_secret_prov-1', 'replacement-client-secret');
+    expect(mocks.secrets.setTenantSecret).not.toHaveBeenCalledWith('tenant-123', 'imap_refresh_token_prov-1', expect.any(String));
+  });
+
+  it('cannot use a password or OAuth token from the old scope after saving a changed destination', async () => {
+    for (const key of [
+      'imap_password_prov-1',
+      'imap_refresh_token_prov-1',
+      'imap_oauth_client_secret_prov-1',
+      'imap_access_token_prov-1',
+    ]) mocks.secretValues[key] = `old-${key}`;
+    seedStored();
+    const { updateEmailProvider, testEmailProviderConnection } = await import('./emailProviderActions');
+    const saved: any = await updateEmailProvider('prov-1', imapPayload({ host: 'mail.new.example.test' }));
+    expect(saved.reconnectRequired).toBe(true);
+
+    mocks.tables.imap_email_provider_config.first = {
+      ...storedImapRow,
+      host: 'mail.new.example.test',
+      access_token: null,
+      refresh_token: null,
+      token_expires_at: null,
+    };
+    const tested = await testEmailProviderConnection('prov-1');
+    expect(tested).toMatchObject({ success: false, errorCode: 'missing_credentials' });
+    expect(Object.keys(mocks.secretValues)).toEqual([]);
+    expect(mocks.axiosPost).not.toHaveBeenCalled();
+    expect(mocks.imapConnect).not.toHaveBeenCalled();
+  });
+
+  it('cannot reuse a stored password after a host change with the password field omitted', async () => {
+    const previousRow = { ...storedImapRow, auth_type: 'password' };
+    for (const key of ['imap_password_prov-1', 'imap_refresh_token_prov-1', 'imap_oauth_client_secret_prov-1']) {
+      mocks.secretValues[key] = `old-${key}`;
+    }
+    seed({ email_providers: { first: providerRow, returned: providerRow }, imap_email_provider_config: { first: previousRow, returned: { ...previousRow } } });
+    const { updateEmailProvider, testEmailProviderConnection } = await import('./emailProviderActions');
+    const saved: any = await updateEmailProvider('prov-1', imapPayload({
+      host: 'mail.new.example.test', auth_type: 'password', password: undefined,
+    }));
+    expect(saved.reconnectRequired).toBe(true);
+    mocks.tables.imap_email_provider_config.first = {
+      ...previousRow, host: 'mail.new.example.test', auth_type: 'password', access_token: null, refresh_token: null,
+    };
+
+    const tested = await testEmailProviderConnection('prov-1');
+    expect(tested).toMatchObject({ success: false, errorCode: 'missing_credentials' });
+    expect(Object.keys(mocks.secretValues)).toEqual([]);
+    expect(mocks.imapConnect).not.toHaveBeenCalled();
+  });
+
+  it('fails before changing the row if any secret invalidation fails', async () => {
+    seedStored();
+    mocks.secrets.deleteTenantSecret.mockImplementation(async (_tenant: string, key: string) => {
+      if (key === 'imap_refresh_token_prov-1') throw new Error('secret store unavailable');
+    });
+    const { updateEmailProvider } = await import('./emailProviderActions');
+    const result: any = await updateEmailProvider('prov-1', imapPayload({ host: 'mail.new.example.test' }));
+
+    expect(result.actionError).toBeTruthy();
+    expect(mocks.merges).toEqual([]);
+    expect(mocks.secrets.setTenantSecret).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the database write fails after secrets were invalidated', async () => {
+    seedStored();
+    mocks.failImapMerge = true;
+    const { updateEmailProvider } = await import('./emailProviderActions');
+    const result: any = await updateEmailProvider('prov-1', imapPayload({ host: 'mail.new.example.test' }));
+
+    expect(result.actionError).toBeTruthy();
+    expect(mocks.secrets.deleteTenantSecret).toHaveBeenCalledWith('tenant-123', 'imap_password_prov-1');
+    expect(mocks.secrets.setTenantSecret).not.toHaveBeenCalled();
+    expect(mocks.merges).toHaveLength(1);
+  });
+
   it('keeps tokens when the same client secret is resubmitted', async () => {
     seedStored();
     const { updateEmailProvider } = await import('./emailProviderActions');
     await updateEmailProvider('prov-1', imapPayload({ oauth_client_secret: 'stored-client-secret' }));
     const [, merge] = mocks.merges.find(([t]) => t === 'imap_email_provider_config')!;
     expect(merge.refresh_token.raw).toContain('COALESCE');
+    expect(mocks.secrets.deleteTenantSecret).not.toHaveBeenCalled();
+  });
+
+  it('treats case and a trailing DNS root dot as the same host identity', async () => {
+    seedStored();
+    const { updateEmailProvider } = await import('./emailProviderActions');
+    const result: any = await updateEmailProvider('prov-1', imapPayload({ host: 'IMAP.EXAMPLE.TEST.' }));
+    expect(result.reconnectRequired).toBeUndefined();
     expect(mocks.secrets.deleteTenantSecret).not.toHaveBeenCalled();
   });
 
@@ -492,6 +637,30 @@ describe('IMAP OAuth credentials are bound to their issuer', () => {
     const result: any = await updateEmailProvider('prov-1', imapPayload({ oauth_token_url: 'https://rebind.example.test/token' }));
     expect(result.actionError).toMatch(/not allowed/);
     expect(mocks.merges).toEqual([]);
+  });
+
+  it('refuses an IMAP destination that resolves to a private address before any write', async () => {
+    seedStored();
+    const { updateEmailProvider } = await import('./emailProviderActions');
+    const result: any = await updateEmailProvider('prov-1', imapPayload({ host: '10.2.3.4' }));
+    expect(result.actionError).toMatch(/IMAP destination is not allowed/);
+    expect(mocks.merges).toEqual([]);
+    expect(mocks.secrets.deleteTenantSecret).not.toHaveBeenCalled();
+  });
+
+  it('refuses an IMAP hostname resolving to a private address before credentials are read', async () => {
+    mocks.lookup.mockResolvedValue([{ address: '10.10.0.8', family: 4 }]);
+    seed({
+      email_providers: { first: { id: 'prov-1', provider_type: 'imap' } },
+      imap_email_provider_config: {
+        first: { auth_type: 'password', username: 'u', host: 'imap.rebind.example.test', port: 993, secure: true },
+      },
+    });
+    const { testEmailProviderConnection } = await import('./emailProviderActions');
+    const result = await testEmailProviderConnection('prov-1');
+    expect(result.success).toBe(false);
+    expect(mocks.secrets.getTenantSecret).not.toHaveBeenCalled();
+    expect(mocks.imapConnect).not.toHaveBeenCalled();
   });
 });
 
@@ -533,5 +702,39 @@ describe('testEmailProviderConnection re-validates stored token URLs', () => {
     expect(mocks.axiosPost).toHaveBeenCalledTimes(1);
     expect(mocks.axiosPost.mock.calls[0][0]).toBe('https://idp.example.test/token');
     expect(result.success).toBe(true);
+  });
+
+  it('rejects a prohibited IMAP destination before reading credentials or connecting', async () => {
+    seed({
+      email_providers: { first: { id: 'prov-1', provider_type: 'imap' } },
+      imap_email_provider_config: {
+        first: { auth_type: 'password', username: 'u', host: '192.168.1.2', port: 993, secure: true },
+      },
+    });
+    const { testEmailProviderConnection } = await import('./emailProviderActions');
+    const result = await testEmailProviderConnection('prov-1');
+    expect(result.success).toBe(false);
+    expect(mocks.secrets.getTenantSecret).not.toHaveBeenCalled();
+    expect(mocks.imapConnect).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when changed-scope database tokens and tenant secrets are absent', async () => {
+    seed({
+      email_providers: { first: { id: 'prov-1', provider_type: 'imap' } },
+      imap_email_provider_config: {
+        first: {
+          auth_type: 'oauth2', username: 'u', host: 'imap.new.example.test', port: 993, secure: true,
+          access_token: null, refresh_token: null, token_expires_at: null,
+          oauth_token_url: 'https://idp.example.test/token', oauth_client_id: 'client-1',
+        },
+      },
+    });
+    mocks.secrets.getTenantSecret.mockResolvedValue(undefined);
+    const { testEmailProviderConnection } = await import('./emailProviderActions');
+    const result = await testEmailProviderConnection('prov-1');
+    expect(result).toMatchObject({ success: false, errorCode: 'missing_credentials' });
+    expect(result.error).toMatch(/credentials were cleared/i);
+    expect(mocks.axiosPost).not.toHaveBeenCalled();
+    expect(mocks.imapConnect).not.toHaveBeenCalled();
   });
 });

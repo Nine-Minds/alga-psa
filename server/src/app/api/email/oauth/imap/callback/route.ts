@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { decodeState, validateState } from '@/utils/email/oauthHelpers';
 import { createTenantKnex } from '@/lib/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { assertSafeOutboundUrl } from '@alga-psa/shared/services/net/outboundAddressPolicy';
 import axios from 'axios';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
 
@@ -54,6 +55,12 @@ export async function GET(request: NextRequest) {
 
     if (!imapConfig.oauth_token_url || !imapConfig.oauth_client_id) {
       return NextResponse.json({ error: 'IMAP OAuth token configuration missing' }, { status: 400 });
+    }
+
+    try {
+      await assertSafeOutboundUrl(imapConfig.oauth_token_url);
+    } catch {
+      return NextResponse.json({ error: 'IMAP OAuth token URL is not allowed' }, { status: 400 });
     }
 
     const secretProvider = await getSecretProviderInstance();

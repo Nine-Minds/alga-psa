@@ -24,6 +24,10 @@ import {
   recordImapWebhookDispatchRetry,
   type MetricImapListenerErrorReason,
 } from '@alga-psa/shared/services/email/inboundEmailMetrics';
+import {
+  assertSafeOutboundHost,
+  assertSafeOutboundUrl,
+} from '@alga-psa/shared/services/net/outboundAddressPolicy';
 
 const DEFAULT_REFRESH_MS = 60_000;
 const DEFAULT_RECONNECT_BASE_MS = 2_000;
@@ -697,6 +701,8 @@ class ImapFolderListener {
       throw new Error('IMAP OAuth token URL or client ID missing');
     }
 
+    await assertSafeOutboundUrl(this.provider.oauth_token_url);
+
     const { clientSecret, refreshToken } = await this.getOauthSecrets();
     const effectiveRefreshToken = refreshToken || this.provider.refresh_token;
     if (!effectiveRefreshToken) {
@@ -759,6 +765,7 @@ class ImapFolderListener {
   }
 
   private async buildClient(): Promise<ImapFlow> {
+    await assertSafeOutboundHost(this.provider.host);
     if (this.provider.auth_type === 'oauth2') {
       if (this.isTokenExpired()) {
         await this.refreshAccessToken();

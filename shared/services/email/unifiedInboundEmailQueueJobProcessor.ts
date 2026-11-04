@@ -28,6 +28,7 @@ import { classifyGraphFailure } from '@alga-psa/shared/services/diagnostics/grap
 import { EmailProviderLifecycleService } from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
 import { refreshImapAccessToken } from '@alga-psa/shared/services/email/imapOauthToken';
 import { normalizeInboundMessageIdentity } from '@alga-psa/shared/services/email/inboundEmailIdentity';
+import { assertSafeOutboundHost } from '../net/outboundAddressPolicy';
 import { createHash } from 'node:crypto';
 
 export class SourceMessageUnavailableError extends Error {
@@ -641,6 +642,8 @@ export async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJo
   if (!provider) {
     throw new SourceMessageUnavailableError('imap_provider_not_found');
   }
+
+  await assertSafeOutboundHost(provider.host);
 
   const connectionTimeoutMs = parsePositiveInteger(
     process.env.IMAP_CONNECTION_TIMEOUT_MS,

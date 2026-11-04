@@ -8,6 +8,7 @@ import axios from 'axios';
 import { tenantDb } from '@alga-psa/db';
 import type { getAdminConnection } from '@alga-psa/db/admin';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { assertSafeOutboundUrl } from '../net/outboundAddressPolicy';
 
 function asNonEmptyString(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -44,6 +45,8 @@ export async function refreshImapAccessToken(params: {
   if (!provider.oauth_token_url || !provider.oauth_client_id) {
     throw new Error('IMAP OAuth token URL or client ID missing');
   }
+
+  await assertSafeOutboundUrl(provider.oauth_token_url);
 
   const { clientSecret, refreshToken } = await getImapOauthSecrets({
     id: provider.id,
