@@ -355,7 +355,8 @@ describe('mapSignedInUserToContact', () => {
       provider: 'tacticalrmm',
       rawUser: 'CORP\\jdoe',
       contactId: 'c-jane',
-    })).rejects.toThrow('Permission denied');
+      authorize: allowMapping,
+    })).rejects.toThrow('RMM integration is unavailable');
     expect(h.dbState.tenant_external_entity_mappings).toHaveLength(0);
     expect(h.setAssetAssignee).not.toHaveBeenCalled();
   });

@@ -215,7 +215,7 @@ describe('suggestContactForAsset', () => {
       },
     );
 
-    expect(await suggestContactForAsset(h.knexMock, TENANT, ASSET)).toBeNull();
+    expect(await suggestContactForAsset(h.knexMock, TENANT, ASSET, allowMapping)).toBeNull();
   });
 
   it('suggests by default when the mapping sets no mode', async () => {
@@ -258,6 +258,6 @@ describe('suggestContactForAsset', () => {
       contact_assignment_mode: 'suggest',
     });
 
-    expect(await suggestContactForAsset(h.knexMock, TENANT, ASSET)).toBeNull();
+    expect(await suggestContactForAsset(h.knexMock, TENANT, ASSET, allowMapping)).toBeNull();
   });
 });
