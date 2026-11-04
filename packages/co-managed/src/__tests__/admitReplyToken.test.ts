@@ -5,6 +5,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 type Row = Record<string, any>;
+const authority = vi.hoisted(() => ({ deniedAction: null as string | null, calls: [] as any[] }));
+const authorize = vi.hoisted(() => async (db: unknown, actor: any, resource: any, action: string, command: any) => {
+  authority.calls.push({ actor, resource, action });
+  if (authority.deniedAction === action) throw Object.assign(new Error('Permission denied'), { code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  return command({ trx: db });
+});
 const store = vi.hoisted(() => ({ tables: {} as Record<string, Row[]>, lookups: [] as string[] }));
 
 vi.mock('@alga-psa/db', () => {
@@ -58,8 +64,12 @@ vi.mock('@alga-psa/db', () => {
 });
 vi.mock('@alga-psa/shared/lib/deliveryLedger', () => ({ claimDelivery: vi.fn(), finishDelivery: vi.fn(), CO_MANAGED_LEDGER: {} }));
 vi.mock('@alga-psa/core/logger', () => ({ default: { warn: vi.fn() } }));
-vi.mock('../sharedWork', () => ({ withCoManagedNotificationRecipient: vi.fn() }));
-vi.mock('../sharedWorkIdentity', () => ({ isCoManagedSharedWorkError: () => false }));
+vi.mock('../sharedWork', () => ({ withCoManagedNotificationRecipient: vi.fn(), withCoManagedSharedWork: vi.fn(authorize) }));
+vi.mock('../customerWork', () => ({ withCoManagedCustomerTicket: vi.fn(authorize) }));
+vi.mock('../sharedWorkIdentity', () => ({
+  isCoManagedSharedWorkError: (error: any) => error?.code === 'CO_MANAGED_SHARED_WORK_FORBIDDEN',
+  withCoManagedMailCredential: (_actor: unknown, run: () => Promise<unknown>) => run(),
+}));
 vi.mock('../routingOutbox', () => ({ ROUTING_IN_APP_KIND: 'routing_in_app', ROUTING_EMAIL_KIND: 'routing_email' }));
 vi.mock('../projectTaskAudience', () => ({ projectTaskAudience: () => 'organization_private' }));
 
@@ -72,13 +82,16 @@ const trusted = (email: string | null) => ({ email, internalAttributionTrusted: 
 const untrusted = (email: string | null) => ({ email, internalAttributionTrusted: false, contactAttributionTrusted: false });
 
 function seed(audience: 'shared_it' | 'organization_private' | 'requester') {
+  authority.deniedAction = null;
+  authority.calls = [];
   store.lookups = [];
   store.tables = {
     email_reply_tokens: [{ tenant: CUSTOMER, token: 'cm2:t', ticket_id: 'tk', comment_id: 'c1', expires_at: new Date('2099-01-01T00:00:00.000Z') }],
     co_management_ticket_work: [{ tenant: CUSTOMER, ticket_id: 'tk', relationship_id: 'rel', work_id: 'w', grant_revoked_at: null, first_escalated_at: new Date() }],
     co_management_relationships: [{ tenant: CUSTOMER, relationship_id: 'rel', state: 'active', ended_at: null, sponsor_tenant: SPONSOR, sponsor_client_id: 'sc' }],
     co_management_ticket_handoffs: [],
-    comment_threads: [{ tenant: CUSTOMER, thread_id: 'thr', collaboration_audience: audience, is_internal: audience !== 'requester' }],
+    comment_threads: [{ tenant: CUSTOMER, thread_id: 'thr', ticket_id: 'tk', collaboration_audience: audience, is_internal: audience !== 'requester' }],
+    comments: [{ tenant: CUSTOMER, comment_id: 'c1', thread_id: 'thr', ticket_id: 'tk' }],
     tickets: [{ tenant: CUSTOMER, ticket_id: 'tk', client_id: 'client-1' }],
     users: [
       { tenant: SPONSOR, user_id: 'sponsor-user', email: 'Agent@MSP.test', user_type: 'internal', is_inactive: false },
@@ -106,6 +119,61 @@ describe('admitReplyToken sender authentication', () => {
     vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
   });
   afterEach(() => vi.useRealTimers());
+
+  describe('token scope and current authority', () => {
+    beforeEach(() => seed('shared_it'));
+
+    it.each(['', 'cm2:missing'])('refuses a missing token (%s)', async (token) => {
+      expect(await createCoManagedDeliveryProvider().admitReplyToken(CUSTOMER, token, metadata('thr'), trusted('agent@msp.test')))
+        .toMatchObject({ admitted: false });
+      expect(authority.calls).toEqual([]);
+    });
+    it('refuses a token stored in another tenant', async () => {
+      store.tables.email_reply_tokens[0].tenant = SPONSOR;
+      expect(await admit(trusted('agent@msp.test'))).toMatchObject({ admitted: false });
+    });
+    it('refuses a token from a different ticket even in the same relationship', async () => {
+      store.tables.email_reply_tokens[0].ticket_id = 'other-ticket';
+      store.tables.co_management_ticket_work.push({ ...store.tables.co_management_ticket_work[0], ticket_id: 'other-ticket' });
+      expect(await admit(trusted('agent@msp.test'))).toMatchObject({ admitted: false });
+      expect(authority.calls).toEqual([]);
+    });
+    it('refuses a token whose parent belongs to another ticket', async () => {
+      store.tables.comments[0].ticket_id = 'other-ticket';
+      expect(await admit(trusted('agent@msp.test'))).toMatchObject({ admitted: false });
+    });
+    it('refuses a revoked grant', async () => {
+      store.tables.co_management_ticket_work[0].grant_revoked_at = new Date();
+      expect(await admit(trusted('agent@msp.test'))).toMatchObject({ admitted: false, reason: 'grant_revoked' });
+    });
+    it('refuses a token from an earlier grant generation', async () => {
+      store.tables.co_management_ticket_handoffs.push({ tenant: CUSTOMER, relationship_id: 'rel', ticket_id: 'tk', transition: 'access_revoked' });
+      expect(await admit(trusted('agent@msp.test'))).toMatchObject({ admitted: false, reason: 'stale_generation' });
+    });
+    it('refuses an ended relationship', async () => {
+      store.tables.co_management_relationships[0].ended_at = new Date();
+      expect(await admit(trusted('agent@msp.test'))).toMatchObject({ admitted: false });
+    });
+    it.each(['agent@msp.test', 'it@customer.test'])('checks read and update authority for %s in its own tenant', async (email) => {
+      expect(await admit(trusted(email))).toMatchObject({ admitted: true });
+      expect(authority.calls).toEqual(['update', 'read'].map(action => ({
+        actor: expect.objectContaining({ tenant: email === 'agent@msp.test' ? SPONSOR : CUSTOMER }),
+        resource: { tenant: CUSTOMER, relationshipId: 'rel', kind: 'ticket', id: 'tk' }, action,
+      })));
+    });
+    it.each([
+      ['agent@msp.test', 'update'], ['agent@msp.test', 'read'],
+      ['it@customer.test', 'update'], ['it@customer.test', 'read'],
+    ])('refuses %s when current %s authority is revoked', async (email, action) => {
+      authority.deniedAction = action;
+      expect(await admit(trusted(email))).toEqual({ admitted: false, reason: 'not_participant', acknowledge: true });
+    });
+    it('does not resolve a user in an unrelated tenant', async () => {
+      store.tables.users[0].tenant = 'unrelated-tenant';
+      expect(await admit(trusted('agent@msp.test'))).toMatchObject({ admitted: false });
+      expect(authority.calls).toEqual([]);
+    });
+  });
 
   describe('shared_it', () => {
     beforeEach(() => seed('shared_it'));
