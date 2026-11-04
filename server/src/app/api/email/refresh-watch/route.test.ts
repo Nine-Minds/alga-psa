@@ -131,6 +131,35 @@ describe('POST /api/email/refresh-watch authorization and rate limit', () => {
     expect(mocks.configureGmailProvider).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['internal user', () => {
+      mocks.hasPermission.mockResolvedValue(false);
+    }],
+    ['client user', () => {
+      mocks.getCurrentUser.mockResolvedValue({
+        user_id: 'client-1', user_type: 'client', tenant: 'tenant-1',
+      });
+    }],
+  ])('does not consume provider throttle capacity for a denied %s', async (label, denyUser) => {
+    denyUser();
+
+    const deniedResponse = await POST(buildRawRequest('{'));
+    expect(deniedResponse.status).toBe(403);
+    expect(mocks.tenantDb).not.toHaveBeenCalled();
+    expect(mocks.configureGmailProvider).not.toHaveBeenCalled();
+
+    mocks.getCurrentUser.mockResolvedValue({
+      user_id: 'user-1', user_type: 'internal', tenant: 'tenant-1',
+      email: 'admin@example.test',
+    });
+    mocks.hasPermission.mockResolvedValue(true);
+
+    const authorizedResponse = await POST(buildRequest(`auth-denial-throttle-check-${label}`));
+
+    expect(authorizedResponse.status).toBe(200);
+    expect(mocks.configureGmailProvider).toHaveBeenCalledTimes(1);
+  });
+
   it('rejects unauthenticated requests before database or external work', async () => {
     mocks.getCurrentUser.mockResolvedValue(null);
 
