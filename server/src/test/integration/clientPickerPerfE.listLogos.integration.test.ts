@@ -148,4 +148,20 @@ describe('client_logo_url on project and asset lists', () => {
     expect(context.logoCalls).toHaveLength(1);
     expect(context.logoCalls[0].sort()).toEqual([ids.acme, ids.bravo].sort());
   });
+
+  it('listAssets looks up logos only for distinct clients on the requested page', async () => {
+    for (const [page, names, clientId] of [
+      [1, ['Acme PC 1', 'Acme PC 2'], ids.acme],
+      [2, ['Bravo PC'], ids.bravo],
+    ] as const) {
+      context.logoCalls.length = 0;
+      const result: any = await listAssets({
+        page, limit: 2, sort_by: 'name', sort_direction: 'asc',
+      });
+      expect(result.assets.map((asset: any) => asset.name)).toEqual(names);
+      expect(result.assets.map((asset: any) => asset.client.client_logo_url))
+        .toEqual(names.map(() => `/logo/${clientId}`));
+      expect(context.logoCalls).toEqual([[clientId]]);
+    }
+  });
 });
