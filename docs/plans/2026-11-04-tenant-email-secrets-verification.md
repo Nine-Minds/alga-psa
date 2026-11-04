@@ -185,3 +185,44 @@ approved plan.
 
 After shipment, SMT-Tech must rotate its SMTP password and re-enter it in
 Outbound Email settings. Track that follow-up on PSA ticket `alga-2026-0002693`.
+
+### 2026-11-04 fresh authenticated Playwright verification
+
+Ran a new local Playwright/Chrome browser session against the card origin on
+application code revision `90ce9ab9a4d577fc3d4e4b4217202c7f380892b1`. The
+Alga Dev browser-control socket was unavailable, so this run used the checkout's
+Playwright dependency and system Chrome. The registered dev-server remained live
+under its saved `PORT=3590 npm run dev` command and normal admission policy.
+
+The authenticated QA session verified that email settings rendered with an empty
+SMTP password input and that relevant server-action responses and rendered
+settings contained no credential values, `secretRefs`, or `email_outbound_*`
+references. Saving the simulator SMTP credential moved SMTP and Resend fixture
+credentials into the tenant secret store and left only references in
+`provider_configs`. GreenMail recorded the authenticated SMTP test message.
+A non-secret sender-name edit preserved the existing SMTP reference. Removing
+that referenced secret caused the expected actionable missing-secret error;
+re-entering the simulator credential restored sending, with a second GreenMail
+receipt.
+
+The operator backfill dry-run detected two fields; execution migrated both;
+rerunning migrated zero. `updated_at` was unchanged. The running application then
+sent successfully through the backfilled SMTP reference, with a third GreenMail
+inbox receipt. The QA fixture was restored to its pre-run legacy state, generated
+feature secrets were removed, and the QA tenant's original `co_managed` product
+code and internal-user password hash were restored and equality-checked. The
+simulator inbox was cleared by the fixture reset. Counts-only evidence is stored
+outside the repository at
+`/home/robert/alga-reviews/feature-move-tenant-smtp-resend-secrets-out-of-plaintext/evidence/2026-11-04-fresh-playwright/summary.txt`.
+
+At this same application code revision, the focused migration-history integration
+suite passed 2/2 on a disposable PostgreSQL 15 database named
+`alga2693_migration_20261104`; that database/container was removed afterward.
+The earlier exact Citus 12.1 exercise remains documented above. No email runtime
+code changed in this verification round.
+
+PR #3695 is already merged at head
+`62a2531483302ffab2af955ded503fb2df917f57` and does not include the subsequent
+migration repairs. Those existing migration changes are being published through
+a fresh PR; the PR URL and final documentation revision will be recorded after it
+is opened.
