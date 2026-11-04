@@ -95,6 +95,42 @@ function memoryTrx(rows: Rows): any {
   };
 }
 
+function memoryStore(rows: Rows = {}): any {
+  const database = (table: string) => {
+    const filters: Array<(row: Record<string, any>) => boolean> = [];
+    let pendingInsert: Record<string, any>[] = [];
+    let conflictKeys: string[] = [];
+    const query: any = {
+      where: (condition: Record<string, any>) => { filters.push(row => Object.entries(condition).every(([key, value]) => row[key] === value)); return query; },
+      first: async () => (rows[table] ?? []).find(row => filters.every(filter => filter(row))) ?? undefined,
+      insert: (input: Record<string, any> | Record<string, any>[]) => { pendingInsert = Array.isArray(input) ? input : [input]; return query; },
+      onConflict: (keys: string[]) => { conflictKeys = keys; return query; },
+      merge: () => query,
+      update: async (patch: Record<string, unknown>) => {
+        let updated = 0;
+        for (const row of rows[table] ?? []) if (filters.every(filter => filter(row))) { Object.assign(row, patch); updated++; }
+        return updated;
+      },
+      then: (resolve: (value: any) => unknown, reject: (reason: unknown) => unknown) => {
+        if (pendingInsert.length) {
+          rows[table] ??= [];
+          for (const input of pendingInsert) {
+            const existing = conflictKeys.length ? rows[table].find(row => conflictKeys.every(key => row[key] === input[key])) : undefined;
+            if (existing) Object.assign(existing, input);
+            else rows[table].push({ ...input });
+          }
+          return Promise.resolve(pendingInsert.length).then(resolve, reject);
+        }
+        return Promise.resolve((rows[table] ?? []).filter(row => filters.every(filter => filter(row)))).then(resolve, reject);
+      },
+    };
+    return query;
+  };
+  database.rows = rows;
+  database.transaction = async (callback: (trx: any) => Promise<unknown>) => callback(database);
+  return database;
+}
+
 describe('co-managed fixtures', () => {
   it('resolves dependencies first and each module once', () => {
     const [a, b, c] = [mod('base'), mod('L1a', ['base']), mod('L2', ['L1a', 'base'])];
@@ -125,6 +161,56 @@ describe('co-managed fixtures', () => {
     ]);
     expect(NOTIFICATION_USERS[0].hidden).toContain('tickets.title');
     expect(NOTIFICATION_USERS[1].hidden).toEqual([]);
+  });
+
+  it('applies effective internal ticket permissions and verification detects authorization regressions', async () => {
+    const db = memoryStore();
+    const engines = {
+      hashPassword: async (password: string) => `hash:${password}`,
+      verifyPassword: async (password: string, stored: string) => stored === `hash:${password}`,
+    } as any;
+    const loadAppliedRoles = async (_connection: any, userId: string) => {
+      const rows = db.rows as Rows;
+      return (rows.user_roles ?? []).filter(row => row.tenant === NOTIFICATION_CUSTOMER && row.user_id === userId).map(membership => {
+        const role = rows.roles.find(row => row.tenant === NOTIFICATION_CUSTOMER && row.role_id === membership.role_id)!;
+        const permissions = (rows.role_permissions ?? []).filter(row => row.tenant === NOTIFICATION_CUSTOMER && row.role_id === role.role_id)
+          .map(link => rows.permissions.find(row => row.tenant === NOTIFICATION_CUSTOMER && row.permission_id === link.permission_id)!)
+          .map(permission => ({ permission_id: permission.permission_id, resource: permission.resource, action: permission.action,
+            msp: permission.msp, client: permission.client }));
+        return { ...role, role_name: 'Notification customer admin', permissions };
+      });
+    };
+    vi.mocked(User.getUserRolesWithPermissions).mockImplementation(loadAppliedRoles as any);
+
+    await notificationModule.apply(db, engines);
+    const author = db.rows.users.find((row: any) => row.tenant === NOTIFICATION_CUSTOMER && row.user_id === NOTIFICATION_CUSTOMER_ADMIN.userId);
+    expect(await User.getUserRolesWithPermissions(db, NOTIFICATION_CUSTOMER_ADMIN.userId)).toHaveLength(1);
+    expect(await import('@alga-psa/auth/rbac').then(({ hasPermission }) => hasPermission(author, 'ticket', 'read', db))).toBe(true);
+    const { hasPermission } = await import('@alga-psa/auth/rbac');
+    expect(await hasPermission(author, 'ticket', 'update', db)).toBe(true);
+    const report = async (detail: string) => (await notificationModule.verify(db, engines)).find(item => item.detail === detail)?.ok;
+    expect(await report('fixture customer admin passes runtime ticket:read authorization')).toBe(true);
+    expect(await report('fixture customer admin passes runtime ticket authorization for Shared IT comments')).toBe(true);
+
+    const role = db.rows.roles.find((row: any) => row.tenant === NOTIFICATION_CUSTOMER && row.role_id === id('role/notification-customer-admin'));
+    const permissions = db.rows.permissions.filter((row: any) => row.tenant === NOTIFICATION_CUSTOMER);
+    const hasMembership = () => db.rows.user_roles.some((row: any) => row.tenant === NOTIFICATION_CUSTOMER && row.user_id === NOTIFICATION_CUSTOMER_ADMIN.userId);
+    role.msp = false;
+    expect(hasMembership()).toBe(true);
+    expect(await hasPermission(author, 'ticket', 'read', db)).toBe(false);
+    expect(await report('fixture customer admin passes runtime ticket:read authorization')).toBe(false);
+    role.msp = true;
+    permissions.forEach((permission: any) => { permission.msp = false; });
+    expect(hasMembership()).toBe(true);
+    expect(await hasPermission(author, 'ticket', 'read', db)).toBe(false);
+    expect(await report('fixture customer admin passes runtime ticket:read authorization')).toBe(false);
+    permissions.forEach((permission: any) => { permission.msp = true; });
+    db.rows.role_permissions = db.rows.role_permissions.filter((row: any) => row.tenant !== NOTIFICATION_CUSTOMER ||
+      row.permission_id !== id('permission/notification-customer-ticket-update'));
+    expect(hasMembership()).toBe(true);
+    expect(await hasPermission(author, 'ticket', 'update', db)).toBe(false);
+    expect(await report('fixture customer admin passes runtime ticket authorization for Shared IT comments')).toBe(false);
+    vi.mocked(User.getUserRolesWithPermissions).mockReset();
   });
 
   it('notification verification rejects missing credentials, staff memberships, operation locator, allocation, and SMTP', async () => {
