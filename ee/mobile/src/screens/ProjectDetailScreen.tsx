@@ -102,12 +102,15 @@ export function ProjectDetailScreen({ navigation, route }: Props) {
         listProjectTasks(client, { apiKey, projectId, signal: controller.signal }),
         listTaskStatusMappings(client, { apiKey, projectId, signal: controller.signal }),
         listProjectStatuses(client, { apiKey, signal: controller.signal }),
-        listUsers(client, { apiKey, limit: 200, signal: controller.signal }),
+        listUsers(client, { apiKey, limit: 100, signal: controller.signal }),
       ]);
 
     if (abortRef.current === controller) abortRef.current = null;
     if (controller.signal.aborted) return;
 
+    // Only a load that ran to completion may clear the spinner: an aborted
+    // one would otherwise flash "Unable to load" while its replacement runs.
+    setLoading(false);
     if (!projectResult.ok) {
       if (projectResult.error.kind === "canceled") return;
       logger.warn("Project fetch failed", { error: projectResult.error });
@@ -150,10 +153,9 @@ export function ProjectDetailScreen({ navigation, route }: Props) {
   useEffect(() => {
     let canceled = false;
     void (async () => {
-      if (!client || !apiKey) return;
+      if (!client || !apiKey || canceled) return;
       setLoading(true);
       await loadRef.current();
-      if (!canceled) setLoading(false);
     })();
     return () => {
       canceled = true;
@@ -161,8 +163,14 @@ export function ProjectDetailScreen({ navigation, route }: Props) {
   }, [apiKey, client, projectId]);
 
   // A task edited on the detail screen must show its new state on the way back.
+  // The first focus arrives while the mount load is still running; reloading
+  // then would only abort it.
   useEffect(
-    () => navigation.addListener("focus", () => void loadRef.current()),
+    () =>
+      navigation.addListener("focus", () => {
+        if (abortRef.current) return;
+        void loadRef.current();
+      }),
     [navigation],
   );
 

@@ -34,8 +34,9 @@ import { TagPickerModal } from "../features/ticketDetail/components/TagPickerMod
 import { clearInheritedScreenParams } from "../navigation/inheritedScreenParams";
 import { withClientFilter, withContactFilter } from "./ticketsClientFilter";
 import { normalizeSavedTags, removeTagFilter, withTagsFilter } from "./ticketsTagsFilter";
-import { computeVisibleTagCount, TAG_CHIP_MAX_TEXT_WIDTH } from "./ticketRowTags";
+import { computeVisibleTagCount, mergePartyDisplayTags, TAG_CHIP_MAX_TEXT_WIDTH } from "./ticketRowTags";
 import { getTagChipColors } from "../ui/tagColors";
+import { DisplayTagBadges } from "../ui/components/DisplayTagBadges";
 
 type Props = CompositeScreenProps<
   NativeStackScreenProps<TicketsStackParamList, "TicketsList">,
@@ -1466,6 +1467,10 @@ const TicketRow = memo(function TicketRow({
   const status = item.status_name ?? t("common:unknown");
   const priority = item.priority_name ?? null;
   const tags = Array.isArray(item.tags) ? item.tags : [];
+  const partyTags = useMemo(
+    () => mergePartyDisplayTags(item.contact_tags, item.client_tags),
+    [item.contact_tags, item.client_tags],
+  );
   const bundleRole = getTicketBundleRole(item);
 
   const [tagsRowWidth, setTagsRowWidth] = useState(0);
@@ -1490,11 +1495,14 @@ const TicketRow = memo(function TicketRow({
         opacity: pressed ? 0.96 : 1,
       })}
     >
-      <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
-        {item.ticket_number}
-        {item.client_name ? ` • ${item.client_name}` : ""}
-        {updatedLabel ? ` • ${updatedLabel}` : ""}
-      </Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: theme.spacing.xs }}>
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
+          {item.ticket_number}
+          {item.client_name ? ` • ${item.client_name}` : ""}
+          {updatedLabel ? ` • ${updatedLabel}` : ""}
+        </Text>
+        <DisplayTagBadges tags={partyTags} />
+      </View>
       <Text style={{ ...theme.typography.body, color: theme.colors.text, marginTop: 2 }} numberOfLines={2}>
         {item.title}
       </Text>

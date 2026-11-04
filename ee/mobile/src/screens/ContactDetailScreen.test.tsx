@@ -110,3 +110,26 @@ describe("ContactDetailScreen calls", () => {
     expect(host.props.client).toBeTruthy();
   });
 });
+
+describe("ContactDetailScreen display tags", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("shows the chip tags the server picked by the tenant's display rules under the name", async () => {
+    getContactMock.mockResolvedValue({
+      ...CONTACT,
+      data: { data: { ...CONTACT.data.data, display_tags: [{ tag_id: "d1", tag_text: "VIP" }, { tag_id: "d2", tag_text: "POC" }] } },
+    });
+    const renderer = await renderScreen();
+
+    expect(texts(renderer)).toEqual(expect.arrayContaining(["VIP", "POC"]));
+  });
+
+  it("renders no chip row when the contact has none", async () => {
+    getContactMock.mockResolvedValue(CONTACT);
+    const renderer = await renderScreen();
+
+    expect(renderer.root.findAll((n) => n.props?.testID === "display-tag-badges")).toHaveLength(0);
+  });
+});

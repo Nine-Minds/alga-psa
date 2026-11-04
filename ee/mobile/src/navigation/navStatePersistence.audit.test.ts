@@ -45,4 +45,28 @@ describe("navStatePersistence audit session", () => {
     expect(stripped.routes[0].params).toEqual({ screen: "InventoryTab" });
     expect(stripped.routes[0].state!.routes![0].params).toBeUndefined();
   });
+
+  it("drops a pushed Scan screen and re-points the index at what is left", () => {
+    const state = {
+      index: 1,
+      routes: [{ name: "Tabs" }, { name: "Scan" }],
+    };
+
+    const stripped = stripTransientRouteParams(state);
+
+    expect(stripped.routes.map((route) => route.name)).toEqual(["Tabs"]);
+    expect(stripped.index).toBe(0);
+  });
+
+  it("keeps a detail screen opened from the scanner, minus the scanner itself", () => {
+    const state = {
+      index: 2,
+      routes: [{ name: "Tabs" }, { name: "Scan" }, { name: "AssetDetail", params: { assetId: "a-1" } }],
+    };
+
+    const stripped = stripTransientRouteParams(state);
+
+    expect(stripped.routes.map((route) => route.name)).toEqual(["Tabs", "AssetDetail"]);
+    expect(stripped.index).toBe(1);
+  });
 });

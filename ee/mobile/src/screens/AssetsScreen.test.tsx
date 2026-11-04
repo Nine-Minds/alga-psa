@@ -226,12 +226,12 @@ describe("AssetsScreen", () => {
     expect(mocks.navigate).toHaveBeenCalledWith("AssetDetail", { assetId: "a-1", assetName: "Reception PC" });
   });
 
-  it("sends Scan to the Inventory scan segment when inventory is available", async () => {
+  it("pushes the Scan screen so Back returns to the Assets list", async () => {
     const renderer = await renderScreen();
 
     await act(async () => renderer.root.find((n) => n.props?.testID === "assets-scan").props.onPress());
 
-    expect(mocks.navigate).toHaveBeenCalledWith("InventoryTab", { segment: "scan" });
+    expect(mocks.navigate).toHaveBeenCalledWith("Scan");
   });
 
   it("T042 hides the Audit action when the assetAudit capability is false", async () => {
@@ -305,13 +305,12 @@ describe("AssetsScreen", () => {
     expect(mocks.navigate).toHaveBeenCalledWith("AuditSession", { auditId: "au-1" });
   });
 
-  it("opens the scan modal instead when inventory is off", async () => {
+  it("pushes the same Scan screen when inventory is off", async () => {
     mocks.features = { inventory: false, assets: true, assetAudit: true };
     const renderer = await renderScreen();
 
     await act(async () => renderer.root.find((n) => n.props?.testID === "assets-scan").props.onPress());
 
-    expect(mocks.navigate).not.toHaveBeenCalled();
-    expect(renderer.root.find((n) => n.props?.testID === "assets-scan-close")).toBeTruthy();
+    expect(mocks.navigate).toHaveBeenCalledWith("Scan");
   });
 });

@@ -4,12 +4,15 @@ import { useTranslation } from "react-i18next";
 import { Feather } from "@expo/vector-icons";
 import { useTheme } from "../ThemeContext";
 import { Avatar } from "./Avatar";
+import { DisplayTagBadges, type DisplayTag } from "./DisplayTagBadges";
 
 export type EntityPickerItem = {
   id: string;
   label: string;
   subtitle?: string | null;
   imageUri?: string | null;
+  /** Chip tags shown after the label (e.g. a client's or contact's VIP badge). */
+  tags?: readonly DisplayTag[] | null;
 };
 
 export function EntityPickerModal({
@@ -198,9 +201,12 @@ export function EntityPickerModal({
                     </View>
                   ) : null}
                   <View style={{ flex: 1 }}>
-                    <Text style={{ ...typography.body, color: colors.text }}>
-                      {item.label}{isSelected ? " \u2713" : ""}
-                    </Text>
+                    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.xs }}>
+                      <Text style={{ ...typography.body, color: colors.text }}>
+                        {item.label}{isSelected ? " \u2713" : ""}
+                      </Text>
+                      <DisplayTagBadges tags={item.tags} />
+                    </View>
                     {item.subtitle ? (
                       <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
                         {item.subtitle}

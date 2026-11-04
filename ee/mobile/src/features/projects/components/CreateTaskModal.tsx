@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../../ui/ThemeContext";
 import { DatePickerField } from "../../../ui/components/DatePickerField";
 import { EntityPickerModal } from "../../../ui/components/EntityPickerModal";
@@ -47,6 +48,7 @@ export function CreateTaskModal({
 }) {
   const { t } = useTranslation("projects");
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -157,6 +159,9 @@ export function CreateTaskModal({
             alignItems: "center",
             justifyContent: "space-between",
             padding: theme.spacing.lg,
+            // A full-screen Modal sits under the status bar; without the inset
+            // the title and the close button hide behind the notch.
+            paddingTop: insets.top + theme.spacing.lg,
             borderBottomWidth: 1,
             borderBottomColor: theme.colors.border,
           }}
@@ -288,7 +293,14 @@ export function CreateTaskModal({
           ) : null}
         </ScrollView>
 
-        <View style={{ padding: theme.spacing.lg, borderTopWidth: 1, borderTopColor: theme.colors.border }}>
+        <View
+          style={{
+            padding: theme.spacing.lg,
+            paddingBottom: insets.bottom + theme.spacing.lg,
+            borderTopWidth: 1,
+            borderTopColor: theme.colors.border,
+          }}
+        >
           <PrimaryButton testID="create-task-save" onPress={() => void submit()} disabled={!canSave}>
             {t("task.create.save", "Create task")}
           </PrimaryButton>

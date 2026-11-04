@@ -1,6 +1,8 @@
 import { formatPhoneForDisplay, formatPhoneLabel } from "../../../../packages/validation/src/lib/phone";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Linking, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { DisplayTagBadges, type DisplayTag } from "../ui/components/DisplayTagBadges";
+import { mergePartyDisplayTags } from "./ticketRowTags";
 import { buildMapsUrl } from "../urls/mapsUrl";
 import { useTranslation } from "react-i18next";
 import type { RootStackParamList } from "../navigation/types";
@@ -298,8 +300,13 @@ export function TicketDetailBody({
   const [moreActionsOpen, setMoreActionsOpen] = useState(false);
   const [titleSuppression, setTitleSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
 
-  const renderEntityValue = useCallback((name: string | null | undefined, imageUri: string | null | undefined, accessibilityLabel: string) => (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+  const renderEntityValue = useCallback((
+    name: string | null | undefined,
+    imageUri: string | null | undefined,
+    accessibilityLabel: string,
+    displayTags?: readonly DisplayTag[] | null,
+  ) => (
+    <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.sm }}>
       <Avatar
         name={name ?? undefined}
         imageUri={imageUri ?? undefined}
@@ -310,6 +317,7 @@ export function TicketDetailBody({
       <Text style={{ ...typography.body, color: colors.text, flexShrink: 1 }}>
         {stringOrDash(name)}
       </Text>
+      <DisplayTagBadges tags={displayTags} />
     </View>
   ), [colors.text, session?.accessToken, spacing.sm, typography.body]);
 
@@ -422,11 +430,14 @@ export function TicketDetailBody({
             void resyncScheduleReminders({ accessToken: session.accessToken, tenantId: session.tenantId, userId: session.user?.id, refreshSession });
           }}
         />
-        <Text style={{ ...typography.caption, color: colors.textSecondary }}>
-          {ticket.ticket_number}
-          {ticket.client_name ? ` • ${ticket.client_name}` : ""}
-          {ticket.contact_name ? ` • ${ticket.contact_name}` : ""}
-        </Text>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: spacing.xs }}>
+          <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+            {ticket.ticket_number}
+            {ticket.client_name ? ` • ${ticket.client_name}` : ""}
+            {ticket.contact_name ? ` • ${ticket.contact_name}` : ""}
+          </Text>
+          <DisplayTagBadges tags={mergePartyDisplayTags(ticket.contact_tags, ticket.client_tags)} />
+        </View>
         {titleHook.titleEditing ? (
           <View style={{ marginTop: 2 }}>
             <View>
@@ -650,6 +661,7 @@ export function TicketDetailBody({
               ticket.contact_name,
               typeof ticket.contact_avatar_url === "string" ? ticket.contact_avatar_url : null,
               t("detail.contact"),
+              ticket.contact_tags,
             )}
           >
             {contactPhone ? (
@@ -704,6 +716,7 @@ export function TicketDetailBody({
               ticket.client_name,
               typeof ticket.client_logo_url === "string" ? ticket.client_logo_url : null,
               t("detail.client"),
+              ticket.client_tags,
             )}
           >
             {clientPhone ? (

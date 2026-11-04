@@ -19,9 +19,12 @@ const TRANSIENT_ROUTE_PARAMS: Record<string, string[]> = {
   InventoryTab: ["segment"],
 };
 
+/** Routes that must not be restored at all: each opens a live viewfinder. */
+const TRANSIENT_ROUTES = new Set(["Scan"]);
+
 type Params = Record<string, unknown>;
 type RouteLike = { name?: string; params?: Readonly<object> | undefined; state?: StateLike };
-type StateLike = { routes?: readonly RouteLike[] };
+type StateLike = { routes?: readonly RouteLike[]; index?: number };
 
 const omitKeys = (params: Params, keys: readonly string[]): Params | undefined => {
   if (!keys.some((key) => key in params)) return params;
@@ -48,7 +51,9 @@ function stripNestedScreenParams(params: Params | undefined): Params | undefined
 export function stripTransientRouteParams<T extends StateLike | undefined>(state: T): T {
   if (!state || !Array.isArray(state.routes)) return state;
   let changed = false;
-  const routes = state.routes.map((route) => {
+  const kept = state.routes.filter((route) => !(route.name && TRANSIENT_ROUTES.has(route.name)));
+  if (kept.length !== state.routes.length) changed = true;
+  const routes = kept.map((route) => {
     let next = route;
     const transient = route.name ? TRANSIENT_ROUTE_PARAMS[route.name] : undefined;
     let params = route.params as Params | undefined;
@@ -67,5 +72,8 @@ export function stripTransientRouteParams<T extends StateLike | undefined>(state
     }
     return next;
   });
-  return changed ? ({ ...state, routes } as T) : state;
+  if (!changed) return state;
+  const next: StateLike = { ...state, routes };
+  if (typeof state.index === "number" && state.index > routes.length - 1) next.index = Math.max(0, routes.length - 1);
+  return next as T;
 }

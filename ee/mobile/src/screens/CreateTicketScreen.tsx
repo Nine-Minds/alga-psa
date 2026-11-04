@@ -145,7 +145,7 @@ export function CreateTicketScreen({ navigation, route }: Props) {
       if (!res.ok) { setPickerError(t("create.errors.loadClients")); return; }
       clientsRef.current = res.data.data;
       const base = config.ok ? config.baseUrl : null;
-      setPickerItems(res.data.data.map((c) => ({ id: c.client_id, label: c.client_name, subtitle: c.email, imageUri: c.logoUrl && base ? `${base}${c.logoUrl}` : null })));
+      setPickerItems(res.data.data.map((c) => ({ id: c.client_id, label: c.client_name, subtitle: c.email, imageUri: c.logoUrl && base ? `${base}${c.logoUrl}` : null, tags: c.display_tags })));
     } catch { if (!controller.signal.aborted) setPickerError(t("create.errors.loadClients")); }
     finally { if (!controller.signal.aborted) setPickerLoading(false); }
   }, [client, apiKey, t]);
@@ -169,7 +169,7 @@ export function CreateTicketScreen({ navigation, route }: Props) {
       });
       contactsRef.current = unique;
       const base = config.ok ? config.baseUrl : null;
-      setPickerItems(unique.map((c) => ({ id: c.contact_name_id, label: c.full_name, subtitle: c.email, imageUri: c.avatarUrl && base ? `${base}${c.avatarUrl}` : null })));
+      setPickerItems(unique.map((c) => ({ id: c.contact_name_id, label: c.full_name, subtitle: c.email, imageUri: c.avatarUrl && base ? `${base}${c.avatarUrl}` : null, tags: c.display_tags })));
     } catch { if (!controller.signal.aborted) setPickerError(t("create.errors.loadContacts")); }
     finally { if (!controller.signal.aborted) setPickerLoading(false); }
   }, [client, apiKey, clientId, t]);

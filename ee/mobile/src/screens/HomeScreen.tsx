@@ -367,7 +367,7 @@ export function HomeScreen({ navigation }: Props) {
                 testID="home-action-scan"
                 icon="barcode-scan"
                 label={t("quickActions.scan", "Scan")}
-                onPress={() => navigation.navigate("InventoryTab", { segment: "scan" })}
+                onPress={() => navigation.navigate("Scan")}
               />
             ) : null}
             <QuickAction

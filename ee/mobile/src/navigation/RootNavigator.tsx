@@ -23,6 +23,7 @@ import { InventoryAdjustScreen } from "../screens/InventoryAdjustScreen";
 import { CountSessionScreen } from "../screens/CountSessionScreen";
 import { PurchaseOrderDetailScreen } from "../screens/PurchaseOrderDetailScreen";
 import { AssetDetailScreen } from "../screens/AssetDetailScreen";
+import { ScanScreen } from "../screens/ScanScreen";
 import { SearchScreen } from "../screens/SearchScreen";
 import { AuditSetupScreen } from "../screens/AuditSetupScreen";
 import { AuditSessionScreen } from "../screens/AuditSessionScreen";
@@ -205,6 +206,14 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
             component={AssetDetailScreen}
             options={({ navigation, route }) => ({
               title: route.params.assetName ?? tInventory("asset.title", "Asset"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="Scan"
+            component={ScanScreen}
+            options={({ navigation }) => ({
+              title: tInventory("segments.scan", "Scan"),
               ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
             })}
           />

@@ -42,6 +42,8 @@ export type RootStackParamList = {
   CountSession: { sessionId: string; locationName?: string };
   PurchaseOrderDetail: { poId: string; poNumber?: string };
   AssetDetail: { assetId: string; assetName?: string };
+  /** The inventory scanner pushed from Home or Assets; never restored on relaunch. */
+  Scan: undefined;
   Search: undefined;
   AuditSetup: undefined;
   AuditSession: { auditId: string };

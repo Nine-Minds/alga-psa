@@ -20,7 +20,6 @@ import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { SecondaryButton } from "../features/opportunities/components/SecondaryButton";
 import { SearchBar } from "../ui/components/SearchBar";
 import { EntityPickerModal, type EntityPickerItem } from "../ui/components/EntityPickerModal";
-import { ScanView } from "../features/inventory/components/ScanView";
 import type { DrawerParamList, RootStackParamList } from "../navigation/types";
 import { useAppResume } from "../hooks/useAppResume";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
@@ -135,7 +134,6 @@ export function AssetsScreen({ navigation }: Props) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [statuses, setStatuses] = useState<AssetStatusOption[]>([]);
   const [statusesLoaded, setStatusesLoaded] = useState(false);
-  const [scanOpen, setScanOpen] = useState(false);
   const [recentAudits, setRecentAudits] = useState<AssetAudit[]>([]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -291,13 +289,8 @@ export function AssetsScreen({ navigation }: Props) {
     }
   }, [hasNext, initialLoading, page, refreshing]);
 
-  const openScan = useCallback(() => {
-    if (features.inventory) {
-      navigation.navigate("InventoryTab", { segment: "scan" });
-      return;
-    }
-    setScanOpen(true);
-  }, [features.inventory, navigation]);
+  // A pushed screen, not the Inventory tab: Back must return to this list.
+  const openScan = useCallback(() => navigation.navigate("Scan"), [navigation]);
 
   const keyExtractor = useCallback((item: AssetListItem) => item.asset_id, []);
   const renderItem = useCallback(
@@ -521,30 +514,6 @@ export function AssetsScreen({ navigation }: Props) {
           setFiltersOpen(false);
         }}
       />
-      <Modal visible={scanOpen} animationType="slide" onRequestClose={() => setScanOpen(false)}>
-        <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "flex-end",
-              padding: theme.spacing.lg,
-              borderBottomWidth: 1,
-              borderBottomColor: theme.colors.border,
-            }}
-          >
-            <Pressable
-              testID="assets-scan-close"
-              onPress={() => setScanOpen(false)}
-              accessibilityRole="button"
-              accessibilityLabel={t("common.cancel", "Cancel")}
-              hitSlop={8}
-            >
-              <Feather name="x" size={22} color={theme.colors.text} />
-            </Pressable>
-          </View>
-          <ScanView />
-        </View>
-      </Modal>
     </View>
   );
 }

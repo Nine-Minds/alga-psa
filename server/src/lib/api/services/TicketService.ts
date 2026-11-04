@@ -28,6 +28,8 @@ import { runAuthorizedTicketWatcherWrite, TicketWatcherPermissionError } from '@
 import { buildAuthorizationPrincipalSubject } from 'server/src/lib/api/controllers/authorizationKernel';
 import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { applyTicketVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
+import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
+import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
@@ -157,6 +159,10 @@ const TICKET_MOBILE_LIST_FIELDS = [
   'entered_at',
   'closed_at',
   'tags',
+  // Chip tags for the requester and client (tag display rules, viewer audience),
+  // the same `contact_tags` / `client_tags` the web ticket list rows carry.
+  'contact_tags',
+  'client_tags',
   'master_ticket_id',
   'bundle_master_ticket_number',
   'bundle_child_count',
@@ -658,6 +664,8 @@ export class TicketService extends BaseService<ITicket> {
       if (selectedFields.includes('entered_at')) selectParts.push('t.entered_at');
       if (selectedFields.includes('closed_at')) selectParts.push('t.closed_at');
       if (selectedFields.includes('master_ticket_id')) selectParts.push('t.master_ticket_id');
+      // The requester's id keys the contact chip lookup (client_id already rides along below).
+      if (selectedFields.includes('contact_tags')) selectParts.push('t.contact_name_id');
       if (selectedFields.includes('latest_activity_at')) {
         selectParts.push(knex.raw(`${latestActivity.sql} as latest_activity_at`, latestActivity.bindings));
       }
@@ -702,11 +710,50 @@ export class TicketService extends BaseService<ITicket> {
     if (wants('tags')) {
       await this.attachTicketTags(knex, context.tenant, tickets as Array<Record<string, unknown>>);
     }
+    if (wants('contact_tags') || wants('client_tags')) {
+      await this.attachPartyDisplayTags(knex, context, tickets as Array<Record<string, unknown>>, {
+        contact: wants('contact_tags'),
+        client: wants('client_tags'),
+      });
+    }
 
     return {
       data: tickets as ITicket[],
       total: parseInt(count as string)
     };
+  }
+
+  /**
+   * Chip tags for each ticket's requester (`contact_tags`) and client (`client_tags`): the entity's
+   * tags restricted to the caller audience's display rules, in rule order. One query per entity
+   * type for the whole page; a ticket without that party, or with no ruled tags, gets [].
+   */
+  private async attachPartyDisplayTags(
+    knex: Knex,
+    context: ServiceContext,
+    tickets: Array<Record<string, unknown>>,
+    which: { contact: boolean; client: boolean }
+  ): Promise<void> {
+    const idOf = (ticket: Record<string, unknown>, column: string): string | null =>
+      typeof ticket[column] === 'string' ? (ticket[column] as string) : null;
+    const refs: Array<{ taggedType: 'contact' | 'client'; ids: Array<string | null> }> = [];
+    if (which.contact) refs.push({ taggedType: 'contact', ids: tickets.map((t) => idOf(t, 'contact_name_id')) });
+    if (which.client) refs.push({ taggedType: 'client', ids: tickets.map((t) => idOf(t, 'client_id')) });
+
+    const byKey = tickets.length > 0
+      ? await loadDisplayTagsForEntities(knex, context.tenant, displayAudienceForUser(context.user), refs)
+      : new Map();
+
+    for (const ticket of tickets) {
+      if (which.contact) {
+        const id = idOf(ticket, 'contact_name_id');
+        ticket.contact_tags = (id && byKey.get(displayTagKey('contact', id))) || [];
+      }
+      if (which.client) {
+        const id = idOf(ticket, 'client_id');
+        ticket.client_tags = (id && byKey.get(displayTagKey('client', id))) || [];
+      }
+    }
   }
 
   private async attachTicketTags(
@@ -844,6 +891,7 @@ export class TicketService extends BaseService<ITicket> {
       this.getTicketDocuments(id, context),
       ticket.contact_name_id ? getContactAvatarUrl(ticket.contact_name_id, context.tenant) : Promise.resolve(null),
       ticket.client_id ? getClientLogoUrl(ticket.client_id, context.tenant) : Promise.resolve(null),
+      this.attachPartyDisplayTags(knex, context, [ticket], { contact: true, client: true }),
     ]);
 
     return {

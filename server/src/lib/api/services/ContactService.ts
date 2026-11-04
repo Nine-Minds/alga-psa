@@ -6,6 +6,8 @@
 import { Knex } from 'knex';
 import { BaseService, ListResult, ServiceContext, withTransaction, tenantDb } from '@alga-psa/db';
 import { getContactAvatarUrl } from '@alga-psa/formatting/avatarUtils';
+import { displayTagKey, loadDisplayTagsForEntities } from '@alga-psa/tags/lib/loadDisplayTags';
+import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import { deleteEntityImage, uploadEntityImage } from '@alga-psa/storage';
 import { ContactModel, clearContactLinksBeforeDelete } from '@alga-psa/shared/models/contactModel';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
@@ -177,15 +179,24 @@ export class ContactService extends BaseService<IContact> {
       ContactModel.hydrateContactsWithPhoneNumbers(contacts as any[], context.tenant, trx)
     );
 
-    const contactsWithAvatars = await Promise.all(
-      contactsWithPhones.map(async (contact: IContact) => ({
-        ...contact,
-        avatarUrl: await getContactAvatarUrl(contact.contact_name_id, context.tenant),
-      }))
-    );
+    const [contactsWithAvatars, displayTags] = await Promise.all([
+      Promise.all(
+        contactsWithPhones.map(async (contact: IContact) => ({
+          ...contact,
+          avatarUrl: await getContactAvatarUrl(contact.contact_name_id, context.tenant),
+        }))
+      ),
+      // Chip tags for picker rows (tag display rules, caller audience): one query for the page.
+      loadDisplayTagsForEntities(knex, context.tenant, displayAudienceForUser(context.user), [
+        { taggedType: 'contact', ids: contactsWithPhones.map((contact: IContact) => contact.contact_name_id) },
+      ]),
+    ]);
 
     return {
-      data: contactsWithAvatars,
+      data: contactsWithAvatars.map((contact) => ({
+        ...contact,
+        display_tags: displayTags.get(displayTagKey('contact', contact.contact_name_id)) ?? [],
+      })),
       total: parseInt(count as string, 10),
     };
   }
@@ -235,9 +246,18 @@ export class ContactService extends BaseService<IContact> {
       return null;
     }
 
+    const [avatarUrl, displayTags] = await Promise.all([
+      getContactAvatarUrl(id, context.tenant),
+      loadDisplayTagsForEntities(knex, context.tenant, displayAudienceForUser(context.user), [
+        { taggedType: 'contact', ids: [id] },
+      ]),
+    ]);
+
     return {
       ...contact,
-      avatarUrl: await getContactAvatarUrl(id, context.tenant),
+      avatarUrl,
+      // Chip tags (tag display rules for the caller's audience), as the web pickers and ticket header show them.
+      display_tags: displayTags.get(displayTagKey('contact', id)) ?? [],
     } as IContact;
   }
 

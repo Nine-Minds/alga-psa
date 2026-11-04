@@ -43,6 +43,9 @@ export type TicketListItem = {
   entered_at?: string | null;
   closed_at?: string | null;
   tags?: TicketListTag[] | null;
+  /** Chip tags for the requester / client, already filtered by the tenant's tag display rules. */
+  contact_tags?: TicketListTag[] | null;
+  client_tags?: TicketListTag[] | null;
   /** Set on bundle children; the master's number rides along for the badge. */
   master_ticket_id?: string | null;
   bundle_master_ticket_number?: string | null;
