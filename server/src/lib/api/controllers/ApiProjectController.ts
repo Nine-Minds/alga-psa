@@ -86,6 +86,14 @@ export class ApiProjectController extends ApiBaseController {
     projectId: string,
     knex?: Awaited<ReturnType<typeof getConnection>>
   ): Promise<Record<string, any>> {
+    return (await this.getProjectReadProjection(apiRequest, projectId, knex)).record;
+  }
+
+  private async getProjectReadProjection(
+    apiRequest: AuthenticatedApiRequest,
+    projectId: string,
+    knex?: Awaited<ReturnType<typeof getConnection>>
+  ): Promise<{ record: Record<string, any>; redactedFields: string[] }> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const project = await this.projectService.getById(projectId, apiRequest.context);
     if (!project) {
@@ -107,7 +115,7 @@ export class ApiProjectController extends ApiBaseController {
 
     const projected = projectRecord(project as Record<string, any>, decision.redactedFields);
     if (!projected) throw new NotFoundError('Project not found');
-    return projected;
+    return { record: projected, redactedFields: decision.redactedFields };
   }
 
   // LEVERAGE: pattern ticket-record-context — thin wrapper over the shared builder; callers should import ./recordContexts directly
@@ -352,6 +360,16 @@ export class ApiProjectController extends ApiBaseController {
     return projectId;
   }
 
+  private async getPhaseProjectReadProjection(
+    apiRequest: AuthenticatedApiRequest,
+    phaseId: string,
+    knex?: Awaited<ReturnType<typeof getConnection>>
+  ) {
+    const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
+    const projectId = await this.resolveProjectIdForPhase(phaseId, apiRequest.context.tenant, resolvedKnex);
+    return this.getProjectReadProjection(apiRequest, projectId, resolvedKnex);
+  }
+
   private async assertTaskProjectAllowed(
     apiRequest: AuthenticatedApiRequest,
     taskId: string,
@@ -361,6 +379,16 @@ export class ApiProjectController extends ApiBaseController {
     const projectId = await this.resolveProjectIdForTask(taskId, apiRequest.context.tenant, resolvedKnex);
     await this.assertProjectReadAllowed(apiRequest, projectId, resolvedKnex);
     return projectId;
+  }
+
+  private async getTaskProjectReadProjection(
+    apiRequest: AuthenticatedApiRequest,
+    taskId: string,
+    knex?: Awaited<ReturnType<typeof getConnection>>
+  ) {
+    const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
+    const projectId = await this.resolveProjectIdForTask(taskId, apiRequest.context.tenant, resolvedKnex);
+    return this.getProjectReadProjection(apiRequest, projectId, resolvedKnex);
   }
 
   list() {
@@ -657,14 +685,17 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
+          const authorization = await this.getProjectReadProjection(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           const tasks = await this.projectService.getProjectTasks(
             projectId,
             apiRequest.context!
           );
 
-          return createSuccessResponse(tasks.map(t => this.stripInternalTaskFields(t)));
+          return createSuccessResponse(tasks.flatMap((task) => {
+            const projected = projectApiRecord('task', task as Record<string, any>, authorization.redactedFields);
+            return projected ? [this.stripInternalTaskFields(projected as any)] : [];
+          }));
         });
       } catch (error) {
         return handleApiError(error);
@@ -1209,14 +1240,17 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          await this.assertProjectReadAllowed(apiRequest as AuthenticatedApiRequest, projectId, knex);
+          const authorization = await this.getProjectReadProjection(apiRequest as AuthenticatedApiRequest, projectId, knex);
 
           const phases = await this.projectService.listPhases(
             projectId,
             apiRequest.context!
           );
 
-          return createSuccessResponse(phases);
+          return createSuccessResponse(phases.flatMap((phase) => {
+            const projected = projectApiRecord('phase', phase as Record<string, any>, authorization.redactedFields);
+            return projected ? [projected] : [];
+          }));
         });
       } catch (error) {
         return handleApiError(error);
@@ -1523,14 +1557,17 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          await this.assertPhaseProjectAllowed(apiRequest as AuthenticatedApiRequest, phaseId, knex);
+          const authorization = await this.getPhaseProjectReadProjection(apiRequest as AuthenticatedApiRequest, phaseId, knex);
 
           const tasks = await this.projectService.listPhaseTasks(
             phaseId,
             apiRequest.context!
           );
 
-          return createSuccessResponse(tasks.map(t => this.stripInternalTaskFields(t)));
+          return createSuccessResponse(tasks.flatMap((task) => {
+            const projected = projectApiRecord('task', task as Record<string, any>, authorization.redactedFields);
+            return projected ? [this.stripInternalTaskFields(projected as any)] : [];
+          }));
         });
       } catch (error) {
         return handleApiError(error);
@@ -1690,7 +1727,7 @@ export class ApiProjectController extends ApiBaseController {
             throw new ForbiddenError('Permission denied: Cannot read project');
           }
 
-          await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);
+          const authorization = await this.getTaskProjectReadProjection(apiRequest as AuthenticatedApiRequest, taskId, knex);
 
           const task = await this.projectService.getTaskById(
             taskId,
@@ -1701,7 +1738,9 @@ export class ApiProjectController extends ApiBaseController {
             throw new NotFoundError('Task not found');
           }
 
-          return createSuccessResponse(this.stripInternalTaskFields(task));
+          const projected = projectApiRecord('task', task as Record<string, any>, authorization.redactedFields);
+          if (!projected) throw new NotFoundError('Task not found');
+          return createSuccessResponse(this.stripInternalTaskFields(projected as any));
         });
       } catch (error) {
         return handleApiError(error);

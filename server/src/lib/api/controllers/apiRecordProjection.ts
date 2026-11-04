@@ -26,7 +26,7 @@ const quoteConversionSources = [
   'net_amount', 'location_id', 'locations', 'locations.location_name',
 ] as const;
 
-const DEFINITIONS: Record<'project' | 'ticket' | 'quote' | 'asset', ResourceDefinition> = {
+const DEFINITIONS: Record<'project' | 'ticket' | 'quote' | 'asset' | 'phase' | 'task', ResourceDefinition> = {
   project: {
     aliases: ['project', 'projects'],
     identifiers: ['project_id', 'projectId', 'projects.project_id', 'values.project_id', 'id', 'project_number', 'projects.project_number'],
@@ -101,6 +101,33 @@ const DEFINITIONS: Record<'project' | 'ticket' | 'quote' | 'asset', ResourceDefi
       vendor_name: ['vendor_name', 'vendor_id', 'vendors', 'vendors.vendor_name'],
       contact_name: ['contact_name', 'contact_name_id', 'contacts', 'contacts.full_name'],
       warranty_status: ['warranty_status', 'warranty_end_date'],
+    },
+  },
+  phase: {
+    aliases: ['phase', 'phases', 'project_phase', 'project_phases'],
+    identifiers: ['phase_id', 'phaseId', 'project_phases.phase_id', 'project_id', 'projects.project_id'],
+    fields: {
+      phase_name: [...CO_MANAGED_PHASE_NAME_ALIASES, 'project_phases.phase_name'],
+      phaseName: [...CO_MANAGED_PHASE_NAME_ALIASES, 'project_phases.phase_name'],
+      project_name: [...CO_MANAGED_PROJECT_NAME_ALIASES, 'projects.project_name'],
+      projectName: [...CO_MANAGED_PROJECT_NAME_ALIASES, 'projects.project_name'],
+      description: ['description', 'project_phases.description'],
+    },
+  },
+  task: {
+    aliases: ['task', 'tasks', 'project_task', 'project_tasks'],
+    identifiers: ['task_id', 'taskId', 'project_tasks.task_id', 'phase_id', 'project_phases.phase_id', 'project_id', 'projects.project_id'],
+    fields: {
+      task_name: [...CO_MANAGED_TASK_NAME_ALIASES, 'project_tasks.task_name'],
+      taskName: [...CO_MANAGED_TASK_NAME_ALIASES, 'project_tasks.task_name'],
+      phase_name: [...CO_MANAGED_PHASE_NAME_ALIASES, 'project_phases.phase_name'],
+      phaseName: [...CO_MANAGED_PHASE_NAME_ALIASES, 'project_phases.phase_name'],
+      project_name: [...CO_MANAGED_PROJECT_NAME_ALIASES, 'projects.project_name'],
+      projectName: [...CO_MANAGED_PROJECT_NAME_ALIASES, 'projects.project_name'],
+      description: ['description', 'project_tasks.description'],
+      status_name: [...commonStatusName, 'project_status_mappings.custom_name'],
+      assigned_user_name: commonAssignedName,
+      client_name: commonClientName,
     },
   },
 };
