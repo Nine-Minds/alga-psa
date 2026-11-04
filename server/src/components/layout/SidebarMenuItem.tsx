@@ -10,6 +10,12 @@ interface SidebarMenuItemProps {
   id: string;
   item: MenuItem & { underConstruction?: boolean };
   isActive: (path: string) => boolean;
+  /**
+   * Prefix match over `relatedPaths`, used for the section row only: a nav with
+   * nothing highlighted is worse than a broad highlight. Leaf links keep exact
+   * (and tab-aware) matching so sub-mode tab links are unaffected.
+   */
+  isRelatedPathActive?: (paths: readonly string[]) => boolean;
   sidebarOpen: boolean;
   openSubmenu: string | null;
   onToggleSubmenu: (name: string) => void;
@@ -20,6 +26,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
   id,
   item,
   isActive,
+  isRelatedPathActive,
   sidebarOpen,
   openSubmenu,
   onToggleSubmenu,
@@ -30,7 +37,9 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
 
   if (item.subItems) {
     const isExternalLink = item.href?.startsWith('http://') || item.href?.startsWith('https://');
-    const isRowActive = (item.href ? isActive(item.href) : false) || hasActiveSubItem;
+    const isRowActive = (item.href ? isActive(item.href) : false)
+      || hasActiveSubItem
+      || (item.relatedPaths ? isRelatedPathActive?.(item.relatedPaths) ?? false : false);
     const content = (
       <>
         <item.icon className="h-5 w-5 mr-2 flex-shrink-0" />
@@ -82,7 +91,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
                     defaultValue: 'Expand {{section}}',
                   })
             }
-            className="ml-auto flex-shrink-0 p-1 rounded hover:bg-white/10"
+            className="ml-auto flex-shrink-0 p-1 rounded hover:bg-sidebar-text/10"
             onClick={() => onToggleSubmenu(item.name)}
           >
             <ChevronDown

@@ -80,7 +80,8 @@ export interface MenuItem {
   href?: string;
   /**
    * Route prefixes that belong to this item although they live outside `href`
-   * (detail pages such as a workflow run). Used to label the header breadcrumb.
+   * (detail pages such as a workflow run). Used to label the header breadcrumb
+   * and to keep the parent row highlighted across the whole subtree.
    */
   relatedPaths?: readonly string[];
   subItems?: MenuItem[];
@@ -313,6 +314,9 @@ export const bottomMenuItems: MenuItem[] = [
     name: 'Settings',
     translationKey: 'sidebar.settings',
     icon: Settings,
+    // The quick links below only cover three of the settings pages; without these
+    // prefixes the main nav has nothing highlighted anywhere else under settings.
+    relatedPaths: ['/msp/settings', '/msp/licenses'],
     subItems: [
       { name: 'General', translationKey: 'settings.tabs.general', icon: SlidersHorizontal, href: '/msp/settings' },
       { name: 'Profile', translationKey: 'settings.tabs.profile', icon: User, href: '/msp/profile' },
