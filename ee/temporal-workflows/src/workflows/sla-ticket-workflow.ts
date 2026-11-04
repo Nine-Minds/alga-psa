@@ -6,6 +6,7 @@ import {
   defineSignal,
   log,
   proxyActivities,
+  patched,
   setHandler,
   sleep,
   workflowInfo,
@@ -162,6 +163,10 @@ export async function slaTicketWorkflow(
     });
     return;
   }
+
+  // Existing executions must retain the pre-change activity command sequence.
+  // New executions include escalation-only wakes and fractional deadlines.
+  const useExactEscalationThresholds = patched('sla-exact-escalation-thresholds-v1');
 
   let responseCompleted = input.carried?.responseCompleted ?? false;
   let resolutionCompleted = false;
@@ -400,11 +405,11 @@ export async function slaTicketWorkflow(
     const configuredNotificationThresholds = notificationThresholds && notificationThresholds.length > 0
       ? notificationThresholds
       : [50, 75, 90];
-    const configuredEscalationThresholds = [
+    const configuredEscalationThresholds = useExactEscalationThresholds ? [
       target.escalation_1_percent,
       target.escalation_2_percent,
       target.escalation_3_percent,
-    ].filter((value): value is number => Number.isFinite(value) && value > 0);
+    ].filter((value): value is number => Number.isFinite(value) && value > 0) : [];
     const notificationWakeThresholds = [...new Set([...configuredNotificationThresholds, 100])];
     const thresholds = [...new Set([...notificationWakeThresholds, ...configuredEscalationThresholds])]
       .sort((a, b) => a - b);
@@ -451,7 +456,9 @@ export async function slaTicketWorkflow(
         await rollOver();
       }
 
-      const thresholdMinutes = (phase.targetMinutes * threshold) / 100;
+      const thresholdMinutes = useExactEscalationThresholds
+        ? (phase.targetMinutes * threshold) / 100
+        : Math.ceil((phase.targetMinutes * threshold) / 100);
 
       const wakeTimeIso = await activities.calculateNextWakeTime({
         currentTime: startedAt.toISOString(),
@@ -505,25 +512,47 @@ export async function slaTicketWorkflow(
           });
         }
 
+        // Legacy histories recorded escalation checks inside the notification
+        // command block. Preserve that ordering when the patch is absent.
+        if (!useExactEscalationThresholds) {
+          try {
+            await activities.checkAndEscalate({
+              tenantId,
+              ticketId,
+              phase: phase.phase,
+              thresholdPercent: threshold,
+            });
+          } catch (error) {
+            log.warn('SLA escalation failed; continuing SLA tracking', {
+              ticketId,
+              tenantId,
+              phase: phase.phase,
+              thresholdPercent: threshold,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
       }
 
-      // Escalation failures (after the activity's retries are exhausted) must
-      // never stop SLA tracking: log and carry on with the next threshold.
-      try {
-        await activities.checkAndEscalate({
-          tenantId,
-          ticketId,
-          phase: phase.phase,
-          thresholdPercent: threshold,
-        });
-      } catch (error) {
-        log.warn('SLA escalation failed; continuing SLA tracking', {
-          ticketId,
-          tenantId,
-          phase: phase.phase,
-          thresholdPercent: threshold,
-          error: error instanceof Error ? error.message : String(error),
-        });
+      if (useExactEscalationThresholds) {
+        // Escalation failures (after the activity's retries are exhausted) must
+        // never stop SLA tracking: log and carry on with the next threshold.
+        try {
+          await activities.checkAndEscalate({
+            tenantId,
+            ticketId,
+            phase: phase.phase,
+            thresholdPercent: threshold,
+          });
+        } catch (error) {
+          log.warn('SLA escalation failed; continuing SLA tracking', {
+            ticketId,
+            tenantId,
+            phase: phase.phase,
+            thresholdPercent: threshold,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       }
 
       thresholdIndex += 1;
