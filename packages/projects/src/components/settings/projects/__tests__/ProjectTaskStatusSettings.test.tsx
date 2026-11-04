@@ -162,10 +162,12 @@ describe('ProjectTaskStatusSettings delete flow', () => {
     fireEvent.click(container.querySelector('#project-status-delete-m2') as HTMLElement);
 
     await screen.findByText('"Waiting on Client" has 11 task(s). Move them to:');
-    fireEvent.change(
-      container.querySelector('#project-status-move-target-select') as HTMLElement,
-      { target: { value: 'm3' } }
-    );
+    const moveTarget = container.querySelector('#project-status-move-target-select') as HTMLSelectElement;
+    fireEvent.change(moveTarget, { target: { value: 'm3' } });
+    // Confirm only once the dialog actually shows the destination, the way an
+    // operator would; clicking through an unflushed pick is what made this
+    // assertion flake under load.
+    await waitFor(() => expect(moveTarget.value).toBe('m3'));
     fireEvent.click(container.querySelector('#project-status-confirm-delete') as HTMLElement);
 
     await waitFor(() => expect(deleteProjectStatusMapping).toHaveBeenCalledWith('m2', 'm3'));

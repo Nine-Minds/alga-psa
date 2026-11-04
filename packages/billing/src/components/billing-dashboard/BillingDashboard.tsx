@@ -174,7 +174,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         </Tabs.Content>
 
         <Tabs.Content value="client-contracts">
-          {searchParams?.has('contractId') ? (
+          {searchParams?.has('contractId') || searchParams?.has('clientContractId') ? (
             <ContractDetailSwitcher
               contractDocuments={contractDocuments}
               currentUserId={currentUserId}

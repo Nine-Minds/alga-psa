@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, type Mock } from 'vitest';
 
-import { activateClientContractAssignment } from '../clientContracts';
+import { activateClientContractAssignment, ContractAlreadyActiveScheduledError } from '../clientContracts';
 
 /**
  * "Set to Active" used to flip only client_contracts.is_active. The contract header stayed
@@ -193,5 +193,66 @@ describe('activateClientContractAssignment', () => {
       activateClientContractAssignment(missing, 'tenant-1', 'client-contract-missing'),
     ).rejects.toThrow('Client contract client-contract-missing not found');
     expect(updateContract).not.toHaveBeenCalled();
+  });
+
+  it("stores status 'active' — never the derived 'scheduled' — when a future-start draft is activated", async () => {
+    const updateContract: PayloadMock = vi.fn();
+    const updateAssignment: PayloadMock = vi.fn();
+
+    const activated = await activateClientContractAssignment(
+      createMockTransaction(
+        {
+          contract: {
+            contract_id: 'contract-1',
+            status: 'draft',
+            is_active: false,
+            currency_code: 'USD',
+            contract_name: 'QA Seed - Future Start',
+          },
+          assignment: { ...baseAssignment, start_date: '2099-11-16' },
+        },
+        { updateContract, updateAssignment },
+      ),
+      'tenant-1',
+      'client-contract-1',
+    );
+
+    // 'scheduled' is derived on every read; the contracts.status column only ever holds a
+    // stored status, so neither write may carry it.
+    expect(updateContract).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'active', is_active: true }),
+    );
+    for (const spy of [updateContract, updateAssignment]) {
+      for (const [payload] of spy.mock.calls) {
+        expect(Object.values(payload)).not.toContain('scheduled');
+        expect(Object.keys(payload)).not.toContain('assignment_status');
+      }
+    }
+    expect(activated.assignment_status).toBe('scheduled');
+  });
+
+  it('names a clean YYYY-MM-DD start date when the assignment is already scheduled (pg Date value)', async () => {
+    const updateContract: PayloadMock = vi.fn();
+    const updateAssignment: PayloadMock = vi.fn();
+
+    await expect(
+      activateClientContractAssignment(
+        createMockTransaction(
+          {
+            contract: { contract_id: 'contract-1', status: 'active', is_active: true, currency_code: 'USD' },
+            // node-postgres returns DATE columns as local-midnight Date objects.
+            assignment: { ...baseAssignment, is_active: true, start_date: new Date(2099, 9, 22) },
+          },
+          { updateContract, updateAssignment },
+        ),
+        'tenant-1',
+        'client-contract-1',
+      ),
+    ).rejects.toMatchObject({
+      name: 'ContractAlreadyActiveScheduledError',
+      startDate: '2099-10-22',
+      message: 'Contract is already active and starts on 2099-10-22; there is nothing to activate.',
+    });
+    expect(updateAssignment).not.toHaveBeenCalled();
   });
 });

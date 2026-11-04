@@ -2,6 +2,7 @@
 // TODO: This file needs refactoring - TimePeriod model method signatures have changed
 'use server'
 
+import { delegateToTimeSource } from '../lib/timeSource';
 import { revalidatePath } from 'next/cache'
 import { TimePeriod } from '../models/timePeriod'
 import { TimePeriodSettings } from '../models/timePeriodSettings';
@@ -11,7 +12,8 @@ import {
   ITimePeriodView,
   ITimePeriodSettings
 } from '@alga-psa/types';
-import { createTimePeriodsThrough, ensureTimePeriodCoversDate } from '../lib/timePeriodMaterialization';
+import { ensureTimePeriodCoversDate } from '../lib/timePeriodMaterialization';
+import { endOfConfiguredTimePeriod, yearBoundary } from '../lib/timePeriodCadence';
 import { addDays, addMonths, format, differenceInHours, parseISO, startOfDay, formatISO, endOfMonth, AddMonthsOptions, differenceInDays } from 'date-fns';
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { validateData, validateArray } from '@alga-psa/validation';
@@ -19,10 +21,10 @@ import { timePeriodSchema, timePeriodSettingsSchema } from '../schemas/timeSheet
 import { formatUtcDateNoTime, toPlainDate } from '@alga-psa/core';
 import { parse } from 'path';
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex, tenantDb, withTransaction, getTenantContext } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
-import { getSession, withAuth } from '@alga-psa/auth';
+import { getSession, hasPermission, withAuth } from '@alga-psa/auth';
 import { resolveUserTimeZone } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -35,7 +37,6 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 // Special value to indicate end of period
-const END_OF_PERIOD = 0;
 
 // These actions are also driven from background jobs and from the billing
 // bootstrap, where there is no Next.js request context and revalidatePath
@@ -126,9 +127,68 @@ function timePeriodActionErrorFrom(error: unknown, fallback = ''): TimePeriodAct
   return actionError(message);
 }
 
-export const getLatestTimePeriod = withAuth(async (_user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodView | null>> => {
+// Time periods are tenant-wide (they bound everyone's time sheets), so reading and
+// changing them is reserved for roles holding the `time_period` permission. The
+// time-entry flow itself stays ungated — getCurrentTimePeriod and
+// getTimeEntryUserTimeZone must keep working for a technician filling a time sheet.
+const TIME_PERIOD_PERMISSION_MESSAGES: Record<'read' | 'create' | 'update' | 'delete', string> = {
+  read: 'Permission denied: cannot view time periods.',
+  create: 'Permission denied: cannot create time periods.',
+  update: 'Permission denied: cannot update time periods.',
+  delete: 'Permission denied: cannot delete time periods.',
+};
+
+async function timePeriodPermissionError(
+  user: Parameters<typeof hasPermission>[0],
+  action: 'read' | 'create' | 'update' | 'delete',
+  knex: Knex | Knex.Transaction
+): Promise<ActionPermissionError | null> {
+  if (await hasPermission(user, 'time_period', action, knex)) {
+    return null;
+  }
+  return permissionError(
+    TIME_PERIOD_PERMISSION_MESSAGES[action],
+    `msp/time-entry:errors.timePeriod.permissions.${action}`
+  );
+}
+
+export interface TimePeriodCapabilities {
+  read: boolean;
+  create: boolean;
+  update: boolean;
+  delete: boolean;
+  /** Governs the time-period *settings* (the cadence rules), mirroring the v1 API. */
+  manage: boolean;
+}
+
+/**
+ * The viewer's `time_period` permissions, for gating the Settings > Time Entry controls.
+ * The actions above remain the authoritative check; this only decides what to render.
+ */
+export const getTimePeriodCapabilities = withAuth(async (user): Promise<TimePeriodCapabilities> => {
+  const { knex } = await createTenantKnex();
+  const [read, create, update, remove, manage] = await Promise.all([
+    hasPermission(user, 'time_period', 'read', knex),
+    hasPermission(user, 'time_period', 'create', knex),
+    hasPermission(user, 'time_period', 'update', knex),
+    hasPermission(user, 'time_period', 'delete', knex),
+    hasPermission(user, 'time_period', 'manage', knex),
+  ]);
+
+  return { read, create, update, delete: remove, manage };
+});
+
+export const getLatestTimePeriod = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodView | null>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.readLatest(ctx));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex } = await createTenantKnex();
+    const denied = await timePeriodPermissionError(user, 'read', knex);
+    if (denied) {
+      return denied;
+    }
+
     const latestPeriod = await TimePeriod.getLatest(knex, tenant);
     if (!latestPeriod) {
       return null;
@@ -146,9 +206,17 @@ export const getLatestTimePeriod = withAuth(async (_user, { tenant }): Promise<T
   }
 });
 
-export const getTimePeriodSettings = withAuth(async (_user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodSettings[]>> => {
+export const getTimePeriodSettings = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodSettings[]>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.readSettings(ctx));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex } = await createTenantKnex();
+    const denied = await timePeriodPermissionError(user, 'read', knex);
+    if (denied) {
+      return denied;
+    }
+
     const settings = await TimePeriodSettings.getActiveSettings(knex, tenant);
     return validateArray(timePeriodSettingsSchema, settings);
   } catch (error) {
@@ -162,10 +230,13 @@ export const getTimePeriodSettings = withAuth(async (_user, { tenant }): Promise
 });
 
 export const createTimePeriod = withAuth(async (
-  _user,
+  user,
   { tenant },
   input: TimePeriodInput
 ): Promise<TimePeriodActionResult<ITimePeriodView>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.create(ctx, input));
+  if (delegated.handled) return delegated.value;
   // Convert string dates to Temporal.PlainDate (Next.js server actions can't receive Temporal objects)
   let timePeriodData: { start_date: Temporal.PlainDate; end_date: Temporal.PlainDate };
   try {
@@ -178,6 +249,11 @@ export const createTimePeriod = withAuth(async (
   }
 
   const { knex: db } = await createTenantKnex();
+  const denied = await timePeriodPermissionError(user, 'create', db);
+  if (denied) {
+    return denied;
+  }
+
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -211,11 +287,19 @@ export const createTimePeriod = withAuth(async (
   }
 });
 
-export const fetchAllTimePeriods = withAuth(async (_user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodView[]>> => {
+export const fetchAllTimePeriods = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodView[]>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.read(ctx));
+  if (delegated.handled) return delegated.value;
   try {
     console.log('Fetching all time periods...');
 
     const { knex } = await createTenantKnex();
+    const denied = await timePeriodPermissionError(user, 'read', knex);
+    if (denied) {
+      return denied;
+    }
+
     const timePeriods = await TimePeriod.getAll(knex, tenant);
 
     // Convert model types to view types
@@ -252,6 +336,9 @@ function getCurrentDate(timeZone: string): Temporal.PlainDate {
 }
 
 export const getCurrentTimePeriod = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodView | null>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.readCurrent(ctx));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex } = await createTenantKnex();
 
@@ -303,51 +390,11 @@ export const getTimeEntryUserTimeZone = withAuth(async (user, { tenant }): Promi
 
 // Helper function to get the end of a period based on frequency unit
 // LEVERAGE: pattern period-end-calc — one setting→[start,end) engine should own this
+// The generator and the suggester read a setting through the same cadence function, so a
+// monthly end_day is the last included day and a yearly profile ends at end_month /
+// end_day_of_month, on both paths.
 function getEndOfPeriod(startDate: string, setting: ITimePeriodSettings): Temporal.PlainDate {
-  const frequency = setting.frequency || 1;
-  const startDatePlain = Temporal.PlainDate.from(startDate);
-
-  // Special handling for frequency = 0 (end of period)
-  if (frequency === END_OF_PERIOD) {
-    switch (setting.frequency_unit) {
-      case 'week': {
-        // End of week (Sunday) + 1 day
-        const daysUntilEndOfWeek = 7 - startDatePlain.dayOfWeek;
-        return startDatePlain.add({ days: daysUntilEndOfWeek + 1 });
-      }
-
-      case 'month': {
-        // End of month + 1 day
-        return startDatePlain.add({ months: 1 }).with({ day: 1 });
-      }
-      case 'year': {
-        return startDatePlain.add({ years: 1 }).with({ month: 1, day: 1 });
-      }
-
-      default: // day
-        return startDatePlain.add({ days: 1 });
-    }
-  }
-
-  // Regular frequency handling
-  switch (setting.frequency_unit) {
-    case 'week':
-      return startDatePlain.add({ days: 7 * frequency });
-
-    case 'month': {
-      if (setting.end_day && setting.end_day !== END_OF_PERIOD) {
-        return startDatePlain.add({ months: frequency - 1 }).with({ day: setting.end_day });
-      }
-      return startDatePlain.add({ months: frequency }).with({ day: 1 });
-    }
-
-    case 'year': {
-      return startDatePlain.add({ years: frequency });
-    }
-
-    default: // day
-      return startDatePlain.add({ days: frequency });
-  }
+  return endOfConfiguredTimePeriod(Temporal.PlainDate.from(startDate), setting);
 }
 
 // Start of the period that follows the one beginning at currentStart, for
@@ -363,14 +410,13 @@ function getNextPeriodStart(
       return currentStart.add({ days: 7 * frequency });
 
     case 'month': {
-      const next = currentStart.add({ months: frequency });
-      return setting.start_day
-        ? next.with({ day: Math.min(setting.start_day, next.daysInMonth) })
-        : next;
+      // start_day defaults to the 1st, as in timePeriodCadence and the suggester.
+      const next = currentStart.with({ day: 1 }).add({ months: frequency });
+      return next.with({ day: Math.min(setting.start_day || 1, next.daysInMonth) });
     }
 
     case 'year':
-      return currentStart.add({ years: frequency });
+      return yearBoundary(setting, currentStart.year + frequency);
 
     default:
       return currentStart.add({ days: frequency });
@@ -389,6 +435,7 @@ export async function generateTimePeriods(
   const endDate = toPlainDate(endDateStr);
 
   for (const setting of settings) {
+    if (setting.is_active === false) continue;
     let currentDate = startDate;
 
     if (setting.effective_from) {
@@ -410,6 +457,13 @@ export async function generateTimePeriods(
       }
     }
 
+    // Yearly profiles start on start_month / start_day_of_month, not on the range start.
+    if (setting.frequency_unit === 'year') {
+      let aligned = yearBoundary(setting, currentDate.year);
+      if (Temporal.PlainDate.compare(aligned, currentDate) < 0) aligned = yearBoundary(setting, currentDate.year + 1);
+      currentDate = aligned;
+    }
+
     while (Temporal.PlainDate.compare(currentDate, endDate) < 0) {
       if (setting.effective_to) {
         const effectiveTo = toPlainDate(setting.effective_to);
@@ -420,13 +474,15 @@ export async function generateTimePeriods(
 
       const periodEndDate = getEndOfPeriod(currentDate.toString(), setting);
 
-      if (Temporal.PlainDate.compare(periodEndDate, endDate) >= 0) {
+      // Stored ends are exclusive, so a period whose end equals the range end (or effective_to)
+      // still fits inside it.
+      if (Temporal.PlainDate.compare(periodEndDate, endDate) > 0) {
         break;
       }
 
       if (setting.effective_to) {
         const effectiveTo = toPlainDate(setting.effective_to);
-        if (Temporal.PlainDate.compare(periodEndDate, effectiveTo) >= 0) {
+        if (Temporal.PlainDate.compare(periodEndDate, effectiveTo) > 0) {
           break;
         }
       }
@@ -439,12 +495,11 @@ export async function generateTimePeriods(
       };
       periods.push(newPeriod);
 
-      // A period that ends on a fixed day of the month (the 15th, say) does not
-      // chain: the next one starts at the next occurrence of start_day. Walking
-      // to periodEndDate instead recomputed the same end date from the same
-      // date forever — an infinite loop that filled the heap.
-      const chainsToItsEnd = setting.end_day === undefined || setting.end_day === END_OF_PERIOD;
-      const nextDate = chainsToItsEnd ? periodEndDate : getNextPeriodStart(currentDate, setting);
+      // The next period starts at the setting's next start (start_day / start_month), never at
+      // this period's end: a 16th-to-month-end profile restarts on the 16th, a seasonal yearly
+      // profile on its start_month. For day and week cadences the two coincide. (Walking to
+      // periodEndDate for a fixed end_day once recomputed the same end forever.)
+      const nextDate = getNextPeriodStart(currentDate, setting);
 
       if (Temporal.PlainDate.compare(nextDate, currentDate) <= 0) {
         break;
@@ -479,9 +534,17 @@ function alignToMonthDay(dateStr: string, targetDay: number): string {
   return alignedDate.toString();
 }
 
-export const deleteTimePeriod = withAuth(async (_user, { tenant }, periodId: string): Promise<TimePeriodActionResult<void>> => {
+export const deleteTimePeriod = withAuth(async (user, { tenant }, periodId: string): Promise<TimePeriodActionResult<void>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.remove(ctx, periodId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex } = await createTenantKnex();
+    const denied = await timePeriodPermissionError(user, 'delete', knex);
+    if (denied) {
+      return denied;
+    }
+
     // Check if period exists and has no associated time records
     const period = await TimePeriod.findById(knex, tenant, periodId);
     if (!period) {
@@ -521,14 +584,19 @@ export const deleteTimePeriod = withAuth(async (_user, { tenant }, periodId: str
  * Remove unused/unneeded time periods directly from the Time Entry list. A period is only
  * removable when it is completely unused: no timesheets exist for it (for any user, which
  * also implies no time entries) and it is not the current period. Because deleting a period
- * is tenant-wide, this is restricted to team managers. Removal is per-id and isolated, so a
- * blocked period only fails itself (reported in `failed`) without aborting the batch.
+ * is tenant-wide, this is restricted to team managers (or to roles granted
+ * `time_period:delete`, which is the admin-side route into the same removal). Removal is
+ * per-id and isolated, so a blocked period only fails itself (reported in `failed`) without
+ * aborting the batch.
  */
 export const deleteTimePeriods = withAuth(async (
   user,
   { tenant },
   periodIds: string[]
 ): Promise<{ deletedIds: string[]; failed: Array<{ periodId: string; message: string }> }> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.removeMany(ctx, periodIds));
+  if (delegated.handled) return delegated.value;
   const { knex } = await createTenantKnex();
 
   // Manager gate: mirrors how the Time Entry page derives isManager (manages any team).
@@ -536,6 +604,7 @@ export const deleteTimePeriods = withAuth(async (
     .where({ manager_id: user.user_id })
     .first('team_id');
   const isManager = !!managedTeam;
+  const canDelete = isManager || await hasPermission(user, 'time_period', 'delete', knex);
 
   const uniqueIds = Array.from(
     new Set((periodIds ?? []).filter((id) => typeof id === 'string' && id.length > 0))
@@ -544,7 +613,7 @@ export const deleteTimePeriods = withAuth(async (
   const deletedIds: string[] = [];
   const failed: Array<{ periodId: string; message: string }> = [];
 
-  if (!isManager) {
+  if (!canDelete) {
     for (const periodId of uniqueIds) {
       failed.push({ periodId, message: 'Only managers can remove time periods' });
     }
@@ -599,11 +668,14 @@ export const deleteTimePeriods = withAuth(async (
 });
 
 export const updateTimePeriod = withAuth(async (
-  _user,
+  user,
   { tenant },
   periodId: string,
   input: Partial<TimePeriodInput>
 ): Promise<TimePeriodActionResult<ITimePeriodView>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.update(ctx, periodId, input));
+  if (delegated.handled) return delegated.value;
   // Convert string dates to Temporal.PlainDate (Next.js server actions can't receive Temporal objects)
   const updates: Partial<Omit<ITimePeriod, 'period_id' | 'tenant'>> = {};
   try {
@@ -614,6 +686,11 @@ export const updateTimePeriod = withAuth(async (
   }
 
   const { knex: db } = await createTenantKnex();
+  const denied = await timePeriodPermissionError(user, 'update', db);
+  if (denied) {
+    return denied;
+  }
+
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
     try {
@@ -670,8 +747,16 @@ export const updateTimePeriod = withAuth(async (
   }
 });
 
-export const generateAndSaveTimePeriods = withAuth(async (_user, { tenant }, startDate: ISO8601String, endDate: ISO8601String): Promise<TimePeriodActionResult<ITimePeriodView[]>> => {
+export const generateAndSaveTimePeriods = withAuth(async (user, { tenant }, startDate: ISO8601String, endDate: ISO8601String): Promise<TimePeriodActionResult<ITimePeriodView[]>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.generate(ctx, startDate, endDate));
+  if (delegated.handled) return delegated.value;
   const { knex: db } = await createTenantKnex();
+  const denied = await timePeriodPermissionError(user, 'create', db);
+  if (denied) {
+    return denied;
+  }
+
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const settings = await getTimePeriodSettings();
@@ -717,40 +802,3 @@ export const generateAndSaveTimePeriods = withAuth(async (_user, { tenant }, sta
     }
   });
 });
-
-/**
- * Creates the next time period(s) based on settings, filling any gaps up to the threshold.
- *
- * Manages its own transaction (all-or-nothing) and takes the per-tenant time-period advisory lock.
- * The work lives in createTimePeriodsThrough, shared with ensureTimePeriodCoversDate.
- *
- * NOTE: This function requires tenant context to be set via runWithTenant() or withAuth wrapper.
- * For background jobs, wrap calls with runWithTenant(tenantId, ...).
- *
- * @param settings - Time period settings to use for generation
- * @param daysThreshold - How many days ahead to create periods (default: 5)
- * @param options.today - The date to treat as today (default: today in UTC)
- */
-export async function createNextTimePeriod(
-  settings: ITimePeriodSettings[],
-  daysThreshold: number = 5,
-  options: { today?: Temporal.PlainDate } = {}
-): Promise<ITimePeriod | null> {
-  const tenant = getTenantContext();
-  if (!tenant) {
-    throw new Error('Tenant context is required. Ensure this function is called within runWithTenant() or from an authenticated server action.');
-  }
-
-  const { knex: db } = await createTenantKnex();
-
-  try {
-    // Use UTC for background jobs since there's no user session
-    const today = options.today ?? getCurrentDate('UTC');
-    return await withTransaction(db, (trx) =>
-      createTimePeriodsThrough(trx, tenant, settings, today, daysThreshold)
-    );
-  } catch (error) {
-    logger.error('Error creating next time period:', error);
-    throw error;
-  }
-}

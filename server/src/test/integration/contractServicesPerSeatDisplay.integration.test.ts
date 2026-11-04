@@ -249,7 +249,7 @@ describe('per-seat recurring services: overview and monthly value agree with bil
     await db('contract_line_service_fixed_config')
       .where({ tenant: tenantId })
       .whereIn('config_id', configIds)
-      .update({ base_rate: null, rate_provenance: 'inherited' });
+      .update({ base_rate: null, base_rate_basis: null, rate_provenance: 'inherited' });
 
     // 20 x EUR 90 + 30 x EUR 45 + 2 x EUR 180.
     const expected = 20 * 9000 + 30 * 4500 + 2 * 18000;

@@ -106,7 +106,7 @@ export class ApiContractLineController {
       // Validate query parameters
       const validation = contractLineListQuerySchema.safeParse(query);
       if (!validation.success) {
-        return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const { page, limit, sort, order, ...filters } = validation.data;
@@ -123,8 +123,8 @@ export class ApiContractLineController {
       };
 
       const listOptions = { 
-        page: page ? parseInt(page) : 1, 
-        limit: limit ? parseInt(limit) : 25, 
+        page: page || 1, 
+        limit: limit || 25, 
         sort: sort || 'contract_line_name', 
         order: (order || 'asc') as 'asc' | 'desc',
         filters
@@ -186,7 +186,7 @@ export class ApiContractLineController {
       // Validate request body
       const validation = createContractLineSchema.safeParse(data);
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const plan = await this.contractLineService.create(validation.data, context);
@@ -210,7 +210,7 @@ export class ApiContractLineController {
       // Validate request body
       const validation = updateContractLineSchema.safeParse(data);
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const plan = await this.contractLineService.update(params.id, validation.data, requestContext);
@@ -262,7 +262,7 @@ export class ApiContractLineController {
       // Validate request body
       const validation = addServiceToPlanSchema.safeParse(data);
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const serviceConfig = await this.contractLineService.addServiceToPlan(params.id, validation.data, requestContext);
@@ -283,7 +283,7 @@ export class ApiContractLineController {
       // Validate request body
       const validation = updatePlanServiceSchema.safeParse(data);
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const serviceConfig = await this.contractLineService.updatePlanService(params.contractLineId, params.serviceId, validation.data, requestContext);
@@ -336,7 +336,7 @@ export class ApiContractLineController {
       // Validate request body
       const validation = createFixedPlanConfigSchema.safeParse(data);
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const config = await this.contractLineService.upsertFixedPlanConfig(params.id, validation.data, requestContext);
@@ -371,7 +371,7 @@ export class ApiContractLineController {
       // Validate request body
       const validation = planActivationSchema.safeParse(data);
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const plan = await this.contractLineService.setPlanActivation(params.id, validation.data, requestContext);
@@ -392,7 +392,7 @@ export class ApiContractLineController {
       // Validate request body
       const validation = copyContractLineSchema.safeParse(data);
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const newPlan = await this.contractLineService.copyPlan(validation.data, requestContext);
@@ -447,13 +447,13 @@ export class ApiContractLineController {
       // Validate query parameters
       const validation = contractListQuerySchema.safeParse(query);
       if (!validation.success) {
-        return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const { page, limit, sort, order, ...filters } = validation.data;
       const listOptions = { 
-        page: page ? parseInt(page) : 1, 
-        limit: limit ? parseInt(limit) : 25, 
+        page: page || 1, 
+        limit: limit || 25, 
         sort, 
         order: order as 'asc' | 'desc' | undefined,
         filters
@@ -480,7 +480,7 @@ export class ApiContractLineController {
       // Validate request body
       const validation = createContractSchema.safeParse(data);
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const contract = await this.contractLineService.createContract(validation.data, context);
@@ -501,7 +501,7 @@ export class ApiContractLineController {
       // Validate request body
       const validation = addContractLineSchema.safeParse(data);
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const contractLineMapping = await this.contractLineService.addContractLine(
@@ -694,13 +694,13 @@ export class ApiContractLineController {
       // Validate query parameters
       const validation = clientContractLineListQuerySchema.safeParse(query);
       if (!validation.success) {
-        return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const { page, limit, sort, order, ...filters } = validation.data;
       const listOptions = { 
-        page: page ? parseInt(page) : 1, 
-        limit: limit ? parseInt(limit) : 25, 
+        page: page || 1, 
+        limit: limit || 25, 
         sort, 
         order: order as 'asc' | 'desc' | undefined,
         filters
@@ -727,7 +727,7 @@ export class ApiContractLineController {
       // Validate request body
       const validation = createClientContractLineSchema.safeParse(data);
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const assignment = await this.contractLineService.assignPlanToClient(validation.data, context);
@@ -761,7 +761,7 @@ export class ApiContractLineController {
       // Validate request body
       const validation = createPlanTemplateSchema.safeParse(data);
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const template = await this.contractLineService.createTemplate(validation.data, context);
@@ -786,7 +786,7 @@ export class ApiContractLineController {
         template_id: templateId ?? data?.template_id
       });
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
       if (!validation.data.template_id) {
         return createErrorResponse('Template id is required in the path', 400, 'VALIDATION_ERROR');
@@ -825,7 +825,7 @@ export class ApiContractLineController {
       // Validate request body
       const validation = bulkCreateContractLinesSchema.safeParse(data);
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const plans = await this.contractLineService.bulkCreateContractLines(validation.data, context);
@@ -845,7 +845,7 @@ export class ApiContractLineController {
       // Validate request body
       const validation = bulkUpdateContractLinesSchema.safeParse(data);
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const plans = await this.contractLineService.bulkUpdateContractLines(validation.data, context);
@@ -865,7 +865,7 @@ export class ApiContractLineController {
       // Validate request body
       const validation = bulkDeleteContractLinesSchema.safeParse(data);
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       await this.contractLineService.bulkDeleteContractLines(validation.data, context);
@@ -888,7 +888,7 @@ export class ApiContractLineController {
       // Validate request body
       const validation = bulkAddServicesToPlanSchema.safeParse(data);
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const results: { success: boolean; service_id: string; config?: any; error?: string }[] = [];
@@ -916,7 +916,7 @@ export class ApiContractLineController {
       // Validate request body
       const validation = bulkRemoveServicesFromPlanSchema.safeParse(data);
       if (!validation.success) {
-        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+        return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
       }
 
       const results: { success: boolean; service_id: string; error?: string }[] = [];

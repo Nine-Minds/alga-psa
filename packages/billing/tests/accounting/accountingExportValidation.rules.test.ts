@@ -43,6 +43,7 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: h.knex, tenant: 'tenant-1' })),
   tenantDb: vi.fn((knex: any) => ({
     table: (table: string) => knex(table),
+    tenantJoin: () => undefined,
   })),
 }));
 
@@ -59,6 +60,7 @@ type FakeState = {
   lines: any[];
   charges: any[];
   chargeDetails: any[];
+  fixedDetails?: any[];
   invoices: any[];
   clients: any[];
   services: any[];
@@ -69,6 +71,7 @@ function createFakeKnex(state: FakeState) {
   const tableData: Record<string, () => any[]> = {
     invoice_charges: () => state.charges.map((charge) => ({ net_amount: 100, ...charge })),
     invoice_charge_details: () => state.chargeDetails,
+    'invoice_charge_details as d': () => state.fixedDetails ?? [],
     invoices: () => state.invoices,
     clients: () => state.clients,
     service_catalog: () => state.services,
@@ -96,6 +99,8 @@ function createFakeKnex(state: FakeState) {
     return builder;
   };
   knex.__updates = updates;
+  // These mapping fixtures have no contract-change settlement table.
+  knex.schema = { hasTable: vi.fn(async () => false) };
   return knex;
 }
 
@@ -201,14 +206,38 @@ describe('AccountingExportValidation.ensureMappingsForBatch', () => {
     expect(repo.updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'needs_attention' });
   });
 
+  it('validates fixed-plan child services without exporting or rejecting the parent', async () => {
+    const state = baseState({
+      charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: null, is_manual: false, net_amount: 100, tax_amount: 0 }],
+      fixedDetails: [
+        { item_id: 'charge-1', item_detail_id: 'detail-1', service_id: 'svc-1', allocated_amount: 60, tax_amount: 0 },
+        { item_id: 'charge-1', item_detail_id: 'detail-2', service_id: 'svc-2', allocated_amount: 40, tax_amount: 0 },
+      ],
+    });
+    const { repo, resolver } = await run(state);
+    expect(repo.errors).toEqual([]);
+    expect(repo.updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'ready' });
+    expect(resolver.resolveServiceMapping.mock.calls.map(([args]: any[]) => args.serviceId)).toEqual(['svc-1', 'svc-2']);
+    const unmapped = await run(state, createFakeResolver({ resolveServiceMapping: vi.fn(async () => null) }));
+    expect(unmapped.repo.errors).toHaveLength(2);
+    expect(unmapped.repo.errors.every((error: any) => error.code === 'missing_service_mapping')).toBe(true);
+  });
+
+  it('rejects inconsistent fixed allocations instead of dropping or duplicating revenue', async () => {
+    await expect(run(baseState({
+      charges: [{ item_id: 'charge-1', service_id: null, is_manual: false, net_amount: 100, tax_amount: 0 }],
+      fixedDetails: [{ item_id: 'charge-1', item_detail_id: 'detail-1', service_id: 'svc-1', allocated_amount: 99, tax_amount: 0 }],
+    }))).rejects.toThrow('Fixed-plan allocation totals do not match');
+  });
+
   it('flags charges that have no associated service', async () => {
     const state = baseState({
-      charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: null, tax_region: null }],
+      charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: null, description: 'Old manual charge', tax_region: null }],
     });
     const { repo } = await run(state);
 
     expect(repo.errors).toEqual([
-      expect.objectContaining({ code: 'missing_service', line_id: 'line-1' }),
+      expect.objectContaining({ code: 'missing_service', line_id: 'line-1', message: expect.stringContaining("Assign a service to 'Old manual charge'") }),
     ]);
   });
 
@@ -604,6 +633,129 @@ describe('AccountingExportValidation.ensureMappingsForBatch', () => {
       expect(resolver.resolveTaxCodeMapping).not.toHaveBeenCalled();
       expect(resolver.resolvePaymentTermMapping).not.toHaveBeenCalled();
       expect(repo.errors).toEqual([]);
+    });
+  });
+
+  describe('QuickBooks Desktop', () => {
+    const desktopState = (overrides: Partial<FakeState> = {}) =>
+      baseState({
+        batch: { batch_id: 'batch-1', tenant: TENANT, adapter_type: 'quickbooks_desktop', target_realm: null },
+        clients: [{ client_id: 'client-1', client_name: 'Acme Corp', payment_terms: 'net_30' }],
+        services: [{ service_id: 'svc-1', service_name: 'Laptop', item_kind: 'product' }],
+        ...overrides,
+      });
+
+    it('validates against the QuickBooks Desktop mappings, as the adapter reads them', async () => {
+      const resolver = createFakeResolver({
+        resolveClientMapping: vi.fn(async () => ({ external_entity_id: 'Acme Corp', source: 'company' })),
+        resolveServiceMapping: vi.fn(async () => ({ external_entity_id: 'Sales', metadata: { qbdItem: 'Laptop' }, source: 'service' })),
+      });
+      const { repo } = await run(desktopState(), resolver);
+
+      expect(resolver.resolveServiceMapping).toHaveBeenCalledWith(
+        expect.objectContaining({ adapterType: 'quickbooks_desktop', serviceId: 'svc-1' })
+      );
+      expect(resolver.resolveClientMapping).toHaveBeenCalledWith(
+        expect.objectContaining({ adapterType: 'quickbooks_desktop', clientId: 'client-1' })
+      );
+      expect(repo.errors).toEqual([]);
+      expect(repo.updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'ready' });
+    });
+
+    it('treats a Desktop service or discount mapping without an item name as unmapped', async () => {
+      const resolver = createFakeResolver({
+        resolveClientMapping: vi.fn(async () => ({ external_entity_id: 'Acme Corp', source: 'company' })),
+        resolveServiceMapping: vi.fn(async () => ({ external_entity_id: 'Sales', metadata: null, source: 'service' })),
+        resolveDiscountMapping: vi.fn(async () => ({ external_entity_id: 'Discounts Given', metadata: { qbdItem: ' ' }, source: 'discount' })),
+      });
+      const state = desktopState({
+        lines: [makeCanonicalLine(), makeCanonicalLine({ line_id: 'line-2', document_line_id: 'charge-2' })],
+        charges: [
+          { item_id: 'charge-1', invoice_id: 'inv-1', service_id: 'svc-1', tax_region: null },
+          { item_id: 'charge-2', invoice_id: 'inv-1', service_id: null, is_discount: true, tax_region: null },
+        ],
+        chargeDetails: [
+          { item_id: 'charge-1', service_period_start: P1_START, service_period_end: P1_END, billing_timing: 'advance' },
+          { item_id: 'charge-2', service_period_start: P1_START, service_period_end: P1_END, billing_timing: 'advance' },
+        ],
+      });
+      const { repo } = await run(state, resolver);
+
+      expect(repo.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: 'missing_service_mapping',
+            metadata: expect.objectContaining({ alga_entity_id: 'svc-1', desktop_account: 'Sales', desktop_mapping_source: 'service' }),
+          }),
+          expect.objectContaining({
+            code: 'missing_discount_mapping',
+            metadata: expect.objectContaining({ desktop_account: 'Discounts Given', desktop_mapping_source: 'discount' }),
+          }),
+        ])
+      );
+      expect(repo.updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'needs_attention' });
+    });
+
+    it('requires a tax code mapping for taxed regions but not a payment term mapping', async () => {
+      const resolver = createFakeResolver({
+        resolveClientMapping: vi.fn(async () => ({ external_entity_id: 'Acme Corp', source: 'company' })),
+        resolveServiceMapping: vi.fn(async () => ({ external_entity_id: 'Sales', metadata: { qbdItem: 'Laptop' }, source: 'service' })),
+        resolveTaxCodeMapping: vi.fn(async () => null),
+        resolvePaymentTermMapping: vi.fn(async () => null),
+      });
+      const state = desktopState({
+        charges: [{ item_id: 'charge-1', invoice_id: 'inv-1', service_id: 'svc-1', tax_region: 'CA' }],
+      });
+      const { repo } = await run(state, resolver);
+
+      expect(resolver.resolveTaxCodeMapping).toHaveBeenCalledWith(
+        expect.objectContaining({ adapterType: 'quickbooks_desktop', taxRegionId: 'CA' })
+      );
+      expect(resolver.resolvePaymentTermMapping).not.toHaveBeenCalled();
+      expect(repo.errors).toEqual([expect.objectContaining({ code: 'missing_tax_mapping' })]);
+    });
+
+    it('reports unmapped clients, services and discounts with the Alga entity for the create-as-new prompt', async () => {
+      const resolver = createFakeResolver({
+        resolveClientMapping: vi.fn(async () => null),
+        resolveServiceMapping: vi.fn(async () => null),
+        resolveDiscountMapping: vi.fn(async () => null),
+      });
+      const state = desktopState({
+        lines: [makeCanonicalLine(), makeCanonicalLine({ line_id: 'line-2', document_line_id: 'charge-2' })],
+        charges: [
+          { item_id: 'charge-1', invoice_id: 'inv-1', service_id: 'svc-1', tax_region: null },
+          { item_id: 'charge-2', invoice_id: 'inv-1', service_id: null, is_discount: true, tax_region: null },
+        ],
+        chargeDetails: [
+          { item_id: 'charge-1', service_period_start: P1_START, service_period_end: P1_END, billing_timing: 'advance' },
+          { item_id: 'charge-2', service_period_start: P1_START, service_period_end: P1_END, billing_timing: 'advance' },
+        ],
+      });
+      const { repo } = await run(state, resolver);
+
+      expect(repo.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: 'missing_client_mapping',
+            metadata: expect.objectContaining({ alga_entity_type: 'client', alga_entity_id: 'client-1', alga_name: 'Acme Corp' }),
+          }),
+          expect.objectContaining({
+            code: 'missing_service_mapping',
+            metadata: expect.objectContaining({
+              alga_entity_type: 'service',
+              alga_entity_id: 'svc-1',
+              alga_name: 'Laptop',
+              item_kind: 'product',
+            }),
+          }),
+          expect.objectContaining({
+            code: 'missing_discount_mapping',
+            metadata: expect.objectContaining({ alga_entity_type: 'discount' }),
+          }),
+        ])
+      );
+      expect(repo.updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'needs_attention' });
     });
   });
 });

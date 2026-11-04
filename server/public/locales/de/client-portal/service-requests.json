@@ -20,6 +20,7 @@
     "datePlaceholder": "Datum auswählen",
     "optionLabel": "Option {{index}}",
     "submit": "Anfrage einreichen",
+    "requiredField": "Dieses Feld ist erforderlich.",
     "initialValuesTitle": "Anfangswerte",
     "noInitialValues": "Keine statischen Standardwerte konfiguriert."
   },

@@ -52,7 +52,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { resolveQuickAddBehavior } from './quickAddUtils';
-import { getTimeEntryWorkDate } from './utils';
+import { contractLineFieldsForWrite, getTimeEntryWorkDate } from './utils';
 
 const TIMESHEET_VIEW_MODE_SETTING = 'timesheet_view_mode';
 
@@ -572,7 +572,7 @@ export function TimeSheet({
             time_sheet_id: timeSheet.id,
             service_id: quickAddBehavior.serviceId,
             tax_region: existingEntry?.tax_region || undefined,
-            contract_line_id: existingEntry?.contract_line_id || undefined
+            ...(existingEntry ? contractLineFieldsForWrite(existingEntry, 'copy-to-new-entry') : {})
         };
 
         await handleSaveTimeEntry(timeEntry);

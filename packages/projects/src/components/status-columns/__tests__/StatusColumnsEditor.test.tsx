@@ -199,6 +199,40 @@ describe('DeleteStatusColumnDialog', () => {
     await waitFor(() => expect(onConfirm).toHaveBeenCalledWith('c'));
   });
 
+  it('keeps the chosen destination when another target arrives', async () => {
+    const onConfirm = vi.fn();
+    const request = { id: 'b', name: 'In Progress', taskCount: 11 };
+    const view = render(
+      <DeleteStatusColumnDialog
+        request={request}
+        moveTargets={[{ id: 'a', name: 'To Do' }, { id: 'c', name: 'Done', isClosed: true }]}
+        onCancel={vi.fn()}
+        onConfirm={onConfirm}
+      />
+    );
+
+    fireEvent.change(screen.getByTestId('custom-select'), { target: { value: 'c' } });
+
+    // A late column load re-renders the dialog with a longer target list; that
+    // must not silently redirect the tasks to the first column.
+    view.rerender(
+      <DeleteStatusColumnDialog
+        request={request}
+        moveTargets={[
+          { id: 'a', name: 'To Do' },
+          { id: 'c', name: 'Done', isClosed: true },
+          { id: 'd', name: 'QA Review' },
+        ]}
+        onCancel={vi.fn()}
+        onConfirm={onConfirm}
+      />
+    );
+
+    expect((screen.getByTestId('custom-select') as HTMLSelectElement).value).toBe('c');
+    fireEvent.click(view.container.querySelector('#status-column-confirm-delete') as HTMLElement);
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledWith('c'));
+  });
+
   it('blocks deletion when there is nowhere to move the tasks', () => {
     const { container } = render(
       <DeleteStatusColumnDialog

@@ -11,7 +11,13 @@ import { useEffect, useState } from 'react';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { paymentMethodOptions, paymentTermsOptions } from './paymentPreferenceOptions';
+import {
+    paymentMethodOptions,
+    paymentTermsOptions,
+    tenantDefaultPaymentTermsLabel,
+} from '@alga-psa/shared/billingClients/paymentPreferenceOptions';
+import { DEFAULT_PAYMENT_TERMS, type PaymentTerms } from '@alga-psa/shared/billingClients/paymentPreferences';
+import { getTenantDefaultPaymentTerms } from '../../actions/clientBillingProfileActions';
 
 interface BillingConfigFormProps {
     billingConfig: {
@@ -36,6 +42,9 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
     contacts
 }) => {
     const { t } = useTranslation('msp/clients');
+    // Option labels live in `features/billing`, shared with tenant billing settings.
+    const { t: tBilling } = useTranslation('features/billing');
+    const [tenantDefaultTerms, setTenantDefaultTerms] = useState<PaymentTerms>(DEFAULT_PAYMENT_TERMS);
     const [templates, setTemplates] = useState<IInvoiceTemplate[]>([]);
     const [defaultTemplate, setDefaultTemplate] = useState<IInvoiceTemplate | null>(null);
     const [contactFilterState, setContactFilterState] = useState<'all' | 'active' | 'inactive'>('active');
@@ -82,6 +91,17 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
            }
         };
 
+        const loadTenantDefaultTerms = async () => {
+            try {
+                const terms = await getTenantDefaultPaymentTerms();
+                // On an action error keep the Net 30 system fallback for the label.
+                if (typeof terms === 'string') setTenantDefaultTerms(terms);
+            } catch (error) {
+                console.error('Error loading tenant default payment terms:', error);
+            }
+        };
+
+        loadTenantDefaultTerms();
         loadTemplateData(); // Call renamed function
         loadTaxRegions(); // Call new function
     }, [t]);
@@ -108,8 +128,14 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
         )
     }));
 
-    const termsOptions = paymentTermsOptions(t);
-    const methodOptions = paymentMethodOptions(t);
+    // The first option is a real "unset" state with value '': it stores nothing,
+    // so the client keeps following the tenant default. A resolved term is never
+    // saved on the client's behalf.
+    const termsOptions = [
+        { value: '', label: tenantDefaultPaymentTermsLabel(tBilling, tenantDefaultTerms) },
+        ...paymentTermsOptions(tBilling),
+    ];
+    const methodOptions = paymentMethodOptions(tBilling);
 
     const deliveryMethodOptions = [
         { value: 'email', label: t('billingConfigForm.deliveryMethods.email', { defaultValue: 'Email' }) },
@@ -213,6 +239,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
 
             <div className="space-y-2">
                 <CustomSelect
+                    id="client-payment-terms-select"
                     label={t('billingConfigForm.paymentTermsLabel', { defaultValue: 'Payment terms' })}
                     value={billingConfig.payment_terms}
                     onValueChange={handleSelectChange('payment_terms')}

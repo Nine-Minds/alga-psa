@@ -112,13 +112,17 @@ function ok<T>(data: T) {
   return { ok: true as const, status: 200, data };
 }
 
-async function renderScreen(navigate: ReturnType<typeof vi.fn> = vi.fn()): Promise<ReactTestRenderer> {
+async function renderScreen(
+  navigate: ReturnType<typeof vi.fn> = vi.fn(),
+  goBack: ReturnType<typeof vi.fn> = vi.fn(),
+  setOptions: ReturnType<typeof vi.fn> = vi.fn(),
+): Promise<ReactTestRenderer> {
   let tree!: ReactTestRenderer;
   await act(async () => {
     tree = create(
       <AssetDetailScreen
         route={{ key: "r", name: "AssetDetail", params: { assetId: "asset-1", assetName: "Device" } } as never}
-        navigation={{ navigate } as never}
+        navigation={{ navigate, goBack, setOptions } as never}
       />,
     );
   });
@@ -373,5 +377,60 @@ describe("AssetDetailScreen", () => {
     );
     // Refetches after a successful save.
     expect(mockGetNotes).toHaveBeenCalledTimes(2);
+  });
+
+  it("blocks Add note and never saves when the notes read fails", async () => {
+    mockGetNotes.mockResolvedValue({
+      ok: false,
+      status: 500,
+      error: { kind: "http", status: 500, message: "Failed to get asset notes" },
+    });
+    const tree = await renderScreen();
+
+    expect(hosts(tree, "asset-detail-add-note")).toHaveLength(0);
+    expect(allText(tree)).toContain("Couldn't load notes");
+    expect(allText(tree)).not.toContain("No notes on this device yet.");
+    expect(mockSaveNotes).not.toHaveBeenCalled();
+  });
+
+  it("keeps Add note available when the notes read succeeds", async () => {
+    const tree = await renderScreen();
+    expect(hosts(tree, "asset-detail-add-note")).toHaveLength(1);
+    expect(allText(tree)).not.toContain("Couldn't load notes");
+  });
+
+  describe.each([
+    ["403", { kind: "permission", status: 403, message: "Permission denied: Cannot read asset" }],
+    ["404", { kind: "http", status: 404, message: "Asset not found" }],
+  ])("unavailable record (%s)", (_label, error) => {
+    it("shows the unavailable state with no record content, not the route assetName, and no Retry", async () => {
+      mockGetAsset.mockResolvedValue({ ok: false, status: (error as { status: number }).status, error });
+      const goBack = vi.fn();
+      const setOptions = vi.fn();
+      const tree = await renderScreen(vi.fn(), goBack, setOptions);
+      const text = allText(tree);
+      // The header title is derived from the assetName param; it must be replaced.
+      expect(setOptions).toHaveBeenCalledWith({ title: "Asset" });
+      expect(JSON.stringify(setOptions.mock.calls)).not.toContain("Device");
+      expect(text).toContain("Not found, or you don't have access");
+      expect(text).not.toContain("Device"); // assetName route param
+      expect(text).not.toContain("Dell Latitude");
+      expect(hosts(tree, "asset-detail-retry")).toHaveLength(0);
+      act(() => hosts(tree, "record-unavailable-back")[0].props.onPress());
+      expect(goBack).toHaveBeenCalled();
+    });
+  });
+
+  it("keeps Retry for network, timeout and server errors", async () => {
+    for (const error of [
+      { kind: "network", message: "Network request failed" },
+      { kind: "timeout", message: "Request timed out" },
+      { kind: "server", status: 500, message: "boom" },
+    ]) {
+      mockGetAsset.mockResolvedValue({ ok: false, error });
+      const tree = await renderScreen();
+      expect(hosts(tree, "asset-detail-retry")).toHaveLength(1);
+      expect(allText(tree)).not.toContain("Not found, or you don't have access");
+    }
   });
 });

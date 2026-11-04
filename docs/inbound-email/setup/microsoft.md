@@ -105,9 +105,10 @@ and [delegated consent policy](https://learn.microsoft.com/graph/permissions-ove
 
 Confirm all of the following:
 
-* The app's supported account type is **Accounts in any organizational
-  directory**. AlgaPSA starts authorization through the Microsoft `common`
-  authority.
+* The app's supported account type matches the **Tenant ID** on the Microsoft
+  profile. A multi-tenant app (**Accounts in any organizational directory**)
+  works with a blank or `common` Tenant ID. A single-tenant app works only when
+  the profile holds the app's directory (tenant) ID.
 * The **Web** redirect URI in Entra exactly matches the value displayed by Alga
   PSA: `https://<your-host>/api/auth/microsoft/callback`. Scheme, host, path, and
   trailing slash must match.
@@ -123,8 +124,12 @@ Confirm all of the following:
 
 1. In the [Microsoft Entra admin center](https://entra.microsoft.com), open
    **App registrations** and create an app.
-2. Select **Accounts in any organizational directory** as the supported account
-   type.
+2. Select the supported account type. **Accounts in any organizational
+   directory** (multi-tenant) is recommended. A single-tenant app, **Accounts in
+   this organizational directory only**, also works for email and calendar if you
+   enter its directory ID as the **Tenant ID** on the Microsoft profile. AlgaPSA
+   then signs in through that directory. Entra Identity cannot use a
+   single-tenant app, so register a separate multi-tenant app for it.
 3. Under **Authentication**, add the callback from AlgaPSA as a **Web** redirect
    URI: `https://<your-host>/api/auth/microsoft/callback`.
    If this app registration will also serve other AlgaPSA Microsoft integrations,
@@ -145,8 +150,16 @@ Confirm all of the following:
 1. Open **Settings → Integrations → Providers**.
 2. In the Microsoft section, select **New app registration**.
 3. Enter a display name, the **Client ID**, **Tenant ID**, and **Client secret**.
-   Use the directory ID for the Microsoft 365 tenant. Use `common` only when
-   your deployment deliberately uses a multi-tenant app with common authority.
+   Choose the Tenant ID to match the app's supported account type:
+
+   * Single-tenant app: enter the directory (tenant) ID GUID or the verified
+     domain. Without it, Microsoft rejects sign-in with `AADSTS50194`.
+   * Multi-tenant app: leave the field blank, or enter `common` or
+     `organizations`. AlgaPSA treats all three as `common`.
+
+   The Alga platform app always signs in through `common`, whatever Tenant ID
+   the profile holds. The Microsoft app registration screen lists every redirect
+   URI the integrations need, each with a copy button.
 4. Under **Services this app can handle**, enable **Outlook email**, then create
    the profile.
 5. Under **Which Microsoft app each service uses**, select that app for
@@ -165,9 +178,10 @@ same app also supports sign-in, calendar, or Teams.
    * **Configuration Name**: an internal name for this connection.
    * **Email Address**: the user or shared mailbox to ingest.
    * **Inbound Ticket Defaults**: the optional defaults for new tickets.
-   * **Folder Filters**: use `Inbox`. The form accepts multiple folder names,
-     but Microsoft setup currently subscribes only to the first entry and
-     maintenance reconciliation uses Inbox.
+   * **Folder Filters**: the folders to watch, comma-separated. Defaults to
+     `Inbox`. To watch a subfolder, use a `/` or `\` path separator, for
+     example `Inbox/AlgaPSA` or `Inbox\Support`. If a listed folder path
+     cannot be resolved, the provider card displays an error.
    * **Max Emails Per Sync**: between 1 and 1000. The default is 50.
    * **Redirect URI**: leave the generated value unchanged unless the matching
      Entra redirect URI was also changed.
@@ -282,6 +296,6 @@ provider after adding or changing delegated permissions.
 | Subscription creation or validation fails | Confirm public DNS, valid TLS, and inbound access to `/api/email/webhooks/microsoft`. Also verify that `APPLICATION_URL`, `NEXTAUTH_URL`, or `NEXT_PUBLIC_BASE_URL` (whichever is set) resolves directly without an HTTP redirect: Graph never follows redirects during webhook validation, so a base URL that 301-redirects produces a 400 ValidationError that silently degrades the provider to polling — set the variable to the final resolved address. Shared mailboxes are expected to poll. |
 | New mail does not create tickets | Check delivery mode and last-ingested time. Polling needs outbound access to Microsoft. Webhook mode also needs public inbound access. Use **Test Connection** to check Graph access and retry webhook registration. |
 | Token refresh fails after working previously | The refresh token or consent may have expired or been revoked, or the bound app's client ID/secret changed. Restore the issuing app credentials if appropriate, then reauthorize the mailbox. |
-| Mail from a custom folder is missing | Set **Folder Filters** to `Inbox` and reauthorize. Multiple/custom Microsoft folders are not currently reliable across subscription maintenance and reconciliation. |
+| Mail from a subfolder is missing | Confirm the **Folder Filters** entry uses the correct path syntax: `Inbox/Subfolder` or `Inbox\Subfolder`. After editing the provider, save and reauthorize to re-register the subscription. If the path cannot be resolved, the provider card displays an error. |
 | The provider is Ready, but AlgaPSA sends no replies | Select the mailbox under **Settings → Email → Outbound Email**, reconnect it if it predates `Mail.Send`, and run the outbound test. |
 | The outbound test returns 403 | Reconnect the mailbox to grant `Mail.Send`. For a shared mailbox, also verify that the authorizing user has Exchange **Send As** permission. |

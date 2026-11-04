@@ -2,6 +2,7 @@ import * as Linking from "expo-linking";
 import type { LinkingOptions } from "@react-navigation/native";
 import type { RootStackParamList } from "./types";
 import { logger } from "../logging/logger";
+import { matchRecordPath } from "../urls/recordLinks";
 
 const EXPO_PREFIX = Linking.createURL("/");
 const ALLOWED_PREFIXES = [EXPO_PREFIX, "alga://"] as const;
@@ -9,21 +10,31 @@ const ALLOWED_PREFIXES = [EXPO_PREFIX, "alga://"] as const;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Hosted web ticket URLs reach the app through iOS Universal Links / Android
+// Hosted web record URLs reach the app through iOS Universal Links / Android
 // App Links (declared in app.json). They are folded into the alga:// shape so
-// the rest of the config has a single ticket route.
-const HOSTED_TICKET_URL_RE =
-  /^https:\/\/algapsa\.com\/msp\/tickets\/([0-9a-f-]{36})(?:[/?#].*)?$/i;
+// the rest of the config has a single route per record. The path grammar is
+// the shared resolver's (matchRecordPath); only the trusted hosted origin and
+// the UUID shape are checked here.
+const HOSTED_ORIGIN_RE = /^https:\/\/algapsa\.com(?=[/?#]|$)/i;
 
-// Web task links point at the project page with the task in the query string.
-const HOSTED_PROJECT_TASK_URL_RE =
-  /^https:\/\/algapsa\.com\/msp\/projects\/[0-9a-f-]{36}\?(?:.*&)?taskId=([0-9a-f-]{36})(?:[&#].*)?$/i;
-
-export function normalizeHostedTicketUrl(rawUrl: string): string {
-  const match = HOSTED_TICKET_URL_RE.exec(rawUrl);
-  if (match) return `alga://ticket/${match[1].toLowerCase()}`;
-  const taskMatch = HOSTED_PROJECT_TASK_URL_RE.exec(rawUrl);
-  return taskMatch ? `alga://project-task/${taskMatch[1].toLowerCase()}` : rawUrl;
+export function normalizeHostedRecordUrl(rawUrl: string): string {
+  const origin = HOSTED_ORIGIN_RE.exec(rawUrl);
+  if (!origin) return rawUrl;
+  const match = matchRecordPath(rawUrl.slice(origin[0].length));
+  if (!match || !UUID_RE.test(match.id)) return rawUrl;
+  const id = match.id.toLowerCase();
+  switch (match.entityType) {
+    case "ticket":
+      return `alga://ticket/${id}`;
+    case "asset":
+      return `alga://asset/${id}`;
+    case "stock_unit":
+      return `alga://stock-unit/${id}`;
+    case "project_task":
+      return match.projectId && UUID_RE.test(match.projectId) ? `alga://project-task/${id}` : rawUrl;
+    default:
+      return rawUrl;
+  }
 }
 
 function isAllowedPath(path: string): boolean {
@@ -40,11 +51,15 @@ function isAllowedPath(path: string): boolean {
   if (ticketMatch) return UUID_RE.test(ticketMatch[1] ?? "");
   const taskMatch = /^project-task\/(.+)$/.exec(path);
   if (taskMatch) return UUID_RE.test(taskMatch[1] ?? "");
+  const assetMatch = /^asset\/(.+)$/.exec(path);
+  if (assetMatch) return UUID_RE.test(assetMatch[1] ?? "");
+  const unitMatch = /^stock-unit\/(.+)$/.exec(path);
+  if (unitMatch) return UUID_RE.test(unitMatch[1] ?? "");
   return false;
 }
 
 function safeDeepLinkUrl(url: string): string | null {
-  const rawUrl = normalizeHostedTicketUrl(url);
+  const rawUrl = normalizeHostedRecordUrl(url);
   if (!ALLOWED_PREFIXES.some((prefix) => rawUrl.startsWith(prefix))) return null;
 
   try {
@@ -84,7 +99,12 @@ export async function hasPendingDeepLink(): Promise<boolean> {
 }
 
 function requiresSession(url: string): boolean {
-  return url.startsWith("alga://ticket/") || url.startsWith("alga://project-task/");
+  return (
+    url.startsWith("alga://ticket/") ||
+    url.startsWith("alga://project-task/") ||
+    url.startsWith("alga://asset/") ||
+    url.startsWith("alga://stock-unit/")
+  );
 }
 
 function rejectUrl(url: string, message: string): void {
@@ -93,7 +113,7 @@ function rejectUrl(url: string, message: string): void {
 }
 
 export const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: [EXPO_PREFIX, "alga://", "https://algapsa.com"],
+  prefixes: [EXPO_PREFIX, "alga://"],
   getInitialURL: async () => {
     if (pendingUrl && signedIn) {
       const url = pendingUrl;
@@ -138,6 +158,8 @@ export const linking: LinkingOptions<RootStackParamList> = {
       AuthCallback: "auth/callback",
       TicketDetail: "ticket/:ticketId",
       ProjectTaskDetail: "project-task/:taskId",
+      AssetDetail: "asset/:assetId",
+      StockUnitDetail: "stock-unit/:unitId",
       Tabs: {
         screens: {
           TicketsTab: {

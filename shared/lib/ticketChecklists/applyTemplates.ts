@@ -1,5 +1,8 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { compilePredicateFragment } from '@alga-psa/predicates/sql';
+import { createTicketQuerySchema } from '../ticketQuery/ticketQuerySchema';
+import { readChecklistWhere } from './rulePredicates';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -9,6 +12,7 @@ import {
   type TicketActivityActorInfo,
   type TicketActivitySource,
 } from '../ticketActivity';
+import { CHECKLIST_TEMPLATE_CLIENT_MISMATCH, isChecklistTemplateInScopeForClient } from './scope';
 
 /**
  * Applying a checklist template copies its items onto the ticket. The copy
@@ -24,6 +28,13 @@ import {
 export interface ApplyChecklistTemplateResult {
   applied: boolean;
   itemsAdded: number;
+  /**
+   * Set when the template was refused. `template-client-mismatch`: the template is scoped to a
+   * client (checklist_templates.client_id) other than the ticket's client. Nothing is inserted and
+   * no activity is written. Callers decide how to surface it (manual: error; auto-apply and
+   * ticket creation: skip; workflow: report in the action output).
+   */
+  reason?: typeof CHECKLIST_TEMPLATE_CLIENT_MISMATCH;
 }
 
 export interface ChecklistApplyAuditContext {
@@ -33,20 +44,13 @@ export interface ChecklistApplyAuditContext {
 
 interface ChecklistTemplateRow {
   name: string;
+  client_id: string | null;
 }
 
 interface ChecklistTemplateItemRow {
   item_name: string;
   description: string | null;
   is_required: boolean;
-}
-
-interface ChecklistTemplateApplyRuleRow {
-  template_id: string;
-  board_id: string | null;
-  category_id: string | null;
-  subcategory_id: string | null;
-  priority_id: string | null;
 }
 
 export const SYSTEM_CHECKLIST_AUDIT_CONTEXT: ChecklistApplyAuditContext = {
@@ -75,6 +79,19 @@ export async function applyChecklistTemplateToTicket(
     .first() as ChecklistTemplateRow | undefined;
   if (!template) {
     throw new Error('Checklist template not found');
+  }
+
+  // Client scope. Enforced here, the single apply chokepoint, so no caller can bypass it.
+  if (template.client_id) {
+    const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+      .where({ ticket_id: ticketId })
+      .first('client_id') as { client_id: string | null } | undefined;
+    if (!ticket) {
+      throw new Error('Ticket not found');
+    }
+    if (!isChecklistTemplateInScopeForClient(template.client_id, ticket.client_id)) {
+      return { applied: false, itemsAdded: 0, reason: CHECKLIST_TEMPLATE_CLIENT_MISMATCH };
+    }
   }
 
   // Idempotency: a template never applies twice to the same ticket.
@@ -128,55 +145,42 @@ export async function applyChecklistTemplateToTicket(
   return { applied: true, itemsAdded: templateItems.length };
 }
 
-/**
- * Evaluates enabled auto-apply rules against a ticket's board / category /
- * subcategory / priority (null matcher = match any) and applies every
- * matching template. Safe to re-run — application is idempotent — so callers
- * invoke it on ticket creation AND whenever board/category change.
- */
+/** Match every enabled rule against the ticket itself in one evaluation statement. */
+export async function matchingRuleTemplateIds(
+  trx: Knex.Transaction,
+  tenant: string,
+  ticketId: string
+): Promise<string[]> {
+  const db = tenantDb(trx, tenant);
+  const rules = await db.tenantJoin(
+    db.table('checklist_template_apply_rules as r'),
+    'checklist_templates as template', 'template.template_id', 'r.template_id'
+  ).where({ 'r.is_enabled': true, 'template.is_active': true })
+    .select('r.template_id', 'r.where', 'r.where_version') as Array<{
+      template_id: string; where: unknown; where_version: number;
+    }>;
+  if (!rules.length) return [];
+  const schema = createTicketQuerySchema();
+  const fragments = rules.map((rule) => compilePredicateFragment(
+    schema, readChecklistWhere(rule.where, rule.where_version), { rootAlias: 't' }
+  ));
+  const row = await db.table('tickets as t').where('t.ticket_id', ticketId)
+    .select(fragments.map((fragment, index) => trx.raw(`(${fragment.sql}) AS ??`, [...fragment.bindings, `r${index}`])))
+    .first() as Record<string, boolean> | undefined;
+  return [...new Set(rules.filter((_rule, index) => row?.[`r${index}`] === true).map((rule) => rule.template_id))];
+}
+
+/** Creation and board/category changes share the same idempotent application path. */
 export async function applyMatchingChecklistTemplates(
   trx: Knex.Transaction,
   tenant: string,
-  ticket: {
-    ticket_id: string;
-    board_id?: string | null;
-    category_id?: string | null;
-    subcategory_id?: string | null;
-    priority_id?: string | null;
-  },
+  ticket: { ticket_id: string },
   auditContext: ChecklistApplyAuditContext = SYSTEM_CHECKLIST_AUDIT_CONTEXT
 ): Promise<number> {
-  const rules = await tenantDb(trx, tenant)
-    .tenantJoin(
-      tenantScopedTable(trx, 'checklist_template_apply_rules as r', tenant),
-      'checklist_templates as t',
-      't.template_id',
-      'r.template_id'
-    )
-    .where({ 'r.is_enabled': true, 't.is_active': true })
-    .select('r.*') as ChecklistTemplateApplyRuleRow[];
-
-  const matching = rules.filter(
-    (rule) =>
-      (rule.board_id === null || rule.board_id === ticket.board_id) &&
-      (rule.category_id === null || rule.category_id === ticket.category_id) &&
-      (rule.subcategory_id === null || rule.subcategory_id === ticket.subcategory_id) &&
-      (rule.priority_id === null || rule.priority_id === ticket.priority_id)
-  );
-
+  const templateIds = await matchingRuleTemplateIds(trx, tenant, ticket.ticket_id);
   let appliedCount = 0;
-  const seenTemplates = new Set<string>();
-  for (const rule of matching) {
-    if (seenTemplates.has(rule.template_id)) continue;
-    seenTemplates.add(rule.template_id);
-    const result = await applyChecklistTemplateToTicket(
-      trx,
-      tenant,
-      ticket.ticket_id,
-      rule.template_id,
-      'template',
-      auditContext
-    );
+  for (const templateId of templateIds) {
+    const result = await applyChecklistTemplateToTicket(trx, tenant, ticket.ticket_id, templateId, 'template', auditContext);
     if (result.applied) appliedCount++;
   }
   return appliedCount;

@@ -62,3 +62,15 @@ Projects already have a contact. With **Only their own projects**, a member sees
 - Invoices, billing and contracts are not scoped by contact.
 - There are no location or department groups; use **Reports to** for people and billing-profile grants for a site's tickets.
 
+## Default visibility for new ticket replies
+
+Under **Settings > Ticketing > Display**, enable **Default ticket replies to
+Internal** to start new MSP ticket replies as internal notes for every team
+member. This tenant-wide setting is off by default, preserving the existing
+Client reply behavior.
+
+The setting applies to both the grid timeline and the classic conversation
+composer. Users can still switch an individual reply to Client. In the classic
+view, explicitly selecting the Client, Internal, or Resolution tab keeps that
+tab's existing composer behavior. Replies within existing threads still inherit
+their parent comment's visibility, and client portal replies are unchanged.

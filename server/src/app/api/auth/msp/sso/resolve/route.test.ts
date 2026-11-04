@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const setCookieMock = vi.fn();
 const consumeLimiterMock = vi.fn(async (_key: string) => ({ remainingPoints: 7 }));
 const resolveSourceMock = vi.fn();
+const getTenantIdBySlugMock = vi.fn();
+const hasAppFallbackMock = vi.fn(async (_provider: string) => false);
 const getSigningSecretMock = vi.fn(async (): Promise<string | null> => 'unit-test-signing-secret');
 const parseDiscoveryCookieMock = vi.fn();
 const createCookieMock = vi.fn((..._args: unknown[]) => ({
@@ -55,6 +57,7 @@ vi.mock('@alga-psa/auth/lib/sso/mspSsoResolution', () => ({
   MSP_SSO_RESOLUTION_TTL_SECONDS: 300,
   createSignedMspSsoResolutionCookie: (...args: unknown[]) => createCookieMock(...args),
   getMspSsoSigningSecret: () => getSigningSecretMock(),
+  hasAppFallbackProviderCredentials: (provider: string) => hasAppFallbackMock(provider),
   isValidResolverCallbackUrl: (value: string | undefined) => {
     if (!value || !value.trim()) return true;
     return value.startsWith('/') || value.startsWith('http://') || value.startsWith('https://');
@@ -64,6 +67,11 @@ vi.mock('@alga-psa/auth/lib/sso/mspSsoResolution', () => ({
   parseResolverProvider: (value: unknown) =>
     value === 'google' || value === 'azure-ad' ? value : null,
   resolveMspSsoCredentialSource: (...args: unknown[]) => resolveSourceMock(...args),
+}));
+
+vi.mock('@alga-psa/db', () => ({
+  getTenantIdBySlug: (...args: unknown[]) => getTenantIdBySlugMock(...args),
+  isValidTenantSlug: (slug: string) => /^[0-9a-f]{12}$/.test(slug),
 }));
 
 vi.mock('@alga-psa/auth/lib/sso/clientPortalSsoResolution', () => ({
@@ -371,5 +379,74 @@ describe('POST /api/auth/msp/sso/resolve', () => {
       message: "We couldn't start SSO sign-in. Please verify provider setup and try again.",
     });
     expect(warnSpy).toHaveBeenCalled();
+  });
+
+  describe('tenant-scoped resolution (tenantSlug)', () => {
+    const SLUG = 'abc123def456';
+    const body = { provider: 'google', email: 'user@example.com', tenantSlug: SLUG };
+
+    it('signs the validated scopeTenantId into the cookie', async () => {
+      getTenantIdBySlugMock.mockResolvedValue('tenant-a');
+
+      const response = await POST(buildRequest(body) as any);
+
+      await expect(response.json()).resolves.toEqual({ ok: true });
+      expect(getTenantIdBySlugMock).toHaveBeenCalledWith(SLUG);
+      expect(createCookieMock).toHaveBeenCalledWith(
+        expect.objectContaining({ source: 'app', scopeTenantId: 'tenant-a' })
+      );
+    });
+
+    it('carries no scope when no slug is sent', async () => {
+      await POST(buildRequest({ provider: 'google', email: 'user@example.com' }) as any);
+      expect(createCookieMock).toHaveBeenCalledWith(expect.objectContaining({ scopeTenantId: undefined }));
+    });
+
+    it.each([['not-a-slug'], [SLUG]])('fails generically for a bad or unknown slug (%s)', async (slug) => {
+      getTenantIdBySlugMock.mockResolvedValue(null);
+
+      const response = await POST(buildRequest({ ...body, tenantSlug: slug }) as any);
+
+      await expect(response.json()).resolves.toEqual({
+        ok: false,
+        message: "We couldn't start SSO sign-in. Please verify provider setup and try again.",
+      });
+      expect(createCookieMock).not.toHaveBeenCalled();
+    });
+
+    it('never runs a scoped sign-in through another tenant\'s IdP: falls back to the app provider', async () => {
+      getTenantIdBySlugMock.mockResolvedValue('tenant-a');
+      resolveSourceMock.mockResolvedValueOnce({ resolved: true, source: 'tenant', tenantId: 'tenant-b' });
+      hasAppFallbackMock.mockResolvedValueOnce(true);
+
+      const response = await POST(buildRequest(body) as any);
+
+      await expect(response.json()).resolves.toEqual({ ok: true });
+      const args = createCookieMock.mock.calls[0][0] as Record<string, unknown>;
+      expect(args).toMatchObject({ source: 'app', scopeTenantId: 'tenant-a' });
+      expect(args.tenantId).toBeUndefined();
+    });
+
+    it('fails generically when another tenant\'s IdP is the only source', async () => {
+      getTenantIdBySlugMock.mockResolvedValue('tenant-a');
+      resolveSourceMock.mockResolvedValueOnce({ resolved: true, source: 'tenant', tenantId: 'tenant-b' });
+      hasAppFallbackMock.mockResolvedValueOnce(false);
+
+      const response = await POST(buildRequest(body) as any);
+
+      await expect(response.json()).resolves.toMatchObject({ ok: false });
+      expect(createCookieMock).not.toHaveBeenCalled();
+    });
+
+    it('keeps the tenant IdP when it belongs to the scoped tenant', async () => {
+      getTenantIdBySlugMock.mockResolvedValue('tenant-a');
+      resolveSourceMock.mockResolvedValueOnce({ resolved: true, source: 'tenant', tenantId: 'tenant-a' });
+
+      await POST(buildRequest(body) as any);
+
+      expect(createCookieMock).toHaveBeenCalledWith(
+        expect.objectContaining({ source: 'tenant', tenantId: 'tenant-a', scopeTenantId: 'tenant-a' })
+      );
+    });
   });
 });

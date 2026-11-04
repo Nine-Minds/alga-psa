@@ -169,7 +169,7 @@ describe('Billing Invoice Edge Cases', () => {
 
     const { contractLineId: creditContractLineId } = await createFixedPlanAssignment(context, creditServiceA, {
       planName: 'Credit Plan',
-      baseRateCents: -12500,
+      baseRateCents: 12500,
       detailBaseRateCents: 5000,
       startDate: '2025-02-01',
       clientId: context.clientId,
@@ -196,23 +196,34 @@ describe('Billing Invoice Edge Cases', () => {
       effective_date: '2025-02-01T00:00:00.000Z'
     });
 
-    // Generate invoice
+    // Generate the normal positive contract charge, then author a one-time
+    // manual credit. Standing contract rates are non-negative; a credit is an
+    // invoice adjustment and must use that supported workflow.
     const invoice = await generateInvoice(billingCycleId);
 
     expect(invoice).toBeDefined();
-    expect(invoice!.subtotal).toBe(-12500);
-    expect(invoice!.tax).toBe(0);
-    expect(invoice!.total_amount).toBe(-12500);
+    expect(invoice!.subtotal).toBe(12500);
+    expect(invoice!.tax).toBe(1250);
+
+    const { addManualItemsToInvoice } = await import('@alga-psa/billing/actions/invoiceModification');
+    const settled = await addManualItemsToInvoice(invoice!.invoice_id, [{
+      item_id: uuidv4(), invoice_id: invoice!.invoice_id, description: 'Manual contract credit',
+      quantity: 1, rate: -26250, unit_price: -26250, total_price: -26250, net_amount: -26250,
+      tax_amount: 0, is_manual: true, is_taxable: false, is_discount: false, tenant: context.tenantId,
+    } as any]) as any;
+    expect(settled).not.toHaveProperty('actionError');
+    expect(Number(settled.subtotal)).toBe(-13750);
+    expect(Number(settled.tax)).toBe(1250);
+    expect(Number(settled.total_amount)).toBe(-12500);
 
     const invoiceItems = await context.db('invoice_charges')
       .where({ invoice_id: invoice!.invoice_id, tenant: context.tenantId })
       .orderBy('net_amount', 'desc');
 
-    expect(invoiceItems).toHaveLength(1);
-    expect(Number(invoiceItems[0].net_amount)).toBe(-12500);
-    expect(Number(invoiceItems[0].tax_amount)).toBe(0);
-    expect(Number(invoiceItems[0].total_price)).toBe(-12500);
+    expect(invoiceItems).toHaveLength(2);
+    expect(invoiceItems.map((item) => Number(item.net_amount))).toEqual([12500, -26250]);
     expect(invoiceItems[0].description).toContain('Credit Plan');
+    expect(invoiceItems[1].description).toBe('Manual contract credit');
   });
 
   it('should properly handle true zero-value invoices through the entire workflow', async () => {

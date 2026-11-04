@@ -50,7 +50,11 @@ const mockKnex: any = Object.assign(
     tableChains[table] = chain;
     return chain;
   },
-  { raw: (...args: any[]) => rawMock(...args) }
+  {
+    raw: (...args: any[]) => rawMock(...args),
+    // Filing fixtures exercise stored PDF placement without contract true-ups.
+    schema: { hasTable: vi.fn(async () => false) },
+  }
 );
 
 const createTenantKnex = vi.fn();

@@ -19,6 +19,7 @@ export function buildAppointmentRequestReviewPath(appointmentRequestId: string):
 }
 
 /** NEXT_PUBLIC_APP_URL || NEXT_PUBLIC_BASE_URL || 'http://localhost:3000', trailing slashes trimmed. */
+// LEVERAGE: pattern tenant-link-context — hand-built tenant-facing base URL for MSP-recipient links; packages/core cannot depend on tenancy, left canonical.
 export function resolveAppBaseUrl(): string {
   // Referenced statically so Next can inline NEXT_PUBLIC_* in client bundles.
   const raw =

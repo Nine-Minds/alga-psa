@@ -7,7 +7,9 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import ClientInvoicePreview from './ClientInvoicePreview';
 
 vi.mock('@alga-psa/client-portal/actions', () => ({
-  getClientInvoiceById: vi.fn(async () => ({
+  getClientInvoicePreview: vi.fn(async () => ({
+    template: { template_id: 'tpl-1', template_name: 'Standard', isStandard: true, template_data: {} },
+    invoice: {
     invoice_id: 'inv-1',
     invoice_number: 'INV-001',
     invoice_date: '2026-02-01',
@@ -40,15 +42,7 @@ vi.mock('@alga-psa/client-portal/actions', () => ({
         ],
       },
     ],
-  })),
-  getClientInvoiceTemplates: vi.fn(async () => [
-    {
-      template_id: 'tpl-1',
-      template_name: 'Standard',
-      isStandard: true,
-      template_data: {},
-    },
-  ]),
+  }})),
 }));
 
 vi.mock('@alga-psa/billing/components', () => ({
@@ -62,10 +56,6 @@ vi.mock('@alga-psa/billing/components', () => ({
       <div>preview-detail-periods:{invoiceData?.items?.[0]?.recurringDetailPeriods?.length ?? 0}</div>
     </div>
   ),
-}));
-
-vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
-  getResolvedInvoiceTemplateId: vi.fn(async () => 'tpl-1'),
 }));
 
 vi.mock('@alga-psa/ui/components/Skeleton', () => ({

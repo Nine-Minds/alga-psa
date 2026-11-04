@@ -21,6 +21,8 @@ function makeTrx(
     b.whereIn = vi.fn().mockReturnValue(b);
     b.count = vi.fn().mockReturnValue(b);
     b.join = vi.fn().mockReturnValue(b);
+    b.whereRaw = vi.fn().mockReturnValue(b);
+    b.whereNot = vi.fn().mockReturnValue(b);
     b.select = vi.fn().mockReturnValue(b);
     b.pluck = vi.fn().mockResolvedValue([]);
     b.first = vi.fn().mockResolvedValue({ count: String(count) });
@@ -35,6 +37,8 @@ function makeTrx(
     }
     return makeBuilder(defaultCount);
   }) as unknown as Knex;
+  // Optional-table dependencies probe the schema before counting.
+  (trx as unknown as { schema: unknown }).schema = { hasTable: vi.fn().mockResolvedValue(true) };
 
   return { trx, builder };
 }
@@ -72,6 +76,41 @@ describe('DELETION_CONFIGS completeness', () => {
       const types = DELETION_CONFIGS[key].dependencies.map((d) => d.type);
       expect(new Set(types).size).toBe(types.length);
     }
+  });
+});
+
+describe('contact deletion and the asset it holds', () => {
+  // FR-C5: deleting a leaver closes the open assignment and nulls the asset's
+  // contact. Counting that link as a blocker meant anyone holding a laptop
+  // could not be deleted at all, so the cleanup never ran.
+  it('an assigned asset is reported but does not block', async () => {
+    const { trx } = makeTrx(0, { assets: 1 });
+
+    const result = await validateDeletion(
+      trx,
+      DELETION_CONFIGS.contact,
+      'contact-1',
+      'tenant-1'
+    );
+
+    expect(result.canDelete).toBe(true);
+    const dependency = result.dependencies.find((d) => d.type === 'assigned_asset');
+    expect(dependency).toMatchObject({ count: 1, blocking: false });
+  });
+
+  it('a real blocker still blocks, and says so without the asset', async () => {
+    const { trx } = makeTrx(0, { assets: 2, tickets: 1 });
+
+    const result = await validateDeletion(
+      trx,
+      DELETION_CONFIGS.contact,
+      'contact-1',
+      'tenant-1'
+    );
+
+    expect(result.canDelete).toBe(false);
+    expect(result.message).toContain('1 ticket');
+    expect(result.message).not.toContain('assigned asset');
   });
 });
 

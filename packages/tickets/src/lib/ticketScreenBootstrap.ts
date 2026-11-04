@@ -48,7 +48,7 @@ export interface TicketScreenBootstrap {
   /** `workflow:manage`/`workflow:admin`: shows More -> Create workflow from ticket. Absent/null falls back to a client fetch. */
   canManageWorkflows?: boolean | null;
   teams: ITeam[] | null;
-  displaySettings: { showWeekday?: boolean; responseStateTrackingEnabled?: boolean } | null;
+  displaySettings: { showWeekday?: boolean; responseStateTrackingEnabled?: boolean; defaultReplyInternal?: boolean } | null;
   tags: ITag[] | null;
   streams: {
     /** Non-comment timeline entries (system/time/alert lanes). */

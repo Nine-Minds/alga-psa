@@ -17,7 +17,7 @@ import {
 } from '@/lib/api/middleware/apiMiddleware';
 
 const ticketStatusesQuerySchema = z.object({
-  board_id: z.string().uuid().optional(),
+  board_id: z.string().guid().optional(),
 });
 
 export const GET = async (req: NextRequest): Promise<NextResponse> => {

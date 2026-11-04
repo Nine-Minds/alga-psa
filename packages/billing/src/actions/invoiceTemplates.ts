@@ -17,6 +17,7 @@ import {
 import type { TemplateAst, WasmInvoiceViewModel, RenderOutput } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
+import { withSerializableAuth } from './serializableAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
     actionError,
@@ -389,7 +390,7 @@ export const addInvoiceAnnotation = withAuth(async (
     return newAnnotation;
 });
 
-export const getInvoiceAnnotations = withAuth(async (
+export const getInvoiceAnnotations = withSerializableAuth(withAuth(async (
     user,
     { tenant },
     invoiceId: string
@@ -398,7 +399,7 @@ export const getInvoiceAnnotations = withAuth(async (
     return tenantDb(knex, tenant).table('invoice_annotations')
         .where({ invoice_id: invoiceId })
         .orderBy('created_at', 'asc');
-});
+}));
 // --- Server-Side Rendering Action ---
 
 /**

@@ -664,6 +664,8 @@ export interface CreateTicketRequest {
   priority?: 'low' | 'medium' | 'high' | 'urgent';
   project_id?: string;
   assignee_id?: string;
+  suppressContactNotifications?: boolean;
+  suppressInternalNotifications?: boolean;
 }
 
 export interface UpdateTicketRequest {

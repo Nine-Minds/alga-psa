@@ -10,6 +10,12 @@ import {
   getAllActiveContacts as getAllActiveContactsModel,
   getContactsByClient as getContactsByClientModel,
 } from '@alga-psa/shared/ticketClients/contacts';
+import {
+  searchClientsForPicker as searchClientsForPickerModel,
+  type SearchClientsForPickerParams,
+  type TaggedSearchClientsForPickerResult,
+} from '@alga-psa/shared/ticketClients/clientPicker';
+import { attachDisplayTags } from '@alga-psa/tags/lib/displayTags';
 import { getClientLocations as getClientLocationsModel } from '@alga-psa/shared/ticketClients/locations';
 import {
   listClientBillingProfiles,
@@ -124,4 +130,26 @@ export const getClientLocations = withAuth(async (user, { tenant }, clientId: st
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getClientLocationsModel(trx, tenant, clientId);
   });
+});
+
+/**
+ * Paged/searchable client lookup for the ticket surfaces' async client picker.
+ *
+ * Tickets-local twin of `searchClientsForPicker` in @alga-psa/clients (which
+ * tickets must not import: nx cycle). Both delegate to the same shared model;
+ * both require an internal user holding client:read, and both attach the chip
+ * tags the viewer's display rules allow.
+ */
+export const searchClientsForPicker = withAuth(async (
+  user,
+  { tenant },
+  params: SearchClientsForPickerParams = {}
+): Promise<TaggedSearchClientsForPickerResult> => {
+  await assertInternalReadAccess(user, 'client');
+  const { knex } = await createTenantKnex();
+
+  const { clients, total } = await searchClientsForPickerModel(knex, tenant, user, params);
+  const withTags = await attachDisplayTags(knex, tenant, user, 'client', clients, (c) => c.client_id);
+
+  return { clients: withTags, total };
 });

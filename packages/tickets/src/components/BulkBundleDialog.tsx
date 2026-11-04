@@ -375,7 +375,7 @@ export default function BulkBundleDialog({ id, isOpen, onClose, initialTicketIds
               </label>
             </div>
             <div className="text-xs text-[rgb(var(--color-text-500))]">
-              {t('bulk.bundle.syncUpdatesHelp', 'Child tickets keep their current status when bundled. Workflow fields are locked on children by default. Internal notes stay on the master.')}
+              {t('bulk.bundle.syncUpdatesHelp', 'Child tickets keep their current status when bundled. With sync updates on, workflow fields are locked on children. With it off, children manage their own status, assignee and priority. Internal notes stay on the master.')}
             </div>
 
             {needsClosedChoice && closedContext && (

@@ -11,6 +11,7 @@ import {
   TicketCommentAddedEvent
 } from '@alga-psa/event-schemas';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
+import { resolveCoManagedCommentStep, audienceRecipients, coManagedSendFields } from '../../notifications/coManagedCommentDelivery';
 import { EventEmailRetryQueue } from '../../notifications/EventEmailRetryQueue';
 import logger from '@alga-psa/core/logger';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
@@ -21,7 +22,7 @@ import { formatBlockNoteContent } from '@alga-psa/formatting/blocknoteUtils';
 import { getEmailEventChannel } from '@alga-psa/notifications';
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
-import { getPortalDomain } from 'server/src/models/PortalDomainModel';
+import { resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import {
   resolveBoardNotificationRecipients,
   type ResolvedRecipient,
@@ -79,8 +80,12 @@ function normalizeHost(host: string): string {
   return host.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
 }
 
+// LEVERAGE: pattern tenant-link-context — ticketEmailSubscriber and projectEmailSubscriber each hand-build the same internal/portal link context (canonical base + vanity host + tenant slug).
 type PortalLinkContext = {
+  /** Origin for MSP (internal recipient) links: the tenant's MSP custom domain when one is active. */
   internalBase: string;
+  /** Canonical origin (NEXTAUTH_URL); used for portal links when no portal custom domain applies. */
+  canonicalBase: string;
   portalHost: string | null;
   isActiveVanityDomain: boolean;
   tenantSlug: string;
@@ -156,7 +161,7 @@ function resolveAccumulatedTicketNotificationSuppression(
 
 /**
  * Resolve the tenant-level portal-domain context once per handler invocation.
- * The DB call (getPortalDomain) doesn't depend on ticketId, so callers that
+ * The DB call (resolveTenantAppBase) doesn't depend on ticketId, so callers that
  * iterate over many tickets (bundle children, accumulator recipients) should
  * call this once and feed the result into buildTicketLinks per ticket.
  */
@@ -164,21 +169,28 @@ async function resolvePortalLinkContext(
   knex: Knex,
   tenantId: string
 ): Promise<PortalLinkContext> {
-  const internalBase = getBaseUrl();
+  const canonicalBase = getBaseUrl();
+  let internalBase = canonicalBase;
   let portalHost: string | null = null;
   let isActiveVanityDomain = false;
 
   try {
-    const portalDomain = await getPortalDomain(knex, tenantId);
     // Only use a portal-specific host when the tenant has an *active* custom
-    // (vanity) domain. The portal_domains row's canonical_host (e.g.
-    // <prefix>.portal.algapsa.com) is just a placeholder shown during DNS
-    // verification — it's not necessarily a routable URL — so falling back to
-    // it produces broken links. Leave portalHost null in every other case so
-    // buildTicketLinks emits https://<NEXTAUTH host>/client-portal/...?tenant=<slug>.
-    if (portalDomain && portalDomain.status === 'active' && portalDomain.domain) {
-      portalHost = portalDomain.domain;
+    // (vanity) domain that serves the client portal. The portal_domains row's
+    // canonical_host (e.g. <prefix>.portal.algapsa.com) is just a placeholder
+    // shown during DNS verification — it's not necessarily a routable URL — so
+    // falling back to it produces broken links. Leave portalHost null in every
+    // other case so buildTicketLinks emits https://<NEXTAUTH host>/client-portal/...?tenant=<slug>.
+    const portal = await resolveTenantAppBase(tenantId, 'client_portal', { knex });
+    if (portal.source === 'vanity') {
+      portalHost = portal.baseUrl;
       isActiveVanityDomain = true;
+    }
+    // Internal (MSP) recipients only move off the canonical host when a custom
+    // domain serves the MSP app.
+    const msp = await resolveTenantAppBase(tenantId, 'msp', { knex });
+    if (msp.source === 'vanity') {
+      internalBase = msp.baseUrl;
     }
   } catch (error) {
     logger.warn('[TicketEmailSubscriber] Failed to resolve portal domain for ticket link', {
@@ -189,6 +201,7 @@ async function resolvePortalLinkContext(
 
   return {
     internalBase,
+    canonicalBase,
     portalHost,
     isActiveVanityDomain,
     tenantSlug: buildTenantPortalSlug(tenantId),
@@ -213,7 +226,7 @@ function buildTicketLinks(
       portalUrl = `https://${sanitizedHost}${clientPortalPath}?${baseParams.toString()}`;
     }
   } else {
-    const fallbackBase = ctx.internalBase.endsWith('/') ? ctx.internalBase.slice(0, -1) : ctx.internalBase;
+    const fallbackBase = ctx.canonicalBase.endsWith('/') ? ctx.canonicalBase.slice(0, -1) : ctx.canonicalBase;
     baseParams.set('tenant', ctx.tenantSlug);
     portalUrl = `${fallbackBase}${clientPortalPath}?${baseParams.toString()}`;
   }
@@ -3004,6 +3017,47 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     const commentThreadHeaderParams = Object.keys(commentThreadHeaders).length > 0
       ? { headers: commentThreadHeaders }
       : {};
+
+    // CM L5: a comment on a shared ticket is delivered by the audience-aware co-managed step INSTEAD of
+    // the native recipient step below (one send per recipient). The served decision is made once, here,
+    // before any co_management_* SQL; an unserved tenant gets null at zero SQL and falls through untouched.
+    const coManagedStep = await resolveCoManagedCommentStep(tenantId, payload.ticketId, payload.comment?.id);
+    if (coManagedStep) {
+      const toRecipient = (kind: 'customer_user' | 'requester_contact', principalId: string | null | undefined, email: string | null | undefined) =>
+        email && isValidEmail(email) ? { kind, principalId: principalId || email, email } : null;
+      const customerUsers = [
+        toRecipient('customer_user', ticket.assigned_to, assignedEmail),
+        ...additionalResources.map((r) => toRecipient('customer_user', r.user_id, r.email)),
+      ].filter((r): r is NonNullable<typeof r> => r !== null);
+      const requester = toRecipient('requester_contact', primaryContactId, primaryEmail);
+      const recipients = audienceRecipients(coManagedStep, { customerUsers, requester });
+      const sourceId = payload.comment!.id!;
+      for (const recipient of recipients) {
+        const internal = recipient.kind !== 'requester_contact';
+        if (!shouldSendTicketCommentNotification(suppression, internal ? 'internal' : 'contact')) continue;
+        const fields = coManagedSendFields(coManagedStep, 'ticket_comment_email', sourceId, recipient);
+        await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          ...(recipient.kind === 'requester_contact' && primaryContactId ? { contactId: primaryContactId } : {}),
+          to: recipient.email!,
+          subject: `New Comment on Ticket: ${ticket.title}`,
+          template: 'ticket-comment-added',
+          context: buildContext(internal ? internalUrl : portalUrl),
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            commentId: payload.comment?.id,
+            threadId: coManagedStep.plan.threadId ?? ticket.email_metadata?.threadId,
+            conversationToken: fields.conversationToken,
+            tokenMetadata: fields.tokenMetadata,
+          },
+          delivery: fields.delivery,
+          attachments: inlineCommentImageAttachments,
+          ...commentThreadHeaderParams,
+        }, 'Ticket Comment Added', recipient.kind === 'customer_user' ? recipient.principalId : undefined);
+      }
+      return;
+    }
 
     // Send to primary email if available - external user, no userId
     let requesterEmailSent = false;

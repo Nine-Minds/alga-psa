@@ -8,6 +8,7 @@ const {
   getVisiblePublishedServiceRequestDefinitionDetailMock,
   submitPortalServiceRequestMock,
   validateSubmissionAgainstPublishedSchemaMock,
+  resolveSubmissionVisibilityMock,
 } = vi.hoisted(() => ({
   createTenantKnexMock: vi.fn(),
   withTransactionMock: vi.fn(),
@@ -16,6 +17,7 @@ const {
   getVisiblePublishedServiceRequestDefinitionDetailMock: vi.fn(),
   submitPortalServiceRequestMock: vi.fn(),
   validateSubmissionAgainstPublishedSchemaMock: vi.fn(),
+  resolveSubmissionVisibilityMock: vi.fn(),
 }));
 
 const testUser = {
@@ -56,6 +58,7 @@ vi.mock('../../../../../lib/service-requests', () => ({
     getVisiblePublishedServiceRequestDefinitionDetailMock,
   submitPortalServiceRequest: submitPortalServiceRequestMock,
   validateSubmissionAgainstPublishedSchema: validateSubmissionAgainstPublishedSchemaMock,
+  resolveSubmissionVisibility: resolveSubmissionVisibilityMock,
 }));
 
 import { submitRequestServiceDefinitionAction } from '../../../../../app/client-portal/request-services/[definitionId]/actions';
@@ -92,6 +95,9 @@ describe('submitRequestServiceDefinitionAction', () => {
       formBehaviorConfig: {},
     });
     validateSubmissionAgainstPublishedSchemaMock.mockReturnValue([]);
+    resolveSubmissionVisibilityMock.mockImplementation(
+      (detail: { visibleFieldKeys: string[] }) => detail.visibleFieldKeys
+    );
     submitPortalServiceRequestMock.mockResolvedValue({
       submissionId: 'submission-1',
       executionStatus: 'succeeded',
@@ -141,5 +147,27 @@ describe('submitRequestServiceDefinitionAction', () => {
       'transaction:done',
       'redirect:/client-portal/request-services?submitted=submission-1&ticketId=ticket-1',
     ]);
+  });
+
+  it('validates against visibility recomputed from the submitted payload, not the stale load-time keys', async () => {
+    withTransactionMock.mockImplementation(async (_knex: unknown, callback: (trx: unknown) => Promise<unknown>) =>
+      callback({ trx: true })
+    );
+    resolveSubmissionVisibilityMock.mockReturnValue(['employee_name']);
+
+    const formData = new FormData();
+    formData.set('employee_name', 'Casey');
+    formData.set('start_date', '2026-04-20');
+
+    await submitRequestServiceDefinitionAction('definition-1', formData);
+
+    expect(resolveSubmissionVisibilityMock).toHaveBeenCalledWith(
+      expect.objectContaining({ visibleFieldKeys: ['employee_name', 'start_date', 'department'] }),
+      expect.objectContaining({ employee_name: 'Casey', start_date: '2026-04-20' }),
+      { requesterUserId: 'client-user-1', clientId: 'client-1', contactId: 'contact-1' }
+    );
+    expect(validateSubmissionAgainstPublishedSchemaMock).toHaveBeenCalledWith(
+      expect.objectContaining({ visibleFieldKeys: ['employee_name'] })
+    );
   });
 });

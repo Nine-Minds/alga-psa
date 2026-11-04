@@ -44,7 +44,7 @@ describe('prepaid balance alert delivery wiring contract', () => {
     expect(roleBlock).toContain('RECIPIENT_ROLE_CLIENT_BILLING');
     const processBlock = source.slice(source.indexOf('async function processDelivery'));
     expect(processBlock).toContain('recipientClientId: prepared.isManager ? undefined : delivery.alert.client_id');
-    expect(processBlock).toContain('clientAlertLink()');
+    expect(processBlock).toContain("clientAlertLink(await resolveAlertBaseUrl(tenantId, 'client_portal', knex))");
   });
 
   it('drains distinct claim batches without reclaiming IDs attempted in the same run', () => {

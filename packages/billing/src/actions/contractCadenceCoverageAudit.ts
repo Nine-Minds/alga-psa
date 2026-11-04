@@ -95,7 +95,9 @@ const ELIGIBLE_LINES_CTE = `
            cl.contract_line_id,
            cl.contract_line_name,
            cl.billing_frequency,
-           cl.billing_timing,
+           -- Hourly/Usage lines always bill in arrears whatever is stored.
+           case when lower(cl.contract_line_type) in ('hourly', 'usage', 'time')
+                then 'arrears' else cl.billing_timing end as billing_timing,
            cc.start_date as assignment_start,
            cc.end_date as assignment_end
     from contract_lines cl

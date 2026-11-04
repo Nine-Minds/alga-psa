@@ -1,3 +1,5 @@
+import { createHash, randomBytes } from 'node:crypto';
+import { decodeJwt } from 'jose';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import msgraph from '@alga-psa/emulator-msgraph';
@@ -6,8 +8,9 @@ import msgraph from '@alga-psa/emulator-msgraph';
  * The ticket's failure — a Microsoft account whose mail is
  * nd@computerbutlereurope.onmicrosoft.com while the AlgaPSA login is
  * nd@computerbutler.eu — driven over the Microsoft simulator's own login and
- * Graph wire instead of a hand-written profile literal. The authorization
- * redirect, code exchange and `/me` lookup all execute; only the AlgaPSA
+ * login wire instead of a hand-written profile literal. Discovery, the
+ * authorization redirect, the PKCE code exchange and the signed ID token
+ * verification all execute; only the AlgaPSA
  * database and session store are fixtures. Unit coverage of the sentinel lives
  * in packages/auth/src/lib/nextAuthOptions.authFailureRedirect.test.ts; this
  * file pins that the provider the app builds reaches the simulator and that a
@@ -29,7 +32,10 @@ const PROVIDER_EMAIL = 'ND@computerbutlereurope.onmicrosoft.com';
 const ALGA_EMAIL = 'nd@computerbutler.eu';
 const LINK_STATE_COOKIE_NAME = 'sso-link-state';
 
-const findUserByEmailAndTypeMock = vi.fn(async (_email: string, _type: string): Promise<unknown> => undefined);
+const findUsersByEmailAndTypeMock = vi.fn(async (_email: string, _type: string): Promise<unknown[]> => []);
+const findUserByEmailTenantAndTypeMock = vi.fn(
+  async (_email: string, _tenant: string, _type: string): Promise<unknown> => undefined
+);
 const userSessionCreateMock = vi.fn(async () => 'session-1');
 const cookieGetMock = vi.fn((_name: string): { value: string } | undefined => undefined);
 const cookieDeleteMock = vi.fn();
@@ -120,7 +126,9 @@ vi.mock('@alga-psa/db/models/UserSession', () => ({
 
 vi.mock('@alga-psa/db/models/user', () => ({
   default: {
-    findUserByEmailAndType: (...args: [string, string]) => findUserByEmailAndTypeMock(...args),
+    findUsersByEmailAndType: (...args: [string, string]) => findUsersByEmailAndTypeMock(...args),
+    findUserByEmailTenantAndType: (...args: [string, string, string]) =>
+      findUserByEmailTenantAndTypeMock(...args),
     updateLastLogin: vi.fn(async () => undefined),
   },
 }));
@@ -132,6 +140,8 @@ vi.mock('@alga-psa/auth/deviceFingerprint', () => ({
 }));
 vi.mock('@alga-psa/auth/geolocation', () => ({ getLocationFromIp: vi.fn() }));
 vi.mock('@alga-psa/db', () => ({ getConnection: vi.fn(), tenantDb: vi.fn() }));
+// The DB layer is mocked above; the user row is faked, so the interactive-user gate is stubbed (as in the other nextAuthOptions tests).
+vi.mock('../../../../packages/auth/src/lib/assertInteractiveUser', () => ({ assertInteractiveUser: vi.fn(async () => true) }));
 vi.mock('@alga-psa/auth/lib/PortalDomainModel', () => ({
   getPortalDomain: vi.fn(),
   getPortalDomainByHostname: vi.fn(),
@@ -164,16 +174,27 @@ async function microsoftProvider() {
   return provider!;
 }
 
+async function discover(provider: Record<string, any>) {
+  const response = await fetch(`${provider.issuer}/.well-known/openid-configuration`);
+  expect(response.ok).toBe(true);
+  return response.json();
+}
+
 /**
- * Replays the Auth.js authorization-code flow against the simulator exactly as
- * @auth/core does for a non-OIDC provider: authorize redirect, token exchange,
- * then the userinfo request whose body is handed to `profile()`.
+ * Replays the Auth.js authorization-code flow against the simulator as
+ * @auth/core does for an OIDC provider: discovery, an authorize redirect
+ * carrying state, nonce and an S256 PKCE challenge, the token exchange, the
+ * provider's own ID token verification, and then `profile()` over the
+ * validated ID token claims (Auth.js reads no userinfo for OIDC providers).
  */
 async function signInThroughSimulator() {
   const provider = await microsoftProvider();
+  const discovery = await discover(provider);
   const redirectUri = 'http://localhost:3000/api/auth/callback/azure-ad';
+  const nonce = 'authjs-nonce';
+  const verifier = randomBytes(32).toString('base64url');
 
-  const authorize = new URL(provider.authorization.url);
+  const authorize = new URL(discovery.authorization_endpoint);
   authorize.search = new URLSearchParams({
     client_id: provider.clientId,
     redirect_uri: redirectUri,
@@ -181,6 +202,9 @@ async function signInThroughSimulator() {
     response_mode: 'query',
     scope: provider.authorization.params.scope,
     state: 'authjs-state',
+    nonce,
+    code_challenge: createHash('sha256').update(verifier).digest('base64url'),
+    code_challenge_method: 'S256',
   }).toString();
   const authorized = await fetch(authorize, { redirect: 'manual' });
   expect(authorized.status).toBe(302);
@@ -194,7 +218,7 @@ async function signInThroughSimulator() {
     `${formUrlEncode(provider.clientId)}:${formUrlEncode(provider.clientSecret)}`
   ).toString('base64')}`;
 
-  const tokenResponse = await fetch(provider.token.url, {
+  const tokenResponse = await fetch(discovery.token_endpoint, {
     method: 'POST',
     headers: {
       'content-type': 'application/x-www-form-urlencoded',
@@ -204,19 +228,31 @@ async function signInThroughSimulator() {
       grant_type: 'authorization_code',
       code: callback.searchParams.get('code')!,
       redirect_uri: redirectUri,
+      code_verifier: verifier,
     }),
   });
   expect(tokenResponse.ok).toBe(true);
-  const tokens = await tokenResponse.json();
+  const tokens = await (await provider.token.conform(tokenResponse)).json();
 
-  const userinfoResponse = await fetch(provider.userinfo.url, {
-    headers: { authorization: `Bearer ${tokens.access_token}` },
-  });
-  expect(userinfoResponse.ok).toBe(true);
-  const userinfo = await userinfoResponse.json();
+  const claims = decodeJwt(tokens.id_token);
+  expect(claims.nonce).toBe(nonce);
 
-  const user = await provider.profile(userinfo);
-  return { provider, userinfo, user };
+  const user = await provider.profile(claims);
+  return { provider, claims, user };
+}
+
+function algaUser(userId: string, tenant: string) {
+  return {
+    user_id: userId,
+    email: ALGA_EMAIL,
+    username: ALGA_EMAIL,
+    first_name: 'N',
+    last_name: 'D',
+    user_type: 'internal',
+    tenant,
+    hashed_password: 'hashed',
+    is_inactive: false,
+  };
 }
 
 async function invokeSignIn(user: unknown) {
@@ -244,7 +280,8 @@ afterAll(async () => {
 beforeEach(async () => {
   vi.clearAllMocks();
   cookieGetMock.mockReturnValue(undefined);
-  findUserByEmailAndTypeMock.mockResolvedValue(undefined);
+  findUsersByEmailAndTypeMock.mockResolvedValue([]);
+  findUserByEmailTenantAndTypeMock.mockResolvedValue(undefined);
   // Per test, not in beforeAll: server/src/test/setup.ts sweeps
   // vi.unstubAllEnvs() after every test outside the DB-backed lanes, so a
   // stub established once would be gone from the second test onward.
@@ -270,16 +307,20 @@ describe('Microsoft sign-in over the Microsoft simulator', () => {
   it('builds the provider against the simulator rather than Entra', async () => {
     const provider = await microsoftProvider();
 
-    expect(new URL(provider.authorization.url).origin).toBe(base);
-    expect(new URL(provider.token.url).origin).toBe(base);
-    expect(new URL(provider.userinfo.url).origin).toBe(base);
-    expect(provider.userinfo.url).toBe(`${base}/v1.0/me`);
+    expect(provider.type).toBe('oidc');
+    expect(provider.issuer).toBe(`${base}/common/v2.0`);
+    expect(provider.checks).toEqual(['pkce', 'state', 'nonce']);
+    const discovery = await discover(provider);
+    expect(discovery.issuer).toBe(provider.issuer);
+    expect(new URL(discovery.authorization_endpoint).origin).toBe(base);
+    expect(new URL(discovery.token_endpoint).origin).toBe(base);
+    expect(new URL(discovery.jwks_uri).origin).toBe(base);
   });
 
   it('turns the simulator profile into a sentinel instead of throwing', async () => {
-    const { userinfo, user } = await signInThroughSimulator();
+    const { claims, user } = await signInThroughSimulator();
 
-    expect(userinfo.mail).toBe(PROVIDER_EMAIL);
+    expect(claims.mail).toBe(PROVIDER_EMAIL);
     // Thrown errors become Auth.js OAuthProfileParseError -> error=Configuration.
     expect(user.authFailure).toEqual({
       code: 'no_matching_user',
@@ -287,7 +328,7 @@ describe('Microsoft sign-in over the Microsoft simulator', () => {
       userType: 'internal',
     });
     expect(user.id).toBe('');
-    expect(findUserByEmailAndTypeMock).toHaveBeenCalledWith(PROVIDER_EMAIL.toLowerCase(), 'internal');
+    expect(findUsersByEmailAndTypeMock).toHaveBeenCalledWith(PROVIDER_EMAIL.toLowerCase(), 'internal');
   });
 
   it('sends a failed profile link back to the SSO tab naming the provider email', async () => {
@@ -327,22 +368,33 @@ describe('Microsoft sign-in over the Microsoft simulator', () => {
 
   it('still signs in over the same wire when the mail does match an AlgaPSA user', async () => {
     await controlPost('seed/signed-in-user', { mail: ALGA_EMAIL, userPrincipalName: ALGA_EMAIL });
-    findUserByEmailAndTypeMock.mockResolvedValue({
-      user_id: 'user-1',
-      email: ALGA_EMAIL,
-      username: ALGA_EMAIL,
-      first_name: 'N',
-      last_name: 'D',
-      user_type: 'internal',
-      tenant: 'tenant-1',
-      hashed_password: 'hashed',
-      is_inactive: false,
-    });
+    findUsersByEmailAndTypeMock.mockResolvedValue([algaUser('user-1', 'tenant-1')]);
 
     const { user } = await signInThroughSimulator();
 
     expect(user.authFailure).toBeUndefined();
     expect(user.id).toBe('user-1');
     expect(await invokeSignIn(user)).toBe(true);
+  });
+
+  it('refuses to pick a tenant when the mail matches live AlgaPSA users in two tenants', async () => {
+    await controlPost('seed/signed-in-user', { mail: ALGA_EMAIL, userPrincipalName: ALGA_EMAIL });
+    findUsersByEmailAndTypeMock.mockResolvedValue([
+      algaUser('user-1', 'tenant-1'),
+      algaUser('user-2', 'tenant-2'),
+    ]);
+
+    const { user } = await signInThroughSimulator();
+
+    expect(user.id).toBe('');
+    expect(user.authFailure).toEqual({
+      code: 'tenant_required',
+      providerEmail: ALGA_EMAIL,
+      userType: 'internal',
+    });
+    expect(await invokeSignIn(user)).toBe(
+      '/auth/msp/signin?error=AccessDenied&reason=tenant_required&providerEmail=nd%40computerbutler.eu'
+    );
+    expect(userSessionCreateMock).not.toHaveBeenCalled();
   });
 });

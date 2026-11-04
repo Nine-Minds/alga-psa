@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 
 import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
+import { recordPath } from '@alga-psa/types';
 
 interface ProjectTaskSearchRow {
   task_id: string;
@@ -30,7 +31,8 @@ function toSearchDoc(tenant: string, row: ProjectTaskSearchRow): SearchDoc {
     title: row.task_name,
     subtitle: row.project_name ?? undefined,
     body: row.description ?? undefined,
-    url: `/msp/projects/${row.project_id}/tasks/${row.task_id}`,
+    // LEVERAGE: pattern record-links — URL comes from the shared recordPath resolver (@alga-psa/types), not an inline template.
+    url: recordPath('project_task', row.task_id, { projectId: row.project_id }),
     acl: {
       requiredPermission: 'project:read',
       clientScopeId: row.client_id ?? undefined,

@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
@@ -48,7 +48,7 @@ export default function GrantHourBlockDialog({ clientId, currencyCode, isOpen, o
     let cancelled = false;
     setServicesLoading(true);
     setError(null);
-    getServices(1, 999, { is_active: true, item_kind: 'service' })
+    getServices(1, 999, { is_active: true, item_kind: 'service', billing_method: 'hourly' })
       .then((result) => {
         if (cancelled) return;
         if (isActionMessageError(result) || isActionPermissionError(result) || 'error' in result) {
@@ -203,12 +203,15 @@ export default function GrantHourBlockDialog({ clientId, currencyCode, isOpen, o
           ) : (
             <div className="space-y-1.5">
               <Label htmlFor="hb-grant-service">{t('sell.serviceLabel', { defaultValue: 'Service' })}</Label>
-              <CustomSelect
+              <SearchableSelect
                 id="hb-grant-service"
                 options={serviceOptions}
-                value={selectedServiceId || null}
-                onValueChange={setSelectedServiceId}
+                value={selectedServiceId}
+                onChange={setSelectedServiceId}
                 placeholder={t('sell.servicePlaceholder', { defaultValue: 'Select a service' })}
+                searchPlaceholder={t('sell.serviceSearchPlaceholder', { defaultValue: 'Search services...' })}
+                emptyMessage={t('sell.serviceNoResults', { defaultValue: 'No services found' })}
+                dropdownMode="overlay"
               />
             </div>
           )}

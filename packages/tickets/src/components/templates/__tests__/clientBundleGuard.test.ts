@@ -43,8 +43,13 @@ describe('client bundle guard', () => {
     expect(specs.filter((s) => forbidden.test(s))).toEqual([]);
   });
 
-  it('ticketTemplateSchema.ts imports only zod (plus type-only imports)', () => {
+  it('ticketTemplateSchema.ts imports only zod and the token module (plus type-only imports)', () => {
     const specs = runtimeImports(readFileSync(path.resolve(src, 'lib/ticketTemplateSchema.ts'), 'utf8'));
-    expect(specs).toEqual(['zod']);
+    expect(specs).toEqual(['zod', './ticketTitleTokens']);
+  });
+
+  it('ticketTitleTokens.ts has no runtime imports, so the client bundle can use it', () => {
+    const specs = runtimeImports(readFileSync(path.resolve(src, 'lib/ticketTitleTokens.ts'), 'utf8'));
+    expect(specs).toEqual([]);
   });
 });

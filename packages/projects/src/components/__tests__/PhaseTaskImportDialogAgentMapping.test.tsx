@@ -47,6 +47,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useFormatters: () => ({ formatNumber: (value: number) => String(value) }),
+  useTranslation: () => ({ t: translate }),
 }));
 
 // Keep the real row grouping — it is what turns an agent resolution into

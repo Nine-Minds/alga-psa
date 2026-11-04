@@ -114,6 +114,55 @@ function serviceFor(fixture: Fixture): ContractLineService {
   return service;
 }
 
+// Inserts an assignment for the fixture contract. Each assignment uses its own
+// client so a (tenant, client, contract) uniqueness rule can never interfere.
+async function addAssignment(
+  fixture: Fixture,
+  dates: { start_date: string; end_date: string | null },
+): Promise<void> {
+  const assignedClientId = uuidv4();
+  await tenantTable(fixture.tenantId, 'clients').insert({
+    tenant: fixture.tenantId,
+    client_id: assignedClientId,
+    client_name: `Assigned Client ${assignedClientId.slice(0, 8)}`,
+    ...(hasColumn(clientColumns, 'billing_cycle') ? { billing_cycle: 'monthly' } : {}),
+    ...(hasColumn(clientColumns, 'is_tax_exempt') ? { is_tax_exempt: false } : {}),
+    ...(hasColumn(clientColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
+    ...(hasColumn(clientColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
+  });
+  await tenantTable(fixture.tenantId, 'client_contracts').insert({
+    tenant: fixture.tenantId,
+    client_contract_id: uuidv4(),
+    contract_id: fixture.contractId,
+    client_id: assignedClientId,
+    start_date: dates.start_date,
+    end_date: dates.end_date,
+    is_active: true,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+}
+
+async function setLegacyDates(
+  fixture: Fixture,
+  dates: { start_date: string | null; end_date: string | null },
+): Promise<void> {
+  await tenantTable(fixture.tenantId, 'contracts')
+    .where({ contract_id: fixture.contractId })
+    .update(dates);
+}
+
+function isoDay(value: unknown): string | null {
+  return value == null ? null : new Date(value as string).toISOString().slice(0, 10);
+}
+
+async function listFor(fixture: Fixture, options: Record<string, unknown> = {}) {
+  return serviceFor(fixture).listContracts(
+    { page: 1, limit: 25, ...options } as any,
+    { tenant: fixture.tenantId, userId: uuidv4() } as any,
+  );
+}
+
 describe('contract line service list integration', () => {
   beforeAll(async () => {
     db = await createTestDbConnection();
@@ -193,5 +242,101 @@ describe('contract line service list integration', () => {
     expect(line.contract_line_id).toBe(fixture.contractLineId);
     expect(line.contract_line_name).toBe(`Line ${fixture.tenantId.slice(0, 8)}`);
     expect(Number(line.total_services)).toBe(0);
+  });
+
+  describe('start_date / end_date come from client assignments', () => {
+    it('returns the assignment dates for a UI-created contract (null legacy dates)', async () => {
+      const fixture = await createFixture();
+      await setLegacyDates(fixture, { start_date: null, end_date: null });
+      await addAssignment(fixture, { start_date: '2026-02-01', end_date: '2027-01-31' });
+
+      const result = await listFor(fixture);
+      const [contract] = result.data as any[];
+      expect(isoDay(contract.start_date)).toBe('2026-02-01');
+      expect(isoDay(contract.end_date)).toBe('2027-01-31');
+      expect(contract.clients_using_contract).toBe(1);
+      expect(contract.total_plans).toBe(1);
+    });
+
+    it('returns the envelope (earliest start, latest end) across several assignments', async () => {
+      const fixture = await createFixture();
+      await setLegacyDates(fixture, { start_date: null, end_date: null });
+      await addAssignment(fixture, { start_date: '2026-01-01', end_date: '2026-06-30' });
+      await addAssignment(fixture, { start_date: '2026-03-01', end_date: '2026-12-31' });
+
+      const [contract] = (await listFor(fixture)).data as any[];
+      expect(isoDay(contract.start_date)).toBe('2026-01-01');
+      expect(isoDay(contract.end_date)).toBe('2026-12-31');
+      expect(contract.clients_using_contract).toBe(2);
+      // Row multiplication from the contract_lines join must not change counts.
+      expect(contract.total_plans).toBe(1);
+    });
+
+    it('falls back to the legacy contract dates when there are no assignments', async () => {
+      const fixture = await createFixture();
+
+      const [contract] = (await listFor(fixture)).data as any[];
+      expect(new Date(contract.start_date).toISOString()).toBe(FIXTURE_START_DATE);
+      expect(new Date(contract.end_date).toISOString()).toBe(FIXTURE_END_DATE);
+    });
+
+    it('prefers the assignment envelope over legacy dates when both exist', async () => {
+      const fixture = await createFixture();
+      await addAssignment(fixture, { start_date: '2026-09-01', end_date: '2026-09-30' });
+
+      const [contract] = (await listFor(fixture)).data as any[];
+      expect(isoDay(contract.start_date)).toBe('2026-09-01');
+      expect(isoDay(contract.end_date)).toBe('2026-09-30');
+    });
+
+    // Pins current behaviour (MAX ignores NULL); open question for review: a true
+    // envelope would arguably be open-ended (null) when any assignment is open-ended.
+    it('ignores an open-ended assignment when computing end_date (MAX skips NULL)', async () => {
+      const fixture = await createFixture();
+      await setLegacyDates(fixture, { start_date: null, end_date: null });
+      await addAssignment(fixture, { start_date: '2026-01-01', end_date: null });
+      await addAssignment(fixture, { start_date: '2026-03-01', end_date: '2026-12-31' });
+
+      const [contract] = (await listFor(fixture)).data as any[];
+      expect(isoDay(contract.start_date)).toBe('2026-01-01');
+      expect(isoDay(contract.end_date)).toBe('2026-12-31');
+    });
+
+    it('keeps total, filters, sorting and pagination working with the aggregate select', async () => {
+      const fixture = await createFixture();
+      await addAssignment(fixture, { start_date: '2026-01-01', end_date: '2026-06-30' });
+      await addAssignment(fixture, { start_date: '2026-03-01', end_date: '2026-12-31' });
+
+      const second = uuidv4();
+      await tenantTable(fixture.tenantId, 'contracts').insert({
+        tenant: fixture.tenantId,
+        contract_id: second,
+        contract_name: 'Zeta unassigned',
+        billing_frequency: 'monthly',
+        owner_client_id: fixture.clientId,
+        is_template: false,
+        status: 'draft',
+        is_active: true,
+        created_at: db.fn.now(),
+        updated_at: db.fn.now(),
+      });
+
+      const all = await listFor(fixture, { sort: 'contract_name', order: 'desc' });
+      expect(all.total).toBe(2);
+      expect((all.data as any[])[0].contract_id).toBe(second);
+      expect((all.data as any[])[0].start_date).toBeNull();
+
+      const page2 = await listFor(fixture, { page: 2, limit: 1, sort: 'contract_name', order: 'desc' });
+      expect(page2.total).toBe(2);
+      expect(page2.data).toHaveLength(1);
+      expect((page2.data as any[])[0].contract_id).toBe(fixture.contractId);
+
+      const filtered = await listFor(fixture, { filters: { clients_count_min: 2 } });
+      expect(filtered.total).toBe(1);
+      expect((filtered.data as any[])[0].contract_id).toBe(fixture.contractId);
+
+      const byName = await listFor(fixture, { filters: { contract_name: 'Zeta' } });
+      expect(byName.total).toBe(1);
+    });
   });
 });

@@ -43,9 +43,9 @@ test('server unit shards partition, reunite and verify as one full-selection bun
     "const files = globSync(include, { dot: true, cwd: __dirname, ignore: exclude, expandDirectories: false });",
     `export default { test: { ...${JSON.stringify({
       globals: true, environment: 'node', pool: 'forks',
-      fileParallelism: false, maxWorkers: 1, isolate: true, poolOptions: { forks: { singleFork: true } },
+      fileParallelism: false, isolate: true,
       coverage: { provider: 'v8', enabled: false, reporter: ['text-summary'], include: ['src/**/*.ts'] },
-    })}, include, exclude,`,
+    })}, ...(process.env.VITEST_RECYCLE_FORKS === '1' ? {} : { maxWorkers: 1 }), include, exclude,`,
     '  projects: environmentProjects(partitionByEnvironment(files, __dirname)) } };',
   ].join('\n'));
   writeFileSync(path.join(root, 'server/src/lib.ts'), 'export const double = (value: number) => value * 2;\n');
@@ -144,7 +144,7 @@ test('server unit shards partition, reunite and verify as one full-selection bun
   assert.equal(readJson('test-results/server-coverage/collected-tests.json').length, 4);
   assert.equal(readJson('test-results/server-coverage/source-before.json').revision, revision);
 
-  const vitest = path.join(root, 'server/node_modules/vitest/vitest.mjs');
+  const vitest = path.join(root, 'node_modules/vitest/vitest.mjs');
   const replay = spawnSync(process.execPath, [vitest, 'run', '--merge-reports', '../test-results/server-unit-blobs',
     '--coverage.enabled=true', '--coverage.reporter=json-summary', '--reporter=json', '--outputFile.json=./test-results.json'],
   { cwd: path.join(root, 'server'), encoding: 'utf8', timeout: 60000, env });

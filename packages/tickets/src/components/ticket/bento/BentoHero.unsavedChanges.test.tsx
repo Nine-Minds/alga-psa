@@ -139,7 +139,8 @@ vi.mock('@alga-psa/ui/components/Tooltip', () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('@alga-psa/ui/components/bento/BentoTile', () => ({
+vi.mock('@alga-psa/ui/components/bento/BentoTile', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/ui/components/bento/BentoTile')>()),
   BentoTile: ({ children, id }: { children: React.ReactNode; id: string }) => <section id={id}>{children}</section>,
   BentoTileEmpty: ({ children, id }: { children: React.ReactNode; id: string }) => <p id={id}>{children}</p>,
 }));
@@ -551,6 +552,37 @@ describe('BentoHero unsaved change model', () => {
     expect(screen.getByText(/Opened by/)).toBeInTheDocument();
   });
 
+  it('hangs the email view switcher off the Description heading, not the body', () => {
+    renderHero({
+      ticket: {
+        ...baseTicket,
+        source: 'email',
+        email_metadata: { messageId: 'abc@example.test', providerId: 'provider-1' },
+      } as any,
+    });
+
+    const switcher = screen.getByRole('group', { name: 'Message view' });
+    // Above the body it spent a row the tile has not got, and it counted
+    // against the clamp that decides whether "Show more" is needed.
+    expect(switcher.closest('#bento-hero-description-original-email')).toBeNull();
+    expect(switcher.closest('.max-h-40')).toBeNull();
+    expect(switcher.parentElement?.textContent).toContain('Description');
+  });
+
+  it('drops the switcher while the description is being edited', () => {
+    renderHero({
+      ticket: {
+        ...baseTicket,
+        source: 'email',
+        email_metadata: { messageId: 'abc@example.test', providerId: 'provider-1' },
+      } as any,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit description' }));
+
+    expect(screen.queryByRole('group', { name: 'Message view' })).not.toBeInTheDocument();
+  });
+
   it('flags the description edit as unsaved and flushes it inside the hero batch', async () => {
     const onBatchSelectChange = vi.fn().mockResolvedValue(true);
     renderHero({ onBatchSelectChange });
@@ -687,21 +719,12 @@ describe('BentoHero unsaved change model', () => {
   });
 });
 
-it('opens the additional agents popover and selects each agent independently', async () => {
-  const onAgentClick = vi.fn();
+it('leaves additional agents to the Team tile (no "+N" control in the hero)', () => {
   renderHero({
-    onAgentClick,
     additionalAgents: [{ additional_user_id: 'agent-a' }, { additional_user_id: 'agent-b' }] as any,
     availableAgents: [{ user_id: 'agent-a', first_name: 'Alex', last_name: 'Agent' }, { user_id: 'agent-b', first_name: 'Blair', last_name: 'Agent' }] as any,
   });
-  const trigger = screen.getByRole('button', { name: 'bento.hero.additionalAgentsTooltip' });
-  expect(trigger).toHaveTextContent('+2');
-  fireEvent.click(trigger);
-  expect(onAgentClick).not.toHaveBeenCalled();
-  fireEvent.click(await screen.findByRole('button', { name: 'Blair Agent' }));
-  expect(onAgentClick).toHaveBeenLastCalledWith('agent-b');
-  await waitFor(() => expect(screen.queryByRole('button', { name: 'Alex Agent' })).not.toBeInTheDocument());
-  fireEvent.click(trigger);
-  fireEvent.click(await screen.findByRole('button', { name: 'Alex Agent' }));
-  expect(onAgentClick).toHaveBeenLastCalledWith('agent-a');
+  expect(screen.queryByRole('button', { name: 'bento.hero.additionalAgentsTooltip' })).not.toBeInTheDocument();
+  expect(screen.queryByText('+2')).not.toBeInTheDocument();
 });
+

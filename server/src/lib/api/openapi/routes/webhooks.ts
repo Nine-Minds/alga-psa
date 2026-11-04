@@ -1,4 +1,5 @@
 import type { ZodTypeAny } from 'zod';
+import { WEBHOOK_EVENT_NAMES, webhookEventsForEntity } from '../../../webhooks/eventRegistry';
 import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from '../../../webhooks/payloadFields';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import type { ApiResponseSpec } from '../types';
@@ -26,14 +27,14 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const WebhookIdParam = registry.registerSchema(
     'WebhookIdParamV1',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Webhook UUID from webhooks.webhook_id.'),
+      id: zOpenApi.string().guid().describe('Webhook UUID from webhooks.webhook_id.'),
     }),
   );
 
   const WebhookDeliveryParams = registry.registerSchema(
     'WebhookDeliveryParamsV1',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Webhook UUID from webhooks.webhook_id.'),
+      id: zOpenApi.string().guid().describe('Webhook UUID from webhooks.webhook_id.'),
       delivery_id: zOpenApi
         .string()
         .uuid()
@@ -66,7 +67,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const WebhookAnalyticsQuery = registry.registerSchema(
     'WebhookAnalyticsQueryV1',
     zOpenApi.object({
-      webhook_id: zOpenApi.string().uuid().optional(),
+      webhook_id: zOpenApi.string().guid().optional(),
       date_from: zOpenApi.string().datetime().optional(),
       date_to: zOpenApi.string().datetime().optional(),
     }),
@@ -92,63 +93,21 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const TicketWebhookEvent = registry.registerSchema(
     'TicketWebhookEventV1',
     zOpenApi
-      .enum([
-        'ticket.created',
-        'ticket.updated',
-        'ticket.status_changed',
-        'ticket.assigned',
-        'ticket.closed',
-        'ticket.comment.added',
-        'ticket.response_state_changed',
-      ])
+      .enum(
+        webhookEventsForEntity('ticket').map((e) => e.name) as unknown as [string, ...string[]],
+      )
       .describe('Ticket-domain webhook events emitted by the eventBus subscriber.'),
   );
 
   const WebhookEventType = registry.registerSchema(
     'WebhookEventTypeV1',
-    zOpenApi.enum([
-      'ticket.created',
-      'ticket.updated',
-      'ticket.status_changed',
-      'ticket.assigned',
-      'ticket.closed',
-      'ticket.comment.added',
-      'ticket.response_state_changed',
-      'project.created',
-      'project.updated',
-      'project.status_changed',
-      'project.assigned',
-      'project.closed',
-      'project.completed',
-      'project.task.created',
-      'project.task.updated',
-      'project.task.status_changed',
-      'project.task.assigned',
-      'project.task.completed',
-      'client.created',
-      'client.updated',
-      'contact.created',
-      'contact.updated',
-      'time.entry.created',
-      'time.entry.updated',
-      'time.entry.approved',
-      'invoice.created',
-      'invoice.finalized',
-      'invoice.sent',
-      'invoice.paid',
-      'asset.created',
-      'asset.updated',
-      'asset.maintenance.scheduled',
-      'asset.maintenance.completed',
-      'system.backup.completed',
-      'system.backup.failed',
-      'system.maintenance.started',
-      'system.maintenance.completed',
-      'workflow.execution.started',
-      'workflow.execution.completed',
-      'workflow.execution.failed',
-      'custom.event',
-    ]),
+    zOpenApi
+      .enum(WEBHOOK_EVENT_NAMES as unknown as [string, ...string[]])
+      .describe(
+        'Public webhook event name from the single event registry (ticket.*, project.*, client.*, contact.*, client_location.*, quote.*). ' +
+          'Webhooks created earlier may still store retired names (time.entry.*, invoice.*, asset.*, system.*, workflow.*, custom.event); ' +
+          'those are returned as stored, never deliver, and are rejected when newly added.',
+      ),
   );
 
   // ---------------------------------------------------------------------------
@@ -170,20 +129,20 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       url: zOpenApi.string().url(),
       method: zOpenApi.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).optional(),
       event_types: zOpenApi.array(WebhookEventType).min(1),
-      security: zOpenApi.record(zOpenApi.unknown()).optional(),
+      security: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
       payload_format: zOpenApi.enum(['json', 'xml', 'form_data', 'custom']).optional(),
       content_type: zOpenApi.string().optional(),
-      custom_headers: zOpenApi.record(zOpenApi.string()).optional(),
-      event_filter: zOpenApi.record(zOpenApi.unknown()).optional(),
+      custom_headers: zOpenApi.record(zOpenApi.string(), zOpenApi.string()).optional(),
+      event_filter: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
       payload_fields: PayloadFieldsByEntity.optional(),
-      payload_transformation: zOpenApi.record(zOpenApi.unknown()).optional(),
-      retry_config: zOpenApi.record(zOpenApi.unknown()).optional(),
+      payload_transformation: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
+      retry_config: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
       is_active: zOpenApi.boolean().optional(),
       is_test_mode: zOpenApi.boolean().optional(),
       verify_ssl: zOpenApi.boolean().optional(),
       secret_token: zOpenApi.string().optional(),
-      rate_limit: zOpenApi.record(zOpenApi.unknown()).optional(),
-      metadata: zOpenApi.record(zOpenApi.unknown()).optional(),
+      rate_limit: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
+      metadata: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
       tags: zOpenApi.array(zOpenApi.string()).optional(),
     }),
   );
@@ -191,9 +150,9 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const WebhookTestBody = registry.registerSchema(
     'WebhookTestBodyV1',
     zOpenApi.object({
-      webhook_id: zOpenApi.string().uuid().optional(),
+      webhook_id: zOpenApi.string().guid().optional(),
       test_event_type: WebhookEventType,
-      test_payload: zOpenApi.record(zOpenApi.unknown()).optional(),
+      test_payload: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
       override_url: zOpenApi.string().url().optional(),
     }),
   );
@@ -204,7 +163,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       name: zOpenApi.string(),
       description: zOpenApi.string().optional(),
       category: zOpenApi.string(),
-      default_config: zOpenApi.record(zOpenApi.unknown()),
+      default_config: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
       required_fields: zOpenApi.array(zOpenApi.string()).optional(),
       supported_events: zOpenApi.array(WebhookEventType).optional(),
       is_system_template: zOpenApi.boolean().optional(),
@@ -216,7 +175,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       name: zOpenApi.string().min(1),
       url: zOpenApi.string().url(),
-      custom_config: zOpenApi.record(zOpenApi.unknown()).optional(),
+      custom_config: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -290,21 +249,21 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const WebhookRecord = registry.registerSchema(
     'WebhookRecordV1',
     zOpenApi.object({
-      webhook_id: zOpenApi.string().uuid(),
-      tenant: zOpenApi.string().uuid(),
+      webhook_id: zOpenApi.string().guid(),
+      tenant: zOpenApi.string().guid(),
       name: zOpenApi.string(),
       description: zOpenApi.string().nullable(),
       url: zOpenApi.string(),
       method: zOpenApi.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
-      event_types: zOpenApi.array(WebhookEventType),
-      security: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+      event_types: zOpenApi.array(zOpenApi.string()).describe('Event names as stored; may include retired legacy names (inert).'),
+      security: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
       payload_format: zOpenApi.enum(['json', 'xml', 'form_data', 'custom']).optional(),
       content_type: zOpenApi.string().optional(),
-      custom_headers: zOpenApi.record(zOpenApi.string()).nullable(),
-      event_filter: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+      custom_headers: zOpenApi.record(zOpenApi.string(), zOpenApi.string()).nullable(),
+      event_filter: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
       payload_fields: PayloadFieldsByEntity.optional(),
-      payload_transformation: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
-      retry_config: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+      payload_transformation: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
+      retry_config: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable().optional(),
       is_active: zOpenApi.boolean(),
       is_test_mode: zOpenApi.boolean().optional(),
       verify_ssl: zOpenApi.boolean(),
@@ -324,15 +283,15 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const WebhookDeliveryRecord = registry.registerSchema(
     'WebhookDeliveryRecordV1',
     zOpenApi.object({
-      tenant: zOpenApi.string().uuid(),
-      delivery_id: zOpenApi.string().uuid(),
-      webhook_id: zOpenApi.string().uuid(),
+      tenant: zOpenApi.string().guid(),
+      delivery_id: zOpenApi.string().guid(),
+      webhook_id: zOpenApi.string().guid(),
       event_id: zOpenApi.string(),
       event_type: zOpenApi.string(),
-      request_headers: zOpenApi.record(zOpenApi.string()).nullable(),
-      request_body: zOpenApi.unknown().nullable(),
+      request_headers: zOpenApi.record(zOpenApi.string(), zOpenApi.string()).nullable(),
+      request_body: zOpenApi.unknown().optional().nullable(),
       response_status_code: zOpenApi.number().int().nullable(),
-      response_headers: zOpenApi.record(zOpenApi.string()).nullable(),
+      response_headers: zOpenApi.record(zOpenApi.string(), zOpenApi.string()).nullable(),
       response_body: zOpenApi.string().nullable(),
       status: zOpenApi.enum(['pending', 'delivered', 'failed', 'retrying', 'abandoned']),
       attempt_number: zOpenApi.number().int(),
@@ -348,7 +307,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const WebhookHealth = registry.registerSchema(
     'WebhookHealthV1',
     zOpenApi.object({
-      webhook_id: zOpenApi.string().uuid(),
+      webhook_id: zOpenApi.string().guid(),
       status: zOpenApi.enum(['healthy', 'failing', 'disabled']),
       is_active: zOpenApi.boolean(),
       auto_disabled_at: zOpenApi.string().datetime().nullable(),
@@ -368,8 +327,8 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const WebhookTestResult = registry.registerSchema(
     'WebhookTestResultV1',
     zOpenApi.object({
-      test_id: zOpenApi.string().uuid().describe('event_id stamped on the test envelope.'),
-      delivery_id: zOpenApi.string().uuid(),
+      test_id: zOpenApi.string().guid().describe('event_id stamped on the test envelope.'),
+      delivery_id: zOpenApi.string().guid(),
       success: zOpenApi.boolean(),
       status_code: zOpenApi.number().int().nullable().optional(),
       response_time_ms: zOpenApi.number().int().nullable().optional(),
@@ -382,7 +341,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const WebhookSecretRotation = registry.registerSchema(
     'WebhookSecretRotationV1',
     zOpenApi.object({
-      webhook_id: zOpenApi.string().uuid(),
+      webhook_id: zOpenApi.string().guid(),
       signing_secret: zOpenApi
         .string()
         .describe('32-byte base64url secret; only returned at rotation time.'),
@@ -393,9 +352,9 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     'WebhookDeliveryRetryQueuedV1',
     zOpenApi.object({
       queued: zOpenApi.literal(true),
-      webhook_id: zOpenApi.string().uuid(),
-      delivery_id: zOpenApi.string().uuid(),
-      event_id: zOpenApi.string().uuid().describe('event_id of the re-queued envelope.'),
+      webhook_id: zOpenApi.string().guid(),
+      delivery_id: zOpenApi.string().guid(),
+      event_id: zOpenApi.string().guid().describe('event_id of the re-queued envelope.'),
     }),
   );
 
@@ -418,8 +377,8 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const WebhookSubscriptionsResponse = registry.registerSchema(
     'WebhookSubscriptionsResponseV1',
     zOpenApi.object({
-      webhook_id: zOpenApi.string().uuid(),
-      event_types: zOpenApi.array(WebhookEventType),
+      webhook_id: zOpenApi.string().guid(),
+      event_types: zOpenApi.array(zOpenApi.string()).describe('Event names as stored; may include retired legacy names (inert).'),
     }),
   );
 
@@ -438,7 +397,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const WebhookAnalyticsResponse = registry.registerSchema(
     'WebhookAnalyticsResponseV1',
     zOpenApi.object({
-      webhook_id: zOpenApi.string().uuid().optional(),
+      webhook_id: zOpenApi.string().guid().optional(),
       date_from: zOpenApi.string().datetime(),
       date_to: zOpenApi.string().datetime(),
       metrics: zOpenApi.object({
@@ -447,8 +406,8 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
         failed_deliveries: zOpenApi.number().int(),
         success_rate: zOpenApi.number(),
         average_response_time: zOpenApi.number(),
-        deliveries_by_status: zOpenApi.record(zOpenApi.number().int()),
-        deliveries_by_event_type: zOpenApi.record(zOpenApi.number().int()),
+        deliveries_by_status: zOpenApi.record(zOpenApi.string(), zOpenApi.number().int()),
+        deliveries_by_event_type: zOpenApi.record(zOpenApi.string(), zOpenApi.number().int()),
         deliveries_timeline: zOpenApi.array(
           zOpenApi.object({
             date: zOpenApi.string(),
@@ -471,14 +430,14 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const WebhookTemplateRecord = registry.registerSchema(
     'WebhookTemplateRecordV1',
     zOpenApi.object({
-      template_id: zOpenApi.string().uuid(),
+      template_id: zOpenApi.string().guid(),
       name: zOpenApi.string(),
       description: zOpenApi.string().optional(),
       category: zOpenApi.string(),
       default_config: zOpenApi.object({
         url_template: zOpenApi.string().optional(),
         method: zOpenApi.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
-        headers: zOpenApi.record(zOpenApi.string()).optional(),
+        headers: zOpenApi.record(zOpenApi.string(), zOpenApi.string()).optional(),
         payload_template: zOpenApi.string(),
         security_type: zOpenApi
           .enum(['none', 'basic_auth', 'bearer_token', 'api_key', 'hmac_signature', 'oauth2'])
@@ -489,7 +448,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       is_system_template: zOpenApi.boolean().optional(),
       created_at: zOpenApi.string().datetime(),
       updated_at: zOpenApi.string().datetime(),
-      tenant: zOpenApi.string().uuid().nullable().optional(),
+      tenant: zOpenApi.string().guid().nullable().optional(),
     }),
   );
 
@@ -498,7 +457,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   function successOf(schema: ReturnType<typeof zOpenApi.object> | unknown) {
     return zOpenApi.object({
       data: schema as never,
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     });
   }
 
@@ -513,7 +472,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
         hasNext: zOpenApi.boolean(),
         hasPrev: zOpenApi.boolean(),
       }),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     });
   }
 
@@ -586,8 +545,8 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const TicketChangeEntry = registry.registerSchema(
     'TicketWebhookChangeEntryV1',
     zOpenApi.object({
-      previous: zOpenApi.unknown().nullable(),
-      new: zOpenApi.unknown().nullable(),
+      previous: zOpenApi.unknown().optional().nullable(),
+      new: zOpenApi.unknown().optional().nullable(),
     }),
   );
 
@@ -602,7 +561,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
         .enum(['internal', 'client', 'unknown'])
         .optional()
         .describe('Who wrote the comment: MSP staff (`internal`), a client/contact (`client`), or unknown.'),
-      contact_id: zOpenApi.string().uuid().optional().describe('Present when a contact wrote the comment.'),
+      contact_id: zOpenApi.string().guid().optional().describe('Present when a contact wrote the comment.'),
       contact_name: zOpenApi.string().optional().describe('Present when a contact wrote the comment.'),
     }),
   );
@@ -610,13 +569,13 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const TicketCommentsEntry = registry.registerSchema(
     'TicketWebhookCommentsEntryV1',
     zOpenApi.object({
-      comment_id: zOpenApi.string().uuid(),
+      comment_id: zOpenApi.string().guid(),
       text: zOpenApi.string(),
       author: zOpenApi.string().nullable(),
       is_internal: zOpenApi.boolean(),
       is_resolution: zOpenApi.boolean(),
       author_type: zOpenApi.enum(['internal', 'client', 'unknown']).optional(),
-      contact_id: zOpenApi.string().uuid().optional().describe('Present when a contact wrote the comment.'),
+      contact_id: zOpenApi.string().guid().optional().describe('Present when a contact wrote the comment.'),
       contact_name: zOpenApi.string().optional().describe('Present when a contact wrote the comment.'),
       created_at: zOpenApi.string().datetime(),
       updated_at: zOpenApi.string().datetime().nullable(),
@@ -628,11 +587,11 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const TicketWebhookData = registry.registerSchema(
     'TicketWebhookDataV1',
     zOpenApi.object({
-      ticket_id: zOpenApi.string().uuid().describe('Always present; the correlation key.'),
+      ticket_id: zOpenApi.string().guid().describe('Always present; the correlation key.'),
       ticket_number: zOpenApi.string().nullable().optional(),
       title: zOpenApi.string().nullable().optional(),
       url: zOpenApi.string().url().optional(),
-      status_id: zOpenApi.string().uuid().nullable().optional(),
+      status_id: zOpenApi.string().guid().nullable().optional(),
       status_name: zOpenApi.string().nullable().optional(),
       is_closed: zOpenApi.boolean().optional(),
       response_state: zOpenApi
@@ -661,27 +620,27 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
         .nullable()
         .optional()
         .describe('Only populated on ticket.response_state_changed. null when the state was cleared (e.g. ticket closed).'),
-      priority_id: zOpenApi.string().uuid().nullable().optional(),
+      priority_id: zOpenApi.string().guid().nullable().optional(),
       priority_name: zOpenApi.string().nullable().optional(),
-      client_id: zOpenApi.string().uuid().nullable().optional(),
+      client_id: zOpenApi.string().guid().nullable().optional(),
       client_name: zOpenApi.string().nullable().optional(),
-      contact_name_id: zOpenApi.string().uuid().nullable().optional(),
+      contact_name_id: zOpenApi.string().guid().nullable().optional(),
       contact_name: zOpenApi.string().nullable().optional(),
       contact_email: zOpenApi.string().nullable().optional(),
-      assigned_to: zOpenApi.string().uuid().nullable().optional(),
+      assigned_to: zOpenApi.string().guid().nullable().optional(),
       assigned_to_name: zOpenApi.string().nullable().optional(),
-      assigned_team_id: zOpenApi.string().uuid().nullable().optional(),
-      board_id: zOpenApi.string().uuid().nullable().optional(),
+      assigned_team_id: zOpenApi.string().guid().nullable().optional(),
+      board_id: zOpenApi.string().guid().nullable().optional(),
       board_name: zOpenApi.string().nullable().optional(),
-      category_id: zOpenApi.string().uuid().nullable().optional(),
-      subcategory_id: zOpenApi.string().uuid().nullable().optional(),
+      category_id: zOpenApi.string().guid().nullable().optional(),
+      subcategory_id: zOpenApi.string().guid().nullable().optional(),
       entered_at: zOpenApi.string().datetime().nullable().optional(),
       updated_at: zOpenApi.string().datetime().nullable().optional(),
       closed_at: zOpenApi.string().datetime().nullable().optional(),
       due_date: zOpenApi.string().nullable().optional(),
       tags: zOpenApi.array(zOpenApi.string()).optional(),
       changes: zOpenApi
-        .record(TicketChangeEntry)
+        .record(zOpenApi.string(), TicketChangeEntry)
         .optional()
         .describe('Field-level diff. Only on ticket.updated.'),
       comment: TicketCommentBlock.optional().describe(
@@ -698,10 +657,10 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
 
   function envelopeFor(eventValue: string, dataSchema: ReturnType<typeof zOpenApi.object>) {
     return zOpenApi.object({
-      event_id: zOpenApi.string().uuid(),
+      event_id: zOpenApi.string().guid(),
       event_type: zOpenApi.literal(eventValue),
       occurred_at: zOpenApi.string().datetime(),
-      tenant_id: zOpenApi.string().uuid(),
+      tenant_id: zOpenApi.string().guid(),
       data: dataSchema,
     });
   }
@@ -712,10 +671,10 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       'x-alga-signature': zOpenApi
         .string()
         .describe('`t=<unix-seconds>,v1=<hex-hmac-sha256>` over `${timestamp}.${raw_body}`.'),
-      'x-alga-webhook-id': zOpenApi.string().uuid(),
-      'x-alga-event-id': zOpenApi.string().uuid(),
+      'x-alga-webhook-id': zOpenApi.string().guid(),
+      'x-alga-event-id': zOpenApi.string().guid(),
       'x-alga-event-type': WebhookEventType,
-      'x-alga-delivery-id': zOpenApi.string().uuid(),
+      'x-alga-delivery-id': zOpenApi.string().guid(),
       'x-alga-delivery-attempt': zOpenApi.string().describe('Stringified attempt count, starts at 1.'),
     }),
   );
@@ -960,7 +919,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       action: 'read',
       summary: 'List available webhook events',
       description:
-        'Returns the supported webhook event types from webhookEventTypeSchema (ticket.*, project.*, invoice.*, etc.).',
+        'Returns the supported webhook event types from webhookEventTypeSchema (ticket.*, project.*, client.*, contact.*, client_location.*, quote.*).',
       success: { description: 'Event type list.', schema: WebhookEventListEnvelope },
     },
     {

@@ -14,6 +14,11 @@ export type DeletionDependency = {
   label: string;
   description?: string;
   viewUrl?: string;
+  /**
+   * False when the delete cleans the rows up itself. Such a dependency is
+   * reported for information and never stops the deletion.
+   */
+  blocking?: boolean;
 };
 
 export type DeletionAlternative = {
@@ -38,6 +43,12 @@ export type EntityDependencyConfig = {
   foreignKey?: string;
   countQuery?: (trx: Knex | Knex.Transaction, options: { tenant: string; entityId: string }) => Promise<number>;
   viewUrlTemplate?: string;
+  /**
+   * Defaults to true. Set false for links the deletion path clears on its own
+   * — they are worth showing, but refusing the delete over them would mean the
+   * cleanup never runs.
+   */
+  blocking?: boolean;
 };
 
 export type EntityDeletionConfig = {

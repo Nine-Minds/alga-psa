@@ -18,6 +18,8 @@ import { getConnection } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { resolvePaymentBillingProfileId } from '@alga-psa/shared/billingClients/billingProfilePayments';
+import { offSessionEvidence, toCustomerSnapshot } from './stripeImportSnapshot';
+import type { StripeCustomerSnapshot } from './stripeImportClassifier';
 import { buildAutopayPaymentIntentRequest, mapStripeAutopayError } from './stripeAutopayParams';
 import {
   PaymentProvider,
@@ -237,8 +239,40 @@ export class StripePaymentProvider implements PaymentProvider {
     return result.data[0] ?? null;
   }
 
-  async updateSavedPaymentMethodMetadata(externalId: string, metadata: Record<string, string>): Promise<void> {
-    await (await this.getStripe()).paymentMethods.update(externalId, { metadata });
+  async updateSavedPaymentMethodMetadata(externalId: string, metadata: Record<string, string>): Promise<Record<string, string>> {
+    const updated = await (await this.getStripe()).paymentMethods.update(externalId, { metadata });
+    return (updated.metadata ?? {}) as Record<string, string>;
+  }
+
+  /** Stripe customer + all attached payment methods + off-session evidence, for the existing-customer import. */
+  async getCustomerImportSnapshot(customerId: string): Promise<StripeCustomerSnapshot | null> {
+    const stripe = await this.getStripe();
+    let customer: Stripe.Customer | Stripe.DeletedCustomer;
+    try {
+      customer = await stripe.customers.retrieve(customerId);
+    } catch (error) {
+      if ((error as Stripe.errors.StripeError).code === 'resource_missing') return null;
+      throw error;
+    }
+    if ('deleted' in customer && customer.deleted) return toCustomerSnapshot(customer, [], new Set());
+    const [methods, setupIntents, paymentIntents] = await Promise.all([
+      stripe.customers.listPaymentMethods(customerId, { limit: 100 }).autoPagingToArray({ limit: 500 }),
+      stripe.setupIntents.list({ customer: customerId, limit: 100 }).autoPagingToArray({ limit: 500 }),
+      stripe.paymentIntents.list({ customer: customerId, limit: 100 }).autoPagingToArray({ limit: 500 }),
+    ]);
+    return toCustomerSnapshot(customer, methods, offSessionEvidence(setupIntents, paymentIntents));
+  }
+
+  /** Lists the account's customers (without payment methods) for assisted matching. */
+  async listCustomersForImport(maxCustomers = 5000): Promise<{ customers: StripeCustomerSnapshot[]; truncated: boolean }> {
+    const stripe = await this.getStripe();
+    const list = await stripe.customers.list({ limit: 100 }).autoPagingToArray({ limit: maxCustomers + 1 });
+    return { customers: list.slice(0, maxCustomers).map((customer) => toCustomerSnapshot(customer, [], new Set())), truncated: list.length > maxCustomers };
+  }
+
+  async updateCustomerMetadata(customerId: string, metadata: Record<string, string>, idempotencyKey: string): Promise<Record<string, string>> {
+    const updated = await (await this.getStripe()).customers.update(customerId, { metadata }, { idempotencyKey });
+    return (updated.metadata ?? {}) as Record<string, string>;
   }
 
   async detachPaymentMethod(externalId: string): Promise<void> {

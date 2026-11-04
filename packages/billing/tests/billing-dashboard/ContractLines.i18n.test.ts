@@ -92,7 +92,7 @@ describe('ContractLines i18n wiring contract', () => {
       'contractLines.services.quantityTaxAllocation',
       'contractLines.services.hourlyRate',
       'contractLines.services.unitRate',
-      'contractLines.services.rateTaxAllocation',
+      'contractLines.services.shareOfLineFee',
       // Unit-of-measure editing moved into UsageServiceConfigPanel, which uses the
       // 'msp/service-catalog' namespace ('usageConfig.*' keys) instead of this component.
       'contractLines.bucket.enableTracking',
@@ -108,20 +108,29 @@ describe('ContractLines i18n wiring contract', () => {
       'contractLines.bucket.rolloverEnabled',
       'billing.labels.timing',
       'billing.labels.cadenceOwner',
-      'billing.timing.arrears',
-      'billing.timing.advance',
       'billing.cadenceOwner.client',
       'billing.cadenceOwner.contract',
       'common.actions.save',
       'common.actions.saving',
       'common.actions.cancel',
-      'contractLines.errors.cannotEditWithInvoices',
+      'contractLines.configuration.billedEditExplanation',
     ];
 
     for (const key of keyChecks) {
       expect(source).toContain(`t('${key}'`);
       expect(getLeaf(en, key)).toBeDefined();
     }
+
+    // Timing labels live in the shared helper; ContractLines must delegate to it.
+    const timingHelper = read('../../src/components/billing-dashboard/contracts/contractLineBillingTimingLabel.ts');
+    expect(source).toContain("from './contractLineBillingTimingLabel'");
+    expect(source).toContain('getContractLineBillingTimingLabel(t,');
+    for (const key of ['billing.timing.arrears', 'billing.timing.advance']) {
+      expect(timingHelper).toContain(`t('${key}'`);
+      expect(getLeaf(en, key)).toBeDefined();
+    }
+    expect(getLeaf(en, 'contractLines.errors.protectedStartDate')).toBeDefined();
+    expect(getLeaf(en, 'contractLines.errors.protectedEndDate')).toBeDefined();
   });
 
   it('T022: ContractLines translation keys resolve to pseudo-locale values in xx', () => {

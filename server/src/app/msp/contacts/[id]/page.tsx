@@ -1,6 +1,7 @@
 import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { ContactBentoLayout } from '@alga-psa/clients';
+import { ContactAssetsSection } from '@alga-psa/assets/components/ContactAssetsSection';
 import type { IDocument } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
@@ -13,7 +14,7 @@ import {
   getContactTicketsSummary,
   getInteractionsForEntity,
 } from '@alga-psa/clients/actions';
-import { getAllClients } from '@alga-psa/clients/actions';
+import { getClientById } from '@alga-psa/clients/actions';
 import { getContactPortalPermissions } from '@alga-psa/auth/actions';
 import { buildCreateTicketHref } from '@alga-psa/tickets/lib/createTicketRoute';
 import { findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
@@ -80,8 +81,8 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
       return notFound();
     }
 
-    const [clients, permissions, documentsResponse, interactions, tags, stats, ticketsSummary, relatedWork, portalSummary] = await Promise.all([
-      getAllClients(),
+    const [contactClient, permissions, documentsResponse, interactions, tags, stats, ticketsSummary, relatedWork, portalSummary] = await Promise.all([
+      contact.client_id ? settledValue(getClientById(contact.client_id), null) : Promise.resolve(null),
       getContactPortalPermissions(),
       isAlgaDesk ? Promise.resolve([]) : settledValue(getDocumentsByEntity(id, 'contact'), [] as any),
       settledValue(getInteractionsForEntity(id, 'contact'), []),
@@ -120,7 +121,7 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
         <div className="p-6">
           <ContactBentoLayout
             contact={contact}
-            clients={clients}
+            clientName={contactClient?.client_name ?? null}
             documents={documents}
             showDocuments={!isAlgaDesk}
             showRelatedWork={!isAlgaDesk}
@@ -136,11 +137,14 @@ const ContactDetailPage = async ({ params }: ContactDetailPageProps) => {
                 ? {
                     client: {
                       id: contact.client_id,
-                      name: clients.find((client) => client.client_id === contact.client_id)?.client_name ?? '',
+                      name: contactClient?.client_name ?? '',
                     },
                   }
                 : {}),
             })}
+            assetsSlot={
+              isAlgaDesk ? null : <ContactAssetsSection contactId={contact.contact_name_id} />
+            }
             userId={currentUser.user_id}
             userPermissions={permissions}
           />

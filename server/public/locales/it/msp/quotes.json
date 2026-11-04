@@ -378,6 +378,14 @@
       "customLayout": "Personalizzato",
       "tenantDefault": "Predefinito tenant",
       "changeLayout": "Modifica"
+    },
+    "sectionTitles": {
+      "title": "Titoli delle sezioni del preventivo raggruppato",
+      "description": "Intestazioni facoltative del layout preventivo standard raggruppato.",
+      "monthlyLabel": "Titolo della sezione mensile",
+      "oneTimeLabel": "Titolo della sezione una tantum",
+      "monthlyPlaceholder": "Mensile",
+      "oneTimePlaceholder": "Una tantum"
     }
   },
   "quoteDetail": {
@@ -622,6 +630,7 @@
       }
     },
     "sections": {
+      "carriedDiscounts": "Sconti riportati sulle linee contrattuali",
       "contractItems": "Articoli contrattuali",
       "conversionMode": "Modalità di conversione",
       "excludedFromConversion": "Escluso dalla Conversione",
@@ -647,6 +656,7 @@
       "converted": "Convertito",
       "discount": "Sconto",
       "fixed": "fisso",
+      "monthlyTotal": "Totale mensile dopo gli sconti",
       "notConverted": "Non convertito"
     },
     "partial": {

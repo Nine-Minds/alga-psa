@@ -62,6 +62,77 @@ function normalizeCippBaseUrl(input: string): string | null {
   }
 }
 
+/**
+ * What the connect/test actions accept. The legacy shape is what the current
+ * dialog sends and stays valid with no `authType`. API-client input uses the
+ * CIPP UI's own labels (`apiUrl`, `tenantId`) or the stored names; both work.
+ */
+export type EntraCippCredentialInput =
+  | { authType?: 'legacy_api_token' | 'legacy_api_key'; baseUrl: string; apiToken?: string; apiKey?: string }
+  | {
+      authType: 'api_client';
+      baseUrl?: string;
+      apiUrl?: string;
+      clientId: string;
+      clientSecret: string;
+      directoryId?: string;
+      tenantId?: string;
+    };
+
+type NormalizedCippInput =
+  | { authType: 'legacy_api_token'; baseUrl: string; apiToken: string }
+  | { authType: 'api_client'; baseUrl: string; clientId: string; clientSecret: string; directoryId: string };
+
+/**
+ * `baseUrl` is stored WITHOUT the trailing `/api` — request paths append
+ * `/api/...`, as they always have for legacy connections. API-client users
+ * paste the "API URL" from CIPP, which may or may not end in /api, so a
+ * trailing /api is stripped rather than rejected (otherwise we'd call
+ * `/api/api/listtenants`).
+ */
+function stripApiSuffix(baseUrl: string): string {
+  return baseUrl.replace(/\/api$/i, '');
+}
+
+function normalizeCippInput(
+  input: EntraCippCredentialInput
+): { ok: true; value: NormalizedCippInput } | { ok: false; error: string } {
+  const rawUrl = String(
+    (input as { baseUrl?: string }).baseUrl
+      ?? (input as { apiUrl?: string }).apiUrl
+      ?? ''
+  );
+  const normalizedBaseUrl = normalizeCippBaseUrl(rawUrl);
+  if (!normalizedBaseUrl) {
+    return { ok: false, error: 'CIPP base URL must be a valid http(s) URL.' };
+  }
+
+  if (input.authType === 'api_client') {
+    const clientId = String(input.clientId || '').trim();
+    const clientSecret = String(input.clientSecret || '').trim();
+    const directoryId = String(input.directoryId ?? input.tenantId ?? '').trim();
+    if (!clientId) return { ok: false, error: 'CIPP Application (client) ID is required.' };
+    if (!clientSecret) return { ok: false, error: 'CIPP client secret is required.' };
+    if (!directoryId) return { ok: false, error: 'CIPP Tenant (directory) ID is required.' };
+    return {
+      ok: true,
+      value: {
+        authType: 'api_client',
+        baseUrl: stripApiSuffix(normalizedBaseUrl),
+        clientId,
+        clientSecret,
+        directoryId,
+      },
+    };
+  }
+
+  const apiToken = String(input.apiToken ?? input.apiKey ?? '').trim();
+  if (!apiToken) {
+    return { ok: false, error: 'CIPP API token is required.' };
+  }
+  return { ok: true, value: { authType: 'legacy_api_token', baseUrl: normalizedBaseUrl, apiToken } };
+}
+
 function eeUnavailableResult<T>(): EntraActionResult<T> {
   return {
     success: false,
@@ -181,6 +252,10 @@ export type EntraStatusResponse = {
   lastValidationError: Record<string, unknown> | null;
   connectionDetails?: {
     cippBaseUrl: string | null;
+    /** Non-secret CIPP identity fields. The client secret and API key are never exposed. */
+    cippAuthType?: 'api_client' | 'legacy_api_token' | null;
+    cippClientId?: string | null;
+    cippDirectoryId?: string | null;
     directTenantId: string | null;
     directCredentialSource: 'profile' | null;
     directProfileId: string | null;
@@ -605,7 +680,7 @@ export const connectEntraIntegration = withAuth(async (
 export const testEntraCippCredentials = withAuth(async (
   user,
   _ctx,
-  input: { baseUrl: string; apiToken: string }
+  input: EntraCippCredentialInput
 ) => {
   if (isClientPortalUser(user)) {
     return { success: false, error: 'Forbidden' } as const;
@@ -616,26 +691,27 @@ export const testEntraCippCredentials = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const normalizedBaseUrl = normalizeCippBaseUrl(input.baseUrl);
-  if (!normalizedBaseUrl) {
-    return { success: false, error: 'CIPP base URL must be a valid http(s) URL.' } as const;
+  const normalized = normalizeCippInput(input);
+  if (normalized.ok === false) {
+    return { success: false, error: normalized.error } as const;
   }
-
-  const apiToken = String(input.apiToken || '').trim();
-  if (!apiToken) {
-    return { success: false, error: 'CIPP API token is required.' } as const;
-  }
+  const candidate = normalized.value;
+  const normalizedBaseUrl = candidate.baseUrl;
 
   const { isFailedCippProbe, probeCippCredentials } = await import(
     '@enterprise/lib/integrations/entra/providers/cipp/cippProbe'
   );
 
-  const probe = await probeCippCredentials({ baseUrl: normalizedBaseUrl, apiToken });
+  const probe = await probeCippCredentials(candidate);
 
   if (isFailedCippProbe(probe)) {
     return {
       success: false,
       error: probe.error || 'Unable to validate the CIPP connection.',
+      // The classification (no secret) lets the dialog title the failure.
+      code: probe.code,
+      // For an unreachable host: DNS, refused, timeout, TLS or network.
+      cause: probe.cause,
     } as const;
   }
 
@@ -653,7 +729,7 @@ export const testEntraCippCredentials = withAuth(async (
 export const connectEntraCipp = withAuth(async (
   user,
   { tenant },
-  input: { baseUrl: string; apiToken: string }
+  input: EntraCippCredentialInput
 ) => {
   if (isClientPortalUser(user)) {
     return { success: false, error: 'Forbidden' } as const;
@@ -664,15 +740,12 @@ export const connectEntraCipp = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const normalizedBaseUrl = normalizeCippBaseUrl(input.baseUrl);
-  if (!normalizedBaseUrl) {
-    return { success: false, error: 'CIPP base URL must be a valid http(s) URL.' } as const;
+  const normalized = normalizeCippInput(input);
+  if (normalized.ok === false) {
+    return { success: false, error: normalized.error } as const;
   }
-
-  const apiToken = String(input.apiToken || '').trim();
-  if (!apiToken) {
-    return { success: false, error: 'CIPP API token is required.' } as const;
-  }
+  const candidate = normalized.value;
+  const normalizedBaseUrl = candidate.baseUrl;
 
   // Validate before persisting anything, and validate without side effects: the
   // probe takes the candidate credential as an argument, so nothing is written
@@ -684,12 +757,16 @@ export const connectEntraCipp = withAuth(async (
     '@enterprise/lib/integrations/entra/providers/cipp/cippProbe'
   );
 
-  const probe = await probeCippCredentials({ baseUrl: normalizedBaseUrl, apiToken });
+  const probe = await probeCippCredentials(candidate);
 
   if (isFailedCippProbe(probe)) {
     return {
       success: false,
       error: probe.error || 'Unable to validate the CIPP connection.',
+      // The classification (no secret) lets the dialog title the failure.
+      code: probe.code,
+      // For an unreachable host: DNS, refused, timeout, TLS or network.
+      cause: probe.cause,
     } as const;
   }
 
@@ -705,10 +782,7 @@ export const connectEntraCipp = withAuth(async (
     .getEntraCippCredentials(tenant)
     .catch(() => null);
 
-  await cippSecretStore.saveEntraCippCredentials(tenant, {
-    baseUrl: normalizedBaseUrl,
-    apiToken,
-  });
+  await cippSecretStore.saveEntraCippCredentials(tenant, candidate);
 
   const { knex } = await createTenantKnex();
   const userId = String((user as { user_id?: string } | undefined)?.user_id || '');

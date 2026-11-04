@@ -2,6 +2,7 @@
  * Shared tsup preset for pre-built @alga-psa/* packages.
  *
  * Compiles every .ts/.tsx file under src/ individually (bundle: false)
+ * and copies JSON assets alongside them with their relative paths preserved,
  * so webpack aliases like '@alga-psa/foo/actions/bar' resolve to dist/.
  *
  * Types are NOT emitted (dts: false) — TypeScript resolves types from
@@ -22,6 +23,8 @@ export function getAllSourceFiles(dir: string, base: string = dir): Record<strin
     const fullPath = join(dir, file);
     if (statSync(fullPath).isDirectory()) {
       Object.assign(entries, getAllSourceFiles(fullPath, base));
+    } else if (file.endsWith('.json')) {
+      entries[relative(base, fullPath)] = fullPath;
     } else if (
       /\.(ts|tsx)$/.test(file) &&
       !file.endsWith('.d.ts') &&
@@ -81,7 +84,7 @@ export function makeConfig(opts: PresetOptions = {}): Options {
   ];
 
   const config: Options = {
-    entry: getAllSourceFiles('src'),
+    entry: Object.values(getAllSourceFiles('src')),
     format: ['esm'],
     dts: false,
     bundle: false,
@@ -89,17 +92,20 @@ export function makeConfig(opts: PresetOptions = {}): Options {
     sourcemap: false,
     clean: true,
     outDir: 'dist',
+    loader: { '.json': 'copy' },
+    esbuildOptions(options) {
+      // Unbundled imports keep their original paths. JSON must be emitted at
+      // those paths, and native Node requires the source's import attributes.
+      options.outbase = 'src';
+      options.assetNames = '[dir]/[name]';
+      options.supported = { ...options.supported, 'import-attributes': true };
+      if (opts.jsxEnabled) options.jsx = 'automatic';
+    },
     external,
     outExtension() {
       return { js: '.js' };
     },
   };
-
-  if (opts.jsxEnabled) {
-    config.esbuildOptions = (options) => {
-      options.jsx = 'automatic';
-    };
-  }
 
   if (opts.addJsExtensions) {
     config.onSuccess = async () => {

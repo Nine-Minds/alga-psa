@@ -10,6 +10,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import DataTableSkeleton from '@alga-psa/ui/components/skeletons/DataTableSkeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { listRecurringTicketDefinitions } from '../../actions/recurringTicketActions';
 import type { RecurringDefinitionListItem } from '../../lib/recurring/types';
@@ -20,6 +21,9 @@ type Filter = 'active' | 'paused' | 'archived' | 'all';
 const FILTERS: Filter[] = ['active', 'paused', 'archived', 'all'];
 
 const STATUS_BADGE = { active: 'success', paused: 'warning', archived: 'default-muted' } as const;
+
+/** Column widths of the loading skeleton, shaped like the table it stands in for. */
+const SKELETON_CELLS = ['w-40', 'w-56', 'w-16', 'w-32', 'w-20'];
 
 /** The recurring tickets list: schedule, clients, next due date and a warning when the last run failed. */
 export function RecurringTicketsPage() {
@@ -46,6 +50,8 @@ export function RecurringTicketsPage() {
   }, [filter]);
 
   useEffect(() => { void load(); }, [load]);
+
+  const openNew = useCallback(() => router.push('/msp/tickets/recurring/new'), [router]);
 
   const columns = useMemo<ColumnDefinition<RecurringDefinitionListItem>[]>(() => {
     const describeT = toDescribeTranslate((key, options) => t(key, options));
@@ -93,7 +99,7 @@ export function RecurringTicketsPage() {
   return (
     <div id="recurring-tickets-page" className="space-y-4 p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t('recurring.list.title', 'Recurring tickets')}</h1>
+        <h1 className="text-2xl font-bold">{t('recurring.list.title', 'Recurring tickets')}</h1>
         <div className="flex items-center gap-3">
           <div className="w-44">
             <CustomSelect
@@ -107,7 +113,7 @@ export function RecurringTicketsPage() {
             />
           </div>
           {permissions.create && (
-            <Button id="recurring-tickets-new" type="button" onClick={() => router.push('/msp/tickets/recurring/new')}>
+            <Button id="recurring-tickets-new" type="button" onClick={openNew}>
               {t('recurring.list.new', 'New recurring ticket')}
             </Button>
           )}
@@ -117,19 +123,33 @@ export function RecurringTicketsPage() {
       {error && <Alert id="recurring-tickets-error" variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
 
       {loading ? (
-        <p id="recurring-tickets-loading" className="text-sm text-[rgb(var(--color-text-500))]">{t('recurring.loading', 'Loading…')}</p>
-      ) : !error && items.length === 0 ? (
-        <p id="recurring-tickets-empty" className="text-sm text-[rgb(var(--color-text-500))]">
-          {t('recurring.list.empty', 'No recurring tickets here yet.')}
-        </p>
-      ) : (
-        <DataTable
-          id="recurring-tickets-table"
-          data={items}
-          columns={columns}
-          pagination
-          onRowClick={(row) => router.push(`/msp/tickets/recurring/${row.definition_id}`)}
+        <DataTableSkeleton
+          id="recurring-tickets-loading"
+          label={t('recurring.loading', 'Loading…')}
+          columnWidths={SKELETON_CELLS}
         />
+      ) : (
+        <>
+          <DataTable
+            id="recurring-tickets-table"
+            data={items}
+            columns={columns}
+            pagination
+            onRowClick={(row) => router.push(`/msp/tickets/recurring/${row.definition_id}`)}
+          />
+          {!error && items.length === 0 && (
+            <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+              <p id="recurring-tickets-empty" className="max-w-md text-sm text-[rgb(var(--color-text-500))]">
+                {t('recurring.list.empty', 'No recurring tickets here yet.')}
+              </p>
+              {permissions.create && (
+                <Button id="recurring-tickets-empty-new" type="button" onClick={openNew}>
+                  {t('recurring.list.new', 'New recurring ticket')}
+                </Button>
+              )}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

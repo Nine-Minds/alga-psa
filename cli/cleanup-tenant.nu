@@ -327,6 +327,8 @@ def "main cleanup" [
         "hour_block_time_allocations" "hour_block_service_scopes" "hour_block_audit" "hour_blocks"
 
         # Invoice details
+        # invoice_adjustment_operations is a FK-less manual-save idempotency ledger.
+        "invoice_adjustment_operations"
         "invoice_charges" "invoice_annotations" "invoice_time_entries" "invoice_usage_records"
         "invoice_charge_details" "invoice_charge_fixed_details" "invoice_items"
         "invoice_payment_links" "invoice_payments" "invoice_template_assignments"

@@ -1,13 +1,37 @@
 /** @vitest-environment jsdom */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { WorkflowStepNameField } from '../WorkflowStepNameField';
 import { WorkflowStepSaveOutputSection } from '../WorkflowStepSaveOutputSection';
 
 const generateSaveAsName = (actionId: string) => actionId.replace(/\./g, '_');
+
+// The designer writes whatever the section emits straight back into step config, so the
+// harness echoes it to reproduce the controlled round-trip the real panel performs.
+const SaveOutputHarness: React.FC<{
+  initialSaveAs?: string;
+  onSaveAsChange: (value?: string) => void;
+}> = ({ initialSaveAs, onSaveAsChange }) => {
+  const [saveAs, setSaveAs] = useState<string | undefined>(initialSaveAs);
+
+  return (
+    <WorkflowStepSaveOutputSection
+      stepId="step-edit"
+      actionId="tickets.create"
+      saveAs={saveAs}
+      onSaveAsChange={(value) => {
+        setSaveAs(value);
+        onSaveAsChange(value);
+      }}
+      onCopyPath={vi.fn()}
+      generateSaveAsName={generateSaveAsName}
+    />
+  );
+};
 
 describe('workflow step properties basics', () => {
   afterEach(() => {
@@ -134,5 +158,61 @@ describe('workflow step properties basics', () => {
     expect(onCopyPath).toHaveBeenLastCalledWith('vars.shortSummary');
     expect(onStepNameChange).not.toHaveBeenCalled();
     expect(onSaveAsChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps the save output name input mounted and focused through clears and spaces', async () => {
+    const user = userEvent.setup();
+    const onSaveAsChange = vi.fn();
+
+    render(<SaveOutputHarness initialSaveAs="tickets_create" onSaveAsChange={onSaveAsChange} />);
+
+    const input = document.getElementById('workflow-step-saveAs-step-edit') as HTMLInputElement;
+    await user.click(input);
+    await user.clear(input);
+
+    // Clearing used to flip the section off and unmount the field mid-edit.
+    expect(document.getElementById('workflow-step-saveAs-step-edit')).toBe(input);
+    expect(document.activeElement).toBe(input);
+    expect(input.value).toBe('');
+    expect(onSaveAsChange).toHaveBeenLastCalledWith('');
+
+    await user.type(input, 'ticket result');
+
+    expect(document.getElementById('workflow-step-saveAs-step-edit')).toBe(input);
+    expect(document.activeElement).toBe(input);
+    expect(input.value).toBe('ticket result');
+    expect(onSaveAsChange).toHaveBeenLastCalledWith('ticket result');
+
+    await user.clear(input);
+    await user.type(input, ' ticketResult ');
+
+    // The trailing space survives while typing and is trimmed on commit.
+    expect(input.value).toBe(' ticketResult ');
+    await user.tab();
+    expect(onSaveAsChange).toHaveBeenLastCalledWith('ticketResult');
+    expect((document.getElementById('workflow-step-saveAs-step-edit') as HTMLInputElement).value)
+      .toBe('ticketResult');
+  });
+
+  it('turns save output off through the toggle and keeps an empty name editable', async () => {
+    const user = userEvent.setup();
+    const onSaveAsChange = vi.fn();
+
+    render(<SaveOutputHarness initialSaveAs="tickets_create" onSaveAsChange={onSaveAsChange} />);
+
+    const input = document.getElementById('workflow-step-saveAs-step-edit') as HTMLInputElement;
+    await user.clear(input);
+    await user.tab();
+
+    // Committing an empty name clears the stored value but leaves the field in place.
+    expect(onSaveAsChange).toHaveBeenLastCalledWith(undefined);
+    expect(document.getElementById('workflow-step-saveAs-step-edit')).toBe(input);
+
+    await user.type(input, 'retyped');
+    expect(onSaveAsChange).toHaveBeenLastCalledWith('retyped');
+
+    await user.click(screen.getByRole('switch'));
+    expect(onSaveAsChange).toHaveBeenLastCalledWith(undefined);
+    expect(document.getElementById('workflow-step-saveAs-step-edit')).toBeNull();
   });
 });
