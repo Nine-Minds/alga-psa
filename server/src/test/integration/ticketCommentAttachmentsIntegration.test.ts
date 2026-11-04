@@ -898,8 +898,8 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
   });
 
   it.each([false, true])('renders independent sponsor comment content from the ticket email subscriber (reverse=%s)', async reverse => {
-    const { TenantEmailService } = await import('@alga-psa/email');
-    const { SMTPEmailProvider } = await import('@alga-psa/email/providers/SMTPEmailProvider');
+    const { EmulatorHost } = await import('@alga-psa/emulator-host');
+    const { default: smtpSink } = await import('@alga-psa/emulator-smtp-sink');
     const { coManagedDeliverySeam } = await import('@shared/lib/coManagedDelivery');
     const { ticketEmailSubscriberTestHarness } = await import('@/lib/eventBus/subscribers/ticketEmailSubscriber');
     const ids = { hidden: randomUUID(), visible: randomUUID() };
@@ -908,21 +908,33 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
     const principals = reverse ? [ids.visible, ids.hidden] : [ids.hidden, ids.visible];
     const redactedFields = [{ kind: 'msp_user', principalId: ids.hidden, email: addresses[ids.hidden], redactedFields: policies[ids.hidden] },
       { kind: 'msp_user', principalId: ids.visible, email: addresses[ids.visible], redactedFields: policies[ids.visible] }];
-    const plan = { audience: 'shared_it', threadId: randomUUID(), relationshipId: randomUUID(), sponsorTenant: tenant,
+    const sponsorTenant = randomUUID();
+    await tenantDb(trx, sponsorTenant).unscoped('tenants', 'create isolated comment SMTP sponsor').insert({
+      tenant: sponsorTenant, client_name: 'Comment SMTP Sponsor', email: 'sponsor@example.test', product_code: 'psa' });
+    const plan = { audience: 'shared_it', threadId: randomUUID(), relationshipId: randomUUID(), sponsorTenant,
       sponsorRecipients: principals.map(id => redactedFields.find(r => r.principalId === id)),
       replyTokenMetadata: { namespace: 'cm', version: 2, relationshipId: randomUUID(), grantGeneration: 0, threadId: null } };
     await table('tenant_email_templates').insert({ tenant, name: 'ticket-comment-added', language_code: 'en', subject: 'Update {{ticket.id}}',
       html_content: '{{{comment.html}}}|{{comment.author}}|{{ticket.requesterDetails}}|{{ticket.assignedDetails}}|{{ticket.categoryDetails}}',
       text_content: '{{comment.text}}|{{comment.author}}|{{ticket.requesterDetails}}|{{ticket.assignedDetails}}|{{ticket.categoryDetails}}' });
-    const messages: any[] = [];
-    const stream = nodemailer.createTransport({ streamTransport: true, buffer: true });
-    const provider = new SMTPEmailProvider('co-managed-order');
-    (provider as any).initialized = true; (provider as any).config = { from: 'agent@example.test' };
-    (provider as any).transporter = { sendMail: async (mail: any) => { const sent = await stream.sendMail(mail); messages.push(await simpleParser(sent.message as Buffer)); return sent; } };
-    const service = TenantEmailService.getInstance(tenant);
-    const refresh = vi.spyOn(service as any, 'refreshProviderState').mockResolvedValue({ emailProvider: provider, providerInitError: null, fromAddress: 'agent@example.test' });
+    const customerMail = new EmulatorHost({ emulators: [smtpSink], controlPort: 0, ports: { 'smtp-sink': 0 } });
+    const sponsorMail = new EmulatorHost({ emulators: [smtpSink], controlPort: 0, ports: { 'smtp-sink': 0 } });
+    const customerPorts = await customerMail.start();
+    const sponsorPorts = await sponsorMail.start();
+    const settings = (port: number, providerId: string) => ({ tenant: providerId === 'customer' ? tenant : sponsorTenant,
+      email_provider: 'smtp', default_from_domain: 'example.test', ticketing_from_email: 'agent@example.test',
+      provider_configs: JSON.stringify([{ providerId, providerType: 'smtp', isEnabled: true,
+        config: { host: '127.0.0.1', port, secure: false, rejectUnauthorized: false, from: 'agent@example.test' } }]) });
+    await trx('tenant_email_settings').insert([
+      settings(customerPorts.ports['smtp-sink'], 'customer'), settings(sponsorPorts.ports['smtp-sink'], 'sponsor'),
+    ]);
     const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(trx);
-    const tenantConnection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant } as any);
+    const tenantConnection = vi.spyOn(dbModule, 'createTenantKnex').mockImplementation(async (requestedTenant: string) => ({ knex: trx, tenant: requestedTenant } as any));
+    const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
+    const secretProvider = await getSecretProviderInstance();
+    const getSecret = secretProvider.getAppSecret.bind(secretProvider);
+    const secret = vi.spyOn(secretProvider, 'getAppSecret').mockImplementation(async name =>
+      name.toLowerCase() === 'nextauth_secret' ? 'co-managed-comment-smtp-test-secret' : getSecret(name));
     process.env.FORCE_CAPABILITIES = 'co-managed:on';
     coManagedDeliverySeam.reset();
     coManagedDeliverySeam.register(() => ({ planTicketComment: async () => plan,
@@ -932,16 +944,22 @@ describe('ticket comment attachments (migrated PostgreSQL)', () => {
         tenantId: tenant, ticketId: ticket, actorUserId: actor,
         comment: { id: comment, content: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'One recipient secret body' }] }]), author: 'Hidden Author', isInternal: false },
       } } as any);
+      const customerMessages = await (await fetch(`http://127.0.0.1:${customerPorts.controlPort}/control/smtp-sink/state/emails`)).json() as any;
+      const sponsorMessages = await (await fetch(`http://127.0.0.1:${sponsorPorts.controlPort}/control/smtp-sink/state/emails`)).json() as any;
+      const messages = customerMessages.result.map((message: any) => ({ ...message, text: message.text ?? '', html: message.html ?? '' }));
       expect(messages).toHaveLength(2);
-      const hidden = messages.find(m => m.to.value[0].address === addresses[ids.hidden]);
-      const visible = messages.find(m => m.to.value[0].address === addresses[ids.visible]);
+      expect(sponsorMessages.result).toHaveLength(0);
+      expect(messages.map((message: any) => message.to.join(',')).sort()).toEqual(Object.values(addresses).sort());
+      const hidden = messages.find((m: any) => m.to.includes(addresses[ids.hidden]));
+      const visible = messages.find((m: any) => m.to.includes(addresses[ids.visible]));
       expect(hidden.text).not.toContain('One recipient secret body');
       expect(hidden.text).not.toContain('Hidden Author');
       expect(visible.text).toContain('One recipient secret body');
       expect(visible.text).toContain('Hidden Author');
     } finally {
-      refresh.mockRestore(); connection.mockRestore(); tenantConnection.mockRestore();
+      secret.mockRestore(); connection.mockRestore(); tenantConnection.mockRestore();
       coManagedDeliverySeam.reset(); delete process.env.FORCE_CAPABILITIES;
+      await customerMail.stop(); await sponsorMail.stop();
     }
   });
 

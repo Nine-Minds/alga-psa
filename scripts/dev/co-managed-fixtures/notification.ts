@@ -3,7 +3,7 @@
  * are card-specific, so apply/reset never edits the shared Oz review tenant.
  */
 import type { Knex } from 'knex';
-import { CREATED, ensure, fingerprint, id, put, VALID_UNTIL, type FixtureEngines, type FixtureModule, type VerifyReport } from './shared';
+import { CREATED, fingerprint, id, put, VALID_UNTIL, type FixtureEngines, type FixtureModule, type VerifyReport } from './shared';
 
 export const NOTIFICATION_CUSTOMER = id('tenant/notification-customer');
 export const NOTIFICATION_SPONSOR = id('tenant/notification-sponsor');
@@ -52,6 +52,39 @@ const ROLE = Object.fromEntries(NOTIFICATION_USERS.map(user => [user.key, id(`ro
 const OPERATION_FINGERPRINT = fingerprint('notification-provisioning-operation');
 const SMTP_PORT = Number(process.env.NOTIFICATION_SMTP_PORT || '1025');
 const SMTP_HOST = process.env.NOTIFICATION_SMTP_HOST || '127.0.0.1';
+const SMTP_TENANTS = [NOTIFICATION_SPONSOR, NOTIFICATION_CUSTOMER];
+const SMTP_PROVIDER_ID = (tenant: string) => `notification-local-smtp-${tenant}`;
+
+function parseProviderConfigs(value: unknown): any[] {
+  if (Array.isArray(value)) return value;
+  if (value === undefined || value === null) return [];
+  if (typeof value !== 'string') throw new Error('Notification fixture will not replace unrecognized email provider settings');
+  const parsed = JSON.parse(value);
+  if (!Array.isArray(parsed)) throw new Error('Notification fixture will not replace malformed email provider settings');
+  return parsed;
+}
+
+async function configureLocalSmtp(trx: Knex.Transaction, tenant: string): Promise<void> {
+  const settings = await trx('tenant_email_settings').where({ tenant }).first();
+  const providerId = SMTP_PROVIDER_ID(tenant);
+  const providerConfigs = parseProviderConfigs(settings?.provider_configs)
+    .filter(provider => provider.providerId !== providerId);
+  providerConfigs.unshift({ providerId, providerType: 'smtp', isEnabled: true, config: {
+    host: SMTP_HOST, port: SMTP_PORT, secure: false, rejectUnauthorized: false, from: 'agent@notification.test',
+  } });
+  const patch = { provider_configs: JSON.stringify(providerConfigs) };
+  if (settings) await trx('tenant_email_settings').where({ tenant }).update(patch);
+  else await trx('tenant_email_settings').insert({ tenant, email_provider: 'smtp', ...patch, default_from_domain: 'notification.test',
+    ticketing_from_email: 'agent@notification.test', fallback_enabled: false, tracking_enabled: false });
+}
+
+async function removeLocalSmtp(trx: Knex.Transaction, tenant: string): Promise<void> {
+  const settings = await trx('tenant_email_settings').where({ tenant }).first();
+  if (!settings) return;
+  const providerConfigs = parseProviderConfigs(settings.provider_configs)
+    .filter(provider => provider.providerId !== SMTP_PROVIDER_ID(tenant));
+  await trx('tenant_email_settings').where({ tenant }).update({ provider_configs: JSON.stringify(providerConfigs) });
+}
 
 async function ensureTenant(trx: Knex.Transaction, tenant: string, name: string, product: string) {
   await put(trx, 'tenants', ['tenant'], { tenant, client_name: name, email: `${tenant.slice(0, 8)}@notification.test`, product_code: product, plan: 'pro', created_at: CREATED, updated_at: CREATED });
@@ -139,11 +172,7 @@ export const notificationModule: FixtureModule = {
         tenant: NOTIFICATION_SPONSOR, customer_tenant: NOTIFICATION_CUSTOMER, relationship_id: NOTIFICATION_RELATIONSHIP,
         principal_type: 'user', principal_id: recipient.userId, relationship_role: 'technician', created_at: CREATED });
     }
-    await ensure(trx, 'tenant_email_settings', { tenant: NOTIFICATION_SPONSOR }, { email_provider: 'smtp',
-      default_from_domain: 'notification.test', ticketing_from_email: 'agent@notification.test', fallback_enabled: false,
-      tracking_enabled: false, provider_configs: JSON.stringify([{ providerId: 'notification-local-smtp', providerType: 'smtp', isEnabled: true,
-        config: { host: SMTP_HOST, port: SMTP_PORT, secure: false,
-          rejectUnauthorized: false, from: 'agent@notification.test' } }]) });
+    for (const tenant of SMTP_TENANTS) await configureLocalSmtp(trx, tenant);
 
     await put(trx, 'co_management_relationships', ['tenant', 'relationship_id'], { tenant: NOTIFICATION_CUSTOMER,
       relationship_id: NOTIFICATION_RELATIONSHIP, sponsor_tenant: NOTIFICATION_SPONSOR, sponsor_client_id: NOTIFICATION_SPONSOR_CLIENT,
@@ -189,14 +218,15 @@ export const notificationModule: FixtureModule = {
     const allocation = await db('co_managed_allocations').where({ tenant: NOTIFICATION_SPONSOR, allocation_id: NOTIFICATION_ALLOCATION,
       operation_id: NOTIFICATION_OPERATION, customer_tenant: NOTIFICATION_CUSTOMER, relationship_id: NOTIFICATION_RELATIONSHIP, state: 'active' }).first();
     const entitlement = await db('co_managed_entitlements').where({ tenant: NOTIFICATION_SPONSOR, source: 'admin_grant' }).first('capacity');
-    const smtp = await db('tenant_email_settings').where({ tenant: NOTIFICATION_SPONSOR, email_provider: 'smtp' }).first('provider_configs');
-    let smtpReady = false;
-    try {
-      const config = typeof smtp?.provider_configs === 'string' ? JSON.parse(smtp.provider_configs) : smtp?.provider_configs;
-      smtpReady = config?.some((provider: any) => provider.providerType === 'smtp' && provider.isEnabled &&
-        typeof provider.config?.host === 'string' && provider.config.host.trim().length > 0 &&
-        Number.isInteger(Number(provider.config?.port)) && Number(provider.config.port) > 0 && Number(provider.config.port) <= 65535);
-    } catch { smtpReady = false; }
+    const smtpReady = await Promise.all(SMTP_TENANTS.map(async tenant => {
+      const settings = await db('tenant_email_settings').where({ tenant }).first('email_provider', 'provider_configs');
+      try {
+        const provider = parseProviderConfigs(settings?.provider_configs)[0];
+        return Boolean(provider && provider.providerId === SMTP_PROVIDER_ID(tenant) && provider.providerType === 'smtp' &&
+          provider.isEnabled && typeof provider.config?.host === 'string' && provider.config.host.trim().length > 0 &&
+          Number.isInteger(Number(provider.config?.port)) && Number(provider.config.port) > 0 && Number(provider.config.port) <= 65535);
+      } catch { return false; }
+    }));
     const reports: VerifyReport[] = [
       { ok: Boolean(customer && sponsor), area: 'notification', detail: 'fixture-owned customer and sponsor workspaces exist' },
       { ok: Boolean(customerCompany && sponsorCompany), area: 'notification', detail: 'both fixture workspaces have a default company for UI context' },
@@ -204,7 +234,8 @@ export const notificationModule: FixtureModule = {
       { ok: Boolean(operation && operation.request?.clientId === NOTIFICATION_SPONSOR_CLIENT && operation.escalation_board_id === NOTIFICATION_SPONSOR_BOARD), area: 'notification', detail: 'provisioning operation resolves to the fixture sponsor client and board' },
       { ok: Boolean(allocation?.state === 'active'), area: 'notification', detail: 'active sponsor allocation exists for the operation and relationship' },
       { ok: Number(entitlement?.capacity ?? 0) >= 2, area: 'notification', detail: 'fixture sponsor has capacity for the active allocation' },
-      { ok: Boolean(smtpReady), area: 'notification', detail: 'fixture sponsor has enabled local SMTP configuration' },
+      { ok: smtpReady[0], area: 'notification', detail: 'fixture sponsor has enabled local SMTP configuration' },
+      { ok: smtpReady[1], area: 'notification', detail: 'fixture customer has enabled local SMTP configuration' },
     ];
     for (const recipient of NOTIFICATION_USERS) {
       const user = await db('users').where({ tenant: NOTIFICATION_SPONSOR, user_id: recipient.userId, user_type: 'internal', is_inactive: false }).first();
@@ -261,7 +292,7 @@ export const notificationModule: FixtureModule = {
     await trx('authorization_bundles').whereIn('bundle_id', NOTIFICATION_USERS.map(user => POLICY[user.key].bundleId)).andWhere({ tenant: NOTIFICATION_SPONSOR }).update({ published_revision_id: null });
     await trx('authorization_bundle_revisions').whereIn('revision_id', NOTIFICATION_USERS.map(user => POLICY[user.key].revisionId)).andWhere({ tenant: NOTIFICATION_SPONSOR }).delete();
     await trx('authorization_bundles').whereIn('bundle_id', NOTIFICATION_USERS.map(user => POLICY[user.key].bundleId)).andWhere({ tenant: NOTIFICATION_SPONSOR }).delete();
-    await trx('tenant_email_settings').where({ tenant: NOTIFICATION_SPONSOR }).delete();
+    for (const tenant of SMTP_TENANTS) await removeLocalSmtp(trx, tenant);
     for (const user of NOTIFICATION_USERS) {
       await trx('user_roles').where({ tenant: NOTIFICATION_SPONSOR, user_id: user.userId }).delete();
       await trx('users').where({ tenant: NOTIFICATION_SPONSOR, user_id: user.userId }).delete();

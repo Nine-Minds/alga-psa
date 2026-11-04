@@ -28,7 +28,9 @@ function notificationRows(): Rows {
     co_managed_allocations: [{ tenant: NOTIFICATION_SPONSOR, allocation_id: NOTIFICATION_ALLOCATION, operation_id: NOTIFICATION_OPERATION,
       customer_tenant: NOTIFICATION_CUSTOMER, relationship_id: NOTIFICATION_RELATIONSHIP, state: 'active' }],
     co_managed_entitlements: [{ tenant: NOTIFICATION_SPONSOR, source: 'admin_grant', capacity: 2 }],
-    tenant_email_settings: [{ tenant: NOTIFICATION_SPONSOR, email_provider: 'smtp', provider_configs: [{ providerType: 'smtp', isEnabled: true, config: { host: '127.0.0.1', port: 1025 } }] }],
+    tenant_email_settings: [NOTIFICATION_SPONSOR, NOTIFICATION_CUSTOMER].map(tenant => ({ tenant, email_provider: 'smtp', provider_configs: [
+      { providerId: `notification-local-smtp-${tenant}`, providerType: 'smtp', isEnabled: true, config: { host: '127.0.0.1', port: 1025 } },
+    ] })),
     users: [
       ...NOTIFICATION_USERS.map(user => ({ tenant: NOTIFICATION_SPONSOR, user_id: user.userId, user_type: 'internal', is_inactive: false, hashed_password: `valid:${user.password}` })),
       { tenant: NOTIFICATION_CUSTOMER, user_id: NOTIFICATION_CUSTOMER_ADMIN.userId, user_type: 'internal', is_inactive: false, hashed_password: `valid:${NOTIFICATION_CUSTOMER_ADMIN.password}` },
@@ -74,6 +76,7 @@ function memoryTrx(rows: Rows): any {
       andWhere: (condition: Record<string, any>) => query.where(condition),
       whereIn: (key: string, values: unknown[]) => { filters.push(row => values.includes(row[key])); return query; },
       select: () => query,
+      first: async () => (rows[table] ?? []).find(row => filters.every(filter => filter(row))) ?? undefined,
       then: (resolve: (value: any) => unknown, reject: (reason: unknown) => unknown) => Promise.resolve((rows[table] ?? []).filter(row => filters.every(filter => filter(row)))).then(resolve, reject),
       delete: async () => { rows[table] = (rows[table] ?? []).filter(row => !filters.every(filter => filter(row))); },
       update: async (patch: Record<string, unknown>) => { for (const row of rows[table] ?? []) if (filters.every(filter => filter(row))) Object.assign(row, patch); },
@@ -134,13 +137,20 @@ describe('co-managed fixtures', () => {
       ['operation target mapping', rows => { rows.co_managed_provisioning_operations[0].request.clientId = id('client/wrong-target'); }],
       ['active allocation', rows => { rows.co_managed_allocations[0].state = 'released'; }],
       ['capacity entitlement', rows => { rows.co_managed_entitlements = []; }],
-      ['local SMTP settings', rows => { rows.tenant_email_settings = []; }],
+      ['sponsor local SMTP settings', rows => { rows.tenant_email_settings = rows.tenant_email_settings.filter(row => row.tenant !== NOTIFICATION_SPONSOR); }],
+      ['customer local SMTP settings', rows => { rows.tenant_email_settings = rows.tenant_email_settings.filter(row => row.tenant !== NOTIFICATION_CUSTOMER); }],
     ];
     for (const [name, remove] of missing) {
       const rows = structuredClone(base);
       remove(rows);
       const reports = await notificationModule.verify(memoryDb(rows), engines);
       expect(reports.some(report => !report.ok), name).toBe(true);
+      if (name === 'sponsor local SMTP settings' || name === 'customer local SMTP settings') {
+        vi.spyOn(console, 'log').mockImplementation(() => {});
+        expect(await run(memoryDb(rows) as never, { through: 'notification', only: 'notification', mode: 'verify' },
+          async () => engines, [notificationModule]), name).toBe(false);
+        vi.restoreAllMocks();
+      }
     }
   });
 
@@ -150,7 +160,10 @@ describe('co-managed fixtures', () => {
       users: [{ tenant: NOTIFICATION_SPONSOR, user_id: NOTIFICATION_USERS[0].userId },
         { tenant: id('tenant/oz'), user_id: id('user/oz/unrelated') },
         { tenant: id('tenant/shared-qa'), user_id: id('user/shared') }],
-      tenant_email_settings: [{ tenant: NOTIFICATION_SPONSOR }, { tenant: id('tenant/shared-qa') }],
+      tenant_email_settings: [...[NOTIFICATION_SPONSOR, NOTIFICATION_CUSTOMER].map(tenant => ({ tenant, email_provider: 'microsoft',
+        provider_configs: [{ providerId: `notification-local-smtp-${tenant}`, providerType: 'smtp', isEnabled: true },
+          { providerId: `unrelated-${tenant}`, providerType: 'microsoft', isEnabled: true }] })),
+        { tenant: id('tenant/shared-qa'), provider_configs: [{ providerId: 'shared', providerType: 'smtp', isEnabled: true }] }],
       co_managed_provisioning_operations: [{ tenant: NOTIFICATION_SPONSOR, operation_id: NOTIFICATION_OPERATION }, { tenant: id('tenant/shared-qa'), operation_id: id('operation/shared') }],
       co_managed_allocations: [{ tenant: NOTIFICATION_SPONSOR, allocation_id: NOTIFICATION_ALLOCATION }, { tenant: id('tenant/shared-qa'), allocation_id: id('allocation/shared') }],
       tickets: [{ tenant: NOTIFICATION_CUSTOMER, ticket_id: NOTIFICATION_TICKET }, { tenant: id('tenant/shared-qa'), ticket_id: id('ticket/shared') }],
@@ -189,7 +202,11 @@ describe('co-managed fixtures', () => {
     expect(rows.tenants).toEqual([{ tenant: id('tenant/oz') }, { tenant: id('tenant/shared-qa') }]);
     expect(rows.users).toEqual([{ tenant: id('tenant/oz'), user_id: id('user/oz/unrelated') },
       { tenant: id('tenant/shared-qa'), user_id: id('user/shared') }]);
-    expect(rows.tenant_email_settings).toEqual([{ tenant: id('tenant/shared-qa') }]);
+    expect(rows.tenant_email_settings).toEqual([
+      { tenant: NOTIFICATION_SPONSOR, email_provider: 'microsoft', provider_configs: JSON.stringify([{ providerId: `unrelated-${NOTIFICATION_SPONSOR}`, providerType: 'microsoft', isEnabled: true }]) },
+      { tenant: NOTIFICATION_CUSTOMER, email_provider: 'microsoft', provider_configs: JSON.stringify([{ providerId: `unrelated-${NOTIFICATION_CUSTOMER}`, providerType: 'microsoft', isEnabled: true }]) },
+      { tenant: id('tenant/shared-qa'), provider_configs: [{ providerId: 'shared', providerType: 'smtp', isEnabled: true }] },
+    ]);
     expect(rows.co_managed_provisioning_operations).toEqual([{ tenant: id('tenant/shared-qa'), operation_id: id('operation/shared') }]);
     expect(rows.co_managed_allocations).toEqual([{ tenant: id('tenant/shared-qa'), allocation_id: id('allocation/shared') }]);
     expect(rows.tickets).toEqual([{ tenant: id('tenant/shared-qa'), ticket_id: id('ticket/shared') }]);
