@@ -1,0 +1,15 @@
+
+ RUN  v4.1.12 /home/robert/alga-copies/feature-security-authz-in-post-3/server
+      Running tests with seed "1793823324315"
+
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-post-3/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-security-authz-in-post-3/.env.localtest
+ ✓ |node| src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts > service-principals Turbopack entry alias > rejects the former absolute alias and compiles the configured alias for community 3704ms 14 MB heap used
+ ✓ |node| src/test/unit/nextConfigServicePrincipalsAlias.contract.test.ts > service-principals Turbopack entry alias > rejects the former absolute alias and compiles the configured alias for enterprise 4021ms 14 MB heap used
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  20:15:29
+   Duration  9.61s (transform 65ms, setup 102ms, import 11ms, tests 9.38s, environment 0ms)
+
+exit_status=0

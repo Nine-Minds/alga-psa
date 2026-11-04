@@ -232,6 +232,12 @@ const nextConfig = {
           ? '../packages/product-service-principals/ee/entry.ts'
           : '../packages/product-service-principals/oss/entry.ts';
       })(),
+      '@ee': isEE ? '../ee/server/src' : '../packages/ee/src',
+      '@ee/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
+      // The EE entry imports this package through a tsconfig path alias. Give
+      // Turbopack the edition-specific module target explicitly so it does not
+      // fall back to the CE tsconfig path during compilation.
+      ...(isEE ? { '@ee/lib/service-principals': '../ee/server/src/lib/service-principals' } : {}),
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
