@@ -139,6 +139,22 @@ describe('projectRecord REST projection', () => {
     expect(projectRecord(link, ['projects.project_id'])).toBeNull();
   });
 
+  it.each(['tasks', 'fields.tasks', 'project_tasks'])(
+    'hides project-link task names when the whole task resource alias %s is hidden',
+    (restriction) => {
+      const projected = projectRecord({ project_id: 'p1', task_id: 't1', task_name: 'Secret task' }, [restriction]);
+      expect(projected).not.toHaveProperty('task_name');
+    },
+  );
+
+  it.each(['task_name', 'fields.task_name', 'values.task_name', 'tasks.task_name', 'project_tasks.task_name'])(
+    'hides project-link task names for canonical task-name restriction %s',
+    (restriction) => {
+      const projected = projectRecord({ project_id: 'p1', task_id: 't1', task_name: 'Secret task' }, [restriction]);
+      expect(projected).not.toHaveProperty('task_name');
+    },
+  );
+
   it('paginates and serializes only allowed projected rows', async () => {
     const page = await buildAuthorizationAwarePage<Record<string, any>>({
       page: 1,

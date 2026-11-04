@@ -7,9 +7,12 @@ import {
   CO_MANAGED_TASK_RESOURCE_ALIASES,
 } from '@alga-psa/co-managed/sharedWorkProjection';
 
-const taskNameFieldAliases = CO_MANAGED_TASK_NAME_ALIASES.filter(
-  (alias) => !(CO_MANAGED_TASK_RESOURCE_ALIASES as readonly string[]).includes(alias),
-);
+const taskNameFieldAliases = [
+  ...CO_MANAGED_TASK_NAME_ALIASES.filter(
+    (alias) => !(CO_MANAGED_TASK_RESOURCE_ALIASES as readonly string[]).includes(alias),
+  ),
+  'tasks.task_name',
+];
 
 type ResourceDefinition = {
   aliases: readonly string[];

@@ -174,6 +174,33 @@ describe('GET /api/v1/tickets/{id}/project-links', () => {
     }
   });
 
+  it.each(['tasks', 'fields.tasks', 'project_tasks'])(
+    'omits task names from serialized links when the whole task resource alias %s is hidden',
+    async (restriction) => {
+      state.redactions[`project:${PROJECT_A}`] = [restriction];
+      const res = await GET(request());
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      expect(data).toHaveLength(2);
+      for (const link of data) {
+        expect(link).not.toHaveProperty('task_name');
+        expect(link).not.toHaveProperty('task_id');
+      }
+    },
+  );
+
+  it.each(['task_name', 'fields.task_name', 'values.task_name', 'tasks.task_name', 'project_tasks.task_name'])(
+    'omits task names from serialized links when canonical task-name restriction %s is applied',
+    async (restriction) => {
+      state.redactions[`project:${PROJECT_A}`] = [restriction];
+      const res = await GET(request());
+      expect(res.status).toBe(200);
+      const { data } = await res.json();
+      expect(data).toHaveLength(2);
+      for (const link of data) expect(link).not.toHaveProperty('task_name');
+    },
+  );
+
   it.each(['projects', 'values.project_id', 'projects.project_number', 'values.project_number'])('suppresses linked projects hidden by %s', async (redaction) => {
     state.readable.add(`project:${PROJECT_B}`);
     state.redactions[`project:${PROJECT_A}`] = [redaction];
