@@ -15,6 +15,7 @@ import { TestContext } from '../../../test-utils/testContext';
 import { createUser } from '../../../test-utils/testDataFactory';
 import * as dbModule from '@alga-psa/db';
 import { tenantDb } from '@alga-psa/db';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 
 vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../test-utils/authModuleMock');
@@ -99,6 +100,7 @@ describe('addTicket create extras (integration)', () => {
 
   beforeEach(async () => {
     await context.reset();
+    vi.mocked(publishWorkflowEvent).mockClear();
     tenantId = context.tenantId;
     clientId = context.clientId;
 
@@ -239,6 +241,7 @@ describe('addTicket create extras (integration)', () => {
 
   it('rolls back ticket and valid staffing when a later additional agent is invalid', async () => {
     const before = await countTickets();
+    const eventsBefore = vi.mocked(publishWorkflowEvent).mock.calls.length;
     vi.spyOn(dbModule, 'createTenantKnex').mockImplementationOnce(async () => ({
       knex: poolLikeForActionTransactions(), tenant: tenantId,
     }) as any);
@@ -254,6 +257,7 @@ describe('addTicket create extras (integration)', () => {
     expect(await tt('ticket_audit_logs').where({ event_type: 'TICKET_ASSIGNED' })
       .whereRaw("details->>'additional_agent_id' = ?", [additionalAgentId]).count('* as n').first()
       .then((row: any) => Number(row.n))).toBe(0);
+    expect(vi.mocked(publishWorkflowEvent).mock.calls).toHaveLength(eventsBefore);
   });
 
   it('rejects an unknown watcher without creating a ticket', async () => {

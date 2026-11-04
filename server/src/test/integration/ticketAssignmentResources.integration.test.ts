@@ -610,6 +610,24 @@ describe('ticket assignment and additional agents', () => {
       expect(publishWorkflowEventMock).not.toHaveBeenCalled();
     });
 
+    it('persists an authorized server-action add before publishing its assignment event', async () => {
+      const added = await addTicketResource(ticketId, userC, 'support');
+
+      expect(added).toMatchObject({ ticket_id: ticketId, additional_user_id: userC });
+      expect(await resourcesFor(ticketId)).toEqual(expect.arrayContaining([
+        expect.objectContaining({ ticket_id: ticketId, additional_user_id: userC }),
+      ]));
+      expect(authorizeTicketRecordAccessMock).toHaveBeenCalledWith(expect.objectContaining({
+        ticketId,
+        action: 'update',
+      }));
+      expect(publishWorkflowEventMock).toHaveBeenCalledTimes(1);
+      expect(publishWorkflowEventMock).toHaveBeenCalledWith(expect.objectContaining({
+        eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED',
+        payload: expect.objectContaining({ ticketId, additionalAgentId: userC }),
+      }));
+    });
+
     it('requires explicit authorization context and permits matching creation-scoped writes', async () => {
       await expect(withTransaction(db, (trx) =>
         getTicketResourcesCore(trx, tenantId, ticketId, undefined as any)
