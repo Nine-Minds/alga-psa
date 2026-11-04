@@ -205,9 +205,25 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
 
     expect(updated).toMatchObject({ id: created.id, approval_status: 'DRAFT', notes: 'updated' });
     expect(() => updateTimeSheetSchema.parse({ approval_status: 'APPROVED' })).toThrow();
-    await service.update(created.id, { approval_status: 'APPROVED' } as any, ctx);
-    const [row] = await sheetsFor(f.tenantId, f.actor);
-    expect(row.approval_status).toBe('DRAFT');
+    const entryId = uuidv4();
+    await tenantTable(f.tenantId, 'time_entries').insert({
+      tenant: f.tenantId, entry_id: entryId, user_id: f.actor, time_sheet_id: created.id,
+      start_time: new Date().toISOString(), end_time: new Date().toISOString(), work_date: '2026-01-06',
+      work_timezone: 'UTC', approval_status: 'DRAFT', created_at: db.fn.now(), updated_at: db.fn.now(),
+    });
+    await tenantTable(f.tenantId, 'time_sheet_comments').insert({
+      tenant: f.tenantId, comment_id: uuidv4(), time_sheet_id: created.id, user_id: f.actor,
+      comment: 'existing', is_approver: false, created_at: db.fn.now(),
+    });
+    const beforeSheet = await tenantTable(f.tenantId, 'time_sheets').where({ id: created.id }).first();
+    const beforeEntries = await tenantTable(f.tenantId, 'time_entries').where({ time_sheet_id: created.id }).select('*');
+    const beforeComments = await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: created.id }).select('*');
+
+    await expect(service.update(created.id, { approval_status: 'APPROVED' } as any, ctx))
+      .rejects.toMatchObject({ statusCode: 400 });
+    expect(await tenantTable(f.tenantId, 'time_sheets').where({ id: created.id }).first()).toEqual(beforeSheet);
+    expect(await tenantTable(f.tenantId, 'time_entries').where({ time_sheet_id: created.id }).select('*')).toEqual(beforeEntries);
+    expect(await tenantTable(f.tenantId, 'time_sheet_comments').where({ time_sheet_id: created.id }).select('*')).toEqual(beforeComments);
   });
 
   it('scopes reads before list retrieval and by-id lookup; read_all widens only within the tenant', async () => {

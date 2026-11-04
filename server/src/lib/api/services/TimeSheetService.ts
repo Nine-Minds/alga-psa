@@ -436,6 +436,11 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async update(id: string, data: UpdateTimeSheetData, context: ServiceContext): Promise<any> {
+    // Lifecycle state is writable only through the transition methods below. Keep this
+    // invariant at the service boundary as well as in the REST schema, before delegation.
+    if (Object.prototype.hasOwnProperty.call(data, 'approval_status')) {
+      throw new ValidationError('approval_status cannot be updated directly');
+    }
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'update', [id, data, context]);
     if (delegated.handled) return delegated.value;
