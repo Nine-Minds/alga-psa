@@ -43,12 +43,33 @@ Using the real application action, simulator, registered worker, and persistent 
 - wrong API key rejection, valid reconnect, explicit Test Connection success, site discovery/mapping, full asset sync, and asset-linked device alerts while Branch asset auto-sync remained disabled;
 - the existing connected Level.io integration settings page loaded after UniFi acceptance, with its group mapping and active-alert view present; no Level.io state was changed;
 - a one-minute grace period, no early transition, duplicate check protection, a delivered trigger then delivered recovery in sequence, and a second outage with a distinct identity and ticket;
-- missing devices, empty listing protection, uncertain `UPDATING` state, and a stale evidence timestamp resetting the grace period;
-- one site returning HTTP 500 while the other site continued through trigger and recovery;
+- simulator actions for missing devices, empty listing protection, uncertain `UPDATING` state, and a stale evidence timestamp resetting grace were part of the earlier walkthrough, but `runtime-final.txt` contains only final rows and cannot establish their intermediate condition/outbox/alert/ticket guards;
 - maintenance-window suppression, followed by a disabled-window recheck that activated the same condition alert and created a ticket; recovery closed the untouched ticket;
 - mapping removal and restoration behavior: while the condition fired, the state became `unmanaged` with its outage and ticket identity retained; fresh failing evidence after restoration resumed the original outage, while fresh healthy evidence after a second removal/restoration emitted recovery and closed the ticket.
 
 The mapping UI’s `ClientPicker` has no clear/unmap option. To exercise this transition, only the Branch mapping’s `client_id` was temporarily set to `NULL` and restored through a tenant-scoped database fixture; the actual condition handling and all observations/recovery were then driven through the application action. This does not count as verification of a UI unmap control. The fixture was restored to the original Wonderland client mapping.
+
+The first runtime evidence captured state/outbox/alert/ticket rows only at the end, so it did not by itself prove each intermediate missing, empty, uncertain, or partial-site guard. The earlier runtime simulator log records a site error response, but persistent runtime history has only Branch transitions; do not claim a second site triggered and recovered during that failure. The DB-backed acceptance runs below provide intermediate assertions for several guards. They are recorded separately from the real-app walkthrough and do not turn the earlier Branch-only runtime history into multi-site runtime evidence.
+
+## DB-backed lifecycle verification (review follow-up)
+
+Both requested suites passed on 2026-11-04 at source revision `03f6ef23b37ef3f0a1a03e8765fa3d98b89e6fd3`. Direct PostgreSQL was verified at `127.0.0.1:5474`; the test harness received `TEST_DB_NAME` before Vitest imported the suites and used unique databases `alga_unifi_lifecycle_verify_20261104` and `alga_unifi_pipeline_verify_20261104`. The EE run used a temporary merged CE+EE migration directory. Both isolated databases contain the three lifecycle migration ledger entries, state/outbox tables, and the expected ordering and ownership indexes. The runtime database `server` was not recreated or used as a test database.
+
+| Suite | Result | Evidence |
+|---|---:|---|
+| `server/src/test/integration/rmmConditionLifecycle.integration.test.ts` | 1 file, 3 tests passed | `lifecycle-test-command.txt`, `lifecycle-test-output.txt` |
+| `ee/server/src/__tests__/integration/rmmAlertPipeline.integration.test.ts` | 1 file, 27 tests passed | `pipeline-test-command.txt`, `pipeline-test-output.txt` |
+| Isolated schema/ledger verification | Both databases contain all three migrations, lifecycle tables, and five expected indexes | `isolated-schema-verification.txt` |
+
+The lifecycle DB suite fires an outage, acknowledges its transition, then checks uncertain evidence, missing evidence, and failed-scope evidence while preserving the same external alert identity and trusted-evidence time. The real UniFi adapter/pipeline DB suite checks empty inventories and a failed site while existing alerts remain active; it checks that the unaffected site can recover while the failed site's existing outage remains active. It does **not** assert a newly triggered and recovered second-site outage during the failed site's outage. It also checks an unmanaged/remapped state where uncertain evidence retains the outage identity and healthy evidence resolves it; the failing remap path holds the existing alert. The two actual-adapter deferred-trigger cases (`OFFLINE` and `ONLINE`) start with a pending outbox trigger, remove management, prove it stays pending with no alert/ticket, remap under `UPDATING` and prove it remains pending, then prove fresh OFFLINE resumes the same trigger exactly once under concurrent delivery while ONLINE supersedes it with recovery and no obsolete ticket. These cases exercise DB state/outbox and downstream alert/ticket rows, not screenshots.
+
+The earlier runtime UI removal case began from an already-delivered outage and must not be read as a pending-trigger deferral. The pending-trigger distinction above is proven by the DB-backed actual-adapter tests.
+
+## Follow-up runtime smoke boundary
+
+An additional attempt to capture fresh runtime before/during/after rows used the real simulator and the app's **Check Offline Devices Now** control. The simulator accepted a Branch Gateway `OFFLINE` request, but the saved browser session had expired. The app action POST returned HTTP 500 with `AuthenticationError: User not authenticated`; the persistent condition remained `healthy`, the last observation timestamp did not advance, and no new outbox row was created. The simulator was restored to `ONLINE`. This attempt proves no additional runtime guard behavior. See `runtime-smoke-followup.txt`.
+
+Consequently, the following remain unverified by a fresh real-app runtime walkthrough in this follow-up: intermediate before/during/after SQL snapshots for missing, empty, and uncertain evidence during the same runtime outage; an unavailable site retaining one runtime outage while a second site newly triggers and recovers; and an uncertain pending-trigger remap in the runtime app. DB-backed suites establish the first guard family and pending-trigger behavior; the per-site test covers an existing failed-site outage retained while the other site recovers, but does not assert a newly triggered-and-recovered second site during that failure. Do not describe these cases as runtime smoke coverage. Re-run them after restoring the private development login session and extend the evidence with state, outbox, alert, and linked ticket snapshots at each phase.
 
 The final simulator state is normal with both sites and devices online; the integration is reconnected, the original mappings are restored, the Branch asset-sync setting remains disabled, and the temporary maintenance window is inactive. The final Branch condition is healthy and all lifecycle transitions are delivered. Existing legacy alert and ticket history remains present with its original links.
 
@@ -59,14 +80,17 @@ The local simulator does not establish live UniFi Site Manager/controller semant
 Review artifacts are under `/home/robert/.alga-xo/reviews/unifi-integration-3711/evidence/repair-20261104/`:
 
 - `01-integrations-baseline.png` through `10-levelio-regression.png`: application checkpoints, including rejected credentials, connection validation, mapping/device sync, rule configuration, the final connected state, and the Level.io regression page.
-- `baseline-db.txt` and `runtime-final.txt`: database baselines, migration ledger/index definitions, persistent condition states, ordered outbox, alert/ticket linkage, and maintenance suppression/recheck.
+- `baseline-db.txt` and `runtime-final.txt`: database baselines, migration ledger/index definitions, persistent condition states, ordered outbox, alert/ticket linkage, and maintenance suppression/recheck. These are final snapshots and do not establish intermediate guard behavior.
+- `lifecycle-test-command.txt`, `lifecycle-test-output.txt`, `pipeline-test-command.txt`, and `pipeline-test-output.txt`: exact isolated test commands and sanitized complete results.
+- `isolated-schema-verification.txt`: lifecycle ledger entries, tables, and indexes in both disposable test databases.
+- `runtime-smoke-followup.txt`: failed authenticated runtime attempt and unchanged persistent rows.
 - `simulator-baseline.json`: initial simulator inventory.
 
 ## Checks and remaining limitations
 
 - Passed: 1,077 `packages/integrations` tests; 84 focused current-revision UniFi and Level.io unit tests; `packages/integrations` and `ee/server` TypeScript checks; `server` TypeScript check; Temporal worker build; enterprise server build (`npm run build:enterprise`, exit 0).
 - `packages/integrations`’ standalone `build` script is not runnable as configured: `tsup` reports no input files. The enterprise application build is the product build check.
-- The RMM pipeline integration suite did not reach its tests: its default DB port had no listener, and the shared currency test server uses different admin credentials. A disposable PostgreSQL retry also failed in the existing harness during role/database recreation, so the lifecycle database integration suite is not green from this run. No test attempted to connect to or drop the runtime `server` database.
+- Both RMM DB-backed suites passed on the migrated isolated schema as recorded above. The pipeline run emitted Redis event-bus connection warnings (`127.0.0.1:6379` refused); ticket and lifecycle assertions still passed. No test connected to or dropped the runtime `server` database.
 - The Level.io regression check covered the existing settings page and focused Level.io unit tests; no Level.io alert was generated in this run.
-- Live-controller validation and a UI-driven mapping removal remain unverified.
+- Live-controller validation and a UI-driven mapping removal remain unverified. Fresh intermediate runtime snapshots for the follow-up guard cases also remain blocked by the expired browser session; see the explicit boundary above.
 
