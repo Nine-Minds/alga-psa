@@ -11,7 +11,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslation(undefined, 'metadata');
 
   return {
-    title: t('msp.coManagement.tickets.detail.title', { defaultValue: 'Shared Ticket' }),
+    title: t('msp.coManagement.sharedTicket.title', { defaultValue: 'Shared Ticket' }),
   };
 }
 

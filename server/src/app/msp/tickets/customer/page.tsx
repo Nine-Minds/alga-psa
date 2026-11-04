@@ -11,7 +11,7 @@ import CustomerTicketsUnavailable from '@/components/co-managed/CustomerTicketsU
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslation(undefined, 'metadata');
-  return { title: t('msp.customerTickets.title', { defaultValue: 'Customer Tickets' }) };
+  return { title: t('msp.coManagement.customerTickets.title', { defaultValue: 'Customer Tickets' }) };
 }
 
 type CustomerTicketsPageProps = {
