@@ -53,11 +53,13 @@ function createRmmMappingAuthorizer(
     if (contactId && !await hasPermission(user as any, 'contact', 'read', conn as Knex)) return false;
 
     const authorizationContext = await authorizationContextPromise;
-    const allowedAssets = await Promise.all(assetRows.map((asset) =>
-      action === 'read'
-        ? isAssetReadAllowed(conn, tenant, authorizationContext, asset)
-        : isAssetActionAllowed(conn, tenant, authorizationContext, asset, action)
-    ));
+    const allowedAssets = await Promise.all(assetRows.map(async (asset) => {
+      const readAllowed = await isAssetReadAllowed(conn, tenant, authorizationContext, asset);
+      const actionAllowed = action === 'read'
+        ? true
+        : await isAssetActionAllowed(conn, tenant, authorizationContext, asset, action);
+      return readAllowed && actionAllowed;
+    }));
     if (allowedAssets.some((allowed) => !allowed)) return false;
 
     if (contactId && contact) {
