@@ -1299,6 +1299,7 @@ class ImapProviderWorker {
       allow_starttls: this.provider.allow_starttls,
       auth_type: this.provider.auth_type,
       username: this.provider.username,
+      credential_generation: this.provider.credential_generation,
       folder_filters: this.provider.folder_filters,
       max_emails_per_sync: this.provider.max_emails_per_sync,
     });
@@ -1348,6 +1349,7 @@ class ImapProviderWorker {
       allow_starttls: nextProvider.allow_starttls,
       auth_type: nextProvider.auth_type,
       username: nextProvider.username,
+      credential_generation: nextProvider.credential_generation,
       folder_filters: nextProvider.folder_filters,
       max_emails_per_sync: nextProvider.max_emails_per_sync,
     });
