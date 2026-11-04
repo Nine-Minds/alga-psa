@@ -208,9 +208,26 @@ describe('MCP agent seat admission', () => {
       tenant: customer, user_id: randomUUID(), username: 'existing-customer', email: 'customer-existing@example.test',
       first_name: 'Existing', last_name: 'User', user_type: 'internal', is_inactive: false, hashed_password: 'unused',
     });
+    const roleId = randomUUID();
+    await db('roles').insert({ tenant: customer, role_id: roleId, role_name: 'Agent role', msp: true, client: false });
 
-    const agent = await createAgent({ tenant: customer, name: 'Co-managed admission' });
+    const agent = await createAgent({ tenant: customer, name: 'Co-managed admission', roleIds: [roleId] });
+    const backingUserId = (agent.metadata as { backing_user_id: string }).backing_user_id;
     expect(agent.active).toBe(true);
     expect(await activeInternals(customer)).toBe(2);
+    expect(await db('user_roles').where({ tenant: customer, user_id: backingUserId, role_id: roleId })).toHaveLength(1);
+    expect(await db('agent_roles').where({ tenant: customer, agent_id: agent.agent_id, role_id: roleId })).toHaveLength(1);
+
+    await installSeatOverflowTrigger(customer);
+    await expect(createAgent({ tenant: customer, name: 'Co-managed post-insert overflow', roleIds: [roleId] }))
+      .rejects.toMatchObject({ name: 'CoManagedAdmissionError', code: 'CO_MANAGED_SEAT_LIMIT' });
+    expect(await activeInternals(customer)).toBe(2);
+    expect(await db('users').where({ tenant: customer }).whereLike('username', 'mcp-agent-%')).toHaveLength(1);
+    expect(await db('users').where({ tenant: customer, username: 'concurrent-seat-consumer' })).toHaveLength(0);
+    expect(await db('user_roles').where({ tenant: customer })).toHaveLength(1);
+    expect(await db('agent_roles').where({ tenant: customer })).toHaveLength(1);
+    expect(await db('agents').where({ tenant: customer })).toHaveLength(1);
+    await db.raw('DROP TRIGGER add_mcp_agent_seat_overflow ON users');
+    await db.raw('DROP FUNCTION add_mcp_agent_seat_overflow()');
   });
 });

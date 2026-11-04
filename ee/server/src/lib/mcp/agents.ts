@@ -10,7 +10,7 @@ import {
   checkInternalUserLicenseLimit,
   isInternalUserLicenseLimitRejected,
 } from '@alga-psa/users/lib/internalUserLicenseGuard';
-import { assertCoManagedSeatAdmission } from '@alga-psa/licensing';
+import { assertCoManagedSeatAdmission, assertCoManagedSeatCapacityWithinLimit } from '@alga-psa/licensing';
 
 /**
  * MCP agent identity service (Phase 2). An agent is a first-class principal
@@ -143,7 +143,11 @@ export async function createAgent(input: CreateAgentInput): Promise<AgentRecord>
         user_type: 'internal',
       });
 
-      if (!admission.coManaged) await assertInternalUserSeatsWithinLimit(trx, tenant);
+      if (admission.coManaged) {
+        await assertCoManagedSeatCapacityWithinLimit(trx, tenant);
+      } else {
+        await assertInternalUserSeatsWithinLimit(trx, tenant);
+      }
 
       for (const roleId of roleIds) {
         await db.table('user_roles').insert({ tenant, user_id: userId, role_id: roleId });
