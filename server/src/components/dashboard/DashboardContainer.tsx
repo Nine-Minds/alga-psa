@@ -21,7 +21,7 @@ import {
   Ticket,
   FileBarChart,
   Shield,
-  HeartPulse,
+  SquareActivity,
   ClipboardList,
   Calendar,
 } from 'lucide-react';
@@ -68,7 +68,8 @@ const featureCards: FeatureCardDefinition[] = [
   },
   {
     id: 'monitoring',
-    icon: HeartPulse,
+    // Same glyph the nav uses for System Monitoring.
+    icon: SquareActivity,
     href: '/msp/jobs',
     analyticsName: 'system_monitoring',
     titleKey: 'features.monitoring.title',

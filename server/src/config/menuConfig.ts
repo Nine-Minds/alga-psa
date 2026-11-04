@@ -28,7 +28,6 @@ import {
   Ghost,
   Handshake,
   HardDrive,
-  HeartPulse,
   HelpCircle,
   Home,
   KeyRound,
@@ -53,6 +52,7 @@ import {
   Share2,
   Shield,
   SlidersHorizontal,
+  SquareActivity,
   SquareDashedKanban,
   Timer,
   User,
@@ -287,8 +287,9 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'System Monitoring',
         translationKey: 'nav.systemMonitoring',
-        // Same glyph the dashboard's System Monitoring card uses.
-        icon: HeartPulse,
+        // A screen with an activity trace — the monitoring metaphor, and the same
+        // glyph the dashboard's System Monitoring card uses.
+        icon: SquareActivity,
         subItems: [
           // Same glyph the header's job activity indicator uses for /msp/jobs.
           { name: 'Job Monitoring', translationKey: 'nav.jobMonitoring', icon: Activity, href: '/msp/jobs' },
