@@ -1,0 +1,3 @@
+/api/health 200
+{"status":"ok","version":"1.0.0"}
+/auth/msp/signin 200
