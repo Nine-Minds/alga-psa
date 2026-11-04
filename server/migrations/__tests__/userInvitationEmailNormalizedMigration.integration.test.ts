@@ -121,7 +121,7 @@ describe('20261103130000_add_normalized_email_to_user_invitations', () => {
 
     const result = await db.transaction((trx) => UserInvitationService.createInvitationWithTransaction(
       {
-        email: 'Service.User@Example.test', firstName: 'Service', lastName: 'User',
+        email: '  Service.User@Example.test  ', firstName: 'Service', lastName: 'User',
         roleId: '00000000-0000-4000-8000-000000000001',
       },
       trx,
