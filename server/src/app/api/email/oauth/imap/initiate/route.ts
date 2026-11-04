@@ -10,6 +10,7 @@ import {
 } from '@/utils/email/imapOAuthState';
 import { createTenantKnex } from '@/lib/db';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
+import { assertSafeOutboundUrl } from '@alga-psa/shared/services/net/outboundAddressPolicy';
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,6 +50,12 @@ export async function POST(request: NextRequest) {
 
     if (!imapConfig.oauth_authorize_url || !imapConfig.oauth_client_id) {
       return NextResponse.json({ error: 'IMAP OAuth configuration missing' }, { status: 400 });
+    }
+
+    try {
+      await assertSafeOutboundUrl(imapConfig.oauth_authorize_url);
+    } catch {
+      return NextResponse.json({ error: 'IMAP OAuth authorization URL is not allowed' }, { status: 400 });
     }
 
     const secretProvider = await getSecretProviderInstance();

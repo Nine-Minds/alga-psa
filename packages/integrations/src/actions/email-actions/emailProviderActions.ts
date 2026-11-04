@@ -1660,7 +1660,9 @@ export const testEmailProviderConnection = withAuth(async (
           let response;
           try {
             response = await axios.post(config.oauth_token_url, params as any, {
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              // LEVERAGE: pattern oauth-no-redirect — credential-bearing OAuth posts must stay at their validated URL.
+              maxRedirects: 0,
             });
           } catch (oauthError) {
             console.warn('IMAP OAuth token refresh failed:', oauthError);

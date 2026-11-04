@@ -59,6 +59,7 @@ describe('shared IMAP OAuth refresh generation guard', () => {
 
     await expect(refreshImapAccessToken({ provider, db: { fn: { now: () => 'NOW' } } as any }))
       .rejects.toThrow(/credential scope changed/i);
+    expect(mocks.axiosPost.mock.calls[0]?.[2]).toMatchObject({ maxRedirects: 0 });
     expect(mocks.secretReads).toEqual([
       'imap_oauth_client_secret_provider-1_generation-old',
       'imap_refresh_token_provider-1_generation-old',

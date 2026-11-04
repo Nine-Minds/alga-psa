@@ -164,6 +164,7 @@ describe('IMAP OAuth callback credential generation', () => {
     const response: any = await GET(callbackRequest(currentState));
     expect(response.status, JSON.stringify(response.body)).toBe(302);
     expect(mocks.axiosPost).toHaveBeenCalledTimes(1);
+    expect(mocks.axiosPost.mock.calls[0]?.[2]).toMatchObject({ maxRedirects: 0 });
     expect(mocks.updateWhere).toMatchObject({ credential_generation: 'generation-new' });
     expect(mocks.setTenantSecret).toHaveBeenCalledWith(
       'tenant-1',

@@ -72,6 +72,8 @@ export async function refreshImapAccessToken(params: {
 
   const response = await axios.post(provider.oauth_token_url, paramsBody, {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    // LEVERAGE: pattern oauth-no-redirect — credential-bearing OAuth posts must stay at their validated URL.
+    maxRedirects: 0,
   });
   const accessToken = asNonEmptyString(response?.data?.access_token);
   if (!accessToken) {

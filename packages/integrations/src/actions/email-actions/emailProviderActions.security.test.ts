@@ -798,6 +798,7 @@ describe('testEmailProviderConnection re-validates stored token URLs', () => {
     const result = await testEmailProviderConnection('prov-1');
     expect(mocks.axiosPost).toHaveBeenCalledTimes(1);
     expect(mocks.axiosPost.mock.calls[0][0]).toBe('https://idp.example.test/token');
+    expect(mocks.axiosPost.mock.calls[0][2]).toMatchObject({ maxRedirects: 0 });
     expect(result.success).toBe(true);
   });
 
