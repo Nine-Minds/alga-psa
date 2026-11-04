@@ -4,7 +4,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUserWithRoles, PaginatedResult } from '@alga-psa/types';
-import { authorizeTicketRecordAccess } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
+import { authorizeTicketRecordAccess } from '@alga-psa/authorization/ticketRecordAuthorization';
 
 // MSP-only: email sending logs expose tenant-wide correspondence (subjects,
 // addresses, ticket numbers, entity ids), so client-portal callers

@@ -42,6 +42,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@alga-psa/auth": "*",
+    "@alga-psa/authorization": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/event-bus": "*",
@@ -50,8 +52,7 @@
     "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
     "axios": "^1.20.0",
-    "nodemailer": "^10.0.13",
-    "@alga-psa/auth": "*"
+    "nodemailer": "^10.0.13"
   },
   "devDependencies": {
     "@types/mailparser": "^3.4.6",
