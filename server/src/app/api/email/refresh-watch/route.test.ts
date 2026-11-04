@@ -75,6 +75,9 @@ describe('POST /api/email/refresh-watch authorization and rate limit', () => {
     const response = await POST(buildRequest());
 
     expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({
+      error: expect.stringContaining('ticket_settings:update'),
+    });
     expect(mocks.tenantDb).not.toHaveBeenCalled();
     expect(mocks.configureGmailProvider).not.toHaveBeenCalled();
   });
@@ -153,5 +156,28 @@ describe('POST /api/email/refresh-watch authorization and rate limit', () => {
     expect(sameProviderOtherTenantRefresh.status).toBe(200);
     expect(sameProviderFirstTenantRefresh.status).toBe(200);
     expect(mocks.configureGmailProvider).toHaveBeenCalledTimes(4);
+  });
+
+  it('returns the throttle response and allows refresh again after the interval', async () => {
+    vi.useFakeTimers();
+    try {
+      const firstRefresh = await POST(buildRequest('recovery-provider'));
+      const throttledRefresh = await POST(buildRequest('recovery-provider'));
+
+      expect(firstRefresh.status).toBe(200);
+      expect(throttledRefresh.status).toBe(429);
+      expect(await throttledRefresh.json()).toEqual({
+        error: 'Gmail provider refresh rate limit exceeded',
+      });
+      expect(mocks.configureGmailProvider).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(60_001);
+      const recoveredRefresh = await POST(buildRequest('recovery-provider'));
+
+      expect(recoveredRefresh.status).toBe(200);
+      expect(mocks.configureGmailProvider).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

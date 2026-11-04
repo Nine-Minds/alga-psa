@@ -44,7 +44,10 @@ export async function POST(request: NextRequest) {
     const knex = await getAdminConnection();
     const access = await requireOutboundEmailAdmin(user, knex);
     if (!access.allowed) {
-      return NextResponse.json({ error: access.message }, { status: 403 });
+      const error = access.reason === 'missing_permission'
+        ? `${access.message}. Required permission: ticket_settings:update`
+        : access.message;
+      return NextResponse.json({ error }, { status: 403 });
     }
 
     const db = tenantDb(knex, user.tenant);
@@ -84,7 +87,7 @@ export async function POST(request: NextRequest) {
     // This will refresh both Pub/Sub setup and Gmail watch subscription
     console.log('🔄 Starting complete Gmail provider refresh (Pub/Sub + Watch)...');
     const result = await configureGmailProvider({
-      tenant: provider.tenant,
+      tenant: user.tenant,
       providerId: providerId,
       projectId: googleConfig.project_id,
       force: true // Force refresh even if recently initialized
