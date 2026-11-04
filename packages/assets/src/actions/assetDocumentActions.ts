@@ -41,7 +41,9 @@ export const associateDocumentWithAsset = withAuth(async (
                 .forUpdate()
                 .first('asset_id', 'client_id');
             const context = await createAssetReadContext(trx, tenant, user as any);
-            if (!asset || !await isAssetActionAllowed(trx, tenant, context, asset, 'update')) {
+            if (!asset ||
+                !await isAssetReadAllowed(trx, tenant, context, asset) ||
+                !await isAssetActionAllowed(trx, tenant, context, asset, 'update')) {
                 return permissionError('Permission denied: Cannot associate documents with assets', 'msp/assets:errors.permissions.associateDocuments');
             }
 
@@ -85,7 +87,7 @@ export const removeDocumentFromAsset = withAuth(async (
     const { knex } = await createTenantKnex();
 
     // Check permission for asset deletion
-    if (!await hasPermission(user, 'asset', 'delete')) {
+    if (!await hasPermission(user, 'asset', 'delete') || !await hasPermission(user, 'document', 'read')) {
         return permissionError('Permission denied: Cannot remove documents from assets', 'msp/assets:errors.permissions.removeDocuments');
     }
     if (typeof association_id !== 'string' || !association_id.trim()) {

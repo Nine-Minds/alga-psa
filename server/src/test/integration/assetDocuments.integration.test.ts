@@ -4,6 +4,13 @@ import type { Knex } from 'knex';
 
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
+import {
+  createAuthorizationBundle,
+  createBundleAssignment,
+  publishBundleRevision,
+  upsertBundleRule,
+} from '@alga-psa/authorization/bundles/service';
+import { createAssetReadContext, isAssetActionAllowed, isAssetReadAllowed } from '@alga-psa/authorization/assetReadAuthorization';
 
 /**
  * Regression coverage for alga-2026-0002549: getAssetDocuments selected a
@@ -15,13 +22,14 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
 const HOOK_TIMEOUT = 180_000;
-const actionAuth = vi.hoisted(() => ({ tenant: '', userId: '', userType: 'internal', clientId: '' }));
+const actionAuth = vi.hoisted(() => ({ tenant: '', userId: '', userType: 'internal', clientId: '', permissions: {} as Record<string, boolean> }));
 
 vi.mock('@alga-psa/auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/auth')>();
   return {
     ...actual,
-    hasPermission: vi.fn().mockResolvedValue(true),
+    hasPermission: vi.fn(async (_user: unknown, resource: string, action: string) =>
+      actionAuth.permissions[`${resource}:${action}`] ?? true),
     withAuth: (action: any) => async (...args: unknown[]) => action(
       { user_id: actionAuth.userId, user_type: actionAuth.userType, clientId: actionAuth.clientId },
       { tenant: actionAuth.tenant },
@@ -63,7 +71,11 @@ function unscoped(name: string) {
 
 async function cleanupTenant(tenant: string): Promise<void> {
   const del = async (name: string) => table(tenant, name).del().catch(() => undefined);
-  for (const name of ['document_associations', 'documents', 'document_types', 'assets', 'clients', 'users']) {
+  for (const name of [
+    'authorization_bundle_assignments', 'authorization_bundle_rules', 'authorization_bundle_revisions',
+    'authorization_bundles', 'team_members', 'teams', 'asset_associations',
+    'document_associations', 'documents', 'document_types', 'assets', 'clients', 'users',
+  ]) {
     await del(name);
   }
   await unscoped('tenants').where({ tenant }).del().catch(() => undefined);
@@ -192,6 +204,7 @@ describe('getAssetDocuments (integration)', () => {
     actionAuth.userId = '';
     actionAuth.userType = 'internal';
     actionAuth.clientId = '';
+    actionAuth.permissions = {};
   });
 
   beforeAll(async () => {
@@ -289,6 +302,88 @@ describe('getAssetDocuments (integration)', () => {
     expect(Number((await table(fx.tenantId, 'document_associations').count('* as count').first())?.count)).toBe(Number(before?.count));
   });
 
+  it('denies creation when bundle read scope excludes an internal user despite same-team update scope', async () => {
+    const fx = await seedFixture();
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.userId;
+    actionAuth.userType = 'internal';
+    const teamId = randomUUID();
+    await table(fx.tenantId, 'teams').insert({
+      tenant: fx.tenantId,
+      team_id: teamId,
+      team_name: `Asset docs team ${teamId.slice(0, 8)}`,
+      manager_id: fx.userId,
+    });
+    await table(fx.tenantId, 'team_members').insert({
+      tenant: fx.tenantId,
+      team_id: teamId,
+      user_id: fx.userId,
+    });
+    await table(fx.tenantId, 'asset_associations').insert({
+      tenant: fx.tenantId,
+      asset_id: fx.assetId,
+      entity_id: teamId,
+      entity_type: 'team',
+      created_by: fx.userId,
+    });
+
+    const bundle = await createAuthorizationBundle(db, {
+      tenant: fx.tenantId,
+      name: `Asset document narrowing ${fx.tenantId.slice(0, 8)}`,
+      actorUserId: fx.userId,
+    });
+    await upsertBundleRule(db, {
+      tenant: fx.tenantId,
+      bundleId: bundle.bundleId,
+      revisionId: bundle.revisionId,
+      resourceType: 'asset',
+      action: 'read',
+      templateKey: 'selected_clients',
+      config: { selectedClientIds: [fx.outsiderClientId] },
+      actorUserId: fx.userId,
+    });
+    await upsertBundleRule(db, {
+      tenant: fx.tenantId,
+      bundleId: bundle.bundleId,
+      revisionId: bundle.revisionId,
+      resourceType: 'asset',
+      action: 'update',
+      templateKey: 'same_team',
+      actorUserId: fx.userId,
+    });
+    await publishBundleRevision(db, {
+      tenant: fx.tenantId,
+      bundleId: bundle.bundleId,
+      revisionId: bundle.revisionId,
+      actorUserId: fx.userId,
+    });
+    await createBundleAssignment(db, {
+      tenant: fx.tenantId,
+      bundleId: bundle.bundleId,
+      targetType: 'user',
+      targetId: fx.userId,
+      actorUserId: fx.userId,
+    });
+
+    const targetAsset = await table(fx.tenantId, 'assets').where({ asset_id: fx.assetId }).first('asset_id', 'client_id');
+    await db.transaction(async (trx) => {
+      const context = await createAssetReadContext(trx, fx.tenantId, {
+        user_id: fx.userId,
+        user_type: 'internal',
+      } as any);
+      expect(await isAssetReadAllowed(trx, fx.tenantId, context, targetAsset)).toBe(false);
+      expect(await isAssetActionAllowed(trx, fx.tenantId, context, targetAsset, 'update')).toBe(true);
+    });
+
+    const documentId = await fx.seedDocument('Internal users owned, unassociated.md', fx.userId);
+    const before = await table(fx.tenantId, 'document_associations').count('* as count').first();
+
+    const result = await associateDocumentWithAsset({ entity_id: fx.assetId, document_id: documentId });
+
+    expect(result).toHaveProperty('permissionError');
+    expect(Number((await table(fx.tenantId, 'document_associations').count('* as count').first())?.count)).toBe(Number(before?.count));
+  });
+
   it('denies an accessible client asset paired with a document outside the caller document policy', async () => {
     const fx = await seedFixture();
     actionAuth.tenant = fx.tenantId;
@@ -330,6 +425,19 @@ describe('getAssetDocuments (integration)', () => {
 
     expect(result).toHaveProperty('permissionError');
     expect(await table(fx.tenantId, 'document_associations').where({ association_id: associationId }).first()).toBeDefined();
+  });
+
+  it('requires coarse document read permission before removal', async () => {
+    const fx = await seedFixture();
+    actionAuth.tenant = fx.tenantId;
+    actionAuth.userId = fx.userId;
+    actionAuth.userType = 'internal';
+    actionAuth.permissions = { 'asset:read': true, 'asset:delete': true, 'document:read': false };
+
+    const result = await removeDocumentFromAsset(fx.associationId);
+
+    expect(result).toHaveProperty('permissionError');
+    expect(await table(fx.tenantId, 'document_associations').where({ association_id: fx.associationId }).first()).toBeDefined();
   });
 
   it('does not remove a non-asset association', async () => {
