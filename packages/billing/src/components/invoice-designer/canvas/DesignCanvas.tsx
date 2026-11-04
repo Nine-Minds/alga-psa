@@ -44,6 +44,7 @@ import {
   resolveTableItemBindingRawValue,
 } from '../preview/previewBindings';
 import { evaluateTemplateAst, type TemplateEvaluationResult } from '../../../lib/invoice-template-ast/evaluator';
+import { getDocumentBindingFields } from '../fields/documentBindingCatalog';
 
 type DesignerTranslator = (key: string, options?: Record<string, unknown>) => string;
 
@@ -555,7 +556,7 @@ const resolveTotalsRowLabelFallback = (type: 'subtotal' | 'tax' | 'discount' | '
     case 'tax':
       return 'Tax';
     case 'discount':
-      return 'Discount';
+      return 'Discounts';
     case 'custom-total':
       return 'Total';
   }
@@ -568,7 +569,7 @@ const resolveTotalsRowBindingFallback = (type: 'subtotal' | 'tax' | 'discount' |
     case 'tax':
       return 'invoice.tax';
     case 'discount':
-      return 'invoice.discount';
+      return 'invoice.discountTotal';
     case 'custom-total':
       return 'invoice.total';
   }
@@ -581,7 +582,8 @@ const resolveTotalsRowAmountFallbackMinorUnits = (type: 'subtotal' | 'tax' | 'di
     case 'tax':
       return 9600;
     case 'discount':
-      return -5000;
+      // Positive magnitude, like the bound `discountTotal`. Sample: 125000 gross - 5000 = 120000 net.
+      return 5000;
     case 'custom-total':
       return 129600;
   }
@@ -591,6 +593,9 @@ const resolveTotalsRowAmountFallback = (
   type: 'subtotal' | 'tax' | 'discount' | 'custom-total',
   currencyCode: string
 ): string => formatBoundValue(resolveTotalsRowAmountFallbackMinorUnits(type), 'currency', currencyCode) ?? '';
+
+const isCatalogInvoiceBinding = (bindingKey: string): boolean =>
+  getDocumentBindingFields('invoice').some((field) => field.path === bindingKey);
 
 const resolveTotalsRowPreviewModel = (
   node: DesignerNode,
@@ -622,7 +627,11 @@ const resolveTotalsRowPreviewModel = (
     boundValue ||
     asTrimmedString(metadata.previewValue) ||
     asTrimmedString(metadata.sampleValue) ||
-    resolveTotalsRowAmountFallback(node.type, currencyCode);
+    // A Discount Row still bound to the legacy, never-published `invoice.discount` path is blank in
+    // real renders, so it is blank here too rather than showing a sample amount.
+    (node.type === 'discount' && !isCatalogInvoiceBinding(bindingKey)
+      ? ''
+      : resolveTotalsRowAmountFallback(node.type, currencyCode));
   const isGrandTotal = /\b(grand total|amount due|balance due|total due)\b/i.test(label);
 
   return {
