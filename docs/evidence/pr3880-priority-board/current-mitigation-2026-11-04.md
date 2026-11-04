@@ -2,7 +2,7 @@
 
 ## Revisions and scope
 
-- Current PR branch and `origin/feature/validate-priority-type-against-board-recurring-t`: `a241a91b06e2d48e692f5c20bd58b0c84f214933`.
+- Final PR evidence revision at the time of the post-publication service restart: `ceea010c606f94bd2fbf504603471cc9e27e812e`. The earlier real-browser template captures were made on `a241a91b06e2d48e692f5c20bd58b0c84f214933`; the diff between these commits contains only evidence documentation. The current serving Ryzen checkout was fast-forwarded and lifecycle-restarted at `ceea010c...` before the final health/sign-in probes.
 - Published dossier/source revision: `7ed5e379d4fe6d3dfd1158fbd60ec0043b9e8ebb`. `git diff 7ed5e379..HEAD -- ':!docs/evidence/pr3880-priority-board'` is empty, so the implementation source currently served is byte-for-byte the published source; commits since it only changed evidence documentation.
 - Existing uncommitted change in `packages/tickets/src/lib/ticketFieldReferences.ts` was present at task start and is preserved, unstaged and uncommitted.
 - No matching approved plan exists under `docs/plans`; the attached card specification and prior takeover evidence remain the available scope record.
@@ -20,7 +20,7 @@ The Ryzen checkout was fast-forwarded to the PR branch at `a241a91b06e2d48e692f5
 ## Current browser and HTTP checks
 
 - A fresh real card browser pane `3c471de2-b8db-4889-a0d8-9fed53c26374` signed in as the dossier QA user and rendered `/msp/dashboard` with title `Dashboard | AlgaPSA`.
-- With the card Host header, `/api/health` returned HTTP 200 and `{"status":"ok","version":"1.0.0"}`; `/auth/msp/signin` returned HTTP 200. Exact responses are recorded in [HTTP checks](current-http-checks-2026-11-04.txt), taken against the serving Ryzen checkout at `a241a91b06e2d48e692f5c20bd58b0c84f214933`. The browser's dashboard screenshot and short sign-in recording are attached below.
+- With the card Host header, `/api/health` returned HTTP 200 and `{"status":"ok","version":"1.0.0"}`; `/auth/msp/signin` returned HTTP 200. Exact responses are recorded in [HTTP checks](current-http-checks-2026-11-04.txt); it includes both initial browser-session probes and post-publication probes against serving checkout `ceea010c...`. The browser's dashboard screenshot and short sign-in recording are attached below.
 - The real browser then navigated to `/msp/tickets`; route text hydration completed, but the recording does not show the priority-validation scenarios. Repeated local notifications WebSocket attempts to `ws://localhost:13301` fail with connection-refused errors; this is separate from app health/sign-in.
 - Current artifacts: [dashboard screenshot](mitigation-dashboard-2026-11-04.png), [tickets screenshot](mitigation-tickets-2026-11-04.png), [browser recording](current-mitigation-2026-11-04.webm), [chapter metadata](current-mitigation-2026-11-04.json), [captions](current-mitigation-2026-11-04.vtt). The recording shows sign-in and dashboard, not template/API/schedule/generator interactions.
 
