@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import {
   createAssetReadContext,
   isAssetActionAllowed,
+  isAssetClientActionAllowed,
   type AssetAuthUser,
 } from './assetReadAuthorization';
 
@@ -57,14 +58,15 @@ export async function isAssetGroupOperationAllowed(
   }
 
   const context = await createAssetReadContext(trx, tenant, user);
+  const clientCanRead = await isAssetClientActionAllowed(trx, tenant, context, clientId, 'read');
+  if (!clientCanRead) return false;
+  if (input.action !== 'read' && !(await isAssetClientActionAllowed(trx, tenant, context, clientId, input.action))) return false;
+
   const can = (asset: { asset_id: string; client_id: string | null }) =>
     isAssetActionAllowed(trx, tenant, context, asset, input.action);
   const canRead = (asset: { asset_id: string; client_id: string | null }) =>
     isAssetActionAllowed(trx, tenant, context, asset, 'read');
 
-  // The synthetic subject makes client scope explicit even for empty groups.
-  const clientScope = { asset_id: `asset-group-client:${clientId}`, client_id: clientId };
-  if (!(await canRead(clientScope)) || (input.action !== 'read' && !(await can(clientScope)))) return false;
   for (const asset of assets) {
     if (!(await canRead(asset)) || (input.action !== 'read' && !(await can(asset)))) return false;
   }

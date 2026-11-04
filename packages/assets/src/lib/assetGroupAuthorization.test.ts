@@ -26,6 +26,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 vi.mock('./assetReadAuthorization', () => ({
   createAssetReadContext: vi.fn(async () => ({})),
+  isAssetClientActionAllowed: vi.fn(async (_trx: unknown, _tenant: string, _context: unknown, clientId: string) => h.allowedClients.has(clientId)),
   isAssetActionAllowed: vi.fn(async (_trx: unknown, _tenant: string, _context: unknown, asset: { asset_id: string; client_id?: string | null }, action: string) => {
     h.seen.push({ asset_id: asset.asset_id, client_id: asset.client_id ?? null, action });
     return h.allowedClients.has(asset.client_id ?? '')
@@ -66,7 +67,7 @@ describe('asset group authorization boundary', () => {
 
   it('allows an in-scope group only after authorizing its client and every member', async () => {
     await expect(isAssetGroupOperationAllowed({} as any, 't1', { user_id: 'u1' } as any, { action: 'read', groupId: 'g1' })).resolves.toBe(true);
-    expect(h.seen.map((item) => item.client_id)).toEqual(['c1', 'c1']);
+    expect(h.seen.map((item) => item.client_id)).toEqual(['c1']);
   });
 
   it('denies a mixed-member group as a whole', async () => {
@@ -78,7 +79,7 @@ describe('asset group authorization boundary', () => {
   it('requires update scope on each affected member as well as read scope', async () => {
     h.deniedUpdateAssets.add('a1');
     await expect(isAssetGroupOperationAllowed({} as any, 't1', { user_id: 'u1' } as any, { action: 'update', groupId: 'g1' })).resolves.toBe(false);
-    expect(h.seen.map((item) => item.action)).toEqual(['read', 'update', 'read', 'update']);
+    expect(h.seen.map((item) => item.action)).toEqual(['read', 'update']);
   });
 
   it('rejects foreign-tenant group and client identifiers', async () => {
