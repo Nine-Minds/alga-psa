@@ -9,11 +9,51 @@ describe('service-principals Turbopack entry alias', () => {
   it.each([
     ['community', 'oss'],
     ['enterprise', 'ee'],
-  ])('resolves the %s edition to its source entry file', (edition, implementation) => {
-    const expected = path.resolve(serverDir, `../packages/product-service-principals/${implementation}/entry.ts`);
+  ])('compiles the %s edition entry and its import graph', (edition, implementation) => {
+    const expected = `../packages/product-service-principals/${implementation}/entry.ts`;
     const script = `
+      import path from 'node:path';
+      import ts from 'typescript';
       import config from './next.config.mjs';
-      console.log(config.turbopack.resolveAlias['@product/service-principals/entry']);
+      const target = config.turbopack.resolveAlias['@product/service-principals/entry'];
+      const serverDir = process.cwd();
+      if (target !== ${JSON.stringify(expected)}) {
+        throw new Error('Unexpected alias target: ' + target);
+      }
+      const entry = path.resolve(serverDir, target);
+      const configPath = path.join(serverDir, 'tsconfig.json');
+      const parsed = ts.getParsedCommandLineOfConfigFile(configPath, {}, {
+        ...ts.sys,
+        onUnRecoverableConfigFileDiagnostic(diagnostic) {
+          throw new Error(ts.flattenDiagnosticMessageText(diagnostic.messageText, '\\n'));
+        },
+      });
+      if (!parsed) throw new Error('Unable to load server tsconfig');
+      const program = ts.createProgram([entry], {
+        ...parsed.options,
+        paths: {
+          ...parsed.options.paths,
+          '@ee/*': ['../ee/server/src/*'],
+        },
+        noEmit: false,
+        declaration: false,
+        incremental: false,
+      });
+      const diagnostics = ts.getPreEmitDiagnostics(program);
+      const unresolved = diagnostics.filter((diagnostic) => diagnostic.code === 2307);
+      if (unresolved.length) {
+        throw new Error(unresolved.map((diagnostic) =>
+          ts.flattenDiagnosticMessageText(diagnostic.messageText, '\\n')
+        ).join('\\n'));
+      }
+      const emitted = [];
+      const result = program.emit(undefined, (fileName, contents) => {
+        if (fileName.endsWith('.js')) emitted.push(contents);
+      });
+      if (result.emitSkipped || emitted.length === 0) {
+        throw new Error('Selected alias entry did not compile to JavaScript');
+      }
+      console.log(JSON.stringify({ target, entry, emittedFiles: emitted.length }));
     `;
     const result = spawnSync(process.execPath, ['--input-type=module', '--eval', script], {
       cwd: serverDir,
@@ -26,6 +66,9 @@ describe('service-principals Turbopack entry alias', () => {
     });
 
     expect(result.status, result.stderr).toBe(0);
-    expect(result.stdout.trim()).toBe(expected);
+    const output = JSON.parse(result.stdout.trim());
+    expect(output.target).toBe(expected);
+    expect(output.entry).toBe(path.resolve(serverDir, expected));
+    expect(output.emittedFiles).toBeGreaterThan(0);
   });
 });

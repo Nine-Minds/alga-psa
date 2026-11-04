@@ -225,9 +225,12 @@ const nextConfig = {
       '@alga-psa/auth/actions': '../packages/auth/src/actions/index.ts',
       '@alga-psa/auth/components': '../packages/auth/src/components/index.ts',
       '@product/service-principals/entry': (() => {
-        const eePath = path.join(__dirname, '../packages/product-service-principals/ee/entry.ts');
-        const ossPath = path.join(__dirname, '../packages/product-service-principals/oss/entry.ts');
-        return isEE ? eePath : ossPath;
+        // Keep this in the same server-relative form as the package aliases
+        // above; Turbopack interpreted the absolute target as a server-relative
+        // module path and could not resolve it.
+        return isEE
+          ? '../packages/product-service-principals/ee/entry.ts'
+          : '../packages/product-service-principals/oss/entry.ts';
       })(),
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
