@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import knexLib, { type Knex } from 'knex';
 
 const holder = vi.hoisted(() => ({ knex: undefined as unknown as Knex, tenant: '', userId: '' }));
+const apiAccess = vi.hoisted(() => ({ permissions: new Set<string>() }));
 
 vi.mock('@alga-psa/auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/auth')>();
@@ -22,6 +23,17 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(async () => undefined) }));
+vi.mock('../../../../server/src/lib/api/utils/requestContext', () => ({
+  requireRequestContext: () => ({
+    tenant: holder.tenant,
+    userId: holder.userId,
+    user: { user_id: holder.userId, tenant: holder.tenant, user_type: 'internal' },
+  }),
+}));
+vi.mock('../../../../server/src/lib/auth/rbac', () => ({
+  hasPermission: async (_user: unknown, resource: string, action: string) => apiAccess.permissions.has(`${resource}:${action}`),
+}));
+vi.mock('../../../../server/src/lib/db/db', () => ({ getConnection: async () => holder.knex }));
 
 import {
   addAssetsToGroup,
@@ -35,6 +47,14 @@ import { createAssetReadContext, isAssetActionAllowed } from './assetReadAuthori
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../../../inventory/src/test-utils/inventoryTestDatabase';
 import { wireLocalTestDbEnv } from '../../../../server/test-utils/dbConfig';
 import { tenantDb } from '@alga-psa/db';
+import { NextRequest } from 'next/server';
+import { ApiAssetGroupController } from '../../../../server/src/lib/api/controllers/ApiAssetGroupController';
+import {
+  addAssetsToGroupRows,
+  createGroup,
+  updateGroupRow,
+} from './assetGroups';
+import { lockAndAuthorizeAssetGroupMembers } from './assetGroupAuthorization';
 
 const database = (tenant = holder.tenant) => tenantDb(holder.knex, tenant);
 
@@ -242,5 +262,98 @@ describe('asset group mutation authorization', () => {
     expect(await database().table('asset_group_contacts').where({ group_id: groupId, role: 'owner' }).first('contact_name_id')).toEqual(beforeOwner);
     expect(await database().table('assets').whereIn('asset_id', [inTeam, secondInTeam, outOfTeam]).select('asset_id', 'location_id', 'location', 'contact_name_id')).toEqual(beforeLocation);
     expect(await assignmentState([inTeam, secondInTeam, outOfTeam])).toEqual(beforeAssignments);
+  });
+
+  it('serializes membership insertion behind the update authorization and propagation transaction', async () => {
+    const inTeam = await createAsset('In-team concurrency member');
+    const outOfTeam = await createAsset('Out-of-team concurrency member');
+    await assignAssetToTeam(inTeam);
+
+    const group = await holder.knex.transaction(async (trx) => {
+      const created = await createGroup(trx, holder.tenant, { clientId, name: 'Serialized group', kind: 'shared_workspace' });
+      await addAssetsToGroupRows(trx, holder.tenant, created.group_id, [inTeam]);
+      return created;
+    });
+
+    let authorized!: () => void;
+    let continuePropagation!: () => void;
+    const authorizationReached = new Promise<void>((resolve) => { authorized = resolve; });
+    const propagationGate = new Promise<void>((resolve) => { continuePropagation = resolve; });
+    const updateTransaction = holder.knex.transaction(async (trx) => {
+      await lockAndAuthorizeAssetGroupMembers(trx, holder.tenant, { user_id: holder.userId, user_type: 'internal' }, group.group_id);
+      authorized();
+      await propagationGate;
+      await updateGroupRow(trx, holder.tenant, group.group_id, { locationId });
+    });
+
+    await authorizationReached;
+    let writerPid!: number;
+    let writerStarted!: () => void;
+    const writerHasPid = new Promise<void>((resolve) => { writerStarted = resolve; });
+    let writerSettled = false;
+    const membershipTransaction = holder.knex.transaction(async (trx) => {
+      const result = await trx.raw('select pg_backend_pid() as pid');
+      writerPid = Number(result.rows[0].pid);
+      writerStarted();
+      await addAssetsToGroupRows(trx, holder.tenant, group.group_id, [outOfTeam]);
+    }).finally(() => { writerSettled = true; });
+
+    try {
+      await writerHasPid;
+      let writerBlocked = false;
+      const deadline = Date.now() + 5_000;
+      while (!writerBlocked && !writerSettled && Date.now() < deadline) {
+        const result = await holder.knex.raw('select pg_blocking_pids(?::int) as blockers', [writerPid]);
+        writerBlocked = (result.rows[0].blockers as number[]).length > 0;
+        if (!writerBlocked && !writerSettled) await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      expect(writerBlocked, 'membership writer should wait on the group row lock').toBe(true);
+    } finally {
+      continuePropagation();
+    }
+
+    await Promise.all([updateTransaction, membershipTransaction]);
+    expect(await database().table('assets').where({ asset_id: outOfTeam }).first('location_id')).toEqual({ location_id: null });
+    expect(await database().table('asset_group_members').where({ group_id: group.group_id, asset_id: outOfTeam })).toHaveLength(1);
+  });
+
+  it('requires coarse asset:update for API membership creation and deletion while preserving their route permissions', async () => {
+    const assetId = await createAsset('API permission asset');
+    await assignAssetToTeam(assetId);
+    const body = JSON.stringify({ client_id: clientId, name: 'API create gate', kind: 'bundle', location_id: locationId, asset_ids: [assetId] });
+    const controller = new ApiAssetGroupController();
+    const groupsBefore = await database().table('asset_groups').count('* as count').first();
+    const assetsBefore = await database().table('assets').where({ asset_id: assetId }).first('location_id', 'location', 'contact_name_id');
+
+    apiAccess.permissions = new Set(['asset:create']);
+    const deniedCreate = await controller.create(new NextRequest('http://localhost/api/v1/asset-groups', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body,
+    }));
+    expect(deniedCreate.status).toBe(403);
+    expect(await database().table('asset_groups').count('* as count').first()).toEqual(groupsBefore);
+    expect(await database().table('asset_group_members').where({ asset_id: assetId })).toHaveLength(0);
+    expect(await database().table('assets').where({ asset_id: assetId }).first('location_id', 'location', 'contact_name_id')).toEqual(assetsBefore);
+
+    apiAccess.permissions = new Set(['asset:create', 'asset:update']);
+    const allowedCreate = await controller.create(new NextRequest('http://localhost/api/v1/asset-groups', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body,
+    }));
+    expect(allowedCreate.status).toBe(200);
+    const createdBody = await allowedCreate.json();
+    const groupId = createdBody.data.group_id as string;
+    expect(await database().table('asset_group_members').where({ group_id: groupId, asset_id: assetId })).toHaveLength(1);
+
+    apiAccess.permissions = new Set(['asset:delete']);
+    const deniedDelete = await controller.delete(new NextRequest(`http://localhost/api/v1/asset-groups/${groupId}`, { method: 'DELETE' }), { id: groupId });
+    expect(deniedDelete.status).toBe(403);
+    expect(await database().table('asset_groups').where({ group_id: groupId })).toHaveLength(1);
+    expect(await database().table('asset_group_members').where({ group_id: groupId, asset_id: assetId })).toHaveLength(1);
+
+    apiAccess.permissions = new Set(['asset:delete', 'asset:update']);
+    const allowedDelete = await controller.delete(new NextRequest(`http://localhost/api/v1/asset-groups/${groupId}`, { method: 'DELETE' }), { id: groupId });
+    expect(allowedDelete.status).toBe(200);
+    expect(await database().table('asset_groups').where({ group_id: groupId })).toHaveLength(0);
+    expect(await database().table('asset_group_members').where({ group_id: groupId })).toHaveLength(0);
+    apiAccess.permissions.clear();
   });
 });

@@ -17,10 +17,10 @@ import {
   addGroupUser,
   createGroup,
   deleteGroupRow,
+  AssetGroupError,
   getGroupOwnerId,
   getGroupWithDetails,
   isAssetGroupError,
-  listGroupMemberIds,
   listGroupsForClient,
   removeAssetFromGroupRow,
   removeGroupUser,
@@ -30,6 +30,7 @@ import {
 import {
   assertAssetGroupAssetsUpdatable,
   assertAssetGroupMemberUpdatableIfPresent,
+  lockAndListAssetGroupMembers,
 } from '@alga-psa/assets/lib/assetGroupAuthorization';
 import { createApiResponse, createErrorResponse } from '../utils/response';
 import { requireRequestContext } from '../utils/requestContext';
@@ -100,6 +101,18 @@ export class ApiAssetGroupController {
     }
   }
 
+  private async authorizeExistingAssetsForUpdate(
+    context: ApiContext,
+    trx: Knex.Transaction,
+    assetIds: readonly string[]
+  ): Promise<void> {
+    if (assetIds.length === 0) return;
+    if (!await hasPermission(context.user!, 'asset', 'update', trx)) {
+      throw new AssetGroupError('permission_denied', 'Permission denied: Cannot update assets');
+    }
+    await assertAssetGroupAssetsUpdatable(trx, context.tenant, context.user!, assetIds);
+  }
+
   /** GET /api/v1/asset-groups?client_id=… */
   async list(req: NextRequest): Promise<NextResponse> {
     const context = await this.requireContext(req, 'read');
@@ -126,7 +139,7 @@ export class ApiAssetGroupController {
     }
 
     return this.run(context, async (trx) => {
-      await assertAssetGroupAssetsUpdatable(trx, context.tenant, context.user!, parsed.data.asset_ids ?? []);
+      await this.authorizeExistingAssetsForUpdate(context, trx, parsed.data.asset_ids ?? []);
       const group = await createGroup(trx, context.tenant, {
         clientId: parsed.data.client_id,
         name: parsed.data.name,
@@ -171,7 +184,8 @@ export class ApiAssetGroupController {
     }
 
     return this.run(context, async (trx) => {
-      await assertAssetGroupAssetsUpdatable(trx, context.tenant, context.user!, await listGroupMemberIds(trx, context.tenant, params.id));
+      const memberIds = await lockAndListAssetGroupMembers(trx, context.tenant, params.id);
+      await this.authorizeExistingAssetsForUpdate(context, trx, memberIds);
       await updateGroupRow(trx, context.tenant, params.id, {
         name: parsed.data.name,
         kind: parsed.data.kind,
@@ -189,7 +203,8 @@ export class ApiAssetGroupController {
     if (context instanceof NextResponse) return context;
 
     return this.run(context, async (trx) => {
-      await assertAssetGroupAssetsUpdatable(trx, context.tenant, context.user!, await listGroupMemberIds(trx, context.tenant, params.id));
+      const memberIds = await lockAndListAssetGroupMembers(trx, context.tenant, params.id);
+      await this.authorizeExistingAssetsForUpdate(context, trx, memberIds);
       await deleteGroupRow(trx, context.tenant, params.id, { actorUserId: context.userId ?? null });
       return { success: true };
     });
@@ -206,7 +221,7 @@ export class ApiAssetGroupController {
     }
 
     return this.run(context, async (trx) => {
-      await assertAssetGroupAssetsUpdatable(trx, context.tenant, context.user!, parsed.data.asset_ids);
+      await this.authorizeExistingAssetsForUpdate(context, trx, parsed.data.asset_ids);
       await addAssetsToGroupRows(trx, context.tenant, params.id, parsed.data.asset_ids, {
         actorUserId: context.userId ?? null,
       });
@@ -245,7 +260,8 @@ export class ApiAssetGroupController {
 
     return this.run(context, async (trx) => {
       if (parsed.data.role === 'owner') {
-        await assertAssetGroupAssetsUpdatable(trx, context.tenant, context.user!, await listGroupMemberIds(trx, context.tenant, params.id));
+        const memberIds = await lockAndListAssetGroupMembers(trx, context.tenant, params.id);
+        await this.authorizeExistingAssetsForUpdate(context, trx, memberIds);
         await setGroupOwner(trx, context.tenant, params.id, parsed.data.contact_name_id, {
           actorUserId: context.userId ?? null,
         });
@@ -286,7 +302,8 @@ export class ApiAssetGroupController {
 
     return this.run(context, async (trx) => {
       if (isBundle) {
-        await assertAssetGroupAssetsUpdatable(trx, context.tenant, context.user!, await listGroupMemberIds(trx, context.tenant, params.id));
+        const memberIds = await lockAndListAssetGroupMembers(trx, context.tenant, params.id);
+        await this.authorizeExistingAssetsForUpdate(context, trx, memberIds);
         await setGroupOwner(trx, context.tenant, params.id, null, { actorUserId: context.userId ?? null });
       } else {
         await removeGroupUser(trx, context.tenant, params.id, contactId.data);

@@ -77,6 +77,20 @@ async function requireGroup(
   return { ...row, created_at: toIso(row.created_at), updated_at: toIso(row.updated_at) } as AssetGroup;
 }
 
+/**
+ * Serialize every writer for a group's membership and every mutation that reads or propagates
+ * across its members. Call this before listing members or checking whether one is attached.
+ */
+export async function lockAssetGroupForMutation(
+  trx: Knex.Transaction,
+  tenant: string,
+  groupId: string
+): Promise<AssetGroup> {
+  const row = await table(trx, tenant, 'asset_groups').where({ group_id: groupId }).forUpdate().first();
+  if (!row) throw new AssetGroupError('not_found', 'Asset group not found');
+  return { ...row, created_at: toIso(row.created_at), updated_at: toIso(row.updated_at) } as AssetGroup;
+}
+
 async function groupHistory(
   trx: Knex | Knex.Transaction,
   tenant: string,
@@ -236,7 +250,7 @@ export async function addAssetsToGroupRows(
   assetIds: string[],
   options?: { actorUserId?: string | null }
 ): Promise<{ added: string[] }> {
-  const group = await requireGroup(trx, tenant, groupId);
+  const group = await lockAssetGroupForMutation(trx, tenant, groupId);
   const added: string[] = [];
 
   for (const assetId of assetIds) {
@@ -315,7 +329,7 @@ export async function removeAssetFromGroupRow(
   assetId: string,
   options?: { actorUserId?: string | null }
 ): Promise<void> {
-  const group = await requireGroup(trx, tenant, groupId);
+  const group = await lockAssetGroupForMutation(trx, tenant, groupId);
   const removed = await table(trx, tenant, 'asset_group_members')
     .where({ group_id: groupId, asset_id: assetId })
     .delete();
@@ -341,6 +355,19 @@ export async function removeAssetFromAnyGroup(
 ): Promise<void> {
   const group = await getAssetGroupRow(trx, tenant, assetId);
   if (!group) return;
+
+  // The first lookup discovers the mutex key. Recheck membership only after taking that mutex;
+  // a concurrent group deletion may have removed it while this transaction was waiting.
+  try {
+    await lockAssetGroupForMutation(trx, tenant, group.group_id);
+  } catch (error) {
+    if (isAssetGroupError(error) && error.code === 'not_found') return;
+    throw error;
+  }
+  const currentMembership = await table(trx, tenant, 'asset_group_members')
+    .where({ group_id: group.group_id, asset_id: assetId })
+    .first('asset_id');
+  if (!currentMembership) return;
   await removeAssetFromGroupRow(trx, tenant, group.group_id, assetId, options);
 }
 
@@ -352,7 +379,7 @@ export async function setGroupOwner(
   contactId: string | null,
   options?: { actorUserId?: string | null }
 ): Promise<void> {
-  const group = await requireGroup(trx, tenant, groupId);
+  const group = await lockAssetGroupForMutation(trx, tenant, groupId);
   if (group.kind !== 'bundle') {
     throw new AssetGroupError('owner_on_workspace', 'A shared workspace has users, not an owner');
   }
@@ -385,7 +412,7 @@ export async function addGroupUser(
   groupId: string,
   contactId: string
 ): Promise<void> {
-  const group = await requireGroup(trx, tenant, groupId);
+  const group = await lockAssetGroupForMutation(trx, tenant, groupId);
   if (group.kind !== 'bundle') {
     await assertContactOfClient(trx, tenant, group.client_id, contactId);
     await table(trx, tenant, 'asset_group_contacts')
@@ -403,6 +430,7 @@ export async function removeGroupUser(
   groupId: string,
   contactId: string
 ): Promise<void> {
+  await lockAssetGroupForMutation(trx, tenant, groupId);
   await table(trx, tenant, 'asset_group_contacts')
     .where({ group_id: groupId, contact_name_id: contactId, role: 'user' })
     .delete();
@@ -427,7 +455,7 @@ export async function updateGroupRow(
     actorUserId?: string | null;
   }
 ): Promise<AssetGroup> {
-  const group = await requireGroup(trx, tenant, groupId);
+  const group = await lockAssetGroupForMutation(trx, tenant, groupId);
   const patch: Record<string, unknown> = {};
 
   if (input.name !== undefined) {
@@ -502,7 +530,7 @@ export async function deleteGroupRow(
   groupId: string,
   options?: { actorUserId?: string | null }
 ): Promise<void> {
-  const group = await requireGroup(trx, tenant, groupId);
+  const group = await lockAssetGroupForMutation(trx, tenant, groupId);
   const memberIds = await listGroupMemberIds(trx, tenant, groupId);
 
   await table(trx, tenant, 'asset_group_contacts').where({ group_id: groupId }).delete();

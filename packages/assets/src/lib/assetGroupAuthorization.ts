@@ -5,7 +5,33 @@ import {
   filterAssetsAllowedForAction,
   type AssetAuthUser,
 } from './assetReadAuthorization';
-import { AssetGroupError } from './assetGroups';
+import {
+  AssetGroupError,
+  listGroupMemberIds,
+  lockAssetGroupForMutation,
+} from './assetGroups';
+
+/** Lock a group before observing its member set for authorization or propagation. */
+export async function lockAndListAssetGroupMembers(
+  trx: Knex.Transaction,
+  tenant: string,
+  groupId: string
+): Promise<string[]> {
+  await lockAssetGroupForMutation(trx, tenant, groupId);
+  return listGroupMemberIds(trx, tenant, groupId);
+}
+
+/** Authorize the stable member set while holding the group's mutation lock. */
+export async function lockAndAuthorizeAssetGroupMembers(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: AssetAuthUser,
+  groupId: string
+): Promise<string[]> {
+  const memberIds = await lockAndListAssetGroupMembers(trx, tenant, groupId);
+  await assertAssetGroupAssetsUpdatable(trx, tenant, user, memberIds);
+  return memberIds;
+}
 
 /** Authorize every asset a group mutation may change before the mutation writes anything. */
 export async function assertAssetGroupAssetsUpdatable(
@@ -45,12 +71,13 @@ export async function assertAssetGroupAssetsUpdatable(
  * requested group membership points at a real asset whose record is part of the mutation boundary.
  */
 export async function assertAssetGroupMemberUpdatableIfPresent(
-  trx: Knex | Knex.Transaction,
+  trx: Knex.Transaction,
   tenant: string,
   user: AssetAuthUser,
   groupId: string,
   assetId: string
 ): Promise<void> {
+  await lockAssetGroupForMutation(trx, tenant, groupId);
   const db = tenantDb(trx, tenant);
   const membership = await db.table('asset_group_members').where({ group_id: groupId, asset_id: assetId }).first('asset_id');
   if (!membership) return;

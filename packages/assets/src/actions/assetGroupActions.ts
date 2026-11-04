@@ -23,6 +23,7 @@ import {
 import {
   assertAssetGroupAssetsUpdatable,
   assertAssetGroupMemberUpdatableIfPresent,
+  lockAndAuthorizeAssetGroupMembers,
 } from '../lib/assetGroupAuthorization';
 import { resolveAssetTicketContactOptions } from '@alga-psa/shared/models/assetTicketContactModel';
 import { publishAssetChanged } from '../lib/assetChangeEvents';
@@ -241,7 +242,7 @@ export const updateAssetGroup = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     const group = await withMemberEvents(knex, tenant, user.user_id, groupId, [], () => withTransaction(knex, async (trx: Knex.Transaction) => {
-      await assertAssetGroupAssetsUpdatable(trx, tenant, user, await listGroupMemberIds(trx, tenant, groupId));
+      await lockAndAuthorizeAssetGroupMembers(trx, tenant, user, groupId);
       await updateGroupRow(trx, tenant, groupId, { ...input, actorUserId: user.user_id });
       return getGroupWithDetails(trx, tenant, groupId);
     }));
@@ -263,7 +264,7 @@ export const deleteAssetGroup = withAuth(async (
   return withGroupErrors(async () => {
     await withMemberEvents(knex, tenant, user.user_id, groupId, [], () =>
       withTransaction(knex, async (trx: Knex.Transaction) => {
-        await assertAssetGroupAssetsUpdatable(trx, tenant, user, await listGroupMemberIds(trx, tenant, groupId));
+        await lockAndAuthorizeAssetGroupMembers(trx, tenant, user, groupId);
         await deleteGroupRow(trx, tenant, groupId, { actorUserId: user.user_id });
       })
     );
@@ -329,7 +330,7 @@ export const setAssetGroupOwner = withAuth(async (
   const { knex } = await createTenantKnex();
   return withGroupErrors(async () => {
     const group = await withMemberEvents(knex, tenant, user.user_id, groupId, [], () => withTransaction(knex, async (trx: Knex.Transaction) => {
-      await assertAssetGroupAssetsUpdatable(trx, tenant, user, await listGroupMemberIds(trx, tenant, groupId));
+      await lockAndAuthorizeAssetGroupMembers(trx, tenant, user, groupId);
       await setGroupOwner(trx, tenant, groupId, contactId, { actorUserId: user.user_id });
       return getGroupWithDetails(trx, tenant, groupId);
     }));
