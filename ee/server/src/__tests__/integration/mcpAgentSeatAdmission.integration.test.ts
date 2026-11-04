@@ -217,16 +217,55 @@ describe('MCP agent seat admission', () => {
     expect(await activeInternals(customer)).toBe(2);
     expect(await db('user_roles').where({ tenant: customer, user_id: backingUserId, role_id: roleId })).toHaveLength(1);
     expect(await db('agent_roles').where({ tenant: customer, agent_id: agent.agent_id, role_id: roleId })).toHaveLength(1);
+  });
 
+  it('rolls back co-managed provisioning when post-insert occupancy exceeds the allocation', async () => {
+    const sponsor = await addTenant({ limit: 1, plan: 'pro' });
+    const customer = await addTenant({ product: 'co_managed', limit: 1 });
+    const relationshipId = randomUUID();
+    const operationId = randomUUID();
+    const allocationId = randomUUID();
+    const boardId = randomUUID();
+    const clientId = randomUUID();
+    const adminInvitationId = randomUUID();
+    const requestFingerprint = 'b'.repeat(64);
+    const now = new Date();
+    const expiry = new Date(now.getTime() + 86_400_000);
+
+    await db('co_management_relationships').insert({
+      tenant: customer, relationship_id: relationshipId, sponsor_tenant: sponsor,
+      sponsor_client_id: randomUUID(), state: 'active', accepted_by: randomUUID(), accepted_at: now,
+    });
+    await db('co_managed_entitlements').insert({
+      tenant: sponsor, source: 'admin_grant', source_reference: 'test', capacity: 10,
+      verified_at: now, valid_until: expiry,
+    });
+    await db('co_managed_provisioning_operations').insert({
+      tenant: sponsor, operation_id: operationId, allocation_id: allocationId, customer_tenant: customer,
+      relationship_id: relationshipId, requested_by: randomUUID(), escalation_board_id: boardId,
+      customer_board_id: boardId, customer_client_id: clientId, administrator_invitation_id: adminInvitationId,
+      request_fingerprint: requestFingerprint, request: JSON.stringify({}), state: 'pending_acceptance',
+    });
+    await db('co_managed_allocations').insert({
+      tenant: sponsor, allocation_id: allocationId, operation_id: operationId,
+      request_fingerprint: requestFingerprint, customer_tenant: customer, relationship_id: relationshipId,
+      seats: 2, state: 'active',
+    });
+    await db('users').insert({
+      tenant: customer, user_id: randomUUID(), username: 'existing-overflow-customer', email: 'overflow-existing@example.test',
+      first_name: 'Existing', last_name: 'User', user_type: 'internal', is_inactive: false, hashed_password: 'unused',
+    });
     await installSeatOverflowTrigger(customer);
-    await expect(createAgent({ tenant: customer, name: 'Co-managed post-insert overflow', roleIds: [roleId] }))
+
+    await expect(createAgent({ tenant: customer, name: 'Co-managed post-insert overflow' }))
       .rejects.toMatchObject({ name: 'CoManagedAdmissionError', code: 'CO_MANAGED_SEAT_LIMIT' });
-    expect(await activeInternals(customer)).toBe(2);
-    expect(await db('users').where({ tenant: customer }).whereLike('username', 'mcp-agent-%')).toHaveLength(1);
+
+    expect(await activeInternals(customer)).toBe(1);
+    expect(await db('users').where({ tenant: customer }).whereLike('username', 'mcp-agent-%')).toHaveLength(0);
     expect(await db('users').where({ tenant: customer, username: 'concurrent-seat-consumer' })).toHaveLength(0);
-    expect(await db('user_roles').where({ tenant: customer })).toHaveLength(1);
-    expect(await db('agent_roles').where({ tenant: customer })).toHaveLength(1);
-    expect(await db('agents').where({ tenant: customer })).toHaveLength(1);
+    expect(await db('user_roles').where({ tenant: customer })).toHaveLength(0);
+    expect(await db('agent_roles').where({ tenant: customer })).toHaveLength(0);
+    expect(await db('agents').where({ tenant: customer })).toHaveLength(0);
     await db.raw('DROP TRIGGER add_mcp_agent_seat_overflow ON users');
     await db.raw('DROP FUNCTION add_mcp_agent_seat_overflow()');
   });
